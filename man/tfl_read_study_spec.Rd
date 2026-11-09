@@ -18,7 +18,9 @@ warning naming it (\code{tfl_read_outputs()}); \code{FALSE} (default) to stop th
 \value{
 \code{tfl_read_study_spec()}: a list of class \code{tfl_study_spec} --
 \code{study}, \code{data}, \code{defaults}, \code{styles} (by name: \code{defaults.yml}'s
-\verb{styles:}, the look a report picks with \verb{style:}),
+\verb{styles:}, the look a report picks with \verb{style:}), \code{figure_style}
+(\code{defaults.yml}'s \verb{figure_style:}: the study's figure style standard,
+tflspec's built-in one for a part it does not give),
 \code{patterns} (by name), \code{toc}, \code{dir}.  \code{tfl_read_outputs()}: a named list of \code{tfl_output}, by id.
 }
 \description{

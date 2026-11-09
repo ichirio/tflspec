@@ -4,17 +4,17 @@
 \alias{tfl_tpl_ancova}
 \title{ancova: the template ancova}
 \description{
-The table template \code{ancova}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "ancova", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
+The table template \code{ancova}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "ancova", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab required \tab call \tab  \tab output.population \tab the analysis set's id (SAF) \cr
+   \code{population} \tab required \tab call \tab report: population, required \tab output.population \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
    \code{data} \tab required \tab call \tab  \tab  \tab the BDS dataset (ADVS, ADLB) \cr
    \code{param} \tab required \tab call \tab  \tab  \tab the PARAMCD (SYSBP) \cr
    \code{visit} \tab required \tab call \tab  \tab  \tab the AVISIT (CYCLE 9 DAY 1) \cr
-   \code{by} \tab other \tab call \tab TRT01A \tab settings.treatment \tab the arm variable (the columns) \cr
+   \code{by} \tab other \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the arm variable (the columns) \cr
    \code{response} \tab other \tab call \tab CHG \tab  \tab the response variable \cr
    \code{covariates} \tab other \tab call \tab BASE \tab  \tab the model's covariates besides the arm \cr
    \code{where} \tab other \tab call \tab  \tab  \tab the records kept besides the parameter and visit (R) \cr

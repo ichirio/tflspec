@@ -167,21 +167,3 @@ test_that("ae_soc_pt: the YAML's template:, A and B make the same RTF", {
   expect_identical(r$a, r$yaml)
   expect_identical(r$b, r$yaml)
 })
-
-test_that("a study's spec/templates/*.R: registered when the study is read", {
-  on.exit(tv_drop("demog_study"))
-  d <- tempfile()
-  on.exit(unlink(d, recursive = TRUE), add = TRUE)
-  dir.create(file.path(d, "spec", "templates"), recursive = TRUE)
-  writeLines(c("# the study's demographics",
-               "tflspec::tfl_template_variant(\"demog_study\", from = \"demog\",",
-               "  defaults = list(categorical = \"SEX\"))"),
-             file.path(d, "spec", "templates", "demog.R"))
-  tfl_read_study_spec(d)
-  tt <- tfl_templates()
-  expect_identical(tt$package[tt$name == "demog_study"],
-                   sprintf("study %s: spec/templates/demog.R", basename(d)))
-  expect_identical(tfl_template_params("demog_study")$categorical$default, "SEX")
-  writeLines("stop('no')", file.path(d, "spec", "templates", "bad.R"))
-  expect_error(tfl_read_study_spec(d), "spec/templates/bad.R: no")
-})

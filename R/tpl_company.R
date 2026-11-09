@@ -11,8 +11,9 @@
 #' A template's definition: its kind, the layout it is built on, its few
 #' parameters ([tfl_param()]) and its body, a function of the parameters'
 #' values and the report's context that returns the report's items.  A
-#' company's package calls it when it is loaded (`.onLoad()`), and so does
-#' a study's `spec/templates/<name>.R`.  The usual body is a tflspec
+#' company's package calls it when it is loaded (`.onLoad()`); a study has
+#' no templates of its own (a report of a study changes a template's
+#' arguments or adds cards after it).  The usual body is a tflspec
 #' template's with the company's defaults ([tfl_template_params()] to
 #' start from, [tfl_template_expand()] in the body); see
 #' [tfl_use_company_templates()].
@@ -95,8 +96,8 @@ tfl_template <- function(name, kind = c("table", "figure", "listing"), layout, p
 #' arguments, the study standard (`study.yml`, `defaults.yml`: `tfl_param(study
 #' = )`), the variant's `defaults`, `from`'s.
 #'
-#' Register it where it is used: a company's package's `.onLoad()`
-#' ([tfl_use_company_templates()]), or a study's `spec/templates/*.R`.
+#' Register it in a company's package's `.onLoad()`
+#' ([tfl_use_company_templates()]).
 #'
 #' @param name The variant's name.  `from`'s own name replaces `from`
 #'   (with a message).
@@ -141,7 +142,7 @@ tfl_template_variant <- function(name, from, defaults = list(), label = NULL, ex
     .ard_stop(sprintf("%s: template %s has no parameter %s to hide.", fn, from,
                       paste(sQuote(unknown, FALSE), collapse = ", ")))
   }
-  # where it is registered: a package, or a study's spec/templates/ file
+  # where it is registered: a package
   pkg <- getOption("tflspec.template_source") %||% environmentName(topenv(parent.frame()))
   if (identical(pkg, "R_GlobalEnv")) pkg <- "(session)"
   old <- get0(name, envir = .tpl_registry, inherits = FALSE)
@@ -320,7 +321,7 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
 # treatment variable as its default
 .tpl_study_kind <- function(p) {
   !isTRUE(p$no_study) &&
-    (p$name %in% c(names(.tpl_param_study), "pop", "arm", "trt", "treatment") ||
+    (p$name %in% c(names(.tpl_study_by_name), "pop", "arm", "trt", "treatment") ||
        any(as.character(unlist(p$default)) %in% c("TRT01A", "TRT01P", "TRTA", "TRTP", "ARM",
                                                   "ACTARM")))
 }

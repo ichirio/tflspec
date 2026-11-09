@@ -17,7 +17,8 @@ tfl_tpl_help(
 \item{study}{The study standard: a \code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}} object or a
 study's spec folder; \code{NULL} for none (the \code{study} column is then
 \code{NA}).  Its \code{defaults.yml} content is where a parameter's
-\code{"<verb>.<argument>"} source is read, \code{study.yml}'s \verb{settings: treatment:} the \code{by} (\code{"settings.treatment"}).}
+\code{"<verb>.<argument>"} source is read, \code{study.yml}'s \verb{settings:} the
+\code{"settings.<name>"} ones (\code{"settings.treatment"} for the \code{by}).}
 
 \item{population}{The report's analysis set: the value of the
 parameters taken from the report's \verb{population:}
