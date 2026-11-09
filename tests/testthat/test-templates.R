@@ -784,3 +784,26 @@ test_that("the kit prints a map of name and text as a mapping, and checks the li
   expect_false(any(grepl("plan_labels", p$problem, fixed = TRUE)))
   expect_true(any(grepl("mapping", p$problem, fixed = TRUE)))
 })
+
+test_that("tfl_read_template_sheets(): the population column (or the args cell's) is the report's population:", {
+  skip_if_not_installed("writexl")
+  f <- withr::local_tempfile(fileext = ".xlsx")
+  t <- data.frame(output_id = c("A", "B", "C", "D", "E"), kind = "table", label = "x",
+                  population = c("ITT", NA, "SAF", "SAF", "ITT"),
+                  template = c("demog", "demog", "demog", "demog", "summary"), by = "TRT01A", where = NA,
+                  args = c(NA, "population=ITT", "population=SAF", "population=ITT", NA))
+  rows <- data.frame(output_id = c("A", "B", "C", "D", "E"), param = "continuous", value = "AGE", label = NA)
+  writexl::write_xlsx(list(templates = t, template_rows = rows), f)
+  # (D: two different ones stop; the others read)
+  expect_error(tfl_read_template_sheets(f), "give it once", fixed = TRUE)
+  t <- t[t$output_id != "D", ]
+  writexl::write_xlsx(list(templates = t, template_rows = rows), f)
+  r <- tfl_read_template_sheets(f)
+  # (demog takes the analysis set from the report: the column, else the cell's, never an argument)
+  expect_identical(vapply(r[c("A", "B", "C")], function(x) x$population, ""), c(A = "ITT", B = "ITT", C = "SAF"))
+  expect_null(r$A$template$args$population)
+  expect_null(r$B$template$args$population)
+  # (a template that has the argument keeps it)
+  expect_identical(r$E$population, "ITT")
+  expect_identical(r$E$template$args$population, "ITT")
+})
