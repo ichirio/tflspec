@@ -17,7 +17,8 @@ The table template \code{ae_overview}, layout \code{summary}. Its program is one
    \code{data_id} \tab other \tab call \tab  \tab  \tab the events' analysis data's id; NULL: <data>_<population> \cr
    \code{flags} \tab other \tab call \tab (id = ANY; label = Any TEAE); (id = REL; label = Any trea... \tab  \tab the rows, in order: each 'id' (the flag's name), 'label' (the row's text) and 'where' (R: the events it counts; none: every event kept) \cr
    \code{heading} \tab other \tab call \tab Subjects with \tab  \tab the label column's heading \cr
-   \code{header_n} \tab other \tab call \tab set \tab  \tab the arm headings' N: "set" (default) or "denominator": the arm's subjects in the analysis set (with 'subset'), the percentages' base; "none": no N. "tested" is not supported, the subjects method takes no other base \cr
+   \code{denominator} \tab other \tab call \tab  \tab  \tab the percentages' denominator: NULL (default): the analysis set's subjects; "data": the subjects with a record kept; a number: that many subjects in every column; numbers named by the values of 'by' ('c("Drug X" = 60, "Control" = 55)'): that many in each column; the id of an analysis data ('adsl_itt', or one of the report's own): its subjects in each column \cr
+   \code{header_n} \tab other \tab call \tab set \tab  \tab the arm headings' N: "set" (default): the arm's subjects in the analysis set (with 'subset'); "denominator": the arm's rows of the data the percentages are of ('denominator'), the same as "set" when that is NULL, not with a number; "none": no N. "tested" is not supported: use "denominator" with denominator = "data" \cr
 }
 }
 

@@ -60,8 +60,8 @@ test_that("the layouts' parameters: what a report changes; the look is the study
   expect_identical(p$by$tier, "usual")
   expect_identical(sort(names(p)), sort(c(
     "population", "subset", "data", "where", "by", "continuous", "categorical", "labels",
-    "order", "cells", "sd_missing", "count_cell", "continuous_statistics", "categorical_statistics",
-    "total",
+    "order", "cells", "sd_missing", "count_cell", "denominator", "continuous_statistics",
+    "categorical_statistics", "total",
     "stack")))
   expect_identical(sort(names(tfl_template_params("hierarchical"))), sort(c(
     "population", "subset", "hierarchy", "data", "where", "by", "any_row", "any_row_label",

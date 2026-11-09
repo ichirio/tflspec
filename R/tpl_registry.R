@@ -695,6 +695,23 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
                         "no effect when `cells` is given"))
 }
 
+# `denominator` of the summary family: the base of the categorical variables'
+# percentages (the continuous statistics have none); the column headings' N is
+# not moved by it
+.tpl_den_sum_doc <- paste(
+  "the categorical variables' percentages' denominator: NULL (default): the analysis set's",
+  "subjects (with a `data` other than ADSL, the records kept); a number: that many in every",
+  "column; numbers named by the values of `by` (`c(\"Drug X\" = 60, \"Control\" = 55)`): that many",
+  "in each column; the id of an analysis data (`adsl_itt`, or one of the report's own): its rows",
+  "in each column. A number is not for `total` = TRUE. The column headings' N is the study",
+  "standard's, not moved")
+.tpl_den_adsl_doc <- paste(
+  "the categorical variables' percentages' denominator: NULL (default): the analysis set's",
+  "subjects (those with a value); a number: that many in every column; numbers named by the",
+  "values of `by` (`c(\"Drug X\" = 60, \"Control\" = 55)`): that many in each column; the id of an",
+  "analysis data (`adsl_itt`, or one of the report's own): its rows in each column. A number",
+  "is not for `total` = TRUE. The column headings' N is the study standard's, not moved")
+
 .tpl_summary_params <- list(
   tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
   .tpl_subset_param(),
@@ -712,6 +729,7 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
   .tpl_sd_missing_param(),
   tfl_param("count_cell", NULL, study = "plan_cells.categorical",
             doc = "a categorical value's cell, n (%) (plan_cells(categorical = )); NULL: the study standard's"),
+  tfl_param("denominator", NULL, doc = .tpl_den_sum_doc),
   tfl_param("continuous_statistics", c("N", "mean", "sd", "median", "min", "max"),
             doc = "the continuous statistics the ARD has"),
   tfl_param("categorical_statistics", c("n", "p"),
@@ -722,6 +740,48 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
 )
 names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
 .tpl_summary_cells <- .tpl_summary_params$cells$default
+
+# The summary family's `denominator`, checked: `value` what the categorical
+# analysis's `denominator` takes (NULL: cards' own, the rows of the set);
+# `extra` the analysis data to add (another analysis set's adsl_<id>, or the
+# records' subjects for "data").  The set's own id is kept as a data: it counts
+# every subject of the set, cards' column only those with a value.
+.tpl_sum_den <- function(a, ctx, subj, set) {
+  tn <- ctx$template$name %||% "summary"
+  v <- a$denominator
+  if (is.null(v)) return(list(value = NULL, extra = list()))
+  if (!length(a$categorical)) {
+    .ard_stop(sprintf(paste0(
+      "%s: denominator is the base of the categorical variables' percentages, and the table ",
+      "has none: give `categorical`, or leave denominator out."), tn))
+  }
+  one <- is.character(v) && length(v) == 1L && !is.na(v)
+  if (one && identical(trimws(v), "data") && identical(toupper(a[["data"]]), "ADSL")) {
+    .ard_stop(sprintf(paste0(
+      "%s: denominator = \"data\" is for a `data` other than ADSL (the subjects with a record ",
+      "kept): ADSL is already one row a subject, the analysis set. Leave it out, or give a number, ",
+      "numbers named by the values of %s, or an analysis data's id (%s counts every subject of the set)."),
+      tn, a$by, subj))
+  }
+  if (one && identical(trimws(v), "data")) {
+    .ard_stop(sprintf(paste0(
+      "%s: denominator = \"data\" on records (%s) is not supported yet: the counts are of records ",
+      "and \"data\" is a base of subjects, so a percentage could pass 100%%; leave it out (the ",
+      "records kept), or give a number, numbers named by the values of %s, or an analysis data's id."),
+      tn, a[["data"]], a$by))
+  }
+  dn <- .tpl_den(a, ctx, subj)
+  value <- dn$value
+  extra <- dn$extra
+  if (isTRUE(a[["stack"]]) && is.numeric(value) && !is.null(names(value))) {
+    .ard_stop(sprintf(paste0(
+      "%s: denominator named by the values of %s is not supported with stack = TRUE (the stack ",
+      "counts its variables in one call, without a column variable of their own): use stack = FALSE, ",
+      "one number, or an analysis data's id."), tn, a$by))
+  }
+  if (is.null(value) && one && identical(trimws(v), subj)) value <- subj
+  list(value = value, extra = extra)
+}
 
 .tpl_summary_body <- function(a, ctx) {
   if (!length(a$continuous) && !length(a$categorical)) {
@@ -738,6 +798,10 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
               where = if (!is.null(a$where)) tfl_r(a$where))
     sets <- c(sets, list(Filter(Negate(is.null), d)))
   }
+  # the categorical percentages' denominator (NULL: cards' own, the rows of
+  # the set); the header N is not moved by it
+  dn <- .tpl_sum_den(a, ctx, subj, set)
+  sets <- c(sets, dn$extra)
   nn <- function(x) Filter(Negate(is.null), x)
   # (the ARD's ids are the layout's; its labels the template's)
   lab <- ctx$template$label
@@ -757,7 +821,7 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
       id = a[["cat_id"]] %||% "CAT", parent = "STACK", label = a[["cat_label"]] %||% "Categorical",
       method = "categorical",
       variables = a$categorical, optional = opt("categorical"), statistics = a$categorical_statistics,
-      purpose = "PRIMARY OUTCOME MEASURE"))))
+      denominator = dn$value, purpose = "PRIMARY OUTCOME MEASURE"))))
   else c(
     list(nn(list(id = "GROUPN", label = a[["groupn_label"]] %||% "Subjects per group",
                  method = "categorical", data = subj,
@@ -770,7 +834,8 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
       id = a[["cat_id"]] %||% "CAT", label = a[["cat_label"]] %||% "Categorical",
       method = "categorical", data = set,
       by = a$by, overall = ov, variables = a$categorical, optional = opt("categorical"),
-      statistics = a$categorical_statistics, purpose = "PRIMARY OUTCOME MEASURE"))))
+      statistics = a$categorical_statistics, denominator = dn$value,
+      purpose = "PRIMARY OUTCOME MEASURE"))))
   vars <- c(a$continuous, a$categorical)
   # (`cells` unset: no continuous cells in the call, plan_cells()'s own)
   cells <- nn(list(continuous = if (length(a$continuous) && length(a$cells)) as.list(
@@ -809,7 +874,8 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
                     "each variable's heading; given by name, merged")),
                function(x) tfl_param(x[[1L]], x[[2L]], doc = x[[3L]])),
              .tpl_summary_params[c("by", "categorical_statistics")],
-             list(tfl_param("groupn_label", NULL, doc = "the subjects-per-group analysis' label"))),
+             list(tfl_param("denominator", NULL, doc = .tpl_den_adsl_doc),
+                  tfl_param("groupn_label", NULL, doc = "the subjects-per-group analysis' label"))),
   body = function(a, ctx) {
     b <- lapply(.tpl_summary_params, `[[`, "default")
     b[names(a)] <- a
@@ -983,6 +1049,13 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
                        "is not supported yet: use header_n = \"denominator\" or \"none\"."))
 }
 
+# The analysis data `denominator = "data"` is for a template of records: the
+# subjects of `set` (the records kept), one row a subject and arm
+.tpl_den_records <- function(set, by) {
+  list(id = paste0(set, "_den"), label = "the subjects with a record kept", from = set,
+       code = tfl_r(sprintf("dplyr::distinct(%s, %s)", set, paste(c("USUBJID", by), collapse = ", "))))
+}
+
 # The values of a code list (as the YAML holds it: rows of value / label; or
 # the values themselves), NULL when the variable has none
 .tpl_cl_values <- function(codelists, var) {
@@ -1041,6 +1114,12 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
       .ard_stop(sprintf(paste0(
         "%s: denominator = %s: a number is the subjects of every column: a positive whole number."),
         tn, format(v)))
+    }
+    if (isTRUE(a[["total"]])) {
+      .ard_stop(sprintf(paste0(
+        "%s: denominator = %s with total = TRUE: one number is each arm's N and would be the Total ",
+        "column's too; give numbers named by the values of %s (the Total column is their sum), ",
+        "or an analysis data's id."), tn, format(v), by))
     }
     return(out(as.integer(v)))
   }
@@ -2450,36 +2529,57 @@ tpl_orr <- function(ard, population = "ITT", ..., codelists = NULL) {
       "the rows, in order: each `id` (the flag's name), `label` (the row's text)",
       "and `where` (R: the events it counts; none: every event kept)")),
     tfl_param("heading", "Subjects with", doc = "the label column's heading"),
+    tfl_param("denominator", NULL, doc = .tpl_den_doc),
     tfl_param("header_n", "set", type = "choice", choices = c("set", "denominator", "none"),
               doc = paste(
-      "the arm headings' N: \"set\" (default) or \"denominator\": the arm's subjects in the",
-      "analysis set (with `subset`), the percentages' base; \"none\": no N.",
-      "\"tested\" is not supported, the subjects method takes no other base"))
+      "the arm headings' N: \"set\" (default): the arm's subjects in the analysis set (with",
+      "`subset`); \"denominator\": the arm's rows of the data the percentages are of",
+      "(`denominator`), the same as \"set\" when that is NULL, not with a number; \"none\": no N.",
+      "\"tested\" is not supported: use \"denominator\" with denominator = \"data\""))
   ),
   body = function(a, ctx) {
-    hn <- .tpl_header_n(a, ctx, c("set", "denominator", "none"), paste0(
-      "is not supported: the subjects method takes no base other than the analysis set; ",
-      "use header_n = \"set\" or \"none\"."))
     pop <- a$population
     subj <- paste0("adsl_", tolower(pop))
     set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(pop))
+    dn <- .tpl_den(a, ctx, subj)
+    hn <- .tpl_header_n(a, ctx, c("set", "denominator", "none"), paste0(
+      "is not supported: use header_n = \"set\", \"denominator\" (the data the percentages ",
+      "are of; \"data\" for the subjects with an event kept) or \"none\"."))
+    if (identical(hn, "denominator") && is.numeric(dn$value)) {
+      .ard_stop(paste0("ae_overview: header_n = \"denominator\" with a denominator that is a number ",
+                       "has no data to count the arms' N from: use header_n = \"set\" or \"none\", ",
+                       "or give the denominator as an analysis data."))
+    }
+    # the percentages' denominator: the set's subjects (no argument), a number,
+    # numbers by arm, an analysis data, or the subjects with an event kept
+    den <- dn$value
+    extra <- dn$extra
+    rec <- NULL
+    if (identical(den, "data")) {
+      rec <- .tpl_den_records(set, a$by)
+      den <- rec$id
+    }
     ids <- vapply(a$flags, `[[`, "", "id")
     # one `subjects` analysis a row: has the subject an event of the data
     # that the row's `where` keeps?
     flag <- function(f) Filter(Negate(is.null), list(
       id = f$id, label = f$label, method = "subjects", data = set,
       where = if (!is.null(f$where)) tfl_r(f$where), by = a$by, variables = f$id,
-      purpose = "PRIMARY OUTCOME MEASURE"))
+      denominator = den, purpose = "PRIMARY OUTCOME MEASURE"))
     ard <- list(
-      analysis_data = list(
-        list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
-             population = pop),
-        Filter(Negate(is.null), list(id = set, from = a$data, subjects = subj,
-                                     where = if (!is.null(a$where)) tfl_r(a$where)))),
+      analysis_data = c(
+        list(list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
+                  population = pop)),
+        extra,
+        list(Filter(Negate(is.null), list(id = set, from = a$data, subjects = subj,
+                                          where = if (!is.null(a$where)) tfl_r(a$where)))),
+        if (!is.null(rec)) list(rec)),
       analyses = c(
+        # (the header N: the set's subjects, or the data the percentages are of)
         if (!identical(hn, "none")) list(list(
-          id = "GROUPN", method = "categorical", data = subj, variables = a$by,
-          purpose = "PRIMARY OUTCOME MEASURE")),
+          id = "GROUPN", method = "categorical",
+          data = if (identical(hn, "denominator") && !is.null(den)) den else subj,
+          variables = a$by, purpose = "PRIMARY OUTCOME MEASURE")),
         lapply(a$flags, flag)))
     content <- list(
       # one row a flag: no label column (the flag's TRUE is the row)
