@@ -255,6 +255,7 @@ test_that("shift: a subject once at its worst, a Missing and a Total row, a page
   expect_true(any(d3$USUBJID == gone & d3$PARAMCD == "AST"))
   # every record, as before: no code, no extra rows, the parameter in the stub
   # (the default percent_of "total" needs a subject once a parameter: by row here)
+  a$header_n <- "set"
   r <- tfl_template_expand("shift", c(a, list(worst = NULL, param_page = FALSE)))
   expect_null(r$ard$analyses[[1L]]$denominator)
   expect_null(r$ard$analysis_data[[1L]]$code)

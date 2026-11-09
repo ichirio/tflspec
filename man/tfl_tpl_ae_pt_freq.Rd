@@ -24,6 +24,7 @@ The table template \code{ae_pt_freq}, layout \code{hierarchical}. Its program is
    \code{min_pct_in} \tab other \tab call \tab any \tab  \tab where min_pct is met: "any" column, "all" of them, or the "total" column \cr
    \code{sort_by} \tab other \tab call \tab  \tab  \tab the column (a value of 'by') whose counts order the PTs; NULL: the Total column with min_pct_in = "total", else the code list's first value of 'by', else all the columns \cr
    \code{heading} \tab other \tab call \tab Preferred Term \tab  \tab the label column's heading \cr
+   \code{header_n} \tab other \tab call \tab denominator \tab  \tab the arm headings' N: "denominator" (default) or "set": the arm's subjects in the analysis set (with 'subset'), the percentages' denominator; "none": no N \cr
 }
 }
 

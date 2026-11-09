@@ -24,6 +24,7 @@ The table template \code{ae_soc_pt}, layout \code{hierarchical}: a variant of \c
    \code{count_cell} \tab other \tab call \tab  \tab plan_cells.categorical \tab a count's cell, n (\%) (plan_cells(categorical = )); NULL: the study standard's \cr
    \code{denominator} \tab other \tab call \tab  \tab  \tab the percentages' denominator: NULL the analysis set's subjects, "data" the records' subjects \cr
    \code{total} \tab other \tab call \tab FALSE \tab plan_total \tab TRUE: a Total column (the analysis again without 'by', plan_total()) \cr
+   \code{header_n} \tab other \tab call \tab denominator \tab  \tab the arm headings' N: "denominator" (default): the arm's subjects the percentages are of ('denominator'); "set": the same, when 'denominator' is NULL (the analysis set); "tested": the same, when 'denominator' is "data" (the records' subjects); a header N apart from the denominator is not supported yet; "none": no N \cr
 }
 }
 
