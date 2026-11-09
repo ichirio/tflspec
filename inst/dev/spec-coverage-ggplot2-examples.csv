@@ -361,7 +361,7 @@
 "ggplot2","scale_x_binned","","yes","geom_histogram; scale_binned","","scale",1,2
 "ggplot2","scale_x_continuous","breaks","yes","guide_axis_logticks; scale_continuous","","scale",3,3
 "ggplot2","scale_x_continuous","guide","yes","guide_axis","","scale",3,1
-"ggplot2","scale_x_continuous","labels","partial","annotation_logticks; scale_continuous","1 of 3 uses: as R: 10^.x (scale_x_continuous(name = ""body"", labels = scales::label_math(10^.x)))","scale",3,3
+"ggplot2","scale_x_continuous","labels","yes","annotation_logticks; scale_continuous","","scale",3,3
 "ggplot2","scale_x_continuous","limits","yes","coord_cartesian; scale_continuous","","scale",3,4
 "ggplot2","scale_x_continuous","name","yes","annotation_logticks; scale_continuous","","scale",3,2
 "ggplot2","scale_x_continuous","transform","yes","guide_axis_logticks","","scale",3,1
@@ -375,20 +375,20 @@
 "ggplot2","scale_x_datetime","sec.axis","yes","sec_axis","","scale",1,2
 "ggplot2","scale_x_discrete","expand","yes","expansion","","scale",3,2
 "ggplot2","scale_x_log10","","yes","geom_histogram","","scale",3,2
-"ggplot2","scale_x_log10","breaks","partial","annotation_logticks","1 of 1 uses: as R: function(x) 10^x (scale_x_log10(breaks = scales::trans_breaks(""log10"", function(x) 10^x), labels = scales::trans_format(""log10"", scales::math_format(10^.x))))","scale",3,1
+"ggplot2","scale_x_log10","breaks","yes","annotation_logticks","","scale",3,1
 "ggplot2","scale_x_log10","guide","yes","guide_axis_logticks","","scale",3,1
-"ggplot2","scale_x_log10","labels","partial","annotation_logticks","1 of 1 uses: as R: scales::math_format(10^.x) (scale_x_log10(breaks = scales::trans_breaks(""log10"", function(x) 10^x), labels = scales::trans_format(""log10"", scales::math_format(10^.x))))","scale",3,1
+"ggplot2","scale_x_log10","labels","yes","annotation_logticks","","scale",3,1
 "ggplot2","scale_x_reverse","","yes","coord_flip","","scale",2,1
 "ggplot2","scale_y_continuous","breaks","yes","geom_dotplot","","scale",3,1
 "ggplot2","scale_y_continuous","expand","yes","expansion; geom_rug","","scale",3,3
-"ggplot2","scale_y_continuous","labels","partial","annotation_logticks; scale_continuous","1 of 3 uses: as R: 10^.x (scale_y_continuous(name = ""brain"", labels = scales::label_math(10^.x)))","scale",3,3
+"ggplot2","scale_y_continuous","labels","yes","annotation_logticks; scale_continuous","","scale",3,3
 "ggplot2","scale_y_continuous","name","yes","annotation_logticks; geom_dotplot; scale_continuous; sec_axis","","scale",3,4
-"ggplot2","scale_y_continuous","sec.axis","partial","sec_axis","2 of 4 uses: as R: derive() (scale_y_continuous(""Miles/gallon"", sec.axis = sec_axis(~. + 10, name = derive())))","scale",3,4
+"ggplot2","scale_y_continuous","sec.axis","yes","sec_axis","","scale",3,4
 "ggplot2","scale_y_continuous","transform","yes","scale_continuous","","scale",3,1
 "ggplot2","scale_y_log10","","yes","scale_continuous","","scale",3,1
-"ggplot2","scale_y_log10","breaks","partial","annotation_logticks","1 of 1 uses: as R: function(x) 10^x (scale_y_log10(breaks = scales::trans_breaks(""log10"", function(x) 10^x), labels = scales::trans_format(""log10"", scales::math_format(10^.x))))","scale",3,1
+"ggplot2","scale_y_log10","breaks","yes","annotation_logticks","","scale",3,1
 "ggplot2","scale_y_log10","guide","yes","guide_axis_logticks","","scale",3,1
-"ggplot2","scale_y_log10","labels","partial","annotation_logticks","1 of 1 uses: as R: scales::math_format(10^.x) (scale_y_log10(breaks = scales::trans_breaks(""log10"", function(x) 10^x), labels = scales::trans_format(""log10"", scales::math_format(10^.x))))","scale",3,1
+"ggplot2","scale_y_log10","labels","yes","annotation_logticks","","scale",3,1
 "ggplot2","scale_y_reverse","","yes","coord_flip; scale_continuous","","scale",2,2
 "ggplot2","scale_y_sqrt","","yes","geom_histogram; scale_continuous","","scale",1,2
 "ggplot2","xlim","limits","yes","geom_bin_2d; geom_density; geom_density_2d; geom_function; geom_segment; lims; scale_continuous","","scale",2,10

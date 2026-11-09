@@ -9,10 +9,10 @@
 "ggplot2","facet_grid","scales","yes","forest; labvisit","","facet",3,2
 "ggplot2","facet_grid","space","yes","forest","","facet",3,1
 "ggplot2","facet_grid","switch","yes","forest","","facet",3,1
-"ggplot2","facet_wrap","facets","yes","bar; scatter; hist_fd; lab_range","","facet",3,4
+"ggplot2","facet_wrap","facets","yes","bar; scatter; hist_fd; lab_range; pk_ind","","facet",3,5
 "ggplot2","facet_wrap","labeller","yes","scatter; lab_range","","facet",3,2
 "ggplot2","facet_wrap","ncol","yes","bar; scatter; hist_fd","","facet",3,3
-"ggplot2","facet_wrap","nrow","yes","lab_range","","facet",3,1
+"ggplot2","facet_wrap","nrow","yes","lab_range; pk_ind","","facet",3,2
 "ggplot2","facet_wrap","scales","yes","scatter; lab_range","","facet",3,2
 "ggplot2","facet_wrap","strip.position","yes","bar","","facet",3,1
 "ggplot2","geom_abline","intercept","yes","scatter","","geom",2,1
@@ -50,11 +50,11 @@
 "ggplot2","geom_histogram","fill","yes","hist_fd","","geom",2,1
 "ggplot2","geom_histogram","mapping","yes","density","","geom",2,1
 "ggplot2","geom_histogram","position","yes","density","","geom",2,1
-"ggplot2","geom_hline","colour","yes","km; waterfall; spider; mean; lab_range","","geom",3,5
-"ggplot2","geom_hline","linetype","yes","km; waterfall; spider; edish; lab_range; mean_boot","","geom",3,6
+"ggplot2","geom_hline","colour","yes","km; waterfall; spider; mean; lab_range; pk_log","","geom",3,6
+"ggplot2","geom_hline","linetype","yes","km; waterfall; spider; edish; lab_range; mean_boot; pk_log","","geom",3,7
 "ggplot2","geom_hline","mapping","yes","lab_range","","geom",3,1
-"ggplot2","geom_hline","yintercept","yes","km; waterfall; spider; mean; edish; mean_boot","","geom",3,6
-"ggplot2","geom_line","alpha","yes","spider","","geom",3,1
+"ggplot2","geom_hline","yintercept","yes","km; waterfall; spider; mean; edish; mean_boot; pk_log","","geom",3,7
+"ggplot2","geom_line","alpha","yes","spider; pk_ind","","geom",3,2
 "ggplot2","geom_line","colour","yes","lab_range","","geom",3,1
 "ggplot2","geom_line","fun","yes","mean_geom","","geom",3,1
 "ggplot2","geom_line","linewidth","yes","lab_range","","geom",3,1
@@ -68,7 +68,8 @@
 "ggplot2","geom_point","position","yes","box","","geom",3,1
 "ggplot2","geom_point","shape","yes","km; forest; km_axis","","geom",3,3
 "ggplot2","geom_point","show.legend","yes","km; km_axis","","geom",3,2
-"ggplot2","geom_point","size","yes","km; spider; swimmer; box; scatter; edish; lab_range; km_axis","","geom",3,8
+"ggplot2","geom_point","size","yes","km; spider; swimmer; box; scatter; edish; lab_range; km_axis; pk_ind","","geom",3,9
+"ggplot2","geom_pointrange","","yes","forest_math","","geom",3,1
 "ggplot2","geom_pointrange","fatten","yes","mean_geom","","geom",3,1
 "ggplot2","geom_pointrange","fun.args","yes","mean_geom","","geom",3,1
 "ggplot2","geom_pointrange","fun.data","yes","mean_geom","","geom",3,1
@@ -109,10 +110,10 @@
 "ggplot2","geom_violin","scale","yes","box","","geom",2,1
 "ggplot2","geom_violin","trim","yes","box","","geom",2,1
 "ggplot2","geom_vline","colour","yes","forest; cdf","","geom",3,2
-"ggplot2","geom_vline","linetype","yes","forest; edish; cdf; forest_log2; dates","","geom",3,5
-"ggplot2","geom_vline","xintercept","yes","forest; edish; cdf; forest_log2; dates","","geom",3,5
+"ggplot2","geom_vline","linetype","yes","forest; edish; cdf; forest_log2; dates; forest_math","","geom",3,6
+"ggplot2","geom_vline","xintercept","yes","forest; edish; cdf; forest_log2; dates; forest_math","","geom",3,6
 "ggplot2","guides","colour","yes","mean_boot","","guide",3,1
-"ggplot2","guides","fill","yes","stack; heat; ae_pct; heat_steps","","guide",3,4
+"ggplot2","guides","fill","partial","stack; heat; ae_pct; heat_steps","3 of 4 uses: guide_legend(title.position = ): guide_legend(title.position = ) is deprecated since ggplot2 3.5.0: give it as the guide's theme, theme = {fn: theme, args: {legend.title.position: ...}} (guides(fill = guide_legend(title = ""Severity"", nrow = 1, reverse = TRUE, title.position = ""top"")))","guide",3,4
 "ggplot2","guides","x","yes","forest","","guide",3,1
 "ggplot2","annotate","alpha","yes","edish","","labs",3,1
 "ggplot2","annotate","fill","yes","edish","","labs",3,1
@@ -128,19 +129,20 @@
 "ggplot2","annotate","y","yes","km; edish; dates","","labs",3,3
 "ggplot2","annotate","ymax","yes","edish","","labs",3,1
 "ggplot2","annotate","ymin","yes","edish","","labs",3,1
-"ggplot2","annotation_logticks","sides","yes","edish","","labs",2,1
+"ggplot2","annotation_logticks","sides","yes","edish; pk_log","","labs",2,2
 "ggplot2","labs","caption","yes","km","","labs",3,1
-"ggplot2","labs","colour","yes","mean; scatter; edish; mean_sd; km_axis","","labs",3,5
+"ggplot2","labs","colour","yes","mean; scatter; edish; mean_sd; km_axis; pk_log; pct_signed","","labs",3,7
 "ggplot2","labs","linetype","yes","mean; km_axis","","labs",3,2
-"ggplot2","labs","shape","yes","mean; edish","","labs",3,2
+"ggplot2","labs","shape","yes","mean; edish; pk_log","","labs",3,3
 "ggplot2","labs","tag","yes","labvisit","","labs",3,1
 "ggplot2","labs","title","yes","km","","labs",3,1
-"ggplot2","labs","x","yes","km; forest; waterfall; swimmer; box; mean; bar; stack; scatter; edish; heat; cdf; labvisit; mean_sd; forest_log2; dates; ae_pct; lab_range; mean_boot; heat_steps; km_axis","","labs",3,21
-"ggplot2","labs","y","yes","km; forest; waterfall; swimmer; box; mean; bar; stack; scatter; edish; heat; cdf; labvisit; mean_sd; forest_log2; dates; ae_pct; lab_range; mean_boot; heat_steps; km_axis","","labs",3,21
+"ggplot2","labs","x","yes","km; forest; waterfall; swimmer; box; mean; bar; stack; scatter; edish; heat; cdf; labvisit; mean_sd; forest_log2; dates; ae_pct; lab_range; mean_boot; heat_steps; km_axis; pk_log; pk_ind; pct_signed; forest_math","","labs",3,25
+"ggplot2","labs","y","yes","km; forest; waterfall; swimmer; box; mean; bar; stack; scatter; edish; heat; cdf; labvisit; mean_sd; forest_log2; dates; ae_pct; lab_range; mean_boot; heat_steps; km_axis; pk_log; pk_ind; pct_signed; forest_math","","labs",3,25
 "ggplot2","xlab","label","yes","mean_geom; density; hist_fd","","labs",1,3
 "ggplot2","ylab","label","yes","mean_geom; cdf_geom; ribbon","","labs",1,3
+"ggplot2","scale_colour_brewer","labels","yes","pct_signed","","scale",2,1
 "ggplot2","scale_colour_brewer","name","yes","spider; dates","","scale",2,2
-"ggplot2","scale_colour_brewer","palette","yes","spider; dates","","scale",2,2
+"ggplot2","scale_colour_brewer","palette","yes","spider; dates; pct_signed","","scale",2,3
 "ggplot2","scale_colour_discrete","name","yes","mean_geom","","scale",1,1
 "ggplot2","scale_colour_discrete","type","yes","mean_geom","","scale",1,1
 "ggplot2","scale_colour_hue","l","yes","labvisit","","scale",1,1
@@ -185,15 +187,15 @@
 "ggplot2","scale_shape_manual","values","yes","swimmer; mean; edish","","scale",3,3
 "ggplot2","scale_size_area","guide","yes","forest","","scale",1,1
 "ggplot2","scale_size_area","max_size","yes","forest","","scale",1,1
-"ggplot2","scale_x_continuous","breaks","yes","km; spider; swimmer; mean; mean_geom; cdf; mean_sd; forest_log2; lab_range; km_axis","","scale",3,10
+"ggplot2","scale_x_continuous","breaks","yes","km; spider; swimmer; mean; mean_geom; cdf; mean_sd; forest_log2; lab_range; km_axis; pk_log; pk_ind; pct_signed; forest_math","","scale",3,14
 "ggplot2","scale_x_continuous","expand","yes","km; swimmer","","scale",3,2
-"ggplot2","scale_x_continuous","labels","partial","mean; stack; mean_sd; forest_log2; lab_range","1 of 5 uses: as R: c(""BL"", paste0(""W"", c(2, 4, 8, 12))) (scale_x_continuous(breaks = c(0, 2, 4, 8, 12), labels = c(""BL"", paste0(""W"", c(2, 4, 8, 12)))))","scale",3,5
+"ggplot2","scale_x_continuous","labels","partial","mean; stack; mean_sd; forest_log2; lab_range; pk_log; pct_signed; forest_math","1 of 8 uses: as R: c(""BL"", paste0(""W"", c(2, 4, 8, 12))) (scale_x_continuous(breaks = c(0, 2, 4, 8, 12), labels = c(""BL"", paste0(""W"", c(2, 4, 8, 12)))))","scale",3,8
 "ggplot2","scale_x_continuous","limits","yes","km; cdf; forest_log2","","scale",3,3
 "ggplot2","scale_x_continuous","minor_breaks","yes","mean","","scale",3,1
 "ggplot2","scale_x_continuous","name","yes","spider","","scale",3,1
 "ggplot2","scale_x_continuous","oob","yes","cdf","","scale",3,1
 "ggplot2","scale_x_continuous","sec.axis","yes","km_axis","","scale",3,1
-"ggplot2","scale_x_continuous","transform","yes","density; forest_log2","","scale",3,2
+"ggplot2","scale_x_continuous","transform","yes","density; forest_log2; forest_math","","scale",3,3
 "ggplot2","scale_x_date","date_breaks","yes","dates","","scale",2,1
 "ggplot2","scale_x_date","date_labels","yes","dates","","scale",2,1
 "ggplot2","scale_x_date","date_minor_breaks","yes","dates","","scale",2,1
@@ -207,17 +209,20 @@
 "ggplot2","scale_x_log10","breaks","yes","forest; edish","","scale",3,2
 "ggplot2","scale_x_log10","labels","yes","forest; edish","","scale",3,2
 "ggplot2","scale_x_log10","limits","yes","forest; edish","","scale",3,2
-"ggplot2","scale_y_continuous","breaks","yes","km; waterfall; cdf; ae_pct; lab_range","","scale",3,5
+"ggplot2","scale_y_continuous","breaks","yes","km; waterfall; cdf; ae_pct; lab_range; pct_signed","","scale",3,6
 "ggplot2","scale_y_continuous","expand","yes","km; bar; hist_fd; ae_pct","","scale",3,4
-"ggplot2","scale_y_continuous","labels","yes","km; waterfall; cdf; mean_sd; ae_pct; km_axis","","scale",3,6
+"ggplot2","scale_y_continuous","labels","yes","km; waterfall; cdf; mean_sd; ae_pct; km_axis; pct_signed","","scale",3,7
 "ggplot2","scale_y_continuous","limits","yes","km; waterfall; lab_range; km_axis","","scale",3,4
 "ggplot2","scale_y_continuous","n.breaks","yes","spider","","scale",3,1
 "ggplot2","scale_y_continuous","name","yes","spider","","scale",3,1
 "ggplot2","scale_y_continuous","sec.axis","yes","lab_range","","scale",3,1
+"ggplot2","scale_y_discrete","labels","yes","forest_math","","scale",3,1
 "ggplot2","scale_y_discrete","limits","yes","forest; heat; forest_log2","","scale",3,3
 "ggplot2","scale_y_log10","","yes","scatter","","scale",3,1
-"ggplot2","scale_y_log10","breaks","yes","edish","","scale",3,1
+"ggplot2","scale_y_log10","breaks","yes","edish; pk_log; pk_ind","","scale",3,3
+"ggplot2","scale_y_log10","labels","yes","pk_log; pk_ind","","scale",3,2
 "ggplot2","scale_y_log10","limits","yes","edish","","scale",3,1
+"ggplot2","scale_y_log10","sec.axis","yes","pk_ind","","scale",3,1
 "ggplot2","stat_ecdf","geom","yes","cdf","","stat",3,1
 "ggplot2","stat_ecdf","linewidth","yes","cdf","","stat",3,1
 "ggplot2","stat_ecdf","pad","yes","cdf","","stat",3,1
@@ -232,21 +237,21 @@
 "ggplot2","stat_summary","alpha","yes","ribbon","","stat",3,1
 "ggplot2","stat_summary","colour","yes","ribbon","","stat",3,1
 "ggplot2","stat_summary","fill","yes","box","","stat",3,1
-"ggplot2","stat_summary","fun","yes","box; mean; ribbon; mean_sd; lab_range; mean_boot","","stat",3,8
+"ggplot2","stat_summary","fun","yes","box; mean; ribbon; mean_sd; lab_range; mean_boot; pk_log; pct_signed","","stat",3,11
 "ggplot2","stat_summary","fun.args","yes","mean; mean_boot","","stat",3,2
-"ggplot2","stat_summary","fun.data","yes","mean; ribbon; mean_boot","","stat",3,3
+"ggplot2","stat_summary","fun.data","yes","mean; ribbon; mean_boot; pk_log; pct_signed","","stat",3,5
 "ggplot2","stat_summary","fun.max","yes","mean_sd","","stat",3,1
 "ggplot2","stat_summary","fun.min","yes","mean_sd","","stat",3,1
-"ggplot2","stat_summary","geom","yes","box; mean; ribbon; mean_sd; lab_range; mean_boot","","stat",3,11
+"ggplot2","stat_summary","geom","yes","box; mean; ribbon; mean_sd; lab_range; mean_boot; pk_log; pct_signed","","stat",3,16
 "ggplot2","stat_summary","linetype","yes","mean","","stat",3,1
 "ggplot2","stat_summary","linewidth","yes","lab_range","","stat",3,1
 "ggplot2","stat_summary","mapping","yes","lab_range; mean_boot","","stat",3,2
 "ggplot2","stat_summary","position","yes","box; mean; mean_sd; mean_boot","","stat",3,8
 "ggplot2","stat_summary","shape","yes","box","","stat",3,1
 "ggplot2","stat_summary","show.legend","yes","mean_boot","","stat",3,1
-"ggplot2","stat_summary","size","yes","box; mean; mean_boot","","stat",3,4
+"ggplot2","stat_summary","size","yes","box; mean; mean_boot; pk_log","","stat",3,5
 "ggplot2","stat_summary","vjust","yes","mean_boot","","stat",3,1
-"ggplot2","stat_summary","width","yes","mean; mean_boot","","stat",3,2
+"ggplot2","stat_summary","width","yes","mean; mean_boot; pk_log","","stat",3,3
 "ggplot2","stat_summary_bin","bins","yes","ribbon","","stat",2,1
 "ggplot2","stat_summary_bin","fun","yes","ribbon","","stat",2,1
 "ggplot2","stat_summary_bin","geom","yes","ribbon","","stat",2,1
@@ -283,10 +288,10 @@
 "ggplot2","theme","strip.text.y","yes","labvisit","","theme",3,1
 "ggplot2","theme","strip.text.y.left","yes","forest","","theme",3,1
 "ggplot2","theme","text","yes","mean","","theme",3,1
-"ggplot2","theme_bw","","yes","swimmer; mean; bar; scatter; edish; cdf; labvisit; dates; lab_range; mean_boot","","theme",3,10
+"ggplot2","theme_bw","","yes","swimmer; mean; bar; scatter; edish; cdf; labvisit; dates; lab_range; mean_boot; pk_log; pk_ind","","theme",3,12
 "ggplot2","theme_bw","base_size","yes","km","","theme",3,1
-"ggplot2","theme_classic","","yes","box; density; ae_pct; km_axis","","theme",3,4
+"ggplot2","theme_classic","","yes","box; density; ae_pct; km_axis; forest_math","","theme",3,5
 "ggplot2","theme_classic","base_size","yes","forest","","theme",3,1
 "ggplot2","theme_light","","yes","spider","","theme",1,1
-"ggplot2","theme_minimal","","yes","stack; heat","","theme",2,2
+"ggplot2","theme_minimal","","yes","stack; heat; pct_signed","","theme",2,3
 "ggplot2","theme_minimal","base_size","yes","waterfall; heat_steps","","theme",2,2

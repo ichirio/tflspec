@@ -430,3 +430,55 @@ fig_km_axis <- ggplot(km, aes(x = time, y = surv, colour = TRTA, linetype = TRTA
   labs(x = "Months", y = "Event-free (%)", colour = NULL, linetype = NULL) +
   theme_classic() +
   theme(legend.position = "inside", legend.position.inside = c(1, 1), legend.justification = c("right", "top"))
+
+# round 12 (2026-11-09): a log axis and scales' helpers with arguments
+
+# PK: the mean (+/- SE) concentration over time on a log axis, the LLOQ
+pk <- expand.grid(USUBJID = 1:12, TRTA = arm[2:3], NTPT = c(0.5, 1, 2, 4, 8, 12, 24))
+pk$AVAL <- exp(stats::rnorm(nrow(pk), log(80 * as.integer(pk$TRTA) / 2) - 0.12 * pk$NTPT, 0.3))
+fig_pk_log <- ggplot(pk, aes(x = NTPT, y = AVAL, colour = TRTA, shape = TRTA)) +
+  stat_summary(fun = mean, geom = "line") +
+  stat_summary(fun = mean, geom = "point", size = 2) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.6) +
+  geom_hline(yintercept = 0.5, linetype = "dashed", colour = "grey40") +
+  annotation_logticks(sides = "l") +
+  scale_x_continuous(breaks = c(0, 2, 4, 8, 12, 24), labels = scales::label_number(accuracy = 1)) +
+  scale_y_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+                labels = scales::trans_format("log10", scales::math_format(10^.x))) +
+  labs(x = "Nominal time after dose (h)", y = "Concentration (ng/mL)", colour = NULL, shape = NULL) +
+  theme_bw()
+
+# PK: each subject's profile, log axis labelled by its numbers, by arm
+fig_pk_ind <- ggplot(pk, aes(x = NTPT, y = AVAL, group = USUBJID)) +
+  geom_line(alpha = 0.5) +
+  geom_point(size = 1) +
+  facet_wrap(~TRTA, nrow = 1) +
+  scale_x_continuous(breaks = scales::breaks_width(4, offset = 0)) +
+  scale_y_log10(breaks = scales::breaks_log(n = 6, base = 10),
+                labels = scales::label_number(accuracy = 0.1, big.mark = ","),
+                sec.axis = dup_axis(name = derive(), labels = scales::label_log())) +
+  labs(x = "Time (h)", y = "Concentration (ng/mL)") +
+  theme_bw()
+
+# the mean percent change with signed labels, a ratio axis by label_math
+fig_pct_signed <- ggplot(mt, aes(x = AVISITN, y = CHG * 10, colour = TRTA)) +
+  stat_summary(fun = mean, geom = "line") +
+  stat_summary(fun.data = mean_se, geom = "pointrange") +
+  scale_x_continuous(breaks = scales::breaks_width(2),
+                     labels = scales::label_number(prefix = "W", accuracy = 1)) +
+  scale_y_continuous(labels = scales::label_number(style_positive = "plus", suffix = "%"),
+                     breaks = scales::breaks_pretty(n = 6)) +
+  scale_colour_brewer(palette = "Dark2", labels = scales::label_wrap(10)) +
+  labs(x = "Week", y = "Mean % change (+/- SE)", colour = NULL) +
+  theme_minimal()
+
+# a forest plot of the odds ratio on a log2 axis labelled 2^x
+fig_forest_math <- ggplot(fo, aes(x = hr, y = level, xmin = lcl, xmax = ucl)) +
+  geom_pointrange() +
+  geom_vline(xintercept = 1, linetype = "dashed") +
+  scale_x_continuous(transform = scales::transform_log(base = 2),
+                     breaks = scales::breaks_log(n = 5, base = 2),
+                     labels = scales::label_log(base = 2)) +
+  scale_y_discrete(labels = scales::label_wrap(12)) +
+  labs(x = "Odds ratio (log scale)", y = NULL) +
+  theme_classic()

@@ -169,7 +169,7 @@ scale,na.value,"string|number|call<alpha>",Missing,欠測の値,
 scale,guide,string|call|r,Legend,凡例,"legend, colourbar, none, or {fn: guide_legend, args: {nrow: 1}}."
 scale,position,enum[left|right|top|bottom],Position,位置,
 scale,transform,"string|call<transform_*, *_trans, trans_new, new_transform>|r",Transformation,変換,"log10, sqrt, reverse, identity ..., or {fn: scales::transform_log, args: {base: 2}}; ggplot2 before 3.5 calls it trans."
-scale,sec.axis,"call<sec_axis, dup_axis>|r",Secondary axis,第2軸,"{fn: dup_axis} or {fn: sec_axis, args: {transform: !r ~ . / 7, name: Weeks}}."
+scale,sec.axis,"call<sec_axis, dup_axis>|tilde|r",Secondary axis,第2軸,"{fn: dup_axis}, {fn: sec_axis, args: {transform: ~ . / 7, name: Weeks}}, or the transformation alone as a formula, ~ . / 7 (no name of its own)."
 scale,drop,logical,Drop unused levels,使わない水準を除く,
 scale,na.translate,logical,Show missing,欠測を表示,
 scale,values,"vec<string, string|number>|list<string|number>|call<hcl.colors, gray.colors, grey.colors, rainbow, heat.colors, terrain.colors, topo.colors, cm.colors, palette.colors, rescale>|r",Values,値,"By level ({Placebo: grey50}) or in the order of the levels; scale_*_gradientn(): the colours' places from 0 to 1, or {fn: scales::rescale, args: {x: [-1, 0, 1]}}."
@@ -432,7 +432,7 @@ position,orientation,enum[x|y],Orientation,向き,
 helper,mult,number|list<number>,Multiplicative expansion,割合の余白,"[0, 0.05]: none below, 5% above."
 helper,add,number|list<number>,Additive expansion,加える余白,In data units.
 helper,transform,tilde|function|lambda|r,Transformation,変換,"~ . / 7 (a formula), or a function by its name."
-helper,name,string|r,Title,タイトル,
+helper,name,string|call<derive>|r,Title,タイトル,"The axis title; {fn: derive} (derive()) takes the primary axis's."
 helper,breaks,"list<number>|call<seq, breaks_*, extended_breaks, pretty_breaks, log_breaks>|tilde|lambda|r",Breaks,目盛り,
 helper,labels,"list<string>|call<label_*, *_format>|tilde|lambda|r",Labels,ラベル,
 helper,guide,string|call|r,Guide,凡例,
@@ -588,3 +588,71 @@ facet,space,enum[fixed|free_x|free_y],Panel sizes,面の大きさ,"free_x: colum
 layer,drop,enum[none|all|extremes]|logical,Drop empty bins,空の区間を除く,"none keeps the bins with no count, all drops them, extremes drops those at both ends; TRUE is all, FALSE none.","stat_bin,geom_histogram,geom_freqpoly"
 coord,reverse,enum[none|theta|thetar|r],Reverse,反転,"theta: the angle, r: the radius, thetar: both (ggplot2 4.0).",coord_radial
 scale,type,string,Scale type,スケールの種類,"The scale the panels are drawn on, by the end of its function's name: continuous, discrete, binned, date, datetime, time, log10 ... (scale_x_<type>).","ggh4x::scale_x_facet,ggh4x::scale_y_facet"
+scales,accuracy,number|r,Accuracy,精度,"The number to round to: 1, 0.1, 0.01 (NULL: by the values).",
+scales,scale,number,Multiplier,倍率,"Multiplied by before formatting: 100 for a proportion in %.",
+scales,prefix,string,Prefix,接頭辞,,
+scales,suffix,string,Suffix,接尾辞,"%, ' mg', ' wk' ...",
+scales,big.mark,string,Thousands separator,桁区切り,"A comma, a space, or \"\" for none.",
+scales,decimal.mark,string,Decimal mark,小数点,,
+scales,trim,logical,Trim,空白を除く,FALSE keeps the numbers the same width.,
+scales,digits,integer,Digits,桁数,,
+scales,style_positive,enum[none|plus|space],Positive numbers,正の数,"plus: +5, as a change from baseline.",
+scales,style_negative,enum[hyphen|minus|parens],Negative numbers,負の数,,
+scales,scale_cut,"vec<string, number>|call<cut_short_scale, cut_long_scale, cut_si>|r",Scale cut,単位の区切り,"{K: 1000, M: 1000000}, or {fn: scales::cut_short_scale}.",
+scales,largest_with_cents,number,Largest with cents,セントを付ける上限,,scales::label_dollar
+scales,largest_with_fractional,number,Largest with fractions,端数を付ける上限,,scales::label_currency
+scales,negative_parens,logical,Negative in parentheses,負の数を括弧で,,scales::label_dollar
+scales,add_p,logical,"""p ="" before",p = を付ける,,scales::label_pvalue
+scales,base,number,Base,底,"10, 2, exp(1) ...",
+scales,signed,logical,Signed,符号付き,,scales::label_log
+scales,n,integer,Number of breaks,目盛りの数,About this many.,
+scales,width,number|string,Width,幅,"A break every width (4, or \"1 month\" on a date axis); the line width of label_wrap().",
+scales,offset,number|string,Offset,オフセット,The breaks shifted by this.,
+scales,unit,enum[secs|mins|hours|days|weeks],Unit,単位,,"scales::breaks_timespan,scales::label_timespan,scales::transform_timespan"
+scales,unit,string,Unit,単位,,
+scales,units,string,Units,単位,,
+scales,format,"string|function|lambda|call<label_*, *_format>|r",Format,書式,"A date's format (\"%d %b %Y\"), or the function that formats (force, scales::label_math(10^.x)).",
+scales,tz,string,Time zone,タイムゾーン,,
+scales,locale,string,Locale,ロケール,,
+scales,sep,string,Separator,区切り,,
+scales,leading,string,Leading text,先頭の文字,,
+scales,space,logical,Space,空白,,
+scales,expr,math|r,Expression,式,"A plotmath expression of .x, written bare: 10^.x.",
+scales,trans,"string|call<transform_*, *_trans>|r",Transformation,変換,"log10, log2, sqrt ..., or a transformation's call.",
+scales,inv,function|lambda|tilde|r,Inverse,逆関数,"The transformation's inverse: function(x) 10^x, ~ 10^.x.",
+scales,rules,call<ordinal_*>|function|r,Rules,規則,,
+scales,dictionary,"vec<string, string>|r",Dictionary,辞書,"{A: Placebo, B: Active}.",
+scales,nomatch,string,No match,一致しない値,,
+scales,pattern,string,Pattern,パターン,"A glue pattern of {x}.",
+scales,parse,logical,Parse,式として読む,,
+scales,detail,integer,Detail,細かさ,,
+scales,smallest,number,Smallest,最小,,
+scales,p,number,Power,べき,,
+scales,sigma,number,Sigma,シグマ,,
+scales,distribution,string,Distribution,分布,"norm, logis ...",
+scales,palette,string|integer,Palette,パレット,"A palette's name (Set1, Dark2, Blues ...) or number.",
+scales,type,enum[seq|div|qual],Palette type,パレットの種類,,"scales::pal_brewer,scales::pal_distiller"
+scales,direction,number,Direction,向き,"1, or -1 for the colours reversed.",
+scales,h,list<number>,Hue range,色相の範囲,,
+scales,c,number,Chroma,彩度,,
+scales,l,number,Luminance,明度,,
+scales,h.start,number,Hue start,色相の開始,,
+scales,begin,number,Begin,開始,0 to 1.,
+scales,end,number,End,終了,0 to 1.,
+scales,option,string,Option,オプション,"A to H, or magma, viridis ...",
+scales,alpha,number,Alpha,透明度,0 to 1.,
+scales,colours,list<string>|call|r,Colours,色,,
+scales,values,list<number>|r,Places,位置,The colours' places from 0 to 1.,
+scales,start,number,Start,開始,,
+scales,x,list<number>|r,Values,値,,"scales::rescale,scales::rescale_mid,scales::rescale_max,scales::oob_*"
+scales,to,list<number>,To,変換先,,
+scales,from,list<number>|r,From,変換元,,
+scales,mid,number,Midpoint,中央,,scales::rescale_mid
+scales,range,list<number>|r,Range,範囲,,
+scales,only.finite,logical,Only finite,有限値のみ,,
+scales,name,string,Name,名前,,
+scales,transform,function|lambda|r,Transformation,変換,,
+scales,inverse,function|lambda|r,Inverse,逆関数,,
+scales,domain,list<number>,Domain,定義域,,
+scales,breaks,"function|lambda|call<breaks_*, extended_breaks, pretty_breaks, log_breaks>|r",Breaks,目盛り,,
+scales,minor_breaks,"function|lambda|call<minor_breaks_*, regular_minor_breaks>|r",Minor breaks,補助目盛り,,

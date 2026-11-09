@@ -71,6 +71,14 @@
 #' it spells.  `theme()` takes ggplot2 4.0's default palettes
 #' (`palette.colour.discrete` ...).
 #'
+#' A figure item's values are checked down to the calls inside them, each
+#' by its own entry: `theme(axis.text = element_text(sizee = 9))` and
+#' `scale_y_continuous(labels = scales::label_percent(acuracy = 1))` warn
+#' (no such argument), `element_text(size = "big")` is an error, and so is
+#' `scales::label_procent()` (scales has no such function).  A guide's
+#' argument of before ggplot2 3.5.0 (`guide_legend(title.position =)`)
+#' warns with the theme setting it is now.
+#'
 #' The types, in a short notation: `string`, `integer`, `number` (a
 #' number written as arithmetic of numbers, `!r 1/5`, is one; numbers so
 #' written, `!r 2^(-2:2)`, are a `list<number>`),
@@ -90,9 +98,15 @@
 #' `limits` and `breaks`, `coord_cartesian()`'s `xlim`, a reference line's
 #' `xintercept`, `annotate()`'s `x`; a text of that form is a date there,
 #' not a level of a discrete axis),
+#' `math` (a plotmath expression as its text, `10^.x`, written bare:
+#' `scales::label_math(10^.x)`),
 #' `call` and `call<fn>` (`{fn:, args:}`; `call<label_*>` takes any
 #' function whose name the pattern matches, of any package:
-#' `{fn: scales::label_percent}`; base R's that clinical figures write as
+#' `{fn: scales::label_percent}`; scales' helpers of a scale's value --
+#' `label_*()`, `*_format()`, `breaks_*()`, `trans_breaks()`,
+#' `transform_*()`, `pal_*()`, `rescale()` -- are entries of the kind
+#' `scales`, their arguments typed (`accuracy`, `suffix`,
+#' `style_positive`, `base`, `width` ...); base R's that clinical figures write as
 #' a value are typed where they fit: `seq()` for breaks,
 #' `{fn: seq, args: {from: 0, to: 52, by: 4}}` written `seq(0, 52, by = 4)`;
 #' `alpha()` for a colour; grDevices' palettes, `hcl.colors()` ..., for a
@@ -270,7 +284,7 @@ tfl_schema <- function(fn = NULL) {
 }
 
 .schema_scalars <- c("string", "integer", "number", "logical", "column", "stat",
-                     "template", "enum", "function", "tilde", "lambda", "date")
+                     "template", "enum", "function", "tilde", "lambda", "date", "math")
 
 # a date as its text, 2024-01-01 (a date scale's limits, breaks)
 .schema_date_re <- "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
@@ -303,6 +317,16 @@ tfl_schema <- function(fn = NULL) {
   }
   e <- tryCatch(str2lang(v), error = function(err) NULL)
   is.call(e) && identical(e[[1L]], as.name("function"))
+}
+
+# a plotmath expression as its text (10^.x, alpha[.x]): text that parses
+# as one expression, no formula and no function written out (the `expr` of
+# scales::label_math(), written bare: label_math(10^.x))
+.schema_is_math <- function(v) {
+  if (!is.character(v) || length(v) != 1L || is.na(v) || !nzchar(trimws(v))) return(FALSE)
+  e <- tryCatch(str2lang(v), error = function(err) NULL)
+  (is.call(e) || is.name(e)) && !(is.call(e) && identical(e[[1L]], as.name("~"))) &&
+    !(is.call(e) && identical(e[[1L]], as.name("function")))
 }
 
 # whether a call's function is one a call<...> type names: by its name
@@ -399,7 +423,9 @@ tfl_schema_check <- function(item) {
   }
   args <- item$args %||% list()
   dots <- ent$dots
-  known <- setdiff(names(f) %||% character(), c("...", "plan", ".plan", "data", "x"))
+  # (a figure's function has no data argument: as_labeller(x =), unit(x =))
+  known <- setdiff(names(f) %||% character(),
+                   c("...", "plan", ".plan", "data", if (is.null(ent$figure)) "x"))
   known <- unique(c(known, names(ent$args)))
   if (!is.null(dots) && identical(dots$style, "positional")) known <- c(known, dots$key)
   for (a in names(args)) {
@@ -420,8 +446,11 @@ tfl_schema_check <- function(item) {
     if (ka %in% names(ent$args) && !is.null(ent$args[[ka]]$type)) {
       msg <- .schema_fits(v, .schema_type(ent$args[[ka]]$type), a)
       if (!is.null(msg)) bad(a, msg)
-      if (is.null(msg) && !.fig_is_figure_fn(fn)) {
-        for (p in .schema_check_calls_in(v)) bad(a, p$message, p$level)
+      # the calls inside the value, each by its own entry (a figure's too:
+      # theme(axis.text = element_text(sizee = 1)),
+      # scale_y_continuous(labels = scales::label_percent(acuracy = 1)))
+      if (is.null(msg)) {
+        for (p in .schema_check_calls_in(v, figure = .fig_is_figure_fn(fn))) bad(a, p$message, p$level)
       }
     } else if (!is.null(dots) && identical(dots$style, "positional") && identical(a, dots$key)) {
       msg <- .schema_fits(v, .schema_type(dots$type), a)
@@ -429,6 +458,8 @@ tfl_schema_check <- function(item) {
     } else if (!is.null(.schema_removed[[fn]][[a]])) {
       bad(a, sprintf("%s(%s = ) was removed in rtfreporter 0.9.0: %s", fn, a,
                      .schema_removed[[fn]][[a]]))
+    } else if (!ka %in% known && !is.null(.schema_guide_old_text(fn, ent, a))) {
+      bad(a, .schema_guide_old_text(fn, ent, a), "warning")
     } else if (!ka %in% known) {
       if (identical(fn, "plan_cells") && !a %in% .cells_kinds && make.names(a) != a) {
         # a row's label as an entry of its own ("Mean (SD)": [...]) names
@@ -454,9 +485,21 @@ tfl_schema_check <- function(item) {
 # {fn: rtf_border_line, args: {style: wavy}}}}), each the schema has an
 # entry for, by that entry: a list of (level, message), the message naming
 # the call ("rtf_border_line(style = ) is ...").
-.schema_check_calls_in <- function(v) {
+.schema_check_calls_in <- function(v, figure = FALSE) {
   if (inherits(v, "tfl_call")) {
-    if (is.null(tfl_schema(v$fn))) return(list())
+    if (is.null(tfl_schema(v$fn))) {
+      if (!figure) return(list())
+      # a figure's pkg::fn of an installed package that has no such
+      # function (scales::label_procent): ggplot2 would stop at the draw
+      pkg <- if (grepl("::", v$fn, fixed = TRUE)) sub("::.*$", "", v$fn)
+      if (!is.null(pkg) && requireNamespace(pkg, quietly = TRUE) &&
+          !sub("^.*::", "", v$fn) %in% getNamespaceExports(pkg)) {
+        return(list(list(level = "error",
+                         message = sprintf("%s has no function %s()", pkg, sub("^.*::", "", v$fn)))))
+      }
+      # (seq(), alpha(), as.Date(): the calls inside theirs)
+      return(do.call(c, c(list(list()), lapply(v$args %||% list(), .schema_check_calls_in, figure = TRUE))))
+    }
     p <- .schema_check_item(list(fn = v$fn, args = v$args %||% list()), part = FALSE)
     fn <- .schema_fn_name(v$fn)
     return(lapply(seq_len(nrow(p)), function(i) list(
@@ -467,7 +510,9 @@ tfl_schema_check <- function(item) {
                 p$message[i]) else
         sprintf("%s(): %s", fn, p$message[i]))))
   }
-  if (is.list(v) && !is.object(v)) return(do.call(c, lapply(v, .schema_check_calls_in)))
+  if (is.list(v) && !is.object(v)) {
+    return(do.call(c, c(list(list()), lapply(v, .schema_check_calls_in, figure = figure))))
+  }
   list()
 }
 
@@ -597,6 +642,7 @@ tfl_schema_check <- function(item) {
       (!length(ty$args) || .schema_call_named(v, unlist(ty$args))),
     tilde = .schema_is_tilde(v),
     lambda = .schema_is_lambda(v),
+    math = .schema_is_math(v),
     date = .schema_is_date(v) || ((is.logical(v) || is.character(v)) && is.na(v)),
     is.character(v) || is.numeric(v) || is.logical(v))
 }

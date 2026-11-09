@@ -1215,6 +1215,89 @@ built by R (`c("BL", paste0("W", ...))`).  `method.args = list(family =
 binomial)` reads as R; `{family: binomial}` (written `"binomial"`, which
 glm() takes) is the typed form.
 
+### Round 12 (2026-11-09): scales' helpers typed, the calls inside a value checked
+
+The three measures were at or near their ceiling.  They did not count
+what goes inside a value.  A scale's `labels`, `breaks` and `transform`
+are mostly made by scales' helpers (`label_percent(accuracy = 1)`,
+`breaks_width(4)`, a PK plot's log axis by `trans_breaks()` and
+`math_format(10^.x)`).  Their arguments had no type, and the check never
+looked inside a figure item's values at all: `theme(axis.text =
+element_text(sizee = 9))`, `sec_axis(nam = "Weeks")` and
+`scales::label_procent()` all passed without a word.  ggplot2 stops at
+the draw on the last.
+
+A fourth group joins the arguments' measure: 40 of scales' helpers (138
+arguments), each argument written inside the scale slot that takes the
+helper (`scale_y_continuous(labels = {fn: scales::label_percent, args:
+{accuracy: ...}})`).  **yes**: typed and labelled by the kind `scales` and
+judged by the check; **partial**: written and accepted, but untyped or
+not checked; **no**: an error of the check.  Weights: 3 for the percent
+and number labels and a break every n; 2 for p-values, log axes (PK
+concentrations, ratios), wrapped labels and dates; 1 the rest.
+
+| Measure | Before | After |
+|---|---:|---:|
+| **scales' helpers (new group, 138 arguments of 40 functions)** | **50.0%** (0 yes / 138 partial) | **100.0%** (138 / 0) |
+| ggplot2's arguments (3409) and aesthetics (826), the extensions (351) | 100% | 100% |
+| **ggplot2's own examples** (round 5's measure) | **96.7%** (uses 1195 / 74 / 3) | **97.6%** (1203 / 66 / 3) |
+| examples: scale_*() | 95.5% | 97.7% |
+| examples: stat_*() (shown apart) | 98.7% | 98.7% |
+| **Clinical figures, 31 (four new, below; weighted)** | **99.2%** (uses 599 / 6 / 0) | **99.3%** (599 / 6 / 0) |
+| clinical: scale_*() | 98.8% | 100.0% |
+| clinical: guides | 100.0% | 87.5% (see below) |
+| clinical: stat_*() (shown apart) | 100.0% | 100.0% |
+
+Four figures added to the clinical measure (31 figures, 248 calls, 605
+uses): `fig_pk_log` (mean concentration on a log axis, the LLOQ,
+`annotation_logticks()`, `trans_breaks()` / `trans_format()` /
+`math_format(10^.x)`), `fig_pk_ind` (each subject's profile, `breaks_log()`,
+`label_number(big.mark = ",")`, a second axis by `dup_axis(name =
+derive(), labels = label_log())`), `fig_pct_signed` (a signed percent
+change, `label_number(style_positive = "plus", suffix = "%")`,
+`label_wrap()`), `fig_forest_math` (an odds ratio on a log2 axis,
+`transform_log(base = 2)`, `label_log(base = 2)`).  "Before" is these 31
+figures with the tflspec before the round; round 11's 27 were 99.6%.
+
+The clinical guides go down because the check now looks inside
+`guides(fill = guide_legend(...))`.  `fig_stack` writes
+`guide_legend(title.position = "top")`, an argument ggplot2 deprecated in
+3.5.0 (it is now the guide's `theme = theme(legend.title.position =
+"top")`).  ggplot2 4.0.3 still draws it, so it is partial, not no; the
+check says what to write instead.
+
+Round 12:
+
+- **scales' helpers have entries of the kind `scales`.** `tfl_schema("scales::label_percent")` gives an entry built from its formals; the arguments are typed and labelled by 68 new `scales` rows of `inst/fig/gg_args.csv`:
+  - numbers: `accuracy`, `scale`, `prefix`, `suffix`, `big.mark`, `decimal.mark`, `trim`, `style_positive` (`none|plus|space`), `style_negative`, `scale_cut`
+  - breaks: `n`, `width`, `offset`, `base`, a time span's `unit`
+  - dates: `format`, `tz`, `locale`
+  - log axes: `trans`, `inv`, `expr`
+  - palettes: `palette`, `type`, `direction`, `option`, `begin` / `end`
+  - `rescale()`'s `x`, `to`, `from`
+
+  A label function's `...` take `label_number()`'s arguments (`label_percent(style_positive = "plus")`); other helpers pass `...` on to another package and take any name (`breaks_pretty(min.n = 3)` goes to `pretty()`).
+- **The calls inside a figure item's values are checked**, each by its own entry. An argument the function does not have is a warning (`element_text(sizee =)`, `sec_axis(nam =)`, `label_percent(acuracy =)`), a value of the wrong type is an error (`element_text(size = "big")`), and so is a `pkg::fn` of an installed package that has no such function (`scales::label_procent`). Before, only a table item's calls were checked.
+- **ggplot2's guide arguments of before 3.5.0** (`title.position`, `label.position`, `keywidth`, `barheight`, `title.hjust`, `frame.colour`, `ticks.colour` ...) warn with the `theme()` setting each is now, rather than "no argument".
+- **New type `math`**: a plotmath expression as its text, `expr: 10^.x`, written bare (`scales::label_math(10^.x)`). It is read back from the code as its text. `label_math()`, `math_format()`, `trans_breaks()` and `trans_format()` are written with their leading arguments by position, as people write them: `scales::trans_breaks("log10", function(x) 10^x)`.
+- **`derive()`** in `sec_axis()` / `dup_axis()`'s `name` (`{fn: derive}`); a scale's `sec.axis` takes a formula alone (`sec.axis: ~ . / 7`), as ggplot2 does. Before, both were `!r`.
+- **Fixes of the check** that the nested check brought out:
+  - `as_labeller(x =)`: a figure function's `x` is its argument, not the data.
+  - `scale_y_log10()`, `_sqrt()` and `_reverse()` take `scale_y_continuous()`'s `sec.axis` and `position`. Before, `sec.axis` warned.
+
+**The generated code changes** for no existing spec: the forms above were
+`!r` before (written as the R given), and a call already typed is written
+as before (`scales::breaks_width(width = 4)` keeps its name).  What can
+change is the check's report: a spec whose values hold a misspelt or
+mistyped argument of a nested call now gets a warning or an error.
+
+What is left (partial), clinical: a layer's data as a subset of the
+figure's own object (`km[km$censored, ]`), a scale's labels built by R
+(`c("BL", paste0("W", ...))`), the deprecated `guide_legend(title.position
+=)`.  Examples: objects of the example (`values = cols`, `labeller =
+to_string`), `Sys.Date() - 30`, grobs and rasters, `size` of line geoms
+(deprecated), `pal_viridis()(5)` (a palette called).
+
 ### The extension packages (ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale, patchwork)
 
 The same measure, the same file (`package` says which), over the

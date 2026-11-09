@@ -388,7 +388,7 @@
 .schema_gg_helpers <- c("expansion", "sec_axis", "dup_axis", "margin", "margin_auto",
                         "margin_part", "arrow", "unit", "rel", "vars", "labeller", "as_labeller",
                         "label_value", "label_both", "label_wrap_gen", "label_parsed",
-                        "label_context", "label_bquote")
+                        "label_context", "label_bquote", "derive")
 .schema_gg_kind <- function(nm) {
   if (identical(nm, "theme")) return("theme")
   if (nm %in% c("labs", "xlab", "ylab", "ggtitle")) return("labs")
@@ -432,18 +432,48 @@
   if (identical(kind, "layer") && grepl("^(geom|stat)_", nm)) {
     return(.schema_ggplot_entry(if (identical(pkg, "ggplot2")) nm else paste0(pkg, "::", nm)))
   }
-  list(package = pkg, figure = kind,
-       description = sprintf("%s's %s(), by its own arguments.", pkg, nm), args = list())
+  ent <- list(package = pkg, figure = kind,
+              description = sprintf("%s's %s(), by its own arguments.", pkg, nm), args = list())
+  # a scales function's `...` passed on: label_percent()'s to
+  # label_number() (taken by name, .schema_gg_takes()); any other's to a
+  # function of another package (breaks_pretty()'s to pretty()), any name
+  if (identical(kind, "scales") && "..." %in% names(formals(getExportedValue(pkg, nm))) &&
+      !.schema_scales_number(nm)) {
+    ent$dots <- list(style = "named", type = .schema_gg_generic)
+  }
+  ent
+}
+
+# a scales function of numbers whose `...` are label_number()'s
+# (label_percent, label_comma, percent_format ...)
+.schema_scales_number <- function(nm) {
+  nm %in% c("label_comma", "label_percent", "label_dollar", "label_currency", "label_bytes",
+            "label_number_si", "label_ordinal", "comma_format",
+            "percent_format", "dollar_format", "unit_format", "number_bytes_format",
+            "ordinal_format")
 }
 
 # the extension packages a figure may call a function of by pkg::fn
 .schema_ext_pkgs <- c("ggsurvfit", "ggrepel", "ggh4x", "ggtext", "ggnewscale", "patchwork")
+
+# scales' functions a scale's value is made by (its breaks, labels,
+# transformation, palette, out-of-bounds handling, a colour's places):
+# kind `scales`, their arguments typed by inst/fig/gg_args.csv
+# (scales::label_percent(accuracy = 1), scales::breaks_width(4),
+# scales::trans_breaks("log10", function(x) 10^x))
+.schema_scales_re <- paste0("^(label_|breaks_|minor_breaks_|transform_|pal_|oob_|cut_|ordinal_)",
+                            "|_format$|_breaks$|_trans$|^(trans_new|new_transform|rescale|",
+                            "rescale_mid|rescale_max)$")
+.schema_scales_kind <- function(nm) {
+  if (grepl(.schema_scales_re, nm)) "scales" else NA_character_
+}
 
 # the kind of an extension's function: ggplot2's by its prefix, and the
 # package's own (ggsurvfit's add_*() on a ggsurvfit plot, patchwork's
 # arrangement, ggnewscale's new scale between layers, ggh4x's strips and
 # element lists as elements, its panel sizes as a facet's)
 .schema_ext_kind <- function(nm, pkg) {
+  if (identical(pkg, "scales")) return(.schema_scales_kind(nm))
   if (!pkg %in% .schema_ext_pkgs) return(NA_character_)
   if (identical(pkg, "ggsurvfit") && startsWith(nm, "add_")) return("ggsurvfit_layer")
   if (identical(pkg, "patchwork") &&
@@ -478,6 +508,9 @@
     if (length(to) == 1L) return(.schema_gg_takes(to, pkg))
   }
   if ("..." %in% fa && startsWith(nm, "scale_")) fa <- c(fa, .schema_scale_dots(nm, f))
+  if ("..." %in% fa && identical(pkg, "scales") && .schema_scales_number(nm)) {
+    fa <- c(fa, names(formals(scales::label_number)))
+  }
   # coord_fixed(ratio, ...): coord_cartesian()'s; labs(...): the labels by
   # aesthetic
   if ("..." %in% fa && startsWith(nm, "coord_")) fa <- c(fa, names(formals(ggplot2::coord_cartesian)))
@@ -502,7 +535,39 @@
   } else {
     "discrete_scale"
   }
-  setdiff(names(formals(getExportedValue("ggplot2", ctor))), c("scale_name", "super", "call"))
+  out <- setdiff(names(formals(getExportedValue("ggplot2", ctor))), c("scale_name", "super", "call"))
+  # scale_y_log10(...), _sqrt(), _reverse(): scale_y_continuous()'s (its
+  # sec.axis, position)
+  if (grepl("^scale_[xy]_(log10|sqrt|reverse)$", nm)) {
+    out <- c(out, names(formals(getExportedValue("ggplot2", sub("_[a-z0-9]+$", "_continuous", nm)))))
+  }
+  unique(out)
+}
+
+# ggplot2's guide arguments before 3.5.0, taken still (deprecated) and
+# passed into the guide's `theme`: the theme() setting each is now
+.schema_guide_old_args <- c(
+  title.position = "legend.title.position", title.theme = "legend.title",
+  title.hjust = "legend.title", title.vjust = "legend.title", label = "legend.text",
+  label.position = "legend.text.position", label.theme = "legend.text", label.hjust = "legend.text",
+  label.vjust = "legend.text", keywidth = "legend.key.width", keyheight = "legend.key.height",
+  barwidth = "legend.key.width", barheight = "legend.key.height", byrow = "legend.byrow",
+  frame.colour = "legend.frame", frame.linewidth = "legend.frame", frame.linetype = "legend.frame",
+  ticks = "legend.ticks", ticks.colour = "legend.ticks", ticks.linewidth = "legend.ticks",
+  axis = "legend.axis.line", axis.colour = "legend.axis.line", axis.linewidth = "legend.axis.line",
+  axis.arrow = "legend.axis.line", default.unit = "")
+
+# the warning for a guide's argument of before ggplot2 3.5.0
+# (guide_legend(title.position = "top")), or NULL for any other
+.schema_guide_old_text <- function(fn, ent, a) {
+  if (!identical(ent$figure, "guide") || !a %in% names(.schema_guide_old_args) ||
+      !grepl("^guide_(legend|colou?rbar|bins|colou?rsteps)$", .schema_fn_name(fn))) {
+    return(NULL)
+  }
+  to <- .schema_guide_old_args[[a]]
+  sprintf("%s(%s = ) is deprecated since ggplot2 3.5.0%s", .schema_fn_name(fn), a,
+          if (nzchar(to)) sprintf(": give it as the guide's theme, theme = {fn: theme, args: {%s: ...}}",
+                                  to) else "")
 }
 
 # The theme() setting a theme_sub_*() argument stands for (ggplot2 4.0):

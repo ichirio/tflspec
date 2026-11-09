@@ -163,6 +163,8 @@ tfl_plot <- function(name, items = list(), from = "own") {
       return(call("::", as.name(sub("::.*$", "", v)), as.name(sub("^.*::", "", v))))
     }
     if (identical(t$kind, "tilde")) return(str2lang(v))
+    # a plotmath expression (label_math(10^.x)) as the expression
+    if (identical(t$kind, "math")) return(str2lang(v))
     return(NULL)
   }
   NULL
@@ -277,13 +279,17 @@ tfl_plot <- function(name, items = list(), from = "own") {
 
 # the functions whose leading arguments are written by position (when given
 # first, in this order): unit(0.5, "cm"), rel(1.2), seq(0, 52, by = 4),
-# alpha("grey50", 0.4), hcl.colors(3, "Dark 3")
+# alpha("grey50", 0.4), hcl.colors(3, "Dark 3"); scales' that take an
+# expression or a function first: label_math(10^.x),
+# trans_breaks("log10", function(x) 10^x)
 .fig_by_position <- list(unit = c("x", "units"), rel = "x", seq = c("from", "to"),
                          alpha = c("colour", "alpha"), hcl.colors = c("n", "palette"),
                          palette.colors = c("n", "palette"), gray.colors = "n",
                          grey.colors = "n", rainbow = "n", heat.colors = "n",
                          terrain.colors = "n", topo.colors = "n", cm.colors = "n",
-                         "scales::rescale" = "x")
+                         "scales::rescale" = "x", "scales::label_math" = "expr",
+                         "scales::math_format" = "expr", "scales::trans_breaks" = c("trans", "inv"),
+                         "scales::trans_format" = c("trans", "format"))
 
 # the arguments R takes as a list, not a vector: a map of the spec is
 # written list(...) and read back from it
@@ -435,6 +441,11 @@ tfl_plot <- function(name, items = list(), from = "own") {
       if (length(x) > 3L) x <- x[1:3]
       txt <- .fig_deparse_r(x)
       if (.schema_is_lambda(txt)) return(txt)
+    }
+    # a plotmath expression (scales::label_math(10^.x)) as its text
+    if (.fig_type_has(type, "math") && !identical(f, "~") && !identical(f, "function")) {
+      txt <- .fig_deparse(x)
+      if (.schema_is_math(txt) && identical(str2lang(txt), x)) return(txt)
     }
     if (identical(f, "~") && .fig_type_has(type, "tilde")) {
       txt <- .fig_deparse(x)

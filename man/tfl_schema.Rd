@@ -55,6 +55,14 @@ spelling of an aesthetic (\code{color}, \code{pch}, \code{lty}) is checked as th
 it spells.  \code{theme()} takes ggplot2 4.0's default palettes
 (\code{palette.colour.discrete} ...).
 
+A figure item's values are checked down to the calls inside them, each
+by its own entry: \code{theme(axis.text = element_text(sizee = 9))} and
+\code{scale_y_continuous(labels = scales::label_percent(acuracy = 1))} warn
+(no such argument), \code{element_text(size = "big")} is an error, and so is
+\code{scales::label_procent()} (scales has no such function).  A guide's
+argument of before ggplot2 3.5.0 (\code{guide_legend(title.position =)})
+warns with the theme setting it is now.
+
 The types, in a short notation: \code{string}, \code{integer}, \code{number} (a
 number written as arithmetic of numbers, \verb{!r 1/5}, is one; numbers so
 written, \verb{!r 2^(-2:2)}, are a \verb{list<number>}),
@@ -73,9 +81,15 @@ open end, written \code{as.Date(c("2024-01-01", NA))}: a date scale's
 \code{limits} and \code{breaks}, \code{coord_cartesian()}'s \code{xlim}, a reference line's
 \code{xintercept}, \code{annotate()}'s \code{x}; a text of that form is a date there,
 not a level of a discrete axis),
+\code{math} (a plotmath expression as its text, \code{10^.x}, written bare:
+\code{scales::label_math(10^.x)}),
 \code{call} and \verb{call<fn>} (\verb{\{fn:, args:\}}; \verb{call<label_*>} takes any
 function whose name the pattern matches, of any package:
-\code{{fn: scales::label_percent}}; base R's that clinical figures write as
+\code{{fn: scales::label_percent}}; scales' helpers of a scale's value --
+\verb{label_*()}, \verb{*_format()}, \verb{breaks_*()}, \code{trans_breaks()},
+\verb{transform_*()}, \verb{pal_*()}, \code{rescale()} -- are entries of the kind
+\code{scales}, their arguments typed (\code{accuracy}, \code{suffix},
+\code{style_positive}, \code{base}, \code{width} ...); base R's that clinical figures write as
 a value are typed where they fit: \code{seq()} for breaks,
 \code{{fn: seq, args: {from: 0, to: 52, by: 4}}} written \code{seq(0, 52, by = 4)};
 \code{alpha()} for a colour; grDevices' palettes, \code{hcl.colors()} ..., for a
