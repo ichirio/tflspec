@@ -75,6 +75,12 @@
 #' @param tier How often it is set, for a help page and an input form:
 #'   `"required"`, `"usual"` (shown with its default) or `"other"` (folded
 #'   away); `NULL`: `"required"` when `required`, else `"other"`.
+#' @param unset What a report's (or a template default's) `!unset` does to this
+#'   parameter, which the template says once, here: `"omit"` (the default): the
+#'   argument is left out of the inner call it goes into; `"step_off"`: the
+#'   parameter stands for a step of the template (a Total column, a guard, a
+#'   style set), and the step is not made -- no code for it in the program;
+#'   `"stop"`: the body needs a value, so `!unset` stops, naming the parameter.
 #' @param stage Where its value is used: `"call"` (the default), an argument
 #'   of the template's call in a report's program, or `"data"`, a step that
 #'   prepares the analysis data (a figure's records, its analysis set),
@@ -86,7 +92,9 @@
 #' @export
 tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study = NULL,
                       type = NULL, multiple = NULL, of = NULL, choices = NULL,
-                      fields = NULL, group = NULL, tier = NULL, stage = "call") {
+                      fields = NULL, group = NULL, tier = NULL, stage = "call",
+                      unset = c("omit", "step_off", "stop")) {
+  unset <- match.arg(unset)
   if (!is.null(type)) type <- match.arg(type, .tpl_param_types)
   if (!is.null(tier)) tier <- match.arg(tier, c("required", "usual", "other"))
   stage <- match.arg(stage, c("call", "data"))
@@ -94,7 +102,7 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   structure(list(name = name, default = default, required = isTRUE(required),
                  doc = doc, study = study, type = type, multiple = multiple, of = of,
                  choices = choices, fields = fields, group = group, tier = tier,
-                 stage = stage),
+                 stage = stage, unset = unset),
             class = "tfl_param")
 }
 
@@ -184,6 +192,12 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     k(c("labels", "param_labels", "subgroup_labels"), "list", fields = nv, merge = TRUE),
     # the rows: given, they are the rows (no merge)
     k("cells", "list", fields = c("label", "template")),
+    k("formats", "list", fields = nv, merge = TRUE),
+    # demog's: a step, the values shown, a heading text, a style set's name, a rule's edges
+    k("missing_row", "flag"),
+    k("categorical_levels", "list", fields = c("variable", "values")),
+    k(c("col_header", "style"), "text"),
+    k(c("border_header", "border_group"), "list", fields = c("edge", "line")),
     k("flags", "list", TRUE, fields = c("id", "label", "where")),
     k("columns", "list", TRUE, fields = c("vars", "label", "width", "collapse_repeats")))
 })
@@ -252,6 +266,7 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   if (is.null(p$tier)) p$tier <- if (isTRUE(p$required)) "required" else "other"
   # (a parameter made before `stage`: an argument of the call)
   if (is.null(p$stage)) p$stage <- "call"
+  if (is.null(p$unset)) p$unset <- "omit"
   p
 }
 
@@ -346,6 +361,12 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   # left out -- the body reads it as NULL, and the call written omits it, so
   # the inner function's own default applies.  Recorded in `unset`.
   unset <- vapply(out, inherits, NA, "tfl_unset")
+  stop_on <- unset & vapply(t$params[names(out)], function(p) identical(p$unset, "stop"), NA)
+  if (any(stop_on)) {
+    .ard_stop(sprintf(paste0("%s: template %s needs %s, so `!unset` cannot be used for it; ",
+                             "give a value."), fn, t$name,
+                      paste(sQuote(names(out)[stop_on], FALSE), collapse = ", ")))
+  }
   if (any(unset)) out[unset] <- list(NULL)
   miss <- vapply(t$params, function(p) p$required && is.null(out[[p$name]]), NA)
   if (any(miss)) {
@@ -371,7 +392,7 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
 #' @seealso [tfl_templates()]; [tpl_demog()] and [tpl_summary()] for the
 #'   objects (the A use).
 #' @examples
-#' x <- tfl_template_expand("demog", list(population = "SAF"))
+#' x <- tfl_template_expand("demog", list(population = "SAF", by = "TRT01A", continuous = "AGE"))
 #' vapply(x$content, function(it) it$fn, "")
 #' @export
 tfl_template_expand <- function(name, args = list(), codelists = NULL,
@@ -551,7 +572,8 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
 #'     cards::ard_tabulate(saf, variables = TRT01A),
 #'     cards::ard_summary(saf, by = TRT01A, variables = AGE),
 #'     cards::ard_tabulate(saf, by = TRT01A, variables = c(AGEGR1, SEX, RACE, ETHNIC)))
-#'   plan <- tfl_tpl(ard, "demog", population = "SAF")
+#'   plan <- tfl_tpl(ard, "demog", population = "SAF", by = "TRT01A", continuous = "AGE",
+#'                   categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC"))
 #' }
 #' @export
 tfl_tpl <- function(x, name, ..., codelists = NULL, sets = NULL) {
@@ -580,6 +602,17 @@ tfl_tpl <- function(x, name, ..., codelists = NULL, sets = NULL) {
 # content does; a study's defaults are not in it -- the program writes them
 # after the call (`# (study default)`), as plan_*() lines.
 .tpl_object <- function(name, ard, args, codelists = NULL, population = NULL) {
+  # (the arms of a template with a `by`: from the ARD when the code lists do
+  # not say them -- the Total column's width and the like need how many)
+  by <- args$by
+  w <- if ("widths" %in% names(args)) args$widths else .tpl_get(name, "tpl")$params$widths$default
+  if (identical(w, "auto") && is.character(by) && length(by) == 1L &&
+      is.null(codelists[[by]]) &&
+      all(c("group1", "group1_level") %in% names(ard))) {
+    arms <- unique(as.character(unlist(ard$group1_level[!is.na(ard$group1) & ard$group1 == by])))
+    arms <- arms[!is.na(arms) & nzchar(arms)]
+    if (length(arms)) codelists <- c(codelists, stats::setNames(list(arms), by))
+  }
   x <- tfl_template_expand(name, args, codelists = codelists, population = population)
   t <- .tpl_get(name, "tpl")
   # (the ARD is normalized first, as a report's content with no step of its
@@ -602,14 +635,14 @@ tfl_tpl <- function(x, name, ..., codelists = NULL, sets = NULL) {
 #' @param ard The normalized ARD's source: the study ARD's rows of this
 #'   report.
 #' @param population The analysis set's id (`"SAF"`).
-#' @param ... The template's other parameters: `data`, `by`, `continuous`,
-#'   `categorical`, `labels`, `cells`.  `labels` given by name change those
-#'   names only (`labels = c(RACE = "Race, n (%) [a]")`); in YAML, `RACE:
-#'   ~` drops one.
-#'   The default `continuous` and `categorical` are the variables the data
-#'   has of them (`any_of()`); the report's own are as written.  Every
-#'   table and figure template also takes `subset` (which subjects) and,
-#'   with records data, `where` (which records): see [tfl_param()].
+#' @param ... The template's other parameters: `by` and `continuous` and/or
+#'   `categorical` are required (no default set of variables, no default
+#'   `by`), then `data`, `labels`, `cells`, `formats` ...
+#'   `labels` given by name change those names only (`labels = c(RACE =
+#'   "Race, n (%) [a]")`); in YAML, `RACE: ~` drops one.  The variables are
+#'   as written.  Every table and figure template also takes `subset` (which
+#'   subjects) and, with records data, `where` (which records): see
+#'   [tfl_param()].
 #' @param codelists The report's code lists, for the order and labels of
 #'   values; `NULL` takes the ARD's.
 #' @return A [rtfreporter::table_plan()]: the template's items run on the
@@ -622,7 +655,8 @@ tfl_tpl <- function(x, name, ..., codelists = NULL, sets = NULL) {
 #'     cards::ard_tabulate(saf, variables = TRT01A),
 #'     cards::ard_summary(saf, by = TRT01A, variables = AGE),
 #'     cards::ard_tabulate(saf, by = TRT01A, variables = c(AGEGR1, SEX, RACE, ETHNIC)))
-#'   plan <- tpl_demog(ard, population = "SAF")
+#'   plan <- tpl_demog(ard, population = "SAF", by = "TRT01A", continuous = "AGE",
+#'                     categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC"))
 #'   head(rtfreporter::plan_apply(plan, "table"))
 #' }
 #' @export
@@ -762,30 +796,7 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
 .tfl_template("summary", kind = "table", layout = "summary",
               params = .tpl_summary_params, body = .tpl_summary_body)
 
-# demog: the demographics table -- summary's parameters, its own defaults
-# (a template is a program and a set of parameters: the program is the
-# layout's)
-tfl_template_variant("demog", from = "summary", label = "Demographics",
-  ai = TRUE, example = list(population = "SAF"),
-  defaults = list(continuous = "AGE", categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC"),
-                  labels = c(AGE = "Age (years)", AGEGR1 = "Age group, n (%)",
-                             SEX = "Sex, n (%)", RACE = "Race, n (%)",
-                             ETHNIC = "Ethnicity, n (%)")))
-
-# FDA STF IG v2 Table 2's shape (stf_*: a table of FDA's Standard Safety
-# Tables and Figures Integrated Guide, version 2): demog with a Total
-# column, the rows in its order, age as Mean (SD) and Median (min, max)
-tfl_template_variant("stf_t02_demog", from = "demog",
-  label = "Demographics, after FDA STF IG v2 Table 2",
-  example = list(population = "SAF"), ai = FALSE,
-  defaults = list(categorical = c("SEX", "AGEGR1", "RACE", "ETHNIC", "COUNTRY"),
-                  order = c("SEX", "AGE", "AGEGR1", "RACE", "ETHNIC", "COUNTRY"),
-                  labels = c(SEX = "Sex, n (%)", AGE = "Age, years",
-                             AGEGR1 = "Age groups (years), n (%)", RACE = "Race, n (%)",
-                             ETHNIC = "Ethnicity, n (%)", COUNTRY = "Country, n (%)"),
-                  cells = list(`Mean (SD)` = "{mean:.1f} ({sd:.2f})",
-                               `Median (min, max)` = "{median:.1f} ({min:.0f}, {max:.0f})"),
-                  total = TRUE))
+# demog and stf_t02_demog: R/tpl_registry_demog.R (two templates of their own)
 
 # disposition: the subjects' status at the end of the study, on summary
 .tfl_template("disposition", kind = "table", layout = "summary",

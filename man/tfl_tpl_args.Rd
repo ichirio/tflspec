@@ -32,7 +32,9 @@ to, else \code{NA}), \code{study} (the study standard's value, else \code{NA}),
 \code{"template"} or \code{"default"}), \code{maps_to} (its study source,
 \code{"plan_stub.indent"}, or the verb its doc names), \code{doc}, \code{study_key}
 (its reference, else \code{NA}) and \code{fallback} (the value it takes when
-the study has none: a variant's default else the layout's; \code{NA} none).
+the study has none: a variant's default else the layout's; \code{NA} none)
+and \code{unset} (what \code{!unset} does to it: \code{"omit"}, \code{"stop"} or
+\code{"step_off"}; \code{NA} for a template not yet migrated).
 }
 \description{
 Each parameter of a registered template (\code{\link[=tfl_templates]{tfl_templates()}}): its tier,

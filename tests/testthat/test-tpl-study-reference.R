@@ -123,7 +123,9 @@ test_that("tfl_tpl_args(): the reference, its fallback and where the value is fr
   expect_identical(r(b, "sd_missing")$layer, "study: settings.sd_missing")
   expect_identical(r(b, "sd_missing")$effective, "NA")
   expect_identical(r(b, "count_cell")$layer, "study: plan_cells.categorical")
-  expect_identical(r(b, "population")$layer, "report")
+  # demog's analysis set is the report's, not a parameter of the table; summary's is
+  expect_identical(nrow(r(b, "population")), 0L)
+  expect_identical(r(tfl_tpl_args("summary", study = s, population = "SAF"), "population")$layer, "report")
   # the Rd table and the help say it too
   rd <- paste(.tpl_rd("demog"), collapse = "\n")
   expect_match(rd, "study: settings.sd_missing, else -", fixed = TRUE)
@@ -179,10 +181,11 @@ test_that("the style helper: defaults.yml's styles: first, then the built-in set
   l0 <- .tpl_style_set("standard", s)
   expect_length(l0$content, 0L)
   expect_identical(names(l0), c("data", "codelists", "content", "page"))
-  # a study's set of a built-in's name wins
+  # a built-in name always is the built-in: a study's set of that name does not replace it
   s2 <- sr_study(defaults = c("styles:", "  standard:", "    content:",
                               "      - plan_paginate_rows: {max_rows: 12}"))
-  expect_identical(.tpl_style_set("standard", s2)$content[[1L]]$args$max_rows, 12L)
+  expect_length(.tpl_style_set("standard", s2)$content, 0L)
+  expect_identical(.tpl_style_set("stf_t02", s2)$content[[1L]]$fn, "plan_style")
   # no such set: the names that exist
   expect_error(.tpl_style_set("nope", s), "no style \"nope\".*compact, standard")
   expect_error(.tpl_style_set(c("a", "b"), s), "one style")
@@ -190,25 +193,27 @@ test_that("the style helper: defaults.yml's styles: first, then the built-in set
   expect_length(.tpl_style_set("standard", NULL)$content, 0L)
 })
 
-test_that("the switch helper: false for every template; a switched one reads no content layer", {
-  expect_false(any(vapply(tfl_templates()$name, .tpl_switched, NA)))
+test_that("the switch helper: true for demog and stf_t02_demog only; a switched one reads no content layer", {
+  expect_identical(sort(Filter(function(n) .tpl_switched(n), tfl_templates()$name)),
+                   c("demog", "stf_t02_demog"))
   # (an alias is its template)
   expect_false(.tpl_switched("stf_t14_ae_soc_pt"))
   s <- sr_study()
   o <- tfl_output("T-9", "table", population = "SAF",
-                  template = list(name = "demog", args = list(population = "SAF")))
-  ro0 <- tfl_resolve_output(o, s)
-  from0 <- vapply(ro0$content, function(it) it$from %||% "", "")
-  expect_true("defaults" %in% from0)
-  testthat::local_mocked_bindings(.tpl_switched = function(name) identical(name, "demog"))
+                  template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE")))
   ro1 <- tfl_resolve_output(o, s)
   from1 <- vapply(ro1$content, function(it) it$from %||% "", "")
   # the template's items alone (its look too), none of the study's content ...
   expect_false(any(c("defaults", "style:compact") %in% from1))
   expect_true(all(startsWith(from1, "template:") | from1 == "own"))
   # ... the study's page is kept
-  expect_identical(ro1$page, ro0$page)
   expect_true(length(ro1$page) > 0L)
+  # the same arguments in a template that is not switched read the study's content layer
+  o0 <- tfl_output("T-9", "table", population = "SAF",
+                   template = list(name = "summary", args = list(continuous = "AGE")))
+  expect_true("defaults" %in% vapply(tfl_resolve_output(o0, s)$content,
+                                      function(it) it$from %||% "", ""))
+  expect_identical(tfl_resolve_output(o0, s)$page, ro1$page)
   # another template of the same study is not switched
   o2 <- tfl_output("T-10", "table", population = "SAF",
                    template = list(name = "ae_soc_pt", args = list(population = "SAF",

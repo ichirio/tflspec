@@ -4,27 +4,44 @@
 \alias{tfl_tpl_demog}
 \title{Demographics: the template demog}
 \description{
-The table template \code{demog}, layout \code{summary}: a variant of \code{summary} (its defaults changed). Its program is one call, \code{tfl_tpl(ard, "demog", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
+The table template \code{demog}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "demog", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab required \tab call \tab report: population, required \tab output.population \tab the analysis set's id (SAF) \cr
-   \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
-   \code{data} \tab other \tab call \tab ADSL \tab  \tab the dataset \cr
-   \code{where} \tab other \tab call \tab  \tab  \tab the records kept (R), for a dataset other than ADSL \cr
-   \code{by} \tab usual \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the column variable \cr
-   \code{continuous} \tab usual \tab call \tab AGE \tab  \tab the continuous variables, in order \cr
-   \code{categorical} \tab usual \tab call \tab AGEGR1, SEX, RACE, ETHNIC \tab  \tab the categorical variables, in order \cr
-   \code{labels} \tab usual \tab call \tab AGE = Age (years); AGEGR1 = Age group, n (\%); SEX = Sex, ... \tab  \tab each variable's heading; given by name, merged (RACE: ~ drops one) \cr
-   \code{order} \tab other \tab call \tab  \tab plan_levels.variable \tab the variables' order (plan_levels(variable = )); NULL: the continuous, then the categorical \cr
-   \code{cells} \tab usual \tab call \tab study: plan_cells.continuous, else n = \{N:.0f\}; Mean (SD) = \{mean:.1f\} (\{sd:.2f\}), \{mean:.1f... \tab plan_cells.continuous \tab the rows of each continuous variable \cr
-   \code{sd_missing} \tab other \tab call \tab study: settings.sd_missing, else - \tab settings.sd_missing \tab what prints in place of the SD when a group has no SD (n = 1): \{mean\} (<sd_missing>); "" in study.yml or a report's YAML prints the mean alone; no effect when 'cells' is given \cr
-   \code{count_cell} \tab other \tab call \tab study: plan_cells.categorical, no fallback \tab plan_cells.categorical \tab a categorical value's cell, n (\%) (plan_cells(categorical = )); NULL: the study standard's \cr
-   \code{continuous_statistics} \tab other \tab call \tab N, mean, sd, median, min, max \tab  \tab the continuous statistics the ARD has \cr
-   \code{categorical_statistics} \tab other \tab call \tab n, p \tab  \tab the categorical statistics the ARD has; NULL: cards' own \cr
-   \code{total} \tab usual \tab call \tab FALSE \tab plan_total \tab TRUE: a Total column (each analysis again without 'by', plan_total()) \cr
-   \code{stack} \tab other \tab call \tab FALSE \tab  \tab TRUE: the ARD as one cards::ard_stack() call \cr
+   \code{continuous} \tab required \tab call \tab  \tab  \tab the continuous variables, in order (required: this or 'categorical') \cr
+   \code{categorical} \tab required \tab call \tab  \tab  \tab the categorical variables, in order (required: this or 'continuous') \cr
+   \code{by} \tab required \tab call \tab  \tab  \tab the column variable (the arms); not a default and not the study's treatment \cr
+   \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1"; unset: all \cr
+   \code{data} \tab other \tab call \tab ADSL \tab  \tab a subject-level dataset \cr
+   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id when 'data' is not ADSL; NULL: <data>_<population> \cr
+   \code{denominator} \tab other \tab call \tab  \tab  \tab the percentages' denominator: NULL the analysis set's subjects, or the id of an analysis data (adsl_itt, or one of the report's own); the arm headings' N are of it too \cr
+   \code{formats} \tab usual \tab call \tab N = 0; mean = 1; sd = 2; median = 1; min = 0; max = 0; p ... \tab  \tab the ARD's formats (precision): per statistic, and per variable (BMIBL: \{mean: 2, sd: 3\}); given by name, merged; a number is the decimals, "xx.x\%" a proportion as a percent \cr
+   \code{total} \tab usual \tab call \tab FALSE \tab  \tab TRUE: a Total column, last (each analysis again without 'by') \cr
+   \code{missing_row} \tab other \tab call \tab FALSE \tab  \tab TRUE: a row under each categorical variable counting the subjects with no value, last \cr
+   \code{missing_label} \tab other \tab call \tab Missing \tab  \tab that row's label \cr
+   \code{order} \tab other \tab call \tab  \tab plan_levels.variable \tab the blocks' order (plan_levels(variable = )); NULL: the continuous, then the categorical \cr
+   \code{labels} \tab usual \tab call \tab AGE = Age (years); AGEGR1 = Age group, n (\%); SEX = Sex, ... \tab  \tab each variable's heading; given by name, merged (RACE: ~ drops one); a variable it does not name has none; unset: no headings \cr
+   \code{categorical_levels} \tab other \tab call \tab  \tab  \tab per categorical variable, its values in display order, each shown even when 0 (RACE: [ASIAN, WHITE]); NULL: the code list's order, else the data's \cr
+   \code{cells} \tab usual \tab call \tab study: plan_cells.continuous, else n = \{N\}; Mean (SD) = \{mean\} (\{sd\}), \{mean\} (-); Median = ... \tab plan_cells.continuous \tab the rows of each continuous variable: where each statistic goes (placement only, \{mean\}) \cr
+   \code{sd_missing} \tab other \tab call \tab study: settings.sd_missing, else - \tab settings.sd_missing \tab what prints in place of the SD when a group has no SD (n = 1): \{mean\} (<sd_missing>); "" prints the mean alone; unset: no such guard; no effect when 'cells' is given \cr
+   \code{count_cell} \tab other \tab call \tab study: plan_cells.categorical, no fallback \tab plan_cells.categorical \tab a categorical value's cell, n (\%); NULL: the study standard's \cr
+   \code{total_label} \tab other \tab call \tab Total \tab  \tab the Total column's heading \cr
+   \code{header_n} \tab other \tab call \tab denominator \tab  \tab the arm headings' N: "denominator" the subjects the percentages are of; "set" the same while 'denominator' is NULL; "none" no N; unset: no N. It acts on the heading 'col_header' gives as a text \cr
+   \code{col_header} \tab other \tab call \tab study: plan_col_header.lines, no fallback \tab plan_col_header.lines \tab the arm heading: a text (\{col\} and \{n\}, a line a line), or the lines of plan_col_header(lines = ); NULL: none \cr
+   \code{heading} \tab other \tab call \tab  \tab plan_stub.heading \tab the row-title (stub) column's heading, a line a line.  Given, it is the stub's (plan_stub(heading = ), the stub being row_label, first) \cr
+   \code{stub_name} \tab other \tab call \tab study: plan_stub.name, no fallback \tab plan_stub.name \tab the row-title column's name (plan_stub(name = )) \cr
+   \code{stub_before} \tab other \tab call \tab study: plan_stub.before, no fallback \tab plan_stub.before \tab TRUE: the row-title column before the row keys (plan_stub(before = )) \cr
+   \code{widths} \tab other \tab call \tab  \tab  \tab NULL: the columns' content; "auto": the row-title column 35\% of the width, the arm columns sharing the rest; numbers: the relative widths, one a printed column \cr
+   \code{max_rows} \tab other \tab call \tab 30 \tab  \tab rows a page \cr
+   \code{rounding} \tab other \tab call \tab study: settings.rounding, no fallback \tab settings.rounding \tab the rounding of the cells' numbers (plan_digits(rounding = )): sas, half away from zero, or r, half to even; NULL: none given here (the study's setup) \cr
+   \code{blanks} \tab other \tab call \tab study: plan_blanks.where, no fallback \tab plan_blanks.where \tab blank rows: TRUE between the blocks, FALSE none, or where (plan_blanks(where = )); FALSE also sets both ends off; NULL: none made here \cr
+   \code{blanks_first} \tab other \tab call \tab study: plan_blanks.first, no fallback \tab plan_blanks.first \tab a blank row before the first block (plan_blanks(first = )) \cr
+   \code{blanks_last} \tab other \tab call \tab study: plan_blanks.last, no fallback \tab plan_blanks.last \tab a blank row after the last block (plan_blanks(last = )) \cr
+   \code{blanks_counted} \tab other \tab call \tab study: plan_blanks.counted, no fallback \tab plan_blanks.counted \tab blank rows count in a page's rows (plan_blanks(counted = )) \cr
+   \code{border_header} \tab other \tab call \tab study: plan_style.border_header, no fallback \tab plan_style.border_header \tab the rule round the column heading (plan_style(border_header = )) \cr
+   \code{border_group} \tab other \tab call \tab  \tab plan_style.border_group \tab a rule under each block (plan_style(border_group = ), e.g. list(bottom = TRUE)); NULL: none \cr
+   \code{style} \tab other \tab call \tab study: settings.style, else standard \tab settings.style \tab the style set (font, borders, page) the report starts from: a set of the study's defaults.yml 'styles:' or a built-in one (standard, stf_t02); unset: none \cr
 }
 }
 
@@ -47,7 +64,7 @@ The aliases follow the numbering of these publications, and the titles are short
 \section{Example}{
 
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{plan <- tfl_tpl(ard, "demog", population = "SAF")
+\if{html}{\out{<div class="sourceCode">}}\preformatted{plan <- tfl_tpl(ard, "demog", population = "SAF", by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC"))
 }\if{html}{\out{</div>}}
 }
 

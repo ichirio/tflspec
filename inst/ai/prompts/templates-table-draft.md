@@ -8,7 +8,7 @@ population: SAF
 extends: [defaults]
 template:
   name: demog
-  args: {categorical: [AGEGR1, SEX, RACE]}
+  ard: {by: TRT01A, continuous: [AGE], categorical: [AGEGR1, SEX, RACE]}
 page:
   titles:
     "1": {center: "Table 14.1.1"}

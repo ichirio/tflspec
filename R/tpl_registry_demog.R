@@ -1,0 +1,399 @@
+# ---- demog and stf_t02_demog: two standalone templates (migration batch 1) -------
+#
+# Each is a template of its own (canon 1.11): its params come from the shared
+# helper below and its body is the shared `.tpl_demog_body`; neither is defined
+# through the other, and nothing is looked up through another template's name
+# at run time.  The purpose and scope fix what they must be (rows are the
+# characteristics' blocks, columns the arms, subjects counted once, a block
+# never split over pages, the Total column last); the rest is a parameter with
+# a default.  One value a parameter: the report's, else the template's default,
+# which may refer to the study standard (`study =`); defaults.yml, patterns and
+# a style set do not apply to the report as layers.
+#
+# Each parameter says what `!unset` does to it (`unset =`, in one place):
+#   "omit"     the argument is left out of the inner call;
+#   "step_off" the step the parameter stands for is not made, no code for it;
+#   "stop"     the body needs a value: `!unset` stops, naming the parameter.
+
+.tpl_demog_labels <- c(AGE = "Age (years)", AGEGR1 = "Age group, n (%)", SEX = "Sex, n (%)",
+                       RACE = "Race, n (%)", ETHNIC = "Ethnicity, n (%)")
+
+# What the cells show is placement only: bare tokens; {mean} and {p} read the
+# ARD's own formatted statistic (stat_fmt).  The digits are the ARD's `formats`:
+# a statistic's, and optionally a variable's (BMIBL: {mean: 2}).
+.tpl_demog_cells <- list(n = "{N}", `Mean (SD)` = .tpl_mean_sd("{mean}", "{sd}"),
+                         Median = "{median}", `Min, Max` = "{min}, {max}")
+.tpl_demog_formats <- list(N = 0, mean = 1, sd = 2, median = 1, min = 0, max = 0, p = "xx.x%")
+
+# The parameters of the two templates.  `defaults`: the template's own
+# defaults by name (stf_t02_demog's); `fixed`: the names whose default does not
+# refer to the study standard (the template's look, not the study's).
+.tpl_demog_params <- function(defaults = list(), fixed = character()) {
+  p <- list(
+    tfl_param("population", required = TRUE, unset = "stop",
+              doc = "the analysis set's id: the report's `population:` field, not a template parameter"),
+    tfl_param("continuous", NULL, tier = "required", unset = "stop",
+              doc = "the continuous variables, in order (required: this or `categorical`)"),
+    tfl_param("categorical", NULL, tier = "required", unset = "stop",
+              doc = "the categorical variables, in order (required: this or `continuous`)"),
+    tfl_param("by", required = TRUE, study = FALSE, unset = "stop",
+              doc = "the column variable (the arms); not a default and not the study's treatment"),
+    tfl_param("subset", NULL, unset = "step_off",
+              doc = "which subjects (R, on the analysis set's ADSL): PART == \"Part 1\"; unset: all"),
+    tfl_param("data", "ADSL", unset = "stop", doc = "a subject-level dataset"),
+    tfl_param("data_id", NULL, doc = "the analysis data's id when `data` is not ADSL; NULL: <data>_<population>"),
+    tfl_param("denominator", NULL,
+              doc = paste("the percentages' denominator: NULL the analysis set's subjects, or the id of an",
+                          "analysis data (adsl_itt, or one of the report's own); the arm headings' N",
+                          "are of it too")),
+    tfl_param("formats", .tpl_demog_formats, tier = "usual",
+              doc = paste("the ARD's formats (precision): per statistic, and per variable",
+                          "(BMIBL: {mean: 2, sd: 3}); given by name, merged; a number is the decimals,",
+                          "\"xx.x%\" a proportion as a percent")),
+    tfl_param("total", FALSE, tier = "usual", unset = "step_off",
+              doc = "TRUE: a Total column, last (each analysis again without `by`)"),
+    tfl_param("missing_row", FALSE, type = "flag", unset = "step_off",
+              doc = paste("TRUE: a row under each categorical variable counting the subjects with no value,",
+                          "last")),
+    tfl_param("missing_label", "Missing", type = "text", unset = "stop", doc = "that row's label"),
+    tfl_param("order", NULL,
+              doc = "the blocks' order (plan_levels(variable = )); NULL: the continuous, then the categorical"),
+    tfl_param("labels", .tpl_demog_labels, tier = "usual", unset = "step_off",
+              doc = paste("each variable's heading; given by name, merged (RACE: ~ drops one);",
+                          "a variable it does not name has none; unset: no headings")),
+    tfl_param("categorical_levels", NULL, type = "list", fields = c("variable", "values"),
+              doc = paste("per categorical variable, its values in display order, each shown even when 0",
+                          "(RACE: [ASIAN, WHITE]); NULL: the code list's order, else the data's")),
+    tfl_param("cells", .tpl_demog_cells, tier = "usual", study = "plan_cells.continuous",
+              doc = "the rows of each continuous variable: where each statistic goes (placement only, {mean})"),
+    tfl_param("sd_missing", "-", type = "text", study = "settings.sd_missing", unset = "step_off",
+              doc = paste("what prints in place of the SD when a group has no SD (n = 1):",
+                          "{mean} (<sd_missing>); \"\" prints the mean alone; unset: no such guard;",
+                          "no effect when `cells` is given")),
+    tfl_param("count_cell", NULL, study = "plan_cells.categorical",
+              doc = "a categorical value's cell, n (%); NULL: the study standard's"),
+    tfl_param("total_label", "Total", type = "text", doc = "the Total column's heading"),
+    tfl_param("header_n", "denominator", type = "choice", choices = c("denominator", "set", "none"),
+              unset = "step_off",
+              doc = paste("the arm headings' N: \"denominator\" the subjects the percentages are of;",
+                          "\"set\" the same while `denominator` is NULL; \"none\" no N; unset: no N.",
+                          "It acts on the heading `col_header` gives as a text")),
+    tfl_param("col_header", NULL, type = "text", study = "plan_col_header.lines",
+              doc = paste("the arm heading: a text ({col} and {n}, a line a line), or the lines of",
+                          "plan_col_header(lines = ); NULL: none")),
+    tfl_param("heading", NULL, type = "text",
+              doc = paste("the row-title (stub) column's heading, a line a line.  Given, it is the",
+                          "stub's (plan_stub(heading = ), the stub being row_label, first)")),
+    tfl_param("stub_name", NULL, type = "text", study = "plan_stub.name",
+              doc = "the row-title column's name (plan_stub(name = ))"),
+    tfl_param("stub_before", NULL, type = "flag", study = "plan_stub.before",
+              doc = "TRUE: the row-title column before the row keys (plan_stub(before = ))"),
+    tfl_param("widths", NULL, type = "text", multiple = TRUE,
+              doc = paste("NULL: the columns' content; \"auto\": the row-title column 35% of the width,",
+                          "the arm columns sharing the rest; numbers: the relative widths, one a",
+                          "printed column")),
+    tfl_param("max_rows", 30L, type = "number", doc = "rows a page"),
+    tfl_param("rounding", NULL, type = "text", study = "settings.rounding",
+              doc = paste("the rounding of the cells' numbers (plan_digits(rounding = )): sas, half away",
+                          "from zero, or r, half to even; NULL: none given here (the study's setup)")),
+    tfl_param("blanks", NULL, type = "text", study = "plan_blanks.where",
+              doc = paste("blank rows: TRUE between the blocks, FALSE none, or where (plan_blanks(where = ));",
+                          "FALSE also sets both ends off; NULL: none made here")),
+    tfl_param("blanks_first", NULL, type = "flag", study = "plan_blanks.first",
+              doc = "a blank row before the first block (plan_blanks(first = ))"),
+    tfl_param("blanks_last", NULL, type = "flag", study = "plan_blanks.last",
+              doc = "a blank row after the last block (plan_blanks(last = ))"),
+    tfl_param("blanks_counted", NULL, type = "flag", study = "plan_blanks.counted",
+              doc = "blank rows count in a page's rows (plan_blanks(counted = ))"),
+    tfl_param("border_header", NULL, type = "list", fields = c("edge", "line"), study = "plan_style.border_header",
+              doc = "the rule round the column heading (plan_style(border_header = ))"),
+    tfl_param("border_group", NULL, type = "list", fields = c("edge", "line"),
+              doc = paste("a rule under each block (plan_style(border_group = ), e.g. list(bottom = TRUE));",
+                          "NULL: none")),
+    tfl_param("style", "standard", type = "text", study = "settings.style", unset = "step_off",
+              doc = paste("the style set (font, borders, page) the report starts from: a set of the",
+                          "study's defaults.yml `styles:` or a built-in one (standard, stf_t02);",
+                          "unset: none")))
+  names(p) <- vapply(p, `[[`, "", "name")
+  for (k in names(defaults)) {
+    if (!k %in% names(p)) .ard_stop(sprintf(".tpl_demog_params(): no parameter %s.", k))
+    p[[k]]["default"] <- list(defaults[[k]])
+  }
+  for (k in fixed) p[[k]]["study"] <- list(FALSE)
+  p[[1L]]$hidden <- TRUE
+  unname(p)
+}
+
+# The continuous statistics the cells name: their tokens ({mean:.1f} -> mean),
+# in order; {q1} and {q3} are the ARD's p25 and p75
+.tpl_cell_stats <- function(cells) {
+  txt <- unlist(cells, use.names = FALSE)
+  tok <- unlist(regmatches(txt, gregexpr("\\{[A-Za-z][A-Za-z0-9_.]*", txt)))
+  tok <- sub("^\\{", "", tok)
+  tok[tok == "q1"] <- "p25"
+  tok[tok == "q3"] <- "p75"
+  unique(tok)
+}
+
+# The cells with {q1} / {q3} written as the ARD's p25 / p75
+.tpl_cell_alias <- function(x) {
+  if (is.list(x)) return(lapply(x, .tpl_cell_alias))
+  if (!is.character(x)) return(x)
+  x <- gsub("\\{q1([}:])", "{p25\\1", x)
+  gsub("\\{q3([}:])", "{p75\\1", x)
+}
+
+# The Mean (SD) cell with the SD's missing mark (`sd_missing`), or with no
+# guard at all when the parameter is unset (NULL): the step is not made.  Cells
+# a report gave are left as given.
+.tpl_demog_cells_sd <- function(cells, sd_missing) {
+  if (!identical(cells, .tpl_demog_cells) || !"Mean (SD)" %in% names(cells)) return(cells)
+  if (is.null(sd_missing)) {
+    cells[["Mean (SD)"]] <- "{mean} ({sd})"
+    return(cells)
+  }
+  .tpl_sd_missing(cells, .tpl_demog_cells, sd_missing, mean = "{mean}", sd = "{sd}")
+}
+
+.tpl_demog_body <- function(a, ctx) {
+  cont <- a$continuous
+  cat <- a$categorical
+  tn <- ctx$template$name %||% "demog"
+  if (!length(cont) && !length(cat)) {
+    .ard_stop(sprintf(paste0("template %s: give `continuous` or `categorical`, or both ",
+                             "(the analysis variables are required: they differ in each study's shell)."), tn))
+  }
+  nn <- function(x) Filter(Negate(is.null), x)
+  pop <- a$population
+  subj <- paste0("adsl_", tolower(pop))
+  # the percentages' denominator (and, through it, the headings' N)
+  dn <- .tpl_den(a, ctx, subj)
+  if (identical(dn$value, "data")) {
+    .ard_stop(sprintf("template %s: denominator = \"data\" is not for it: use NULL or an analysis data's id.", tn))
+  }
+  hn <- if (is.null(a$header_n)) "none" else .tpl_header_n_stack(a, ctx, den = dn$header)
+  grp_set <- subj
+  if (!identical(hn, "none") && !is.null(dn$header)) {
+    if (!is.character(dn$value)) {
+      .ard_stop(sprintf(paste0("%s: header_n = \"%s\" with numbers as the denominator is not supported: ",
+                               "use header_n = \"none\"."), tn, hn))
+    }
+    grp_set <- dn$value
+  }
+  sets <- c(list(list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
+                      population = pop)), dn$extra)
+  set <- subj
+  if (!identical(toupper(a[["data"]]), "ADSL")) {
+    set <- a[["data_id"]] %||% paste0(tolower(a[["data"]]), "_", tolower(pop))
+    sets <- c(sets, list(list(id = set, from = a[["data"]], subjects = subj)))
+  }
+  # the Missing row: the categorical variables again with a level of the
+  # subjects who have no value, last
+  ml <- if (isTRUE(a$missing_row)) a$missing_label else NULL
+  if (isTRUE(a$missing_row) && (!is.character(ml) || length(ml) != 1L || is.na(ml) || !nzchar(ml))) {
+    .ard_stop(sprintf("template %s: `missing_label` is one text (\"Missing\").", tn))
+  }
+  cat_set <- set
+  if (!is.null(ml) && length(cat)) {
+    cat_set <- paste0(set, "_m")
+    vv <- paste0("c(", paste0("\"", cat, "\"", collapse = ", "), ")")
+    code <- paste0(
+      "dplyr::mutate(", set, ", dplyr::across(dplyr::all_of(", vv, "), function(x) {\n",
+      "  lv <- if (is.factor(x)) levels(x) else sort(unique(x[!is.na(x) & nzchar(trimws(x))]))\n",
+      "  x <- as.character(x)\n",
+      "  x[is.na(x) | !nzchar(trimws(x))] <- \"", ml, "\"\n",
+      "  factor(x, levels = unique(c(lv, \"", ml, "\")))\n",
+      "}))")
+    sets <- c(sets, list(list(id = cat_set, label = "with the Missing level", from = set,
+                              code = tfl_r(code))))
+  }
+  # the values per variable (shown even when 0): the code lists and the order
+  vals <- a$categorical_levels
+  if (length(vals) && (is.null(names(vals)) || !all(nzchar(names(vals))))) {
+    .ard_stop(sprintf("template %s: `categorical_levels` is named by variable: RACE: [ASIAN, WHITE].", tn))
+  }
+  bad <- setdiff(names(vals), cat)
+  if (length(bad) && "categorical_levels" %in% ctx$given) {
+    .ard_stop(sprintf("template %s: `categorical_levels` names %s, not in `categorical`.", tn,
+                      paste(bad, collapse = ", ")))
+  }
+  # (the template's own default names the values of variables the report may not use)
+  vals <- vals[names(vals) %in% cat]
+  vals <- lapply(vals, function(v) as.character(unlist(v)))
+  with_ml <- function(v) if (is.null(ml)) v else unique(c(v, ml))
+  cl_vars <- intersect(cat, union(names(vals), names(ctx$codelists)))
+  codelists <- if (length(vals) || (!is.null(ml) && length(cl_vars))) {
+    cl <- lapply(cl_vars, function(v) {
+      v1 <- if (!is.null(vals[[v]])) with_ml(vals[[v]]) else NULL
+      if (is.null(v1)) return(list(list(value = ml, label = ml)))
+      lapply(v1, function(x) list(value = x, label = x))
+    })
+    names(cl) <- cl_vars
+    Filter(length, cl)
+  }
+  lev <- lapply(names(vals), function(v) with_ml(vals[[v]]))
+  names(lev) <- names(vals)
+  ov <- if (isTRUE(a[["total"]])) TRUE
+  # (the statistics computed: those `formats` names, and any the cells name)
+  fm <- as.list(a$formats)
+  nested <- fm[vapply(fm, is.list, NA)]
+  flat <- fm[!vapply(fm, is.list, NA)]
+  cont_flat <- flat[!names(flat) %in% c("n", "p")]
+  stats <- unique(c(names(cont_flat), .tpl_cell_stats(a$cells)))
+  fmt_text <- function(vars, keep) {
+    one <- function(v) as.character(v)[1L]
+    k <- flat[names(flat) %in% keep]
+    parts <- if (length(k)) paste0(names(k), "=", vapply(k, one, "")) else character()
+    for (v in intersect(names(nested), vars)) {
+      for (st in names(nested[[v]])) parts <- c(parts, paste0(v, ":", st, "=", one(nested[[v]][[st]])))
+    }
+    if (length(parts)) paste(parts, collapse = " | ")
+  }
+  analyses <- c(
+    list(nn(list(id = "GROUPN", label = "Subjects per group", method = "categorical", data = grp_set,
+                 variables = a$by, purpose = "PRIMARY OUTCOME MEASURE"))),
+    if (length(cont)) list(nn(list(
+      id = "CONT", label = "Continuous", method = "continuous", data = set,
+      by = a$by, overall = ov, variables = cont,
+      statistics = if (length(stats)) stats,
+      formats = fmt_text(cont, names(cont_flat)),
+      purpose = "PRIMARY OUTCOME MEASURE"))),
+    if (length(cat)) list(nn(list(
+      id = "CAT", label = "Categorical", method = "categorical", data = cat_set,
+      by = a$by, overall = ov, variables = cat, statistics = c("n", "p"),
+      formats = fmt_text(cat, c("n", "p")),
+      denominator = dn$value %||% subj, purpose = "PRIMARY OUTCOME MEASURE"))))
+  vars <- c(cont, cat)
+  cells <- nn(list(
+    continuous = if (length(cont) && length(a$cells)) as.list(
+      .tpl_cell_alias(.tpl_demog_cells_sd(a$cells, a[["sd_missing"]]))),
+    categorical = a$count_cell))
+  # the arms and the columns of the table, for the widths
+  w <- a$widths
+  widths_item <- NULL
+  if (is.character(w) && length(w) == 1L && identical(w, "auto")) {
+    arms <- .tpl_levels(a$by, ctx$codelists)[[a$by]]
+    ncol_val <- if (length(arms)) length(arms) + isTRUE(a$total) else NA_integer_
+    if (!is.na(ncol_val)) {
+      widths_item <- tfl_item("plan_columns", list(widths = c(35, rep(65 / ncol_val, ncol_val))))
+    }
+  } else if (length(w) && is.numeric(unlist(w)) && all(unlist(w) > 0)) {
+    widths_item <- tfl_item("plan_columns", list(widths = as.numeric(unlist(w))))
+  } else if (length(w)) {
+    .ard_stop(sprintf(paste0("template %s: `widths` is \"auto\" or the relative widths ",
+                             "(positive numbers), one a printed column."), tn))
+  }
+  # the arm heading: a text ({col} and the N on a line), or the lines a study gives
+  ch <- a$col_header
+  hdr <- NULL
+  if (is.character(ch) && length(ch) == 1L) {
+    txt <- ch
+    if (identical(hn, "none")) {
+      ln <- strsplit(txt, "\n", fixed = TRUE)[[1L]]
+      txt <- paste(ln[!grepl("{n}", ln, fixed = TRUE)], collapse = "\n")
+    }
+    hdr <- tfl_item("plan_col_header", list(header = list(
+      nn(list(line = "1", cols = "row_label", text = .tpl_lines(a$heading))),
+      list(line = "1", cols = ".values", span = "each", text = txt))))
+  } else if (length(ch)) {
+    hdr <- tfl_item("plan_col_header", list(lines = ch))
+  }
+  # the blank rows
+  bl <- a$blanks
+  blank <- NULL
+  if (!is.null(bl) || length(nn(list(a$blanks_first, a$blanks_last, a$blanks_counted)))) {
+    where <- if (isTRUE(bl)) "between_groups" else if (is.character(bl)) bl
+    off <- identical(bl, FALSE)
+    blank <- tfl_item("plan_blanks", nn(list(
+      where = where,
+      # (blanks = FALSE is no blank rows at all, whatever is said of the ends)
+      first = if (off) FALSE else a$blanks_first,
+      last = if (off) FALSE else a$blanks_last,
+      counted = a$blanks_counted)))
+  }
+  # the stub: the study's name and place, and the heading
+  stub <- NULL
+  if (length(nn(list(a$stub_name, a$stub_before, a$heading)))) {
+    hd <- !is.null(a$heading)
+    stub <- tfl_item("plan_stub", nn(list(
+      name = a$stub_name %||% if (hd) "row_label",
+      before = a$stub_before %||% if (hd) TRUE,
+      heading = if (hd) paste(a$heading, collapse = "\n"))))
+  }
+  # (a rule written as its edges, list(bottom = TRUE), is rtf_border(bottom = TRUE))
+  rule <- function(x) if (is.list(x) && !inherits(x, c("tfl_call", "tfl_r"))) tfl_call("rtf_border", x) else x
+  look <- nn(list(border_header = rule(a$border_header), border_group = rule(a$border_group)))
+  ord <- c(list(variable = a$order), lev)
+  ord <- ord[!vapply(ord, is.null, NA)]
+  content <- c(
+    list(tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable")))),
+    if (!is.null(a$rounding)) list(tfl_item("plan_digits", list(rounding = a$rounding))),
+    if (length(cells)) list(tfl_item("plan_cells", cells)),
+    if (length(ord)) list(tfl_item("plan_levels", ord)),
+    if (length(a$labels) && length(intersect(vars, names(a$labels)))) list(tfl_item(
+      "plan_labels", list(variable = as.list(a$labels[intersect(vars, names(a$labels))])))),
+    if (isTRUE(a[["total"]])) list(tfl_item("plan_total", nn(list(
+      label = a$total_label, position = "last")))),
+    if (!is.null(hdr)) list(hdr),
+    if (!is.null(blank)) list(blank),
+    if (!is.null(stub)) list(stub),
+    if (length(look)) list(tfl_item("plan_style", look)),
+    if (!is.null(widths_item)) list(widths_item),
+    # (a block is never split over pages)
+    list(tfl_item("plan_paginate_rows", nn(list(
+      max_rows = if (!is.null(a$max_rows)) as.integer(a$max_rows), split = "group_safe")))))
+  out <- list(ard = list(analysis_data = sets, analyses = analyses),
+              data = list(source = "ard", object = "ard"), content = content)
+  if (length(codelists)) out$codelists <- codelists
+  out
+}
+
+# Where each parameter acts: what is computed / how it is shown
+.tpl_demog_parts <- list(
+  ard = c("by", "data", "data_id", "subset", "continuous", "categorical", "total", "denominator",
+          "formats", "missing_row", "missing_label"),
+  content = c("order", "labels", "categorical_levels", "cells", "sd_missing", "count_cell",
+              "total_label", "header_n", "col_header", "heading", "stub_name", "stub_before",
+              "widths", "max_rows", "rounding", "blanks", "blanks_first", "blanks_last", "blanks_counted",
+              "border_header", "border_group", "style"))
+
+.tfl_template("demog", kind = "table", layout = "summary", label = "Demographics",
+              params = .tpl_demog_params(), body = .tpl_demog_body, ai = TRUE,
+              parts = .tpl_demog_parts,
+              example = list(population = "SAF", by = "TRT01A", continuous = "AGE",
+                             categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC")))
+
+# stf_t02_demog: the look of FDA's Standard Safety Tables and Figures Integrated
+# Guide v2.0 (April 2025), section 2.1.2, Table 2, "Demographics and Baseline
+# Clinical Characteristics".  A template of its own with other defaults -- the
+# labels, cells, Total and Missing, the values shown, the heading text, no blank
+# rows, a rule under each block, the style set "stf_t02" (fixed: the look is
+# the template's, so no reference to the study's style).  The variables are not
+# among them (canon 1.12): `continuous` and `categorical` are required.  It
+# follows the guide's style; it is not endorsed by FDA and not an official FDA
+# format.
+.tpl_stf_t02_defaults <- list(
+  order = c("SEX", "AGE", "AGEGR1", "RACE", "ETHNIC", "COUNTRY"),
+  labels = c(SEX = "Sex, n (%)", AGE = "Age, years", AGEGR1 = "Age groups (years), n (%)",
+             RACE = "Race, n (%)", ETHNIC = "Ethnicity, n (%)",
+             COUNTRY = "Country of participation, n (%)"),
+  cells = list(`Mean (SD)` = "{mean} ({sd})", `Median (min, max)` = "{median} ({min}, {max})"),
+  count_cell = "{n} ({p})",
+  categorical_levels = list(
+    RACE = c("AMERICAN INDIAN OR ALASKA NATIVE", "ASIAN", "BLACK OR AFRICAN AMERICAN",
+             "NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER", "WHITE", "MULTIPLE", "OTHER",
+             "NOT REPORTED", "UNKNOWN"),
+    ETHNIC = c("HISPANIC OR LATINO", "NOT HISPANIC OR LATINO", "NOT REPORTED", "UNKNOWN")),
+  total = TRUE, total_label = "Total Population", missing_row = TRUE,
+  col_header = "{col}\nN={n}", heading = "Characteristic", widths = "auto",
+  blanks = FALSE, border_group = list(bottom = TRUE), style = "stf_t02")
+
+.tfl_template("stf_t02_demog", kind = "table", layout = "summary",
+              label = "Demographics (FDA STF Table 2)",
+              params = .tpl_demog_params(
+                .tpl_stf_t02_defaults,
+                fixed = c("col_header", "stub_name", "stub_before", "blanks", "blanks_first",
+                          "blanks_last", "blanks_counted", "border_header", "style")),
+              body = .tpl_demog_body, ai = FALSE, parts = .tpl_demog_parts,
+              example = list(population = "SAF", by = "TRT01A", continuous = "AGE",
+                             categorical = c("SEX", "AGEGR1", "RACE", "ETHNIC", "COUNTRY")))

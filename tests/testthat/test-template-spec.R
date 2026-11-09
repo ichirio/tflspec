@@ -11,7 +11,7 @@ ts_output <- function(content = list(tfl_item("plan_paginate_rows", list(max_row
              codelists = list(TRT01A = list(list(value = "Drug X"), list(value = "Control"))),
              content = content,
              template = list(name = "demog", args = utils::modifyList(list(
-               population = "SAF", continuous = "AGE", categorical = c("AGEGR1", "SEX"),
+               by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX"),
                labels = c(AGE = "Age (years)", AGEGR1 = "Age group, n (%)", SEX = "Sex, n (%)")),
                args)))
 }
@@ -80,7 +80,7 @@ test_that("A (the template's call) = B (its items) = the items written out, as t
   expect_match(paste(code, collapse = "\n"), "plan <- tflspec::tfl_tpl(\n  ard,\n  \"demog\",", fixed = TRUE)
   # (the code lists are the ARD's: no codelists = for a template of cards' analyses)
   expect_false(any(grepl("codelists =", code, fixed = TRUE)))
-  expect_match(code, "# (study default)", fixed = TRUE, all = FALSE)
+  expect_match(code, "study defaults:", fixed = TRUE, all = FALSE)
   expect_match(code, "# (own)", fixed = TRUE, all = FALSE)
   expect_false(any(grepl("table_plan(", code, fixed = TRUE)))
   e <- new.env()
@@ -106,9 +106,9 @@ test_that("a study's default for a parameter that says where it is: taken, and a
   k <- which(vapply(s$defaults$content, `[[`, "", "fn") == "plan_cells")
   s$defaults$content[[k]]$args$continuous <- rows
   ro <- tfl_resolve_output(ts_output(), s)
-  expect_identical(attr(ro, "template")$study[1L], "cells")
+  expect_true("cells" %in% attr(ro, "template")$study)
   expect_identical(attr(ro, "template")$args$cells, rows)
-  expect_match(paste(tfl_content_code(ro), collapse = "\n"), "study defaults: cells", fixed = TRUE)
+  expect_match(paste(tfl_content_code(ro), collapse = "\n"), "study defaults: [a-z_, ]*cells")
   expect_message(tfl_resolve_output(ts_output(args = list(cells = list(n = "{N}"))), s),
                  "overrides the study standard")
 })
@@ -148,10 +148,20 @@ test_that("every template as a template SPEC: resolved as its items written out 
                             identical(p$stage, "data"), NA))) {
       list(steps = list(list(step = "read", dataset = "ADTTE"), list(step = "param", value = "PFS")))
     }
+    ex <- .tpl_examples[[nm]]
+    # (demog's analysis set is the report's `population:`, not an argument)
+    if (nm %in% c("demog", "stf_t02_demog")) ex$population <- NULL
     o <- tfl_output(paste0("X-", nm), tp$kind[tp$name == nm], population = "SAF",
-                    template = list(name = nm, args = .tpl_examples[[nm]]), data = own)
+                    template = list(name = nm, args = ex), data = own)
     ro <- tfl_resolve_output(o, s)
-    rb <- tfl_resolve_output(tfl_template_to_spec(o, s), s)
+    w <- tfl_template_to_spec(o, s)
+    if (.tpl_switched(nm)) {
+      # a switched template reads no study content layer, but its written-out SPEC is a
+      # code SPEC the layers apply to: every written-out verb is in the resolved items (which add the style set), the template's the content
+      expect_true(all(vapply(w$content, `[[`, "", "fn") %in% vapply(ro$content, `[[`, "", "fn")), info = nm)
+      next
+    }
+    rb <- tfl_resolve_output(w, s)
     expect_identical(lapply(ro$content, unclass), lapply(rb$content, unclass), info = nm)
   }
 })
@@ -174,7 +184,7 @@ hs_output <- function(header = NULL, template = "ae_soc_pt") {
   tfl_output("T-9", "table", population = "SAF",
              content = if (!is.null(header)) list(tfl_item("plan_col_header", list(header = header))) else
                list(tfl_item("plan_paginate_rows", list(max_rows = 24L))),
-             template = list(name = template, args = list(population = "SAF")))
+             template = list(name = template, args = if (template == "demog") list(by = "TRT01A", continuous = "AGE") else list(population = "SAF")))
 }
 hs_header <- function(o, s = ts_study()) {
   ro <- tfl_resolve_output(o, s)

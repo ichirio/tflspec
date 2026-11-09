@@ -48,6 +48,10 @@ tfl_read_template_sheets <- function(path) {
       n <- suppressWarnings(as.numeric(v))
       args[[kv[1L]]] <- if (!is.na(n)) n else v
     }
+    # (a template that takes the analysis set from the report's `population:`
+    # has it as no argument)
+    tp <- tryCatch(.tpl_get(val(t$template[i]) %||% "", fn), error = function(e) NULL)
+    if (isTRUE(tp$params$population$hidden)) args$population <- NULL
     r <- rows[rows$output_id == id, , drop = FALSE]
     for (p in unique(r$param)) {
       k <- r[r$param == p, , drop = FALSE]

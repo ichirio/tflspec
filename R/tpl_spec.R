@@ -183,6 +183,10 @@
                              "`template: args:`."),
                       id, t$name, paste(sQuote(stage, FALSE), collapse = ", ")))
   }
+  if ("population" %in% hidden) {
+    .ard_stop(sprintf(paste0("%s: template %s takes the analysis set from the report's `population:` ",
+                             "field, not from `template:`."), id, t$name))
+  }
   if (length(hidden)) {
     .ard_stop(sprintf(paste0("%s: template %s takes %s from the study standard, not from ",
                              "`template: args:`; a figure setting (`plot:`: the title, axes, legend, theme, palette, ",
@@ -191,6 +195,12 @@
                       id, t$name, paste(sQuote(hidden, FALSE), collapse = ", ")))
   }
   .tpl_data_said(t, output, id)
+  # a template with a `style` parameter: the report's `style:` field is its value
+  # when the SPEC does not give one
+  if ("style" %in% names(t$params) && !"style" %in% names(args) && length(output$style) == 1L &&
+      !is.na(output$style)) {
+    args$style <- output$style
+  }
   from_study <- character()
   for (p in t$params) {
     if (is.null(p$study)) next
@@ -213,8 +223,9 @@
 # standard): no look item, no defaults.yml / patterns / style-set content
 # of the study applies to their reports, only the page and the code lists
 # (migration/MIGRATION.md, "the per-batch precedence switch").  Each family's
-# batch adds its names here; none has yet.  An alias is its template.
-.tpl_switched_names <- character()
+# batch adds its names here (demog and stf_t02_demog: batch 1).  An alias is its
+# template.
+.tpl_switched_names <- c("demog", "stf_t02_demog")
 .tpl_switched <- function(name) {
   to <- if (exists(name, envir = .tpl_registry, inherits = FALSE)) name else
     .tpl_alias_target(name, ".tpl_switched()") %||% name
@@ -223,23 +234,60 @@
 
 # The set a `style` parameter names, for the parameter that takes it
 # (a template's `style`, `tfl_param("style", study = "settings.style",
-# default = "standard")`): the study's own set of that name (spec/
-# defaults.yml `styles:`), else tflspec's built-in one.  A layer: `data`,
-# `codelists`, `content`, `page`.  A name neither has stops, naming the sets
-# there are.  No template reads it yet.
-.tpl_style_builtin <- list(
-  standard = list(data = list(), codelists = list(), content = list(), page = list()))
+# default = "standard")`).  A name tflspec ships ("standard", "stf_t02")
+# always is tflspec's set: a study's `styles:` of the same name does not
+# replace it.  Any other name is the study's own set (spec/defaults.yml
+# `styles:`).  A layer: `data`, `codelists`, `content`, `page`.  A name
+# neither has stops, naming the sets there are.
+.tpl_style_builtin_yaml <- c(
+  standard = "{}",
+  # FDA STF IG v2.0, section 2.1.2, Table 2's look (not an FDA format)
+  stf_t02 = paste(
+    "content:",
+    "  - plan_style:",
+    "      font: Arial",
+    "      font_size_half_points: 16",
+    "      header_bold: true",
+    "      header_align: right",
+    "      align: right",
+    "      border_header: {fn: rtf_border, args: {top: true, bottom: true}}",
+    "      border_last_row: {fn: rtf_border, args: {bottom: true}}",
+    "  - plan_cell_style: {cols: row_label, align: left}",
+    "page:",
+    "  rtf_page: {orientation: landscape}",
+    sep = "\n"))
+.tpl_style_builtin_names <- names(.tpl_style_builtin_yaml)
+.tpl_style_builtin_set <- function(name) {
+  y <- yaml::yaml.load(.tpl_style_builtin_yaml[[name]], handlers = .yaml_handlers())
+  .layer_from_list(if (length(y)) y else list(), paste0("style:", name))
+}
 .tpl_style_set <- function(name, study = NULL) {
   if (!is.character(name) || length(name) != 1L || is.na(name) || !nzchar(name)) {
     .ard_stop("`style` is one style's name (a set of defaults.yml's styles:, or a built-in one).")
   }
-  set <- study$styles[[name]] %||% .tpl_style_builtin[[name]]
+  if (name %in% .tpl_style_builtin_names) return(.tpl_style_builtin_set(name))
+  set <- study$styles[[name]]
   if (is.null(set)) {
     .ard_stop(sprintf("no style %s in defaults.yml's styles: or among the built-in sets (%s).",
                       dQuote(name, FALSE),
-                      paste(unique(c(names(study$styles), names(.tpl_style_builtin))), collapse = ", ")))
+                      paste(unique(c(names(study$styles), .tpl_style_builtin_names)), collapse = ", ")))
   }
   set
+}
+
+# The style layer of a switched template's report: the set its `style`
+# parameter names (the report's `style:` field is the parameter's value when
+# the SPEC does not give it), NULL when the template has none or it is unset
+.tpl_switched_style <- function(output, study) {
+  ts <- .tpl_spec_of(output)
+  t <- .tpl_get(ts$name, sprintf("%s: template:", output$id))
+  if (!"style" %in% names(t$params)) return(NULL)
+  sa <- suppressMessages(.tpl_study_args(t, ts$args, output$id, output, study))
+  nm <- if ("style" %in% names(sa$args)) sa$args$style else t$params$style$default
+  if (is.null(nm) || inherits(nm, "tfl_unset")) return(NULL)
+  st <- .tpl_style_set(nm, study)
+  if (!identical(output$kind, "table")) st$content <- list()
+  st
 }
 
 # The template expanded for a report: its arguments with the study's
@@ -278,7 +326,8 @@
 # the report's own `ard:` does (step 1's analysis data)
 .tpl_den_known <- function(t, args, x, output) {
   v <- args$denominator
-  if (!"denominator" %in% names(t$params) || !is.character(v) || length(v) != 1L ||
+  # (an `!unset` or a NULL: the analysis set's, nothing to check)
+  if (!"denominator" %in% names(t$params) || inherits(v, "tfl_unset") || !is.character(v) || length(v) != 1L ||
       is.na(v)) return(invisible())
   v <- trimws(v)
   if (identical(v, "data") || !is.null(.den_numbers(v))) return(invisible())
@@ -604,6 +653,10 @@ tfl_template_to_spec <- function(output, study) {
 # (`n == 0 ~ "0"`), not as the text they are held in
 .tpl_r_code <- function(x) {
   if (inherits(x, "tfl_r")) return(.spec_expr(as.character(unclass(x))))
+  # an `!unset` (over a default of the template) as the call that says it
+  if (inherits(x, "tfl_unset")) return(.spec_call("tflspec::tfl_unset"))
+  # a call (a rule: rtf_border(top = TRUE)) as the call it is
+  if (inherits(x, "tfl_call")) return(.schema_value_to_r(x, NULL, FALSE))
   if (is.list(x) && !is.object(x)) x[] <- lapply(x, .tpl_r_code)
   x
 }

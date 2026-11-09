@@ -40,7 +40,9 @@ hn_base <- list(
   shift = list(data_id = "adlb_shift", by_levels = c("Drug X", "Control")),
   param_change = list(data = "ADLB", params = c("ALT", "AST"), where = "ONTRTFL == \"Y\""),
   ancova = list(data = "ADVS", param = "SYSBP", visit = "CYCLE 2 DAY 1"),
-  summary = list(continuous = "AGE"))
+  summary = list(continuous = "AGE"),
+  demog = list(by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX")),
+  stf_t02_demog = list(by = "TRT01A", continuous = "AGE", categorical = c("SEX", "AGEGR1")))
 
 # the report: its template built to the table step; NULL, or what stopped it
 hn_try <- function(tpl, ..., pop = "SAF") {
@@ -81,7 +83,7 @@ test_that("total = TRUE and stack = TRUE: the Total column and the stacked layer
     hn_expect_ok(tpl, total = TRUE, label = paste(tpl, "total"))
   }
   hn_expect_ok("stf_t02_demog", total = FALSE, label = "stf_t02_demog total = FALSE")
-  hn_expect_ok("demog", stack = TRUE, total = TRUE, label = "demog stack total")
+  hn_expect_ok("summary", stack = TRUE, total = TRUE, label = "summary stack total")
 })
 
 test_that("subset: the same subjects in every analysis", {

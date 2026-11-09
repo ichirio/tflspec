@@ -115,7 +115,9 @@
 #'   `"template"` or `"default"`), `maps_to` (its study source,
 #'   `"plan_stub.indent"`, or the verb its doc names), `doc`, `study_key`
 #'   (its reference, else `NA`) and `fallback` (the value it takes when
-#'   the study has none: a variant's default else the layout's; `NA` none).
+#'   the study has none: a variant's default else the layout's; `NA` none)
+#'   and `unset` (what `!unset` does to it: `"omit"`, `"stop"` or
+#'   `"step_off"`; `NA` for a template not yet migrated).
 #' @seealso [tfl_tpl_help()] to print it; [tfl_tpl()] to run a template.
 #' @examples
 #' a <- tfl_tpl_args("demog")
@@ -169,6 +171,7 @@ tfl_tpl_args <- function(name, study = NULL, population = NULL) {
                study = .tpl_short(sv), effective = .tpl_short(eff), layer = layer,
                maps_to = .tpl_maps_to(p), doc = p$doc %||% NA_character_,
                study_key = key, fallback = if (is.na(key)) NA_character_ else .tpl_short(p$default),
+               unset = if (.tpl_switched(t$name)) p$unset %||% "omit" else NA_character_,
                stringsAsFactors = FALSE)
   })
   out <- do.call(rbind, unname(rows))

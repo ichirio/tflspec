@@ -57,7 +57,7 @@ test_that("demog, summary and disposition: a blank is missing, not a category", 
     adsl$EOSSTT[i[2L]] <- ""
   }
   d <- bv_study(withr::local_tempdir(), list(adsl = adsl))
-  bv_put(d, "T-D", "demog", list(population = "SAF"))
+  bv_put(d, "T-D", "demog", list(by = "TRT01A", continuous = "AGE", categorical = c("SEX", "AGEGR1")))
   bv_put(d, "T-S", "summary", list(population = "SAF", continuous = "AGE",
                                    categorical = c("SEX", "EOSSTT"), total = TRUE))
   bv_put(d, "T-DI", "disposition", list(population = "SAF"))
@@ -72,8 +72,10 @@ test_that("demog, summary and disposition: a blank is missing, not a category", 
         x <- x[x != ""]
         for (l in unique(x)) {
           expect_equal(bv_stat(a, v, l, arm, "n"), sum(x == l), info = paste(id, v, l, arm))
-          # the percent is of the subjects with a value
-          expect_equal(bv_stat(a, v, l, arm, "p"), sum(x == l) / length(x), info = paste(id, v, l, arm))
+          # the percent is of the subjects with a value (demog: of the arm's subjects, the
+          # analysis set's, as its `denominator` says; the blank subjects are its `missing_row`)
+          den <- if (id == "T-D") sum(s$TRT01A == arm) else length(x)
+          expect_equal(bv_stat(a, v, l, arm, "p"), sum(x == l) / den, info = paste(id, v, l, arm))
         }
       }
     }

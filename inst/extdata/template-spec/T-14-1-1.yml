@@ -6,7 +6,6 @@ extends: defaults
 template:
   name: demog
   args:
-    population: SAF
     by: TRT01A
     continuous: AGE
     labels:
