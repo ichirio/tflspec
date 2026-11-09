@@ -38,7 +38,7 @@
   add <- function(...) rows[[length(rows) + 1L]] <<- .check_rows(output_id = id, ...)
   # (a template by name alone, `template: km_simple`, or with its arguments)
   tpl <- o$template
-  args <- if (is.list(tpl)) tpl$args %||% list() else list()
+  args <- if (is.list(tpl)) (.tpl_spec_of(o)$args %||% tpl$args %||% list()) else list()
   tx <- .check_texts(list(content = o$content, template = args, layers = o$layers))
   # {p:.1%}: a precision then `%`, no type between them
   bad <- if (!is.null(tx)) tx[grepl("[{][^{}:]+:[^{}]*[.][0-9]+%[}]", tx$text), , drop = FALSE]

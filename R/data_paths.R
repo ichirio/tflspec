@@ -152,7 +152,7 @@
     }
     # (a template puts its `where` in the program it writes: the report has it)
     o <- Filter(function(x) identical(x$id, oid), outs)
-    targs <- if (length(o)) o[[1L]]$template$args else NULL
+    targs <- if (length(o)) (.tpl_spec_of(o[[1L]])$args %||% o[[1L]]$template$args) else NULL
     if (!length(stats::na.omit(where)) && !is.null(targs$where)) {
       where <- paste(as.character(targs$where), collapse = " ")
     }

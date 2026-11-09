@@ -21,7 +21,37 @@
   if (!is.character(t$name) || length(t$name) != 1L || !nzchar(t$name)) {
     .ard_stop(sprintf("%s: `template: name:` is one template's name.", output$id))
   }
-  list(name = t$name, args = as.list(t$args %||% list()))
+  list(name = t$name, args = .tpl_spec_args(t))
+}
+
+# A template SPEC's arguments: the flat `args:`, and the two parts --
+# `ard:` (what is computed) and `content:` (how it is shown) -- each name
+# in the part the template says it acts in (a name in the other part stops,
+# naming the right one).  A template with no parts takes them as written.
+.tpl_spec_args <- function(t) {
+  args <- as.list(t$args %||% list())
+  tpl <- tryCatch(.tpl_get(t$name, "template:"), error = function(e) NULL)
+  for (part in c("ard", "content")) {
+    p <- t[[part]]
+    if (is.null(p)) next
+    if (!is.list(p) || (length(p) && is.null(names(p)))) {
+      .ard_stop(sprintf("template %s: `%s:` is a map of parameters (`%s: {...}`).", t$name, part, part))
+    }
+    other <- setdiff(c("ard", "content"), part)
+    wrong <- if (!is.null(tpl$parts)) setdiff(names(p), tpl$parts[[part]]) else character()
+    wrong <- intersect(wrong, tpl$parts[[other]])
+    if (length(wrong)) {
+      .ard_stop(sprintf("template %s: %s acts in `%s:`, not `%s:`.", t$name,
+                        paste(sQuote(wrong, FALSE), collapse = ", "), other, part))
+    }
+    dup <- intersect(names(p), names(args))
+    if (length(dup)) {
+      .ard_stop(sprintf("template %s: %s is given twice (in `args:` and `%s:`, or in both parts).",
+                        t$name, paste(sQuote(dup, FALSE), collapse = ", "), part))
+    }
+    args <- c(args, p)
+  }
+  args
 }
 
 # Is a `template: {name: }` a figure design's preset (tfl_fig_templates():

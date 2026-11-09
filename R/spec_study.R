@@ -352,7 +352,8 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 # `standard` when it names none (none when the study has no `standard`).
 # A figure's or a listing's style is its page only, as the defaults are.
 .style_of <- function(output, study) {
-  nm <- output$style %||% "standard"
+  # (the report's own `style:` wins; a template's `style` parameter is the default)
+  nm <- output$style %||% .tpl_style_default(output) %||% "standard"
   if (!is.character(nm) || length(nm) != 1L) {
     .ard_stop(sprintf("%s: `style` is one of the study's styles' names.", output$id))
   }
@@ -365,6 +366,15 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   }
   if (!identical(output$kind, "table")) st$content <- list()
   st
+}
+
+# A template's `style` parameter for a report: the SPEC's value, else the
+# template's default (a variant's too); NULL when it has no such parameter
+.tpl_style_default <- function(output) {
+  ts <- .tpl_spec_of(output)
+  if (is.null(ts)) return(NULL)
+  ts$args$style %||% tryCatch(.tpl_get(ts$name, "style")$params$style$default,
+                              error = function(e) NULL)
 }
 
 .layer_of <- function(nm, study) {

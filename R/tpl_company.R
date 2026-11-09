@@ -188,7 +188,7 @@ tfl_template_variant <- function(name, from, defaults = list(), label = NULL, ex
   root <- src$root %||% src$name
   list(name = v$name, kind = src$kind, layout = src$layout, params = params,
        body = src$body, label = v$label %||% src$label, call = src$call,
-       package = v$package, example = v$example %||% src$example %||% .tpl_examples[[root]],
+       package = v$package, parts = src$parts, example = v$example %||% src$example %||% .tpl_examples[[root]],
        ai = if (is.null(v$ai)) isTRUE(src$ai) else isTRUE(v$ai),
        from = sub("^[.]base[.]", "", v$from), root = root,
        # every default it changes, the ones of a variant it is made from too
@@ -264,6 +264,8 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
 # the table's shape: the study's plan_blanks() between groups must not take
 # it away.)
 .tpl_is_look <- function(it) {
+  # (an item a template made from a parameter the report gave: the report's)
+  if (isTRUE(it$explicit)) return(FALSE)
   it$fn %in% names(.tpl_look) && !any(names(it$args) %in% .tpl_shape_keys[[it$fn]]) &&
     !identical(it$args$where, "between_parts")
 }
