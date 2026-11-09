@@ -1004,15 +1004,18 @@ names(.tpl_demog_params) <- vapply(.tpl_demog_params, `[[`, "", "name")
 # stf_t02_demog: the look of FDA's Standard Safety Tables and Figures
 # Integrated Guide v2.0 (April 2025), section 2.1.2, Table 2, "Demographics
 # and Baseline Clinical Characteristics": a variant is a template defined by
-# other defaults -- the variables, labels, cells, Total and Missing, the
-# values shown, the heading text, no blank rows, a style set.  It follows the
-# guide's style; it is not endorsed by FDA and not an official FDA format.
+# other defaults -- the labels, cells, Total and Missing, the values shown,
+# the heading text, no blank rows, a style set.  The variables are not among
+# them: a template never defaults a variable set (canon 1.12), so `continuous`
+# and `categorical` stay required, as in demog; the candidate lists are
+# tflplanner's suggested values.  It follows the guide's style; it is not
+# endorsed by FDA and not an official FDA format.
 tfl_template_variant("stf_t02_demog", from = "demog",
   label = "Demographics (FDA STF Table 2)",
-  example = list(population = "SAF"), ai = FALSE,
+  example = list(population = "SAF", continuous = "AGE",
+                 categorical = c("SEX", "AGEGR1", "RACE", "ETHNIC", "COUNTRY")),
+  ai = FALSE,
   defaults = list(
-    continuous = "AGE",
-    categorical = c("SEX", "AGEGR1", "RACE", "ETHNIC", "COUNTRY"),
     order = c("SEX", "AGE", "AGEGR1", "RACE", "ETHNIC", "COUNTRY"),
     labels = c(SEX = "Sex, n (%)", AGE = "Age, years", AGEGR1 = "Age groups (years), n (%)",
                RACE = "Race, n (%)", ETHNIC = "Ethnicity, n (%)",

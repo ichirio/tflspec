@@ -3,6 +3,11 @@
 # ARD side, and the params for the arm headings, widths, blank rows, the page
 # and the style (DEMOG-DESIGN).
 
+# the variables the FDA-style example gives itself (a template never defaults them)
+dp_fda <- function(...) utils::modifyList(list(
+  population = "SAF", continuous = "AGE",
+  categorical = c("SEX", "AGEGR1", "RACE", "ETHNIC", "COUNTRY")), list(...))
+
 dp_items <- function(x) x$content
 dp_item <- function(x, fn) Filter(function(it) identical(it$fn, fn), x$content)
 dp_args <- function(...) utils::modifyList(list(population = "SAF", continuous = "AGE",
@@ -64,11 +69,15 @@ test_that("the analysis variables are required: at least one, else a clear error
   expect_identical(an("CAT")$variables, c("AGEGR1", "SEX"))
 })
 
-test_that("a variant sets the variables, so it needs only the population", {
-  expect_no_error(tfl_template_expand("stf_t02_demog", list(population = "SAF")))
+test_that("a variant does not default the variables either: they stay required", {
+  expect_error(tfl_template_expand("stf_t02_demog", list(population = "SAF")),
+               "give `continuous` or `categorical`")
+  expect_no_error(tfl_template_expand("stf_t02_demog", dp_fda()))
   p <- tfl_template_params("stf_t02_demog")
-  expect_false(p$continuous$required)
-  expect_identical(p$continuous$default, "AGE")
+  expect_null(p$continuous$default)
+  expect_null(p$categorical$default)
+  expect_null(tflspec:::.tpl_get("stf_t02_demog", "t")$defaults[["continuous"]])
+  expect_null(tflspec:::.tpl_get("stf_t02_demog", "t")$defaults[["categorical"]])
   expect_match(tflspec:::.tpl_get("stf_t02_demog", "t")$label, "(FDA STF Table 2)", fixed = TRUE)
   expect_error(tfl_template_expand("demog_fda_safety", list(population = "SAF")), "no template")
 })
@@ -353,7 +362,7 @@ test_that("a two-part report runs end to end and reads back from YAML", {
 test_that("stf_t02_demog: the FDA STF Table 2 look as defaults of a variant; it runs", {
   skip_if_not_installed("haven")
   d <- dp_study()
-  x <- tfl_template_expand("stf_t02_demog", list(population = "SAF"))
+  x <- tfl_template_expand("stf_t02_demog", dp_fda())
   expect_identical(dp_item(x, "plan_total")[[1L]]$args$label, "Total Population")
   hdr <- dp_item(x, "plan_col_header")[[1L]]
   expect_identical(hdr$args$header[[2L]]$text, "{col}\nN={n}")
@@ -365,7 +374,8 @@ test_that("stf_t02_demog: the FDA STF Table 2 look as defaults of a variant; it 
   expect_length(dp_item(tfl_template_expand("demog", dp_args()), "plan_stub"), 0L)
   expect_identical(dp_item(x, "plan_cells")[[1L]]$args$continuous[["Median (min, max)"]],
                    "{median} ({min}, {max})")
-  r <- dp_run(d, list(name = "stf_t02_demog"),
+  r <- dp_run(d, list(name = "stf_t02_demog", ard = list(
+                continuous = "AGE", categorical = c("SEX", "AGEGR1", "RACE", "ETHNIC", "COUNTRY"))),
               extra = list(codelists = list(TRT01A = list(list(value = "Drug X", label = "Drug X"),
                                                           list(value = "Control", label = "Control")))))
   expect_true("Total Population" %in% names(r$table))
