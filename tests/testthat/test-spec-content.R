@@ -592,3 +592,13 @@ test_that("a stub heading goes in the layout sheet's stub_heading and comes back
   expect_identical(st[[1L]]$plan_stub$heading, "")
   expect_identical(st[[1L]]$plan_stub$name, "row_label")
 })
+
+test_that("a guard's numbers reach the cells sheet as written, not as 5e-04", {
+  it <- tfl_item("plan_cells", list(categorical = list(p > 0 & p < 0.0005 ~ "{n} (<0.1%)",
+                                                       "{n} ({p:.1f%}%)")))
+  s0 <- getOption("scipen")
+  sh <- tflspec:::.plan_sheets_from_content(list(it), "T-1")
+  w <- sh$cells$when[!is.na(sh$cells$when)]
+  expect_identical(w, "p > 0 & p < 0.0005")
+  expect_identical(getOption("scipen"), s0)
+})

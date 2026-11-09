@@ -62,7 +62,7 @@ test_that("the layouts' parameters: what a report changes; the look is the study
   expect_identical(sort(names(tfl_template_params("hierarchical"))), sort(c(
     "population", "subset", "hierarchy", "data", "where", "by", "any_row", "any_row_label",
     "heading", "sort",
-    "min_pct", "min_pct_in", "count_cell", "denominator", "total")))
+    "min_pct", "min_pct_in", "count_cell", "denominator", "total", "header_n")))
   # every parameter's stage: an argument of the call, unless it says "data"
   expect_true(all(vapply(p, `[[`, "", "stage") == "call"))
   expect_identical(tfl_param("x", stage = "data")$stage, "data")

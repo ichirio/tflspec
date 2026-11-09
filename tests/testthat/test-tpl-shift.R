@@ -274,10 +274,9 @@ test_that("shift: header_n = 'none' shows no N; param_page = FALSE shows the set
                                               c(sum(saf$TRT01A == "Drug X"),
                                                 sum(saf$TRT01A == "Control"))))
   }
-  pt <- sn_report(d, list(param_page = FALSE, header_n = "tested"))
-  for (g in suppressMessages(rtfreporter::plan_apply(pt, "pages"))) {
-    expect_false(any(grepl("N=", sn_hdr1(g), fixed = TRUE)))
-  }
+  # ("tested" is a page's parameter's N: without the page it stops, not no N)
+  expect_error(suppressWarnings(sn_report(d, list(param_page = FALSE, header_n = "tested"))),
+               "header_n = \"tested\" needs param_page = TRUE", fixed = TRUE)
   pg <- suppressMessages(rtfreporter::plan_apply(sn_report(d, list(header_n = "none")), "pages"))
   expect_identical(names(pg), c("Parameter: ALT", "Parameter: AST"))
   expect_identical(sn_hdr1(pg[[1L]]), c("", "Drug X", "Control"))
@@ -295,9 +294,11 @@ test_that("shift: header_n = 'none' shows no N; param_page = FALSE shows the set
   t1 <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "V", params = "ALT",
                                               header_n = "tested"))
   expect_identical(vapply(t1$ard$analyses, `[[`, "", "id"), c("SHIFT", "SHIFT_N"))
-  t2 <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "V", params = "ALT",
-                                              header_n = "tested", param_page = FALSE))
-  expect_length(t2$ard$analyses, 1L)
+  # (the tested N is a page's parameter's: without the page it stops, not no N)
+  expect_error(tfl_template_expand("lab_shift", list(population = "SAF", visit = "V",
+                                                     params = "ALT", header_n = "tested",
+                                                     param_page = FALSE)),
+               "lab_shift: header_n = \"tested\" needs param_page = TRUE", fixed = TRUE)
   # FALSE and TRUE are not values: an error naming the values
   expect_error(tfl_template_expand("shift", list(population = "SAF", header_n = FALSE)),
                "\"set\".*\"tested\".*\"none\"")
