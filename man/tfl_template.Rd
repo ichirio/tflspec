@@ -52,8 +52,9 @@ templates (\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}\code{(templates = TRU
 A template's definition: its kind, the layout it is built on, its few
 parameters (\code{\link[=tfl_param]{tfl_param()}}) and its body, a function of the parameters'
 values and the report's context that returns the report's items.  A
-company's package calls it when it is loaded (\code{.onLoad()}), and so does
-a study's \verb{spec/templates/<name>.R}.  The usual body is a tflspec
+company's package calls it when it is loaded (\code{.onLoad()}); a study has
+no templates of its own (a report of a study changes a template's
+arguments or adds cards after it).  The usual body is a tflspec
 template's with the company's defaults (\code{\link[=tfl_template_params]{tfl_template_params()}} to
 start from, \code{\link[=tfl_template_expand]{tfl_template_expand()}} in the body); see
 \code{\link[=tfl_use_company_templates]{tfl_use_company_templates()}}.

@@ -4,7 +4,7 @@
 \alias{tfl_tpl_km_cumulative}
 \title{Kaplan-Meier plot of the cumulative percentage (1 - S(t)): CI bars, number at risk, p-value: the template km_cumulative}
 \description{
-The figure template \code{km_cumulative}, layout \code{km}: a variant of \code{km} (its defaults changed). Its program is one call, \code{tfl_tpl(adtte, "km_cumulative", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
+The figure template \code{km_cumulative}, layout \code{km}: a variant of \code{km} (its defaults changed). Its program is one call, \code{tfl_tpl(adtte, "km_cumulative", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }
 \section{Parameters}{
 \tabular{llllll}{
@@ -12,7 +12,7 @@ The figure template \code{km_cumulative}, layout \code{km}: a variant of \code{k
    \code{time} \tab usual \tab call \tab AVAL \tab  \tab the time variable (Surv(time, ...)), in 'time_unit' \cr
    \code{time_unit} \tab usual \tab call \tab months \tab  \tab the time's unit: the call's first step converts the days to it; the x axis's title \cr
    \code{censor} \tab usual \tab call \tab CNSR \tab  \tab the censoring variable, 1 censored (Surv(time, censor == 0)) \cr
-   \code{by} \tab required \tab call \tab  \tab settings.treatment \tab the curves' variable (survfit2(~ by), the colours) \cr
+   \code{by} \tab required \tab call \tab study: settings.treatment, required \tab settings.treatment \tab the curves' variable (survfit2(~ by), the colours) \cr
    \code{y_percent} \tab other \tab call \tab TRUE \tab  \tab TRUE: the y axis in \% (scale_y_continuous(labels = scales::label_percent())) \cr
    \code{ci} \tab usual \tab call \tab bars \tab  \tab the confidence interval: band (add_confidence_interval()), bars at the axis's times (geom_errorbar()) \cr
    \code{ci_times} \tab other \tab call \tab  \tab  \tab the bars' times (summary(fit, times = )); NULL: the x axis's breaks \cr
@@ -27,7 +27,7 @@ The figure template \code{km_cumulative}, layout \code{km}: a variant of \code{k
    \code{x_label} \tab usual \tab call \tab  \tab  \tab the x axis's title (labs(x = )); NULL: Time (<unit>) \cr
    \code{y_min} \tab other \tab call \tab  \tab  \tab the y axis's start (coord_cartesian(ylim = )); NULL: 0 \cr
    \code{y_max} \tab other \tab call \tab  \tab  \tab the y axis's end; NULL: 1 \cr
-   \code{y_step} \tab other \tab call \tab  \tab km.y_by \tab the y axis's step (scale_y_continuous(breaks = )); NULL: the figure style's \cr
+   \code{y_step} \tab other \tab call \tab study: km.y_by, no fallback \tab km.y_by \tab the y axis's step (scale_y_continuous(breaks = )); NULL: the figure style's \cr
    \code{y_label} \tab usual \tab call \tab  \tab  \tab the y axis's title (labs(y = )); NULL: by y_type \cr
    \code{linetype_by} \tab other \tab call \tab FALSE \tab  \tab TRUE: a line type an arm too (ggsurvfit(linetype_aes = TRUE)) \cr
    \code{legend} \tab usual \tab call \tab bottom \tab  \tab the legend's place (theme(legend.position = )); NULL: inside \cr

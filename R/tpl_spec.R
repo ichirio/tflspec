@@ -84,16 +84,40 @@
 }
 
 # The study standard's value of a parameter that says where it is
-# (tfl_param(study = )): one of the study's own settings named below, else
-# "<verb>.<argument>", that argument of the verb's item in the layers below
-# the report; NULL when none has it
-.tpl_study_value <- function(src, base, output = NULL, study = NULL) {
-  if (src %in% names(.tpl_study_sources)) return(.tpl_study_sources[[src]](output, study))
-  fn <- sub("[.].*$", "", src)
-  arg <- sub("^[^.]*[.]", "", src)
-  hit <- Filter(function(it) identical(it$fn, fn) && arg %in% names(it$args),
-                if (inherits(base, "tfl_r")) list() else base %||% list())
-  if (length(hit)) hit[[length(hit)]]$args[[arg]] else NULL
+# (tfl_param(study = <key>)): the one reader, for any key, with no table of
+# keys.  `settings.<name>` is study.yml's `settings:`; `figure_style.<key>`
+# (or `figure_style.<type>.<key>`) is defaults.yml's `figure_style:` over
+# tflspec's built-in one; `output.<field>` is the report's own field;
+# `km.<key>` is the company's figure style (until the Kaplan-Meier batch);
+# any other first part is a verb: `<verb>.<argument>[.<name>]` is that
+# argument of the last item of the verb in spec/defaults.yml's `content:` (a
+# part further down is a name in it).  Patterns, a style set and the
+# company's files are not read.  NULL when the study has none.
+.tpl_study_read <- function(key, output = NULL, study = NULL) {
+  root <- sub("[.].*$", "", key)
+  path <- strsplit(sub("^[^.]*[.]", "", key), ".", fixed = TRUE)[[1L]]
+  down <- function(x, path) {
+    for (k in path) {
+      if (!is.list(x) || !k %in% names(x)) return(NULL)
+      x <- x[[k]]
+    }
+    x
+  }
+  switch(root,
+    output = {
+      v <- down(output, path)
+      # (none when the report names none: NA is tfl_output()'s "not given")
+      if (length(v) == 1L && !is.na(v)) v
+    },
+    settings = down(study$study$settings, path),
+    figure_style = .tpl_fig_style_read(path, study),
+    km = .tpl_km_style_value(path[1L]),
+    {
+      items <- study$defaults$content
+      if (inherits(items, "tfl_r") || !length(items)) return(NULL)
+      hit <- Filter(function(it) identical(it$fn, root) && !is.null(down(it$args, path)), items)
+      if (length(hit)) down(hit[[length(hit)]]$args, path) else NULL
+    })
 }
 
 # A template whose data stage is the report's (its data-stage parameters
@@ -149,7 +173,7 @@
 # SPEC does not give takes the study's value (tfl_param(study = )); one it
 # gives over a different study value says so (a message).  Returns the
 # arguments and the names the study gave.
-.tpl_study_args <- function(t, args, base, id, output = NULL, study = NULL) {
+.tpl_study_args <- function(t, args, id, output = NULL, study = NULL) {
   # (a parameter the template hides is not the report's: its look)
   hidden <- intersect(names(args), names(Filter(function(p) isTRUE(p$hidden), t$params)))
   stage <- hidden[vapply(hidden, function(k) identical(t$params[[k]]$stage, "data"), NA)]
@@ -170,7 +194,7 @@
   from_study <- character()
   for (p in t$params) {
     if (is.null(p$study)) next
-    v <- .tpl_study_value(p$study, base, output, study)
+    v <- .tpl_study_read(p$study, output, study)
     if (is.null(v)) next
     if (!p$name %in% names(args)) {
       args[[p$name]] <- v
@@ -180,7 +204,42 @@
                       id, t$name, p$name, p$study))
     }
   }
-  list(args = args, study = from_study)
+  list(args = args, study = from_study,
+       keys = stats::setNames(vapply(from_study, function(k) t$params[[k]]$study, ""), from_study))
+}
+
+# The templates whose family has taken one value a parameter (the report's
+# argument, else the template's own default or its reference to the study
+# standard): no look item, no defaults.yml / patterns / style-set content
+# of the study applies to their reports, only the page and the code lists
+# (migration/MIGRATION.md, "the per-batch precedence switch").  Each family's
+# batch adds its names here; none has yet.  An alias is its template.
+.tpl_switched_names <- character()
+.tpl_switched <- function(name) {
+  to <- if (exists(name, envir = .tpl_registry, inherits = FALSE)) name else
+    .tpl_alias_target(name, ".tpl_switched()") %||% name
+  to %in% .tpl_switched_names
+}
+
+# The set a `style` parameter names, for the parameter that takes it
+# (a template's `style`, `tfl_param("style", study = "settings.style",
+# default = "standard")`): the study's own set of that name (spec/
+# defaults.yml `styles:`), else tflspec's built-in one.  A layer: `data`,
+# `codelists`, `content`, `page`.  A name neither has stops, naming the sets
+# there are.  No template reads it yet.
+.tpl_style_builtin <- list(
+  standard = list(data = list(), codelists = list(), content = list(), page = list()))
+.tpl_style_set <- function(name, study = NULL) {
+  if (!is.character(name) || length(name) != 1L || is.na(name) || !nzchar(name)) {
+    .ard_stop("`style` is one style's name (a set of defaults.yml's styles:, or a built-in one).")
+  }
+  set <- study$styles[[name]] %||% .tpl_style_builtin[[name]]
+  if (is.null(set)) {
+    .ard_stop(sprintf("no style %s in defaults.yml's styles: or among the built-in sets (%s).",
+                      dQuote(name, FALSE),
+                      paste(unique(c(names(study$styles), names(.tpl_style_builtin))), collapse = ", ")))
+  }
+  set
 }
 
 # The template expanded for a report: its arguments with the study's
@@ -190,7 +249,10 @@
   ts <- .tpl_spec_of(output)
   t <- .tpl_get(ts$name, sprintf("%s: template:", output$id))
   if (warn) .tpl_plot_unused_warn(t, output)
-  sa <- .tpl_study_args(t, ts$args, base, output$id, output, study)
+  # a switched template reads no content layer (one value a parameter)
+  switched <- .tpl_switched(t$name)
+  if (switched) base <- list()
+  sa <- .tpl_study_args(t, ts$args, output$id, output, study)
   sa$args <- .tpl_plot_axis_args(t, sa$args, output$plot)
   x <- tfl_template_expand(ts$name, sa$args, codelists = codelists,
                            population = study$data$populations)
@@ -208,7 +270,8 @@
                    x$content)
   }
   x$content <- .tpl_stub_first(x$content, base)
-  list(name = ts$name, args = sa$args, study = sa$study, x = x)
+  list(name = ts$name, args = sa$args, study = sa$study, study_keys = sa$keys, x = x,
+       switched = switched)
 }
 
 # A `denominator` that is an analysis data's id: the template makes it, or

@@ -28,7 +28,9 @@
 #'   warning naming it (`tfl_read_outputs()`); `FALSE` (default) to stop there.
 #' @return `tfl_read_study_spec()`: a list of class `tfl_study_spec` --
 #'   `study`, `data`, `defaults`, `styles` (by name: `defaults.yml`'s
-#'   `styles:`, the look a report picks with `style:`),
+#'   `styles:`, the look a report picks with `style:`), `figure_style`
+#'   (`defaults.yml`'s `figure_style:`: the study's figure style standard,
+#'   tflspec's built-in one for a part it does not give),
 #'   `patterns` (by name), `toc`, `dir`.  `tfl_read_outputs()`: a named list of `tfl_output`, by id.
 #' @examples
 #' d <- system.file("extdata", "spec-yaml", package = "tflspec")
@@ -56,7 +58,14 @@ tfl_read_study_spec <- function(dir) {
     message("spec/codelists.yml is not read: a code list is a report's or a layer's ",
             "(`codelists:` in spec/defaults.yml or the report's file).")
   }
-  .study_templates(spec, study$id %||% basename(normalizePath(dir, "/", mustWork = FALSE)))
+  # a study defines reports, not templates (a report's own args and cards
+  # say what differs); the company's templates are copied into the study's
+  # standard at its start
+  if (dir.exists(file.path(spec, "templates"))) {
+    stop("tfl_read_study_spec(): spec/templates/ is not read: a study defines reports, not ",
+         "templates. A report that differs from a template changes its arguments or adds ",
+         "cards after the template's; remove the folder.", call. = FALSE)
+  }
   structure(list(
     study = study,
     data = .calls_in(rd(file.path(spec, "data.yml")) %||% list()),
@@ -64,30 +73,14 @@ tfl_read_study_spec <- function(dir) {
     styles = stats::setNames(lapply(names(styles), function(nm)
       .layer_from_list(styles[[nm]], paste0("style:", nm))), names(styles)),
     patterns = patterns,
+    # the figure style standard the study keeps (defaults.yml's figure_style:)
+    figure_style = dflt$figure_style %||% list(),
     toc = rd(file.path(spec, "toc.yml")) %||% list(),
     # rtfreporter's options for every program of the study (defaults.yml's
     # options:, by rtfreporter's names: rtfreporter.png_device ...)
     options = dflt$options %||% list(),
     dir = normalizePath(dir, "/", mustWork = FALSE)),
     class = "tfl_study_spec")
-}
-
-# The study's own templates: spec/templates/*.R, each registering its
-# variants (tfl_template_variant()) -- run when the study is read, so a
-# report's template: finds them.  Quietly: a study read again registers
-# them again.
-.study_templates <- function(spec, study_id) {
-  for (f in sort(list.files(file.path(spec, "templates"), "[.][Rr]$", full.names = TRUE))) {
-    op <- options(tflspec.template_source = sprintf("study %s: spec/templates/%s", study_id,
-                                                    basename(f)))
-    tryCatch(suppressMessages(sys.source(f, envir = new.env(parent = globalenv()))),
-             error = function(e) {
-               options(op)
-               stop(sprintf("tfl_read_study_spec(): spec/templates/%s: %s", basename(f),
-                            conditionMessage(e)), call. = FALSE)
-             })
-    options(op)
-  }
 }
 
 # spec/ of a study folder, or the folder itself when it is a spec folder
@@ -198,13 +191,26 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   if (!is.null(.tpl_spec_of(output))) {
     tpl <- .tpl_expand_for(output, study, acc$content,
                            .merge_map(acc$codelists, output$codelists))
-    look <- vapply(tpl$x$content, .tpl_is_look, NA)
-    tlook <- list(data = list(), codelists = list(), content = tpl$x$content[look], page = list())
-    tl <- list(data = tpl$x$data %||% list(), codelists = list(),
-               content = tpl$x$content[!look], page = list())
     acc <- list(data = list(), codelists = list(), content = list(), page = list())
-    for (l in rev(c(list(tl), layers, list(tlook)))) acc <- .layer_over(acc, l)
-    layers <- c(list(tl), layers, list(tlook))
+    if (isTRUE(tpl$switched)) {
+      # a template whose family has switched: one value a parameter, so the
+      # template's items (its look too) are the content, over no content
+      # layer -- the style set's, the extends chain's (defaults, patterns).
+      # The layers keep their code lists and their page.
+      layers <- lapply(layers, function(l) list(data = list(), codelists = l$codelists,
+                                                content = list(), page = l$page))
+      tl <- list(data = tpl$x$data %||% list(), codelists = list(),
+                 content = tpl$x$content, page = list())
+      for (l in rev(c(list(tl), layers))) acc <- .layer_over(acc, l)
+      layers <- c(list(tl), layers)
+    } else {
+      look <- vapply(tpl$x$content, .tpl_is_look, NA)
+      tlook <- list(data = list(), codelists = list(), content = tpl$x$content[look], page = list())
+      tl <- list(data = tpl$x$data %||% list(), codelists = list(),
+                 content = tpl$x$content[!look], page = list())
+      for (l in rev(c(list(tl), layers, list(tlook)))) acc <- .layer_over(acc, l)
+      layers <- c(list(tl), layers, list(tlook))
+    }
     output$ard <- .merge_ard(tpl$x$ard, output$ard)
     # a figure's design: its settings (`plot:`) under the report's own
     if (!is.null(tpl$x$plot)) output$plot <- .tpl_plot_over(tpl$x$plot, output$plot)
@@ -232,6 +238,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
         (!identical(output$kind, "figure") || !length(intersect(
         vapply(r$items, `[[`, "", "fn"), vapply(tpl$x$content, `[[`, "", "fn"))))
       attr(output, "template") <- list(name = tpl$name, args = tpl$args, study = tpl$study,
+                                       study_keys = tpl$study_keys,
                                        items = tpl$x$content, rest = r$items, ok = ok,
                                        plot = tpl$x$plot, call_steps = tpl$x$call_steps)
     }

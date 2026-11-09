@@ -4,12 +4,12 @@
 \alias{tfl_tpl_km_table}
 \title{km_table: the template km_table}
 \description{
-The table template \code{km_table}, layout \code{km_table}. Its program is one call, \code{tfl_tpl(ard, "km_table", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
+The table template \code{km_table}, layout \code{km_table}. Its program is one call, \code{tfl_tpl(ard, "km_table", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
-   \code{by} \tab other \tab call \tab TRT01A \tab settings.treatment \tab the column variable \cr
+   \code{by} \tab other \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the column variable \cr
    \code{by_levels} \tab other \tab call \tab  \tab  \tab its values in order; NULL: its code list's \cr
    \code{median_label} \tab other \tab call \tab Median (95\% CI) \tab  \tab the median's row \cr
    \code{time_prefix} \tab other \tab call \tab Day \tab  \tab a rate's row: <prefix> <time> \cr

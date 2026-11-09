@@ -25,17 +25,15 @@
                         text_size = TRUE, line_width = TRUE, y_by = TRUE, base_size = TRUE,
                         theme = FALSE)
 
-# The study's figure style (options(tflspec.fig_style =)): a km key's value
-# when it is not tflspec's own (NULL: the template's default, the same)
-.tpl_km_style_sources <- function() {
-  lapply(stats::setNames(nm = paste0("km.", names(.tpl_km_style_keys))), function(src) {
-    key <- sub("^km[.]", "", src)
-    function(output, study) {
-      v <- .fs_get(key, "km")
-      if (is.na(v) || identical(v, .fs_get(key, "km", .fig_style_builtin()))) return(NULL)
-      if (.tpl_km_style_keys[[key]]) as.numeric(v) else v
-    }
-  })
+# The company's figure style (options(tflspec.fig_style =)): a km key's
+# value when it is not tflspec's own (NULL: the template's default, the
+# same).  Read for a `km.<key>` reference until the Kaplan-Meier batch moves
+# these to the study's own copy (`figure_style.km.<key>`, .tpl_fig_style_read()).
+.tpl_km_style_value <- function(key) {
+  if (!key %in% names(.tpl_km_style_keys)) return(NULL)
+  v <- .fs_get(key, "km")
+  if (is.na(v) || identical(v, .fs_get(key, "km", .fig_style_builtin()))) return(NULL)
+  if (.tpl_km_style_keys[[key]]) as.numeric(v) else v
 }
 
 .tpl_km_params <- function() {
