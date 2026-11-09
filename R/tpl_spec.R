@@ -149,6 +149,7 @@
   sa$args <- .tpl_plot_axis_args(t, sa$args, output$plot)
   x <- tfl_template_expand(ts$name, sa$args, codelists = codelists,
                            population = study$data$populations)
+  .tpl_den_known(t, sa$args, x, output)
   if (!identical(t$kind, output$kind)) {
     .ard_stop(sprintf("%s: template %s makes a %s; the report is a %s.",
                       output$id, ts$name, t$kind, output$kind))
@@ -163,6 +164,25 @@
   }
   x$content <- .tpl_stub_first(x$content, base)
   list(name = ts$name, args = sa$args, study = sa$study, x = x)
+}
+
+# A `denominator` that is an analysis data's id: the template makes it, or
+# the report's own `ard:` does (step 1's analysis data)
+.tpl_den_known <- function(t, args, x, output) {
+  v <- args$denominator
+  if (!"denominator" %in% names(t$params) || !is.character(v) || length(v) != 1L ||
+      is.na(v)) return(invisible())
+  v <- trimws(v)
+  if (identical(v, "data") || !is.null(.den_numbers(v))) return(invisible())
+  ids <- function(ad) vapply(ad %||% list(), function(e) as.character(e$id %||% ""), "")
+  have <- unique(c(ids(x$ard$analysis_data), ids(output$ard$analysis_data)))
+  if (!v %in% have) {
+    .ard_stop(sprintf(paste0(
+      "%s: template %s: denominator \"%s\" is not an analysis data of the report (%s).",
+      " The template makes %s and the other analysis sets' adsl_<id>; the report's own come from its `ard:`."),
+      output$id, t$name, v, paste(have, collapse = ", "), paste0("adsl_", tolower(args$population))))
+  }
+  invisible()
 }
 
 # A stub the study folds first (its plan_stub(before = TRUE)) takes the
