@@ -34,10 +34,11 @@ test_that("the report's population: the template's population, written in its pr
   expect_identical(attr(ro, "template")$study[1L], "population")
   code <- tfl_content_code(ro, pipe = "|>")
   expect_match(paste(code, collapse = "\n"), "\"demog\",\\s+population = \"SAF\"")
-  # the report's own argument wins, and says so
-  expect_message(ro2 <- ss_resolve("demog", list(population = "SCRF"), s),
-                 "overrides the study standard \\(output.population\\)")
-  expect_identical(attr(ro2, "template")$args$population, "SCRF")
+  # an argument that differs from the report's `population:` stops, naming both
+  expect_error(ss_resolve("demog", list(population = "SCRF"), s), "'SCRF'.*'SAF'")
+  # the same as the report's is used
+  ro2 <- ss_resolve("demog", list(population = "SAF"), s)
+  expect_identical(attr(ro2, "template")$args$population, "SAF")
 })
 
 test_that("study.yml's settings: treatment: the templates' by", {

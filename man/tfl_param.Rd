@@ -78,8 +78,11 @@ A \code{tfl_param}.
 }
 \description{
 One parameter of a template (\code{\link[=tfl_template]{tfl_template()}}): its name, default and
-what it is.  A template has few, and none of them is the look (a font,
-a width, the rows a page): the study's styles and defaults say that.
+what it is.  What the template's purpose and scope decide is fixed; the
+rest is a parameter with a default, the look too (the style, the
+widths, the rows a page): a report changes it with an argument, or with
+a card appended after the template's (the study's styles and defaults
+sit under both).
 }
 \examples{
 tfl_param("population", "SAF", doc = "the analysis set's id")

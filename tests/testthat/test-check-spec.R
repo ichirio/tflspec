@@ -54,7 +54,7 @@ test_that("build = TRUE: a report the checks pass is built; one that cannot be m
   skip_if_not_installed("ggsurvfit")
   d <- cs_study()
   tfl_write_output(tfl_output("T-DM", "table", population = "SAF",
-                              template = list(name = "demog", args = list(population = "SAF"))),
+                              template = list(name = "demog", args = list(continuous = "AGE"))),
                    file.path(d, "spec", "outputs", "T-DM.yml"))
   # a KM of ADTTE, which the study does not have: read, it cannot be made
   tfl_write_output(tfl_output("F-KM", "figure", population = "SAF", extends = "defaults",

@@ -52,8 +52,7 @@ test_that("a variant: from's parameters and types, its own defaults; listed with
   # demog itself: summary's parameters with its own defaults
   expect_identical(tt$from[tt$name == "demog"], "summary")
   expect_identical(tt$call[tt$name == "demog_as"], "tfl_tpl")
-  # its look parameters take the study standard's values: no plain "look"
-  expect_false("look" %in% tfl_test_templates("demog_as")$status)
+  expect_identical(nrow(tfl_test_templates("demog_as")), 0L)
   expect_error(tfl_template_variant("x", from = "demog", defaults = list(colour = 1)),
                "no parameter 'colour'")
   expect_error(tfl_template_variant("x", from = "nope"), "no template")

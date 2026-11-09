@@ -18,11 +18,10 @@
 #' [tfl_use_company_templates()].
 #'
 #' A name already registered is replaced, with a message (a company's
-#' `demog` over tflspec's: the package loaded later wins).  A parameter
-#' that ends in the look -- the rows a page, column widths, the digits, the
-#' blank rows, the style -- is warned about: the study's styles and
-#' defaults say those, and a template parameter would beat them
-#' ([tfl_test_templates()] finds them).
+#' `demog` over tflspec's: the package loaded later wins).  The look -- the
+#' rows a page, column widths, the digits, the blank rows, the style -- may
+#' be a parameter with a default, like any other not decided by the
+#' template's purpose and scope.
 #'
 #' @param name The template's name (`"acme_demog"`).
 #' @param kind `"table"`, `"figure"` or `"listing"`.
@@ -78,15 +77,6 @@ tfl_template <- function(name, kind = c("table", "figure", "listing"), layout, p
   }
   .tfl_template(name, kind, layout, params, body, label = label, call = call, package = pkg,
                 example = example, ai = ai)
-  look <- .tpl_look_params(.tpl_get(name, fn))
-  look <- look[look$status == "look", , drop = FALSE]
-  if (nrow(look)) {
-    warning(sprintf(paste0(
-      "%s: template %s takes the look as a parameter: %s.\n",
-      "  The study's styles and defaults say the look; a template parameter beats them."),
-      fn, name, paste(sprintf("`%s` (%s(%s))", look$param, look$fn, look$arg), collapse = ", ")),
-      call. = FALSE)
-  }
   invisible(name)
 }
 
@@ -188,7 +178,7 @@ tfl_template_variant <- function(name, from, defaults = list(), label = NULL, ex
   root <- src$root %||% src$name
   list(name = v$name, kind = src$kind, layout = src$layout, params = params,
        body = src$body, label = v$label %||% src$label, call = src$call,
-       package = v$package, example = v$example %||% src$example %||% .tpl_examples[[root]],
+       package = v$package, parts = src$parts, example = v$example %||% src$example %||% .tpl_examples[[root]],
        ai = if (is.null(v$ai)) isTRUE(src$ai) else isTRUE(v$ai),
        from = sub("^[.]base[.]", "", v$from), root = root,
        # every default it changes, the ones of a variant it is made from too
@@ -243,9 +233,10 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
 
 # ---- the look ------------------------------------------------------------------
 
-# The look: the verbs (and of a verb, its arguments) a template parameter
-# should not end in -- the study's styles and defaults say them.  NULL: any
-# of the verb's arguments.  (The stub's `vars` and `name` are the table's
+# The look: the verbs (and of a verb, its arguments) the study's styles and
+# defaults say.  An item of them from a template (a parameter's default, or
+# the template's own) sits under the study's layers.  NULL: any of the
+# verb's arguments.  (The stub's `vars` and `name` are the table's
 # keys and the column the header names: its shape.  A listing's column
 # widths are its columns' definition, decided 10/18: plan_listing()'s
 # `cols` is not the look.)
@@ -268,34 +259,13 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
     !identical(it$args$where, "between_parts")
 }
 
-# A value of the same shape, changed: each string with a mark after it (its
-# names kept), each number one more, each logical turned
-.tpl_perturb <- function(x) {
-  if (inherits(x, "tfl_r")) return(tfl_r(paste0(x, " ")))
-  if (inherits(x, "tfl_unset")) return(x)
-  if (is.character(x)) {
-    y <- paste0(x, "~")
-    attributes(y) <- attributes(x)
-    return(y)
-  }
-  if (is.integer(x)) return(x + 1L)
-  if (is.numeric(x)) return(x + 1)
-  if (is.logical(x)) return(!x)
-  if (is.list(x)) {
-    x[] <- lapply(x, .tpl_perturb)
-    return(x)
-  }
-  x
-}
-
-# Where each of a template's parameters ends: its body run with the
-# template's example (its parameters' defaults, `example =` of
-# tfl_template(), tflspec's own examples), and again with one parameter
-# changed (the same shape, another value); a look verb's argument that
-# changed with it is where it ends.  One row a parameter that ends in the
-# look (`status` "look"), or a template whose run stopped ("not checked:
-# <why>").  A parameter whose value is NULL is not changed.
-.tpl_look_params <- function(t) {
+# What is wrong with a template's definition: a parameter with no type, the
+# analysis set or the treatment with no study source, no `subset` / `where`,
+# or a body that stops with its example (the template's example, `example =`
+# of tfl_template(), tflspec's own examples, and its parameters' defaults).
+# One row a finding; no rows: none.  (The look as a parameter is no finding:
+# the look is a parameter with a default, like any other.)
+.tpl_findings <- function(t) {
   rows <- list()
   row <- function(p, fn, arg, status) rows[[length(rows) + 1L]] <<- data.frame(
     template = t$name, param = p, fn = fn, arg = arg, status = status, stringsAsFactors = FALSE)
@@ -326,31 +296,6 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
     if (any(toupper(ds) != "ADSL") && !"where" %in% names(t$params)) {
       row("where", NA_character_, NA_character_, "no where (a records template)")
     }
-    look <- function(items) Filter(function(it) it$fn %in% names(.tpl_look), items %||% list())
-    l0 <- look(x0$content)
-    for (p in names(t$params)) {
-      if (is.null(base[[p]])) next
-      a <- base
-      a[p] <- list(.tpl_perturb(base[[p]]))
-      x1 <- run(a)
-      if (inherits(x1, "error")) next
-      l1 <- look(x1$content)
-      seen <- list()
-      for (it in l1) {
-        k <- (seen[[it$fn]] %||% 0L) + 1L
-        seen[[it$fn]] <- k
-        same <- Filter(function(b) identical(b$fn, it$fn), l0)
-        b <- if (length(same) >= k) same[[k]]$args else list()
-        keys <- union(names(it$args), names(b))
-        if (!is.null(.tpl_look[[it$fn]])) keys <- intersect(keys, .tpl_look[[it$fn]])
-        # (one that takes the study standard's value of that very argument,
-        # tfl_param(study = "<verb>.<argument>"), is the study's look: fine)
-        for (key in keys) if (!identical(it$args[[key]], b[[key]])) {
-          own <- identical(t$params[[p]]$study, paste0(it$fn, ".", key))
-          row(p, it$fn, key, if (own) "look (study source)" else "look")
-        }
-      }
-    }
   }
   if (!length(rows)) {
     return(data.frame(template = character(), param = character(), fn = character(),
@@ -380,25 +325,23 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
                                                   "ACTARM")))
 }
 
-#' Test templates: no parameter is the look, each has its type
+#' Test templates: each has its types, its study sources and its standard pair
 #'
-#' Runs each template's body with its example, and again with one
-#' parameter at a time changed, and looks which items change with it: a
-#' parameter that changes the look (the rows a page, column widths, the
-#' digits, the blank rows, the style, a listing's type) is listed.  So is
-#' a parameter with no type ([tfl_param()]'s `type`, nor tflspec's for its
-#' name): an input form guesses its field from the default; and the analysis
-#' set or the treatment not read from the study standard (no `study =`).
-#' A study's value of them is the study's, not each report's.  So is a
-#' template of data of its own without `subset`, and one of records data
-#' without `where` ([tfl_templates()]: the standard pair).
-#' tflspec's own templates have none; a company's package tests its own
-#' with it (one line in its tests, [tfl_use_company_templates()]).
+#' Runs each template's body with its example and lists what is wrong
+#' with its definition: a parameter with no type ([tfl_param()]'s `type`,
+#' nor tflspec's for its name): an input form guesses its field from the
+#' default; and the analysis set or the treatment not read from the study
+#' standard (no `study =`).  A study's value of them is the study's, not
+#' each report's.  So is a template of data of its own without `subset`,
+#' and one of records data without `where` ([tfl_templates()]: the standard
+#' pair).  A parameter that is the look (the rows a page, column widths,
+#' the digits, the blank rows, the style) is not listed: the look is a
+#' parameter with a default, like any other.
+#' tflspec's own templates have no finding; a company's package tests its
+#' own with it (one line in its tests, [tfl_use_company_templates()]).
 #'
 #' @param names The templates; `NULL`: every one registered.
-#' @return A data frame, one row a parameter that ends in the look
-#'   (`status` `"look"`: `param`, and the verb `fn` and argument `arg` it
-#'   ends in), a parameter with no type (`"no type (guessed: <type>)"`),
+#' @return A data frame, one row a finding: a parameter with no type (`"no type (guessed: <type>)"`),
 #'   one with no study source (`"no study source (population / treatment)"`),
 #'   a template without the standard pair (`"no subset"`, `"no where (a
 #'   records template)"`)
@@ -409,7 +352,7 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
 #' @export
 tfl_test_templates <- function(names = NULL) {
   nm <- names %||% sort(ls(.tpl_registry))
-  out <- lapply(nm, function(n) .tpl_look_params(.tpl_get(n, "tfl_test_templates()")))
+  out <- lapply(nm, function(n) .tpl_findings(.tpl_get(n, "tfl_test_templates()")))
   do.call(rbind, out)
 }
 
@@ -460,7 +403,7 @@ tfl_test_templates <- function(names = NULL) {
 #'
 #' The files: `DESCRIPTION`, `NAMESPACE`, `LICENSE`, `R/templates.R` (the
 #' templates), `R/zzz.R` (their registration), `tests/` (that each is
-#' registered, takes no look as a parameter and expands),
+#' registered, has no finding and expands),
 #' `inst/standards/defaults.yml` (the company standard a new study's
 #' standard is copied from, the form of a study's `spec/defaults.yml`) and
 #' `README.md`.
@@ -532,8 +475,8 @@ tfl_use_company_templates <- function(path, package = basename(path),
     "# (R/zzz.R).  A report's YAML names it:",
     "#   template: {name: <name>, args: {population: SAF}}",
     "# and its program calls tflspec's function with these defaults written out.",
-    "# The look (widths, the rows a page, digits) is no parameter:",
-    "# inst/standards/defaults.yml says it.",
+    "# The look (widths, the rows a page, digits) is a parameter with a",
+    "# default, or the study's: inst/standards/defaults.yml says it for all.",
     "",
     "register_templates <- function() {")
   for (i in seq_along(templates)) {
@@ -564,11 +507,11 @@ tfl_use_company_templates <- function(path, package = basename(path),
   put(file.path("tests", "testthat.R"), c(
     "library(testthat)", paste0("library(", package, ")"), "", paste0("test_check(\"", package, "\")")))
   put(file.path("tests", "testthat", "test-templates.R"), c(
-    "test_that(\"the templates are registered, and none takes the look as a parameter\", {",
+    "test_that(\"the templates are registered, and have no finding\", {",
     sprintf("  tpl <- c(%s)", paste(sprintf("\"%s\"", nm), collapse = ", ")),
     "  expect_true(all(tpl %in% tflspec::tfl_templates()$name))",
-    "  look <- tflspec::tfl_test_templates(tpl)",
-    "  expect_identical(look[look$status == \"look\", \"param\"], character(0))",
+    "  found <- tflspec::tfl_test_templates(tpl)",
+    "  expect_identical(nrow(found), 0L)",
     "})",
     "",
     "test_that(\"each template expands into a report's items\", {",
@@ -596,13 +539,13 @@ tfl_use_company_templates <- function(path, package = basename(path),
     sprintf("| `%s` | `%s` | %s |", nm, templates, vapply(tpl, `[[`, "", "kind")),
     "",
     "- `R/templates.R`: the templates. Change a default in its `defaults = list()`;",
-    "  the look (widths, the rows a page, digits) is not a parameter -- it is",
-    "  `inst/standards/defaults.yml`, the defaults a new study starts from.",
+    "  the look (widths, the rows a page, digits) may be a parameter too, or the",
+    "  study's: `inst/standards/defaults.yml` is the defaults a new study starts from.",
     "- A report's YAML names a template: `template: {name: <name>, args: {...}}`;",
     paste0("  its program calls tflspec's function with the defaults written out; the"),
     paste0("  templates are registered by `library(", package, ")`."),
-    paste0("- `devtools::test()`: each template is registered, takes no look as a"),
-    "  parameter (`tflspec::tfl_test_templates()`) and expands.",
+    paste0("- `devtools::test()`: each template is registered, has no finding"),
+    "  (`tflspec::tfl_test_templates()`) and expands.",
     "- Written by `tflspec::tfl_use_company_templates()`."))
   invisible(files)
 }

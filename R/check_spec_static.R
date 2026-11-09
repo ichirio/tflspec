@@ -38,7 +38,26 @@
   add <- function(...) rows[[length(rows) + 1L]] <<- .check_rows(output_id = id, ...)
   # (a template by name alone, `template: km_simple`, or with its arguments)
   tpl <- o$template
-  args <- if (is.list(tpl)) tpl$args %||% list() else list()
+  args <- if (is.list(tpl)) {
+    tryCatch(.tpl_spec_of(o)$args, error = function(e) NULL) %||% tpl$args %||% list()
+  } else {
+    list()
+  }
+  # the analysis set is the report's `population:`, not a template argument
+  if ("population" %in% names(args) && is.list(tpl) && is.character(tpl$name) &&
+      !is.null(tryCatch(.tpl_get(tpl$name, "tfl_check_spec()")$params$population,
+                        error = function(e) NULL))) {
+    rp <- o$population
+    if (length(rp) == 1L && !is.na(rp) && !identical(as.character(args$population), as.character(rp))) {
+      add(part = "template", item = "population", level = "error", message = sprintf(paste0(
+        "template argument `population` (%s) differs from the report's `population:` (%s): ",
+        "the analysis set is the report's `population:` field"), args$population[1L], rp))
+    } else {
+      add(part = "template", item = "population", level = "warning", message = paste0(
+        "move the template's `population` to the report's `population:` field: ",
+        "the analysis set is the report's, not a template argument"))
+    }
+  }
   tx <- .check_texts(list(content = o$content, template = args, layers = o$layers))
   # {p:.1%}: a precision then `%`, no type between them
   bad <- if (!is.null(tx)) tx[grepl("[{][^{}:]+:[^{}]*[.][0-9]+%[}]", tx$text), , drop = FALSE]
