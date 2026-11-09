@@ -15,7 +15,7 @@ The table template \code{stf_t02_demog}, layout \code{summary}. Its program is o
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1"; unset: all \cr
    \code{data} \tab other \tab call \tab ADSL \tab  \tab a subject-level dataset \cr
    \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id when 'data' is not ADSL; NULL: <data>_<population> \cr
-   \code{denominator} \tab other \tab call \tab  \tab  \tab the percentages' denominator: NULL the analysis set's subjects, or the id of an analysis data (adsl_itt, or one of the report's own); the arm headings' N are of it too \cr
+   \code{denominator} \tab other \tab call \tab  \tab  \tab the categorical variables' percentages' denominator: NULL (default): the analysis set's subjects (with a 'data' other than ADSL, the records kept); a number: that many in every column; numbers named by the values of 'by' ('c("Drug X" = 60, "Control" = 55)'): that many in each column; the id of an analysis data ('adsl_itt', or one of the report's own): its rows in each column. A number is not for 'total' = TRUE. The column headings' N is the study standard's, not moved \cr
    \code{formats} \tab usual \tab call \tab N = 0; mean = 1; sd = 2; median = 1; min = 0; max = 0; p ... \tab  \tab the ARD's formats (precision): per statistic, and per variable (BMIBL: \{mean: 2, sd: 3\}); given by name, merged; a number is the decimals, "xx.x\%" a proportion as a percent \cr
    \code{total} \tab usual \tab call \tab TRUE \tab  \tab TRUE: a Total column, last (each analysis again without 'by') \cr
    \code{missing_row} \tab other \tab call \tab TRUE \tab  \tab TRUE: a row under each categorical variable counting the subjects with no value, last \cr
@@ -27,7 +27,7 @@ The table template \code{stf_t02_demog}, layout \code{summary}. Its program is o
    \code{sd_missing} \tab other \tab call \tab study: settings.sd_missing, else - \tab settings.sd_missing \tab what prints in place of the SD when a group has no SD (n = 1): \{mean\} (<sd_missing>); "" prints the mean alone; unset: no such guard; no effect when 'cells' is given \cr
    \code{count_cell} \tab other \tab call \tab study: plan_cells.categorical, else \{n\} (\{p\}) \tab plan_cells.categorical \tab a categorical value's cell, n (\%); NULL: the study standard's \cr
    \code{total_label} \tab other \tab call \tab Total Population \tab  \tab the Total column's heading \cr
-   \code{header_n} \tab other \tab call \tab denominator \tab  \tab the arm headings' N: "denominator" the subjects the percentages are of; "set" the same while 'denominator' is NULL; "none" no N; unset: no N. It acts on the heading 'col_header' gives as a text \cr
+   \code{header_n} \tab other \tab call \tab denominator \tab  \tab the arm headings' N: "denominator" or "set": the arm's subjects in the analysis set ('denominator' does not move it); "none" no N; unset: no N. It acts on the heading 'col_header' gives as a text \cr
    \code{col_header} \tab other \tab call \tab \{col\} N=\{n\} \tab plan_col_header.lines \tab the arm heading: a text (\{col\} and \{n\}, a line a line), or the lines of plan_col_header(lines = ); NULL: none \cr
    \code{heading} \tab other \tab call \tab Characteristic \tab plan_stub.heading \tab the row-title (stub) column's heading, a line a line.  Given, it is the stub's (plan_stub(heading = ), the stub being row_label, first) \cr
    \code{stub_name} \tab other \tab call \tab  \tab plan_stub.name \tab the row-title column's name (plan_stub(name = )) \cr
@@ -40,7 +40,7 @@ The table template \code{stf_t02_demog}, layout \code{summary}. Its program is o
    \code{blanks_last} \tab other \tab call \tab  \tab plan_blanks.last \tab a blank row after the last block (plan_blanks(last = )) \cr
    \code{blanks_counted} \tab other \tab call \tab  \tab plan_blanks.counted \tab blank rows count in a page's rows (plan_blanks(counted = )) \cr
    \code{border_header} \tab other \tab call \tab  \tab plan_style.border_header \tab the rule round the column heading (plan_style(border_header = )) \cr
-   \code{border_group} \tab other \tab call \tab bottom = TRUE \tab plan_style.border_group \tab a rule under each block (plan_style(border_group = ), e.g. list(bottom = TRUE)); NULL: none \cr
+   \code{border_group} \tab other \tab call \tab  \tab plan_style.border_group \tab a rule under each block (plan_style(border_group = ), e.g. list(bottom = TRUE)); NULL: none \cr
    \code{style} \tab other \tab call \tab stf_t02 \tab  \tab the style set (font, borders, page) the report starts from: a set of the study's defaults.yml 'styles:' or a built-in one (standard, stf_t02); unset: none \cr
 }
 }

@@ -90,6 +90,17 @@ test_that("the standalone templates equal what the variants gave: defaults and t
   b <- b1_run(d, b1_out("demog", list(by = "TRT01A", total = TRUE, labels = list(SEX = "Gender"),
                                      continuous = "AGE", categorical = "SEX")))$table
   expect_identical(a, b)
+  # (values missing -- RACE blank, SEX NA: the percentages are of the arm's rows that have a value,
+  # cards' own, as the summary gave; no `denominator` in the call)
+  d2 <- b1_folder(na = TRUE)
+  a <- b1_run(d2, b1_out("b1_old_demog", vars))$table
+  b <- b1_run(d2, b1_out("demog", c(list(by = "TRT01A"), vars)))$table
+  expect_identical(a, b)
+  x <- tfl_template_expand("demog", b1_args())
+  expect_false("denominator" %in% names(Filter(function(a) identical(a$id, "CAT"), x$ard$analyses)[[1L]]))
+  # (asked for, the set's own id counts every subject of the set)
+  x <- tfl_template_expand("demog", b1_args(denominator = "adsl_saf"))
+  expect_identical(Filter(function(a) identical(a$id, "CAT"), x$ard$analyses)[[1L]]$denominator, "adsl_saf")
   # the FDA variant: the same rows (the new look adds the heading, the Missing row ...)
   new_stf <- tfl_template_params("stf_t02_demog")
   old_stf <- tfl_template_params("b1_old_stf")
@@ -236,17 +247,14 @@ test_that("header_n and col_header: the arm heading text, {n} dropped with none;
   expect_identical(b1_item(z, "plan_col_header")[[1L]]$args$header[[2L]]$text, "{col}\n(N={n})")
   w <- tfl_template_expand("demog", b1_args(col_header = "{col}\nN={n}", header_n = "none"))
   expect_identical(b1_item(w, "plan_col_header")[[1L]]$args$header[[2L]]$text, "{col}")
-  # the N is the denominator's: an analysis data's id is the headings' too
+  # the percentages' denominator (#749's, the summary family's) does not move the headings' N
   y <- tfl_template_expand("demog", b1_args(denominator = "adsl_itt"),
                            population = list(list(id = "ITT", label = "ITT Analysis Set")))
-  expect_identical(Filter(function(a) identical(a$id, "GROUPN"), y$ard$analyses)[[1L]]$data, "adsl_itt")
+  expect_identical(Filter(function(a) identical(a$id, "GROUPN"), y$ard$analyses)[[1L]]$data, "adsl_saf")
   expect_identical(Filter(function(a) identical(a$id, "CAT"), y$ard$analyses)[[1L]]$denominator, "adsl_itt")
   expect_error(tfl_template_expand("demog", b1_args(header_n = "tested")), "header_n")
-  expect_error(tfl_template_expand("demog", b1_args(denominator = c("Drug X" = 60, Control = 55))),
-               "not supported")
-  expect_no_error(tfl_template_expand("demog", b1_args(denominator = c("Drug X" = 60, Control = 55),
-                                                      header_n = "none")))
-  expect_error(tfl_template_expand("demog", b1_args(denominator = "data")), "not for it")
+  expect_no_error(tfl_template_expand("demog", b1_args(denominator = c("Drug X" = 60, Control = 55))))
+  expect_error(tfl_template_expand("demog", b1_args(denominator = "data")), "is for a `data` other than ADSL")
   expect_identical(tfl_template_params("demog")$header_n$choices, c("denominator", "set", "none"))
 })
 

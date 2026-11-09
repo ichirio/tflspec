@@ -42,10 +42,8 @@
               doc = "which subjects (R, on the analysis set's ADSL): PART == \"Part 1\"; unset: all"),
     tfl_param("data", "ADSL", unset = "stop", doc = "a subject-level dataset"),
     tfl_param("data_id", NULL, doc = "the analysis data's id when `data` is not ADSL; NULL: <data>_<population>"),
-    tfl_param("denominator", NULL,
-              doc = paste("the percentages' denominator: NULL the analysis set's subjects, or the id of an",
-                          "analysis data (adsl_itt, or one of the report's own); the arm headings' N",
-                          "are of it too")),
+    # (#749's: the summary family's denominator and its doc)
+    tfl_param("denominator", NULL, doc = .tpl_den_sum_doc),
     tfl_param("formats", .tpl_demog_formats, tier = "usual",
               doc = paste("the ARD's formats (precision): per statistic, and per variable",
                           "(BMIBL: {mean: 2, sd: 3}); given by name, merged; a number is the decimals,",
@@ -75,8 +73,8 @@
     tfl_param("total_label", "Total", type = "text", doc = "the Total column's heading"),
     tfl_param("header_n", "denominator", type = "choice", choices = c("denominator", "set", "none"),
               unset = "step_off",
-              doc = paste("the arm headings' N: \"denominator\" the subjects the percentages are of;",
-                          "\"set\" the same while `denominator` is NULL; \"none\" no N; unset: no N.",
+              doc = paste("the arm headings' N: \"denominator\" or \"set\": the arm's subjects in the",
+                          "analysis set (`denominator` does not move it); \"none\" no N; unset: no N.",
                           "It acts on the heading `col_header` gives as a text")),
     tfl_param("col_header", NULL, type = "text", study = "plan_col_header.lines",
               doc = paste("the arm heading: a text ({col} and {n}, a line a line), or the lines of",
@@ -166,20 +164,13 @@
   nn <- function(x) Filter(Negate(is.null), x)
   pop <- a$population
   subj <- paste0("adsl_", tolower(pop))
-  # the percentages' denominator (and, through it, the headings' N)
-  dn <- .tpl_den(a, ctx, subj)
-  if (identical(dn$value, "data")) {
-    .ard_stop(sprintf("template %s: denominator = \"data\" is not for it: use NULL or an analysis data's id.", tn))
-  }
-  hn <- if (is.null(a$header_n)) "none" else .tpl_header_n_stack(a, ctx, den = dn$header)
+  # the categorical variables' percentages' denominator, #749's helper of the summary family
+  # (NULL: cards' own, the rows of the arm that have a value -- no `denominator` in the call);
+  # the arm headings' N is the analysis set's, not moved by it
+  dn <- .tpl_sum_den(a, ctx, subj, subj)
+  cat_den <- dn$value
+  hn <- if (is.null(a$header_n)) "none" else .tpl_header_n_stack(a, ctx, den = NULL)
   grp_set <- subj
-  if (!identical(hn, "none") && !is.null(dn$header)) {
-    if (!is.character(dn$value)) {
-      .ard_stop(sprintf(paste0("%s: header_n = \"%s\" with numbers as the denominator is not supported: ",
-                               "use header_n = \"none\"."), tn, hn))
-    }
-    grp_set <- dn$value
-  }
   sets <- c(list(list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
                       population = pop)), dn$extra)
   set <- subj
@@ -262,7 +253,7 @@
       id = "CAT", label = "Categorical", method = "categorical", data = cat_set,
       by = a$by, overall = ov, variables = cat, statistics = c("n", "p"),
       formats = fmt_text(cat, c("n", "p")),
-      denominator = dn$value %||% subj, purpose = "PRIMARY OUTCOME MEASURE"))))
+      denominator = cat_den, purpose = "PRIMARY OUTCOME MEASURE"))))
   vars <- c(cont, cat)
   cells <- nn(list(
     continuous = if (length(cont) && length(a$cells)) as.list(

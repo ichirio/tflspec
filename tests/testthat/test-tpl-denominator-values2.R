@@ -10,7 +10,7 @@ d2_codelists <- list(TRT01A = c("Drug X", "Control"), TRT01P = c("Drug X", "Cont
 d2_expand <- function(name, args = list(), ...) {
   base <- switch(name,
     summary = list(population = "SAF", categorical = "SEX"),
-    demog = list(population = "SAF"),
+    demog = list(population = "SAF", by = "TRT01A", categorical = "SEX"),
     disposition = list(population = "SAF"),
     ae_overview = list(population = "SAF"),
     orr = list(population = "ITT"))
@@ -230,6 +230,7 @@ test_that("a single number with total = TRUE stops; numbers by arm and a data id
                 "ae_disc_soc_pt")) {
     a <- c(list(population = "SAF", total = TRUE),
            if (tpl == "summary") list(categorical = "SEX"),
+           if (tpl %in% c("demog", "stf_t02_demog")) list(by = "TRT01A", categorical = "SEX"),
            if (tpl == "hierarchical") hier)
     ex <- function(den) tfl_template_expand(tpl, c(a, list(denominator = den)), codelists = d2_codelists,
                                             population = d2_pops)
@@ -320,7 +321,9 @@ d2_report <- function(s, name, args, own = NULL) {
   pop <- args$population %||% "SAF"
   args$population <- NULL
   tfl_write_output(tfl_output("T-DV", "table", population = pop, extends = "defaults",
-                              template = list(name = name, args = c(list(population = pop), args)),
+                              template = list(name = name, args = c(
+                                # (demog takes the analysis set from the report's `population:`)
+                                if (!name %in% c("demog", "stf_t02_demog")) list(population = pop), args)),
                               ard = own), f)
   st <- tfl_read_study_spec(s$dir)
   ard <- suppressMessages(tfl_build_ard(st, output_id = "T-DV", dir = s$dir, save = FALSE))
@@ -424,7 +427,7 @@ test_that("summary, demog on ADSL: n (%) of each denominator, the header's N not
     for (nm in names(forms)) {
       f <- forms[[nm]]
       a <- c(list(denominator = f$den), if (tpl == "summary") list(categorical = "SEX"),
-             if (tpl == "demog") list(categorical = "SEX", continuous = "AGE"))
+             if (tpl == "demog") list(by = "TRT01A", categorical = "SEX", continuous = "AGE"))
       r <- d2_report(s, tpl, a, own = if (nm == "own") d2_own)
       info <- paste(tpl, nm)
       for (arm in h$arms) {
