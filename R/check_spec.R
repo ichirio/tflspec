@@ -167,9 +167,20 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
     rows[[length(rows) + 1L]] <- .check_static_rows(o, id)
     if (inherits(ro$content, "tfl_r")) next
     if (identical(ro$kind, "figure") && !.fig_new_content(ro$content)) {
-      p <- tryCatch(tfl_check_fig_design(.fig_design_of_output(ro)), error = function(e) {
+      bad_design <- function(e) {
         data.frame(part = "", field = "", problem = conditionMessage(e), stringsAsFactors = FALSE)
-      })
+      }
+      p <- tryCatch(tfl_check_fig_design(.fig_design_of_output(ro)), error = bad_design)
+      # the design tflplanner opens (the sheets' one: a template expanded,
+      # its plot settings joined) is checked as it checks it, so a draft it
+      # would refuse is an error here
+      pd <- tryCatch(suppressWarnings(
+        tfl_sheets_from_spec(study, stats::setNames(list(o), id))$figures[[id]]),
+        error = function(e) NULL)
+      if (is.list(pd) && length(Filter(length, pd))) {
+        p <- unique(rbind(p, tryCatch(tfl_check_fig_design(structure(pd, class = "tfl_fig_design")),
+                                      error = bad_design)))
+      }
       if (nrow(p)) {
         add(output_id = id, part = "figure", item = paste0(p$part, "$", p$field),
             level = "error", message = p$problem)
