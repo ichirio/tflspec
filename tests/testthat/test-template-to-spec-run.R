@@ -130,8 +130,11 @@ test_that("every template: its RTF as a template report = as the code SPEC tfl_t
     expect_identical(r$b[i], "", info = paste(nm, "as its code SPEC:", r$b[i]))
     if (nzchar(r$a[i]) || nzchar(r$b[i])) next
     if (nzchar(keep)) file.copy(file.path(d, paste0(r$id[i], c("-A.rtf", "-B.rtf"))), keep, overwrite = TRUE)
-    # (a switched template reads no defaults.yml content layer; the code SPEC written from
-    # it has none to say that, so the study's layers reach B: open question in the batch 1 PR)
+    # (skipped for demog and stf_t02_demog: tfl_template_to_spec() for a switched template is
+    # pending the user's decision.  A switched template reads no defaults.yml content layer, but
+    # the code SPEC written from it has no way to say that, so the study's layers reach B; the
+    # style set's font and landscape are not carried either.  See
+    # design/template-params/Q-BATCH1.md (section 1) in the _work folder.)
     if (nm %in% c("demog", "stf_t02_demog")) next
     expect_identical(rtf(file.path(d, paste0(r$id[i], "-B.rtf"))),
                      rtf(file.path(d, paste0(r$id[i], "-A.rtf"))), info = nm)

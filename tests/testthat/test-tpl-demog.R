@@ -428,7 +428,10 @@ test_that("stf_t02_demog: the FDA look as its own defaults; it runs", {
   expect_identical(hdr$args$header[[1L]]$text, "Characteristic")
   expect_identical(b1_item(x, "plan_stub")[[1L]]$args$heading, "Characteristic")
   expect_identical(b1_item(x, "plan_blanks")[[1L]]$args, list(first = FALSE, last = FALSE))
-  expect_identical(b1_item(x, "plan_style")[[1L]]$args$border_group, tfl_call("rtf_border", list(bottom = TRUE)))
+  # (the rule under each block is the style set "stf_t02"'s, not a default of the template)
+  expect_null(unlist(lapply(b1_item(x, "plan_style"), function(it) it$args$border_group)))
+  ro <- tfl_resolve_output(b1_out("stf_t02_demog", b1_fda()[-1L]), b1_study())
+  expect_true(any(vapply(b1_item(ro, "plan_style"), function(it) !is.null(it$args$border_group), NA)))
   expect_identical(b1_item(x, "plan_cells")[[1L]]$args$continuous[["Median (min, max)"]],
                    "{median} ({min}, {max})")
   # the study's look does not reach it: its look is fixed

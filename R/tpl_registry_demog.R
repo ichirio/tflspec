@@ -367,8 +367,9 @@
 # Guide v2.0 (April 2025), section 2.1.2, Table 2, "Demographics and Baseline
 # Clinical Characteristics".  A template of its own with other defaults -- the
 # labels, cells, Total and Missing, the values shown, the heading text, no blank
-# rows, a rule under each block, the style set "stf_t02" (fixed: the look is
-# the template's, so no reference to the study's style).  The variables are not
+# rows, the style set "stf_t02" (fixed: the look is the template's, so no
+# reference to the study's style; the set also holds the rule under each block,
+# `border_group`, so the parameter stays at its none default here).  The variables are not
 # among them (canon 1.12): `continuous` and `categorical` are required.  It
 # follows the guide's style; it is not endorsed by FDA and not an official FDA
 # format.
@@ -386,7 +387,7 @@
     ETHNIC = c("HISPANIC OR LATINO", "NOT HISPANIC OR LATINO", "NOT REPORTED", "UNKNOWN")),
   total = TRUE, total_label = "Total Population", missing_row = TRUE,
   col_header = "{col}\nN={n}", heading = "Characteristic", widths = "auto",
-  blanks = FALSE, border_group = list(bottom = TRUE), style = "stf_t02")
+  blanks = FALSE, style = "stf_t02")
 
 .tfl_template("stf_t02_demog", kind = "table", layout = "summary",
               label = "Demographics (FDA STF Table 2)",
