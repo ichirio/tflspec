@@ -58,7 +58,10 @@
 #'   `output_id`, `title` (as the answer lists it, else its report file's
 #'   label), `population` (its analysis set), `split` (how its TOC row is
 #'   split for it), `request`, `status` (`ok`, `warning`, `error`, `no
-#'   answer`, `not answered`; `draft` for a report file no answer lists),
+#'   answer`, `not answered`; `draft` for a report file no answer lists).
+#'   A report a request asked for ([tfl_ai_requests()]) that has no
+#'   manifest row and no draft is a row all the same, `not answered`
+#'   (it has no draft to adopt),
 #'   `rtf` (its RTF, `NA` when none), `problem` (why it has none),
 #'   `adopted` (`no`; `yes`; `yes, draft newer` -- the draft differs from
 #'   the study's file adopted from it) and `file` (its draft report file).
@@ -76,6 +79,16 @@ tfl_ai_outputs <- function(study_dir = ".") {
   man <- man[!duplicated(man$output_id), , drop = FALSE]
   dr <- .ai_draft_rows(study_dir)
   ids <- unique(c(man$output_id, dr$output_id))
+  # every report a request asked for has a row (as the requests list, which
+  # step 3 counts): one with no manifest row and no draft is `not answered`
+  asked <- .ai_asked_ids(study_dir)
+  asked_key <- function(id) tryCatch(.ai_id_key(id), error = function(e) NA_character_)
+  have_k <- vapply(ids, asked_key, "", USE.NAMES = FALSE)
+  lost <- asked[!vapply(asked, function(id) {
+    id %in% ids || (!is.na(asked_key(id)) &&
+                      any(vapply(have_k[!is.na(have_k)], .ai_id_same, NA, b = asked_key(id))))
+  }, NA)]
+  ids <- c(ids, lost)
   m <- match(ids, man$output_id)
   d <- match(ids, dr$output_id)
   pick <- function(x, i) if (is.null(x)) rep(NA_character_, length(i)) else x[i]
@@ -113,7 +126,8 @@ tfl_ai_outputs <- function(study_dir = ".") {
     population = pick(dr$population, d),
     split = pick(man$split, m),
     request = req,
-    status = ifelse(is.na(m), "draft", pick(man$status, m)),
+    status = ifelse(is.na(m), ifelse(ids %in% lost, "not answered", "draft"),
+                    pick(man$status, m)),
     rtf = pick(b$rtf, bi),
     problem = pick(b$problem, bi),
     adopted = .ai_adopted_state(study_dir, ids, pick(dr$file, d)),
@@ -121,6 +135,15 @@ tfl_ai_outputs <- function(study_dir = ".") {
     stringsAsFactors = FALSE)
   rownames(out) <- NULL
   out
+}
+
+# The report ids the study's requests asked for (tfl_ai_requests()'s
+# `outputs`, which the requests step counts)
+.ai_asked_ids <- function(study_dir) {
+  rq <- tryCatch(tfl_ai_requests(study_dir), error = function(e) NULL)
+  if (is.null(rq) || !nrow(rq)) return(character())
+  x <- trimws(unlist(strsplit(rq$outputs[!is.na(rq$outputs)], ",", fixed = TRUE)))
+  unique(.ai_file_id(x[nzchar(x)]))
 }
 
 # Each report's adoption: `no`; `yes` (its study file adopted from the
