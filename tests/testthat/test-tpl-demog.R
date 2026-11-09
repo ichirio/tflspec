@@ -166,6 +166,28 @@ test_that("population is not a template parameter: the report's `population:` dr
   expect_error(tfl_resolve_output(o2, s), "the report's `population:` field")
 })
 
+test_that("formats: the default is the active statistics catalog's (a company catalog's digits)", {
+  fm <- function(x, id) Filter(function(a) identical(a$id, id), x$ard$analyses)[[1L]]$formats
+  cat0 <- tfl_ard_statistics()
+  cat1 <- cat0
+  cat1$fmt[cat1$statistic == "sd" & cat1$kind == "continuous"] <- "xx.xxx"
+  cat1$fmt[cat1$statistic == "mean" & cat1$kind == "continuous"] <- "xx.xx"
+  cat1$fmt[cat1$statistic == "p" & cat1$kind == "categorical"] <- "xx.xx%"
+  withr::local_options(tflspec.ard_statistics = cat1)
+  x <- tfl_template_expand("demog", b1_args())
+  expect_match(fm(x, "CONT"), "mean=2 | sd=3", fixed = TRUE)
+  expect_identical(fm(x, "CAT"), "p=xx.xx%")
+  # (given by name over the catalog's)
+  y <- tfl_template_expand("demog", b1_args(formats = list(sd = 4)))
+  expect_match(fm(y, "CONT"), "mean=2 | sd=4", fixed = TRUE)
+  expect_identical(fm(tfl_template_expand("stf_t02_demog", b1_fda()), "CAT"), "p=xx.xx%")
+  # the built-in catalog: the digits the template had
+  withr::local_options(tflspec.ard_statistics = cat0)
+  z <- tfl_template_expand("demog", b1_args())
+  expect_identical(fm(z, "CONT"), "N=0 | mean=1 | sd=2 | median=1 | min=0 | max=0")
+  expect_identical(fm(z, "CAT"), "p=xx.x%")
+})
+
 test_that("the statistics computed are the ones formats names, plus any the cells name", {
   x <- tfl_template_expand("demog", b1_args())
   stat <- Filter(function(a) identical(a$id, "CONT"), x$ard$analyses)[[1L]]$statistics

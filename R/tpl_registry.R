@@ -403,6 +403,7 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
   # (an unset parameter is not given: the inner function's default applies)
   out <- t$body(a, list(codelists = codelists, population = population,
                         given = setdiff(names(args), attr(a, "unset")),
+                        unset = attr(a, "unset"),
                         template = list(name = t$name, label = t$label)))
   out$unset <- attr(a, "unset")
   # a figure's: how many of the data's last steps its call (tpl_<name>())

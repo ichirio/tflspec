@@ -23,7 +23,23 @@
 # a statistic's, and optionally a variable's (BMIBL: {mean: 2}).
 .tpl_demog_cells <- list(n = "{N}", `Mean (SD)` = .tpl_mean_sd("{mean}", "{sd}"),
                          Median = "{median}", `Min, Max` = "{min}, {max}")
-.tpl_demog_formats <- list(N = 0, mean = 1, sd = 2, median = 1, min = 0, max = 0, p = "xx.x%")
+# The ARD's formats when the template is given none: each statistic's format in the active
+# statistics catalog (tfl_ard_statistics(), fmt_default in the program), so a company catalog's
+# digits reach a bare {sd} or {p} as they did before.  A plain xx.x is the number of decimals.
+.tpl_demog_formats_active <- function() {
+  st <- tfl_ard_statistics()
+  one <- function(s, kind) {
+    f <- st$fmt[st$statistic == s & st$kind == kind]
+    f <- f[!is.na(f) & nzchar(f)]
+    if (!length(f)) return(NULL)
+    f <- f[1L]
+    if (grepl("^xx([.]x+)?$", f)) nchar(sub("^xx[.]?", "", f)) else f
+  }
+  m <- c(stats::setNames(lapply(c("N", "mean", "sd", "median", "min", "max"), one, kind = "continuous"),
+                         c("N", "mean", "sd", "median", "min", "max")),
+         list(p = one("p", "categorical")))
+  Filter(Negate(is.null), m)
+}
 
 # The parameters of the two templates.  `defaults`: the template's own
 # defaults by name (stf_t02_demog's); `fixed`: the names whose default does not
@@ -44,10 +60,12 @@
     tfl_param("data_id", NULL, doc = "the analysis data's id when `data` is not ADSL; NULL: <data>_<population>"),
     # (#749's: the summary family's denominator and its doc)
     tfl_param("denominator", NULL, doc = .tpl_den_sum_doc),
-    tfl_param("formats", .tpl_demog_formats, tier = "usual",
+    tfl_param("formats", NULL, tier = "usual",
               doc = paste("the ARD's formats (precision): per statistic, and per variable",
-                          "(BMIBL: {mean: 2, sd: 3}); given by name, merged; a number is the decimals,",
-                          "\"xx.x%\" a proportion as a percent")),
+                          "(BMIBL: {mean: 2, sd: 3}); given by name, merged over the statistics",
+                          "catalog's (tfl_ard_statistics(), by default N 0, mean 1, sd 2, median 1,",
+                          "min 0, max 0, p xx.x%); a number is the decimals, \"xx.x%\" a proportion",
+                          "as a percent; unset: none given here")),
     tfl_param("total", FALSE, tier = "usual", unset = "step_off",
               doc = "TRUE: a Total column, last (each analysis again without `by`)"),
     tfl_param("missing_row", FALSE, type = "flag", unset = "step_off",
@@ -226,7 +244,8 @@
   names(lev) <- names(vals)
   ov <- if (isTRUE(a[["total"]])) TRUE
   # (the statistics computed: those `formats` names, and any the cells name)
-  fm <- as.list(a$formats)
+  # (NULL: the active catalog's; `!unset`: none, the ARD's own)
+  fm <- if ("formats" %in% ctx$unset) list() else .tpl_merge_named(.tpl_demog_formats_active(), a$formats)
   nested <- fm[vapply(fm, is.list, NA)]
   flat <- fm[!vapply(fm, is.list, NA)]
   cont_flat <- flat[!names(flat) %in% c("n", "p")]
