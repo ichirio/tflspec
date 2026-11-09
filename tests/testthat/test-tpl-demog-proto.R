@@ -351,6 +351,12 @@ test_that("stf_t02_demog: the FDA STF Table 2 look as defaults of a variant; it 
   expect_identical(dp_item(x, "plan_total")[[1L]]$args$label, "Total Population")
   hdr <- dp_item(x, "plan_col_header")[[1L]]
   expect_identical(hdr$args$header[[2L]]$text, "{col}\nN={n}")
+  # the stub column's heading: a default of the variant, over the study's stub
+  stub <- dp_item(x, "plan_stub")[[1L]]
+  expect_identical(stub$args$heading, "Characteristic")
+  expect_true(stub$explicit)
+  expect_identical(hdr$args$header[[1L]]$text, "Characteristic")
+  expect_length(dp_item(tfl_template_expand("demog", dp_args()), "plan_stub"), 0L)
   expect_identical(dp_item(x, "plan_cells")[[1L]]$args$continuous[["Median (min, max)"]],
                    "{median} ({min}, {max})")
   r <- dp_run(d, list(name = "stf_t02_demog", ard = list(population = "SAF")),

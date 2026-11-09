@@ -776,6 +776,9 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
                           "\"set\" the same while `denominator` is NULL; \"none\" no N")),
     tfl_param("col_header", NULL, type = "text",
               doc = "the arm heading's text, {col} and {n}; NULL: the study's heading, else \"{col}\\n(N={n})\""),
+    tfl_param("heading", NULL, type = "text",
+              doc = paste("the row-title (stub) column's heading, a line a line; NULL: the study's.",
+                          "Given, it is the stub's (plan_stub(heading = ), as the study's stub: row_label, first)")),
     tfl_param("widths", "auto", type = "text", multiple = TRUE,
               doc = paste("\"auto\": the row-title column 35% of the width, the arm columns sharing the rest;",
                           "numbers: the relative widths, one a printed column")),
@@ -937,13 +940,20 @@ names(.tpl_demog_params) <- vapply(.tpl_demog_params, `[[`, "", "name")
 ")
   }
   hdr <- tfl_item("plan_col_header", list(header = list(
-    list(line = "1", cols = "row_label"),
+    nn(list(line = "1", cols = "row_label", text = .tpl_lines(a$heading))),
     list(line = "1", cols = ".values", span = "each", text = txt))))
   if (!is.null(a$col_header) || identical(hn, "none")) hdr$explicit <- TRUE
   blank <- if (isTRUE(a$blanks)) {
     expl(tfl_item("plan_blanks", list(where = "between_groups")), "blanks")
   } else {
     expl(tfl_item("plan_blanks", list(first = FALSE, last = FALSE)), "blanks")
+  }
+  stub <- if (!is.null(a$heading)) {
+    it <- tfl_item("plan_stub", list(name = "row_label", before = TRUE,
+                                     heading = paste(a$heading, collapse = "
+")))
+    it$explicit <- TRUE
+    list(it)
   }
   ord <- c(list(variable = a$order), lev)
   ord <- ord[!vapply(ord, is.null, NA)]
@@ -957,6 +967,7 @@ names(.tpl_demog_params) <- vapply(.tpl_demog_params, `[[`, "", "name")
       label = a$total_label %||% "Total", position = "last"))),
     list(hdr),
     list(blank),
+    stub,
     if (!is.null(widths_item)) list(widths_item),
     # (a block is never split over pages)
     list(expl(tfl_item("plan_paginate_rows", list(max_rows = as.integer(a$max_rows), split = "group_safe")),
@@ -974,7 +985,7 @@ names(.tpl_demog_params) <- vapply(.tpl_demog_params, `[[`, "", "name")
                 ard = c("population", "by", "data", "subset", "continuous", "categorical", "total",
                         "denominator", "formats", "missing_row", "missing_label"),
                 content = c("order", "labels", "categorical_levels", "cells", "sd_missing",
-                            "count_cell", "total_label", "header_n", "col_header", "widths",
+                            "count_cell", "total_label", "header_n", "col_header", "heading", "widths",
                             "max_rows", "blanks", "style")),
               example = list(population = "SAF", continuous = "AGE",
                              categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC")))
@@ -1007,7 +1018,7 @@ tfl_template_variant("stf_t02_demog", from = "demog",
       ETHNIC = c("HISPANIC OR LATINO", "NOT HISPANIC OR LATINO", "NOT REPORTED", "UNKNOWN")),
     total = TRUE, total_label = "Total Population", missing_row = TRUE,
     col_header = "{col}
-N={n}", blanks = FALSE, style = "stf_t02"))
+N={n}", heading = "Characteristic", blanks = FALSE, style = "stf_t02"))
 
 # disposition: the subjects' status at the end of the study, on summary
 .tfl_template("disposition", kind = "table", layout = "summary",
