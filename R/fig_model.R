@@ -2166,13 +2166,9 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
   }
   cols <- objects[["df"]]
   f <- .fig_plot_fields()
-  # (a Kaplan-Meier template reads some `plot:` keys itself: the risk table's title)
-  tn <- if (is.list(design$template)) design$template$name else design$template
-  routed <- tryCatch(
-    if (is.character(tn) && length(tn) == 1L && identical(.tpl_get(tn, "")$layout, "km")) {
-      .tpl_km_plot_routed
-    } else character(),
-    error = function(e) character())
+  # (a template reads some `plot:` keys itself: the Kaplan-Meier types, the risk
+  # table's title)
+  routed <- .fig_plot_routed(design)
   for (nm in names(design$plot)) {
     r <- f[f$field == nm, , drop = FALSE]
     if (!nrow(r) && nm %in% routed) next
@@ -2939,4 +2935,19 @@ tfl_fig_forest_analyses <- function(data = "ADTTE", param = "OS", pop = "FASFL",
     if (inherits(it, "tfl_plot")) it$items <- .fig_mark_from(it$items, from)
     it
   })
+}
+
+# The `plot:` keys of a figure design that its template reads itself, not
+# figure settings: by the template's layout; a design without the template
+# (the expanded one) by the layer the key went to (.tpl_plot_routed)
+.fig_plot_routed <- function(design) {
+  tn <- if (is.list(design$template)) design$template$name else design$template
+  layout <- if (is.character(tn) && length(tn) == 1L) {
+    tryCatch(.tpl_get(tn, "")$layout, error = function(e) NULL)
+  }
+  if (is.null(layout)) {
+    ls <- Filter(is.list, design$layers %||% list())
+    layout <- names(Filter(function(has) any(vapply(ls, has, NA)), .tpl_plot_routed_layer))
+  }
+  as.character(unlist(.tpl_plot_routed[intersect(layout, names(.tpl_plot_routed))], use.names = FALSE))
 }
