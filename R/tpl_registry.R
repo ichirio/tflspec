@@ -17,7 +17,12 @@
 #'
 #' @param name The parameter's name.
 #' @param default Its default value; `NULL` for none.  With `study`, the
-#'   fallback: the value when the study standard has none.
+#'   fallback: the value when the study standard has none.  [tfl_unset()]
+#'   (`!unset` in a YAML): leave the argument out of the call, so the inner
+#'   function's own default applies (distinct from `NA` and `NULL`); a
+#'   report's `!unset` does the same over any default, and so does a study
+#'   value or fallback that is `!unset`.  `tfl_tpl_args()` shows it as
+#'   `(none)`.
 #' @param required `TRUE` when a report must give it.  With `study`: stop
 #'   when neither the report nor the study standard gives it.
 #' @param doc One line saying what it is.
@@ -330,17 +335,24 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   out <- lapply(t$params, function(p) {
     if (!p$name %in% names(args)) return(p$default)
     v <- args[[p$name]]
+    if (inherits(v, "tfl_unset")) return(v)
     if (.tpl_is_name_text(p)) v <- .tpl_name_text_map(v, t$name, p$name, fn)
     if (isTRUE(p$merge) && length(p$default) && length(v) && !is.null(names(v))) {
       v <- .tpl_merge_named(p$default, v)
     }
     v
   })
+  # `!unset` (a report's value or a template's default): the parameter is
+  # left out -- the body reads it as NULL, and the call written omits it, so
+  # the inner function's own default applies.  Recorded in `unset`.
+  unset <- vapply(out, inherits, NA, "tfl_unset")
+  if (any(unset)) out[unset] <- list(NULL)
   miss <- vapply(t$params, function(p) p$required && is.null(out[[p$name]]), NA)
   if (any(miss)) {
     .ard_stop(sprintf("%s: template %s needs %s.", fn, t$name,
                       paste(sQuote(names(miss)[miss], FALSE), collapse = ", ")))
   }
+  attr(out, "unset") <- names(unset)[unset]
   out
 }
 
@@ -367,8 +379,11 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
   fn <- "tfl_template_expand()"
   t <- .tpl_get(name, fn)
   a <- .tpl_args(t, args, fn)
-  out <- t$body(a, list(codelists = codelists, population = population, given = names(args),
+  # (an unset parameter is not given: the inner function's default applies)
+  out <- t$body(a, list(codelists = codelists, population = population,
+                        given = setdiff(names(args), attr(a, "unset")),
                         template = list(name = t$name, label = t$label)))
+  out$unset <- attr(a, "unset")
   # a figure's: how many of the data's last steps its call (tpl_<name>())
   # makes -- the statistics; the program writes the steps before them
   if (identical(t$kind, "figure")) {
@@ -723,7 +738,8 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
       by = a$by, overall = ov, variables = a$categorical, optional = opt("categorical"),
       statistics = a$categorical_statistics, purpose = "PRIMARY OUTCOME MEASURE"))))
   vars <- c(a$continuous, a$categorical)
-  cells <- nn(list(continuous = if (length(a$continuous)) as.list(
+  # (`cells` unset: no continuous cells in the call, plan_cells()'s own)
+  cells <- nn(list(continuous = if (length(a$continuous) && length(a$cells)) as.list(
                      .tpl_sd_missing(a$cells, .tpl_summary_cells, a[["sd_missing"]] %||% "-",
                                      mean = "{mean:.1f}", sd = "{sd:.2f}")),
                    categorical = a$count_cell))

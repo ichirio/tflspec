@@ -215,13 +215,15 @@
             paste("Each: its name, what it is, its kind and layout; then its parameters'",
                   "names -- [target] (the report's analysis set, subjects and records),",
                   "* required. A parameter left out takes its default, or the study standard's",
-                  "value where it says `study: <key>`: it is not written again.")
+                  "value where it says `study: <key>`: it is not written again. `!unset`: leave the",
+                  "argument out of the call.")
           } else {
             paste("Each: its name, what it is, its kind and layout; then its parameters --",
                   "`name` [target] (the report's analysis set, subjects and records),",
                   "* required, (its type), = its default, and what it is. A parameter left",
                   "out takes its default, or the study standard's value where it says",
-                  "`study: <key>, else <fallback>` (`no fallback`: left unset): it is not written again.")
+                  "`study: <key>, else <fallback>` (`no fallback`: left unset): it is not written again.",
+                  "`!unset` (a default, or a value you write): leave the argument out of the call.")
           }, "",
           .ai_templates_list(kinds, short = short)), collapse = "\n")
 }
@@ -261,7 +263,8 @@
                     "`name` [target] (the report's analysis set, subjects and records),",
                     "* required, (its type), = its default, and what it is. A parameter left",
                     "out takes its default, or the study standard's value where it says",
-                    "`study: <key>, else <fallback>` (`no fallback`: left unset): it is not written again."), "",
+                    "`study: <key>, else <fallback>` (`no fallback`: left unset): it is not written again.",
+                    "`!unset` (a default, or a value you write): leave the argument out of the call."), "",
               .ai_templates_list(kinds[[task]]), "")
           }))), collapse = "\n")
 }

@@ -24,8 +24,10 @@
 # "name = value; ..."; long ones cut
 .tpl_short <- function(x, width = 60L) {
   if (is.null(x)) return(NA_character_)
+  if (inherits(x, "tfl_unset")) return("(none)")
   one <- function(v) {
     if (is.null(v)) return("NULL")
+    if (inherits(v, "tfl_unset")) return("(none)")
     if (is.list(v)) return(paste0("(", .tpl_short(v, width = 1000L), ")"))
     paste(as.character(v), collapse = ", ")
   }
@@ -88,7 +90,9 @@
 #' `"study: <key>, no fallback"` (left unset when the study has none), or
 #' `"study: <key>, required"`.  Its `layer` is then `"study: <key>"` when
 #' the study has a value, else `"fallback"` (or `"default"` when it has
-#' none); the report's own field (`population`) is `"report"`.
+#' none); the report's own field (`population`) is `"report"`.  A default
+#' or a value that is `!unset` ([tfl_unset()]: the argument is left out of
+#' the call) is shown as `(none)`.
 #'
 #' @param name The template's name (`"demog"`).
 #' @param study The study standard: a [tfl_read_study_spec()] object or a

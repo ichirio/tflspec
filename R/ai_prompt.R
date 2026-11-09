@@ -801,6 +801,7 @@ print.tfl_ai_text <- function(x, ...) {
 # as the prompt asks (a character of `.ai_yaml_special`, a blank at either
 # end) or where YAML would not read it back as the same text.
 .ai_yaml_flow <- function(v) {
+  if (inherits(v, "tfl_unset")) return("!unset")
   if (.is_r(v)) return(paste("!r", .ai_yaml_quote(unclass(v))))
   if (is.list(v)) {
     items <- vapply(v, .ai_yaml_flow, "")

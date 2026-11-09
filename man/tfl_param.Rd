@@ -24,7 +24,12 @@ tfl_param(
 \item{name}{The parameter's name.}
 
 \item{default}{Its default value; \code{NULL} for none.  With \code{study}, the
-fallback: the value when the study standard has none.}
+fallback: the value when the study standard has none.  \code{\link[=tfl_unset]{tfl_unset()}}
+(\code{!unset} in a YAML): leave the argument out of the call, so the inner
+function's own default applies (distinct from \code{NA} and \code{NULL}); a
+report's \code{!unset} does the same over any default, and so does a study
+value or fallback that is \code{!unset}.  \code{tfl_tpl_args()} shows it as
+\code{(none)}.}
 
 \item{required}{\code{TRUE} when a report must give it.  With \code{study}: stop
 when neither the report nor the study standard gives it.}
