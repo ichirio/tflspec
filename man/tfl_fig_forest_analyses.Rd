@@ -12,7 +12,8 @@ tfl_fig_forest_analyses(
   subgroups = c("SEX", "AGEGR1"),
   time = "AVAL",
   censor = "CNSR",
-  id = "HR"
+  id = "HR",
+  ref = NULL
 )
 }
 \arguments{
@@ -26,6 +27,9 @@ tfl_fig_forest_analyses(
 tflplanner names a data by.}
 
 \item{group}{The treatment variable; its first level is the reference.}
+
+\item{ref}{The reference arm, put first by a relevel in the analysis
+data's \code{derive}; \code{NULL}: the first level (none derived).}
 
 \item{subgroups}{The subgroup variables (of the population's data), a
 character vector or one string with \verb{,} between them.}

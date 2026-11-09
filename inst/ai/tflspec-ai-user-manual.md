@@ -513,8 +513,9 @@ analyses do, and the figure starts from it.
   looks for each address in it.  `ard_value()`, `ard_stats()` and
   `ard_fingerprint()` are study helpers (`tfl_helpers_code()`).
 - A forest plot's numbers are an ARD of its own: `tfl_fig_template("forest_hr",
-  data, param, pop, group, subgroups = "SEX, AGEGR1", comparison = <the
-  arm against the reference>)` reads `ard_stats` of the analyses `HR`,
+  data, param, pop, group, subgroups = "SEX, AGEGR1", ref = <the reference
+  arm, put first; NULL: the first level>, comparison = <the one arm to show
+  against the reference>)` reads `ard_stats` of the analyses `HR`,
   `HR_SEX`, `HR_AGEGR1` (a Cox model of all subjects, one within each
   subgroup variable through `cards::ard_strata()`, each a `custom`
   analysis), which `tfl_fig_forest_analyses()` gives as rows of the
