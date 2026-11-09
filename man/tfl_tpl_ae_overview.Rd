@@ -17,6 +17,7 @@ The table template \code{ae_overview}, layout \code{summary}. Its program is one
    \code{data_id} \tab other \tab call \tab  \tab  \tab the events' analysis data's id; NULL: <data>_<population> \cr
    \code{flags} \tab other \tab call \tab (id = ANY; label = Any TEAE); (id = REL; label = Any trea... \tab  \tab the rows, in order: each 'id' (the flag's name), 'label' (the row's text) and 'where' (R: the events it counts; none: every event kept) \cr
    \code{heading} \tab other \tab call \tab Subjects with \tab  \tab the label column's heading \cr
+   \code{header_n} \tab other \tab call \tab set \tab  \tab the arm headings' N: "set" (default) or "denominator": the arm's subjects in the analysis set (with 'subset'), the percentages' base; "none": no N. "tested" is not supported, the subjects method takes no other base \cr
 }
 }
 

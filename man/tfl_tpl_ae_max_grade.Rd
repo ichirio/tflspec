@@ -23,6 +23,7 @@ The table template \code{ae_max_grade}, layout \code{hierarchical}. Its program 
    \code{any_grade} \tab other \tab call \tab Any grade \tab  \tab the label of a term's count at any grade \cr
    \code{sort} \tab other \tab call \tab n \tab  \tab the SOCs and PTs by their count, most first ("n"), or by "name" \cr
    \code{heading} \tab other \tab call \tab System Organ Class,    Preferred Term \tab  \tab the label column's heading, a line a level \cr
+   \code{header_n} \tab other \tab call \tab denominator \tab  \tab the arm headings' N: "denominator" (default) or "set": the arm's subjects in the analysis set (with 'subset'), the percentages' denominator; "none": no N \cr
 }
 }
 

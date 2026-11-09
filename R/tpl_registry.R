@@ -855,6 +855,12 @@ tfl_templates <- function(source = NULL) {
 
 # ---- hierarchical: a hierarchy's counts (SOC / PT), the layout ------------------
 
+.tpl_header_n_stack_doc <- paste(
+  "the arm headings' N: \"denominator\" (default): the arm's subjects the percentages",
+  "are of (`denominator`); \"set\": the same, when `denominator` is NULL (the analysis set);",
+  "\"tested\": the same, when `denominator` is \"data\" (the records' subjects); a header N",
+  "apart from the denominator is not supported yet; \"none\": no N")
+
 .tpl_hier_params <- list(
   tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
   .tpl_subset_param(),
@@ -877,9 +883,35 @@ tfl_templates <- function(source = NULL) {
             doc = "a count's cell, n (%) (plan_cells(categorical = )); NULL: the study standard's"),
   tfl_param("denominator", NULL,
             doc = "the percentages' denominator: NULL the analysis set's subjects, \"data\" the records' subjects"),
-  tfl_param("total", FALSE, doc = "TRUE: a Total column (the analysis again without `by`, plan_total())")
+  tfl_param("total", FALSE, doc = "TRUE: a Total column (the analysis again without `by`, plan_total())"),
+  tfl_param("header_n", "denominator", type = "choice",
+            choices = c("denominator", "set", "tested", "none"), doc = .tpl_header_n_stack_doc)
 )
 names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
+
+# header_n, checked: `allowed` the values the template takes (the first is
+# the default); any other stops with "<template>: header_n = "<x>" <why>".
+# The values are "denominator", "set", "tested" and "none".
+.tpl_header_n <- function(a, ctx, allowed, why) {
+  tn <- ctx$template$name %||% "template"
+  hn <- a$header_n %||% allowed[1L]
+  if (!(is.character(hn) && length(hn) == 1L && !is.na(hn) &&
+        hn %in% c("denominator", "set", "tested", "none"))) {
+    .ard_stop(sprintf("%s: header_n takes \"denominator\", \"set\", \"tested\" or \"none\".", tn))
+  }
+  if (!(hn %in% allowed)) .ard_stop(sprintf("%s: header_n = \"%s\" %s", tn, hn, why))
+  hn
+}
+
+# the stack templates' header N is the stack's own denominator: "set" is the
+# same when the denominator is the analysis set, "tested" when it is the
+# records' subjects ("data"); a header N apart from it is not supported yet
+.tpl_header_n_stack <- function(a, ctx, den = a$denominator) {
+  .tpl_header_n(a, ctx, c("denominator", "none", if (is.null(den)) "set",
+                          if (identical(den, "data")) "tested"),
+                paste0("differs from the percentages' denominator; a header N apart from it ",
+                       "is not supported yet: use header_n = \"denominator\" or \"none\"."))
+}
 
 # The rows kept: `min_pct` % of subjects or more, in any column, every
 # column, or the Total column (plan_filter()); NULL when none is set
@@ -893,6 +925,8 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
 }
 
 .tpl_hier_body <- function(a, ctx) {
+  # (the header N is the stack's own denominator: only the text changes)
+  hn <- .tpl_header_n_stack(a, ctx)
   # the any-record row: its label, when it is shown
   overall <- if (isTRUE(a[["any_row"]])) a[["any_row_label"]]
   pop <- a$population
@@ -938,7 +972,7 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
     # (the layout's column header, its counts' line: the study standard's wins)
     list(tfl_item("plan_col_header", list(header = list(
       list(line = "1", cols = "row_label"),
-      list(line = "1", cols = ".values", span = "each", text = "{col}\n(N={n})\nn (%)"),
+      list(line = "1", cols = ".values", span = "each", text = if (identical(hn, "none")) "{col}\nn (%)" else "{col}\n(N={n})\nn (%)"),
       list(line = "2", cols = "row_label", text = paste(a$heading, collapse = "\n")),
       list(line = "2", cols = ".values"))))),
     list(tfl_item("plan_paginate_rows", list(max_rows = 22L, split = "group_force"))))
@@ -1013,7 +1047,11 @@ tpl_hierarchical <- function(ard, population, hierarchy, ..., codelists = NULL) 
             doc = "where min_pct is met: \"any\" column, \"all\" of them, or the \"total\" column"),
   tfl_param("sort_by", NULL,
             doc = "the column (a value of `by`) whose counts order the PTs; NULL: the Total column with min_pct_in = \"total\", else the code list's first value of `by`, else all the columns"),
-  tfl_param("heading", "Preferred Term", doc = "the label column's heading")
+  tfl_param("heading", "Preferred Term", doc = "the label column's heading"),
+  tfl_param("header_n", "denominator", type = "choice",
+            choices = c("denominator", "set", "none"), doc = paste(
+    "the arm headings' N: \"denominator\" (default) or \"set\": the arm's subjects in the",
+    "analysis set (with `subset`), the percentages' denominator; \"none\": no N"))
 )
 names(.tpl_pt_params) <- vapply(.tpl_pt_params, `[[`, "", "name")
 
@@ -1089,12 +1127,18 @@ tpl_ae_pt_freq <- function(ard, population, ..., codelists = NULL) {
   tfl_param("sort", "n", type = "choice", choices = c("n", "name"),
             doc = "the SOCs and PTs by their count, most first (\"n\"), or by \"name\""),
   tfl_param("heading", c("System Organ Class", "   Preferred Term"),
-            doc = "the label column's heading, a line a level")
+            doc = "the label column's heading, a line a level"),
+  tfl_param("header_n", "denominator", type = "choice",
+            choices = c("denominator", "set", "none"), doc = paste(
+    "the arm headings' N: \"denominator\" (default) or \"set\": the arm's subjects in the",
+    "analysis set (with `subset`), the percentages' denominator; \"none\": no N"))
 )
 names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
 
 .tpl_mg_body <- function(a, ctx) {
   rows_in <- identical(match.arg(a$grade_in, c("rows", "cols")), "rows")
+  # (the percentages are of the analysis set: "denominator" and "set" are one)
+  hn <- .tpl_header_n_stack(a, ctx, den = NULL)
   pop <- a$population
   subj <- paste0("adsl_", tolower(pop))
   set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(pop))
@@ -1152,7 +1196,8 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
   # (grades as columns: the arm x grade columns, and the any-grade column
   # the total adds, are under the arm -- `{n1}`, the arm's N, is the one
   # number the ARD gives all of them)
-  head_n <- if (rows_in) "{col}\n(N={n})\nn (%)" else "{col}\n(N={n1})\nn (%)"
+  head_n <- if (identical(hn, "none")) "{col}\nn (%)" else if (rows_in)
+    "{col}\n(N={n})\nn (%)" else "{col}\n(N={n1})\nn (%)"
   content <- c(
     list(tfl_item("normalize_ard", list(hierarchy = c(h, g))),
          # the overall block first, whatever the order of the others
@@ -1381,6 +1426,11 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
     .ard_stop(paste0("shift: header_n takes \"set\" (the arm's subjects in the analysis ",
                      "set), \"tested\" (the page's subjects with a baseline and a ",
                      "post-baseline category) or \"none\" (no N)."))
+  }
+  if (identical(hn, "tested") && !isTRUE(a$param_page)) {
+    .ard_stop(sprintf(paste0("%s: header_n = \"tested\" needs param_page = TRUE (the N is a ",
+                             "page's parameter's); use header_n = \"set\" or \"none\"."),
+                      ctx$template$name %||% "shift"))
   }
   # each page's N ("tested"): the arm's subjects for the page's parameter,
   # from the same records as the table (the Total row's, or the set's own)
@@ -2072,9 +2122,17 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
     tfl_param("stat_layout", "rows", type = "choice", choices = c("rows", "cols"), doc = paste(
       "the rate and its CI: \"rows\", under each other in the arm's column, or \"cols\",",
       "each arm's two columns (stat_block)")),
-    tfl_param("heading", "Response", doc = "the label column's heading")
+    tfl_param("heading", "Response", doc = "the label column's heading"),
+    tfl_param("header_n", "set", type = "choice", choices = c("set", "denominator", "none"),
+              doc = paste(
+      "the arm headings' N: \"set\" (default) or \"denominator\": the arm's subjects in the",
+      "analysis set (with `subset`), the percentages' and the rate's base; \"none\": no N.",
+      "\"tested\" is not supported, the rate row's base is the analysis set"))
   ),
   body = function(a, ctx) {
+    hn <- .tpl_header_n(a, ctx, c("set", "denominator", "none"), paste0(
+      "is not supported: the rate row's base is the analysis set; ",
+      "use header_n = \"set\" or \"none\"."))
     set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(a$param))
     resp <- paste(a$responders, collapse = " + ")
     lvl <- as.numeric(a$conf_level %||% 0.95)
@@ -2101,11 +2159,16 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
              where = tfl_r(.tpl_and(sprintf("PARAMCD == \"%s\"", a$param), a$where))),
         list(id = set, from = rec, code = tfl_r(code),
              label = sprintf("%s of %s, each subject of the set a row", a$param, a$population))),
-      analyses = list(
-        list(id = a$param, method = "categorical", data = set, by = a$by,
-             variables = a$category, denominator = subj),
-        list(id = "ORR", method = "proportion_ci", data = set, by = a$by,
-             variables = "RESP", args = tfl_r(ci_args))))
+      analyses = c(
+        list(list(id = a$param, method = "categorical", data = set, by = a$by,
+                  variables = a$category, denominator = subj),
+             list(id = "ORR", method = "proportion_ci", data = set, by = a$by,
+                  variables = "RESP", args = tfl_r(ci_args))),
+        # the header N: the arm's subjects in the analysis set, counted apart
+        # (not left to the best response and the rate agreeing on it)
+        if (!identical(hn, "none")) list(list(
+          id = "GROUPN", method = "categorical", data = subj, variables = a$by,
+          purpose = "PRIMARY OUTCOME MEASURE"))))
     # (the arms' order: an order given, else the code list's, which the ARD
     # program puts on the survfit / CI analysis too, relevel_ard())
     by_lv <- a$by_levels
@@ -2128,7 +2191,7 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
       content <- c(blk, list(levels_item, labels_item,
         tfl_item("plan_labels", list(RESP = c("TRUE" = ""))),
         tfl_item("plan_col_header", list(header = list(
-          list(line = "1", cols = ".values", span = a$by, text = "{col1} (N={n1})"),
+          list(line = "1", cols = ".values", span = a$by, text = if (identical(hn, "none")) "{col1}" else "{col1} (N={n1})"),
           list(line = "2", cols = "row_label", text = .tpl_lines(a$heading)),
           list(line = "2", cols = ".values", span = "each", text = "{col}"))))))
       return(list(ard = ard, data = list(source = "ard"), content = content))
@@ -2139,10 +2202,11 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
         "{n} ({estimate:.1f%})", "[{conf.low:.1f%}, {conf.high:.1f%}]"), c("n (%)", ci_lab)))),
       # (the categories' order is the ARD's: its code list, applied in the ARD program)
       levels_item, labels_item,
-      tfl_item("plan_col_header", list(header = list(
+      tfl_item("plan_col_header", list(header = c(list(
         list(line = "1", cols = ".values", span = "each", text = "{col}"),
-        list(line = "2", cols = "row_label", text = .tpl_lines(a$heading)),
-        list(line = "2", cols = ".values", span = "each", text = "(N={n})")))))
+        list(line = "2", cols = "row_label", text = .tpl_lines(a$heading))),
+        if (!identical(hn, "none")) list(
+          list(line = "2", cols = ".values", span = "each", text = "(N={n})"))))))
     list(ard = ard, data = list(source = "ard"), content = content)
   })
 
@@ -2190,9 +2254,17 @@ tpl_orr <- function(ard, population = "ITT", ..., codelists = NULL) {
     tfl_param("flags", .tpl_ae_flags, doc = paste(
       "the rows, in order: each `id` (the flag's name), `label` (the row's text)",
       "and `where` (R: the events it counts; none: every event kept)")),
-    tfl_param("heading", "Subjects with", doc = "the label column's heading")
+    tfl_param("heading", "Subjects with", doc = "the label column's heading"),
+    tfl_param("header_n", "set", type = "choice", choices = c("set", "denominator", "none"),
+              doc = paste(
+      "the arm headings' N: \"set\" (default) or \"denominator\": the arm's subjects in the",
+      "analysis set (with `subset`), the percentages' base; \"none\": no N.",
+      "\"tested\" is not supported, the subjects method takes no other base"))
   ),
   body = function(a, ctx) {
+    hn <- .tpl_header_n(a, ctx, c("set", "denominator", "none"), paste0(
+      "is not supported: the subjects method takes no base other than the analysis set; ",
+      "use header_n = \"set\" or \"none\"."))
     pop <- a$population
     subj <- paste0("adsl_", tolower(pop))
     set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(pop))
@@ -2210,8 +2282,9 @@ tpl_orr <- function(ard, population = "ITT", ..., codelists = NULL) {
         Filter(Negate(is.null), list(id = set, from = a$data, subjects = subj,
                                      where = if (!is.null(a$where)) tfl_r(a$where)))),
       analyses = c(
-        list(list(id = "GROUPN", method = "categorical", data = subj, variables = a$by,
-                  purpose = "PRIMARY OUTCOME MEASURE")),
+        if (!identical(hn, "none")) list(list(
+          id = "GROUPN", method = "categorical", data = subj, variables = a$by,
+          purpose = "PRIMARY OUTCOME MEASURE")),
         lapply(a$flags, flag)))
     content <- list(
       # one row a flag: no label column (the flag's TRUE is the row)
@@ -2219,11 +2292,12 @@ tpl_orr <- function(ard, population = "ITT", ..., codelists = NULL) {
       # (no plan_levels(): the rows are the flags in their analyses' order, the
       # columns the code list's, applied when the ARD is made)
       tfl_item("plan_labels", list(variable = stats::setNames(lapply(a$flags, `[[`, "label"), ids))),
-      tfl_item("plan_col_header", list(header = list(
+      tfl_item("plan_col_header", list(header = c(list(
         list(line = "1", cols = "group"),
         list(line = "1", cols = ".values", span = "each", text = "{col}"),
-        list(line = "2", cols = "group", text = .tpl_lines(a$heading)),
-        list(line = "2", cols = ".values", span = "each", text = "(N={n})")))),
+        list(line = "2", cols = "group", text = .tpl_lines(a$heading))),
+        if (!identical(hn, "none")) list(
+          list(line = "2", cols = ".values", span = "each", text = "(N={n})"))))),
       # the look is the template's (a report changes it with an item of its own)
       tfl_item("plan_paginate_rows", list(max_rows = 30L, split = "group_safe")))
     list(ard = ard, data = list(source = "ard", object = "ard"), content = content)
