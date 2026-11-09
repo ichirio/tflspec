@@ -54,7 +54,7 @@ test_that("demog is its own template, no longer a variant of summary", {
 test_that("the analysis variables are required: at least one, else a clear error", {
   expect_error(tfl_template_expand("demog", list(population = "SAF")),
                "give `continuous` or `categorical`")
-  expect_error(tfl_template_expand("demog", list(continuous = "AGE")), "needs 'population'")
+  expect_error(tfl_template_expand("demog", list(continuous = "AGE")), "needs 'population' (population: the report's `population:` field)", fixed = TRUE)
   expect_no_error(tfl_template_expand("demog", list(population = "SAF", continuous = "AGE")))
   expect_no_error(tfl_template_expand("demog", list(population = "SAF", categorical = "SEX")))
   # the variables are as written, not the data's (no any_of())
@@ -116,7 +116,7 @@ test_that("formats: the ARD's digits, by statistic and by variable; the default 
 test_that("formats reach the table: AGE one decimal, a variable of its own more; p a percent", {
   skip_if_not_installed("haven")
   d <- dp_study(na = FALSE)
-  r <- dp_run(d, list(name = "demog", ard = list(population = "SAF", continuous = c("AGE", "TRTDURD"),
+  r <- dp_run(d, list(name = "demog", ard = list(continuous = c("AGE", "TRTDURD"),
                                                  categorical = "SEX",
                                                  formats = list(TRTDURD = list(mean = 0, sd = 1)))))
   txt <- unlist(lapply(r$table, as.character))
@@ -145,7 +145,7 @@ test_that("missing_row counts the subjects with no value, last; categorical_leve
   skip_if_not_installed("haven")
   d <- dp_study()
   r <- dp_run(d, list(name = "demog", ard = list(
-    population = "SAF", continuous = "AGE", categorical = c("SEX", "RACE"),
+    continuous = "AGE", categorical = c("SEX", "RACE"),
     missing_row = TRUE, missing_label = "Not recorded"),
     content = list(categorical_levels = list(
       RACE = c("WHITE", "ASIAN", "BLACK OR AFRICAN AMERICAN", "OTHER", "UNKNOWN")))))
@@ -172,9 +172,9 @@ test_that("missing_row counts the subjects with no value, last; categorical_leve
 test_that("without missing_row there is no such row; a value the list lacks stops", {
   skip_if_not_installed("haven")
   d <- dp_study()
-  r <- dp_run(d, list(name = "demog", ard = list(population = "SAF", categorical = "SEX")))
+  r <- dp_run(d, list(name = "demog", ard = list(categorical = "SEX")))
   expect_false(any(grepl("Missing", unlist(lapply(r$table, as.character)))))
-  expect_error(dp_run(d, list(name = "demog", ard = list(population = "SAF", categorical = "RACE"),
+  expect_error(dp_run(d, list(name = "demog", ard = list(categorical = "RACE"),
                               content = list(categorical_levels = list(RACE = c("ASIAN", "WHITE"))))),
                "code list does not")
   expect_error(tfl_template_expand("demog", dp_args(
@@ -249,7 +249,7 @@ test_that("a given max_rows and blanks win over the study's defaults in a report
   s$defaults$content[[k]] <- tfl_item("plan_paginate_rows", list(max_rows = 40L), from = "defaults")
   mk <- function(args) tfl_output("T-9", "table", population = "SAF",
                                   template = list(name = "demog", ard = list(
-                                    population = "SAF", continuous = "AGE", categorical = "SEX"),
+                                    continuous = "AGE", categorical = "SEX"),
                                     content = args))
   pr <- function(o) {
     ro <- tfl_resolve_output(o, s)
@@ -274,7 +274,7 @@ test_that("style: the template's param is the default, the report's style: wins"
     ps <- ro$content[[match("plan_style", vapply(ro$content, `[[`, "", "fn"))]]
     ps$args$font_size_half_points
   }
-  tpl <- function(...) list(name = "demog", ard = list(population = "SAF", continuous = "AGE"),
+  tpl <- function(...) list(name = "demog", ard = list(continuous = "AGE"),
                             content = list(...))
   expect_identical(tflspec:::.tpl_get("demog", "t")$params$style$default, "standard")
   # the param
@@ -301,6 +301,11 @@ test_that("the SPEC has two parts, ard: and content:; the old flat args: is stil
   both <- tflspec:::.tpl_spec_of(mk(list(name = "demog", args = list(population = "SAF"),
                                          ard = list(continuous = "AGE"))))
   expect_setequal(names(both$args), c("population", "continuous"))
+  # the analysis set is hidden: not a template parameter, not in the SPEC
+  expect_true(tflspec:::.tpl_registry$demog$params$population$hidden)
+  expect_error(tflspec:::.tpl_study_args(tflspec:::.tpl_get("demog", "t"),
+                                         list(population = "SAF", continuous = "AGE"), list(), "T-1"),
+               "the report's `population:` field")
   # a name in the part it does not act in stops, naming the right one
   expect_error(tflspec:::.tpl_spec_of(mk(list(name = "demog", ard = list(population = "SAF", widths = "auto")))),
                "'widths' acts in `content:`, not `ard:`")
@@ -312,7 +317,8 @@ test_that("the SPEC has two parts, ard: and content:; the old flat args: is stil
   # every parameter is in one part
   p <- names(tfl_template_params("demog"))
   parts <- tflspec:::.tpl_registry$demog$parts
-  expect_setequal(c(parts$ard, parts$content), p)
+  # (the analysis set is the report's `population:`, not a parameter in either part)
+  expect_setequal(c(parts$ard, parts$content), setdiff(p, "population"))
   expect_length(intersect(parts$ard, parts$content), 0L)
 })
 
@@ -320,7 +326,7 @@ test_that("a two-part report runs end to end and reads back from YAML", {
   skip_if_not_installed("haven")
   d <- dp_study(na = FALSE)
   o <- tfl_output("T-DP", "table", population = "SAF", extends = "defaults", template = list(
-    name = "demog", ard = list(population = "SAF", continuous = "AGE", categorical = c("SEX", "RACE"),
+    name = "demog", ard = list(continuous = "AGE", categorical = c("SEX", "RACE"),
                                total = TRUE),
     content = list(total_label = "All subjects", blanks = FALSE, widths = c(40, 20, 20, 20))),
     codelists = list(TRT01A = list(list(value = "Drug X", label = "Drug X"),
@@ -359,7 +365,7 @@ test_that("stf_t02_demog: the FDA STF Table 2 look as defaults of a variant; it 
   expect_length(dp_item(tfl_template_expand("demog", dp_args()), "plan_stub"), 0L)
   expect_identical(dp_item(x, "plan_cells")[[1L]]$args$continuous[["Median (min, max)"]],
                    "{median} ({min}, {max})")
-  r <- dp_run(d, list(name = "stf_t02_demog", ard = list(population = "SAF")),
+  r <- dp_run(d, list(name = "stf_t02_demog"),
               extra = list(codelists = list(TRT01A = list(list(value = "Drug X", label = "Drug X"),
                                                           list(value = "Control", label = "Control")))))
   expect_true("Total Population" %in% names(r$table))

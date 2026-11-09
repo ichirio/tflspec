@@ -144,6 +144,10 @@
                              "`template: args:`."),
                       id, t$name, paste(sQuote(stage, FALSE), collapse = ", ")))
   }
+  if (identical(hidden, "population")) {
+    .ard_stop(sprintf(paste0("%s: template %s takes the analysis set from the report's `population:` ",
+                             "field, not from `template:`."), id, t$name))
+  }
   if (length(hidden)) {
     .ard_stop(sprintf(paste0("%s: template %s takes %s from the study standard, not from ",
                              "`template: args:`; a figure setting (`plot:`: the title, axes, legend, theme, palette, ",

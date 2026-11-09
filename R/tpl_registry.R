@@ -303,8 +303,12 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   })
   miss <- vapply(t$params, function(p) p$required && is.null(out[[p$name]]), NA)
   if (any(miss)) {
-    .ard_stop(sprintf("%s: template %s needs %s.", fn, t$name,
-                      paste(sQuote(names(miss)[miss], FALSE), collapse = ", ")))
+    nm <- names(miss)[miss]
+    hid <- nm[vapply(t$params[nm], function(p) isTRUE(p$hidden), NA)]
+    .ard_stop(sprintf("%s: template %s needs %s%s.", fn, t$name,
+                      paste(sQuote(nm, FALSE), collapse = ", "),
+                      if (length(hid)) paste0(" (", paste(hid, collapse = ", "),
+                                              ": the report's `", hid[1L], ":` field)") else ""))
   }
   out
 }
@@ -740,7 +744,8 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
 
 .tpl_demog_params <- c(
   list(
-    tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+    tfl_param("population", required = TRUE,
+              doc = "the analysis set's id: the report's `population:` field, not a template parameter"),
     tfl_param("continuous", NULL, tier = "required",
               doc = "the continuous variables, in order (required: this or `categorical`)"),
     tfl_param("categorical", NULL, tier = "required",
@@ -788,6 +793,12 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
               doc = paste("the study style set (defaults.yml `styles:`: font, borders) the report starts from;",
                           "the report's own `style:` wins when it has one"))))
 names(.tpl_demog_params) <- vapply(.tpl_demog_params, `[[`, "", "name")
+# The analysis set is not a template parameter: the data stage is outside the
+# template's scope (a template does not define the analysis data yet).  The
+# report's own `population:` field carries it, and the body reads it from
+# there (the study source output.population); hidden, so no report gives it
+# in `template:` and no help or form lists it.
+.tpl_demog_params$population$hidden <- TRUE
 
 # The continuous statistics the cells name: their tokens ({mean:.1f} -> mean),
 # in order; {q1} and {q3} are the ARD's p25 and p75
@@ -982,7 +993,7 @@ names(.tpl_demog_params) <- vapply(.tpl_demog_params, `[[`, "", "name")
               params = .tpl_demog_params, body = .tpl_demog_body, ai = TRUE,
               # (where each parameter acts: what is computed / how it is shown)
               parts = list(
-                ard = c("population", "by", "data", "subset", "continuous", "categorical", "total",
+                ard = c("by", "data", "subset", "continuous", "categorical", "total",
                         "denominator", "formats", "missing_row", "missing_label"),
                 content = c("order", "labels", "categorical_levels", "cells", "sd_missing",
                             "count_cell", "total_label", "header_n", "col_header", "heading", "widths",
