@@ -2,7 +2,10 @@
 #
 #   template:
 #     name: demog
-#     args: {population: SAF, continuous: AGE, ...}
+#     args: {continuous: AGE, ...}
+#
+# (or `ard: {...}` -- what is computed -- and `content: {...}` -- how it is
+# shown -- in place of the flat `args:`, or beside it)
 #
 # with `ard:` / `data:` / `content:` holding only what the report adds or
 # changes.  tfl_resolve_output() puts the template's items between the
@@ -21,7 +24,49 @@
   if (!is.character(t$name) || length(t$name) != 1L || !nzchar(t$name)) {
     .ard_stop(sprintf("%s: `template: name:` is one template's name.", output$id))
   }
-  list(name = t$name, args = as.list(t$args %||% list()))
+  list(name = t$name, args = .tpl_spec_args(t))
+}
+
+# A template SPEC's arguments: the flat `args:`, and the two parts -- `ard:`
+# (what is computed) and `content:` (how it is shown) -- as one list.  A name
+# given twice (in `args:` and a part, or in both parts) stops.  A template
+# that declares where its parameters act (`parts` of the registry) has a name
+# in the other part stopped, naming the right one; a template with no parts
+# takes the names as written.
+.tpl_spec_args <- function(t) {
+  args <- as.list(t$args %||% list())
+  tpl <- if (is.null(t$ard) && is.null(t$content)) NULL else
+    tryCatch(.tpl_get(t$name, "template:"), error = function(e) NULL)
+  for (part in c("ard", "content")) {
+    p <- t[[part]]
+    if (is.null(p)) next
+    if (!is.list(p) || (length(p) && is.null(names(p)))) {
+      .ard_stop(sprintf("template %s: `%s:` is a map of parameters (`%s: {...}`).", t$name, part, part))
+    }
+    other <- setdiff(c("ard", "content"), part)
+    wrong <- if (!is.null(tpl$parts)) setdiff(names(p), tpl$parts[[part]]) else character()
+    wrong <- intersect(wrong, tpl$parts[[other]])
+    if (length(wrong)) {
+      .ard_stop(sprintf("template %s: %s acts in `%s:`, not `%s:`.", t$name,
+                        paste(sQuote(wrong, FALSE), collapse = ", "), other, part))
+    }
+    dup <- intersect(names(p), names(args))
+    if (length(dup)) {
+      .ard_stop(sprintf("template %s: %s is given twice (in `args:` and `%s:`, or in both parts).",
+                        t$name, paste(sQuote(dup, FALSE), collapse = ", "), part))
+    }
+    args <- c(args, p)
+  }
+  args
+}
+
+# The part (`"ard"` or `"content"`) a template's parameter acts in, from its
+# registry entry; NA when the template declares no parts or does not list it
+# (a flat `args:` is read by name, so this is for writers)
+.tpl_part_of <- function(name, param) {
+  parts <- tryCatch(.tpl_get(name, "template:")$parts, error = function(e) NULL)
+  for (part in c("ard", "content")) if (param %in% parts[[part]]) return(part)
+  NA_character_
 }
 
 # Is a `template: {name: }` a figure design's preset (tfl_fig_templates():

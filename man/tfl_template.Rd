@@ -60,11 +60,10 @@ start from, \code{\link[=tfl_template_expand]{tfl_template_expand()}} in the bod
 }
 \details{
 A name already registered is replaced, with a message (a company's
-\code{demog} over tflspec's: the package loaded later wins).  A parameter
-that ends in the look -- the rows a page, column widths, the digits, the
-blank rows, the style -- is warned about: the study's styles and
-defaults say those, and a template parameter would beat them
-(\code{\link[=tfl_test_templates]{tfl_test_templates()}} finds them).
+\code{demog} over tflspec's: the package loaded later wins).  The look -- the
+rows a page, column widths, the digits, the blank rows, the style -- may
+be a parameter with a default, like any other not decided by the
+template's purpose and scope.
 }
 \examples{
 tfl_template("my_ages", kind = "table", layout = "summary",

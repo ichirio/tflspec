@@ -9,8 +9,11 @@
 #' A template parameter
 #'
 #' One parameter of a template ([tfl_template()]): its name, default and
-#' what it is.  A template has few, and none of them is the look (a font,
-#' a width, the rows a page): the study's styles and defaults say that.
+#' what it is.  What the template's purpose and scope decide is fixed; the
+#' rest is a parameter with a default, the look too (the style, the
+#' widths, the rows a page): a report changes it with an argument, or with
+#' a card appended after the template's (the study's styles and defaults
+#' sit under both).
 #'
 #' @param name The parameter's name.
 #' @param default Its default value; `NULL` for none.
@@ -219,16 +222,19 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
 
 # Register a template: its kind, layout, parameters and body.  The body is
 # function(args, context) returning list(ard = , data = , content = ): the
-# report's items, `content` a list of tfl_item().
+# report's items, `content` a list of tfl_item().  `parts`: where each
+# parameter acts, list(ard = <names>, content = <names>), for a SPEC written
+# as `template: {name, ard:, content:}`; NULL: the template takes the two
+# parts' names as written (every name in either).
 .tfl_template <- function(name, kind, layout, params, body, label = NULL, call = NULL,
-                          package = "tflspec", example = NULL, ai = FALSE) {
+                          package = "tflspec", example = NULL, ai = FALSE, parts = NULL) {
   params <- lapply(params, .tpl_param_typed)
   names(params) <- vapply(params, `[[`, "", "name")
   # (a table's or a listing's call is the one tfl_tpl(); a figure's its own)
   call <- call %||% if (identical(kind, "figure")) paste0("tpl_", name) else "tfl_tpl"
   assign(name, list(name = name, kind = kind, layout = layout, params = params, body = body,
                     label = label, call = call, package = package,
-                    example = example, ai = isTRUE(ai)),
+                    example = example, ai = isTRUE(ai), parts = parts),
          envir = .tpl_registry)
   invisible(name)
 }
