@@ -956,7 +956,11 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
     els <- if (is.list(v)) v else as.list(v)
     for (e in els) {
       if (inherits(e, "formula") && length(e) == 3L) {
-        cell(variable, context, row, paste(deparse(e[[2L]]), collapse = " "), eval(e[[3L]], baseenv()))
+        # (numbers as written, not 5e-04: no scientific notation)
+        op <- options(scipen = 100L)
+        cond <- paste(deparse(e[[2L]]), collapse = " ")
+        options(op)
+        cell(variable, context, row, cond, eval(e[[3L]], baseenv()))
       } else if (is.character(e) && length(e) == 1L) {
         cell(variable, context, row, template = e)
       } else {
