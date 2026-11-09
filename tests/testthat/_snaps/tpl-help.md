@@ -15,7 +15,7 @@
       
       usual (4):
         param   | effective (layer)                                                       | what
-        formats | N = 0; mean = 1; sd = 2; median = 1; min = 0; max = 0; p ... (template) | the ARD's formats (precision): per statistic, and per variable (BMIBL: {mean: 2, sd: 3}); given by name, merged; a number is the decimals, "xx.x%" a proportion as a percent
+        formats | - (template)                                                            | the ARD's formats (precision): per statistic, and per variable (BMIBL: {mean: 2, sd: 3}); given by name, merged over the statistics catalog's (tfl_ard_statistics(), by default N 0, mean 1, sd 2, median 1, min 0, max 0, p xx.x%); a number is the decimals, "xx.x%" a proportion as a percent; unset: none given here
         total   | FALSE (template)                                                        | TRUE: a Total column, last (each analysis again without `by`)
         labels  | AGE = Age (years); AGEGR1 = Age group, n (%); SEX = Sex, ... (template) | each variable's heading; given by name, merged (RACE: ~ drops one); a variable it does not name has none; unset: no headings
         cells   | n = {N}; Mean (SD) = {mean} ({sd}), {mean} (-); Median = ... (fallback) | the rows of each continuous variable: where each statistic goes (placement only, {mean}) [study: plan_cells.continuous, else n = {N}; Mean (SD) = {mean} ({sd}), {mean} (-); Median = ...]

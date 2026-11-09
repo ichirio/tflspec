@@ -72,9 +72,9 @@ test_that("demog, summary and disposition: a blank is missing, not a category", 
         x <- x[x != ""]
         for (l in unique(x)) {
           expect_equal(bv_stat(a, v, l, arm, "n"), sum(x == l), info = paste(id, v, l, arm))
-          # the percent is of the subjects with a value (demog: of the arm's subjects, the
-          # analysis set's, as its `denominator` says; the blank subjects are its `missing_row`)
-          den <- if (id == "T-D") sum(s$TRT01A == arm) else length(x)
+          # the percent is of the subjects with a value (cards' own; demog's `denominator` is NULL
+          # unless it says another; the blank subjects are its `missing_row`)
+          den <- length(x)
           expect_equal(bv_stat(a, v, l, arm, "p"), sum(x == l) / den, info = paste(id, v, l, arm))
         }
       }
