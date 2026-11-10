@@ -239,7 +239,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
     prov <- .content_provenance(acc$content, output$content, layers, below)
     if (!is.null(tpl)) {
       # what the program writes after the template's call (the A use)
-      r <- .tpl_rest(prov, tpl$name, tpl$x$content)
+      r <- .tpl_rest(prov, tpl$name, tpl$x$content, layered = isTRUE(tpl$layered))
       # (a report's own data: the call's data step is the template's --
       # unless the report's steps come before the template's call steps)
       # (a figure's call draws the template's layers: none of them replaced)
@@ -249,6 +249,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
       attr(output, "template") <- list(name = tpl$name, args = tpl$args, study = tpl$study,
                                        study_keys = tpl$study_keys,
                                        items = tpl$x$content, rest = r$items, ok = ok,
+                                       layered = isTRUE(tpl$layered),
                                        plot = tpl$x$plot, call_steps = tpl$x$call_steps,
                                        extends = .extends_compact(lb$extends),
                                        style = lb$style_name, removed = tpl$removed,

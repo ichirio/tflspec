@@ -640,8 +640,10 @@ tfl_template_to_spec <- function(output, study) {
 # that the template did not make -- a verb's whole item, or for a verb whose
 # `...` is named its keys, by where they come from (`arg_from`).  `ok` is
 # FALSE when the call cannot say it: the table's roles (table_plan()) or
-# the normalization's arguments come from elsewhere.
-.tpl_rest <- function(items, name, tpl_items = list()) {
+# the normalization's arguments come from elsewhere.  `layered` (a template
+# whose set has its `extends`): the study's parts go in the call's `study =`,
+# merged under the template's items, so they do not say `before` again.
+.tpl_rest <- function(items, name, tpl_items = list(), layered = FALSE) {
   tag <- paste0("template:", name)
   # an item the template made the same (its parameters took the study's
   # values: stub_name, blanks ...) is in the call, not after it
@@ -663,7 +665,9 @@ tfl_template_to_spec <- function(output, study) {
         take <- af == s
         # (rtfreporter's plan_stub() always sets `before`, FALSE by default: a
         # second call would put it back, so the call says it again)
-        if (identical(it$fn, "plan_stub")) take <- take | keys == "before"
+        if (identical(it$fn, "plan_stub") && (!layered || identical(s, "own"))) {
+          take <- take | keys == "before"
+        }
         rest <- c(rest, list(tfl_item(it$fn, it$args[keys[take]], from = s)))
       }
     } else if (!identical(it$from, tag) && !same_as_tpl(it)) {
@@ -709,6 +713,51 @@ tfl_template_to_spec <- function(output, study) {
   x
 }
 
+# The template's call as the program writes it, with the study's items
+# (`study`, the resolved items not the template's nor the report's) as its
+# last argument: `study = list(<verb> = list(<args>), ...)`, each part after
+# a note of the layer it is from, its values as the SPEC holds them
+.tpl_call_study_code <- function(call, study, lead) {
+  if (!length(study)) return(.spec_call_code(call, 0L, lead))
+  # (the call over lines, an argument a line, as .spec_code() writes a long one)
+  p <- .spec_parts(call)
+  el <- vapply(seq_along(p$items), function(i) {
+    paste0("  ", if (nzchar(p$names[i])) paste0(.spec_name(p$names[i]), " = "),
+           .spec_code(p$items[[i]], 2L))
+  }, "")
+  code <- paste0(p$open, "(\n", paste(el, collapse = ",\n"))
+  ent <- vapply(study, function(it) {
+    a <- .tpl_study_value(it$args %||% list())
+    one <- .spec_code_line(a)
+    v <- if (nchar(one) + nchar(it$fn) + 8L <= 80L) one else .spec_code(a, 4L)
+    paste0("    ", .spec_name(it$fn), " = ", v)
+  }, "")
+  note <- vapply(study, function(it) paste0("    ", .tpl_from_note(it$from)), "")
+  paste0(code, ",\n",
+         "  # (the study's items, under the template's: the template's values win)\n",
+         "  study = list(\n",
+         paste(paste0(note, "\n", ent), collapse = ",\n"), "\n  )\n)")
+}
+
+# A value of the call's `study =` as the program writes it: as the SPEC
+# holds it (the call merges it with the template's items), an `!r` as
+# tfl_r("<code>"), an `!unset` as tfl_unset(), a call (a rule) as the call
+.tpl_study_value <- function(x) {
+  if (inherits(x, "tfl_r")) return(.spec_call("tflspec::tfl_r", as.character(unclass(x))))
+  if (inherits(x, "tfl_unset")) return(.spec_call("tflspec::tfl_unset"))
+  if (inherits(x, "tfl_call")) return(.schema_value_to_r(x, NULL, FALSE))
+  if (is.list(x) && !is.object(x)) x[] <- lapply(x, .tpl_study_value)
+  x
+}
+
+# where an item of a template report's program is from, as its note says
+.tpl_from_note <- function(f) {
+  if (identical(f, "own")) return("# (own)")
+  if (identical(f, "defaults")) return("# (study default)")
+  if (startsWith(f, "style:")) return(paste0("# (study style: ", sub("^style:", "", f), ")"))
+  paste0("# (pattern ", sub("^pattern:", "", f), ")")
+}
+
 # A template report's program (the A use): the template's call, the
 # arguments its SPEC gives and the study's defaults it took (not the ones
 # left at the template's own default), the code lists it reads at the head;
@@ -745,23 +794,25 @@ tfl_template_to_spec <- function(output, study) {
                                 if (length(levels)) list(codelists = stats::setNames(
                                   lapply(names(levels), function(v) .spec_sym(.cl_name(v))),
                                   names(levels)))))
+  rest <- .levels_prune(tp$rest, output)
+  # a template whose set has its `extends` (canon 1.28): the study's items
+  # (its defaults, patterns and style set) in the call's `study =`, under the
+  # template's; the report's own after the call
+  study <- if (isTRUE(tp$layered) && generic) {
+    Filter(function(it) !identical(it$from %||% "own", "own"), rest)
+  }
+  if (length(study)) rest <- Filter(function(it) identical(it$from %||% "own", "own"), rest)
   head <- c(sprintf("# template %s%s%s", tp$name,
                     if (!is.null(t$from)) sprintf(": a variant of %s (%s)", t$from,
                                                    .tpl_pkg_version(t$package)) else "",
                     if (length(tp$study)) paste0("; study defaults: ", paste(tp$study, collapse = ", "))
                     else ""),
-            paste(plan, "<-", .spec_call_code(call, 0L, nchar(plan) + 4L)))
-  rest <- .levels_prune(tp$rest, output)
+            paste(plan, "<-", .tpl_call_study_code(call, study, nchar(plan) + 4L)))
   if (!length(rest)) return(.drop_attached_ns(c(cl, head)))
   steps <- .content_calls(rest)
   from <- vapply(rest, function(it) it$from %||% "own", "")
   lines <- vapply(steps, function(s) paste0("  ", .spec_call_code(.content_print(s))), "")
-  note <- vapply(from, function(f) {
-    if (identical(f, "own")) return("  # (own)")
-    if (identical(f, "defaults")) return("  # (study default)")
-    if (startsWith(f, "style:")) return(paste0("  # (study style: ", sub("^style:", "", f), ")"))
-    paste0("  # (pattern ", sub("^pattern:", "", f), ")")
-  }, "")
+  note <- vapply(from, function(f) paste0("  ", .tpl_from_note(f)), "")
   body <- c(head[2L], unlist(lapply(seq_along(lines), function(i) c(note[i], lines[i]))))
   # the pipe: after every call but the last (a comment line takes none)
   is_call <- !startsWith(trimws(body), "#")
