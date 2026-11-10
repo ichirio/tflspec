@@ -131,10 +131,14 @@ test_that("T2: the map forms on demog and stf_t02_demog; an unknown step stops",
 test_that("T3: stf_t02_demog fixes the content step; `template:` holds no extends or style", {
   s <- te_layers()
   msg <- "template stf_t02_demog fixes extends' content step to none; write the other steps as a map"
-  expect_error(tfl_resolve_output(te_demog(name = "stf_t02_demog", extends = "defaults"), s), msg)
+  expect_error(tfl_resolve_output(te_demog(name = "stf_t02_demog", extends = c("patterns/x", "defaults")), s),
+               msg)
   expect_error(tfl_resolve_output(te_demog(name = "stf_t02_demog", extends = list(content = "defaults")), s),
                msg)
-  expect_error(tfl_output_extends(te_demog(name = "stf_t02_demog", extends = "defaults")), msg)
+  expect_error(tfl_output_extends(te_demog(name = "stf_t02_demog", extends = "patterns/x")), msg)
+  # (a plain [defaults], as saved files write it, reads as not written)
+  expect_identical(tfl_output_extends(te_demog(name = "stf_t02_demog", extends = "defaults")),
+                   tfl_output_extends(te_demog(name = "stf_t02_demog")))
   # (`none` for every step keeps the content step none)
   expect_identical(tfl_output_extends(te_demog(name = "stf_t02_demog", extends = "none"), "content"),
                    character())
