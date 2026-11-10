@@ -39,7 +39,8 @@ if (requireNamespace("cards", quietly = TRUE)) {
     cards::ard_tabulate(saf, variables = TRT01A),
     cards::ard_summary(saf, by = TRT01A, variables = AGE),
     cards::ard_tabulate(saf, by = TRT01A, variables = c(AGEGR1, SEX, RACE, ETHNIC)))
-  plan <- tfl_tpl(ard, "demog", population = "SAF")
+  plan <- tfl_tpl(ard, "demog", population = "SAF", by = "TRT01A", continuous = "AGE",
+                  categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC"))
 }
 }
 \seealso{

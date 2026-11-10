@@ -180,7 +180,10 @@ tfl_read_outputs <- function(dir, skip_bad = FALSE) {
 tfl_resolve_output <- function(output, study, provenance = FALSE) {
   if (!inherits(output, "tfl_output")) stop("tfl_resolve_output(): `output` is a tfl_output.", call. = FALSE)
   if (!inherits(study, "tfl_study_spec")) stop("tfl_resolve_output(): `study` is a tfl_study_spec.", call. = FALSE)
-  lb <- .layers_below(output, study)
+  # (a switched template's style is the one its `style` parameter names)
+  sw <- !is.null(.tpl_spec_of(output)) && .tpl_switched(.tpl_spec_of(output)$name)
+  lb <- if (sw) .layers_below(output, study, style = .tpl_switched_style(output, study)) else
+    .layers_below(output, study)
   layers <- lb$layers
   acc <- lb$acc
   # a template SPEC: the template's items between the layers and the
@@ -197,8 +200,13 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
       # template's items (its look too) are the content, over no content
       # layer -- the style set's, the extends chain's (defaults, patterns).
       # The layers keep their code lists and their page.
-      layers <- lapply(layers, function(l) list(data = list(), codelists = l$codelists,
-                                                content = list(), page = l$page))
+      # (the style set the `style` parameter names keeps its content: it is
+      # the parameter's value)
+      layers <- lapply(seq_along(layers), function(i) {
+        l <- layers[[i]]
+        list(data = list(), codelists = l$codelists,
+             content = if (i == 1L && !is.null(lb$style)) l$content else list(), page = l$page)
+      })
       tl <- list(data = tpl$x$data %||% list(), codelists = list(),
                  content = tpl$x$content, page = list())
       for (l in rev(c(list(tl), layers))) acc <- .layer_over(acc, l)
@@ -339,7 +347,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 # The layers a report extends (nearest first): its style (the look it
 # picks, `style:`, the study's `styles:`), then the files of `extends`; and
 # their content, data, code lists and page put together (the farthest first)
-.layers_below <- function(output, study) {
+.layers_below <- function(output, study, style = "output") {
   chain <- output$extends
   if (identical(chain, "none")) chain <- character()
   layers <- lapply(chain, function(nm) {
@@ -348,11 +356,13 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
     if (identical(nm, "defaults") && !identical(output$kind, "table")) l$content <- list()
     l
   })
-  st <- .style_of(output, study)
+  # (`style`: "output", the report's own `style:`; or the set a switched
+  # template's `style` parameter names, NULL for none)
+  st <- if (identical(style, "output")) .style_of(output, study) else style
   if (!is.null(st)) layers <- c(list(st), layers)
   acc <- list(data = list(), codelists = list(), content = list(), page = list())
   for (l in rev(layers)) acc <- .layer_over(acc, l)
-  list(layers = layers, acc = acc)
+  list(layers = layers, acc = acc, style = st)
 }
 
 # A report's style: the study's `styles:` set it names (`style: compact`),
@@ -363,7 +373,8 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   if (!is.character(nm) || length(nm) != 1L) {
     .ard_stop(sprintf("%s: `style` is one of the study's styles' names.", output$id))
   }
-  st <- study$styles[[nm]]
+  st <- study$styles[[nm]] %||% if (nm %in% setdiff(.tpl_style_builtin_names, "standard"))
+    .tpl_style_builtin_set(nm)
   if (is.null(st)) {
     if (identical(nm, "standard")) return(NULL)
     .ard_stop(sprintf("%s: no style %s in defaults.yml's styles: (%s).", output$id, sQuote(nm, FALSE),

@@ -299,14 +299,18 @@
     # inside)
     if (!is.na(r$code %||% NA)) {
       code <- trimws(r$code)
+      # (made from another analysis data, which has the code lists on
+      # already: none after it -- a level its code adds, demog's Missing,
+      # stays)
+      lv_c <- if (!(r$from %||% NA) %in% ad$data_id) lv
       one <- tryCatch(length(parse(text = code, keep.source = FALSE)) == 1L,
                       error = function(e) FALSE)
-      made <- if (one) .code_as_program(code, id, list(lv), c(avoid, ids))
+      made <- if (one) .code_as_program(code, id, list(lv_c), c(avoid, ids))
       if (is.null(made)) {
         made <- c(sprintf("%s <- local({\n%s\n})", id,
                           paste0("  ", strsplit(code, "\n", fixed = TRUE)[[1L]],
                                  collapse = "\n")),
-                  if (length(lv)) .make_code(id, id, lv))
+                  if (length(lv_c)) .make_code(id, id, lv_c))
       }
       out <- c(out, made)
       next

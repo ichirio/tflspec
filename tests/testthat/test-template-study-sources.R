@@ -28,30 +28,37 @@ ss_an <- function(ro, id) Filter(function(a) identical(a$id, id), ro$ard$analyse
 
 test_that("the report's population: the template's population, written in its program", {
   s <- ss_study(NULL)
-  ro <- ss_resolve("demog", list(), s)
+  ro <- ss_resolve("summary", list(continuous = "AGE"), s)
   expect_identical(attr(ro, "template")$args$population, "SAF")
   # (with the study standard's look: its plan_stub, plan_blanks ... too)
   expect_identical(attr(ro, "template")$study[1L], "population")
   code <- tfl_content_code(ro, pipe = "|>")
-  expect_match(paste(code, collapse = "\n"), "\"demog\",\\s+population = \"SAF\"")
+  expect_match(paste(code, collapse = "\n"), "\"summary\",\\s+continuous = \"AGE\",\\s+population = \"SAF\"")
   # the report's own argument wins, and says so
-  expect_message(ro2 <- ss_resolve("demog", list(population = "SCRF"), s),
+  expect_message(ro2 <- ss_resolve("summary", list(continuous = "AGE", population = "SCRF"), s),
                  "overrides the study standard \\(output.population\\)")
   expect_identical(attr(ro2, "template")$args$population, "SCRF")
+  # demog: the analysis set is the report's `population:` only, never an argument
+  ro3 <- ss_resolve("demog", list(by = "TRT01A", continuous = "AGE"), s)
+  expect_identical(attr(ro3, "template")$args$population, "SAF")
+  expect_error(ss_resolve("demog", list(by = "TRT01A", continuous = "AGE", population = "SCRF"), s),
+               "takes the analysis set from the report's `population:`")
 })
 
 test_that("study.yml's settings: treatment: the templates' by", {
   s <- ss_study("TRT01P")
   ro <- ss_resolve("ae_soc_pt", list(), s)
   expect_identical(ss_an(ro, "AE")$by, "TRT01P")
-  ro <- ss_resolve("demog", list(), s)
+  ro <- ss_resolve("summary", list(continuous = "AGE"), s)
   expect_identical(ss_an(ro, "CONT")$by, "TRT01P")
   # the report's own by wins
-  ro <- suppressMessages(ss_resolve("demog", list(by = "SEX"), s))
+  ro <- suppressMessages(ss_resolve("summary", list(continuous = "AGE", by = "SEX"), s))
   expect_identical(ss_an(ro, "CONT")$by, "SEX")
-  # no setting: the template's own default
-  ro <- ss_resolve("demog", list(), ss_study(NULL))
+  # demog: `by` is required, never the study's treatment
+  expect_error(ss_resolve("demog", list(continuous = "AGE"), s), "needs 'by'")
+  ro <- ss_resolve("demog", list(continuous = "AGE", by = "TRT01A"), s)
   expect_identical(ss_an(ro, "CONT")$by, "TRT01A")
+  expect_null(tfl_template_params("demog")$by$study)
 })
 
 test_that("study.yml's settings: sd_missing: what prints for a missing SD; the report's argument wins (#673)", {
@@ -59,31 +66,32 @@ test_that("study.yml's settings: sd_missing: what prints for a missing SD; the r
     cl <- Filter(function(i) identical(i$fn, "plan_cells"), ro$content)[[1L]]$args$continuous
     cl[["Mean (SD)"]]
   }
+  dm <- list(by = "TRT01A", continuous = "AGE")
   s <- ss_study("TRT01P")
   s$study$settings$sd_missing <- "NA"
-  ro <- ss_resolve("demog", list(), s)
+  ro <- ss_resolve("demog", dm, s)
   expect_identical(attr(ro, "template")$args$sd_missing, "NA")
   expect_true("sd_missing" %in% attr(ro, "template")$study)
-  expect_identical(mark(ro), c("{mean:.1f} ({sd:.2f})", "{mean:.1f} (NA)"))
+  expect_identical(mark(ro), c("{mean} ({sd})", "{mean} (NA)"))
   # the report's template: args: wins, and says so
-  expect_message(ro2 <- ss_resolve("demog", list(sd_missing = ""), s),
+  expect_message(ro2 <- ss_resolve("demog", c(dm, list(sd_missing = "")), s),
                  "overrides the study standard \\(settings.sd_missing\\)")
-  expect_identical(mark(ro2), c("{mean:.1f} ({sd:.2f})", "{mean:.1f}"))
+  expect_identical(mark(ro2), c("{mean} ({sd})", "{mean}"))
   # param_change too
   pc <- list(data = "ADLB", params = "ALT")
   expect_identical(mark(ss_resolve("param_change", pc, s)), c("{mean} ({sd})", "{mean} (NA)"))
   expect_identical(mark(suppressMessages(ss_resolve("param_change", c(pc, list(sd_missing = "~")), s))),
                    c("{mean} ({sd})", "{mean} (~)"))
   # no setting: the template's `-`
-  expect_identical(mark(ss_resolve("demog", list(), ss_study(NULL))), c("{mean:.1f} ({sd:.2f})", "{mean:.1f} (-)"))
+  expect_identical(mark(ss_resolve("demog", dm, ss_study(NULL))), c("{mean} ({sd})", "{mean} (-)"))
   # a setting with braces stops
   s$study$settings$sd_missing <- "{sd}"
-  expect_error(ss_resolve("demog", list(), s), "sd_missing")
+  expect_error(ss_resolve("demog", dm, s), "sd_missing")
 })
 
 test_that("first to last: the report's argument, the study standard, the variant's, from's", {
   on.exit(rm("demog_arm", envir = .tpl_registry))
-  tfl_template_variant("demog_arm", from = "demog", defaults = list(by = "ARM"))
+  tfl_template_variant("demog_arm", from = "summary", defaults = list(by = "ARM", continuous = "AGE"))
   # the study's treatment over the variant's default
   ro <- ss_resolve("demog_arm", list(), ss_study("TRT01P"))
   expect_identical(ss_an(ro, "CONT")$by, "TRT01P")
@@ -94,7 +102,7 @@ test_that("first to last: the report's argument, the study standard, the variant
 
 test_that("tfl_test_templates(): the analysis set or the treatment with no study source", {
   expect_false(any(grepl("no study source", tfl_test_templates()$status)))
-  d <- .tpl_get("demog", "test")
+  d <- .tpl_get("summary", "test")
   p <- c(d$params, list(tfl_param("arm", "ARM", type = "vars", study = NULL)))
   suppressMessages(tfl_template("ss_arm", "table", "summary", params = p, body = d$body,
                                 example = list(population = "SAF")))

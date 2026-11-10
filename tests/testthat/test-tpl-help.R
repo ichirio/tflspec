@@ -3,29 +3,34 @@
 
 test_that("tfl_tpl_args(): one row a parameter, the template's order and tiers", {
   a <- tfl_tpl_args("demog")
-  # (demog hides `denominator`: its percentages are over the analysis set)
-  p <- tfl_template_params("demog")
-  p <- p[names(p) != "denominator"]
-  expect_identical(a$param, names(p))
+  p <-tfl_template_params("demog")
+  # (the registry keeps `population` for a direct tpl_demog() call; the table leaves it out)
+  expect_identical(a$param, setdiff(names(Filter(function(x) !isTRUE(x$hidden), p)), "population"))
+  # (demog has no `denominator` a report gives: its percentages are over the
+  # analysis set, a hidden fixed value)
+  expect_true(isTRUE(p$denominator$hidden))
   expect_identical(names(a), c("param", "tier", "stage", "type", "required", "default", "variant",
-                               "study", "effective", "layer", "maps_to", "doc", "study_key", "fallback"))
-  expect_identical(a$param[a$tier == "required"], "population")
-  expect_identical(a$param[a$tier == "usual"],
-                   c("by", "continuous", "categorical", "labels", "cells", "total"))
+                               "study", "effective", "layer", "maps_to", "doc", "study_key", "fallback", "unset"))
+  # (the analysis set is the report's: no `population` parameter; the variables and `by` are required)
+  expect_false("population" %in% a$param)
+  expect_identical(a$param[a$tier == "required"], c("continuous", "categorical", "by"))
+  expect_identical(a$param[a$tier == "usual"], c("formats", "total", "labels", "cells"))
   expect_true(all(a$tier %in% c("required", "usual", "other")))
   # each its stage, tfl_param(stage = ): a table's all of its call
-  expect_identical(a$stage, unname(vapply(p, function(x) x$stage %||% "call", "")))
+  expect_identical(a$stage, unname(vapply(p[a$param], function(x) x$stage %||% "call", "")))
   expect_true(all(a$stage == "call"))
   # the layout's default, the variant's, the one in effect
   r <- function(nm) a[a$param == nm, , drop = FALSE]
-  expect_identical(r("by")$default, "study: settings.treatment, else TRT01A")
-  expect_identical(r("by")$fallback, "TRT01A")
-  expect_identical(r("by")$layer, "fallback")
-  expect_true(is.na(r("continuous")$default))
-  expect_identical(r("continuous")$variant, "AGE")
-  expect_identical(r("continuous")$layer, "variant:demog")
-  expect_identical(r("categorical")$effective, "AGEGR1, SEX, RACE, ETHNIC")
-  expect_identical(r("count_cell")$maps_to, "plan_cells.categorical")
+  # (`by` and the variables: no default, no variant, not from the study)
+  expect_true(r("by")$required)
+  for (nm in c("by", "continuous", "categorical")) {
+    expect_true(is.na(r(nm)$default), info = nm)
+    expect_true(is.na(r(nm)$variant), info = nm)
+    expect_true(is.na(r(nm)$effective), info = nm)
+    expect_true(is.na(r(nm)$study_key), info = nm)
+    expect_identical(r(nm)$layer, "template", info = nm)
+  }
+  expect_identical(r("count_cell")$maps_to, "plan_cells.categorical, plan_cells.default")
   expect_identical(r("order")$maps_to, "plan_levels.variable")
   # no study: no study value
   expect_true(all(is.na(a$study)))
@@ -46,22 +51,21 @@ test_that("tfl_tpl_args(): a variant of a variant, each default its own variant'
 
 test_that("tfl_tpl_args(): the study standard's values, layer study: <key>", {
   s <- tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
-  a <- tfl_tpl_args("demog", study = s, population = "SAF")
+  a <- tfl_tpl_args("demog", study = s)
   r <- function(nm) a[a$param == nm, , drop = FALSE]
-  expect_identical(r("population")$study, "SAF")
-  expect_identical(r("population")$layer, "report")
   # the sample study's plan_cells(categorical = )
   expect_identical(r("count_cell")$effective, "{n:.0f} ({p:.1f%})")
   expect_identical(r("count_cell")$layer, "study: plan_cells.categorical")
-  # (the look is not a parameter: the study's plan_stub is the study's)
-  expect_false("stub_name" %in% a$param)
-  # one the study does not say: the variant's, the template's
-  expect_identical(r("continuous")$layer, "variant:demog")
+  # (the look reaches the template through a reference only: plan_stub.name)
+  expect_identical(r("stub_name")$effective, "row_label")
+  expect_identical(r("stub_name")$layer, "study: plan_stub.name")
+  # one the study does not say: the template's
+  expect_identical(r("continuous")$layer, "template")
   expect_identical(r("total")$layer, "template")
   expect_identical(r("total")$effective, "FALSE")
   # a study's folder is read the same
   d <- system.file("extdata", "spec-yaml", package = "tflspec")
-  expect_identical(tfl_tpl_args("demog", study = d, population = "SAF"), a)
+  expect_identical(tfl_tpl_args("demog", study = d), a)
   expect_error(tfl_tpl_args("demog", study = 1), "tfl_study_spec")
   expect_error(tfl_tpl_args("no_such"), "no template")
 })

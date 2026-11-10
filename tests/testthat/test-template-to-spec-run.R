@@ -34,9 +34,12 @@ tsr_output <- function(nm) {
                           identical(p$stage, "data"), NA))) {
     list(steps = list(list(step = "read", dataset = "ADTTE"), list(step = "param", value = "PFS")))
   }
+  args <- utils::modifyList(
+    tflspec:::.tpl_examples[[nm]], tsr_args[[nm]] %||% list(), keep.null = FALSE)
+  # (demog and stf_t02_demog take the analysis set from the report's `population:`)
+  if (nm %in% c("demog", "stf_t02_demog")) args$population <- NULL
   tfl_output(paste0("X-", gsub("_", "-", nm)), tp$kind[tp$name == nm], population = "SAF",
-             label = nm, template = list(name = nm, args = utils::modifyList(
-               tflspec:::.tpl_examples[[nm]], tsr_args[[nm]] %||% list(), keep.null = FALSE)),
+             label = nm, template = list(name = nm, args = args),
              data = own)
 }
 

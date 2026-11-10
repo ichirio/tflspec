@@ -57,7 +57,7 @@ test_that("demog, summary and disposition: a blank is missing, not a category", 
     adsl$EOSSTT[i[2L]] <- ""
   }
   d <- bv_study(withr::local_tempdir(), list(adsl = adsl))
-  bv_put(d, "T-D", "demog", list(population = "SAF"))
+  bv_put(d, "T-D", "demog", list(by = "TRT01A", continuous = "AGE", categorical = c("SEX", "AGEGR1")))
   bv_put(d, "T-S", "summary", list(population = "SAF", continuous = "AGE",
                                    categorical = c("SEX", "EOSSTT"), total = TRUE))
   bv_put(d, "T-DI", "disposition", list(population = "SAF"))

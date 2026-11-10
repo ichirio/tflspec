@@ -31,7 +31,7 @@ test_that("a template's page_by, heading and heading_at stay under a report's ma
 })
 
 test_that("the split of a template stays under a report's max_rows", {
-  ro <- mba_resolve("demog", list(population = "SAF"),
+  ro <- mba_resolve("demog", list(by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX")),
                     list(tfl_item("plan_paginate_rows", list(max_rows = 25))))
   pr <- mba_items(ro, "plan_paginate_rows")
   expect_length(pr, 1L)
@@ -162,7 +162,7 @@ test_that("a figure's item is still replaced whole", {
 
 test_that("end to end: a template's plan_cell_style stays and the report's is added after", {
   o <- tfl_output("T-9", "table", population = "SAF",
-                  template = list(name = "demog", args = list(population = "SAF")),
+                  template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX"))),
                   content = list(tfl_item("plan_cell_style", list(bold = TRUE, cols = "total")),
                                  tfl_item("plan_titles", list(titles = "My title"))))
   ro <- tfl_resolve_output(o, mba_study(), provenance = TRUE)

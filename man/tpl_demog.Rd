@@ -12,13 +12,13 @@ report.}
 
 \item{population}{The analysis set's id (\code{"SAF"}).}
 
-\item{...}{The template's other parameters: \code{data}, \code{by}, \code{continuous},
-\code{categorical}, \code{labels}, \code{cells}.  \code{labels} given by name change those
-names only (\code{labels = c(RACE = "Race, n (\%) [a]")}); in YAML, \verb{RACE: ~} drops one.
-The default \code{continuous} and \code{categorical} are the variables the data
-has of them (\code{any_of()}); the report's own are as written.  Every
-table and figure template also takes \code{subset} (which subjects) and,
-with records data, \code{where} (which records): see \code{\link[=tfl_param]{tfl_param()}}.}
+\item{...}{The template's other parameters: \code{by} and \code{continuous} and/or
+\code{categorical} are required (no default set of variables, no default
+\code{by}), then \code{data}, \code{labels}, \code{cells}, \code{formats} ...
+\code{labels} given by name change those names only (\code{labels = c(RACE = "Race, n (\%) [a]")}); in YAML, \verb{RACE: ~} drops one.  The variables are
+as written.  Every table and figure template also takes \code{subset} (which
+subjects) and, with records data, \code{where} (which records): see
+\code{\link[=tfl_param]{tfl_param()}}.}
 
 \item{codelists}{The report's code lists, for the order and labels of
 values; \code{NULL} takes the ARD's.}
@@ -39,7 +39,8 @@ if (requireNamespace("cards", quietly = TRUE)) {
     cards::ard_tabulate(saf, variables = TRT01A),
     cards::ard_summary(saf, by = TRT01A, variables = AGE),
     cards::ard_tabulate(saf, by = TRT01A, variables = c(AGEGR1, SEX, RACE, ETHNIC)))
-  plan <- tpl_demog(ard, population = "SAF")
+  plan <- tpl_demog(ard, population = "SAF", by = "TRT01A", continuous = "AGE",
+                    categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC"))
   head(rtfreporter::plan_apply(plan, "table"))
 }
 }

@@ -17,7 +17,8 @@ tfl_param(
   fields = NULL,
   group = NULL,
   tier = NULL,
-  stage = "call"
+  stage = "call",
+  unset = c("omit", "step_off", "stop")
 )
 }
 \arguments{
@@ -54,6 +55,10 @@ key): \code{defaults.yml}'s \verb{figure_style:}, else tflspec's built-in
 figure style;
 \item \code{"output.<field>"}: the report's own field (\code{"output.population"}).
 }
+
+A character vector names several keys one setting can be written under
+(\code{c("plan_cells.categorical", "plan_cells.default")}): read in order, the
+first the study has wins.
 
 Three forms: with \code{default}, the study's value else that fallback;
 with neither \code{default} nor \code{required}, the study's value else the
@@ -97,6 +102,13 @@ away); \code{NULL}: \code{"required"} when \code{required}, else \code{"other"}.
 of the template's call in a report's program, or \code{"data"}, a step that
 prepares the analysis data (a figure's records, its analysis set),
 written in the program's data steps, not in the call.}
+
+\item{unset}{What a report's (or a template default's) \code{!unset} does to this
+parameter, which the template says once, here: \code{"omit"} (the default): the
+argument is left out of the inner call it goes into; \code{"step_off"}: the
+parameter stands for a step of the template (a Total column, a guard, a
+style set), and the step is not made -- no code for it in the program;
+\code{"stop"}: the body needs a value, so \code{!unset} stops, naming the parameter.}
 }
 \value{
 A \code{tfl_param}.

@@ -11,7 +11,8 @@ tfl_template_params(name)
 }
 \value{
 A named list of \code{\link[=tfl_param]{tfl_param()}}; change one's \code{default} and pass
-them to \code{\link[=tfl_template]{tfl_template()}}.
+them to \code{\link[=tfl_template]{tfl_template()}}.  Each has \code{unset}: what \code{!unset} does to it
+(\code{"omit"}, \code{"stop"} or \code{"step_off"}), \code{NA} for a template not yet migrated.
 }
 \description{
 The parameters of a registered template, to start a template of one's

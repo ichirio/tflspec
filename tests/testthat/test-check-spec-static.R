@@ -46,7 +46,7 @@ test_that("in tfl_check_spec(): the percent form of a template's cell", {
   haven::write_xpt(tflspec:::.ai_chr(tflspec::adsl), file.path(d, "adam", "adsl.xpt"))
   tfl_ai_study_init(d, adam = "adam", study_id = "CS-1")
   tfl_write_output(tfl_output("T-DM", "table", population = "SAF",
-    template = list(name = "demog", args = list(population = "SAF")),
+    template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE", categorical = "SEX")),
     content = list(tfl_item("plan_cells", list(categorical = "{n} ({p:.1%})")))),
     file.path(d, "spec", "outputs", "T-DM.yml"))
   p <- tfl_check_spec(d)

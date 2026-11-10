@@ -13,7 +13,7 @@ test_that("a clean report: no rows; the versions come with it", {
   skip_if_not_installed("haven")
   d <- cs_study()
   tfl_write_output(tfl_output("T-DM", "table", population = "SAF",
-                              template = list(name = "demog", args = list(population = "SAF"))),
+                              template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE", categorical = "SEX"))),
                    file.path(d, "spec", "outputs", "T-DM.yml"))
   p <- tfl_check_spec(d)
   expect_named(p, c("output_id", "part", "item", "level", "message"))
@@ -54,7 +54,7 @@ test_that("build = TRUE: a report the checks pass is built; one that cannot be m
   skip_if_not_installed("ggsurvfit")
   d <- cs_study()
   tfl_write_output(tfl_output("T-DM", "table", population = "SAF",
-                              template = list(name = "demog", args = list(continuous = "AGE"))),
+                              template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE", categorical = "SEX"))),
                    file.path(d, "spec", "outputs", "T-DM.yml"))
   # a KM of ADTTE, which the study does not have: read, it cannot be made
   tfl_write_output(tfl_output("F-KM", "figure", population = "SAF", extends = "defaults",
@@ -89,7 +89,7 @@ test_that("page: titles under a study header that prints the label, title and po
                "    '6': {center: '({OUTPUT_POPULATION})'}"),
              file.path(d, "spec", "defaults.yml"))
   o <- tfl_output("T-DM", "table", population = "SAF", label = "Demographics", extends = "defaults",
-                  template = list(name = "demog", args = list(population = "SAF")),
+                  template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE", categorical = "SEX")),
                   page = list(titles = list("1" = list(center = "Table 14.1.1"),
                                             "2" = list(center = "Demographics"))))
   tfl_write_output(o, file.path(d, "spec", "outputs", "T-DM.yml"))

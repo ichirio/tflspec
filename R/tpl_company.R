@@ -195,14 +195,21 @@ tfl_template_variant <- function(name, from, defaults = list(), label = NULL, ex
 #'
 #' @param name The template's name.
 #' @return A named list of [tfl_param()]; change one's `default` and pass
-#'   them to [tfl_template()].
+#'   them to [tfl_template()].  Each has `unset`: what `!unset` does to it
+#'   (`"omit"`, `"stop"` or `"step_off"`), `NA` for a template not yet migrated.
 #' @examples
 #' p <- tfl_template_params("demog")
 #' names(p)
 #' p$cells$default
 #' @export
 tfl_template_params <- function(name) {
-  .tpl_get(name, "tfl_template_params()")$params
+  t <- .tpl_get(name, "tfl_template_params()")
+  # `unset` (what `!unset` does to the parameter) is stated for a migrated
+  # template only; NA for the others (`!unset` leaves the argument out)
+  lapply(t$params, function(p) {
+    if (!.tpl_switched(t$name)) p["unset"] <- list(NA_character_)
+    p
+  })
 }
 
 #' Run a template: its table plan
@@ -364,8 +371,10 @@ tfl_test_templates <- function(names = NULL) {
 # An example of each tflspec template's parameters: what a company's
 # package tests its wrapped templates with
 .tpl_examples <- list(
-  demog = list(population = "SAF"),
-  stf_t02_demog = list(population = "SAF"),
+  demog = list(population = "SAF", by = "TRT01A", continuous = "AGE",
+               categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC")),
+  stf_t02_demog = list(population = "SAF", by = "TRT01A", continuous = "AGE",
+                       categorical = c("SEX", "AGEGR1", "RACE", "ETHNIC", "COUNTRY")),
   summary = list(population = "SAF", continuous = "AGE"),
   disposition = list(population = "SAF"),
   hierarchical = list(population = "SAF", hierarchy = c("AEBODSYS", "AEDECOD")),

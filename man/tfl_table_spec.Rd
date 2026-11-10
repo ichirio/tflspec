@@ -327,7 +327,8 @@ One row per report, each column an argument of
 \code{cell_padding_top_twips}, \code{cell_padding_bottom_twips}, \code{cell_valign},
 \code{table_align}, \code{markup}, \code{blank_row_normalize}, and the rules of one
 kind of row, \code{border_header}, \code{border_spanning}, \code{border_body},
-\code{border_first_row}, \code{border_last_row}: the sides drawn (\code{top | bottom})
+\code{border_first_row}, \code{border_last_row}, \code{border_group} (the rule under
+each row group's last row): the sides drawn (\code{top | bottom})
 or \code{none}, as \code{\link[rtfreporter:rtf_border]{rtfreporter::rtf_border()}} takes them.  \code{border} and the
 \verb{border_*} columns are one or the other.  The table's default look,
 \code{header_align}, \code{header_bold}, \code{header_italic}, \code{align}, \code{bold},
