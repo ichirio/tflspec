@@ -183,7 +183,7 @@ test_that("km: the arguments and what the design has for them", {
   expect_identical(x(plot = list(dpi = 150))$plot$dpi, 150)
   # the parameters: their stage and tier
   p <- tfl_template_params("km")
-  st <- vapply(p, `[[`, "", "stage")
+  st <- vapply(p, `[[`, "", "step")
   expect_identical(sort(names(st)[st == "data"]),
                    c("data", "event", "param", "population", "subset", "where"))
   expect_true(all(c("ci", "risk_table", "x_max", "x_step", "y_label") %in%

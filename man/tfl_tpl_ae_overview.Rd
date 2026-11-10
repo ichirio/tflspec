@@ -8,7 +8,7 @@ The table template \code{ae_overview}, layout \code{summary}. Its program is one
 }
 \section{Parameters}{
 \tabular{llllll}{
-   Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
+   Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
    \code{population} \tab other \tab call \tab report: population, else SAF \tab output.population \tab the analysis set's id \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
    \code{by} \tab other \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the column variable \cr

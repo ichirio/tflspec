@@ -95,7 +95,7 @@
 # The step a parameter acts in: "data" (a data-stage parameter), else its
 # part (`ard`, `content`) when the template declares parts; NA otherwise
 .tpl_param_step <- function(t, p) {
-  if (identical(p$stage, "data")) return("data")
+  if (identical(p$step, "data")) return("data")
   for (part in c("ard", "content")) if (p$name %in% t$parts[[part]]) return(part)
   NA_character_
 }

@@ -149,7 +149,7 @@
 # ADSL) is kept to one (a param step, or a filter on PARAMCD).  Without
 # them the figure would be of every record: no report, so an error.
 .tpl_data_said <- function(t, output, id) {
-  hid <- Filter(function(p) isTRUE(p$hidden) && identical(p$stage, "data"), t$params)
+  hid <- Filter(function(p) isTRUE(p$hidden) && identical(p$step, "data"), t$params)
   if (!length(hid) || is.null(output)) return(invisible(TRUE))
   steps <- output$data$steps %||% list()
   kind <- vapply(steps, function(st) if (is.list(st)) as.character(st$step %||% "") else "", "")
@@ -201,7 +201,7 @@
 .tpl_study_args <- function(t, args, id, output = NULL, study = NULL, range = NULL) {
   # (a parameter the template hides is not the report's: its look)
   hidden <- intersect(names(args), names(Filter(function(p) isTRUE(p$hidden), t$params)))
-  stage <- hidden[vapply(hidden, function(k) identical(t$params[[k]]$stage, "data"), NA)]
+  stage <- hidden[vapply(hidden, function(k) identical(t$params[[k]]$step, "data"), NA)]
   if (length(stage)) {
     .ard_stop(sprintf(paste0("%s: template %s's %s: the data stage, the report's own `data:` ",
                              "steps (read, the analysis set's join, param, filter), not ",

@@ -145,7 +145,7 @@ test_that("every template as a template SPEC: resolved as its items written out 
   for (nm in names(.tpl_examples)) {
     # (a template whose data stage is the report's: its data: steps)
     own <- if (any(vapply(.tpl_get(nm, "test")$params, function(p) isTRUE(p$hidden) &&
-                            identical(p$stage, "data"), NA))) {
+                            identical(p$step, "data"), NA))) {
       list(steps = list(list(step = "read", dataset = "ADTTE"), list(step = "param", value = "PFS")))
     }
     ex <- .tpl_examples[[nm]]

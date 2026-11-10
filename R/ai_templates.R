@@ -148,7 +148,7 @@
     from <- if (!is.na(tt$from[i])) sprintf("; variant of %s", tt$from[i]) else ""
     pkg <- if (!identical(tt$package[i], "tflspec")) sprintf("; %s's", tt$package[i]) else ""
     # (a template whose data stage is the report's: the rule beside it)
-    own <- any(vapply(t$params %||% list(), function(p) isTRUE(p$hidden) && identical(p$stage, "data"), NA))
+    own <- any(vapply(t$params %||% list(), function(p) isTRUE(p$hidden) && identical(p$step, "data"), NA))
     out <- c(out, sprintf("- `%s`: %s (%s, layout %s%s%s)%s", tt$name[i], .ai_tpl_description(t),
                           tt$kind[i], tt$layout[i], from, pkg,
                           if (own) paste0(" -- own data: the report writes `data` steps `read`, the analysis ",

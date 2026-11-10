@@ -107,9 +107,9 @@
 #'   parameters taken from the report's `population:`
 #'   (`"output.population"`); `NULL` for none.
 #' @return A data frame, one row a parameter in the template's order:
-#'   `param`, `tier` (`"required"`, `"usual"`, `"other"`), `stage`
+#'   `param`, `tier` (`"required"`, `"usual"`, `"other"`), `step`
 #'   (`"call"`, an argument of the template's call, or `"data"`, of a step
-#'   preparing the analysis data: [tfl_param()]`(stage = )`), `type`,
+#'   preparing the analysis data: [tfl_param()]`(step = )`), `type`,
 #'   `required`, `default` (the layout's, a short text; the reference for a
 #'   parameter that has one), `variant` (the default a variant changes it
 #'   to, else `NA`), `study` (the study standard's value, else `NA`),
@@ -175,7 +175,7 @@ tfl_tpl_args <- function(name, study = NULL, population = NULL) {
       "template"
     }
     eff <- if (!is.null(sv)) sv else p$default
-    data.frame(param = p$name, tier = p$tier %||% "other", stage = p$stage %||% "call",
+    data.frame(param = p$name, tier = p$tier %||% "other", step = p$step %||% "call",
                type = p$type %||% NA_character_,
                required = isTRUE(p$required),
                default = if (is.na(key)) .tpl_short(rp$default) else
@@ -250,7 +250,7 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
     what[ref] <- paste0(what[ref], " [", mapply(.tpl_ref_text, r$maps_to[ref], r$fallback[ref],
                                                   r$required[ref], USE.NAMES = FALSE), "]")
     # (a data step's argument marked: not one of the call's)
-    nm <- ifelse(r$stage == "data", paste(r$param, "[data]"), r$param)
+    nm <- ifelse(r$step == "data", paste(r$param, "[data]"), r$param)
     w1 <- max(nchar(c("param", nm)))
     w2 <- max(nchar(c("effective (layer)", val)))
     lines <- c(lines, "", sprintf("%s (%d):", k, nrow(r)),
@@ -304,7 +304,7 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
   ex <- t$example %||% .tpl_examples[[t$root %||% name]] %||% list()
   # (a figure's call: the data step's arguments are the program's)
   fig <- identical(t$kind, "figure")
-  if (fig) ex <- ex[!vapply(names(ex), function(k) identical(t$params[[k]]$stage, "data"), NA)]
+  if (fig) ex <- ex[!vapply(names(ex), function(k) identical(t$params[[k]]$step, "data"), NA)]
   desc <- sprintf("The %s template `%s`, layout `%s`", t$kind, name, t$layout)
   if (!is.null(t$from)) desc <- sprintf("%s: a variant of `%s` (its defaults changed)", desc, t$from)
   desc <- paste0(desc, sprintf(". Its program is one call, `tfl_tpl(%s, \"%s\", ...)`; ", x, name),
@@ -316,9 +316,9 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
   ref <- !is.na(a$study_key)
   dflt[ref] <- mapply(.tpl_ref_text, a$maps_to[ref], a$fallback[ref], a$required[ref],
                       USE.NAMES = FALSE)
-  tbl <- c("| Parameter | Tier | Stage | Default | Maps to | What |",
+  tbl <- c("| Parameter | Tier | Step | Default | Maps to | What |",
            "|---|---|---|---|---|---|",
-           sprintf("| `%s` | %s | %s | %s | %s | %s |", a$param, a$tier, a$stage,
+           sprintf("| `%s` | %s | %s | %s | %s | %s |", a$param, a$tier, a$step,
                    .tpl_rd_cell(dflt),
                    .tpl_rd_cell(a$maps_to), .tpl_rd_cell(a$doc)))
   c(sprintf("@title %s: the template %s", t$label %||% name, name),
