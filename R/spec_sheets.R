@@ -25,6 +25,15 @@
 #' cell's is an error (one of the two was edited).
 #'
 #' @param dir The study folder (or its `spec/`).
+#' @param templates What a report written as a template SPEC becomes.
+#'   `"sheet"` (the default): one row of the `templates` sheet (and its
+#'   `template_rows`), by the template's name and arguments, as
+#'   [tfl_read_template_sheets()] reads them; the report's page parts,
+#'   codelists and report row are the other sheets' as for any report. Nothing is expanded; a
+#'   report is written out as its items only by [tfl_template_to_spec()],
+#'   called on purpose.  `"expand"`: the report is expanded first
+#'   ([tfl_template_to_spec()]) and its items are on the table and ARD
+#'   sheets, for what is made from the items (the ARD, the preview).
 #' @param study The study's spec, as [tfl_read_study_spec()] reads it.
 #' @param outputs The reports, as [tfl_read_outputs()] reads them: a list of
 #'   `tfl_output` (as written, not resolved), named by id.
@@ -32,7 +41,9 @@
 #'   `planner` (the `_tflplanner` sheet: the report list and the setup),
 #'   `ard` (the ARD sheets), `listing` (`listings`, `listing_cols`),
 #'   `figures` (a figure's design list, by id), `study` (study.yml's
-#'   fields), `not_converted` (what the sheets cannot hold).
+#'   fields), `templates` and `template_rows` (the template reports; with
+#'   `templates = "expand"` both are empty), `not_converted` (what the
+#'   sheets cannot hold).
 #' @examples
 #' d <- system.file("extdata", "spec-yaml", package = "tflspec")
 #' sh <- tfl_sheets_from_yaml(d)
@@ -43,13 +54,15 @@
 #' outs[["T-14-1-1"]]$label <- "Demographics (draft)"
 #' tfl_sheets_from_spec(s, outs)$planner$description
 #' @export
-tfl_sheets_from_yaml <- function(dir) {
-  tfl_sheets_from_spec(tfl_read_study_spec(dir), tfl_read_outputs(dir, skip_bad = TRUE))
+tfl_sheets_from_yaml <- function(dir, templates = c("sheet", "expand")) {
+  tfl_sheets_from_spec(tfl_read_study_spec(dir), tfl_read_outputs(dir, skip_bad = TRUE),
+                       templates = templates)
 }
 
 #' @rdname tfl_sheets_from_yaml
 #' @export
-tfl_sheets_from_spec <- function(study, outputs) {
+tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand")) {
+  templates <- match.arg(templates)
   if (!inherits(study, "tfl_study_spec")) {
     .ard_stop("tfl_sheets_from_spec(): `study` is a study's spec, tfl_read_study_spec().")
   }
@@ -63,20 +76,20 @@ tfl_sheets_from_spec <- function(study, outputs) {
   toc_ids <- vapply(s$toc$outputs %||% list(), function(e) e$id %||% NA_character_, "")
   ids <- vapply(outs, function(o) o$id, "")
   outs <- outs[order(match(ids, toc_ids, nomatch = length(toc_ids) + 1L), seq_along(ids))]
-  # a template SPEC: the sheets hold its items (tfl_template_to_spec()),
-  # the ARD's analyses among them
-  # (one that cannot be expanded -- a KM type with no `data:` steps -- stays
-  # as it is, its template and args kept, and is named in a warning: the
-  # study still reads, the report can be opened and fixed; running it says
-  # the error again)
-  outs <- lapply(outs, function(o) {
-    if (is.null(.tpl_spec_of(o))) return(o)
-    tryCatch(tfl_template_to_spec(o, s), error = function(e) {
-      warning(sprintf("%s: kept as it is (its template not expanded): %s", o$id,
-                      conditionMessage(e)), call. = FALSE)
-      o
+  # a template SPEC is one row of the `templates` sheet; only
+  # `templates = "expand"` writes its items out first
+  if (identical(templates, "expand")) {
+    outs <- lapply(outs, function(o) {
+      if (is.null(.tpl_spec_of(o))) return(o)
+      tryCatch(tfl_template_to_spec(o, s), error = function(e) {
+        warning(sprintf("%s: kept as it is (its template not expanded): %s", o$id,
+                        conditionMessage(e)), call. = FALSE)
+        o
+      })
     })
-  })
+  }
+  trows <- list()
+  tparam_rows <- list()
   bridge <- .bridge_fn(".plan_sheets_from_content")
   nc <- list()
   note <- function(output, part, reason) nc[[length(nc) + 1L]] <<- data.frame(
@@ -214,6 +227,7 @@ tfl_sheets_from_spec <- function(study, outputs) {
   for (id in names(outs)) {
     o <- outs[[id]]
     e <- toc_index[[id]] %||% list()
+    tpl <- .tpl_spec_of(o)
     planner[[length(planner) + 1L]] <- list(
       output_id = id, description = cell(e$label %||% o$label), setup_code = NA_character_,
       process_code = .first_r_step(o$data$steps),
@@ -242,15 +256,39 @@ tfl_sheets_from_spec <- function(study, outputs) {
       for (k in setdiff(names(extra), "output_id")) rr[[k]] <- extra[[k]]
       rows$report <- after[-length(after)]
     }
-    if (inherits(o$content, "tfl_r")) rr$content_code <- cell(o$content)
-    if (identical(o$data$source, "code") && !is.null(o$data$code)) rr$data_code <- cell(o$data$code)
-    # the ARD's name in the report's program, when not ard
-    if (!is.null(o$data$object) && !identical(o$data$object, "ard")) rr$ard_object <- cell(o$data$object)
+    if (is.null(tpl)) {
+      if (inherits(o$content, "tfl_r")) rr$content_code <- cell(o$content)
+      if (identical(o$data$source, "code") && !is.null(o$data$code)) rr$data_code <- cell(o$data$code)
+      # the ARD's name in the report's program, when not ard
+      if (!is.null(o$data$object) && !identical(o$data$object, "ard")) rr$ard_object <- cell(o$data$object)
+    }
     add("report", rr)
     for (v in names(o$codelists)) for (i in seq_along(o$codelists[[v]])) {
       cl <- o$codelists[[v]][[i]]
       add("codelists", list(output_id = id, variable = v, value = cell(cl$value), label = cell(cl$label), order = as.character(i),
                             under = cell(cl$under)))
+    }
+    # a template report: its name and arguments on the templates sheet, and
+    # that is all of the template; the items are made again from them
+    if (!is.null(tpl)) {
+      enc <- .tpl_sheets_encode(id, o$kind, .na_scalar(o$label), tpl)
+      trows[[length(trows) + 1L]] <- enc$row
+      tparam_rows <- c(tparam_rows, enc$rows)
+      if (length(enc$lost)) {
+        warning(sprintf("%s: template arguments the templates sheet cannot hold are not kept: %s",
+                        id, paste(enc$lost, collapse = ", ")), call. = FALSE)
+        note(id, "template", paste0("template arguments the templates sheet cannot hold: ",
+                                    paste(enc$lost, collapse = ", ")))
+      }
+      own <- c(if (length(o$content)) "content", if (length(o$ard)) "ard",
+               if (length(o$data$steps)) "data steps")
+      if (length(own)) {
+        warning(sprintf("%s: the report's own %s stay in YAML; the templates sheet has no place for them",
+                        id, paste(own, collapse = ", ")), call. = FALSE)
+        note(id, "template", paste0("the report's own ", paste(own, collapse = ", "),
+                                    " stay in YAML: the templates sheet has no place for them"))
+      }
+      next
     }
     code_content <- inherits(o$content, "tfl_r")
     # the datasets a report written by hand reads, and whether it reads its
@@ -482,6 +520,9 @@ tfl_sheets_from_spec <- function(study, outputs) {
                       listing_cols = .rows_df(listing_cols, .listing_sheets$listing_cols),
                       figures = .rows_df(fig_rows, c("output_id", "datasets", "ard"))),
        figures = figures, study = s$study,
+       templates = .rows_df(trows, c("output_id", "kind", "label", "population", "template", "by",
+                                     "where", "args")),
+       template_rows = .rows_df(tparam_rows, c("output_id", "param", "value", "label")),
        not_converted = if (length(nc)) do.call(rbind, nc) else
          data.frame(output = character(), part = character(), reason = character(), stringsAsFactors = FALSE))
 }

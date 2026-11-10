@@ -184,7 +184,7 @@ tfl_report_codelists <- function(study, outputs = NULL, rows = NULL) {
     }
     outputs <- tfl_read_outputs(study$dir, skip_bad = TRUE)
   }
-  if (is.null(rows)) rows <- tfl_sheets_from_spec(study, outputs)$table$codelists
+  if (is.null(rows)) rows <- tfl_sheets_from_spec(study, outputs, templates = "expand")$table$codelists
   .report_codelists(study, outputs, rows)
 }
 
