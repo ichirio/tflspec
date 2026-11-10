@@ -112,7 +112,7 @@ test_that("in a study: a listing of ADAE (no PART) with subset lists Part 1's su
   st <- tfl_read_study_spec(d)
   ro <- tfl_resolve_output(tfl_read_output(f), st)
   # the program as the sheets write it: the listing's rows, its rework
-  sh <- suppressMessages(tfl_sheets_from_spec(st, list(`L-9-1` = ro)))
+  sh <- suppressMessages(tfl_sheets_from_spec(st, list(`L-9-1` = ro), templates = "expand"))
   rework <- stats::na.omit(sh$planner$process_code[sh$planner$output_id == "L-9-1"])
   code <- tfl_listing_code(tfl_listing_spec(sh$listing, check = FALSE), "L-9-1",
                            sh$ard$datasets, rework = rework, part = "data")
