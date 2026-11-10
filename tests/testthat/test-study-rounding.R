@@ -159,3 +159,13 @@ test_that("an in-process run sets cards' rounding and puts the options back", {
   suppressMessages(tfl_build_ard(sp, dir = d, save = FALSE))
   expect_null(getOption("cards.round_type"))
 })
+
+test_that("the sheets' setup writes the rounding and cards' in one options() call, as the YAML route", {
+  for (v in c("sas", "r")) {
+    setup <- tfl_report_setup_code(tfl_table_spec(study = c(rounding = v)))
+    hit <- grep("rtfreporter.rounding", setup, value = TRUE, fixed = TRUE)
+    expect_length(hit, 1L)
+    expect_match(hit, "cards.round_type", fixed = TRUE)
+    expect_length(grep("cards.round_type", setup, fixed = TRUE), 1L)
+  }
+})
