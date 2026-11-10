@@ -68,7 +68,8 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
 #'   `planner` (tflplanner's `_tflplanner` sheet: the report list and the
 #'   setup code), `ard` (the ARD sheets), `listing` (`listings`,
 #'   `listing_cols`), `figures` (a figure's design list, by id), `study`
-#'   (study.yml's fields), `not_converted` ([tfl_sheets_from_yaml()]'s notes
+#'   (study.yml's fields), `templates` and `template_rows` (the template
+#'   reports: [tfl_sheets_from_yaml()]), `not_converted` ([tfl_sheets_from_yaml()]'s notes
 #'   on what the sheets could not hold: listed in `_not_converted.yml` too,
 #'   with one message saying how many).  What the app holds, or what the
 #'   workbooks read as.
@@ -296,6 +297,14 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
 
     out <- .conv_output(id, kind, entry, sp, ard, lf, figs[[id]], prow, scope, page_of, content_fn, note,
                         figures = figures)
+    # a report on the templates sheet is a template report again
+    tr <- sheets$templates
+    if (is.data.frame(tr) && id %in% tr$output_id) {
+      # (the items the other sheets would make of an empty report are not its own)
+      out$template <- .tpl_sheets_decode(tr, sheets$template_rows)[[id]]$template
+      out$content <- list()
+      out$data <- NULL
+    }
     f <- file.path(to, "spec", "outputs", paste0(id, ".yml"))
     tfl_write_output(out, f)
     files <- c(files, f)

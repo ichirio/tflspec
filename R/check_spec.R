@@ -175,7 +175,7 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
       # its plot settings joined) is checked as it checks it, so a draft it
       # would refuse is an error here
       pd <- tryCatch(suppressWarnings(
-        tfl_sheets_from_spec(study, stats::setNames(list(o), id))$figures[[id]]),
+        tfl_sheets_from_spec(study, stats::setNames(list(o), id), templates = "expand")$figures[[id]]),
         error = function(e) NULL)
       if (is.list(pd) && length(Filter(length, pd))) {
         p <- unique(rbind(p, tryCatch(tfl_check_fig_design(structure(pd, class = "tfl_fig_design")),
