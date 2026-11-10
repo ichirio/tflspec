@@ -948,7 +948,7 @@ back): rename the value or choose another separator.
 
 **Spec files (YAML, one file a report):** `tfl_output` `tfl_item` `tfl_plot` `tfl_call` `tfl_r`
 `tfl_unset` `tfl_read_output` `tfl_write_output` `tfl_read_study_spec`
-`tfl_read_outputs` `tfl_resolve_output` `tfl_run_output` `tfl_output_contents` `tfl_output_data_names` `tfl_code_refs` `tfl_write_study_part` `tfl_item_code`
+`tfl_read_outputs` `tfl_resolve_output` `tfl_run_output` `tfl_output_contents` `tfl_output_extends` `tfl_study_value` `tfl_output_data_names` `tfl_code_refs` `tfl_write_study_part` `tfl_item_code`
 `tfl_item_written` `tfl_item_own` `tfl_convert_sheets_to_yaml`
 `tfl_yaml_from_sheets` `tfl_sheets_from_yaml` `tfl_sheets_from_spec` `tfl_report_codelists` `tfl_write_spec_xlsx`
 `tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_check_spec` `tfl_check_build` `tfl_check_reports` `tfl_check_fix_text` `tfl_data_code` `tfl_schema_help` `tfl_ai_decisions_read` `tfl_ai_decisions_write` `tfl_ai_confirm` `tfl_content_code` `tfl_content_run`
@@ -958,7 +958,7 @@ back): rename the value or choose another separator.
 
 **The functions the generated programs call (their code):** `tfl_helpers_code`
 
-**Template SPEC (prototype):** `tfl_tpl` `tfl_tpl_args` `tfl_tpl_help` `tfl_templates` `tfl_template_expand` `tfl_template_to_spec` `tfl_template` `tfl_param` `tfl_template_params` `tfl_template_variant` `tfl_template_run` `tfl_test_templates` `tfl_use_company_templates`
+**Template SPEC (prototype):** `tfl_tpl` `tfl_tpl_args` `tfl_tpl_help` `tfl_templates` `tfl_template_expand` `tfl_template_to_spec` `tfl_template_routes` `tfl_template` `tfl_param` `tfl_template_params` `tfl_template_variant` `tfl_template_run` `tfl_test_templates` `tfl_use_company_templates`
 `tpl_demog` `tpl_summary` `tpl_disposition` `tpl_ae_soc_pt` `tpl_ae_pt_freq` `tpl_ae_max_grade` `tpl_hierarchical`
 `tpl_shift` `tpl_lab_shift` `tpl_listing` `tpl_km_table` `tpl_param_change` `tpl_pk_conc` `tpl_lab_abnormal` `tpl_ae_eair` `tpl_ancova` `tpl_mean_se` `tpl_mean_ci` `tpl_waterfall` `tpl_forest_hr` `tpl_forest_layout` `tpl_orr` `tpl_stat_block` `tpl_ae_overview`
 `tfl_read_template_sheets` `tfl_write_template_yaml`
