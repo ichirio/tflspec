@@ -64,7 +64,8 @@ sr_ard_spec <- function(rounding = NULL) {
 }
 # the numbers cards formats under the options a setup's lines set
 sr_cards_under <- function(setup, x, digits = 1) {
-  old <- options(cards.round_type = NULL)
+  # (a setup line may set rtfreporter's option too: both put back)
+  old <- options(cards.round_type = NULL, rtfreporter.rounding = NULL)
   on.exit(options(old), add = TRUE)
   for (l in grep("cards.round_type", setup, value = TRUE, fixed = TRUE)) eval(str2lang(l))
   cards::label_round(digits)(x)
