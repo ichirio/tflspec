@@ -280,7 +280,7 @@ print.tfl_ai_answer <- function(x, ...) {
   }
   handlers <- if (task == "figure") list(r = tfl_r) else if (task == "table") .yaml_handlers()
   v <- tryCatch(
-    yaml::yaml.load(text, handlers = handlers),
+    yaml::yaml.load(.yaml_flow_tags(text), handlers = handlers),
     error = function(e) e, warning = function(w) w
   )
   if (inherits(v, "condition")) {

@@ -333,7 +333,7 @@ tfl_ai_adopted_diff <- function(study_dir = ".", output_id = NULL) {
   h <- .yaml_handlers()
   h$r <- function(x) paste("!r", x)
   h$unset <- function(x) "!unset"
-  y <- yaml::read_yaml(f, handlers = h)
+  y <- .yaml_read_file(f, handlers = h)
   out <- character()
   one <- function(v) {
     if (is.null(v)) return("~")
