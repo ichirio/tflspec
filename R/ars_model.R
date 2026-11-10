@@ -581,7 +581,16 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
               vapply(al, function(e) paste(deparse(e), collapse = " "), ""),
               collapse = ", ", sep = "")))
     }
-    if (!is.na(r$denominator %||% NA) && r$denominator != "population") {
+    # (a denominator that is the analysis data of the analysis's own set --
+    # an analysis_data row with that population, what GROUPN counts -- is the
+    # analysis set's subject count: nothing to say)
+    ad_o <- .adata_of(ad, out)
+    den_set <- !is.na(r$denominator %||% NA) && r$denominator %in% ad_o$data_id &&
+      !is.na(r$population_id) &&
+      identical(ad_o$population_id[match(r$denominator, ad_o$data_id)],
+                r$population_id)
+    if (!is.na(r$denominator %||% NA) && r$denominator != "population" &&
+        !den_set) {
       miss(tag, "denominator", sprintf(paste(
         "`%s`: a percentage's denominator in ARS is the analysis set's",
         "subject count; this one is the ARD program's"), r$denominator))

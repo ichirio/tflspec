@@ -451,6 +451,50 @@ test_that("an explicit analysis set denominator is still the subject count", {
   expect_true(any(tfl_ars_unmapped(ars)$item == "denominator"))
 })
 
+# the ARS of a template's report: its ARD definition from a tiny fictional
+# study (the SAF of the package's ADSL)
+tpl_ars <- function(template, args = list()) {
+  skip_if_not_installed("haven")
+  d <- tempfile("arsden")
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  a <- tflspec:::.ai_chr(tflspec::adsl)
+  haven::write_xpt(a[a$SAFFL == "Y", ], file.path(d, "adam", "adsl.xpt"))
+  tfl_ai_study_init(d, adam = "adam", study_id = "ARSDEN-1")
+  o <- tfl_output("T-DD", "table", population = "SAF", label = "tpl",
+    template = list(name = template, args = c(list(
+      by = "TRT01A", continuous = "AGE", categorical = c("SEX", "RACE")), args)))
+  tfl_write_output(o, file.path(d, "spec", "outputs", "T-DD.yml"))
+  sp <- tflspec:::.ard_spec_of_study(tfl_read_study_spec(d), output_id = "T-DD")$spec
+  list(spec = sp, ars = tfl_ars(sp))
+}
+
+test_that("demog: the denominator is the analysis set (adsl_saf), so GROUPN and nothing said", {
+  x <- tpl_ars("demog")
+  expect_identical(x$spec$analyses$denominator[x$spec$analyses$analysis_id == "CAT"],
+                   "adsl_saf")
+  ids <- vapply(x$ars$analyses, `[[`, "", "id")
+  expect_false(any(grepl("NONMISS", ids)))
+  for (id in grep("^An_T-DD_CAT_", ids, value = TRUE)) {
+    expect_identical(den_op(x$ars, id)$den_an, "An_T-DD_GROUPN")
+  }
+  expect_false(any(tfl_ars_unmapped(x$ars)$item == "denominator"))
+})
+
+test_that("summary on ADSL: an explicit analysis set denominator is GROUPN (after #774)", {
+  skip_if_not_installed("haven")
+  x <- tpl_ars("summary", list(data = "ADSL"))
+  cat_row <- x$spec$analyses[x$spec$analyses$analysis_id == "CAT", ]
+  skip_if_not(!is.na(cat_row$denominator),
+              "the summary expansion carries no explicit denominator yet (#774)")
+  expect_identical(cat_row$denominator, "adsl_saf")
+  ids <- vapply(x$ars$analyses, `[[`, "", "id")
+  expect_false(any(grepl("NONMISS", ids)))
+  for (id in grep("^An_T-DD_CAT_", ids, value = TRUE)) {
+    expect_identical(den_op(x$ars, id)$den_an, "An_T-DD_GROUPN")
+  }
+  expect_false(any(tfl_ars_unmapped(x$ars)$item == "denominator"))
+})
+
 test_that("a denominator in args is not cards' own", {
   sp <- ars_spec(ars_df(
     list(output_id = "DM", analysis_id = "GROUPN", method = "categorical",
