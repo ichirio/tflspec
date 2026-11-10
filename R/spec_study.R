@@ -353,8 +353,9 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 # their content, data, code lists and page put together (the farthest first).
 # Each part is laid by its step's files (tfl_output_extends()): a file only
 # some steps name keeps only their parts.  `range`: the content a study
-# reference reads (the style set's and the content step's files', merged),
-# NULL when the content step lays nothing (`{content: none}`).
+# reference reads (the style set's and the content step's files', merged);
+# none when the content step lays nothing (`{content: none}`: every content
+# reference takes its fallback, canon 1.32).
 .layers_below <- function(output, study, style = "output") {
   ext <- .extends_of(output)
   files <- unique(c(ext$content, ext$data, ext$page))
@@ -385,7 +386,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
     }
   }
   list(layers = layers, acc = acc, style = st, extends = ext,
-       range = if (length(ext$content)) acc$content)
+       range = if (length(ext$content)) acc$content else list())
 }
 
 # ---- extends: what a report lays under it, step by step ---------------------
@@ -427,7 +428,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 # a template's set held its `extends` (tfl_write_output() wrote the value
 # tfl_read_output() filled in): read as not written, so a saved demog report
 # keeps its output and a saved stf_t02_demog report its fixed content step.
-# (Once demog's set is `[defaults]` (5b-2) the two read the same for every
+# (Since demog's set is `[defaults]` (5b-2) the two read the same for every
 # template but the stf_ family, where `[defaults]` stops.)  Pending
 # decision of PR 5b-1: drop this, and such files take `[defaults]`.
 .extends_old_constant <- function(x) {

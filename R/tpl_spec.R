@@ -96,9 +96,9 @@
 # `km.<key>` is the company's figure style (until the Kaplan-Meier batch);
 # any other first part is a verb: `<verb>.<argument>[.<name>]` is that
 # argument of the verb's item in the reference's range (`range`: the report's
-# layers' content merged, the style set's and the content step's files'),
-# else -- a template not yet migrated, or a report whose content step lays
-# nothing (5b-1) -- of the last item of the verb in spec/defaults.yml's
+# layers' content merged, the style set's and the content step's files';
+# none for a report whose content step lays nothing), else -- a template
+# not yet migrated -- of the last item of the verb in spec/defaults.yml's
 # `content:` (a part further down is a name in it).  The company's files are
 # not read.  NULL when the study has none.
 .tpl_study_read <- function(key, output = NULL, study = NULL, range = NULL) {
@@ -309,7 +309,7 @@
 # defaults and the report's code lists (`codelists`: the layers' and its
 # own).  `lb`: the layers below the report (.tpl_layers_below()).  A
 # template with an `extends` in its set reads its references in the
-# content step's range (NULL: the old range, 5b-1) and folds the study's
+# content step's range (none under `{content: none}`) and folds the study's
 # stub over that range; one not yet migrated over the layers' content.
 .tpl_expand_for <- function(output, study, lb, codelists, warn = TRUE) {
   ts <- .tpl_spec_of(output)

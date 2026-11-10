@@ -1,8 +1,7 @@
-# A template's `extends` (PLAN-5B, 5b-1): the value's forms, the set's
-# default and its fixed step, one layer order, the reference range, the
-# step_off rule (maps_to), the route record and the one reader.  demog's set
-# is {content: none} until 5b-2, so a demog report that writes no `extends`
-# resolves as before; these tests write it where they need the layers.
+# A template's `extends` (PLAN-5B, 5b-1 and 5b-2): the value's forms, the
+# set's default and its fixed step, one layer order, the reference range,
+# the step_off rule (maps_to), the route record and the one reader.  demog's
+# set is [defaults] (5b-2), stf_t02_demog's a fixed {content: none}.
 
 te_study <- function(defaults, patterns = list(), settings = list()) {
   d <- tempfile("te")
@@ -64,8 +63,10 @@ test_that("extends' forms: files, none, a map by step; NULL for a template repor
   expect_error(tfl_output("T-1", "table", extends = list(content = 1)), "a map by step")
   expect_error(tfl_output_extends(o, "plot"), "one of data, ard, content, page")
   # a template report's: its template's, a map's other steps its template's too (Q1)
-  expect_identical(tfl_output_extends(te_demog())$content, character())
-  expect_identical(tfl_output_extends(te_demog(extends = list(page = "none")))$content, character())
+  expect_identical(tfl_output_extends(te_demog())$content, "defaults")
+  expect_identical(tfl_output_extends(te_demog(extends = list(page = "none")))$content, "defaults")
+  expect_identical(tfl_output_extends(te_demog(extends = list(page = "none")))$page, character())
+  expect_identical(tfl_output_extends(te_demog(name = "stf_t02_demog"))$content, character())
   expect_identical(tfl_output_extends(te_demog(extends = "defaults"))$content, "defaults")
   # written and read back: a map as a map, NULL not written
   f <- tempfile(fileext = ".yml")
@@ -112,11 +113,16 @@ test_that("T1: one order -- report > template > style > pattern > defaults; a co
 test_that("T2: the map forms on demog and stf_t02_demog; an unknown step stops", {
   s <- te_layers()
   from <- function(ro) vapply(ro$content, function(it) it$from %||% "", "")
-  # {content: none}, demog's set in 5b-1: no study content, the page kept
+  # {content: none} written on demog: no study content, the page kept
   r1 <- tfl_resolve_output(te_demog(extends = list(content = "none")), s)
   expect_false(any(c("defaults", "pattern:x") %in% from(r1)))
   expect_identical(r1$page$header[["1"]]$left, "Defaults")
-  expect_identical(lapply(r1$content, unclass), lapply(tfl_resolve_output(te_demog(), s)$content, unclass))
+  # none written: its set's [defaults], the same as written
+  r0 <- tfl_resolve_output(te_demog(), s, provenance = TRUE)
+  expect_true("defaults" %in% unlist(lapply(r0$content, function(it) it$arg_from)))
+  expect_identical(lapply(r0$content, unclass),
+                   lapply(tfl_resolve_output(te_demog(extends = "defaults"), s, provenance = TRUE)$content,
+                          unclass))
   # [patterns/x, defaults] lays the pattern
   r2 <- tfl_resolve_output(te_demog(extends = c("patterns/x", "defaults")), s, provenance = TRUE)
   expect_true("pattern:x" %in% unlist(lapply(r2$content, function(it) it$arg_from)))
@@ -160,10 +166,14 @@ test_that("T4: one rule -- a reference wins, the study's argument does not reach
   st <- te_item(ro, "plan_stub")
   expect_identical(st$args$name, "Dstub")
   expect_false(identical(unname(st$arg_from["name"]), "defaults"))
-  # under {content: none} (demog's set in 5b-1) the old range is read: the
-  # defaults' value (5b-2 widens the range: its fallback)
+  # none written: demog's set, [defaults], the same
   r0 <- tfl_template_routes(te_demog(), s)
   expect_identical(r0$route[r0$param == "stub_name"], "study:plan_stub.name")
+  # under {content: none} a reference reads nothing: its fallback, else unset
+  rn <- tfl_template_routes(te_demog(extends = list(content = "none")), s)
+  expect_identical(rn$route[rn$param == "stub_name"], "unset")
+  expect_identical(rn$route[rn$param == "max_rows"], "fallback")
+  expect_null(tfl_study_value(s, "plan_stub.name", te_demog(extends = list(content = "none")))$value)
 })
 
 test_that("T5: the range -- the pattern over the defaults, the style set, !unset, no value", {
@@ -208,7 +218,7 @@ test_that("T5: the range -- the pattern over the defaults, the style set, !unset
 
 test_that("T6: the program -- the call, then only what the template did not write", {
   s <- te_layers()
-  for (o in list(te_demog(), te_demog(extends = "defaults"))) {
+  for (o in list(te_demog(), te_demog(extends = list(content = "none")))) {
     ro <- tfl_resolve_output(o, s)
     tp <- attr(ro, "template")
     expect_true(tp$ok)
@@ -241,6 +251,9 @@ test_that("T7: a stop value takes its maps_to out of the study's layers (A, B, t
   expect_identical(b$style, "standard")
   rb <- tfl_resolve_output(b, s)
   expect_identical(lapply(ro$content, unclass), lapply(rb$content, unclass))
+  # none written: the set's [defaults], the same
+  expect_identical(lapply(tfl_resolve_output(te_demog(args = list(blanks = FALSE)), s)$content, unclass),
+                   lapply(ro$content, unclass))
   # heading: !unset -- no study heading
   rh <- tfl_resolve_output(te_demog(extends = "defaults", args = list(heading = tfl_unset())), s)
   expect_null(te_item(rh, "plan_stub")$args$heading)
@@ -262,7 +275,7 @@ test_that("T8: one record -- tfl_template_routes(), the resolved attribute, tfl_
   expect_identical(rt, attr(tfl_resolve_output(o, s), "template")$routes)
   expect_identical(names(rt), c("param", "step", "value", "route", "key", "fallback", "fixed", "reaches"))
   expect_identical(utils::tail(rt$param, 2L), c("extends", "style"))
-  expect_identical(rt$value[rt$param == "extends"], "content: none")
+  expect_identical(rt$value[rt$param == "extends"], "defaults")
   expect_identical(rt$route[rt$param == "extends"], "template")
   ta <- tfl_tpl_args("demog", study = s, population = "SAF")
   # (the parameters the report does not give)

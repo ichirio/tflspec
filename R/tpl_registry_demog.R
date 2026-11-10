@@ -434,11 +434,11 @@
               "widths", "max_rows", "rounding", "blanks", "blanks_first", "blanks_last", "blanks_counted",
               "border_header", "border_group", "style"))
 
-# (`extends`: its family's `[defaults]` (canon 1.27) is 5b-2's flip; until
-# then `{content: none}`, the order of today, so that no output moves)
+# (`extends`: its family's `[defaults]`, canon 1.27: the study's defaults are
+# laid under the template's items, and its references read them)
 .tfl_template("demog", kind = "table", layout = "summary", label = "Demographics",
               params = .tpl_demog_params(), body = .tpl_demog_body, ai = TRUE,
-              parts = .tpl_demog_parts, extends = list(content = "none"),
+              parts = .tpl_demog_parts, extends = "defaults",
               example = list(population = "SAF", by = "TRT01A", continuous = "AGE",
                              categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC")))
 

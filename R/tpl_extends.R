@@ -296,8 +296,9 @@ tfl_study_value <- function(study, key, output = NULL) {
 # The range a report's references read (.tpl_study_read()): `content`, the
 # layers' content merged, and `layers`, each layer's content nearest first.
 # No report: the `settings.style` set (else `standard`) over the defaults.
-# NULL: the old range (study$defaults$content) -- a template not yet
-# migrated, a report whose content step lays nothing (5b-1).
+# A report whose content step lays nothing (`{content: none}`) reads none:
+# its content references take their fallbacks (canon 1.32).  NULL: the old
+# range (study$defaults$content) -- a template not yet migrated.
 .tpl_ref_range <- function(output, study) {
   if (is.null(output)) {
     nm <- .tpl_study_read1("settings.style", NULL, study) %||% "standard"
@@ -307,8 +308,7 @@ tfl_study_value <- function(study, key, output = NULL) {
     ts <- .tpl_spec_of(output)
     if (!is.null(ts) && !.tpl_layered(ts$name)) return(NULL)
     lb <- .tpl_layers_below(output, study)
-    if (is.null(lb$range)) return(NULL)
-    layers <- lapply(lb$layers, function(l) l$content)
+    layers <- if (length(lb$extends$content)) lapply(lb$layers, function(l) l$content) else list()
   }
   layers <- Filter(function(x) !inherits(x, "tfl_r"), layers)
   acc <- list()

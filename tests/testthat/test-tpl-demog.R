@@ -318,7 +318,7 @@ test_that("the defaults are today's output: no header N, no blank rows, 30 rows,
                    tfl_call("rtf_border", list(bottom = TRUE)))
 })
 
-test_that("the study standard reaches demog through its references only", {
+test_that("the study standard reaches demog through its references; other verbs lay under it", {
   s <- b1_study()
   o <- b1_out("demog", b1_args()[-1L])
   r <- tfl_resolve_output(o, s)
@@ -348,8 +348,8 @@ test_that("the study standard reaches demog through its references only", {
   b <- Filter(function(it) it$fn == "plan_blanks", tfl_resolve_output(o3, s)$content)[[1L]]$args
   expect_identical(b$where, NULL)
   expect_false(b$first)
-  # what the template does not take from the study is not applied: a defaults.yml item of a
-  # verb the template does not emit, a pattern; max_rows is a reference (canon 1.29)
+  # max_rows is a reference (canon 1.29); a defaults.yml item of a verb the template does
+  # not emit is laid under it (demog's set is [defaults], canon 1.27 and 1.32)
   s3 <- s
   s3$defaults$content[[length(s3$defaults$content) + 1L]] <- tfl_item("plan_paginate_rows", list(max_rows = 40L),
                                                                       from = "defaults")
@@ -358,7 +358,9 @@ test_that("the study standard reaches demog through its references only", {
   r3 <- tfl_resolve_output(o, s3)
   expect_identical(Filter(function(it) it$fn == "plan_paginate_rows", r3$content)[[1L]]$args,
                    list(max_rows = 40L, split = "group_safe"))
-  expect_false("plan_cell_style" %in% vapply(r3$content, `[[`, "", "fn"))
+  expect_true("plan_cell_style" %in% vapply(r3$content, `[[`, "", "fn"))
+  o3$extends <- list(content = "none")
+  expect_false("plan_cell_style" %in% vapply(tfl_resolve_output(o3, s3)$content, `[[`, "", "fn"))
   # the page of the study stays
   expect_true(length(r3$page$header) > 0L)
   # the program writes the resolved values
