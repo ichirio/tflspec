@@ -86,8 +86,9 @@ test_that("a SPEC with border_group draws a rule under each group's last row", {
   with <- render("  - plan_style: {border_group: {fn: rtf_border, args: {bottom: true}}}")
   without <- render(NULL)
   # blocks: the header, SEX's two rows, RACE's three; the rule is under each
-  # group's last row (SEX's, RACE's)
-  expect_identical(which(with), c(3L, 6L))
+  # group's last row (SEX's, RACE's), the header keeping its own default rule
+  # (block 1, as without it)
+  expect_identical(which(with), c(1L, 3L, 6L))
   # absent: no rule under any group (only the default one of the header)
   expect_identical(which(without), 1L)
 })
