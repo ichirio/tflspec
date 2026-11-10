@@ -870,7 +870,11 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
 .tpl_sum_den <- function(a, ctx, subj, set) {
   tn <- ctx$template$name %||% "summary"
   v <- a$denominator
-  if (is.null(v)) return(list(value = NULL, extra = list()))
+  # NULL: the report's ADSL population (the column headings' N counts it too);
+  # on records, the records kept
+  if (is.null(v)) {
+    return(list(value = if (identical(toupper(a[["data"]]), "ADSL")) subj else set, extra = list()))
+  }
   if (!length(a$categorical)) {
     .ard_stop(sprintf(paste0(
       "%s: denominator is the base of the categorical variables' percentages, and the table ",
@@ -2327,8 +2331,10 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
     # (the stub's place: after the header, as before the look's items)
     if (!is.null(lk$stub)) list(lk$stub),
     if (length(labels)) list(tfl_item("plan_labels", list(variable = labels))),
-    unname(Filter(Negate(is.null), lk[c("blank", "style", "widths", "paginate")])),
-    if (isTRUE(a$param_page)) list(tfl_item("plan_hide", list(cols = list("group1")))))
+    unname(Filter(Negate(is.null), lk[c("blank", "widths", "paginate")])),
+    if (isTRUE(a$param_page)) list(tfl_item("plan_hide", list(cols = list("group1")))),
+    # (the style last: where the study's lands in the old order, so A = B)
+    unname(Filter(Negate(is.null), lk["style"])))
   list(ard = list(analysis_data = sets, analyses = analyses),
        data = list(source = "ard", object = "ard"), content = content)
 }
@@ -2728,7 +2734,7 @@ tpl_orr <- function(ard, population = "ITT", ..., codelists = NULL) {
         if (!identical(hn, "none")) list(
           list(line = "2", cols = ".values", span = "each", text = "(N={n})")))))),
       # the look: the template's defaults, the study's where they refer to it
-      unname(Filter(Negate(is.null), lk[c("blank", "stub", "style", "widths", "paginate")])))
+      unname(Filter(Negate(is.null), lk[.tpl_look_order(tn)])))
     list(ard = ard, data = list(source = "ard", object = "ard"), content = content)
   })
 

@@ -69,9 +69,11 @@ test_that("demog, summary and disposition: a blank is missing, not a category", 
       expect_false(any(lv %in% ""), info = paste(id, v))
       for (arm in c("Drug X", "Control")) {
         x <- s[[v]][s$TRT01A == arm]
-        # demog, summary, disposition: the percent is of the whole analysis set's arm
-        # (blanks counted in the denominator, the header N, a Missing row: canon 1.31, 1.38)
+        # the percent is of the whole analysis set's arm (blanks counted in the
+        # denominator, the header N), and the blanks are a Missing row, last
         den <- length(x)
+        expect_equal(bv_stat(a, v, "Missing", arm, "n"), sum(x == ""), info = paste(id, v, arm))
+        expect_equal(bv_stat(a, v, "Missing", arm, "p"), sum(x == "") / den, info = paste(id, v, arm))
         x <- x[x != ""]
         for (l in unique(x)) {
           expect_equal(bv_stat(a, v, l, arm, "n"), sum(x == l), info = paste(id, v, l, arm))
@@ -85,6 +87,7 @@ test_that("demog, summary and disposition: a blank is missing, not a category", 
   tot <- a$variable == "SEX" & is.na(a$group1_level) & a$stat_name == "n"
   expect_setequal(a$variable_level[tot], c("F", "M", "Missing"))
   expect_equal(sum(as.numeric(a$stat[tot])), nrow(s))
+  expect_equal(bv_stat(a, "SEX", "Missing", NA, "n"), sum(s$SEX == ""))
   # the program says it: the count reads the data with its blank text missing
   txt <- paste(tfl_ard_code(tfl_read_study_spec(d), output_id = "T-D", save = FALSE, dir = d),
                collapse = "\n")

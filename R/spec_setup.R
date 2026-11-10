@@ -123,14 +123,31 @@
   switch(tolower(as.character(rnd)), sas = "round-half-up", r = "round-to-even", NULL)
 }
 
+# The values a rounding is spelled as, from the schema ("sas", "r", ...)
+.rounding_values <- function() {
+  ty <- .schema_arg_type(tfl_schema("plan_digits"), "rounding")
+  if (identical(ty$kind, "enum")) ty$args else c("sas", "r")
+}
+
+# A rounding must be spelled exactly as one of the values ("SAS" is not
+# "sas"); else it stops, naming them.  `where`: the field, with its file.
+.check_rounding <- function(x, where) {
+  ok <- .rounding_values()
+  if (!(is.character(x) && length(x) == 1L && !is.na(x) && x %in% ok)) {
+    stop(where, " takes one of ", paste0("\"", ok, "\"", collapse = ", "),
+         ", not \"", paste(as.character(x), collapse = ", "), "\"", call. = FALSE)
+  }
+  x
+}
+
 .study_rounding <- function(study) {
   # study.yml's `settings: rounding` (tfl_ai_study_init() writes it); the
   # defaults' plan_digits(rounding = ) over it
   r <- study$study$settings$rounding
-  if (!is.null(r)) r <- tolower(as.character(r)[1L])
+  if (!is.null(r)) r <- .check_rounding(as.character(r)[1L], "study.yml: settings: rounding")
   for (it in study$defaults$content %||% list()) {
     if (identical(.schema_fn_name(it$fn %||% ""), "plan_digits") && !is.null(it$args$rounding)) {
-      r <- tolower(as.character(it$args$rounding))
+      r <- .check_rounding(as.character(it$args$rounding), "plan_digits rounding")
     }
   }
   r

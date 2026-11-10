@@ -100,7 +100,7 @@ tfl_fill_widths <- function(study_dir = ".", output_id = NULL, assumption = TRUE
   # what the ARD is made from)
   # (nothing to fill: not read)
   sheets <- if (length(lst) || length(unset)) {
-    tryCatch(tfl_sheets_from_yaml(study_dir), error = function(e) NULL)
+    tryCatch(tfl_sheets_from_yaml(study_dir, templates = "expand"), error = function(e) NULL)
   }
   lw <- .ai_listing_widths_set(outs[lst], study_dir, sheets = sheets)
   outs[lst] <- lw$outs

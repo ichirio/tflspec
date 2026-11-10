@@ -257,6 +257,14 @@
   unname(p)
 }
 
+# The look items' order in the content: a layered template's (demog's);
+# a template still in the old order puts them where the study's land, its
+# style last, so the report and its code SPEC (A and B) list them alike
+.tpl_look_order <- function(tn) {
+  if (.tpl_layered(tn)) c("blank", "stub", "style", "widths", "paginate") else
+    c("stub", "blank", "widths", "paginate", "style")
+}
+
 # The look's items from those parameters: the widths (`ncol`: the printed
 # value columns, NA when not known -- "auto" then gives none), the blank
 # rows, the stub (its name and place; `heading`: the stub's heading, demog's),
@@ -475,7 +483,7 @@
     if (isTRUE(a[["total"]])) list(tfl_item("plan_total", nn(list(
       label = a$total_label, position = "last")))),
     if (!is.null(hdr)) list(hdr),
-    unname(Filter(Negate(is.null), lk[c("blank", "stub", "style", "widths", "paginate")])))
+    unname(Filter(Negate(is.null), lk[.tpl_look_order(tn)])))
   out <- list(ard = list(analysis_data = sets, analyses = analyses),
               data = list(source = "ard", object = "ard"), content = content)
   if (length(codelists)) out$codelists <- codelists

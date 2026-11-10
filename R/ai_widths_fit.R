@@ -124,7 +124,7 @@
   st <- if (!is.null(old)) tryCatch(tfl_read_study_spec("."), error = function(e) NULL)
   # (the study read into sheets once for all the listings, not once a listing)
   sh <- sheets
-  if (is.null(sh) && !is.null(st)) sh <- tryCatch(tfl_sheets_from_yaml("."), error = function(e) NULL)
+  if (is.null(sh) && !is.null(st)) sh <- tryCatch(tfl_sheets_from_yaml(".", templates = "expand"), error = function(e) NULL)
   for (id in todo) {
     o <- outs[[id]]
     info <- .ai_listing_cols(o)
