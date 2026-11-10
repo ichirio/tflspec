@@ -75,11 +75,18 @@ request has what you need: the shell's text and the variables
      (`ANL01FL == "Y"` when the summary lists it), the baseline the
      record flagged `ABLFL == "Y"` and the change `CHG`, the visits in
      `AVISITN` order;
-   - a subject with no value is left out of the statistics (n shows
-     how many), and a Missing row only when the shell shows one.
+   - in a demographics or summary table of subjects (the templates
+     demog, summary, disposition), the percentages are over every
+     subject of the analysis set in the arm (the column heading's N),
+     and a variable with missing values gets a Missing row, last
+     (`missing_row`, default TRUE): leave it as it is unless the shell
+     or the SAP says to leave missing values out;
+   - elsewhere a subject with no value is left out of the statistics
+     (n shows how many).
    A convention holds only when it is *the* usual one for this kind of
-   table: when two are usual (LOCF or observed cases, a percent of the
-   arm or of those with a value), it is not settled -- step 3.
+   table: when two are usual (LOCF or observed cases), it is not
+   settled -- step 3.  A percentage is over the analysis set's subjects
+   in the arm unless the shell or the SAP names another base.
 3. **Else ask** -- only what neither the documents nor a convention
    settles **and** what changes the report's numbers or its structure
    (its rows, its columns, what is counted).  A point that changes
