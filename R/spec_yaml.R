@@ -235,6 +235,9 @@ tfl_read_output <- function(path) {
   if (!is.character(path) || length(path) != 1L || !file.exists(path)) {
     stop("tfl_read_output(): no file ", path, call. = FALSE)
   }
+  # (the file named in a value's message: .logical_strict(), .rounding_check())
+  .spec_read$file <- path
+  on.exit(.spec_read$file <- NULL, add = TRUE)
   y <- .yaml_read_file(path, handlers = .yaml_handlers())
   if (!is.list(y)) stop("tfl_read_output(): ", path, " is not a map.", call. = FALSE)
   if (!is.null(y$outputs)) {
@@ -394,7 +397,7 @@ tfl_read_output <- function(path) {
     if (identical(.schema_fn_name(names(el)), .spec_part$fn)) {
       return(tfl_item(names(el), .part_in(args), "own"))
     }
-    return(tfl_item(names(el), .rounding_lower(names(el), .neutral_in(names(el), .calls_in(args))), "own"))
+    return(tfl_item(names(el), .rounding_check(names(el), .logical_strict(names(el), .neutral_in(names(el), .calls_in(args)))), "own"))
   }
   if (is.list(el) && !is.null(el$fn)) {
     return(tfl_item(el$fn, .neutral_in(el$fn, .calls_in(el$args %||% list())), el$from %||% "own"))
@@ -402,14 +405,44 @@ tfl_read_output <- function(path) {
   stop("A content item is `- fn: {args}`.", call. = FALSE)
 }
 
-# plan_digits()'s rounding in either case ("SAS" is "sas"), held in lower
-# case: what the program writes, whatever rtfreporter reads it
-.rounding_lower <- function(fn, args) {
-  r <- args$rounding
-  if (identical(.schema_fn_name(fn), "plan_digits") && is.character(r) && length(r) == 1L) {
-    args$rounding <- tolower(r)
+# The file being read, for the message of a value that is not allowed
+.spec_read <- new.env(parent = emptyenv())
+
+.spec_read_file <- function() .spec_read$file %||% "the SPEC"
+
+# plan_digits()'s rounding is spelled as one of its values ("sas", "r"): a
+# value in another case ("SAS") stops, naming the values
+.rounding_check <- function(fn, args) {
+  if (identical(.schema_fn_name(fn), "plan_digits") && !is.null(args$rounding) &&
+      !inherits(args$rounding, c("tfl_r", "tfl_unset"))) {
+    .check_rounding(args$rounding, paste0(.spec_read_file(), ": plan_digits rounding"))
   }
   args
+}
+
+# A field that takes true or false (a `logical` in the schema) holds a
+# logical: `yes`, `no` and any other text are not turned into one
+.logical_strict <- function(fn, args) {
+  ent <- tryCatch(tfl_schema(fn), error = function(e) NULL)
+  if (is.null(ent)) return(args)
+  for (a in names(args)) {
+    ty <- .schema_arg_type(ent, a)
+    if (!is.null(ty)) .logical_check(args[[a]], ty, a)
+  }
+  args
+}
+
+.logical_check <- function(v, ty, a) {
+  if (inherits(v, c("tfl_r", "tfl_call", "tfl_unset"))) return(invisible())
+  if (ty$kind == "logical") {
+    if (is.character(v) && length(v) == 1L) {
+      stop(.spec_read_file(), ": ", a, " takes true or false, not \"", v, "\"", call. = FALSE)
+    }
+  } else if (ty$kind %in% c("list", "vec", "map") && is.list(v) && !is.object(v)) {
+    el <- if (ty$kind == "list") ty$args[[1L]] else ty$args[[2L]]
+    for (e in v) .logical_check(e, el, a)
+  }
+  invisible()
 }
 
 # every `{fn:, args:}` map inside a value as a tfl_call (recursively)
