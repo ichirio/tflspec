@@ -679,6 +679,17 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
                         "no effect when `cells` is given"))
 }
 
+# Is a template `demog` or a variant made from it (stf_t02_demog, a company's)?
+.tpl_is_demog <- function(name) {
+  for (i in 1:20) {
+    if (identical(name, "demog")) return(TRUE)
+    t <- get0(name, envir = .tpl_registry, inherits = FALSE)
+    if (is.null(t) || is.null(t$from)) return(FALSE)
+    name <- sub("^[.]base[.]", "", t$from)
+  }
+  FALSE
+}
+
 # `denominator` of the summary family: the base of the categorical variables'
 # percentages (the continuous statistics have none); the column headings' N is
 # not moved by it
@@ -725,6 +736,30 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
 names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
 .tpl_summary_cells <- .tpl_summary_params$cells$default
 
+# The data step of the demog family's Missing row: of the categorical
+# variables, those with a missing value (NA, or blank as an .xpt holds it)
+# become a factor of their values and a last level "Missing"; the others
+# stay as they are
+.tpl_missing_level_code <- function(set, vars) {
+  v <- paste0("c(", paste0("\"", vars, "\"", collapse = ", "), ")")
+  paste0(
+    "dplyr::mutate(", set, ", dplyr::across(dplyr::any_of(", v, "), function(x) {
+",
+    "  chr <- trimws(as.character(x))
+",
+    "  miss <- is.na(chr) | !nzchar(chr)
+",
+    "  if (!any(miss)) return(x)
+",
+    "  chr[miss] <- \"Missing\"
+",
+    "  values <- if (is.factor(x)) levels(x) else sort(unique(chr[!miss]))
+",
+    "  factor(chr, levels = unique(c(values, \"Missing\")))
+",
+    "}))")
+}
+
 # The summary family's `denominator`, checked: `value` what the categorical
 # analysis's `denominator` takes (NULL: cards' own, the rows of the set);
 # `extra` the analysis data to add (another analysis set's adsl_<id>, or the
@@ -732,6 +767,17 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
 # every subject of the set, cards' column only those with a value.
 .tpl_sum_den <- function(a, ctx, subj, set) {
   tn <- ctx$template$name %||% "summary"
+  # the demog family's percentages are of the analysis set (the report's
+  # ADSL after its population and filters), not a parameter: the analysis
+  # data the ARD already has, the one the column headings' N counts too
+  if (.tpl_is_demog(tn) && length(a$categorical)) {
+    if (!is.null(a$denominator)) {
+      .ard_stop(sprintf(paste0(
+        "%s: the percentages are over the analysis set (%s), so there is no `denominator` ",
+        "parameter: leave it out (summary has one)."), tn, subj))
+    }
+    return(list(value = subj, extra = list()))
+  }
   v <- a$denominator
   if (is.null(v)) return(list(value = NULL, extra = list()))
   if (!length(a$categorical)) {
@@ -786,6 +832,16 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
   # the set); the header N is not moved by it
   dn <- .tpl_sum_den(a, ctx, subj, set)
   sets <- c(sets, dn$extra)
+  # demog family: a variable with missing values (NA or blank) gets a
+  # Missing row, last, counted over the analysis set; decided on the data
+  # as the program runs
+  cat_set <- set
+  if (.tpl_is_demog(ctx$template$name %||% "") && length(a$categorical) && !isTRUE(a[["stack"]])) {
+    cat_set <- paste0(set, "_m")
+    sets <- c(sets, list(list(
+      id = cat_set, label = "with a Missing level for a variable that has missing values",
+      from = set, code = tfl_r(.tpl_missing_level_code(set, a$categorical)))))
+  }
   nn <- function(x) Filter(Negate(is.null), x)
   # (the ARD's ids are the layout's; its labels the template's)
   lab <- ctx$template$label
@@ -816,7 +872,7 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
       statistics = a$continuous_statistics, purpose = "PRIMARY OUTCOME MEASURE"))),
     if (length(a$categorical)) list(nn(list(
       id = a[["cat_id"]] %||% "CAT", label = a[["cat_label"]] %||% "Categorical",
-      method = "categorical", data = set,
+      method = "categorical", data = cat_set,
       by = a$by, overall = ov, variables = a$categorical, optional = opt("categorical"),
       statistics = a$categorical_statistics, denominator = dn$value,
       purpose = "PRIMARY OUTCOME MEASURE"))))
@@ -849,7 +905,7 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
 # (a template is a program and a set of parameters: the program is the
 # layout's)
 tfl_template_variant("demog", from = "summary", label = "Demographics",
-  ai = TRUE, example = list(population = "SAF"),
+  ai = TRUE, example = list(population = "SAF"), hide = "denominator",
   defaults = list(continuous = "AGE", categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC"),
                   labels = c(AGE = "Age (years)", AGEGR1 = "Age group, n (%)",
                              SEX = "Sex, n (%)", RACE = "Race, n (%)",
