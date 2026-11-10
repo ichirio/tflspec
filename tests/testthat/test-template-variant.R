@@ -142,7 +142,7 @@ test_that("demog: the YAML's template:, A and B make the same RTF; A calls tpl_d
   r <- tv_rtfs(o, ard, s)
   expect_match(r$code, "# template demog_as: a variant of demog", fixed = TRUE, all = FALSE)
   # (a variant of a session or a company: its root called, its defaults written)
-  expect_match(paste(r$code, collapse = "\n"), "plan <- tflspec::tfl_tpl(\n  ard,\n  \"summary\",", fixed = TRUE)
+  expect_match(paste(r$code, collapse = "\n"), "plan <- tflspec::tfl_tpl(\n  ard,\n  \"demog\",", fixed = TRUE)
   expect_match(paste(r$code, collapse = "\n"), "categorical = c(\"AGEGR1\", \"SEX\")",
                fixed = TRUE)
   expect_identical(r$a, r$yaml)

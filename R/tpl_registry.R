@@ -707,6 +707,18 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
   "analysis data (`adsl_itt`, or one of the report's own): its rows in each column. A number",
   "is not for `total` = TRUE. The column headings' N is the study standard's, not moved")
 
+# `missing_row`: the demog family's (summary does not show it; a variant
+# that gives it a default, demog, does)
+.tpl_missing_row_param <- function() {
+  p <- tfl_param("missing_row", FALSE, type = "flag", doc = paste(
+    "TRUE (default): a Missing row, last, for each categorical variable that has missing values",
+    "(NA or blank). FALSE: no Missing row; missing values are left out of the counts, and the",
+    "percentages stay over the analysis set."))
+  p$hidden <- TRUE
+  p$variant_only <- TRUE
+  p
+}
+
 .tpl_summary_params <- list(
   tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
   .tpl_subset_param(),
@@ -725,6 +737,7 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
   tfl_param("count_cell", NULL, study = "plan_cells.categorical",
             doc = "a categorical value's cell, n (%) (plan_cells(categorical = )); NULL: the study standard's"),
   tfl_param("denominator", NULL, doc = .tpl_den_sum_doc),
+  .tpl_missing_row_param(),
   tfl_param("continuous_statistics", c("N", "mean", "sd", "median", "min", "max"),
             doc = "the continuous statistics the ARD has"),
   tfl_param("categorical_statistics", c("n", "p"),
@@ -814,6 +827,11 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
 }
 
 .tpl_summary_body <- function(a, ctx) {
+  tn <- ctx$template$name %||% "summary"
+  if ("missing_row" %in% ctx$given &&
+      isTRUE(.tpl_get(tn, "template")$params$missing_row$hidden)) {
+    .ard_stop(sprintf("%s: there is no `missing_row` parameter (summary and stf_t02_demog do not take it): leave it out.", tn))
+  }
   if (!length(a$continuous) && !length(a$categorical)) {
     .ard_stop("template summary: give `continuous` or `categorical`, or both.")
   }
@@ -836,7 +854,7 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
   # Missing row, last, counted over the analysis set; decided on the data
   # as the program runs
   cat_set <- set
-  if (.tpl_is_demog(ctx$template$name %||% "") && length(a$categorical) && !isTRUE(a[["stack"]])) {
+  if (.tpl_is_demog(tn) && isTRUE(a$missing_row) && length(a$categorical) && !isTRUE(a[["stack"]])) {
     cat_set <- paste0(set, "_m")
     sets <- c(sets, list(list(
       id = cat_set, label = "with a Missing level for a variable that has missing values",
@@ -906,7 +924,7 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
 # layout's)
 tfl_template_variant("demog", from = "summary", label = "Demographics",
   ai = TRUE, example = list(population = "SAF"), hide = "denominator",
-  defaults = list(continuous = "AGE", categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC"),
+  defaults = list(missing_row = TRUE, continuous = "AGE", categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC"),
                   labels = c(AGE = "Age (years)", AGEGR1 = "Age group, n (%)",
                              SEX = "Sex, n (%)", RACE = "Race, n (%)",
                              ETHNIC = "Ethnicity, n (%)")))
@@ -916,7 +934,7 @@ tfl_template_variant("demog", from = "summary", label = "Demographics",
 # column, the rows in its order, age as Mean (SD) and Median (min, max)
 tfl_template_variant("stf_t02_demog", from = "demog",
   label = "Demographics, after FDA STF IG v2 Table 2",
-  example = list(population = "SAF"), ai = FALSE,
+  example = list(population = "SAF"), ai = FALSE, hide = "missing_row",
   defaults = list(categorical = c("SEX", "AGEGR1", "RACE", "ETHNIC", "COUNTRY"),
                   order = c("SEX", "AGE", "AGEGR1", "RACE", "ETHNIC", "COUNTRY"),
                   labels = c(SEX = "Sex, n (%)", AGE = "Age, years",

@@ -118,3 +118,50 @@ test_that("summary with its default denominator keeps the non-missing percentage
   expect_false("denominator" %in% names(dd_an(x, "CAT")))
   expect_identical(dd_an(x, "CAT")$data, "adsl_saf")
 })
+
+test_that("missing_row: TRUE (default) is the Missing step; FALSE and !unset turn it off", {
+  on <- dd_expand("demog")
+  expect_identical(dd_expand("demog", missing_row = TRUE), on)
+  expect_true("adsl_saf_m" %in% vapply(on$ard$analysis_data, `[[`, "", "id"))
+  for (v in list(FALSE, tfl_unset())) {
+    off <- dd_expand("demog", missing_row = v)
+    expect_false("adsl_saf_m" %in% vapply(off$ard$analysis_data, `[[`, "", "id"))
+    cat <- dd_an(off, "CAT")
+    expect_identical(cat$data, "adsl_saf")
+    # (the percentages stay over the analysis set)
+    expect_identical(cat$denominator, "adsl_saf")
+    expect_identical(dd_an(off, "GROUPN")$data, "adsl_saf")
+  }
+  a <- tfl_tpl_args("demog")
+  expect_identical(a$effective[a$param == "missing_row"], "TRUE")
+  expect_match(a$doc[a$param == "missing_row"], "^TRUE \\(default\\): a Missing row, last")
+})
+
+test_that("missing_row is no parameter of stf_t02_demog or summary, and passing it stops", {
+  expect_false("missing_row" %in% tfl_tpl_args("stf_t02_demog")$param)
+  expect_false("missing_row" %in% tfl_tpl_args("summary")$param)
+  expect_error(dd_expand("stf_t02_demog", missing_row = FALSE), "there is no `missing_row` parameter")
+  expect_error(dd_expand("summary", categorical = "SEX", missing_row = TRUE),
+               "there is no `missing_row` parameter")
+  # (stf_t02_demog keeps the Missing step)
+  expect_true("adsl_saf_m" %in% vapply(dd_expand("stf_t02_demog")$ard$analysis_data, `[[`, "", "id"))
+})
+
+test_that("missing_row = FALSE: no Missing row, other percentages as with TRUE; code and export show it", {
+  skip_on_cran()
+  d <- dd_study(args = list(missing_row = FALSE))
+  txt <- dd_text(d)
+  expect_false(any(grepl("Missing", txt)))
+  expect_true(any(grepl("ASIAN.*22 \\(28\\.2\\)", txt)))
+  st <- tfl_read_study_spec(d)
+  code <- paste(suppressMessages(tfl_ard_code(st, output_id = "T-DD")), collapse = "
+")
+  expect_false(grepl("adsl_saf_m", code, fixed = TRUE))
+  expect_match(code, "denominator = adsl_saf", fixed = TRUE)
+  cs <- tfl_template_to_spec(tfl_read_output(file.path(d, "spec", "outputs", "T-DD.yml")), st)
+  expect_false("adsl_saf_m" %in% vapply(cs$ard$analysis_data, `[[`, "", "id"))
+  d2 <- dd_study()
+  st2 <- tfl_read_study_spec(d2)
+  cs2 <- tfl_template_to_spec(tfl_read_output(file.path(d2, "spec", "outputs", "T-DD.yml")), st2)
+  expect_true("adsl_saf_m" %in% vapply(cs2$ard$analysis_data, `[[`, "", "id"))
+})
