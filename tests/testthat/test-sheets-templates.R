@@ -6,7 +6,7 @@ st_study <- function() tfl_read_study_spec(system.file("extdata", "spec-yaml", p
 st_demog <- function(...) {
   tfl_output("T-9", "table", label = "Demographics", population = "SAF",
              template = list(name = "demog", args = list(
-               population = "SAF", continuous = c("AGE", "AGEU"), categorical = c("AGEGR1", "SEX"),
+               by = "TRT01A", continuous = c("AGE", "AGEU"), categorical = c("AGEGR1", "SEX"),
                labels = c(AGE = "Age (years)", SEX = "Sex, n (%)"), ...)))
 }
 
@@ -41,6 +41,9 @@ test_that("a template report is a row of the templates sheet, read back as the s
   expect_identical(names(back), "T-9")
   expect_identical(back[["T-9"]]$template$name, "demog")
   expect_identical(back[["T-9"]]$label, "Demographics")
+  # (demog takes the analysis set from the report's `population:`: the
+  # sheet's population column, not an argument)
+  expect_identical(back[["T-9"]]$population, "SAF")
   a <- back[["T-9"]]$template$args
   b <- o$template$args
   expect_identical(a[sort(names(a))], b[sort(names(b))])

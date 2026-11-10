@@ -271,7 +271,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     # a template report: its name and arguments on the templates sheet, and
     # that is all of the template; the items are made again from them
     if (!is.null(tpl)) {
-      enc <- .tpl_sheets_encode(id, o$kind, .na_scalar(o$label), tpl)
+      enc <- .tpl_sheets_encode(id, o$kind, .na_scalar(o$label), tpl, o$population)
       trows[[length(trows) + 1L]] <- enc$row
       tparam_rows <- c(tparam_rows, enc$rows)
       if (length(enc$lost)) {

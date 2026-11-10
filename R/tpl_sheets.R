@@ -40,6 +40,7 @@ tfl_read_template_sheets <- function(path) {
 
 # The two sheets (as data frames of text) as the reports' template SPECs
 .tpl_sheets_decode <- function(t, rows) {
+  fn <- "tfl_read_template_sheets()"
   val <- function(x) if (is.null(x) || is.na(x) || !nzchar(trimws(x))) NULL else trimws(x)
   out <- list()
   for (i in seq_len(nrow(t))) {
@@ -94,7 +95,7 @@ tfl_read_template_sheets <- function(path) {
 # `label`.  Returns the `templates` row, the `template_rows` rows, and the
 # names of the arguments the sheets do not give back as they were (a map, a
 # list of maps, a value with `;`), found by reading the rows back.
-.tpl_sheets_encode <- function(id, kind, label, spec) {
+.tpl_sheets_encode <- function(id, kind, label, spec, population = NULL) {
   args <- spec$args
   one <- function(v) is.atomic(v) && length(v) == 1L && !is.na(v) && nzchar(as.character(v))
   cols <- list()
@@ -136,6 +137,10 @@ tfl_read_template_sheets <- function(path) {
     for (x in labels) if (identical(x$param, p) && identical(x$value, v)) { l <- x$label; break }
     rws[[length(rws) + 1L]] <- list(output_id = id, param = p, value = v, label = l)
   }
+  # (a template that takes the analysis set from the report's `population:`
+  # has it as no argument: the `population` column is the report's)
+  tp <- tryCatch(.tpl_get(spec$name %||% "", "tfl_sheets_from_spec()"), error = function(e) NULL)
+  if (isTRUE(tp$params$population$hidden) && one(population)) cols$population <- as.character(population)
   row <- list(output_id = id, kind = kind, label = label, population = cols$population,
               template = spec$name, by = cols$by, where = cols$where,
               args = if (length(cells)) paste(cells, collapse = "; "))
