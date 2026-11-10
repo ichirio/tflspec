@@ -94,6 +94,20 @@
 # part further down is a name in it).  Patterns, a style set and the
 # company's files are not read.  NULL when the study has none.
 .tpl_study_read <- function(key, output = NULL, study = NULL) {
+  .tpl_study_find(key, output, study)$value
+}
+
+# A reference may name several keys: they are read in order, the first the
+# study has wins.  The key found (NA when none) and its value (NULL when none)
+.tpl_study_find <- function(keys, output = NULL, study = NULL) {
+  for (k in keys) {
+    v <- .tpl_study_read1(k, output, study)
+    if (!is.null(v)) return(list(key = k, value = v))
+  }
+  list(key = NA_character_, value = NULL)
+}
+
+.tpl_study_read1 <- function(key, output = NULL, study = NULL) {
   root <- sub("[.].*$", "", key)
   path <- strsplit(sub("^[^.]*[.]", "", key), ".", fixed = TRUE)[[1L]]
   down <- function(x, path) {
@@ -202,20 +216,23 @@
     args$style <- output$style
   }
   from_study <- character()
+  found <- list()
   for (p in t$params) {
     if (is.null(p$study)) next
-    v <- .tpl_study_read(p$study, output, study)
+    hit <- .tpl_study_find(p$study, output, study)
+    v <- hit$value
     if (is.null(v)) next
     if (!p$name %in% names(args)) {
       args[[p$name]] <- v
       from_study <- c(from_study, p$name)
+      found[[p$name]] <- hit$key
     } else if (!identical(args[[p$name]], v)) {
       message(sprintf("%s: template %s's %s overrides the study standard (%s).",
-                      id, t$name, p$name, p$study))
+                      id, t$name, p$name, hit$key))
     }
   }
   list(args = args, study = from_study,
-       keys = stats::setNames(vapply(from_study, function(k) t$params[[k]]$study, ""), from_study))
+       keys = stats::setNames(vapply(from_study, function(k) found[[k]], ""), from_study))
 }
 
 # The templates whose family has taken one value a parameter (the report's
@@ -398,7 +415,7 @@
 # What it says: the key, the template, and where the setting comes from
 # instead when the study's figure style has it
 .tpl_plot_unused_text <- function(t, key) {
-  style <- sub("^km[.]", "", t$params[[key]]$study %||% "")
+  style <- sub("^km[.]", "", t$params[[key]]$study[1L] %||% "")
   what <- .tpl_km_look_what[key]
   if (is.na(what)) what <- sprintf("its `%s`", key)
   sprintf("plot: %s has no effect in template %s: %s %s.", key, t$name, what,

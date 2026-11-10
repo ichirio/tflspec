@@ -27,7 +27,7 @@ test_that("tfl_tpl_args(): one row a parameter, the template's order and tiers",
     expect_true(is.na(r(nm)$study_key), info = nm)
     expect_identical(r(nm)$layer, "template", info = nm)
   }
-  expect_identical(r("count_cell")$maps_to, "plan_cells.categorical")
+  expect_identical(r("count_cell")$maps_to, "plan_cells.categorical, plan_cells.default")
   expect_identical(r("order")$maps_to, "plan_levels.variable")
   # no study: no study value
   expect_true(all(is.na(a$study)))

@@ -189,7 +189,7 @@
       tgt <- if (identical(x$group, "target") || (is.null(x$group) && x$name %in% target)) " [target]" else ""
       val <- .ai_tpl_value(x$default)
       # (a parameter that refers to the study standard: its key and fallback)
-      if (is.character(x$study) && !startsWith(x$study, "output.")) {
+      if (is.character(x$study) && !startsWith(x$study[1L], "output.")) {
         val <- .tpl_ref_text(x$study, if (is.null(x$default)) NA_character_ else val, x$required)
       }
       long <- nchar(val) > .ai_tpl_long

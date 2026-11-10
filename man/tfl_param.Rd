@@ -56,6 +56,10 @@ figure style;
 \item \code{"output.<field>"}: the report's own field (\code{"output.population"}).
 }
 
+A character vector names several keys one setting can be written under
+(\code{c("plan_cells.categorical", "plan_cells.default")}): read in order, the
+first the study has wins.
+
 Three forms: with \code{default}, the study's value else that fallback;
 with neither \code{default} nor \code{required}, the study's value else the
 parameter is left unset (the inner function's own default applies:

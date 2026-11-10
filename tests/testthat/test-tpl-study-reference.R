@@ -100,7 +100,9 @@ test_that("a reference to a verb's argument reads spec/defaults.yml only", {
 test_that("a key the reader cannot follow stops where the parameter is declared", {
   expect_error(tfl_param("x", study = "plan_nonsense.arg"), "not a verb")
   expect_error(tfl_param("x", study = "settings"), "key of the study standard")
-  expect_error(tfl_param("x", study = c("settings.a", "settings.b")), "key of the study standard")
+  expect_error(tfl_param("x", study = c("settings.a", "b")), "key of the study standard")
+  expect_s3_class(tfl_param("x", study = c("settings.a", "settings.b")), "tfl_param")
+  expect_error(tfl_param("x", study = c("settings.a", "plan_nonsense.arg")), "not a verb")
   expect_s3_class(tfl_param("x", study = "settings.anything"), "tfl_param")
   expect_s3_class(tfl_param("x", study = "figure_style.km.theme"), "tfl_param")
   expect_s3_class(tfl_param("x", study = "plan_digits.rounding"), "tfl_param")
@@ -114,7 +116,7 @@ test_that("tfl_tpl_args(): the reference, its fallback and where the value is fr
   expect_identical(r(a, "sd_missing")$default, "study: settings.sd_missing, else -")
   expect_identical(r(a, "sd_missing")$fallback, "-")
   expect_identical(r(a, "sd_missing")$layer, "fallback")
-  expect_identical(r(a, "count_cell")$default, "study: plan_cells.categorical, no fallback")
+  expect_identical(r(a, "count_cell")$default, "study: plan_cells.categorical, plan_cells.default, no fallback")
   expect_identical(r(a, "count_cell")$layer, "default")
   expect_true(is.na(r(a, "count_cell")$fallback))
   expect_true(is.na(r(a, "total")$study_key))
@@ -129,7 +131,7 @@ test_that("tfl_tpl_args(): the reference, its fallback and where the value is fr
   # the Rd table and the help say it too
   rd <- paste(.tpl_rd("demog"), collapse = "\n")
   expect_match(rd, "study: settings.sd_missing, else -", fixed = TRUE)
-  expect_match(rd, "study: plan_cells.categorical, no fallback", fixed = TRUE)
+  expect_match(rd, "study: plan_cells.categorical, plan_cells.default, no fallback", fixed = TRUE)
   out <- capture.output(tfl_tpl_help("demog"))
   expect_true(any(grepl("[study: settings.sd_missing, else -]", out, fixed = TRUE)))
 })
@@ -137,7 +139,7 @@ test_that("tfl_tpl_args(): the reference, its fallback and where the value is fr
 test_that("ai/templates.md: a parameter that refers to the study standard says so", {
   txt <- paste(.ai_templates_list("table"), collapse = "\n")
   expect_match(txt, "`sd_missing` (text) = study: settings.sd_missing, else -", fixed = TRUE)
-  expect_match(txt, "study: plan_cells.categorical, no fallback", fixed = TRUE)
+  expect_match(txt, "study: plan_cells.categorical, plan_cells.default, no fallback", fixed = TRUE)
   expect_match(paste(.ai_templates_file_text(), collapse = "\n"),
                "study: <key>, else <fallback>", fixed = TRUE)
 })

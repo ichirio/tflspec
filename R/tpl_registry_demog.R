@@ -86,7 +86,7 @@
               doc = paste("what prints in place of the SD when a group has no SD (n = 1):",
                           "{mean} (<sd_missing>); \"\" prints the mean alone; unset: no such guard;",
                           "no effect when `cells` is given")),
-    tfl_param("count_cell", NULL, study = "plan_cells.categorical",
+    tfl_param("count_cell", NULL, study = c("plan_cells.categorical", "plan_cells.default"),
               doc = "a categorical value's cell, n (%); NULL: the study standard's"),
     tfl_param("total_label", "Total", type = "text", doc = "the Total column's heading"),
     tfl_param("header_n", "denominator", type = "choice", choices = c("denominator", "set", "none"),
@@ -94,9 +94,9 @@
               doc = paste("the arm headings' N: \"denominator\" or \"set\": the arm's subjects in the",
                           "analysis set (`denominator` does not move it); \"none\" no N; unset: no N.",
                           "It acts on the heading `col_header` gives as a text")),
-    tfl_param("col_header", NULL, type = "text", study = "plan_col_header.lines",
-              doc = paste("the arm heading: a text ({col} and {n}, a line a line), or the lines of",
-                          "plan_col_header(lines = ); NULL: none")),
+    tfl_param("col_header", NULL, type = "text", study = c("plan_col_header.lines", "plan_col_header.header"),
+              doc = paste("the arm heading: a text ({col} and {n}, a line a line), the lines of",
+                          "plan_col_header(lines = ), or its cells (header = ); NULL: none")),
     tfl_param("heading", NULL, type = "text",
               doc = paste("the row-title (stub) column's heading, a line a line.  Given, it is the",
                           "stub's (plan_stub(heading = ), the stub being row_label, first)")),
@@ -331,6 +331,9 @@
     hdr <- tfl_item("plan_col_header", list(header = list(
       nn(list(line = "1", cols = "row_label", text = .tpl_lines(a$heading))),
       list(line = "1", cols = ".values", span = "each", text = txt))))
+  } else if (length(ch) && is.list(ch) && all(vapply(ch, function(e) is.list(e) && "cols" %in% names(e), NA))) {
+    # (a list of cell records, line / cols / text: plan_col_header(header = ))
+    hdr <- tfl_item("plan_col_header", list(header = unname(ch)))
   } else if (length(ch)) {
     hdr <- tfl_item("plan_col_header", list(lines = ch))
   }

@@ -43,6 +43,10 @@
 #'     figure style;
 #'   * `"output.<field>"`: the report's own field (`"output.population"`).
 #'
+#'   A character vector names several keys one setting can be written under
+#'   (`c("plan_cells.categorical", "plan_cells.default")`): read in order, the
+#'   first the study has wins.
+#'
 #'   Three forms: with `default`, the study's value else that fallback;
 #'   with neither `default` nor `required`, the study's value else the
 #'   parameter is left unset (the inner function's own default applies:
@@ -117,17 +121,20 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
 .tpl_study_key_check <- function(key, name = NULL) {
   if (is.null(key) || isFALSE(key)) return(invisible(key))
   what <- if (is.null(name)) "" else sprintf(" (parameter %s)", name)
-  if (!is.character(key) || length(key) != 1L || is.na(key) ||
-      !grepl("^[A-Za-z][A-Za-z0-9_]*([.][A-Za-z0-9_]+)+$", key)) {
+  if (!is.character(key) || !length(key) || anyNA(key) ||
+      !all(grepl("^[A-Za-z][A-Za-z0-9_]*([.][A-Za-z0-9_]+)+$", key))) {
     .ard_stop(sprintf(paste0("tfl_param(): `study` is a key of the study standard%s: ",
-                             "\"settings.<name>\" or \"<verb>.<argument>\"."), what))
+                             "\"settings.<name>\" or \"<verb>.<argument>\" (or several, read in order)."),
+                      what))
   }
-  verb <- sub("[.].*$", "", key)
-  if (!verb %in% .tpl_study_roots &&
-      !verb %in% tryCatch(getNamespaceExports("rtfreporter"), error = function(e) verb)) {
-    .ard_stop(sprintf(paste0("tfl_param(): `study = \"%s\"`%s: %s is not a verb of the study's ",
-                             "defaults.yml (a plan_*() function of rtfreporter), nor `settings`, ",
-                             "`figure_style` or `output`."), key, what, sQuote(verb, FALSE)))
+  for (k in key) {
+    verb <- sub("[.].*$", "", k)
+    if (!verb %in% .tpl_study_roots &&
+        !verb %in% tryCatch(getNamespaceExports("rtfreporter"), error = function(e) verb)) {
+      .ard_stop(sprintf(paste0("tfl_param(): `study = \"%s\"`%s: %s is not a verb of the study's ",
+                               "defaults.yml (a plan_*() function of rtfreporter), nor `settings`, ",
+                               "`figure_style` or `output`."), k, what, sQuote(verb, FALSE)))
+    }
   }
   invisible(key)
 }

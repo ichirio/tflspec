@@ -707,4 +707,61 @@ test_that("the `unset` flag is shown for the migrated templates, NA for the othe
   }
   expect_true(all(is.na(tfl_tpl_args("summary")$unset)))
   expect_true(all(is.na(vapply(tfl_template_params("summary"), function(p) p$unset, ""))))
-})
+})
+
+sr_study_b1 <- function(settings) {
+  d <- withr::local_tempdir()
+  file.copy(list.files(system.file("extdata", "spec-yaml", package = "tflspec"), full.names = TRUE), d,
+            recursive = TRUE)
+  yaml::write_yaml(list(study_id = "SR-1", settings = c(list(treatment = "TRT01P"), settings)),
+                   file.path(d, "study.yml"))
+  tfl_read_study_spec(d)
+}
+
+# tflplanner's sample study writes the same settings another way: the unnamed
+# cell (`default`) and the header as cells (`header`); a reference may name
+# several keys, read in order
+b1_planner_defaults <- c(
+  "content:", "  - normalize_ard: {}", "  - plan_cells:", "      default: '{n:.0f} ({p:.1f%})'",
+  "  - plan_col_header:", "      header:", "        - line: '1'", "          cols: row_label",
+  "        - line: '1'", "          cols: .values", "          span: each", "          text: '{col}'",
+  "        - line: '2'", "          cols: row_label", "          text: Characteristic",
+  "        - line: '2'", "          cols: .values", "          span: each", "          text: (N={n})",
+  "  - plan_stub:", "      name: row_label", "      before: true", "      heading: ''",
+  "  - plan_blanks:", "      where: between_groups")
+
+test_that("a reference may name several keys: plan_cells.default and plan_col_header.header", {
+  d <- b1_folder(defaults = b1_planner_defaults)
+  o <- b1_out("demog", b1_args()[-1L])
+  r <- b1_run(d, o)
+  # the categorical rows are there, with the study's cell
+  expect_true(any(grepl("^ *[0-9]+ +[(][0-9.]+[)]$", unlist(r$table[-1L]))))
+  hdr <- b1_item(r$ro, "plan_col_header")[[1L]]
+  expect_null(hdr$args$lines)
+  expect_identical(vapply(hdr$args$header, function(e) e$text %||% "", ""),
+                   c("", "{col}", "Characteristic", "(N={n})"))
+  code <- paste(tfl_content_code(r$ro, pipe = "|>"), collapse = "
+")
+  expect_match(code, "col_header = list(", fixed = TRUE)
+  expect_match(code, "count_cell", fixed = TRUE)
+  expect_match(code, "(N={n})", fixed = TRUE)
+  expect_match(code, "{n:.0f} ({p:.1f%})", fixed = TRUE)
+  # (A = B: the program gives the same table)
+  e <- new.env()
+  e$ard <- r$ard
+  suppressMessages(eval(parse(text = code), envir = e))
+  expect_identical(as.data.frame(suppressMessages(rtfreporter::plan_apply(e$plan, "table"))), r$table)
+  # the help shows the key that was found
+  a <- tfl_tpl_args("demog", r$st, "SAF")
+  expect_identical(a$layer[a$param == "count_cell"], "study: plan_cells.default")
+  expect_identical(a$layer[a$param == "col_header"], "study: plan_col_header.header")
+  expect_identical(a$study_key[a$param == "count_cell"], "plan_cells.default")
+  expect_identical(a$study_key[a$param == "col_header"], "plan_col_header.header")
+  # none found: the first key, and the key text names them all
+  a0 <- tfl_tpl_args("demog", b1_study(), "SAF")
+  expect_identical(a0$study_key[a0$param == "count_cell"], "plan_cells.categorical")
+  expect_match(tflspec:::.tpl_ref_text(c("plan_cells.categorical", "plan_cells.default")),
+               "plan_cells.categorical, plan_cells.default", fixed = TRUE)
+  # a single key: as before
+  expect_identical(tflspec:::.tpl_study_find("settings.a", NULL, sr_study_b1(list(a = 1)))$value, 1)
+})
