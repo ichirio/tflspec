@@ -3,7 +3,9 @@
 
 test_that("tfl_tpl_args(): one row a parameter, the template's order and tiers", {
   a <- tfl_tpl_args("demog")
+  # (demog hides `denominator`: its percentages are over the analysis set)
   p <- tfl_template_params("demog")
+  p <- p[names(p) != "denominator"]
   expect_identical(a$param, names(p))
   expect_identical(names(a), c("param", "tier", "stage", "type", "required", "default", "variant",
                                "study", "effective", "layer", "maps_to", "doc", "study_key", "fallback"))
