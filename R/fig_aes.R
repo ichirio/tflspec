@@ -26,7 +26,8 @@
 #  after_scale(), stage(), ifelse(), cut(), is.na() ...), of the
 #  arithmetic or of a comparison (<, <=, ==, !=, %in%, !, &, |), its
 #  arguments columns (the names), constants, the arithmetic of them and
-#  a few summaries (sum(), max(), mean() ...); a text in quotes.
+#  a few summaries (sum(), max(), mean(), sd() ...), at its top too
+#  (yintercept: mean(AVAL - BASE)); a text in quotes.
 #  Anything else is R (`!r`).  The check reads the form (a text that is
 #  neither a column's name nor of the form warns) and the variables of an
 #  after_stat(): those the layer's stat computes, or an aesthetic.
@@ -48,7 +49,10 @@
                   "scales::comma", "scales::pvalue", "fct_rev", "fct_reorder",
                   "fct_relevel", "fct_inorder", "fct_infreq", "forcats::fct_rev",
                   "forcats::fct_reorder", "forcats::fct_relevel", "forcats::fct_inorder",
-                  "forcats::fct_infreq", "str_wrap", "stringr::str_wrap")
+                  "forcats::fct_infreq", "str_wrap", "stringr::str_wrap",
+                  # a reference line at a summary of the data (a Bland-Altman
+                  # plot's mean difference: yintercept = mean(AVAL - BASE))
+                  "mean", "median", "min", "max", "sum", "quantile")
 
 # the operators a mapping's expression may be of, at its top too
 # (ymin: mean - se)
@@ -58,7 +62,9 @@
 # the functions and operators inside it, besides those
 .fig_aes_inner <- c(.fig_aes_ops, "c", "sum", "max", "min", "mean",
                     "median", "length", "alpha", "pmin", "pmax", "cumsum",
-                    "[", "duplicated", "unique", "rank", "n_distinct")
+                    "[", "duplicated", "unique", "rank", "n_distinct",
+                    # (its limits of agreement: mean(d) + 1.96 * sd(d))
+                    "sd", "var", "quantile", "IQR", "mad")
 
 # Is `e` (a language object) a mapping's expression of the form: a call
 # of `.fig_aes_fns` or of the arithmetic, whose parts are names, constants

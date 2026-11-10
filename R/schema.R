@@ -87,7 +87,8 @@
 #' `cond ~ "text"`), `function` (a function by its name, `mean_se` or
 #' `Hmisc::smean.cl.normal`, written bare: `fun.data = mean_se`),
 #' `function<f1, f2>` (one of those functions by its name, written bare: a
-#' discrete scale's `limits: rev`, a facet's `labeller: label_both`), `tilde`
+#' discrete scale's `limits: rev`, a facet's `labeller: label_both`, a
+#' scale's `labels: abs` or `labels: scales::percent`), `tilde`
 #' (a formula as its text, `y ~ x` or `~ . / 7`, written as the formula),
 #' `lambda` (a function written out as its text, `function(y) mean(y) -
 #' sd(y)` or `\(x) paste0(x, "\%")`, written as the function: a summary's
@@ -99,7 +100,11 @@
 #' `xintercept`, `annotate()`'s `x`; a text of that form is a date there,
 #' not a level of a discrete axis),
 #' `math` (a plotmath expression as its text, `10^.x`, written bare:
-#' `scales::label_math(10^.x)`),
+#' `scales::label_math(10^.x)`); a title in plotmath, of `labs()`, a
+#' scale's `name` or a guide's `title`, is the call R writes, its
+#' expression as its text: `{fn: expression, args: {expr: AUC[0 - 24] ~
+#' (ng/mL)}}` written `expression(AUC[0 - 24] ~ (ng/mL))` (`quote()`,
+#' `bquote()` likewise),
 #' `call` and `call<fn>` (`{fn:, args:}`; `call<label_*>` takes any
 #' function whose name the pattern matches, of any package:
 #' `{fn: scales::label_percent}`; scales' helpers of a scale's value --
@@ -144,7 +149,10 @@
 #' `<=`, `==`, `!=`, `%in%`, `!`, `&`, `|`), of columns, constants, their
 #' arithmetic and `c()`, `sum()`, `max()`, `min()`, `mean()`, `median()`,
 #' `length()`, `alpha()`, `pmin()`, `pmax()`, `cumsum()`, `[`,
-#' `duplicated()`, `unique()`, `rank()` (`x: factor(AVISITN)`,
+#' `duplicated()`, `unique()`, `rank()`, `sd()`, `var()`, `quantile()`,
+#' `IQR()`, `mad()`; a summary at its top too, `mean()`, `median()`,
+#' `min()`, `max()`, `sum()`, `quantile()` (a Bland-Altman plot's
+#' `yintercept: mean(AVAL - BASE) + 1.96 * sd(AVAL - BASE)`) (`x: factor(AVISITN)`,
 #' `y: after_stat(density)`, `x: reorder(USUBJID, -PCHG)`,
 #' `fill: after_scale(alpha(colour, 0.4))`, a waterfall's
 #' `fill: PCHG <= -30` or `fill: ifelse(PCHG <= -30, "PR", "SD/PD")`;
@@ -496,6 +504,14 @@ tfl_schema_check <- function(item) {
           !sub("^.*::", "", v$fn) %in% getNamespaceExports(pkg)) {
         return(list(list(level = "error",
                          message = sprintf("%s has no function %s()", pkg, sub("^.*::", "", v$fn)))))
+      }
+      # a plotmath title, expression(AUC[0-24]): its one argument, an
+      # expression R parses
+      if (v$fn %in% .fig_plotmath_fns) {
+        bad <- !identical(names(v$args %||% list()), "expr") || !.fig_is_plotmath(v$args$expr)
+        return(if (bad) list(list(level = "error", message = sprintf(paste0(
+          "%s() takes one argument, expr: a plotmath expression as its text ",
+          "(AUC[0-24]~(ng/mL))"), v$fn))) else list())
       }
       # (seq(), alpha(), as.Date(): the calls inside theirs)
       return(do.call(c, c(list(list()), lapply(v$args %||% list(), .schema_check_calls_in, figure = TRUE))))

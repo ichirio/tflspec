@@ -2692,7 +2692,7 @@ scale_x_continuous:
   args:
     limits: {type: "list<number>|r", label: {en: Range, ja: 範囲}}
     breaks: {type: "list<number>|call<seq, breaks_*, extended_breaks, pretty_breaks>|tilde|lambda|r", label: {en: Breaks, ja: 目盛り}}
-    labels: {type: "list<string>|call<label_*, *_format>|tilde|lambda|r", label: {en: Tick labels, ja: 目盛りのラベル}}
+    labels: {type: "function<abs, toupper, tolower, format, percent, comma, scientific, dollar, number, pvalue>|list<string>|call<label_*, *_format>|tilde|lambda|r", label: {en: Tick labels, ja: 目盛りのラベル}}
     expand: {type: "call<expansion, expand_scale, waiver>|list<number>|r", label: {en: Expansion, ja: 余白}}
 
 scale_y_continuous:
@@ -2707,7 +2707,7 @@ scale_y_continuous:
   args:
     limits: {type: "list<number>|r", label: {en: Range, ja: 範囲}}
     breaks: {type: "list<number>|call<seq, breaks_*, extended_breaks, pretty_breaks>|tilde|lambda|r", label: {en: Breaks, ja: 目盛り}}
-    labels: {type: "list<string>|call<label_*, *_format>|tilde|lambda|r", label: {en: Tick labels, ja: 目盛りのラベル}}
+    labels: {type: "function<abs, toupper, tolower, format, percent, comma, scientific, dollar, number, pvalue>|list<string>|call<label_*, *_format>|tilde|lambda|r", label: {en: Tick labels, ja: 目盛りのラベル}}
     expand: {type: "call<expansion, expand_scale, waiver>|list<number>|r", label: {en: Expansion, ja: 余白}}
 
 scale_x_log10:
@@ -2859,11 +2859,11 @@ labs:
   stage: finishing
   label: {en: Labels, ja: ラベル}
   visible: [x, "y", title, colour]
-  dots: {style: named, type: "string|r", description: "The labels by aesthetic (x, y, colour, fill ...); !r NULL for none."}
+  dots: {style: named, type: "string|call<expression, quote, bquote>|r", description: "The labels by aesthetic (x, y, colour, fill ...); !r NULL for none."}
   args:
-    title: {type: "string|r", label: {en: Title, ja: 題}}
-    subtitle: {type: "string|r", label: {en: Subtitle, ja: 副題}}
-    caption: {type: "string|r", label: {en: Caption, ja: 注}}
+    title: {type: "string|call<expression, quote, bquote>|r", label: {en: Title, ja: 題}}
+    subtitle: {type: "string|call<expression, quote, bquote>|r", label: {en: Subtitle, ja: 副題}}
+    caption: {type: "string|call<expression, quote, bquote>|r", label: {en: Caption, ja: 注}}
 
 theme_tfl:
   package: tflspec

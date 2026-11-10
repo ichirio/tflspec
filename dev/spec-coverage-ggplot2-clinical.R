@@ -482,3 +482,113 @@ fig_forest_math <- ggplot(fo, aes(x = hr, y = level, xmin = lcl, xmax = ucl)) +
   scale_y_discrete(labels = scales::label_wrap(12)) +
   labs(x = "Odds ratio (log scale)", y = NULL) +
   theme_classic()
+
+# round 13: more everyday figures
+
+# a butterfly (tornado) chart of the AE incidence, one arm to each side
+bf <- data.frame(AEDECOD = rep(c("Nausea", "Headache", "Fatigue", "Rash", "Diarrhoea"), 2),
+                 TRTA = rep(c("Placebo", "Drug 20 mg"), each = 5), pct = stats::runif(10, 2, 25))
+fig_butterfly <- ggplot(bf, aes(x = reorder(AEDECOD, pct),
+                                y = ifelse(TRTA == "Placebo", -pct, pct), fill = TRTA)) +
+  geom_col(width = 0.7) +
+  geom_hline(yintercept = 0, colour = "grey20") +
+  scale_y_continuous(labels = abs, breaks = seq(-30, 30, by = 10), limits = c(-30, 30)) +
+  scale_fill_manual(values = c("grey60", "#B2182B"), breaks = c("Placebo", "Drug 20 mg")) +
+  coord_flip() +
+  labs(x = NULL, y = "Subjects with the event (%)", fill = NULL) +
+  theme_minimal() +
+  theme(legend.position = "top", panel.grid.minor = element_blank())
+
+# a normal Q-Q plot of the change by treatment
+fig_qq <- ggplot(mt, aes(sample = CHG, colour = TRTA)) +
+  stat_qq(distribution = stats::qnorm, size = 1, alpha = 0.6) +
+  stat_qq_line(distribution = stats::qnorm, line.p = c(0.25, 0.75), fullrange = FALSE) +
+  facet_wrap(vars(TRTA), nrow = 1) +
+  labs(x = "Theoretical quantiles", y = "Sample quantiles") +
+  theme_bw() +
+  theme(legend.position = "none", aspect.ratio = 1)
+
+# a Bland-Altman plot: the difference of two methods against their mean
+ba <- data.frame(m1 = stats::rnorm(60, 50, 10))
+ba$m2 <- ba$m1 + stats::rnorm(60, 1, 3)
+fig_bland <- ggplot(ba, aes(x = (m1 + m2) / 2, y = m2 - m1)) +
+  geom_point(shape = 21, fill = "grey80") +
+  geom_hline(aes(yintercept = mean(m2 - m1)), colour = "#2166AC") +
+  geom_hline(aes(yintercept = mean(m2 - m1) + 1.96 * sd(m2 - m1)), linetype = "dashed") +
+  geom_hline(aes(yintercept = mean(m2 - m1) - 1.96 * sd(m2 - m1)), linetype = "dashed") +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, colour = "grey50", linewidth = 0.5) +
+  annotate("label", x = Inf, y = Inf, label = "Mean +/- 1.96 SD", hjust = 1.1, vjust = 1.5,
+           size = 3, label.size = 0) +
+  labs(x = "Mean of the two methods", y = "Difference (method 2 - method 1)") +
+  theme_classic()
+
+# a 100% stacked bar of the response by treatment, counts inside
+rs <- data.frame(TRTA = sample(arm, 150, replace = TRUE),
+                 AVALC = sample(c("CR", "PR", "SD", "PD"), 150, replace = TRUE))
+rs$AVALC <- factor(rs$AVALC, levels = c("CR", "PR", "SD", "PD"))
+fig_fill <- ggplot(rs, aes(x = TRTA, fill = AVALC)) +
+  geom_bar(position = "fill", width = 0.6) +
+  geom_text(aes(label = after_stat(count)), stat = "count",
+            position = position_fill(vjust = 0.5), size = 3) +
+  scale_y_continuous(labels = scales::percent, expand = c(0, 0)) +
+  scale_fill_grey(start = 0.9, end = 0.4, name = "Best response") +
+  guides(fill = guide_legend(reverse = TRUE, nrow = 1)) +
+  labs(x = NULL, y = "Subjects (%)") +
+  theme_classic()
+
+# the mean over time with week labels built by R and the means as text
+fig_mean_text <- ggplot(mt, aes(x = AVISITN, y = CHG, colour = TRTA, group = TRTA)) +
+  stat_summary(fun = mean, geom = "line") +
+  geom_text(stat = "summary", fun = mean, aes(label = after_stat(round(y, 1))),
+            vjust = -0.8, size = 2.5, show.legend = FALSE) +
+  stat_summary_bin(fun = median, geom = "point", breaks = c(-1, 1, 3, 6, 10, 14), shape = 4) +
+  scale_x_continuous(breaks = c(0, 2, 4, 8, 12), labels = c("BL", paste0("W", c(2, 4, 8, 12)))) +
+  scale_colour_hue(l = 45, c = 80, h.start = 30) +
+  labs(x = NULL, y = "Mean change", colour = "Treatment") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+# a histogram with the density and the normal curve, a margin facet
+fig_hist_density <- ggplot(lv, aes(x = AVAL)) +
+  geom_histogram(aes(y = after_stat(density)), binwidth = 0.5, boundary = 0, closed = "left",
+                 fill = "grey85", colour = "grey40") +
+  geom_density(colour = "#B2182B", adjust = 1.5, bounds = c(0, Inf)) +
+  stat_function(fun = stats::dnorm, args = list(mean = 5, sd = 1), linetype = "dashed", n = 201) +
+  facet_grid(rows = vars(TRTA), margins = TRUE) +
+  labs(x = "Value", y = "Density") +
+  theme_bw()
+
+# the scatter with 95% ellipses and the unique points
+fig_ellipse <- ggplot(sc, aes(x = BASE, y = AVAL, colour = TRTA)) +
+  stat_unique(alpha = 0.5) +
+  stat_ellipse(type = "norm", level = 0.95, geom = "polygon", alpha = 0.08,
+               aes(fill = TRTA), segments = 101) +
+  stat_ellipse(type = "t", level = 0.68, linetype = "dotted") +
+  coord_fixed(ratio = 1, xlim = c(0, 60), ylim = c(0, 60), expand = FALSE) +
+  theme_bw()
+
+# a CDF with no padding, a responder threshold and an arrow to it
+fig_cdf_pad <- ggplot(cd, aes(x = CHG, colour = TRTA, linetype = TRTA)) +
+  stat_ecdf(geom = "step", pad = FALSE, linewidth = 0.6) +
+  geom_vline(xintercept = -10, colour = "grey40") +
+  annotate("segment", x = -20, xend = -10.5, y = 0.85, yend = 0.85,
+           arrow = arrow(length = unit(2, "mm"), ends = "last", type = "open")) +
+  annotate("text", x = -20, y = 0.85, label = "Responder threshold", hjust = 1.05, size = 3) +
+  scale_y_continuous(labels = scales::label_percent(), sec.axis = dup_axis(name = NULL)) +
+  scale_linetype_manual(values = c("solid", "longdash", "dotdash")) +
+  labs(x = "Change from baseline", y = "Cumulative percent of subjects") +
+  theme_bw() +
+  theme(legend.position = "inside", legend.position.inside = c(0.02, 0.98),
+        legend.justification = c("left", "top"), legend.title = element_blank())
+
+# dose proportionality of the exposure, titles in plotmath
+dp <- data.frame(DOSE = rep(c(10, 30, 100, 300), each = 8))
+dp$AUC <- dp$DOSE * 12 * stats::rlnorm(nrow(dp), 0, 0.3)
+fig_dose_prop <- ggplot(dp, aes(x = DOSE, y = AUC)) +
+  geom_point(shape = 1) +
+  geom_smooth(method = "lm", formula = y ~ x, colour = "black", linewidth = 0.5) +
+  scale_x_log10(breaks = c(10, 30, 100, 300)) +
+  scale_y_log10(name = expression(AUC[0 - infinity] ~ (ng %.% h / mL))) +
+  labs(x = expression(paste("Dose (", mu, "g/kg)")),
+       title = quote(log(AUC) == beta[0] + beta[1] %.% log(Dose))) +
+  theme_bw()

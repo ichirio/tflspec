@@ -159,6 +159,8 @@ tfl_plot <- function(name, items = list(), from = "own") {
   for (t in .fig_type_alts(ty)) {
     if (!.schema_ok(v, t)) next
     if (identical(t$kind, "function")) {
+      # (scales' percent by its pkg::name, the package not attached)
+      v <- .fig_scales_name(v)
       if (!grepl("::", v, fixed = TRUE)) return(as.name(v))
       return(call("::", as.name(sub("::.*$", "", v)), as.name(sub("^.*::", "", v))))
     }
@@ -201,6 +203,10 @@ tfl_plot <- function(name, items = list(), from = "own") {
   }
   if (inherits(v, "tfl_r")) return(str2lang(as.character(unclass(v))))
   if (inherits(v, "tfl_call")) {
+    # a plotmath title: expression(AUC[0-24] ~ (ng/mL)), its expression bare
+    if (v$fn %in% .fig_plotmath_fns && identical(names(v$args), "expr") && .fig_is_plotmath(v$args$expr)) {
+      return(call(v$fn, str2lang(v$args$expr)))
+    }
     ty <- .fig_arg_types(v$fn, v$args %||% list())
     a <- lapply(stats::setNames(names(v$args %||% list()), names(v$args %||% list())),
                 function(k) .fig_value_lang(v$args[[k]], k, type = ty[[k]]))
@@ -289,7 +295,23 @@ tfl_plot <- function(name, items = list(), from = "own") {
                          terrain.colors = "n", topo.colors = "n", cm.colors = "n",
                          "scales::rescale" = "x", "scales::label_math" = "expr",
                          "scales::math_format" = "expr", "scales::trans_breaks" = c("trans", "inv"),
-                         "scales::trans_format" = c("trans", "format"))
+                         "scales::trans_format" = c("trans", "format"),
+                         expression = "expr", quote = "expr", bquote = "expr")
+
+# a plotmath title, written as R writes it (expression(AUC[0-24]),
+# quote(log[10](AUC)), bquote(...)): {fn: expression, args: {expr:
+# AUC[0-24]}}, its one argument a plotmath expression as its text
+.fig_plotmath_fns <- c("expression", "quote", "bquote")
+
+# a plotmath expression as its text: one expression R parses, a call or a
+# name (`~` is plotmath's space, AUC[0-24] ~ (ng/mL)), no function
+# written out
+.fig_is_plotmath <- function(v) {
+  if (!is.character(v) || length(v) != 1L || is.na(v) || !nzchar(trimws(v))) return(FALSE)
+  e <- tryCatch(parse(text = v, keep.source = FALSE), error = function(err) NULL)
+  length(e) == 1L && (is.call(e[[1L]]) || is.name(e[[1L]])) &&
+    !(is.call(e[[1L]]) && identical(e[[1L]][[1L]], as.name("function")))
+}
 
 # the arguments R takes as a list, not a vector: a map of the spec is
 # written list(...) and read back from it
@@ -441,6 +463,13 @@ tfl_plot <- function(name, items = list(), from = "own") {
       if (length(x) > 3L) x <- x[1:3]
       txt <- .fig_deparse_r(x)
       if (.schema_is_lambda(txt)) return(txt)
+    }
+    # a plotmath title (labs(y = expression(AUC[0-24]))): {fn: expression,
+    # args: {expr: AUC[0-24]}}, the expression as its text
+    if (f %in% .fig_plotmath_fns && length(a) == 1L && !nzchar(names(a) %||% "") &&
+        .fig_type_takes_call(type, f)) {
+      txt <- .fig_deparse(a[[1L]])
+      if (.fig_is_plotmath(txt) && identical(str2lang(txt), a[[1L]])) return(tfl_call(f, list(expr = txt)))
     }
     # a plotmath expression (scales::label_math(10^.x)) as its text
     if (.fig_type_has(type, "math") && !identical(f, "~") && !identical(f, "function")) {

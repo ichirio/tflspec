@@ -71,7 +71,8 @@ written, \verb{!r 2^(-2:2)}, are a \verb{list<number>}),
 \code{cond ~ "text"}), \code{function} (a function by its name, \code{mean_se} or
 \code{Hmisc::smean.cl.normal}, written bare: \code{fun.data = mean_se}),
 \verb{function<f1, f2>} (one of those functions by its name, written bare: a
-discrete scale's \code{limits: rev}, a facet's \code{labeller: label_both}), \code{tilde}
+discrete scale's \code{limits: rev}, a facet's \code{labeller: label_both}, a
+scale's \code{labels: abs} or \code{labels: scales::percent}), \code{tilde}
 (a formula as its text, \code{y ~ x} or \code{~ . / 7}, written as the formula),
 \code{lambda} (a function written out as its text, \code{function(y) mean(y) - sd(y)} or \code{\\(x) paste0(x, "\%")}, written as the function: a summary's
 \code{fun.min}, a scale's \code{labels}; a lambda or a formula is written as code
@@ -82,7 +83,10 @@ open end, written \code{as.Date(c("2024-01-01", NA))}: a date scale's
 \code{xintercept}, \code{annotate()}'s \code{x}; a text of that form is a date there,
 not a level of a discrete axis),
 \code{math} (a plotmath expression as its text, \code{10^.x}, written bare:
-\code{scales::label_math(10^.x)}),
+\code{scales::label_math(10^.x)}); a title in plotmath, of \code{labs()}, a
+scale's \code{name} or a guide's \code{title}, is the call R writes, its
+expression as its text: \code{{fn: expression, args: {expr: AUC[0 - 24] ~ (ng/mL)}}} written \code{expression(AUC[0 - 24] ~ (ng/mL))} (\code{quote()},
+\code{bquote()} likewise),
 \code{call} and \verb{call<fn>} (\verb{\{fn:, args:\}}; \verb{call<label_*>} takes any
 function whose name the pattern matches, of any package:
 \code{{fn: scales::label_percent}}; scales' helpers of a scale's value --
@@ -127,7 +131,10 @@ a call of \code{factor()}, \code{as.factor()}, \code{ordered()}, \code{as.numeri
 \code{<=}, \code{==}, \code{!=}, \verb{\%in\%}, \code{!}, \code{&}, \code{|}), of columns, constants, their
 arithmetic and \code{c()}, \code{sum()}, \code{max()}, \code{min()}, \code{mean()}, \code{median()},
 \code{length()}, \code{alpha()}, \code{pmin()}, \code{pmax()}, \code{cumsum()}, \code{[},
-\code{duplicated()}, \code{unique()}, \code{rank()} (\code{x: factor(AVISITN)},
+\code{duplicated()}, \code{unique()}, \code{rank()}, \code{sd()}, \code{var()}, \code{quantile()},
+\code{IQR()}, \code{mad()}; a summary at its top too, \code{mean()}, \code{median()},
+\code{min()}, \code{max()}, \code{sum()}, \code{quantile()} (a Bland-Altman plot's
+\code{yintercept: mean(AVAL - BASE) + 1.96 * sd(AVAL - BASE)}) (\code{x: factor(AVISITN)},
 \code{y: after_stat(density)}, \code{x: reorder(USUBJID, -PCHG)},
 \code{fill: after_scale(alpha(colour, 0.4))}, a waterfall's
 \code{fill: PCHG <= -30} or \code{fill: ifelse(PCHG <= -30, "PR", "SD/PD")};

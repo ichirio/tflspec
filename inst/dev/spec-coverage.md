@@ -1298,6 +1298,97 @@ figure's own object (`km[km$censored, ]`), a scale's labels built by R
 to_string`), `Sys.Date() - 30`, grobs and rasters, `size` of line geoms
 (deprecated), `pal_viridis()(5)` (a palette called).
 
+### Round 13 (2026-11-10): titles in plotmath, labels by a function's name, a Q-Q plot's distribution
+
+The three measures were at their ceiling (arguments 100%, examples
+97.6%, clinical 99.3%).  This round adds nine everyday figures to the
+clinical measure and runs a probe of 50 one-line figures
+(about 110 calls: scales, facets, themes, guides, positions, stats).
+They found four real gaps:
+
+- a PK figure's titles in plotmath
+- a butterfly chart's labels by `abs`
+- a Q-Q plot's distribution, which tflspec typed as a text, although
+  ggplot2 needs a function
+- a Bland-Altman plot's lines at the data's mean +/- 1.96 SD, mapped
+
+| Measure | Before | After |
+|---|---:|---:|
+| **Clinical figures, 40 (nine new, below; weighted)** | **98.9%** (uses 747 / 17 / 0) | **99.4%** (757 / 7 / 0) |
+| clinical: scale_*() | 99.3% | 99.9% |
+| clinical: labs | 99.1% | 100.0% |
+| clinical: stat_*() (shown apart) | 97.6% | 100.0% |
+| ggplot2's own examples | 97.6% (1203 / 66 / 3) | 97.6% (unchanged) |
+| ggplot2's arguments (3409) and aesthetics (826), the extensions (351), scales' helpers (138) | 100% | 100% |
+
+The new figures in the clinical measure (40 figures, 311 calls, 764 uses):
+
+- `fig_butterfly`: AE incidence, one arm to each side, `labels = abs`, `coord_flip()`
+- `fig_qq`: a normal Q-Q plot, `stat_qq()` / `stat_qq_line(line.p =)`
+- `fig_bland`: a Bland-Altman plot, `aes(yintercept = mean(d) + 1.96 * sd(d))`
+- `fig_fill`: a 100% stacked bar, `position_fill(vjust =)`, `after_stat(count)`
+- `fig_mean_text`: the means as text, `geom_text(stat = "summary")`, `stat_summary_bin(breaks =)`
+- `fig_hist_density`: a histogram, its density and the normal curve, `facet_grid(margins = TRUE)`
+- `fig_ellipse`: `stat_ellipse(type =, level =, segments =)`, `stat_unique()`
+- `fig_cdf_pad`: `stat_ecdf(pad = FALSE)`, an arrow by `annotate("segment")`, `dup_axis()`
+- `fig_dose_prop`: dose proportionality, titles by `expression()` and `quote()`
+
+The probe of 50 one-line figures went from 95.4% of its uses typed (206 of
+216) to 98.1% (212 of 216).
+
+Round 13:
+
+- **A title in plotmath** reads as the call R writes. The expression is
+  kept as its text and written back bare:
+  - `labs(y = expression(AUC[0 - infinity] ~ (ng %.% h / mL)))` is
+    `y: {fn: expression, args: {expr: "AUC[0 - infinity] ~ (ng %.% h / mL)"}}`;
+    `quote()` and `bquote()` work the same way.
+  - This applies to `labs()` (each of its titles), `xlab()` / `ylab()` /
+    `ggtitle()`, a scale's `name`, a guide's `title` and `sec_axis()`'s
+    `name`.
+  - The check reads the expression: one that does not parse
+    (`AUC[0-24`), or a call with another argument, is an error.
+  - Before, all of these were `!r`.
+- **A scale's `labels` takes a function by its name**, written bare:
+  `abs` (a butterfly chart's counts), `toupper`, `tolower`, `format`, and
+  scales' `percent`, `comma`, `number`, `pvalue`, `scientific`, `dollar`.
+  - `labels: scales::percent` is written `scales::percent`; `labels: comma`
+    is written `scales::comma`, because the package is not attached.
+  - The type is `function<abs, toupper, ...>`, a set of names. A label
+    that is not one of those names (`labels: Placebo`) is still a label.
+  - The same applies to `sec_axis()`'s `labels`.
+- **`stat_qq()` / `stat_qq_line()`'s `distribution` is a function**,
+  given by its name and written bare (`qnorm`, `qt` with `dparams: {df:
+  5}`, `stats::qexp`), or a function written out.
+  - Before, it was typed as a text, so `distribution: qnorm` was written
+    `"qnorm"`, which ggplot2 cannot call (it stops at the draw).
+- **A mapping takes a summary of the data at its top**: `mean()`,
+  `median()`, `min()`, `max()`, `sum()`, `quantile()`.
+  - Inside an expression it also takes `sd()`, `var()`, `quantile()`,
+    `IQR()` and `mad()`.
+  - So a Bland-Altman plot's lines are typed:
+    `yintercept: mean(m2 - m1) + 1.96 * sd(m2 - m1)`.
+
+**The generated code changes** for one existing form: `distribution:
+qnorm` of `stat_qq()` / `stat_qq_line()` / `geom_qq()` / `geom_qq_line()`
+was written `distribution = "qnorm"`, which does not draw. It is now
+written `distribution = qnorm`. Two other forms were text before and are
+now written bare:
+
+- a scale's `labels:` given as exactly one of the names above
+- `oob: squish` (now `scales::squish`)
+
+A single label equal to one of those names would have been a one-label
+vector before. No template, snapshot or test of this repo writes any of
+these forms.
+
+What is left (partial), clinical: a layer's data as a subset of the
+figure's own object (`km[km$censored, ]`), a scale's labels built by R
+(`c("BL", paste0("W", ...))`), the deprecated `guide_legend(title.position
+=)`.  Probe: a reference line at a summary of an object (`yintercept =
+mean(d$y)`, the data's own object), labels by `paste("Visit", 1:6)`,
+`guide_legend(byrow =)` (deprecated since 3.5.0).
+
 ### The extension packages (ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale, patchwork)
 
 The same measure, the same file (`package` says which), over the

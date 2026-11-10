@@ -97,7 +97,7 @@ layer,binaxis,enum[x|y],Bin along,ビンの軸,
 layer,stackdir,enum[up|down|center|centerwhole],Stack direction,積む向き,
 layer,dotsize,number,Dot size,点の大きさ,
 layer,stackratio,number,Stack ratio,積む間隔,
-layer,distribution,string|r,Distribution,分布,stat qq: the theoretical distribution (qnorm).
+layer,distribution,function|lambda|r,Distribution,分布,"stat qq: the quantile function of the theoretical distribution, by its name, written bare (qnorm, qt with dparams: {df: 5}, stats::qexp)."
 layer,dparams,"map<string, number>|r",Its parameters,分布の母数,
 layer,line.p,list<number>,Probabilities of the line,線を通す確率,
 layer,fatten,number,Point size multiplier,点の大きさの倍率,
@@ -157,11 +157,11 @@ layer,h,list<number>|number|r,Bandwidth,バンド幅,A 2-d density's bandwidth (
 layer,contour,logical,Draw contours,等高線を描く,
 layer,contour_var,enum[density|ndensity|count],Contoured variable,等高線の変数,
 layer,z.range,list<number>|r,Range of z,z の範囲,
-scale,name,string|r,Title,タイトル,The axis or legend title; !r NULL for none.
+scale,name,"string|call<expression, quote, bquote>|r",Title,タイトル,"The axis or legend title; a plotmath title, {fn: expression, args: {expr: AUC[0-24]~(ng %.% h/mL)}}; !r NULL for none."
 scale,breaks,"list<number|string>|call<seq, breaks_*, extended_breaks, pretty_breaks, trans_breaks, log_breaks>|tilde|lambda|r",Breaks,目盛り,"The values with a tick or a key; {fn: scales::breaks_width, args: {width: 4}}; !r NULL for none, !r seq(0, 52, by = 4)."
 scale,minor_breaks,"list<number>|call<seq, breaks_*, minor_breaks_*>|tilde|lambda|r",Minor breaks,補助目盛り,
 scale,n.breaks,integer,Number of breaks,目盛りの数,
-scale,labels,"list<string>|vec<string, string>|call<label_*, *_format>|tilde|lambda|r",Labels,目盛りのラベル,"In the order of the breaks, or by value ({A: Placebo}); a function written out, function(x) paste0(x, ""%""), or ~ paste0(.x, ""%"")."
+scale,labels,"function<abs, toupper, tolower, format, percent, comma, scientific, dollar, number, pvalue>|list<string>|vec<string, string>|call<label_*, *_format>|tilde|lambda|r",Labels,目盛りのラベル,"In the order of the breaks, or by value ({A: Placebo}); a function by its name, written bare (abs: a butterfly chart's counts, scales::percent); a function written out, function(x) paste0(x, ""%""), or ~ paste0(.x, ""%"")."
 scale,limits,list<number|string>|r,Range,範囲,"Data outside it are dropped (to zoom, use coord_cartesian()); NA keeps that end."
 scale,expand,"call<expansion, expand_scale, waiver>|list<number>|r",Expansion,余白,"{fn: expansion, args: {mult: [0, 0.05]}}; [0, 0] for none."
 scale,oob,function|tilde|lambda|r,Out of bounds,範囲外の扱い,"scales::oob_squish keeps them at the edge, scales::oob_keep keeps them (a function by its name, written bare); the default drops them."
@@ -379,7 +379,7 @@ element,unit,string,Unit,単位,"pt, mm, cm, in, lines."
 element,linejoin,enum[round|mitre|bevel],Line joins,線の角,ggplot2 3.5.
 element,arrow.fill,string,Arrow fill,矢印の塗り,ggplot2 3.5.
 element,debug,logical,Show the text box,文字枠を表示,
-guide,title,string|r,Title,タイトル,!r NULL for none.
+guide,title,"string|call<expression, quote, bquote>|r",Title,タイトル,"A plotmath title by {fn: expression, args: {expr: ...}}; !r NULL for none."
 guide,theme,call<theme>|r,Theme of the guide,凡例のテーマ,ggplot2 3.5.
 guide,position,enum[top|right|bottom|left|inside],Position,位置,
 guide,direction,enum[horizontal|vertical],Direction,向き,
@@ -432,9 +432,9 @@ position,orientation,enum[x|y],Orientation,向き,
 helper,mult,number|list<number>,Multiplicative expansion,割合の余白,"[0, 0.05]: none below, 5% above."
 helper,add,number|list<number>,Additive expansion,加える余白,In data units.
 helper,transform,tilde|function|lambda|r,Transformation,変換,"~ . / 7 (a formula), or a function by its name."
-helper,name,string|call<derive>|r,Title,タイトル,"The axis title; {fn: derive} (derive()) takes the primary axis's."
+helper,name,"string|call<derive>|call<expression, quote, bquote>|r",Title,タイトル,"The axis title; {fn: derive} (derive()) takes the primary axis's."
 helper,breaks,"list<number>|call<seq, breaks_*, extended_breaks, pretty_breaks, log_breaks>|tilde|lambda|r",Breaks,目盛り,
-helper,labels,"list<string>|call<label_*, *_format>|tilde|lambda|r",Labels,ラベル,
+helper,labels,"function<abs, toupper, tolower, format, percent, comma, scientific, dollar, number, pvalue>|list<string>|call<label_*, *_format>|tilde|lambda|r",Labels,ラベル,
 helper,guide,string|call|r,Guide,凡例,
 helper,angle,number,Arrowhead angle,矢じりの角度,
 helper,length,call<unit>|r,Arrowhead length,矢じりの長さ,
@@ -445,18 +445,18 @@ helper,r,number,Right,右,
 helper,b,number,Bottom,下,
 helper,l,number,Left,左,
 helper,unit,string,Unit,単位,"pt, mm, cm, in, lines."
-labs,title,string|r,Title,題,
-labs,subtitle,string|r,Subtitle,副題,
-labs,caption,string|r,Caption,注,
-labs,tag,string|r,Tag,タグ,
+labs,title,"string|call<expression, quote, bquote>|r",Title,題,
+labs,subtitle,"string|call<expression, quote, bquote>|r",Subtitle,副題,
+labs,caption,"string|call<expression, quote, bquote>|r",Caption,注,
+labs,tag,"string|call<expression, quote, bquote>|r",Tag,タグ,
 labs,alt,string|r,Alt text,代替テキスト,
-labs,label,string|r,Title,タイトル,
-labs,x,string|r,X title,x のタイトル,
-labs,y,string|r,Y title,y のタイトル,
-labs,colour,string|r,Colour legend title,色の凡例のタイトル,
-labs,fill,string|r,Fill legend title,塗りの凡例のタイトル,
-labs,shape,string|r,Shape legend title,形の凡例のタイトル,
-labs,linetype,string|r,Line type legend title,線種の凡例のタイトル,
+labs,label,"string|call<expression, quote, bquote>|r",Title,タイトル,
+labs,x,"string|call<expression, quote, bquote>|r",X title,x のタイトル,
+labs,y,"string|call<expression, quote, bquote>|r",Y title,y のタイトル,
+labs,colour,"string|call<expression, quote, bquote>|r",Colour legend title,色の凡例のタイトル,
+labs,fill,"string|call<expression, quote, bquote>|r",Fill legend title,塗りの凡例のタイトル,
+labs,shape,"string|call<expression, quote, bquote>|r",Shape legend title,形の凡例のタイトル,
+labs,linetype,"string|call<expression, quote, bquote>|r",Line type legend title,線種の凡例のタイトル,
 labs,dictionary,"vec<string, string>|r",Labels by variable,変数ごとのラベル,"ggplot2 4.0: {AVAL: Value, TRTA: Treatment}: a variable's label wherever it is mapped."
 labs,alt_insight,string|r,Alt text insight,代替テキストの要点,
 plot,linetype_aes,logical,Linetype by group,群ごとの線種,"TRUE: the groups told apart by linetype too (a black-and-white print)."
