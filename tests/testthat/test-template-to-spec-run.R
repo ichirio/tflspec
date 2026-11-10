@@ -3,53 +3,15 @@
 # is in it) by a child R that has tflspec loaded but not attached: the two
 # RTFs are the same.  The templates are the catalog's (.tpl_examples: a
 # template added without an example fails test-template-company.R), so a
-# new template is held to this too.
-
-tsr_study <- function(root) {
-  d <- file.path(root, "study")
-  dir.create(file.path(d, "adam"), recursive = TRUE)
-  for (x in c("adsl", "adae", "adlb", "advs", "adtte", "adrs", "adtr", "adex")) {
-    haven::write_xpt(tflspec:::.ai_chr(getExportedValue("tflspec", x)),
-                     file.path(d, "adam", paste0(x, ".xpt")))
-  }
-  # (pk_conc's concentrations: helper-pk.R)
-  haven::write_xpt(tflspec:::.ai_chr(pk_adpc(tflspec::adsl)), file.path(d, "adam", "adpc.xpt"))
-  tfl_ai_study_init(d, adam = "adam", study_id = "TSR-1")
-  d
-}
-
-# The catalog's examples this study cannot build as they are -- the same in
-# both forms, so no conversion is at stake: km_table and stat_block take
-# the report's own ARD analyses (`ard:`), which an example has not;
-# param_change's example keeps ANL01FL == "Y", which the bundled ADLB has
-# not (its records are taken as they are here).
-tsr_args <- list(param_change = list(where = NULL))
-tsr_without <- c("km_table", "stat_block")
-
-# a template report of the catalog's example (a template whose data stage
-# is the report's own: its data: steps, as test-template-spec.R gives them)
-tsr_output <- function(nm) {
-  tp <- tfl_templates()
-  own <- if (any(vapply(tflspec:::.tpl_get(nm, "test")$params, function(p) isTRUE(p$hidden) &&
-                          identical(p$stage, "data"), NA))) {
-    list(steps = list(list(step = "read", dataset = "ADTTE"), list(step = "param", value = "PFS")))
-  }
-  tfl_output(paste0("X-", gsub("_", "-", nm)), tp$kind[tp$name == nm], population = "SAF",
-             label = nm, template = list(name = nm, args = utils::modifyList(
-               tflspec:::.tpl_examples[[nm]], tsr_args[[nm]] %||% list(), keep.null = FALSE)),
-             data = own)
-}
+# new template is held to this too.  (The study, the report and the child
+# Rs: helper-template-run.R.)
 
 test_that("every template: its RTF as a template report = as the code SPEC tfl_template_to_spec() writes", {
   skip_on_cran()
   skip_if_not_installed("haven")
   skip_if_not_installed("rtfreporter")
   skip_if_not_installed("cards")
-  rscript <- file.path(R.home("bin"), "Rscript")
-  withr::local_envvar(R_LIBS = paste(.libPaths(), collapse = .Platform$path.sep))
-  has <- suppressWarnings(system2(rscript, c("-e", shQuote("cat(requireNamespace('tflspec', quietly = TRUE))")),
-                                  stdout = TRUE, stderr = FALSE))
-  skip_if_not(identical(utils::tail(has, 1L), "TRUE"), "tflspec is not installed where a child R looks")
+  tsr_skip_without_child()
   d <- tsr_study(withr::local_tempdir())
   names_ <- setdiff(names(tflspec:::.tpl_examples), tsr_without)
   ids <- vapply(names_, function(nm) tsr_output(nm)$id, "")
@@ -60,7 +22,7 @@ test_that("every template: its RTF as a template report = as the code SPEC tfl_t
   # and built again (B); a build's error is recorded, never stops the loop
   w <- withr::local_tempdir()
   keep <- Sys.getenv("TSR_KEEP")
-  writeLines(c(
+  script <- c(
     "# (a study's setup attaches rtfreporter, never tflspec)",
     "library(rtfreporter)",
     "d <- commandArgs(TRUE)[1]; part <- commandArgs(TRUE)[2]; sdir <- commandArgs(TRUE)[3]",
@@ -80,41 +42,12 @@ test_that("every template: its RTF as a template report = as the code SPEC tfl_t
     "})",
     "csv <- file.path(d, paste0('tsr-', part, '.csv'))",
     "write.csv(do.call(rbind, res), paste0(csv, '.tmp'), row.names = FALSE)",
-    "file.rename(paste0(csv, '.tmp'), csv)"),
-    file.path(w, "run.R"))
+    "file.rename(paste0(csv, '.tmp'), csv)")
   # (the reports are independent: a few children build them side by side,
-  # each its own share, the slow ones spread over them; each builds in a
-  # copy of the study holding only its share's reports -- a run reads every
-  # report of its study -- and leaves the RTFs and its csv in `d`)
-  n_child <- min(4L, length(ids))
-  share <- rep_len(seq_len(n_child), length(ids))
-  sds <- file.path(w, paste0("study-", seq_len(n_child)))
-  for (k in seq_len(n_child)) {
-    file.copy(d, w, recursive = TRUE)
-    file.rename(file.path(w, basename(d)), sds[k])
-    unlink(file.path(sds[k], "spec", "outputs", paste0(unname(ids)[share != k], ".yml")))
-  }
-  logs <- file.path(w, paste0("child-", seq_len(n_child), ".log"))
-  for (k in seq_len(n_child)) {
-    system2(rscript, c(file.path(w, "run.R"), d, k, sds[k], unname(ids)[share == k]),
-            stdout = logs[k], stderr = logs[k], wait = FALSE)
-  }
-  csvs <- file.path(d, paste0("tsr-", seq_len(n_child), ".csv"))
-  # (each child writes its csv last, errors of a build recorded: wait for
-  # them all, 30 minutes at most)
-  t0 <- Sys.time()
-  while (!all(file.exists(csvs)) && difftime(Sys.time(), t0, units = "mins") < 30) {
-    Sys.sleep(1)
-  }
-  # (a child may still hold its log open after its csv is written: on Windows
-  # reading it then fails, "Permission denied"; the log is only for the message)
-  out <- unlist(lapply(logs, function(l) {
-    if (file.exists(l)) tryCatch(suppressWarnings(readLines(l, warn = FALSE)),
-                                 error = function(e) character())
-  }))
-  expect_true(all(file.exists(csvs)), info = paste(utils::tail(out, 20L), collapse = "\n"))
-  r <- do.call(rbind, lapply(csvs[file.exists(csvs)], utils::read.csv,
-                             colClasses = "character", na.strings = character()))
+  # each its own share, and leave the RTFs and its csv in `d`)
+  got <- tsr_children(d, ids, script, w)
+  expect_true(got$ok, info = paste(utils::tail(got$out, 20L), collapse = "\n"))
+  r <- got$r
   # (the run's date and time, wherever a footer prints them, are not the report)
   rtf <- function(p) {
     x <- readLines(p, warn = FALSE)
