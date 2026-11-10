@@ -2099,6 +2099,8 @@ tfl_report_setup_code <- function(spec) {
   # the study's rounding, once for every report
   rnd <- .ard_spec_study_value(sp, "rounding")
   if (!is.na(rnd)) out <- c(out, .spec_call_code(.spec_call("options", rtfreporter.rounding = rnd), 0L))
+  ct <- .cards_round_type(rnd)
+  if (!is.null(ct)) out <- c(out, .spec_call_code(.spec_call("options", cards.round_type = ct), 0L))
   d <- study(sp$tokens)
   if (!is.null(d) && nrow(d)) {
     v <- ifelse(is.na(d$value), "", d$value)

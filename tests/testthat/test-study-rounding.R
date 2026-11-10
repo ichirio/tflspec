@@ -50,3 +50,111 @@ test_that("the workbook's study rounding: in the setup, not in each table's code
   expect_true(any(grepl("rtfreporter.rounding = \"sas\"", tfl_report_setup_code(sp), fixed = TRUE)))
   expect_false(any(grepl("rounding", tfl_table_code(sp, "T1", normalize = FALSE), fixed = TRUE)))
 })
+
+# ---- cards formats the ARD's numbers: the study's rounding reaches it ----
+
+sr_ard_spec <- function(rounding = NULL) {
+  sp <- exact_spec(list(method = "categorical", population_id = "SAF",
+                        by = "TRT01A", variables = "SEX"))
+  if (!is.null(rounding)) {
+    sp$study[nrow(sp$study) + 1L, "key"] <- "rounding"
+    sp$study[nrow(sp$study), "value"] <- rounding
+  }
+  sp
+}
+# the numbers cards formats under the options a setup's lines set
+sr_cards_under <- function(setup, x, digits = 1) {
+  old <- options(cards.round_type = NULL)
+  on.exit(options(old), add = TRUE)
+  for (l in grep("cards.round_type", setup, value = TRUE, fixed = TRUE)) eval(str2lang(l))
+  cards::label_round(digits)(x)
+}
+
+test_that("the setup a program writes sets cards' rounding with the study's", {
+  st_sas <- tfl_report_setup_code(sr_study("sas"))
+  st_r <- tfl_report_setup_code(sr_study("r"))
+  expect_true(any(grepl("cards.round_type = \"round-half-up\"", st_sas, fixed = TRUE)))
+  expect_true(any(grepl("cards.round_type = \"round-to-even\"", st_r, fixed = TRUE)))
+  expect_false(any(grepl("cards.round_type", tfl_report_setup_code(
+    tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))), fixed = TRUE)))
+  # the workbook's study rounding
+  wb <- function(v) tfl_table_spec(
+    tables = data.frame(output_id = "T1", cols = "TRT01A", stringsAsFactors = FALSE),
+    study = data.frame(key = "rounding", value = v, stringsAsFactors = FALSE))
+  expect_true(any(grepl("round-to-even", tfl_report_setup_code(wb("r")), fixed = TRUE)))
+  expect_true(any(grepl("round-half-up", tfl_report_setup_code(wb("sas")), fixed = TRUE)))
+  # and the numbers that setup gives: a tie at 1 decimal, and at none
+  expect_identical(sr_cards_under(st_r, c(0.25, 2.5), 0), c("0", "2"))
+  expect_identical(sr_cards_under(st_r, 0.25), "0.2")
+  expect_identical(sr_cards_under(st_sas, c(0.25, 2.45)), c("0.3", "2.5"))
+  expect_identical(sr_cards_under(st_sas, 2.5, 0), "3")
+})
+
+test_that("the ARD program's setup sets cards' rounding with the study's", {
+  none <- tfl_ard_code(sr_ard_spec(), part = "setup")
+  expect_false(any(grepl("cards.round_type", none, fixed = TRUE)))
+  r <- tfl_ard_code(sr_ard_spec("r"), part = "setup")
+  s <- tfl_ard_code(sr_ard_spec("sas"), part = "setup")
+  expect_true(any(grepl("cards.round_type = \"round-to-even\"", r, fixed = TRUE)))
+  expect_true(any(grepl("cards.round_type = \"round-half-up\"", s, fixed = TRUE)))
+  # (the whole program carries it too)
+  expect_true(any(grepl("round-to-even", tfl_ard_code(sr_ard_spec("r"), save = FALSE), fixed = TRUE)))
+  expect_identical(sr_cards_under(r, c(0.25, 2.5), 0), c("0", "2"))
+  expect_identical(sr_cards_under(s, c(0.25, 2.5), 0), c("0", "3"))
+  expect_identical(sr_cards_under(r, 0.25), "0.2")
+  expect_identical(sr_cards_under(s, 0.25), "0.3")
+})
+
+test_that("a YAML study's ARD setup carries its rounding", {
+  skip_on_cran()
+  for (v in c("sas", "r")) {
+    dir <- withr::local_tempdir()
+    dir.create(file.path(dir, "spec", "outputs"), recursive = TRUE)
+    writeLines(c("study_id: SR-1", "keys:", "  id: USUBJID", "settings:",
+                 paste("  rounding:", v)), file.path(dir, "study.yml"))
+    writeLines(c("datasets:", "  - dataset: ADSL", "    level: ADaM", "    path: data/adam/adsl.rds",
+                 "populations:", "  - id: SAF", "    dataset: ADSL", "    where: !r SAFFL == \"Y\""),
+               file.path(dir, "spec", "data.yml"))
+    writeLines(c("outputs:", "  - id: T-1", "    kind: table"), file.path(dir, "spec", "toc.yml"))
+    writeLines(c("id: T-1", "kind: table", "extends: none", "ard:", "  analyses:",
+                 "    - id: AGE", "      method: continuous", "      population: SAF",
+                 "      by: [ARM]", "      variables: [AGE]", "data:", "  source: ard",
+                 "  object: ard", "content:", "  - table_plan: {cols: ARM}"),
+               file.path(dir, "spec", "outputs", "T-1.yml"))
+    st <- tfl_read_study_spec(dir)
+    expect_identical(tflspec:::.study_rounding(st), v)
+    setup <- tfl_ard_code(st, part = "setup")
+    expect_true(any(grepl(if (v == "r") "cards.round_type = \"round-to-even\"" else
+                            "cards.round_type = \"round-half-up\"", setup, fixed = TRUE)))
+  }
+})
+
+test_that("an in-process run sets cards' rounding and puts the options back", {
+  old <- options(rtfreporter.rounding = NULL, cards.round_type = NULL)
+  on.exit(options(old), add = TRUE)
+  op <- tflspec:::.study_rounding_option(sr_study("r"))
+  expect_identical(getOption("rtfreporter.rounding"), "r")
+  expect_identical(getOption("cards.round_type"), "round-to-even")
+  expect_identical(cards::label_round(1)(0.25), "0.2")
+  options(op)
+  expect_null(getOption("rtfreporter.rounding"))
+  expect_null(getOption("cards.round_type"))
+  op <- tflspec:::.study_rounding_option(sr_study("sas"))
+  expect_identical(getOption("cards.round_type"), "round-half-up")
+  expect_identical(cards::label_round(1)(0.25), "0.3")
+  options(op)
+  expect_null(getOption("cards.round_type"))
+  # a study that says none leaves both
+  options(cards.round_type = "round-to-even")
+  st <- sr_study("sas")
+  st$defaults$content <- NULL
+  st$study$settings$rounding <- NULL
+  expect_identical(tflspec:::.study_rounding_option(st), list())
+  expect_identical(getOption("cards.round_type"), "round-to-even")
+  # tfl_build_ard() leaves cards' option as it found it
+  options(cards.round_type = NULL)
+  sp <- sr_ard_spec("r")
+  d <- exact_dir(exact_data())
+  suppressMessages(tfl_build_ard(sp, dir = d, save = FALSE))
+  expect_null(getOption("cards.round_type"))
+})
