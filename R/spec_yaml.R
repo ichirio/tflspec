@@ -421,28 +421,31 @@ tfl_read_output <- function(path) {
 }
 
 # A field that takes true or false (a `logical` in the schema) holds a
-# logical: `yes`, `no` and any other text are not turned into one
+# logical.  `yes` / `no` (what the yaml package itself writes for TRUE /
+# FALSE) become TRUE / FALSE there; any other text stops, naming the file,
+# the field and the value.  (Elsewhere `yes` / `no` stay text.)
 .logical_strict <- function(fn, args) {
   ent <- tryCatch(tfl_schema(fn), error = function(e) NULL)
   if (is.null(ent)) return(args)
   for (a in names(args)) {
     ty <- .schema_arg_type(ent, a)
-    if (!is.null(ty)) .logical_check(args[[a]], ty, a)
+    if (!is.null(ty)) args[a] <- list(.logical_check(args[[a]], ty, a))
   }
   args
 }
 
 .logical_check <- function(v, ty, a) {
-  if (inherits(v, c("tfl_r", "tfl_call", "tfl_unset"))) return(invisible())
+  if (inherits(v, c("tfl_r", "tfl_call", "tfl_unset"))) return(v)
   if (ty$kind == "logical") {
     if (is.character(v) && length(v) == 1L) {
+      if (v %in% c("yes", "no")) return(identical(v, "yes"))
       stop(.spec_read_file(), ": ", a, " takes true or false, not \"", v, "\"", call. = FALSE)
     }
   } else if (ty$kind %in% c("list", "vec", "map") && is.list(v) && !is.object(v)) {
     el <- if (ty$kind == "list") ty$args[[1L]] else ty$args[[2L]]
-    for (e in v) .logical_check(e, el, a)
+    for (i in seq_along(v)) if (!is.null(v[[i]])) v[[i]] <- .logical_check(v[[i]], el, a)
   }
-  invisible()
+  v
 }
 
 # every `{fn:, args:}` map inside a value as a tfl_call (recursively)

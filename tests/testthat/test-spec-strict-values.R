@@ -1,5 +1,6 @@
 # A field that takes true or false and an enum are read as written:
-# yes / no and "SAS" stop with a message, they are not turned into a value
+# yes / no (the yaml package's own TRUE / FALSE) are read as logicals, other
+# text and "SAS" stop with a message
 
 strict_read <- function(...) {
   f <- tempfile(fileext = ".yml")
@@ -9,16 +10,19 @@ strict_read <- function(...) {
   list(file = f, out = function() tfl_read_output(f))
 }
 
-test_that("yes / no in a field that takes true or false stops, naming file, field and value", {
+test_that("yes / no in a field that takes true or false are TRUE / FALSE; other text stops, naming file, field and value", {
   s <- strict_read("  - plan_filter: {where: !r 'p > 0.5', any: yes}")
-  expect_error(s$out(), "plan_filter|takes true or false", fixed = FALSE)
+  o <- s$out()
+  expect_identical(o$content[[length(o$content)]]$args$any, TRUE)
+  s <- strict_read("  - plan_filter: {where: !r 'p > 0.5', any: 'no'}")
+  o <- s$out()
+  expect_identical(o$content[[length(o$content)]]$args$any, FALSE)
+  s <- strict_read("  - plan_filter: {where: !r 'p > 0.5', any: maybe}")
   e <- tryCatch(s$out(), error = function(e) conditionMessage(e))
   expect_match(e, s$file, fixed = TRUE)
-  expect_match(e, 'any takes true or false, not "yes"', fixed = TRUE)
-  s <- strict_read("  - plan_filter: {where: !r 'p > 0.5', any: 'no'}")
-  expect_error(s$out(), 'any takes true or false, not "no"', fixed = TRUE)
-  s <- strict_read("  - plan_filter: {where: !r 'p > 0.5', any: maybe}")
-  expect_error(s$out(), 'not "maybe"', fixed = TRUE)
+  expect_match(e, 'any takes true or false, not "maybe"', fixed = TRUE)
+  s <- strict_read("  - plan_filter: {where: !r 'p > 0.5', any: 'Yes'}")
+  expect_error(s$out(), 'not "Yes"', fixed = TRUE)
 })
 
 test_that("true / false / !unset in a logical field pass", {
