@@ -574,6 +574,12 @@
        content = intersect(.tpl_demog_parts$content, nm))
 }
 
+# `missing_row` where the denominator is a parameter (#774's text: a
+# denominator given moves the percentages, so not "over the analysis set")
+.tpl_missing_row_sum <- tfl_param("missing_row", TRUE, type = "flag", unset = "step_off", doc = paste(
+  "TRUE (default): a Missing row, last, for each categorical variable that has missing values",
+  "(NA or blank). FALSE: no Missing row; missing values are left out of the counts."))
+
 .tpl_summary_params <- .tpl_demog_params(
   defaults = list(labels = NULL),
   drop = c("rounding", "style"),
@@ -581,7 +587,8 @@
     tfl_param("where", NULL, unset = "step_off",
               doc = paste("which records (R) of a `data` other than ADSL: ANL01FL == \"Y\";",
                           "unset: all; for which subjects, `subset`")),
-    tfl_param("denominator", NULL, doc = .tpl_den_sum_doc)))
+    tfl_param("denominator", NULL, doc = .tpl_den_sum_doc),
+    .tpl_missing_row_sum))
 
 .tfl_template("summary", kind = "table", layout = "summary",
               params = .tpl_summary_params, body = .tpl_demog_body,
@@ -597,7 +604,8 @@
   drop = c("continuous", "rounding", "style"),
   add = list(tfl_param("categorical", required = TRUE, unset = "stop",
                        doc = "the status variables, in order (EOSSTT)"),
-             tfl_param("denominator", NULL, doc = .tpl_den_sum_doc)))
+             tfl_param("denominator", NULL, doc = .tpl_den_sum_doc),
+             .tpl_missing_row_sum))
 
 .tfl_template("disposition", kind = "table", layout = "summary",
               params = .tpl_disposition_params,
