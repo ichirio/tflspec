@@ -1,6 +1,6 @@
 # A template parameter's reference to the study standard (tfl_param(study = )):
 # one generic reader, the three declaration forms, what the help shows, the
-# style helper, the figure style part, the switch helper, no study templates
+# style helper, the figure style part, the set's extends, no study templates
 # (migration batch 0b)
 
 sr_study <- function(settings = list(), defaults = NULL) {
@@ -195,32 +195,44 @@ test_that("the style helper: defaults.yml's styles: first, then the built-in set
   expect_length(.tpl_style_set("standard", NULL)$content, 0L)
 })
 
-test_that("the switch helper: true for demog and stf_t02_demog only; a switched one reads no content layer", {
-  expect_identical(sort(Filter(function(n) .tpl_switched(n), tfl_templates()$name)),
+test_that("the set's extends: demog and stf_t02_demog only; under {content: none} no content layer", {
+  expect_identical(sort(Filter(function(n) .tpl_layered(n), tfl_templates()$name)),
                    c("demog", "stf_t02_demog"))
-  # (an alias is its template)
-  expect_false(.tpl_switched("stf_t14_ae_soc_pt"))
+  # (an alias is its template: stf_t14_ae_soc_pt is ae_soc_pt's, not migrated)
+  expect_false(.tpl_layered("stf_t14_ae_soc_pt"))
+  expect_identical(.tpl_get("demog", "test")$extends, list(content = "none"))
+  expect_identical(.tpl_get("stf_t02_demog", "test")$extends_fixed, "content")
   s <- sr_study()
   o <- tfl_output("T-9", "table", population = "SAF",
                   template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE")))
   ro1 <- tfl_resolve_output(o, s)
   from1 <- vapply(ro1$content, function(it) it$from %||% "", "")
-  # the template's items alone (its look too), none of the study's content ...
+  # the template's items alone (its look too), none of the study's content
+  # (5b-1: demog's set is {content: none}; its [defaults] is 5b-2's flip) ...
   expect_false(any(c("defaults", "style:compact") %in% from1))
   expect_true(all(startsWith(from1, "template:") | from1 == "own"))
   # ... the study's page is kept
   expect_true(length(ro1$page) > 0L)
-  # the same arguments in a template that is not switched read the study's content layer
+  # stf_t02_demog: no defaults content, its style:stf_t02 items, the page kept
+  o2 <- tfl_output("T-9", "table", population = "SAF",
+                   template = list(name = "stf_t02_demog", args = list(by = "TRT01A", continuous = "AGE")))
+  ro2 <- tfl_resolve_output(o2, s)
+  from2 <- vapply(ro2$content, function(it) it$from %||% "", "")
+  expect_false("defaults" %in% from2)
+  expect_true("style:stf_t02" %in% from2)
+  expect_identical(ro2$page$header, ro1$page$header)
+  expect_identical(ro2$page$rtf_page$orientation, "landscape")
+  # the same arguments in a template not yet migrated read the study's content layer
   o0 <- tfl_output("T-9", "table", population = "SAF",
                    template = list(name = "summary", args = list(continuous = "AGE")))
   expect_true("defaults" %in% vapply(tfl_resolve_output(o0, s)$content,
                                       function(it) it$from %||% "", ""))
   expect_identical(tfl_resolve_output(o0, s)$page, ro1$page)
-  # another template of the same study is not switched
-  o2 <- tfl_output("T-10", "table", population = "SAF",
+  # another template of the same study is not migrated: the old order
+  o3 <- tfl_output("T-10", "table", population = "SAF",
                    template = list(name = "ae_soc_pt", args = list(population = "SAF",
                                                                   hierarchy = c("AEBODSYS", "AEDECOD"))))
-  expect_true("defaults" %in% vapply(tfl_resolve_output(o2, s)$content,
+  expect_true("defaults" %in% vapply(tfl_resolve_output(o3, s)$content,
                                       function(it) it$from %||% "", ""))
 })
 

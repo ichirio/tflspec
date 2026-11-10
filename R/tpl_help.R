@@ -43,9 +43,11 @@
   s
 }
 
-# Where a parameter ends: its study source ("plan_stub.indent"), else the
-# verb (and argument) its doc names, else NA
+# Where a parameter ends: its declared `maps_to` (tfl_param(maps_to = )),
+# else its study source ("plan_stub.indent"), else the verb (and argument)
+# its doc names (for the templates not yet migrated), else NA
 .tpl_maps_to <- function(p) {
+  if (!is.null(p$maps_to)) return(if (length(p$maps_to)) paste(p$maps_to, collapse = ", ") else NA_character_)
   if (!is.null(p$study)) return(paste(p$study, collapse = ", "))
   d <- p$doc %||% ""
   m <- regmatches(d, regexpr("plan_[a-z_]+\\(([a-z_]+) = ", d))
@@ -115,10 +117,12 @@
 #'   `"study: <key>"`, `"report"`, `"fallback"`, `"variant:<name>"`,
 #'   `"template"` or `"default"`), `maps_to` (its study source,
 #'   `"plan_stub.indent"`, or the verb its doc names), `doc`, `study_key`
-#'   (its reference, else `NA`) and `fallback` (the value it takes when
-#'   the study has none: a variant's default else the layout's; `NA` none)
-#'   and `unset` (what `!unset` does to it: `"omit"`, `"stop"` or
-#'   `"step_off"`; `NA` for a template not yet migrated).
+#'   (its reference, else `NA`), `fallback` (the value it takes when
+#'   the study has none: a variant's default else the layout's; `NA` none),
+#'   `unset` (what `!unset` does to it: `"omit"`, `"stop"` or
+#'   `"step_off"`; `NA` for a template not yet migrated) and `route` (where
+#'   its value comes from, as [tfl_template_routes()] says it: `"own"`,
+#'   `"study:<key>"`, `"fallback"`, `"template"`, `"fixed"`, `"unset"`).
 #' @seealso [tfl_tpl_help()] to print it; [tfl_tpl()] to run a template.
 #' @examples
 #' a <- tfl_tpl_args("demog")
@@ -175,7 +179,8 @@ tfl_tpl_args <- function(name, study = NULL, population = NULL) {
                study = .tpl_short(sv), effective = .tpl_short(eff), layer = layer,
                maps_to = .tpl_maps_to(p), doc = p$doc %||% NA_character_,
                study_key = key, fallback = if (is.na(key)) NA_character_ else .tpl_short(p$default),
-               unset = if (.tpl_switched(t$name)) p$unset %||% "omit" else NA_character_,
+               unset = if (.tpl_layered(t$name)) p$unset %||% "omit" else NA_character_,
+               route = .tpl_param_route(p, NULL, if (!is.null(sv)) key else NA_character_),
                stringsAsFactors = FALSE)
   })
   out <- do.call(rbind, unname(rows))

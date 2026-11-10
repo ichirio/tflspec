@@ -10,7 +10,7 @@ test_that("tfl_tpl_args(): one row a parameter, the template's order and tiers",
   # analysis set, a hidden fixed value)
   expect_true(isTRUE(p$denominator$hidden))
   expect_identical(names(a), c("param", "tier", "stage", "type", "required", "default", "variant",
-                               "study", "effective", "layer", "maps_to", "doc", "study_key", "fallback", "unset"))
+                               "study", "effective", "layer", "maps_to", "doc", "study_key", "fallback", "unset", "route"))
   # (the analysis set is the report's: no `population` parameter; the variables and `by` are required)
   expect_false("population" %in% a$param)
   expect_identical(a$param[a$tier == "required"], c("continuous", "categorical", "by"))

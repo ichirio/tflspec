@@ -153,8 +153,13 @@ tfl_read_outputs <- function(dir, skip_bad = FALSE) {
 #' nearest layer below its own: the look it picks, content and page.  A
 #' template SPEC (`template: {name, args}`) puts the template's items
 #' ([tfl_template_expand()], marked `template:<name>`) between the layers
-#' and the report's own -- its look (plan_style, the widths, the rows a
-#' page ...) under the study's layers, which say the look and win -- and
+#' and the report's own -- for a template whose set holds its `extends`
+#' ([tfl_template()]), all of them over the style set its `style` names
+#' and the files each step of `extends` names ([tfl_output_extends()]),
+#' with what a parameter's stop value turns off ([tfl_param()]`(maps_to =
+#' )`) taken out of those; for a template not yet migrated, its look
+#' (plan_style, the widths, the rows a page ...) under the study's layers,
+#' which say the look and win -- and
 #' its `ard:` under the report's (an entry of the report's replaces the
 #' template's of the same id); a template parameter that says where its
 #' study default is takes it from the layers when the SPEC does not give
@@ -180,38 +185,34 @@ tfl_read_outputs <- function(dir, skip_bad = FALSE) {
 tfl_resolve_output <- function(output, study, provenance = FALSE) {
   if (!inherits(output, "tfl_output")) stop("tfl_resolve_output(): `output` is a tfl_output.", call. = FALSE)
   if (!inherits(study, "tfl_study_spec")) stop("tfl_resolve_output(): `study` is a tfl_study_spec.", call. = FALSE)
-  # (a switched template's style is the one its `style` parameter names)
-  sw <- !is.null(.tpl_spec_of(output)) && .tpl_switched(.tpl_spec_of(output)$name)
-  lb <- if (sw) .layers_below(output, study, style = .tpl_switched_style(output, study)) else
-    .layers_below(output, study)
+  # (a template with an `extends` in its set: the style its `style`
+  # parameter names, resolved first)
+  lb <- .tpl_layers_below(output, study)
   layers <- lb$layers
   acc <- lb$acc
   # a template SPEC: the template's items between the layers and the
-  # report's own (its ard: under the report's ard:) -- its look (plan_style,
-  # the widths, the rows a page ...) under the study's layers, which say the
-  # look and win, the rest over them
+  # report's own (its ard: under the report's ard:)
   tpl <- NULL
   if (!is.null(.tpl_spec_of(output))) {
-    tpl <- .tpl_expand_for(output, study, acc$content,
-                           .merge_map(acc$codelists, output$codelists))
+    tpl <- .tpl_expand_for(output, study, lb, .merge_map(acc$codelists, output$codelists))
     acc <- list(data = list(), codelists = list(), content = list(), page = list())
-    if (isTRUE(tpl$switched)) {
-      # a template whose family has switched: one value a parameter, so the
-      # template's items (its look too) are the content, over no content
-      # layer -- the style set's, the extends chain's (defaults, patterns).
-      # The layers keep their code lists and their page.
-      # (the style set the `style` parameter names keeps its content: it is
-      # the parameter's value)
-      layers <- lapply(seq_along(layers), function(i) {
-        l <- layers[[i]]
-        list(data = list(), codelists = l$codelists,
-             content = if (i == 1L && !is.null(lb$style)) l$content else list(), page = l$page)
-      })
+    if (isTRUE(tpl$layered)) {
+      # a template whose set has its `extends` (canon 1.27, the layers 1 < 2
+      # < 3 < 4): the template's items (its look too) over the style set its
+      # `style` names, over the files each step of `extends` names -- the
+      # content step's none under `{content: none}`.  What a parameter's stop
+      # value turns off (its `maps_to`) is taken out of those layers first.
+      layers <- .tpl_strip_lower(layers, tpl$strip, tpl$x$content)
       tl <- list(data = tpl$x$data %||% list(), codelists = list(),
                  content = tpl$x$content, page = list())
-      for (l in rev(c(list(tl), layers))) acc <- .layer_over(acc, l)
-      layers <- c(list(tl), layers)
+      for (l in rev(c(list(tl), layers$layers))) acc <- .layer_over(acc, l)
+      tpl$removed <- layers$removed
+      layers <- c(list(tl), layers$layers)
     } else {
+      # (a template not yet migrated, its set with no `extends`: the old
+      # order -- its look (plan_style, the widths, the rows a page ...)
+      # under the study's layers, which say the look and win, the rest over
+      # them; until its batch)
       look <- vapply(tpl$x$content, .tpl_is_look, NA)
       tlook <- list(data = list(), codelists = list(), content = tpl$x$content[look], page = list())
       tl <- list(data = tpl$x$data %||% list(), codelists = list(),
@@ -248,7 +249,10 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
       attr(output, "template") <- list(name = tpl$name, args = tpl$args, study = tpl$study,
                                        study_keys = tpl$study_keys,
                                        items = tpl$x$content, rest = r$items, ok = ok,
-                                       plot = tpl$x$plot, call_steps = tpl$x$call_steps)
+                                       plot = tpl$x$plot, call_steps = tpl$x$call_steps,
+                                       extends = .extends_compact(lb$extends),
+                                       style = lb$style_name, removed = tpl$removed,
+                                       routes = .tpl_routes(tpl, lb, output, prov))
     }
     if (isTRUE(provenance)) acc$content <- prov
   }
@@ -346,23 +350,175 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 
 # The layers a report extends (nearest first): its style (the look it
 # picks, `style:`, the study's `styles:`), then the files of `extends`; and
-# their content, data, code lists and page put together (the farthest first)
+# their content, data, code lists and page put together (the farthest first).
+# Each part is laid by its step's files (tfl_output_extends()): a file only
+# some steps name keeps only their parts.  `range`: the content a study
+# reference reads (the style set's and the content step's files', merged),
+# NULL when the content step lays nothing (`{content: none}`).
 .layers_below <- function(output, study, style = "output") {
-  chain <- output$extends
-  if (identical(chain, "none")) chain <- character()
-  layers <- lapply(chain, function(nm) {
+  ext <- .extends_of(output)
+  files <- unique(c(ext$content, ext$data, ext$page))
+  layers <- lapply(files, function(nm) {
     l <- .layer_of(nm, study)
     # the defaults' content is a table's: not a figure's or a listing's layers
     if (identical(nm, "defaults") && !identical(output$kind, "table")) l$content <- list()
+    for (part in names(.extends_part_step)) {
+      if (!nm %in% ext[[.extends_part_step[[part]]]]) l[part] <- list(list())
+    }
     l
   })
-  # (`style`: "output", the report's own `style:`; or the set a switched
-  # template's `style` parameter names, NULL for none)
+  # (`style`: "output", the report's own `style:`; or the set a template's
+  # `style` parameter names, NULL for none)
   st <- if (identical(style, "output")) .style_of(output, study) else style
   if (!is.null(st)) layers <- c(list(st), layers)
   acc <- list(data = list(), codelists = list(), content = list(), page = list())
-  for (l in rev(layers)) acc <- .layer_over(acc, l)
-  list(layers = layers, acc = acc, style = st)
+  if (length(unique(ext[c("data", "content", "page")])) == 1L) {
+    for (l in rev(layers)) acc <- .layer_over(acc, l)
+  } else {
+    # (the steps name their files in other orders: each part in its own)
+    for (part in names(acc)) {
+      chain <- ext[[.extends_part_step[[part]]]]
+      ls <- c(if (!is.null(st)) list(st), layers[match(chain, files) + !is.null(st)])
+      a <- list(data = list(), codelists = list(), content = list(), page = list())
+      for (l in rev(ls)) a <- .layer_over(a, l)
+      acc[[part]] <- a[[part]]
+    }
+  }
+  list(layers = layers, acc = acc, style = st, extends = ext,
+       range = if (length(ext$content)) acc$content)
+}
+
+# ---- extends: what a report lays under it, step by step ---------------------
+
+# The steps a report is made in (canon 1.32), which `extends` may name one
+# by one; and the step each part of a layer goes with (a layer's code lists
+# with its data: Q3 of PLAN-5B; `ard` lays nothing yet, defaults.yml has
+# no `ard:`)
+.extends_steps <- c("data", "ard", "content", "page")
+.extends_part_step <- c(data = "data", codelists = "data", content = "content", page = "page")
+
+# `extends` as written, checked: NULL (not written); the files, nearest
+# first ("defaults", "patterns/<name>"), or "none"; or a map by step, each
+# step such a value.  The files as a character vector; a map's steps too.
+.extends_value <- function(x, who) {
+  if (is.null(x)) return(NULL)
+  bad <- sprintf(paste0("%s: `extends` is the files laid under the report (\"defaults\", ",
+                        "\"patterns/<name>\"), \"none\", or a map by step ({content: none}; the ",
+                        "steps: %s)."), who, paste(.extends_steps, collapse = ", "))
+  files <- function(v) {
+    v <- if (is.list(v) && is.null(names(v))) unlist(v) else v
+    is.character(v) && length(v) > 0L && !anyNA(v) && all(nzchar(v))
+  }
+  if (is.list(x) && length(x) && !is.null(names(x))) {
+    unknown <- setdiff(names(x), .extends_steps)
+    if (length(unknown) || !all(nzchar(names(x))) || anyDuplicated(names(x))) {
+      stop(sprintf("%s: `extends` has no step %s; the steps: %s.", who,
+                   paste(sQuote(unknown, FALSE), collapse = ", "),
+                   paste(.extends_steps, collapse = ", ")), call. = FALSE)
+    }
+    if (!all(vapply(x, files, NA))) stop(bad, call. = FALSE)
+    return(lapply(x, function(v) as.character(unlist(v))))
+  }
+  if (!files(x)) stop(bad, call. = FALSE)
+  as.character(unlist(x))
+}
+
+# A template report's `extends: [defaults]` as every writer wrote it before
+# a template's set held its `extends` (tfl_write_output() wrote the value
+# tfl_read_output() filled in): read as not written, so a saved demog report
+# keeps its output and a saved stf_t02_demog report its fixed content step.
+# (Once demog's set is `[defaults]` (5b-2) the two read the same for every
+# template but the stf_ family, where `[defaults]` stops.)  Pending
+# decision of PR 5b-1: drop this, and such files take `[defaults]`.
+.extends_old_constant <- function(x) {
+  identical(as.character(unlist(x)), "defaults") && !(is.list(x) && !is.null(names(x)))
+}
+
+# A step's files from a written value ("none": none)
+.extends_files <- function(v) if (identical(v, "none")) character() else v
+
+# A written value as the files of each step (the four by name): a file
+# list for every step, a map's steps their own, a step the map does not
+# name `fallback`'s (a template report's map over its template's: Q1 of
+# PLAN-5B), else `defaults`
+.extends_norm <- function(x, fallback = NULL) {
+  out <- stats::setNames(lapply(.extends_steps, function(s) fallback[[s]] %||% "defaults"),
+                         .extends_steps)
+  if (is.null(x)) return(out)
+  # (an unnamed list, as a YAML sequence is read: the files)
+  if (is.list(x) && is.null(names(x))) x <- as.character(unlist(x))
+  if (!is.list(x)) return(stats::setNames(rep(list(.extends_files(x)), length(.extends_steps)),
+                                          .extends_steps))
+  for (s in names(x)) out[[s]] <- .extends_files(x[[s]])
+  out
+}
+
+# The four steps' files as the shortest value that says them: one file
+# list (or "none") when the steps agree, else a map of the steps that do
+# not lay `defaults`
+.extends_compact <- function(norm) {
+  one <- function(f) if (length(f)) f else "none"
+  if (length(unique(norm)) == 1L) return(one(norm[[1L]]))
+  d <- Filter(function(s) !identical(norm[[s]], "defaults"), .extends_steps)
+  lapply(norm[d], one)
+}
+
+# A written value as text: "defaults, patterns/x", "content: none; page: ..."
+.extends_text <- function(x) {
+  if (is.null(x)) return("(the template's)")
+  if (!is.list(x)) return(paste(x, collapse = ", "))
+  paste(sprintf("%s: %s", names(x), vapply(x, paste, "", collapse = ", ")), collapse = "; ")
+}
+
+# What a report extends, step by step: its own value, a step its map does
+# not name its template's (the set's `extends`), else `defaults`.  A step
+# the template fixes (`extends_fixed`) stops on another value; the file
+# list form names every step, the fixed one too (Q2 of PLAN-5B).
+.extends_of <- function(output) {
+  ts <- .tpl_spec_of(output)
+  t <- if (!is.null(ts)) tryCatch(.tpl_get(ts$name, "extends"), error = function(e) NULL)
+  set <- .extends_norm(t$extends)
+  out <- .extends_norm(output$extends, set)
+  for (s in t$extends_fixed) {
+    if (identical(out[[s]], set[[s]])) next
+    .ard_stop(sprintf(paste0("%s: template %s fixes extends' %s step to %s; write the other steps ",
+                             "as a map ({page: [patterns/x, defaults]})."),
+                      output$id, t$name, s, .extends_text(.extends_compact(list(set[[s]])))))
+  }
+  out
+}
+
+.extends_step <- function(output, step) .extends_of(output)[[step]]
+
+#' What a report extends
+#'
+#' What a report extends, step by step: the files laid under it -- the
+#' study's `defaults`, its patterns (`patterns/<name>`) -- in each of the
+#' steps a report is made in (`data`, `ard`, `content`, `page`), nearest
+#' first.  The report's `extends:` says it, as a list of files for every
+#' step, `none`, or a map by step (`{content: none}`).  A step the map does
+#' not name, or a template report that writes none, takes its template's
+#' (a template's set holds its `extends`, [tfl_template()]), else
+#' `defaults`.  A report's style set is laid over these files in any case.
+#'
+#' @param output A `tfl_output` ([tfl_read_output()]).
+#' @param step One step's name; `NULL` for all.
+#' @return The files laid under `step`, nearest first (`character(0)`:
+#'   none); `NULL` `step`: a list by step (`data`, `ard`, `content`,
+#'   `page`).
+#' @examples
+#' o <- tfl_output("T-1", "table", extends = list(content = "none"))
+#' tfl_output_extends(o)
+#' tfl_output_extends(o, "page")
+#' @export
+tfl_output_extends <- function(output, step = NULL) {
+  if (!inherits(output, "tfl_output")) .ard_stop("tfl_output_extends(): `output` is a tfl_output.")
+  ext <- .extends_of(output)
+  if (is.null(step)) return(ext)
+  if (!is.character(step) || length(step) != 1L || !step %in% .extends_steps) {
+    .ard_stop(sprintf("tfl_output_extends(): `step` is one of %s.", paste(.extends_steps, collapse = ", ")))
+  }
+  ext[[step]]
 }
 
 # A report's style: the study's `styles:` set it names (`style: compact`),

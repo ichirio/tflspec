@@ -95,14 +95,14 @@
               doc = "a categorical value's cell, n (%); NULL: the study standard's"),
     tfl_param("total_label", "Total", type = "text", doc = "the Total column's heading"),
     tfl_param("header_n", "denominator", type = "choice", choices = c("denominator", "set", "none"),
-              unset = "step_off",
+              unset = "step_off", maps_to = character(),
               doc = paste("the arm headings' N: \"denominator\" or \"set\": the arm's subjects in the",
                           "analysis set (`denominator` does not move it); \"none\" no N; unset: no N.",
                           "It acts on the heading `col_header` gives as a text")),
     tfl_param("col_header", NULL, type = "text", study = c("plan_col_header.lines", "plan_col_header.header"),
               doc = paste("the arm heading: a text ({col} and {n}, a line a line), the lines of",
                           "plan_col_header(lines = ), or its cells (header = ); NULL: none")),
-    tfl_param("heading", NULL, type = "text",
+    tfl_param("heading", NULL, type = "text", maps_to = "plan_stub.heading",
               doc = paste("the row-title (stub) column's heading, a line a line.  Given, it is the",
                           "stub's (plan_stub(heading = ), the stub being row_label, first)")),
     tfl_param("stub_name", NULL, type = "text", study = "plan_stub.name",
@@ -119,7 +119,7 @@
     tfl_param("rounding", NULL, type = "choice", choices = c("sas", "r"), study = "settings.rounding",
               doc = paste("the rounding of the cells' numbers (plan_digits(rounding = )): sas, half away",
                           "from zero, or r, half to even; NULL: none given here (the study's setup)")),
-    tfl_param("blanks", NULL, type = "text", study = "plan_blanks.where",
+    tfl_param("blanks", NULL, type = "text", study = "plan_blanks.where", maps_to = "plan_blanks.where",
               doc = paste("blank rows: TRUE between the blocks, FALSE none, or where (plan_blanks(where = ));",
                           "FALSE also sets both ends off; NULL: none made here")),
     tfl_param("blanks_first", NULL, type = "flag", study = "plan_blanks.first",
@@ -439,9 +439,11 @@
               "widths", "max_rows", "rounding", "blanks", "blanks_first", "blanks_last", "blanks_counted",
               "border_header", "border_group", "style"))
 
+# (`extends`: its family's `[defaults]` (canon 1.27) is 5b-2's flip; until
+# then `{content: none}`, the order of today, so that no output moves)
 .tfl_template("demog", kind = "table", layout = "summary", label = "Demographics",
               params = .tpl_demog_params(), body = .tpl_demog_body, ai = TRUE,
-              parts = .tpl_demog_parts,
+              parts = .tpl_demog_parts, extends = list(content = "none"),
               example = list(population = "SAF", by = "TRT01A", continuous = "AGE",
                              categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC")))
 
@@ -486,7 +488,9 @@
                 fixed = c("col_header", "stub_name", "stub_before", "blanks", "blanks_first",
                           "blanks_last", "blanks_counted", "border_header", "style", "cells",
                           "count_cell", "sd_missing", "rounding", "widths", "max_rows"),
-                fixed_value = c("formats", "missing_row")),
+                fixed_value = c("formats", "missing_row", "style")),
               body = .tpl_demog_body, ai = FALSE, parts = .tpl_demog_parts,
+              # (canon 1.27, 1.30: the study's content is not laid, fixed)
+              extends = list(content = "none"), extends_fixed = "content",
               example = list(population = "SAF", by = "TRT01A", continuous = "AGE",
                              categorical = c("SEX", "AGEGR1", "RACE", "ETHNIC", "COUNTRY")))

@@ -485,7 +485,9 @@
 # them is left out.
 .ai_draft_codelists <- function(o, study) {
   own <- o$codelists %||% list()
-  if (!length(o$extends) || identical(o$extends, "none")) return(.codelists_norm(own))
+  # (the code lists go with the data step: Q3 of PLAN-5B)
+  ch <- tryCatch(.extends_step(o, "data"), error = function(e) character())
+  if (!length(ch)) return(.codelists_norm(own))
   if (is.null(study)) return(NULL)
   below <- tryCatch(.layers_below(o, study)$acc$codelists, error = function(e) NULL)
   if (is.null(below)) return(NULL)
