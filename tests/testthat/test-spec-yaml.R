@@ -59,6 +59,54 @@ test_that("the defaults file reads with the same reader's pieces: a nested call"
   expect_identical(st$args$border_header$args$top, TRUE)
 })
 
+test_that("!unset reads in flow style, with no space before } , ]", {
+  rd <- function(txt) {
+    f <- withr::local_tempfile(fileext = ".yml")
+    writeLines(txt, f)
+    .yaml_read_file(f, handlers = .yaml_handlers())
+  }
+  y <- rd(c("plan_stub: {before: !unset}", "m: {a: 1, b: !unset}", "s: [x, !unset]",
+            "t: {b: !unset, c: 2}", "u: {b: !unset }"))
+  expect_s3_class(y$plan_stub$before, "tfl_unset")
+  expect_identical(y$m$a, 1L)
+  expect_s3_class(y$m$b, "tfl_unset")
+  expect_identical(y$s[[1L]], "x")
+  expect_s3_class(y$s[[2L]], "tfl_unset")
+  expect_s3_class(y$t$b, "tfl_unset")
+  expect_identical(y$t$c, 2L)
+  expect_s3_class(y$u$b, "tfl_unset")
+})
+
+test_that("flow-style !unset fix leaves quotes, comments, !r and blocks alone", {
+  txt <- c("a: \"x !unset} y\"", "b: 'p {q: !unset}'", "c: {d: !r \"c(1, 2)\", e: !r \"f(a = {1}, !unset}\", g: !unset}",
+           "f: !unset", "g:", "  h: !unset", "i: # {z: !unset}", "j: |", "  {k: !unset}", "l: {m: !unset}")
+  fixed <- .yaml_flow_tags(paste(txt, collapse = "\n"))
+  out <- strsplit(fixed, "\n", fixed = TRUE)[[1L]]
+  expect_identical(out[-c(3L, 10L)], txt[-c(3L, 10L)])
+  expect_identical(out[3L], sub("!unset}\"?$", "!unset }", txt[3L]))
+  expect_identical(out[10L], "l: {m: !unset }")
+  f <- withr::local_tempfile(fileext = ".yml")
+  writeLines(txt, f)
+  y <- .yaml_read_file(f, handlers = .yaml_handlers())
+  expect_identical(y$a, "x !unset} y")
+  expect_identical(y$b, "p {q: !unset}")
+  expect_s3_class(y$c$d, "tfl_r")
+  expect_identical(as.character(y$c$d), "c(1, 2)")
+  expect_identical(as.character(y$c$e), "f(a = {1}, !unset}")
+  expect_s3_class(y$c$g, "tfl_unset")
+  expect_s3_class(y$f, "tfl_unset")
+  expect_s3_class(y$g$h, "tfl_unset")
+  expect_identical(y$j, "{k: !unset}\n")
+  expect_s3_class(y$l$m, "tfl_unset")
+})
+
+test_that("a report with flow-style !unset is read by tfl_read_output()", {
+  f <- withr::local_tempfile(fileext = ".yml")
+  writeLines(c("id: T-1", "kind: table", "content:", "  - {fn: plan_stub, args: {before: !unset}}"), f)
+  out <- tfl_read_output(f)
+  expect_s3_class(out$content[[1L]]$args$before, "tfl_unset")
+})
+
 test_that("a report written and read again is the same", {
   out <- tfl_read_output(yml_fixture("outputs", "T-14-1-1.yml"))
   out$content[[6L]]$args$bold <- tfl_unset()
