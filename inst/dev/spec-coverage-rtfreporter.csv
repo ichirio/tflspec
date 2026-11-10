@@ -320,6 +320,7 @@
 "rtfreporter","plan_style","border_body","yes","content: plan_style","schema.yml type"
 "rtfreporter","plan_style","border_first_row","yes","content: plan_style","schema.yml type"
 "rtfreporter","plan_style","border_last_row","yes","content: plan_style","schema.yml type"
+"rtfreporter","plan_style","border_group","yes","content: plan_style","schema.yml type"
 "rtfreporter","plan_style","header_align","yes","content: plan_style","schema.yml type"
 "rtfreporter","plan_style","header_bold","yes","content: plan_style","schema.yml type"
 "rtfreporter","plan_style","header_italic","yes","content: plan_style","schema.yml type"

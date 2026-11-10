@@ -1331,7 +1331,8 @@ column): `column`, `rel_width`, `row_title`, `decimal_split`, `hide` →
 `cell_padding_bottom_twips`, `cell_valign`,
 `table_align`, `markup`, `blank_row_normalize`, and one kind of row's rules
 `border_header`, `border_spanning` (under a spanning header), `border_body`,
-`border_first_row`, `border_last_row` written as sides (`top | bottom`) or
+`border_first_row`, `border_last_row`, `border_group` (under each row group's
+last row) written as sides (`top | bottom`) or
 `none`; the default look `header_align`, `header_bold`, `header_italic`,
 `align`, `bold`, `italic`, `underline` (one `rtf_table_style()` with the
 `border_*` columns; a blank `align` keeps each column's default) and

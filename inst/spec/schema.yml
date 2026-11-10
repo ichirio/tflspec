@@ -286,6 +286,7 @@ plan_style:
     border_body: {label: "Body borders", help: "The rules of the body's rows. Blank: none between them. e.g. \"none\"", type: "call<rtf_border>"}
     border_first_row: {label: "First row's border", help: "The rule over the table's first row (the top of the table). e.g. \"top\"", type: "call<rtf_border>"}
     border_last_row: {label: "Last row's border", help: "The rule under the table's last row (the foot of the table). e.g. \"bottom\"", type: "call<rtf_border>"}
+    border_group: {label: "Row group's border", help: "The rule under the last row of each row group. Blank: none. e.g. \"bottom\"", type: "call<rtf_border>"}
     align_count_pct: {main: true, label: "Align n (%)", type: "logical", help: "TRUE: the n and the (%) of a count cell line up from row to row. e.g. TRUE"}
     border: {main: true, label: "Borders", type: "string|call<rtf_border>", help: "The table's borders: \"tfl\" (rules over and under the header and under the last row) or \"none\"; another style as a border ({fn: rtf_border, args: {all: true, inside_h: true}}). Blank: tfl. e.g. \"none\""}
     font_size_half_points: {main: true, label: "Font size (half points)", type: "integer", help: "The table's font size in half points (18 = 9 pt). Blank: the document's. e.g. 16"}
@@ -1633,6 +1634,10 @@ rtf_footer:
         example: top
       - column: border_last_row
         description: 'The last body row''s rules: sides, or none; blank: border''s.'
+        example: bottom
+      - column: border_group
+        description: 'The rule under the last row of each row group: sides, or none;
+          blank: none.'
         example: bottom
       - column: header_align
         description: 'The whole column header''s alignment: left / center / right
