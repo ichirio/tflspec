@@ -99,7 +99,7 @@ hd_args <- list(
   lab_shift = list(population = "SAF", visit = "CYCLE 2 DAY 1", params = c("ALT", "AST")),
   param_change = list(population = "SAF", data = "ADLB", params = c("ALT", "AST"), where = NULL),
   pk_conc = list(population = "SAF", blq = "BLQFL == \"Y\""),
-  demog = list(population = "SAF"))
+  demog = list(by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX")))
 
 hd_write <- function(d, id, tpl, titles = NULL, args = list()) {
   tfl_write_output(tfl_output(id, "table", population = "SAF", extends = "defaults",

@@ -46,7 +46,7 @@
 # Where a parameter ends: its study source ("plan_stub.indent"), else the
 # verb (and argument) its doc names, else NA
 .tpl_maps_to <- function(p) {
-  if (!is.null(p$study)) return(p$study)
+  if (!is.null(p$study)) return(paste(p$study, collapse = ", "))
   d <- p$doc %||% ""
   m <- regmatches(d, regexpr("plan_[a-z_]+\\(([a-z_]+) = ", d))
   if (length(m)) return(sub("\\(([a-z_]+) = $", ".\\1", m))
@@ -60,6 +60,7 @@
 # study has none) or "study: <key>, required" (a stop); the report's own
 # field as "report: <field>"
 .tpl_ref_text <- function(key, fallback = NA_character_, required = FALSE) {
+  key <- paste(key, collapse = ", ")
   src <- if (startsWith(key, "output.")) paste0("report: ", sub("^output[.]", "", key)) else
     paste0("study: ", key)
   if (isTRUE(required)) return(paste0(src, ", required"))
@@ -115,7 +116,9 @@
 #'   `"template"` or `"default"`), `maps_to` (its study source,
 #'   `"plan_stub.indent"`, or the verb its doc names), `doc`, `study_key`
 #'   (its reference, else `NA`) and `fallback` (the value it takes when
-#'   the study has none: a variant's default else the layout's; `NA` none).
+#'   the study has none: a variant's default else the layout's; `NA` none)
+#'   and `unset` (what `!unset` does to it: `"omit"`, `"stop"` or
+#'   `"step_off"`; `NA` for a template not yet migrated).
 #' @seealso [tfl_tpl_help()] to print it; [tfl_tpl()] to run a template.
 #' @examples
 #' a <- tfl_tpl_args("demog")
@@ -144,10 +147,13 @@ tfl_tpl_args <- function(name, study = NULL, population = NULL) {
         break
       }
     }
-    key <- if (is.character(p$study)) p$study else NA_character_
+    keys <- if (is.character(p$study)) p$study else NA_character_
+    key <- keys[1L]
     sv <- NULL
     if (!is.na(key) && (!is.null(study) || startsWith(key, "output."))) {
-      sv <- .tpl_study_read(key, output, study)
+      hit <- .tpl_study_find(keys, output, study)
+      sv <- hit$value
+      if (!is.null(sv)) key <- hit$key
     }
     layer <- if (!is.null(sv)) {
       if (startsWith(key, "output.")) "report" else paste0("study: ", key)
@@ -163,12 +169,13 @@ tfl_tpl_args <- function(name, study = NULL, population = NULL) {
                type = p$type %||% NA_character_,
                required = isTRUE(p$required),
                default = if (is.na(key)) .tpl_short(rp$default) else
-                 .tpl_ref_text(key, .tpl_short(rp$default), p$required),
+                 .tpl_ref_text(keys, .tpl_short(rp$default), p$required),
                variant = if (is.na(vname)) NA_character_ else
                  if (is.null(p$default)) "NULL" else .tpl_short(p$default),
                study = .tpl_short(sv), effective = .tpl_short(eff), layer = layer,
                maps_to = .tpl_maps_to(p), doc = p$doc %||% NA_character_,
                study_key = key, fallback = if (is.na(key)) NA_character_ else .tpl_short(p$default),
+               unset = if (.tpl_switched(t$name)) p$unset %||% "omit" else NA_character_,
                stringsAsFactors = FALSE)
   })
   out <- do.call(rbind, unname(rows))
@@ -229,7 +236,7 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
     what <- ifelse(is.na(r$doc), "", r$doc)
     # (a parameter that refers to the study standard says so, with its fallback)
     ref <- !is.na(r$study_key)
-    what[ref] <- paste0(what[ref], " [", mapply(.tpl_ref_text, r$study_key[ref], r$fallback[ref],
+    what[ref] <- paste0(what[ref], " [", mapply(.tpl_ref_text, r$maps_to[ref], r$fallback[ref],
                                                   r$required[ref], USE.NAMES = FALSE), "]")
     # (a data step's argument marked: not one of the call's)
     nm <- ifelse(r$stage == "data", paste(r$param, "[data]"), r$param)
@@ -296,7 +303,7 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
                  if (!is.null(.tpl_stf_note(name))) paste0(" ", .tpl_stf_note(name)))
   dflt <- ifelse(is.na(a$variant), a$default, a$variant)
   ref <- !is.na(a$study_key)
-  dflt[ref] <- mapply(.tpl_ref_text, a$study_key[ref], a$fallback[ref], a$required[ref],
+  dflt[ref] <- mapply(.tpl_ref_text, a$maps_to[ref], a$fallback[ref], a$required[ref],
                       USE.NAMES = FALSE)
   tbl <- c("| Parameter | Tier | Stage | Default | Maps to | What |",
            "|---|---|---|---|---|---|",

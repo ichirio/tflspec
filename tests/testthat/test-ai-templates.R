@@ -96,7 +96,7 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
     "    label: Demographic and Baseline Characteristics",
     "    population: SAF",
     "    extends: [defaults]",
-    "    template: {name: demog, args: {categorical: [AGEGR1, SEX, RACE]}}",
+    "    template: {name: demog, args: {by: TRT01A, continuous: AGE, categorical: [AGEGR1, SEX, RACE]}}",
     "    page: {titles: {\"1\": {center: Table 14.1.1}}}",
     "assumptions: []"), "table")
   ai_drafts_from_answer(d, aitpl_answer(

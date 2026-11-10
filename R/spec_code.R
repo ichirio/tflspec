@@ -1427,6 +1427,8 @@ tfl_content_run <- function(output, data) {
                              "yet; tables, listings and figures, for now."), output$kind))
   }
   for (it in output$content) .schema_need_version(it)
+  # a template's `widths = "auto"` with no code list for the arms: the ARD's
+  output$content <- .tpl_auto_widths(output, data)
   # plan_levels() the ARD already says: left out, as the program does
   if (identical(output$kind, "table")) output$content <- .levels_prune(output$content, output)
   # a table of records (its data a dataset: a table_plan(value = ) with

@@ -239,7 +239,8 @@ layout <- data.frame(
 ```
 
 `style`: `border_header`, `border_spanning`, `border_body`,
-`border_first_row` and `border_last_row` give the sides drawn for one kind
+`border_first_row`, `border_last_row` and `border_group` (under each row
+group's last row) give the sides drawn for one kind
 of row (`top | bottom`, or `none`). Use them in place of `border`, not
 with it:
 

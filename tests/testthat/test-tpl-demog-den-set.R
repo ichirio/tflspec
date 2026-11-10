@@ -6,7 +6,13 @@
 dd_pops <- list(list(id = "SAF", label = "Safety Analysis Set"))
 dd_codelists <- list(TRT01A = c("Drug X", "Control"))
 dd_expand <- function(name = "demog", ...) {
-  tfl_template_expand(name, c(list(population = "SAF"), list(...)),
+  a <- list(...)
+  # (demog and stf_t02_demog are standalone: the arms and variables are required)
+  if (name %in% c("demog", "stf_t02_demog")) {
+    a <- utils::modifyList(list(by = "TRT01A", continuous = "AGE",
+                                categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC")), a)
+  }
+  tfl_template_expand(name, c(list(population = "SAF"), a),
                       codelists = dd_codelists, population = dd_pops)
 }
 dd_an <- function(x, id) Filter(function(a) identical(a$id, id), x$ard$analyses)[[1L]]
@@ -40,11 +46,12 @@ test_that("demog family: denominator is no parameter; summary and disposition ke
   expect_true("denominator" %in% tfl_tpl_args("summary")$param)
   expect_true("denominator" %in% tfl_tpl_args("disposition")$param)
   s <- dd_expand("summary", categorical = "SEX")
-  expect_false("denominator" %in% names(dd_an(s, "CAT")))
-  expect_identical(dd_an(s, "CAT")$data, "adsl_saf")
+  # (summary's percentages are over the analysis set too, passed explicitly)
+  expect_identical(dd_an(s, "CAT")$denominator, "adsl_saf")
+  expect_identical(dd_an(s, "CAT")$data, "adsl_saf_m")
 })
 
-dd_study <- function(blank_race = TRUE, args = list(), template = "demog") {
+dd_study <- function(blank_race = TRUE, args = list(), template = "demog", codelists = list()) {
   skip_if_not_installed("haven")
   d <- tempfile("demogden")
   dir.create(file.path(d, "adam"), recursive = TRUE)
@@ -56,7 +63,7 @@ dd_study <- function(blank_race = TRUE, args = list(), template = "demog") {
   }
   haven::write_xpt(a, file.path(d, "adam", "adsl.xpt"))
   tfl_ai_study_init(d, adam = "adam", study_id = "DD-1")
-  o <- tfl_output("T-DD", "table", population = "SAF", label = "demog",
+  o <- tfl_output("T-DD", "table", population = "SAF", label = "demog", codelists = codelists,
     template = list(name = template, args = c(list(
       by = "TRT01A", continuous = "AGE", categorical = c("SEX", "RACE")), args)))
   tfl_write_output(o, file.path(d, "spec", "outputs", "T-DD.yml"))
@@ -107,16 +114,16 @@ test_that("demog: no missing values, no Missing row, the percentages of the set"
   expect_true(any(grepl("ASIAN.*\\(", txt)))
 })
 
-test_that("summary with its default denominator keeps the non-missing percentages", {
+test_that("summary with its default denominator: % over the analysis set, a Missing row", {
   skip_on_cran()
   d <- dd_study(template = "summary")
   txt <- dd_text(d)
-  # Control: 22 / 75 (the subjects with a value), no Missing row
-  expect_true(any(grepl("ASIAN.*22 \\(29\\.3\\)", txt)))
-  expect_false(any(grepl("Missing", txt)))
+  # Control: 22 / 78 (every subject of the set), and a Missing row
+  expect_true(any(grepl("ASIAN.*22 \\(28\\.2\\)", txt)))
+  expect_true(any(grepl("Missing.*3 \\(3\\.8\\)", txt)))
   x <- dd_expand("summary", categorical = "RACE")
-  expect_false("denominator" %in% names(dd_an(x, "CAT")))
-  expect_identical(dd_an(x, "CAT")$data, "adsl_saf")
+  expect_identical(dd_an(x, "CAT")$denominator, "adsl_saf")
+  expect_identical(dd_an(x, "CAT")$data, "adsl_saf_m")
 })
 
 test_that("missing_row: TRUE (default) is the Missing step; FALSE and !unset turn it off", {
@@ -137,12 +144,10 @@ test_that("missing_row: TRUE (default) is the Missing step; FALSE and !unset tur
   expect_match(a$doc[a$param == "missing_row"], "^TRUE \\(default\\): a Missing row, last")
 })
 
-test_that("missing_row is no parameter of stf_t02_demog or summary, and passing it stops", {
+test_that("missing_row is no parameter of stf_t02_demog, and passing it stops", {
   expect_false("missing_row" %in% tfl_tpl_args("stf_t02_demog")$param)
-  expect_false("missing_row" %in% tfl_tpl_args("summary")$param)
+  expect_true("missing_row" %in% tfl_tpl_args("summary")$param)
   expect_error(dd_expand("stf_t02_demog", missing_row = FALSE), "there is no `missing_row` parameter")
-  expect_error(dd_expand("summary", categorical = "SEX", missing_row = TRUE),
-               "there is no `missing_row` parameter")
   # (stf_t02_demog keeps the Missing step)
   expect_true("adsl_saf_m" %in% vapply(dd_expand("stf_t02_demog")$ard$analysis_data, `[[`, "", "id"))
 })
@@ -164,4 +169,58 @@ test_that("missing_row = FALSE: no Missing row, other percentages as with TRUE; 
   st2 <- tfl_read_study_spec(d2)
   cs2 <- tfl_template_to_spec(tfl_read_output(file.path(d2, "spec", "outputs", "T-DD.yml")), st2)
   expect_true("adsl_saf_m" %in% vapply(cs2$ard$analysis_data, `[[`, "", "id"))
+})
+
+# canon 1.31 (user, 2026-11-10): a Missing row only for a variable with missing
+# values, a code-listed one too (`categorical_levels`, or the report's code
+# list); never a row of 0
+dd_race <- c("WHITE", "ASIAN", "BLACK OR AFRICAN AMERICAN", "OTHER", "UNKNOWN")
+dd_cl <- function(values, labels = values) {
+  Map(function(v, l) list(value = v, label = l), values, labels, USE.NAMES = FALSE)
+}
+
+test_that("demog family: a code-listed variable has a Missing row only when it has missing values", {
+  skip_on_cran()
+  for (tpl in c("demog", "stf_t02_demog")) {
+    # (stf_t02_demog's own categorical_levels list RACE)
+    lv <- if (tpl == "demog") list(categorical_levels = list(SEX = c("M", "F"), RACE = dd_race))
+    d <- dd_study(args = lv, template = tpl)
+    txt <- dd_text(d)
+    # (a row label starts after its indent)
+    # SEX (a list, nothing missing): no Missing row; RACE (3 blank): one, counted
+    expect_identical(sum(grepl("^[^A-Za-z]*Missing", txt)), 1L, info = tpl)
+    expect_true(any(grepl("^[^A-Za-z]*Missing.*3 \\(3\\.8\\)", txt)), info = tpl)
+    # last of RACE's rows, after the list's values (0 rows too)
+    expect_gt(which(grepl("^[^A-Za-z]*Missing", txt)), max(which(grepl("^[^A-Za-z]*UNKNOWN", txt))))
+    expect_true(any(grepl("^[^A-Za-z]*UNKNOWN0 \\(0\\.0\\)", txt)), info = tpl)
+    code <- paste(suppressMessages(tfl_ard_code(tfl_read_study_spec(d), output_id = "T-DD")),
+                  collapse = "\n")
+    # (the lists have no Missing value; the Missing step comes after them)
+    expect_false(grepl("Missing = \"Missing\"", code, fixed = TRUE), info = tpl)
+    expect_false(grepl("adsl_saf_m |> set_levels", code, fixed = TRUE), info = tpl)
+    expect_lt(regexpr("set_levels(", code, fixed = TRUE), regexpr("adsl_saf_m <-", code, fixed = TRUE))
+    # nothing missing: no Missing row at all
+    expect_false(any(grepl("Missing", dd_text(dd_study(blank_race = FALSE, args = lv, template = tpl)))),
+                 info = tpl)
+  }
+})
+
+test_that("demog family: the report's code lists get a Missing row only with missing values", {
+  skip_on_cran()
+  cl <- list(SEX = dd_cl(c("F", "M"), c("Female", "Male")), RACE = dd_cl(dd_race))
+  for (tpl in c("demog", "stf_t02_demog")) {
+    x <- tfl_template_expand(tpl, list(population = "SAF", by = "TRT01A", categorical = c("SEX", "RACE")),
+                             codelists = cl, population = dd_pops)
+    expect_null(x$codelists$SEX, info = tpl)
+    expect_false("Missing" %in% unlist(x$codelists), info = tpl)
+    txt <- dd_text(dd_study(template = tpl, codelists = cl))
+    expect_true(any(grepl("^[^A-Za-z]*Female", txt)), info = tpl)
+    expect_identical(sum(grepl("^[^A-Za-z]*Missing", txt)), 1L, info = tpl)
+    expect_true(any(grepl("^[^A-Za-z]*Missing.*3 \\(3\\.8\\)", txt)), info = tpl)
+    expect_false(any(grepl("Missing", dd_text(dd_study(blank_race = FALSE, template = tpl, codelists = cl)))),
+                 info = tpl)
+  }
+  # (no code list: as before, RACE's Missing row alone, last)
+  txt <- dd_text(dd_study())
+  expect_identical(sum(grepl("^[^A-Za-z]*Missing", txt)), 1L)
 })

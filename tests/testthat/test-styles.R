@@ -41,7 +41,7 @@ test_that("a template's look is under the study's layers (they say the look), it
   k <- length(s$defaults$content) + 1L
   s$defaults$content[[k]] <- tfl_item("plan_paginate_rows", list(max_rows = 40L), from = "defaults")
   o <- tfl_output("T-9", "table", population = "SAF",
-                  template = list(name = "demog", args = list(population = "SAF",
+                  template = list(name = "summary", args = list(
                     continuous = "AGE", categorical = c("AGEGR1", "SEX"))))
   ro <- tfl_resolve_output(o, s)
   pr <- ro$content[[match("plan_paginate_rows", vapply(ro$content, `[[`, "", "fn"))]]
@@ -70,6 +70,13 @@ test_that("a template's look is under the study's layers (they say the look), it
   r2 <- tfl_resolve_output(o, s)
   expect_identical(r2$content[[match("plan_paginate_rows", vapply(r2$content, `[[`, "", "fn"))]]$args,
                    list(max_rows = 24L, split = "group_safe"))
+  # demog is under no study layer but its own references (canon 1.29): its max_rows
+  # refers to the study's plan_paginate_rows.max_rows, so the study's 40 reaches it
+  od <- tfl_output("T-9", "table", population = "SAF",
+                   template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE")))
+  rd <- tfl_resolve_output(od, s)
+  pd <- rd$content[[match("plan_paginate_rows", vapply(rd$content, `[[`, "", "fn"))]]
+  expect_identical(pd$args$max_rows, 40L)
 })
 
 test_that("titles_at / footnotes_at: the report's titles in the running header, its footnotes in the footer", {

@@ -12,6 +12,11 @@ tpl_ard <- function() {
     cards::ard_tabulate(saf, by = TRT01A, variables = c(AGEGR1, SEX, RACE, ETHNIC)))
 }
 
+# demog's required arguments (a template of its own: the variables and `by` are given)
+dmv <- function(...) utils::modifyList(
+  list(population = "SAF", by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC")),
+  list(...))
+
 test_that("tfl_templates() lists demog and summary", {
   t <- tfl_templates()
   expect_true(all(c("demog", "summary") %in% t$name))
@@ -19,18 +24,17 @@ test_that("tfl_templates() lists demog and summary", {
 })
 
 test_that("tfl_template_expand(): the items, marked as the template's", {
-  x <- tfl_template_expand("demog", list(population = "SAF"))
+  x <- tfl_template_expand("demog", dmv())
   expect_identical(vapply(x$content, `[[`, "", "fn"),
                    c("table_plan", "plan_cells", "plan_labels", "plan_paginate_rows"))
   expect_true(all(vapply(x$content, `[[`, "", "from") == "template:demog"))
   expect_identical(x$ard$analysis_data[[1L]]$id, "adsl_saf")
   expect_identical(vapply(x$ard$analyses, `[[`, "", "id"), c("GROUPN", "CONT", "CAT"))
-  s <- tfl_template_expand("demog", list(population = "SAF", stack = TRUE))
-  expect_identical(vapply(s$ard$analyses, `[[`, "", "id"), c("STACK", "CONT", "CAT"))
-  expect_identical(s$ard$analyses[[2L]]$parent, "STACK")
+  # (`stack` is gone from demog: the plain unknown-parameter error)
+  expect_error(tfl_template_expand("demog", dmv(stack = TRUE)), "no parameter 'stack'")
   # the code lists are the ARD's (applied when it is made): no plan_levels()
   cl <- list(SEX = list(list(value = "F", label = "Female"), list(value = "M", label = "Male")))
-  y <- tfl_template_expand("demog", list(population = "SAF"), codelists = cl)
+  y <- tfl_template_expand("demog", dmv(), codelists = cl)
   expect_null(tpl_item(y, "plan_levels"))
   # a dataset other than ADSL: its own analysis data, its records kept by `where`
   z <- tfl_template_expand("summary", list(population = "SAF", continuous = "AVAL",
@@ -54,17 +58,18 @@ test_that("ae_soc_pt: the hierarchical layout with its own defaults", {
 })
 
 test_that("tfl_template_expand(): an unknown or missing parameter is said", {
-  expect_error(tfl_template_expand("demog", list(population = "SAF", nope = 1)), "no parameter")
+  expect_error(tfl_template_expand("demog", dmv(nope = 1)), "no parameter")
   expect_error(tfl_template_expand("demog", list()), "needs")
   expect_error(tfl_template_expand("nope"), "no template")
 })
 
 test_that("tpl_demog() / tpl_summary(): the object is the items run on the ARD", {
   ard <- tpl_ard()
-  p <- suppressMessages(tpl_demog(ard, population = "SAF"))
+  p <- suppressMessages(tpl_demog(ard, population = "SAF", by = "TRT01A", continuous = "AGE",
+                                  categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC")))
   expect_s3_class(p, "table_plan")
   # the same as the items, run as a report's content
-  x <- tfl_template_expand("demog", list(population = "SAF"))
+  x <- tfl_template_expand("demog", dmv())
   o <- tfl_output("T", extends = "none", data = x$data,
                   content = c(list(tfl_item("normalize_ard", list())), x$content))
   q <- suppressMessages(tfl_content_run(o, ard))
@@ -85,8 +90,8 @@ test_that("tfl_read_template_sheets(): the Excel example, as report files", {
   expect_identical(a$labels[["AGE"]], "Age (years)")
   expect_identical(r[["T-14-3-1"]]$template$args$overall, "Any TEAE")
   # the same expansion as the template's own defaults (they are the example's values)
-  x <- tfl_template_expand("demog", a)
-  y <- tfl_template_expand("demog", list(population = "SAF"))
+  x <- tfl_template_expand("demog", c(list(population = "SAF"), a))
+  y <- tfl_template_expand("demog", dmv())
   expect_identical(x$content, y$content)
   out <- withr::local_tempfile(fileext = ".yml")
   tfl_write_template_yaml(r[["T-14-1-1"]], out)
@@ -109,7 +114,8 @@ dm_ard <- function(control = c("one", "none")) {
 # demog's Age Mean (SD) row: Drug X, Control
 dm_age <- function(ard, ...) {
   t <- as.data.frame(suppressMessages(rtfreporter::plan_apply(
-    suppressMessages(tpl_demog(ard, population = "SAF", ...)), "table")))
+    suppressMessages(tpl_demog(ard, population = "SAF", by = "TRT01A", continuous = "AGE",
+                               categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC"), ...)), "table")))
   unlist(t[t$label == "Mean (SD)", c("Drug X", "Control")], use.names = FALSE)
 }
 
@@ -119,8 +125,9 @@ test_that("demog: Mean (SD) keeps the mean when a group has one subject; sd_miss
   saf <- adsl[adsl$SAFFL == "Y", ]
   ctl1 <- saf$AGE[saf$TRT01A == "Control"][1L]
   drug <- saf$AGE[saf$TRT01A == "Drug X"]
-  # n >= 2: as before; n = 1: the mean and `-`, to the template's digits
-  expect_identical(dm_age(ard1), c(sprintf("%.1f (%.2f)", mean(drug), stats::sd(drug)),
+  # n >= 2: as before; n = 1: the mean and `-`, to the ARD's digits (the formats are the ARD's:
+  # a hand-made cards ARD prints the SD to its own default, one place)
+  expect_identical(dm_age(ard1), c(sprintf("%.1f (%.1f)", mean(drug), stats::sd(drug)),
                                    sprintf("%.1f (-)", ctl1)))
   expect_identical(dm_age(ard1, sd_missing = "NA")[2L], sprintf("%.1f (NA)", ctl1))
   one <- dm_age(ard1, sd_missing = "")
@@ -133,20 +140,22 @@ test_that("demog: Mean (SD) keeps the mean when a group has one subject; sd_miss
   own <- list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})")
   expect_true(is.na(dm_age(ard1, cells = own, sd_missing = "NA")[2L]))
   # a mark that is not a text without braces stops
-  expect_error(tfl_template_expand("demog", list(population = "SAF", sd_missing = "{sd}")), "sd_missing")
-  expect_error(tfl_template_expand("demog", list(population = "SAF", sd_missing = NA_character_)), "sd_missing")
+  expect_error(tfl_template_expand("demog", dmv(sd_missing = "{sd}")), "sd_missing")
+  expect_error(tfl_template_expand("demog", dmv(sd_missing = NA_character_)), "sd_missing")
   # the default cell: the mean and its SD, else the mean and the mark
-  x <- tfl_template_expand("demog", list(population = "SAF"))
+  # (the cells only place the statistics: the digits are the ARD's formats)
+  x <- tfl_template_expand("demog", dmv())
   expect_identical(tpl_item(x, "plan_cells")$args$continuous[["Mean (SD)"]],
-                   c("{mean:.1f} ({sd:.2f})", "{mean:.1f} (-)"))
-  y <- tfl_template_expand("demog", list(population = "SAF", sd_missing = ""))
+                   c("{mean} ({sd})", "{mean} (-)"))
+  y <- tfl_template_expand("demog", dmv(sd_missing = ""))
   expect_identical(tpl_item(y, "plan_cells")$args$continuous[["Mean (SD)"]],
-                   c("{mean:.1f} ({sd:.2f})", "{mean:.1f}"))
+                   c("{mean} ({sd})", "{mean}"))
   # (the rest of the cells, the template's)
   expect_identical(tpl_item(y, "plan_cells")$args$continuous[-2L],
                    tpl_item(x, "plan_cells")$args$continuous[-2L])
   expect_true("sd_missing" %in% names(tfl_template_params("param_change")))
   expect_identical(tfl_template_params("summary")$sd_missing$study, "settings.sd_missing")
+  expect_identical(tfl_template_params("demog")$sd_missing$study, "settings.sd_missing")
 })
 
 test_that("summary: categorical variables too; disposition on it", {
@@ -627,14 +636,10 @@ test_that("hierarchical of one level; demog and ae_pt_freq on their layouts", {
   expect_identical(vapply(p$content, `[[`, "", "fn"),
                    c("normalize_ard", "table_plan", "plan_sort", "plan_filter", "plan_col_header",
                      "plan_paginate_rows"))
-  # demog's usual table is summary's
-  d <- tfl_template_expand("demog", list(population = "SAF", continuous = "AGE", categorical = "SEX"))
-  s <- tfl_template_expand("summary", list(population = "SAF", continuous = "AGE", categorical = "SEX",
-    labels = list(AGE = "Age (years)", SEX = "Sex, n (%)")))
-  no_from <- function(x) lapply(x, function(i) i[setdiff(names(i), "from")])
-  expect_identical(no_from(d$content), no_from(s$content))   # (each item says its template)
-  # (the same sets, and demog's one more: the categorical variables with a Missing level)
-  expect_identical(d$ard$analysis_data[1L], s$ard$analysis_data)
+  # demog is a template of its own (no longer summary's variant): its population is the report's
+  d <- tfl_template_expand("demog", dmv(categorical = "SEX"))
+  expect_identical(d$ard$analysis_data[[1L]]$id, "adsl_saf")
+  # (and its one more set, #770's: the categorical variables with a Missing level)
   expect_identical(d$ard$analysis_data[[2L]]$id, "adsl_saf_m")
 })
 
@@ -664,8 +669,7 @@ test_that("ae_overview: a subjects analysis and a row a flag", {
 })
 
 test_that("demog: a categorical variable the labels do not name has no label row (no `<NA> = NA`; the sheets convert)", {
-  x <- tfl_template_expand("demog", list(population = "SAF", by = "TRT01A",
-                                         categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC", "ECOGBL")))
+  x <- tfl_template_expand("demog", dmv(categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC", "ECOGBL")))
   lab <- Filter(function(it) identical(it$fn, "plan_labels"), x$content)
   expect_identical(length(lab), 1L)
   v <- lab[[1L]]$args$variable
@@ -693,10 +697,10 @@ test_that("a map of name and text also takes a list of {name, text}: the mapping
     expect_identical(pl(l)[[1L]]$args$PARAMCD$ALT, "Alanine Aminotransferase (U/L)", info = tn)
   }
   # labels, merged with the default's: only these names change
-  m <- tfl_template_expand("demog", list(population = "SAF", labels = list(AGE = "Age (y)")))
-  l <- tfl_template_expand("demog", list(population = "SAF", labels = nt(AGE = "Age (y)")))
+  m <- tfl_template_expand("demog", dmv(labels = list(AGE = "Age (y)")))
+  l <- tfl_template_expand("demog", dmv(labels = nt(AGE = "Age (y)")))
   expect_identical(l, m)
-  d <- tfl_template_expand("demog", list(population = "SAF"))
+  d <- tfl_template_expand("demog", dmv())
   a <- unlist(pl(l)[[1L]]$args)
   a0 <- unlist(pl(d)[[1L]]$args)
   expect_identical(names(a), names(a0))
@@ -720,7 +724,7 @@ test_that("a map of name and text also takes a list of {name, text}: the mapping
 
 test_that("demog: labels as a list of {name, text} are read like the mapping, the default labels kept (#640)", {
   lab <- function(e) Filter(function(it) it$fn == "plan_labels", e$content)[[1L]]$args$variable
-  args <- list(population = "SAF", by = "TRT01A", categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC"))
+  args <- list(population = "SAF", by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC"))
   m <- tfl_template_expand("demog", c(args, list(labels = list(
     AGE = "Age (years)", SEX = "Sex, n (%)", RACE = "Race, n (%)"))))
   # the list as a YAML draft writes it, read by yaml
@@ -781,4 +785,27 @@ test_that("the kit prints a map of name and text as a mapping, and checks the li
   expect_true(any(grepl("param_labels", p$problem, fixed = TRUE) & p$severity == "error"))
   expect_false(any(grepl("plan_labels", p$problem, fixed = TRUE)))
   expect_true(any(grepl("mapping", p$problem, fixed = TRUE)))
+})
+
+test_that("tfl_read_template_sheets(): the population column (or the args cell's) is the report's population:", {
+  skip_if_not_installed("writexl")
+  f <- withr::local_tempfile(fileext = ".xlsx")
+  t <- data.frame(output_id = c("A", "B", "C", "D", "E"), kind = "table", label = "x",
+                  population = c("ITT", NA, "SAF", "SAF", "ITT"),
+                  template = c("demog", "demog", "demog", "demog", "summary"), by = "TRT01A", where = NA,
+                  args = c(NA, "population=ITT", "population=SAF", "population=ITT", NA))
+  rows <- data.frame(output_id = c("A", "B", "C", "D", "E"), param = "continuous", value = "AGE", label = NA)
+  writexl::write_xlsx(list(templates = t, template_rows = rows), f)
+  # (D: two different ones stop; the others read)
+  expect_error(tfl_read_template_sheets(f), "give it once", fixed = TRUE)
+  t <- t[t$output_id != "D", ]
+  writexl::write_xlsx(list(templates = t, template_rows = rows), f)
+  r <- tfl_read_template_sheets(f)
+  # (demog takes the analysis set from the report: the column, else the cell's, never an argument)
+  expect_identical(vapply(r[c("A", "B", "C")], function(x) x$population, ""), c(A = "ITT", B = "ITT", C = "SAF"))
+  expect_null(r$A$template$args$population)
+  expect_null(r$B$template$args$population)
+  # (a template that has the argument keeps it)
+  expect_identical(r$E$population, "ITT")
+  expect_identical(r$E$template$args$population, "ITT")
 })
