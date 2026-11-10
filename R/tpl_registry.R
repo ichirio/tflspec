@@ -138,7 +138,8 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
         "order"), "vars", TRUE),
     # the layouts' look, each a verb's argument the study standard may give
     k(c("max_rows", "stub_indent"), "number"),
-    k(c("stub_before", "blanks_first", "blanks_last", "blanks_counted", "total"), "flag"),
+    k(c("stub_before", "blanks_first", "blanks_last", "blanks_counted", "total",
+        "missing_row"), "flag"),
     k(c("blanks", "split", "total_label", "stub_name", "header_n", "cat_cell", "na",
         "rounding", "empty", "denominator", "stack_id", "stack_label"), "text"),
     k("widths", "list", fields = c("name", "text")),
