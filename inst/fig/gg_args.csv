@@ -432,7 +432,7 @@ position,orientation,enum[x|y],Orientation,向き,
 helper,mult,number|list<number>,Multiplicative expansion,割合の余白,"[0, 0.05]: none below, 5% above."
 helper,add,number|list<number>,Additive expansion,加える余白,In data units.
 helper,transform,tilde|function|lambda|r,Transformation,変換,"~ . / 7 (a formula), or a function by its name."
-helper,name,"string|call<derive>|call<expression, quote, bquote>|r",Title,タイトル,"The axis title; {fn: derive} (derive()) takes the primary axis's."
+helper,name,"string|call<derive, expression, quote, bquote>|r",Title,タイトル,"The axis title; {fn: derive} (derive()) takes the primary axis's."
 helper,breaks,"list<number>|call<seq, breaks_*, extended_breaks, pretty_breaks, log_breaks>|tilde|lambda|r",Breaks,目盛り,
 helper,labels,"function<abs, toupper, tolower, format, percent, comma, scientific, dollar, number, pvalue>|list<string>|call<label_*, *_format>|tilde|lambda|r",Labels,ラベル,
 helper,guide,string|call|r,Guide,凡例,
