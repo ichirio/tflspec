@@ -40,8 +40,9 @@ test_that("demog family: denominator is no parameter; summary and disposition ke
   expect_true("denominator" %in% tfl_tpl_args("summary")$param)
   expect_true("denominator" %in% tfl_tpl_args("disposition")$param)
   s <- dd_expand("summary", categorical = "SEX")
-  expect_false("denominator" %in% names(dd_an(s, "CAT")))
-  expect_identical(dd_an(s, "CAT")$data, "adsl_saf")
+  # (summary's percentages are over the analysis set too, passed explicitly)
+  expect_identical(dd_an(s, "CAT")$denominator, "adsl_saf")
+  expect_identical(dd_an(s, "CAT")$data, "adsl_saf_m")
 })
 
 dd_study <- function(blank_race = TRUE, args = list(), template = "demog") {
@@ -107,16 +108,16 @@ test_that("demog: no missing values, no Missing row, the percentages of the set"
   expect_true(any(grepl("ASIAN.*\\(", txt)))
 })
 
-test_that("summary with its default denominator keeps the non-missing percentages", {
+test_that("summary with its default denominator: % over the analysis set, a Missing row", {
   skip_on_cran()
   d <- dd_study(template = "summary")
   txt <- dd_text(d)
-  # Control: 22 / 75 (the subjects with a value), no Missing row
-  expect_true(any(grepl("ASIAN.*22 \\(29\\.3\\)", txt)))
-  expect_false(any(grepl("Missing", txt)))
+  # Control: 22 / 78 (every subject of the set), and a Missing row
+  expect_true(any(grepl("ASIAN.*22 \\(28\\.2\\)", txt)))
+  expect_true(any(grepl("Missing.*3 \\(3\\.8\\)", txt)))
   x <- dd_expand("summary", categorical = "RACE")
-  expect_false("denominator" %in% names(dd_an(x, "CAT")))
-  expect_identical(dd_an(x, "CAT")$data, "adsl_saf")
+  expect_identical(dd_an(x, "CAT")$denominator, "adsl_saf")
+  expect_identical(dd_an(x, "CAT")$data, "adsl_saf_m")
 })
 
 test_that("missing_row: TRUE (default) is the Missing step; FALSE and !unset turn it off", {
@@ -137,12 +138,10 @@ test_that("missing_row: TRUE (default) is the Missing step; FALSE and !unset tur
   expect_match(a$doc[a$param == "missing_row"], "^TRUE \\(default\\): a Missing row, last")
 })
 
-test_that("missing_row is no parameter of stf_t02_demog or summary, and passing it stops", {
+test_that("missing_row is no parameter of stf_t02_demog, and passing it stops", {
   expect_false("missing_row" %in% tfl_tpl_args("stf_t02_demog")$param)
-  expect_false("missing_row" %in% tfl_tpl_args("summary")$param)
+  expect_true("missing_row" %in% tfl_tpl_args("summary")$param)
   expect_error(dd_expand("stf_t02_demog", missing_row = FALSE), "there is no `missing_row` parameter")
-  expect_error(dd_expand("summary", categorical = "SEX", missing_row = TRUE),
-               "there is no `missing_row` parameter")
   # (stf_t02_demog keeps the Missing step)
   expect_true("adsl_saf_m" %in% vapply(dd_expand("stf_t02_demog")$ard$analysis_data, `[[`, "", "id"))
 })

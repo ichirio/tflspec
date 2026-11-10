@@ -633,8 +633,8 @@ test_that("hierarchical of one level; demog and ae_pt_freq on their layouts", {
     labels = list(AGE = "Age (years)", SEX = "Sex, n (%)")))
   no_from <- function(x) lapply(x, function(i) i[setdiff(names(i), "from")])
   expect_identical(no_from(d$content), no_from(s$content))   # (each item says its template)
-  # (the same sets, and demog's one more: the categorical variables with a Missing level)
-  expect_identical(d$ard$analysis_data[1L], s$ard$analysis_data)
+  # (the same sets, the categorical variables with a Missing level too)
+  expect_identical(d$ard$analysis_data, s$ard$analysis_data)
   expect_identical(d$ard$analysis_data[[2L]]$id, "adsl_saf_m")
 })
 
