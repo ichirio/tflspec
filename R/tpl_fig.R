@@ -309,7 +309,10 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
 }
 
 .tpl_forest_design <- function(group = "TRT01A", subgroups = c("SEX", "AGEGR1"),
-                               comparison = NULL, look = list()) {
+                               comparison = NULL, look = list(), ref = NULL) {
+  if (!is.null(ref) && identical(ref[1L], comparison[1L])) {
+    .ard_stop("forest_hr: `comparison` is the reference arm (`ref`); the reference has no hazard ratio to show.")
+  }
   d <- tfl_fig_template("forest_hr", group = group,
                         subgroups = paste(subgroups, collapse = ", "), comparison = comparison)
   d <- .tpl_forest_look(d, look, length(subgroups) > 0L)
@@ -347,8 +350,10 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
             doc = paste("the subgroups' headings, a variable = its label (SEX: Sex, AGEGR1: Age group);",
                         "a variable not given: the common ADaM variables' label (SEX, AGEGR1, RACE,",
                         "REGION1, ECOGBL ...), else its name; the levels' rows are not changed")),
+  tfl_param("ref", NULL, type = "levels", of = "group",
+            doc = "the reference arm, put first; NULL: the first arm in the code list's order, or in its number order"),
   tfl_param("comparison", NULL, type = "levels", of = "group",
-            doc = "the arm compared with the reference; NULL: every other arm"),
+            doc = "the one arm to show against the reference (not the reference itself); NULL: every other arm"),
   tfl_param("favours", NULL, type = "text", multiple = TRUE,
             doc = "two labels under the axis, Favours <left> and Favours <right> (the arms); NULL: none"),
   tfl_param("x_breaks", NULL, type = "number", multiple = TRUE,
@@ -415,22 +420,21 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
       id = set, label = sprintf("%s of %s, with the subgroups", a$param, a$population),
       from = a$data, population = a$population,
       where = tfl_r(.tpl_and(sprintf("PARAMCD == %s", q(a$param)), a$where)),
-      # (the arm compared last: the Cox model's reference is another arm,
-      # whatever the arms' order -- a study whose treatment arm comes first)
+      # (the reference arm first: `ref` is a relevel, else the first level is
+      # the reference)
       # (a blank arm is a missing one first: coxph keeps "" as an arm of its
       # own, and the model and the subgroups' models read this data)
       derive = tfl_r(paste(c(
         sprintf("%s = replace(%s, !is.na(%s) & as.character(%s) == \"\", NA)",
                 a$group, a$group, a$group, a$group),
-        if (length(a$comparison)) sprintf(
-          "%s = factor(%s, levels = c(setdiff(levels(factor(%s)), %s), %s))",
-          a$group, a$group, a$group, q(a$comparison[1L]), q(a$comparison[1L]))),
+        if (length(a$ref)) .forest_ref_derive(a$group, a$ref[1L])),
         collapse = " | ")),
       add = if (length(a$subgroups)) as.list(a$subgroups)))),
     analyses = lapply(seq_len(nrow(an)), function(i) list(
       id = an$analysis_id[i], label = an$label[i], method = "custom", data = set,
       code = tfl_r(an$code[i]), purpose = "SECONDARY OUTCOME MEASURE")))
-  f <- .tpl_forest_design(a$group, a$subgroups, a$comparison, .tpl_forest_look_args(a))
+  f <- .tpl_forest_design(a$group, a$subgroups, a$comparison, .tpl_forest_look_args(a),
+                          ref = a$ref)
   c(list(ard = ard), .tpl_fig_body_of(f, list(), ctx))
 }
 
@@ -447,8 +451,11 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
 #' @param ard The study ARD's rows of this report.
 #' @param group The arms compared (`TRT01A`), bare or as text.
 #' @param subgroups The subgroups (`c(SEX, AGEGR1)`), bare or as text.
-#' @param comparison The arm compared with the reference; `NULL`: every
-#'   other arm, each row saying which.
+#' @param comparison The one arm to show, compared with the reference (not
+#'   the reference itself); `NULL`: every other arm, each row saying which.
+#' @param ref The reference arm the ARD was made with (the template's `ref`);
+#'   the call only checks that `comparison` is not it.  `NULL`: the first
+#'   arm in the code list's order, or in its number order.
 #' @param favours Two labels under the axis: `Favours <left>` and
 #'   `Favours <right>`; `NULL`: none.
 #' @param x_breaks The hazard ratio axis's ticks; `NULL`: ggplot2's.
@@ -471,13 +478,14 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
 #' @seealso [tfl_template_expand()] for its ARD and design (the B use).
 #' @export
 tpl_forest_hr <- function(ard, group = "TRT01A", subgroups = c("SEX", "AGEGR1"),
-                          comparison = NULL, favours = NULL, x_breaks = NULL, size_by_n = FALSE,
-                          bold_headings = FALSE, n_by_arm = NULL, subgroup_labels = NULL,
-                          plot = NULL) {
+                          ref = NULL, comparison = NULL, favours = NULL, x_breaks = NULL,
+                          size_by_n = FALSE, bold_headings = FALSE, n_by_arm = NULL,
+                          subgroup_labels = NULL, plot = NULL) {
   f <- .tpl_forest_design(.tpl_col(rlang::enquo(group)), .tpl_cols(rlang::enquo(subgroups)),
                           comparison, list(favours = favours, x_breaks = x_breaks,
                                            size_by_n = size_by_n, bold_headings = bold_headings,
-                                           n_by_arm = n_by_arm, subgroup_labels = subgroup_labels))
+                                           n_by_arm = n_by_arm, subgroup_labels = subgroup_labels),
+                          ref = ref)
   f$content <- Filter(function(it) !identical(it$fn, "text_column"), f$content)
   .tpl_fig_draw("forest_hr", f, ard, plot, as = "ard")
 }
@@ -527,6 +535,4 @@ tpl_forest_layout <- function(fig, n_by_arm = NULL) {
       f <- .tpl_wf_design(a$value, a$by_response, a$param, a$data, a$where)
       .tpl_fig_body_of(f, a[setdiff(names(a), "where")], ctx)
     }, label = "Waterfall of each subject's change", call = "tfl_tpl")
-  # the study's figure style: the km parameters' study values
-  .tpl_extend(study_sources = .tpl_km_style_sources())
 }

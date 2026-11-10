@@ -145,6 +145,9 @@
 .spec_code_line <- function(x) {
   # (a tfl_r is its text, never a deparsed structure())
   if (inherits(x, "tfl_r")) return(paste(as.character(unclass(x)), collapse = " "))
+  # (an `!unset` argument of a template's call: the marker is needed there,
+  # leaving the argument out would bring the template's default back)
+  if (inherits(x, "tfl_unset")) return("tflspec::tfl_unset()")
   if (inherits(x, "tfl_spec_sym")) return(x$name)
   if (inherits(x, "tfl_spec_expr")) return(x$text)
   if (inherits(x, "tfl_spec_formula")) return(paste("~", x$text))
@@ -340,7 +343,8 @@
                         break_before = "break_before",
                         min_group_rows = "min_group_rows",
                         cont_label = "cont_label", page_by = "page_by",
-                        heading = "heading", heading_at = "heading_at"))
+                        heading = "heading", heading_at = "heading_at",
+                        na_label = "na_label"))
   if (length(a)) do.call(add, c(list("plan_paginate_rows"), a))
   a <- pick("colpages_", c(at = "at", cut_by = "cut_by", every = "every",
                            keep = "keep", fit = "fit",
@@ -955,7 +959,11 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
     els <- if (is.list(v)) v else as.list(v)
     for (e in els) {
       if (inherits(e, "formula") && length(e) == 3L) {
-        cell(variable, context, row, paste(deparse(e[[2L]]), collapse = " "), eval(e[[3L]], baseenv()))
+        # (numbers as written, not 5e-04: no scientific notation)
+        op <- options(scipen = 100L)
+        cond <- paste(deparse(e[[2L]]), collapse = " ")
+        options(op)
+        cell(variable, context, row, cond, eval(e[[3L]], baseenv()))
       } else if (is.character(e) && length(e) == 1L) {
         cell(variable, context, row, template = e)
       } else {
@@ -2091,6 +2099,8 @@ tfl_report_setup_code <- function(spec) {
   # the study's rounding, once for every report
   rnd <- .ard_spec_study_value(sp, "rounding")
   if (!is.na(rnd)) out <- c(out, .spec_call_code(.spec_call("options", rtfreporter.rounding = rnd), 0L))
+  ct <- .cards_round_type(rnd)
+  if (!is.null(ct)) out <- c(out, .spec_call_code(.spec_call("options", cards.round_type = ct), 0L))
   d <- study(sp$tokens)
   if (!is.null(d) && nrow(d)) {
     v <- ifelse(is.na(d$value), "", d$value)

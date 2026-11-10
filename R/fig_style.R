@@ -244,3 +244,49 @@ tfl_read_fig_style <- function(path) {
   i <- match(tolower(label), tolower(m$marker))
   if (is.na(i)) NULL else as.list(m[i, ])
 }
+
+# ---- the study's copy (spec/defaults.yml's `figure_style:`) ----------------------
+
+# The figure style standard a study keeps: spec/defaults.yml's
+# `figure_style:`, the catalog's three tables as lists of records
+#
+#   figure_style:
+#     settings:
+#       - {type: km, key: theme, value: classic}
+#     colors: [...]   # palette, value, colour
+#     markers: [...]  # marker, shape, fill, colour, size
+#
+# (tflplanner copies the company's at the study's start, as it does the
+# rest of the defaults).  A table the study gives is the study's whole
+# table, as tfl_read_fig_style() reads a workbook's sheet; one it does not
+# give is tflspec's built-in one.  NULL part: the built-in style itself.
+.fig_style_study <- function(figure_style = NULL) {
+  b <- .fig_style_builtin()
+  if (!length(figure_style)) return(b)
+  for (k in intersect(names(b), names(figure_style))) {
+    rows <- figure_style[[k]]
+    if (!is.list(rows) || !length(rows)) next
+    cols <- names(b[[k]])
+    one <- function(r) {
+      v <- lapply(cols, function(cn) {
+        x <- r[[cn]]
+        if (is.null(x) || !length(x)) NA_character_ else as.character(x[[1L]])
+      })
+      .fs_df(stats::setNames(v, cols))
+    }
+    b[[k]] <- do.call(rbind, lapply(rows, one))
+  }
+  b
+}
+
+# A `figure_style.<key>` (or `figure_style.<type>.<key>`) reference's
+# value: the study's figure style, else tflspec's built-in one; NULL when
+# neither has it
+.tpl_fig_style_read <- function(path, study = NULL) {
+  if (!length(path) || length(path) > 2L) return(NULL)
+  key <- path[length(path)]
+  type <- if (length(path) == 2L) path[1L] else NA
+  v <- .fs_get(key, type, .fig_style_study(study$figure_style))
+  if (is.na(v)) v <- .fs_get(key, type, .fig_style_builtin())
+  if (is.na(v)) NULL else v
+}

@@ -4,14 +4,14 @@
 \alias{tfl_tpl_orr}
 \title{orr: the template orr}
 \description{
-The table template \code{orr}, layout \code{stat_block}. Its program is one call, \code{tfl_tpl(ard, "orr", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
+The table template \code{orr}, layout \code{stat_block}. Its program is one call, \code{tfl_tpl(ard, "orr", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab other \tab call \tab ITT \tab output.population \tab the analysis set's id \cr
+   \code{population} \tab other \tab call \tab report: population, else ITT \tab output.population \tab the analysis set's id \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
-   \code{by} \tab other \tab call \tab TRT01P \tab settings.treatment \tab the column variable \cr
+   \code{by} \tab other \tab call \tab study: settings.treatment, else TRT01P \tab settings.treatment \tab the column variable \cr
    \code{by_levels} \tab other \tab call \tab  \tab  \tab its values in order; NULL: its code list's \cr
    \code{data} \tab other \tab call \tab ADRS \tab  \tab the response dataset \cr
    \code{param} \tab other \tab call \tab BOR \tab  \tab the PARAMCD of the best overall response \cr
@@ -23,6 +23,7 @@ The table template \code{orr}, layout \code{stat_block}. Its program is one call
    \code{conf_level} \tab other \tab call \tab 0.95 \tab  \tab the rate's CI's level \cr
    \code{stat_layout} \tab other \tab call \tab rows \tab  \tab the rate and its CI: "rows", under each other in the arm's column, or "cols", each arm's two columns (stat_block) \cr
    \code{heading} \tab other \tab call \tab Response \tab  \tab the label column's heading \cr
+   \code{header_n} \tab other \tab call \tab set \tab  \tab the arm headings' N: "set" (default) or "denominator": the arm's subjects in the analysis set (with 'subset'), the percentages' and the rate's base; "none": no N. "tested" is not supported, the rate row's base is the analysis set \cr
 }
 }
 

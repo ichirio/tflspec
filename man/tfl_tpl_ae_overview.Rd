@@ -4,19 +4,21 @@
 \alias{tfl_tpl_ae_overview}
 \title{ae_overview: the template ae_overview}
 \description{
-The table template \code{ae_overview}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "ae_overview", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
+The table template \code{ae_overview}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "ae_overview", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab other \tab call \tab SAF \tab output.population \tab the analysis set's id \cr
+   \code{population} \tab other \tab call \tab report: population, else SAF \tab output.population \tab the analysis set's id \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
-   \code{by} \tab other \tab call \tab TRT01A \tab settings.treatment \tab the column variable \cr
+   \code{by} \tab other \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the column variable \cr
    \code{data} \tab other \tab call \tab ADAE \tab  \tab the dataset of events \cr
    \code{where} \tab other \tab call \tab TRTEMFL == "Y" \tab  \tab the events kept (R): the treatment-emergent \cr
    \code{data_id} \tab other \tab call \tab  \tab  \tab the events' analysis data's id; NULL: <data>_<population> \cr
    \code{flags} \tab other \tab call \tab (id = ANY; label = Any TEAE); (id = REL; label = Any trea... \tab  \tab the rows, in order: each 'id' (the flag's name), 'label' (the row's text) and 'where' (R: the events it counts; none: every event kept) \cr
    \code{heading} \tab other \tab call \tab Subjects with \tab  \tab the label column's heading \cr
+   \code{denominator} \tab other \tab call \tab  \tab  \tab the percentages' denominator: NULL (default): the analysis set's subjects; "data": the subjects with a record kept; a number: that many subjects in every column; numbers named by the values of 'by' ('c("Drug X" = 60, "Control" = 55)'): that many in each column; the id of an analysis data ('adsl_itt', or one of the report's own): its subjects in each column \cr
+   \code{header_n} \tab other \tab call \tab set \tab  \tab the arm headings' N: "set" (default): the arm's subjects in the analysis set (with 'subset'); "denominator": the arm's rows of the data the percentages are of ('denominator'), the same as "set" when that is NULL, not with a number; "none": no N. "tested" is not supported: use "denominator" with denominator = "data" \cr
 }
 }
 

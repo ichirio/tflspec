@@ -48,6 +48,7 @@
     pages_break_before = "ids",
     pages_min_group_rows = "int", pages_cont_label = "text",
     pages_page_by = "list", pages_heading = "text", pages_heading_at = "text",
+    pages_na_label = "text",
     group_col = "text", group_mode = "text", group_collapse = "flex",
     group_page = "bool", group_keep = "bool", group_heading = "text",
     group_heading_at = "text",
@@ -127,6 +128,9 @@
 # nothing is what the verb it feeds then receives.
 .ard_spec_value <- function(x, type, where) {
   if (is.null(x) || is.na(x)) return(NULL)
+  # a sheet writes an !unset as "(none)": no value, not a wrong one (the
+  # round trip to YAML reads it back as !unset, convert.R)
+  if (!identical(type, "text") && identical(trimws(x), "(none)")) return(NULL)
   bad <- function(what) {
     .ard_stop(sprintf("%s must be %s; got %s.", where, what, sQuote(x)))
   }
@@ -2796,6 +2800,7 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
   put("pages_page_by", pg$page_by)
   put("pages_heading", pg[[".heading"]])
   put("pages_heading_at", pg[[".heading_at"]])
+  put("pages_na_label", pg[[".na_label"]])
   cp <- ly[["colpages"]]
   put("colpages_every", cp$every); put("colpages_at", cp$at)
   put("colpages_keep", cp$keep); put("colpages_order", cp$order)

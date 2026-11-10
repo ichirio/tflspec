@@ -54,8 +54,8 @@ variant's defaults written out, so the package that registers it
 exports nothing.  A value comes from, first to last: the report's
 arguments, the study standard (\code{study.yml}, \code{defaults.yml}: \code{tfl_param(study = )}), the variant's \code{defaults}, \code{from}'s.
 
-Register it where it is used: a company's package's \code{.onLoad()}
-(\code{\link[=tfl_use_company_templates]{tfl_use_company_templates()}}), or a study's \verb{spec/templates/*.R}.
+Register it in a company's package's \code{.onLoad()}
+(\code{\link[=tfl_use_company_templates]{tfl_use_company_templates()}}).
 }
 \examples{
 tfl_template_variant("demog_age_sex", from = "demog",

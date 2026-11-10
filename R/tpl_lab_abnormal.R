@@ -20,7 +20,13 @@
   tfl_param("baseline", "BNRIND", doc = "the category at baseline"),
   tfl_param("baseline_value", "NORMAL", doc = "the value of `baseline` that is normal"),
   tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<population>"),
-  tfl_param("heading", "Parameter / Category", doc = "the label column's heading")
+  tfl_param("heading", "Parameter / Category", doc = "the label column's heading"),
+  tfl_param("header_n", "set", type = "choice", choices = c("set", "tested", "none"), doc = paste(
+    "the arm headings' N, set apart from the cells' N (a parameter's subjects with a value):",
+    "\"set\" (default): the arm's subjects in the analysis set (with `subset`);",
+    "\"tested\": the arm's subjects with a record kept (after `where`, `params` and",
+    "`baseline_normal`), one N for all the parameters; \"none\": no N.  \"denominator\" is",
+    "not one N here, the cells' N differs by parameter"))
 )
 
 .tpl_la_body <- function(a, ctx) {
@@ -35,6 +41,10 @@
                     "(or a code list of the category)."))
   }
   q <- function(x) paste0("c(", paste0("\"", x, "\"", collapse = ", "), ")")
+  # (the cells' N differs by parameter: no "denominator" for the header)
+  hn <- .tpl_header_n(a, ctx, c("set", "tested", "none"), paste0(
+    "is not one N: the percentages' denominator differs by parameter; ",
+    "use header_n = \"set\", \"tested\" or \"none\"."))
   where <- c(a$where, if (length(a$params)) sprintf("PARAMCD %%in%% %s", q(a$params)),
              if (isTRUE(a$baseline_normal)) sprintf("%s == \"%s\"", a$baseline, a$baseline_value))
   keys <- paste(c("USUBJID", a$by, "PARAM"), collapse = ", ")
@@ -56,7 +66,7 @@
         where = if (length(lv)) tfl_r(sprintf("%s %%in%% %s", ct, q(lv))),
         derive = if (length(lv)) tfl_r(sprintf("%s = factor(%s, levels = %s)", ct, ct, q(lv))),
         distinct = paste(c("USUBJID", a$by, "PARAM", ct), collapse = " | ")))
-  sets <- c(list(
+  sets <- Filter(Negate(is.null), c(list(
     list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
          population = pop),
     Filter(Negate(is.null), list(
@@ -69,13 +79,20 @@
           "PARAM = factor(PARAM)"))),
     # the N
     per("_n", "the subjects with a value of each parameter",
-        code = sprintf("dplyr::distinct(%s, %s)", set, keys))), cats)
+        code = sprintf("dplyr::distinct(%s, %s)", set, keys)),
+    # the header N ("tested"): the arm's subjects with a record kept
+    if (identical(hn, "tested")) per("_tested", "the subjects with a record kept",
+        code = sprintf("dplyr::distinct(%s, %s)", set,
+                       paste(c("USUBJID", a$by), collapse = ", ")))), cats))
   analyses <- list(
-    list(id = "GROUPN", method = "categorical", data = subj, variables = a$by,
-         purpose = "PRIMARY OUTCOME MEASURE"),
+    if (!identical(hn, "none")) list(
+      id = "GROUPN", method = "categorical",
+      data = if (identical(hn, "tested")) paste0(set, "_tested") else subj,
+      variables = a$by, purpose = "PRIMARY OUTCOME MEASURE"),
     list(id = "ABNORMAL", method = "categorical", data = paste0(set, "_cat"),
          by = c(a$by, "PARAM"), variables = ct, denominator = paste0(set, "_n"),
          purpose = "PRIMARY OUTCOME MEASURE"))
+  analyses <- Filter(Negate(is.null), analyses)
   content <- c(
     list(tfl_item("table_plan", list(cols = a$by, rows = list(group = "PARAM"))),
          tfl_item("plan_cells", list(categorical = "{n}/{N} ({p:.1f%})"))),
@@ -83,7 +100,7 @@
     list(tfl_item("plan_stub", list(vars = c("group", "label"), name = "row_label")),
          tfl_item("plan_col_header", list(header = list(
            list(line = "1", cols = "row_label", text = .tpl_lines(a$heading)),
-           list(line = "1", cols = ".values", span = "each", text = "{col}\n(N={n})")))),
+           list(line = "1", cols = ".values", span = "each", text = if (identical(hn, "none")) "{col}" else "{col}\n(N={n})")))),
          tfl_item("plan_paginate_rows", list(max_rows = 30L, split = "group_safe"))))
   list(ard = list(analysis_data = sets, analyses = analyses),
        data = list(source = "ard", object = "ard"), content = content)

@@ -2,7 +2,7 @@
 % Please edit documentation in R/tpl_company.R
 \name{tfl_test_templates}
 \alias{tfl_test_templates}
-\title{Test templates: no parameter is the look, each has its type}
+\title{Test templates: each has its types, its study sources and its standard pair}
 \usage{
 tfl_test_templates(names = NULL)
 }
@@ -10,27 +10,25 @@ tfl_test_templates(names = NULL)
 \item{names}{The templates; \code{NULL}: every one registered.}
 }
 \value{
-A data frame, one row a parameter that ends in the look
-(\code{status} \code{"look"}: \code{param}, and the verb \code{fn} and argument \code{arg} it
-ends in), a parameter with no type (\code{"no type (guessed: <type>)"}),
+A data frame, one row a finding: a parameter with no type (\code{"no type (guessed: <type>)"}),
 one with no study source (\code{"no study source (population / treatment)"}),
 a template without the standard pair (\code{"no subset"}, \code{"no where (a records template)"})
 or a template whose run stopped (\code{"not checked: ..."}):
 \code{template}, \code{param}, \code{fn}, \code{arg}, \code{status}.  No rows: none.
 }
 \description{
-Runs each template's body with its example, and again with one
-parameter at a time changed, and looks which items change with it: a
-parameter that changes the look (the rows a page, column widths, the
-digits, the blank rows, the style, a listing's type) is listed.  So is
-a parameter with no type (\code{\link[=tfl_param]{tfl_param()}}'s \code{type}, nor tflspec's for its
-name): an input form guesses its field from the default; and the analysis
-set or the treatment not read from the study standard (no \verb{study =}).
-A study's value of them is the study's, not each report's.  So is a
-template of data of its own without \code{subset}, and one of records data
-without \code{where} (\code{\link[=tfl_templates]{tfl_templates()}}: the standard pair).
-tflspec's own templates have none; a company's package tests its own
-with it (one line in its tests, \code{\link[=tfl_use_company_templates]{tfl_use_company_templates()}}).
+Runs each template's body with its example and lists what is wrong
+with its definition: a parameter with no type (\code{\link[=tfl_param]{tfl_param()}}'s \code{type},
+nor tflspec's for its name): an input form guesses its field from the
+default; and the analysis set or the treatment not read from the study
+standard (no \verb{study =}).  A study's value of them is the study's, not
+each report's.  So is a template of data of its own without \code{subset},
+and one of records data without \code{where} (\code{\link[=tfl_templates]{tfl_templates()}}: the standard
+pair).  A parameter that is the look (the rows a page, column widths,
+the digits, the blank rows, the style) is not listed: the look is a
+parameter with a default, like any other.
+tflspec's own templates have no finding; a company's package tests its
+own with it (one line in its tests, \code{\link[=tfl_use_company_templates]{tfl_use_company_templates()}}).
 }
 \examples{
 tfl_test_templates("demog")

@@ -65,15 +65,27 @@ tfl_item_own <- function(item, below = NULL) {
     .ard_stop(sprintf("tfl_item_own(): `below` is a %s item; the item is %s.", below$fn, item$fn))
   }
   txt <- function(args) tfl_args_to_r(item$fn, args)
+  # an `!unset` argument is the report's own (left out of the call on
+  # purpose, whatever is below it); it cannot be written as R, so it is
+  # taken out of the comparison and kept in the result
+  un <- vapply(item$args %||% list(), inherits, NA, "tfl_unset")
   if (.dots_named(item$fn)) {
     a <- item$args %||% list()
     b <- below$args %||% list()
-    keys <- names(a)[vapply(names(a), function(k)
-      is.null(b[[k]]) || !identical(txt(a[k]), txt(b[k])), NA)]
+    keys <- names(a)[vapply(seq_along(a), function(i) {
+      k <- names(a)[i]
+      un[[i]] || is.null(b[[k]]) || !identical(txt(a[k]), txt(b[k]))
+    }, NA)]
     own <- a[keys]
     for (k in setdiff(names(b), names(a))) own[[k]] <- tfl_unset()
     if (!length(own)) return(NULL)
     return(tfl_item(item$fn, own, from = "own"))
+  }
+  if (any(un)) {
+    a <- item$args
+    b <- below$args[setdiff(names(below$args), names(a)[un])]
+    own <- if (identical(txt(a[!un]), txt(b))) list() else a[!un]
+    return(tfl_item(item$fn, c(own, a[un]), from = "own"))
   }
   if (identical(txt(item$args), txt(below$args))) return(NULL)
   .item_bare(item, "own")

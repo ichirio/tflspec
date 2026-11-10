@@ -56,13 +56,13 @@ test_that("the layouts' parameters: what a report changes; the look is the study
   expect_identical(p$by$tier, "usual")
   expect_identical(sort(names(p)), sort(c(
     "population", "subset", "data", "where", "by", "continuous", "categorical", "labels",
-    "order", "cells", "sd_missing", "count_cell", "continuous_statistics", "categorical_statistics",
-    "total",
+    "order", "cells", "sd_missing", "count_cell", "denominator", "continuous_statistics",
+    "categorical_statistics", "total",
     "stack")))
   expect_identical(sort(names(tfl_template_params("hierarchical"))), sort(c(
     "population", "subset", "hierarchy", "data", "where", "by", "any_row", "any_row_label",
     "heading", "sort",
-    "min_pct", "min_pct_in", "count_cell", "denominator", "total")))
+    "min_pct", "min_pct_in", "count_cell", "denominator", "total", "header_n")))
   # every parameter's stage: an argument of the call, unless it says "data"
   expect_true(all(vapply(p, `[[`, "", "stage") == "call"))
   expect_identical(tfl_param("x", stage = "data")$stage, "data")
@@ -216,14 +216,14 @@ test_that("the layout's own page and column header: the study standard's replace
   # no plan_paginate_rows in the standard: the layout's
   pg <- fn_args(res("summary", list(continuous = "AGE")), "plan_paginate_rows")
   expect_identical(pg[[length(pg)]]$args, list(max_rows = 30L, split = "group_safe"))
-  # the standard's: it replaces the layout's
+  # the standard's: it updates the layout's, argument by argument (the split stays)
   s$defaults$content <- c(s$defaults$content,
                           list(tfl_item("plan_paginate_rows", list(max_rows = 15L))))
   ro <- res("summary", list(continuous = "AGE"))
   pg <- fn_args(ro, "plan_paginate_rows")
-  expect_identical(pg[[length(pg)]]$args, list(max_rows = 15L))
+  expect_identical(pg[[length(pg)]]$args, list(max_rows = 15L, split = "group_safe"))
   hp <- fn_args(res("ae_soc_pt", list()), "plan_paginate_rows")
-  expect_identical(hp[[length(hp)]]$args, list(max_rows = 15L))
+  expect_identical(hp[[length(hp)]]$args, list(max_rows = 15L, split = "group_force"))
   # hierarchical's column header is its shape (the counts' "n (%)" line, the
   # levels' heading): a standard's general header (Characteristic, (N=n))
   # does not replace it

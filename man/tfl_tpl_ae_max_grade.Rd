@@ -4,18 +4,18 @@
 \alias{tfl_tpl_ae_max_grade}
 \title{ae_max_grade: the template ae_max_grade}
 \description{
-The table template \code{ae_max_grade}, layout \code{hierarchical}. Its program is one call, \code{tfl_tpl(ard, "ae_max_grade", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
+The table template \code{ae_max_grade}, layout \code{hierarchical}. Its program is one call, \code{tfl_tpl(ard, "ae_max_grade", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab required \tab call \tab  \tab output.population \tab the analysis set's id (SAF) \cr
+   \code{population} \tab required \tab call \tab report: population, required \tab output.population \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
    \code{grade} \tab other \tab call \tab AESEV \tab  \tab the severity or grade variable (AESEV, AETOXGR) \cr
-   \code{grade_levels} \tab other \tab call \tab  \tab  \tab its values, lowest first; NULL: the code list of 'grade' \cr
+   \code{grade_levels} \tab other \tab call \tab  \tab  \tab its values, lowest first: the rank of the maximum, and the order the table shows them in; NULL: the code list of 'grade' \cr
    \code{grade_in} \tab other \tab call \tab rows \tab  \tab the grades as "rows" under each term, or as "cols" in each group \cr
    \code{hierarchy} \tab other \tab call \tab AEBODSYS, AEDECOD \tab  \tab the levels, outer first \cr
-   \code{by} \tab other \tab call \tab TRT01A \tab settings.treatment \tab the column variable \cr
+   \code{by} \tab other \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the column variable \cr
    \code{data} \tab other \tab call \tab ADAE \tab  \tab the dataset of records \cr
    \code{where} \tab other \tab call \tab TRTEMFL == "Y" \tab  \tab the records kept (R) \cr
    \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<population> \cr
@@ -23,6 +23,8 @@ The table template \code{ae_max_grade}, layout \code{hierarchical}. Its program 
    \code{any_grade} \tab other \tab call \tab Any grade \tab  \tab the label of a term's count at any grade \cr
    \code{sort} \tab other \tab call \tab n \tab  \tab the SOCs and PTs by their count, most first ("n"), or by "name" \cr
    \code{heading} \tab other \tab call \tab System Organ Class,    Preferred Term \tab  \tab the label column's heading, a line a level \cr
+   \code{denominator} \tab other \tab call \tab  \tab  \tab the percentages' denominator: NULL (default): the analysis set's subjects; "data": the subjects with a record kept; a number: that many subjects in every column; numbers named by the values of 'by' ('c("Drug X" = 60, "Control" = 55)'): that many in each column; the id of an analysis data ('adsl_itt', or one of the report's own): its subjects in each column \cr
+   \code{header_n} \tab other \tab call \tab denominator \tab  \tab the arm headings' N: "denominator" (default): the arm's subjects the percentages are of ('denominator'); "set": the same, when 'denominator' is NULL (the analysis set); "tested": the same, when 'denominator' is "data" (the records' subjects); a header N apart from the denominator is not supported yet; "none": no N \cr
 }
 }
 

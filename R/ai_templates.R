@@ -5,7 +5,7 @@
 #  args}` when one of the study's templates fits (and the report's own
 #  content items for what the template does not cover), else as a code
 #  SPEC.  The templates are listed from the registry as it is when the
-#  requests are written (tflspec's, a company's, a study's variants), never
+#  requests are written (tflspec's and a company's), never
 #  by hand.  An answer's template is checked (its name, its arguments' names
 #  and, cheaply, their types) and then expanded, so the code SPEC's checks
 #  run on what it stands for.  `templates = FALSE` writes the requests as
@@ -59,14 +59,39 @@
   if (is.na(t)) NULL else unname(t)
 }
 
-# A parameter's value as one short line of YAML
+# A parameter's value as one line of YAML -- whole: the agent copies it, so
+# it is never cut (a long one goes on its own line under the parameter)
 .ai_tpl_value <- function(v) {
   if (is.null(v)) return("~")
   # (a named vector as the mapping a report writes)
   if (is.atomic(v) && !is.null(names(v))) v <- as.list(v)
-  s <- .ai_yaml_flow(v)
-  if (nchar(s) > 70L) s <- paste0(substr(s, 1L, 67L), "...")
-  s
+  .ai_yaml_flow(v)
+}
+
+# A long default goes under its parameter, on a line of its own
+.ai_tpl_long <- 70L
+
+# What the km report types read that is not an ordinary parameter, from the
+# registry's own objects: the `plot:` keys the template routes (risk_title:
+# .tpl_plot_routed), the figure's own `plot:` settings the look shares
+# (theme, palette, base_size) and the look the study's figure style sets,
+# which `plot:` does not take (.tpl_km_look, .tpl_km_look_what)
+.ai_tpl_plot_lines <- function(t) {
+  routed <- .tpl_plot_routed[[t$layout]]
+  look <- .tpl_plot_unused(t, stats::setNames(rep(list(1), length(.tpl_km_look)), .tpl_km_look))
+  if (is.null(routed) || !length(look)) return(character())
+  own <- intersect(names(Filter(function(p) isTRUE(p$hidden), t$params)),
+                   intersect(.tpl_km_look, .fig_plot_fields()$field))
+  what <- .tpl_km_look_what[look]
+  c(sprintf("  - settings that are not parameters (they have no place in `template: args`): %s",
+            paste(sprintf("`%s` (a `plot:` key of the report, read by the template)", routed), collapse = ", ")),
+    sprintf("    - write `plot: {%s: \"<the shell's text>\"}` in the report, beside the template, not as an argument",
+            routed[1L]),
+    if (length(own)) sprintf("    - `plot: {%s: <value>}` are the figure's own settings (accepted)",
+                             paste(own, collapse = ": <value>, ")),
+    sprintf("    - the look is the study's figure style, set once for the study (`%s`), not in a report: %s; a `plot:` key of these names is rejected (tfl_check_spec() and tfl_check_fig_design() give an error), and `template: args` has no such argument: leave them out",
+            paste(sprintf("km.%s", look), collapse = ", "),
+            paste(sprintf("`%s` %s", look, sub("^its ", "", what)), collapse = ", ")))
 }
 
 # A line a template's block adds: a fact the agent found only by building
@@ -162,10 +187,20 @@
         what <- paste0(what, " {", paste(x$fields, collapse = ", "), "}")
       }
       tgt <- if (identical(x$group, "target") || (is.null(x$group) && x$name %in% target)) " [target]" else ""
+      val <- .ai_tpl_value(x$default)
+      # (a parameter that refers to the study standard: its key and fallback)
+      if (is.character(x$study) && !startsWith(x$study, "output.")) {
+        val <- .tpl_ref_text(x$study, if (is.null(x$default)) NA_character_ else val, x$required)
+      }
+      long <- nchar(val) > .ai_tpl_long
       out <- c(out, sprintf("  - `%s`%s%s (%s) = %s%s", x$name, tgt,
-                            if (isTRUE(x$required)) "*" else "", what, .ai_tpl_value(x$default),
+                            if (isTRUE(x$required)) "*" else "", what,
+                            if (long) "(the default, whole, on the next line)" else val,
                             if (!is.null(x$doc) && nzchar(x$doc)) paste0(": ", x$doc) else ""))
+      if (long) out <- c(out, paste0("    ", val))
     }
+    # (what the template reads that is not a parameter)
+    if (!short) out <- c(out, .ai_tpl_plot_lines(t))
   }
   out
 }
@@ -179,13 +214,16 @@
           if (short) {
             paste("Each: its name, what it is, its kind and layout; then its parameters'",
                   "names -- [target] (the report's analysis set, subjects and records),",
-                  "* required. A parameter left out takes its default or the study",
-                  "standard's value.")
+                  "* required. A parameter left out takes its default, or the study standard's",
+                  "value where it says `study: <key>`: it is not written again. `!unset`: leave the",
+                  "argument out of the call.")
           } else {
             paste("Each: its name, what it is, its kind and layout; then its parameters --",
                   "`name` [target] (the report's analysis set, subjects and records),",
                   "* required, (its type), = its default, and what it is. A parameter left",
-                  "out takes its default or the study standard's value.")
+                  "out takes its default, or the study standard's value where it says",
+                  "`study: <key>, else <fallback>` (`no fallback`: left unset): it is not written again.",
+                  "`!unset` (a default, or a value you write): leave the argument out of the call.")
           }, "",
           .ai_templates_list(kinds, short = short)), collapse = "\n")
 }
@@ -215,8 +253,8 @@
   kinds <- list(table = c("table", "listing"), figure = "figure")
   paste(c("# The study's templates", "",
           paste("Read when a request has `<!-- templates: TRUE -->` at its head. The",
-                "templates are written from the registry (tflspec's, the company's, the",
-                "study's variants) when the requests were; name no other."), "",
+                "templates are written from the registry (tflspec's and the company's)",
+                "when the requests were; name no other."), "",
           unlist(lapply(names(kinds), function(task) {
             c(sub("^## ", sprintf("## %s: ", if (task == "table") "Tables and listings" else "Figures"),
                   how(task)), "",
@@ -224,7 +262,9 @@
               paste("Each: its name, what it is, its kind and layout; then its parameters --",
                     "`name` [target] (the report's analysis set, subjects and records),",
                     "* required, (its type), = its default, and what it is. A parameter left",
-                    "out takes its default or the study standard's value."), "",
+                    "out takes its default, or the study standard's value where it says",
+                    "`study: <key>, else <fallback>` (`no fallback`: left unset): it is not written again.",
+                    "`!unset` (a default, or a value you write): leave the argument out of the call."), "",
               .ai_templates_list(kinds[[task]]), "")
           }))), collapse = "\n")
 }

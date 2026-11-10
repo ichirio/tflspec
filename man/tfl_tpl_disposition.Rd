@@ -4,19 +4,20 @@
 \alias{tfl_tpl_disposition}
 \title{disposition: the template disposition}
 \description{
-The table template \code{disposition}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "disposition", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
+The table template \code{disposition}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "disposition", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab required \tab call \tab  \tab output.population \tab the analysis set's id (SAF) \cr
+   \code{population} \tab required \tab call \tab report: population, required \tab output.population \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
    \code{categorical} \tab other \tab call \tab EOSSTT \tab  \tab the status variable(s), in order \cr
    \code{cat_id} \tab other \tab call \tab DISP \tab  \tab the status analysis' id in the ARD \cr
    \code{cat_label} \tab other \tab call \tab Status at end of study \tab  \tab the status analysis' label in the ARD \cr
    \code{labels} \tab other \tab call \tab Status at end of study, n (\%) \tab  \tab each variable's heading; given by name, merged \cr
-   \code{by} \tab usual \tab call \tab TRT01A \tab settings.treatment \tab the column variable \cr
+   \code{by} \tab usual \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the column variable \cr
    \code{categorical_statistics} \tab other \tab call \tab n, p \tab  \tab the categorical statistics the ARD has; NULL: cards' own \cr
+   \code{denominator} \tab other \tab call \tab  \tab  \tab the categorical variables' percentages' denominator: NULL (default): the analysis set's subjects (those with a value); a number: that many in every column; numbers named by the values of 'by' ('c("Drug X" = 60, "Control" = 55)'): that many in each column; the id of an analysis data ('adsl_itt', or one of the report's own): its rows in each column. A number is not for 'total' = TRUE. The column headings' N is the study standard's, not moved \cr
    \code{groupn_label} \tab other \tab call \tab  \tab  \tab the subjects-per-group analysis' label \cr
 }
 }

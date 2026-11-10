@@ -135,7 +135,8 @@
       "Do not build or check them: the person runs the check.",
     per_chat = if (isTRUE(n > 0L)) sprintf(paste0(
       "\n- After %d requests in this chat, finish the current one, update ",
-      "`ai/progress.md` and stop with \"Open a new chat and give it ai/agent_prompt.md; ",
+      "`ai/progress.md` and stop with \"Open a new chat and give it ai/agent_prompt.md ",
+      "(it starts: First read AGENTS.md in this folder and follow it); ",
       "it goes on from ai/progress.md\"."), n) else "",
     language = lang,
     carry_section = if ("section" %in% s$carry) " or its TOC section" else "",
@@ -366,7 +367,7 @@ tfl_ai_decisions_write <- function(study_dir, x) {
   if (!dir.exists(area)) return(out)
   for (f in list.files(area, "[.]ya?ml$", full.names = TRUE)) {
     id <- sub("[.]ya?ml$", "", basename(f))
-    y <- tryCatch(yaml::read_yaml(f, handlers = .yaml_handlers()), error = function(e) e)
+    y <- tryCatch(.yaml_read_file(f, handlers = .yaml_handlers()), error = function(e) e)
     if (inherits(y, "error")) {
       out$bad[id] <- trimws(paste("the YAML cannot be read:", .ai_one_line(conditionMessage(y)),
                                   .ai_yaml_error_line(conditionMessage(y), f)))
@@ -460,7 +461,7 @@ tfl_ai_decisions_write <- function(study_dir, x) {
   area <- file.path(study_dir, "ai", "spec", "outputs")
   df <- file.path(study_dir, "spec", "defaults.yml")
   if (!dir.exists(area) || !file.exists(df)) return(invisible(NULL))
-  y <- tryCatch(yaml::read_yaml(df, handlers = .yaml_handlers()), error = function(e) NULL)
+  y <- tryCatch(.yaml_read_file(df, handlers = .yaml_handlers()), error = function(e) NULL)
   own <- suppressWarnings(as.integer(names(y$page$footer %||% list())))
   n <- if (length(own) && !all(is.na(own))) max(own, na.rm = TRUE) else 0L
   if (n < 1L) return(invisible(NULL))
