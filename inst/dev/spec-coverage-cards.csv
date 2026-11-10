@@ -245,6 +245,8 @@
 "cardx","ard_effectsize_cohens_d","pooled_sd","yes","method: cohens_d (or cardx::ard_effectsize_cohens_d); args","passed on to effectsize::cohens_d; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",2
 "cardx","ard_effectsize_cohens_d","mu","yes","method: cohens_d (or cardx::ard_effectsize_cohens_d); args","passed on to effectsize::cohens_d; inst/ard/passed_args.csv: number; its value judged","cardx ard_*()",2
 "cardx","ard_effectsize_cohens_d","alternative","yes","method: cohens_d (or cardx::ard_effectsize_cohens_d); args","passed on to effectsize::cohens_d; inst/ard/passed_args.csv: choice; its value judged","cardx ard_*()",2
+"cardx","ard_effectsize_cohens_d","reference","yes","method: cohens_d (or cardx::ard_effectsize_cohens_d); args","passed on to effectsize::cohens_d; inst/ard/passed_args.csv: text; its value judged","cardx ard_*()",2
+"cardx","ard_effectsize_cohens_d","adjust","yes","method: cohens_d (or cardx::ard_effectsize_cohens_d); args","passed on to effectsize::cohens_d; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",2
 "cardx","ard_effectsize_hedges_g","data","yes","method: hedges_g (or cardx::ard_effectsize_hedges_g); column `data`","the analysis row's column","cardx ard_*()",2
 "cardx","ard_effectsize_hedges_g","by","yes","method: hedges_g (or cardx::ard_effectsize_hedges_g); column `by`","the analysis row's column","cardx ard_*()",2
 "cardx","ard_effectsize_hedges_g","variables","yes","method: hedges_g (or cardx::ard_effectsize_hedges_g); column `variables`","the analysis row's column","cardx ard_*()",2
@@ -252,6 +254,7 @@
 "cardx","ard_effectsize_hedges_g","pooled_sd","yes","method: hedges_g (or cardx::ard_effectsize_hedges_g); args","passed on to effectsize::hedges_g; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",2
 "cardx","ard_effectsize_hedges_g","mu","yes","method: hedges_g (or cardx::ard_effectsize_hedges_g); args","passed on to effectsize::hedges_g; inst/ard/passed_args.csv: number; its value judged","cardx ard_*()",2
 "cardx","ard_effectsize_hedges_g","alternative","yes","method: hedges_g (or cardx::ard_effectsize_hedges_g); args","passed on to effectsize::hedges_g; inst/ard/passed_args.csv: choice; its value judged","cardx ard_*()",2
+"cardx","ard_effectsize_hedges_g","reference","yes","method: hedges_g (or cardx::ard_effectsize_hedges_g); args","passed on to effectsize::hedges_g; inst/ard/passed_args.csv: text; its value judged","cardx ard_*()",2
 "cardx","ard_effectsize_paired_cohens_d","data","yes","method: paired_cohens_d (or cardx::ard_effectsize_paired_cohens_d); column `data`","the analysis row's column","cardx ard_*()",2
 "cardx","ard_effectsize_paired_cohens_d","by","yes","method: paired_cohens_d (or cardx::ard_effectsize_paired_cohens_d); column `by`","the analysis row's column","cardx ard_*()",2
 "cardx","ard_effectsize_paired_cohens_d","variables","yes","method: paired_cohens_d (or cardx::ard_effectsize_paired_cohens_d); column `variables`","the analysis row's column","cardx ard_*()",2
@@ -272,7 +275,6 @@
 "cardx","ard_smd_smd","std.error","yes","method: smd (or cardx::ard_smd_smd); args","inst/ard/args.csv: logical; its value judged","cardx ard_*()",2
 "cardx","ard_smd_smd","conf.level","yes","method: smd (or cardx::ard_smd_smd); args","inst/ard/args.csv: number; its value judged","cardx ard_*()",2
 "cardx","ard_smd_smd","gref","yes","method: smd (or cardx::ard_smd_smd); args","passed on to smd::smd; inst/ard/passed_args.csv: number; its value judged","cardx ard_*()",2
-"cardx","ard_smd_smd","na.rm","yes","method: smd (or cardx::ard_smd_smd); args","passed on to smd::smd; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",2
 "cardx","ard_regression","x","yes","method: regression (or cardx::ard_regression); column `data`","the analysis row's column","cardx ard_*()",3
 "cardx","ard_regression","formula","yes","method: regression (or cardx::ard_regression); args","inst/ard/args.csv: formula; its value judged","cardx ard_*()",3
 "cardx","ard_regression","method","yes","method: regression (or cardx::ard_regression); args","inst/ard/args.csv: text; its value judged","cardx ard_*()",3

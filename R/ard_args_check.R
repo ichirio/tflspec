@@ -436,14 +436,23 @@
 # there is ignored or stops), car::Anova()'s method of the model
 # (.anova_args_unknown()) and, since 2026-11-08, broom.helpers'
 # tidy_plus_plus() with broom's tidier of the model (.tidy_args_unknown()).
-# effectsize and smd pass `...` on again, so a name not theirs may still be
-# right: not judged.
+# Since 2026-11-10 also effectsize's cohens_d() / hedges_g(), which drop
+# a name they do not have, and smd::smd(), which stops on one
+# (R/ard_passed_sets.R); and, for every function reached, a name cardx
+# writes itself in that call (`paired =` of ard_effectsize_cohens_d(),
+# `na.rm =` of ard_smd_smd()), which stops the analysis.
 .passed_args_unknown <- function(tag, call, given, args = NA_character_) {
   if (!length(given)) return(character())
   d <- .ard_catalog_rows("passed_args.csv", "tflspec.ard_passed_args",
                          c("call", "arg"))
   d <- d[d$call == call, , drop = FALSE]
   to <- unique(d$passed_to)
+  twice <- .cardx_sets_problems(tag, call, given, to)
+  if (length(twice)) return(twice)
+  if (length(to) && all(startsWith(to, "effectsize::"))) {
+    return(.effectsize_args_unknown(tag, call, given, to))
+  }
+  if (identical(to, "smd::smd")) return(.smd_args_unknown(tag, call, given))
   if (identical(to, "car::Anova")) {
     return(.anova_args_unknown(tag, call, given, args, d$arg))
   }

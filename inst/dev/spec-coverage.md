@@ -191,6 +191,31 @@ population's and the derivation's), `chisq.test(p =, rescale.p =)` and
 | cardx model arguments | 100.0% | 100.0% |
 | weight-3 functions only | 98.5% | 100.0% |
 
+2026-11-10 (wider scope; cards 0.9.0, cardx 0.3.4, effectsize 1.0.3, smd
+0.8.0): 3 more passed-on arguments of the effect sizes -- `reference` of
+`effectsize::cohens_d()` / `hedges_g()` (the by level compared with:
+"Placebo", which sets the sign) and `cohens_d(adjust =)` (the small-sample
+correction).  One argument left the scope: `ard_smd_smd(na.rm =)`, which
+cardx gives `smd::smd()` itself (`na.rm = TRUE`) -- written in `args` too,
+it stopped the analysis, so the catalog no longer offers it.
+
+| Scope (2026-11-10, wider) | 2026-11-10 before | 2026-11-10 after |
+|---|---:|---:|
+| **cards / cardx, weighted** | **99.8%** (510 yes / 3 partial) | **100.0%** (512 / 0) |
+| cards ard_*() | 100.0% | 100.0% |
+| cardx ard_*() | 99.6% (292 / 3) | 100.0% (294 / 0) |
+| cards post helpers | 100.0% | 100.0% |
+| cards code helpers | 100.0% | 100.0% |
+| cardx CI helpers | 100.0% | 100.0% |
+| cardx model arguments | 100.0% | 100.0% |
+| weight-3 functions only | 100.0% | 100.0% |
+
+(2026-11-10 before: this branch before the run (tflspec@next f04b06d
+merged) on the wider scope -- the 3 arguments could be written as R in
+`args` and reached effectsize, but were not described and their values
+not judged: partial.  On the 2026-11-09 scope the run starts and ends at
+100.0%.)
+
 (2026-11-09 before: this branch before the run (tflspec@next 0890a63
 merged) on the wider scope -- the 14 arguments could be written as R in
 `args` and reached their function, but were not described and their
@@ -236,6 +261,28 @@ function, but the catalog did not describe it and its value was not
 judged: partial.  2026-10-31 before: the same, with
 `update_ard_fmt_fun()` in the `post` scope -- written as R in `post`, its
 names checked, its values not judged.)
+
+### Added 2026-11-10
+
+* **Cohen's d / Hedges' g against a reference level**:
+  `ard_effectsize_cohens_d(reference = "Placebo")` and `hedges_g()`'s --
+  the difference is the other level minus the reference (by default the
+  first level minus the second); `cohens_d(adjust = TRUE)` gives the
+  small-sample (Hedges) correction.  A test compares the row's estimate
+  with `effectsize::cohens_d(reference =)` and `hedges_g()`.
+* **A name cardx writes itself is said** (all passed-on calls): cardx
+  writes some of the arguments of the call that takes `...`
+  (`paired = TRUE` of `ard_stats_paired_t_test()`, `paired` and `ci` of
+  the effect sizes, `na.rm = TRUE` of `ard_smd_smd()`).  The same name in
+  `args` reaches that call twice, and R stops ("formal argument matched by
+  multiple actual arguments"); cardx keeps the error in the ARD and the
+  table's cells are empty.  The names are read from the installed cardx's
+  code.  A test checks that the catalog offers none of them, and so
+  `ard_smd_smd(na.rm =)` left it.
+* **Names passed on to effectsize and smd are checked** (gap 4):
+  effectsize's `cohens_d()` / `hedges_g()` drop a name they do not have
+  (`pooled_SD = FALSE` left the pooled SD without a word); `smd::smd()`
+  has no `...` and stops on one.
 
 ### Added 2026-11-09
 
@@ -583,8 +630,11 @@ Every argument in scope is described and its value judged (since
    reaches a stats or survival function, (since 2026-11-05) the
    `car::Anova()` method of a model written in `x` (since 2026-11-09 a
    catalogued name too: `white.adjust =` with a glm) and (since 2026-11-08)
-   `broom.helpers::tidy_plus_plus()` with broom's tidier of the model; one
-   passed to effectsize or smd, which pass `...` on again, is not.  The catalog
+   `broom.helpers::tidy_plus_plus()` with broom's tidier of the model and
+   (since 2026-11-10) effectsize's `cohens_d()` / `hedges_g()` and
+   `smd::smd()`; since 2026-11-10 a name cardx writes itself in that call
+   (`paired =`, `na.rm =`) is said too.  Left: `mantelhaen.test()`'s
+   arguments cardx gives as a list (`!!!`), not read.  The catalog
    names the arguments clinical tables use, not every argument of the
    function they reach (`stats::aov()`'s, `car::vif(type =)` -- a method's
    argument, not the generic's -- are not described).
@@ -652,6 +702,19 @@ Percentage: yes counts 1, partial 0.5.
 | 2026-11-07 before / after | 51.6% (326 / 19 / 305 of 650) | 59.0% (326 / 19 / 224 of 569) | 41 / 7 / 67 |
 | 2026-11-08 before / after | 51.7% (327 / 19 / 305 of 651) | 59.0% (327 / 19 / 224 of 570) | 41 / 7 / 67 |
 | 2026-11-09 before / after | 51.7% (327 / 19 / 305 of 651) | 59.0% (327 / 19 / 224 of 570) | 41 / 7 / 67 |
+| 2026-11-10 before | 51.9% (331 / 20 / 306 of 657) | 59.2% (331 / 20 / 225 of 576) | 40 / 8 / 67 |
+| 2026-11-10 after  | 52.1% (332 / 20 / 305 of 657) | 59.4% (332 / 20 / 224 of 576) | 41 / 7 / 67 |
+
+(2026-11-10: rtfreporter@next 48b954d (its changes since b1182ae: the
+header, footer, title and footnote borders as the whole block's,
+`rtf_titles(border =)`, `plan_titles(border =)`, `plan_footnotes(border
+=)`, `plan_cell_style(row =)`, `plan_style(border_group =)`, band rows'
+`bold` / `italic` / `underline` as list fields) and tflspec@next f04b06d.
+The plan verbs' new arguments passed on by their formals already (yes);
+the run gives `plan_titles(border =)`, `plan_footnotes(border =)` and
+`plan_cell_style(row =)` schema entries (type, check, help) and passes
+`page.rtf_titles.border` on to `rtf_titles(border =)` (no -> yes).
+`plan_style(border_group =)`'s schema entry is tflspec#762's.)
 
 (2026-11-09: rtfreporter@next b1182ae (its changes since 29e1c24 are the
 header N read from a total stated by group, a maintainer change, tests and

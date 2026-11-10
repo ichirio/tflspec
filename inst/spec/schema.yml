@@ -326,6 +326,7 @@ plan_cell_style:
     color: {main: true, label: "Text colour", type: "colour|r|map<column, r>", help: "The chosen cells' text colour. e.g. \"#CC0000\""}
     background: {main: true, label: "Background colour", type: "colour|r|map<column, r>", help: "The chosen cells' background colour. e.g. \"#F2F2F2\""}
     underline: {label: "Underline", type: "enum[TRUE|FALSE]|logical", help: "The chosen cells underlined: TRUE / FALSE, or a condition as R. e.g. TRUE"}
+    row: {label: "Header rows", type: "list<integer>", help: "With The column header TRUE: the header rows styled, 1 the top row (a spanning row over the labels), the last the column labels. Blank: every header row. Takes Bold, Italic, Underline, Alignment and Borders; the header's colours go in a call without it. e.g. 1"}
 
 plan_hide:
   package: rtfreporter
@@ -415,6 +416,7 @@ plan_titles:
   dots: {style: positional, key: titles, type: "list<string>"}
   args:
     pages: {type: "list<string>"}
+    border: {type: "call<rtf_border>", description: "This table's own border for its title block as a whole on every page of this table: {fn: rtf_border, args: {bottom: true}}; it wins over the document's (page.rtf_titles.border). Drawn with page.rtf_style.title_format: table."}
 
 plan_footnotes:
   package: rtfreporter
@@ -424,6 +426,7 @@ plan_footnotes:
   dots: {style: positional, key: footnotes, type: "list<string>"}
   args:
     pages: {type: "list<string>"}
+    border: {type: "call<rtf_border>", description: "This table's own border for its footnote block as a whole on every page of this table: {fn: rtf_border, args: {top: true}} (the separator rule above the block); it wins over the document's (page.rtf_footnotes.border)."}
 
 plan_after:
   package: rtfreporter
@@ -673,7 +676,7 @@ rtf_style:
     title_width: {type: "number|string"}
     footnote_width: {type: "number|string"}
     table: {type: "map<string, object>", description: "rtftable()'s style arguments for every content table: {header_row_height_twips: 260, cell_valign: center}."}
-    titles: {type: "map<string, object>", description: "rtf_titles()'s style arguments: font, font_size_half_points, row_height_twips, markup, align."}
+    titles: {type: "map<string, object>", description: "rtf_titles()'s style arguments: font, font_size_half_points, row_height_twips, markup, align, border."}
     footnotes: {type: "map<string, object>", description: "rtf_footnotes()'s style arguments: font, font_size_half_points, row_height_twips, markup, align, border."}
     header: {type: "map<string, object>", description: "rtf_header()'s style arguments: font, font_size_half_points, row_height_twips, markup, the cell padding, border, color."}
     footer: {type: "map<string, object>", description: "rtf_footer()'s style arguments, as header."}
@@ -753,6 +756,7 @@ rtf_titles:
     markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
     font: {type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
     align: {type: "enum[left|center|right]"}
+    border: {type: "call<rtf_border>", description: "The title block's border, the block as a whole: {fn: rtf_border, args: {bottom: true}} (a rule under the last title row). Drawn with page.rtf_style.title_format: table."}
 
 rtf_footnotes:
   package: rtfreporter

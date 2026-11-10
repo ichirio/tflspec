@@ -436,3 +436,72 @@ test_that("the passed-on Hodges-Lehmann estimate, CMH level, Fisher's odds ratio
   expect_false(isTRUE(all.equal(unname(unlist(got$stat)),
     car::Anova(fit, type = "III")["TRT01A", "Pr(>F)"])))
 })
+
+test_that("no catalogued passed-on argument is one cardx writes itself", {
+  skip_if_not_installed("cardx")
+  d <- .ard_catalog_csv("passed_args.csv")
+  for (i in seq_len(nrow(d))) {
+    expect_false(d$arg[i] %in% .cardx_sets_args(d$call[i], d$passed_to[i]),
+                 info = paste(d$call[i], d$arg[i]))
+  }
+  # what cardx 0.3.4 writes itself: ard_smd_smd()'s na.rm = TRUE
+  skip_if_not_installed("smd")
+  expect_true(all(c("na.rm", "std.error") %in%
+                    .cardx_sets_args("cardx::ard_smd_smd", "smd::smd")))
+  expect_true("paired" %in% .cardx_sets_args("cardx::ard_stats_paired_t_test",
+                                             "stats::t.test"))
+})
+
+test_that("a name cardx gives the function itself, and effectsize's and smd's names, are said", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  test_row <- function(method, args, by = "SEX")
+    list(method = method, population_id = "SAF", by = by, variables = "AGE", args = args)
+  # cardx writes paired = TRUE / na.rm = TRUE itself: R would stop on a second one
+  expect_warning(exact_spec(test_row("cardx::ard_stats_paired_t_test", "id = USUBJID, paired = TRUE")),
+                 "gives stats::t.test\\(\\) `paired` itself")
+  skip_if_not_installed("smd")
+  expect_warning(exact_spec(test_row("cardx::ard_smd_smd", "na.rm = TRUE")),
+                 "gives smd::smd\\(\\) `na.rm` itself")
+  # smd() has no `...`: a name it does not have stops it
+  expect_warning(exact_spec(test_row("cardx::ard_smd_smd", "gerf = 2L")),
+                 "passes it on to smd::smd\\(\\), which has none either")
+  expect_no_warning(exact_spec(test_row("cardx::ard_smd_smd", "gref = 2L")))
+  # effectsize drops a name it does not have
+  skip_if_not_installed("effectsize")
+  expect_warning(exact_spec(test_row("cardx::ard_effectsize_cohens_d", "pooled_SD = FALSE")),
+                 "passes it on to effectsize::cohens_d\\(\\), which has none either")
+  expect_warning(exact_spec(test_row("cardx::ard_effectsize_hedges_g", "paired = TRUE")),
+                 "gives effectsize::hedges_g\\(\\) `paired` itself")
+  expect_no_warning(exact_spec(test_row("cardx::ard_effectsize_cohens_d",
+                                        "pooled_sd = FALSE, reference = \"M\", adjust = TRUE")))
+  expect_no_warning(exact_spec(test_row("cardx::ard_effectsize_cohens_d", "var.equal = FALSE")))
+  expect_identical(
+    .passed_args_unknown("T / A", "cardx::ard_effectsize_cohens_d", "pooled", "pooled = FALSE"),
+    character())
+})
+
+test_that("Cohen's d's reference level and small-sample correction reach effectsize", {
+  skip_on_cran()
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("dplyr")
+  skip_if_not_installed("effectsize", "0.8.8")
+  skip_if_not_installed("parameters")
+  adam <- exact_data()
+  dir <- exact_dir(adam)
+  on.exit(unlink(dir, recursive = TRUE))
+  run <- function(method, args) suppressMessages(tfl_build_ard(exact_spec(list(
+    method = method, population_id = "SAF", by = "SEX", variables = "AGE", args = args)),
+    dir = dir, save = FALSE))
+  stat <- function(ard, nm) unname(unlist(ard$stat[ard$stat_name == nm]))
+  pop <- adam$ADSL[adam$ADSL$SAFFL == "Y", ]
+  lv <- sort(unique(pop$SEX))
+  d0 <- stat(run("cardx::ard_effectsize_cohens_d", NA_character_), "estimate")
+  d1 <- stat(run("cardx::ard_effectsize_cohens_d", sprintf("reference = \"%s\"", lv[1L])),
+             "estimate")
+  want <- effectsize::cohens_d(AGE ~ SEX, data = pop, reference = lv[1L])$Cohens_d
+  expect_equal(d1, want, tolerance = 1e-10)
+  expect_equal(d1, -d0, tolerance = 1e-10)
+  g <- stat(run("cardx::ard_effectsize_cohens_d", "adjust = TRUE"), "estimate")
+  expect_equal(g, effectsize::hedges_g(AGE ~ SEX, data = pop)$Hedges_g, tolerance = 1e-10)
+})

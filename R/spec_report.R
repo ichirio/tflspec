@@ -128,8 +128,9 @@
   if (length(tt)) {
     a <- args_of("rtf_titles")
     if (!is.null(a[["font"]])) a[["font"]] <- .font_slots_value(a[["font"]])
+    if (!is.null(a[["border"]])) a[["border"]] <- .page_call_value(a[["border"]])
     st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_titles", doc, list(tt)),
-                                                   a[intersect(band_style, names(a))]))
+                                                   a[intersect(c(band_style, "border"), names(a))]))
   }
   if (length(fn)) {
     a <- args_of("rtf_footnotes")
