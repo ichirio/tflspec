@@ -128,7 +128,7 @@ test_that("the help shows an `!unset` default as (none); the kit says what it do
   txt <- paste(tflspec:::.ai_templates_list("table"), collapse = "\n")
   expect_match(txt, "`lab` (text) = !unset", fixed = TRUE)
   expect_match(tflspec:::.ai_templates_text("table"),
-               "`!unset` (a default, or a value you write): leave the argument out of the call.",
+               "`!unset` (a default, or a value you write): leave the argument out of the call; for a flag (TRUE / FALSE) it is FALSE, the step off.",
                fixed = TRUE)
   # no built-in template's default is `!unset`
   for (n in setdiff(tfl_templates()$name, "us_t")) {
