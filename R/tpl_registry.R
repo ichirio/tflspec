@@ -36,8 +36,11 @@
 #'     (`"settings.sd_missing"`);
 #'   * `"<verb>.<argument>[.<name>]"`: that argument of the verb's item in
 #'     `spec/defaults.yml`'s `content:` (`"plan_cells.continuous"`; a
-#'     named-dots argument's own name as the last part); patterns and a
-#'     style set are not read;
+#'     named-dots argument's own name as the last part); for a template
+#'     whose set holds its `extends` ([tfl_template()]), of the layers the
+#'     report's `extends` and style lay, nearest first, when its content
+#'     step lays any ([tfl_study_value()]); otherwise patterns and a style
+#'     set are not read;
 #'   * `"figure_style.<key>"` (`"figure_style.km.theme"`: the type, then the
 #'     key): `defaults.yml`'s `figure_style:`, else tflspec's built-in
 #'     figure style;
@@ -89,6 +92,10 @@
 #'   of the template's call in a report's program, or `"data"`, a step that
 #'   prepares the analysis data (a figure's records, its analysis set),
 #'   written in the program's data steps, not in the call.
+#' @param maps_to The plan arguments the parameter stands for
+#'   (`"plan_blanks.where"`): when its value turns its step off (`!unset`,
+#'   `FALSE`, `"none"`), they are taken out of the study's layers too.
+#'   `NULL`: none declared.
 #' @return A `tfl_param`.
 #' @examples
 #' tfl_param("population", "SAF", doc = "the analysis set's id")
@@ -97,16 +104,17 @@
 tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study = NULL,
                       type = NULL, multiple = NULL, of = NULL, choices = NULL,
                       fields = NULL, group = NULL, tier = NULL, stage = "call",
-                      unset = c("omit", "step_off", "stop")) {
+                      unset = c("omit", "step_off", "stop"), maps_to = NULL) {
   unset <- match.arg(unset)
   if (!is.null(type)) type <- match.arg(type, .tpl_param_types)
   if (!is.null(tier)) tier <- match.arg(tier, c("required", "usual", "other"))
   stage <- match.arg(stage, c("call", "data"))
   .tpl_study_key_check(study, name)
+  .tpl_maps_to_check(maps_to, name)
   structure(list(name = name, default = default, required = isTRUE(required),
                  doc = doc, study = study, type = type, multiple = multiple, of = of,
                  choices = choices, fields = fields, group = group, tier = tier,
-                 stage = stage, unset = unset),
+                 stage = stage, unset = unset, maps_to = maps_to),
             class = "tfl_param")
 }
 
@@ -137,6 +145,24 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     }
   }
   invisible(key)
+}
+
+# A parameter's `maps_to`: plan arguments, "<verb>.<argument>", the verb one
+# of rtfreporter's (character(0): it maps to nothing in the study)
+.tpl_maps_to_check <- function(x, name = NULL) {
+  if (is.null(x)) return(invisible(x))
+  what <- if (is.null(name)) "" else sprintf(" (parameter %s)", name)
+  if (!is.character(x) || anyNA(x) || !all(grepl("^[A-Za-z][A-Za-z0-9_]*[.][A-Za-z0-9_]+$", x))) {
+    .ard_stop(sprintf(paste0("tfl_param(): `maps_to` is plan arguments%s: \"<verb>.<argument>\" ",
+                             "(\"plan_blanks.where\")."), what))
+  }
+  verb <- sub("[.].*$", "", x)
+  bad <- setdiff(verb, tryCatch(getNamespaceExports("rtfreporter"), error = function(e) verb))
+  if (length(bad)) {
+    .ard_stop(sprintf("tfl_param(): `maps_to`%s: %s is not a plan verb of rtfreporter.", what,
+                      sQuote(bad[1L], FALSE)))
+  }
+  invisible(x)
 }
 
 # tflspec's parameters' types by name (a template's tfl_param(type = )
@@ -283,16 +309,27 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
 # report's items, `content` a list of tfl_item().  `parts`: where each
 # parameter acts, list(ard = <names>, content = <names>), for a SPEC written
 # as `template: {name, ard:, content:}`; NULL: the template takes the two
-# parts' names as written (every name in either).
+# parts' names as written (every name in either).  `extends`: what its
+# reports extend when they write none (its set's value, canon 1.27; NULL: a
+# template not yet migrated, the old layer order); `extends_fixed`: the
+# steps whose value it fixes.
 .tfl_template <- function(name, kind, layout, params, body, label = NULL, call = NULL,
-                          package = "tflspec", example = NULL, ai = FALSE, parts = NULL) {
+                          package = "tflspec", example = NULL, ai = FALSE, parts = NULL,
+                          extends = NULL, extends_fixed = character()) {
+  extends <- .extends_value(extends, sprintf("template %s", name))
+  if (!is.character(extends_fixed) || !all(extends_fixed %in% .extends_steps) ||
+        (length(extends_fixed) && is.null(extends))) {
+    .ard_stop(sprintf("template %s: `extends_fixed` names steps (%s) of its `extends`.", name,
+                      paste(.extends_steps, collapse = ", ")))
+  }
   params <- lapply(params, .tpl_param_typed)
   names(params) <- vapply(params, `[[`, "", "name")
   # (a table's or a listing's call is the one tfl_tpl(); a figure's its own)
   call <- call %||% if (identical(kind, "figure")) paste0("tpl_", name) else "tfl_tpl"
   assign(name, list(name = name, kind = kind, layout = layout, params = params, body = body,
                     label = label, call = call, package = package,
-                    example = example, ai = isTRUE(ai), parts = parts),
+                    example = example, ai = isTRUE(ai), parts = parts,
+                    extends = extends, extends_fixed = extends_fixed),
          envir = .tpl_registry)
   invisible(name)
 }

@@ -12,7 +12,8 @@ b1_fda <- function(...) utils::modifyList(
        categorical = c("SEX", "AGEGR1", "RACE", "ETHNIC", "COUNTRY")), list(...))
 b1_item <- function(x, fn) Filter(function(it) identical(it$fn, fn), x$content)
 b1_out <- function(name, args, ..., id = "T-9") {
-  tfl_output(id, "table", population = "SAF", extends = "defaults",
+  # (no `extends`: the template's, stf_t02_demog's content step fixed to none)
+  tfl_output(id, "table", population = "SAF",
              template = list(name = name, args = args), ...)
 }
 
@@ -644,7 +645,11 @@ test_that("`!unset` in detail: cells omitted, sd_missing no guard, header_n no N
   z <- tfl_template_expand("stf_t02_demog", b1_fda(header_n = tfl_unset()))
   expect_identical(b1_item(z, "plan_col_header")[[1L]]$args$header[[2L]]$text, "{col}")
   s <- b1_study()
-  r <- tfl_resolve_output(b1_out("stf_t02_demog", b1_fda(style = tfl_unset())[-1L]), s)
+  # (stf_t02_demog fixes its style, canon 1.32: `!unset` is another value, a stop;
+  # demog's unset style lays no set)
+  expect_error(tfl_resolve_output(b1_out("stf_t02_demog", b1_fda(style = tfl_unset())[-1L]), s),
+               "fixes its style")
+  r <- tfl_resolve_output(b1_out("demog", b1_args(style = tfl_unset())[-1L]), s)
   expect_null(r$page$rtf_page$orientation)
   expect_false(any(vapply(r$content, function(it) identical(it$args$font, "Arial"), NA)))
   # NA and NULL stay distinct from unset

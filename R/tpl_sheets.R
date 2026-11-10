@@ -81,7 +81,7 @@ tfl_read_template_sheets <- function(path) {
       }
     }
     out[[id]] <- list(id = id, kind = val(t$kind[i]) %||% "table", label = val(t$label[i]),
-                      population = pop, extends = "defaults",
+                      population = pop, extends = NULL,
                       template = list(name = val(t$template[i]), args = args))
   }
   out

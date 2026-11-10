@@ -156,15 +156,8 @@ test_that("every template as a template SPEC: resolved as its items written out 
                     template = list(name = nm, args = ex), data = own)
     ro <- tfl_resolve_output(o, s)
     w <- tfl_template_to_spec(o, s)
-    if (.tpl_switched(nm)) {
-      # (relaxed from "identical items" to "the written verbs are a subset": what
-      # tfl_template_to_spec() should write for a switched template is pending the user's
-      # decision, see design/template-params/Q-BATCH1.md (section 1) in the _work folder)
-      # a switched template reads no study content layer, but its written-out SPEC is a
-      # code SPEC the layers apply to: every written-out verb is in the resolved items (which add the style set), the template's the content
-      expect_true(all(vapply(w$content, `[[`, "", "fn") %in% vapply(ro$content, `[[`, "", "fn")), info = nm)
-      next
-    }
+    # (B writes the `extends` and `style:` A has: a template with an `extends`
+    # in its set, demog's {content: none}, resolves as its code SPEC does)
     rb <- tfl_resolve_output(w, s)
     expect_identical(lapply(ro$content, unclass), lapply(rb$content, unclass), info = nm)
   }

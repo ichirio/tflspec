@@ -20,7 +20,8 @@
 #' (the first pattern, `@<name>`), and an `extends` cell (`a | b`, or `none`)
 #' only when the chain is not `[<pattern>, defaults]` as the `pattern` cell
 #' alone says it: `extends: none`, a pattern after the defaults, a pattern
-#' alone, two patterns.  `tfl_yaml_from_sheets()` reads the cell as the chain,
+#' alone, two patterns; a map by step as `content=none; page=patterns/a |
+#' defaults`.  `tfl_yaml_from_sheets()` reads the cell as the chain,
 #' in its order; an `extends` cell whose first pattern is not the `pattern`
 #' cell's is an error (one of the two was edited).
 #'
@@ -238,13 +239,21 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     }
     # the report row: its kind, its pattern, its file and program
     rr <- list(output_id = id, type = o$kind)
-    pat <- grep("^patterns/", o$extends, value = TRUE)
+    # (a map by step: the cell says it step by step, `content=none; page=a | b`
+    # (Q6 of PLAN-5B); a template report that writes none takes its template's)
+    if (is.list(o$extends)) {
+      rr$extends <- paste(sprintf("%s=%s", names(o$extends),
+                                  vapply(o$extends, paste, "", collapse = " | ")), collapse = "; ")
+    }
+    pat <- if (!is.list(o$extends)) grep("^patterns/", o$extends, value = TRUE)
     if (length(pat)) rr$pattern <- paste0("@", substring(pat[1L], 10L))
     # (what the pattern cell alone reads back as is [first pattern, defaults];
     # any other chain -- the order flipped, `none`, a pattern alone, two
     # patterns -- is said in the `extends` cell)
-    if (!identical(as.character(unlist(o$extends)),
-                   c(if (length(pat)) pat[1L], "defaults"))) rr$extends <- .sheet_cell(o$extends)
+    if (!is.null(o$extends) && !is.list(o$extends) && !identical(as.character(unlist(o$extends)),
+                                          c(if (length(pat)) pat[1L], "defaults"))) {
+      rr$extends <- .sheet_cell(o$extends)
+    }
     for (k in c("file", "program")) if (!is.null(e[[k]])) rr[[k]] <- cell(e[[k]])
     # the report row: its kind, pattern, file and program here, its
     # rtfreporter arguments from page_rows() -- one row

@@ -45,6 +45,11 @@
 #'   [tfl_test_templates()] runs it with, beside the defaults; `NULL` none.
 #' @param ai `TRUE` to list it in the AI requests that answer with
 #'   templates ([tfl_ai_prepare()]`(templates = TRUE)`).
+#' @param extends The `extends` its reports take when they write none:
+#'   files for every step, `"none"`, or a list by step (`list(content =
+#'   "none")`); `NULL`: a template not yet migrated.
+#' @param extends_fixed The steps whose `extends` the template fixes:
+#'   another value stops.
 #' @return `name`, invisibly.
 #' @examples
 #' tfl_template("my_ages", kind = "table", layout = "summary",
@@ -55,7 +60,8 @@
 #' tfl_templates()[, c("name", "package")]
 #' @export
 tfl_template <- function(name, kind = c("table", "figure", "listing"), layout, params,
-                         body, label = NULL, call = NULL, example = NULL, ai = FALSE) {
+                         body, label = NULL, call = NULL, example = NULL, ai = FALSE,
+                         extends = NULL, extends_fixed = character()) {
   fn <- "tfl_template()"
   if (!is.character(name) || length(name) != 1L || !grepl("^[A-Za-z][A-Za-z0-9_.]*$", name)) {
     .ard_stop(sprintf("%s: `name` is one name of letters, digits, '_' and '.'.", fn))
@@ -77,7 +83,7 @@ tfl_template <- function(name, kind = c("table", "figure", "listing"), layout, p
     message(sprintf("%s: %s's template %s replaces %s's.", fn, pkg, name, old$package %||% "tflspec"))
   }
   .tfl_template(name, kind, layout, params, body, label = label, call = call, package = pkg,
-                example = example, ai = ai)
+                example = example, ai = ai, extends = extends, extends_fixed = extends_fixed)
   invisible(name)
 }
 
@@ -207,7 +213,7 @@ tfl_template_params <- function(name) {
   # `unset` (what `!unset` does to the parameter) is stated for a migrated
   # template only; NA for the others (`!unset` leaves the argument out)
   lapply(t$params, function(p) {
-    if (!.tpl_switched(t$name)) p["unset"] <- list(NA_character_)
+    if (!.tpl_layered(t$name)) p["unset"] <- list(NA_character_)
     p
   })
 }

@@ -134,4 +134,12 @@ test_that("every template: its RTF as a template report = as the code SPEC tfl_t
                      rtf(file.path(d, paste0(r$id[i], "-A.rtf"))), info = nm)
   }
   expect_setequal(r$id, unname(ids))
+  # B says what A extends and its style, always (canon: B = A, `extends` and
+  # `style:` explicit): demog's {content: none} (5b-1), stf_t02_demog's fixed one
+  for (nm in intersect(c("demog", "stf_t02_demog"), names_)) {
+    f <- Filter(file.exists, file.path(sds, "spec", "outputs", paste0(ids[[nm]], ".yml")))
+    y <- yaml::read_yaml(f[1L])
+    expect_identical(y$extends, list(content = "none"), info = nm)
+    expect_identical(y$style, if (nm == "demog") "standard" else "stf_t02", info = nm)
+  }
 })
