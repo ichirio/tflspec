@@ -128,11 +128,12 @@ test_that("what the call cannot say is written as the items; a wrong template is
   expect_error(tfl_resolve_output(lst, s), "makes a listing")
 })
 
-test_that("the sheets (and the study's ARD program) take a template report's analyses", {
+test_that("templates = \"expand\": the sheets (and the study's ARD program) take a template report's analyses", {
   s <- ts_study()
-  sh <- suppressMessages(tfl_sheets_from_spec(s, list(`T-9` = ts_output())))
+  sh <- suppressMessages(tfl_sheets_from_spec(s, list(`T-9` = ts_output()), templates = "expand"))
   a <- sh$ard$analyses
   expect_identical(a$analysis_id[a$output_id %in% "T-9"], c("GROUPN", "CONT", "CAT"))
+  expect_equal(nrow(sh$templates), 0L)
 })
 
 test_that("every template as a template SPEC: resolved as its items written out (B), the study's layers on both", {

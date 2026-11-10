@@ -172,8 +172,8 @@ tfl_template_variant <- function(name, from, defaults = list(), label = NULL, ex
   params <- src$params
   for (k in names(v$defaults)) {
     params[[k]]$default <- v$defaults[[k]]
-    # (a parameter only variants show, `missing_row`)
-    if (isTRUE(params[[k]]$variant_only) && !k %in% v$hide) params[[k]]$hidden <- NULL
+    # (the doc a parameter keeps for the variants that give it a default)
+    if (!is.null(params[[k]]$variant_doc)) params[[k]]$doc <- params[[k]]$variant_doc
     if (!is.null(v$defaults[[k]])) params[[k]]$required <- FALSE
   }
   # (hidden: not its arguments; a variant of it keeps them hidden)
