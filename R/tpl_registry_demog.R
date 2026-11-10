@@ -210,9 +210,10 @@
 }
 
 # The Missing row's data step: #770's (.tpl_missing_level_code()) with the
-# label `label`.  (A variable with a code list -- `categorical_levels`, the
-# report's -- has the label in its list, as the list must hold every value,
-# so its row shows, 0 when nothing is missing.)
+# label `label`.  It runs on the data with the code lists on
+# (`categorical_levels`, the report's): a variable with a list keeps its
+# values and gets the label last only when it has missing values, as one
+# without a list; none has a Missing row of 0 (canon 1.31).
 .tpl_demog_missing_code <- function(set, vars, label = "Missing") {
   if (identical(label, "Missing")) return(.tpl_missing_level_code(set, vars))
   q <- encodeString(label, quote = "\"")
@@ -282,19 +283,13 @@
   # (the template's own default names the values of variables the report may not use)
   vals <- vals[names(vals) %in% cat]
   vals <- lapply(vals, function(v) as.character(unlist(v)))
-  with_ml <- function(v) if (is.null(ml)) v else unique(c(v, ml))
-  cl_vars <- intersect(cat, union(names(vals), names(ctx$codelists)))
-  codelists <- if (length(vals) || (!is.null(ml) && length(cl_vars))) {
-    cl <- lapply(cl_vars, function(v) {
-      v1 <- if (!is.null(vals[[v]])) with_ml(vals[[v]]) else NULL
-      if (is.null(v1)) return(list(list(value = ml, label = ml)))
-      lapply(v1, function(x) list(value = x, label = x))
-    })
-    names(cl) <- cl_vars
+  # (the lists have no Missing value: the Missing step, after them, adds the
+  # level to a variable that has missing values only -- canon 1.31)
+  codelists <- if (length(vals)) {
+    cl <- lapply(vals, function(v1) lapply(v1, function(x) list(value = x, label = x)))
     Filter(length, cl)
   }
-  lev <- lapply(names(vals), function(v) with_ml(vals[[v]]))
-  names(lev) <- names(vals)
+  lev <- vals
   cat_set <- set
   if (!is.null(ml) && length(cat)) {
     cat_set <- paste0(set, "_m")

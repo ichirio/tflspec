@@ -228,11 +228,11 @@ test_that("one-element sequences of ard: and listing_col vars stay sequences (te
   expect_identical(readLines(g), txt)
 })
 
-test_that("plan_digits()'s rounding in either case is read in lower case (\"SAS\" is \"sas\")", {
+test_that("plan_digits()'s rounding must be spelled as its value (\"SAS\" stops; see test-spec-strict-values.R)", {
   f <- withr::local_tempfile(fileext = ".yml")
   writeLines(c("id: T-1", "kind: table", "content:",
                "  - table_plan: {cols: TRT01A}",
-               "  - plan_digits: {rounding: SAS}"), f)
+               "  - plan_digits: {rounding: sas}"), f)
   o <- tfl_read_output(f)
   expect_identical(o$content[[2L]]$args$rounding, "sas")
   expect_match(tfl_content_code(o), 'rounding = "sas"', fixed = TRUE, all = FALSE)

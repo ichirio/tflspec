@@ -278,7 +278,7 @@
   # when it was built alone
   # (`sheets`: the study's, when the caller has read them; else read here, once)
   if (length(need) && is.null(sheets)) {
-    sheets <- tryCatch(tfl_sheets_from_yaml("."), error = function(e) NULL)
+    sheets <- tryCatch(tfl_sheets_from_yaml(".", templates = "expand"), error = function(e) NULL)
   }
   batch <- .ai_build_ard_split(st, vapply(outs[need], function(o) o$id, ""), sheets = sheets)
   for (k in seq_along(todo)) {

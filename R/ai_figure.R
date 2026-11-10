@@ -65,7 +65,7 @@
 # PNG where the program saves it, under the study's output path.  The plot,
 # for the report's RTF.  Run in the study folder.
 .ai_fig_draw <- function(st, id, out_dir) {
-  sh <- tfl_sheets_from_yaml(".")
+  sh <- tfl_sheets_from_yaml(".", templates = "expand")
   fd <- sh$figures[[id]]
   if (is.null(fd)) .ard_stop(sprintf("%s has no figure design in its report file.", id))
   args <- c(list(data = fd$data %||% list(), stats = fd$stats %||% list(),
