@@ -92,16 +92,14 @@ test_that("the standalone templates equal what the variants gave: defaults and t
                                      continuous = "AGE", categorical = "SEX")))$table
   expect_identical(a, b)
   # (values missing -- RACE blank, SEX NA: demog adds a Missing row, last, for each of
-  # the two and its percentages are over the analysis set (canon 1.31); the counts
-  # are the summary's)
+  # the two and its percentages are over the analysis set (canon 1.31); the summary
+  # does the same (its missing_row, #774), so the whole table is the summary's)
   d2 <- b1_folder(na = TRUE)
   a <- b1_run(d2, b1_out("b1_old_demog", vars))$table
   b <- b1_run(d2, b1_out("demog", c(list(by = "TRT01A"), vars)))$table
   keep <- trimws(as.character(b$label)) != "Missing"
   expect_identical(sum(!keep), 2L)
-  expect_identical(trimws(as.character(b$label[keep])), trimws(as.character(a$label)))
-  cnt <- function(x) sub(" .*", "", x)
-  for (arm in c("Drug X", "Control")) expect_identical(cnt(b[[arm]][keep]), cnt(a[[arm]]), info = arm)
+  expect_identical(a, b)
   x <- tfl_template_expand("demog", b1_args())
   expect_identical(Filter(function(a) identical(a$id, "CAT"), x$ard$analyses)[[1L]]$denominator, "adsl_saf")
   # the FDA variant: the same rows (the new look adds the heading, the Missing row ...)

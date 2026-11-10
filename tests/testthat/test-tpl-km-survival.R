@@ -79,7 +79,7 @@ test_that("the B file in the figure designer: the report's own items seen, saved
                    c("km_curve", "censor_mark", "geom_hline", rep("tfl_ard_number", 3L), "labs"))
   # the designer's design of it (the sheets bridge), written and read as
   # the designer keeps it (spec/figures/<id>.yml)
-  fd <- tfl_sheets_from_yaml(d)$figures[["F-14-2-3"]]
+  fd <- tfl_sheets_from_yaml(d, templates = "expand")$figures[["F-14-2-3"]]
   design <- do.call(tfl_fig_design, fd[intersect(names(fd), names(formals(tfl_fig_design)))])
   kinds <- vapply(design$layers, `[[`, "", "layer")
   expect_identical(kinds, c("km_curve", "censor_mark", "call", rep("ard_number", 3L)))

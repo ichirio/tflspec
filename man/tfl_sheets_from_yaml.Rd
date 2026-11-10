@@ -5,12 +5,22 @@
 \alias{tfl_sheets_from_spec}
 \title{The YAML spec as sheets}
 \usage{
-tfl_sheets_from_yaml(dir)
+tfl_sheets_from_yaml(dir, templates = c("sheet", "expand"))
 
-tfl_sheets_from_spec(study, outputs)
+tfl_sheets_from_spec(study, outputs, templates = c("sheet", "expand"))
 }
 \arguments{
 \item{dir}{The study folder (or its \verb{spec/}).}
+
+\item{templates}{What a report written as a template SPEC becomes.
+\code{"sheet"} (the default): one row of the \code{templates} sheet (and its
+\code{template_rows}), by the template's name and arguments, as
+\code{\link[=tfl_read_template_sheets]{tfl_read_template_sheets()}} reads them; the report's page parts,
+codelists and report row are the other sheets' as for any report. Nothing is expanded; a
+report is written out as its items only by \code{\link[=tfl_template_to_spec]{tfl_template_to_spec()}},
+called on purpose.  \code{"expand"}: the report is expanded first
+(\code{\link[=tfl_template_to_spec]{tfl_template_to_spec()}}) and its items are on the table and ARD
+sheets, for what is made from the items (the ARD, the preview).}
 
 \item{study}{The study's spec, as \code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}} reads it.}
 
@@ -22,7 +32,9 @@ A list: \code{table} (the table and report sheets, with \code{study}),
 \code{planner} (the \verb{_tflplanner} sheet: the report list and the setup),
 \code{ard} (the ARD sheets), \code{listing} (\code{listings}, \code{listing_cols}),
 \code{figures} (a figure's design list, by id), \code{study} (study.yml's
-fields), \code{not_converted} (what the sheets cannot hold).
+fields), \code{templates} and \code{template_rows} (the template reports; with
+\code{templates = "expand"} both are empty), \code{not_converted} (what the
+sheets cannot hold).
 }
 \description{
 \code{tfl_sheets_from_yaml()} reads a study's YAML spec and gives the sheets
