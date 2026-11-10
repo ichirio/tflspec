@@ -378,11 +378,12 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
 
   keys <- tfl_ard_methods()
   methods <- list()
-  method <- function(m, stats, opt = NULL, code = NULL, tag) {
+  method <- function(m, stats, opt = NULL, code = NULL, tag, suffix = "") {
     default <- .ars_method_stats(m)
     if (!length(stats)) stats <- default
     base <- paste0("Mth_", gsub("[^A-Za-z0-9_]", "_", m),
-                   if (!is.null(opt)) paste0("_", gsub("[^A-Za-z0-9]", "", opt)))
+                   if (!is.null(opt)) paste0("_", gsub("[^A-Za-z0-9]", "", opt)),
+                   suffix)
     key <- paste(base, paste(stats, collapse = "|"), code %||% "", sep = "\r")
     hit <- match(key, vapply(methods, `[[`, "", "key"))
     if (!is.na(hit)) return(methods[[hit]])
@@ -495,11 +496,14 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
     id
   }
 
-  need_den <- function(id, r, by, mz, ds, pur, rea) {
+  # nm: the variable whose non-missing values the percentage divides by
+  # (cards' own denominator), with the analysis's dataset, data subset and
+  # groupings
+  need_den <- function(id, r, by, mz, ds, pur, rea, nm = NULL) {
     if (!"p" %in% names(mz$op)) return(invisible())
     pending_den[[length(pending_den) + 1L]] <<- list(
       id = id, out = r$output_id, pop = r$population_id, by = by, mz = mz,
-      ds = ds, r = r, pur = pur, rea = rea)
+      ds = ds, r = r, pur = pur, rea = rea, nm = nm)
   }
 
   # an analysis with `overall` is two ARS analyses: by its groups, and
@@ -610,7 +614,17 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
                                  if (overall) "TOTAL", ...),
                                collapse = "_")
     shape <- .ars_method_shape(m)
-    mz <- method(m, stats, opt, code, tag)
+    # no denominator written (nor in args): the ARD's percentages divide by
+    # cards' own count, the subjects with a value of the variable in the
+    # group -- not the analysis set's subject count
+    own_den <- shape == "count" && is.na(r$denominator %||% NA) &&
+      m %in% c("categorical", "dichotomous", "max") &&
+      !(length(by) == 0L && length(vars) == 1L &&
+        vars %in% unlist(lapply(a$by[a$output_id %in% out], .split_bar))) &&
+      !"denominator" %in% tryCatch(.args_given(r$args),
+                                   error = function(e) character())
+    mz <- method(m, stats, opt, code, tag,
+                 suffix = if (own_den) "_NONMISS" else "")
     several <- length(vars) > 1L
     if (m == "hierarchical") {
       if (over) {
@@ -655,7 +669,8 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
                            lbl %||% lab_of(out, v), ds, subj, mz, gv,
                            ss = ss, pur = pur, rea = rea, role = "count",
                            v = v)
-        need_den(id, r, by, mz, pds %|NA|% ds, pur, rea)
+        need_den(id, r, by, mz, pds %|NA|% ds, pur, rea,
+                 nm = if (own_den) list(v = v, ds = ds, ss = ss, g = g_by))
       }
     } else if (shape %in% c("value", "test_value")) {
       for (v in vars) {
@@ -688,7 +703,20 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
   for (p in pending_den) {
     key <- paste(p$out, p$pop, paste(p$by, collapse = ","), sep = "\r")
     b <- groupn[[key]]
-    if (is.null(b)) {
+    if (!is.null(p$nm)) {
+      # cards' own denominator: the subjects with a non-missing value of the
+      # variable, in the same group (the `missing` method's N_nonmiss)
+      mzn <- method("missing", "N_nonmiss", tag = p$out)
+      id <- add_analysis(p$r, paste0(p$id, "_NONMISS"),
+                         paste("Subjects with a value:", p$nm$v), p$nm$ds,
+                         p$nm$v, mzn, p$nm$g, ss = p$nm$ss, pur = p$pur,
+                         rea = p$rea, role = "nonmiss", v = p$nm$v,
+                         m = "missing")
+      k <- length(analyses)
+      at <- match(p$id, vapply(analyses, function(z) z$model$id, ""))
+      analyses <- append(analyses[-k], analyses[k], after = at)
+      b <- list(id = id, op = mzn$op[["N_nonmiss"]])
+    } else if (is.null(b)) {
       r <- p$r
       r$analysis_id <- "GROUPN"
       mz <- method("total_n", character(), tag = p$out)
