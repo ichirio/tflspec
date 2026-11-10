@@ -1241,6 +1241,9 @@ tfl_build_ard <- function(spec, dir = ".", output_id = NULL, save = TRUE,
   old <- options(tflspec.paths = NULL, tflspec.attached = NULL,
                  tflspec.plain_ns = TRUE)
   on.exit(options(old), add = TRUE)
+  # (the program's setup sets cards' rounding; put back as it was)
+  old_cr <- options("cards.round_type")
+  on.exit(options(old_cr), add = TRUE)
   # a study of the YAML spec: its ARD definition and code lists from its
   # files, once (tfl_ard_code() would read them again, and so would the note)
   ard <- spec
