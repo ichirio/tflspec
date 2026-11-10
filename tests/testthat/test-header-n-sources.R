@@ -117,8 +117,9 @@ test_that("denominator: a number, named numbers, \"data\", another analysis set"
                label = "ae_soc_pt denominator data, total")
   hn_expect_ok("ae_pt_freq", denominator = named, label = "ae_pt_freq denominator named")
   hn_expect_ok("ae_max_grade", denominator = "data", label = "ae_max_grade denominator data")
-  hn_expect_ok("ae_ser_soc_pt", denominator = 60, total = TRUE,
-               label = "ae_ser_soc_pt denominator number, total")
+  # one number with total = TRUE stops (D2b); named numbers sum to the Total
+  hn_expect_ok("ae_ser_soc_pt", denominator = named, total = TRUE,
+               label = "ae_ser_soc_pt denominator named, total")
   hn_expect_ok("hierarchical", denominator = "data", label = "hierarchical denominator data")
 })
 

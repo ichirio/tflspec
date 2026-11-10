@@ -23,6 +23,7 @@
 
 .tpl_ancova_body <- function(a, ctx) {
   pop <- a$population
+  .tpl_unset_stop(a, "adjust", "ancova")
   if (!is.character(a$adjust) || length(a$adjust) != 1L || !a$adjust %in% .tpl_ancova_adjust) {
     .ard_stop(sprintf("ancova: `adjust` is %s; it must be one of %s (emmeans' multiplicity adjustments).",
                       paste(format(a$adjust), collapse = ", "),

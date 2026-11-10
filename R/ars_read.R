@@ -322,6 +322,8 @@ tfl_ars_to_specs <- function(ars, table = FALSE) {
           c(if (length(gv)) paste(gv, collapse = "_") else "ALL")) {
         next
       }
+      # the non-missing count tfl_ars() added for a percentage's denominator
+      if (tfl_made && grepl("_NONMISS$", own)) next
       if (is.na(mm$method)) {
         miss(tag, "method", sprintf(
           "method %s: tflspec has no keyword for what it computes",

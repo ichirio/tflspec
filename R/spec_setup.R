@@ -37,6 +37,9 @@
   # rounding = ) wins where it differs)
   rnd <- .study_rounding(study)
   if (!is.null(rnd) && is.null(opts[["rtfreporter.rounding"]])) opts[["rtfreporter.rounding"]] <- rnd
+  # (the same value for cards, which formats the ARD's numbers)
+  ct <- .cards_round_type(opts[["rtfreporter.rounding"]])
+  if (!is.null(ct) && is.null(opts[["cards.round_type"]])) opts[["cards.round_type"]] <- ct
   sz <- .page_style(pg)$font_size_half_points
   if (!is.null(sz)) {
     n <- suppressWarnings(as.integer(sz))
@@ -106,17 +109,45 @@
 .study_rounding_option <- function(study) {
   rnd <- .study_rounding(study)
   if (is.null(rnd)) return(list())
-  options(rtfreporter.rounding = rnd)
+  ct <- .cards_round_type(rnd)
+  if (is.null(ct)) return(options(rtfreporter.rounding = rnd))
+  options(rtfreporter.rounding = rnd, cards.round_type = ct)
+}
+
+# The study's rounding as cards' option says it (cards formats the ARD's
+# numbers, rtfreporter's option does not reach it): "sas", a half away from
+# zero, is cards' "round-half-up" (round5(), by magnitude); "r", a half to
+# even, is "round-to-even" (base round()).  NULL for any other value.
+.cards_round_type <- function(rnd) {
+  if (is.null(rnd) || length(rnd) != 1L || is.na(rnd)) return(NULL)
+  switch(tolower(as.character(rnd)), sas = "round-half-up", r = "round-to-even", NULL)
+}
+
+# The values a rounding is spelled as, from the schema ("sas", "r", ...)
+.rounding_values <- function() {
+  ty <- .schema_arg_type(tfl_schema("plan_digits"), "rounding")
+  if (identical(ty$kind, "enum")) ty$args else c("sas", "r")
+}
+
+# A rounding must be spelled exactly as one of the values ("SAS" is not
+# "sas"); else it stops, naming them.  `where`: the field, with its file.
+.check_rounding <- function(x, where) {
+  ok <- .rounding_values()
+  if (!(is.character(x) && length(x) == 1L && !is.na(x) && x %in% ok)) {
+    stop(where, " takes one of ", paste0("\"", ok, "\"", collapse = ", "),
+         ", not \"", paste(as.character(x), collapse = ", "), "\"", call. = FALSE)
+  }
+  x
 }
 
 .study_rounding <- function(study) {
   # study.yml's `settings: rounding` (tfl_ai_study_init() writes it); the
   # defaults' plan_digits(rounding = ) over it
   r <- study$study$settings$rounding
-  if (!is.null(r)) r <- tolower(as.character(r)[1L])
+  if (!is.null(r)) r <- .check_rounding(as.character(r)[1L], "study.yml: settings: rounding")
   for (it in study$defaults$content %||% list()) {
     if (identical(.schema_fn_name(it$fn %||% ""), "plan_digits") && !is.null(it$args$rounding)) {
-      r <- tolower(as.character(it$args$rounding))
+      r <- .check_rounding(as.character(it$args$rounding), "plan_digits rounding")
     }
   }
   r

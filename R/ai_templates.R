@@ -5,7 +5,7 @@
 #  args}` when one of the study's templates fits (and the report's own
 #  content items for what the template does not cover), else as a code
 #  SPEC.  The templates are listed from the registry as it is when the
-#  requests are written (tflspec's, a company's, a study's variants), never
+#  requests are written (tflspec's and a company's), never
 #  by hand.  An answer's template is checked (its name, its arguments' names
 #  and, cheaply, their types) and then expanded, so the code SPEC's checks
 #  run on what it stands for.  `templates = FALSE` writes the requests as
@@ -188,6 +188,10 @@
       }
       tgt <- if (identical(x$group, "target") || (is.null(x$group) && x$name %in% target)) " [target]" else ""
       val <- .ai_tpl_value(x$default)
+      # (a parameter that refers to the study standard: its key and fallback)
+      if (is.character(x$study) && !startsWith(x$study, "output.")) {
+        val <- .tpl_ref_text(x$study, if (is.null(x$default)) NA_character_ else val, x$required)
+      }
       long <- nchar(val) > .ai_tpl_long
       out <- c(out, sprintf("  - `%s`%s%s (%s) = %s%s", x$name, tgt,
                             if (isTRUE(x$required)) "*" else "", what,
@@ -210,13 +214,16 @@
           if (short) {
             paste("Each: its name, what it is, its kind and layout; then its parameters'",
                   "names -- [target] (the report's analysis set, subjects and records),",
-                  "* required. A parameter left out takes its default or the study",
-                  "standard's value.")
+                  "* required. A parameter left out takes its default, or the study standard's",
+                  "value where it says `study: <key>`: it is not written again. `!unset`: leave the",
+                  "argument out of the call.")
           } else {
             paste("Each: its name, what it is, its kind and layout; then its parameters --",
                   "`name` [target] (the report's analysis set, subjects and records),",
                   "* required, (its type), = its default, and what it is. A parameter left",
-                  "out takes its default or the study standard's value.")
+                  "out takes its default, or the study standard's value where it says",
+                  "`study: <key>, else <fallback>` (`no fallback`: left unset): it is not written again.",
+                  "`!unset` (a default, or a value you write): leave the argument out of the call; for a flag (TRUE / FALSE) it is FALSE, the step off.")
           }, "",
           .ai_templates_list(kinds, short = short)), collapse = "\n")
 }
@@ -246,8 +253,8 @@
   kinds <- list(table = c("table", "listing"), figure = "figure")
   paste(c("# The study's templates", "",
           paste("Read when a request has `<!-- templates: TRUE -->` at its head. The",
-                "templates are written from the registry (tflspec's, the company's, the",
-                "study's variants) when the requests were; name no other."), "",
+                "templates are written from the registry (tflspec's and the company's)",
+                "when the requests were; name no other."), "",
           unlist(lapply(names(kinds), function(task) {
             c(sub("^## ", sprintf("## %s: ", if (task == "table") "Tables and listings" else "Figures"),
                   how(task)), "",
@@ -255,7 +262,9 @@
               paste("Each: its name, what it is, its kind and layout; then its parameters --",
                     "`name` [target] (the report's analysis set, subjects and records),",
                     "* required, (its type), = its default, and what it is. A parameter left",
-                    "out takes its default or the study standard's value."), "",
+                    "out takes its default, or the study standard's value where it says",
+                    "`study: <key>, else <fallback>` (`no fallback`: left unset): it is not written again.",
+                    "`!unset` (a default, or a value you write): leave the argument out of the call; for a flag (TRUE / FALSE) it is FALSE, the step off."), "",
               .ai_templates_list(kinds[[task]]), "")
           }))), collapse = "\n")
 }

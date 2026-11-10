@@ -9,23 +9,48 @@
 #' A template parameter
 #'
 #' One parameter of a template ([tfl_template()]): its name, default and
-#' what it is.  A template has few, and none of them is the look (a font,
-#' a width, the rows a page): the study's styles and defaults say that.
+#' what it is.  What the template's purpose and scope decide is fixed; the
+#' rest is a parameter with a default, the look too (the style, the
+#' widths, the rows a page): a report changes it with an argument, or with
+#' a card appended after the template's (the study's styles and defaults
+#' sit under both).
 #'
 #' @param name The parameter's name.
-#' @param default Its default value; `NULL` for none.
-#' @param required `TRUE` when a report must give it.
+#' @param default Its default value; `NULL` for none.  With `study`, the
+#'   fallback: the value when the study standard has none.  [tfl_unset()]
+#'   (`!unset` in a YAML): leave the argument out of the call, so the inner
+#'   function's own default applies (distinct from `NA` and `NULL`); a
+#'   report's `!unset` does the same over any default, and so does a study
+#'   value or fallback that is `!unset`.  `tfl_tpl_args()` shows it as
+#'   `(none)`.
+#' @param required `TRUE` when a report must give it.  With `study`: stop
+#'   when neither the report nor the study standard gives it.
 #' @param doc One line saying what it is.
-#' @param study Where the study standard's value of it is, taken when the
-#'   report's template SPEC does not give it: `"output.population"` (the
-#'   report's `population:`), `"settings.treatment"` (`study.yml`'s
-#'   `settings: treatment:`), `"settings.sd_missing"` (its `settings:
-#'   sd_missing:`), or `"<verb>.<argument>"`
-#'   (`"plan_cells.continuous"`: that argument of the study's defaults (and
-#'   pattern) item).  `NULL`: tflspec's for its name (`population`, `by`,
-#'   `group`), else the template's own default only.  `FALSE`: none, for a
-#'   parameter that shares such a name and is not the study's (the listing's
-#'   `by`, the variables that divide it).
+#' @param study A reference to the study standard: where the study's value
+#'   of this parameter is, taken when the report's template SPEC does not
+#'   give it.  The study standard is the study's own copy of the company
+#'   standard (`study.yml`'s `settings:` and `spec/defaults.yml`), never
+#'   the company's.  One reader resolves any key, so a new one needs no
+#'   code:
+#'   * `"settings.<name>"`: `study.yml`'s `settings: <name>:`
+#'     (`"settings.sd_missing"`);
+#'   * `"<verb>.<argument>[.<name>]"`: that argument of the verb's item in
+#'     `spec/defaults.yml`'s `content:` (`"plan_cells.continuous"`; a
+#'     named-dots argument's own name as the last part); patterns and a
+#'     style set are not read;
+#'   * `"figure_style.<key>"` (`"figure_style.km.theme"`: the type, then the
+#'     key): `defaults.yml`'s `figure_style:`, else tflspec's built-in
+#'     figure style;
+#'   * `"output.<field>"`: the report's own field (`"output.population"`).
+#'
+#'   Three forms: with `default`, the study's value else that fallback;
+#'   with neither `default` nor `required`, the study's value else the
+#'   parameter is left unset (the inner function's own default applies:
+#'   a rounding); with `required = TRUE`, the study's value else a stop.
+#'   `NULL`: tflspec's for its name (`population`, `by`, `group`), else the
+#'   template's own default only.  `FALSE`: none, for a parameter that
+#'   shares such a name and is not the study's (the listing's `by`, the
+#'   variables that divide it).
 #' @param type What its value is, for an input form: `"vars"` (variable
 #'   names), `"levels"` (values of a variable), `"flag"` (`TRUE` /
 #'   `FALSE`), `"number"`, `"text"` (also an R condition, an id, a label),
@@ -65,6 +90,7 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   if (!is.null(type)) type <- match.arg(type, .tpl_param_types)
   if (!is.null(tier)) tier <- match.arg(tier, c("required", "usual", "other"))
   stage <- match.arg(stage, c("call", "data"))
+  .tpl_study_key_check(study, name)
   structure(list(name = name, default = default, required = isTRUE(required),
                  doc = doc, study = study, type = type, multiple = multiple, of = of,
                  choices = choices, fields = fields, group = group, tier = tier,
@@ -73,6 +99,30 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
 }
 
 .tpl_param_types <- c("vars", "levels", "flag", "number", "text", "choice", "list")
+
+# A study reference's key must be one the reader can follow: a part of
+# the study standard (`settings`, `figure_style`), the report's own field
+# (`output`), or a verb of defaults.yml (`plan_cells`: one rtfreporter has).
+# `km` is the Kaplan-Meier params' company figure style, read as before
+# until their batch moves it to `figure_style`.
+.tpl_study_roots <- c("settings", "output", "figure_style", "km")
+.tpl_study_key_check <- function(key, name = NULL) {
+  if (is.null(key) || isFALSE(key)) return(invisible(key))
+  what <- if (is.null(name)) "" else sprintf(" (parameter %s)", name)
+  if (!is.character(key) || length(key) != 1L || is.na(key) ||
+      !grepl("^[A-Za-z][A-Za-z0-9_]*([.][A-Za-z0-9_]+)+$", key)) {
+    .ard_stop(sprintf(paste0("tfl_param(): `study` is a key of the study standard%s: ",
+                             "\"settings.<name>\" or \"<verb>.<argument>\"."), what))
+  }
+  verb <- sub("[.].*$", "", key)
+  if (!verb %in% .tpl_study_roots &&
+      !verb %in% tryCatch(getNamespaceExports("rtfreporter"), error = function(e) verb)) {
+    .ard_stop(sprintf(paste0("tfl_param(): `study = \"%s\"`%s: %s is not a verb of the study's ",
+                             "defaults.yml (a plan_*() function of rtfreporter), nor `settings`, ",
+                             "`figure_style` or `output`."), key, what, sQuote(verb, FALSE)))
+  }
+  invisible(key)
+}
 
 # tflspec's parameters' types by name (a template's tfl_param(type = )
 # says it where a name means two things: `param`, `sort`)
@@ -88,7 +138,8 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
         "order"), "vars", TRUE),
     # the layouts' look, each a verb's argument the study standard may give
     k(c("max_rows", "stub_indent"), "number"),
-    k(c("stub_before", "blanks_first", "blanks_last", "blanks_counted", "total"), "flag"),
+    k(c("stub_before", "blanks_first", "blanks_last", "blanks_counted", "total",
+        "missing_row"), "flag"),
     k(c("blanks", "split", "total_label", "stub_name", "header_n", "cat_cell", "na",
         "rounding", "empty", "denominator", "stack_id", "stack_label"), "text"),
     k("widths", "list", fields = c("name", "text")),
@@ -162,26 +213,14 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
 # none given stays none
 .tpl_lines <- function(x) if (length(x)) paste(x, collapse = "\n")
 
-# The study's own settings a template parameter may take its value from
-# (tfl_param(study = )), besides "<verb>.<argument>" of the study's
-# defaults: the one list of their names.  Each is function(output, study).
-.tpl_study_sources <- list(
-  # the report's analysis set (its `population:`)
-  # (none when the report names none: NA is tfl_output()'s "not given")
-  output.population = function(output, study) {
-    p <- output$population
-    if (length(p) == 1L && !is.na(p)) p
-  },
-  # the study's treatment variable (study.yml `settings: treatment:`)
-  settings.treatment = function(output, study) study$study$settings$treatment,
-  # what prints for a missing SD (summary, demog, param_change)
-  settings.sd_missing = function(output, study) study$study$settings$sd_missing
-)
-
-# tflspec's parameters' study sources by name: the analysis set and the
-# treatment are the study's (a parameter's own `study =` wins)
-.tpl_param_study <- c(population = "output.population", by = "settings.treatment",
-                      group = "settings.treatment")
+# A parameter's study reference by its name, until each family drops it:
+# the analysis set is the report's (`population:`), the treatment the study's
+# (a parameter's own `study =` wins).  (`by` and `group` are required with
+# no reference in the new design, canon 1.14; each family's batch drops the
+# fill, so this table is the last per-name rule.)  One reader reads them
+# and every other key: .tpl_study_read().
+.tpl_study_by_name <- c(population = "output.population", by = "settings.treatment",
+                        group = "settings.treatment")
 
 # A parameter's type filled in: as declared, by its name, else from its
 # default (a company's template that says none: `guessed`, which
@@ -194,8 +233,8 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     p$study <- NULL
     p$no_study <- TRUE
   }
-  if (is.null(p$study) && !isTRUE(p$no_study) && p$name %in% names(.tpl_param_study)) {
-    p$study <- .tpl_param_study[[p$name]]
+  if (is.null(p$study) && !isTRUE(p$no_study) && p$name %in% names(.tpl_study_by_name)) {
+    p$study <- .tpl_study_by_name[[p$name]]
   }
   by_name <- .tpl_param_kinds[[p$name]]
   if (is.null(p$type) && !is.null(by_name)) {
@@ -219,16 +258,19 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
 
 # Register a template: its kind, layout, parameters and body.  The body is
 # function(args, context) returning list(ard = , data = , content = ): the
-# report's items, `content` a list of tfl_item().
+# report's items, `content` a list of tfl_item().  `parts`: where each
+# parameter acts, list(ard = <names>, content = <names>), for a SPEC written
+# as `template: {name, ard:, content:}`; NULL: the template takes the two
+# parts' names as written (every name in either).
 .tfl_template <- function(name, kind, layout, params, body, label = NULL, call = NULL,
-                          package = "tflspec", example = NULL, ai = FALSE) {
+                          package = "tflspec", example = NULL, ai = FALSE, parts = NULL) {
   params <- lapply(params, .tpl_param_typed)
   names(params) <- vapply(params, `[[`, "", "name")
   # (a table's or a listing's call is the one tfl_tpl(); a figure's its own)
   call <- call %||% if (identical(kind, "figure")) paste0("tpl_", name) else "tfl_tpl"
   assign(name, list(name = name, kind = kind, layout = layout, params = params, body = body,
                     label = label, call = call, package = package,
-                    example = example, ai = isTRUE(ai)),
+                    example = example, ai = isTRUE(ai), parts = parts),
          envir = .tpl_registry)
   invisible(name)
 }
@@ -294,18 +336,43 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   out <- lapply(t$params, function(p) {
     if (!p$name %in% names(args)) return(p$default)
     v <- args[[p$name]]
+    if (inherits(v, "tfl_unset")) return(v)
     if (.tpl_is_name_text(p)) v <- .tpl_name_text_map(v, t$name, p$name, fn)
     if (isTRUE(p$merge) && length(p$default) && length(v) && !is.null(names(v))) {
       v <- .tpl_merge_named(p$default, v)
     }
     v
   })
+  # `!unset` (a report's value or a template's default): the parameter is
+  # left out -- the body reads it as NULL, and the call written omits it, so
+  # the inner function's own default applies.  Recorded in `unset`.
+  unset <- vapply(out, inherits, NA, "tfl_unset")
+  if (any(unset)) out[unset] <- list(NULL)
   miss <- vapply(t$params, function(p) p$required && is.null(out[[p$name]]), NA)
   if (any(miss)) {
     .ard_stop(sprintf("%s: template %s needs %s.", fn, t$name,
                       paste(sQuote(names(miss)[miss], FALSE), collapse = ", ")))
   }
+  attr(out, "unset") <- names(unset)[unset]
   out
+}
+
+# A parameter the body cannot do without a value for: `!unset` on it stops
+# with a message that names it.  A check of a parameter's value (a choice,
+# a range) lets an unset value through to here, so it is never reported as
+# a wrong value; what unset means for each parameter is the template's own
+# decision, made parameter by parameter.
+.tpl_unset_stop <- function(a, name, tn) {
+  if (name %in% attr(a, "unset")) {
+    .ard_stop(sprintf("%s: `%s` cannot be left unset (!unset).", tn, name))
+  }
+  invisible(a)
+}
+
+# A choice parameter's value, checked (match.arg()); `!unset` stops as above
+.tpl_choice <- function(a, name, choices, tn, value = a[[name]]) {
+  .tpl_unset_stop(a, name, tn)
+  match.arg(value, choices)
 }
 
 #' Expand a template into a report's items
@@ -331,8 +398,11 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
   fn <- "tfl_template_expand()"
   t <- .tpl_get(name, fn)
   a <- .tpl_args(t, args, fn)
-  out <- t$body(a, list(codelists = codelists, population = population, given = names(args),
+  # (an unset parameter is not given: the inner function's default applies)
+  out <- t$body(a, list(codelists = codelists, population = population,
+                        given = setdiff(names(args), attr(a, "unset")),
                         template = list(name = t$name, label = t$label)))
+  out$unset <- attr(a, "unset")
   # a figure's: how many of the data's last steps its call (tpl_<name>())
   # makes -- the statistics; the program writes the steps before them
   if (identical(t$kind, "figure")) {
@@ -610,6 +680,46 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
                         "no effect when `cells` is given"))
 }
 
+# Is a template `demog` or a variant made from it (stf_t02_demog, a company's)?
+.tpl_is_demog <- function(name) {
+  for (i in 1:20) {
+    if (identical(name, "demog")) return(TRUE)
+    t <- get0(name, envir = .tpl_registry, inherits = FALSE)
+    if (is.null(t) || is.null(t$from)) return(FALSE)
+    name <- sub("^[.]base[.]", "", t$from)
+  }
+  FALSE
+}
+
+# `denominator` of the summary family: the base of the categorical variables'
+# percentages (the continuous statistics have none); the column headings' N is
+# not moved by it
+.tpl_den_sum_doc <- paste(
+  "the categorical variables' percentages' denominator: NULL (default): the analysis set's",
+  "subjects (with a `data` other than ADSL, the records kept); a number: that many in every",
+  "column; numbers named by the values of `by` (`c(\"Drug X\" = 60, \"Control\" = 55)`): that many",
+  "in each column; the id of an analysis data (`adsl_itt`, or one of the report's own): its rows",
+  "in each column. A number is not for `total` = TRUE. The column headings' N is the study",
+  "standard's, not moved")
+.tpl_den_adsl_doc <- paste(
+  "the categorical variables' percentages' denominator: NULL (default): the analysis set's",
+  "subjects (those with a value); a number: that many in every column; numbers named by the",
+  "values of `by` (`c(\"Drug X\" = 60, \"Control\" = 55)`): that many in each column; the id of an",
+  "analysis data (`adsl_itt`, or one of the report's own): its rows in each column. A number",
+  "is not for `total` = TRUE. The column headings' N is the study standard's, not moved")
+
+# `missing_row`: the demog family's (summary does not show it; a variant
+# that gives it a default, demog, does)
+.tpl_missing_row_param <- function() {
+  p <- tfl_param("missing_row", FALSE, type = "flag", doc = paste(
+    "TRUE (default): a Missing row, last, for each categorical variable that has missing values",
+    "(NA or blank). FALSE: no Missing row; missing values are left out of the counts, and the",
+    "percentages stay over the analysis set."))
+  p$hidden <- TRUE
+  p$variant_only <- TRUE
+  p
+}
+
 .tpl_summary_params <- list(
   tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
   .tpl_subset_param(),
@@ -627,6 +737,8 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
   .tpl_sd_missing_param(),
   tfl_param("count_cell", NULL, study = "plan_cells.categorical",
             doc = "a categorical value's cell, n (%) (plan_cells(categorical = )); NULL: the study standard's"),
+  tfl_param("denominator", NULL, doc = .tpl_den_sum_doc),
+  .tpl_missing_row_param(),
   tfl_param("continuous_statistics", c("N", "mean", "sd", "median", "min", "max"),
             doc = "the continuous statistics the ARD has"),
   tfl_param("categorical_statistics", c("n", "p"),
@@ -638,7 +750,89 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
 names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
 .tpl_summary_cells <- .tpl_summary_params$cells$default
 
+# The data step of the demog family's Missing row: of the categorical
+# variables, those with a missing value (NA, or blank as an .xpt holds it)
+# become a factor of their values and a last level "Missing"; the others
+# stay as they are
+.tpl_missing_level_code <- function(set, vars) {
+  v <- paste0("c(", paste0("\"", vars, "\"", collapse = ", "), ")")
+  paste0(
+    "dplyr::mutate(", set, ", dplyr::across(dplyr::any_of(", v, "), function(x) {
+",
+    "  chr <- trimws(as.character(x))
+",
+    "  miss <- is.na(chr) | !nzchar(chr)
+",
+    "  if (!any(miss)) return(x)
+",
+    "  chr[miss] <- \"Missing\"
+",
+    "  values <- if (is.factor(x)) levels(x) else sort(unique(chr[!miss]))
+",
+    "  factor(chr, levels = unique(c(values, \"Missing\")))
+",
+    "}))")
+}
+
+# The summary family's `denominator`, checked: `value` what the categorical
+# analysis's `denominator` takes (NULL: cards' own, the rows of the set);
+# `extra` the analysis data to add (another analysis set's adsl_<id>, or the
+# records' subjects for "data").  The set's own id is kept as a data: it counts
+# every subject of the set, cards' column only those with a value.
+.tpl_sum_den <- function(a, ctx, subj, set) {
+  tn <- ctx$template$name %||% "summary"
+  # the demog family's percentages are of the analysis set (the report's
+  # ADSL after its population and filters), not a parameter: the analysis
+  # data the ARD already has, the one the column headings' N counts too
+  if (.tpl_is_demog(tn) && length(a$categorical)) {
+    if (!is.null(a$denominator)) {
+      .ard_stop(sprintf(paste0(
+        "%s: the percentages are over the analysis set (%s), so there is no `denominator` ",
+        "parameter: leave it out (summary has one)."), tn, subj))
+    }
+    return(list(value = subj, extra = list()))
+  }
+  v <- a$denominator
+  if (is.null(v)) return(list(value = NULL, extra = list()))
+  if (!length(a$categorical)) {
+    .ard_stop(sprintf(paste0(
+      "%s: denominator is the base of the categorical variables' percentages, and the table ",
+      "has none: give `categorical`, or leave denominator out."), tn))
+  }
+  one <- is.character(v) && length(v) == 1L && !is.na(v)
+  if (one && identical(trimws(v), "data") && identical(toupper(a[["data"]]), "ADSL")) {
+    .ard_stop(sprintf(paste0(
+      "%s: denominator = \"data\" is for a `data` other than ADSL (the subjects with a record ",
+      "kept): ADSL is already one row a subject, the analysis set. Leave it out, or give a number, ",
+      "numbers named by the values of %s, or an analysis data's id (%s counts every subject of the set)."),
+      tn, a$by, subj))
+  }
+  if (one && identical(trimws(v), "data")) {
+    .ard_stop(sprintf(paste0(
+      "%s: denominator = \"data\" on records (%s) is not supported yet: the counts are of records ",
+      "and \"data\" is a base of subjects, so a percentage could pass 100%%; leave it out (the ",
+      "records kept), or give a number, numbers named by the values of %s, or an analysis data's id."),
+      tn, a[["data"]], a$by))
+  }
+  dn <- .tpl_den(a, ctx, subj)
+  value <- dn$value
+  extra <- dn$extra
+  if (isTRUE(a[["stack"]]) && is.numeric(value) && !is.null(names(value))) {
+    .ard_stop(sprintf(paste0(
+      "%s: denominator named by the values of %s is not supported with stack = TRUE (the stack ",
+      "counts its variables in one call, without a column variable of their own): use stack = FALSE, ",
+      "one number, or an analysis data's id."), tn, a$by))
+  }
+  if (is.null(value) && one && identical(trimws(v), subj)) value <- subj
+  list(value = value, extra = extra)
+}
+
 .tpl_summary_body <- function(a, ctx) {
+  tn <- ctx$template$name %||% "summary"
+  if ("missing_row" %in% ctx$given &&
+      isTRUE(.tpl_get(tn, "template")$params$missing_row$hidden)) {
+    .ard_stop(sprintf("%s: there is no `missing_row` parameter (summary and stf_t02_demog do not take it): leave it out.", tn))
+  }
   if (!length(a$continuous) && !length(a$categorical)) {
     .ard_stop("template summary: give `continuous` or `categorical`, or both.")
   }
@@ -652,6 +846,20 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
     d <- list(id = set, from = a[["data"]], subjects = subj,
               where = if (!is.null(a$where)) tfl_r(a$where))
     sets <- c(sets, list(Filter(Negate(is.null), d)))
+  }
+  # the categorical percentages' denominator (NULL: cards' own, the rows of
+  # the set); the header N is not moved by it
+  dn <- .tpl_sum_den(a, ctx, subj, set)
+  sets <- c(sets, dn$extra)
+  # demog family: a variable with missing values (NA or blank) gets a
+  # Missing row, last, counted over the analysis set; decided on the data
+  # as the program runs
+  cat_set <- set
+  if (.tpl_is_demog(tn) && isTRUE(a$missing_row) && length(a$categorical) && !isTRUE(a[["stack"]])) {
+    cat_set <- paste0(set, "_m")
+    sets <- c(sets, list(list(
+      id = cat_set, label = "with a Missing level for a variable that has missing values",
+      from = set, code = tfl_r(.tpl_missing_level_code(set, a$categorical)))))
   }
   nn <- function(x) Filter(Negate(is.null), x)
   # (the ARD's ids are the layout's; its labels the template's)
@@ -672,7 +880,7 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
       id = a[["cat_id"]] %||% "CAT", parent = "STACK", label = a[["cat_label"]] %||% "Categorical",
       method = "categorical",
       variables = a$categorical, optional = opt("categorical"), statistics = a$categorical_statistics,
-      purpose = "PRIMARY OUTCOME MEASURE"))))
+      denominator = dn$value, purpose = "PRIMARY OUTCOME MEASURE"))))
   else c(
     list(nn(list(id = "GROUPN", label = a[["groupn_label"]] %||% "Subjects per group",
                  method = "categorical", data = subj,
@@ -683,11 +891,13 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
       statistics = a$continuous_statistics, purpose = "PRIMARY OUTCOME MEASURE"))),
     if (length(a$categorical)) list(nn(list(
       id = a[["cat_id"]] %||% "CAT", label = a[["cat_label"]] %||% "Categorical",
-      method = "categorical", data = set,
+      method = "categorical", data = cat_set,
       by = a$by, overall = ov, variables = a$categorical, optional = opt("categorical"),
-      statistics = a$categorical_statistics, purpose = "PRIMARY OUTCOME MEASURE"))))
+      statistics = a$categorical_statistics, denominator = dn$value,
+      purpose = "PRIMARY OUTCOME MEASURE"))))
   vars <- c(a$continuous, a$categorical)
-  cells <- nn(list(continuous = if (length(a$continuous)) as.list(
+  # (`cells` unset: no continuous cells in the call, plan_cells()'s own)
+  cells <- nn(list(continuous = if (length(a$continuous) && length(a$cells)) as.list(
                      .tpl_sd_missing(a$cells, .tpl_summary_cells, a[["sd_missing"]] %||% "-",
                                      mean = "{mean:.1f}", sd = "{sd:.2f}")),
                    categorical = a$count_cell))
@@ -714,8 +924,8 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
 # (a template is a program and a set of parameters: the program is the
 # layout's)
 tfl_template_variant("demog", from = "summary", label = "Demographics",
-  ai = TRUE, example = list(population = "SAF"),
-  defaults = list(continuous = "AGE", categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC"),
+  ai = TRUE, example = list(population = "SAF"), hide = "denominator",
+  defaults = list(missing_row = TRUE, continuous = "AGE", categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC"),
                   labels = c(AGE = "Age (years)", AGEGR1 = "Age group, n (%)",
                              SEX = "Sex, n (%)", RACE = "Race, n (%)",
                              ETHNIC = "Ethnicity, n (%)")))
@@ -725,7 +935,7 @@ tfl_template_variant("demog", from = "summary", label = "Demographics",
 # column, the rows in its order, age as Mean (SD) and Median (min, max)
 tfl_template_variant("stf_t02_demog", from = "demog",
   label = "Demographics, after FDA STF IG v2 Table 2",
-  example = list(population = "SAF"), ai = FALSE,
+  example = list(population = "SAF"), ai = FALSE, hide = "missing_row",
   defaults = list(categorical = c("SEX", "AGEGR1", "RACE", "ETHNIC", "COUNTRY"),
                   order = c("SEX", "AGE", "AGEGR1", "RACE", "ETHNIC", "COUNTRY"),
                   labels = c(SEX = "Sex, n (%)", AGE = "Age, years",
@@ -746,7 +956,8 @@ tfl_template_variant("stf_t02_demog", from = "demog",
                     "each variable's heading; given by name, merged")),
                function(x) tfl_param(x[[1L]], x[[2L]], doc = x[[3L]])),
              .tpl_summary_params[c("by", "categorical_statistics")],
-             list(tfl_param("groupn_label", NULL, doc = "the subjects-per-group analysis' label"))),
+             list(tfl_param("denominator", NULL, doc = .tpl_den_adsl_doc),
+                  tfl_param("groupn_label", NULL, doc = "the subjects-per-group analysis' label"))),
   body = function(a, ctx) {
     b <- lapply(.tpl_summary_params, `[[`, "default")
     b[names(a)] <- a
@@ -901,6 +1112,7 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
 # The values are "denominator", "set", "tested" and "none".
 .tpl_header_n <- function(a, ctx, allowed, why) {
   tn <- ctx$template$name %||% "template"
+  .tpl_unset_stop(a, "header_n", tn)
   hn <- a$header_n %||% allowed[1L]
   if (!(is.character(hn) && length(hn) == 1L && !is.na(hn) &&
         hn %in% c("denominator", "set", "tested", "none"))) {
@@ -918,6 +1130,13 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
                           if (identical(den, "data")) "tested"),
                 paste0("differs from the percentages' denominator; a header N apart from it ",
                        "is not supported yet: use header_n = \"denominator\" or \"none\"."))
+}
+
+# The analysis data `denominator = "data"` is for a template of records: the
+# subjects of `set` (the records kept), one row a subject and arm
+.tpl_den_records <- function(set, by) {
+  list(id = paste0(set, "_den"), label = "the subjects with a record kept", from = set,
+       code = tfl_r(sprintf("dplyr::distinct(%s, %s)", set, paste(c("USUBJID", by), collapse = ", "))))
 }
 
 # The values of a code list (as the YAML holds it: rows of value / label; or
@@ -979,6 +1198,12 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
         "%s: denominator = %s: a number is the subjects of every column: a positive whole number."),
         tn, format(v)))
     }
+    if (isTRUE(a[["total"]])) {
+      .ard_stop(sprintf(paste0(
+        "%s: denominator = %s with total = TRUE: one number is each arm's N and would be the Total ",
+        "column's too; give numbers named by the values of %s (the Total column is their sum), ",
+        "or an analysis data's id."), tn, format(v), by))
+    }
     return(out(as.integer(v)))
   }
   if (is.null(nm) || anyNA(nm) || !all(nzchar(nm))) {
@@ -1015,9 +1240,9 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
 
 # The rows kept: `min_pct` % of subjects or more, in any column, every
 # column, or the Total column (plan_filter()); NULL when none is set
-.tpl_min_pct_items <- function(min_pct, min_pct_in = "any", by = NULL) {
+.tpl_min_pct_items <- function(min_pct, min_pct_in = "any", by = NULL, a = NULL, tn = "template") {
   if (is.null(min_pct)) return(NULL)
-  in_ <- match.arg(min_pct_in, c("any", "all", "total"))
+  in_ <- .tpl_choice(a, "min_pct_in", c("any", "all", "total"), tn, value = min_pct_in)
   cond <- sprintf("p >= %s", format(min_pct / 100))
   if (identical(in_, "total")) cond <- sprintf("%s & %s == \"Total\"", cond, by)
   list(tfl_item("plan_filter", c(list(where = tfl_r(cond)),
@@ -1067,7 +1292,7 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
       label = list(label = a$hierarchy[n])))),
     # (the columns' order is the ARD's: the code list applied when it is made)
     tfl_item("plan_sort", list(keys = a$sort))),
-    .tpl_min_pct_items(a[["min_pct"]], a$min_pct_in, a$by),
+    .tpl_min_pct_items(a[["min_pct"]], a$min_pct_in, a$by, a, ctx$template$name),
     if (length(cells)) list(tfl_item("plan_cells", cells)),
     if (isTRUE(a[["total"]])) list(tfl_item("plan_total", list(position = "last"))),
     # (the layout's column header, its counts' line: the study standard's wins)
@@ -1156,13 +1381,14 @@ tpl_hierarchical <- function(ard, population, hierarchy, ..., codelists = NULL) 
 names(.tpl_pt_params) <- vapply(.tpl_pt_params, `[[`, "", "name")
 
 .tpl_pt_body <- function(a, ctx) {
-  in_ <- match.arg(a$min_pct_in, c("any", "all", "total"))
+  in_ <- .tpl_choice(a, "min_pct_in", c("any", "all", "total"), ctx$template$name)
   # hierarchical's ARD and items, of one level (the term); then its own
   # order, the terms kept and the page
   # (hierarchical's defaults for what ae_pt_freq does not take)
   h <- lapply(.tpl_hier_params, `[[`, "default")
   # (its own ids and labels too: the layout's body reads them when given)
   h[names(a)] <- a
+  attr(h, "unset") <- attr(a, "unset")
   h$hierarchy <- a$term
   h$min_pct <- NULL
   h$any_row <- !is.null(a$overall)
@@ -1215,7 +1441,8 @@ tpl_ae_pt_freq <- function(ard, population, ..., codelists = NULL) {
   .tpl_subset_param(),
   tfl_param("grade", "AESEV", doc = "the severity or grade variable (AESEV, AETOXGR)"),
   tfl_param("grade_levels", NULL,
-            doc = "its values, lowest first; NULL: the code list of `grade`"),
+            doc = paste("its values, lowest first: the rank of the maximum, and the order the",
+                        "table shows them in; NULL: the code list of `grade`")),
   tfl_param("grade_in", "rows", doc = "the grades as \"rows\" under each term, or as \"cols\" in each group"),
   tfl_param("hierarchy", c("AEBODSYS", "AEDECOD"), doc = "the levels, outer first"),
   tfl_param("by", "TRT01A", doc = "the column variable"),
@@ -1235,7 +1462,7 @@ tpl_ae_pt_freq <- function(ard, population, ..., codelists = NULL) {
 names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
 
 .tpl_mg_body <- function(a, ctx) {
-  rows_in <- identical(match.arg(a$grade_in, c("rows", "cols")), "rows")
+  rows_in <- identical(.tpl_choice(a, "grade_in", c("rows", "cols"), ctx$template$name), "rows")
   pop <- a$population
   subj <- paste0("adsl_", tolower(pop))
   # (the header N is the stack's own denominator: only the text changes)
@@ -1248,11 +1475,17 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
   den_id <- paste0(set, "_den")
   g <- a$grade
   h <- a$hierarchy
+  # the grades in their order: `grade_levels`, else the report's code list
   lv <- a$grade_levels %||% .tpl_levels(g, ctx$codelists)[[g]]
   # a record's rank: its grade among the levels (lowest first)
   rank <- if (length(lv)) {
     sprintf("match(%s, c(%s))", g, paste0("\"", lv, "\"", collapse = ", "))
   } else sprintf("xtfrm(%s)", g)
+  # the grades as the ARD holds them (the code list's labels), in their
+  # order on the table: a data step's factor order does not reach it --
+  # cards' hierarchical ARD puts the innermost variable's values in
+  # alphabetical order whatever its levels are -- so the plan says it
+  lv_ard <- if (length(lv)) .tpl_shift_labels(lv, g, ctx$codelists)
   # each subject's record of the highest grade: overall, in each SOC, in each PT
   top <- function(suffix, within) {
     list(id = paste0(set, "_max", suffix), from = set,
@@ -1286,13 +1519,14 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
       an("AE_MAX_SOC", maxes[[2L]]$id, c(h[1L], g)),
       an("AE_MAX_PT", maxes[[3L]]$id, c(h, g))))
   n <- length(h)
-  by_n <- identical(match.arg(a$sort, c("n", "name")), "n")
+  by_n <- identical(.tpl_choice(a, "sort", c("n", "name"), ctx$template$name), "n")
   # the terms' row keys (as rows: every level; as columns: all but the PT,
   # the label); each term after its own count (most first), or by name
   grp <- paste0("group", seq_len(if (rows_in) n else n - 1L))
   term_keys <- unlist(lapply(grp, function(k) c(if (by_n) sprintf("-n@%s", k), k)))
   keys <- c("levels(group1)", term_keys, ".depth",
-            if (!rows_in) c(if (by_n) "-n", "label"))
+            if (!rows_in) c(if (by_n) "-n", "label"),
+            if (rows_in && length(lv_ard)) "levels(label)")
   plan <- if (rows_in) {
     list(tfl_item("table_plan", list(
       cols = a$by, rows = stats::setNames(as.list(h), grp), label = list(label = g))))
@@ -1311,7 +1545,12 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
   content <- c(
     list(tfl_item("normalize_ard", list(hierarchy = c(h, g))),
          # the overall block first, whatever the order of the others
-         tfl_item("plan_levels", stats::setNames(list(a$overall), h[1L]))),
+         tfl_item("plan_levels", c(
+           stats::setNames(list(a$overall), h[1L]),
+           if (length(lv_ard)) {
+             if (rows_in) list(label = lv_ard)
+             else stats::setNames(list(c(a$any_grade, lv_ard)), g)
+           }))),
     plan,
     list(tfl_item("plan_sort", list(keys = keys))),
     list(tfl_item("plan_col_header", list(header = list(
@@ -1531,6 +1770,7 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
     total <- FALSE
   }
   den <- paste0(set, "_den")
+  .tpl_unset_stop(a, "header_n", ctx$template$name %||% "shift")
   hn <- a$header_n
   if (!(is.character(hn) && length(hn) == 1L && hn %in% c("set", "tested", "none"))) {
     .ard_stop(paste0("shift: header_n takes \"set\" (the arm's subjects in the analysis ",
@@ -1635,6 +1875,7 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
   body = function(a, ctx) {
     b <- lapply(.tpl_shift_params, `[[`, "default")
     for (k in intersect(names(a), names(b))) b[k] <- list(a[[k]])
+    attr(b, "unset") <- attr(a, "unset")
     b$where <- .tpl_and(sprintf("AVISIT == \"%s\" & PARAMCD %%in%% c(%s)", a$visit,
                                 paste(sprintf("\"%s\"", a$params), collapse = ", ")),
                         a$where)
@@ -1754,6 +1995,7 @@ tpl_lab_shift <- function(ard, population, ..., codelists = NULL) {
 # starts again when a column to its left changes).
 .listing_by <- function(a, given, cols) {
   by <- as.character(unlist(a$by))
+  .tpl_unset_stop(a, "by_break", "listing")
   brk <- a$by_break
   if (length(brk) != 1L || is.na(brk) || !brk %in% c("page", "block")) {
     .ard_stop("template listing: `by_break` is \"page\" (a page a value) or \"block\" (a value's records together).")
@@ -2012,7 +2254,7 @@ names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
 
 .tpl_pc_body <- function(a, ctx) {
   a$cells <- .tpl_sd_missing(.tpl_cells_named(a$cells), .tpl_pc_cells, a[["sd_missing"]] %||% "-")
-  rows_in <- identical(match.arg(a$layout, c("cols", "rows")), "rows")
+  rows_in <- identical(.tpl_choice(a, "layout", c("cols", "rows"), ctx$template$name), "rows")
   pop <- a$population
   subj <- paste0("adsl_", tolower(pop))
   set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(pop))
@@ -2157,7 +2399,8 @@ tpl_param_change <- function(ard, population, ..., codelists = NULL) {
 .tpl_stat_block_body <- function(a, ctx = NULL, others = NULL, rows_key = NULL,
                                  header = TRUE, levels = FALSE) {
   cells <- .tpl_cells_list(a$cells)
-  dir <- match.arg(a$direction %||% "cols", c("cols", "rows"))
+  dir <- .tpl_choice(a, "direction", c("cols", "rows"), ctx$template$name %||% "template",
+                     value = a$direction %||% "cols")
   rows <- a$rows
   # the row keys, by name: the variable's (or a display template's), then
   # the report's (subgroup, subgroup_level); no label column -- a block's
@@ -2236,6 +2479,15 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
 
 # ---- orr: best overall response and the objective response rate (95% CI) --------
 
+# The column variable's `by_levels` as a code list of the template (the data
+# step puts the arms in that order), unless the report has a list for it: the
+# report's own wins.  NULL: none.
+.tpl_by_codelist <- function(a, ctx) {
+  if (length(a$by_levels) && is.null(ctx$codelists[[a$by]])) {
+    stats::setNames(list(lapply(a$by_levels, function(v) list(value = v, label = v))), a$by)
+  }
+}
+
 .tfl_template("orr", kind = "table", layout = "stat_block",
   params = list(
     tfl_param("population", "ITT", doc = "the analysis set's id"),
@@ -2301,15 +2553,16 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
         if (!identical(hn, "none")) list(list(
           id = "GROUPN", method = "categorical", data = subj, variables = a$by,
           purpose = "PRIMARY OUTCOME MEASURE"))))
-    # (the arms' order: an order given, else the code list's, which the ARD
-    # program puts on the survfit / CI analysis too, relevel_ard())
-    by_lv <- a$by_levels
-    levels_item <- tfl_item("plan_levels", c(list(variable = c(a$category, "RESP")),
-                                             if (length(by_lv)) stats::setNames(list(by_lv), a$by)))
+    # (the arms' order: an order given, else the code list's -- the program
+    # puts it on the data, and on the survfit / CI analysis too, relevel_ard();
+    # the report's own list for the arms wins)
+    own <- .tpl_by_codelist(a, ctx)
+    levels_item <- tfl_item("plan_levels", list(variable = c(a$category, "RESP")))
     labels_item <- tfl_item("plan_labels", list(variable = stats::setNames(
       list("Best overall response, n (%)", sprintf("Objective response rate (%s)", resp)),
       c(a$category, "RESP"))))
-    if (identical(match.arg(a$stat_layout %||% "rows", c("rows", "cols")), "cols")) {
+    if (identical(.tpl_choice(a, "stat_layout", c("rows", "cols"), ctx$template$name,
+                              value = a$stat_layout %||% "rows"), "cols")) {
       # each arm's two columns, the rate and its CI (stat_block); the best
       # overall response's n (%) in the first, by its own (categorical) cell
       blk <- Filter(Negate(is.null), .tpl_stat_block_body(list(
@@ -2326,7 +2579,7 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
           list(line = "1", cols = ".values", span = a$by, text = if (identical(hn, "none")) "{col1}" else "{col1} (N={n1})"),
           list(line = "2", cols = "row_label", text = .tpl_lines(a$heading)),
           list(line = "2", cols = ".values", span = "each", text = "{col}"))))))
-      return(list(ard = ard, data = list(source = "ard"), content = content))
+      return(list(ard = ard, data = list(source = "ard"), content = content, codelists = own))
     }
     content <- list(
       tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable"))),
@@ -2339,7 +2592,7 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
         list(line = "2", cols = "row_label", text = .tpl_lines(a$heading))),
         if (!identical(hn, "none")) list(
           list(line = "2", cols = ".values", span = "each", text = "(N={n})"))))))
-    list(ard = ard, data = list(source = "ard"), content = content)
+    list(ard = ard, data = list(source = "ard"), content = content, codelists = own)
   })
 
 #' Objective response: a table plan from the template `orr`
@@ -2387,36 +2640,57 @@ tpl_orr <- function(ard, population = "ITT", ..., codelists = NULL) {
       "the rows, in order: each `id` (the flag's name), `label` (the row's text)",
       "and `where` (R: the events it counts; none: every event kept)")),
     tfl_param("heading", "Subjects with", doc = "the label column's heading"),
+    tfl_param("denominator", NULL, doc = .tpl_den_doc),
     tfl_param("header_n", "set", type = "choice", choices = c("set", "denominator", "none"),
               doc = paste(
-      "the arm headings' N: \"set\" (default) or \"denominator\": the arm's subjects in the",
-      "analysis set (with `subset`), the percentages' base; \"none\": no N.",
-      "\"tested\" is not supported, the subjects method takes no other base"))
+      "the arm headings' N: \"set\" (default): the arm's subjects in the analysis set (with",
+      "`subset`); \"denominator\": the arm's rows of the data the percentages are of",
+      "(`denominator`), the same as \"set\" when that is NULL, not with a number; \"none\": no N.",
+      "\"tested\" is not supported: use \"denominator\" with denominator = \"data\""))
   ),
   body = function(a, ctx) {
-    hn <- .tpl_header_n(a, ctx, c("set", "denominator", "none"), paste0(
-      "is not supported: the subjects method takes no base other than the analysis set; ",
-      "use header_n = \"set\" or \"none\"."))
     pop <- a$population
     subj <- paste0("adsl_", tolower(pop))
     set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(pop))
+    dn <- .tpl_den(a, ctx, subj)
+    hn <- .tpl_header_n(a, ctx, c("set", "denominator", "none"), paste0(
+      "is not supported: use header_n = \"set\", \"denominator\" (the data the percentages ",
+      "are of; \"data\" for the subjects with an event kept) or \"none\"."))
+    if (identical(hn, "denominator") && is.numeric(dn$value)) {
+      .ard_stop(paste0("ae_overview: header_n = \"denominator\" with a denominator that is a number ",
+                       "has no data to count the arms' N from: use header_n = \"set\" or \"none\", ",
+                       "or give the denominator as an analysis data."))
+    }
+    # the percentages' denominator: the set's subjects (no argument), a number,
+    # numbers by arm, an analysis data, or the subjects with an event kept
+    den <- dn$value
+    extra <- dn$extra
+    rec <- NULL
+    if (identical(den, "data")) {
+      rec <- .tpl_den_records(set, a$by)
+      den <- rec$id
+    }
     ids <- vapply(a$flags, `[[`, "", "id")
     # one `subjects` analysis a row: has the subject an event of the data
     # that the row's `where` keeps?
     flag <- function(f) Filter(Negate(is.null), list(
       id = f$id, label = f$label, method = "subjects", data = set,
       where = if (!is.null(f$where)) tfl_r(f$where), by = a$by, variables = f$id,
-      purpose = "PRIMARY OUTCOME MEASURE"))
+      denominator = den, purpose = "PRIMARY OUTCOME MEASURE"))
     ard <- list(
-      analysis_data = list(
-        list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
-             population = pop),
-        Filter(Negate(is.null), list(id = set, from = a$data, subjects = subj,
-                                     where = if (!is.null(a$where)) tfl_r(a$where)))),
+      analysis_data = c(
+        list(list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
+                  population = pop)),
+        extra,
+        list(Filter(Negate(is.null), list(id = set, from = a$data, subjects = subj,
+                                          where = if (!is.null(a$where)) tfl_r(a$where)))),
+        if (!is.null(rec)) list(rec)),
       analyses = c(
+        # (the header N: the set's subjects, or the data the percentages are of)
         if (!identical(hn, "none")) list(list(
-          id = "GROUPN", method = "categorical", data = subj, variables = a$by,
-          purpose = "PRIMARY OUTCOME MEASURE")),
+          id = "GROUPN", method = "categorical",
+          data = if (identical(hn, "denominator") && !is.null(den)) den else subj,
+          variables = a$by, purpose = "PRIMARY OUTCOME MEASURE")),
         lapply(a$flags, flag)))
     content <- list(
       # one row a flag: no label column (the flag's TRUE is the row)
@@ -2457,12 +2731,11 @@ tpl_ae_overview <- function(ard, population = "SAF", ..., codelists = NULL) {
 
 # ---- the templates in files of their own (R/tpl_<name>.R, read before this one) ----
 
-# A file's own templates (R/tpl_fig.R ...): its parameters' types by name,
-# study sources and examples, added to the shared tables.  Called from a
+# A file's own templates (R/tpl_fig.R ...): its parameters' types by name
+# and examples, added to the shared tables.  Called from a
 # .tpl_*_register() below, while the package loads.
-.tpl_extend <- function(param_kinds = NULL, study_sources = NULL, examples = NULL) {
+.tpl_extend <- function(param_kinds = NULL, examples = NULL) {
   if (length(param_kinds)) .tpl_param_kinds[names(param_kinds)] <<- param_kinds
-  if (length(study_sources)) .tpl_study_sources[names(study_sources)] <<- study_sources
   if (length(examples)) .tpl_examples[names(examples)] <<- examples
   invisible(NULL)
 }

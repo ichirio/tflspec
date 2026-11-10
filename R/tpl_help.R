@@ -24,8 +24,10 @@
 # "name = value; ..."; long ones cut
 .tpl_short <- function(x, width = 60L) {
   if (is.null(x)) return(NA_character_)
+  if (inherits(x, "tfl_unset")) return("(none)")
   one <- function(v) {
     if (is.null(v)) return("NULL")
+    if (inherits(v, "tfl_unset")) return("(none)")
     if (is.list(v)) return(paste0("(", .tpl_short(v, width = 1000L), ")"))
     paste(as.character(v), collapse = ", ")
   }
@@ -53,6 +55,17 @@
   NA_character_
 }
 
+# A parameter's reference to the study standard as text: "study: <key>,
+# else <fallback>" (a fallback), "study: <key>, no fallback" (unset when the
+# study has none) or "study: <key>, required" (a stop); the report's own
+# field as "report: <field>"
+.tpl_ref_text <- function(key, fallback = NA_character_, required = FALSE) {
+  src <- if (startsWith(key, "output.")) paste0("report: ", sub("^output[.]", "", key)) else
+    paste0("study: ", key)
+  if (isTRUE(required)) return(paste0(src, ", required"))
+  if (is.na(fallback)) paste0(src, ", no fallback") else paste0(src, ", else ", fallback)
+}
+
 # The study standard: a tfl_study_spec, or a study's folder read
 .tpl_help_study <- function(study, fn) {
   if (is.null(study) || inherits(study, "tfl_study_spec")) return(study)
@@ -72,12 +85,21 @@
 #' report, so its `effective` value is the one a report that does not
 #' give the parameter gets.
 #'
+#' A parameter that refers to the study standard (`tfl_param(study = )`)
+#' shows its reference in `default`: `"study: <key>, else <fallback>"`, or
+#' `"study: <key>, no fallback"` (left unset when the study has none), or
+#' `"study: <key>, required"`.  Its `layer` is then `"study: <key>"` when
+#' the study has a value, else `"fallback"` (or `"default"` when it has
+#' none); the report's own field (`population`) is `"report"`.  A default
+#' or a value that is `!unset` ([tfl_unset()]: the argument is left out of
+#' the call) is shown as `(none)`.
+#'
 #' @param name The template's name (`"demog"`).
 #' @param study The study standard: a [tfl_read_study_spec()] object or a
 #'   study's spec folder; `NULL` for none (the `study` column is then
 #'   `NA`).  Its `defaults.yml` content is where a parameter's
-#'   `"<verb>.<argument>"` source is read, `study.yml`'s `settings:
-#'   treatment:` the `by` (`"settings.treatment"`).
+#'   `"<verb>.<argument>"` source is read, `study.yml`'s `settings:` the
+#'   `"settings.<name>"` ones (`"settings.treatment"` for the `by`).
 #' @param population The report's analysis set: the value of the
 #'   parameters taken from the report's `population:`
 #'   (`"output.population"`); `NULL` for none.
@@ -85,19 +107,22 @@
 #'   `param`, `tier` (`"required"`, `"usual"`, `"other"`), `stage`
 #'   (`"call"`, an argument of the template's call, or `"data"`, of a step
 #'   preparing the analysis data: [tfl_param()]`(stage = )`), `type`,
-#'   `required`, `default` (the layout's, a short text), `variant` (the
-#'   default a variant changes it to, else `NA`), `study` (the study
-#'   standard's value, else `NA`), `effective` (the value that takes
-#'   effect), `layer` (where it is from: `"study"`, `"variant:<name>"` or
-#'   `"template"`), `maps_to` (its study source, `"plan_stub.indent"`, or
-#'   the verb its doc names) and `doc`.
+#'   `required`, `default` (the layout's, a short text; the reference for a
+#'   parameter that has one), `variant` (the default a variant changes it
+#'   to, else `NA`), `study` (the study standard's value, else `NA`),
+#'   `effective` (the value that takes effect), `layer` (where it is from:
+#'   `"study: <key>"`, `"report"`, `"fallback"`, `"variant:<name>"`,
+#'   `"template"` or `"default"`), `maps_to` (its study source,
+#'   `"plan_stub.indent"`, or the verb its doc names), `doc`, `study_key`
+#'   (its reference, else `NA`) and `fallback` (the value it takes when
+#'   the study has none: a variant's default else the layout's; `NA` none).
 #' @seealso [tfl_tpl_help()] to print it; [tfl_tpl()] to run a template.
 #' @examples
 #' a <- tfl_tpl_args("demog")
 #' a[a$tier != "other", c("param", "effective", "layer")]
 #' s <- tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
 #' a <- tfl_tpl_args("demog", study = s, population = "SAF")
-#' a[a$layer == "study", c("param", "effective", "maps_to")]
+#' a[startsWith(a$layer, "study"), c("param", "effective", "study_key")]
 #' @export
 tfl_tpl_args <- function(name, study = NULL, population = NULL) {
   fn <- "tfl_tpl_args()"
@@ -108,7 +133,6 @@ tfl_tpl_args <- function(name, study = NULL, population = NULL) {
   root <- chain[[length(chain)]]
   root_p <- lapply(root$params, .tpl_param_typed)
   names(root_p) <- vapply(root_p, `[[`, "", "name")
-  base <- if (!is.null(study)) .layer_of("defaults", study)$content else list()
   output <- list(population = population)
   rows <- lapply(.tpl_shown(t$params), function(p) {
     rp <- root_p[[p$name]] %||% p
@@ -120,21 +144,31 @@ tfl_tpl_args <- function(name, study = NULL, population = NULL) {
         break
       }
     }
+    key <- if (is.character(p$study)) p$study else NA_character_
     sv <- NULL
-    if (!is.null(p$study) && (!is.null(study) || identical(p$study, "output.population"))) {
-      sv <- .tpl_study_value(p$study, base, output, study)
+    if (!is.na(key) && (!is.null(study) || startsWith(key, "output."))) {
+      sv <- .tpl_study_read(key, output, study)
     }
-    layer <- if (!is.null(sv)) "study" else if (!is.na(vname)) paste0("variant:", vname) else
+    layer <- if (!is.null(sv)) {
+      if (startsWith(key, "output.")) "report" else paste0("study: ", key)
+    } else if (!is.na(vname)) {
+      paste0("variant:", vname)
+    } else if (!is.na(key)) {
+      if (is.null(p$default)) "default" else "fallback"
+    } else {
       "template"
+    }
     eff <- if (!is.null(sv)) sv else p$default
     data.frame(param = p$name, tier = p$tier %||% "other", stage = p$stage %||% "call",
                type = p$type %||% NA_character_,
                required = isTRUE(p$required),
-               default = .tpl_short(rp$default),
+               default = if (is.na(key)) .tpl_short(rp$default) else
+                 .tpl_ref_text(key, .tpl_short(rp$default), p$required),
                variant = if (is.na(vname)) NA_character_ else
                  if (is.null(p$default)) "NULL" else .tpl_short(p$default),
                study = .tpl_short(sv), effective = .tpl_short(eff), layer = layer,
                maps_to = .tpl_maps_to(p), doc = p$doc %||% NA_character_,
+               study_key = key, fallback = if (is.na(key)) NA_character_ else .tpl_short(p$default),
                stringsAsFactors = FALSE)
   })
   out <- do.call(rbind, unname(rows))
@@ -193,6 +227,10 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
     val <- ifelse(is.na(r$effective), "-", r$effective)
     val <- paste0(val, " (", r$layer, ")")
     what <- ifelse(is.na(r$doc), "", r$doc)
+    # (a parameter that refers to the study standard says so, with its fallback)
+    ref <- !is.na(r$study_key)
+    what[ref] <- paste0(what[ref], " [", mapply(.tpl_ref_text, r$study_key[ref], r$fallback[ref],
+                                                  r$required[ref], USE.NAMES = FALSE), "]")
     # (a data step's argument marked: not one of the call's)
     nm <- ifelse(r$stage == "data", paste(r$param, "[data]"), r$param)
     w1 <- max(nchar(c("param", nm)))
@@ -252,13 +290,18 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
   desc <- sprintf("The %s template `%s`, layout `%s`", t$kind, name, t$layout)
   if (!is.null(t$from)) desc <- sprintf("%s: a variant of `%s` (its defaults changed)", desc, t$from)
   desc <- paste0(desc, sprintf(". Its program is one call, `tfl_tpl(%s, \"%s\", ...)`; ", x, name),
-                 "a parameter a report leaves out takes the study standard's value, ",
-                 "else the variant's default, else the layout's.",
+                 "a parameter a report leaves out takes the study standard's value (the ",
+                 "Default column names the key) else its fallback, else the variant's ",
+                 "default, else the layout's.",
                  if (!is.null(.tpl_stf_note(name))) paste0(" ", .tpl_stf_note(name)))
+  dflt <- ifelse(is.na(a$variant), a$default, a$variant)
+  ref <- !is.na(a$study_key)
+  dflt[ref] <- mapply(.tpl_ref_text, a$study_key[ref], a$fallback[ref], a$required[ref],
+                      USE.NAMES = FALSE)
   tbl <- c("| Parameter | Tier | Stage | Default | Maps to | What |",
            "|---|---|---|---|---|---|",
            sprintf("| `%s` | %s | %s | %s | %s | %s |", a$param, a$tier, a$stage,
-                   .tpl_rd_cell(ifelse(is.na(a$variant), a$default, a$variant)),
+                   .tpl_rd_cell(dflt),
                    .tpl_rd_cell(a$maps_to), .tpl_rd_cell(a$doc)))
   c(sprintf("@title %s: the template %s", t$label %||% name, name),
     sprintf("@name %s", topic),

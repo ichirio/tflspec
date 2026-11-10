@@ -235,13 +235,75 @@ tfl_read_output <- function(path) {
   if (!is.character(path) || length(path) != 1L || !file.exists(path)) {
     stop("tfl_read_output(): no file ", path, call. = FALSE)
   }
-  y <- yaml::read_yaml(path, handlers = .yaml_handlers())
+  # (the file named in a value's message: .logical_strict(), .rounding_check())
+  .spec_read$file <- path
+  on.exit(.spec_read$file <- NULL, add = TRUE)
+  y <- .yaml_read_file(path, handlers = .yaml_handlers())
   if (!is.list(y)) stop("tfl_read_output(): ", path, " is not a map.", call. = FALSE)
   if (!is.null(y$outputs)) {
     base <- y$base %||% list()
     return(lapply(y$outputs, function(o) .output_from_list(.merge_plain(base, o), path)))
   }
   .output_from_list(y, path)
+}
+
+# A tag with no value in flow style -- `{b: !unset}`, `[x, !unset]` -- is
+# a Scanner error in the yaml package (it reads `!unset}` as the tag).
+# A space is put after a bare `!unset` that a `}`, `,` or `]` follows
+# directly.  Text in quotes, in a comment and in a block scalar (`|`, `>`)
+# is left alone, and so is an `!r` value (a plain scalar to its end).
+.yaml_flow_tags <- function(text) {
+  if (!grepl("!unset[]},]", text)) return(text)
+  lines <- strsplit(text, "\n", fixed = TRUE)[[1L]]
+  starts <- c(" ", "[", "{", ",", ":", "-")
+  quote <- ""
+  block <- -1L
+  for (i in seq_along(lines)) {
+    ln <- lines[[i]]
+    ind <- nchar(sub("^( *).*$", "\\1", ln))
+    if (block >= 0L) {
+      if (!nzchar(trimws(ln)) || ind > block) next
+      block <- -1L
+    }
+    ch <- strsplit(ln, "")[[1L]]
+    n <- length(ch)
+    out <- character()
+    j <- 1L
+    while (j <= n) {
+      c1 <- ch[[j]]
+      if (nzchar(quote)) {
+        if (quote == "\"" && c1 == "\\" && j < n) {
+          out <- c(out, c1, ch[[j + 1L]])
+          j <- j + 2L
+          next
+        }
+        if (c1 == quote) quote <- ""
+      } else if (c1 %in% c("\"", "'") && (j == 1L || ch[[j - 1L]] %in% starts)) {
+        quote <- c1
+      } else if (c1 == "#" && (j == 1L || ch[[j - 1L]] == " ")) {
+        out <- c(out, ch[j:n])
+        break
+      } else if (c1 == "!" && (j == 1L || ch[[j - 1L]] %in% starts) &&
+                 j + 6L <= n && paste(ch[j:(j + 5L)], collapse = "") == "!unset" &&
+                 ch[[j + 6L]] %in% c("}", ",", "]")) {
+        out <- c(out, "!unset ")
+        j <- j + 6L
+        next
+      }
+      out <- c(out, c1)
+      j <- j + 1L
+    }
+    new <- paste(out, collapse = "")
+    if (!nzchar(quote) && grepl("(^|[ :-])[|>][-+0-9]*[ ]*(#.*)?$", new)) block <- ind
+    lines[[i]] <- new
+  }
+  paste(lines, collapse = "\n")
+}
+
+# yaml::read_yaml() with `.yaml_flow_tags()` applied to the file's text
+.yaml_read_file <- function(path, handlers = list()) {
+  txt <- paste(readLines(path, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
+  yaml::yaml.load(.yaml_flow_tags(txt), handlers = handlers)
 }
 
 # The tags: !r, !unset; and YAML 1.1's implicit booleans (n, N, y, Y, yes,
@@ -335,7 +397,7 @@ tfl_read_output <- function(path) {
     if (identical(.schema_fn_name(names(el)), .spec_part$fn)) {
       return(tfl_item(names(el), .part_in(args), "own"))
     }
-    return(tfl_item(names(el), .rounding_lower(names(el), .neutral_in(names(el), .calls_in(args))), "own"))
+    return(tfl_item(names(el), .rounding_check(names(el), .logical_strict(names(el), .neutral_in(names(el), .calls_in(args)))), "own"))
   }
   if (is.list(el) && !is.null(el$fn)) {
     return(tfl_item(el$fn, .neutral_in(el$fn, .calls_in(el$args %||% list())), el$from %||% "own"))
@@ -343,14 +405,47 @@ tfl_read_output <- function(path) {
   stop("A content item is `- fn: {args}`.", call. = FALSE)
 }
 
-# plan_digits()'s rounding in either case ("SAS" is "sas"), held in lower
-# case: what the program writes, whatever rtfreporter reads it
-.rounding_lower <- function(fn, args) {
-  r <- args$rounding
-  if (identical(.schema_fn_name(fn), "plan_digits") && is.character(r) && length(r) == 1L) {
-    args$rounding <- tolower(r)
+# The file being read, for the message of a value that is not allowed
+.spec_read <- new.env(parent = emptyenv())
+
+.spec_read_file <- function() .spec_read$file %||% "the SPEC"
+
+# plan_digits()'s rounding is spelled as one of its values ("sas", "r"): a
+# value in another case ("SAS") stops, naming the values
+.rounding_check <- function(fn, args) {
+  if (identical(.schema_fn_name(fn), "plan_digits") && !is.null(args$rounding) &&
+      !inherits(args$rounding, c("tfl_r", "tfl_unset"))) {
+    .check_rounding(args$rounding, paste0(.spec_read_file(), ": plan_digits rounding"))
   }
   args
+}
+
+# A field that takes true or false (a `logical` in the schema) holds a
+# logical.  `yes` / `no` (what the yaml package itself writes for TRUE /
+# FALSE) become TRUE / FALSE there; any other text stops, naming the file,
+# the field and the value.  (Elsewhere `yes` / `no` stay text.)
+.logical_strict <- function(fn, args) {
+  ent <- tryCatch(tfl_schema(fn), error = function(e) NULL)
+  if (is.null(ent)) return(args)
+  for (a in names(args)) {
+    ty <- .schema_arg_type(ent, a)
+    if (!is.null(ty)) args[a] <- list(.logical_check(args[[a]], ty, a))
+  }
+  args
+}
+
+.logical_check <- function(v, ty, a) {
+  if (inherits(v, c("tfl_r", "tfl_call", "tfl_unset"))) return(v)
+  if (ty$kind == "logical") {
+    if (is.character(v) && length(v) == 1L) {
+      if (v %in% c("yes", "no")) return(identical(v, "yes"))
+      stop(.spec_read_file(), ": ", a, " takes true or false, not \"", v, "\"", call. = FALSE)
+    }
+  } else if (ty$kind %in% c("list", "vec", "map") && is.list(v) && !is.object(v)) {
+    el <- if (ty$kind == "list") ty$args[[1L]] else ty$args[[2L]]
+    for (i in seq_along(v)) if (!is.null(v[[i]])) v[[i]] <- .logical_check(v[[i]], el, a)
+  }
+  v
 }
 
 # every `{fn:, args:}` map inside a value as a tfl_call (recursively)

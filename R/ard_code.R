@@ -246,12 +246,16 @@
   src <- .split_bar(.study_value(x, "source", NA))
   libs <- if (isTRUE(getOption("tflspec.plain_ns"))) "cards" else
     setdiff(.ard_pkgs, getOption("tflspec.user_attached"))
+  ct <- .cards_round_type(.study_value(x, "rounding", NA))
   c(if (length(libs)) sprintf("library(%s)", libs),
     if (length(src)) c(
       "",
       "# the study's own analysis functions (study key `source`)",
       sprintf("source(%s)", vapply(src, .path_code, ""))),
     "",
+    # the study's rounding, for cards' formats
+    if (!is.null(ct)) c("# the study's rounding, for the numbers cards formats",
+                        .spec_call_code(.spec_call("options", cards.round_type = ct), 0L), ""),
     if (length(helpers)) c("# ---- the functions the program calls ----",
                            helpers, ""),
     .ard_helpers(used))

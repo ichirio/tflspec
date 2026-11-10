@@ -69,11 +69,13 @@ test_that("demog, summary and disposition: a blank is missing, not a category", 
       expect_false(any(lv %in% ""), info = paste(id, v))
       for (arm in c("Drug X", "Control")) {
         x <- s[[v]][s$TRT01A == arm]
+        # demog: the percent is of the whole analysis set's arm (blanks counted in
+        # the denominator, the header N); summary, disposition: of the subjects with a value
+        den <- if (id == "T-D") length(x) else sum(x != "")
         x <- x[x != ""]
         for (l in unique(x)) {
           expect_equal(bv_stat(a, v, l, arm, "n"), sum(x == l), info = paste(id, v, l, arm))
-          # the percent is of the subjects with a value
-          expect_equal(bv_stat(a, v, l, arm, "p"), sum(x == l) / length(x), info = paste(id, v, l, arm))
+          expect_equal(bv_stat(a, v, l, arm, "p"), sum(x == l) / den, info = paste(id, v, l, arm))
         }
       }
     }
