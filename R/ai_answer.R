@@ -172,7 +172,7 @@ tfl_ai_unpack <- function(answer, dir, overwrite = FALSE) {
   }
   for (p in paths) {
     msg <- tryCatch({
-      yaml::yaml.load(paste(blocks[[p]], collapse = "\n"), handlers = .yaml_handlers())
+      yaml::yaml.load(.yaml_flow_tags(paste(blocks[[p]], collapse = "\n")), handlers = .yaml_handlers())
       NULL
     }, error = function(e) conditionMessage(e))
     if (!is.null(msg)) .ard_stop(sprintf("tfl_ai_unpack(): %s is not valid YAML: %s", p, msg))

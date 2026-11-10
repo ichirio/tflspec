@@ -235,13 +235,72 @@ tfl_read_output <- function(path) {
   if (!is.character(path) || length(path) != 1L || !file.exists(path)) {
     stop("tfl_read_output(): no file ", path, call. = FALSE)
   }
-  y <- yaml::read_yaml(path, handlers = .yaml_handlers())
+  y <- .yaml_read_file(path, handlers = .yaml_handlers())
   if (!is.list(y)) stop("tfl_read_output(): ", path, " is not a map.", call. = FALSE)
   if (!is.null(y$outputs)) {
     base <- y$base %||% list()
     return(lapply(y$outputs, function(o) .output_from_list(.merge_plain(base, o), path)))
   }
   .output_from_list(y, path)
+}
+
+# A tag with no value in flow style -- `{b: !unset}`, `[x, !unset]` -- is
+# a Scanner error in the yaml package (it reads `!unset}` as the tag).
+# A space is put after a bare `!unset` that a `}`, `,` or `]` follows
+# directly.  Text in quotes, in a comment and in a block scalar (`|`, `>`)
+# is left alone, and so is an `!r` value (a plain scalar to its end).
+.yaml_flow_tags <- function(text) {
+  if (!grepl("!unset[]},]", text)) return(text)
+  lines <- strsplit(text, "\n", fixed = TRUE)[[1L]]
+  starts <- c(" ", "[", "{", ",", ":", "-")
+  quote <- ""
+  block <- -1L
+  for (i in seq_along(lines)) {
+    ln <- lines[[i]]
+    ind <- nchar(sub("^( *).*$", "\\1", ln))
+    if (block >= 0L) {
+      if (!nzchar(trimws(ln)) || ind > block) next
+      block <- -1L
+    }
+    ch <- strsplit(ln, "")[[1L]]
+    n <- length(ch)
+    out <- character()
+    j <- 1L
+    while (j <= n) {
+      c1 <- ch[[j]]
+      if (nzchar(quote)) {
+        if (quote == "\"" && c1 == "\\" && j < n) {
+          out <- c(out, c1, ch[[j + 1L]])
+          j <- j + 2L
+          next
+        }
+        if (c1 == quote) quote <- ""
+      } else if (c1 %in% c("\"", "'") && (j == 1L || ch[[j - 1L]] %in% starts)) {
+        quote <- c1
+      } else if (c1 == "#" && (j == 1L || ch[[j - 1L]] == " ")) {
+        out <- c(out, ch[j:n])
+        break
+      } else if (c1 == "!" && (j == 1L || ch[[j - 1L]] %in% starts) &&
+                 j + 6L <= n && paste(ch[j:(j + 5L)], collapse = "") == "!unset" &&
+                 ch[[j + 6L]] %in% c("}", ",", "]")) {
+        out <- c(out, "!unset ")
+        j <- j + 6L
+        next
+      }
+      out <- c(out, c1)
+      j <- j + 1L
+    }
+    new <- paste(out, collapse = "")
+    if (!nzchar(quote) && grepl("(^|[ :-])[|>][-+0-9]*[ ]*(#.*)?$", new)) block <- ind
+    lines[[i]] <- new
+  }
+  paste(lines, collapse = "\n")
+}
+
+# yaml::read_yaml() with `.yaml_flow_tags()` applied to the file's text
+.yaml_read_file <- function(path, handlers = list()) {
+  txt <- paste(readLines(path, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
+  yaml::yaml.load(.yaml_flow_tags(txt), handlers = handlers)
 }
 
 # The tags: !r, !unset; and YAML 1.1's implicit booleans (n, N, y, Y, yes,
