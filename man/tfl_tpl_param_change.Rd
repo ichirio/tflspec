@@ -15,7 +15,7 @@ The table template \code{param_change}, layout \code{summary}. Its program is on
    \code{params} \tab other \tab call \tab  \tab  \tab the PARAMCD values, in the data's order; NULL: all \cr
    \code{visits} \tab other \tab call \tab  \tab  \tab the AVISIT values; NULL: all \cr
    \code{where} \tab other \tab call \tab  \tab  \tab the records kept (R), e.g. ANL01FL == "Y" \cr
-   \code{by} \tab other \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the column variable \cr
+   \code{by} \tab required \tab call \tab  \tab  \tab the column variable (the arms); not a default and not the study's treatment \cr
    \code{layout} \tab other \tab call \tab cols \tab  \tab cols: each arm's value and change side by side; rows: the value's rows, then the change's, under each visit \cr
    \code{param_order} \tab other \tab call \tab PARAMN \tab  \tab the parameters' order variable; NULL: by name \cr
    \code{visit_order} \tab other \tab call \tab AVISITN \tab  \tab the visits' order variable; NULL: by name \cr
@@ -25,12 +25,22 @@ The table template \code{param_change}, layout \code{summary}. Its program is on
    \code{change_label} \tab other \tab call \tab Change from baseline \tab  \tab the change's heading \cr
    \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<population> \cr
    \code{data_label} \tab other \tab call \tab  \tab  \tab the analysis data's label \cr
-   \code{statistics} \tab other \tab call \tab N, mean, sd, median, min, max \tab  \tab the statistics the ARD has \cr
-   \code{cells} \tab other \tab call \tab study: plan_cells.continuous, else n = \{N:.0f\}; Mean (SD) = \{mean\} (\{sd\}), \{mean\} (-); Media... \tab plan_cells.continuous \tab the rows of a value or a change \cr
-   \code{sd_missing} \tab other \tab call \tab study: settings.sd_missing, else - \tab settings.sd_missing \tab what prints in place of the SD when a group has no SD (n = 1): \{mean\} (<sd_missing>); "" in study.yml or a report's YAML prints the mean alone; no effect when 'cells' is given \cr
+   \code{formats} \tab usual \tab call \tab N = 0; mean = 1; sd = 2; median = 1; min = 1; max = 1 \tab  \tab the ARD's formats (precision): per statistic (N 0, mean 1, sd 2, median 1, min 1, max 1), given by name, merged; and per parameter by its PARAMCD (HBA1C: \{mean: 2, sd: 3\}); a number is the decimals; unset: none given here \cr
+   \code{cells} \tab usual \tab call \tab study: plan_cells.continuous, else n = \{N\}; Mean (SD) = \{mean\} (\{sd\}), \{mean\} (-); Median = ... \tab plan_cells.continuous \tab the rows of a value or a change: where each statistic goes (placement only, \{mean\}) \cr
+   \code{sd_missing} \tab other \tab call \tab study: settings.sd_missing, else - \tab settings.sd_missing \tab what prints in place of the SD when a group has no SD (n = 1): \{mean\} (<sd_missing>); "" prints the mean alone; unset: no such guard; no effect when 'cells' is given \cr
+   \code{header_n} \tab other \tab call \tab set \tab  \tab the arm headings' N: "set": the arm's subjects in the analysis set; "none" or unset: no N \cr
    \code{param_page} \tab other \tab call \tab TRUE \tab  \tab TRUE: a page a parameter, named in the titles by 'param_heading' \cr
    \code{param_heading} \tab other \tab call \tab Parameter: \{value\} \tab  \tab a parameter's page name ('\{value\}': the parameter); the last title line, or where the title line '\{PAGE_HEADING\}' is \cr
    \code{heading} \tab other \tab call \tab  \tab  \tab the label column's heading \cr
+   \code{stub_name} \tab other \tab call \tab study: plan_stub.name, no fallback \tab plan_stub.name \tab the row-title column's name (plan_stub(name = )) \cr
+   \code{stub_before} \tab other \tab call \tab study: plan_stub.before, no fallback \tab plan_stub.before \tab TRUE: the row-title column before the row keys (plan_stub(before = )) \cr
+   \code{blanks} \tab other \tab call \tab study: plan_blanks.where, no fallback \tab plan_blanks.where \tab blank rows: TRUE between the blocks, FALSE none, or where (plan_blanks(where = )); FALSE also sets both ends off; NULL: none made here \cr
+   \code{blanks_first} \tab other \tab call \tab study: plan_blanks.first, no fallback \tab plan_blanks.first \tab a blank row before the first block (plan_blanks(first = )) \cr
+   \code{blanks_last} \tab other \tab call \tab study: plan_blanks.last, no fallback \tab plan_blanks.last \tab a blank row after the last block (plan_blanks(last = )) \cr
+   \code{blanks_counted} \tab other \tab call \tab study: plan_blanks.counted, no fallback \tab plan_blanks.counted \tab blank rows count in a page's rows (plan_blanks(counted = )) \cr
+   \code{border_header} \tab other \tab call \tab study: plan_style.border_header, no fallback \tab plan_style.border_header \tab the rule round the column heading (plan_style(border_header = )) \cr
+   \code{widths} \tab other \tab call \tab study: plan_columns.widths, no fallback \tab plan_columns.widths \tab NULL: the columns' content; "auto": the row-title column 35\% of the width, the arm columns sharing the rest; numbers: the relative widths, one a printed column; or the widths by column name, as plan_columns(widths = ) takes them (row_label: 40, .values: 18) \cr
+   \code{max_rows} \tab other \tab call \tab study: plan_paginate_rows.max_rows, else 30 \tab plan_paginate_rows.max_rows \tab rows a page (plan_paginate_rows(max_rows = )) \cr
 }
 }
 
@@ -59,7 +69,7 @@ The aliases follow the numbering of these publications, and the titles are short
 \section{Example}{
 
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{plan <- tfl_tpl(ard, "param_change", population = "SAF", data = "ADLB", params = c("ALT", "AST"), where = "ANL01FL == \\"Y\\"")
+\if{html}{\out{<div class="sourceCode">}}\preformatted{plan <- tfl_tpl(ard, "param_change", population = "SAF", by = "TRT01A", data = "ADLB", params = c("ALT", "AST"), where = "ANL01FL == \\"Y\\"")
 }\if{html}{\out{</div>}}
 }
 

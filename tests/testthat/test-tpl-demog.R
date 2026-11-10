@@ -64,7 +64,7 @@ test_that("the standalone templates equal what the variants gave: defaults and t
   d <- b1_folder(na = FALSE)
   # the variants as they were (of summary, of demog)
   tfl_template_variant("b1_old_demog", from = "summary", label = "old",
-    defaults = list(continuous = "AGE", categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC"),
+    defaults = list(by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC"),
                     labels = c(AGE = "Age (years)", AGEGR1 = "Age group, n (%)",
                                SEX = "Sex, n (%)", RACE = "Race, n (%)", ETHNIC = "Ethnicity, n (%)")))
   tfl_template_variant("b1_old_stf", from = "b1_old_demog", label = "old",
@@ -92,16 +92,13 @@ test_that("the standalone templates equal what the variants gave: defaults and t
                                      continuous = "AGE", categorical = "SEX")))$table
   expect_identical(a, b)
   # (values missing -- RACE blank, SEX NA: demog adds a Missing row, last, for each of
-  # the two and its percentages are over the analysis set (canon 1.31); the counts
-  # are the summary's)
+  # the two and its percentages are over the analysis set (canon 1.31); summary, on
+  # the same body since batch 2, too)
   d2 <- b1_folder(na = TRUE)
   a <- b1_run(d2, b1_out("b1_old_demog", vars))$table
   b <- b1_run(d2, b1_out("demog", c(list(by = "TRT01A"), vars)))$table
-  keep <- trimws(as.character(b$label)) != "Missing"
-  expect_identical(sum(!keep), 2L)
-  expect_identical(trimws(as.character(b$label[keep])), trimws(as.character(a$label)))
-  cnt <- function(x) sub(" .*", "", x)
-  for (arm in c("Drug X", "Control")) expect_identical(cnt(b[[arm]][keep]), cnt(a[[arm]]), info = arm)
+  expect_identical(sum(trimws(as.character(b$label)) == "Missing"), 2L)
+  expect_identical(b, a)
   x <- tfl_template_expand("demog", b1_args())
   expect_identical(Filter(function(a) identical(a$id, "CAT"), x$ard$analyses)[[1L]]$denominator, "adsl_saf")
   # the FDA variant: the same rows (the new look adds the heading, the Missing row ...)
@@ -138,8 +135,12 @@ test_that("`by` is not filled from the study's treatment", {
     expect_error(tfl_resolve_output(o, s), "needs 'by'")
     expect_null(tfl_template_params(n)$by$study)
   }
+  # summary, disposition, ae_overview, param_change too (batch 2)
+  for (n in c("summary", "disposition", "ae_overview", "param_change")) {
+    expect_null(tfl_template_params(n)$by$study, info = n)
+  }
   # other templates still take it (their batches are later)
-  expect_identical(tflspec:::.tpl_get("summary", "t")$params$by$study, "settings.treatment")
+  expect_identical(tflspec:::.tpl_get("ae_soc_pt", "t")$params$by$study, "settings.treatment")
 })
 
 test_that("continuous_statistics, categorical_statistics, stack and where are gone: the plain unknown-parameter error", {

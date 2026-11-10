@@ -58,7 +58,7 @@ test_that("lab_abnormal on a data without PARAMN: the parameters in their own or
 })
 
 test_that("param_change writes the same step for PARAM and AVISIT", {
-  x <- tfl_template_expand("param_change", list(population = "SAF", data = "ADVS"))
+  x <- tfl_template_expand("param_change", list(population = "SAF", data = "ADVS", by = "TRT01A"))
   dv <- as.character(x$ard$analysis_data[[2L]]$derive)
   expect_match(dv, "PARAM = reorder_by(PARAM, PARAMN)", fixed = TRUE)
   expect_match(dv, "AVISIT = reorder_by(AVISIT, AVISITN)", fixed = TRUE)

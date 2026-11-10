@@ -150,7 +150,7 @@ test_that("every template as a template SPEC: resolved as its items written out 
     }
     ex <- .tpl_examples[[nm]]
     # (demog's analysis set is the report's `population:`, not an argument)
-    if (nm %in% c("demog", "stf_t02_demog")) ex$population <- NULL
+    if (nm %in% c("demog", "stf_t02_demog", "summary", "disposition")) ex$population <- NULL
     o <- tfl_output(paste0("X-", nm), tp$kind[tp$name == nm], population = "SAF",
                     template = list(name = nm, args = ex), data = own)
     ro <- tfl_resolve_output(o, s)
