@@ -480,6 +480,11 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   t <- if (!is.null(ts)) tryCatch(.tpl_get(ts$name, "extends"), error = function(e) NULL)
   set <- .extends_norm(t$extends)
   out <- .extends_norm(output$extends, set)
+  # (a plain [defaults], as files saved before 5b wrote it, on a template
+  # that fixes a step reads as not written: its template's)
+  own <- output$extends
+  if (length(t$extends_fixed) && !is.null(own) && is.null(names(own)) &&
+      identical(as.character(unlist(own)), "defaults")) out <- set
   for (s in t$extends_fixed) {
     if (identical(out[[s]], set[[s]])) next
     .ard_stop(sprintf(paste0("%s: template %s fixes extends' %s step to %s; write the other steps ",
