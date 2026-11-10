@@ -336,8 +336,9 @@ Group: {RENALGR}"`.
   and `split_at` (a second block of columns) as the shell says.
 - **A shift table of counts** (baseline category down, worst post-baseline
   category across): the template `shift` (or `lab_shift` at one visit)
-  keeps a subject once a parameter at its worst category, with a Missing
-  and a Total row and a page a parameter; write only `where` (the
+  keeps a subject once a parameter at its worst category, with a Total
+  row (a subject with no baseline category is left out; `missing_label`
+  adds a row for them) and a page a parameter; write only `where` (the
   parameters, the records after baseline the study counts) and what
   differs.
 - **A shift table with percents of the Total row** (the % of the arm's

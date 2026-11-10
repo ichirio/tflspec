@@ -223,7 +223,7 @@
                   "* required, (its type), = its default, and what it is. A parameter left",
                   "out takes its default, or the study standard's value where it says",
                   "`study: <key>, else <fallback>` (`no fallback`: left unset): it is not written again.",
-                  "`!unset` (a default, or a value you write): leave the argument out of the call.")
+                  "`!unset` (a default, or a value you write): leave the argument out of the call; for a flag (TRUE / FALSE) it is FALSE, the step off.")
           }, "",
           .ai_templates_list(kinds, short = short)), collapse = "\n")
 }
@@ -264,7 +264,7 @@
                     "* required, (its type), = its default, and what it is. A parameter left",
                     "out takes its default, or the study standard's value where it says",
                     "`study: <key>, else <fallback>` (`no fallback`: left unset): it is not written again.",
-                    "`!unset` (a default, or a value you write): leave the argument out of the call."), "",
+                    "`!unset` (a default, or a value you write): leave the argument out of the call; for a flag (TRUE / FALSE) it is FALSE, the step off."), "",
               .ai_templates_list(kinds[[task]]), "")
           }))), collapse = "\n")
 }
