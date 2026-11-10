@@ -526,7 +526,7 @@
 #' d <- system.file("extdata", "spec-yaml", package = "tflspec")
 #' s <- tfl_read_study_spec(d)
 #' o <- tfl_output("T-9", "table", population = "SAF",
-#'                 template = list(name = "demog", args = list(population = "SAF")))
+#'                 template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE")))
 #' b <- tfl_template_to_spec(o, s)
 #' vapply(b$content, function(it) it$fn, "")
 #' @export
@@ -546,11 +546,59 @@ tfl_template_to_spec <- function(output, study) {
   own <- if (.tpl_composes(output$data, e$x)) .tpl_compose_data(output$data, e$x) else output$data
   output$data <- .merge_map(e$x$data %||% list(), own %||% list())
   output$content <- if (inherits(ro$content, "tfl_r")) ro$content else .tpl_own_part(ro$content)
+  # a switched template reads no content layer: an argument the study's layers
+  # give to one of its verbs that the template does not write is `!unset` in
+  # the code SPEC (blanks = FALSE: no `where`, bug 9), so it prints as the
+  # template report did; and the style set its `style` chose is the code
+  # SPEC's `style:` field
+  if (isTRUE(e$switched) && !inherits(output$content, "tfl_r")) {
+    output$content <- .tpl_unset_below(output$content, below$acc$content)
+    # (`widths = "auto"` with no code list for the arms: the template report
+    # takes them from its ARD as it runs; the code SPEC gets the widths
+    # written, from the report's ARD built here -- none when it cannot be)
+    # (the build reads the study's reports, this one through tfl_template_to_spec()
+    # again: that inner call writes no widths)
+    w <- e$args$widths %||% .tpl_get(e$name, "tfl_template_to_spec()")$params$widths$default
+    ard <- NULL
+    if (identical(output$kind, "table") && identical(w, "auto") && !isTRUE(.tpl_to_spec_busy$on)) {
+      .tpl_to_spec_busy$on <- TRUE
+      ard <- tryCatch(suppressMessages(
+        tfl_build_ard(study, dir = study$dir %||% ".", output_id = output$id, save = FALSE)),
+        error = function(err) NULL, finally = .tpl_to_spec_busy$on <- FALSE)
+    }
+    if (is.data.frame(ard)) {
+      ro$content <- output$content
+      output$content <- .tpl_auto_widths(ro, ard)
+    }
+  }
+  st <- e$args$style %||% .tpl_get(e$name, "tfl_template_to_spec()")$params$style$default
+  if (isTRUE(e$switched) && !inherits(st, "tfl_unset") && is.character(st) && length(st) == 1L &&
+      !is.na(st)) output$style <- st
   # a figure's design: its settings, the template's under the report's
   if (!is.null(ro$plot)) output$plot <- ro$plot
   if (!is.null(e$x$codelists)) output$codelists <- .tpl_add_codelists(output$codelists, e$x$codelists)
   output$template <- NULL
   output
+}
+
+# (tfl_template_to_spec() building a report's ARD for its widths)
+.tpl_to_spec_busy <- new.env(parent = emptyenv())
+
+# The items with `!unset` for each argument the layers below give to the
+# same verb and the item does not (a verb that may repeat is left as it is)
+.tpl_unset_below <- function(items, below) {
+  if (inherits(below, "tfl_r") || !length(below)) return(items)
+  lapply(items, function(it) {
+    fn <- .schema_fn_name(it$fn %||% "")
+    if (fn %in% c(.plan_repeat_kept, .plan_repeat_add)) return(it)
+    for (b in below) {
+      if (!identical(.schema_fn_name(b$fn %||% ""), fn)) next
+      for (k in setdiff(names(b$args) %||% character(), names(it$args) %||% character())) {
+        it$args[[k]] <- tfl_unset()
+      }
+    }
+    it
+  })
 }
 
 # A figure template (its call makes the data's last `call_steps` steps: the

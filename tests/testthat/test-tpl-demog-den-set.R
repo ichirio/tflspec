@@ -6,7 +6,13 @@
 dd_pops <- list(list(id = "SAF", label = "Safety Analysis Set"))
 dd_codelists <- list(TRT01A = c("Drug X", "Control"))
 dd_expand <- function(name = "demog", ...) {
-  tfl_template_expand(name, c(list(population = "SAF"), list(...)),
+  a <- list(...)
+  # (demog and stf_t02_demog are standalone: the arms and variables are required)
+  if (name %in% c("demog", "stf_t02_demog")) {
+    a <- utils::modifyList(list(by = "TRT01A", continuous = "AGE",
+                                categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC")), a)
+  }
+  tfl_template_expand(name, c(list(population = "SAF"), a),
                       codelists = dd_codelists, population = dd_pops)
 }
 dd_an <- function(x, id) Filter(function(a) identical(a$id, id), x$ard$analyses)[[1L]]

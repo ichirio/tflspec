@@ -90,16 +90,18 @@ test_that("the standalone templates equal what the variants gave: defaults and t
   b <- b1_run(d, b1_out("demog", list(by = "TRT01A", total = TRUE, labels = list(SEX = "Gender"),
                                      continuous = "AGE", categorical = "SEX")))$table
   expect_identical(a, b)
-  # (values missing -- RACE blank, SEX NA: the percentages are of the arm's rows that have a value,
-  # cards' own, as the summary gave; no `denominator` in the call)
+  # (values missing -- RACE blank, SEX NA: demog adds a Missing row, last, for each of
+  # the two and its percentages are over the analysis set (canon 1.31); the counts
+  # are the summary's)
   d2 <- b1_folder(na = TRUE)
   a <- b1_run(d2, b1_out("b1_old_demog", vars))$table
   b <- b1_run(d2, b1_out("demog", c(list(by = "TRT01A"), vars)))$table
-  expect_identical(a, b)
+  keep <- trimws(as.character(b$label)) != "Missing"
+  expect_identical(sum(!keep), 2L)
+  expect_identical(trimws(as.character(b$label[keep])), trimws(as.character(a$label)))
+  cnt <- function(x) sub(" .*", "", x)
+  for (arm in c("Drug X", "Control")) expect_identical(cnt(b[[arm]][keep]), cnt(a[[arm]]), info = arm)
   x <- tfl_template_expand("demog", b1_args())
-  expect_false("denominator" %in% names(Filter(function(a) identical(a$id, "CAT"), x$ard$analyses)[[1L]]))
-  # (asked for, the set's own id counts every subject of the set)
-  x <- tfl_template_expand("demog", b1_args(denominator = "adsl_saf"))
   expect_identical(Filter(function(a) identical(a$id, "CAT"), x$ard$analyses)[[1L]]$denominator, "adsl_saf")
   # the FDA variant: the same rows (the new look adds the heading, the Missing row ...)
   new_stf <- tfl_template_params("stf_t02_demog")
@@ -180,7 +182,8 @@ test_that("formats: the default is the active statistics catalog's (a company ca
   # (given by name over the catalog's)
   y <- tfl_template_expand("demog", b1_args(formats = list(sd = 4)))
   expect_match(fm(y, "CONT"), "mean=2 | sd=4", fixed = TRUE)
-  expect_identical(fm(tfl_template_expand("stf_t02_demog", b1_fda()), "CAT"), "p=xx.xx%")
+  # (stf_t02_demog's formats are fixed values (canon 1.30): the catalog does not reach them)
+  expect_identical(fm(tfl_template_expand("stf_t02_demog", b1_fda()), "CAT"), "p=xx.x%")
   # the built-in catalog: the digits the template had
   withr::local_options(tflspec.ard_statistics = cat0)
   z <- tfl_template_expand("demog", b1_args())
@@ -241,8 +244,8 @@ test_that("missing_row counts the subjects with no value, last; categorical_leve
   expect_identical(vals("Sex, n (%)"), 2)
   k <- which(key == "Race, n (%)" & lab == "UNKNOWN")
   expect_true(all(grepl("^0 ", unlist(r$table[k, -(1:2), drop = FALSE]))))
-  # without it there is no such row; a value the list lacks stops
-  r2 <- b1_run(d, b1_out("demog", list(by = "TRT01A", categorical = "SEX")))
+  # FALSE: no such row; a value the list lacks stops
+  r2 <- b1_run(d, b1_out("demog", list(by = "TRT01A", categorical = "SEX", missing_row = FALSE)))
   expect_false(any(grepl("Missing", unlist(lapply(r2$table, as.character)))))
   expect_error(b1_run(d, b1_out("demog", list(by = "TRT01A", categorical = "RACE",
                                               categorical_levels = list(RACE = c("ASIAN", "WHITE"))))),
@@ -269,14 +272,14 @@ test_that("header_n and col_header: the arm heading text, {n} dropped with none;
   expect_identical(b1_item(z, "plan_col_header")[[1L]]$args$header[[2L]]$text, "{col}\n(N={n})")
   w <- tfl_template_expand("demog", b1_args(col_header = "{col}\nN={n}", header_n = "none"))
   expect_identical(b1_item(w, "plan_col_header")[[1L]]$args$header[[2L]]$text, "{col}")
-  # the percentages' denominator (#749's, the summary family's) does not move the headings' N
-  y <- tfl_template_expand("demog", b1_args(denominator = "adsl_itt"),
-                           population = list(list(id = "ITT", label = "ITT Analysis Set")))
+  # the percentages are over the analysis set the headings' N counts (canon 1.31): no `denominator`
+  y <- tfl_template_expand("demog", b1_args())
   expect_identical(Filter(function(a) identical(a$id, "GROUPN"), y$ard$analyses)[[1L]]$data, "adsl_saf")
-  expect_identical(Filter(function(a) identical(a$id, "CAT"), y$ard$analyses)[[1L]]$denominator, "adsl_itt")
+  expect_identical(Filter(function(a) identical(a$id, "CAT"), y$ard$analyses)[[1L]]$denominator, "adsl_saf")
   expect_error(tfl_template_expand("demog", b1_args(header_n = "tested")), "header_n")
-  expect_no_error(tfl_template_expand("demog", b1_args(denominator = c("Drug X" = 60, Control = 55))))
-  expect_error(tfl_template_expand("demog", b1_args(denominator = "data")), "is for a `data` other than ADSL")
+  for (n in c("demog", "stf_t02_demog")) {
+    expect_error(tfl_template_expand(n, b1_args(denominator = "adsl_itt")), "there is no `denominator` parameter")
+  }
   expect_identical(tfl_template_params("demog")$header_n$choices, c("denominator", "set", "none"))
 })
 
@@ -345,7 +348,7 @@ test_that("the study standard reaches demog through its references only", {
   expect_identical(b$where, NULL)
   expect_false(b$first)
   # what the template does not take from the study is not applied: a defaults.yml item of a
-  # verb the template does not emit, a max_rows, a pattern
+  # verb the template does not emit, a pattern; max_rows is a reference (canon 1.29)
   s3 <- s
   s3$defaults$content[[length(s3$defaults$content) + 1L]] <- tfl_item("plan_paginate_rows", list(max_rows = 40L),
                                                                       from = "defaults")
@@ -353,7 +356,7 @@ test_that("the study standard reaches demog through its references only", {
                                                                       from = "defaults")
   r3 <- tfl_resolve_output(o, s3)
   expect_identical(Filter(function(it) it$fn == "plan_paginate_rows", r3$content)[[1L]]$args,
-                   list(max_rows = 30L, split = "group_safe"))
+                   list(max_rows = 40L, split = "group_safe"))
   expect_false("plan_cell_style" %in% vapply(r3$content, `[[`, "", "fn"))
   # the page of the study stays
   expect_true(length(r3$page$header) > 0L)
@@ -370,7 +373,8 @@ test_that("tfl_tpl_args(): where each demog value comes from", {
   expect_identical(a$layer[a$param == "blanks"], "study: plan_blanks.where")
   expect_identical(a$layer[a$param == "by"], "template")
   b <- tfl_tpl_args("demog")
-  expect_identical(b$layer[b$param == "max_rows"], "template")
+  # (max_rows refers to the study (canon 1.29): with none, its fallback)
+  expect_identical(b$layer[b$param == "max_rows"], "fallback")
   expect_false("population" %in% b$param)
 })
 
@@ -467,7 +471,7 @@ test_that("stf_t02_demog: the FDA look as its own defaults; it runs", {
   # the study's look does not reach it: its look is fixed
   s <- b1_study()
   tp <- attr(tfl_resolve_output(b1_out("stf_t02_demog", b1_fda()[-1L]), s), "template")
-  expect_setequal(tp$study, c("population", "count_cell"))
+  expect_setequal(tp$study, "population")
   r <- b1_run(d, b1_out("stf_t02_demog", b1_fda()[-1L],
                         codelists = list(TRT01A = list(list(value = "Drug X", label = "Drug X"),
                                                        list(value = "Control", label = "Control")))))
@@ -531,7 +535,6 @@ test_that("widths auto: a report with no code list for the arms takes them from 
 b1_unset_probe <- list(
   subset = list(args = list(subset = "AGE > 0"), pat = "AGE > 0"),
   data_id = list(args = list(data = "ADSL2", data_id = "my_set"), pat = "my_set"),
-  denominator = list(args = list(denominator = "adsl_itt"), pat = "adsl_itt"),
   formats = list(args = list(), pat = "formats"),
   total = list(args = list(total = TRUE), pat = "plan_total|overall"),
   missing_row = list(args = list(missing_row = TRUE), pat = "Missing|is\\.factor|if \\("),
@@ -575,6 +578,13 @@ b1_unset_loop <- function(name, base) {
   for (p in names(t$params)) {
     flag <- t$params[[p]]$unset
     info <- paste(name, p, flag)
+    if (isTRUE(t$params[[p]]$fixed_value)) {
+      # a value the template fixes (canon 1.30) is no parameter: giving it, `!unset` too, stops
+      args <- base
+      args[[p]] <- tfl_unset()
+      expect_error(tfl_template_expand(name, args), sprintf("there is no `%s` parameter", p), info = info)
+      next
+    }
     expect_true(flag %in% c("omit", "step_off", "stop"), info = info)
     args <- base
     args[[p]] <- tfl_unset()
@@ -667,33 +677,81 @@ test_that("an appended plan_paginate_rows(max_rows) keeps split; an appended pla
   }
 })
 
-test_that("rounding references the study standard; max_rows and widths do not", {
+test_that("demog: rounding, max_rows and widths reference the study standard (canon 1.29); stf_t02_demog: none", {
   mk <- function(items, settings = list()) {
     s <- b1_study()
     s$defaults$content <- c(s$defaults$content, items)
     s$study$settings <- utils::modifyList(s$study$settings %||% list(), settings)
     s
   }
+  s <- mk(list(tfl_item("plan_paginate_rows", list(max_rows = 18L)),
+               tfl_item("plan_columns", list(widths = list(row_label = 40, .values = 18)))),
+          list(rounding = "r"))
+  cols <- function(r) Filter(function(it) it$fn == "plan_columns", r$content)
+  rows <- function(r) Filter(function(it) it$fn == "plan_paginate_rows", r$content)[[1L]]$args$max_rows
+  digits <- function(r) Filter(function(it) it$fn == "plan_digits", r$content)
   for (n in c("demog", "stf_t02_demog")) {
     a <- (if (n == "demog") b1_args() else b1_fda())[-1L]
     base <- tfl_resolve_output(b1_out(n, a), b1_study())
-    # the study says nothing: no plan_digits item (today's output)
-    expect_length(Filter(function(it) it$fn == "plan_digits", base$content), 0L)
-    s <- mk(list(tfl_item("plan_paginate_rows", list(max_rows = 18L)),
-                 tfl_item("plan_columns", list(widths = c(40, 30, 30)))),
-            list(rounding = "r"))
+    # the study says nothing: no plan_digits item, 30 rows (today's output)
+    expect_length(digits(base), 0L)
+    expect_identical(rows(base), 30L)
     r <- tfl_resolve_output(b1_out(n, a), s)
-    expect_identical(Filter(function(it) it$fn == "plan_digits", r$content)[[1L]]$args, list(rounding = "r"))
-    # (the page length and the widths are the template's, the report's through its params)
-    expect_identical(Filter(function(it) it$fn == "plan_paginate_rows", r$content)[[1L]]$args$max_rows, 30L)
-    expect_length(Filter(function(it) it$fn == "plan_columns", r$content), 0L)
+    if (n == "demog") {
+      expect_identical(digits(r)[[1L]]$args, list(rounding = "r"))
+      expect_identical(rows(r), 18L)
+      # (the widths by column name, as the study's plan_columns(widths = ) gives them)
+      expect_identical(cols(r)[[1L]]$args$widths, list(row_label = 40, .values = 18))
+      expect_setequal(intersect(c("max_rows", "widths"), attr(r, "template")$study), c("max_rows", "widths"))
+    } else {
+      # canon 1.30: the template's values, not the study's
+      expect_length(digits(r), 0L)
+      expect_identical(rows(r), 30L)
+      expect_false(any(c("max_rows", "widths", "rounding") %in% attr(r, "template")$study))
+    }
     # the report's own value wins
     r2 <- tfl_resolve_output(b1_out(n, c(a, list(max_rows = 9, rounding = "sas"))), s)
-    expect_identical(Filter(function(it) it$fn == "plan_paginate_rows", r2$content)[[1L]]$args$max_rows, 9L)
-    expect_identical(Filter(function(it) it$fn == "plan_digits", r2$content)[[1L]]$args$rounding, "sas")
+    expect_identical(rows(r2), 9L)
+    expect_identical(digits(r2)[[1L]]$args$rounding, "sas")
   }
+  p <- tfl_template_params("demog")
+  expect_identical(p$widths$study, "plan_columns.widths")
+  expect_identical(p$max_rows$study, "plan_paginate_rows.max_rows")
+  expect_null(p$widths$default)
+  expect_identical(p$max_rows$default, 30L)
+  q <- tfl_template_params("stf_t02_demog")
+  expect_identical(q$widths$default, "auto")
+  expect_identical(q$max_rows$default, 30L)
 })
-
+
+test_that("stf_t02_demog is values only (canon 1.30): no reference; formats and missing_row fixed", {
+  p <- tfl_template_params("stf_t02_demog")
+  refs <- names(Filter(function(x) length(x$study) && !isFALSE(x$study), p))
+  # (`population` is the report's field, until its removal)
+  expect_identical(setdiff(refs, "population"), character())
+  a <- tfl_tpl_args("stf_t02_demog")
+  expect_false(any(c("formats", "missing_row", "denominator") %in% a$param))
+  expect_error(tfl_template_expand("stf_t02_demog", b1_fda(formats = list(mean = 2))),
+               "there is no `formats` parameter")
+  expect_error(tfl_template_expand("stf_t02_demog", b1_fda(missing_row = FALSE)),
+               "there is no `missing_row` parameter")
+  # the digits are the built-in catalog's, whatever a company catalog says
+  fm <- function(x, id) Filter(function(a) identical(a$id, id), x$ard$analyses)[[1L]]$formats
+  old <- options(tflspec.ard_statistics = local({
+    st <- tflspec:::.ard_statistics_builtin()
+    st$fmt[st$statistic == "mean"] <- "xx.xx"
+    st
+  }))
+  on.exit(options(old), add = TRUE)
+  expect_match(fm(tfl_template_expand("demog", b1_args()), "CONT"), "mean=2", fixed = TRUE)
+  x <- tfl_template_expand("stf_t02_demog", b1_fda())
+  expect_identical(fm(x, "CONT"), "N=0 | mean=1 | sd=2 | median=1 | min=0 | max=0")
+  expect_identical(fm(x, "CAT"), "p=xx.x%")
+  # the Missing step is there, the % over the analysis set
+  expect_true("adsl_saf_m" %in% vapply(x$ard$analysis_data, `[[`, "", "id"))
+  expect_identical(Filter(function(a) identical(a$id, "CAT"), x$ard$analyses)[[1L]]$denominator, "adsl_saf")
+})
+
 test_that("the `unset` flag is shown for the migrated templates, NA for the others", {
   for (n in c("demog", "stf_t02_demog")) {
     a <- tfl_tpl_args(n)
