@@ -153,7 +153,8 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
         "order"), "vars", TRUE),
     # the layouts' look, each a verb's argument the study standard may give
     k(c("max_rows", "stub_indent"), "number"),
-    k(c("stub_before", "blanks_first", "blanks_last", "blanks_counted", "total"), "flag"),
+    k(c("stub_before", "blanks_first", "blanks_last", "blanks_counted", "total",
+        "missing_row"), "flag"),
     k(c("blanks", "split", "total_label", "stub_name", "header_n", "cat_cell", "na",
         "rounding", "empty", "denominator", "stack_id", "stack_label"), "text"),
     k("widths", "list", fields = c("name", "text")),
@@ -721,6 +722,17 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
                         "no effect when `cells` is given"))
 }
 
+# Is a template `demog` or a variant made from it (stf_t02_demog, a company's)?
+.tpl_is_demog <- function(name) {
+  for (i in 1:20) {
+    if (identical(name, "demog")) return(TRUE)
+    t <- get0(name, envir = .tpl_registry, inherits = FALSE)
+    if (is.null(t) || is.null(t$from)) return(FALSE)
+    name <- sub("^[.]base[.]", "", t$from)
+  }
+  FALSE
+}
+
 # `denominator` of the summary family: the base of the categorical variables'
 # percentages (the continuous statistics have none); the column headings' N is
 # not moved by it
@@ -737,6 +749,18 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
   "values of `by` (`c(\"Drug X\" = 60, \"Control\" = 55)`): that many in each column; the id of an",
   "analysis data (`adsl_itt`, or one of the report's own): its rows in each column. A number",
   "is not for `total` = TRUE. The column headings' N is the study standard's, not moved")
+
+# `missing_row`: the demog family's (summary does not show it; a variant
+# that gives it a default, demog, does)
+.tpl_missing_row_param <- function() {
+  p <- tfl_param("missing_row", FALSE, type = "flag", doc = paste(
+    "TRUE (default): a Missing row, last, for each categorical variable that has missing values",
+    "(NA or blank). FALSE: no Missing row; missing values are left out of the counts, and the",
+    "percentages stay over the analysis set."))
+  p$hidden <- TRUE
+  p$variant_only <- TRUE
+  p
+}
 
 .tpl_summary_params <- list(
   tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
@@ -756,6 +780,7 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
   tfl_param("count_cell", NULL, study = "plan_cells.categorical",
             doc = "a categorical value's cell, n (%) (plan_cells(categorical = )); NULL: the study standard's"),
   tfl_param("denominator", NULL, doc = .tpl_den_sum_doc),
+  .tpl_missing_row_param(),
   tfl_param("continuous_statistics", c("N", "mean", "sd", "median", "min", "max"),
             doc = "the continuous statistics the ARD has"),
   tfl_param("categorical_statistics", c("n", "p"),
@@ -767,6 +792,30 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
 names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
 .tpl_summary_cells <- .tpl_summary_params$cells$default
 
+# The data step of the demog family's Missing row: of the categorical
+# variables, those with a missing value (NA, or blank as an .xpt holds it)
+# become a factor of their values and a last level "Missing"; the others
+# stay as they are
+.tpl_missing_level_code <- function(set, vars) {
+  v <- paste0("c(", paste0("\"", vars, "\"", collapse = ", "), ")")
+  paste0(
+    "dplyr::mutate(", set, ", dplyr::across(dplyr::any_of(", v, "), function(x) {
+",
+    "  chr <- trimws(as.character(x))
+",
+    "  miss <- is.na(chr) | !nzchar(chr)
+",
+    "  if (!any(miss)) return(x)
+",
+    "  chr[miss] <- \"Missing\"
+",
+    "  values <- if (is.factor(x)) levels(x) else sort(unique(chr[!miss]))
+",
+    "  factor(chr, levels = unique(c(values, \"Missing\")))
+",
+    "}))")
+}
+
 # The summary family's `denominator`, checked: `value` what the categorical
 # analysis's `denominator` takes (NULL: cards' own, the rows of the set);
 # `extra` the analysis data to add (another analysis set's adsl_<id>, or the
@@ -774,6 +823,17 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
 # every subject of the set, cards' column only those with a value.
 .tpl_sum_den <- function(a, ctx, subj, set) {
   tn <- ctx$template$name %||% "summary"
+  # the demog family's percentages are of the analysis set (the report's
+  # ADSL after its population and filters), not a parameter: the analysis
+  # data the ARD already has, the one the column headings' N counts too
+  if (.tpl_is_demog(tn) && length(a$categorical)) {
+    if (!is.null(a$denominator)) {
+      .ard_stop(sprintf(paste0(
+        "%s: the percentages are over the analysis set (%s), so there is no `denominator` ",
+        "parameter: leave it out (summary has one)."), tn, subj))
+    }
+    return(list(value = subj, extra = list()))
+  }
   v <- a$denominator
   if (is.null(v)) return(list(value = NULL, extra = list()))
   if (!length(a$categorical)) {
@@ -810,6 +870,11 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
 }
 
 .tpl_summary_body <- function(a, ctx) {
+  tn <- ctx$template$name %||% "summary"
+  if ("missing_row" %in% ctx$given &&
+      isTRUE(.tpl_get(tn, "template")$params$missing_row$hidden)) {
+    .ard_stop(sprintf("%s: there is no `missing_row` parameter (summary and stf_t02_demog do not take it): leave it out.", tn))
+  }
   if (!length(a$continuous) && !length(a$categorical)) {
     .ard_stop("template summary: give `continuous` or `categorical`, or both.")
   }
@@ -828,6 +893,16 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
   # the set); the header N is not moved by it
   dn <- .tpl_sum_den(a, ctx, subj, set)
   sets <- c(sets, dn$extra)
+  # demog family: a variable with missing values (NA or blank) gets a
+  # Missing row, last, counted over the analysis set; decided on the data
+  # as the program runs
+  cat_set <- set
+  if (.tpl_is_demog(tn) && isTRUE(a$missing_row) && length(a$categorical) && !isTRUE(a[["stack"]])) {
+    cat_set <- paste0(set, "_m")
+    sets <- c(sets, list(list(
+      id = cat_set, label = "with a Missing level for a variable that has missing values",
+      from = set, code = tfl_r(.tpl_missing_level_code(set, a$categorical)))))
+  }
   nn <- function(x) Filter(Negate(is.null), x)
   # (the ARD's ids are the layout's; its labels the template's)
   lab <- ctx$template$label
@@ -858,7 +933,7 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
       statistics = a$continuous_statistics, purpose = "PRIMARY OUTCOME MEASURE"))),
     if (length(a$categorical)) list(nn(list(
       id = a[["cat_id"]] %||% "CAT", label = a[["cat_label"]] %||% "Categorical",
-      method = "categorical", data = set,
+      method = "categorical", data = cat_set,
       by = a$by, overall = ov, variables = a$categorical, optional = opt("categorical"),
       statistics = a$categorical_statistics, denominator = dn$value,
       purpose = "PRIMARY OUTCOME MEASURE"))))

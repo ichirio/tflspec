@@ -128,6 +128,9 @@
 # nothing is what the verb it feeds then receives.
 .ard_spec_value <- function(x, type, where) {
   if (is.null(x) || is.na(x)) return(NULL)
+  # a sheet writes an !unset as "(none)": no value, not a wrong one (the
+  # round trip to YAML reads it back as !unset, convert.R)
+  if (!identical(type, "text") && identical(trimws(x), "(none)")) return(NULL)
   bad <- function(what) {
     .ard_stop(sprintf("%s must be %s; got %s.", where, what, sQuote(x)))
   }

@@ -1,6 +1,6 @@
 ## Templates first
 
-The study has templates: a report kind written from a few arguments (the templates are listed below). When one fits a report, write that report as the template, not as its analyses and items:
+These templates are available: a report kind written from a few arguments (the templates are listed below). When one fits a report, write that report as the template, not as its analyses and items:
 
 - `template: {name: <template>, args: {<argument>: <value>, ...}}` in place of `ard`, `data` and the template's `content`. Give only the arguments the shell asks to differ from the default; the analysis set goes in the report's `population` (or the `population` argument; `demog` and `stf_t02_demog` take it from the report's `population` only). `demog` and `stf_t02_demog` need `by` and `continuous` and/or `categorical` (no default variables), in `ard:`.
 - Keep `id`, `kind`, `label`, `population`, `extends`, `codelists` and `page` as for any report.

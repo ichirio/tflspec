@@ -233,7 +233,7 @@
   }
   old_m <- stats::setNames(ars$methods, vapply(ars$methods, `[[`, "", "id"))
   drop <- info$ars_id[is.na(info$kind)]
-  for (i in which(is.na(info$kind) & info$role != "level")) {
+  for (i in which(is.na(info$kind) & !info$role %in% c("level", "nonmiss"))) {
     miss(paste(info$output_id[i], info$analysis_id[i], sep = " / "),
          "method", sprintf(paste(
            "siera has no template for `%s` here: left out of the siera",
@@ -307,10 +307,30 @@
     methods[[id]]
   }
 
+  # siera divides by the output's subject count by group: the analyses that
+  # count the subjects with a value (a percentage's own denominator) are
+  # left out, and the percentages name the subject count instead
+  nm_ids <- info$ars_id[info$role == "nonmiss"]
+  for (i in which(info$role == "nonmiss")) {
+    miss(paste(info$output_id[i], info$analysis_id[i], sep = " / "),
+         "denominator", paste(
+           "siera's percentages divide by the output's subject count by",
+           "group: the subjects with a value of", info$variable[i],
+           "(the ARD's denominator) are left out of the siera profile"))
+  }
   analyses <- list()
   for (i in seq_len(nrow(info))) {
     if (is.na(info$kind[i])) next
     a <- an_by_id[[info$ars_id[i]]]
+    for (q in seq_along(a$referencedAnalysisOperations)) {
+      if (a$referencedAnalysisOperations[[q]]$analysisId %in% nm_ids) {
+        gn <- info$ars_id[info$output_id == info$output_id[i] &
+                            info$role == "groupn"]
+        if (length(gn)) {
+          a$referencedAnalysisOperations[[q]]$analysisId <- gn[1L]
+        }
+      }
+    }
     m <- method_for(i)
     a$methodId <- m$id
     if (info$kind[i] == "proportion_ci") {

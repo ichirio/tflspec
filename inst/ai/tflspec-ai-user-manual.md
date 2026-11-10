@@ -281,7 +281,7 @@ a number, `true` / `false`.  A condition is written bare
 `%in% c(...)`, `is.na()`, parentheses); `!r` marks R beyond that
 (`args: !r over_variables = TRUE`) and is kept for what only R can say;
 `{fn: rtf_border, args: {top: single}}` is a nested call; `!unset`
-removes what a layer below set.
+removes what a layer below set. It reads in flow style too: `{b: !unset}`.
 
 **The layers.**  A report says only what differs from what it extends
 (`tfl_resolve_output()`): `page` lines, `tokens`, `codelists` and a call's

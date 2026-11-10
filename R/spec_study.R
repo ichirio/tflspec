@@ -432,7 +432,8 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 
 # an !unset with nothing under it: gone (a report may unset a key no layer set)
 .drop_unset <- function(x) {
-  if (!is.list(x) || !length(x)) return(x)
+  # (an object -- an rtf_border, a tfl_call -- is a value; `[` would drop its class)
+  if (!is.list(x) || is.object(x) || !length(x)) return(x)
   keep <- !vapply(x, inherits, NA, "tfl_unset")
   x <- x[keep]
   if (.is_map(x)) x[] <- lapply(x, .drop_unset)
@@ -466,6 +467,21 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 # * a verb only the report has goes where the generators' order puts it
 #   (the schema's `rank`), else last.
 .merge_content <- function(base, over) {
+  .drop_unset_items(.merge_content_layers(base, over))
+}
+
+# an !unset argument with nothing under it means "leave the argument out", on
+# every item that leaves the merge (the early returns, a verb only the report
+# has, a "whole" or "stack" item: not only where the "arg" merge ran)
+.drop_unset_items <- function(content) {
+  if (inherits(content, "tfl_r") || !is.list(content)) return(content)
+  lapply(content, function(it) {
+    if (is.list(it) && is.list(it$args) && length(it$args)) it$args <- .drop_unset(it$args)
+    it
+  })
+}
+
+.merge_content_layers <- function(base, over) {
   # the content as R code (one !r): the later one wins whole
   if (inherits(over, "tfl_r")) return(over)
   if (inherits(base, "tfl_r")) return(if (length(over)) .table_plan_first(over) else base)

@@ -696,7 +696,8 @@ tfl_template_to_spec <- function(output, study) {
   if (!is.null(t$from) && !identical(t$package, "tflspec")) {
     args <- c(t$defaults[setdiff(names(t$defaults), names(args))], args)
     args <- args[intersect(names(t$params), names(args))]
-    called <- t$root %||% t$from
+    # (a variant of demog calls demog: its denominator and Missing row are demog's, not summary's)
+    called <- if (.tpl_is_demog(t$from)) "demog" else t$root %||% t$from
   }
   generic <- identical(t$call, "tfl_tpl")
   # an !r value (a guard in `count_cell`'s list) as the R it is

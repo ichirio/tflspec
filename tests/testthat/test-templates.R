@@ -639,6 +639,8 @@ test_that("hierarchical of one level; demog and ae_pt_freq on their layouts", {
   # demog is a template of its own (no longer summary's variant): its population is the report's
   d <- tfl_template_expand("demog", dmv(categorical = "SEX"))
   expect_identical(d$ard$analysis_data[[1L]]$id, "adsl_saf")
+  # (and its one more set, #770's: the categorical variables with a Missing level)
+  expect_identical(d$ard$analysis_data[[2L]]$id, "adsl_saf_m")
 })
 
 test_that("ae_overview: a subjects analysis and a row a flag", {

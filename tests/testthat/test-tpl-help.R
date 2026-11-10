@@ -3,9 +3,11 @@
 
 test_that("tfl_tpl_args(): one row a parameter, the template's order and tiers", {
   a <- tfl_tpl_args("demog")
-  p <- tfl_template_params("demog")
+  p <-tfl_template_params("demog")
   # (the registry keeps `population` for a direct tpl_demog() call; the table leaves it out)
   expect_identical(a$param, setdiff(names(p), "population"))
+  # (demog has no `denominator`: its percentages are over the analysis set)
+  expect_false("denominator" %in% names(p))
   expect_identical(names(a), c("param", "tier", "stage", "type", "required", "default", "variant",
                                "study", "effective", "layer", "maps_to", "doc", "study_key", "fallback", "unset"))
   # (the analysis set is the report's: no `population` parameter; the variables and `by` are required)

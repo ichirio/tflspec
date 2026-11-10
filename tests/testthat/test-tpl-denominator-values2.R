@@ -27,7 +27,7 @@ d2_all_msg <- function(tpl, by = "TRT01A") {
 # ---- summary, demog, disposition: expansions ----
 
 test_that("summary family: no denominator is today's analysis; the parameter has its documentation", {
-  for (tpl in c("summary", "demog", "disposition")) {
+  for (tpl in c("summary", "disposition")) {
     x <- d2_expand(tpl)
     cat <- d2_an(x, if (tpl == "disposition") "DISP" else "CAT")
     expect_false("denominator" %in% names(cat), info = tpl)
@@ -41,8 +41,10 @@ test_that("summary family: no denominator is today's analysis; the parameter has
     a <- tfl_tpl_args(nm)
     a$doc[a$param == "denominator"]
   }
-  expect_identical(doc("demog"), doc("summary"))
-  expect_identical(doc("stf_t02_demog"), doc("summary"))
+  # (demog and stf_t02_demog have none: their percentages are over the analysis set)
+  expect_false("denominator" %in% tfl_tpl_args("demog")$param)
+  expect_false("denominator" %in% tfl_tpl_args("stf_t02_demog")$param)
+  expect_error(d2_expand("demog", denominator = 20), "there is no `denominator` parameter")
   # ("data" is for ae_overview and the stack templates, not here)
   expect_false(grepl("\"data\"", doc("summary"), fixed = TRUE))
   expect_false(grepl("\"data\"", doc("disposition"), fixed = TRUE))
@@ -50,7 +52,7 @@ test_that("summary family: no denominator is today's analysis; the parameter has
 })
 
 test_that("summary family: a number, numbers by arm, an analysis data's id", {
-  for (tpl in c("summary", "demog", "disposition")) {
+  for (tpl in c("summary", "disposition")) {
     cat <- if (tpl == "disposition") "DISP" else "CAT"
     den <- function(...) d2_an(d2_expand(tpl, ...), cat)$denominator
     expect_identical(den(denominator = 20), 20L, info = tpl)
@@ -102,7 +104,7 @@ test_that("summary on records: \"data\" stops until id exists; the default is th
 # ---- summary family: refusals ----
 
 test_that("summary family: \"data\" on ADSL, a stack by arm, no categorical", {
-  for (tpl in c("summary", "demog", "disposition")) {
+  for (tpl in c("summary", "disposition")) {
     expect_error(d2_expand(tpl, denominator = "data"),
                  sprintf(paste0("%s: denominator = \"data\" is for a `data` other than ADSL (the ",
                                 "subjects with a record kept): ADSL is already one row a subject, the ",
@@ -123,7 +125,7 @@ test_that("summary family: \"data\" on ADSL, a stack by arm, no categorical", {
 })
 
 test_that("summary family: the checks of D2a's denominator", {
-  for (tpl in c("summary", "demog", "disposition")) {
+  for (tpl in c("summary", "disposition")) {
     expect_error(d2_expand(tpl, denominator = 0),
                  sprintf("%s: denominator = 0: a number is the subjects of every column: a positive whole number.",
                          tpl), fixed = TRUE, info = tpl)
@@ -226,7 +228,7 @@ test_that("orr has no denominator parameter", {
 
 test_that("a single number with total = TRUE stops; numbers by arm and a data id do not", {
   hier <- list(hierarchy = c("AEBODSYS", "AEDECOD"))
-  for (tpl in c("summary", "demog", "stf_t02_demog", "hierarchical", "ae_soc_pt", "ae_ser_soc_pt",
+  for (tpl in c("summary", "hierarchical", "ae_soc_pt", "ae_ser_soc_pt",
                 "ae_disc_soc_pt")) {
     a <- c(list(population = "SAF", total = TRUE),
            if (tpl == "summary") list(categorical = "SEX"),
@@ -423,7 +425,7 @@ test_that("summary, demog on ADSL: n (%) of each denominator, the header's N not
   forms <- d2_forms(h)
   forms$set <- NULL
   nsex <- function(a, v) sum(h$saf$TRT01A == a & h$saf$SEX == v)
-  for (tpl in c("summary", "demog")) {
+  for (tpl in "summary") {
     for (nm in names(forms)) {
       f <- forms[[nm]]
       a <- c(list(denominator = f$den), if (tpl == "summary") list(categorical = "SEX"),

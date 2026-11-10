@@ -34,3 +34,37 @@ test_that("a template with a part (pk_conc) and a report that writes the same pa
   expect_identical(p[[1L]]$args$name, "summary")
   expect_false(is.null(p[[1L]]$args$content))
 })
+
+test_that("an !unset argument is dropped from every resolved item, with or without items below", {
+  has_unset <- function(content) {
+    any(vapply(content, function(it) any(vapply(it$args, inherits, NA, "tfl_unset")), NA))
+  }
+  tp <- function() tfl_item("table_plan", list(cols = "TRT", show_keys = tfl_unset()))
+  # (a) the layers have items, none of table_plan
+  below <- list(tfl_item("plan_style", list(bold = TRUE), from = "defaults"))
+  out <- tflspec:::.merge_content(below, list(tp()))
+  tpo <- Filter(function(it) identical(it$fn, "table_plan"), out)[[1L]]
+  expect_false(has_unset(out))
+  expect_identical(names(tpo$args), "cols")
+  expect_no_error(code <- tfl_item_code(tpo))
+  expect_false(any(grepl("show_keys", code)))
+  # (b) nothing below
+  out <- tflspec:::.merge_content(list(), list(tp()))
+  expect_false(has_unset(out))
+  expect_identical(names(out[[1L]]$args), "cols")
+  out <- tflspec:::.merge_content(NULL, list(tp()))
+  expect_false(has_unset(out))
+  # an !r content below is left alone
+  r <- tfl_r("table_plan()")
+  expect_identical(tflspec:::.merge_content(r, list()), r)
+  # (c) a verb only the report has (plan_hide stacks; plan_style is "arg")
+  hide <- tfl_item("plan_hide", list(where = "a", bold = tfl_unset()))
+  out <- tflspec:::.merge_content(below, list(hide))
+  expect_false(has_unset(out))
+  expect_identical(Filter(function(it) identical(it$fn, "plan_hide"), out)[[1L]]$args$where, "a")
+  # the unset still removes an argument of an item below
+  out <- tflspec:::.merge_content(
+    list(tfl_item("plan_style", list(bold = TRUE, font = "Arial"))),
+    list(tfl_item("plan_style", list(bold = tfl_unset()))))
+  expect_identical(names(out[[1L]]$args), "font")
+})

@@ -471,12 +471,14 @@ The hints never override the shell, the SAP or the standard.
 ## Templates or the code SPEC (`templates`)
 
 By default (`templates = TRUE`) each request asks the agent to draft a
-report with one of the study's templates where one fits (`template: {name,
-args}`, only the arguments that differ from the default, and the report's
-own content items for what the template does not do), else as a code SPEC.
-`ai/templates.md` lists the templates registered when the requests were
-written -- tflspec's, the company's, the study's variants -- with their
-arguments, and each request names the ones likely for its reports.
+report with a template where one fits (`template: {name, args}`, only the
+arguments that differ from the default, and the report's own content items
+for what the template does not do), else as a code SPEC. `ai/templates.md`
+lists the templates registered when the requests were written -- tflspec's
+and the company's -- with their arguments, and each request names the ones
+likely for its reports. A template has no study variant: a report changes
+it with an argument, or with override cards added after it (the last one
+wins).
 `templates = FALSE`: the code SPEC only. The setting is a line near the
 top of each request (`<!-- templates: TRUE -->`) and `ai/status.md`'s.
 `tfl_ai_compare()` says, a row a report, which was used.
