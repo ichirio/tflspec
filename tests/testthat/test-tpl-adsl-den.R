@@ -73,5 +73,8 @@ test_that("missing_row = TRUE given with a data other than ADSL stops; the defau
 
 test_that("stf_t02_demog still rejects missing_row", {
   expect_false("missing_row" %in% tfl_tpl_args("stf_t02_demog")$param)
-  expect_error(ad_expand("stf_t02_demog", missing_row = FALSE), "there is no `missing_row` parameter")
+  # (its required arguments given, so that the missing_row check is reached)
+  expect_error(ad_expand("stf_t02_demog", by = "TRT01A", continuous = "AGE", categorical = "SEX",
+                         missing_row = FALSE),
+               "there is no `missing_row` parameter")
 })
