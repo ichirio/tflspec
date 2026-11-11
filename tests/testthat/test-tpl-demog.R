@@ -560,7 +560,6 @@ b1_unset_probe <- list(
                      stf = list(args = list(heading = tfl_unset()))),
   widths = list(args = list(widths = "auto"), pat = "plan_columns"),
   max_rows = list(args = list(max_rows = 12), pat = "max_rows"),
-  rounding = list(args = list(rounding = "sas"), pat = "plan_digits"),
   blanks = list(args = list(blanks = TRUE), pat = "where"),
   blanks_first = list(args = list(blanks = TRUE, blanks_first = TRUE), pat = "first = TRUE"),
   blanks_last = list(args = list(blanks = TRUE, blanks_last = TRUE), pat = "last = TRUE"),
@@ -685,7 +684,7 @@ test_that("an appended plan_paginate_rows(max_rows) keeps split; an appended pla
   }
 })
 
-test_that("demog: rounding, max_rows and widths reference the study standard (canon 1.29); stf_t02_demog: none", {
+test_that("demog: max_rows and widths reference the study standard (canon 1.29), rounding is no parameter (1.40); stf_t02_demog: none", {
   mk <- function(items, settings = list()) {
     s <- b1_study()
     s$defaults$content <- c(s$defaults$content, items)
@@ -705,28 +704,28 @@ test_that("demog: rounding, max_rows and widths reference the study standard (ca
     expect_length(digits(base), 0L)
     expect_identical(rows(base), 30L)
     r <- tfl_resolve_output(b1_out(n, a), s)
+    # the study's rounding is its setup's (canon 1.40): no plan_digits item here
+    expect_length(digits(r), 0L)
     if (n == "demog") {
-      expect_identical(digits(r)[[1L]]$args, list(rounding = "r"))
       expect_identical(rows(r), 18L)
       # (the widths by column name, as the study's plan_columns(widths = ) gives them)
       expect_identical(cols(r)[[1L]]$args$widths, list(row_label = 40, .values = 18))
       expect_setequal(intersect(c("max_rows", "widths"), attr(r, "template")$study), c("max_rows", "widths"))
     } else {
       # canon 1.30: the template's values, not the study's
-      expect_length(digits(r), 0L)
       expect_identical(rows(r), 30L)
       expect_false(any(c("max_rows", "widths", "rounding") %in% attr(r, "template")$study))
     }
     # the report's own value wins
-    r2 <- tfl_resolve_output(b1_out(n, c(a, list(max_rows = 9, rounding = "sas"))), s)
+    r2 <- tfl_resolve_output(b1_out(n, c(a, list(max_rows = 9))), s)
     expect_identical(rows(r2), 9L)
-    expect_identical(digits(r2)[[1L]]$args$rounding, "sas")
   }
   p <- tfl_template_params("demog")
   expect_identical(p$widths$study, "plan_columns.widths")
   expect_identical(p$max_rows$study, "plan_paginate_rows.max_rows")
   expect_null(p$widths$default)
   expect_identical(p$max_rows$default, 30L)
+  expect_false("rounding" %in% names(p))
   q <- tfl_template_params("stf_t02_demog")
   expect_identical(q$widths$default, "auto")
   expect_identical(q$max_rows$default, 30L)

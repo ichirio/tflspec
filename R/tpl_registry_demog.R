@@ -122,9 +122,6 @@
                           "takes them (row_label: 40, .values: 18)")),
     tfl_param("max_rows", 30L, type = "number", study = "plan_paginate_rows.max_rows",
               doc = "rows a page (plan_paginate_rows(max_rows = ))"),
-    tfl_param("rounding", NULL, type = "choice", choices = c("sas", "r"), study = "settings.rounding",
-              doc = paste("the rounding of the cells' numbers (plan_digits(rounding = )): sas, half away",
-                          "from zero, or r, half to even; NULL: none given here (the study's setup)")),
     tfl_param("blanks", NULL, type = "text", study = "plan_blanks.where", maps_to = "plan_blanks.where",
               doc = paste("blank rows: TRUE between the blocks, FALSE none, or where (plan_blanks(where = ));",
                           "FALSE also sets both ends off; NULL: none made here")),
@@ -475,7 +472,6 @@
   ord <- ord[!vapply(ord, is.null, NA)]
   content <- c(
     list(tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable")))),
-    if (!is.null(a$rounding)) list(tfl_item("plan_digits", list(rounding = a$rounding))),
     if (length(cells)) list(tfl_item("plan_cells", cells)),
     if (length(ord)) list(tfl_item("plan_levels", ord)),
     if (length(a$labels) && length(intersect(vars, names(a$labels)))) list(tfl_item(
@@ -496,7 +492,7 @@
           "formats", "missing_row", "missing_label"),
   content = c("order", "labels", "categorical_levels", "cells", "sd_missing", "count_cell",
               "total_label", "header_n", "col_header", "heading", "stub_name", "stub_before",
-              "widths", "max_rows", "rounding", "blanks", "blanks_first", "blanks_last", "blanks_counted",
+              "widths", "max_rows", "blanks", "blanks_first", "blanks_last", "blanks_counted",
               "border_header", "border_group", "style"))
 
 # (`extends`: its family's `[defaults]`, canon 1.27: the study's defaults are
@@ -547,7 +543,7 @@
                 # digits and the Missing row fixed, as the % denominator is)
                 fixed = c("col_header", "stub_name", "stub_before", "blanks", "blanks_first",
                           "blanks_last", "blanks_counted", "border_header", "style", "cells",
-                          "count_cell", "sd_missing", "rounding", "widths", "max_rows"),
+                          "count_cell", "sd_missing", "widths", "max_rows"),
                 fixed_value = c("formats", "missing_row", "style")),
               body = .tpl_demog_body, ai = FALSE, parts = .tpl_demog_parts,
               # (canon 1.27, 1.30: the study's content is not laid, fixed)
@@ -582,7 +578,7 @@
 
 .tpl_summary_params <- .tpl_demog_params(
   defaults = list(labels = NULL),
-  drop = c("rounding", "style"),
+  drop = "style",
   add = list(
     tfl_param("where", NULL, unset = "step_off",
               doc = paste("which records (R) of a `data` other than ADSL: ANL01FL == \"Y\";",
@@ -595,13 +591,13 @@
               parts = .tpl_demog_parts_of(.tpl_summary_params))
 
 # disposition: the subjects' status at the end of the study, n (%).  The %
-# denominator is summary's parameter, the analysis set by default (whether to
-# fix it, as demog's, is the user's to say); the status analysis's id and label
+# denominator is summary's parameter, the analysis set by default, given
+# explicitly (canon 1.38; demog's fixed one, 1.31, is the exception); the status analysis's id and label
 # in the ARD are fixed (DISP).  A block is never split over pages (Q-C6:
 # split = "group_safe" again), 24 rows a page.
 .tpl_disposition_params <- .tpl_demog_params(
   defaults = list(labels = c(EOSSTT = "Status at end of study, n (%)"), max_rows = 24L),
-  drop = c("continuous", "rounding", "style"),
+  drop = c("continuous", "style"),
   add = list(tfl_param("categorical", required = TRUE, unset = "stop",
                        doc = "the status variables, in order (EOSSTT)"),
              tfl_param("denominator", NULL, doc = .tpl_den_sum_doc),
