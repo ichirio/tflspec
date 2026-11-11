@@ -21,7 +21,7 @@ tfl_output(
   kind = c("table", "figure", "listing"),
   label = NA_character_,
   population = NA_character_,
-  extends = "defaults",
+  extends = if (is.null(template)) "defaults",
   data = NULL,
   codelists = list(),
   content = list(),
@@ -52,7 +52,12 @@ tfl_output(
 \item{label, population}{The report's label and analysis set (\code{NA}: none).}
 
 \item{extends}{The files layered under this one, nearest first
-(\code{"defaults"}, \code{"patterns/<name>"}); \code{"none"} for none.}
+(\code{"defaults"}, \code{"patterns/<name>"}); \code{"none"} for none; or a list by
+step (\code{data}, \code{ard}, \code{content}, \code{page}), each such a value
+(\code{list(content = "none")}), a step it does not name taking the
+template's, else \code{"defaults"}.  \code{NULL}: not written (a template report
+takes its template's); the default for a report with \code{template}, else
+\code{"defaults"}.}
 
 \item{data}{What the report reads, its step 1 (a list: \code{source} --
 \code{"ard"}, \code{"code"} or \code{"dataset"} -- and \code{object}, \code{steps}, \code{code},

@@ -148,7 +148,7 @@
     from <- if (!is.na(tt$from[i])) sprintf("; variant of %s", tt$from[i]) else ""
     pkg <- if (!identical(tt$package[i], "tflspec")) sprintf("; %s's", tt$package[i]) else ""
     # (a template whose data stage is the report's: the rule beside it)
-    own <- any(vapply(t$params %||% list(), function(p) isTRUE(p$hidden) && identical(p$stage, "data"), NA))
+    own <- any(vapply(t$params %||% list(), function(p) isTRUE(p$hidden) && identical(p$step, "data"), NA))
     out <- c(out, sprintf("- `%s`: %s (%s, layout %s%s%s)%s", tt$name[i], .ai_tpl_description(t),
                           tt$kind[i], tt$layout[i], from, pkg,
                           if (own) paste0(" -- own data: the report writes `data` steps `read`, the analysis ",
@@ -485,7 +485,9 @@
 # them is left out.
 .ai_draft_codelists <- function(o, study) {
   own <- o$codelists %||% list()
-  if (!length(o$extends) || identical(o$extends, "none")) return(.codelists_norm(own))
+  # (the code lists go with the data step: Q3 of PLAN-5B)
+  ch <- tryCatch(.extends_step(o, "data"), error = function(e) character())
+  if (!length(ch)) return(.codelists_norm(own))
   if (is.null(study)) return(NULL)
   below <- tryCatch(.layers_below(o, study)$acc$codelists, error = function(e) NULL)
   if (is.null(below)) return(NULL)

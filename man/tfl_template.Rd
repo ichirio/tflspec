@@ -13,7 +13,9 @@ tfl_template(
   label = NULL,
   call = NULL,
   example = NULL,
-  ai = FALSE
+  ai = FALSE,
+  extends = NULL,
+  extends_fixed = character()
 )
 }
 \arguments{
@@ -44,6 +46,12 @@ them make.}
 
 \item{ai}{\code{TRUE} to list it in the AI requests that answer with
 templates (\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}\code{(templates = TRUE)}).}
+
+\item{extends}{The \code{extends} its reports take when they write none:
+files for every step, \code{"none"}, or a list by step (\code{list(content = "none")}); \code{NULL}: a template not yet migrated.}
+
+\item{extends_fixed}{The steps whose \code{extends} the template fixes:
+another value stops.}
 }
 \value{
 \code{name}, invisibly.

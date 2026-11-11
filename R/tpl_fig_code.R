@@ -3,13 +3,13 @@
 # A figure template is called as a table's is: tfl_tpl(<data>, "<name>", ...)
 # on the data the program made (its data steps: the dataset read, the
 # analysis set's subjects, the parameter), a ggplot back.  The arguments
-# of the data steps (tfl_param(stage = "data")) are the program's, not the
+# of the data steps (tfl_param(step = "data")) are the program's, not the
 # call's.  (The figures' former functions, tpl_mean_se() ..., stay.)
 
-# Parameters the data step takes (stage "data"); the rest the call's
+# Parameters the data step takes (step "data"); the rest the call's
 .tpl_fig_data_stage <- function(params, names = c("population", "subset", "data", "where")) {
   lapply(params, function(p) {
-    if (p$name %in% names) p$stage <- "data"
+    if (p$name %in% names) p$step <- "data"
     p
   })
 }
@@ -59,7 +59,7 @@
     args$plot <- NULL
   }
   data_stage <- names(args)[vapply(names(args), function(k) {
-    identical(t$params[[k]]$stage, "data")
+    identical(t$params[[k]]$step, "data")
   }, NA)]
   if (length(data_stage)) {
     .ard_stop(sprintf(paste0("%s: %s's %s: the program's data step's (the data `x` is made ",
@@ -67,7 +67,7 @@
                       fn, t$name, paste(sQuote(data_stage, FALSE), collapse = ", ")))
   }
   # (the data step's parameters: not needed by the call)
-  for (k in names(t$params)) if (identical(t$params[[k]]$stage, "data")) t$params[[k]]$required <- FALSE
+  for (k in names(t$params)) if (identical(t$params[[k]]$step, "data")) t$params[[k]]$required <- FALSE
   a <- .tpl_args(t, args, fn)
   root <- t$root %||% t$name
   draw <- .tpl_fig_draws[[root]]
@@ -86,7 +86,7 @@
 # template's call on the data -- tfl_tpl(<data>, "<name>", ...): the fit,
 # the layers and the settings are the call's -- with the report's own
 # items `+`-ed after it, each the design's piece for it (a layer, a
-# figure-wide call).  The call's arguments: the call's parameters (stage
+# figure-wide call).  The call's arguments: the call's parameters (step
 # "call") the report or the study standard gives; the report's own
 # settings (`plot:`) the arguments of the same name, the rest `plot =`.
 .content_fig_tpl_code <- function(output, name = "content") {
@@ -108,7 +108,7 @@
   }
   keep <- if (generic) {
     names(args)[vapply(names(args), function(k) {
-      !is.null(t$params[[k]]) && !identical(t$params[[k]]$stage, "data") && k != "plot"
+      !is.null(t$params[[k]]) && !identical(t$params[[k]]$step, "data") && k != "plot"
     }, NA)]
   } else {
     fun <- get(t$call, envir = asNamespace(t$package %||% "tflspec"), mode = "function")

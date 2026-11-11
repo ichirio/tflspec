@@ -325,8 +325,7 @@
     .ard_stop(paste0("tfl_report_code(setup = TRUE): give the report as read ",
                      "(tfl_read_output(), not resolved) and its `study`."))
   }
-  chain <- output$extends
-  if (identical(chain, "none")) chain <- character()
+  chain <- .extends_step(output, "page")
   study_pg <- if ("defaults" %in% chain) study$defaults$page %||% list() else list()
   layers <- c(lapply(setdiff(chain, "defaults"), function(nm) .layer_of(nm, study)$page),
               list(output$page))

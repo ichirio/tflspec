@@ -9,16 +9,16 @@ test_that("tfl_tpl_args(): one row a parameter, the template's order and tiers",
   # (demog has no `denominator` a report gives: its percentages are over the
   # analysis set, a hidden fixed value)
   expect_true(isTRUE(p$denominator$hidden))
-  expect_identical(names(a), c("param", "tier", "stage", "type", "required", "default", "variant",
-                               "study", "effective", "layer", "maps_to", "doc", "study_key", "fallback", "unset"))
+  expect_identical(names(a), c("param", "tier", "step", "type", "required", "default", "variant",
+                               "study", "effective", "layer", "maps_to", "doc", "study_key", "fallback", "unset", "route"))
   # (the analysis set is the report's: no `population` parameter; the variables and `by` are required)
   expect_false("population" %in% a$param)
   expect_identical(a$param[a$tier == "required"], c("continuous", "categorical", "by"))
   expect_identical(a$param[a$tier == "usual"], c("formats", "total", "labels", "cells"))
   expect_true(all(a$tier %in% c("required", "usual", "other")))
-  # each its stage, tfl_param(stage = ): a table's all of its call
-  expect_identical(a$stage, unname(vapply(p[a$param], function(x) x$stage %||% "call", "")))
-  expect_true(all(a$stage == "call"))
+  # each its step, tfl_param(step = ): a table's all of its call
+  expect_identical(a$step, unname(vapply(p[a$param], function(x) x$step %||% "call", "")))
+  expect_true(all(a$step == "call"))
   # the layout's default, the variant's, the one in effect
   r <- function(nm) a[a$param == nm, , drop = FALSE]
   # (`by` and the variables: no default, no variant, not from the study)

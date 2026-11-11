@@ -577,6 +577,25 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   items
 }
 
+# A report's `extends` cell: a chain (`a | b`, `none`), or a map by step
+# (`content=none; page=patterns/a | defaults`)
+.conv_extends_cell <- function(cell, id) {
+  one <- function(x) {
+    x <- trimws(strsplit(x, "|", fixed = TRUE)[[1L]])
+    x[nzchar(x)]
+  }
+  if (!grepl("=", cell, fixed = TRUE)) return(one(cell))
+  parts <- trimws(strsplit(cell, ";", fixed = TRUE)[[1L]])
+  parts <- parts[nzchar(parts)]
+  if (!all(grepl("^[a-z]+ *=", parts))) {
+    stop("report ", sQuote(id), ": the `extends` cell is a chain (a | b) or steps (content=none; page=a | b).",
+         call. = FALSE)
+  }
+  out <- lapply(sub("^[a-z]+ *= *", "", parts), one)
+  names(out) <- trimws(sub("=.*$", "", parts))
+  .extends_value(out, sprintf("report %s", sQuote(id)))
+}
+
 # one report's file
 .conv_output <- function(id, kind, entry, sp, ard, lf, fig, prow, scope, page_of, content_fn, note,
                          figures = "design") {
@@ -586,11 +605,12 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   # the `extends` cell, when the report has one, says the chain as written
   # (`none` stays `none`); its first pattern has to be the `pattern` cell's
   if (nrow(rrow) && !is.null(rrow$extends) && !is.na(rrow$extends[1L]) && nzchar(trimws(rrow$extends[1L]))) {
-    chain <- trimws(strsplit(rrow$extends[1L], "|", fixed = TRUE)[[1L]])
-    chain <- chain[nzchar(chain)]
-    first <- grep("^patterns/", chain, value = TRUE)[1L]
+    chain <- .conv_extends_cell(rrow$extends[1L], id)
+    # (a map by step, `content=none; page=a | b`: as written, no pattern cell to agree with)
+    if (is.list(chain)) pattern <- NULL
+    first <- grep("^patterns/", unlist(chain), value = TRUE)[1L]
     said <- if (is.null(pattern)) NA_character_ else paste0("patterns/", sub("^@", "", pattern))
-    if (!identical(first, said)) {
+    if (!is.list(chain) && !identical(first, said)) {
       stop("report ", sQuote(id), ": the `pattern` cell (", if (is.na(said)) "blank" else sQuote(sub("^patterns/", "@", said)),
            ") and the `extends` cell (", sQuote(paste(chain, collapse = " | ")),
            ") name different patterns; change one of them.", call. = FALSE)

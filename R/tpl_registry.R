@@ -36,8 +36,11 @@
 #'     (`"settings.sd_missing"`);
 #'   * `"<verb>.<argument>[.<name>]"`: that argument of the verb's item in
 #'     `spec/defaults.yml`'s `content:` (`"plan_cells.continuous"`; a
-#'     named-dots argument's own name as the last part); patterns and a
-#'     style set are not read;
+#'     named-dots argument's own name as the last part); for a template
+#'     whose set holds its `extends` ([tfl_template()]), of the layers the
+#'     report's `extends` and style lay, nearest first, when its content
+#'     step lays any ([tfl_study_value()]); otherwise patterns and a style
+#'     set are not read;
 #'   * `"figure_style.<key>"` (`"figure_style.km.theme"`: the type, then the
 #'     key): `defaults.yml`'s `figure_style:`, else tflspec's built-in
 #'     figure style;
@@ -85,10 +88,14 @@
 #'   parameter stands for a step of the template (a Total column, a guard, a
 #'   style set), and the step is not made -- no code for it in the program;
 #'   `"stop"`: the body needs a value, so `!unset` stops, naming the parameter.
-#' @param stage Where its value is used: `"call"` (the default), an argument
+#' @param step Where its value is used: `"call"` (the default), an argument
 #'   of the template's call in a report's program, or `"data"`, a step that
 #'   prepares the analysis data (a figure's records, its analysis set),
 #'   written in the program's data steps, not in the call.
+#' @param maps_to The plan arguments the parameter stands for
+#'   (`"plan_blanks.where"`): when its value turns its step off (`!unset`,
+#'   `FALSE`, `"none"`), they are taken out of the study's layers too.
+#'   `NULL`: none declared.
 #' @return A `tfl_param`.
 #' @examples
 #' tfl_param("population", "SAF", doc = "the analysis set's id")
@@ -96,17 +103,18 @@
 #' @export
 tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study = NULL,
                       type = NULL, multiple = NULL, of = NULL, choices = NULL,
-                      fields = NULL, group = NULL, tier = NULL, stage = "call",
-                      unset = c("omit", "step_off", "stop")) {
+                      fields = NULL, group = NULL, tier = NULL, step = "call",
+                      unset = c("omit", "step_off", "stop"), maps_to = NULL) {
   unset <- match.arg(unset)
   if (!is.null(type)) type <- match.arg(type, .tpl_param_types)
   if (!is.null(tier)) tier <- match.arg(tier, c("required", "usual", "other"))
-  stage <- match.arg(stage, c("call", "data"))
+  step <- match.arg(step, c("call", "data"))
   .tpl_study_key_check(study, name)
+  .tpl_maps_to_check(maps_to, name)
   structure(list(name = name, default = default, required = isTRUE(required),
                  doc = doc, study = study, type = type, multiple = multiple, of = of,
                  choices = choices, fields = fields, group = group, tier = tier,
-                 stage = stage, unset = unset),
+                 step = step, unset = unset, maps_to = maps_to),
             class = "tfl_param")
 }
 
@@ -137,6 +145,24 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     }
   }
   invisible(key)
+}
+
+# A parameter's `maps_to`: plan arguments, "<verb>.<argument>", the verb one
+# of rtfreporter's (character(0): it maps to nothing in the study)
+.tpl_maps_to_check <- function(x, name = NULL) {
+  if (is.null(x)) return(invisible(x))
+  what <- if (is.null(name)) "" else sprintf(" (parameter %s)", name)
+  if (!is.character(x) || anyNA(x) || !all(grepl("^[A-Za-z][A-Za-z0-9_]*[.][A-Za-z0-9_]+$", x))) {
+    .ard_stop(sprintf(paste0("tfl_param(): `maps_to` is plan arguments%s: \"<verb>.<argument>\" ",
+                             "(\"plan_blanks.where\")."), what))
+  }
+  verb <- sub("[.].*$", "", x)
+  bad <- setdiff(verb, tryCatch(getNamespaceExports("rtfreporter"), error = function(e) verb))
+  if (length(bad)) {
+    .ard_stop(sprintf("tfl_param(): `maps_to`%s: %s is not a plan verb of rtfreporter.", what,
+                      sQuote(bad[1L], FALSE)))
+  }
+  invisible(x)
 }
 
 # tflspec's parameters' types by name (a template's tfl_param(type = )
@@ -272,8 +298,8 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   if (is.null(p$multiple)) p$multiple <- identical(p$type, "list") || length(p$default) > 1L
   # its tier: as declared, else required or other (a variant keeps its root's)
   if (is.null(p$tier)) p$tier <- if (isTRUE(p$required)) "required" else "other"
-  # (a parameter made before `stage`: an argument of the call)
-  if (is.null(p$stage)) p$stage <- "call"
+  # (a parameter made before `step`: an argument of the call)
+  if (is.null(p$step)) p$step <- "call"
   if (is.null(p$unset)) p$unset <- "omit"
   p
 }
@@ -283,16 +309,27 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
 # report's items, `content` a list of tfl_item().  `parts`: where each
 # parameter acts, list(ard = <names>, content = <names>), for a SPEC written
 # as `template: {name, ard:, content:}`; NULL: the template takes the two
-# parts' names as written (every name in either).
+# parts' names as written (every name in either).  `extends`: what its
+# reports extend when they write none (its set's value, canon 1.27; NULL: a
+# template not yet migrated, the old layer order); `extends_fixed`: the
+# steps whose value it fixes.
 .tfl_template <- function(name, kind, layout, params, body, label = NULL, call = NULL,
-                          package = "tflspec", example = NULL, ai = FALSE, parts = NULL) {
+                          package = "tflspec", example = NULL, ai = FALSE, parts = NULL,
+                          extends = NULL, extends_fixed = character()) {
+  extends <- .extends_value(extends, sprintf("template %s", name))
+  if (!is.character(extends_fixed) || !all(extends_fixed %in% .extends_steps) ||
+        (length(extends_fixed) && is.null(extends))) {
+    .ard_stop(sprintf("template %s: `extends_fixed` names steps (%s) of its `extends`.", name,
+                      paste(.extends_steps, collapse = ", ")))
+  }
   params <- lapply(params, .tpl_param_typed)
   names(params) <- vapply(params, `[[`, "", "name")
   # (a table's or a listing's call is the one tfl_tpl(); a figure's its own)
   call <- call %||% if (identical(kind, "figure")) paste0("tpl_", name) else "tfl_tpl"
   assign(name, list(name = name, kind = kind, layout = layout, params = params, body = body,
                     label = label, call = call, package = package,
-                    example = example, ai = isTRUE(ai), parts = parts),
+                    example = example, ai = isTRUE(ai), parts = parts,
+                    extends = extends, extends_fixed = extends_fixed),
          envir = .tpl_registry)
   invisible(name)
 }
@@ -575,8 +612,10 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
 #' items run on the data, as the report's content.  `tfl_tpl(ard, "demog",
 #' population = "SAF")` is what a template report's program calls; a
 #' study's defaults the template does not take as its parameters are added
-#' after the call.  The template's parameters, their defaults and where each
-#' ends: `tfl_tpl_help()` (and `?tpl_<name>`).
+#' after the call -- or, for a template whose set has its `extends` (demog),
+#' given as `study`, under the template's items.  The template's parameters,
+#' their defaults and where each ends: `tfl_tpl_help()` (and
+#' `?tpl_<name>`).
 #'
 #' @param x The data: the ARD, not yet normalized (a table); the dataset as
 #'   the program made it, its subjects kept already (a listing).
@@ -584,6 +623,14 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
 #'   template or a variant.
 #' @param ... Its parameters, by name.  A name it does not have is an error
 #'   naming its parameters.
+#' @param study The study's items under the template (its default and style
+#'   layers, as the report's SPEC resolves them): a list by plan verb, each a
+#'   named list of its arguments as the SPEC holds them, `list(plan_style =
+#'   list(align_count_pct = TRUE))`.  They are merged right after
+#'   `table_plan()`, as the SPEC's layers meet: the template's values win, an
+#'   argument it does not write stays the study's ([tfl_unset()] leaves it to
+#'   the function).  A verb may come again (a stacking verb's second item,
+#'   another layer's arguments).  `NULL` none; not for a figure.
 #' @param codelists The report's code lists: as [tfl_read_output()] reads
 #'   them, or the values in order, `list(TRT01A = c("Drug X", "Control"))`.
 #' @param sets The study's analysis sets (`data.yml`'s populations), for
@@ -603,14 +650,18 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
 #'                   categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC"))
 #' }
 #' @export
-tfl_tpl <- function(x, name, ..., codelists = NULL, sets = NULL) {
+tfl_tpl <- function(x, name, ..., study = NULL, codelists = NULL, sets = NULL) {
   fn <- "tfl_tpl()"
   if (!is.character(name) || length(name) != 1L || is.na(name)) {
     .ard_stop(sprintf("%s: `name` is a template's name, one text (\"demog\"); the templates: tfl_templates().",
                       fn))
   }
   t <- .tpl_get(name, fn)
+  study <- .tpl_study_items(study, fn)
   if (identical(t$kind, "figure")) {
+    if (length(study)) {
+      .ard_stop(sprintf("%s: `study` is for a table or listing template; %s is a figure's.", fn, name))
+    }
     return(.tpl_fig_call(t, x, rlang::enquos(...)))
   }
   if (identical(t$kind, "listing")) {
@@ -619,16 +670,60 @@ tfl_tpl <- function(x, name, ..., codelists = NULL, sets = NULL) {
     # `x` is the data as the program made it (its subjects kept already)
     it$data$steps <- NULL
     o <- tfl_output(paste0("tpl-", name), kind = "listing", extends = "none",
-                    data = it$data, content = it$content)
+                    data = it$data, content = .tpl_study_under(study, it$content))
     return(tfl_content_run(o, x))
   }
-  .tpl_object(name, x, list(...), codelists = codelists, population = sets)
+  .tpl_object(name, x, list(...), codelists = codelists, population = sets, study = study)
+}
+
+# `tfl_tpl(study = )`: the study's items under the template (its layers 1
+# and 2, canon 1.28), `list(<verb> = list(<argument> = <value>, ...), ...)`
+# -- the arguments as the SPEC holds them, a verb named again for another
+# layer's arguments or a stacking verb's second item.  The items, one per
+# verb but a stacking verb's, in their order.
+.tpl_study_items <- function(study, fn = "tfl_tpl()") {
+  if (is.null(study) || !length(study)) return(list())
+  bad <- !is.list(study) || is.object(study) || is.null(names(study)) || any(!nzchar(names(study)))
+  if (!bad) bad <- !all(vapply(study, function(a) is.list(a) && !is.object(a) &&
+                                 (!length(a) || (!is.null(names(a)) && all(nzchar(names(a))))), NA))
+  if (bad) {
+    .ard_stop(sprintf(paste0("%s: `study` is a list of the study's items by verb, each a named list ",
+                             "of its arguments: study = list(plan_style = list(align = \"right\"))."), fn))
+  }
+  verbs <- names(study)
+  nope <- verbs[!startsWith(verbs, "plan_")]
+  if (length(nope)) {
+    .ard_stop(sprintf("%s: `study` takes plan verbs' items; %s %s not.", fn,
+                      paste(unique(nope), collapse = ", "), if (length(unique(nope)) > 1L) "are" else "is"))
+  }
+  out <- list()
+  for (i in seq_along(study)) {
+    v <- verbs[i]
+    k <- .merge_kind(v)
+    j <- if (k %in% c("arg", "dots")) match(v, vapply(out, `[[`, "", "fn")) else NA_integer_
+    if (is.na(j)) {
+      out <- c(out, list(tfl_item(v, study[[i]], from = "defaults")))
+    } else {
+      out[[j]]$args <- if (k == "dots") .merge_dots(out[[j]]$args, study[[i]])
+                       else .merge_by_arg(out[[j]]$args, study[[i]])
+    }
+  }
+  out
+}
+
+# The template's items over the study's (`tfl_tpl(study = )`), by tflspec's
+# merge as the SPEC's layers meet: the template's values win, an argument
+# it does not write stays the study's
+.tpl_study_under <- function(study, content) {
+  if (!length(study)) return(content)
+  .merge_content(study, content)
 }
 
 # The A use: the template's object.  Its items run on the ARD as a report's
-# content does; a study's defaults are not in it -- the program writes them
-# after the call (`# (study default)`), as plan_*() lines.
-.tpl_object <- function(name, ard, args, codelists = NULL, population = NULL) {
+# content does; the study's items it is given (`study`, its layers 1 and 2)
+# under them, merged right after table_plan().  The report's own items are
+# the program's lines after the call.
+.tpl_object <- function(name, ard, args, codelists = NULL, population = NULL, study = list()) {
   # (the arms of a template with a `by`: from the ARD when the code lists do
   # not say them -- the Total column's width and the like need how many)
   by <- args$by
@@ -644,7 +739,7 @@ tfl_tpl <- function(x, name, ..., codelists = NULL, sets = NULL) {
   t <- .tpl_get(name, "tpl")
   # (the ARD is normalized first, as a report's content with no step of its
   # own: normalize_ard() with its defaults)
-  content <- x$content
+  content <- .tpl_study_under(study, x$content)
   if (!any(vapply(content, function(it) identical(it$fn, "normalize_ard"), NA))) {
     content <- c(list(tfl_item("normalize_ard", list())), content)
   }

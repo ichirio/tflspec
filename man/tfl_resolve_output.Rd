@@ -39,8 +39,12 @@ set of \code{defaults.yml}'s \verb{styles:}; \code{standard} when it names none)
 nearest layer below its own: the look it picks, content and page.  A
 template SPEC (\verb{template: \{name, args\}}) puts the template's items
 (\code{\link[=tfl_template_expand]{tfl_template_expand()}}, marked \verb{template:<name>}) between the layers
-and the report's own -- its look (plan_style, the widths, the rows a
-page ...) under the study's layers, which say the look and win -- and
+and the report's own -- for a template whose set holds its \code{extends}
+(\code{\link[=tfl_template]{tfl_template()}}), all of them over the style set its \code{style} names
+and the files each step of \code{extends} names (\code{\link[=tfl_output_extends]{tfl_output_extends()}}),
+with what a parameter's stop value turns off (\code{\link[=tfl_param]{tfl_param()}}\verb{(maps_to = )}) taken out of those; for a template not yet migrated, its look
+(plan_style, the widths, the rows a page ...) under the study's layers,
+which say the look and win -- and
 its \verb{ard:} under the report's (an entry of the report's replaces the
 template's of the same id); a template parameter that says where its
 study default is takes it from the layers when the SPEC does not give
