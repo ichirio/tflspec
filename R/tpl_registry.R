@@ -2304,8 +2304,10 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
   content <- c(plan,
     # (the stub's place: after the header, as before the look's items)
     if (!is.null(lk$stub)) list(lk$stub),
-    if (length(labels)) list(tfl_item("plan_labels", list(variable = labels))),
-    if (length(ptext)) list(tfl_item("plan_labels", list(PARAMCD = as.list(ptext)))),
+    # (one plan_labels(): the statistics' text and the parameters')
+    if (length(labels) || length(ptext)) list(tfl_item("plan_labels", c(
+      if (length(labels)) list(variable = labels),
+      if (length(ptext)) list(PARAMCD = as.list(ptext))))),
     unname(Filter(Negate(is.null), lk[c("blank", "widths", "paginate")])),
     if (isTRUE(a$param_page)) list(tfl_item("plan_hide", list(cols = list("group1")))),
     # (the style last: where the study's lands in the old order, so A = B)

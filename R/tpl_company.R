@@ -404,7 +404,10 @@ tfl_test_templates <- function(names = NULL) {
   orr = list(),
   stat_block = list(variable = "RESP", cells = list(N = "{N}", "ORR (%)" = "{n} ({estimate:.1f%})")),
   param_change = list(population = "SAF", by = "TRT01A", data = "ADLB", params = c("ALT", "AST"),
-                      where = "ANL01FL == \"Y\""),
+                      where = "ANL01FL == \"Y\"",
+                      # (the parameters' text: the report's, outside the ARD, canon 1.42)
+                      param_labels = list(ALT = "Alanine Aminotransferase (U/L)",
+                                          AST = "Aspartate Aminotransferase (U/L)")),
   ae_eair = list(population = "SAF"),
   ancova = list(population = "SAF", data = "ADVS", param = "SYSBP", visit = "CYCLE 2 DAY 1"),
   lab_abnormal = list(population = "SAF", levels = c("LOW", "HIGH"), where = "ONTRTFL == \"Y\""))

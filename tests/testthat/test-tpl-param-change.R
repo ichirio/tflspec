@@ -319,6 +319,8 @@ test_that("vs_change's table (removed) from param_change: a baseline block, its 
   tfl_ai_study_init(d, adam = "adam", study_id = "VS-1")
   pc <- list(population = "SAF", data = "ADVS", params = "SYSBP", visits = "CYCLE 9 DAY 1",
              by = "TRT01A", layout = "rows", param_order = NULL, baseline = TRUE,
+             # (the parameter's text: the report's, outside the ARD, canon 1.42)
+             param_labels = list(SYSBP = "Systolic Blood Pressure (mmHg)"),
              baseline_label = "Baseline (mmHg)", value_label = "Week 24 (mmHg)",
              change_label = "Change from baseline (mmHg)",
              cells = list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})", SE = "{se:.2f}",
