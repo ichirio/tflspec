@@ -141,6 +141,12 @@ tfl_tpl_args <- function(name, study = NULL, population = NULL) {
   root_p <- lapply(root$params, .tpl_param_typed)
   names(root_p) <- vapply(root_p, `[[`, "", "name")
   output <- list(population = population)
+  # (a template with an `extends` in its set reads the range its reports
+  # read when they write no `extends` or `style:`: the settings.style set
+  # over the defaults, or none under `{content: none}`)
+  range <- if (!is.null(study) && .tpl_layered(t$name)) {
+    if (length(.extends_norm(t$extends)$content)) .tpl_ref_range(NULL, study)$content else list()
+  }
   rows <- lapply(.tpl_shown(t$params), function(p) {
     rp <- root_p[[p$name]] %||% p
     # the nearest variant that sets it
@@ -155,7 +161,7 @@ tfl_tpl_args <- function(name, study = NULL, population = NULL) {
     key <- keys[1L]
     sv <- NULL
     if (!is.na(key) && (!is.null(study) || startsWith(key, "output."))) {
-      hit <- .tpl_study_find(keys, output, study)
+      hit <- .tpl_study_find(keys, output, study, range)
       sv <- hit$value
       if (!is.null(sv)) key <- hit$key
     }

@@ -195,24 +195,34 @@ test_that("the style helper: defaults.yml's styles: first, then the built-in set
   expect_length(.tpl_style_set("standard", NULL)$content, 0L)
 })
 
-test_that("the set's extends: demog and stf_t02_demog only; under {content: none} no content layer", {
+test_that("the set's extends: demog [defaults], stf_t02_demog {content: none}; the 27 the old order", {
   expect_identical(sort(Filter(function(n) .tpl_layered(n), tfl_templates()$name)),
                    c("demog", "stf_t02_demog"))
   # (an alias is its template: stf_t14_ae_soc_pt is ae_soc_pt's, not migrated)
   expect_false(.tpl_layered("stf_t14_ae_soc_pt"))
-  expect_identical(.tpl_get("demog", "test")$extends, list(content = "none"))
+  expect_identical(.tpl_get("demog", "test")$extends, "defaults")
   expect_identical(.tpl_get("stf_t02_demog", "test")$extends_fixed, "content")
   s <- sr_study()
   o <- tfl_output("T-9", "table", population = "SAF",
                   template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE")))
   ro1 <- tfl_resolve_output(o, s)
-  from1 <- vapply(ro1$content, function(it) it$from %||% "", "")
-  # the template's items alone (its look too), none of the study's content
-  # (5b-1: demog's set is {content: none}; its [defaults] is 5b-2's flip) ...
-  expect_false(any(c("defaults", "style:compact") %in% from1))
-  expect_true(all(startsWith(from1, "template:") | from1 == "own"))
+  # demog's set is [defaults] (canon 1.27): the study's content is laid under
+  # the template's items -- a verb it does not make reaches it ...
+  s1 <- s
+  s1$defaults$content <- c(s1$defaults$content,
+                           list(tfl_item("plan_cell_style", list(bold = TRUE), from = "defaults")))
+  from1 <- vapply(tfl_resolve_output(o, s1)$content, function(it) it$from %||% "", "")
+  expect_true("defaults" %in% from1)
+  expect_true(any(startsWith(from1, "template:")))
   # ... the study's page is kept
   expect_true(length(ro1$page) > 0L)
+  # written {content: none}: the template's items alone, the page kept
+  o$extends <- list(content = "none")
+  ron <- tfl_resolve_output(o, s)
+  fromn <- vapply(ron$content, function(it) it$from %||% "", "")
+  expect_false(any(c("defaults", "style:compact") %in% fromn))
+  expect_true(all(startsWith(fromn, "template:") | fromn == "own"))
+  expect_identical(ron$page, ro1$page)
   # stf_t02_demog: no defaults content, its style:stf_t02 items, the page kept
   o2 <- tfl_output("T-9", "table", population = "SAF",
                    template = list(name = "stf_t02_demog", args = list(by = "TRT01A", continuous = "AGE")))
