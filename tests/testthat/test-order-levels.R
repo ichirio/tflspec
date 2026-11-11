@@ -122,7 +122,8 @@ test_that("RACE follows RACEN, SEX follows SEXN, where ADSL has the pair", {
   out <- function(d) {
     tfl_write_output(tfl_output("T-SU", "table", population = "SAF", extends = "defaults",
                                 template = list(name = "summary",
-                                                args = list(continuous = "AGE", categorical = c("SEX", "RACE")))),
+                                                args = list(by = "TRT01A", continuous = "AGE",
+                                                            categorical = c("SEX", "RACE")))),
                      file.path(d, "spec", "outputs", "T-SU.yml"))
     suppressMessages(suppressWarnings(tfl_build_ard(tfl_read_study_spec(d), d, output_id = "T-SU", save = FALSE)))
   }

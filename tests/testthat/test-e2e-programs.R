@@ -57,10 +57,11 @@ test_that("lab_abnormal on a data without PARAMN: the parameters in their own or
   expect_identical(nrow(a), nrow(r$ard))
 })
 
-test_that("param_change writes the same step for PARAM and AVISIT", {
+test_that("param_change writes the same step for PARAMCD and AVISIT", {
   x <- tfl_template_expand("param_change", list(population = "SAF", data = "ADVS", by = "TRT01A"))
   dv <- as.character(x$ard$analysis_data[[2L]]$derive)
-  expect_match(dv, "PARAM = reorder_by(PARAM, PARAMN)", fixed = TRUE)
+  # (the ARD's by is the code, PARAMCD; its text is plan_labels()', canon 1.42)
+  expect_match(dv, "PARAMCD = reorder_by(PARAMCD, PARAMN)", fixed = TRUE)
   expect_match(dv, "AVISIT = reorder_by(AVISIT, AVISITN)", fixed = TRUE)
 })
 
