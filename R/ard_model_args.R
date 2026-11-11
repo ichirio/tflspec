@@ -196,17 +196,7 @@ tfl_ard_model_args <- function(method, package = "base") {
   ma <- given[["method.args"]]
   if ("method.args" %in% names(fm) && is.call(ma) &&
       identical(ma[[1L]], as.name("list"))) {
-    key <- if (identical(call, "cardx::ard_survival_survfit")) {
-      "survival::survfit"
-    } else {
-      m <- given[["method"]]
-      p <- given[["package"]]
-      p <- if (is.null(p)) {
-        d <- fm[["package"]]
-        if (is.character(d)) d else "base"
-      } else .literal_value(p)
-      if (is.null(m) || is.null(p)) NA_character_ else .model_key(m, p)
-    }
+    key <- .row_model_key(call, given, fm)
     if (!is.na(key)) {
       out <- c(out, .model_call_problems(
         tag, key, as.list(ma)[-1L], sprintf("%s(method.args = )", fn),
@@ -230,6 +220,44 @@ tfl_ard_model_args <- function(method, package = "base") {
 }
 
 # the catalog's rows of one model function, or NULL
+# The model function a cardx row with `method.args` fits, as `pkg::fun`:
+# survival::survfit for ard_survival_survfit(), else the one `method` /
+# `package` name (`given`: the row's `args` as a named list; `fm`: the
+# function's formals).  NA when it cannot be told.
+.row_model_key <- function(call, given, fm) {
+  if (identical(call, "cardx::ard_survival_survfit")) return("survival::survfit")
+  m <- given[["method"]]
+  p <- given[["package"]]
+  p <- if (is.null(p)) {
+    d <- fm[["package"]]
+    if (is.character(d)) d else "base"
+  } else .literal_value(p)
+  if (is.null(m) || is.null(p)) NA_character_ else .model_key(m, p)
+}
+
+# Since 2026-11-11: the names in `bad`, written in a row's `args`, that are
+# the model's arguments -- `conf.type = "log-log"` beside
+# ard_survival_survfit()'s own, `family = binomial` beside
+# ard_regression()'s -- said as a hint to write them in `method.args =
+# list(...)`, where cardx gives them to the model.  "" when the function
+# has no `method.args`, the model cannot be told or none of them is its.
+.method_args_hint <- function(call, args, bad) {
+  if (!length(bad)) return("")
+  fm <- .ard_formals(call)
+  if (is.null(fm) || !"method.args" %in% names(fm)) return("")
+  given <- tryCatch(.args_list(args), error = function(e) list())
+  key <- .row_model_key(call, given, fm)
+  if (is.na(key)) return("")
+  has <- unique(c(unlist(.model_arg_names(key)), .model_catalog(key)$arg))
+  hit <- setdiff(intersect(bad, has), c("...", "formula", "data"))
+  if (!length(hit)) return("")
+  sprintf(" -- %s %s %s()'s: write %s in `method.args = list(%s)`",
+          paste0("`", hit, "`", collapse = ", "),
+          if (length(hit) > 1L) "are" else "is", key,
+          if (length(hit) > 1L) "them" else "it",
+          paste0(hit, " = ...", collapse = ", "))
+}
+
 .model_catalog <- function(key) {
   d <- .ard_catalog_rows("model_args.csv", "tflspec.ard_model_args", c("fn", "arg"))
   d <- d[d$fn == key, , drop = FALSE]

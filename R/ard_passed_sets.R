@@ -111,3 +111,58 @@
     paste0("`", bad, "`", collapse = ", "),
     paste(setdiff(fm, c("x", "g", "w", "na.rm", "std.error")), collapse = ", "))
 }
+
+# Since 2026-11-11: a function that takes `...` and does nothing with them
+# -- neither passes them on nor checks them -- drops a name it does not
+# have without a word.  cardx 0.3.4's ard_survival_survfit() (its
+# data.frame method: `conf.type = "log-log"` written beside `times`, not in
+# `method.args`, leaves the log intervals), ard_tabulate_max() and
+# ard_aod_wald_test(), cards 0.9.0's ard_tabulate_value() (a misspelt
+# `denominater =` leaves the default denominator).  Read from the installed
+# code (its data.frame method's, else the function's), as .dots_checked().
+.dots_ignored <- function(call) {
+  f <- .ard_fun(call)
+  if (is.null(f)) return(FALSE)
+  m <- tryCatch(utils::getS3method(sub("^.*::", "", call), "data.frame",
+                                   optional = TRUE, envir = environment(f)),
+                error = function(e) NULL)
+  h <- if (is.function(m)) m else f
+  if (!"..." %in% names(formals(h)) || .dots_checked(call)) return(FALSE)
+  # a generic's own body only dispatches: its method is judged
+  if (!is.function(m) && .calls_use_method(body(h))) return(FALSE)
+  !.uses_dots(body(h))
+}
+
+# TRUE when the expression mentions `...` (passes, lists or checks them)
+.uses_dots <- function(e) {
+  if (identical(e, quote(...))) return(TRUE)
+  if (!is.call(e) && !is.pairlist(e)) return(FALSE)
+  for (i in seq_along(e)) {
+    x <- e[[i]]
+    if (!missing(x) && .uses_dots(x)) return(TRUE)
+  }
+  FALSE
+}
+
+.calls_use_method <- function(e) {
+  if (!is.call(e)) return(FALSE)
+  if (identical(e[[1L]], as.name("UseMethod"))) return(TRUE)
+  any(vapply(as.list(e)[-1L], function(x) !missing(x) && .calls_use_method(x), NA))
+}
+
+# The line of the check for the names `bad` a function drops (.dots_ignored()):
+# "T1 / KM: cardx 0.3.4's ard_survival_survfit() has no argument
+# `conf.type`, and drops what its `...` take without a word: it would be
+# ignored -- `conf.type` is survival::survfit()'s: write it in `method.args
+# = list(conf.type = ...)`".
+.dots_ignored_problems <- function(tag, call, bad, fm, args) {
+  if (!length(bad)) return(character())
+  pkg <- sub("::.*$", "", call)
+  has <- setdiff(names(fm), c("...", if (isTRUE(attr(fm, "data_first"))) names(fm)[1L]))
+  sprintf(paste(
+    "%s: %s %s's %s() has no argument %s, and drops what its `...` take",
+    "without a word (it has: %s): it would be ignored%s"),
+    tag, pkg, utils::packageVersion(pkg), sub("^.*::", "", call),
+    paste0("`", bad, "`", collapse = ", "), paste(has, collapse = ", "),
+    .method_args_hint(call, args, bad))
+}

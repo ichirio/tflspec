@@ -210,6 +210,12 @@ it stopped the analysis, so the catalog no longer offers it.
 | cardx model arguments | 100.0% | 100.0% |
 | weight-3 functions only | 100.0% | 100.0% |
 
+2026-11-11 (the same scope; cards 0.9.0, cardx 0.3.4, still the CRAN
+versions): **100.0% before and after (512 yes / 0 partial)**.  The run
+added checks (below), not arguments: a name a function takes in `...` and
+drops, and a hint to `method.args` for a model's argument written beside
+the function's own.
+
 (2026-11-10 before: this branch before the run (tflspec@next f04b06d
 merged) on the wider scope -- the 3 arguments could be written as R in
 `args` and reached effectsize, but were not described and their values
@@ -261,6 +267,39 @@ function, but the catalog did not describe it and its value was not
 judged: partial.  2026-10-31 before: the same, with
 `update_ard_fmt_fun()` in the `post` scope -- written as R in `post`, its
 names checked, its values not judged.)
+
+### Added 2026-11-11
+
+* **A name a function drops is said.**  Some functions take `...` and do
+  nothing with them -- neither pass them on nor check them: cardx 0.3.4's
+  `ard_survival_survfit()` (its data.frame method), `ard_tabulate_max()`
+  and `ard_aod_wald_test()`, and cards 0.9.0's `ard_tabulate_value()`.  A
+  name they do not have was ignored without a word: `conf.type =
+  "log-log"` written beside `times` (not in `method.args`) left the
+  Kaplan-Meier intervals "log"; `denominater = ADSL` in an AE by maximum
+  severity row left the default denominator.  It is now a warning when
+  the spec is read.  Which functions drop their `...` is read from the
+  installed code, as for the ones that check them.
+* **A model's argument beside the function's own points to
+  `method.args`.**  When the misplaced name is an argument of the model
+  the row fits (`conf.type` of `survival::survfit()`, `family` of
+  `stats::glm()` beside `ard_regression(method = "glm")`), the warning
+  says to write it in `method.args = list(conf.type = ...)`.  The same
+  hint is added to the warnings for a name `tidy_plus_plus()` and broom's
+  tidier do not have, and for a name a function that checks its `...`
+  does not have (`ard_stats_anova()`, `ard_emmeans_*()`).
+* **Gap 4: the CMH test's passed-on names.**  cardx lists the row's `...`
+  for `mantelhaen.test()` and fills only the names the row leaves out with
+  the test's defaults, so no name reaches the call twice.  A test now
+  checks that and compares `correct = FALSE` with
+  `stats::mantelhaen.test()`.
+* Looked at, not added: `ard_stats_aov()` passes `...` to `stats::aov()`,
+  but its table is the sequential (type I) sums of squares, which
+  `contrasts =` does not change, and `weights =` stops in cardx's call
+  ("..1 used in an incorrect context").  Use `ard_car_anova()` with a
+  weighted model in `x`.  `ard_stats_anova()` checks its `...` (it stops
+  on any), so `anova(test = "Chisq")` cannot be passed on; its `method`
+  chooses the test.
 
 ### Added 2026-11-10
 
@@ -633,8 +672,12 @@ Every argument in scope is described and its value judged (since
    `broom.helpers::tidy_plus_plus()` with broom's tidier of the model and
    (since 2026-11-10) effectsize's `cohens_d()` / `hedges_g()` and
    `smd::smd()`; since 2026-11-10 a name cardx writes itself in that call
-   (`paired =`, `na.rm =`) is said too.  Left: `mantelhaen.test()`'s
-   arguments cardx gives as a list (`!!!`), not read.  The catalog
+   (`paired =`, `na.rm =`) is said too.  (Closed 2026-11-11:
+   `mantelhaen.test()`'s arguments cardx gives as a list fill only what
+   the row leaves out, so none reaches the call twice.)  Since 2026-11-11
+   a name a function takes in `...` and drops is said too
+   (`ard_survival_survfit()`, `ard_tabulate_max()`,
+   `ard_tabulate_value()`, `ard_aod_wald_test()`).  The catalog
    names the arguments clinical tables use, not every argument of the
    function they reach (`stats::aov()`'s, `car::vif(type =)` -- a method's
    argument, not the generic's -- are not described).
@@ -704,6 +747,16 @@ Percentage: yes counts 1, partial 0.5.
 | 2026-11-09 before / after | 51.7% (327 / 19 / 305 of 651) | 59.0% (327 / 19 / 224 of 570) | 41 / 7 / 67 |
 | 2026-11-10 before | 51.9% (331 / 20 / 306 of 657) | 59.2% (331 / 20 / 225 of 576) | 40 / 8 / 67 |
 | 2026-11-10 after  | 52.1% (332 / 20 / 305 of 657) | 59.4% (332 / 20 / 224 of 576) | 41 / 7 / 67 |
+| 2026-11-11 before / after | 52.1% (332 / 20 / 305 of 657) | 59.4% (332 / 20 / 224 of 576) | 41 / 7 / 67 |
+
+(2026-11-11: rtfreporter@next dd1e0cb (its changes since 48b954d are the
+validation kit's traceability matrix and the quality plan: no new exported
+argument) and tflspec@next 3e8c9c1 merged; the run went to cards / cardx --
+the table is unchanged.  Gap 1 below, `rtf_section(page =)`, was looked at
+again: it takes page numbers, which a SPEC does not know before the
+document is laid out, so it stays a gap until rtfreporter can start a
+section at an object.  Gap 3, `rtf_table_style()` as a value, needs a
+`plan_style()` argument that takes one in rtfreporter first.)
 
 (2026-11-10: rtfreporter@next 48b954d (its changes since b1182ae: the
 header, footer, title and footnote borders as the whole block's,

@@ -40,6 +40,12 @@
     given <- tryCatch(.args_given(a$args[i]), error = function(e) character())
     known <- c(names(fm), ".overall", ".missing", "by", "variables", "strata",
                "denominator", "statistic")
+    if ("..." %in% names(fm) && .dots_ignored(call)) {
+      out <- c(out, .dots_ignored_problems(
+        tag, call, .args_not_matched(setdiff(given, known), names(fm)), fm,
+        a$args[i]))
+      next
+    }
     if ("..." %in% names(fm) && !.dots_checked(call)) {
       # (a name R matches by its beginning is the function's own argument)
       out <- c(out, .passed_args_unknown(
@@ -51,10 +57,10 @@
     if (!length(bad)) next
     has <- setdiff(names(fm), c("...", if (isTRUE(attr(fm, "data_first"))) names(fm)[1L]))
     out <- c(out, sprintf(
-      "%s: %s %s's %s() has no argument %s (it has: %s); the program would stop on it",
+      "%s: %s %s's %s() has no argument %s (it has: %s); the program would stop on it%s",
       tag, pkg, utils::packageVersion(pkg),
       sub("^.*::", "", call), paste0("`", bad, "`", collapse = ", "),
-      paste(has, collapse = ", ")))
+      paste(has, collapse = ", "), .method_args_hint(call, a$args[i], bad)))
   }
   c(out, .post_args_unknown(a))
 }
@@ -575,8 +581,9 @@
   sprintf(paste(
     "%s: cardx %s's %s() has no argument %s, and passes it on to",
     "broom.helpers::tidy_plus_plus() and broom's tidy.%s(), which have none",
-    "either (they have: %s); it would be ignored"),
+    "either (they have: %s); it would be ignored%s"),
     tag, utils::packageVersion("cardx"), sub("^.*::", "", call),
     paste0("`", bad, "`", collapse = ", "), cls,
-    paste(setdiff(has, c("model", "x", "tidy_fun")), collapse = ", "))
+    paste(setdiff(has, c("model", "x", "tidy_fun")), collapse = ", "),
+    .method_args_hint(call, args, bad))
 }

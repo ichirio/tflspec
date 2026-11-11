@@ -505,3 +505,70 @@ test_that("Cohen's d's reference level and small-sample correction reach effects
   g <- stat(run("cardx::ard_effectsize_cohens_d", "adjust = TRUE"), "estimate")
   expect_equal(g, effectsize::hedges_g(AGE ~ SEX, data = pop)$Hedges_g, tolerance = 1e-10)
 })
+
+test_that("a name a function takes in `...` and drops is said, with method.args as the hint", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("survival")
+  # what the installed code does with `...`
+  expect_true(.dots_ignored("cardx::ard_survival_survfit"))
+  expect_true(.dots_ignored("cardx::ard_tabulate_max"))
+  expect_true(.dots_ignored("cards::ard_tabulate_value"))
+  expect_false(.dots_ignored("cardx::ard_stats_t_test"))      # passed on
+  expect_false(.dots_ignored("cards::ard_summary"))           # checked
+  expect_false(.dots_ignored("cardx::ard_regression"))        # passed on
+  km <- function(args) list(
+    method = "km", dataset = "ADTTE", population_id = "SAF", variables = "TRTA",
+    args = paste("y = \"survival::Surv(AVAL, 1 - CNSR)\", times = 60,", args))
+  # conf.type beside times is dropped: the intervals stay "log"
+  expect_warning(exact_spec(km("conf.type = \"log-log\"")), paste0(
+    "ard_survival_survfit\\(\\) has no argument `conf.type`, and drops what its ",
+    "`...` take without a word .*it would be ignored -- `conf.type` is ",
+    "survival::survfit\\(\\)'s: write it in `method.args = list\\(conf.type = ...\\)`"))
+  expect_no_warning(exact_spec(km("method.args = list(conf.type = \"log-log\")")))
+  # a misspelt name of the function's own: no method.args hint
+  w <- tryCatch(exact_spec(list(
+    method = "cardx::ard_tabulate_max", dataset = "ADAE", population_id = "SAF",
+    by = "TRTA", variables = "AESEV", args = "id = USUBJID, denominater = ADSL")),
+    warning = function(w) conditionMessage(w))
+  expect_match(w, "ard_tabulate_max\\(\\) has no argument `denominater`, and drops")
+  expect_false(grepl("method.args", w, fixed = TRUE))
+})
+
+test_that("a model's argument beside ard_regression()'s own points to method.args", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom.helpers")
+  skip_if_not_installed("broom")
+  expect_match(
+    .method_args_hint("cardx::ard_regression",
+                      "formula = AGE ~ TRT01A, method = \"glm\", family = binomial",
+                      c("family", "nope")),
+    "`family` is stats::glm\\(\\)'s: write it in `method.args = list\\(family = ...\\)`")
+  expect_identical(.method_args_hint("cardx::ard_regression",
+                                     "x = fit", "family"), "")
+  expect_identical(.method_args_hint("cardx::ard_stats_t_test", "", "family"), "")
+  expect_warning(exact_spec(list(
+    method = "cardx::ard_regression", population_id = "SAF", variables = "AGE",
+    args = "formula = AGE ~ TRT01A, method = \"glm\", family = gaussian")),
+    "`family` is stats::glm\\(\\)'s: write it in `method.args")
+})
+
+test_that("the CMH test's options reach mantelhaen.test() over cardx's defaults", {
+  skip_on_cran()
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom")
+  # cardx lists the row's `...` and fills only the names they leave out
+  # with mantelhaen.test()'s defaults: no name reaches the call twice
+  expect_identical(.cardx_sets_args("cardx::ard_stats_mantelhaen_test",
+                                    "stats::mantelhaen.test"), character())
+  adsl <- as.data.frame(cards::ADSL)
+  adsl <- adsl[adsl$TRT01A != "Xanomeline High Dose", ]
+  adsl$TRT01A <- factor(adsl$TRT01A)
+  adsl$SEX <- factor(adsl$SEX)
+  adsl$AGEGR1 <- factor(adsl$AGEGR1)
+  ard <- cardx::ard_stats_mantelhaen_test(adsl, by = "TRT01A", variables = "SEX",
+                                          strata = "AGEGR1", correct = FALSE)
+  ref <- stats::mantelhaen.test(adsl$SEX, adsl$TRT01A, adsl$AGEGR1, correct = FALSE)
+  expect_equal(unlist(ard$stat[ard$stat_name == "p.value"]), ref$p.value)
+})
