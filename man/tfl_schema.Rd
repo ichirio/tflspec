@@ -65,7 +65,10 @@ warns with the theme setting it is now.
 
 The types, in a short notation: \code{string}, \code{integer}, \code{number} (a
 number written as arithmetic of numbers, \verb{!r 1/5}, is one; numbers so
-written, \verb{!r 2^(-2:2)}, are a \verb{list<number>}),
+written, \verb{!r 2^(-2:2)}, are a \verb{list<number>}; texts built of constants,
+\verb{!r paste0("W", seq(0, 24, by = 4))} or \verb{!r sprintf("Day \%d", 1:10)},
+are a \verb{list<string>}, kept as written and judged by the check: one that
+does not evaluate is an error),
 \code{logical}, \code{enum[a|b]}, \code{column}, \code{stat}, \code{template}, \code{r} (\code{!r}),
 \code{formula} (\code{!r}, written \verb{~ <text>}), \code{guard} (\code{!r}, a two-sided
 \code{cond ~ "text"}), \code{function} (a function by its name, \code{mean_se} or
@@ -96,8 +99,12 @@ function whose name the pattern matches, of any package:
 \code{style_positive}, \code{base}, \code{width} ...); base R's that clinical figures write as
 a value are typed where they fit: \code{seq()} for breaks,
 \code{{fn: seq, args: {from: 0, to: 52, by: 4}}} written \code{seq(0, 52, by = 4)};
-\code{alpha()} for a colour; grDevices' palettes, \code{hcl.colors()} ..., for a
-scale's colours), \verb{list<T>} (a sequence), \verb{vec<K, V>} (a map that is a
+\code{alpha()} for a colour; grDevices' palettes, \code{hcl.colors()} ...,
+\code{RColorBrewer::brewer.pal()} and viridisLite's \code{viridis()} ..., for a
+scale's colours; \code{data.frame()} of constants for a layer's \code{data}
+(reference lines with a legend), its columns of one length; a glm's
+family in \code{method.args}, \code{{family: binomial}} written bare or
+\code{{fn: binomial, args: {link: probit}}}), \verb{list<T>} (a sequence), \verb{vec<K, V>} (a map that is a
 named vector in R), \verb{map<K, V>} (a map that is a named list),
 \verb{rows<f1, f2, ...>} (a sequence of maps that is a data frame) and \code{T|U}
 (either).

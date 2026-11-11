@@ -52,7 +52,11 @@
                   "forcats::fct_infreq", "str_wrap", "stringr::str_wrap",
                   # a reference line at a summary of the data (a Bland-Altman
                   # plot's mean difference: yintercept = mean(AVAL - BASE))
-                  "mean", "median", "min", "max", "sum", "quantile")
+                  "mean", "median", "min", "max", "sum", "quantile",
+                  # a band kept in its range (ymin = pmax(lower, 0)), a
+                  # running total, a CI by the t or normal quantile
+                  # (ymin = mean - qt(0.975, n - 1) * se)
+                  "pmin", "pmax", "cumsum", "qt", "qnorm")
 
 # the operators a mapping's expression may be of, at its top too
 # (ymin: mean - se)

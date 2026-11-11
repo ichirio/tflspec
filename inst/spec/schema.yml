@@ -2176,7 +2176,7 @@ ggplot:
   layers: [layer]
   visible: [data, mapping]
   args:
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
     mapping: {type: "map<string, column|r>", label: {en: Mapping shared by the layers, ja: レイヤー共通のマッピング}}
 
 ggsurvfit:
@@ -2272,7 +2272,7 @@ geom_line:
   visible: [mapping, linewidth, alpha, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_point:
@@ -2285,7 +2285,7 @@ geom_point:
   visible: [mapping, shape, size, alpha, na.rm, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_errorbar:
@@ -2299,7 +2299,7 @@ geom_errorbar:
   visible: [mapping, width, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_pointrange:
@@ -2313,7 +2313,7 @@ geom_pointrange:
   visible: [mapping, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_col:
@@ -2327,7 +2327,7 @@ geom_col:
   visible: [mapping, width, position, colour, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_text:
@@ -2340,7 +2340,7 @@ geom_text:
   visible: [mapping, size, position, vjust, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_label:
@@ -2353,7 +2353,7 @@ geom_label:
   visible: [mapping, size, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_step:
@@ -2366,7 +2366,7 @@ geom_step:
   visible: [mapping]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
 
 geom_area:
   package: ggplot2
@@ -2378,7 +2378,7 @@ geom_area:
   visible: [mapping, alpha]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
 
 geom_ribbon:
   package: ggplot2
@@ -2391,7 +2391,7 @@ geom_ribbon:
   visible: [mapping, alpha]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
 
 geom_segment:
   package: ggplot2
@@ -2404,7 +2404,7 @@ geom_segment:
   visible: [mapping, linewidth, arrow, alpha]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
 
 geom_tile:
   package: ggplot2
@@ -2417,7 +2417,7 @@ geom_tile:
   visible: [mapping]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
 
 geom_boxplot:
   package: ggplot2
@@ -2429,7 +2429,7 @@ geom_boxplot:
   visible: [mapping, width, outlier.shape, alpha, position, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_violin:
@@ -2442,7 +2442,7 @@ geom_violin:
   visible: [mapping, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_histogram:
@@ -2455,7 +2455,7 @@ geom_histogram:
   visible: [mapping, bins]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
 
 geom_density:
   package: ggplot2
@@ -2467,7 +2467,7 @@ geom_density:
   visible: [mapping]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
 
 geom_jitter:
   package: ggplot2
@@ -2479,7 +2479,7 @@ geom_jitter:
   visible: [mapping, width, height, alpha, size]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
 
 geom_smooth:
   package: ggplot2
@@ -2492,7 +2492,7 @@ geom_smooth:
   visible: [mapping, method, se]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
 
 geom_hline:
   package: ggplot2
@@ -2509,7 +2509,7 @@ geom_hline:
     linewidth: {type: "number|list<number>", label: {en: Line width, ja: 線の太さ}, description: "One for all, or one a line in their order."}
     alpha: {type: "number|list<number>", label: {en: Transparency, ja: 透明度}, description: "One for all, or one a line in their order."}
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
 
 geom_vline:
   package: ggplot2
@@ -2525,7 +2525,7 @@ geom_vline:
     linewidth: {type: "number|list<number>", label: {en: Line width, ja: 線の太さ}, description: "One for all, or one a line in their order."}
     alpha: {type: "number|list<number>", label: {en: Transparency, ja: 透明度}, description: "One for all, or one a line in their order."}
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
 
 geom_abline:
   package: ggplot2
@@ -2541,7 +2541,7 @@ geom_abline:
     linewidth: {type: "number|list<number>", label: {en: Line width, ja: 線の太さ}, description: "One for all, or one a line in their order."}
     alpha: {type: "number|list<number>", label: {en: Transparency, ja: 透明度}, description: "One for all, or one a line in their order."}
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
 
 geom_text_repel:
   package: ggrepel
@@ -2554,7 +2554,7 @@ geom_text_repel:
   visible: [mapping, size]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
     direction: {type: "enum[both|y|x]", label: {en: Moved along, ja: 動かす向き}}
 
 geom_sina:
@@ -2568,7 +2568,7 @@ geom_sina:
   visible: [mapping, size, alpha]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
 
 
 # -- layers beyond the geoms --
@@ -2775,7 +2775,7 @@ scale_colour_manual:
   visible: [values, breaks]
   args:
     limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
-    values: {type: "vec<string, string>|list<string>|call<hcl.colors, gray.colors, grey.colors, rainbow, heat.colors, terrain.colors, topo.colors, cm.colors, palette.colors>|r", label: {en: Colours, ja: 色}}
+    values: {type: "vec<string, string>|list<string>|call<hcl.colors, gray.colors, grey.colors, rainbow, heat.colors, terrain.colors, topo.colors, cm.colors, palette.colors, brewer.pal, viridis, magma, inferno, plasma, cividis, turbo>|r", label: {en: Colours, ja: 色}}
 
 scale_fill_manual:
   package: ggplot2
@@ -2786,7 +2786,7 @@ scale_fill_manual:
   visible: [values, breaks]
   args:
     limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
-    values: {type: "vec<string, string>|list<string>|call<hcl.colors, gray.colors, grey.colors, rainbow, heat.colors, terrain.colors, topo.colors, cm.colors, palette.colors>|r", label: {en: Colours, ja: 色}}
+    values: {type: "vec<string, string>|list<string>|call<hcl.colors, gray.colors, grey.colors, rainbow, heat.colors, terrain.colors, topo.colors, cm.colors, palette.colors, brewer.pal, viridis, magma, inferno, plasma, cividis, turbo>|r", label: {en: Colours, ja: 色}}
 
 scale_shape_manual:
   package: ggplot2
@@ -4979,7 +4979,7 @@ geom_label_repel:
   visible: [mapping, size, max.overlaps, box.padding]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
     max.overlaps: {type: number, label: {en: Overlaps allowed, ja: 許す重なりの数}}
     direction: {type: "enum[both|y|x]", label: {en: Moved along, ja: 動かす向き}}
 
@@ -4994,7 +4994,7 @@ geom_richtext:
   visible: [mapping, size, label.padding]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|tilde|lambda|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored)."}
+    data: {type: "object|tilde|lambda|call<data.frame>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}."}
 
 new_scale_fill:
   package: ggnewscale

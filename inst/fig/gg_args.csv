@@ -1,6 +1,6 @@
 kind,arg,type,en,ja,help,only
 layer,mapping,"map<string, column|r>",Mapping,マッピング,"Aesthetic = column: {x: AVISITN, y: AVAL, colour: TRTA}; !r for an expression."
-layer,data,object|tilde|lambda|r,Data,データ,"The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored) (the censored times of a KM plot), or as a function of it written out, function(d) subset(d, AVAL > ANRHI)."
+layer,data,"object|tilde|lambda|call<data.frame>|r",Data,データ,"The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored) (the censored times of a KM plot), or as a function of it written out, function(d) subset(d, AVAL > ANRHI); or a small table of constants, {fn: data.frame, args: {y: [-30, 20], what: [PR, PD]}} (reference lines with a legend)."
 layer,x,number|string|list<number|string|date>|r,X,x,"A fixed x (annotate(), a reference line); a mapped one goes in mapping.  On a date axis a date, 2025-01-31 (written as.Date(""2025-01-31""))."
 layer,y,number|string|list<number|string|date>|r,Y,y,
 layer,xmin,number|string|list<number|string|date>|r,X from,x の始まり,
@@ -70,7 +70,7 @@ layer,method,string|r,Smoothing method,平滑化の方法,"lm, glm, loess, gam (
 layer,formula,tilde|r,Model formula,モデル式,"y ~ x, y ~ poly(x, 2): written as the formula."
 layer,se,logical,Confidence band,信頼帯,
 layer,span,number,Loess span,loess の幅,
-layer,method.args,"map<string, string|number|logical>|r",Arguments of the method,方法の引数,{family: binomial}; written as list().
+layer,method.args,"map<string, string|number|logical|call<binomial, gaussian, Gamma, inverse.gaussian, poisson, quasibinomial, quasipoisson, quasi>>|r",Arguments of the method,方法の引数,"{family: binomial} (a glm's family by its name, written bare), {family: {fn: binomial, args: {link: probit}}}; written as list()."
 layer,fullrange,logical,Over the whole x range,x 全体に延ばす,
 layer,outliers,logical,Outliers,外れ値,FALSE: none drawn (and the whiskers ignore them).
 layer,outlier.shape,number|string|r,Outlier shape,外れ値の形,NA: none drawn.
@@ -172,7 +172,7 @@ scale,transform,"string|call<transform_*, *_trans, trans_new, new_transform>|r",
 scale,sec.axis,"call<sec_axis, dup_axis>|tilde|r",Secondary axis,第2軸,"{fn: dup_axis}, {fn: sec_axis, args: {transform: ~ . / 7, name: Weeks}}, or the transformation alone as a formula, ~ . / 7 (no name of its own)."
 scale,drop,logical,Drop unused levels,使わない水準を除く,
 scale,na.translate,logical,Show missing,欠測を表示,
-scale,values,"vec<string, string|number>|list<string|number>|call<hcl.colors, gray.colors, grey.colors, rainbow, heat.colors, terrain.colors, topo.colors, cm.colors, palette.colors, rescale>|r",Values,値,"By level ({Placebo: grey50}) or in the order of the levels; scale_*_gradientn(): the colours' places from 0 to 1, or {fn: scales::rescale, args: {x: [-1, 0, 1]}}."
+scale,values,"vec<string, string|number>|list<string|number>|call<hcl.colors, gray.colors, grey.colors, rainbow, heat.colors, terrain.colors, topo.colors, cm.colors, palette.colors, brewer.pal, viridis, magma, inferno, plasma, cividis, turbo, rescale>|r",Values,値,"By level ({Placebo: grey50}) or in the order of the levels; scale_*_gradientn(): the colours' places from 0 to 1, or {fn: scales::rescale, args: {x: [-1, 0, 1]}}."
 scale,aesthetics,string|list<string>,Aesthetics,対象のマッピング,"colour, fill, or both ([colour, fill])."
 scale,palette,"string|number|list<string>|call<pal_*>|r",Palette,パレット,"Brewer: Set1, Dark2, Paired, Blues, RdBu ... (or its number)."
 scale,type,enum[seq|div|qual],Palette type,パレットの種類,
@@ -181,7 +181,7 @@ scale,low,"string|call<alpha>",Low colour,低い値の色,
 scale,mid,"string|call<alpha>",Middle colour,中央の色,
 scale,high,"string|call<alpha>",High colour,高い値の色,
 scale,midpoint,number,Middle value,中央の値,
-scale,colours,"list<string>|call<hcl.colors, gray.colors, grey.colors, rainbow, heat.colors, terrain.colors, topo.colors, cm.colors, palette.colors>|r",Colours,色,
+scale,colours,"list<string>|call<hcl.colors, gray.colors, grey.colors, rainbow, heat.colors, terrain.colors, topo.colors, cm.colors, palette.colors, brewer.pal, viridis, magma, inferno, plasma, cividis, turbo>|r",Colours,色,
 scale,colors,list<string>,Colours,色,
 scale,option,string,Viridis option,viridis の種類,"A (magma), B (inferno), C (plasma), D (viridis), E (cividis)."
 scale,begin,number,Start of the palette,パレットの始まり,

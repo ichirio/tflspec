@@ -22,8 +22,9 @@
 #   partial  read as R (!r), or with R in it ({fn: dup_axis, args: {labels:
 #            !r scales::label_time()}}), or a warning of the check on it,
 #            and it draws the same (!r NULL and a number written as
-#            arithmetic, !r 1/5 or !r 2^(-2:2), are typed: the check
-#            judges them)
+#            arithmetic, !r 1/5 or !r 2^(-2:2), and texts built of
+#            constants, !r paste0("W", 1:4), are typed: the check judges
+#            them)
 #   no       an error of the check on it, the call not read as an item, or
 #            the example drawn otherwise (or not at all) with the code
 # An argument's coverage is its uses' mean (yes 1, partial 0.5); a
@@ -47,11 +48,14 @@ alias_of <- get(".schema_gg_alias", ns)
 r_number <- if (exists(".schema_r_number", ns)) get(".schema_r_number", ns) else function(v) NULL
 # (numbers written as arithmetic, !r 2^(-2:2): typed where a list<number> goes)
 r_numbers <- if (exists(".schema_r_numbers", ns)) get(".schema_r_numbers", ns) else function(v) NULL
+# (texts built of constants, !r paste0("W", seq(0, 24, by = 4)): typed where a list<string> goes)
+r_texts <- if (exists(".schema_r_texts", ns)) get(".schema_r_texts", ns) else function(v) NULL
 # the R in a value (any !r but NULL and a number), the first, or NULL
 r_in <- function(v) {
   if (inherits(v, "tfl_r")) {
     txt <- as.character(unclass(v))
-    return(if (identical(txt, "NULL") || !is.null(r_number(v)) || !is.null(r_numbers(v))) NULL else txt)
+    return(if (identical(txt, "NULL") || !is.null(r_number(v)) || !is.null(r_numbers(v)) ||
+                 !is.null(r_texts(v))) NULL else txt)
   }
   if (inherits(v, "tfl_call")) v <- v$args
   if (is.list(v)) for (e in v) if (!is.null(r <- r_in(e))) return(r)

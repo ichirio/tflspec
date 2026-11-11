@@ -81,7 +81,10 @@
 #'
 #' The types, in a short notation: `string`, `integer`, `number` (a
 #' number written as arithmetic of numbers, `!r 1/5`, is one; numbers so
-#' written, `!r 2^(-2:2)`, are a `list<number>`),
+#' written, `!r 2^(-2:2)`, are a `list<number>`; texts built of constants,
+#' `!r paste0("W", seq(0, 24, by = 4))` or `!r sprintf("Day \%d", 1:10)`,
+#' are a `list<string>`, kept as written and judged by the check: one that
+#' does not evaluate is an error),
 #' `logical`, `enum[a|b]`, `column`, `stat`, `template`, `r` (`!r`),
 #' `formula` (`!r`, written `~ <text>`), `guard` (`!r`, a two-sided
 #' `cond ~ "text"`), `function` (a function by its name, `mean_se` or
@@ -114,8 +117,12 @@
 #' `style_positive`, `base`, `width` ...); base R's that clinical figures write as
 #' a value are typed where they fit: `seq()` for breaks,
 #' `{fn: seq, args: {from: 0, to: 52, by: 4}}` written `seq(0, 52, by = 4)`;
-#' `alpha()` for a colour; grDevices' palettes, `hcl.colors()` ..., for a
-#' scale's colours), `list<T>` (a sequence), `vec<K, V>` (a map that is a
+#' `alpha()` for a colour; grDevices' palettes, `hcl.colors()` ...,
+#' `RColorBrewer::brewer.pal()` and viridisLite's `viridis()` ..., for a
+#' scale's colours; `data.frame()` of constants for a layer's `data`
+#' (reference lines with a legend), its columns of one length; a glm's
+#' family in `method.args`, `{family: binomial}` written bare or
+#' `{fn: binomial, args: {link: probit}}`), `list<T>` (a sequence), `vec<K, V>` (a map that is a
 #' named vector in R), `map<K, V>` (a map that is a named list),
 #' `rows<f1, f2, ...>` (a sequence of maps that is a data frame) and `T|U`
 #' (either).
@@ -505,6 +512,12 @@ tfl_schema_check <- function(item) {
         return(list(list(level = "error",
                          message = sprintf("%s has no function %s()", pkg, sub("^.*::", "", v$fn)))))
       }
+      # a layer's table of constants, data.frame(y = c(-30, 20)): its
+      # columns by name, of one length (or one that divides it)
+      if (identical(v$fn, "data.frame")) {
+        p <- .schema_check_data_frame(v$args %||% list())
+        if (length(p)) return(p)
+      }
       # a plotmath title, expression(AUC[0-24]): its one argument, an
       # expression R parses
       if (v$fn %in% .fig_plotmath_fns) {
@@ -528,6 +541,23 @@ tfl_schema_check <- function(item) {
   }
   if (is.list(v) && !is.object(v)) {
     return(do.call(c, c(list(list()), lapply(v, .schema_check_calls_in, figure = figure))))
+  }
+  list()
+}
+
+# data.frame()'s problems, as .schema_check_calls_in() says them
+.schema_check_data_frame <- function(a) {
+  if (!length(a)) {
+    return(list(list(level = "error",
+                     message = "data.frame() takes its columns by name: {fn: data.frame, args: {y: [-30, 20]}}")))
+  }
+  cols <- a[!names(a) %in% c("stringsAsFactors", "check.names", "row.names")]
+  lens <- vapply(cols, function(x) if (inherits(x, c("tfl_r", "tfl_call"))) NA_integer_ else length(x), 1L)
+  lens <- lens[!is.na(lens)]
+  if (length(lens) && (any(lens == 0L) || any(max(lens) %% lens != 0L))) {
+    return(list(list(level = "error", message = sprintf(
+      "data.frame(): its columns have %s values; each needs as many as the longest (or one)",
+      paste(sprintf("%s %d", names(lens), lens), collapse = ", ")))))
   }
   list()
 }
@@ -596,6 +626,11 @@ tfl_schema_check <- function(item) {
 
 # NULL when `v` (as the spec holds it) has the type, else what is wrong
 .schema_fits <- function(v, ty, a = "") {
+  # texts built of constants that do not evaluate (sprintf("%d", 1.5)):
+  # the code would stop there
+  if (.schema_has_list(ty) && !is.null(err <- .schema_r_texts(v, why = TRUE))) {
+    return(sprintf("is texts built by R that do not evaluate: %s", err))
+  }
   nx <- .schema_pure_r(ty)
   if (.schema_ok(v, ty, nx)) return(if (nx) .neutral_literal_msg(v, a))
   # a slot that takes only R: a string that is no neutral condition, and
@@ -631,7 +666,8 @@ tfl_schema_check <- function(item) {
   }
   if (k == "list") {
     # numbers written as arithmetic of numbers (!r 2^(-2:2), !r c(-10^(2:0), 0))
-    if (inherits(v, "tfl_r")) v <- .schema_r_numbers(v) %||% v
+    # and texts built of constants (!r paste0("W", seq(0, 24, by = 4)))
+    if (inherits(v, "tfl_r")) v <- .schema_r_numbers(v) %||% .schema_r_texts(v) %||% v
     if (inherits(v, c("tfl_r", "tfl_call"))) return(FALSE)
     el <- if (is.list(v)) v else as.list(v)
     return(all(vapply(el, function(e) .schema_ok(e, ty$args[[1L]], nx), NA)))
@@ -648,6 +684,11 @@ tfl_schema_check <- function(item) {
   }
   # a scalar; a number written as arithmetic of constants (!r 1/5, !r -0.4 * pi)
   if (k %in% c("number", "integer") && inherits(v, "tfl_r")) v <- .schema_r_number(v) %||% v
+  # a text built of constants (labs(caption = sprintf("N = %d", 120L)))
+  if (identical(k, "string") && inherits(v, "tfl_r")) {
+    tx <- .schema_r_texts(v)
+    if (length(tx) == 1L) v <- tx
+  }
   if (is.list(v) || inherits(v, c("tfl_r", "tfl_call")) || length(v) != 1L) return(FALSE)
   switch(k,
     logical = is.logical(v),
@@ -695,6 +736,51 @@ tfl_schema_check <- function(item) {
   if (is.null(e) || !ok(e)) return(NULL)
   n <- tryCatch(eval(e, baseenv()), error = function(err) NULL)
   if (is.numeric(n) && length(n) >= 1L && length(n) <= 1000L && !anyNA(n)) as.numeric(n)
+}
+
+# An !r expression that builds texts of constants only, as R writes a
+# title (sprintf("N = %d", 120L)) or a scale's labels (paste0("W", seq(0, 24, by = 4)), sprintf("Day %d", 1:10),
+# c("BL", paste("Week", c(4, 8)))): its functions and names are of the
+# list below, its numbers of a sequence at most 10000; the expression, or
+# NULL for any other
+.schema_r_texts_fns <- c("c", "paste", "paste0", "sprintf", "format", "formatC", "seq",
+                         "seq_len", "rep", "rev", "toupper", "tolower", "trimws", "round",
+                         ":", "+", "-", "*", "/", "^", "(")
+.schema_r_texts_names <- c("pi", "LETTERS", "letters", "month.abb", "month.name")
+
+.schema_r_texts_expr <- function(v) {
+  if (!inherits(v, "tfl_r")) return(NULL)
+  e <- tryCatch(str2lang(paste(as.character(unclass(v)), collapse = "\n")), error = function(err) NULL)
+  texts <- FALSE
+  ok <- function(x, big = FALSE) {
+    if (is.character(x)) {
+      texts <<- TRUE
+      return(length(x) == 1L)
+    }
+    if (is.numeric(x) || is.logical(x)) return(length(x) == 1L && (!big || is.na(x) || abs(x) <= 10000))
+    if (is.name(x)) {
+      texts <<- texts || !identical(as.character(x), "pi")
+      return(as.character(x) %in% .schema_r_texts_names)
+    }
+    if (!is.call(x) || !is.name(x[[1L]])) return(FALSE)
+    f <- as.character(x[[1L]])
+    if (!f %in% .schema_r_texts_fns) return(FALSE)
+    if (f %in% c("paste", "paste0", "sprintf", "format", "formatC", "toupper", "tolower")) texts <<- TRUE
+    all(vapply(as.list(x)[-1L], ok, NA, big = f %in% c("seq", "seq_len", "rep", ":")))
+  }
+  if (is.null(e) || !is.call(e) || !ok(e) || !texts) return(NULL)
+  e
+}
+
+# those texts (1 to 1000 of them, no NA), else NULL; `why` TRUE: the
+# error of an expression of that form that does not evaluate, as its text
+.schema_r_texts <- function(v, why = FALSE) {
+  e <- .schema_r_texts_expr(v)
+  if (is.null(e)) return(NULL)
+  r <- tryCatch(eval(e, baseenv()), error = function(err) structure(conditionMessage(err), class = "err"))
+  if (inherits(r, "err")) return(if (why) unclass(r))
+  if (why) return(NULL)
+  if (is.character(r) && length(r) >= 1L && length(r) <= 1000L && !anyNA(r)) r
 }
 
 .schema_show <- function(ty) {
@@ -915,6 +1001,12 @@ tfl_schema_check <- function(item) {
   if (is.null(ty)) return(FALSE)
   if (identical(ty$kind, kind)) return(TRUE)
   any(vapply(ty$args, function(t) is.list(t) && .schema_has(t, kind), NA))
+}
+
+# whether one of a type's alternatives is a list<>
+.schema_has_list <- function(ty) {
+  alts <- if (identical(ty$kind, "either")) ty$args else list(ty)
+  any(vapply(alts, function(t) identical(t$kind, "list"), NA))
 }
 
 .schema_scalar <- function(ty) ty$kind %in% .schema_scalars

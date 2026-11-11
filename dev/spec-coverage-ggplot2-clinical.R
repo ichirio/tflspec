@@ -592,3 +592,145 @@ fig_dose_prop <- ggplot(dp, aes(x = DOSE, y = AUC)) +
   labs(x = expression(paste("Dose (", mu, "g/kg)")),
        title = quote(log(AUC) == beta[0] + beta[1] %.% log(Dose))) +
   theme_bw()
+
+# ---- round 14 (2026-11-11) ----
+
+# a pie of the best overall response, one per treatment
+rp <- data.frame(TRTA = rep(arm, each = 4), AVALC = rep(c("CR", "PR", "SD", "PD"), 3),
+                 n = c(2, 8, 10, 10, 5, 12, 8, 5, 8, 14, 6, 2))
+rp$AVALC <- factor(rp$AVALC, levels = c("CR", "PR", "SD", "PD"))
+fig_pie <- ggplot(rp, aes(x = "", y = n, fill = AVALC)) +
+  geom_col(width = 1, colour = "white") +
+  geom_text(aes(label = n), position = position_stack(vjust = 0.5), colour = "white", size = 3) +
+  coord_polar(theta = "y", start = 0, direction = -1) +
+  facet_wrap(vars(TRTA), nrow = 1) +
+  scale_fill_viridis_d(option = "D", end = 0.85, direction = -1, name = "BOR") +
+  theme_void() +
+  theme(legend.position = "bottom", strip.text = element_text(size = 9, margin = margin(b = 4)))
+
+# lab values over time, one panel per parameter, labels of the visits by paste0()
+lp <- expand.grid(USUBJID = 1:15, PARAM = c("Alanine Aminotransferase (U/L)", "Creatinine (umol/L)"),
+                  AVISITN = seq(0, 24, by = 4))
+lp$AVAL <- stats::rlnorm(nrow(lp), 3, 0.3)
+fig_lab_panels <- ggplot(lp, aes(x = AVISITN, y = AVAL, group = USUBJID)) +
+  geom_line(colour = "grey70", linewidth = 0.3) +
+  stat_summary(aes(group = 1), fun = median, geom = "line", linewidth = 1, colour = "black") +
+  facet_wrap(~PARAM, scales = "free_y", ncol = 2, strip.position = "left",
+             labeller = labeller(PARAM = label_wrap_gen(width = 20))) +
+  scale_x_continuous(breaks = seq(0, 24, by = 4), labels = paste0("W", seq(0, 24, by = 4))) +
+  scale_y_continuous(n.breaks = 6) +
+  labs(x = NULL, y = NULL, tag = "A") +
+  theme_bw() +
+  theme(strip.placement = "outside", strip.background = element_blank(),
+        panel.spacing.x = unit(1, "lines"), axis.ticks.length = unit(-0.1, "cm"),
+        plot.tag.position = "topleft")
+
+# a dot plot of the individual values with the median
+fig_dot <- ggplot(lb[lb$AVISIT == "Week 8", ], aes(x = TRTA, y = AVAL)) +
+  geom_dotplot(binaxis = "y", stackdir = "center", dotsize = 0.5, binwidth = 0.2, fill = "grey60") +
+  stat_summary(fun = median, fun.min = median, fun.max = median, geom = "crossbar",
+               width = 0.5, linewidth = 0.3) +
+  scale_x_discrete(labels = c(Placebo = "PBO", "Drug 10 mg" = "10 mg", "Drug 20 mg" = "20 mg"),
+                   guide = guide_axis(n.dodge = 1, angle = 0)) +
+  labs(x = NULL, y = "ALT (U/L) at week 8") +
+  theme_classic(base_size = 11, base_family = "sans")
+
+# a calendar of the dosing over months
+ds <- data.frame(USUBJID = rep(sprintf("S%02d", 1:8), each = 2),
+                 date = as.Date("2025-01-15") + c(0, 120, 10, 200, 20, 90, 30, 250,
+                                                  40, 180, 50, 160, 60, 300, 70, 140))
+ds$what <- rep(c("First dose", "Last dose"), 8)
+fig_calendar <- ggplot(ds, aes(x = date, y = USUBJID, shape = what)) +
+  geom_line(aes(group = USUBJID), colour = "grey50") +
+  geom_point(size = 2) +
+  scale_x_date(date_breaks = "2 months", date_labels = "%b %Y", date_minor_breaks = "1 month",
+               expand = expansion(add = 15)) +
+  scale_shape_manual(values = c("First dose" = 16, "Last dose" = 4), name = NULL) +
+  scale_y_discrete(limits = rev) +
+  labs(x = NULL, y = "Subject") +
+  theme_minimal() +
+  theme(legend.position = "top", legend.direction = "horizontal",
+        panel.grid.major.y = element_blank(), axis.text.x = element_text(angle = 30, hjust = 1))
+
+# the correlation of the PK and the response, a bubble by dose
+pr <- data.frame(CMAX = stats::rlnorm(60, 4, 0.5), DOSE = rep(c(10, 30, 100), 20))
+pr$RESP <- 20 + 10 * log(pr$CMAX) + stats::rnorm(60, 0, 5)
+fig_bubble <- ggplot(pr, aes(x = CMAX, y = RESP, colour = factor(DOSE))) +
+  geom_point(aes(size = DOSE), alpha = 0.6) +
+  geom_smooth(aes(group = 1), method = "loess", formula = y ~ x, span = 0.9, se = FALSE,
+              colour = "black", linewidth = 0.5, show.legend = FALSE) +
+  scale_size_area(max_size = 6, breaks = c(10, 30, 100)) +
+  scale_colour_brewer(palette = "Set1", name = "Dose (mg)") +
+  scale_x_continuous(transform = "log10", labels = scales::label_comma()) +
+  guides(size = "none", colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
+  labs(x = "Cmax (ng/mL)", y = "Response") +
+  theme_light() +
+  theme(legend.position = "right", legend.key = element_blank())
+
+# a heat map of the AE incidence by preferred term and arm, text in the tiles
+hi <- expand.grid(AEDECOD = c("Nausea", "Headache", "Fatigue", "Rash", "Diarrhoea"), TRTA = arm)
+hi$pct <- round(stats::runif(nrow(hi), 0, 30), 1)
+fig_heat_text <- ggplot(hi, aes(x = TRTA, y = AEDECOD, fill = pct)) +
+  geom_tile(colour = "white", linewidth = 0.5) +
+  geom_text(aes(label = sprintf("%.1f", pct), colour = pct > 20), size = 3, show.legend = FALSE) +
+  scale_fill_distiller(palette = "YlOrRd", direction = 1, limits = c(0, 30), name = "%") +
+  scale_colour_manual(values = c("FALSE" = "black", "TRUE" = "white")) +
+  scale_x_discrete(position = "top", expand = c(0, 0)) +
+  scale_y_discrete(expand = c(0, 0)) +
+  guides(fill = guide_colourbar(direction = "horizontal", position = "bottom")) +
+  labs(x = NULL, y = NULL) +
+  theme_minimal() +
+  theme(legend.key.width = unit(2, "cm"), legend.key.height = unit(0.3, "cm"),
+        panel.grid = element_blank(), axis.ticks = element_blank())
+
+# subject profiles: change by visit, one panel per subject in a grid
+fig_profile <- ggplot(sp[sp$USUBJID %in% unique(sp$USUBJID)[1:6], ], aes(x = ADY, y = PCHG)) +
+  geom_area(fill = "grey85", alpha = 0.6) +
+  geom_line() +
+  geom_point(aes(shape = PCHG <= -30), size = 1.5) +
+  geom_hline(yintercept = c(-30, 20), linetype = "dashed") +
+  facet_grid(rows = vars(USUBJID), switch = "y", space = "fixed", scales = "fixed") +
+  scale_shape_manual(values = c(1, 16), labels = c("No response", "Response"), name = NULL) +
+  scale_y_continuous(position = "right", breaks = c(-60, -30, 0, 20, 60)) +
+  coord_cartesian(ylim = c(-80, 80), expand = TRUE) +
+  labs(x = "Week", y = "% change") +
+  theme_bw(base_size = 9) +
+  theme(strip.text.y.left = element_text(angle = 0), legend.position = "bottom",
+        legend.margin = margin(0, 0, 0, 0), panel.border = element_rect(colour = "grey50"))
+
+# a stacked proportion of the visits by category, a dodge in the text
+fig_area <- ggplot(rs, aes(x = TRTA, fill = AVALC)) +
+  geom_bar(position = position_stack(reverse = TRUE), width = 0.6, colour = "black", linewidth = 0.2) +
+  geom_text(aes(label = after_stat(count)), stat = "count",
+            position = position_stack(vjust = 0.5, reverse = TRUE), size = 3) +
+  scale_fill_grey(start = 0.9, end = 0.4) +
+  coord_flip() +
+  labs(x = NULL, y = "Number of subjects", fill = "Response") +
+  theme_bw() +
+  theme(legend.position = "top", legend.title.position = "left", legend.byrow = TRUE,
+        legend.text = element_text(size = 8), aspect.ratio = 0.4)
+
+# exposure-response: the probability of a response by a logistic fit
+pr$RESPFL <- as.integer(pr$RESP > 60)
+fig_er_logit <- ggplot(pr, aes(x = CMAX, y = RESPFL, colour = factor(DOSE))) +
+  geom_jitter(width = 0, height = 0.03, alpha = 0.5) +
+  geom_smooth(aes(group = 1), method = "glm", method.args = list(family = binomial),
+              formula = y ~ x, colour = "black", fill = "grey80") +
+  xlim(c(0, 250)) +
+  scale_y_continuous(breaks = c(0, 0.5, 1), labels = c("No response", "50%", "Response")) +
+  scale_colour_manual(values = RColorBrewer::brewer.pal(3, "Dark2"), name = "Dose (mg)") +
+  labs(x = "Cmax (ng/mL)", y = "Probability of response") +
+  theme_bw()
+
+# a spider plot whose reference lines have a legend, the CI band kept above -100
+sp2 <- sp[sp$USUBJID %in% unique(sp$USUBJID)[1:8], ]
+fig_spider_ref <- ggplot(sp2, aes(x = ADY, y = PCHG, group = USUBJID)) +
+  geom_ribbon(aes(ymin = pmax(PCHG - 15, -100), ymax = PCHG + 15), fill = "grey90", colour = NA) +
+  geom_line(aes(colour = TRTA)) +
+  geom_hline(aes(yintercept = y, linetype = what),
+             data = data.frame(y = c(20, -30), what = c("PD (+20%)", "PR (-30%)"))) +
+  scale_colour_manual(values = setNames(c("grey40", "#1F78B4", "#E31A1C"), arm), name = NULL) +
+  scale_linetype_manual(values = c("dashed", "dotted"), name = NULL) +
+  labs(x = "Week", y = "Change in tumour size (%)") +
+  theme_bw() +
+  theme(legend.position = "bottom", legend.box = "vertical")

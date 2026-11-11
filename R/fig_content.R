@@ -249,7 +249,10 @@ tfl_plot <- function(name, items = list(), from = "own") {
   }
   # an argument R takes as a list (fun.args = list(mult = 1.96))
   if (arg %in% .fig_list_args && is.list(v)) {
-    el <- lapply(seq_along(v), function(i) .fig_value_lang(v[[i]], names(v)[i] %||% ""))
+    el <- lapply(seq_along(v), function(i) {
+      k <- names(v)[i] %||% ""
+      .fig_value_lang(v[[i]], k, type = .fig_list_arg_type(arg, k))
+    })
     names(el) <- names(v)
     return(as.call(c(list(as.name("list")), el)))
   }
@@ -293,6 +296,10 @@ tfl_plot <- function(name, items = list(), from = "own") {
                          palette.colors = c("n", "palette"), gray.colors = "n",
                          grey.colors = "n", rainbow = "n", heat.colors = "n",
                          terrain.colors = "n", topo.colors = "n", cm.colors = "n",
+                         "RColorBrewer::brewer.pal" = c("n", "name"),
+                         "viridisLite::viridis" = "n", "viridisLite::magma" = "n",
+                         "viridisLite::inferno" = "n", "viridisLite::plasma" = "n",
+                         "viridisLite::cividis" = "n", "viridisLite::turbo" = "n",
                          "scales::rescale" = "x", "scales::label_math" = "expr",
                          "scales::math_format" = "expr", "scales::trans_breaks" = c("trans", "inv"),
                          "scales::trans_format" = c("trans", "format"),
@@ -317,6 +324,19 @@ tfl_plot <- function(name, items = list(), from = "own") {
 # written list(...) and read back from it
 .fig_list_args <- c("fun.args", "method.args", "args", "dparams", "override.aes",
                     "x_scales", "y_scales", "stats_label")
+
+# the type of a name in such a list, where it is code: a glm's family by
+# its function's name, written bare (method.args = list(family =
+# binomial)), or its call (binomial(link = "probit")); NULL for any other
+.fig_glm_families <- c("binomial", "gaussian", "Gamma", "inverse.gaussian", "poisson",
+                       "quasibinomial", "quasipoisson", "quasi")
+.fig_list_arg_type <- function(arg, key) {
+  if (identical(arg, "method.args") && identical(key, "family")) {
+    fam <- paste(.fig_glm_families, collapse = ", ")
+    return(.schema_type(sprintf("function<%s>|call<%s>", fam, fam)))
+  }
+  NULL
+}
 
 # a function as the code calls it: bare for the packages the figure's
 # program attaches (ggplot2, ggsurvfit, patchwork) and tflspec's own,
@@ -367,7 +387,10 @@ tfl_plot <- function(name, items = list(), from = "own") {
   key <- .fig_positional_key(it$fn)
   if (!is.null(key) && key %in% names(a) && !inherits(a[[key]], c("tfl_r", "tfl_call"))) {
     i <- match(key, names(args))
-    pos <- lapply(unname(as.list(a[[key]])), .fig_value_lang, arg = key, objects = obj)
+    # (an open end NA, as R writes it: xlim(0, NA), not NA_real_)
+    pos <- lapply(unname(as.list(a[[key]])), function(e) {
+      if (.fig_is_na_end(e)) NA else .fig_value_lang(e, arg = key, objects = obj)
+    })
     args <- c(args[seq_len(i - 1L)], pos, args[-seq_len(i)])
   }
   as.call(c(list(.fig_fn_sym(it$fn)), args))
@@ -506,7 +529,8 @@ tfl_plot <- function(name, items = list(), from = "own") {
     }
     if (identical(f, "list") && arg %in% .fig_list_args && length(a) &&
         all(nzchar(names(a) %||% rep("", length(a))))) {
-      vals <- lapply(stats::setNames(names(a), names(a)), function(k) .fig_lang_value(a[[k]], k))
+      vals <- lapply(stats::setNames(names(a), names(a)),
+                     function(k) .fig_lang_value(a[[k]], k, type = .fig_list_arg_type(arg, k)))
       if (!any(vapply(vals, inherits, NA, "tfl_r"))) return(vals)
     }
     # a negative number, a vector of constants (a negative number among
@@ -523,6 +547,17 @@ tfl_plot <- function(name, items = list(), from = "own") {
         all(vapply(a, function(e) is.atomic(e) && length(e) == 1L && !is.null(e), NA)) &&
         !arg %in% .fig_list_args) {
       return(lapply(a, identity))
+    }
+    # setNames(c("red", "blue"), c("A", "B")): the named vector, a map as
+    # c(A = "red", B = "blue") is
+    if (f %in% c("setNames", "stats::setNames") && length(a) == 2L) {
+      v <- .fig_lang_value(a[[1L]])
+      k <- .fig_lang_value(a[[2L]])
+      if (is.atomic(v) && is.character(k) && length(v) == length(k) && length(k) &&
+          !anyNA(k) && all(nzchar(k)) && !anyDuplicated(k) && is.null(names(v)) &&
+          !arg %in% .fig_list_args) {
+        return(stats::setNames(as.list(v), k))
+      }
     }
     # 1:5 (whole numbers): the numbers
     if (identical(f, ":") && all(vapply(a, function(e) is.numeric(e) && length(e) == 1L &&
@@ -623,6 +658,11 @@ tfl_plot <- function(name, items = list(), from = "own") {
   key <- .fig_positional_key(f)
   if (any(!nzchar(nm)) && !is.null(key) && !key %in% nm) {
     pos <- lapply(a[!nzchar(nm)], .fig_lang_value, arg = key)
+    # one vector of constants, xlim(c(0, 52)): its values
+    if (length(pos) == 1L && is.atomic(pos[[1L]]) && length(pos[[1L]]) > 1L &&
+        !is.object(pos[[1L]]) && is.null(names(pos[[1L]]))) {
+      pos <- as.list(pos[[1L]])
+    }
     if (all(vapply(pos, function(v) is.atomic(v) && length(v) == 1L && !is.object(v), NA))) {
       a <- c(a[nzchar(nm)], stats::setNames(list(as.call(c(list(as.name("c")), unname(pos)))), key))
       nm <- names(a)
@@ -719,7 +759,7 @@ tfl_plot <- function(name, items = list(), from = "own") {
   fun <- .fig_find_fun(f)
   if (!is.null(fun)) return(fun)
   if (identical(f, "seq")) return(seq.default)
-  for (pkg in c("base", "grDevices")) {
+  for (pkg in c("base", "grDevices", "stats")) {
     if (exists(f, envir = asNamespace(pkg), inherits = FALSE)) {
       fun <- get(f, envir = asNamespace(pkg))
       if (is.function(fun)) return(fun)

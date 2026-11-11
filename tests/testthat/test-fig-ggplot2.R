@@ -49,7 +49,8 @@ test_that("a geom drawn by another stat takes that stat's parameters (geom_step(
 
 test_that("a list argument is written list() and read back as a map", {
   e <- .fig_item_lang(tfl_item("geom_smooth", list(method = "glm", method.args = list(family = "binomial"))))
-  expect_identical(.fig_deparse(e), "geom_smooth(method = \"glm\", method.args = list(family = \"binomial\"))")
+  # (a glm's family by its name is its function, written bare)
+  expect_identical(.fig_deparse(e), "geom_smooth(method = \"glm\", method.args = list(family = binomial))")
   back <- .fig_lang_item(str2lang("stat_summary(fun.data = mean_cl_normal, fun.args = list(conf.int = 0.9))"))
   expect_identical(back$args$fun.args, list(conf.int = 0.9))
   # a function by its name: the name (written back bare)

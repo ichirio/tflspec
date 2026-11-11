@@ -1389,6 +1389,102 @@ figure's own object (`km[km$censored, ]`), a scale's labels built by R
 mean(d$y)`, the data's own object), labels by `paste("Visit", 1:6)`,
 `guide_legend(byrow =)` (deprecated since 3.5.0).
 
+### Round 14 (2026-11-11): what programmers build of constants
+
+The three measures were at their ceiling (arguments 100%, examples
+97.6%, clinical 99.4%).  This round adds ten everyday figures to the
+clinical measure and runs two probes of one-line figures (85 figures,
+151 calls).  They found that the gaps left are values built of
+constants in the figure's own code:
+
+- a scale's labels by `paste0()` / `sprintf()` (`labels = paste0("W", seq(0, 24, by = 4))`)
+- `xlim(c(0, 250))`, which was read as R as a whole call
+- reference lines with a legend, whose `data` is `data.frame(y = c(20, -30), what = c(...))`
+- a logistic fit's `method.args = list(family = binomial)`
+- colours by `RColorBrewer::brewer.pal()` or `viridisLite::viridis()`, and by `setNames(c(...), c(...))`
+- a CI band kept in its range, `aes(ymin = pmax(lower, 0))`, and a t-based CI, `aes(ymin = mean - qt(0.975, n - 1) * se)`
+
+| Measure | Before | After |
+|---|---:|---:|
+| **Clinical figures, 50 (ten new, below; weighted)** | **97.7%** (uses 947 / 13 / 1) | **99.4%** (955 / 6 / 0) |
+| clinical: geom_*() | 98.3% | 99.1% |
+| clinical: scale_*() | 95.4% | 99.8% |
+| clinical: stat_*() (shown apart) | 100.0% | 100.0% |
+| Probes, 85 one-line figures (not committed) | 94.7% of uses (249 / 13 / 1) | 99.2% (261 / 2 / 0) |
+| ggplot2's own examples | 97.6% (1203 / 66 / 3) | 97.6% (1204 / 65 / 3) |
+| ggplot2's arguments (3409) and aesthetics (826), the extensions (351), scales' helpers (138) | 100% | 100% |
+
+(The examples gain `labs(alt = paste("...", "..."))`: a text built of
+constants is a text where one goes.)
+
+The new figures in the clinical measure (50 figures, 391 calls, 961 uses):
+
+- `fig_pie`: best overall response as pies, `coord_polar(theta = "y", direction = -1)`, `theme_void()`
+- `fig_lab_panels`: lab values by parameter, `facet_wrap(strip.position = "left", labeller = labeller(PARAM = label_wrap_gen(20)))`, labels by `paste0()`, `labs(tag =)`, inward ticks
+- `fig_dot`: `geom_dotplot(binaxis = "y", stackdir = "center")` with the median as a crossbar
+- `fig_calendar`: first and last doses on a date axis, `date_breaks` / `date_labels` / `date_minor_breaks`
+- `fig_bubble`: exposure and response, `scale_size_area()`, `transform = "log10"`, `guide_legend(override.aes =)`
+- `fig_heat_text`: AE incidence as a heat map with its numbers, `scale_fill_distiller()`, `guide_colourbar(position = "bottom")`
+- `fig_profile`: subject profiles, `facet_grid(rows = vars(), switch = "y")`, the y axis on the right
+- `fig_area`: counts stacked in reverse, `coord_flip()`, `legend.title.position`, `aspect.ratio`
+- `fig_er_logit`: a logistic exposure-response fit, `method.args = list(family = binomial)`, `xlim(c(0, 250))`, `RColorBrewer::brewer.pal()`
+- `fig_spider_ref`: reference lines with a legend from `data.frame()`, a band by `pmax()`, colours by `setNames()`
+
+Round 14:
+
+- **Texts built of constants** are typed where texts go, as numbers
+  written as arithmetic are (round 10): `!r paste0("W", seq(0, 24, by =
+  4))`, `!r sprintf("Day %d", 1:10)`, `!r c("BL", paste("Week", c(4,
+  8)))` count as a `list<string>`, and one of length one
+  (`sprintf("N = %d", 120L)`) as a `string`.
+  - The functions are `c()`, `paste()`, `paste0()`, `sprintf()`,
+    `format()`, `formatC()`, `seq()`, `seq_len()`, `rep()`, `rev()`,
+    `toupper()`, `tolower()`, `trimws()`, `round()`, `:` and the
+    arithmetic, over constants, `LETTERS`, `letters`, `month.abb` and
+    `month.name` (`.schema_r_texts()`); a sequence of at most 10000.
+  - The SPEC keeps them as written.  The check evaluates them: one that
+    does not evaluate (`sprintf("Day %d", 1.5)`) is an error, as the
+    code would stop there.  A column or an object in it is R, as before.
+- **`xlim(c(0, 52))`** reads as `limits: [0, 52]`, written `xlim(0, 52)`.
+  An open end is written `NA` (`ylim(-5, NA)`), not `NA_real_`.
+- **A layer's `data` takes a table of constants**:
+  `{fn: data.frame, args: {y: [20, -30], what: [PD, PR]}}`, written
+  `data.frame(y = c(20, -30), what = c("PD", "PR"))`.  The check says
+  when its columns' lengths do not fit (`y 3, g 2`).  (In YAML, quote a
+  column named `y`, `n`, `yes` or `no`, or read the spec with tflspec's
+  reader, which keeps them as names.)
+- **A glm's family in `method.args`** is its function: `method.args =
+  list(family = binomial)` reads as `{family: binomial}` and is written
+  bare; a link is the family's call, `{family: {fn: binomial, args:
+  {link: probit}}}`.  The names are `binomial`, `gaussian`, `Gamma`,
+  `inverse.gaussian`, `poisson`, `quasibinomial`, `quasipoisson` and
+  `quasi`.
+- **Colours by a palette of RColorBrewer or viridisLite** (both come
+  with ggplot2): `values` / `colours` take `{fn: RColorBrewer::brewer.pal,
+  args: {n: 3, name: Dark2}}` and `viridisLite::viridis()` / `magma()` /
+  `inferno()` / `plasma()` / `cividis()` / `turbo()`, written
+  `RColorBrewer::brewer.pal(3, "Dark2")`.  A function the package does
+  not have is an error.
+- **`setNames(c("grey40", "red"), c("Placebo", "Drug"))`** reads as the
+  map `{Placebo: grey40, Drug: red}`, written `c(Placebo = "grey40", Drug =
+  "red")`.  Names from an object stay R.
+- **A mapping takes `pmax()`, `pmin()`, `cumsum()`, `qt()` and
+  `qnorm()` at its top and inside**: `ymin: pmax(lower, 0)`, `ymin: mean
+  - qt(0.975, n - 1) * se`.
+
+**The generated code changes** for one existing form: `method.args:
+{family: binomial}` (any of the names above) was written `family =
+"binomial"` and is now written `family = binomial`.  `glm()` takes both,
+so the fit is the same.  No template or snapshot of this repo writes it;
+one test (`test-fig-ggplot2.R`) was updated.
+
+What is left (partial), clinical: a layer's data as a subset of the
+figure's own object (`km[km$censored, ]`), colours named by an object
+(`setNames(cols, arm)`), the deprecated `guide_legend(title.position =)`.
+Probes: date breaks by `seq(as.Date(...), by = "1 week", ...)` (a date
+scale's `date_breaks: 1 week` is the typed form), the deprecated
+`guide_legend(byrow =)`.
+
 ### The extension packages (ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale, patchwork)
 
 The same measure, the same file (`package` says which), over the
