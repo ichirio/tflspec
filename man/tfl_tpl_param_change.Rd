@@ -17,7 +17,7 @@ The table template \code{param_change}, layout \code{summary}. Its program is on
    \code{where} \tab other \tab call \tab  \tab  \tab the records kept (R), e.g. ANL01FL == "Y" \cr
    \code{by} \tab required \tab call \tab  \tab  \tab the column variable (the arms); not a default and not the study's treatment \cr
    \code{layout} \tab other \tab call \tab cols \tab  \tab cols: each arm's value and change side by side; rows: the value's rows, then the change's, under each visit \cr
-   \code{param_order} \tab other \tab call \tab PARAMN \tab  \tab the parameters' order variable; NULL: by name \cr
+   \code{param_order} \tab other \tab call \tab PARAMN \tab  \tab the parameters' order variable; NULL: by their PARAMCD \cr
    \code{visit_order} \tab other \tab call \tab AVISITN \tab  \tab the visits' order variable; NULL: by name \cr
    \code{baseline} \tab other \tab call \tab FALSE \tab  \tab TRUE: the baseline's rows (BASE) before the value's \cr
    \code{baseline_label} \tab other \tab call \tab Baseline \tab  \tab the baseline's heading \cr
@@ -31,6 +31,7 @@ The table template \code{param_change}, layout \code{summary}. Its program is on
    \code{header_n} \tab other \tab call \tab set \tab  \tab the arm headings' N: "set": the arm's subjects in the analysis set; "none" or unset: no N \cr
    \code{param_page} \tab other \tab call \tab TRUE \tab  \tab TRUE: a page a parameter, named in the titles by 'param_heading' \cr
    \code{param_heading} \tab other \tab call \tab Parameter: \{value\} \tab  \tab a parameter's page name ('\{value\}': the parameter); the last title line, or where the title line '\{PAGE_HEADING\}' is \cr
+   \code{param_labels} \tab other \tab call \tab  \tab  \tab each parameter's text by its PARAMCD \{GLUC: "Glucose (mg/dL)"\}; given by name, merged; NULL: the study's PARAMCD code list's labels, else the codes print \cr
    \code{heading} \tab other \tab call \tab  \tab  \tab the label column's heading \cr
    \code{stub_name} \tab other \tab call \tab study: plan_stub.name, no fallback \tab plan_stub.name \tab the row-title column's name (plan_stub(name = )) \cr
    \code{stub_before} \tab other \tab call \tab study: plan_stub.before, no fallback \tab plan_stub.before \tab TRUE: the row-title column before the row keys (plan_stub(before = )) \cr

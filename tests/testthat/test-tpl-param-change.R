@@ -2,7 +2,10 @@
 
 pc_args <- list(population = "SAF", by = "TRT01A", data = "ADLB", params = c("ALT", "AST"),
                 visits = c("BASELINE", "CYCLE 2 DAY 1", "CYCLE 9 DAY 1", "CYCLE 10 DAY 1"),
-                param_order = NULL)
+                param_order = NULL,
+                # (the parameters' text: the table's, outside the ARD, canon 1.42)
+                param_labels = list(ALT = "Alanine Aminotransferase (U/L)",
+                                    AST = "Aspartate Aminotransferase (U/L)"))
 
 # the ARD as the study's program makes it (its analysis data's steps)
 pc_ard <- function(x) {
@@ -17,11 +20,11 @@ pc_ard <- function(x) {
   chg <- adlb_saf[!is.na(adlb_saf$CHG), ]
   if (length(d[[3L]]$derive)) chg$AVISIT <- droplevels(chg$AVISIT)
   st <- ~ cards::continuous_summary_fns(c("N", "mean", "sd", "median", "min", "max"))
+  # (as the template's ARD: by PARAMCD; its text, PARAM, is the table's)
   cards::bind_ard(
     cards::ard_tabulate(adsl_saf, variables = TRT01A),
-    drop_empty_groups(cards::ard_summary(adlb_saf, by = c(TRT01A, PARAM, PARAMCD, AVISIT), variables = AVAL,
-                                         statistic = st)),
-    drop_empty_groups(cards::ard_summary(chg, by = c(TRT01A, PARAM, PARAMCD, AVISIT), variables = CHG,
+    cards::ard_summary(adlb_saf, by = c(TRT01A, PARAMCD, AVISIT), variables = AVAL, statistic = st),
+    drop_empty_groups(cards::ard_summary(chg, by = c(TRT01A, PARAMCD, AVISIT), variables = CHG,
                                          statistic = st)))
 }
 
@@ -46,13 +49,27 @@ test_that("expanded: the records kept, the visits in their order, the change's o
   expect_identical(as.character(d[[3L]]$derive), "AVISIT = droplevels(AVISIT)")
   an <- x$ard$analyses
   expect_identical(vapply(an, `[[`, "", "id"), c("GROUPN", "VALUE", "CHANGE"))
-  # (PARAMCD with PARAM: a parameter's own digits by its code, Q6; its empty pairings dropped)
-  expect_identical(an[[2L]]$by, c("TRT01A", "PARAM", "PARAMCD", "AVISIT"))
-  expect_identical(as.character(an[[2L]]$post), "drop_empty_groups()")
+  # (the parameter by its code, PARAMCD, user 11-11: no PARAM x PARAMCD
+  # crossing, so the value keeps an arm's 0 at a visit; its text, PARAM, is
+  # the table's, outside the ARD, canon 1.42)
+  expect_identical(an[[2L]]$by, c("TRT01A", "PARAMCD", "AVISIT"))
+  expect_null(an[[2L]]$post)
+  pl <- function(y) Filter(function(i) i$fn == "plan_labels" && !is.null(i$args$PARAMCD), y$content)
+  # no text given: no item, the codes print
+  pc0 <- pc_args[setdiff(names(pc_args), "param_labels")]
+  expect_length(pl(tfl_template_expand("param_change", pc0)), 0L)
+  # the report's text, or the study's code list's
+  w <- tfl_template_expand("param_change", c(pc0, list(param_labels = list(ALT = "ALT (U/L)"))))
+  lb <- Filter(function(i) i$fn == "plan_labels" && !is.null(i$args$PARAMCD), w$content)[[1L]]$args$PARAMCD
+  expect_identical(lb, list(ALT = "ALT (U/L)"))
+  w <- tfl_template_expand("param_change", pc0, codelists = list(PARAMCD = list(
+    list(value = "ALT", label = "Alanine Aminotransferase (U/L)"))))
+  lb <- Filter(function(i) i$fn == "plan_labels" && !is.null(i$args$PARAMCD), w$content)[[1L]]$args$PARAMCD
+  expect_identical(lb, list(ALT = "Alanine Aminotransferase (U/L)"))
   # no where of its own unless given: ANL01FL is not every study's
   y <- tfl_template_expand("param_change", list(population = "SAF", by = "TRT01A", data = "ADVS"))
   expect_null(y$ard$analysis_data[[2L]]$where)
-  expect_match(y$ard$analysis_data[[2L]]$derive, "PARAM = reorder_by(PARAM, PARAMN)",
+  expect_match(y$ard$analysis_data[[2L]]$derive, "PARAMCD = reorder_by(PARAMCD, PARAMN)",
                fixed = TRUE)
   z <- tfl_template_expand("param_change", list(population = "SAF", by = "TRT01A", data = "ADVS",
                                                 where = "ANL01FL == \"Y\"", visit_order = NULL))
@@ -356,8 +373,12 @@ test_that("cells as items ({label, template}); a page a parameter, named in the 
 
 test_that("a page a parameter: the parameter's name in the titles, once a page", {
   pc_skip()
-  x <- tfl_template_expand("param_change", pc_args)
-  p <- do.call(tpl_param_change, c(list(pc_ard(x)), pc_args))
+  # (the parameters' text from the study's PARAMCD code list)
+  cl <- list(PARAMCD = list(list(value = "ALT", label = "Alanine Aminotransferase (U/L)"),
+                            list(value = "AST", label = "Aspartate Aminotransferase (U/L)")))
+  pc0 <- pc_args[setdiff(names(pc_args), "param_labels")]
+  x <- tfl_template_expand("param_change", pc0, codelists = cl)
+  p <- do.call(tpl_param_change, c(list(pc_ard(x)), pc0, list(codelists = cl)))
   f <- tempfile(fileext = ".rtf")
   on.exit(unlink(f))
   suppressWarnings(suppressMessages(rtfreporter::generate_rtfreport(

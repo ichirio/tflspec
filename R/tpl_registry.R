@@ -2154,7 +2154,7 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
         "cols: each arm's value and change side by side;",
         "rows: the value's rows, then the change's, under each visit")),
       tfl_param("param_order", "PARAMN", unset = "step_off",
-                doc = "the parameters' order variable; NULL: by name"),
+                doc = "the parameters' order variable; NULL: by their PARAMCD"),
       tfl_param("visit_order", "AVISITN", unset = "step_off",
                 doc = "the visits' order variable; NULL: by name"),
       tfl_param("baseline", FALSE, type = "flag", unset = "step_off",
@@ -2182,6 +2182,9 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
                 doc = "TRUE: a page a parameter, named in the titles by `param_heading`"),
       tfl_param("param_heading", "Parameter: {value}",
                 doc = .tpl_param_heading_doc),
+      tfl_param("param_labels", NULL, doc = paste(
+        "each parameter's text by its PARAMCD {GLUC: \"Glucose (mg/dL)\"}; given by name, merged;",
+        "NULL: the study's PARAMCD code list's labels, else the codes print")),
       tfl_param("heading", NULL, doc = "the label column's heading")),
     .tpl_look_params(c("stub_name", "stub_before", "blanks", "blanks_first", "blanks_last",
                        "blanks_counted", "border_header", "widths", "max_rows")))
@@ -2199,6 +2202,15 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
   stats::setNames(lapply(x, `[[`, "template"), vapply(x, `[[`, "", "label"))
 }
 
+# A code list's code -> text (rows of value / label), the codes it labels
+.tpl_code_labels <- function(cl) {
+  if (!is.list(cl)) return(NULL)
+  v <- vapply(cl, function(r) as.character(r$value %||% NA), "")
+  l <- vapply(cl, function(r) as.character(r$label %||% NA), "")
+  k <- !is.na(v) & !is.na(l) & v != l
+  if (any(k)) stats::setNames(l[k], v[k])
+}
+
 .tpl_pc_body <- function(a, ctx) {
   tn <- ctx$template$name %||% "param_change"
   a$cells <- .tpl_demog_cells_sd(.tpl_cells_named(a$cells), a[["sd_missing"]])
@@ -2212,8 +2224,10 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
   }
   where <- c(a$where, inn("PARAMCD", a$params), inn("AVISIT", a$visits))
   # the parameters and visits as factors in their order: the ARD keeps it
+  # (the ARD's by is the parameter's code, PARAMCD, user 11-11; its text,
+  # PARAM, is plan_labels()' at the table: no PARAM x PARAMCD crossing)
   ord <- c(if (length(a$param_order))
-             sprintf("PARAM = reorder_by(PARAM, %s)", a$param_order),
+             sprintf("PARAMCD = reorder_by(PARAMCD, %s)", a$param_order),
            if (length(a$visit_order))
              sprintf("AVISIT = reorder_by(AVISIT, %s)", a$visit_order))
   nn <- function(x) Filter(Negate(is.null), x)
@@ -2230,18 +2244,19 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
     # change cells stay empty)
     nn(list(id = paste0(set, "_chg"), from = set, where = tfl_r("!is.na(CHG)"),
             derive = if (length(a$visit_order)) tfl_r("AVISIT = droplevels(AVISIT)"))))
-  # (PARAMCD rides along with PARAM, for a parameter's own digits by its
-  # code; the parameter's empty pairings, a factor's levels crossed, dropped)
   an <- function(id, data, v, ...) nn(list(
-    id = id, method = "continuous", data = data, by = c(a$by, "PARAM", "PARAMCD", "AVISIT"),
+    id = id, method = "continuous", data = data, by = c(a$by, "PARAMCD", "AVISIT"),
     variables = v, statistics = stats, purpose = "PRIMARY OUTCOME MEASURE", ...))
+  # the parameters' text (PARAM) for the table, outside the ARD (canon
+  # 1.42): the report's, else the study's PARAMCD code list's
+  ptext <- if (length(a$param_labels)) unlist(a$param_labels) else .tpl_code_labels(ctx$codelists[["PARAMCD"]])
   analyses <- c(
     list(list(id = "GROUPN", method = "categorical", data = subj, variables = a$by,
               purpose = "PRIMARY OUTCOME MEASURE")),
-    if (isTRUE(a$baseline)) list(an("BASELINE", set, "BASE", post = tfl_r("drop_empty_groups()"))),
+    if (isTRUE(a$baseline)) list(an("BASELINE", set, "BASE")),
     # (the change of a visit with no change records -- the baseline, whose
     # level a code list puts back -- has no rows: its cells stay empty)
-    list(an("VALUE", set, "AVAL", post = tfl_r("drop_empty_groups()")),
+    list(an("VALUE", set, "AVAL"),
          an("CHANGE", paste0(set, "_chg"), "CHG", post = tfl_r("drop_empty_groups()"))))
   # (`cells` unset: no plan_cells() item, its own default)
   cells_item <- if (length(a$cells)) list(tfl_item("plan_cells", list(continuous = as.list(a$cells))))
@@ -2249,7 +2264,7 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
   nline <- if (identical(hn, "none")) "" else "\n(N={n})"
   plan <- if (rows_in) {
     c(list(tfl_item("table_plan", list(cols = a$by, rows = list(
-        group1 = "PARAM", group2 = "AVISIT", group3 = "variable")))),
+        group1 = "PARAMCD", group2 = "AVISIT", group3 = "variable")))),
       cells_item, dg,
       list(tfl_item("plan_sort", list(keys = c("group1", "group2", "group3"))),
            # (one header row: the stub's heading is in it)
@@ -2259,7 +2274,7 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
              list(list(line = "1", cols = ".values", span = "each", text = paste0("{col}", nline))))))))
   } else {
     c(list(tfl_item("table_plan", list(cols = c(a$by, "variable"), rows = list(
-        group1 = "PARAM", group2 = "AVISIT")))),
+        group1 = "PARAMCD", group2 = "AVISIT")))),
       cells_item, dg,
       # the arm and its N over its two columns (the N is the arm's, not
       # a value's or a change's)
@@ -2290,6 +2305,7 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
     # (the stub's place: after the header, as before the look's items)
     if (!is.null(lk$stub)) list(lk$stub),
     if (length(labels)) list(tfl_item("plan_labels", list(variable = labels))),
+    if (length(ptext)) list(tfl_item("plan_labels", list(PARAMCD = as.list(ptext)))),
     unname(Filter(Negate(is.null), lk[c("blank", "widths", "paginate")])),
     if (isTRUE(a$param_page)) list(tfl_item("plan_hide", list(cols = list("group1")))),
     # (the style last: where the study's lands in the old order, so A = B)
