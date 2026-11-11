@@ -8,7 +8,7 @@ The table template \code{stf_t02_demog}, layout \code{summary}. Its program is o
 }
 \section{Parameters}{
 \tabular{llllll}{
-   Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
+   Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
    \code{continuous} \tab required \tab call \tab  \tab  \tab the continuous variables, in order (required: this or 'categorical') \cr
    \code{categorical} \tab required \tab call \tab  \tab  \tab the categorical variables, in order (required: this or 'continuous') \cr
    \code{by} \tab required \tab call \tab  \tab  \tab the column variable (the arms); not a default and not the study's treatment \cr

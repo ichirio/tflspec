@@ -31,7 +31,7 @@ tsr_without <- c("km_table", "stat_block")
 tsr_output <- function(nm) {
   tp <- tfl_templates()
   own <- if (any(vapply(tflspec:::.tpl_get(nm, "test")$params, function(p) isTRUE(p$hidden) &&
-                          identical(p$stage, "data"), NA))) {
+                          identical(p$step, "data"), NA))) {
     list(steps = list(list(step = "read", dataset = "ADTTE"), list(step = "param", value = "PFS")))
   }
   args <- utils::modifyList(

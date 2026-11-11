@@ -88,7 +88,7 @@
 #'   parameter stands for a step of the template (a Total column, a guard, a
 #'   style set), and the step is not made -- no code for it in the program;
 #'   `"stop"`: the body needs a value, so `!unset` stops, naming the parameter.
-#' @param stage Where its value is used: `"call"` (the default), an argument
+#' @param step Where its value is used: `"call"` (the default), an argument
 #'   of the template's call in a report's program, or `"data"`, a step that
 #'   prepares the analysis data (a figure's records, its analysis set),
 #'   written in the program's data steps, not in the call.
@@ -103,18 +103,18 @@
 #' @export
 tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study = NULL,
                       type = NULL, multiple = NULL, of = NULL, choices = NULL,
-                      fields = NULL, group = NULL, tier = NULL, stage = "call",
+                      fields = NULL, group = NULL, tier = NULL, step = "call",
                       unset = c("omit", "step_off", "stop"), maps_to = NULL) {
   unset <- match.arg(unset)
   if (!is.null(type)) type <- match.arg(type, .tpl_param_types)
   if (!is.null(tier)) tier <- match.arg(tier, c("required", "usual", "other"))
-  stage <- match.arg(stage, c("call", "data"))
+  step <- match.arg(step, c("call", "data"))
   .tpl_study_key_check(study, name)
   .tpl_maps_to_check(maps_to, name)
   structure(list(name = name, default = default, required = isTRUE(required),
                  doc = doc, study = study, type = type, multiple = multiple, of = of,
                  choices = choices, fields = fields, group = group, tier = tier,
-                 stage = stage, unset = unset, maps_to = maps_to),
+                 step = step, unset = unset, maps_to = maps_to),
             class = "tfl_param")
 }
 
@@ -298,8 +298,8 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   if (is.null(p$multiple)) p$multiple <- identical(p$type, "list") || length(p$default) > 1L
   # its tier: as declared, else required or other (a variant keeps its root's)
   if (is.null(p$tier)) p$tier <- if (isTRUE(p$required)) "required" else "other"
-  # (a parameter made before `stage`: an argument of the call)
-  if (is.null(p$stage)) p$stage <- "call"
+  # (a parameter made before `step`: an argument of the call)
+  if (is.null(p$step)) p$step <- "call"
   if (is.null(p$unset)) p$unset <- "omit"
   p
 }

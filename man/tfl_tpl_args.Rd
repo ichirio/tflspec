@@ -21,9 +21,9 @@ parameters taken from the report's \verb{population:}
 }
 \value{
 A data frame, one row a parameter in the template's order:
-\code{param}, \code{tier} (\code{"required"}, \code{"usual"}, \code{"other"}), \code{stage}
+\code{param}, \code{tier} (\code{"required"}, \code{"usual"}, \code{"other"}), \code{step}
 (\code{"call"}, an argument of the template's call, or \code{"data"}, of a step
-preparing the analysis data: \code{\link[=tfl_param]{tfl_param()}}\verb{(stage = )}), \code{type},
+preparing the analysis data: \code{\link[=tfl_param]{tfl_param()}}\verb{(step = )}), \code{type},
 \code{required}, \code{default} (the layout's, a short text; the reference for a
 parameter that has one), \code{variant} (the default a variant changes it
 to, else \code{NA}), \code{study} (the study standard's value, else \code{NA}),
