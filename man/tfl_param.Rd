@@ -17,7 +17,9 @@ tfl_param(
   fields = NULL,
   group = NULL,
   tier = NULL,
-  stage = "call"
+  step = "call",
+  unset = c("omit", "step_off", "stop"),
+  maps_to = NULL
 )
 }
 \arguments{
@@ -47,13 +49,20 @@ code:
 (\code{"settings.sd_missing"});
 \item \code{"<verb>.<argument>[.<name>]"}: that argument of the verb's item in
 \code{spec/defaults.yml}'s \verb{content:} (\code{"plan_cells.continuous"}; a
-named-dots argument's own name as the last part); patterns and a
-style set are not read;
+named-dots argument's own name as the last part); for a template
+whose set holds its \code{extends} (\code{\link[=tfl_template]{tfl_template()}}), of the layers the
+report's \code{extends} and style lay, nearest first, when its content
+step lays any (\code{\link[=tfl_study_value]{tfl_study_value()}}); otherwise patterns and a style
+set are not read;
 \item \code{"figure_style.<key>"} (\code{"figure_style.km.theme"}: the type, then the
 key): \code{defaults.yml}'s \verb{figure_style:}, else tflspec's built-in
 figure style;
 \item \code{"output.<field>"}: the report's own field (\code{"output.population"}).
 }
+
+A character vector names several keys one setting can be written under
+(\code{c("plan_cells.categorical", "plan_cells.default")}): read in order, the
+first the study has wins.
 
 Three forms: with \code{default}, the study's value else that fallback;
 with neither \code{default} nor \code{required}, the study's value else the
@@ -93,10 +102,22 @@ else none.}
 \code{"required"}, \code{"usual"} (shown with its default) or \code{"other"} (folded
 away); \code{NULL}: \code{"required"} when \code{required}, else \code{"other"}.}
 
-\item{stage}{Where its value is used: \code{"call"} (the default), an argument
+\item{step}{Where its value is used: \code{"call"} (the default), an argument
 of the template's call in a report's program, or \code{"data"}, a step that
 prepares the analysis data (a figure's records, its analysis set),
 written in the program's data steps, not in the call.}
+
+\item{unset}{What a report's (or a template default's) \code{!unset} does to this
+parameter, which the template says once, here: \code{"omit"} (the default): the
+argument is left out of the inner call it goes into; \code{"step_off"}: the
+parameter stands for a step of the template (a Total column, a guard, a
+style set), and the step is not made -- no code for it in the program;
+\code{"stop"}: the body needs a value, so \code{!unset} stops, naming the parameter.}
+
+\item{maps_to}{The plan arguments the parameter stands for
+(\code{"plan_blanks.where"}): when its value turns its step off (\code{!unset},
+\code{FALSE}, \code{"none"}), they are taken out of the study's layers too.
+\code{NULL}: none declared.}
 }
 \value{
 A \code{tfl_param}.

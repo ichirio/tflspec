@@ -47,7 +47,12 @@
 #' @param kind `"table"`, `"figure"` or `"listing"`.
 #' @param label,population The report's label and analysis set (`NA`: none).
 #' @param extends The files layered under this one, nearest first
-#'   (`"defaults"`, `"patterns/<name>"`); `"none"` for none.
+#'   (`"defaults"`, `"patterns/<name>"`); `"none"` for none; or a list by
+#'   step (`data`, `ard`, `content`, `page`), each such a value
+#'   (`list(content = "none")`), a step it does not name taking the
+#'   template's, else `"defaults"`.  `NULL`: not written (a template report
+#'   takes its template's); the default for a report with `template`, else
+#'   `"defaults"`.
 #' @param data What the report reads, its step 1 (a list: `source` --
 #'   `"ard"`, `"code"` or `"dataset"` -- and `object`, `steps`, `code`,
 #'   `dataset` ...).
@@ -110,7 +115,7 @@ tfl_item <- function(fn, args = list(), from = "own") {
 #' @export
 tfl_output <- function(id, kind = c("table", "figure", "listing"),
                        label = NA_character_, population = NA_character_,
-                       extends = "defaults", data = NULL, codelists = list(),
+                       extends = if (is.null(template)) "defaults", data = NULL, codelists = list(),
                        content = list(), page = list(), ard = NULL, template = NULL,
                        style = NULL) {
   if (!is.character(id) || length(id) != 1L || is.na(id) ||
@@ -124,10 +129,7 @@ tfl_output <- function(id, kind = c("table", "figure", "listing"),
     stop("tfl_output(): `content` is a list of tfl_item(), or one tfl_r() (the content as code).",
          call. = FALSE)
   }
-  if (!is.character(extends) || !length(extends)) {
-    stop("tfl_output(): `extends` is a character vector (\"defaults\", \"patterns/<name>\", \"none\").",
-         call. = FALSE)
-  }
+  extends <- .extends_value(extends, "tfl_output()")
   out <- structure(list(id = id, kind = kind,
                         label = .na_scalar(label), population = .na_scalar(population),
                         extends = extends, ard = ard, data = data, codelists = codelists,
@@ -156,7 +158,7 @@ tfl_output <- function(id, kind = c("table", "figure", "listing"),
 print.tfl_output <- function(x, ...) {
   cat("<tfl_output> ", x$id, " (", x$kind, ")",
       if (!is.na(x$label)) paste0(": ", x$label), "\n", sep = "")
-  cat("  extends: ", paste(x$extends, collapse = ", "), "\n", sep = "")
+  cat("  extends: ", .extends_text(x$extends), "\n", sep = "")
   if (length(x$ard$analyses)) {
     cat("  ard: ", paste(vapply(x$ard$analyses, function(a) a$id %||% "?", ""), collapse = ", "),
         "\n", sep = "")
@@ -235,6 +237,9 @@ tfl_read_output <- function(path) {
   if (!is.character(path) || length(path) != 1L || !file.exists(path)) {
     stop("tfl_read_output(): no file ", path, call. = FALSE)
   }
+  # (the file named in a value's message: .logical_strict(), .rounding_check())
+  .spec_read$file <- path
+  on.exit(.spec_read$file <- NULL, add = TRUE)
   y <- .yaml_read_file(path, handlers = .yaml_handlers())
   if (!is.list(y)) stop("tfl_read_output(): ", path, " is not a map.", call. = FALSE)
   if (!is.null(y$outputs)) {
@@ -355,10 +360,14 @@ tfl_read_output <- function(path) {
     lapply(y[["content"]] %||% list(), .item_from_list)
   # (a table's verb twice: one call, R/plan_repeats.R)
   if (y$kind %in% c("table", "listing")) content <- .plan_merge_repeats(content, y$id)
-  extends <- y$extends %||% "defaults"
+  # (a template report that writes no `extends` takes its template's: left
+  # NULL; any other report's is `defaults`)
+  extends <- y$extends
+  if (.is_tpl_spec(y$template) && .extends_old_constant(extends)) extends <- NULL
+  if (is.null(extends) && !.is_tpl_spec(y$template)) extends <- "defaults"
   out <- tfl_output(
     id = y$id, kind = y$kind, label = y$label, population = y$population,
-    extends = as.character(unlist(extends)),
+    extends = extends,
     ard = if (!is.null(y$ard)) .calls_in(y$ard),
     data = .data_steps_in(.calls_in(y$data)), codelists = .codelists_norm(y$codelists),
     content = content, page = .calls_in(y$page %||% list()))
@@ -394,7 +403,7 @@ tfl_read_output <- function(path) {
     if (identical(.schema_fn_name(names(el)), .spec_part$fn)) {
       return(tfl_item(names(el), .part_in(args), "own"))
     }
-    return(tfl_item(names(el), .rounding_lower(names(el), .neutral_in(names(el), .calls_in(args))), "own"))
+    return(tfl_item(names(el), .rounding_check(names(el), .logical_strict(names(el), .neutral_in(names(el), .calls_in(args)))), "own"))
   }
   if (is.list(el) && !is.null(el$fn)) {
     return(tfl_item(el$fn, .neutral_in(el$fn, .calls_in(el$args %||% list())), el$from %||% "own"))
@@ -402,14 +411,47 @@ tfl_read_output <- function(path) {
   stop("A content item is `- fn: {args}`.", call. = FALSE)
 }
 
-# plan_digits()'s rounding in either case ("SAS" is "sas"), held in lower
-# case: what the program writes, whatever rtfreporter reads it
-.rounding_lower <- function(fn, args) {
-  r <- args$rounding
-  if (identical(.schema_fn_name(fn), "plan_digits") && is.character(r) && length(r) == 1L) {
-    args$rounding <- tolower(r)
+# The file being read, for the message of a value that is not allowed
+.spec_read <- new.env(parent = emptyenv())
+
+.spec_read_file <- function() .spec_read$file %||% "the SPEC"
+
+# plan_digits()'s rounding is spelled as one of its values ("sas", "r"): a
+# value in another case ("SAS") stops, naming the values
+.rounding_check <- function(fn, args) {
+  if (identical(.schema_fn_name(fn), "plan_digits") && !is.null(args$rounding) &&
+      !inherits(args$rounding, c("tfl_r", "tfl_unset"))) {
+    .check_rounding(args$rounding, paste0(.spec_read_file(), ": plan_digits rounding"))
   }
   args
+}
+
+# A field that takes true or false (a `logical` in the schema) holds a
+# logical.  `yes` / `no` (what the yaml package itself writes for TRUE /
+# FALSE) become TRUE / FALSE there; any other text stops, naming the file,
+# the field and the value.  (Elsewhere `yes` / `no` stay text.)
+.logical_strict <- function(fn, args) {
+  ent <- tryCatch(tfl_schema(fn), error = function(e) NULL)
+  if (is.null(ent)) return(args)
+  for (a in names(args)) {
+    ty <- .schema_arg_type(ent, a)
+    if (!is.null(ty)) args[a] <- list(.logical_check(args[[a]], ty, a))
+  }
+  args
+}
+
+.logical_check <- function(v, ty, a) {
+  if (inherits(v, c("tfl_r", "tfl_call", "tfl_unset"))) return(v)
+  if (ty$kind == "logical") {
+    if (is.character(v) && length(v) == 1L) {
+      if (v %in% c("yes", "no")) return(identical(v, "yes"))
+      stop(.spec_read_file(), ": ", a, " takes true or false, not \"", v, "\"", call. = FALSE)
+    }
+  } else if (ty$kind %in% c("list", "vec", "map") && is.list(v) && !is.object(v)) {
+    el <- if (ty$kind == "list") ty$args[[1L]] else ty$args[[2L]]
+    for (i in seq_along(v)) if (!is.null(v[[i]])) v[[i]] <- .logical_check(v[[i]], el, a)
+  }
+  v
 }
 
 # every `{fn:, args:}` map inside a value as a tfl_call (recursively)
@@ -459,7 +501,12 @@ tfl_write_output <- function(x, path) {
   y <- list(id = x$id, kind = x$kind)
   if (!is.na(x$label)) y$label <- x$label
   if (!is.na(x$population)) y$population <- x$population
-  y$extends <- as.list(x$extends)
+  # (NULL: not written, the template's; a map by step as a map)
+  if (is.list(x$extends)) {
+    y$extends <- lapply(x$extends, function(v) if (identical(v, "none")) v else as.list(v))
+  } else if (!is.null(x$extends)) {
+    y$extends <- as.list(x$extends)
+  }
   if (length(x$ard)) y$ard <- .ard_seqs_out(.calls_out(x$ard))
   if (!is.null(x$data)) y$data <- .calls_out(x$data)
   if (length(x$codelists)) y$codelists <- x$codelists

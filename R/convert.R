@@ -68,7 +68,8 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
 #'   `planner` (tflplanner's `_tflplanner` sheet: the report list and the
 #'   setup code), `ard` (the ARD sheets), `listing` (`listings`,
 #'   `listing_cols`), `figures` (a figure's design list, by id), `study`
-#'   (study.yml's fields), `not_converted` ([tfl_sheets_from_yaml()]'s notes
+#'   (study.yml's fields), `templates` and `template_rows` (the template
+#'   reports: [tfl_sheets_from_yaml()]), `not_converted` ([tfl_sheets_from_yaml()]'s notes
 #'   on what the sheets could not hold: listed in `_not_converted.yml` too,
 #'   with one message saying how many).  What the app holds, or what the
 #'   workbooks read as.
@@ -296,6 +297,14 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
 
     out <- .conv_output(id, kind, entry, sp, ard, lf, figs[[id]], prow, scope, page_of, content_fn, note,
                         figures = figures)
+    # a report on the templates sheet is a template report again
+    tr <- sheets$templates
+    if (is.data.frame(tr) && id %in% tr$output_id) {
+      # (the items the other sheets would make of an empty report are not its own)
+      out$template <- .tpl_sheets_decode(tr, sheets$template_rows)[[id]]$template
+      out$content <- list()
+      out$data <- NULL
+    }
     f <- file.path(to, "spec", "outputs", paste0(id, ".yml"))
     tfl_write_output(out, f)
     files <- c(files, f)
@@ -568,6 +577,25 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   items
 }
 
+# A report's `extends` cell: a chain (`a | b`, `none`), or a map by step
+# (`content=none; page=patterns/a | defaults`)
+.conv_extends_cell <- function(cell, id) {
+  one <- function(x) {
+    x <- trimws(strsplit(x, "|", fixed = TRUE)[[1L]])
+    x[nzchar(x)]
+  }
+  if (!grepl("=", cell, fixed = TRUE)) return(one(cell))
+  parts <- trimws(strsplit(cell, ";", fixed = TRUE)[[1L]])
+  parts <- parts[nzchar(parts)]
+  if (!all(grepl("^[a-z]+ *=", parts))) {
+    stop("report ", sQuote(id), ": the `extends` cell is a chain (a | b) or steps (content=none; page=a | b).",
+         call. = FALSE)
+  }
+  out <- lapply(sub("^[a-z]+ *= *", "", parts), one)
+  names(out) <- trimws(sub("=.*$", "", parts))
+  .extends_value(out, sprintf("report %s", sQuote(id)))
+}
+
 # one report's file
 .conv_output <- function(id, kind, entry, sp, ard, lf, fig, prow, scope, page_of, content_fn, note,
                          figures = "design") {
@@ -577,11 +605,12 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   # the `extends` cell, when the report has one, says the chain as written
   # (`none` stays `none`); its first pattern has to be the `pattern` cell's
   if (nrow(rrow) && !is.null(rrow$extends) && !is.na(rrow$extends[1L]) && nzchar(trimws(rrow$extends[1L]))) {
-    chain <- trimws(strsplit(rrow$extends[1L], "|", fixed = TRUE)[[1L]])
-    chain <- chain[nzchar(chain)]
-    first <- grep("^patterns/", chain, value = TRUE)[1L]
+    chain <- .conv_extends_cell(rrow$extends[1L], id)
+    # (a map by step, `content=none; page=a | b`: as written, no pattern cell to agree with)
+    if (is.list(chain)) pattern <- NULL
+    first <- grep("^patterns/", unlist(chain), value = TRUE)[1L]
     said <- if (is.null(pattern)) NA_character_ else paste0("patterns/", sub("^@", "", pattern))
-    if (!identical(first, said)) {
+    if (!is.list(chain) && !identical(first, said)) {
       stop("report ", sQuote(id), ": the `pattern` cell (", if (is.na(said)) "blank" else sQuote(sub("^patterns/", "@", said)),
            ") and the `extends` cell (", sQuote(paste(chain, collapse = " | ")),
            ") name different patterns; change one of them.", call. = FALSE)

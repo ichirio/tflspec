@@ -43,10 +43,12 @@
   s
 }
 
-# Where a parameter ends: its study source ("plan_stub.indent"), else the
-# verb (and argument) its doc names, else NA
+# Where a parameter ends: its declared `maps_to` (tfl_param(maps_to = )),
+# else its study source ("plan_stub.indent"), else the verb (and argument)
+# its doc names (for the templates not yet migrated), else NA
 .tpl_maps_to <- function(p) {
-  if (!is.null(p$study)) return(p$study)
+  if (!is.null(p$maps_to)) return(if (length(p$maps_to)) paste(p$maps_to, collapse = ", ") else NA_character_)
+  if (!is.null(p$study)) return(paste(p$study, collapse = ", "))
   d <- p$doc %||% ""
   m <- regmatches(d, regexpr("plan_[a-z_]+\\(([a-z_]+) = ", d))
   if (length(m)) return(sub("\\(([a-z_]+) = $", ".\\1", m))
@@ -60,6 +62,7 @@
 # study has none) or "study: <key>, required" (a stop); the report's own
 # field as "report: <field>"
 .tpl_ref_text <- function(key, fallback = NA_character_, required = FALSE) {
+  key <- paste(key, collapse = ", ")
   src <- if (startsWith(key, "output.")) paste0("report: ", sub("^output[.]", "", key)) else
     paste0("study: ", key)
   if (isTRUE(required)) return(paste0(src, ", required"))
@@ -104,9 +107,9 @@
 #'   parameters taken from the report's `population:`
 #'   (`"output.population"`); `NULL` for none.
 #' @return A data frame, one row a parameter in the template's order:
-#'   `param`, `tier` (`"required"`, `"usual"`, `"other"`), `stage`
+#'   `param`, `tier` (`"required"`, `"usual"`, `"other"`), `step`
 #'   (`"call"`, an argument of the template's call, or `"data"`, of a step
-#'   preparing the analysis data: [tfl_param()]`(stage = )`), `type`,
+#'   preparing the analysis data: [tfl_param()]`(step = )`), `type`,
 #'   `required`, `default` (the layout's, a short text; the reference for a
 #'   parameter that has one), `variant` (the default a variant changes it
 #'   to, else `NA`), `study` (the study standard's value, else `NA`),
@@ -114,8 +117,12 @@
 #'   `"study: <key>"`, `"report"`, `"fallback"`, `"variant:<name>"`,
 #'   `"template"` or `"default"`), `maps_to` (its study source,
 #'   `"plan_stub.indent"`, or the verb its doc names), `doc`, `study_key`
-#'   (its reference, else `NA`) and `fallback` (the value it takes when
-#'   the study has none: a variant's default else the layout's; `NA` none).
+#'   (its reference, else `NA`), `fallback` (the value it takes when
+#'   the study has none: a variant's default else the layout's; `NA` none),
+#'   `unset` (what `!unset` does to it: `"omit"`, `"stop"` or
+#'   `"step_off"`; `NA` for a template not yet migrated) and `route` (where
+#'   its value comes from, as [tfl_template_routes()] says it: `"own"`,
+#'   `"study:<key>"`, `"fallback"`, `"template"`, `"fixed"`, `"unset"`).
 #' @seealso [tfl_tpl_help()] to print it; [tfl_tpl()] to run a template.
 #' @examples
 #' a <- tfl_tpl_args("demog")
@@ -134,6 +141,12 @@ tfl_tpl_args <- function(name, study = NULL, population = NULL) {
   root_p <- lapply(root$params, .tpl_param_typed)
   names(root_p) <- vapply(root_p, `[[`, "", "name")
   output <- list(population = population)
+  # (a template with an `extends` in its set reads the range its reports
+  # read when they write no `extends` or `style:`: the settings.style set
+  # over the defaults, or none under `{content: none}`)
+  range <- if (!is.null(study) && .tpl_layered(t$name)) {
+    if (length(.extends_norm(t$extends)$content)) .tpl_ref_range(NULL, study)$content else list()
+  }
   rows <- lapply(.tpl_shown(t$params), function(p) {
     rp <- root_p[[p$name]] %||% p
     # the nearest variant that sets it
@@ -144,10 +157,13 @@ tfl_tpl_args <- function(name, study = NULL, population = NULL) {
         break
       }
     }
-    key <- if (is.character(p$study)) p$study else NA_character_
+    keys <- if (is.character(p$study)) p$study else NA_character_
+    key <- keys[1L]
     sv <- NULL
     if (!is.na(key) && (!is.null(study) || startsWith(key, "output."))) {
-      sv <- .tpl_study_read(key, output, study)
+      hit <- .tpl_study_find(keys, output, study, range)
+      sv <- hit$value
+      if (!is.null(sv)) key <- hit$key
     }
     layer <- if (!is.null(sv)) {
       if (startsWith(key, "output.")) "report" else paste0("study: ", key)
@@ -159,16 +175,18 @@ tfl_tpl_args <- function(name, study = NULL, population = NULL) {
       "template"
     }
     eff <- if (!is.null(sv)) sv else p$default
-    data.frame(param = p$name, tier = p$tier %||% "other", stage = p$stage %||% "call",
+    data.frame(param = p$name, tier = p$tier %||% "other", step = p$step %||% "call",
                type = p$type %||% NA_character_,
                required = isTRUE(p$required),
                default = if (is.na(key)) .tpl_short(rp$default) else
-                 .tpl_ref_text(key, .tpl_short(rp$default), p$required),
+                 .tpl_ref_text(keys, .tpl_short(rp$default), p$required),
                variant = if (is.na(vname)) NA_character_ else
                  if (is.null(p$default)) "NULL" else .tpl_short(p$default),
                study = .tpl_short(sv), effective = .tpl_short(eff), layer = layer,
                maps_to = .tpl_maps_to(p), doc = p$doc %||% NA_character_,
                study_key = key, fallback = if (is.na(key)) NA_character_ else .tpl_short(p$default),
+               unset = if (.tpl_layered(t$name)) p$unset %||% "omit" else NA_character_,
+               route = .tpl_param_route(p, NULL, if (!is.null(sv)) key else NA_character_),
                stringsAsFactors = FALSE)
   })
   out <- do.call(rbind, unname(rows))
@@ -229,10 +247,10 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
     what <- ifelse(is.na(r$doc), "", r$doc)
     # (a parameter that refers to the study standard says so, with its fallback)
     ref <- !is.na(r$study_key)
-    what[ref] <- paste0(what[ref], " [", mapply(.tpl_ref_text, r$study_key[ref], r$fallback[ref],
+    what[ref] <- paste0(what[ref], " [", mapply(.tpl_ref_text, r$maps_to[ref], r$fallback[ref],
                                                   r$required[ref], USE.NAMES = FALSE), "]")
     # (a data step's argument marked: not one of the call's)
-    nm <- ifelse(r$stage == "data", paste(r$param, "[data]"), r$param)
+    nm <- ifelse(r$step == "data", paste(r$param, "[data]"), r$param)
     w1 <- max(nchar(c("param", nm)))
     w2 <- max(nchar(c("effective (layer)", val)))
     lines <- c(lines, "", sprintf("%s (%d):", k, nrow(r)),
@@ -286,7 +304,7 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
   ex <- t$example %||% .tpl_examples[[t$root %||% name]] %||% list()
   # (a figure's call: the data step's arguments are the program's)
   fig <- identical(t$kind, "figure")
-  if (fig) ex <- ex[!vapply(names(ex), function(k) identical(t$params[[k]]$stage, "data"), NA)]
+  if (fig) ex <- ex[!vapply(names(ex), function(k) identical(t$params[[k]]$step, "data"), NA)]
   desc <- sprintf("The %s template `%s`, layout `%s`", t$kind, name, t$layout)
   if (!is.null(t$from)) desc <- sprintf("%s: a variant of `%s` (its defaults changed)", desc, t$from)
   desc <- paste0(desc, sprintf(". Its program is one call, `tfl_tpl(%s, \"%s\", ...)`; ", x, name),
@@ -296,11 +314,11 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
                  if (!is.null(.tpl_stf_note(name))) paste0(" ", .tpl_stf_note(name)))
   dflt <- ifelse(is.na(a$variant), a$default, a$variant)
   ref <- !is.na(a$study_key)
-  dflt[ref] <- mapply(.tpl_ref_text, a$study_key[ref], a$fallback[ref], a$required[ref],
+  dflt[ref] <- mapply(.tpl_ref_text, a$maps_to[ref], a$fallback[ref], a$required[ref],
                       USE.NAMES = FALSE)
-  tbl <- c("| Parameter | Tier | Stage | Default | Maps to | What |",
+  tbl <- c("| Parameter | Tier | Step | Default | Maps to | What |",
            "|---|---|---|---|---|---|",
-           sprintf("| `%s` | %s | %s | %s | %s | %s |", a$param, a$tier, a$stage,
+           sprintf("| `%s` | %s | %s | %s | %s | %s |", a$param, a$tier, a$step,
                    .tpl_rd_cell(dflt),
                    .tpl_rd_cell(a$maps_to), .tpl_rd_cell(a$doc)))
   c(sprintf("@title %s: the template %s", t$label %||% name, name),

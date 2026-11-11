@@ -29,7 +29,7 @@ changes of the template do not reach it.
 d <- system.file("extdata", "spec-yaml", package = "tflspec")
 s <- tfl_read_study_spec(d)
 o <- tfl_output("T-9", "table", population = "SAF",
-                template = list(name = "demog", args = list(population = "SAF")))
+                template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE")))
 b <- tfl_template_to_spec(o, s)
 vapply(b$content, function(it) it$fn, "")
 }

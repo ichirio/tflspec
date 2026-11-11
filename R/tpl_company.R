@@ -45,6 +45,11 @@
 #'   [tfl_test_templates()] runs it with, beside the defaults; `NULL` none.
 #' @param ai `TRUE` to list it in the AI requests that answer with
 #'   templates ([tfl_ai_prepare()]`(templates = TRUE)`).
+#' @param extends The `extends` its reports take when they write none:
+#'   files for every step, `"none"`, or a list by step (`list(content =
+#'   "none")`); `NULL`: a template not yet migrated.
+#' @param extends_fixed The steps whose `extends` the template fixes:
+#'   another value stops.
 #' @return `name`, invisibly.
 #' @examples
 #' tfl_template("my_ages", kind = "table", layout = "summary",
@@ -55,7 +60,8 @@
 #' tfl_templates()[, c("name", "package")]
 #' @export
 tfl_template <- function(name, kind = c("table", "figure", "listing"), layout, params,
-                         body, label = NULL, call = NULL, example = NULL, ai = FALSE) {
+                         body, label = NULL, call = NULL, example = NULL, ai = FALSE,
+                         extends = NULL, extends_fixed = character()) {
   fn <- "tfl_template()"
   if (!is.character(name) || length(name) != 1L || !grepl("^[A-Za-z][A-Za-z0-9_.]*$", name)) {
     .ard_stop(sprintf("%s: `name` is one name of letters, digits, '_' and '.'.", fn))
@@ -77,7 +83,7 @@ tfl_template <- function(name, kind = c("table", "figure", "listing"), layout, p
     message(sprintf("%s: %s's template %s replaces %s's.", fn, pkg, name, old$package %||% "tflspec"))
   }
   .tfl_template(name, kind, layout, params, body, label = label, call = call, package = pkg,
-                example = example, ai = ai)
+                example = example, ai = ai, extends = extends, extends_fixed = extends_fixed)
   invisible(name)
 }
 
@@ -172,6 +178,8 @@ tfl_template_variant <- function(name, from, defaults = list(), label = NULL, ex
   params <- src$params
   for (k in names(v$defaults)) {
     params[[k]]$default <- v$defaults[[k]]
+    # (the doc a parameter keeps for the variants that give it a default)
+    if (!is.null(params[[k]]$variant_doc)) params[[k]]$doc <- params[[k]]$variant_doc
     if (!is.null(v$defaults[[k]])) params[[k]]$required <- FALSE
   }
   # (hidden: not its arguments; a variant of it keeps them hidden)
@@ -193,14 +201,21 @@ tfl_template_variant <- function(name, from, defaults = list(), label = NULL, ex
 #'
 #' @param name The template's name.
 #' @return A named list of [tfl_param()]; change one's `default` and pass
-#'   them to [tfl_template()].
+#'   them to [tfl_template()].  Each has `unset`: what `!unset` does to it
+#'   (`"omit"`, `"stop"` or `"step_off"`), `NA` for a template not yet migrated.
 #' @examples
 #' p <- tfl_template_params("demog")
 #' names(p)
 #' p$cells$default
 #' @export
 tfl_template_params <- function(name) {
-  .tpl_get(name, "tfl_template_params()")$params
+  t <- .tpl_get(name, "tfl_template_params()")
+  # `unset` (what `!unset` does to the parameter) is stated for a migrated
+  # template only; NA for the others (`!unset` leaves the argument out)
+  lapply(t$params, function(p) {
+    if (!.tpl_layered(t$name)) p["unset"] <- list(NA_character_)
+    p
+  })
 }
 
 #' Run a template: its table plan
@@ -362,8 +377,10 @@ tfl_test_templates <- function(names = NULL) {
 # An example of each tflspec template's parameters: what a company's
 # package tests its wrapped templates with
 .tpl_examples <- list(
-  demog = list(population = "SAF"),
-  stf_t02_demog = list(population = "SAF"),
+  demog = list(population = "SAF", by = "TRT01A", continuous = "AGE",
+               categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC")),
+  stf_t02_demog = list(population = "SAF", by = "TRT01A", continuous = "AGE",
+                       categorical = c("SEX", "AGEGR1", "RACE", "ETHNIC", "COUNTRY")),
   summary = list(population = "SAF", continuous = "AGE"),
   disposition = list(population = "SAF"),
   hierarchical = list(population = "SAF", hierarchy = c("AEBODSYS", "AEDECOD")),

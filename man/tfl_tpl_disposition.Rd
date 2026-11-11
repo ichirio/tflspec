@@ -8,7 +8,7 @@ The table template \code{disposition}, layout \code{summary}. Its program is one
 }
 \section{Parameters}{
 \tabular{llllll}{
-   Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
+   Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
    \code{population} \tab required \tab call \tab report: population, required \tab output.population \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
    \code{categorical} \tab other \tab call \tab EOSSTT \tab  \tab the status variable(s), in order \cr
@@ -17,7 +17,8 @@ The table template \code{disposition}, layout \code{summary}. Its program is one
    \code{labels} \tab other \tab call \tab Status at end of study, n (\%) \tab  \tab each variable's heading; given by name, merged \cr
    \code{by} \tab usual \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the column variable \cr
    \code{categorical_statistics} \tab other \tab call \tab n, p \tab  \tab the categorical statistics the ARD has; NULL: cards' own \cr
-   \code{denominator} \tab other \tab call \tab  \tab  \tab the categorical variables' percentages' denominator: NULL (default): the analysis set's subjects (those with a value); a number: that many in every column; numbers named by the values of 'by' ('c("Drug X" = 60, "Control" = 55)'): that many in each column; the id of an analysis data ('adsl_itt', or one of the report's own): its rows in each column. A number is not for 'total' = TRUE. The column headings' N is the study standard's, not moved \cr
+   \code{denominator} \tab other \tab call \tab  \tab  \tab the categorical variables' percentages' denominator: NULL (default): the analysis set's subjects (all of them, as the column headings' N); a number: that many in every column; numbers named by the values of 'by' ('c("Drug X" = 60, "Control" = 55)'): that many in each column; the id of an analysis data ('adsl_itt', or one of the report's own): its rows in each column. A number is not for 'total' = TRUE. The column headings' N is the study standard's, not moved \cr
+   \code{missing_row} \tab other \tab call \tab TRUE \tab  \tab TRUE (default): a Missing row, last, for each categorical variable that has missing values (NA or blank). FALSE: no Missing row; missing values are left out of the counts. \cr
    \code{groupn_label} \tab other \tab call \tab  \tab  \tab the subjects-per-group analysis' label \cr
 }
 }

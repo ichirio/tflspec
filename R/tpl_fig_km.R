@@ -38,7 +38,7 @@
 
 .tpl_km_params <- function() {
   d <- function(p) {
-    p$stage <- "data"
+    p$step <- "data"
     p
   }
   list(

@@ -560,7 +560,8 @@
   if (!identical(o[["kind"]], "table")) {
     add("kind", sprintf("is %s; this task writes tables and listings", o[["kind"]]))
   }
-  for (e in o[["extends"]]) {
+  # (every file it names, a map's steps' too)
+  for (e in unique(as.character(unlist(o[["extends"]])))) {
     ok <- e %in% c("defaults", "none") ||
       (startsWith(e, "patterns/") && (is.null(context$patterns) ||
                                         substring(e, 10L) %in% context$patterns))

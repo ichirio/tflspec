@@ -16,7 +16,7 @@ fig_routed_report <- function(plot = NULL, nm = "km_survival", id = "F-9-routed"
 # the design as tflplanner is given it: the sheets' one
 fig_routed_planner_design <- function(o, d) {
   st <- tfl_read_study_spec(d)
-  tfl_sheets_from_spec(st, stats::setNames(list(o), o$id))$figures[[o$id]]
+  tfl_sheets_from_spec(st, stats::setNames(list(o), o$id), templates = "expand")$figures[[o$id]]
 }
 
 test_that("a km report with plot.risk_title passes the design check, expanded or not", {

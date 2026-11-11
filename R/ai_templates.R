@@ -148,7 +148,7 @@
     from <- if (!is.na(tt$from[i])) sprintf("; variant of %s", tt$from[i]) else ""
     pkg <- if (!identical(tt$package[i], "tflspec")) sprintf("; %s's", tt$package[i]) else ""
     # (a template whose data stage is the report's: the rule beside it)
-    own <- any(vapply(t$params %||% list(), function(p) isTRUE(p$hidden) && identical(p$stage, "data"), NA))
+    own <- any(vapply(t$params %||% list(), function(p) isTRUE(p$hidden) && identical(p$step, "data"), NA))
     out <- c(out, sprintf("- `%s`: %s (%s, layout %s%s%s)%s", tt$name[i], .ai_tpl_description(t),
                           tt$kind[i], tt$layout[i], from, pkg,
                           if (own) paste0(" -- own data: the report writes `data` steps `read`, the analysis ",
@@ -189,7 +189,7 @@
       tgt <- if (identical(x$group, "target") || (is.null(x$group) && x$name %in% target)) " [target]" else ""
       val <- .ai_tpl_value(x$default)
       # (a parameter that refers to the study standard: its key and fallback)
-      if (is.character(x$study) && !startsWith(x$study, "output.")) {
+      if (is.character(x$study) && !startsWith(x$study[1L], "output.")) {
         val <- .tpl_ref_text(x$study, if (is.null(x$default)) NA_character_ else val, x$required)
       }
       long <- nchar(val) > .ai_tpl_long
@@ -223,7 +223,7 @@
                   "* required, (its type), = its default, and what it is. A parameter left",
                   "out takes its default, or the study standard's value where it says",
                   "`study: <key>, else <fallback>` (`no fallback`: left unset): it is not written again.",
-                  "`!unset` (a default, or a value you write): leave the argument out of the call.")
+                  "`!unset` (a default, or a value you write): leave the argument out of the call; for a flag (TRUE / FALSE) it is FALSE, the step off.")
           }, "",
           .ai_templates_list(kinds, short = short)), collapse = "\n")
 }
@@ -264,7 +264,7 @@
                     "* required, (its type), = its default, and what it is. A parameter left",
                     "out takes its default, or the study standard's value where it says",
                     "`study: <key>, else <fallback>` (`no fallback`: left unset): it is not written again.",
-                    "`!unset` (a default, or a value you write): leave the argument out of the call."), "",
+                    "`!unset` (a default, or a value you write): leave the argument out of the call; for a flag (TRUE / FALSE) it is FALSE, the step off."), "",
               .ai_templates_list(kinds[[task]]), "")
           }))), collapse = "\n")
 }
@@ -485,7 +485,9 @@
 # them is left out.
 .ai_draft_codelists <- function(o, study) {
   own <- o$codelists %||% list()
-  if (!length(o$extends) || identical(o$extends, "none")) return(.codelists_norm(own))
+  # (the code lists go with the data step: Q3 of PLAN-5B)
+  ch <- tryCatch(.extends_step(o, "data"), error = function(e) character())
+  if (!length(ch)) return(.codelists_norm(own))
   if (is.null(study)) return(NULL)
   below <- tryCatch(.layers_below(o, study)$acc$codelists, error = function(e) NULL)
   if (is.null(below)) return(NULL)

@@ -4,7 +4,7 @@
 \alias{tfl_tpl}
 \title{A table or listing template's plan: one call for every template}
 \usage{
-tfl_tpl(x, name, ..., codelists = NULL, sets = NULL)
+tfl_tpl(x, name, ..., study = NULL, codelists = NULL, sets = NULL)
 }
 \arguments{
 \item{x}{The data: the ARD, not yet normalized (a table); the dataset as
@@ -15,6 +15,14 @@ template or a variant.}
 
 \item{...}{Its parameters, by name.  A name it does not have is an error
 naming its parameters.}
+
+\item{study}{The study's items under the template (its default and style
+layers, as the report's SPEC resolves them): a list by plan verb, each a
+named list of its arguments as the SPEC holds them, \code{list(plan_style = list(align_count_pct = TRUE))}.  They are merged right after
+\code{table_plan()}, as the SPEC's layers meet: the template's values win, an
+argument it does not write stays the study's (\code{\link[=tfl_unset]{tfl_unset()}} leaves it to
+the function).  A verb may come again (a stacking verb's second item,
+another layer's arguments).  \code{NULL} none; not for a figure.}
 
 \item{codelists}{The report's code lists: as \code{\link[=tfl_read_output]{tfl_read_output()}} reads
 them, or the values in order, \code{list(TRT01A = c("Drug X", "Control"))}.}
@@ -29,8 +37,10 @@ A \code{\link[rtfreporter:table_plan]{rtfreporter::table_plan()}}.
 The A use of a template SPEC, one function for them all: the template's
 items run on the data, as the report's content.  \code{tfl_tpl(ard, "demog", population = "SAF")} is what a template report's program calls; a
 study's defaults the template does not take as its parameters are added
-after the call.  The template's parameters, their defaults and where each
-ends: \code{tfl_tpl_help()} (and \verb{?tpl_<name>}).
+after the call -- or, for a template whose set has its \code{extends} (demog),
+given as \code{study}, under the template's items.  The template's parameters,
+their defaults and where each ends: \code{tfl_tpl_help()} (and
+\verb{?tpl_<name>}).
 }
 \examples{
 if (requireNamespace("cards", quietly = TRUE)) {
@@ -39,7 +49,8 @@ if (requireNamespace("cards", quietly = TRUE)) {
     cards::ard_tabulate(saf, variables = TRT01A),
     cards::ard_summary(saf, by = TRT01A, variables = AGE),
     cards::ard_tabulate(saf, by = TRT01A, variables = c(AGEGR1, SEX, RACE, ETHNIC)))
-  plan <- tfl_tpl(ard, "demog", population = "SAF")
+  plan <- tfl_tpl(ard, "demog", population = "SAF", by = "TRT01A", continuous = "AGE",
+                  categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC"))
 }
 }
 \seealso{

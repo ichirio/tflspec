@@ -25,7 +25,7 @@ test_that("every table and figure template takes subset; a records template wher
   # (km_table and stat_block read the report's own ARD: no data of their own)
   own <- setdiff(t$name[t$package == "tflspec"], c("km_table", "stat_block"))
   expect_true(all(vapply(own, has, NA, p = "subset")))
-  expect_true(all(vapply(setdiff(own, c("demog", "disposition", "summary")), has, NA,
+  expect_true(all(vapply(setdiff(own, c("demog", "stf_t02_demog", "disposition", "summary")), has, NA,
                          p = "where")))
   p <- tflspec:::.tpl_get("ae_soc_pt", "test")$params
   expect_identical(vapply(p[c("population", "subset", "where")], `[[`, "", "group"),
@@ -78,7 +78,8 @@ test_that("expanded: subset on the set's ADSL; a records data takes its subjects
   expect_identical(d[[3L]]$from, "adlb_saf")
   expect_match(d[[3L]]$code, "dplyr::distinct(adlb_saf, USUBJID", fixed = TRUE)
   # an "or" in brackets
-  z <- tfl_template_expand("demog", list(population = "SAF", subset = "PART == \"A\" | AGE > 70"))
+  z <- tfl_template_expand("demog", list(population = "SAF", by = "TRT01A", continuous = "AGE",
+                                         subset = "PART == \"A\" | AGE > 70"))
   expect_identical(as.character(z$ard$analysis_data[[1L]]$where), "PART == \"A\" | AGE > 70")
   # a figure: the set's semi join keeps them too; none given: one of its own
   f <- tfl_template_expand("km", list(param = "PFS", by = "TRT01A", subset = "PART == \"Part 1\""))
@@ -111,7 +112,7 @@ test_that("in a study: a listing of ADAE (no PART) with subset lists Part 1's su
   st <- tfl_read_study_spec(d)
   ro <- tfl_resolve_output(tfl_read_output(f), st)
   # the program as the sheets write it: the listing's rows, its rework
-  sh <- suppressMessages(tfl_sheets_from_spec(st, list(`L-9-1` = ro)))
+  sh <- suppressMessages(tfl_sheets_from_spec(st, list(`L-9-1` = ro), templates = "expand"))
   rework <- stats::na.omit(sh$planner$process_code[sh$planner$output_id == "L-9-1"])
   code <- tfl_listing_code(tfl_listing_spec(sh$listing, check = FALSE), "L-9-1",
                            sh$ard$datasets, rework = rework, part = "data")
@@ -137,15 +138,16 @@ test_that("in a study: demog and ae_soc_pt of Part 1's subjects; N and counts th
   haven::write_xpt(tflspec:::.ai_chr(sl), file.path(d, "adam", "adsl.xpt"))
   haven::write_xpt(tflspec:::.ai_chr(adae), file.path(d, "adam", "adae.xpt"))
   tfl_ai_study_init(d, adam = "adam", study_id = "SUB-1")
+  dm <- list(by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX"))
   sub <- list(subset = "PART == \"Part 1\"")
   outs <- list(
     tfl_output("T-9-1", "table", population = "SAF", label = "Demographics, Part 1",
-               extends = "defaults", template = list(name = "demog", args = sub)),
+               extends = "defaults", template = list(name = "demog", args = c(dm, sub))),
     tfl_output("T-9-2", "table", population = "SAF", label = "TEAEs, Part 1",
                extends = "defaults", template = list(name = "ae_soc_pt", args = sub)),
     # the same set's name in another report, every subject: its own
     tfl_output("T-9-3", "table", population = "SAF", label = "Demographics",
-               extends = "defaults", template = list(name = "demog")))
+               extends = "defaults", template = list(name = "demog", args = dm)))
   for (o in outs) tfl_write_output(o, file.path(d, "spec", "outputs", paste0(o$id, ".yml")))
   st <- tfl_read_study_spec(d)
   code <- paste(tfl_ard_code(st, output_id = "T-9-2", save = FALSE, part = "body"),

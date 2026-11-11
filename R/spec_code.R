@@ -1427,6 +1427,8 @@ tfl_content_run <- function(output, data) {
                              "yet; tables, listings and figures, for now."), output$kind))
   }
   for (it in output$content) .schema_need_version(it)
+  # a template's `widths = "auto"` with no code list for the arms: the ARD's
+  output$content <- .tpl_auto_widths(output, data)
   # plan_levels() the ARD already says: left out, as the program does
   if (identical(output$kind, "table")) output$content <- .levels_prune(output$content, output)
   # a table of records (its data a dataset: a table_plan(value = ) with
@@ -1563,7 +1565,9 @@ tfl_content_run <- function(output, data) {
 #'   args}`, [tfl_resolve_output()]): `"call"` (default) writes the
 #'   template's call, `plan <- tpl_<name>(ard, ...)` with the arguments its
 #'   SPEC gives and the study's defaults it took, then the study's and the
-#'   report's own lines after it, each marked; `"items"` writes the items
+#'   report's own lines after it, each marked (a template whose set has its
+#'   `extends`, demog: the study's items in the call's `study =`, only the
+#'   report's own after it); `"items"` writes the items
 #'   it stands for, as for any report (and so does `"call"`, with a message,
 #'   when the call cannot say the report's own table roles, data or
 #'   normalization).  A figure's template (`km_survival`): its data steps
@@ -2097,10 +2101,13 @@ tfl_report_setup_code <- function(spec) {
     }
   }
   # the study's rounding, once for every report
+  # (and the same value for cards, in the same call, as the YAML route writes it)
   rnd <- .ard_spec_study_value(sp, "rounding")
-  if (!is.na(rnd)) out <- c(out, .spec_call_code(.spec_call("options", rtfreporter.rounding = rnd), 0L))
-  ct <- .cards_round_type(rnd)
-  if (!is.null(ct)) out <- c(out, .spec_call_code(.spec_call("options", cards.round_type = ct), 0L))
+  if (!is.na(rnd)) {
+    ct <- .cards_round_type(rnd)
+    ro <- c(list("options", rtfreporter.rounding = rnd), if (!is.null(ct)) list(cards.round_type = ct))
+    out <- c(out, .spec_call_code(do.call(.spec_call, ro), 0L))
+  }
   d <- study(sp$tokens)
   if (!is.null(d) && nrow(d)) {
     v <- ifelse(is.na(d$value), "", d$value)
