@@ -325,3 +325,99 @@ test_that("T10: the templates sheet leaves extends unwritten; an stf_t02_demog r
   expect_identical(tfl_output_extends(o, "content"), character())
   expect_s3_class(tfl_resolve_output(o, te_layers()), "tfl_output")
 })
+
+# a plan's RTF as text (its date taken out): the program's and the run's
+te_rtf <- function(ro, s, plan) {
+  f <- tempfile("te", fileext = ".rtf")
+  on.exit(unlink(f))
+  suppressMessages(rtfreporter::generate_rtfreport(tfl_report(ro, content = plan, study = s), f,
+                                                   overwrite = TRUE))
+  x <- readLines(f, warn = FALSE)
+  gsub("[0-9]{2}[A-Z][a-z]{2}[0-9]{4}( +[0-9]{2}:[0-9]{2}(:[0-9]{2})?)?", "<date>", x)
+}
+
+# the plan the report's program makes, its code run
+te_program_plan <- function(ro, ard) {
+  e <- new.env()
+  e$ard <- ard
+  suppressMessages(eval(parse(text = tfl_content_code(ro, pipe = "|>")), envir = e))
+  e$plan
+}
+
+test_that("T11: tfl_tpl(study = ) carries the study's items; the program runs as tfl_run_output() does", {
+  skip_if_not_installed("cards")
+  s <- te_layers()
+  saf <- adsl[adsl$SAFFL == "Y", ]
+  # (stf_t02_demog's Total column: the overall rows too)
+  ard <- cards::bind_ard(cards::ard_tabulate(saf, variables = TRT01A),
+                         cards::ard_summary(saf, by = TRT01A, variables = AGE),
+                         cards::ard_summary(saf, variables = AGE))
+  own <- list(tfl_item("plan_style", list(header_bold = FALSE)),
+              tfl_item("plan_stub", list(heading = "Own heading")))
+  cases <- list(
+    plain = te_demog(),
+    own = te_demog(content = own),
+    blanks = te_demog(args = list(blanks = FALSE)),
+    header_n = te_demog(args = list(header_n = "none")),
+    heading = te_demog(args = list(heading = tfl_unset())),
+    style = te_demog(style = "compact"),
+    stf = te_demog(name = "stf_t02_demog"))
+  for (nm in names(cases)) {
+    ro <- suppressMessages(tfl_resolve_output(cases[[nm]], s))
+    code <- strsplit(paste(tfl_content_code(ro, pipe = "|>"), collapse = "\n"), "\n", fixed = TRUE)[[1L]]
+    # the study's items in the call, after a note of their layer; none after it
+    at <- grep("^  study = list[(]$", code)
+    expect_length(at, 1L)
+    end <- grep("^[)]", code)[1L]
+    expect_gt(end, at)
+    after <- code[seq_along(code) > end]
+    expect_false(any(grepl("# (study", after, fixed = TRUE)), info = nm)
+    expect_false(any(grepl("# (pattern", after, fixed = TRUE)), info = nm)
+    # the program's plan is the run's (tfl_run_output() runs the resolved items)
+    expect_identical(te_rtf(ro, s, te_program_plan(ro, ard)),
+                     te_rtf(ro, s, suppressMessages(tfl_content_run(ro, ard))), info = nm)
+  }
+  code <- function(nm) {
+    x <- tfl_content_code(suppressMessages(tfl_resolve_output(cases[[nm]], s)))
+    strsplit(paste(x, collapse = "\n"), "\n", fixed = TRUE)[[1L]]
+  }
+  # the report's own items stay after the call
+  expect_match(code("own"), "Own heading", fixed = TRUE, all = FALSE)
+  expect_identical(grep("# (own)", code("own"), fixed = TRUE) > grep("^[)]", code("own"))[1L], c(TRUE, TRUE))
+  # a stop value does not bring the study's default back (SM 3.5)
+  expect_false(any(grepl("between_groups", code("blanks"), fixed = TRUE)))
+  expect_false(any(grepl("Study heading", code("heading"), fixed = TRUE)))
+  expect_match(code("plain"), "plan_stub = list(heading = \"Study heading\")", fixed = TRUE, all = FALSE)
+  # the style set's items, noted as such
+  expect_match(code("style"), "# (study style: compact)", fixed = TRUE, all = FALSE)
+  # a template not yet migrated keeps the study's lines after the call
+  rs <- tfl_resolve_output(te_demog(name = "summary"), s)
+  expect_false(any(grepl("study = list(", tfl_content_code(rs), fixed = TRUE)))
+})
+
+test_that("T12: tfl_tpl(study = ) -- under the template, by tflspec's merge; checked", {
+  skip_if_not_installed("cards")
+  saf <- adsl[adsl$SAFFL == "Y", ]
+  ard <- cards::bind_ard(cards::ard_tabulate(saf, variables = TRT01A),
+                         cards::ard_summary(saf, by = TRT01A, variables = AGE))
+  tab <- function(p) suppressMessages(rtfreporter::plan_apply(p, "table"))
+  call <- function(...) tfl_tpl(ard, "demog", by = "TRT01A", continuous = "AGE", population = "SAF", ...)
+  ap <- function(p) suppressMessages(rtfreporter::plan_apply(p))
+  # the template's plan_stub(name) wins over the study's; the study's heading reaches
+  p1 <- call(stub_name = "row_label", study = list(plan_stub = list(name = "zzz", heading = "Study")))
+  p2 <- call(stub_name = "row_label", study = list(plan_stub = list(heading = "Study")))
+  expect_identical(ap(p1), ap(p2))
+  expect_false(identical(ap(p2), ap(call(stub_name = "row_label"))))
+  expect_identical(names(tab(p1)), names(tab(call(stub_name = "row_label"))))
+  # an argument the template does not write: the study's
+  expect_identical(names(ap(call(study = list(plan_stub = list(name = "zzz"))))[[1L]]$data)[1L], "zzz")
+  # one verb again: another layer's arguments merge into one item
+  expect_identical(.tpl_study_items(list(plan_style = list(font = "A"), plan_style = list(align = "right"))),
+                   list(tfl_item("plan_style", list(font = "A", align = "right"), from = "defaults")))
+  expect_length(.tpl_study_items(list(plan_cell_style = list(cols = "a"), plan_cell_style = list(cols = "b"))), 2L)
+  expect_identical(.tpl_study_items(NULL), list())
+  # checked
+  expect_error(call(study = list(plot = list(x = 1))), "plan verbs")
+  expect_error(call(study = list(plan_style = "right")), "named list of its arguments")
+  expect_error(call(study = list(list(align = "right"))), "named list of its arguments")
+})
