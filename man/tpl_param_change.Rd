@@ -15,9 +15,10 @@ report.}
 \item{...}{The template's other parameters: \code{data} and \code{by} (required,
 no default), then \code{params}, \code{visits}, \code{where}, \code{layout}, \code{param_order},
 \code{visit_order}, \code{baseline}, \code{baseline_label}, \code{value_label},
-\code{change_label}, \code{formats} (the ARD's digits, per statistic and per
-parameter by its PARAMCD: \code{list(ALT = list(mean = 2))}), \code{cells} (label
-= template, or a list of \code{list(label = , template = )}: placement only),
+\code{change_label}, \code{formats} (the cells' decimals, plan_digits(): by
+statistic, and a parameter's own by its PARAMCD:
+\code{list(mean = 2, GLUC = list(sd = 3))}), \code{cells} (label = template, or a
+list of \code{list(label = , template = )}: placement only),
 \code{header_n}, \code{param_page}, \code{param_heading}, \code{heading} and the look
 (\code{stub_name}, \code{blanks}, \code{border_header}, \code{widths}, \code{max_rows} ...).}
 

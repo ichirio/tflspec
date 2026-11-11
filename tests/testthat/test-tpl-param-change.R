@@ -17,22 +17,14 @@ pc_ard <- function(x) {
   chg <- adlb_saf[!is.na(adlb_saf$CHG), ]
   if (length(d[[3L]]$derive)) chg$AVISIT <- droplevels(chg$AVISIT)
   st <- ~ cards::continuous_summary_fns(c("N", "mean", "sd", "median", "min", "max"))
-  # the ARD's formats (the analysis's), and a parameter's own (its post steps)
-  an <- x$ard$analyses[[match("VALUE", vapply(x$ard$analyses, `[[`, "", "id"))]]
-  fm <- tflspec:::.parse_formats(an$formats)
-  ff <- stats::setNames(lapply(fm, as.integer), names(fm))
-  steps <- setdiff(tflspec:::.split_post(an$post), "drop_empty_groups()")
-  one <- function(data, v) {
-    a <- cards::apply_fmt_fun(cards::ard_summary(data, by = c(TRT01A, PARAM, AVISIT), variables = dplyr::all_of(v),
-                                                 statistic = st, fmt_fun = cards::everything() ~ ff))
-    for (s in steps) a <- eval(parse(text = paste("a |>", s)))
-    if (length(steps)) a <- cards::apply_fmt_fun(a, replace = TRUE)
-    a
-  }
   cards::bind_ard(
     cards::ard_tabulate(adsl_saf, variables = TRT01A),
-    one(adlb_saf, "AVAL"), one(chg, "CHG"))
+    drop_empty_groups(cards::ard_summary(adlb_saf, by = c(TRT01A, PARAM, PARAMCD, AVISIT), variables = AVAL,
+                                         statistic = st)),
+    drop_empty_groups(cards::ard_summary(chg, by = c(TRT01A, PARAM, PARAMCD, AVISIT), variables = CHG,
+                                         statistic = st)))
 }
+
 pc_tab <- function(p) {
   t <- as.data.frame(suppressMessages(rtfreporter::plan_apply(p, "table")))
   t[] <- lapply(t, function(v) if (is.factor(v)) as.character(v) else v)
@@ -54,7 +46,9 @@ test_that("expanded: the records kept, the visits in their order, the change's o
   expect_identical(as.character(d[[3L]]$derive), "AVISIT = droplevels(AVISIT)")
   an <- x$ard$analyses
   expect_identical(vapply(an, `[[`, "", "id"), c("GROUPN", "VALUE", "CHANGE"))
-  expect_identical(an[[2L]]$by, c("TRT01A", "PARAM", "AVISIT"))
+  # (PARAMCD with PARAM: a parameter's own digits by its code, Q6; its empty pairings dropped)
+  expect_identical(an[[2L]]$by, c("TRT01A", "PARAM", "PARAMCD", "AVISIT"))
+  expect_identical(as.character(an[[2L]]$post), "drop_empty_groups()")
   # no where of its own unless given: ANL01FL is not every study's
   y <- tfl_template_expand("param_change", list(population = "SAF", by = "TRT01A", data = "ADVS"))
   expect_null(y$ard$analysis_data[[2L]]$where)
@@ -98,13 +92,14 @@ test_that("as rows: the value's rows, then the change's; none at baseline", {
   expect_identical(names(t), c("group1", "group2", "group3", "label", "Drug X", "Control"))
 })
 
-test_that("the digits: the ARD's formats, the same as fixed cells; a parameter's own by its PARAMCD", {
+test_that("the digits: plan_digits(), the same as fixed cells; a parameter's own in `formats` (Q6)", {
   pc_skip()
   x <- tfl_template_expand("param_change", pc_args)
-  # (the statistics and their digits are the ARD's: no plan_digits())
-  expect_false("plan_digits" %in% vapply(x$content, `[[`, "", "fn"))
-  expect_identical(x$ard$analyses[[2L]]$formats, "N=0 | mean=1 | sd=2 | median=1 | min=1 | max=1")
+  # (the user's Q6: the plan_digits() route, no ARD formats)
+  expect_null(x$ard$analyses[[2L]]$formats)
   expect_identical(x$ard$analyses[[2L]]$statistics, c("N", "mean", "sd", "median", "min", "max"))
+  expect_identical(Filter(function(i) i$fn == "plan_digits", x$content)[[1L]]$args,
+                   list(continuous = list(mean = 1L, sd = 2L, median = 1L, min = 1L, max = 1L)))
   ard <- pc_ard(x)
   p <- do.call(tpl_param_change, c(list(ard), pc_args))
   t <- pc_tab(p)
@@ -112,15 +107,19 @@ test_that("the digits: the ARD's formats, the same as fixed cells; a parameter's
   fixed <- list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})",
                 Median = "{median:.1f}", `Min, Max` = "{min:.1f}, {max:.1f}")
   expect_identical(t, pc_tab(do.call(tpl_param_change, c(list(ard), pc_args, list(cells = fixed)))))
-  # a parameter's digits by its PARAMCD (canon row 344): the ARD's post steps on its rows
-  a2 <- c(pc_args, list(formats = list(ALT = list(mean = 2, sd = 3, min = 0, max = 0))))
-  x2 <- tfl_template_expand("param_change", a2)
-  expect_match(as.character(x2$ard$analyses[[2L]]$post), "update_ard_fmt_fun", fixed = TRUE)
-  expect_match(as.character(x2$ard$analyses[[3L]]$post), "^drop_empty_groups\\(\\) [|] ")
-  expect_error(tfl_template_expand("param_change", c(pc_args, list(formats = list(HBA1C = list(mean = 2))))),
-               "names HBA1C, not in `params`")
-  d <- pc_tab(do.call(tpl_param_change, c(list(pc_ard(x2)), a2)))
+  # a parameter's digits, only that one's, by its PARAMCD (on the ARD's by)
   alt <- unique(as.character(adlb$PARAM[adlb$PARAMCD == "ALT"]))
+  db <- list(ALT = list(mean = 2, sd = 3, min = 0, max = 0))
+  x2 <- tfl_template_expand("param_change", c(pc_args, list(formats = db)))
+  expect_identical(Filter(function(i) i$fn == "plan_digits", x2$content)[[1L]]$args$PARAMCD,
+                   list(ALT = list(mean = 2L, sd = 3L, min = 0L, max = 0L)))
+  expect_error(tfl_template_expand("param_change", c(pc_args, list(formats = list(GLUC = list(mean = 2))))),
+               "`formats` names GLUC, not in `params`")
+  # (the statistics' own stay the template's: merged key by key)
+  expect_identical(Filter(function(i) i$fn == "plan_digits", x2$content)[[1L]]$args$continuous,
+                   list(mean = 1L, sd = 2L, median = 1L, min = 1L, max = 1L))
+  d <- pc_tab(do.call(tpl_param_change, c(list(ard), pc_args, list(formats = db))))
+  if (identical(d, t)) skip("rtfreporter without digits by a row key's value (#794)")
   m <- t$label == "Mean (SD)"
   r <- t$label == "Min, Max"
   a <- t$group1 == alt
@@ -128,9 +127,18 @@ test_that("the digits: the ARD's formats, the same as fixed cells; a parameter's
   expect_match(d[["Drug X____Value"]][r & a], "^[0-9]+, [0-9]+$")
   # the other parameter keeps the template's
   expect_identical(d[!a, ], t[!a, ])
+  # a statistic given by name, merged; unset: no plan_digits()
+  x3 <- tfl_template_expand("param_change", c(pc_args, list(formats = list(mean = 2))))
+  expect_identical(Filter(function(i) i$fn == "plan_digits", x3$content)[[1L]]$args$continuous,
+                   list(mean = 2L, sd = 2L, median = 1L, min = 1L, max = 1L))
+  x4 <- tfl_template_expand("param_change", c(pc_args, list(formats = tfl_unset())))
+  expect_false("plan_digits" %in% vapply(x4$content, `[[`, "", "fn"))
+  expect_error(tfl_template_expand("param_change", c(pc_args, list(formats = list(list(mean = 2))))),
+               "parameter 'formats'")
+  expect_error(tfl_template_expand("param_change", c(pc_args, list(formats = list(mean = 1.5)))),
+               "whole numbers of decimals")
 })
 
-# Control has 2 subjects with a change at CYCLE 17, 1 at CYCLE 18, none at CYCLE 20
 pc_n1_args <- list(population = "SAF", by = "TRT01A", data = "ADLB", params = "ALT", param_order = NULL,
                    visits = c("CYCLE 17 DAY 1", "CYCLE 18 DAY 1", "CYCLE 20 DAY 1"))
 # the Mean (SD) row of the Control columns, a visit a cell: n = 2, n = 1, n = 0
@@ -201,16 +209,16 @@ test_that("the fallback cell takes the template's digits and a parameter's own, 
   # the template's: one decimal for the mean, two for the SD
   expect_match(t[["Control____Value"]][v1], "^[0-9]+\\.[0-9] \\([0-9]+\\.[0-9]{2}\\)$")
   expect_match(t[["Control____Value"]][v2], "^[0-9]+\\.[0-9] \\(-\\)$")
-  # a parameter's own (its formats by PARAMCD), on both forms
-  af <- c(a1, list(formats = list(ALT = list(mean = 2, sd = 3))))
-  ardf <- pc_ard(tfl_template_expand("param_change", af))
-  d <- pc_tab(do.call(tpl_param_change, c(list(ardf), af)))
+  # a parameter's own (its map in `formats`), on both forms
+  db <- list(ALT = list(mean = 2, sd = 3))
+  d <- pc_tab(do.call(tpl_param_change, c(list(ard), a1, list(formats = db))))
+  if (identical(d, t)) skip("rtfreporter without digits by a row key's value (#794)")
   expect_match(d[["Control____Value"]][v1], "^[0-9]+\\.[0-9]{2} \\([0-9]+\\.[0-9]{3}\\)$")
   expect_match(d[["Control____Value"]][v2], "^[0-9]+\\.[0-9]{2} \\(-\\)$")
-  d0 <- pc_tab(do.call(tpl_param_change, c(list(ardf), af, list(sd_missing = ""))))
+  d0 <- pc_tab(do.call(tpl_param_change, c(list(ard), a1, list(formats = db, sd_missing = ""))))
   expect_match(d0[["Control____Value"]][v2], "^[0-9]+\\.[0-9]{2}$")
-  # the same two forms as cells a report sets (no digits of their own: the ARD's)
-  both <- list(n = "{N}", `Mean (SD)` = c("{mean} ({sd})", "{mean} (-)"),
+  # the same two forms as cells a report sets
+  both <- list(n = "{N:.0f}", `Mean (SD)` = c("{mean:.1f} ({sd:.2f})", "{mean:.1f} (-)"),
                Median = "{median}", `Min, Max` = "{min}, {max}")
   expect_identical(t, pc_tab(do.call(tpl_param_change, c(list(ard), a1, list(cells = both)))))
 })

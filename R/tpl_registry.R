@@ -2129,11 +2129,13 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
 
 # ---- param_change: parameters' value and change from baseline at each visit -------
 
-# The ARD's formats when the report gives none: one decimal for the mean, the
-# median and the range, two for the SD (the cells only place them, canon
-# 1.18).  A parameter's own, by its PARAMCD: `formats: {HBA1C: {mean: 2}}`
-# (canon row 344).
-.tpl_pc_formats <- list(N = 0L, mean = 1L, sd = 2L, median = 1L, min = 1L, max = 1L)
+# The cells' digits (Q6, the user's 11-11 decision: the plan_digits() route,
+# not the ARD's formats): one decimal for the mean, the median and the range,
+# two for the SD; a parameter that differs its own map in `formats`, keyed by
+# its PARAMCD (the ARD's by carries PARAMCD for it, user OK 11-11), before
+# them in rtfreporter's order (a row key's value, then the kind's)
+.tpl_pc_digits <- list(mean = 1L, sd = 2L, median = 1L, min = 1L, max = 1L)
+.tpl_pc_stats <- c("N", "mean", "sd", "median", "min", "max")
 
 # (made when the package loads, after R/tpl_registry_demog.R: the look's
 # parameters are demog's, .tpl_look_params())
@@ -2162,11 +2164,12 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
       tfl_param("change_label", "Change from baseline", doc = "the change's heading"),
       tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<population>"),
       tfl_param("data_label", NULL, doc = "the analysis data's label"),
-      tfl_param("formats", .tpl_pc_formats, tier = "usual", doc = paste(
-        "the ARD's formats (precision): per statistic (N 0, mean 1, sd 2, median 1, min 1, max 1),",
-        "given by name, merged; and per parameter by its PARAMCD (HBA1C: {mean: 2, sd: 3});",
-        "a number is the decimals; unset: none given here")),
-      # (the cells place the statistics; their digits are the ARD's `formats`)
+      tfl_param("formats", .tpl_pc_digits, tier = "usual", unset = "step_off", doc = paste(
+        "the cells' decimals (plan_digits()): by statistic (mean 1, sd 2, median 1, min 1, max 1),",
+        "and a parameter's own, only for the parameters that differ, by its PARAMCD:",
+        "{GLUC: {mean: 2, sd: 3}}; given by name, merged key by key; unset: none given here.",
+        "The table's digits: an ARD built alone keeps cards' default formats")),
+      # (the cells place the statistics; their digits are `formats`, plan_digits())
       tfl_param("cells", .tpl_demog_cells, tier = "usual", study = "plan_cells.continuous",
                 doc = "the rows of a value or a change: where each statistic goes (placement only, {mean})"),
       tfl_param("sd_missing", "-", type = "text", study = "settings.sd_missing", unset = "step_off",
@@ -2196,40 +2199,6 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
   stats::setNames(lapply(x, `[[`, "template"), vapply(x, `[[`, "", "label"))
 }
 
-# A parameter's own formats (`formats: {ALT: {mean: 2}}`) as the ARD's post
-# steps: cards::update_ard_fmt_fun() on that parameter's rows (PARAM, the
-# ARD's group2, the label of its PARAMCD in the analysis data `set`)
-.tpl_pc_param_formats <- function(nested, set, params, tn) {
-  if (!length(nested)) return(character())
-  bad <- setdiff(names(nested), params)
-  if (length(params) && length(bad)) {
-    .ard_stop(sprintf("template %s: `formats` names %s, not in `params`.", tn,
-                      paste(bad, collapse = ", ")))
-  }
-  out <- character()
-  for (pc in names(nested)) {
-    f <- nested[[pc]]
-    if (is.null(names(f)) || !all(nzchar(names(f)))) {
-      .ard_stop(sprintf("template %s: `formats` of %s is by statistic: {mean: 2}.", tn, pc))
-    }
-    f <- vapply(f, function(v) as.character(v)[1L], "")
-    if (!all(.fmt_ok(f))) {
-      .ard_stop(sprintf("template %s: `formats` of %s: a number of decimals or xx.x (%s).", tn, pc,
-                        paste(f[!.fmt_ok(f)], collapse = ", ")))
-    }
-    lab <- sprintf("unique(as.character(%s$PARAM[%s$PARAMCD %%in%% \"%s\"]))", set, set, pc)
-    for (v in unique(f)) {
-      st <- names(f)[f == v]
-      out <- c(out, sprintf(paste0(
-        "cards::update_ard_fmt_fun(stat_names = %s, fmt_fun = %s, filter = group2 == \"PARAM\" & ",
-        "vapply(group2_level, function(x) as.character(x)[1L], \"\") %%in%% %s)"),
-        if (length(st) == 1L) .q(st) else sprintf("c(%s)", paste(.q(st), collapse = ", ")),
-        .fmt_r(v), lab))
-    }
-  }
-  out
-}
-
 .tpl_pc_body <- function(a, ctx) {
   tn <- ctx$template$name %||% "param_change"
   a$cells <- .tpl_demog_cells_sd(.tpl_cells_named(a$cells), a[["sd_missing"]])
@@ -2248,16 +2217,9 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
            if (length(a$visit_order))
              sprintf("AVISIT = reorder_by(AVISIT, %s)", a$visit_order))
   nn <- function(x) Filter(Negate(is.null), x)
-  # the statistics: those `formats` names and any the cells name; their
-  # digits the ARD's (canon 1.18), a parameter's own by its PARAMCD
-  fm <- if ("formats" %in% ctx$unset) list() else as.list(a$formats)
-  nested <- fm[vapply(fm, function(x) is.list(x) || length(x) > 1L || !is.null(names(x)), NA)]
-  flat <- fm[!names(fm) %in% names(nested)]
-  stats <- unique(c(names(flat), .tpl_cell_stats(a$cells)))
-  fmt <- if (length(flat)) {
-    paste(paste0(names(flat), "=", vapply(flat, function(v) as.character(v)[1L], "")), collapse = " | ")
-  }
-  pfmt <- .tpl_pc_param_formats(nested, set, a$params, tn)
+  # the statistics: the six, and any other the cells name (canon 1.37)
+  stats <- unique(c(.tpl_pc_stats, .tpl_cell_stats(a$cells)))
+  dg <- .tpl_pc_digits_item(a, tn, ctx$unset)
   sets <- list(
     list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
          population = pop),
@@ -2268,22 +2230,19 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
     # change cells stay empty)
     nn(list(id = paste0(set, "_chg"), from = set, where = tfl_r("!is.na(CHG)"),
             derive = if (length(a$visit_order)) tfl_r("AVISIT = droplevels(AVISIT)"))))
-  post <- function(...) {
-    p <- c(..., pfmt)
-    if (length(p)) tfl_r(paste(p, collapse = " | "))
-  }
+  # (PARAMCD rides along with PARAM, for a parameter's own digits by its
+  # code; the parameter's empty pairings, a factor's levels crossed, dropped)
   an <- function(id, data, v, ...) nn(list(
-    id = id, method = "continuous", data = data, by = c(a$by, "PARAM", "AVISIT"),
-    variables = v, statistics = if (length(stats)) stats, formats = fmt,
-    purpose = "PRIMARY OUTCOME MEASURE", ...))
+    id = id, method = "continuous", data = data, by = c(a$by, "PARAM", "PARAMCD", "AVISIT"),
+    variables = v, statistics = stats, purpose = "PRIMARY OUTCOME MEASURE", ...))
   analyses <- c(
     list(list(id = "GROUPN", method = "categorical", data = subj, variables = a$by,
               purpose = "PRIMARY OUTCOME MEASURE")),
-    if (isTRUE(a$baseline)) list(an("BASELINE", set, "BASE", post = post())),
+    if (isTRUE(a$baseline)) list(an("BASELINE", set, "BASE", post = tfl_r("drop_empty_groups()"))),
     # (the change of a visit with no change records -- the baseline, whose
     # level a code list puts back -- has no rows: its cells stay empty)
-    list(an("VALUE", set, "AVAL", post = post()),
-         an("CHANGE", paste0(set, "_chg"), "CHG", post = post("drop_empty_groups()"))))
+    list(an("VALUE", set, "AVAL", post = tfl_r("drop_empty_groups()")),
+         an("CHANGE", paste0(set, "_chg"), "CHG", post = tfl_r("drop_empty_groups()"))))
   # (`cells` unset: no plan_cells() item, its own default)
   cells_item <- if (length(a$cells)) list(tfl_item("plan_cells", list(continuous = as.list(a$cells))))
   # (`header_n` none or unset: no N line)
@@ -2291,7 +2250,7 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
   plan <- if (rows_in) {
     c(list(tfl_item("table_plan", list(cols = a$by, rows = list(
         group1 = "PARAM", group2 = "AVISIT", group3 = "variable")))),
-      cells_item,
+      cells_item, dg,
       list(tfl_item("plan_sort", list(keys = c("group1", "group2", "group3"))),
            # (one header row: the stub's heading is in it)
            tfl_item("plan_col_header", list(header = c(
@@ -2301,7 +2260,7 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
   } else {
     c(list(tfl_item("table_plan", list(cols = c(a$by, "variable"), rows = list(
         group1 = "PARAM", group2 = "AVISIT")))),
-      cells_item,
+      cells_item, dg,
       # the arm and its N over its two columns (the N is the arm's, not
       # a value's or a change's)
       # (the stub's heading on the second row, as shift's)
@@ -2339,6 +2298,43 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
        data = list(source = "ard", object = "ard"), content = content)
 }
 
+# The digits item from `formats`: its statistics' numbers to
+# plan_digits(continuous = ), its maps (a parameter's own, by PARAMCD) to
+# plan_digits(PARAMCD = ); the template's default under the given, key by
+# key; none when unset
+.tpl_pc_digits_item <- function(a, tn, unset = character()) {
+  if ("formats" %in% unset || !length(a$formats)) return(NULL)
+  f <- as.list(a$formats)
+  if (is.null(names(f)) || !all(nzchar(names(f)))) {
+    .ard_stop(sprintf(paste0("template %s: `formats` is named: by statistic {mean: 1}, or by a ",
+                             "parameter's PARAMCD {GLUC: {mean: 2}}."), tn))
+  }
+  map <- vapply(f, function(x) is.list(x) || length(x) > 1L || !is.null(names(x)), NA)
+  f <- c(utils::modifyList(.tpl_pc_digits, f[!map]), f[map])
+  map <- vapply(f, function(x) is.list(x) || length(x) > 1L || !is.null(names(x)), NA)
+  one <- function(x, what) {
+    if (!length(x)) return(NULL)
+    if (is.null(names(x)) || !all(nzchar(names(x)))) {
+      .ard_stop(sprintf("template %s: `%s` is by statistic: {mean: 1, sd: 2}.", tn, what))
+    }
+    ok <- vapply(x, function(v) is.numeric(v) && length(v) == 1L && !is.na(v) && v >= 0 && v == round(v), NA)
+    if (!all(ok)) {
+      .ard_stop(sprintf("template %s: `%s` gives whole numbers of decimals, 0 or more (%s).", tn, what,
+                        paste(names(x)[!ok], collapse = ", ")))
+    }
+    lapply(x, as.integer)
+  }
+  cont <- one(f[!map], "formats")
+  by <- f[map]
+  bad <- setdiff(names(by), a$params)
+  if (length(a$params) && length(bad)) {
+    .ard_stop(sprintf("template %s: `formats` names %s, not in `params`.", tn, paste(bad, collapse = ", ")))
+  }
+  by <- if (length(by)) stats::setNames(lapply(names(by), function(k) one(as.list(by[[k]]), "formats")), names(by))
+  args <- Filter(length, list(continuous = cont, PARAMCD = by))
+  if (length(args)) list(tfl_item("plan_digits", args))
+}
+
 .tpl_pc_register <- function() {
   .tfl_template("param_change", kind = "table", layout = "summary",
                 params = .tpl_pc_params(), body = .tpl_pc_body)
@@ -2364,9 +2360,10 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
 #' @param ... The template's other parameters: `data` and `by` (required,
 #'   no default), then `params`, `visits`, `where`, `layout`, `param_order`,
 #'   `visit_order`, `baseline`, `baseline_label`, `value_label`,
-#'   `change_label`, `formats` (the ARD's digits, per statistic and per
-#'   parameter by its PARAMCD: `list(ALT = list(mean = 2))`), `cells` (label
-#'   = template, or a list of `list(label = , template = )`: placement only),
+#'   `change_label`, `formats` (the cells' decimals, plan_digits(): by
+#'   statistic, and a parameter's own by its PARAMCD:
+#'   `list(mean = 2, GLUC = list(sd = 3))`), `cells` (label = template, or a
+#'   list of `list(label = , template = )`: placement only),
 #'   `header_n`, `param_page`, `param_heading`, `heading` and the look
 #'   (`stub_name`, `blanks`, `border_header`, `widths`, `max_rows` ...).
 #' @return A [rtfreporter::table_plan()].
