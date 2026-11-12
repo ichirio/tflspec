@@ -103,17 +103,17 @@ test_that("lab_abnormal: header_n \"set\" is today's; \"tested\" counts the reco
   x <- hn_expand("lab_abnormal", a)
   expect_identical(hn_expand("lab_abnormal", a, header_n = "set"), x)
   expect_identical(hn_ids(x), c("GROUPN", "ABNORMAL"))
-  expect_identical(x$ard$analyses[[1L]]$data, "adsl_saf")
+  expect_identical(x$ard$analyses[[1L]]$data, "adsl_sub")
   expect_identical(hn_texts(x)[[2L]], "{col}\n(N={n})")
   # tested: a GROUPN on the distinct subjects of the records kept
   y <- hn_expand("lab_abnormal", a, header_n = "tested")
   ids <- vapply(y$ard$analysis_data, function(d) d$id, "")
-  expect_identical(ids, c("adsl_saf", "adlb_saf", "adlb_saf_n", "adlb_saf_tested", "adlb_saf_cat"))
+  expect_identical(ids, c("adsl_sub", "adlb_sub", "adlb_n", "adlb_tested", "adlb_cat"))
   d <- y$ard$analysis_data[[4L]]
-  expect_identical(d$from, "adlb_saf")
-  expect_identical(d$code, "dplyr::distinct(adlb_saf, USUBJID, TRT01A)")
+  expect_identical(d$from, "adlb_sub")
+  expect_identical(d$code, "dplyr::distinct(adlb_sub, USUBJID, TRT01A)")
   expect_identical(hn_ids(y), c("GROUPN", "ABNORMAL"))
-  expect_identical(y$ard$analyses[[1L]]$data, "adlb_saf_tested")
+  expect_identical(y$ard$analyses[[1L]]$data, "adlb_tested")
   expect_identical(y$ard$analyses[[2L]], x$ard$analyses[[2L]])
   expect_identical(hn_texts(y), hn_texts(x))
   # none
@@ -222,7 +222,7 @@ test_that("orr: an explicit GROUPN on the analysis set; \"none\"; \"tested\" sto
     x <- hn_expand("orr", list(), stat_layout = lay)
     expect_identical(hn_ids(x), c("BOR", "ORR", "GROUPN"), info = lay)
     g <- x$ard$analyses[[3L]]
-    expect_identical(g$data, "adsl_saf", info = lay)
+    expect_identical(g$data, "adsl_sub", info = lay)
     expect_identical(g$variables, "TRT01P", info = lay)
     expect_identical(hn_expand("orr", list(), stat_layout = lay, header_n = "set"), x)
     expect_identical(hn_expand("orr", list(), stat_layout = lay, header_n = "denominator"), x)
@@ -238,7 +238,7 @@ test_that("orr: an explicit GROUPN on the analysis set; \"none\"; \"tested\" sto
   expect_identical(hn_texts(hn_expand("orr", stat_layout = "cols", header_n = "none"))[[1L]], "{col1}")
   # (the subset narrows the GROUPN's data, as the other analyses')
   s <- hn_expand("orr", subset = "SEX == \"F\"")
-  expect_identical(s$ard$analyses[[3L]]$data, "adsl_saf")
+  expect_identical(s$ard$analyses[[3L]]$data, "adsl_sub")
   e <- s$ard$analysis_data[[1L]]
   expect_match(as.character(e$where), "SEX", fixed = TRUE)
 })

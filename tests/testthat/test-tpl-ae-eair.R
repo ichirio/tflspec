@@ -3,10 +3,10 @@
 # the ARD as the study's program makes it: each level's time at risk (its
 # analysis data's code), the rates by cardx, the term as the variable
 eair_ard <- function(x) {
-  adsl_saf <- adsl[adsl$SAFFL == "Y", ]
+  adsl_sub <- adsl[adsl$SAFFL == "Y", ]
   d <- x$ard$analysis_data
-  adae_saf <- adae[adae$USUBJID %in% adsl_saf$USUBJID & adae$TRTEMFL == "Y", ]
-  adae_saf$DAY <- eval(parse(text = d[[2L]]$derive), adae_saf)
+  adae_sub <- adae[adae$USUBJID %in% adsl_sub$USUBJID & adae$TRTEMFL == "Y", ]
+  adae_sub$DAY <- eval(parse(text = d[[2L]]$derive), adae_sub)
   e <- environment()
   for (i in 3:5) assign(d[[i]]$id, eval(parse(text = d[[i]]$code), e))
   rate <- function(data, strata, k) {
@@ -18,10 +18,10 @@ eair_ard <- function(x) {
     a[c(paste0("group", k), paste0("group", k, "_level"))] <- NULL
     a
   }
-  cards::bind_ard(cards::ard_tabulate(adsl_saf, variables = TRT01A),
-                  rate(adae_saf_risk, "AEBODSYS", 2L),
-                  rate(adae_saf_risk_soc, "AEBODSYS", 2L),
-                  rate(adae_saf_risk_pt, c("AEBODSYS", "AEDECOD"), 3L))
+  cards::bind_ard(cards::ard_tabulate(adsl_sub, variables = TRT01A),
+                  rate(adae_risk, "AEBODSYS", 2L),
+                  rate(adae_risk_soc, "AEBODSYS", 2L),
+                  rate(adae_risk_pt, c("AEBODSYS", "AEDECOD"), 3L))
 }
 eair_tab <- function(p) {
   t <- as.data.frame(suppressMessages(rtfreporter::plan_apply(p, "table")))
@@ -37,8 +37,8 @@ eair_skip <- function() {
 test_that("expanded: the event's day, each level's time at risk, the rates by cardx", {
   x <- tfl_template_expand("ae_eair", list(population = "SAF"))
   d <- x$ard$analysis_data
-  expect_identical(vapply(d, `[[`, "", "id"), c("adsl_saf", "adae_saf", "adae_saf_risk",
-                                                "adae_saf_risk_soc", "adae_saf_risk_pt"))
+  expect_identical(vapply(d, `[[`, "", "id"), c("adsl_sub", "adae_sub", "adae_risk",
+                                                "adae_risk_soc", "adae_risk_pt"))
   expect_identical(as.character(d[[2L]]$where), "TRTEMFL == \"Y\"")
   expect_identical(as.character(d[[2L]]$derive), "DAY = ASTDY")
   expect_match(d[[5L]]$code, ".by = c(USUBJID, AEBODSYS, AEDECOD)", fixed = TRUE)

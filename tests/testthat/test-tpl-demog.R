@@ -100,7 +100,7 @@ test_that("the standalone templates equal what the variants gave: defaults and t
   expect_identical(sum(trimws(as.character(b$label)) == "Missing"), 2L)
   expect_identical(b, a)
   x <- tfl_template_expand("demog", b1_args())
-  expect_identical(Filter(function(a) identical(a$id, "CAT"), x$ard$analyses)[[1L]]$denominator, "adsl_saf")
+  expect_identical(Filter(function(a) identical(a$id, "CAT"), x$ard$analyses)[[1L]]$denominator, "adsl_sub")
   # the FDA variant: the same rows (the new look adds the heading, the Missing row ...)
   new_stf <- tfl_template_params("stf_t02_demog")
   old_stf <- tfl_template_params("b1_old_stf")
@@ -276,8 +276,8 @@ test_that("header_n and col_header: the arm heading text, {n} dropped with none;
   expect_identical(b1_item(w, "plan_col_header")[[1L]]$args$header[[2L]]$text, "{col}")
   # the percentages are over the analysis set the headings' N counts (canon 1.31): no `denominator`
   y <- tfl_template_expand("demog", b1_args())
-  expect_identical(Filter(function(a) identical(a$id, "GROUPN"), y$ard$analyses)[[1L]]$data, "adsl_saf")
-  expect_identical(Filter(function(a) identical(a$id, "CAT"), y$ard$analyses)[[1L]]$denominator, "adsl_saf")
+  expect_identical(Filter(function(a) identical(a$id, "GROUPN"), y$ard$analyses)[[1L]]$data, "adsl_sub")
+  expect_identical(Filter(function(a) identical(a$id, "CAT"), y$ard$analyses)[[1L]]$denominator, "adsl_sub")
   expect_error(tfl_template_expand("demog", b1_args(header_n = "tested")), "header_n")
   for (n in c("demog", "stf_t02_demog")) {
     expect_error(tfl_template_expand(n, b1_args(denominator = "adsl_itt")), "there is no `denominator` parameter")
@@ -755,8 +755,8 @@ test_that("stf_t02_demog is values only (canon 1.30): no reference; formats and 
   expect_identical(fm(x, "CONT"), "N=0 | mean=1 | sd=2 | median=1 | min=0 | max=0")
   expect_identical(fm(x, "CAT"), "p=xx.x%")
   # the Missing step is there, the % over the analysis set
-  expect_true("adsl_saf_m" %in% vapply(x$ard$analysis_data, `[[`, "", "id"))
-  expect_identical(Filter(function(a) identical(a$id, "CAT"), x$ard$analyses)[[1L]]$denominator, "adsl_saf")
+  expect_true("adsl_miss" %in% vapply(x$ard$analysis_data, `[[`, "", "id"))
+  expect_identical(Filter(function(a) identical(a$id, "CAT"), x$ard$analyses)[[1L]]$denominator, "adsl_sub")
 })
 
 test_that("the `unset` flag is shown for the migrated templates, NA for the others", {

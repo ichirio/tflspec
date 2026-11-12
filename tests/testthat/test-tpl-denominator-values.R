@@ -27,8 +27,8 @@ dv_all_msg <- function(tpl) {
 test_that("the default is the analysis set; the set's own id is the same expansion", {
   for (tpl in names(dv_args)) {
     x <- dv_expand(tpl)
-    expect_true(all(vapply(dv_dens(x), identical, NA, "adsl_saf")), info = tpl)
-    expect_identical(dv_expand(tpl, denominator = "adsl_saf"), x, info = tpl)
+    expect_true(all(vapply(dv_dens(x), identical, NA, "adsl_sub")), info = tpl)
+    expect_identical(dv_expand(tpl, denominator = "adsl_sub"), x, info = tpl)
     expect_identical(dv_expand(tpl, denominator = NULL), x, info = tpl)
   }
 })
@@ -75,12 +75,11 @@ test_that("an analysis set's data id: the template makes it from ADSL, narrowed 
   for (tpl in names(dv_args)) {
     x <- dv_expand(tpl, denominator = "adsl_itt")
     ids <- dv_ids(x)
-    expect_identical(ids[1:2], c("adsl_saf", "adsl_itt"), info = tpl)
+    expect_identical(ids[1:2], c("adsl_sub", "adsl_den"), info = tpl)
     d <- x$ard$analysis_data[[2L]]
     expect_identical(d$from, "ADSL", info = tpl)
     expect_identical(d$population, "ITT", info = tpl)
-    expect_identical(d$label, "Intent-To-Treat set", info = tpl)
-    expect_true(all(vapply(dv_dens(x), identical, NA, "adsl_itt")), info = tpl)
+    expect_true(all(vapply(dv_dens(x), identical, NA, "adsl_den")), info = tpl)
     # (the subset narrows both sets)
     s <- dv_expand(tpl, denominator = "adsl_itt", subset = "SEX == \"F\"")
     for (k in 1:2) {
@@ -199,13 +198,13 @@ test_that("header_n: \"denominator\" is the denominator's N, \"none\" takes it a
         expect_error(dv_expand(tpl, denominator = v, header_n = "tested"),
                      sprintf("%s: header_n = \"tested\" %s", tpl, dv_why), fixed = TRUE)
       }
-      if (!identical(v, "adsl_saf")) {
+      if (!identical(v, "adsl_sub")) {
         expect_error(dv_expand(tpl, denominator = v, header_n = "set"),
                      sprintf("%s: header_n = \"set\" %s", tpl, dv_why), fixed = TRUE)
       }
     }
     # the analysis set's own id is the set
-    x <- dv_expand(tpl, denominator = "adsl_saf", header_n = "set")
+    x <- dv_expand(tpl, denominator = "adsl_sub", header_n = "set")
     expect_identical(x, dv_expand(tpl), info = tpl)
     # "data" is the tested subjects
     x <- dv_expand(tpl, denominator = "data", header_n = "tested")
@@ -308,8 +307,8 @@ test_that("an analysis data the report does not have stops, naming what it has",
   st <- tfl_read_study_spec(s$dir)
   expect_error(tfl_resolve_output(o, st),
                  paste0("T-DV: template ae_soc_pt: denominator \"adsl_zzz\" is not an analysis data ",
-                        "of the report (adsl_saf, adae_saf). The template makes adsl_saf and the ",
-                        "other analysis sets' adsl_<id>; the report's own come from its `ard:`."),
+                        "of the report (adsl_sub, adae_sub). The template makes adsl_sub and, for another ",
+                        "analysis set, adsl_<id> (the object adsl_den); the report's own come from its `ard:`."),
                  fixed = TRUE)
   # (a number, "data", an analysis set of the study: no complaint)
   for (v in list(5, "data", "adsl_itt")) {
@@ -464,6 +463,6 @@ test_that("a named vector is a small data frame in the program; a number is a nu
                paste0("denominator = data.frame(TRT01A = rep(c(\"Drug X\", \"Control\"), c(10L, 8L)), ",
                       "USUBJID = seq_len(18L))"), fixed = TRUE)
   expect_match(code(20), "denominator = 20L", fixed = TRUE)
-  expect_match(code("adsl_itt"), "denominator = adsl_itt", fixed = TRUE)
-  expect_match(code("adsl_itt"), "adsl_itt <- filter(adsl, ITTFL == \"Y\")", fixed = TRUE)
+  expect_match(code("adsl_itt"), "denominator = adsl_den", fixed = TRUE)
+  expect_match(code("adsl_itt"), "adsl_den <- filter(adsl, ITTFL == \"Y\")", fixed = TRUE)
 })

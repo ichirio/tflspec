@@ -30,12 +30,11 @@ rc_an <- function() rc_df(
 test_that("an analysis reads its records' dataset under their condition, then its own", {
   code <- tfl_ard_code(rc_spec(), output_id = "T1", save = FALSE, part = "body")
   txt <- paste(code, collapse = "\n")
-  expect_true("# adae_sub: TESAE — Treatment-emergent SAEs (TRTEMFL == \"Y\" & AESER == \"Y\"); of the adsl_sub subjects"
-              %in% code)
+  expect_true(any(startsWith(code, "# adae_sub: the records. TESAE — Treatment-emergent SAEs")))
   expect_match(txt, "filter(TRTEMFL == \"Y\", AESER == \"Y\")", fixed = TRUE)
   # (the analysis's condition with an | at its top in parentheses)
-  expect_match(txt, "# adae_sub2: TEAE — Treatment-emergent adverse events", fixed = TRUE)
-  expect_match(txt, "TRTEMFL == \"Y\" & (AESEV == \"SEVERE\" | AESER == \"Y\")", fixed = TRUE)
+  expect_match(txt, "# adae_sub2: the records. TEAE — Treatment-emergent adverse events", fixed = TRUE)
+  expect_match(txt, "filter(TRTEMFL == \"Y\", (AESEV == \"SEVERE\" | AESER == \"Y\"))", fixed = TRUE)
   expect_identical(tfl_ard_data_names(rc_spec())$data, c("adae_sub", "adae_sub2"))
 })
 
@@ -108,7 +107,7 @@ test_that("YAML: data.yml records: and a report's records: id; the any row in it
   expect_identical(sh$ard$analyses$records[sh$ard$analyses$output_id == "T-SAE"], "TESAE")
   st <- tfl_read_study_spec(d)
   code <- tfl_ard_code(st, output_id = "T-SAE", save = FALSE, part = "body")
-  expect_true(any(startsWith(code, "# adae_sub: TESAE")))
+  expect_true(any(startsWith(code, "# adae_sub: the records. TESAE")))
   res <- tfl_resolve_output(tfl_read_outputs(d)[["T-SAE"]], st)
   nz <- Filter(function(it) identical(it$fn, "normalize_ard"), res$content)[[1L]]
   expect_identical(nz$args$overall, "Any SAE")
