@@ -225,14 +225,32 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if (is.na(id)) d[is.na(oid) | !nzchar(oid), , drop = FALSE]
     else d[!is.na(oid) & oid == id, , drop = FALSE]
   }
-  # (a report's rows override the configuration's default lines line by line)
-  page_of <- function(id) {
+  # the study's default configuration's name: study.yml's settings.style (it
+  # travels with the sheets as their `study`), else "standard"
+  dn <- .conv_default_name(meta)
+  # (where each configuration's lines went: the first or last block; a
+  # report's rows then override them line by line, the configuration its own)
+  dsplits <- list()
+  dpg <- list()
+  page_of <- function(id, style = NULL) {
     pg <- .conv_page(sp, id, scope, note)
-    if (is.na(id) || startsWith(id, "@")) pg else .conv_page_over(pg, dsplit)
+    if (is.na(id) || startsWith(id, "@")) return(pg)
+    .conv_page_over(pg, dsplits[[if (!is.null(style) && style %in% names(dsplits)) style else dn]])
   }
-  # (where each band's default lines went: the configuration's first or last
-  # block; the reports' rows then override them line by line)
-  dsplit <- list()
+  # a configuration's page rows as its blocks; the split kept under its name
+  split_page <- function(pg, name) {
+    sb_all <- list()
+    for (b in .page_bands) {
+      if (!length(pg[[b]]) || !is.list(pg[[b]])) next
+      sb <- .conv_band_split(sp, b, pg[[b]])
+      sb_all[[b]] <- sb
+      if (length(sb$last)) {
+        pg[[b]] <- Filter(length, list(first = pg[[b]][sb$first], last = pg[[b]][sb$last]))
+      }
+    }
+    dsplits[[name]] <<- sb_all
+    pg
+  }
 
   # spec/defaults.yml
   defaults <- list()
@@ -258,18 +276,16 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     pg <- page_of(NA_character_)
     if (length(pg$tokens)) study$tokens <- pg$tokens
     pg$tokens <- NULL
-    for (b in .page_bands) {
-      if (!length(pg[[b]]) || !is.list(pg[[b]])) next
-      sb <- .conv_band_split(sp, b, pg[[b]])
-      dsplit[[b]] <- sb
-      if (length(sb$last)) {
-        pg[[b]] <- Filter(length, list(first = pg[[b]][sb$first], last = pg[[b]][sb$last]))
-      }
-    }
-    set <- .conv_style_set(pg, note, "standard")
+    dpg <- pg
+    pg <- split_page(pg, dn)
+    set <- .conv_style_set(pg, note, dn)
     if (length(set)) {
-      defaults$styles <- list(standard = set)
-      study$settings$style <- "standard"
+      defaults$styles <- stats::setNames(list(set), dn)
+      study$settings$style <- dn
+    } else if (!identical(dn, "standard")) {
+      # (a default named in study.yml with no rows of its own: an empty set, so the name holds)
+      defaults$styles <- stats::setNames(list(list(page = list())), dn)
+      study$settings$style <- dn
     }
   }
   put("study.yml", study)
@@ -287,11 +303,16 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   for (p in pats) {
     pg <- page_of(p)
     pg$tokens <- NULL
+    # (a pattern's rows lie over the default rows, as the sheets layer them: its
+    # configuration is complete)
+    if (length(pg)) pg <- .conv_page_layer(dpg, pg)
+    pg <- split_page(pg, substring(p, 2L))
     set <- .conv_style_set(pg, note, substring(p, 2L))
     if (length(set)) pat_styles[[substring(p, 2L)]] <- set
     put(file.path("spec", "patterns", paste0(substring(p, 2L), ".yml")), list())
   }
   if (length(pat_styles)) defaults$styles <- c(defaults$styles, pat_styles)
+  style_names <- names(defaults$styles)
   put("spec/defaults.yml", defaults)
 
   # spec/toc.yml and spec/outputs/<id>.yml
@@ -326,7 +347,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     toc[[length(toc) + 1L]] <- entry
 
     out <- .conv_output(id, kind, entry, sp, ard, lf, figs[[id]], prow, scope, page_of, content_fn, note,
-                        figures = figures)
+                        figures = figures, style_names = style_names)
     # a report on the templates sheet is a template report again
     tr <- sheets$templates
     if (is.data.frame(tr) && id %in% tr$output_id) {
@@ -527,7 +548,9 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     oid <- d$output_id
     own <- !is.na(oid) & nzchar(oid) & !startsWith(oid, "@")
     rep <- suppressWarnings(as.numeric(d$line[own]))
-    rep <- rep[!is.na(rep)]
+    # (a report row with a default row's number overrides it: it says nothing
+    # of where the lines go)
+    rep <- rep[!is.na(rep) & !rep %in% suppressWarnings(as.numeric(names(m)))]
   }
   if (!length(rep)) return(list(first = names(m), last = character()))
   num <- suppressWarnings(as.numeric(names(m)))
@@ -556,6 +579,30 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     page[[b]] <- out
   }
   page
+}
+
+# A pattern's page rows over the default rows: a line by its number (a (none)
+# line takes it out), a setting by its key
+.conv_page_layer <- function(base, over) {
+  out <- base
+  for (k in names(over)) {
+    if (k %in% .page_bands) {
+      m <- out[[k]] %||% list()
+      for (ln in names(over[[k]])) m[[ln]] <- over[[k]][[ln]]
+      out[[k]] <- Filter(function(x) !inherits(x, "tfl_unset"), m)
+    } else {
+      out[[k]] <- if (is.list(out[[k]]) && is.list(over[[k]])) .merge_map(out[[k]], over[[k]]) else over[[k]]
+    }
+  }
+  out
+}
+
+# The study's default configuration's name: study.yml's settings.style when it
+# is a name of the study's own, else "standard"
+.conv_default_name <- function(meta) {
+  nm <- meta$settings$style
+  if (is.character(nm) && length(nm) == 1L && !is.na(nm) && nzchar(nm) &&
+      !nm %in% .tpl_style_builtin_names) nm else "standard"
 }
 
 # A page's rows as a page configuration (a style set): the keys a
@@ -681,10 +728,12 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
 
 # one report's file
 .conv_output <- function(id, kind, entry, sp, ard, lf, fig, prow, scope, page_of, content_fn, note,
-                         figures = "design") {
+                         figures = "design", style_names = character()) {
   rrow <- scope(sp$report, id)
   pattern <- if (nrow(rrow) && !is.null(rrow$pattern) && !is.na(rrow$pattern[1L])) rrow$pattern[1L]
   extends <- c(if (!is.null(pattern)) paste0("patterns/", sub("^@", "", pattern)), "defaults")
+  # the `pattern` cell of a pattern that is a page configuration picks it: the report's style
+  style <- if (!is.null(pattern) && sub("^@", "", pattern) %in% style_names) sub("^@", "", pattern)
   # the `extends` cell, when the report has one, says the chain as written
   # (`none` stays `none`); its first pattern has to be the `pattern` cell's
   if (nrow(rrow) && !is.null(rrow$extends) && !is.na(rrow$extends[1L]) && nzchar(trimws(rrow$extends[1L]))) {
@@ -896,7 +945,8 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   }
   out <- tfl_output(id, kind, label = entry$label %||% NA, population = entry$population %||% NA,
                     extends = extends, data = data, codelists = codelists, content = content,
-                    page = page_of(id), ard = ard_part)
+                    page = page_of(id, style), ard = ard_part)
+  if (!is.null(style)) out$style <- style
   for (k in names(extra)) out[[k]] <- extra[[k]]
   if (!is.null(tnote)) out$note <- tnote
   out
