@@ -237,4 +237,11 @@ tokens: {COMPANY: Acme Pharma}", env = env)
     key <- function(x) paste(x$output_id, x$line, x$left, x$center, x$right)
     expect_setequal(key(b), key(a))
   }
+  # both routes name the setup's objects after the default configuration
+  expect_identical(sh$table$study$value[sh$table$study$key == "style"], "acme")
+  sp <- tfl_table_spec(sh$table[intersect(names(sh$table), c("study", names(tflspec:::.ard_spec_schema())))])
+  for (code in list(tfl_report_setup_code(s), tfl_report_setup_code(sp))) {
+    expect_true(any(startsWith(code, "header_acme <-")))
+    expect_true(any(startsWith(code, "footer_acme <-")))
+  }
 })

@@ -227,7 +227,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   }
   # the study's default configuration's name: study.yml's settings.style (it
   # travels with the sheets as their `study`), else "standard"
-  dn <- .conv_default_name(meta)
+  dn <- .conv_default_name(meta, sp)
   # (where each configuration's lines went: the first or last block; a
   # report's rows then override them line by line, the configuration its own)
   dsplits <- list()
@@ -599,8 +599,9 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
 
 # The study's default configuration's name: study.yml's settings.style when it
 # is a name of the study's own, else "standard"
-.conv_default_name <- function(meta) {
-  nm <- meta$settings$style
+.conv_default_name <- function(meta, sp = NULL) {
+  nm <- .ard_spec_study_value(sp, "style")
+  if (is.null(nm) || is.na(nm)) nm <- meta$settings$style
   if (is.character(nm) && length(nm) == 1L && !is.na(nm) && nzchar(nm) &&
       !nm %in% .tpl_style_builtin_names) nm else "standard"
 }

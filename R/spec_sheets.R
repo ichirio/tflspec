@@ -543,8 +543,8 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
   settings <- s$study$settings %||% list()
   # every report's file and program go back to the report sheet's study row
   fp <- settings[intersect(c("file", "program"), names(settings))]
-  # (the default style is the default rows' page configuration)
-  settings <- settings[setdiff(names(settings), c("file", "program", "style"))]
+  # (the default style is the default rows' page configuration; its name stays a study row)
+  settings <- settings[setdiff(names(settings), c("file", "program"))]
   table$study <- data.frame(key = as.character(names(settings)), value = vapply(settings, cell, ""), stringsAsFactors = FALSE)
   for (sh in c(names(.ard_spec_schema()), .ard_spec_pattern_sheets)) {
     table[[sh]] <- .rows_df(rows[[sh]] %||% list(), c("output_id", setdiff(.sheet_columns(sh), "output_id")))

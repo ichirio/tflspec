@@ -1972,7 +1972,7 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
     # report has its own
     if (setup && !isTRUE(attr(sp, "bands_own")[[sheet]]) &&
         length(.ard_spec_band(sp, sheet))) {
-      return(.spec_sym(.setup_band_object(sheet, .sheets_style_name)))
+      return(.spec_sym(.setup_band_object(sheet, .sheets_style_name(sp))))
     }
     b <- .ard_spec_band(sp, sheet, tokens)
     if (!length(b)) return(NULL)
@@ -2022,11 +2022,15 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
 }
 
 # the bands the setup code writes (a header and a footer object each) and the
-# name of the configuration the sheets' default rows are: the objects are
-# header_standard and footer_standard, as the YAML spec's setup writes them
-# for a study converted from these sheets
+# name of the configuration the sheets' default rows are (the study sheet's
+# `style` row, study.yml's settings.style, else standard): the objects are
+# header_<name> and footer_<name>, as the YAML spec's setup writes them
 .setup_band_names <- c(header = "header", footer = "footer")
-.sheets_style_name <- "standard"
+.sheets_style_name <- function(sp) {
+  nm <- .ard_spec_study_value(sp, "style")
+  if (is.character(nm) && length(nm) == 1L && !is.na(nm) && nzchar(nm) &&
+      !nm %in% .tpl_style_builtin_names) nm else "standard"
+}
 
 #' The study's setup code for its report programs
 #'
@@ -2109,7 +2113,7 @@ tfl_report_setup_code <- function(spec) {
     if (!length(b)) next
     # a line of tokens of one's own goes when a report's are empty
     own <- setdiff(.ard_spec_used_tokens(one[sheet]), .ard_spec_rtf_tokens)
-    nm <- .setup_band_object(sheet, .sheets_style_name)
+    nm <- .setup_band_object(sheet, .sheets_style_name(sp))
     call <- .spec_call(paste0("rtf_", sheet), b, drop_empty_rows = if (length(own)) TRUE)
     out <- c(out, paste(nm, "<-", .spec_call_code(call, 0L, lead = nchar(nm) + 4L)))
   }

@@ -240,7 +240,10 @@
 .ard_spec_study_keys <- list(rounding = c("r", "sas"),
                              # any text: where the files go, where the
                              # programs are (for {PROGRAM})
-                             output_path = NULL, program_dir = NULL)
+                             output_path = NULL, program_dir = NULL,
+                             # the name of the default page configuration
+                             # (the default page rows' set; YAML settings.style)
+                             style = NULL)
 
 # What a report's own row replaces a default row by.  `tables` has one row
 # per report, so its key is the report itself.
