@@ -1,6 +1,6 @@
 # A report's code lists applied to the data before its ARD is made.
 
-test_that("code lists make the listed columns factors, their labels the ARD's values", {
+test_that("code lists make the listed columns factors of the codes: no labels in the ARD", {
   skip_on_cran()
   skip_if_not_installed("cards")
   adam <- exact_data()
@@ -14,8 +14,8 @@ test_that("code lists make the listed columns factors, their labels the ARD's va
                    label = c("Under 65", NA, NA, NA, "Male", "Female"),
                    order = c("1", "2", "3", "4", "1", "2"))
   code <- paste(tfl_ard_code(sp, part = "body", codelists = cl), collapse = "\n")
-  # the lists at the program's head, a value named by... -- what it is in
-  # the ARD; put on the data the analysis reads
+  # the lists at the program's head, a code named by... -- its label, which
+  # the table plan applies; put on the data the analysis reads
   expect_match(code, paste0("cl_agegr1 <- c(
   \"<65\" = \"Under 65\",
   \"65-80\" = \"65-80\",
@@ -29,12 +29,13 @@ test_that("code lists make the listed columns factors, their labels the ARD's va
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, codelists = cl))
   ag <- ard[ard$variable == "AGEGR1", ]
   lv <- unique(vapply(ag$variable_level, as.character, ""))
-  expect_identical(lv, c("Under 65", "65-80", ">80", "Unknown"))   # in order, the empty one too
+  expect_identical(lv, c("<65", "65-80", ">80", "Unknown"))   # the codes, in order, the empty one too
   n0 <- unlist(ag$stat[ag$stat_name == "n" &
                          vapply(ag$variable_level, as.character, "") == "Unknown"])
   expect_true(all(n0 == 0))
   sx <- unique(vapply(ard$variable_level[ard$variable == "SEX"], as.character, ""))
-  expect_identical(sx, c("Male", "Female"))
+  expect_identical(sx, c("M", "F"))
+  expect_false(any(c("Male", "Female", "Under 65") %in% unlist(ard$variable_level)))
   # a value the list does not have stops the program, and says which
   short <- cl[cl$value != "F", ]
   expect_error(suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, codelists = short)),
@@ -52,11 +53,20 @@ test_that("code lists make the listed columns factors, their labels the ARD's va
   expect_identical(arms[!is.na(arms)][1:2], c("Xanomeline High Dose", "Xanomeline Low Dose"))
   expect_false("Placebo" %in% arms)
   # a condition on a listed variable the analysis reads is written in its
-  # labels: the data have them by then
+  # codes, as in the ADaM data: a label stops, and says the code
   sp3 <- exact_spec(list(method = "categorical", dataset = "ADSL",
-                         population_id = "SAF", by = "ARM", where = "SEX == \"F\"",
+                         population_id = "SAF", by = "ARM", where = "SEX == \"Female\"",
                          variables = "SEX"))
-  expect_error(tfl_ard_code(sp3, codelists = cl), "write \"Female\" for \"F\"", fixed = TRUE)
+  expect_error(tfl_ard_code(sp3, codelists = cl), "SEX: write \"F\" for \"Female\"", fixed = TRUE)
+  # (and the ARS, which reads the code lists from the table spec)
+  expect_error(tfl_ars(sp3, table_spec = list(codelists = cl), dir = dir),
+               "SEX: write \"F\" for \"Female\"", fixed = TRUE)
+  sp3b <- sp3
+  sp3b$analyses$where <- "SEX == \"F\""
+  expect_no_error(tfl_ard_code(sp3b, codelists = cl))
+  sp3c <- sp3
+  sp3c$analyses$where <- "SEX %in% c(\"M\", \"Male\")"
+  expect_error(tfl_ard_code(sp3c, codelists = cl), "write \"M\" for \"Male\"", fixed = TRUE)
   # without code lists: as before
   plain <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE))
   expect_false(any(vapply(plain$variable_level[plain$variable == "AGEGR1"],
@@ -120,7 +130,7 @@ test_that("only the variables a report's analyses read; the study's program a pa
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, codelists = cl))
   lv <- function(v) unique(vapply(ard$variable_level[ard$variable == v], as.character, ""))
   expect_identical(lv("AGEGR1"), c(">80", "<65", "65-80"))
-  expect_identical(lv("SEX"), c("Male", "Female"))
+  expect_identical(lv("SEX"), c("M", "F"))
   # each the same as its own program's
   for (o in c("T", "U")) {
     one <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE,
@@ -248,7 +258,7 @@ test_that("the study's program: an analysis data that is its population under a 
   expect_true(any(grepl("adsl_saf <- adsl_sub", all, fixed = TRUE)))
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, codelists = cl))
   sx <- unique(vapply(ard$variable_level[ard$variable == "SEX"], as.character, ""))
-  expect_identical(sx, c("Male", "Female"))
+  expect_identical(sx, c("M", "F"))
   for (o in c("T", "U")) {
     one <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, output_id = o, codelists = cl))
     expect_equal(one, ard[ard$output_id == o, ], ignore_attr = TRUE)

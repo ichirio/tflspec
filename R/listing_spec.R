@@ -406,7 +406,9 @@ print.tfl_listing_spec <- function(x, ...) {
 #'   factor in its list's order (it sorts so), its values as the list has
 #'   them.  Before them the arms are put in their numeric order by
 #'   `order_levels()` (`TRT01A` by `TRT01AN`; a list wins), so a sort on
-#'   an arm sorts so.
+#'   an arm sorts so.  The columns are factors of the codes, in the list's
+#'   order (for sorting); a label, when the display needs one, goes in the
+#'   listing's `rework` code, e.g. `SEX = unname(cl_sex[as.character(SEX)])`.
 #' @param part `"all"` (the whole of it), `"data"` (the data, up to its
 #'   order: what a report's content step of its own code reads as `data`)
 #'   or `"content"` (the listing laid out from a `data` made before -- by a

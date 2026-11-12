@@ -511,6 +511,8 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
   }
   # which subjects: the analysis set's ADSL narrowed, whatever the template
   if ("subset" %in% names(t$params)) out <- .tpl_subset(out, a$subset, population)
+  # the code lists' labels: the ARD holds the codes
+  if (identical(t$kind, "table")) out$content <- .tpl_labels_items(out$content, codelists)
   out$content <- lapply(out$content, function(it) {
     it$from <- paste0("template:", name)
     it
@@ -621,18 +623,75 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
   sub(" Analysis Set$", " set", lab)
 }
 
-# A code list's values in its order: from a report's code lists as the
-# YAML holds them (rows of value / label), or from a list of the values
-# themselves (`list(TRT01A = c("Drug X", "Control"))`, what a program
-# passes to tpl_*())
+# A code list's codes in its order, as the ARD holds them: from a report's
+# code lists as the YAML holds them (rows of value / label), or from a list
+# of the values themselves (`list(TRT01A = c("Drug X", "Control"))`, what a
+# program passes to tpl_*()); a vector named by its codes (`c(F = "Female")`)
+# is its names.
 .tpl_levels <- function(vars, codelists) {
   out <- list()
   for (v in intersect(names(codelists), vars)) {
     cl <- codelists[[v]]
-    out[[v]] <- if (is.character(cl)) unname(cl) else
-      vapply(cl, function(r) r$label %||% r$value, "")
+    out[[v]] <- if (is.character(cl)) {
+      if (is.null(names(cl))) unname(cl) else names(cl)
+    } else vapply(cl, function(r) as.character(r$value), "")
   }
   out
+}
+
+# A code list's labels by code, `c(F = "Female", M = "Male")` (a code with no
+# label is its own); NULL for a list that has none: the table's text of the
+# codes the ARD holds, which plan_labels() applies.
+.tpl_cl_dict <- function(cl) {
+  if (is.character(cl)) {
+    return(if (is.null(names(cl))) NULL else stats::setNames(unname(cl), names(cl)))
+  }
+  val <- vapply(cl, function(r) as.character(r$value), "")
+  lab <- vapply(cl, function(r) as.character(r$label %||% NA_character_), "")
+  lab[!is.na(lab) & !nzchar(trimws(lab))] <- NA
+  if (all(is.na(lab))) return(NULL)
+  stats::setNames(ifelse(is.na(lab), val, lab), val)
+}
+
+# A template's items with the code lists' labels in one plan_labels(): an
+# entry a variable, `SEX = c(F = "Female")`, joined to the template's own
+# entry of the variable (its text wins), the plan_labels() item the template
+# has taking them, else an item of its own.  `covered`: a variable whose
+# entry says one of its codes already is left as it is (items made from the
+# sheets have it, narrowed).
+.tpl_labels_items <- function(content, codelists, covered = FALSE) {
+  if (inherits(content, "tfl_r") || !is.list(content)) return(content)
+  dict <- Filter(Negate(is.null), lapply(codelists, .tpl_cl_dict))
+  if (covered && length(dict)) {
+    have <- function(v) {
+      for (it in content) {
+        if (!identical(it$fn, "plan_labels")) next
+        own <- unlist(it$args[[v]])
+        if (any(names(own) %in% names(dict[[v]]))) return(TRUE)
+      }
+      FALSE
+    }
+    dict <- dict[!vapply(names(dict), have, NA)]
+  }
+  if (!length(dict)) return(content)
+  fn <- vapply(content, function(it) it$fn, "")
+  at <- match("plan_labels", fn)
+  if (is.na(at)) return(.insert_by_rank(content, tfl_item("plan_labels", dict)))
+  args <- content[[at]]$args
+  for (v in names(dict)) {
+    own <- args[[v]]
+    if (is.null(own)) {
+      args[[v]] <- dict[[v]]
+    } else if (is.character(own) || (is.list(own) && all(vapply(own, is.character, NA)))) {
+      # (the text it has wins; the form it has stays)
+      # (one unnamed text is the variable's own heading: keyed by its name)
+      own <- if (is.null(names(unlist(own)))) stats::setNames(unlist(own), v) else own
+      joined <- c(unlist(own), dict[[v]][!names(dict[[v]]) %in% names(own)])
+      args[[v]] <- if (is.list(own)) as.list(joined) else joined
+    }
+  }
+  content[[at]]$args <- args
+  content
 }
 
 #' A table or listing template's plan: one call for every template
@@ -1467,11 +1526,11 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
   rank <- if (length(lv)) {
     sprintf("match(%s, c(%s))", g, paste0("\"", lv, "\"", collapse = ", "))
   } else sprintf("xtfrm(%s)", g)
-  # the grades as the ARD holds them (the code list's labels), in their
+  # the grades as the ARD holds them (the codes), in their
   # order on the table: a data step's factor order does not reach it --
   # cards' hierarchical ARD puts the innermost variable's values in
   # alphabetical order whatever its levels are -- so the plan says it
-  lv_ard <- if (length(lv)) .tpl_shift_labels(lv, g, ctx$codelists)
+  lv_ard <- lv
   # each subject's record of the highest grade: overall, in each SOC, in each PT
   top <- function(suffix, within) {
     list(id = paste0(set, "_max", suffix), from = set,
@@ -1709,22 +1768,6 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
     sprintf("TRUE ~ %s", m(a$worst))), collapse = ", "), ")")
 }
 
-# The categories `lv` (codes or labels) as the ARD holds them for a column:
-# a value of its code list as the list's label, the others as they are
-.tpl_shift_labels <- function(lv, var, codelists) {
-  cl <- codelists[[var]]
-  if (is.null(cl)) return(lv)
-  if (is.character(cl)) {
-    val <- names(cl) %||% unname(cl)
-    lab <- unname(cl)
-  } else {
-    val <- vapply(cl, function(r) as.character(r$value), "")
-    lab <- vapply(cl, function(r) as.character(r$label %||% r$value), "")
-  }
-  i <- match(lv, val)
-  ifelse(is.na(i), lv, lab[i])
-}
-
 # The baseline column's code list with the Missing and Total rows the
 # analysis data's code adds (value = label), or NULL: the template's
 # `codelists`, which the report's own lists take the values they lack from
@@ -1823,11 +1866,12 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
   # the columns: the ARD's order (the code list applied when it is made),
   # or `by_levels` when the report says them
   by_lv <- a$by_levels
-  # (as the ARD holds them: the code list's labels when the column has one;
-  # the Missing and Total rows of the code, last)
-  post_lv <- .tpl_shift_labels(a$levels, a$post, ctx$codelists)
-  base_lv <- c(.tpl_shift_labels(a$levels, a$baseline, ctx$codelists),
-               if (worst) c(a$missing_label, a$total_label))
+  # (as the ARD holds them: the codes; the Missing and Total rows of the
+  # code, last)
+  post_lv <- a$levels
+  # (the baseline's list when the post variable has none: the same categories)
+  post_dict <- .tpl_cl_dict(ctx$codelists[[a$post]] %||% ctx$codelists[[a$baseline]])
+  base_lv <- c(a$levels, if (worst) c(a$missing_label, a$total_label))
   lv <- c(if (length(by_lv)) stats::setNames(list(by_lv), a$by),
           stats::setNames(list(base_lv, post_lv), c(a$baseline, ".label")))
   content <- c(
@@ -1835,8 +1879,11 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
                                      rows = list(group = a$param), label = a$baseline)),
          tfl_item("plan_cells", list(categorical = a$cell)),
          tfl_item("plan_levels", lv)),
-    if (length(a$param_labels)) list(tfl_item("plan_labels", stats::setNames(
-      list(as.list(a$param_labels)), a$param))),
+    # (the parameters' text, and the post-baseline categories' -- the
+    # code list's labels of their codes -- under the column key `.label`)
+    if (length(a$param_labels) || !is.null(post_dict)) list(tfl_item("plan_labels", c(
+      if (length(a$param_labels)) stats::setNames(list(as.list(a$param_labels)), a$param),
+      if (!is.null(post_dict)) list(.label = post_dict)))),
     # (a page a parameter: the parameter in the titles, not the stub)
     list(tfl_item("plan_stub", list(vars = c(if (!paged) "group", a$baseline),
                                     name = "row_label",

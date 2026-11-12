@@ -365,8 +365,10 @@
                                                collapse = ", ")),
                if (length(dis)) sprintf("dplyr::distinct(%s, .keep_all = TRUE)",
                                         paste(dis, collapse = ", ")),
-               # the same rows as the data it is made from: the same levels
-               if (length(c(steps0, .split_bar(r$derive), dis, add))) lv)
+               # the same rows as the data it is made from: the same levels --
+               # but a dataset read as it is has none yet
+               if (length(c(steps0, .split_bar(r$derive), dis, add)) ||
+                   (is.null(pop) && !from_data)) lv)
     out <- c(out, .make_code(id, base, steps))
   }
   out

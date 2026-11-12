@@ -91,9 +91,9 @@ test_that("the example runs on the sample data: the ARD, the tables, the listing
   }
   st <- tfl_read_study_spec(d)
   ard <- suppressMessages(tfl_build_ard(st, dir = d, save = FALSE))
-  # the code list's labels and order are the ARD's
+  # the code list's codes and order are the ARD's; the labels are the table's
   sex <- ard[ard$output_id == "T-1" & ard$variable == "SEX", ]
-  expect_identical(levels(unlist(sex$variable_level)), c("Male", "Female"))
+  expect_identical(levels(unlist(sex$variable_level)), c("M", "F"))
   outs <- tfl_read_outputs(d)
   for (id in c("T-1", "T-2")) {
     o <- tfl_resolve_output(outs[[id]], st)
@@ -103,6 +103,7 @@ test_that("the example runs on the sample data: the ARD, the tables, the listing
       rtfreporter::generate_rtfreport(tfl_report(o, content = plan, study = st), out, overwrite = TRUE)))
     txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
     expect_match(txt, "(N=80)", fixed = TRUE)          # Drug X, safety set
+    if (id == "T-1") expect_match(txt, "Female", fixed = TRUE)
     if (id == "T-2") expect_match(txt, "Subjects with at least one TEAE", fixed = TRUE)
   }
   skip_if_not_installed("ggplot2")
