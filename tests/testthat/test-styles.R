@@ -112,3 +112,40 @@ test_that("titles_at / footnotes_at: the report's titles in the running header, 
   s$study$settings <- list(titles_at = "top")
   expect_error(tfl_report_code(ro, content = "plan", study = s), "titles_at")
 })
+
+test_that("tfl_styles() lists the built-in sets and the study's, and marks the default", {
+  s <- st_study()
+  ts <- tfl_styles(s)
+  expect_true(all(c("name", "source", "default", "page_keys", "content_verbs") %in% names(ts)))
+  expect_identical(ts$source[match(c("standard", "stf_t02", "small"), ts$name)],
+                   c("built-in", "built-in", "study"))
+  expect_identical(ts$page_keys[ts$name == "small"], "rtf_page, rtf_style")
+  expect_identical(ts$content_verbs[ts$name == "small"], "plan_style, plan_paginate_rows")
+  expect_identical(ts$name[ts$default], "standard")
+  # the study's default pick (settings.style) is marked; a path is read
+  s$study$settings <- list(style = "small")
+  expect_identical(tfl_styles(s)$name[tfl_styles(s)$default], "small")
+  expect_identical(tfl_styles(system.file("extdata", "spec-yaml", package = "tflspec")), ts)
+  expect_error(tfl_styles(1L), "tfl_study_spec")
+})
+
+test_that("the sample study's `small` set: a report with style: small gets its margins, font and rows", {
+  s <- st_study()
+  o <- st_report()
+  o$style <- "small"
+  # the sample report says its own rows a page (30): its own item wins; without it the set's 42 reaches the table
+  o$content <- Filter(function(it) it$fn != "plan_paginate_rows", o$content)
+  ro <- tfl_resolve_output(o, s)
+  expect_identical(ro$page$rtf_page$margin_left_in, 0.5)
+  expect_identical(ro$page$rtf_page$margin_right_in, 0.5)
+  expect_identical(ro$page$rtf_style$font_size_half_points, 14L)
+  fns <- vapply(ro$content, `[[`, "", "fn")
+  ps <- ro$content[[match("plan_style", fns)]]
+  expect_identical(ps$args$font_size_half_points, 14L)
+  pr <- ro$content[[match("plan_paginate_rows", fns)]]
+  expect_identical(pr$args$max_rows, 42L)
+  expect_identical(tfl_resolve_output(st_report(), s)$content[[match("plan_paginate_rows", vapply(tfl_resolve_output(st_report(), s)$content, `[[`, "", "fn"))]]$args$max_rows, 30L)
+  # the default report is unchanged
+  r0 <- tfl_resolve_output(st_report(), s)
+  expect_null(r0$page$rtf_page$margin_left_in)
+})
