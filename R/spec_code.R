@@ -255,9 +255,10 @@
                    if (length(de)) list(.drop_empty = de)))
   }
   lb <- .ard_spec_labels(sp)
-  # derived: the code lists' labels, which a program writes but a spec file
-  # does not (the study's lists are their one source)
-  vl <- if (isTRUE(derived)) .ard_spec_value_labels(sp, ard_spec) else list()
+  # derived: the variables' code-list labels, which a program writes but a
+  # spec file does not (the study's lists are their one source); a column
+  # the plan makes keeps its labels either way
+  vl <- .ard_spec_value_labels(sp, ard_spec, derived = derived)
   # the variables' headings under `variable` (they never meet a variable's
   # value labels, SEX = c(F = )); a key column's label under its own key
   keycols <- unique(as.character(unlist(roles[c("cols", "rows")], use.names = FALSE)))
