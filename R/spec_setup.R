@@ -8,6 +8,38 @@
 # (tfl_report_code(output, setup = TRUE, study = ): study_header,
 # study_header_lines ...), made the same way (.page_band()).
 
+#' The lines of the study's setup file that tflspec owns
+#'
+#' A study's setup file (tflplanner's `programs/study_setup.R`) is sourced by
+#' every ARD and report program.  This gives the lines tflspec writes in it:
+#' the study's rounding as one `options()` call, `rtfreporter.rounding` and
+#' (for "sas" and "r") `cards.round_type`.  With option `tflspec.study_setup`
+#' set to `TRUE` ([tflspec_code_options]) the ARD and report setups do not
+#' write the rounding again.
+#'
+#' @param study The study: what [tfl_read_study_spec()] gives, or a
+#'   table / report spec of the sheets (its `study` sheet's `rounding`).
+#' @return A character vector, one element per line; `character()` when the
+#'   study says no rounding.
+#' @seealso [tflspec_code_options]
+#' @examples
+#' st <- tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
+#' tfl_study_setup_code(st)
+#' @export
+tfl_study_setup_code <- function(study) {
+  rnd <- if (inherits(study, "tfl_study_spec")) .study_rounding(study) else {
+    v <- if (is.list(study) && is.data.frame(study$study)) .ard_spec_study_value(study, "rounding") else
+      stop("tfl_study_setup_code(): `study` must be a study spec (tfl_read_study_spec()) ",
+           "or a table / report spec of the sheets.", call. = FALSE)
+    if (is.na(v)) NULL else v
+  }
+  if (is.null(rnd)) return(character())
+  ct <- .cards_round_type(rnd)
+  ro <- c(list("options", rtfreporter.rounding = rnd), if (!is.null(ct)) list(cards.round_type = ct))
+  c("# the study's rounding (every ARD and report program)",
+    .spec_call_code(do.call(.spec_call, ro), 0L))
+}
+
 # The setup code of a study's spec, one element a line (none: the study's
 # defaults say no font, size, tokens, header or footer)
 .study_setup_code <- function(study) {
@@ -35,11 +67,14 @@
   }
   # the study's rounding, once for every report (a report's own plan_digits(
   # rounding = ) wins where it differs)
-  rnd <- .study_rounding(study)
-  if (!is.null(rnd) && is.null(opts[["rtfreporter.rounding"]])) opts[["rtfreporter.rounding"]] <- rnd
-  # (the same value for cards, which formats the ARD's numbers)
-  ct <- .cards_round_type(opts[["rtfreporter.rounding"]])
-  if (!is.null(ct) && is.null(opts[["cards.round_type"]])) opts[["cards.round_type"]] <- ct
+  # (the study's setup file sets it when option tflspec.study_setup is TRUE)
+  if (!isTRUE(getOption("tflspec.study_setup"))) {
+    rnd <- .study_rounding(study)
+    if (!is.null(rnd) && is.null(opts[["rtfreporter.rounding"]])) opts[["rtfreporter.rounding"]] <- rnd
+    # (the same value for cards, which formats the ARD's numbers)
+    ct <- .cards_round_type(opts[["rtfreporter.rounding"]])
+    if (!is.null(ct) && is.null(opts[["cards.round_type"]])) opts[["cards.round_type"]] <- ct
+  }
   sz <- .page_style(pg)$font_size_half_points
   if (!is.null(sz)) {
     n <- suppressWarnings(as.integer(sz))

@@ -85,7 +85,7 @@ test_that("the same name: the variant replaces from, and reads the one it replac
                                       defaults = list(continuous = "AGE")), "replaces")
   expect_identical(tfl_template_params("summary")$continuous$default, "AGE")
   expect_identical(tfl_templates()$from[tfl_templates()$name == "summary"], "summary")
-  x <- tfl_template_expand("summary", list(population = "SAF"))
+  x <- tfl_template_expand("summary", list(by = "TRT01A", population = "SAF"))
   expect_identical(x$ard$analyses[[2L]]$variables, "AGE")
 })
 
@@ -106,7 +106,7 @@ test_that("first to last: the report's argument, the study's default, the varian
   s <- tfl_read_study_spec(d)
   vc <- list(n = "{N:.0f}", Mean = "{mean:.2f}")
   tfl_template_variant("sum_as", from = "summary",
-                       defaults = list(categorical = "SEX", cells = vc))
+                       defaults = list(by = "TRT01A", categorical = "SEX", cells = vc))
   cells_of <- function(args) {
     o <- tfl_output("T-9", "table", population = "SAF",
                     template = list(name = "sum_as", args = args))
@@ -116,13 +116,13 @@ test_that("first to last: the report's argument, the study's default, the varian
          cat = Filter(function(a) identical(a$id, "CAT"), ro$ard$analyses)[[1L]]$variables)
   }
   # the study's defaults have plan_cells(continuous = ): over the variant's
-  r <- cells_of(list(population = "SAF"))
+  r <- cells_of(list())
   expect_identical(r$cells, list(n = "{N:.0f}"))
   # the variant's over from's (no study default for categorical)
   expect_identical(r$cat, "SEX")
   # the report's over all of them
   own <- list(n = "{N:.0f}")
-  r2 <- cells_of(list(population = "SAF", cells = own, categorical = "RACE"))
+  r2 <- cells_of(list(cells = own, categorical = "RACE"))
   expect_identical(r2$cells, own)
   expect_identical(r2$cat, "RACE")
 })
@@ -131,14 +131,14 @@ test_that("summary variant: the YAML's template:, A and B make the same RTF; A c
   skip_if_not_installed("cards")
   on.exit(tv_drop("sum_as"))
   tv_variant("sum_as", from = "summary",
-             defaults = list(continuous = "AGE", categorical = c("AGEGR1", "SEX")))
+             defaults = list(by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX")))
   s <- tv_study()
   saf <- adsl[adsl$SAFFL == "Y", ]
   ard <- cards::bind_ard(cards::ard_tabulate(saf, variables = TRT01A),
                          cards::ard_summary(saf, by = TRT01A, variables = AGE),
                          cards::ard_tabulate(saf, by = TRT01A, variables = c(AGEGR1, SEX)))
   o <- tfl_output("T-9", "table", population = "SAF", label = "Demographics",
-                  template = list(name = "sum_as", args = list(population = "SAF")))
+                  template = list(name = "sum_as", args = list()))
   r <- tv_rtfs(o, ard, s)
   expect_match(r$code, "# template sum_as: a variant of summary", fixed = TRUE, all = FALSE)
   # (a variant of a session or a company: its root called, its defaults written)

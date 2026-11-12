@@ -122,7 +122,7 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
     "    extends: [defaults]",
     "    template:",
     "      name: param_change",
-    "      args: {data: ADLB, params: [ALT, AST], visits: [CYCLE 2 DAY 1], param_order: ~, colour: red}",
+    "      args: {data: ADLB, by: TRT01A, params: [ALT, AST], visits: [CYCLE 2 DAY 1], param_order: ~, colour: red}",
     "    page: {titles: {\"1\": {center: Table 14.3.5}}}",
     "assumptions: []"), "table")
   ai_drafts_from_answer(d, aitpl_answer(

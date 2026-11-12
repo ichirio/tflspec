@@ -14,11 +14,11 @@ report.}
 
 \item{continuous}{The continuous variables, in order; \code{NULL} for none.}
 
-\item{...}{The template's other parameters: \code{categorical} (the
-categorical variables), \code{by}, \code{labels}, \code{order}, \code{cells}, \code{count_cell},
-\code{total} ...: \code{tfl_tpl_help("summary")}.  The look (the stub, the blank
-rows, the widths, the page) is the study standard's; change it after the
-template with \verb{|> plan_stub()}, \verb{|> plan_paginate_rows()} ...}
+\item{...}{The template's other parameters: \code{by} (required, no
+default) and \code{categorical} (the categorical variables), then \code{data},
+\code{where}, \code{labels}, \code{order}, \code{formats}, \code{cells}, \code{count_cell},
+\code{denominator}, \code{missing_row}, \code{total} ...: \code{tfl_tpl_help("summary")}.
+The statistics' digits are the ARD's (\code{formats}); the cells place them.}
 
 \item{codelists}{The report's code lists, for the order and labels of
 values; \code{NULL} takes the ARD's.}
@@ -35,7 +35,7 @@ if (requireNamespace("cards", quietly = TRUE)) {
   ard <- cards::bind_ard(
     cards::ard_tabulate(saf, variables = TRT01A),
     cards::ard_summary(saf, by = TRT01A, variables = c(AGE, TRTDURD)))
-  plan <- tpl_summary(ard, population = "SAF", continuous = c("AGE", "TRTDURD"))
+  plan <- tpl_summary(ard, population = "SAF", continuous = c("AGE", "TRTDURD"), by = "TRT01A")
   head(rtfreporter::plan_apply(plan, "table"))
 }
 }

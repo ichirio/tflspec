@@ -38,9 +38,11 @@ hn_base <- list(
   lab_abnormal = list(levels = c("LOW", "HIGH"), where = "ONTRTFL == \"Y\""),
   lab_shift = list(visit = "CYCLE 2 DAY 1", params = c("ALT", "AST")),
   shift = list(data_id = "adlb_shift", by_levels = c("Drug X", "Control")),
-  param_change = list(data = "ADLB", params = c("ALT", "AST"), where = "ONTRTFL == \"Y\""),
+  param_change = list(by = "TRT01A", data = "ADLB", params = c("ALT", "AST"), where = "ONTRTFL == \"Y\""),
   ancova = list(data = "ADVS", param = "SYSBP", visit = "CYCLE 2 DAY 1"),
-  summary = list(continuous = "AGE"),
+  summary = list(by = "TRT01A", continuous = "AGE"),
+  disposition = list(by = "TRT01A", categorical = "EOSSTT"),
+  ae_overview = list(by = "TRT01A"),
   demog = list(by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX")),
   stf_t02_demog = list(by = "TRT01A", continuous = "AGE", categorical = c("SEX", "AGEGR1")))
 
@@ -77,13 +79,12 @@ test_that("every table template, as its example: no two counts for one column", 
   }
 })
 
-test_that("total = TRUE and stack = TRUE: the Total column and the stacked layer add no count", {
+test_that("total = TRUE: the Total column adds no count", {
   hn_skip()
   for (tpl in c("demog", "summary", "hierarchical", "ae_soc_pt")) {
     hn_expect_ok(tpl, total = TRUE, label = paste(tpl, "total"))
   }
   hn_expect_ok("stf_t02_demog", total = FALSE, label = "stf_t02_demog total = FALSE")
-  hn_expect_ok("summary", stack = TRUE, total = TRUE, label = "summary stack total")
 })
 
 test_that("subset: the same subjects in every analysis", {

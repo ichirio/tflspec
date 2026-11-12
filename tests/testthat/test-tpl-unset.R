@@ -12,7 +12,7 @@ us_register <- function(name) {
                   tfl_param("lab", tfl_unset(), type = "text", doc = "plan_stub(label = )"),
                   tfl_param("mr", 30, type = "number", doc = "plan_paginate_rows(max_rows = )")),
     body = function(a, ctx) {
-      x <- tfl_template_expand("summary", list(population = a$population, continuous = "AGE"),
+      x <- tfl_template_expand("summary", list(by = "TRT01A", population = a$population, continuous = "AGE"),
                                codelists = ctx$codelists, population = ctx$population)
       x$content <- c(x$content, list(
         tfl_item("plan_stub", list(indent = a$ind, label = a$lab)),
@@ -66,13 +66,13 @@ test_that("a report's `!unset` over a default omits the argument; NA and NULL st
   expect_true("mr" %in% nl$given)
   expect_false(identical(nl$given, u$given))
   # the summary's `cells` unset: no continuous cells in the call
-  s <- tfl_template_expand("summary", list(population = "SAF", continuous = "AGE", cells = tfl_unset()))
+  s <- tfl_template_expand("summary", list(by = "TRT01A", population = "SAF", continuous = "AGE", cells = tfl_unset()))
   expect_identical(s$unset, "cells")
   expect_false("plan_cells" %in% vapply(s$content, `[[`, "", "fn"))
 })
 
 test_that("a required parameter left `!unset` is still needed", {
-  expect_error(tfl_template_expand("summary", list(population = tfl_unset(), continuous = "AGE")),
+  expect_error(tfl_template_expand("summary", list(by = "TRT01A", population = tfl_unset(), continuous = "AGE")),
                "needs 'population'")
 })
 
@@ -96,7 +96,7 @@ test_that("a study value or fallback that is `!unset` means omit", {
                   tfl_param("mr", 30, type = "number", study = "settings.mr"),
                   tfl_param("ind", tfl_unset(), type = "number", study = "settings.ind")),
     body = function(a, ctx) {
-      x <- tfl_template_expand("summary", list(population = a$population, continuous = "AGE"),
+      x <- tfl_template_expand("summary", list(by = "TRT01A", population = a$population, continuous = "AGE"),
                                codelists = ctx$codelists, population = ctx$population)
       x$content <- c(x$content, list(tfl_item("plan_stub", list(indent = a$ind))))
       x$seen <- a
@@ -144,7 +144,7 @@ test_that("tfl_check_spec() accepts `!unset` on a template argument", {
   yml <- file.path(d, "spec", "outputs")
   dir.create(yml, recursive = TRUE, showWarnings = FALSE)
   tfl_write_output(tfl_output("T-US", "table", population = "SAF", extends = "defaults",
-    template = list(name = "summary", args = list(continuous = "AGE", cells = tfl_unset(),
+    template = list(name = "summary", args = list(by = "TRT01A", continuous = "AGE", cells = tfl_unset(),
                                                   sd_missing = tfl_unset()))),
     file.path(yml, "T-US.yml"))
   expect_match(paste(readLines(file.path(yml, "T-US.yml")), collapse = "\n"), "cells: !unset",
@@ -169,8 +169,6 @@ us_choice <- list(
   list("ae_max_grade", list(population = "SAF"), "grade_in"),
   list("ae_max_grade", list(population = "SAF"), "sort"),
   list("ae_max_grade", list(population = "SAF"), "header_n"),
-  list("ae_overview", list(population = "SAF"), "header_n"),
-  list("param_change", list(population = "SAF", data = "ADVS"), "layout"),
   list("orr", list(responders = c("CR", "PR", "SD")), "stat_layout"),
   list("orr", list(responders = c("CR", "PR", "SD")), "header_n"),
   list("shift", list(population = "SAF"), "header_n"),
@@ -190,6 +188,16 @@ test_that("a choice check lets `!unset` through to a message that names the para
     # (not a choice error, and not a raw R error)
     expect_no_match(msg, "is 'page'|takes|must be one of|'arg'|should be one of|is \"page\"", info = info)
   }
+})
+
+test_that("batch 2: ae_overview's header_n `!unset` is no N; param_change's layout `!unset` stops", {
+  x <- tfl_template_expand("ae_overview", list(population = "SAF", by = "TRT01A", header_n = tfl_unset()))
+  n <- tfl_template_expand("ae_overview", list(population = "SAF", by = "TRT01A", header_n = "none"))
+  expect_identical(x$unset, "header_n")
+  expect_identical(x[c("ard", "content")], n[c("ard", "content")])
+  expect_error(tfl_template_expand("param_change", list(population = "SAF", data = "ADVS", by = "TRT01A",
+                                                        layout = tfl_unset())),
+               "needs 'layout', so `!unset` cannot be used for it")
 })
 
 test_that("the same parameters with a value, or left out, work as before", {
@@ -257,7 +265,7 @@ test_that("tfl_item_own() keeps an `!unset` argument of a named-arguments verb",
 
 us_unset_output <- function() {
   tfl_output("T-9", "table", population = "SAF", template = list(name = "summary",
-    args = list(continuous = "AGE", cells = tfl_unset(), sd_missing = tfl_unset(),
+    args = list(by = "TRT01A", continuous = "AGE", cells = tfl_unset(), sd_missing = tfl_unset(),
                 total = tfl_unset())))
 }
 

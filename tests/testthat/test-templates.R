@@ -37,7 +37,7 @@ test_that("tfl_template_expand(): the items, marked as the template's", {
   y <- tfl_template_expand("demog", dmv(), codelists = cl)
   expect_null(tpl_item(y, "plan_levels"))
   # a dataset other than ADSL: its own analysis data, its records kept by `where`
-  z <- tfl_template_expand("summary", list(population = "SAF", continuous = "AVAL",
+  z <- tfl_template_expand("summary", list(population = "SAF", by = "TRT01A", continuous = "AVAL",
                                            data = "ADVS", where = 'PARAMCD == "SYSBP"'))
   expect_identical(z$ard$analysis_data[[2L]]$id, "advs_saf")
   expect_s3_class(z$ard$analysis_data[[2L]]$where, "tfl_r")
@@ -75,7 +75,7 @@ test_that("tpl_demog() / tpl_summary(): the object is the items run on the ARD",
   q <- suppressMessages(tfl_content_run(o, ard))
   expect_identical(suppressMessages(rtfreporter::plan_apply(p, "table")),
                    suppressMessages(rtfreporter::plan_apply(q, "table")))
-  s <- suppressMessages(tpl_summary(ard, population = "SAF", continuous = c("AGE", "TRTDURD")))
+  s <- suppressMessages(tpl_summary(ard, population = "SAF", by = "TRT01A", continuous = c("AGE", "TRTDURD")))
   tab <- suppressMessages(rtfreporter::plan_apply(s, "table"))
   expect_true(all(c("Drug X", "Control") %in% names(tab)))
 })
@@ -158,25 +158,45 @@ test_that("demog: Mean (SD) keeps the mean when a group has one subject; sd_miss
   expect_identical(tfl_template_params("demog")$sd_missing$study, "settings.sd_missing")
 })
 
-test_that("summary: categorical variables too; disposition on it", {
-  x <- tfl_template_expand("summary", list(population = "SAF", categorical = c("AGEGR1", "SEX"),
-                                           categorical_statistics = NULL))
+test_that("summary: categorical variables too; disposition on the same body (batch 2)", {
+  x <- tfl_template_expand("summary", list(population = "SAF", by = "TRT01A",
+                                           categorical = c("AGEGR1", "SEX")))
   expect_identical(vapply(x$ard$analyses, `[[`, "", "id"), c("GROUPN", "CAT"))
-  expect_null(x$ard$analyses[[2L]]$statistics)
+  expect_identical(x$ard$analyses[[2L]]$statistics, c("n", "p"))
+  # (the percentages over the analysis set, passed explicitly: canon 1.38)
+  expect_identical(x$ard$analyses[[2L]]$denominator, "adsl_saf")
   expect_false("plan_cells" %in% vapply(x$content, `[[`, "", "fn"))
   expect_identical(x$content[[length(x$content)]]$args, list(max_rows = 30L, split = "group_safe"))
-  # the page is the study standard's (or |> plan_paginate_rows() after), not a parameter
-  expect_error(tfl_template_expand("summary", list(population = "SAF", continuous = "AGE",
-                                                   max_rows = 24)), "no parameter 'max_rows'")
-  expect_error(tfl_template_expand("summary", list(population = "SAF", continuous = "AGE",
+  # the rows a page are a parameter now (the look, canon 1.29)
+  y <- tfl_template_expand("summary", list(population = "SAF", by = "TRT01A", continuous = "AGE",
+                                           max_rows = 24))
+  expect_identical(y$content[[length(y$content)]]$args, list(max_rows = 24L, split = "group_safe"))
+  expect_error(tfl_template_expand("summary", list(population = "SAF", by = "TRT01A", continuous = "AGE",
                                                    colour = "red")), "no parameter")
-  expect_error(tfl_template_expand("summary", list(population = "SAF")), "categorical")
-  d <- tfl_template_expand("disposition", list(population = "SAF"))
+  expect_error(tfl_template_expand("summary", list(population = "SAF", by = "TRT01A")), "categorical")
+  # `by` is required, no default (canon 1.14); the removed parameters are unknown ones (Q-C4)
+  expect_error(tfl_template_expand("summary", list(population = "SAF", continuous = "AGE")), "needs 'by'")
+  for (k in c("stack", "continuous_statistics", "categorical_statistics", "rounding")) {
+    expect_error(tfl_template_expand("summary", stats::setNames(
+      list("SAF", "TRT01A", "AGE", NULL), c("population", "by", "continuous", k))),
+      sprintf("no parameter '%s'", k), info = k)
+  }
+  d <- tfl_template_expand("disposition", list(population = "SAF", by = "TRT01A", categorical = "EOSSTT"))
   expect_identical(d$ard$analyses[[2L]]$id, "DISP")
+  expect_identical(d$ard$analyses[[2L]]$label, "Status at end of study")
   expect_identical(tpl_item(d, "plan_labels")$args, list(variable = list(EOSSTT = "Status at end of study, n (%)")))
+  # a block never split over pages, 24 rows a page (Q-C6)
+  expect_identical(tpl_item(d, "plan_paginate_rows")$args, list(max_rows = 24L, split = "group_safe"))
+  # no default status variable (canon 1.12); no continuous; no ARD ids as parameters (Q4)
+  expect_error(tfl_template_expand("disposition", list(population = "SAF", by = "TRT01A")), "needs 'categorical'")
+  for (k in c("continuous", "cat_id", "cat_label", "groupn_label")) {
+    expect_error(tfl_template_expand("disposition", stats::setNames(
+      list("SAF", "TRT01A", "EOSSTT", "X"), c("population", "by", "categorical", k))),
+      sprintf("no parameter '%s'", k), info = k)
+  }
   expect_true("disposition" %in% tfl_templates()$name)
   ard <- tpl_ard()
-  p <- suppressMessages(tpl_summary(ard, population = "SAF", categorical = c("AGEGR1", "SEX")))
+  p <- suppressMessages(tpl_summary(ard, population = "SAF", by = "TRT01A", categorical = c("AGEGR1", "SEX")))
   expect_s3_class(p, "table_plan")
 })
 
@@ -597,8 +617,8 @@ test_that("listing by: as code, as items in a file and on the sheets, nothing lo
 })
 
 test_that("summary has no mean (CI) analysis of its own; km_table and orr", {
-  x <- tfl_template_expand("summary", list(population = "SAF", continuous = "CHG",
-                                           continuous_statistics = "N"))
+  x <- tfl_template_expand("summary", list(population = "SAF", by = "TRT01A", continuous = "CHG",
+                                           formats = list(N = 0)))
   expect_identical(vapply(x$ard$analyses, `[[`, "", "method"), c("categorical", "continuous"))
   k <- tfl_template_expand("km_table", list(by_levels = c("A", "B")))
   expect_null(k$ard)   # the survival analyses are the report's own
@@ -634,8 +654,11 @@ test_that("hierarchical of one level; demog and ae_pt_freq on their layouts", {
   expect_identical(p$ard$analyses[[1L]][c("id", "label")], list(id = "TEAE_PT", label = "TEAE by PT"))
   expect_identical(p$ard$analysis_data[[2L]]$where, h1$ard$analysis_data[[2L]]$where)
   expect_identical(vapply(p$content, `[[`, "", "fn"),
-                   c("normalize_ard", "table_plan", "plan_sort", "plan_filter", "plan_col_header",
+                   c("normalize_ard", "table_plan", "plan_sort", "plan_col_header",
                      "plan_paginate_rows"))
+  # (min_pct: the terms kept are the ARD's, a step after it; the plan filters no rows)
+  expect_identical(as.character(p$ard$analyses[[1L]]$post), "keep_min_pct(5)")
+  expect_null(h1$ard$analyses[[1L]]$post)
   # demog is a template of its own (no longer summary's variant): its population is the report's
   d <- tfl_template_expand("demog", dmv(categorical = "SEX"))
   expect_identical(d$ard$analysis_data[[1L]]$id, "adsl_saf")
@@ -644,14 +667,18 @@ test_that("hierarchical of one level; demog and ae_pt_freq on their layouts", {
 })
 
 test_that("ae_overview: a subjects analysis and a row a flag", {
-  x <- tfl_template_expand("ae_overview")
+  expect_error(tfl_template_expand("ae_overview", list(by = "TRT01A")), "needs 'population'")
+  expect_error(tfl_template_expand("ae_overview", list(population = "SAF")), "needs 'by'")
+  x <- tfl_template_expand("ae_overview", list(population = "SAF", by = "TRT01A"))
+  # (the percentages over the analysis set, passed explicitly: canon 1.38)
+  expect_identical(unique(vapply(x$ard$analyses[-1L], `[[`, "", "denominator")), "adsl_saf")
   expect_identical(vapply(x$ard$analyses, `[[`, "", "method"), c("categorical", rep("subjects", 6)))
   expect_null(x$ard$analyses[[2L]]$where)   # ANY: every event kept
   expect_identical(as.character(x$ard$analyses[[5L]]$where), 'AESER == "Y"')
   expect_identical(as.character(x$ard$analysis_data[[2L]]$where), 'TRTEMFL == "Y"')
   expect_identical(x$content[[1L]]$args$label, NA)   # no label column
   ser <- list(list(id = "SER", label = "Serious", where = 'AESER == "Y"'))
-  f <- tfl_template_expand("ae_overview", list(flags = ser, population = "ITT"))
+  f <- tfl_template_expand("ae_overview", list(flags = ser, population = "ITT", by = "TRT01A"))
   expect_identical(tpl_item(f, "plan_labels")$args, list(variable = list(SER = "Serious")))
   expect_identical(f$ard$analysis_data[[2L]]$id, "adae_itt")
   skip_if_not_installed("cards")
@@ -661,7 +688,7 @@ test_that("ae_overview: a subjects analysis and a row a flag", {
   ard <- cards::bind_ard(
     cards::ard_tabulate(saf, variables = TRT01A),
     cards::ard_tabulate_value(saf, by = TRT01A, variables = SER, value = list(SER = TRUE)))
-  p <- suppressMessages(tpl_ae_overview(ard, flags = ser))
+  p <- suppressMessages(tpl_ae_overview(ard, population = "SAF", by = "TRT01A", flags = ser))
   expect_s3_class(p, "table_plan")
   tab <- suppressMessages(rtfreporter::plan_apply(p, "table"))
   expect_identical(nrow(tab), 1L)
@@ -759,7 +786,7 @@ test_that("a map given as a list that is not {name, text} stops, naming the para
   expect_no_error(ex(c(ALT = "a")))
   expect_no_error(ex(NULL))
   # a several-records parameter is untouched: flags, a list of records
-  x <- tfl_template_expand("ae_overview", list(population = "SAF",
+  x <- tfl_template_expand("ae_overview", list(population = "SAF", by = "TRT01A",
     flags = list(list(id = "SER", label = "Serious", where = 'AESER == "Y"'))))
   expect_true(length(x$ard$analyses) > 0L)
 })
@@ -792,7 +819,7 @@ test_that("tfl_read_template_sheets(): the population column (or the args cell's
   f <- withr::local_tempfile(fileext = ".xlsx")
   t <- data.frame(output_id = c("A", "B", "C", "D", "E"), kind = "table", label = "x",
                   population = c("ITT", NA, "SAF", "SAF", "ITT"),
-                  template = c("demog", "demog", "demog", "demog", "summary"), by = "TRT01A", where = NA,
+                  template = c("demog", "demog", "demog", "demog", "ae_soc_pt"), by = "TRT01A", where = NA,
                   args = c(NA, "population=ITT", "population=SAF", "population=ITT", NA))
   rows <- data.frame(output_id = c("A", "B", "C", "D", "E"), param = "continuous", value = "AGE", label = NA)
   writexl::write_xlsx(list(templates = t, template_rows = rows), f)

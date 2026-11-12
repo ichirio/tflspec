@@ -58,9 +58,9 @@ test_that("demog, summary and disposition: a blank is missing, not a category", 
   }
   d <- bv_study(withr::local_tempdir(), list(adsl = adsl))
   bv_put(d, "T-D", "demog", list(by = "TRT01A", continuous = "AGE", categorical = c("SEX", "AGEGR1")))
-  bv_put(d, "T-S", "summary", list(population = "SAF", continuous = "AGE",
+  bv_put(d, "T-S", "summary", list(by = "TRT01A", continuous = "AGE",
                                    categorical = c("SEX", "EOSSTT"), total = TRUE))
-  bv_put(d, "T-DI", "disposition", list(population = "SAF"))
+  bv_put(d, "T-DI", "disposition", list(by = "TRT01A", categorical = "EOSSTT"))
   s <- adsl[adsl$SAFFL == "Y", ]
   for (id in c("T-D", "T-S", "T-DI")) {
     a <- bv_ard(d, id)
@@ -84,7 +84,6 @@ test_that("demog, summary and disposition: a blank is missing, not a category", 
   }
   # the Total column too
   a <- bv_ard(d, "T-S")
-  sex <- s$SEX[s$SEX != ""]
   tot <- a$variable == "SEX" & is.na(a$group1_level) & a$stat_name == "n"
   expect_setequal(a$variable_level[tot], c("F", "M", "Missing"))
   expect_equal(sum(as.numeric(a$stat[tot])), nrow(s))

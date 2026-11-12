@@ -12,6 +12,8 @@ dd_expand <- function(name = "demog", ...) {
     a <- utils::modifyList(list(by = "TRT01A", continuous = "AGE",
                                 categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC")), a)
   }
+  # (summary and disposition, on the same body: `by` required too)
+  if (name %in% c("summary", "disposition")) a <- utils::modifyList(list(by = "TRT01A"), a)
   tfl_template_expand(name, c(list(population = "SAF"), a),
                       codelists = dd_codelists, population = dd_pops)
 }
@@ -40,15 +42,18 @@ test_that("demog family: the report's filter narrows the set the denominator nam
   expect_identical(dd_an(x, "GROUPN")$data, "adsl_saf")
 })
 
-test_that("demog family: denominator is no parameter; summary and disposition keep it", {
+test_that("demog family: denominator is no parameter; summary and disposition keep it, the set by default", {
   expect_false("denominator" %in% tfl_tpl_args("demog")$param)
   expect_false("denominator" %in% tfl_tpl_args("stf_t02_demog")$param)
   expect_true("denominator" %in% tfl_tpl_args("summary")$param)
   expect_true("denominator" %in% tfl_tpl_args("disposition")$param)
+  # (canon 1.38: the analysis set, passed explicitly; a Missing level made on it, row 361)
   s <- dd_expand("summary", categorical = "SEX")
-  # (summary's percentages are over the analysis set too, passed explicitly)
   expect_identical(dd_an(s, "CAT")$denominator, "adsl_saf")
   expect_identical(dd_an(s, "CAT")$data, "adsl_saf_m")
+  d <- dd_expand("disposition", categorical = "EOSSTT")
+  expect_identical(dd_an(d, "DISP")$denominator, "adsl_saf")
+  expect_identical(dd_an(d, "DISP")$data, "adsl_saf_m")
 })
 
 dd_study <- function(blank_race = TRUE, args = list(), template = "demog", codelists = list()) {
@@ -114,16 +119,20 @@ test_that("demog: no missing values, no Missing row, the percentages of the set"
   expect_true(any(grepl("ASIAN.*\\(", txt)))
 })
 
-test_that("summary with its default denominator: % over the analysis set, a Missing row", {
+test_that("summary with its default denominator: % over the analysis set, a Missing row (as demog)", {
   skip_on_cran()
   d <- dd_study(template = "summary")
   txt <- dd_text(d)
-  # Control: 22 / 78 (every subject of the set), and a Missing row
+  # Control (78): 22 / 78, not 22 / 75 (canon 1.38); the 3 blank in a Missing row (row 361)
   expect_true(any(grepl("ASIAN.*22 \\(28\\.2\\)", txt)))
+  expect_false(any(grepl("29\\.3", txt)))
   expect_true(any(grepl("Missing.*3 \\(3\\.8\\)", txt)))
-  x <- dd_expand("summary", categorical = "RACE")
-  expect_identical(dd_an(x, "CAT")$denominator, "adsl_saf")
-  expect_identical(dd_an(x, "CAT")$data, "adsl_saf_m")
+  expect_identical(sum(grepl("Missing", txt)), 1L)
+  # missing_row = FALSE: no Missing row, the percentages still over the set
+  d0 <- dd_study(template = "summary", args = list(missing_row = FALSE))
+  txt0 <- dd_text(d0)
+  expect_false(any(grepl("Missing", txt0)))
+  expect_true(any(grepl("ASIAN.*22 \\(28\\.2\\)", txt0)))
 })
 
 test_that("missing_row: TRUE (default) is the Missing step; FALSE and !unset turn it off", {
@@ -144,10 +153,16 @@ test_that("missing_row: TRUE (default) is the Missing step; FALSE and !unset tur
   expect_match(a$doc[a$param == "missing_row"], "^TRUE \\(default\\): a Missing row, last")
 })
 
-test_that("missing_row is no parameter of stf_t02_demog, and passing it stops", {
+test_that("missing_row is no parameter of stf_t02_demog; summary and disposition have it (row 361)", {
   expect_false("missing_row" %in% tfl_tpl_args("stf_t02_demog")$param)
   expect_true("missing_row" %in% tfl_tpl_args("summary")$param)
+  expect_true("missing_row" %in% tfl_tpl_args("disposition")$param)
   expect_error(dd_expand("stf_t02_demog", missing_row = FALSE), "there is no `missing_row` parameter")
+  for (v in list(FALSE, tfl_unset())) {
+    off <- dd_expand("summary", categorical = "SEX", missing_row = v)
+    expect_identical(dd_an(off, "CAT")$data, "adsl_saf")
+    expect_identical(dd_an(off, "CAT")$denominator, "adsl_saf")
+  }
   # (stf_t02_demog keeps the Missing step)
   expect_true("adsl_saf_m" %in% vapply(dd_expand("stf_t02_demog")$ard$analysis_data, `[[`, "", "id"))
 })

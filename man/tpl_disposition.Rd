@@ -12,8 +12,9 @@ report.}
 
 \item{population}{The analysis set's id (\code{"SAF"}).}
 
-\item{...}{The template's other parameters: \code{categorical}, \code{by},
-\code{categorical_statistics} ...}
+\item{...}{The template's other parameters: \code{by} and \code{categorical} (the
+status variables, \code{EOSSTT}) are required, then \code{labels}, \code{formats},
+\code{count_cell}, \code{missing_row}, \code{total}, \code{max_rows} (24) ...}
 
 \item{codelists}{The report's code lists, for the order and labels of
 values; \code{NULL} takes the ARD's.}

@@ -55,7 +55,7 @@
 #' tfl_template("my_ages", kind = "table", layout = "summary",
 #'   params = list(tfl_param("population", "SAF", doc = "the analysis set's id")),
 #'   body = function(a, ctx) tfl_template_expand("summary",
-#'     list(population = a$population, continuous = "AGE"),
+#'     list(population = a$population, by = "TRT01A", continuous = "AGE"),
 #'     codelists = ctx$codelists, population = ctx$population))
 #' tfl_templates()[, c("name", "package")]
 #' @export
@@ -240,7 +240,7 @@ tfl_template_params <- function(name) {
 #'   saf <- adsl[adsl$SAFFL == "Y", ]
 #'   ard <- cards::bind_ard(cards::ard_tabulate(saf, variables = TRT01A),
 #'                          cards::ard_summary(saf, by = TRT01A, variables = AGE))
-#'   plan <- tfl_template_run("summary", ard, population = "SAF", continuous = "AGE")
+#'   plan <- tfl_template_run("summary", ard, population = "SAF", by = "TRT01A", continuous = "AGE")
 #' }
 #' @export
 tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
@@ -381,15 +381,15 @@ tfl_test_templates <- function(names = NULL) {
                categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC")),
   stf_t02_demog = list(population = "SAF", by = "TRT01A", continuous = "AGE",
                        categorical = c("SEX", "AGEGR1", "RACE", "ETHNIC", "COUNTRY")),
-  summary = list(population = "SAF", continuous = "AGE"),
-  disposition = list(population = "SAF"),
+  summary = list(population = "SAF", by = "TRT01A", continuous = "AGE"),
+  disposition = list(population = "SAF", by = "TRT01A", categorical = "EOSSTT"),
   hierarchical = list(population = "SAF", hierarchy = c("AEBODSYS", "AEDECOD")),
   ae_soc_pt = list(population = "SAF"),
   ae_ser_soc_pt = list(population = "SAF"),
   ae_disc_soc_pt = list(population = "SAF"),
   ae_pt_freq = list(population = "SAF", min_pct = 5),
   ae_max_grade = list(population = "SAF", grade_levels = c("MILD", "MODERATE", "SEVERE")),
-  ae_overview = list(population = "SAF"),
+  ae_overview = list(population = "SAF", by = "TRT01A"),
   shift = list(population = "SAF", data_id = "adlb_shift", by_levels = c("Drug X", "Control")),
   lab_shift = list(population = "SAF", visit = "CYCLE 2 DAY 1", params = c("ALT", "AST")),
   listing = list(data = "ADAE", columns = list(list(vars = "USUBJID", label = "Subject"))),
@@ -403,8 +403,11 @@ tfl_test_templates <- function(names = NULL) {
   waterfall = list(param = "SUMDIAM", where = "AVISIT == \"WEEK 12\""),
   orr = list(),
   stat_block = list(variable = "RESP", cells = list(N = "{N}", "ORR (%)" = "{n} ({estimate:.1f%})")),
-  param_change = list(population = "SAF", data = "ADLB", params = c("ALT", "AST"),
-                      where = "ANL01FL == \"Y\""),
+  param_change = list(population = "SAF", by = "TRT01A", data = "ADLB", params = c("ALT", "AST"),
+                      where = "ANL01FL == \"Y\"",
+                      # (the parameters' text: the report's, outside the ARD, canon 1.42)
+                      param_labels = list(ALT = "Alanine Aminotransferase (U/L)",
+                                          AST = "Aspartate Aminotransferase (U/L)")),
   ae_eair = list(population = "SAF"),
   ancova = list(population = "SAF", data = "ADVS", param = "SYSBP", visit = "CYCLE 2 DAY 1"),
   lab_abnormal = list(population = "SAF", levels = c("LOW", "HIGH"), where = "ONTRTFL == \"Y\""))
