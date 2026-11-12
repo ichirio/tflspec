@@ -191,7 +191,11 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     for (sh in c("page", "report")) if (length(pr[[sh]])) add(sh, c(list(output_id = id), pr[[sh]]))
     for (k in setdiff(names(page), .page_known)) note(id, paste0("page.", k), "no sheet for it")
   }
-  page_rows(s$defaults$page, NA_character_)
+  # the study's default page configuration (when the study has its own: a
+  # built-in one is every report's anyway) with its tokens are the default rows
+  dflt <- .style_default_name(s)
+  page_rows(.page_resolve(if (dflt %in% names(s$styles)) s$styles[[dflt]]$page, .study_tokens(s), NULL),
+            NA_character_)
   for (nm in names(s$patterns)) page_rows(s$patterns[[nm]]$page, paste0("@", nm))
 
   # -- the ARD's study-wide sheets ----------------------------------------------
@@ -409,9 +413,11 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     note(NA_character_, "options", paste0(
       "defaults.yml options: (", paste(names(s$options), collapse = ", "), ") is not kept: no sheet or column holds it"))
   }
-  if (length(s$styles)) {
+  other <- setdiff(names(s$styles), dflt)
+  if (length(other)) {
     note(NA_character_, "styles", paste0(
-      "defaults.yml styles: (", paste(names(s$styles), collapse = ", "), ") is not kept: no sheet or column holds it"))
+      "defaults.yml styles: (", paste(other, collapse = ", "), ") is not kept: no sheet or column holds it ",
+      "(the study's default one is the default rows)"))
   }
   for (id in names(outs)) {
     if (length(outs[[id]]$style)) {
@@ -451,7 +457,8 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
   settings <- s$study$settings %||% list()
   # every report's file and program go back to the report sheet's study row
   fp <- settings[intersect(c("file", "program"), names(settings))]
-  settings <- settings[setdiff(names(settings), c("file", "program"))]
+  # (the default style is the default rows' page configuration)
+  settings <- settings[setdiff(names(settings), c("file", "program", "style"))]
   table$study <- data.frame(key = as.character(names(settings)), value = vapply(settings, cell, ""), stringsAsFactors = FALSE)
   for (sh in c(names(.ard_spec_schema()), .ard_spec_pattern_sheets)) {
     table[[sh]] <- .rows_df(rows[[sh]] %||% list(), c("output_id", setdiff(.sheet_columns(sh), "output_id")))

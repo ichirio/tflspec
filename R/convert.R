@@ -181,7 +181,6 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     srow <- plan[is.na(plan$output_id) | !nzchar(plan$output_id), , drop = FALSE]
     if (nrow(srow) && !is.na(srow$setup_code[1L])) study$setup <- tfl_r(gsub("\r\n?", "\n", srow$setup_code[1L]))
   }
-  put("study.yml", study)
 
   # spec/data.yml: the data catalog
   if (!is.null(ard)) {
@@ -247,10 +246,18 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
                         function(s) nrow(scope(sp[[s]], NA)) > 0L, NA))) {
       note(NA, "table sheets", "(defaults)", NA, "content: not converted -- no sheets-to-content bridge given (content_fn)")
     }
+    # the default rows of the page sheets are the study's page configuration
+    # (a style set, the study's default), its tokens study.yml's
     pg <- page_of(NA_character_)
-    if (length(pg)) defaults$page <- pg
+    if (length(pg$tokens)) study$tokens <- pg$tokens
+    pg$tokens <- NULL
+    set <- .conv_style_set(pg, note, "standard")
+    if (length(set)) {
+      defaults$styles <- list(standard = set)
+      study$settings$style <- "standard"
+    }
   }
-  put("spec/defaults.yml", defaults)
+  put("study.yml", study)
 
   # spec/patterns/<name>.yml
   pats <- unique(unlist(lapply(.ard_spec_pattern_sheets, function(s) {
@@ -259,10 +266,18 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     oid <- d$output_id
     oid[!is.na(oid) & startsWith(oid, "@")]
   })))
+  # (a pattern's page rows are a page configuration, a style set of the
+  # pattern's name; the pattern file holds nothing else)
+  pat_styles <- list()
   for (p in pats) {
     pg <- page_of(p)
-    put(file.path("spec", "patterns", paste0(substring(p, 2L), ".yml")), list(page = pg))
+    pg$tokens <- NULL
+    set <- .conv_style_set(pg, note, substring(p, 2L))
+    if (length(set)) pat_styles[[substring(p, 2L)]] <- set
+    put(file.path("spec", "patterns", paste0(substring(p, 2L), ".yml")), list())
   }
+  if (length(pat_styles)) defaults$styles <- c(defaults$styles, pat_styles)
+  put("spec/defaults.yml", defaults)
 
   # spec/toc.yml and spec/outputs/<id>.yml
   ids <- character()
@@ -484,6 +499,17 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     for (k in names(rows[[1L]])) page <- .page_put(page, s, k, rows[[1L]][[k]], note, id)
   }
   page
+}
+
+# A page's rows as a page configuration (a style set): the keys a
+# configuration holds; the others (a report's own, `generate_rtfreport`) are
+# said, not kept
+.conv_style_set <- function(pg, note, name) {
+  keep <- pg[intersect(names(pg), .page_config_keys)]
+  for (k in setdiff(names(pg), .page_config_keys)) {
+    note(NA, "page", name, NA, sprintf("page.%s is not kept in a page configuration", k))
+  }
+  if (length(keep)) list(page = .calls_out(keep)) else list()
 }
 
 # The page and report sheets' columns as the rtfreporter functions' arguments
