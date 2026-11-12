@@ -232,13 +232,16 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     planner[[length(planner) + 1L]] <- list(
       output_id = id, description = cell(e$label %||% o$label), setup_code = NA_character_,
       process_code = .first_r_step(o$data$steps),
-      section = cell(e$section), population = cell(e$population %||% o$population),
+      section = cell(e$section), population = cell(e$population %||% .out_population(o)),
       datasets = cell(e$datasets %||% .records_dataset(o)), batches = cell(e$sets))
     if (!is.null(.records_dataset(o)) && !is.null(o$data$where)) {
       note(id, "data", "a records table's where (its dataset's condition) stays in YAML")
     }
     # the report row: its kind, its pattern, its file and program
     rr <- list(output_id = id, type = o$kind)
+    # (the report's `common:`: its population is the planner's / templates' column,
+    # the other two the report row's)
+    for (k in c("treatment", "population_label")) if (!is.null(o$common[[k]])) rr[[k]] <- cell(o$common[[k]])
     # (a map by step: the cell says it step by step, `content=none; page=a | b`
     # (Q6 of PLAN-5B); a template report that writes none takes its template's)
     if (is.list(o$extends)) {
@@ -280,7 +283,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     # a template report: its name and arguments on the templates sheet, and
     # that is all of the template; the items are made again from them
     if (!is.null(tpl)) {
-      enc <- .tpl_sheets_encode(id, o$kind, .na_scalar(o$label), tpl, o$population)
+      enc <- .tpl_sheets_encode(id, o$kind, .na_scalar(o$label), tpl, .out_population(o))
       trows[[length(trows) + 1L]] <- enc$row
       tparam_rows <- c(tparam_rows, enc$rows)
       if (length(enc$lost)) {
@@ -309,6 +312,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     }
     # the report's ARD analyses and analysis data, whatever its kind
     for (a in o$ard$analysis_data %||% list()) {
+      a <- .entry_pop_inject(a, .out_population(o))
       m <- lapply(a, cell); m$data_id <- m$id; m$id <- NULL
       if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
       adata[[length(adata) + 1L]] <- c(list(output_id = id), m)

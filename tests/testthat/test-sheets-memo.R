@@ -14,7 +14,7 @@
 }
 
 .memo_listing <- function(id = "L-LB") {
-  tfl_output(id, "listing", population = "SAF",
+  tfl_output(id, "listing", common = list(population = "SAF"),
     data = list(source = "dataset", dataset = "ADLB", population = "SAF"),
     content = list(tfl_item("plan_listing", list(cols = c("USUBJID", "AVISIT", "AVAL")))))
 }

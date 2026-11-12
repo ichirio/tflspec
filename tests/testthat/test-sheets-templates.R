@@ -4,14 +4,14 @@
 st_study <- function() tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
 
 st_demog <- function(...) {
-  tfl_output("T-9", "table", label = "Demographics", population = "SAF",
+  tfl_output("T-9", "table", label = "Demographics", common = list(population = "SAF"),
              template = list(name = "demog", args = list(
                by = "TRT01A", continuous = c("AGE", "AGEU"), categorical = c("AGEGR1", "SEX"),
                labels = c(AGE = "Age (years)", SEX = "Sex, n (%)"), ...)))
 }
 
 st_code <- function() {
-  tfl_output("T-8", "table", label = "Plain", population = "SAF",
+  tfl_output("T-8", "table", label = "Plain", common = list(population = "SAF"),
              content = list(tfl_item("plan_paginate_rows", list(max_rows = 24L))))
 }
 
@@ -41,9 +41,9 @@ test_that("a template report is a row of the templates sheet, read back as the s
   expect_identical(names(back), "T-9")
   expect_identical(back[["T-9"]]$template$name, "demog")
   expect_identical(back[["T-9"]]$label, "Demographics")
-  # (demog takes the analysis set from the report's `population:`: the
+  # (demog takes the analysis set from the report's `common: population`: the
   # sheet's population column, not an argument)
-  expect_identical(back[["T-9"]]$population, "SAF")
+  expect_identical(back[["T-9"]]$common$population, "SAF")
   a <- back[["T-9"]]$template$args
   b <- o$template$args
   expect_identical(a[sort(names(a))], b[sort(names(b))])

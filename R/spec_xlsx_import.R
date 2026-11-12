@@ -313,6 +313,14 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
 .imp_rows_of <- function(st, part, sheet, rel, path_in, key_col, r_cols = character(), list_cols = character(),
                          get_file, set_file, content_fn = NULL) {
   y <- get_file(rel)
+  # a table's or listing's definitions are the file's flat `data:` list (DP-2);
+  # the subjects definition says nothing of the report's own set
+  pop <- NULL
+  if (identical(sheet, "analysis_data") && y$kind %in% c("table", "listing") &&
+      (is.null(y$data) || is.null(names(y$data)))) {
+    path_in <- "data"
+    pop <- y$common$population
+  }
   if (is.null(content_fn)) rows <- .get_in(y, path_in) %||% list()
   else rows <- lapply(Filter(function(it) is.list(it) && identical(names(it), content_fn), y$content %||% list()), function(it) it[[1L]])
   id <- .na_scalar(part$output_id[1L])
@@ -322,6 +330,7 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
       v <- .conv_cell(part[[cn]][i], cn, r_cols, list_cols, function(...) NULL, NA, sheet, i)
       if (!is.null(v)) m[[cn]] <- v
     }
+    if (length(pop)) m <- .entry_pop_strip(m, pop)
     kv <- .flat_text(m[[key_col]])
     j <- .find_row(rows, list(key_col), kv)
     key <- paste(id, kv, sep = " / ")
