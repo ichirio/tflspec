@@ -30,8 +30,11 @@ in \code{method.args = list(...)} of the analysis row's \code{args}:
 \code{method.args = list(conf.type = "log-log")} (the Kaplan-Meier interval
 SAS's PROC LIFETEST gives), \code{method.args = list(ties = "breslow")} (a
 Cox model as SAS's PROC PHREG fits it), \code{method.args = list(family = binomial)} (a logistic model), \code{method.args = list(method = "Kenward-Roger")} (MMRM's degrees of freedom), \code{method.args = list(covariance = cov_struct("toep", visits = "AVISIT", subject = "USUBJID"))} (MMRM's covariance when the formula has none), \verb{method = "glm.nb", package = "MASS"} with \code{method.args = list(link = log)} (a
-negative binomial rate model: exacerbations, recurrent events) and
-\verb{method = "survreg", package = "survival"} with \code{method.args = list(dist = "lognormal")} (a parametric survival model).  The same arguments are
+negative binomial rate model: exacerbations, recurrent events),
+\verb{method = "survreg", package = "survival"} with \code{method.args = list(dist = "lognormal")} (a parametric survival model), \verb{method = "geeglm", package = "geepack"} with \code{method.args = list(family = binomial, id = factor(USUBJID), corstr = "exchangeable")} (a GEE model of a response
+over visits: its \code{id} is required, a factor or a number, and the data
+sorted by it) and \verb{method = "polr", package = "MASS"} with \code{method.args = list(Hess = TRUE)} (a
+proportional odds model of an ordinal scale).  The same arguments are
 the model's in a call written in \code{x}
 (\code{ard_survival_survfit_diff(x = survival::survfit(..., conf.type = "log-log"))}).
 }
@@ -39,13 +42,16 @@ the model's in a call written in \code{x}
 \code{tfl_ard_spec()} looks for each name in the installed model function
 (and where its \code{...} go: survfit()'s survfitKM(), glm()'s and glm.nb()'s
 glm.control(), survreg()'s survreg.control(),
-coxph()'s coxph.control(), mmrm()'s mmrm_control()) and judges the
+coxph()'s coxph.control(), mmrm()'s mmrm_control(), geeglm()'s
+glm.control() and geese.control(), polr()'s optim(control =)) and judges the
 values this catalog describes by their kind: \code{conf.type = "loglog"}
 would stop the program, \code{tise = "breslow"} too, and \code{wieghts = W} would
 be ignored by \code{lm()}; a covariance type mmrm does not have
 (\code{cov_struct("un", ...)}, \code{~ un(AVISIT | USUBJID)}), the visit
 column not in quotes, \code{weights = "WTS"} given to mmrm() (a vector, not a
-column name), \code{link = logit} of glm.nb() and \code{init.theta = 0} too.
+column name), \code{link = logit} of glm.nb() and \code{init.theta = 0} too, and
+so are \code{corstr = "exch"}, no \code{id} or \code{id = USUBJID} (text: one cluster
+for the whole data) of geeglm() and \code{method = "logit"} of polr().
 \code{formula} and \code{data} are cardx's to give.
 
 The catalog is \code{inst/ard/model_args.csv} (\code{fn}, \code{arg}, \code{default},
@@ -56,4 +62,8 @@ The catalog is \code{inst/ard/model_args.csv} (\code{fn}, \code{arg}, \code{defa
 tfl_ard_model_args("survfit", "survival")
 tfl_ard_model_args("glm")
 tfl_ard_model_args("glm.nb", "MASS")
+tfl_ard_model_args("polr", "MASS")
+if (requireNamespace("geepack", quietly = TRUE)) {
+  tfl_ard_model_args("geeglm", "geepack")
+}
 }

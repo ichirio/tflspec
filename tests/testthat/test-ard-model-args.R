@@ -315,3 +315,123 @@ test_that("method.args reaches a negative binomial model: its rate ratio", {
   r <- exact_run(cs, adam, dir)
   expect_true(isTRUE(r$same), info = r$error)
 })
+
+test_that("a GEE model (geepack::geeglm) has its arguments checked, its id required", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("geepack")
+  gee <- function(extra) list(
+    method = "regression", dataset = "ADLB", population_id = "SAF",
+    where = "PARAMCD == \"ALB\"",
+    args = paste("formula = AVAL ~ TRTA + AVISIT, method = \"geeglm\",",
+                 "package = \"geepack\",", extra))
+  # geeglm()'s own names and glm.control()'s, where its `...` go
+  expect_no_warning(exact_spec(gee(paste(
+    "method.args = list(id = factor(USUBJID), waves = AVISITN, corstr = \"ar1\",",
+    "std.err = \"san.se\", maxit = 50, epsilon = 1e-6)"))))
+  expect_warning(exact_spec(gee("method.args = list(id = factor(USUBJID), corstr = \"exch\")")),
+                 "geeglm\\(corstr = \\) is one of \"independence\", \"exchangeable\"")
+  expect_warning(exact_spec(gee("method.args = list(id = factor(USUBJID), std.err = \"robust\")")),
+                 "geeglm\\(std.err = \\) is one of \"san.se\"")
+  # (USUBJID is text: geeglm() would take the whole data as one cluster)
+  expect_warning(exact_spec(gee("method.args = list(id = USUBJID)")),
+                 "gives `id = USUBJID`, a text column: .* write `id = factor\\(USUBJID\\)`")
+  expect_warning(exact_spec(gee("method.args = list(id = \"USUBJID\")")),
+                 "geeglm\\(id = \\) is a column of the data, not in quotes")
+  expect_warning(exact_spec(gee("method.args = list(id = factor(USUBJID), scale.value = 0)")),
+                 "geeglm\\(scale.value = \\) is a number above 0")
+  # (jack = goes to geese.control() but stops glm(): not a name to write)
+  expect_warning(exact_spec(gee("method.args = list(id = factor(USUBJID), jack = TRUE)")),
+                 "gives `jack`, which geepack .*'s geeglm\\(\\) does not have")
+  # the subject column is required: in method.args, or method.args at all
+  expect_warning(exact_spec(gee("method.args = list(corstr = \"exchangeable\")")),
+                 "gives no `id`, which geeglm\\(\\) needs")
+  expect_warning(exact_spec(gee("exponentiate = FALSE")),
+                 "fits geeglm\\(\\) with no method.args; it needs method.args = list\\(id = factor\\(USUBJID\\)\\)")
+  # a model's call in x
+  expect_warning(exact_spec(list(
+    method = "regression", dataset = "ADLB", population_id = "SAF",
+    args = "x = geepack::geeglm(AVAL ~ TRTA, data = data, id = factor(USUBJID), cosrtr = \"ar1\")")),
+    "ard_regression\\(x = geeglm\\(\\)\\) gives `cosrtr`")
+  g <- tfl_ard_model_args("geeglm", "geepack")
+  expect_identical(g$fn[1L], "geepack::geeglm")
+  expect_true(all(c("id", "corstr", "std.err", "maxit") %in% g$arg))
+  expect_true(all(g$described[match(c("id", "corstr", "waves"), g$arg)]))
+})
+
+test_that("a proportional odds model (MASS::polr) has its arguments checked", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("MASS")
+  po <- function(extra) list(
+    method = "regression", population_id = "SAF",
+    args = paste("formula = factor(AGEGR1, ordered = TRUE) ~ TRT01A,",
+                 "method = \"polr\", package = \"MASS\",", extra))
+  expect_no_warning(exact_spec(po(paste(
+    "method.args = list(method = \"probit\", Hess = TRUE, control = list(maxit = 500))"))))
+  # (broom's tidy.polr() takes p.values: passed on, not a mistake)
+  expect_no_warning(exact_spec(po("method.args = list(Hess = TRUE), p.values = TRUE")))
+  expect_warning(exact_spec(po("method.args = list(method = \"logit\")")),
+                 "polr\\(method = \\) is one of \"logistic\", \"probit\"")
+  # optim() gets hessian from polr(): a second one would stop it
+  expect_warning(exact_spec(po("method.args = list(hessian = TRUE)")),
+                 "gives `hessian`, which MASS .*'s polr\\(\\) does not have")
+  expect_warning(exact_spec(po("method.args = list(Hess = \"yes\")")),
+                 "polr\\(Hess = \\)")
+  p <- tfl_ard_model_args("polr", "MASS")
+  expect_identical(p$fn[1L], "MASS::polr")
+  expect_true(all(c("method", "Hess", "control") %in% p$arg))
+  expect_true(all(p$described[match(c("method", "Hess", "control"), p$arg)]))
+})
+
+test_that("method.args reaches a GEE model and a proportional odds model", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("geepack")
+  skip_if_not_installed("MASS")
+  skip_if_not_installed("broom.helpers")
+  adam <- exact_data()
+  dir <- exact_dir(adam)
+  on.exit(unlink(dir, recursive = TRUE))
+  # a responder analysis over visits: odds ratios of a GEE logistic model
+  # with an exchangeable working correlation (the data sorted by subject)
+  gee <- list(
+    row = list(method = "regression", dataset = "ADLB", population_id = "SAF",
+               where = "PARAMCD == \"ALB\" & AVISITN %in% c(2, 4, 6, 8)",
+               args = paste("formula = RESP ~ TRTA + AVISIT, method = \"geeglm\",",
+                            "package = \"geepack\", exponentiate = TRUE,",
+                            "method.args = list(family = binomial, id = factor(USUBJID),",
+                            "corstr = \"exchangeable\")")),
+    ds_derive = "RESP = as.integer(AVAL > BASE)",
+    hand = paste("cardx::ard_regression(data, formula = RESP ~ TRTA + AVISIT,",
+                 "method = \"geeglm\", package = \"geepack\", exponentiate = TRUE,",
+                 "method.args = list(family = binomial, id = factor(USUBJID),",
+                 "corstr = \"exchangeable\"))"))
+  r <- exact_run(gee, adam, dir)
+  expect_true(isTRUE(r$same), info = r$error)
+  # the same odds ratios as geeglm() itself
+  d <- exact_inputs(gee$row, adam, ds_derive = gee$ds_derive)$data
+  fit <- geepack::geeglm(RESP ~ TRTA + AVISIT, family = stats::binomial, data = d,
+                         id = factor(d$USUBJID), corstr = "exchangeable")
+  a <- suppressWarnings(cardx::ard_regression(
+    d, formula = RESP ~ TRTA + AVISIT, method = "geeglm", package = "geepack",
+    exponentiate = TRUE,
+    method.args = list(family = binomial, id = factor(USUBJID), corstr = "exchangeable")))
+  est <- a[a$variable == "TRTA" & a$stat_name == "estimate" &
+             !vapply(a$variable_level, function(v) identical(unlist(v), "Placebo"), NA), ]
+  expect_equal(unname(unlist(est$stat)),
+               unname(exp(stats::coef(fit))[grep("^TRTA", names(stats::coef(fit)))]),
+               tolerance = 1e-8)
+  # an ordinal scale: the proportional odds model's odds ratios
+  po <- list(
+    row = list(method = "regression", population_id = "SAF",
+               args = paste("formula = AGEGRO ~ TRT01A, method = \"polr\",",
+                            "package = \"MASS\", exponentiate = TRUE,",
+                            "method.args = list(Hess = TRUE)")),
+    pop_derive = "AGEGRO = factor(AGEGR1, levels = c(\"<65\", \"65-80\", \">80\"), ordered = TRUE)",
+    hand = paste("cardx::ard_regression(data, formula = AGEGRO ~ TRT01A,",
+                 "method = \"polr\", package = \"MASS\", exponentiate = TRUE,",
+                 "method.args = list(Hess = TRUE))"))
+  r <- exact_run(po, adam, dir)
+  expect_true(isTRUE(r$same), info = r$error)
+})

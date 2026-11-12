@@ -216,6 +216,32 @@ added checks (below), not arguments: a name a function takes in `...` and
 drops, and a hint to `method.args` for a model's argument written beside
 the function's own.
 
+2026-11-12 (wider scope; cards 0.9.0, cardx 0.3.4, still the CRAN
+versions; geepack 1.3.13, MASS 7.3-60.0.1): two more models cardx fits
+from `method` / `package` -- `geepack::geeglm()` (a GEE model: a
+responder analysis over visits, weight 2) and `MASS::polr()` (a
+proportional odds model of an ordinal scale, weight 2) -- 18 more
+arguments of 2 functions (by design left out: their starting values,
+`subset` / `na.action`, geeglm()'s fitting routine, `control` written as
+its parts and `zcor`, polr()'s `model`).
+
+| Scope (2026-11-12, wider) | 2026-11-12 before | 2026-11-12 after |
+|---|---:|---:|
+| **cards / cardx, weighted** | **99.0%** (512 yes / 18 partial) | **100.0%** (530 / 0) |
+| cards ard_*() | 100.0% | 100.0% |
+| cardx ard_*() | 100.0% | 100.0% |
+| cards post helpers | 100.0% | 100.0% |
+| cards code helpers | 100.0% | 100.0% |
+| cardx CI helpers | 100.0% | 100.0% |
+| cardx model arguments | 90.9% (60 / 18) | 100.0% (78 / 0) |
+| weight-3 functions only | 100.0% | 100.0% |
+
+(2026-11-12 before: this branch before the run (tflspec@next 7af5a42
+merged) on the wider scope -- the two models' arguments could be written
+as R in `method.args` and reached the model, but were neither described
+nor their names checked: partial.  On the 2026-11-11 scope the run starts
+and ends at 100.0%.)
+
 (2026-11-10 before: this branch before the run (tflspec@next f04b06d
 merged) on the wider scope -- the 3 arguments could be written as R in
 `args` and reached effectsize, but were not described and their values
@@ -267,6 +293,40 @@ function, but the catalog did not describe it and its value was not
 judged: partial.  2026-10-31 before: the same, with
 `update_ard_fmt_fun()` in the `post` scope -- written as R in `post`, its
 names checked, its values not judged.)
+
+### Added 2026-11-12
+
+* **A GEE model, `geepack::geeglm()`**, through `method = "geeglm",
+  package = "geepack"` and `method.args = list(family = binomial, id =
+  factor(USUBJID), corstr = "exchangeable")` (or a call in `x`): the
+  responder analysis over visits that some efficacy tables give with
+  `exponentiate = TRUE` (odds ratios with robust, sandwich intervals).
+  `inst/ard/model_args.csv` describes `family`, `id`, `waves`, `corstr`
+  (independence, exchangeable, ar1, unstructured ...), `std.err` (san.se,
+  jack, j1s, fij), `scale.fix`, `scale.value`, `weights`, `offset`,
+  `contrasts`, and the `maxit`, `epsilon` and `trace` that its `...` give
+  both `glm.control()` and `geese.control()`.  Names and values are
+  judged.  Two mistakes are now reported when the spec is read:
+  * no `id`: geeglm() stops ("id variable not found");
+  * **`id = USUBJID`**: geeglm() finds its clusters where `as.numeric(id)`
+    changes.  ADaM's USUBJID is text, so the whole data is one cluster.
+    The program runs, with only a warning that cardx keeps in the ARD, and
+    the standard errors and p-values are wrong (a p-value of 0 on cards'
+    ADLB, against 0.099 with `id = factor(USUBJID)`).  The warning says to
+    write `id = factor(USUBJID)`.
+* **A proportional odds model, `MASS::polr()`**, through `method =
+  "polr", package = "MASS"`: an ordinal scale's odds ratios.  The catalog
+  describes `method` (logistic, probit, loglog, cloglog, cauchit),
+  `Hess`, `weights`, `contrasts` and `control`.  `control` is the only
+  name polr()'s `...` may carry to `optim()`: polr() gives optim() its
+  `par`, `fn`, `gr`, `method` and `hessian` itself, and a second one
+  stops it.  broom's `tidy.polr(p.values = TRUE)` is passed on as before
+  and is known.
+* The tests run both: a GEE row and a polr row give the same ARD as
+  cardx's call written by hand, and the GEE odds ratios are those of
+  `geeglm()` fitted directly.
+* geepack joins Suggests (for the tests and the example of
+  `tfl_ard_model_args("geeglm", "geepack")`); MASS ships with R.
 
 ### Added 2026-11-11
 
@@ -686,9 +746,11 @@ Every argument in scope is described and its value judged (since
    (`survival::survreg()`, `MASS::glm.nb()`, `nlme::gls()`, a study's own)
    takes its names as written.  (Since 2026-11-07 also `MASS::glm.nb()`
    and `survival::survreg()`, and `mmrm(covariance =, weights =)` are
-   judged.)  Left: `nlme::gls()` (its formula is `model =`, which cardx
-   does not give: not offered), a study's own model, and `cov_struct(group
-   =)`'s column, taken as written.  A list made by the program
+   judged; since 2026-11-12 also `geepack::geeglm()` and `MASS::polr()`.)
+   Left: `nlme::gls()` (its formula is `model =`, which cardx does not
+   give: not offered) and `nlme::lme()` (its formula is `fixed =`, which
+   cardx's `formula =` does not reach either), a study's own model, and
+   `cov_struct(group =)`'s column, taken as written.  A list made by the program
    (`method.args = my_args`) is the program's.
 6. Not in scope by design: `rename_ard_groups_shift()` /
    `_reverse()` (the table code reads the by columns in the row's order:
@@ -748,6 +810,18 @@ Percentage: yes counts 1, partial 0.5.
 | 2026-11-10 before | 51.9% (331 / 20 / 306 of 657) | 59.2% (331 / 20 / 225 of 576) | 40 / 8 / 67 |
 | 2026-11-10 after  | 52.1% (332 / 20 / 305 of 657) | 59.4% (332 / 20 / 224 of 576) | 41 / 7 / 67 |
 | 2026-11-11 before / after | 52.1% (332 / 20 / 305 of 657) | 59.4% (332 / 20 / 224 of 576) | 41 / 7 / 67 |
+| 2026-11-12 before / after | 53.0% (332 / 20 / 293 of 645) | 59.4% (332 / 20 / 224 of 576) | 42 / 6 / 66 |
+
+(2026-11-12: rtfreporter@next 5c7d0ac (its changes since dd1e0cb:
+`rtf_default_format()` and `rtf_document(default_format =)` removed, as
+0.9.0 plans; `assemble_rtf()`'s table of contents -- `toc_style`, a
+hanging indent, `toc_title` line breaks -- and `pull_ard(levels =)` in
+the data's order: no new argument a SPEC writes) and tflspec@next
+7af5a42 merged.  The 12 removed arguments were helpers (deprecated), so
+only "all arguments" moves; `assemble_rtf(toc_style =)` is a new helper
+(file assembly).  tflspec writes no call to `rtf_default_format()`: an
+old SPEC's `page.rtf_default_format` is read as `rtf_style()`'s shared
+level.  The run went to cards / cardx.)
 
 (2026-11-11: rtfreporter@next dd1e0cb (its changes since 48b954d are the
 validation kit's traceability matrix and the quality plan: no new exported

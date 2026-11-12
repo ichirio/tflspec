@@ -46,6 +46,7 @@ Suggests:
     dplyr,
     effectsize,
     emmeans,
+    geepack,
     ggh4x,
     ggnewscale,
     ggrepel,
