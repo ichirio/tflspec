@@ -42,7 +42,7 @@ test_that("a template's look is under the study's layers (they say the look), it
   s$defaults$content[[k]] <- tfl_item("plan_paginate_rows", list(max_rows = 40L), from = "defaults")
   o <- tfl_output("T-9", "table", population = "SAF",
                   template = list(name = "summary", args = list(
-                    continuous = "AGE", categorical = c("AGEGR1", "SEX"))))
+                    by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX"))))
   ro <- tfl_resolve_output(o, s)
   pr <- ro$content[[match("plan_paginate_rows", vapply(ro$content, `[[`, "", "fn"))]]
   # (the study's max_rows over the layout's split, argument by argument)

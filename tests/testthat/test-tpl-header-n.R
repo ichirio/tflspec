@@ -9,6 +9,8 @@ hn_texts <- function(x) {
 hn_all <- function(x) unlist(hn_texts(x))
 hn_ids <- function(x) vapply(x$ard$analyses, function(a) a$id, "")
 hn_expand <- function(name, args = list(), ...) {
+  # (ae_overview's `by` is required, no default: canon 1.14)
+  if (name == "ae_overview" && is.null(args$by)) args$by <- "TRT01A"
   tfl_template_expand(name, c(list(population = "SAF"), args, list(...)))
 }
 hn_msg <- function(tpl, x, why) {

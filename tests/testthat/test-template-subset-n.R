@@ -48,7 +48,7 @@ test_that("ae_overview with subset: every percentage is over the subset's subjec
   sn_skip()
   s <- sn_study(withr::local_tempdir())
   sub <- "PART == \"Part 1\""
-  x <- sn_rtf(s$dir, "T-N1", "ae_overview", list(population = "SAF", subset = sub))
+  x <- sn_rtf(s$dir, "T-N1", "ae_overview", list(population = "SAF", by = "TRT01A", subset = sub))
   saf <- s$adsl[s$adsl$SAFFL == "Y" & s$adsl$PART == "Part 1", ]
   n <- table(saf$TRT01A)
   expect_match(x, "Drug X", fixed = TRUE)

@@ -97,7 +97,8 @@ hd_study <- function(root) {
 hd_args <- list(
   shift = list(population = "SAF", data_id = "adlb_shift", by_levels = c("Drug X", "Control")),
   lab_shift = list(population = "SAF", visit = "CYCLE 2 DAY 1", params = c("ALT", "AST")),
-  param_change = list(population = "SAF", data = "ADLB", params = c("ALT", "AST"), where = NULL),
+  param_change = list(population = "SAF", data = "ADLB", by = "TRT01A", params = c("ALT", "AST"),
+                      where = NULL),
   pk_conc = list(population = "SAF", blq = "BLQFL == \"Y\""),
   demog = list(by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX")))
 

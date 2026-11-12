@@ -537,7 +537,8 @@ test_that("shift: a where with | is its own argument of the filter (no brackets 
 test_that("a heading of two lines: one header text with a line break, as the hierarchical tables write it", {
   two <- c("Line one", "Line two")
   code_of <- function(name, args) {
-    x <- tfl_template_expand(name, c(list(population = "SAF"), args))
+    x <- tfl_template_expand(name, c(list(population = "SAF"),
+                                     if (name == "ae_overview") list(by = "TRT01A"), args))
     o <- tfl_output("T-1", "table", data = x$data, content = x$content)
     suppressMessages(tfl_content_code(o, pipe = "|>"))
   }

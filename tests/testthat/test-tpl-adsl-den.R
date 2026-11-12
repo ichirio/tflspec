@@ -6,7 +6,11 @@
 ad_pops <- list(list(id = "SAF", label = "Safety Analysis Set"))
 ad_codelists <- list(TRT01A = c("Drug X", "Control"))
 ad_expand <- function(name, ...) {
-  tfl_template_expand(name, c(list(population = "SAF"), list(...)),
+  # (batch 2: `by` required, no default; disposition's status variable too)
+  a <- list(...)
+  if (name %in% c("summary", "disposition", "ae_overview") && is.null(a$by)) a$by <- "TRT01A"
+  if (name == "disposition" && is.null(a$categorical)) a$categorical <- "EOSSTT"
+  tfl_template_expand(name, c(list(population = "SAF"), a),
                       codelists = ad_codelists, population = ad_pops)
 }
 ad_an <- function(x, id) Filter(function(a) identical(a$id, id), x$ard$analyses)[[1L]]

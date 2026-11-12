@@ -28,7 +28,7 @@ test_that("every table template: the example as flat args: and as ard:/content: 
     ex <- tflspec:::.tpl_examples[[t]]
     if (is.null(ex) || !length(ex)) ex <- list()
     # (demog and stf_t02_demog take the analysis set from the report: no `population` argument)
-    if (t %in% c("demog", "stf_t02_demog")) ex$population <- NULL
+    if (t %in% c("demog", "stf_t02_demog", "summary", "disposition")) ex$population <- NULL
     flat <- tp_output(list(name = t, args = ex))
     two <- tp_output(c(list(name = t), tp_split(ex, t)))
     a <- tflspec:::.tpl_spec_of(flat)
@@ -101,7 +101,7 @@ test_that("a two-part SPEC survives a YAML round trip", {
 
 test_that("population: not given, it is the report's `population:`", {
   s <- tp_study()
-  o <- tp_output(list(name = "summary", args = list(continuous = "AGE")), population = "SAF")
+  o <- tp_output(list(name = "ae_soc_pt", args = list()), population = "SAF")
   r <- tfl_resolve_output(o, s)
   expect_identical(r$ard$analysis_data[[1L]]$population, "SAF")
   expect_identical(attr(r, "template")$args$population, "SAF")
@@ -110,16 +110,16 @@ test_that("population: not given, it is the report's `population:`", {
 
 test_that("population: args equal to the report's, or the report has none: used, no message", {
   s <- tp_study()
-  base <- tfl_resolve_output(tp_output(list(name = "summary", args = list(continuous = "AGE"))), s)
-  same <- tp_output(list(name = "summary", args = list(population = "SAF", continuous = "AGE")))
+  base <- tfl_resolve_output(tp_output(list(name = "ae_soc_pt", args = list())), s)
+  same <- tp_output(list(name = "ae_soc_pt", args = list(population = "SAF")))
   expect_no_message(r <- tfl_resolve_output(same, s))
   expect_identical(r$content, base$content)
   expect_identical(r$ard, base$ard)
   # ard: says it too
-  two <- tp_output(list(name = "summary", ard = list(population = "SAF", continuous = "AGE")))
+  two <- tp_output(list(name = "ae_soc_pt", ard = list(population = "SAF")))
   expect_identical(tfl_resolve_output(two, s)$content, base$content)
   # the report has no `population:`: the template's is used
-  none <- tp_output(list(name = "summary", args = list(population = "SAF", continuous = "AGE")),
+  none <- tp_output(list(name = "ae_soc_pt", args = list(population = "SAF")),
                     population = NULL)
   expect_true(is.na(none$population))
   r <- tfl_resolve_output(none, s)
@@ -129,23 +129,23 @@ test_that("population: args equal to the report's, or the report has none: used,
 
 test_that("population: args differing from the report's: built with the template's, with the message (as before)", {
   s <- tp_study()
-  o <- tp_output(list(name = "summary", args = list(population = "ITT", continuous = "AGE")))
+  o <- tp_output(list(name = "ae_soc_pt", args = list(population = "ITT")))
   expect_message(r <- tfl_resolve_output(o, s), "overrides the study standard \\(output.population\\)")
   expect_identical(r$ard$analysis_data[[1L]]$population, "ITT")
-  o <- tp_output(list(name = "summary", ard = list(population = "ITT", continuous = "AGE")))
+  o <- tp_output(list(name = "ae_soc_pt", ard = list(population = "ITT")))
   expect_message(r <- tfl_resolve_output(o, s), "overrides the study standard")
   expect_identical(r$ard$analysis_data[[1L]]$population, "ITT")
 })
 
 test_that("tfl_check_spec(): a template's population that differs from the report's gives a warning row naming both", {
-  mk <- function(args, population = "SAF") tp_output(list(name = "summary", args = args), population)
-  p <- tflspec:::.check_static_rows(mk(list(continuous = "AGE")), "T1")
+  mk <- function(args, population = "SAF") tp_output(list(name = "ae_soc_pt", args = args), population)
+  p <- tflspec:::.check_static_rows(mk(list()), "T1")
   expect_identical(nrow(p), 0L)
   # equal to the report's, or the report has none: used, no row
-  expect_identical(nrow(tflspec:::.check_static_rows(mk(list(population = "SAF", continuous = "AGE")), "T1")), 0L)
+  expect_identical(nrow(tflspec:::.check_static_rows(mk(list(population = "SAF")), "T1")), 0L)
   expect_identical(nrow(tflspec:::.check_static_rows(mk(list(population = "SAF"), population = NULL), "T1")), 0L)
   expect_identical(nrow(tflspec:::.check_static_rows(
-    tp_output(list(name = "summary", ard = list(population = "SAF"))), "T1")), 0L)
+    tp_output(list(name = "ae_soc_pt", ard = list(population = "SAF"))), "T1")), 0L)
   p <- tflspec:::.check_static_rows(mk(list(population = "ITT")), "T1")
   expect_identical(p$level, "warning")
   expect_identical(p$item, "population")
@@ -170,7 +170,7 @@ test_that("the look as a template parameter is no warning, and no finding", {
   expect_no_warning(tfl_template("tp_wide", kind = "table", layout = "summary",
     params = list(tfl_param("population", "SAF"), tfl_param("max_rows", 30L, type = "number")),
     body = function(a, ctx) {
-      x <- tfl_template_expand("summary", list(population = a$population, continuous = "AGE"))
+      x <- tfl_template_expand("summary", list(by = "TRT01A", population = a$population, continuous = "AGE"))
       x$content <- c(x$content, list(tfl_item("plan_paginate_rows", list(max_rows = a$max_rows))))
       x
     }))

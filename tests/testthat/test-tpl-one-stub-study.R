@@ -21,7 +21,7 @@ test_that("ae_pt_freq and ae_overview draw in a study of the default standard", 
   for (nm in names(ids)) {
     tfl_write_output(tfl_output(ids[[nm]], "table", population = "SAF", label = nm,
                                 extends = "defaults",
-                                template = list(name = nm, args = list(population = "SAF"))),
+                                template = list(name = nm, args = list(population = "SAF", by = "TRT01A"))),
                      file.path(d, "spec", "outputs", paste0(ids[[nm]], ".yml")))
   }
   st <- tfl_read_study_spec(d)

@@ -21,7 +21,7 @@ sr_register <- function(name, params) {
   tfl_template(name, "table", "summary",
                params = c(list(tfl_param("population", "SAF", type = "text")), params),
                body = function(a, ctx) tfl_template_expand(
-                 "summary", list(population = a$population, continuous = "AGE"),
+                 "summary", list(by = "TRT01A", population = a$population, continuous = "AGE"),
                  codelists = ctx$codelists, population = ctx$population),
                example = list(population = "SAF"))
   invisible(name)
@@ -127,7 +127,7 @@ test_that("tfl_tpl_args(): the reference, its fallback and where the value is fr
   expect_identical(r(b, "count_cell")$layer, "study: plan_cells.categorical")
   # demog's analysis set is the report's, not a parameter of the table; summary's is
   expect_identical(nrow(r(b, "population")), 0L)
-  expect_identical(r(tfl_tpl_args("summary", study = s, population = "SAF"), "population")$layer, "report")
+  expect_identical(r(tfl_tpl_args("ae_soc_pt", study = s, population = "SAF"), "population")$layer, "report")
   # the Rd table and the help say it too
   rd <- paste(.tpl_rd("demog"), collapse = "\n")
   expect_match(rd, "study: settings.sd_missing, else -", fixed = TRUE)
@@ -234,7 +234,7 @@ test_that("the set's extends: demog [defaults], stf_t02_demog {content: none}; t
   expect_identical(ro2$page$rtf_page$orientation, "landscape")
   # the same arguments in a template not yet migrated read the study's content layer
   o0 <- tfl_output("T-9", "table", population = "SAF",
-                   template = list(name = "summary", args = list(continuous = "AGE")))
+                   template = list(name = "summary", args = list(by = "TRT01A", continuous = "AGE")))
   expect_true("defaults" %in% vapply(tfl_resolve_output(o0, s)$content,
                                       function(it) it$from %||% "", ""))
   expect_identical(tfl_resolve_output(o0, s)$page, ro1$page)
