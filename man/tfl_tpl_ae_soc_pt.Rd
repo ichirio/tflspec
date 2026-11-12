@@ -11,7 +11,7 @@ The table template \code{ae_soc_pt}, layout \code{hierarchical}: a variant of \c
    Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
    \code{population} \tab required \tab call \tab report: population, required \tab output.population \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
-   \code{hierarchy} \tab required \tab call \tab AEBODSYS, AEDECOD \tab  \tab the levels, outer first \cr
+   \code{hierarchy} \tab key \tab call \tab AEBODSYS, AEDECOD \tab  \tab the levels, outer first \cr
    \code{data} \tab other \tab call \tab ADAE \tab  \tab the dataset of records \cr
    \code{where} \tab usual \tab call \tab TRTEMFL == "Y" \tab  \tab the records kept (R) \cr
    \code{by} \tab usual \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the column variable \cr
