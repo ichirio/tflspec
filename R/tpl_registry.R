@@ -80,8 +80,9 @@
 #'   (which records of the records data); `NULL`: tflspec's for its name,
 #'   else none.
 #' @param tier How often it is set, for a help page and an input form:
-#'   `"required"`, `"usual"` (shown with its default) or `"other"` (folded
-#'   away); `NULL`: `"required"` when `required`, else `"other"`.
+#'   `"required"`, `"key"` (it has a default but stays on top, with a marker),
+#'   `"usual"` (shown with its default) or `"other"` (folded away); `NULL`:
+#'   `"required"` when `required`, else `"other"`.
 #' @param unset What a report's (or a template default's) `!unset` does to this
 #'   parameter, which the template says once, here: `"omit"` (the default): the
 #'   argument is left out of the inner call it goes into; `"step_off"`: the
@@ -107,7 +108,7 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
                       unset = c("omit", "step_off", "stop"), maps_to = NULL) {
   unset <- match.arg(unset)
   if (!is.null(type)) type <- match.arg(type, .tpl_param_types)
-  if (!is.null(tier)) tier <- match.arg(tier, c("required", "usual", "other"))
+  if (!is.null(tier)) tier <- match.arg(tier, c("required", "key", "usual", "other"))
   step <- match.arg(step, c("call", "data"))
   .tpl_study_key_check(study, name)
   .tpl_maps_to_check(maps_to, name)
@@ -1257,6 +1258,7 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
 tfl_template_variant("ae_soc_pt", from = "hierarchical", ai = TRUE,
   label = "Adverse events by SOC and PT (FDA STF Table 14)",
   example = list(population = "SAF"),
+  key = "hierarchy",
   defaults = list(hierarchy = c("AEBODSYS", "AEDECOD"), where = "TRTEMFL == \"Y\"",
                   any_row = TRUE, any_row_label = "Any TEAE"))
 tfl_template_variant("ae_ser_soc_pt", from = "ae_soc_pt",
@@ -1306,7 +1308,7 @@ tpl_hierarchical <- function(ard, population, hierarchy, ..., codelists = NULL) 
 .tpl_pt_params <- list(
   tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
   .tpl_subset_param(),
-  tfl_param("term", "AEDECOD", doc = "the term variable (the PT)"),
+  tfl_param("term", "AEDECOD", tier = "key", doc = "the term variable (the PT)"),
   tfl_param("by", "TRT01A", doc = "the column variable"),
   tfl_param("data", "ADAE", doc = "the dataset of records"),
   tfl_param("where", "TRTEMFL == \"Y\"", doc = "the records kept (R)"),
@@ -1390,7 +1392,7 @@ tpl_ae_pt_freq <- function(ard, population, ..., codelists = NULL) {
 .tpl_mg_params <- list(
   tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
   .tpl_subset_param(),
-  tfl_param("grade", "AESEV", doc = "the severity or grade variable (AESEV, AETOXGR)"),
+  tfl_param("grade", "AESEV", tier = "key", doc = "the severity or grade variable (AESEV, AETOXGR)"),
   tfl_param("grade_levels", NULL,
             doc = paste("its values, lowest first: the rank of the maximum, and the order the",
                         "table shows them in; NULL: the code list of `grade`")),

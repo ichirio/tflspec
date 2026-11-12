@@ -107,7 +107,7 @@
 #'   parameters taken from the report's `population:`
 #'   (`"output.population"`); `NULL` for none.
 #' @return A data frame, one row a parameter in the template's order:
-#'   `param`, `tier` (`"required"`, `"usual"`, `"other"`), `step`
+#'   `param`, `tier` (`"required"`, `"key"`, `"usual"`, `"other"`), `step`
 #'   (`"call"`, an argument of the template's call, or `"data"`, of a step
 #'   preparing the analysis data: [tfl_param()]`(step = )`), `type`,
 #'   `required`, `default` (the layout's, a short text; the reference for a
@@ -222,7 +222,7 @@ tfl_tpl_args <- function(name, study = NULL, population = NULL) {
 #' them.
 #'
 #' @inheritParams tfl_tpl_args
-#' @param tier The tiers to print: `"required"`, `"usual"`, `"other"`
+#' @param tier The tiers to print: `"required"`, `"key"`, `"usual"`, `"other"`
 #'   (all by default; `c("required", "usual")` folds the others away).
 #' @return [tfl_tpl_args()]`(name, study, population)`, invisibly.
 #' @seealso [tfl_tpl()]; the template's page, `?tfl_tpl_<name>`
@@ -231,7 +231,7 @@ tfl_tpl_args <- function(name, study = NULL, population = NULL) {
 #' tfl_tpl_help("demog", tier = c("required", "usual"))
 #' @export
 tfl_tpl_help <- function(name, study = NULL, population = NULL,
-                         tier = c("required", "usual", "other")) {
+                         tier = c("required", "key", "usual", "other")) {
   tier <- match.arg(tier, several.ok = TRUE)
   t <- .tpl_get(name, "tfl_tpl_help()")
   a <- tfl_tpl_args(name, study = study, population = population)
