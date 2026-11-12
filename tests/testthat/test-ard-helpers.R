@@ -186,15 +186,21 @@ test_that("drop_empty_groups(): a group with N = 0 and nothing else loses its ro
   expect_identical(nrow(e$drop_empty_groups(no_group)), 1L)
 })
 
-test_that("set_levels() on a column that holds the list's labels already keeps them (a data made from another)", {
+test_that("set_levels() makes a factor of the codes: no labels, and a data made from another keeps them", {
   e <- new.env()
   sys.source(system.file("helpers", "study_helpers.R", package = "tflspec"), envir = e)
   cl <- c(LOW = "Low", NORMAL = "Normal", HIGH = "High")
   d <- data.frame(WORST = c("HIGH", "LOW", NA), stringsAsFactors = FALSE)
   once <- e$set_levels(d, WORST = cl)
-  expect_identical(levels(once$WORST), c("Low", "Normal", "High"))
+  expect_identical(levels(once$WORST), c("LOW", "NORMAL", "HIGH"))
+  expect_identical(as.character(once$WORST), c("HIGH", "LOW", NA))
   twice <- e$set_levels(once, WORST = cl)
   expect_identical(twice$WORST, once$WORST)
+  # a list without names: the values themselves; a narrowed list: its levels only
+  expect_identical(levels(e$set_levels(d, WORST = names(cl))$WORST), c("LOW", "NORMAL", "HIGH"))
+  expect_identical(levels(e$set_levels(d, WORST = cl[c("LOW", "HIGH")])$WORST), c("LOW", "HIGH"))
+  # a label is no code: it stops
+  expect_error(e$set_levels(data.frame(WORST = "High"), WORST = cl), "WORST has values its code list does not")
   expect_error(e$set_levels(data.frame(WORST = "Mid"), WORST = cl), "WORST has values its code list does not")
 })
 
@@ -204,12 +210,12 @@ test_that("set_levels(): a blank text value is missing, not a value the list lac
   cl <- c(LOW = "Low", NORMAL = "Normal", HIGH = "High")
   d <- data.frame(WORST = c("HIGH", "", NA, "  ", "LOW"), stringsAsFactors = FALSE)
   r <- e$set_levels(d, WORST = cl)
-  expect_identical(levels(r$WORST), c("Low", "Normal", "High"))
+  expect_identical(levels(r$WORST), c("LOW", "NORMAL", "HIGH"))
   expect_identical(is.na(r$WORST), c(FALSE, TRUE, TRUE, TRUE, FALSE))
-  expect_identical(as.character(r$WORST[c(1L, 5L)]), c("High", "Low"))
+  expect_identical(as.character(r$WORST[c(1L, 5L)]), c("HIGH", "LOW"))
   expect_error(e$set_levels(data.frame(WORST = c("", "Mid")), WORST = cl),
                "WORST has values its code list does not: \"Mid\"", fixed = TRUE)
-  # a factor with the labels already still works, its blank staying missing
+  # a factor with the codes already still works, its blank staying missing
   f <- e$set_levels(r, WORST = cl)
   expect_identical(f$WORST, r$WORST)
 })

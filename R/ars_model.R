@@ -341,13 +341,14 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
     g <- list(id = id, name = label_of(out, var), groupingDataset = ds,
               groupingVariable = var, dataDriven = !length(lv))
     if (length(lv)) {
-      # a group's name as the table shows it, its condition the data's own
-      # value (a code list's label back to its value)
+      # a group's name as the table shows it (the code list's label), its
+      # condition the data's own value: the code the levels are
       cl <- .codelist_levels(table_spec, out)[[var]]
-      val <- if (is.null(names(cl))) lv else
-        ifelse(lv %in% cl, names(cl)[match(lv, cl)], lv)
+      val <- lv
+      nm <- if (is.null(names(cl))) lv else
+        ifelse(lv %in% names(cl), unname(cl[lv]), lv)
       g$groups <- lapply(seq_along(lv), function(k) list(
-        id = paste0(id, "_", k), name = lv[k], level = 1L, order = k,
+        id = paste0(id, "_", k), name = nm[k], level = 1L, order = k,
         condition = list(dataset = ds, variable = var, comparator = "EQ",
                          value = list(val[k]))))
     }
@@ -609,10 +610,8 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
       # the statistics: the row's, else the ones the function says it gives
       if (!length(stats)) stats <- own_stats[[m]] %||% character()
     }
-    # (the condition runs on the data with the code lists' labels; ARS
-    # compares the data's own values)
-    ss <- subset(.where_labels_to_values(
-      r$where, .codelist_levels(table_spec, out)), ds, tag)
+    # (the condition is in the data's own values: the codes)
+    ss <- subset(r$where, ds, tag)
     lbl <- if (!is.na(r$label)) r$label else NULL
     # (overall: the name says so)
     lab_of <- function(o, v) paste(c(label_of(o, v), if (overall) "(overall)"),
