@@ -44,7 +44,7 @@
 #'   * `"figure_style.<key>"` (`"figure_style.km.theme"`: the type, then the
 #'     key): `defaults.yml`'s `figure_style:`, else tflspec's built-in
 #'     figure style;
-#'   * `"output.<field>"`: the report's own field (`"output.population"`).
+#'   * `"output.<field>"`: the report's own field (`"output.common.population"`).
 #'
 #'   A character vector names several keys one setting can be written under
 #'   (`c("plan_cells.categorical", "plan_cells.default")`): read in order, the
@@ -261,12 +261,12 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
 .tpl_lines <- function(x) if (length(x)) paste(x, collapse = "\n")
 
 # A parameter's study reference by its name, until each family drops it:
-# the analysis set is the report's (`population:`), the treatment the study's
+# the analysis set is the report's (`common: population`), the treatment the study's
 # (a parameter's own `study =` wins).  (`by` and `group` are required with
 # no reference in the new design, canon 1.14; each family's batch drops the
 # fill, so this table is the last per-name rule.)  One reader reads them
 # and every other key: .tpl_study_read().
-.tpl_study_by_name <- c(population = "output.population", by = "settings.treatment",
+.tpl_study_by_name <- c(population = "output.common.population", by = "settings.treatment",
                         group = "settings.treatment")
 
 # A parameter's type filled in: as declared, by its name, else from its
@@ -2728,7 +2728,7 @@ tpl_orr <- function(ard, population = "ITT", ..., codelists = NULL) {
 .tpl_ae_overview_params <- function() c(
   list(
     tfl_param("population", required = TRUE,
-              doc = "the analysis set's id: the report's `population:` field"),
+              doc = "the analysis set's id: the report's `common: population`"),
     .tpl_subset_param(),
     tfl_param("by", required = TRUE, study = FALSE, unset = "stop",
               doc = "the column variable (the arms); not a default and not the study's treatment"),

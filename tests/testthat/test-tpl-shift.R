@@ -17,7 +17,7 @@ sh_study <- function(root) {
 
 sh_report <- function(d, args, codelists = list()) {
   f <- file.path(d, "spec", "outputs", "T-SH.yml")
-  tfl_write_output(tfl_output("T-SH", "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("T-SH", "table", common = list(population = "SAF"), extends = "defaults",
                               codelists = codelists, template = list(name = "shift", args = args)), f)
   st <- tfl_read_study_spec(d)
   ard <- suppressMessages(tfl_build_ard(st, output_id = "T-SH", dir = d, save = FALSE))
@@ -181,7 +181,7 @@ sn_study <- function(root, drop = TRUE) {
 
 sn_report <- function(d, args) {
   f <- file.path(d, "spec", "outputs", "T-SN.yml")
-  tfl_write_output(tfl_output("T-SN", "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("T-SN", "table", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = "lab_shift",
                                               args = c(list(population = "SAF",
                                                             visit = "CYCLE 2 DAY 1",
@@ -408,7 +408,7 @@ ph_report <- function(d, name, args, codelists = list()) {
             else list(where = 'PARAMCD == "HGB" & AVISIT == "CYCLE 2 DAY 1"'),
             args)
   f <- file.path(d, "spec", "outputs", "T-PH.yml")
-  tfl_write_output(tfl_output("T-PH", "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("T-PH", "table", common = list(population = "SAF"), extends = "defaults",
                               codelists = codelists, template = list(name = name, args = args)), f)
   st <- tfl_read_study_spec(d)
   ard <- suppressMessages(tfl_build_ard(st, output_id = "T-PH", dir = d, save = FALSE))
@@ -634,7 +634,7 @@ sd_study <- function(root) {
 
 sd_report <- function(d, args) {
   f <- file.path(d, "spec", "outputs", "T-SD.yml")
-  tfl_write_output(tfl_output("T-SD", "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("T-SD", "table", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = "shift",
                                               args = c(list(population = "SAF",
                                                             cell = "{n} ({p:.1f%})"), args))),

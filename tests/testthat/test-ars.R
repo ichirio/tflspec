@@ -460,7 +460,7 @@ tpl_ars <- function(template, args = list()) {
   a <- tflspec:::.ai_chr(tflspec::adsl)
   haven::write_xpt(a[a$SAFFL == "Y", ], file.path(d, "adam", "adsl.xpt"))
   tfl_ai_study_init(d, adam = "adam", study_id = "ARSDEN-1")
-  o <- tfl_output("T-DD", "table", population = "SAF", label = "tpl",
+  o <- tfl_output("T-DD", "table", common = list(population = "SAF"), label = "tpl",
     template = list(name = template, args = c(list(
       by = "TRT01A", continuous = "AGE", categorical = c("SEX", "RACE")), args)))
   tfl_write_output(o, file.path(d, "spec", "outputs", "T-DD.yml"))

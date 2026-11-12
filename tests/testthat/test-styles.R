@@ -40,7 +40,7 @@ test_that("a template's look is under the study's layers (they say the look), it
   s <- st_study()
   k <- length(s$defaults$content) + 1L
   s$defaults$content[[k]] <- tfl_item("plan_paginate_rows", list(max_rows = 40L), from = "defaults")
-  o <- tfl_output("T-9", "table", population = "SAF",
+  o <- tfl_output("T-9", "table", common = list(population = "SAF"),
                   template = list(name = "summary", args = list(
                     by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX"))))
   # (extends [defaults], batch 2 (ii)): summary is layered now -- the study's
@@ -64,7 +64,7 @@ test_that("a template's look is under the study's layers (they say the look), it
   w <- tfl_template_to_spec(o, s)
   expect_identical(tab(suppressMessages(tfl_content_run(tfl_resolve_output(w, s), ard))), tab(b))
   # an unlayered template (ae_soc_pt): the study's look under, the old order
-  o <- tfl_output("T-9", "table", population = "SAF",
+  o <- tfl_output("T-9", "table", common = list(population = "SAF"),
                   template = list(name = "ae_soc_pt", args = list(population = "SAF",
                                                                  hierarchy = c("AEBODSYS", "AEDECOD"))))
   ro <- tfl_resolve_output(o, s)
@@ -84,7 +84,7 @@ test_that("a template's look is under the study's layers (they say the look), it
                    list(max_rows = 24L, split = "group_force"))
   # demog is under no study layer but its own references (canon 1.29): its max_rows
   # refers to the study's plan_paginate_rows.max_rows, so the study's 40 reaches it
-  od <- tfl_output("T-9", "table", population = "SAF",
+  od <- tfl_output("T-9", "table", common = list(population = "SAF"),
                    template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE")))
   rd <- tfl_resolve_output(od, s)
   pd <- rd$content[[match("plan_paginate_rows", vapply(rd$content, `[[`, "", "fn"))]]

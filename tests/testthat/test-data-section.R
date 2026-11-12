@@ -24,7 +24,7 @@ ds_output <- function(nm, id = paste0("X-", gsub("_", "-", nm)), population = "S
   if ("population" %in% names(tflspec:::.tpl_get(nm, "test")$params) && !is.null(a$population)) {
     a$population <- population
   }
-  tfl_output(id, tp$kind[tp$name == nm], population = population, label = nm,
+  tfl_output(id, tp$kind[tp$name == nm], common = list(population = population), label = nm,
              template = list(name = nm, args = a))
 }
 

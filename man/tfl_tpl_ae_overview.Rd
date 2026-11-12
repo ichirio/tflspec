@@ -9,7 +9,7 @@ The table template \code{ae_overview}, layout \code{summary}. Its program is one
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab required \tab call \tab report: population, required \tab output.population \tab the analysis set's id: the report's 'population:' field \cr
+   \code{population} \tab required \tab call \tab report: population, required \tab output.common.population \tab the analysis set's id: the report's 'common: population' \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
    \code{by} \tab required \tab call \tab  \tab  \tab the column variable (the arms); not a default and not the study's treatment \cr
    \code{data} \tab other \tab call \tab ADAE \tab  \tab the dataset of events \cr

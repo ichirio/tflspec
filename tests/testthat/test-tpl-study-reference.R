@@ -27,7 +27,7 @@ sr_register <- function(name, params) {
   invisible(name)
 }
 sr_resolve <- function(name, args, s) {
-  tfl_resolve_output(tfl_output("T-9", "table", population = "SAF",
+  tfl_resolve_output(tfl_output("T-9", "table", common = list(population = "SAF"),
                                 template = list(name = name, args = args)), s)
 }
 
@@ -93,8 +93,8 @@ test_that("a reference to a verb's argument reads spec/defaults.yml only", {
   s3$defaults$content <- list()
   expect_null(.tpl_study_read("plan_cells.categorical", NULL, s3))
   # the report's own field
-  expect_identical(.tpl_study_read("output.population", list(population = "SAF"), s), "SAF")
-  expect_null(.tpl_study_read("output.population", list(population = NA_character_), s))
+  expect_identical(.tpl_study_read("output.common.population", list(common = list(population = "SAF")), s), "SAF")
+  expect_null(.tpl_study_read("output.common.population", list(common = list()), s))
 })
 
 test_that("a key the reader cannot follow stops where the parameter is declared", {
@@ -206,7 +206,7 @@ test_that("the set's extends: demog, summary, disposition, ae_overview, param_ch
   expect_identical(.tpl_get("demog", "test")$extends, "defaults")
   expect_identical(.tpl_get("stf_t02_demog", "test")$extends_fixed, "content")
   s <- sr_study()
-  o <- tfl_output("T-9", "table", population = "SAF",
+  o <- tfl_output("T-9", "table", common = list(population = "SAF"),
                   template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE")))
   ro1 <- tfl_resolve_output(o, s)
   # demog's set is [defaults] (canon 1.27): the study's content is laid under
@@ -227,7 +227,7 @@ test_that("the set's extends: demog, summary, disposition, ae_overview, param_ch
   expect_true(all(startsWith(fromn, "template:") | fromn == "own"))
   expect_identical(ron$page, ro1$page)
   # stf_t02_demog: no defaults content, its style:stf_t02 items, the page kept
-  o2 <- tfl_output("T-9", "table", population = "SAF",
+  o2 <- tfl_output("T-9", "table", common = list(population = "SAF"),
                    template = list(name = "stf_t02_demog", args = list(by = "TRT01A", continuous = "AGE")))
   ro2 <- tfl_resolve_output(o2, s)
   from2 <- vapply(ro2$content, function(it) it$from %||% "", "")
@@ -237,14 +237,14 @@ test_that("the set's extends: demog, summary, disposition, ae_overview, param_ch
   expect_identical(ro2$page$rtf_page$orientation, "landscape")
   # (extends [defaults], batch 2 (ii)): summary has the same set as demog: the
   # study's content is laid under its items, its own items marked template:summary
-  o0 <- tfl_output("T-9", "table", population = "SAF",
+  o0 <- tfl_output("T-9", "table", common = list(population = "SAF"),
                    template = list(name = "summary", args = list(by = "TRT01A", continuous = "AGE")))
   from0 <- vapply(tfl_resolve_output(o0, s1)$content, function(it) it$from %||% "", "")
   expect_true("defaults" %in% from0)
   expect_true("template:summary" %in% from0)
   expect_identical(tfl_resolve_output(o0, s)$page, ro1$page)
   # another template of the same study is not migrated: the old order
-  o3 <- tfl_output("T-10", "table", population = "SAF",
+  o3 <- tfl_output("T-10", "table", common = list(population = "SAF"),
                    template = list(name = "ae_soc_pt", args = list(population = "SAF",
                                                                   hierarchy = c("AEBODSYS", "AEDECOD"))))
   expect_true("defaults" %in% vapply(tfl_resolve_output(o3, s)$content,

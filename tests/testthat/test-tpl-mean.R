@@ -34,7 +34,7 @@ test_that("in a study: A (the data steps, the call) = B (the design) = the templ
   on.exit(unlink(d, recursive = TRUE))
   data <- tplfig_study(d, c("adsl", "advs"), "MEAN-1")
   for (nm in c("mean_se", "mean_ci")) {
-    o <- tfl_output(paste0("F-9-", nm), "figure", population = "SAF", label = "Mean SBP",
+    o <- tfl_output(paste0("F-9-", nm), "figure", common = list(population = "SAF"), label = "Mean SBP",
                     extends = "defaults",
                     template = list(name = nm, args = list(param = "SYSBP", data = "ADVS",
                                                            value = "CHG")),

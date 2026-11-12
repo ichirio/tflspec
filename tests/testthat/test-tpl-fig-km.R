@@ -283,7 +283,7 @@ test_that("in a study: km_cumulative (STF Figure 1's sample) from ADTTE and from
                    vapply(built$layers, function(l) class(l$geom)[1L], ""))
   expect_identical(tplfig_png(env3$content), tplfig_png(built))
   # ADSL: no parameter, the event, the time
-  o2 <- tfl_output("F-9-adsl", "figure", population = "SAF", label = "KM", extends = "defaults",
+  o2 <- tfl_output("F-9-adsl", "figure", common = list(population = "SAF"), label = "KM", extends = "defaults",
                    data = list(steps = list(
                      list(step = "read", dataset = "ADSL"),
                      list(step = "filter", expr = "SAFFL == \"Y\""),

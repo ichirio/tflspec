@@ -97,7 +97,7 @@ test_that("in a study: the ARD program runs, the table from its ARD", {
                      file.path(d, "adam", paste0(x, ".xpt")))
   }
   tfl_ai_study_init(d, adam = "adam", study_id = "EAIR-1")
-  o <- tfl_output("T-9-3", "table", population = "SAF", label = "EAIR by SOC and PT",
+  o <- tfl_output("T-9-3", "table", common = list(population = "SAF"), label = "EAIR by SOC and PT",
                   extends = "defaults", template = list(name = "ae_eair", args = list(population = "SAF")))
   tfl_write_output(o, file.path(d, "spec", "outputs", "T-9-3.yml"))
   st <- tfl_read_study_spec(d)

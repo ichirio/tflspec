@@ -103,7 +103,7 @@ hd_args <- list(
   demog = list(by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX")))
 
 hd_write <- function(d, id, tpl, titles = NULL, args = list()) {
-  tfl_write_output(tfl_output(id, "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output(id, "table", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = tpl, args = utils::modifyList(hd_args[[tpl]], args)),
                               page = if (!is.null(titles)) list(titles = titles) else list()),
                    file.path(d, "spec", "outputs", paste0(id, ".yml")))

@@ -13,7 +13,7 @@ b1_fda <- function(...) utils::modifyList(
 b1_item <- function(x, fn) Filter(function(it) identical(it$fn, fn), x$content)
 b1_out <- function(name, args, ..., id = "T-9") {
   # (no `extends`: the template's, stf_t02_demog's content step fixed to none)
-  tfl_output(id, "table", population = "SAF",
+  tfl_output(id, "table", common = list(population = "SAF"),
              template = list(name = name, args = args), ...)
 }
 
@@ -160,14 +160,14 @@ test_that("population is not a template parameter: the report's `population:` dr
     expect_false("population" %in% tfl_templates()$params[tfl_templates()$name == n])
   }
   s <- b1_study()
-  o <- tfl_output("T-9", "table", population = "SAF",
+  o <- tfl_output("T-9", "table", common = list(population = "SAF"),
                   template = list(name = "demog", args = b1_args()[-1L]))
   r <- tfl_resolve_output(o, s)
   expect_identical(r$ard$analysis_data[[1L]]$population, "SAF")
   expect_true("population" %in% attr(r, "template")$study)
   # written in the template SPEC it stops, naming the report's field
-  o2 <- tfl_output("T-9", "table", population = "SAF", template = list(name = "demog", args = b1_args()))
-  expect_error(tfl_resolve_output(o2, s), "the report's `population:` field")
+  o2 <- tfl_output("T-9", "table", common = list(population = "SAF"), template = list(name = "demog", args = b1_args()))
+  expect_error(tfl_resolve_output(o2, s), "the report's `common: population`")
 })
 
 test_that("formats: the default is the active statistics catalog's (a company catalog's digits)", {
@@ -423,7 +423,7 @@ test_that("style: demog follows settings.style, stf_t02_demog is fixed; a built-
 })
 
 test_that("the two parts: ard: and content:; flat args: still reads; every parameter in one part", {
-  mk <- function(t) tfl_output("T-1", "table", population = "SAF", template = t)
+  mk <- function(t) tfl_output("T-1", "table", common = list(population = "SAF"), template = t)
   a <- tflspec:::.tpl_spec_of(mk(list(name = "demog", ard = list(by = "TRT01A", continuous = "AGE"),
                                       content = list(total_label = "All", widths = "auto"))))
   expect_setequal(names(a$args), c("by", "continuous", "total_label", "widths"))
@@ -441,7 +441,7 @@ test_that("the two parts: ard: and content:; flat args: still reads; every param
   }
   # a two-part report runs end to end and reads back
   d <- b1_folder(na = FALSE)
-  o <- tfl_output("T-9", "table", population = "SAF", extends = "defaults", template = list(
+  o <- tfl_output("T-9", "table", common = list(population = "SAF"), extends = "defaults", template = list(
     name = "demog", ard = list(by = "TRT01A", continuous = "AGE", categorical = c("SEX", "RACE"), total = TRUE),
     content = list(total_label = "All subjects", blanks = FALSE, widths = c(40, 20, 20, 20))),
     codelists = list(TRT01A = list(list(value = "Drug X", label = "Drug X"),
@@ -598,7 +598,7 @@ b1_unset_loop <- function(name, base) {
     }
     if (identical(p, "style")) {
       # the style set is a layer of the report: none when unset (the FDA look's font is the set's)
-      o <- tfl_output("T-9", "table", population = "SAF", template = list(name = name, args = args[-1L]))
+      o <- tfl_output("T-9", "table", common = list(population = "SAF"), template = list(name = name, args = args[-1L]))
       r <- tfl_resolve_output(o, s)
       expect_false(any(vapply(r$content, function(it) identical(it$args$font, "Arial"), NA)), info = info)
       expect_null(r$page$rtf_page$orientation, info = info)

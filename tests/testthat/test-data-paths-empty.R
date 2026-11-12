@@ -12,7 +12,7 @@ ed_study <- function(d) {
 
 ed_shift <- function(d, where) {
   f <- file.path(d, "spec", "outputs", "T-ED.yml")
-  tfl_write_output(tfl_output("T-ED", "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("T-ED", "table", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = "shift",
                                               args = list(population = "SAF", where = where))), f)
   st <- tfl_read_study_spec(d)

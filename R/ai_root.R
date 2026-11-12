@@ -30,7 +30,7 @@
     "defaults, outside this folder: do not open them); tflspec writes this file",
     "again when they change.",
     "",
-    "## The analysis sets (a report's `population:` is the id)",
+    "## The analysis sets (a report's `common: population` is the id)",
     "",
     "| id | label | the subjects |",
     "|---|---|---|",

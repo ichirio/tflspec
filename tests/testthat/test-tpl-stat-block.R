@@ -87,7 +87,7 @@ test_that("in a study: the report's own ARD built, the table made from it", {
                      file.path(d, "adam", paste0(x, ".xpt")))
   }
   tfl_ai_study_init(d, adam = "adam", study_id = "SB-1")
-  o <- tfl_output("T-SB", "table", population = "ITT", extends = "defaults",
+  o <- tfl_output("T-SB", "table", common = list(population = "ITT"), extends = "defaults",
     ard = list(
       analysis_data = list(list(id = "adrs_bor", from = "ADRS", population = "ITT",
                                 where = tfl_r("PARAMCD == \"BOR\""),
@@ -132,7 +132,7 @@ test_that("orr(stat_layout = \"cols\"): each arm's rate and CI side by side, the
                      file.path(d, "adam", paste0(v, ".xpt")))
   }
   tfl_ai_study_init(d, adam = "adam", study_id = "SB-2")
-  o <- tfl_output("T-C", "table", population = "ITT", extends = "defaults",
+  o <- tfl_output("T-C", "table", common = list(population = "ITT"), extends = "defaults",
                   template = list(name = "orr", args = list(population = "ITT", stat_layout = "cols",
                                                             conf_level = 0.9)))
   f <- file.path(d, "spec", "outputs", "T-C.yml")

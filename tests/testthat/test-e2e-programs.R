@@ -39,7 +39,7 @@ test_that("lab_abnormal on a data without PARAMN: the parameters in their own or
   expect_false("PARAMN" %in% names(adlb))
   d <- ep_study(withr::local_tempdir(), c("adsl", "adlb"))
   f <- file.path(d, "spec", "outputs", "T-LA.yml")
-  tfl_write_output(tfl_output("T-LA", "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("T-LA", "table", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = "lab_abnormal",
                                               args = list(levels = c("LOW", "HIGH")))), f)
   r <- ep_run_child(d, "T-LA")
@@ -81,7 +81,7 @@ test_that("ancova: the differences by emmeans' trt.vs.ctrl, adjusted as `adjust`
   skip_if_not_installed("emmeans")
   d <- ep_study(withr::local_tempdir(), c("adsl", "advs"))
   f <- file.path(d, "spec", "outputs", "T-AN.yml")
-  tfl_write_output(tfl_output("T-AN", "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("T-AN", "table", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = "ancova", args = list(
                                 data = "ADVS", param = "SYSBP", visit = "CYCLE 2 DAY 1"))), f)
   r <- ep_run_child(d, "T-AN")
@@ -98,7 +98,7 @@ test_that("a denominator's by column the subjects' data lacks (AESEV): the recor
   d <- ep_study(withr::local_tempdir(), c("adsl", "adae"))
   f <- file.path(d, "spec", "outputs", "T-AE.yml")
   tfl_write_output(tfl_output(
-    "T-AE", "table", population = "SAF", extends = "defaults", label = "TEAE by severity",
+    "T-AE", "table", common = list(population = "SAF"), extends = "defaults", label = "TEAE by severity",
     ard = list(
       analysis_data = list(
         list(id = "adsl_saf", from = "ADSL", population = "SAF"),

@@ -209,8 +209,8 @@
                       id, t$name, paste(sQuote(stage, FALSE), collapse = ", ")))
   }
   if ("population" %in% hidden) {
-    .ard_stop(sprintf(paste0("%s: template %s takes the analysis set from the report's `population:` ",
-                             "field, not from `template:`."), id, t$name))
+    .ard_stop(sprintf(paste0("%s: template %s takes the analysis set from the report's `common: population`, ",
+                             "not from `template:`."), id, t$name))
   }
   if (length(hidden)) {
     .ard_stop(sprintf(paste0("%s: template %s takes %s from the study standard, not from ",
@@ -518,7 +518,7 @@
 #' @examples
 #' d <- system.file("extdata", "spec-yaml", package = "tflspec")
 #' s <- tfl_read_study_spec(d)
-#' o <- tfl_output("T-9", "table", population = "SAF",
+#' o <- tfl_output("T-9", "table", common = list(population = "SAF"),
 #'                 template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE")))
 #' b <- tfl_template_to_spec(o, s)
 #' vapply(b$content, function(it) it$fn, "")
@@ -539,6 +539,19 @@ tfl_template_to_spec <- function(output, study) {
   # (canon: B = A, explicit `extends` and `style:`)
   output$extends <- .extends_compact(lb$extends)
   output$ard <- .merge_ard(e$x$ard, output$ard)
+  # the report's analysis set is its `common: population`, and the subjects
+  # definition does not repeat it (the code SPEC's `data:` says what the
+  # report adds to the set)
+  if (output$kind %in% c("table", "listing")) {
+    pop <- .na_scalar(as.character(e$args$population %||% output$common$population %||% NA))
+    if (!is.na(pop)) {
+      output$common <- .common_in(c(list(population = pop), output$common[setdiff(names(output$common), "population")]),
+                                  paste0("tfl_template_to_spec(): ", output$id))
+      if (length(output$ard$analysis_data)) {
+        output$ard$analysis_data <- lapply(output$ard$analysis_data, .entry_pop_strip, pop)
+      }
+    }
+  }
   own <- if (.tpl_composes(output$data, e$x)) .tpl_compose_data(output$data, e$x) else output$data
   output$data <- .merge_map(e$x$data %||% list(), own %||% list())
   output$content <- if (inherits(ro$content, "tfl_r")) ro$content else .tpl_own_part(ro$content)

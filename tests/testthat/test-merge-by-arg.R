@@ -6,7 +6,7 @@ mba_study <- function() {
   tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
 }
 mba_resolve <- function(name, args, content) {
-  o <- tfl_output("T-9", "table", population = "SAF",
+  o <- tfl_output("T-9", "table", common = list(population = "SAF"),
                   template = list(name = name, args = args), content = content)
   tfl_resolve_output(o, mba_study())
 }
@@ -161,7 +161,7 @@ test_that("a figure's item is still replaced whole", {
 })
 
 test_that("end to end: a template's plan_cell_style stays and the report's is added after", {
-  o <- tfl_output("T-9", "table", population = "SAF",
+  o <- tfl_output("T-9", "table", common = list(population = "SAF"),
                   template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX"))),
                   content = list(tfl_item("plan_cell_style", list(bold = TRUE, cols = "total")),
                                  tfl_item("plan_titles", list(titles = "My title"))))

@@ -20,7 +20,7 @@ tfl_output(
   id,
   kind = c("table", "figure", "listing"),
   label = NA_character_,
-  population = NA_character_,
+  common = list(),
   extends = if (is.null(template)) "defaults",
   data = NULL,
   codelists = list(),
@@ -28,7 +28,8 @@ tfl_output(
   page = list(),
   ard = NULL,
   template = NULL,
-  style = NULL
+  style = NULL,
+  population = NULL
 )
 }
 \arguments{
@@ -49,7 +50,15 @@ tfl_output(
 
 \item{kind}{\code{"table"}, \code{"figure"} or \code{"listing"}.}
 
-\item{label, population}{The report's label and analysis set (\code{NA}: none).}
+\item{label}{The report's label (\code{NA}: none).}
+
+\item{common}{What several steps of the report read, a list with the keys
+\code{population} (an analysis set's id, the one filter of the report's
+subjects), \code{treatment} (the report's arm variable) and \code{population_label}
+(the text \code{{OUTPUT_POPULATION}} prints when the report has no set, or
+to replace the set's label); a report may have none of them.  Any other
+key stops.  The old \code{population} argument stops: write
+\code{common = list(population = )}.}
 
 \item{extends}{The files layered under this one, nearest first
 (\code{"defaults"}, \code{"patterns/<name>"}); \code{"none"} for none; or a list by
@@ -59,9 +68,12 @@ template's, else \code{"defaults"}.  \code{NULL}: not written (a template report
 takes its template's); the default for a report with \code{template}, else
 \code{"defaults"}.}
 
-\item{data}{What the report reads, its step 1 (a list: \code{source} --
-\code{"ard"}, \code{"code"} or \code{"dataset"} -- and \code{object}, \code{steps}, \code{code},
-\code{dataset} ...).}
+\item{data}{What the report reads, its step 1: a list of definitions
+(\code{id}, \code{from}, \code{subjects}, \code{where} ..., one dataset each; in a YAML file
+the report's flat \verb{data:} list) in the report's built data; or, for a
+figure (and a listing or a records table that still has the map), a
+list (\code{source} -- \code{"ard"}, \code{"code"} or \code{"dataset"} -- and \code{object},
+\code{steps}, \code{code}, \code{dataset} ...).}
 
 \item{codelists}{The report's code lists, by variable.}
 
@@ -71,7 +83,8 @@ takes its template's); the default for a report with \code{template}, else
 (maps by line), \code{tokens}, and the \verb{rtf_*} calls' arguments.}
 
 \item{ard}{The report's part of the study ARD, made in the ARD stage
-before any report (a list: \code{analysis_data}, \code{analyses}); \code{NULL} none.}
+before any report (a list: \code{analyses}, and \code{analysis_data} for a figure);
+\code{NULL} none.  A table's or listing's definitions are \verb{data:} in a file.}
 
 \item{template}{A template SPEC, \code{list(name = , args = )}: the report
 is the template's items (\code{\link[=tfl_templates]{tfl_templates()}}) with \code{ard}, \code{data} and
@@ -108,7 +121,7 @@ for an argument that is itself a constructor's result.
 \item \code{tfl_item()}: one layer of \verb{content:} -- a function (\code{fn}), its
 arguments by name (\code{args}), and where it came from (\code{from}: \code{"own"},
 \code{"defaults"} or \code{"pattern:<name>"}).
-\item \code{tfl_output()}: one report: \code{id}, \code{kind}, \code{label}, \code{population},
+\item \code{tfl_output()}: one report: \code{id}, \code{kind}, \code{label}, \code{common},
 \code{extends}, \code{data}, \code{codelists}, \code{content} (a list of \code{tfl_item}) and
 \code{page}.
 }
