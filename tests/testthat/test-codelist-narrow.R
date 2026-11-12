@@ -255,3 +255,23 @@ test_that("a variable's one unnamed heading text is kept, keyed by its name, bes
   out <- tflspec:::.tpl_labels_items(content, list(SEX = c(F = "Female", M = "Male")))
   expect_identical(out[[1L]]$args$SEX, c(SEX = "Sex", F = "Female", M = "Male"))
 })
+
+test_that("a spec file keeps no code-list label: the sheets' content has none, the program's plan_labels has them", {
+  sp <- narrow_spec("PARAMCD %in% c(\"AST\", \"ALT\") & AVISIT == \"Week 2\"")
+  ts <- tfl_table_spec(list(
+    tables = data.frame(output_id = "T", cols = "TRTA", rows = "group = variable"),
+    codelists = narrow_cl()))
+  labels_of <- function(items) {
+    Filter(function(it) it$fn == "plan_labels", items)
+  }
+  # the program's plan (what the generated code runs): the labels by code
+  made <- tflspec:::.plan_content_items(.ard_spec_scope(ts, "T"), sp)
+  pl <- labels_of(made)
+  expect_length(pl, 1L)
+  expect_identical(unlist(pl[[1L]]$args$SEX), c(M = "Male", F = "Female"))
+  # what a spec file holds: the study's lists are their one source
+  kept <- tflspec:::.plan_content_from_sheets(ts, "T", own = TRUE, ard_spec = sp)
+  expect_length(labels_of(kept), 0L)
+  whole <- tflspec:::.plan_content_from_sheets(ts, "T")
+  expect_length(labels_of(whole), 0L)
+})
