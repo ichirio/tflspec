@@ -221,6 +221,57 @@ drop_empty_groups <- function(ard) {
   ard[!key %in% empty, , drop = FALSE]
 }
 
+# The terms of a nested count (cards::ard_stack_hierarchical()) that `pct`
+# % of subjects or more have, the other terms' rows dropped: in `met_in`
+# "any" column (each arm, and the Total column when the ARD has one),
+# "all" of them, or the "total" column alone (an ARD with no Total column
+# keeps no term).  The last two levels' rows (SOC and PT) each stand on
+# their own percentage; a level above them (a SOC over HLT and PT) stays
+# when a row below it does.  The overall row and the by variable's counts
+# stay.  (cards::filter_ard_hierarchical() drops the Total column's rows.)
+#   ard |> keep_min_pct(5)
+#   ard |> keep_min_pct(10, "all")
+keep_min_pct <- function(ard, pct, met_in = c("any", "all", "total")) {
+  met_in <- match.arg(met_in)
+  one <- function(x) vapply(x, function(v)
+    if (length(v) && !is.na(v[[1L]])) as.character(v[[1L]]) else NA_character_, "")
+  term <- ard$context %in% "hierarchical" & !startsWith(as.character(ard$variable), "..")
+  vars <- unique(as.character(ard$variable[term]))
+  if (!any(term)) return(ard)
+  gk <- grep("^group[0-9]+$", names(ard), value = TRUE)
+  g <- lapply(gk, function(k) as.character(ard[[k]]))
+  gl <- lapply(gk, function(k) one(ard[[paste0(k, "_level")]]))
+  # a row's path (the levels it sits under, then its own) and its column (the
+  # by group's level; none: the Total column)
+  path <- rep("", nrow(ard))
+  column <- rep("", nrow(ard))
+  depth <- integer(nrow(ard))
+  for (k in seq_along(gk)) {
+    above <- g[[k]] %in% vars
+    path[above] <- paste0(path[above], gl[[k]][above], "\r")
+    depth <- depth + above
+    by <- !is.na(g[[k]]) & !above
+    column[by] <- gl[[k]][by]
+  }
+  path <- paste0(path, one(ard$variable_level))
+  depth <- depth + 1L
+  n <- length(vars)
+  p <- vapply(ard$stat, function(s) if (length(s)) suppressWarnings(as.numeric(s[[1L]])) else NA_real_, 0)
+  at <- term & ard$stat_name %in% "p" & !is.na(p)
+  # (the last two levels: their own percentage)
+  own <- at & depth >= n - 1L
+  pass <- vapply(split(seq_len(nrow(ard))[own], path[own]), function(i) {
+    v <- if (met_in == "total") p[i][column[i] == ""] else p[i]
+    if (!length(v)) return(FALSE)
+    if (met_in == "all") all(v >= pct / 100) else any(v >= pct / 100)
+  }, NA)
+  kept <- names(pass)[pass]
+  # (a level above: when a row below it stays)
+  up <- unique(path[term & depth < n - 1L])
+  kept <- c(kept, up[vapply(up, function(u) any(startsWith(kept, paste0(u, "\r"))), NA)])
+  ard[!term | path %in% kept, , drop = FALSE]
+}
+
 # An ARD's columns in their code lists' order: the rows of a listed
 # variable (as `variable` or a group) get its list's levels (as the ARD has
 # them, the labels).  For what does not keep its data's factor order --

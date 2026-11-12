@@ -95,10 +95,12 @@ test_that("the layouts' parameters: what a report changes, the look too (summary
   expect_match(tfl_templates()$label[tfl_templates()$name == "demog"], "Demographics", fixed = TRUE)
   # demog's variables are as written: none is optional (no any_of default)
   expect_null(dm$ard$analyses[[2L]]$optional)
-  # hierarchical: min_pct the shared filter, the Total column
+  # hierarchical: min_pct the ARD's filter (no plan item), the Total column
   h <- tfl_template_expand("ae_soc_pt", list(population = "SAF", min_pct = 5, total = TRUE))
   hf <- vapply(h$content, `[[`, "", "fn")
-  expect_true(all(c("plan_filter", "plan_total") %in% hf))
+  expect_true("plan_total" %in% hf)
+  expect_false("plan_filter" %in% hf)
+  expect_identical(as.character(h$ard$analyses[[1L]]$post), "keep_min_pct(5)")
   expect_true(isTRUE(h$ard$analyses[[1L]]$overall))
   # the nested variant: its root's parameters, its own and its parent's defaults
   v <- tfl_template_params("ae_ser_soc_pt")

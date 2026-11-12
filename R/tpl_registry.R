@@ -1027,7 +1027,7 @@ tfl_templates <- function(source = NULL) {
   tfl_param("sort", c(".overall", "group1", ".depth", "-n", "label"),
             type = "text", multiple = TRUE, doc = "the rows' order (plan_sort())"),
   tfl_param("min_pct", NULL, tier = "usual",
-            doc = "the rows kept: this % of subjects or more (plan_filter()); NULL: all"),
+            doc = "the rows kept: this % of subjects or more (a step of the ARD); NULL: all"),
   tfl_param("min_pct_in", "any",
             doc = "where min_pct is met: \"any\" column, \"all\" of them, or the \"total\" column"),
   tfl_param("count_cell", NULL, study = "plan_cells.categorical",
@@ -1170,15 +1170,15 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
   out(stats::setNames(as.integer(v), nm))
 }
 
-# The rows kept: `min_pct` % of subjects or more, in any column, every
-# column, or the Total column (plan_filter()); NULL when none is set
-.tpl_min_pct_items <- function(min_pct, min_pct_in = "any", by = NULL, a = NULL, tn = "template") {
+# The terms kept: `min_pct` % of subjects or more, in any column, every
+# column, or the Total column.  A step on the hierarchical ARD, so that it
+# holds only the terms the table shows (the plan filters no rows):
+# keep_min_pct() of the study's helpers.  NULL when none is set
+.tpl_min_pct_post <- function(min_pct, min_pct_in = "any", a = NULL, tn = "template") {
   if (is.null(min_pct)) return(NULL)
   in_ <- .tpl_choice(a, "min_pct_in", c("any", "all", "total"), tn, value = min_pct_in)
-  cond <- sprintf("p >= %s", format(min_pct / 100))
-  if (identical(in_, "total")) cond <- sprintf("%s & %s == \"Total\"", cond, by)
-  list(tfl_item("plan_filter", c(list(where = tfl_r(cond)),
-                                 if (identical(in_, "all")) list(any = FALSE))))
+  tfl_r(if (identical(in_, "any")) sprintf("keep_min_pct(%s)", format(min_pct))
+        else sprintf("keep_min_pct(%s, \"%s\")", format(min_pct), in_))
 }
 
 .tpl_hier_body <- function(a, ctx) {
@@ -1212,6 +1212,7 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
       by = a$by, overall = if (isTRUE(a[["total"]])) TRUE, variables = a$hierarchy,
       denominator = if (rec_den) den_id else dn$value %||% subj,
       args = if (!is.null(overall)) tfl_r("over_variables = TRUE"),
+      post = .tpl_min_pct_post(a[["min_pct"]], a$min_pct_in, a, ctx$template$name),
       purpose = "PRIMARY OUTCOME MEASURE"))))
   n <- length(a$hierarchy)
   cells <- nn(list(categorical = a[["count_cell"]]))
@@ -1224,7 +1225,6 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
       label = list(label = a$hierarchy[n])))),
     # (the columns' order is the ARD's: the code list applied when it is made)
     tfl_item("plan_sort", list(keys = a$sort))),
-    .tpl_min_pct_items(a[["min_pct"]], a$min_pct_in, a$by, a, ctx$template$name),
     if (length(cells)) list(tfl_item("plan_cells", cells)),
     if (isTRUE(a[["total"]])) list(tfl_item("plan_total", list(position = "last"))),
     # (the layout's column header, its counts' line: the study standard's wins)
@@ -1322,7 +1322,6 @@ names(.tpl_pt_params) <- vapply(.tpl_pt_params, `[[`, "", "name")
   h[names(a)] <- a
   attr(h, "unset") <- attr(a, "unset")
   h$hierarchy <- a$term
-  h$min_pct <- NULL
   h$any_row <- !is.null(a$overall)
   h$any_row_label <- a$overall
   out <- .tpl_hier_body(h, ctx)
@@ -1330,13 +1329,11 @@ names(.tpl_pt_params) <- vapply(.tpl_pt_params, `[[`, "", "name")
   col <- a$sort_by %||%
     (if (identical(in_, "total")) "Total" else .tpl_levels(a$by, ctx$codelists)[[a$by]][1L])
   key <- if (length(col) && !is.na(col)) sprintf("-n[%s]", col) else "-n"
-  keep <- .tpl_min_pct_items(a[["min_pct"]], in_, a$by)
   it <- out$content
   fn <- vapply(it, `[[`, "", "fn")
   it[[match("plan_sort", fn)]]$args <- list(keys = c(".overall", key, "label"))
   it[[match("plan_paginate_rows", fn)]]$args <- list(max_rows = 22L)
-  at <- match("plan_sort", fn)
-  out$content <- c(it[seq_len(at)], keep, it[-seq_len(at)])
+  out$content <- it
   out
 }
 
