@@ -225,7 +225,14 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if (is.na(id)) d[is.na(oid) | !nzchar(oid), , drop = FALSE]
     else d[!is.na(oid) & oid == id, , drop = FALSE]
   }
-  page_of <- function(id) .conv_page(sp, id, scope, note)
+  # (a report's rows override the configuration's default lines line by line)
+  page_of <- function(id) {
+    pg <- .conv_page(sp, id, scope, note)
+    if (is.na(id) || startsWith(id, "@")) pg else .conv_page_over(pg, dsplit)
+  }
+  # (where each band's default lines went: the configuration's first or last
+  # block; the reports' rows then override them line by line)
+  dsplit <- list()
 
   # spec/defaults.yml
   defaults <- list()
@@ -251,6 +258,14 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     pg <- page_of(NA_character_)
     if (length(pg$tokens)) study$tokens <- pg$tokens
     pg$tokens <- NULL
+    for (b in .page_bands) {
+      if (!length(pg[[b]]) || !is.list(pg[[b]])) next
+      sb <- .conv_band_split(sp, b, pg[[b]])
+      dsplit[[b]] <- sb
+      if (length(sb$last)) {
+        pg[[b]] <- Filter(length, list(first = pg[[b]][sb$first], last = pg[[b]][sb$last]))
+      }
+    }
     set <- .conv_style_set(pg, note, "standard")
     if (length(set)) {
       defaults$styles <- list(standard = set)
@@ -497,6 +512,48 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     rows <- .conv_rows(d[1L, , drop = FALSE], note, id, s,
                        drop = c("output_id", "note", "type", "pattern", "extends", "file", "program"))
     for (k in names(rows[[1L]])) page <- .page_put(page, s, k, rows[[1L]][[k]], note, id)
+  }
+  page
+}
+
+# Where a band's default lines go in the configuration: a default row is a
+# `last` line when its number is higher than every report row's number seen
+# for the band in the study's sheets, else a `first` line (the sheets print
+# the lines in the order of their numbers)
+.conv_band_split <- function(sp, band, m) {
+  d <- sp[[band]]
+  rep <- numeric()
+  if (!is.null(d) && nrow(d) && !is.null(d$line)) {
+    oid <- d$output_id
+    own <- !is.na(oid) & nzchar(oid) & !startsWith(oid, "@")
+    rep <- suppressWarnings(as.numeric(d$line[own]))
+    rep <- rep[!is.na(rep)]
+  }
+  if (!length(rep)) return(list(first = names(m), last = character()))
+  num <- suppressWarnings(as.numeric(names(m)))
+  last <- names(m)[!is.na(num) & num > max(rep)]
+  list(first = setdiff(names(m), last), last = last)
+}
+
+# A report's own band lines against the configuration's: a row whose number is
+# a default row's replaces that line (`first: {2: ...}`, `(none)` as !unset);
+# a row with a new number is a body line
+.conv_page_over <- function(page, dsplit) {
+  for (b in names(dsplit)) {
+    m <- page[[b]]
+    if (!length(m) || !is.list(m)) next
+    out <- list()
+    for (ln in names(m)) {
+      blk <- if (ln %in% dsplit[[b]]$first) "first" else if (ln %in% dsplit[[b]]$last) "last"
+      if (is.null(blk)) {
+        out[[ln]] <- m[[ln]]
+      } else {
+        cur <- out[[blk]] %||% list()
+        cur[[ln]] <- m[[ln]]
+        out[[blk]] <- cur
+      }
+    }
+    page[[b]] <- out
   }
   page
 }

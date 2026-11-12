@@ -96,7 +96,7 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   # the default rows are the study's page configuration (its default), the
   # tokens study.yml's; a pattern's page rows are a page configuration too
   expect_identical(s$styles$standard$page$header$first[["1"]]$left, "Acme")
-  expect_identical(s$styles$standard$page$footer$first[["99"]]$left, "{PROGRAM}")
+  expect_identical(s$styles$standard$page$footer$last[["99"]]$left, "{PROGRAM}")
   expect_identical(s$study$tokens$COMPANY, "Acme")
   expect_identical(s$study$settings$style, "standard")
   expect_null(s$codelists)                     # a code list is a report's, or a layer's
@@ -123,14 +123,14 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   # the content through the package's bridge from the sheets
   expect_true(length(t1$content) > 0L)
   expect_identical(t1$content[[1L]]$fn, "table_plan")
-  # the report's header line 2 is (none): an unset, resolved to nothing
-  expect_s3_class(t1$page$header[["2"]], "tfl_unset")
+  # the report's header line 2 is (none): the configuration's line 2 unset, resolved to nothing
+  expect_s3_class(t1$page$header$first[["2"]], "tfl_unset")
   r1 <- tfl_resolve_output(t1, s)
-  # (the sheets' default lines are the configuration's `first` lines; the report's
-  # own lines are body lines below them, so a (none) for a default line drops nothing)
-  expect_identical(names(r1$page$header), c("1", "2"))
-  expect_identical(r1$page$footer[["1"]]$left, "{PROGRAM}")
-  expect_identical(r1$page$footer[["2"]]$left, "SD = Standard Deviation.")
+  # (a report row with a default row's number overrides that line, (none) drops it;
+  # the default row 99 is higher than the reports' rows: a `last` line)
+  expect_identical(names(r1$page$header), "1")
+  expect_identical(r1$page$footer[["1"]]$left, "SD = Standard Deviation.")
+  expect_identical(r1$page$footer[["2"]]$left, "{PROGRAM}")
   expect_identical(r1$page$tokens$OUTPUT_TITLE, "Demographics")
   # the listing: its data, its columns as items, its spec and pages
   l1 <- outs[["L-1"]]
