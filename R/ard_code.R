@@ -957,10 +957,17 @@
     r <- x$datasets[x$datasets$dataset == ds, ]
     obj <- .r_name(ds)
     d <- .split_bar(r$derive[1L])
+    steps <- c(.order_levels_step(cats, if (has_adsl && toupper(ds) != "ADSL") "adsl"),
+               if (length(levels)) .levels_step)
+    if (isTRUE(getOption("tflspec.study_setup"))) {
+      # the study's setup file has read it, with its derive: the object's own
+      # steps, and no line when none is left
+      if (length(steps)) code <- c(code, .make_code(obj, obj, steps))
+      next
+    }
     code <- c(code, .make_code(obj, .reader(r$path[1L]), c(
       if (length(d)) sprintf("dplyr::mutate(%s)", paste(d, collapse = ", ")),
-      .order_levels_step(cats, if (has_adsl && toupper(ds) != "ADSL") "adsl"),
-      if (length(levels)) .levels_step)))
+      steps)))
   }
   pop_code <- character()
   for (pid in pops) {

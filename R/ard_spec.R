@@ -1238,8 +1238,10 @@ tfl_build_ard <- function(spec, dir = ".", output_id = NULL, save = TRUE,
                        statistics = NULL, methods = NULL, codelists = NULL,
                        sheets = NULL) {
   # run where nothing is attached and no folder variable is defined
+  # (and where the program reads its data itself: the study's setup file is
+  # not run)
   old <- options(tflspec.paths = NULL, tflspec.attached = NULL,
-                 tflspec.plain_ns = TRUE)
+                 tflspec.plain_ns = TRUE, tflspec.study_setup = FALSE)
   on.exit(options(old), add = TRUE)
   # (the program's setup sets cards' rounding; put back as it was)
   old_cr <- options("cards.round_type")
