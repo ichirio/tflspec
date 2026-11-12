@@ -35,9 +35,13 @@ rp_output <- function() {
     tokens = list(COMPANY = "Sample Pharma")))
 }
 
-rp_study <- function() {
+# a study whose default configuration (rp) says no page: a report's page is its own
+rp_study <- function(page = list(), tokens = NULL) {
   structure(list(study = list(settings = list(program_dir = "programs/tfl",
-                                              program = "{output_id}.R"))),
+                                              program = "{output_id}.R", style = "rp"),
+                              tokens = tokens),
+                 styles = list(rp = list(data = list(), codelists = list(), content = list(),
+                                         page = page))),
             class = "tfl_study_spec")
 }
 
@@ -82,16 +86,18 @@ test_that("page:'s calls check against their schema", {
 
 test_that("after the study's setup code, a YAML report says what its sheets say", {
   full <- rp_output()$page
-  study_keys <- c("rtf_page", "rtf_style", "rtf_document", "header", "footer", "tokens")
-  study <- rp_study()
-  study$defaults <- list(page = full[study_keys])
+  cfg <- list(rtf_page = full$rtf_page, rtf_style = full$rtf_style, rtf_document = full$rtf_document,
+              header = list(first = full$header), footer = list(first = full$footer))
+  study <- rp_study(page = cfg, tokens = list(COMPANY = "Sample Pharma"))
   study$patterns <- list()
-  o <- tfl_output("T-1", "table", extends = "defaults",
-                  page = full[setdiff(names(full), study_keys)])
+  o <- tfl_output("T-1", "table",
+                  page = full[setdiff(names(full), c("rtf_page", "rtf_style", "rtf_document", "header",
+                                                     "footer", "tokens"))])
   sheets <- tfl_report_code(rp_sheets(), "T-1", content = "plan", setup = TRUE)
   yaml <- tfl_report_code(o, content = "plan", setup = TRUE, study = study)
-  expect_identical(yaml, sheets)
-  expect_true(any(grepl("header = study_header", yaml, fixed = TRUE)))
+  # (the YAML setup names the configuration's bands header_rp / footer_rp)
+  expect_identical(sub("footer_rp", "study_footer", sub("header_rp", "study_header", yaml)), sheets)
+  expect_true(any(grepl("header = header_rp", yaml, fixed = TRUE)))
   expect_error(tfl_report_code(tfl_resolve_output(o, study), setup = TRUE, study = study),
                "as read")
 })

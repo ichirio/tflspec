@@ -15,11 +15,14 @@ su_sheets <- function() {
                         value = c("Sample Pharma", "ABC-123", "(none)")))
 }
 
-su_study <- function(page = su_page()) {
-  structure(list(study = list(settings = list(program_dir = "programs/tfl")),
-                 defaults = list(page = page)),
+# the study: its default page configuration (a set "std"), its tokens study.yml's
+su_study <- function(page = su_page(), tokens = su_tokens) {
+  structure(list(study = list(settings = list(program_dir = "programs/tfl", style = "std"),
+                              tokens = tokens),
+                 styles = list(std = list(page = page)), defaults = list()),
             class = "tfl_study_spec")
 }
+su_tokens <- list(COMPANY = "Sample Pharma", STUDY_ID = "ABC-123", GONE = tfl_unset())
 
 su_page <- function() {
   list(
@@ -28,8 +31,7 @@ su_page <- function() {
     header = list(`1` = list(left = "{COMPANY}", right = "DRAFT"),
                   `2` = list(left = "Protocol: {STUDY_ID}", right = "Page {PAGE} of {TOTAL_PAGES}"),
                   `3` = list(center = "{OUTPUT_LABEL}")),
-    footer = list(`1` = list(left = "{PROGRAM}")),
-    tokens = list(COMPANY = "Sample Pharma", STUDY_ID = "ABC-123", GONE = tfl_unset()))
+    footer = list(`1` = list(left = "{PROGRAM}")))
 }
 
 su_output <- function() {
@@ -37,27 +39,30 @@ su_output <- function() {
              page = list(titles = list(`1` = list(center = "Demographics"))))
 }
 
-test_that("a study's setup code from its defaults is what its sheets write", {
+test_that("a study's setup code from its configuration is what its sheets write: the options; the bands per configuration", {
   yaml <- tfl_report_setup_code(su_study())
-  expect_identical(yaml, tfl_report_setup_code(su_sheets()))
+  sheets <- tfl_report_setup_code(su_sheets())
+  # (the options and tokens: the same lines; the sheets' header and footer
+  # are study_header / study_footer, the YAML route's one pair a configuration)
+  n <- grep("^header_std <-", yaml)[1L] - 1L
+  expect_identical(yaml[seq_len(n)], sheets[seq_len(n)])
   txt <- paste(yaml, collapse = "\n")
   expect_match(txt, "rtfreporter.font = \"Arial\"", fixed = TRUE)
   expect_match(txt, "rtfreporter.font_size_half_points = 16", fixed = TRUE)
   expect_match(txt, "COMPANY = \"Sample Pharma\"", fixed = TRUE)
   expect_false(grepl("GONE", txt, fixed = TRUE))
-  expect_match(txt, "study_header <- rtf_header(study_header_lines, drop_empty_rows = TRUE)",
-               fixed = TRUE)
-  expect_match(txt, "study_footer <- rtf_footer(study_footer_lines)", fixed = TRUE)
+  expect_match(txt, "header_std <- rtf_header(", fixed = TRUE)
+  expect_match(txt, "drop_empty_rows = TRUE", fixed = TRUE)
+  expect_match(txt, "footer_std <- rtf_footer(", fixed = TRUE)
 })
 
-test_that("a study whose defaults say nothing of the page has no setup code", {
-  expect_identical(tfl_report_setup_code(su_study(list())), character())
+test_that("a configuration that says nothing of the page has no setup code", {
+  expect_identical(tfl_report_setup_code(su_study(list(), list())), character())
   pg <- su_page()
   pg$header <- tfl_unset()
   pg$footer <- NULL
-  pg$tokens <- NULL
   pg$rtf_document <- NULL
-  code <- tfl_report_setup_code(su_study(pg))
+  code <- tfl_report_setup_code(su_study(pg, list()))
   expect_identical(code, "options(rtfreporter.font_size_half_points = 16)")
 })
 
@@ -67,8 +72,8 @@ test_that("a report's program after the setup refers to the setup's names", {
   setup <- tfl_report_setup_code(st)
   code <- tfl_report_code(su_output(), content = "plan", setup = TRUE, study = st)
   txt <- paste(code, collapse = "\n")
-  expect_match(txt, "header = study_header", fixed = TRUE)
-  expect_match(txt, "footer = study_footer", fixed = TRUE)
+  expect_match(txt, "header = header_std", fixed = TRUE)
+  expect_match(txt, "footer = footer_std", fixed = TRUE)
   expect_false(grepl("COMPANY", txt, fixed = TRUE))
   # the setup defines every name the report's code uses
   env <- new.env(parent = asNamespace("rtfreporter"))
@@ -76,7 +81,7 @@ test_that("a report's program after the setup refers to the setup's names", {
                  rtfreporter.font_size_half_points = NULL)
   on.exit(options(old), add = TRUE)
   eval(parse(text = setup), env)
-  expect_true(all(c("study_header", "study_footer") %in% ls(env)))
+  expect_true(all(c("header_std", "footer_std") %in% ls(env)))
   expect_identical(getOption("rtfreporter.tokens")$COMPANY, "Sample Pharma")
 })
 
