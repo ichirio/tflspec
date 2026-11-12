@@ -41,12 +41,18 @@
   Filter(Negate(is.null), m)
 }
 
-# The parameters of the two templates.  `defaults`: the template's own
-# defaults by name (stf_t02_demog's); `fixed`: the names whose default does not
-# refer to the study standard (the template's look, not the study's);
-# `fixed_value`: the names whose value the template fixes (canon 1.30: no
-# parameter, a report that gives one stops).
-.tpl_demog_params <- function(defaults = list(), fixed = character(), fixed_value = character()) {
+# The parameters of the templates on this body (demog, stf_t02_demog,
+# summary, disposition: migration batches 1 and 2).  `defaults`: the
+# template's own defaults by name (stf_t02_demog's); `fixed`: the names whose
+# default does not refer to the study standard (the template's look, not the
+# study's); `fixed_value`: the names whose value the template fixes (canon
+# 1.30: no parameter, a report that gives one stops); `drop`: the names the
+# template does not have (disposition's `continuous`); `add`: parameters of
+# its own, each in place of the one of its name or, a new one, after `data`
+# (summary's `where`).  `denominator` is fixed (canon 1.31) unless `add`
+# gives one.
+.tpl_demog_params <- function(defaults = list(), fixed = character(), fixed_value = character(),
+                              drop = character(), add = list()) {
   p <- list(
     tfl_param("population", required = TRUE, unset = "stop",
               doc = "the analysis set's id: the report's `population:` field, not a template parameter"),
@@ -116,9 +122,9 @@
                           "takes them (row_label: 40, .values: 18)")),
     tfl_param("max_rows", 30L, type = "number", study = "plan_paginate_rows.max_rows",
               doc = "rows a page (plan_paginate_rows(max_rows = ))"),
-    tfl_param("rounding", NULL, type = "choice", choices = c("sas", "r"), study = "settings.rounding",
-              doc = paste("the rounding of the cells' numbers (plan_digits(rounding = )): sas, half away",
-                          "from zero, or r, half to even; NULL: none given here (the study's setup)")),
+    # (fixed in the family: a block is never split over pages, canon 1.2; `!unset`
+    # reads as any value given: "there is no `split` parameter")
+    .tpl_split_param("group_safe", unset = "omit"),
     tfl_param("blanks", NULL, type = "text", study = "plan_blanks.where", maps_to = "plan_blanks.where",
               doc = paste("blank rows: TRUE between the blocks, FALSE none, or where (plan_blanks(where = ));",
                           "FALSE also sets both ends off; NULL: none made here")),
@@ -138,11 +144,20 @@
                           "study's defaults.yml `styles:` or a built-in one (standard, stf_t02);",
                           "unset: none")))
   names(p) <- vapply(p, `[[`, "", "name")
+  for (q in add) {
+    if (q$name %in% names(p)) {
+      p[[q$name]] <- q
+    } else {
+      p <- append(p, stats::setNames(list(q), q$name), after = match("data", names(p)))
+    }
+  }
+  p <- p[setdiff(names(p), drop)]
   for (k in names(defaults)) {
     if (!k %in% names(p)) .ard_stop(sprintf(".tpl_demog_params(): no parameter %s.", k))
     p[[k]]["default"] <- list(defaults[[k]])
   }
-  fixed_value <- union("denominator", fixed_value)
+  if (!"denominator" %in% vapply(add, `[[`, "", "name")) fixed_value <- union("denominator", fixed_value)
+  fixed_value <- union("split", fixed_value)
   for (k in c(fixed, fixed_value)) p[[k]]["study"] <- list(FALSE)
   for (k in fixed_value) {
     p[[k]]$hidden <- TRUE
@@ -204,6 +219,9 @@
   if (!length(arms)) return(output$content)
   total <- if ("total" %in% names(tp$args)) tp$args$total else t$params$total$default
   n <- length(arms) + isTRUE(total)
+  # (param_change's arms side by side: a value and a change column each)
+  lay <- if ("layout" %in% names(tp$args)) tp$args$layout else t$params$layout$default
+  if (identical(t$name, "param_change") && !identical(lay, "rows")) n <- 2L * length(arms)
   it <- tfl_item("plan_columns", list(widths = c(35, rep(65 / n, n))), from = paste0("template:", tp$name))
   at <- match("plan_paginate_rows", fns)
   if (is.na(at)) c(output$content, list(it)) else append(output$content, list(it), after = at - 1L)
@@ -229,7 +247,85 @@
     "}))")
 }
 
-.tpl_demog_body <- function(a, ctx) {
+# The look's parameters a template of its own body shares with demog
+# (ae_overview, param_change: migration batch 2): demog's declarations by
+# name, each with the template's own default (`defaults`)
+.tpl_look_params <- function(names, defaults = list()) {
+  p <- .tpl_demog_params()
+  p <- p[match(names, vapply(p, `[[`, "", "name"))]
+  names(p) <- names
+  for (k in names(defaults)) p[[k]]["default"] <- list(defaults[[k]])
+  unname(p)
+}
+
+# The look items' order in the content: a layered template's (demog's);
+# a template still in the old order puts them where the study's land, its
+# style last, so the report and its code SPEC (A and B) list them alike
+.tpl_look_order <- function(tn) {
+  if (.tpl_layered(tn)) c("blank", "stub", "style", "widths", "paginate") else
+    c("stub", "blank", "widths", "paginate", "style")
+}
+
+# The look's items from those parameters: the widths (`ncol`: the printed
+# value columns, NA when not known -- "auto" then gives none), the blank
+# rows, the stub (its name and place; `heading`: the stub's heading, demog's),
+# the rules (plan_style) and the rows a page (`page`: plan_paginate_rows()'s
+# other arguments, after `split`, which is the template's parameter).  NULL for
+# each the parameters do not make.
+.tpl_look_items <- function(a, tn, ncol = NA_integer_, heading = NULL, page = list()) {
+  nn <- function(x) Filter(Negate(is.null), x)
+  w <- a$widths
+  widths <- NULL
+  if (is.character(w) && length(w) == 1L && identical(w, "auto")) {
+    if (!is.na(ncol)) widths <- tfl_item("plan_columns", list(widths = c(35, rep(65 / ncol, ncol))))
+  } else if (length(w) && is.numeric(unlist(w)) && all(unlist(w) > 0) && length(names(w)) &&
+             all(nzchar(names(w)))) {
+    # (by column name, as the study's plan_columns(widths = ) gives them)
+    widths <- tfl_item("plan_columns", list(widths = as.list(w)))
+  } else if (length(w) && is.numeric(unlist(w)) && all(unlist(w) > 0)) {
+    widths <- tfl_item("plan_columns", list(widths = as.numeric(unlist(w))))
+  } else if (length(w)) {
+    .ard_stop(sprintf(paste0("template %s: `widths` is \"auto\", the relative widths ",
+                             "(positive numbers), one a printed column, or the widths by column name."), tn))
+  }
+  # the blank rows
+  bl <- a$blanks
+  blank <- NULL
+  if (!is.null(bl) || length(nn(list(a$blanks_first, a$blanks_last, a$blanks_counted)))) {
+    off <- identical(bl, FALSE)
+    # (FALSE: no `where` either; a code SPEC written from the report,
+    # tfl_template_to_spec(), writes it `!unset` when the study's layers below
+    # give one: bug 9)
+    where <- if (isTRUE(bl)) "between_groups" else if (is.character(bl)) bl
+    blank <- tfl_item("plan_blanks", nn(list(
+      where = where,
+      # (blanks = FALSE is no blank rows at all, whatever is said of the ends)
+      first = if (off) FALSE else a$blanks_first,
+      last = if (off) FALSE else a$blanks_last,
+      counted = a$blanks_counted)))
+  }
+  # the stub: the study's name and place, and the heading
+  stub <- NULL
+  if (length(nn(list(a$stub_name, a$stub_before, heading)))) {
+    hd <- !is.null(heading)
+    stub <- tfl_item("plan_stub", nn(list(
+      name = a$stub_name %||% if (hd) "row_label",
+      before = a$stub_before %||% if (hd) TRUE,
+      heading = if (hd) paste(heading, collapse = "\n"))))
+  }
+  # (a rule written as its edges, list(bottom = TRUE), is rtf_border(bottom = TRUE))
+  rule <- function(x) if (is.list(x) && !inherits(x, c("tfl_call", "tfl_r"))) tfl_call("rtf_border", x) else x
+  look <- nn(list(border_header = rule(a$border_header), border_group = rule(a$border_group)))
+  list(widths = widths, blank = blank, stub = stub,
+       style = if (length(look)) tfl_item("plan_style", look),
+       paginate = tfl_item("plan_paginate_rows", nn(c(
+         list(max_rows = if (!is.null(a$max_rows)) as.integer(a$max_rows),
+              split = .tpl_choice(a, "split", .tpl_split_choices, tn)), page))))
+}
+
+# `ids`: the categorical analysis's id and label in the ARD (disposition's
+# own, fixed: not parameters)
+.tpl_demog_body <- function(a, ctx, ids = list(cat = "CAT", cat_label = "Categorical")) {
   cont <- a$continuous
   cat <- a$categorical
   tn <- ctx$template$name %||% "demog"
@@ -250,24 +346,43 @@
   nn <- function(x) Filter(Negate(is.null), x)
   pop <- a$population
   subj <- paste0("adsl_", tolower(pop))
-  # the categorical variables' percentages are over the analysis set (canon
-  # 1.31, #770): the report's ADSL after its population and filters, the set
-  # GROUPN counts -- the column headings' N -- passed explicitly; not a parameter
-  cat_den <- subj
   hn <- if (is.null(a$header_n)) "none" else .tpl_header_n_stack(a, ctx, den = NULL)
   grp_set <- subj
   sets <- list(list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
                     population = pop))
   set <- subj
-  if (!identical(toupper(a[["data"]]), "ADSL")) {
+  adsl <- identical(toupper(a[["data"]]), "ADSL")
+  if (!is.null(a$where) && adsl) {
+    .ard_stop(sprintf(paste0("template %s: `where` keeps records of a `data` other than ADSL; ",
+                             "for which subjects, use `subset`."), tn))
+  }
+  if (!adsl) {
     set <- a[["data_id"]] %||% paste0(tolower(a[["data"]]), "_", tolower(pop))
-    sets <- c(sets, list(list(id = set, from = a[["data"]], subjects = subj)))
+    sets <- c(sets, list(nn(list(id = set, from = a[["data"]], subjects = subj,
+                                 where = if (!is.null(a$where)) tfl_r(a$where)))))
+  }
+  # the categorical variables' percentages' denominator, passed explicitly
+  # (canon 1.38).  Fixed in the demog family and disposition (canon 1.31):
+  # the analysis set -- the report's ADSL after its population and filters,
+  # the set GROUPN counts, the column headings' N.  summary's parameter:
+  # NULL the analysis set (with records `data`, the records kept), or another.
+  cat_den <- subj
+  if (!isTRUE(.tpl_get(tn, "template")$params$denominator$fixed_value)) {
+    dn <- .tpl_sum_den(a, ctx, subj, set)
+    cat_den <- dn$value %||% set
+    sets <- c(sets, dn$extra)
   }
   # the Missing row (#770's): a categorical variable that has missing values
   # (NA or blank) gets a level of them, last; decided on the data as the
   # program runs, so a variable with none has no such row
-  ml <- if (isTRUE(a$missing_row)) a$missing_label else NULL
-  if (isTRUE(a$missing_row) && (!is.character(ml) || length(ml) != 1L || is.na(ml) || !nzchar(ml))) {
+  # It is for ADSL (#774): asked for on records, it stops; the default is off there.
+  if (!adsl && "missing_row" %in% ctx$given && isTRUE(a$missing_row)) {
+    .ard_stop(sprintf(paste0(
+      "%s: missing_row is for data ADSL (one row a subject); with data %s leave it out ",
+      "or give FALSE."), tn, a[["data"]]))
+  }
+  ml <- if (isTRUE(a$missing_row) && adsl) a$missing_label else NULL
+  if (isTRUE(a$missing_row) && adsl && (!is.character(ml) || length(ml) != 1L || is.na(ml) || !nzchar(ml))) {
     .ard_stop(sprintf("template %s: `missing_label` is one text (\"Missing\").", tn))
   }
   # the values per variable (shown even when 0): the code lists and the order
@@ -326,7 +441,7 @@
       formats = fmt_text(cont, names(cont_flat)),
       purpose = "PRIMARY OUTCOME MEASURE"))),
     if (length(cat)) list(nn(list(
-      id = "CAT", label = "Categorical", method = "categorical", data = cat_set,
+      id = ids$cat, label = ids$cat_label, method = "categorical", data = cat_set,
       by = a$by, overall = ov, variables = cat, statistics = c("n", "p"),
       formats = fmt_text(cat, c("n", "p")),
       denominator = cat_den, purpose = "PRIMARY OUTCOME MEASURE"))))
@@ -335,25 +450,11 @@
     continuous = if (length(cont) && length(a$cells)) as.list(
       .tpl_cell_alias(.tpl_demog_cells_sd(a$cells, a[["sd_missing"]]))),
     categorical = a$count_cell))
-  # the arms and the columns of the table, for the widths
-  w <- a$widths
-  widths_item <- NULL
-  if (is.character(w) && length(w) == 1L && identical(w, "auto")) {
-    arms <- .tpl_levels(a$by, ctx$codelists)[[a$by]]
-    ncol_val <- if (length(arms)) length(arms) + isTRUE(a$total) else NA_integer_
-    if (!is.na(ncol_val)) {
-      widths_item <- tfl_item("plan_columns", list(widths = c(35, rep(65 / ncol_val, ncol_val))))
-    }
-  } else if (length(w) && is.numeric(unlist(w)) && all(unlist(w) > 0) && length(names(w)) &&
-             all(nzchar(names(w)))) {
-    # (by column name, as the study's plan_columns(widths = ) gives them)
-    widths_item <- tfl_item("plan_columns", list(widths = as.list(w)))
-  } else if (length(w) && is.numeric(unlist(w)) && all(unlist(w) > 0)) {
-    widths_item <- tfl_item("plan_columns", list(widths = as.numeric(unlist(w))))
-  } else if (length(w)) {
-    .ard_stop(sprintf(paste0("template %s: `widths` is \"auto\", the relative widths ",
-                             "(positive numbers), one a printed column, or the widths by column name."), tn))
-  }
+  # the look: the widths (the arms and a Total, the printed columns), the blank
+  # rows, the stub, the rules, the rows a page (a block never split over pages)
+  arms <- .tpl_levels(a$by, ctx$codelists)[[a$by]]
+  lk <- .tpl_look_items(a, tn, ncol = if (length(arms)) length(arms) + isTRUE(a$total) else NA_integer_,
+                        heading = a$heading)
   # the arm heading: a text ({col} and the N on a line), or the lines a study gives
   ch <- a$col_header
   hdr <- NULL
@@ -372,39 +473,10 @@
   } else if (length(ch)) {
     hdr <- tfl_item("plan_col_header", list(lines = ch))
   }
-  # the blank rows
-  bl <- a$blanks
-  blank <- NULL
-  if (!is.null(bl) || length(nn(list(a$blanks_first, a$blanks_last, a$blanks_counted)))) {
-    off <- identical(bl, FALSE)
-    # (FALSE: no `where` either; a code SPEC written from the report,
-    # tfl_template_to_spec(), writes it `!unset` when the study's layers below
-    # give one: bug 9)
-    where <- if (isTRUE(bl)) "between_groups" else if (is.character(bl)) bl
-    blank <- tfl_item("plan_blanks", nn(list(
-      where = where,
-      # (blanks = FALSE is no blank rows at all, whatever is said of the ends)
-      first = if (off) FALSE else a$blanks_first,
-      last = if (off) FALSE else a$blanks_last,
-      counted = a$blanks_counted)))
-  }
-  # the stub: the study's name and place, and the heading
-  stub <- NULL
-  if (length(nn(list(a$stub_name, a$stub_before, a$heading)))) {
-    hd <- !is.null(a$heading)
-    stub <- tfl_item("plan_stub", nn(list(
-      name = a$stub_name %||% if (hd) "row_label",
-      before = a$stub_before %||% if (hd) TRUE,
-      heading = if (hd) paste(a$heading, collapse = "\n"))))
-  }
-  # (a rule written as its edges, list(bottom = TRUE), is rtf_border(bottom = TRUE))
-  rule <- function(x) if (is.list(x) && !inherits(x, c("tfl_call", "tfl_r"))) tfl_call("rtf_border", x) else x
-  look <- nn(list(border_header = rule(a$border_header), border_group = rule(a$border_group)))
   ord <- c(list(variable = a$order), lev)
   ord <- ord[!vapply(ord, is.null, NA)]
   content <- c(
     list(tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable")))),
-    if (!is.null(a$rounding)) list(tfl_item("plan_digits", list(rounding = a$rounding))),
     if (length(cells)) list(tfl_item("plan_cells", cells)),
     if (length(ord)) list(tfl_item("plan_levels", ord)),
     if (length(a$labels) && length(intersect(vars, names(a$labels)))) list(tfl_item(
@@ -412,13 +484,7 @@
     if (isTRUE(a[["total"]])) list(tfl_item("plan_total", nn(list(
       label = a$total_label, position = "last")))),
     if (!is.null(hdr)) list(hdr),
-    if (!is.null(blank)) list(blank),
-    if (!is.null(stub)) list(stub),
-    if (length(look)) list(tfl_item("plan_style", look)),
-    if (!is.null(widths_item)) list(widths_item),
-    # (a block is never split over pages)
-    list(tfl_item("plan_paginate_rows", nn(list(
-      max_rows = if (!is.null(a$max_rows)) as.integer(a$max_rows), split = "group_safe")))))
+    unname(Filter(Negate(is.null), lk[.tpl_look_order(tn)])))
   out <- list(ard = list(analysis_data = sets, analyses = analyses),
               data = list(source = "ard", object = "ard"), content = content)
   if (length(codelists)) out$codelists <- codelists
@@ -431,8 +497,8 @@
           "formats", "missing_row", "missing_label"),
   content = c("order", "labels", "categorical_levels", "cells", "sd_missing", "count_cell",
               "total_label", "header_n", "col_header", "heading", "stub_name", "stub_before",
-              "widths", "max_rows", "rounding", "blanks", "blanks_first", "blanks_last", "blanks_counted",
-              "border_header", "border_group", "style"))
+              "widths", "max_rows", "split", "blanks", "blanks_first", "blanks_last",
+              "blanks_counted", "border_header", "border_group", "style"))
 
 # (`extends`: its family's `[defaults]`, canon 1.27: the study's defaults are
 # laid under the template's items, and its references read them)
@@ -482,10 +548,78 @@
                 # digits and the Missing row fixed, as the % denominator is)
                 fixed = c("col_header", "stub_name", "stub_before", "blanks", "blanks_first",
                           "blanks_last", "blanks_counted", "border_header", "style", "cells",
-                          "count_cell", "sd_missing", "rounding", "widths", "max_rows"),
+                          "count_cell", "sd_missing", "widths", "max_rows"),
                 fixed_value = c("formats", "missing_row", "style")),
               body = .tpl_demog_body, ai = FALSE, parts = .tpl_demog_parts,
               # (canon 1.27, 1.30: the study's content is not laid, fixed)
               extends = list(content = "none"), extends_fixed = "content",
               example = list(population = "SAF", by = "TRT01A", continuous = "AGE",
                              categorical = c("SEX", "AGEGR1", "RACE", "ETHNIC", "COUNTRY")))
+
+# ---- summary and disposition: two more templates on this body (batch 2) ----------
+#
+# Each is a template of its own (canon 1.11, 1.25): the same definition (the
+# parameters' helper and `.tpl_demog_body`), its own defaults.  Neither has a
+# default set of variables (canon 1.12) or `by` (1.14); the % denominator is
+# passed explicitly, the analysis set by default (1.38), and a categorical
+# variable with missing values gets a Missing row (`missing_row`, 1.31, row
+# 361).  The `extends` default is not written yet (the old layer order): it
+# flips in the batch's (ii) PR (MIGRATION 4.7); `style` comes with it, as
+# `rounding` is not a parameter (the study's force, canon 1.33).
+
+# Where each parameter acts, for a template on this body: demog's parts, the
+# names it has (`where` with the analysis)
+.tpl_demog_parts_of <- function(params) {
+  nm <- vapply(params, `[[`, "", "name")
+  list(ard = intersect(c(.tpl_demog_parts$ard, "where"), nm),
+       content = intersect(.tpl_demog_parts$content, nm))
+}
+
+# `missing_row` where the denominator is a parameter (#774's text: a
+# denominator given moves the percentages, so not "over the analysis set")
+.tpl_missing_row_sum <- tfl_param("missing_row", TRUE, type = "flag", unset = "step_off", doc = paste(
+  "TRUE (default): a Missing row, last, for each categorical variable that has missing values",
+  "(NA or blank). FALSE: no Missing row; missing values are left out of the counts."))
+
+.tpl_summary_params <- .tpl_demog_params(
+  defaults = list(labels = NULL),
+  drop = "style",
+  add = list(
+    tfl_param("where", NULL, unset = "step_off",
+              doc = paste("which records (R) of a `data` other than ADSL: ANL01FL == \"Y\";",
+                          "unset: all; for which subjects, `subset`")),
+    tfl_param("denominator", NULL, doc = .tpl_den_sum_doc),
+    .tpl_missing_row_sum))
+
+# (`extends`: its family's `[defaults]`, canon 1.27: the study's defaults are
+# laid under the template's items, and its references read them)
+.tfl_template("summary", kind = "table", layout = "summary",
+              params = .tpl_summary_params, body = .tpl_demog_body, extends = "defaults",
+              parts = .tpl_demog_parts_of(.tpl_summary_params))
+
+# disposition: the subjects' status at the end of the study, n (%).  The %
+# denominator is summary's parameter, the analysis set by default, given
+# explicitly (canon 1.38; demog's fixed one, 1.31, is the exception); the status analysis's id and label
+# in the ARD are fixed (DISP).  A block is never split over pages (Q-C6:
+# split = "group_safe" again), 24 rows a page.
+.tpl_disposition_params <- .tpl_demog_params(
+  defaults = list(labels = c(EOSSTT = "Status at end of study, n (%)"), max_rows = 24L),
+  drop = c("continuous", "style"),
+  add = list(tfl_param("categorical", required = TRUE, unset = "stop",
+                       doc = "the status variables, in order (EOSSTT)"),
+             tfl_param("denominator", NULL, doc = .tpl_den_sum_doc),
+             .tpl_missing_row_sum))
+
+# (`extends`: its family's `[defaults]`, canon 1.27: the study's defaults are
+# laid under the template's items, and its references read them)
+.tfl_template("disposition", kind = "table", layout = "summary", extends = "defaults",
+              params = .tpl_disposition_params,
+              body = function(a, ctx) {
+                .tpl_demog_body(a, ctx, ids = list(cat = "DISP", cat_label = "Status at end of study"))
+              },
+              parts = .tpl_demog_parts_of(.tpl_disposition_params))
+
+# ae_overview and param_change (R/tpl_registry.R): their look's parameters are
+# demog's (.tpl_look_params()), so they are registered once this file is read
+.tpl_ae_overview_register()
+.tpl_pc_register()

@@ -55,7 +55,7 @@
 #' tfl_template("my_ages", kind = "table", layout = "summary",
 #'   params = list(tfl_param("population", "SAF", doc = "the analysis set's id")),
 #'   body = function(a, ctx) tfl_template_expand("summary",
-#'     list(population = a$population, continuous = "AGE"),
+#'     list(population = a$population, by = "TRT01A", continuous = "AGE"),
 #'     codelists = ctx$codelists, population = ctx$population))
 #' tfl_templates()[, c("name", "package")]
 #' @export
@@ -121,6 +121,9 @@ tfl_template <- function(name, kind = c("table", "figure", "listing"), layout, p
 #'   defaults and the study standard's values (`tfl_param(study = )`), as
 #'   the look of a figure's report type takes the figure style standard's;
 #'   a report changes that with its own items (`+`) or `plot:`.
+#' @param key Parameters of `from` that are `"key"` in the variant: they
+#'   have a default but stay on top of its input form (the tier of
+#'   [tfl_param()]); `NULL`: each keeps `from`'s tier.
 #' @return `name`, invisibly.
 #' @examples
 #' tfl_template_variant("demog_age_sex", from = "demog",
@@ -128,7 +131,7 @@ tfl_template <- function(name, kind = c("table", "figure", "listing"), layout, p
 #' tfl_template_params("demog_age_sex")$categorical$default
 #' @export
 tfl_template_variant <- function(name, from, defaults = list(), label = NULL, example = NULL,
-                                 ai = NULL, hide = NULL) {
+                                 ai = NULL, hide = NULL, key = NULL) {
   fn <- "tfl_template_variant()"
   if (!is.character(name) || length(name) != 1L || !grepl("^[A-Za-z][A-Za-z0-9_.]*$", name)) {
     .ard_stop(sprintf("%s: `name` is one name of letters, digits, '_' and '.'.", fn))
@@ -142,6 +145,11 @@ tfl_template_variant <- function(name, from, defaults = list(), label = NULL, ex
     .ard_stop(sprintf("%s: template %s has no parameter %s; its parameters: %s.", fn, from,
                       paste(sQuote(unknown, FALSE), collapse = ", "),
                       paste(names(src$params), collapse = ", ")))
+  }
+  unknown <- setdiff(key, names(src$params))
+  if (length(unknown)) {
+    .ard_stop(sprintf("%s: template %s has no parameter %s to make key.", fn, from,
+                      paste(sQuote(unknown, FALSE), collapse = ", ")))
   }
   unknown <- setdiff(hide, names(src$params))
   if (length(unknown)) {
@@ -163,7 +171,7 @@ tfl_template_variant <- function(name, from, defaults = list(), label = NULL, ex
     from <- keep
   }
   assign(name, list(name = name, from = from, defaults = defaults, label = label,
-                    package = pkg, example = example, ai = ai, hide = hide),
+                    package = pkg, example = example, ai = ai, hide = hide, key = key),
          envir = .tpl_registry)
   invisible(name)
 }
@@ -184,6 +192,8 @@ tfl_template_variant <- function(name, from, defaults = list(), label = NULL, ex
   }
   # (hidden: not its arguments; a variant of it keeps them hidden)
   for (k in v$hide) params[[k]]$hidden <- TRUE
+  # (key: its tier here; a variant of it keeps it)
+  for (k in v$key) params[[k]]$tier <- "key"
   root <- src$root %||% src$name
   list(name = v$name, kind = src$kind, layout = src$layout, params = params,
        body = src$body, label = v$label %||% src$label, call = src$call,
@@ -240,7 +250,7 @@ tfl_template_params <- function(name) {
 #'   saf <- adsl[adsl$SAFFL == "Y", ]
 #'   ard <- cards::bind_ard(cards::ard_tabulate(saf, variables = TRT01A),
 #'                          cards::ard_summary(saf, by = TRT01A, variables = AGE))
-#'   plan <- tfl_template_run("summary", ard, population = "SAF", continuous = "AGE")
+#'   plan <- tfl_template_run("summary", ard, population = "SAF", by = "TRT01A", continuous = "AGE")
 #' }
 #' @export
 tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
@@ -381,15 +391,15 @@ tfl_test_templates <- function(names = NULL) {
                categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC")),
   stf_t02_demog = list(population = "SAF", by = "TRT01A", continuous = "AGE",
                        categorical = c("SEX", "AGEGR1", "RACE", "ETHNIC", "COUNTRY")),
-  summary = list(population = "SAF", continuous = "AGE"),
-  disposition = list(population = "SAF"),
+  summary = list(population = "SAF", by = "TRT01A", continuous = "AGE"),
+  disposition = list(population = "SAF", by = "TRT01A", categorical = "EOSSTT"),
   hierarchical = list(population = "SAF", hierarchy = c("AEBODSYS", "AEDECOD")),
   ae_soc_pt = list(population = "SAF"),
   ae_ser_soc_pt = list(population = "SAF"),
   ae_disc_soc_pt = list(population = "SAF"),
   ae_pt_freq = list(population = "SAF", min_pct = 5),
   ae_max_grade = list(population = "SAF", grade_levels = c("MILD", "MODERATE", "SEVERE")),
-  ae_overview = list(population = "SAF"),
+  ae_overview = list(population = "SAF", by = "TRT01A"),
   shift = list(population = "SAF", data_id = "adlb_shift", by_levels = c("Drug X", "Control")),
   lab_shift = list(population = "SAF", visit = "CYCLE 2 DAY 1", params = c("ALT", "AST")),
   listing = list(data = "ADAE", columns = list(list(vars = "USUBJID", label = "Subject"))),
@@ -403,8 +413,11 @@ tfl_test_templates <- function(names = NULL) {
   waterfall = list(param = "SUMDIAM", where = "AVISIT == \"WEEK 12\""),
   orr = list(),
   stat_block = list(variable = "RESP", cells = list(N = "{N}", "ORR (%)" = "{n} ({estimate:.1f%})")),
-  param_change = list(population = "SAF", data = "ADLB", params = c("ALT", "AST"),
-                      where = "ANL01FL == \"Y\""),
+  param_change = list(population = "SAF", by = "TRT01A", data = "ADLB", params = c("ALT", "AST"),
+                      where = "ANL01FL == \"Y\"",
+                      # (the parameters' text: the report's, outside the ARD, canon 1.42)
+                      param_labels = list(ALT = "Alanine Aminotransferase (U/L)",
+                                          AST = "Aspartate Aminotransferase (U/L)")),
   ae_eair = list(population = "SAF"),
   ancova = list(population = "SAF", data = "ADVS", param = "SYSBP", visit = "CYCLE 2 DAY 1"),
   lab_abnormal = list(population = "SAF", levels = c("LOW", "HIGH"), where = "ONTRTFL == \"Y\""))

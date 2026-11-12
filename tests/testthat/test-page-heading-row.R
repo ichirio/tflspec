@@ -97,7 +97,8 @@ hd_study <- function(root) {
 hd_args <- list(
   shift = list(population = "SAF", data_id = "adlb_shift", by_levels = c("Drug X", "Control")),
   lab_shift = list(population = "SAF", visit = "CYCLE 2 DAY 1", params = c("ALT", "AST")),
-  param_change = list(population = "SAF", data = "ADLB", params = c("ALT", "AST"), where = NULL),
+  param_change = list(population = "SAF", data = "ADLB", by = "TRT01A", params = c("ALT", "AST"),
+                      where = NULL),
   pk_conc = list(population = "SAF", blq = "BLQFL == \"Y\""),
   demog = list(by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX")))
 
@@ -182,7 +183,7 @@ test_that("no heading to place: the mark's row is dropped (no parameter pages; d
   skip_if_not_installed("haven")
   skip_if_not_installed("cards")
   d <- hd_study(withr::local_tempdir())
-  hd_write(d, "T-SHNP", "shift", hd_shell(), args = list(param_page = FALSE))
+  hd_write(d, "T-SHNP", "shift", hd_shell(), args = list(page_by = FALSE))
   t <- hd_page1(d, "T-SHNP")
   expect_identical(t$text, hd_shell_texts)
   hd_write(d, "T-DM", "demog", hd_shell())

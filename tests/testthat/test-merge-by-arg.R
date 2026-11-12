@@ -21,7 +21,7 @@ test_that("a template's page_by, heading and heading_at stay under a report's ma
   expect_identical(pr[[1L]]$args$page_by, "group")
   expect_true(all(c("heading", "heading_at") %in% names(pr[[1L]]$args)))
   # (the same in param_change)
-  ro2 <- mba_resolve("param_change", list(population = "SAF", data = "ADLB", params = c("ALT", "AST"),
+  ro2 <- mba_resolve("param_change", list(population = "SAF", data = "ADLB", by = "TRT01A", params = c("ALT", "AST"),
                                       visits = c("BASELINE", "CYCLE 2 DAY 1")),
                      list(tfl_item("plan_paginate_rows", list(max_rows = 20))))
   pr2 <- mba_items(ro2, "plan_paginate_rows")

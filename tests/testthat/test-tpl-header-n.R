@@ -9,6 +9,8 @@ hn_texts <- function(x) {
 hn_all <- function(x) unlist(hn_texts(x))
 hn_ids <- function(x) vapply(x$ard$analyses, function(a) a$id, "")
 hn_expand <- function(name, args = list(), ...) {
+  # (ae_overview's `by` is required, no default: canon 1.14)
+  if (name == "ae_overview" && is.null(args$by)) args$by <- "TRT01A"
   tfl_template_expand(name, c(list(population = "SAF"), args, list(...)))
 }
 hn_msg <- function(tpl, x, why) {
@@ -295,14 +297,14 @@ test_that("ae_overview: header_n \"set\" is today's, \"none\" drops the N; \"tes
 
 # ---- shift, lab_shift ----
 
-test_that("shift and lab_shift: header_n \"tested\" without param_page stops", {
+test_that("shift and lab_shift: header_n \"tested\" without page_by stops", {
   for (tpl in c("shift", "lab_shift")) {
     a <- if (tpl == "shift") list(baseline = "BNRIND", post = "ANRIND", param = "PARAMCD") else
       list(visit = "V", params = "ALT")
-    expect_error(hn_expand(tpl, a, header_n = "tested", param_page = FALSE),
-                 sprintf("%s: header_n = \"tested\" needs param_page = TRUE", tpl), fixed = TRUE)
+    expect_error(hn_expand(tpl, a, header_n = "tested", page_by = FALSE),
+                 sprintf("%s: header_n = \"tested\" needs page_by", tpl), fixed = TRUE)
     expect_no_error(hn_expand(tpl, a, header_n = "tested"))
-    expect_no_error(hn_expand(tpl, a, header_n = "set", param_page = FALSE))
-    expect_no_error(hn_expand(tpl, a, header_n = "none", param_page = FALSE))
+    expect_no_error(hn_expand(tpl, a, header_n = "set", page_by = FALSE))
+    expect_no_error(hn_expand(tpl, a, header_n = "none", page_by = FALSE))
   }
 })

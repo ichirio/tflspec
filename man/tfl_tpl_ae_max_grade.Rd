@@ -11,7 +11,7 @@ The table template \code{ae_max_grade}, layout \code{hierarchical}. Its program 
    Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
    \code{population} \tab required \tab call \tab report: population, required \tab output.population \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
-   \code{grade} \tab other \tab call \tab AESEV \tab  \tab the severity or grade variable (AESEV, AETOXGR) \cr
+   \code{grade} \tab key \tab call \tab AESEV \tab  \tab the severity or grade variable (AESEV, AETOXGR) \cr
    \code{grade_levels} \tab other \tab call \tab  \tab  \tab its values, lowest first: the rank of the maximum, and the order the table shows them in; NULL: the code list of 'grade' \cr
    \code{grade_in} \tab other \tab call \tab rows \tab  \tab the grades as "rows" under each term, or as "cols" in each group \cr
    \code{hierarchy} \tab other \tab call \tab AEBODSYS, AEDECOD \tab  \tab the levels, outer first \cr
@@ -25,6 +25,7 @@ The table template \code{ae_max_grade}, layout \code{hierarchical}. Its program 
    \code{heading} \tab other \tab call \tab System Organ Class,    Preferred Term \tab  \tab the label column's heading, a line a level \cr
    \code{denominator} \tab other \tab call \tab  \tab  \tab the percentages' denominator: NULL (default): the analysis set's subjects; "data": the subjects with a record kept; a number: that many subjects in every column; numbers named by the values of 'by' ('c("Drug X" = 60, "Control" = 55)'): that many in each column; the id of an analysis data ('adsl_itt', or one of the report's own): its subjects in each column \cr
    \code{header_n} \tab other \tab call \tab denominator \tab  \tab the arm headings' N: "denominator" (default): the arm's subjects the percentages are of ('denominator'); "set": the same, when 'denominator' is NULL (the analysis set); "tested": the same, when 'denominator' is "data" (the records' subjects); a header N apart from the denominator is not supported yet; "none": no N \cr
+   \code{split} \tab other \tab call \tab group_force \tab plan_paginate_rows.split \tab how a page break is placed (plan_paginate_rows(split = )): "none" one page; "group_safe" whole groups to a page; "group_force" a cut every 'max_rows' rows, a group continued on the next page; "rows" and "by_value" are cut by position or by value (they need their own arguments, a 'plan_paginate_rows' item) \cr
 }
 }
 

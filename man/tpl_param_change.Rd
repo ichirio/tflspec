@@ -12,11 +12,15 @@ report.}
 
 \item{population}{The analysis set's id (\code{"SAF"}).}
 
-\item{...}{The template's other parameters: \code{data} (required), \code{params},
-\code{visits}, \code{where}, \code{by}, \code{layout}, \code{param_order}, \code{visit_order},
-\code{baseline}, \code{baseline_label}, \code{value_label}, \code{change_label}, \code{statistics},
-\code{cells} (label = template, or a list of \code{list(label = , template = )}),
-\code{param_page}, \code{param_heading}, \code{heading} ...}
+\item{...}{The template's other parameters: \code{data} and \code{by} (required,
+no default), then \code{params}, \code{visits}, \code{where}, \code{layout}, \code{param_order},
+\code{visit_order}, \code{baseline}, \code{baseline_label}, \code{value_label},
+\code{change_label}, \code{formats} (the cells' decimals, plan_digits(): by
+statistic, and a parameter's own by its PARAMCD:
+\code{list(mean = 2, GLUC = list(sd = 3))}), \code{cells} (label = template, or a
+list of \code{list(label = , template = )}: placement only),
+\code{header_n}, \code{page_by}, \code{page_heading}, \code{split}, \code{heading} and the look
+(\code{stub_name}, \code{blanks}, \code{border_header}, \code{widths}, \code{max_rows} ...).}
 
 \item{codelists}{The report's code lists, for the order and labels of
 values; \code{NULL} takes the ARD's.}
@@ -38,5 +42,5 @@ that have one: the baseline visit's change cells stay empty.
 \code{baseline = TRUE} puts the baseline's (\code{BASE}) before them.
 
 Each parameter is a page of its own, \verb{Parameter: <PARAM>} in its titles
-(\code{param_page = FALSE}: one table, the parameter a row heading).
+(\code{page_by = !unset}: one table, the parameter a row heading).
 }

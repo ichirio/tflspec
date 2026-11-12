@@ -52,8 +52,9 @@ test_that("a template's default variables: optional, any_of(); a report's own: a
   expect_null(an(x, "CONT")$optional)
   y <- tfl_template_expand("demog", c(dd_args["population"], list(by = "TRT01A", categorical = c("SEX", "RACE"))))
   expect_null(an(y, "CAT")$optional)
-  z <- tfl_template_expand("disposition", list(population = "SAF"))
-  expect_true(an(z, "DISP")$optional)
+  # disposition: no default status variable either (canon 1.12): the report's, as written
+  z <- tfl_template_expand("disposition", list(population = "SAF", by = "TRT01A", categorical = "EOSSTT"))
+  expect_null(an(z, "DISP")$optional)
 })
 
 test_that("an ADSL with no ETHNIC: demog's table of the variables given, as written; A = B", {

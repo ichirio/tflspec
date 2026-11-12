@@ -9,16 +9,26 @@ The table template \code{ae_overview}, layout \code{summary}. Its program is one
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab other \tab call \tab report: population, else SAF \tab output.population \tab the analysis set's id \cr
+   \code{population} \tab required \tab call \tab report: population, required \tab output.population \tab the analysis set's id: the report's 'population:' field \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
-   \code{by} \tab other \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the column variable \cr
+   \code{by} \tab required \tab call \tab  \tab  \tab the column variable (the arms); not a default and not the study's treatment \cr
    \code{data} \tab other \tab call \tab ADAE \tab  \tab the dataset of events \cr
-   \code{where} \tab other \tab call \tab TRTEMFL == "Y" \tab  \tab the events kept (R): the treatment-emergent \cr
+   \code{where} \tab other \tab call \tab TRTEMFL == "Y" \tab  \tab the events kept (R): the treatment-emergent; unset: every event \cr
    \code{data_id} \tab other \tab call \tab  \tab  \tab the events' analysis data's id; NULL: <data>_<population> \cr
    \code{flags} \tab other \tab call \tab (id = ANY; label = Any TEAE); (id = REL; label = Any trea... \tab  \tab the rows, in order: each 'id' (the flag's name), 'label' (the row's text) and 'where' (R: the events it counts; none: every event kept) \cr
-   \code{heading} \tab other \tab call \tab Subjects with \tab  \tab the label column's heading \cr
+   \code{heading} \tab other \tab call \tab Subjects with \tab  \tab the label column's heading; NULL: none \cr
    \code{denominator} \tab other \tab call \tab  \tab  \tab the percentages' denominator: NULL (default): the analysis set's subjects; "data": the subjects with a record kept; a number: that many subjects in every column; numbers named by the values of 'by' ('c("Drug X" = 60, "Control" = 55)'): that many in each column; the id of an analysis data ('adsl_itt', or one of the report's own): its subjects in each column \cr
-   \code{header_n} \tab other \tab call \tab set \tab  \tab the arm headings' N: "set" (default): the arm's subjects in the analysis set (with 'subset'); "denominator": the arm's rows of the data the percentages are of ('denominator'), the same as "set" when that is NULL, not with a number; "none": no N. "tested" is not supported: use "denominator" with denominator = "data" \cr
+   \code{header_n} \tab other \tab call \tab set \tab  \tab the arm headings' N: "set" (default): the arm's subjects in the analysis set (with 'subset'); "denominator": the arm's rows of the data the percentages are of ('denominator'), the same as "set" when that is NULL, not with a number; "none": no N; unset: no N. "tested" is not supported: use "denominator" with denominator = "data" \cr
+   \code{split} \tab other \tab call \tab group_safe \tab plan_paginate_rows.split \tab how a page break is placed (plan_paginate_rows(split = )): "none" one page; "group_safe" whole groups to a page; "group_force" a cut every 'max_rows' rows, a group continued on the next page; "rows" and "by_value" are cut by position or by value (they need their own arguments, a 'plan_paginate_rows' item) \cr
+   \code{stub_name} \tab other \tab call \tab study: plan_stub.name, no fallback \tab plan_stub.name \tab the row-title column's name (plan_stub(name = )) \cr
+   \code{stub_before} \tab other \tab call \tab study: plan_stub.before, no fallback \tab plan_stub.before \tab TRUE: the row-title column before the row keys (plan_stub(before = )) \cr
+   \code{blanks} \tab other \tab call \tab study: plan_blanks.where, no fallback \tab plan_blanks.where \tab blank rows: TRUE between the blocks, FALSE none, or where (plan_blanks(where = )); FALSE also sets both ends off; NULL: none made here \cr
+   \code{blanks_first} \tab other \tab call \tab study: plan_blanks.first, no fallback \tab plan_blanks.first \tab a blank row before the first block (plan_blanks(first = )) \cr
+   \code{blanks_last} \tab other \tab call \tab study: plan_blanks.last, no fallback \tab plan_blanks.last \tab a blank row after the last block (plan_blanks(last = )) \cr
+   \code{blanks_counted} \tab other \tab call \tab study: plan_blanks.counted, no fallback \tab plan_blanks.counted \tab blank rows count in a page's rows (plan_blanks(counted = )) \cr
+   \code{border_header} \tab other \tab call \tab study: plan_style.border_header, no fallback \tab plan_style.border_header \tab the rule round the column heading (plan_style(border_header = )) \cr
+   \code{widths} \tab other \tab call \tab study: plan_columns.widths, no fallback \tab plan_columns.widths \tab NULL: the columns' content; "auto": the row-title column 35\% of the width, the arm columns sharing the rest; numbers: the relative widths, one a printed column; or the widths by column name, as plan_columns(widths = ) takes them (row_label: 40, .values: 18) \cr
+   \code{max_rows} \tab other \tab call \tab study: plan_paginate_rows.max_rows, else 30 \tab plan_paginate_rows.max_rows \tab rows a page (plan_paginate_rows(max_rows = )) \cr
 }
 }
 
@@ -43,7 +53,7 @@ The aliases follow the numbering of these publications, and the titles are short
 \section{Example}{
 
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{plan <- tfl_tpl(ard, "ae_overview", population = "SAF")
+\if{html}{\out{<div class="sourceCode">}}\preformatted{plan <- tfl_tpl(ard, "ae_overview", population = "SAF", by = "TRT01A")
 }\if{html}{\out{</div>}}
 }
 

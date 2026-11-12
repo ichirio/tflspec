@@ -292,7 +292,7 @@ needs that variable in `by`.
   it the heading is the variable's name.
 - **A title line that changes with the page** ("Parameter: <PARAM>", one
   parameter a page): the templates `param_change` and `shift` do it
-  themselves (`param_page`, `param_heading`); else `plan_paginate_rows: {page_by: [PARAMCD], heading:
+  themselves (`page_by`, `page_heading`); else `plan_paginate_rows: {page_by: [PARAMCD], heading:
   "Parameter: {PARAM}", heading_at: title}` -- the heading goes under the
   report's titles on each page, as their last line.  A shell with the
   Parameter line **above** the population line writes it where it is, a

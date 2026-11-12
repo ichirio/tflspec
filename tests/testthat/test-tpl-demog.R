@@ -64,7 +64,7 @@ test_that("the standalone templates equal what the variants gave: defaults and t
   d <- b1_folder(na = FALSE)
   # the variants as they were (of summary, of demog)
   tfl_template_variant("b1_old_demog", from = "summary", label = "old",
-    defaults = list(continuous = "AGE", categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC"),
+    defaults = list(by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC"),
                     labels = c(AGE = "Age (years)", AGEGR1 = "Age group, n (%)",
                                SEX = "Sex, n (%)", RACE = "Race, n (%)", ETHNIC = "Ethnicity, n (%)")))
   tfl_template_variant("b1_old_stf", from = "b1_old_demog", label = "old",
@@ -92,14 +92,13 @@ test_that("the standalone templates equal what the variants gave: defaults and t
                                      continuous = "AGE", categorical = "SEX")))$table
   expect_identical(a, b)
   # (values missing -- RACE blank, SEX NA: demog adds a Missing row, last, for each of
-  # the two and its percentages are over the analysis set (canon 1.31); the summary
-  # does the same (its missing_row, #774), so the whole table is the summary's)
+  # the two and its percentages are over the analysis set (canon 1.31); summary, on
+  # the same body since batch 2, too)
   d2 <- b1_folder(na = TRUE)
   a <- b1_run(d2, b1_out("b1_old_demog", vars))$table
   b <- b1_run(d2, b1_out("demog", c(list(by = "TRT01A"), vars)))$table
-  keep <- trimws(as.character(b$label)) != "Missing"
-  expect_identical(sum(!keep), 2L)
-  expect_identical(a, b)
+  expect_identical(sum(trimws(as.character(b$label)) == "Missing"), 2L)
+  expect_identical(b, a)
   x <- tfl_template_expand("demog", b1_args())
   expect_identical(Filter(function(a) identical(a$id, "CAT"), x$ard$analyses)[[1L]]$denominator, "adsl_saf")
   # the FDA variant: the same rows (the new look adds the heading, the Missing row ...)
@@ -136,8 +135,12 @@ test_that("`by` is not filled from the study's treatment", {
     expect_error(tfl_resolve_output(o, s), "needs 'by'")
     expect_null(tfl_template_params(n)$by$study)
   }
+  # summary, disposition, ae_overview, param_change too (batch 2)
+  for (n in c("summary", "disposition", "ae_overview", "param_change")) {
+    expect_null(tfl_template_params(n)$by$study, info = n)
+  }
   # other templates still take it (their batches are later)
-  expect_identical(tflspec:::.tpl_get("summary", "t")$params$by$study, "settings.treatment")
+  expect_identical(tflspec:::.tpl_get("ae_soc_pt", "t")$params$by$study, "settings.treatment")
 })
 
 test_that("continuous_statistics, categorical_statistics, stack and where are gone: the plain unknown-parameter error", {
@@ -557,7 +560,6 @@ b1_unset_probe <- list(
                      stf = list(args = list(heading = tfl_unset()))),
   widths = list(args = list(widths = "auto"), pat = "plan_columns"),
   max_rows = list(args = list(max_rows = 12), pat = "max_rows"),
-  rounding = list(args = list(rounding = "sas"), pat = "plan_digits"),
   blanks = list(args = list(blanks = TRUE), pat = "where"),
   blanks_first = list(args = list(blanks = TRUE, blanks_first = TRUE), pat = "first = TRUE"),
   blanks_last = list(args = list(blanks = TRUE, blanks_last = TRUE), pat = "last = TRUE"),
@@ -682,7 +684,7 @@ test_that("an appended plan_paginate_rows(max_rows) keeps split; an appended pla
   }
 })
 
-test_that("demog: rounding, max_rows and widths reference the study standard (canon 1.29); stf_t02_demog: none", {
+test_that("demog: max_rows and widths reference the study standard (canon 1.29), rounding is no parameter (1.40); stf_t02_demog: none", {
   mk <- function(items, settings = list()) {
     s <- b1_study()
     s$defaults$content <- c(s$defaults$content, items)
@@ -702,28 +704,28 @@ test_that("demog: rounding, max_rows and widths reference the study standard (ca
     expect_length(digits(base), 0L)
     expect_identical(rows(base), 30L)
     r <- tfl_resolve_output(b1_out(n, a), s)
+    # the study's rounding is its setup's (canon 1.40): no plan_digits item here
+    expect_length(digits(r), 0L)
     if (n == "demog") {
-      expect_identical(digits(r)[[1L]]$args, list(rounding = "r"))
       expect_identical(rows(r), 18L)
       # (the widths by column name, as the study's plan_columns(widths = ) gives them)
       expect_identical(cols(r)[[1L]]$args$widths, list(row_label = 40, .values = 18))
       expect_setequal(intersect(c("max_rows", "widths"), attr(r, "template")$study), c("max_rows", "widths"))
     } else {
       # canon 1.30: the template's values, not the study's
-      expect_length(digits(r), 0L)
       expect_identical(rows(r), 30L)
       expect_false(any(c("max_rows", "widths", "rounding") %in% attr(r, "template")$study))
     }
     # the report's own value wins
-    r2 <- tfl_resolve_output(b1_out(n, c(a, list(max_rows = 9, rounding = "sas"))), s)
+    r2 <- tfl_resolve_output(b1_out(n, c(a, list(max_rows = 9))), s)
     expect_identical(rows(r2), 9L)
-    expect_identical(digits(r2)[[1L]]$args$rounding, "sas")
   }
   p <- tfl_template_params("demog")
   expect_identical(p$widths$study, "plan_columns.widths")
   expect_identical(p$max_rows$study, "plan_paginate_rows.max_rows")
   expect_null(p$widths$default)
   expect_identical(p$max_rows$default, 30L)
+  expect_false("rounding" %in% names(p))
   q <- tfl_template_params("stf_t02_demog")
   expect_identical(q$widths$default, "auto")
   expect_identical(q$max_rows$default, 30L)
@@ -758,7 +760,9 @@ test_that("stf_t02_demog is values only (canon 1.30): no reference; formats and 
 })
 
 test_that("the `unset` flag is shown for the migrated templates, NA for the others", {
-  for (n in c("demog", "stf_t02_demog")) {
+  # (extends [defaults], batch 2 (ii)): summary, disposition, ae_overview and
+  # param_change are migrated too
+  for (n in c("demog", "stf_t02_demog", "summary", "disposition", "ae_overview", "param_change")) {
     a <- tfl_tpl_args(n)
     expect_false(anyNA(a$unset), info = n)
     expect_true(all(a$unset %in% c("omit", "stop", "step_off")), info = n)
@@ -768,8 +772,9 @@ test_that("the `unset` flag is shown for the migrated templates, NA for the othe
     expect_identical(unname(vapply(tflspec:::.tpl_registry[[n]]$params, `[[`, "", "unset")),
                      unname(vapply(pr, `[[`, "", "unset")))
   }
-  expect_true(all(is.na(tfl_tpl_args("summary")$unset)))
-  expect_true(all(is.na(vapply(tfl_template_params("summary"), function(p) p$unset, ""))))
+  # (extends [defaults], batch 2 (ii)): ae_soc_pt, not migrated, is the NA case
+  expect_true(all(is.na(tfl_tpl_args("ae_soc_pt")$unset)))
+  expect_true(all(is.na(vapply(tfl_template_params("ae_soc_pt"), function(p) p$unset, ""))))
 })
 
 sr_study_b1 <- function(settings) {
