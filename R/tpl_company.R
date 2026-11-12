@@ -121,6 +121,9 @@ tfl_template <- function(name, kind = c("table", "figure", "listing"), layout, p
 #'   defaults and the study standard's values (`tfl_param(study = )`), as
 #'   the look of a figure's report type takes the figure style standard's;
 #'   a report changes that with its own items (`+`) or `plot:`.
+#' @param key Parameters of `from` that are `"key"` in the variant: they
+#'   have a default but stay on top of its input form (the tier of
+#'   [tfl_param()]); `NULL`: each keeps `from`'s tier.
 #' @return `name`, invisibly.
 #' @examples
 #' tfl_template_variant("demog_age_sex", from = "demog",
@@ -128,7 +131,7 @@ tfl_template <- function(name, kind = c("table", "figure", "listing"), layout, p
 #' tfl_template_params("demog_age_sex")$categorical$default
 #' @export
 tfl_template_variant <- function(name, from, defaults = list(), label = NULL, example = NULL,
-                                 ai = NULL, hide = NULL) {
+                                 ai = NULL, hide = NULL, key = NULL) {
   fn <- "tfl_template_variant()"
   if (!is.character(name) || length(name) != 1L || !grepl("^[A-Za-z][A-Za-z0-9_.]*$", name)) {
     .ard_stop(sprintf("%s: `name` is one name of letters, digits, '_' and '.'.", fn))
@@ -142,6 +145,11 @@ tfl_template_variant <- function(name, from, defaults = list(), label = NULL, ex
     .ard_stop(sprintf("%s: template %s has no parameter %s; its parameters: %s.", fn, from,
                       paste(sQuote(unknown, FALSE), collapse = ", "),
                       paste(names(src$params), collapse = ", ")))
+  }
+  unknown <- setdiff(key, names(src$params))
+  if (length(unknown)) {
+    .ard_stop(sprintf("%s: template %s has no parameter %s to make key.", fn, from,
+                      paste(sQuote(unknown, FALSE), collapse = ", ")))
   }
   unknown <- setdiff(hide, names(src$params))
   if (length(unknown)) {
@@ -163,7 +171,7 @@ tfl_template_variant <- function(name, from, defaults = list(), label = NULL, ex
     from <- keep
   }
   assign(name, list(name = name, from = from, defaults = defaults, label = label,
-                    package = pkg, example = example, ai = ai, hide = hide),
+                    package = pkg, example = example, ai = ai, hide = hide, key = key),
          envir = .tpl_registry)
   invisible(name)
 }
@@ -184,6 +192,8 @@ tfl_template_variant <- function(name, from, defaults = list(), label = NULL, ex
   }
   # (hidden: not its arguments; a variant of it keeps them hidden)
   for (k in v$hide) params[[k]]$hidden <- TRUE
+  # (key: its tier here; a variant of it keeps it)
+  for (k in v$key) params[[k]]$tier <- "key"
   root <- src$root %||% src$name
   list(name = v$name, kind = src$kind, layout = src$layout, params = params,
        body = src$body, label = v$label %||% src$label, call = src$call,

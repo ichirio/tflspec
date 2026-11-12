@@ -44,9 +44,32 @@ test_that("tfl_tpl_args(): a variant of a variant, each default its own variant'
   expect_identical(r("any_row_label")$effective, "Any SAE")
   # (the hierarchy is ae_soc_pt's)
   expect_identical(r("hierarchy")$layer, "variant:ae_soc_pt")
-  expect_identical(r("hierarchy")$tier, "required")
+  expect_identical(r("hierarchy")$tier, "key")
   expect_false(r("hierarchy")$required)
   expect_identical(r("data")$layer, "template")
+})
+
+test_that("the key tier: a default that stays on top, set by a variant or a parameter", {
+  tier_of <- function(nm, p) {
+    a <- tfl_tpl_args(nm)
+    a$tier[a$param == p]
+  }
+  expect_identical(tier_of("hierarchical", "hierarchy"), "required")
+  for (nm in c("ae_soc_pt", "ae_ser_soc_pt", "ae_disc_soc_pt")) {
+    expect_identical(tier_of(nm, "hierarchy"), "key")
+    expect_identical(tier_of(nm, "where"), "usual")
+  }
+  expect_identical(tier_of("ae_pt_freq", "term"), "key")
+  expect_identical(tier_of("ae_max_grade", "grade"), "key")
+  expect_identical(tier_of("ae_max_grade", "hierarchy"), "other")
+  expect_identical(tfl_param("x", 1, tier = "key")$tier, "key")
+  expect_error(tfl_param("x", 1, tier = "main"))
+  expect_error(tfl_template_variant("tk_bad", from = "hierarchical", key = "nope"), "no parameter")
+  # tfl_tpl_help(): required, then key, then usual, then other
+  out <- capture.output(tfl_tpl_help("ae_soc_pt"))
+  heads <- grep("^(required|key|usual|other) [(]", out, value = TRUE)
+  expect_identical(sub(" .*", "", heads), c("required", "key", "usual", "other"))
+  expect_true(any(grepl("^  hierarchy ", out)))
 })
 
 test_that("tfl_tpl_args(): the study standard's values, layer study: <key>", {
