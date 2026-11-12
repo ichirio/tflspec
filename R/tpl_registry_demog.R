@@ -586,8 +586,10 @@
     tfl_param("denominator", NULL, doc = .tpl_den_sum_doc),
     .tpl_missing_row_sum))
 
+# (`extends`: its family's `[defaults]`, canon 1.27: the study's defaults are
+# laid under the template's items, and its references read them)
 .tfl_template("summary", kind = "table", layout = "summary",
-              params = .tpl_summary_params, body = .tpl_demog_body,
+              params = .tpl_summary_params, body = .tpl_demog_body, extends = "defaults",
               parts = .tpl_demog_parts_of(.tpl_summary_params))
 
 # disposition: the subjects' status at the end of the study, n (%).  The %
@@ -603,7 +605,9 @@
              tfl_param("denominator", NULL, doc = .tpl_den_sum_doc),
              .tpl_missing_row_sum))
 
-.tfl_template("disposition", kind = "table", layout = "summary",
+# (`extends`: its family's `[defaults]`, canon 1.27: the study's defaults are
+# laid under the template's items, and its references read them)
+.tfl_template("disposition", kind = "table", layout = "summary", extends = "defaults",
               params = .tpl_disposition_params,
               body = function(a, ctx) {
                 .tpl_demog_body(a, ctx, ids = list(cat = "DISP", cat_label = "Status at end of study"))

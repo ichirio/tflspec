@@ -760,7 +760,9 @@ test_that("stf_t02_demog is values only (canon 1.30): no reference; formats and 
 })
 
 test_that("the `unset` flag is shown for the migrated templates, NA for the others", {
-  for (n in c("demog", "stf_t02_demog")) {
+  # (extends [defaults], batch 2 (ii)): summary, disposition, ae_overview and
+  # param_change are migrated too
+  for (n in c("demog", "stf_t02_demog", "summary", "disposition", "ae_overview", "param_change")) {
     a <- tfl_tpl_args(n)
     expect_false(anyNA(a$unset), info = n)
     expect_true(all(a$unset %in% c("omit", "stop", "step_off")), info = n)
@@ -770,8 +772,9 @@ test_that("the `unset` flag is shown for the migrated templates, NA for the othe
     expect_identical(unname(vapply(tflspec:::.tpl_registry[[n]]$params, `[[`, "", "unset")),
                      unname(vapply(pr, `[[`, "", "unset")))
   }
-  expect_true(all(is.na(tfl_tpl_args("summary")$unset)))
-  expect_true(all(is.na(vapply(tfl_template_params("summary"), function(p) p$unset, ""))))
+  # (extends [defaults], batch 2 (ii)): ae_soc_pt, not migrated, is the NA case
+  expect_true(all(is.na(tfl_tpl_args("ae_soc_pt")$unset)))
+  expect_true(all(is.na(vapply(tfl_template_params("ae_soc_pt"), function(p) p$unset, ""))))
 })
 
 sr_study_b1 <- function(settings) {

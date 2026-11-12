@@ -390,8 +390,14 @@ test_that("T11: tfl_tpl(study = ) carries the study's items; the program runs as
   expect_match(code("plain"), "plan_stub = list(heading = \"Study heading\")", fixed = TRUE, all = FALSE)
   # the style set's items, noted as such
   expect_match(code("style"), "# (study style: compact)", fixed = TRUE, all = FALSE)
-  # a template not yet migrated keeps the study's lines after the call
+  # (extends [defaults], batch 2 (ii)): summary carries the study's items too, as demog does
   rs <- tfl_resolve_output(te_demog(name = "summary"), s)
+  expect_true(any(grepl("study = list(", tfl_content_code(rs), fixed = TRUE)))
+  # a template not yet migrated keeps the study's lines after the call
+  ro3 <- tfl_output("T-10", "table", population = "SAF",
+                    template = list(name = "ae_soc_pt", args = list(population = "SAF",
+                                                                   hierarchy = c("AEBODSYS", "AEDECOD"))))
+  rs <- tfl_resolve_output(ro3, s)
   expect_false(any(grepl("study = list(", tfl_content_code(rs), fixed = TRUE)))
 })
 

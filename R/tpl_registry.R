@@ -612,7 +612,8 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
 #' items run on the data, as the report's content.  `tfl_tpl(ard, "demog",
 #' population = "SAF")` is what a template report's program calls; a
 #' study's defaults the template does not take as its parameters are added
-#' after the call -- or, for a template whose set has its `extends` (demog),
+#' after the call -- or, for a template whose set has its `extends` (demog,
+#' summary, disposition, ae_overview, param_change),
 #' given as `study`, under the template's items.  The template's parameters,
 #' their defaults and where each ends: `tfl_tpl_help()` (and
 #' `?tpl_<name>`).
@@ -2354,8 +2355,10 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
 }
 
 .tpl_pc_register <- function() {
+  # (`extends`: its family's `[defaults]`, canon 1.27: the study's defaults are
+  # laid under the template's items, and its references read them)
   .tfl_template("param_change", kind = "table", layout = "summary",
-                params = .tpl_pc_params(), body = .tpl_pc_body)
+                params = .tpl_pc_params(), body = .tpl_pc_body, extends = "defaults")
 }
 
 #' Parameters' value and change: a table plan from the template `param_change`
@@ -2681,8 +2684,10 @@ tpl_orr <- function(ard, population = "ITT", ..., codelists = NULL) {
   .tpl_look_params(c("stub_name", "stub_before", "blanks", "blanks_first", "blanks_last",
                      "blanks_counted", "border_header", "widths", "max_rows")))
 
+# (`extends`: its family's `[defaults]`, canon 1.27: the study's defaults are
+# laid under the template's items, and its references read them)
 .tpl_ae_overview_register <- function() .tfl_template("ae_overview", kind = "table", layout = "summary",
-  params = .tpl_ae_overview_params(),
+  params = .tpl_ae_overview_params(), extends = "defaults",
   body = function(a, ctx) {
     tn <- ctx$template$name %||% "ae_overview"
     pop <- a$population
