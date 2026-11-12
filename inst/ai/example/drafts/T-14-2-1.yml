@@ -1,16 +1,17 @@
 id: T-14-2-1
 kind: table
 label: Best Overall Response and Objective Response Rate
-population: ITT
+common:
+  population: ITT
 extends:
   - defaults
+data:
+  - id: adrs_bor
+    from: ADRS
+    population: ITT
+    where: !r PARAMCD == "BOR"
+    derive: !r RESP = AVALC %in% c("CR", "PR")
 ard:
-  analysis_data:
-    - id: adrs_bor
-      from: ADRS
-      population: ITT
-      where: !r PARAMCD == "BOR"
-      derive: !r RESP = AVALC %in% c("CR", "PR")
   analyses:
     - id: BOR
       method: categorical
@@ -27,8 +28,6 @@ ard:
       variables:
         - RESP
       args: !r method = "clopper-pearson"
-data:
-  source: ard
 codelists:
   AVALC:
     - value: CR

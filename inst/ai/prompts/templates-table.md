@@ -2,8 +2,8 @@
 
 These templates are available: a report kind written from a few arguments (the templates are listed below). When one fits a report, write that report as the template, not as its analyses and items:
 
-- `template: {name: <template>, args: {<argument>: <value>, ...}}` in place of `ard`, `data` and the template's `content`. Give only the arguments the shell asks to differ from the default; the analysis set goes in the report's `population` (or the `population` argument; `demog` and `stf_t02_demog` take it from the report's `population` only). `demog` and `stf_t02_demog` need `by` and `continuous` and/or `categorical` (no default variables), in `ard:`.
-- Keep `id`, `kind`, `label`, `population`, `extends`, `codelists` and `page` as for any report.
+- `template: {name: <template>, args: {<argument>: <value>, ...}}` in place of `ard`, `data` and the template's `content`. Give only the arguments the shell asks to differ from the default; the analysis set goes in the report's `common: {population: <id>}` (or the `population` argument; `demog` and `stf_t02_demog` take it from the report's `common: population` only). `demog` and `stf_t02_demog` need `by` and `continuous` and/or `categorical` (no default variables), in `ard:`.
+- Keep `id`, `kind`, `label`, `common`, `extends`, `codelists` and `page` as for any report.
 - `content`: only the report's own items, for what the template does not do (an item of the same function changes the template's: `plan_labels`, `plan_cells` ... merged by key).
 - When no template fits, or the shell needs analyses no template has, write the report as the schema above says (a code SPEC). Never mix: a report has `template` or `ard`, not both.
 - An argument a template does not list is an error. Name only the templates and arguments below.
@@ -16,7 +16,7 @@ outputs:
   - id: T-14-1-1
     kind: table
     label: "Demographic and Baseline Characteristics"
-    population: SAF
+    common: {population: SAF}
     extends: [defaults]
     template:
       name: demog
@@ -28,7 +28,7 @@ outputs:
   - id: T-14-3-1
     kind: table
     label: "Treatment-Emergent Adverse Events by System Organ Class and Preferred Term"
-    population: SAF
+    common: {population: SAF}
     extends: [defaults]
     template:
       name: ae_soc_pt

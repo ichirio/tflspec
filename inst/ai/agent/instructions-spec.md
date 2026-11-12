@@ -6,12 +6,16 @@ report's skeleton and nothing of its look:
 
 - `id`, `kind` (`table`, `listing`, `figure`), `label` (the TOC's title;
   when the printed title differs, an assumption that says so),
-  `population` (the analysis set's id from `spec/data.yml`), `extends:
-  [defaults]`;
-- `data` (`{source: ard}` for a table of statistics; a listing's records as
-  the listing section says);
-- `ard`: `analysis_data` (the analysis set's subjects, a condition) and
-  `analyses` (`method`, `by`, `variables`, `denominator`, `where`);
+  `common` (`population`: the analysis set's id from `spec/data.yml`;
+  `treatment`: the arm variable; `population_label`: the text the title's
+  `{OUTPUT_POPULATION}` prints when there is no set -- never a top-level
+  `population:`), `extends: [defaults]`;
+- `data`: a flat list of the datasets the analyses read, one definition
+  each (the analysis set's subjects with a condition; a table of statistics
+  writes no `data: {source: ard}`; a listing's records as the listing
+  section says);
+- `ard`: `analyses` (`method`, `by`, `variables`, `denominator`, `where`) --
+  never `ard: analysis_data`, which is `data:`;
 - the content: `template: {name: <template>, args: {...}}` when one fits
   (only the arguments that differ from the default; the content then holds
   only what the template does not do), else `content:` with `table_plan`
@@ -61,7 +65,7 @@ report's skeleton and nothing of its look:
   and a Change column under it), write this
   one item, nothing more of the header: `plan_col_header: {header: [{line:
   "1", cols: .values, span: each, text: "{col}\n(N={n})"}]}`;
-- an `ard.analysis_data` that `code` makes may name its `population`: the
+- a `data:` definition that `code` makes may name its `population`: the
   set's subjects are made first and are in reach as `<dataset>_sub`
   (`adsl_sub`); its other fields (`where`, `add`, `derive` ...) stay blank.
 - a text holding a comma, a colon or a `#` is quoted: `{left: "MedDRA
@@ -108,9 +112,9 @@ A table of statistics, as a code SPEC (an AE table by SOC and PT):
 id: T-14-3-1
 kind: table
 label: Treatment-Emergent Adverse Events by System Organ Class and Preferred Term
-population: SAF
+common:
+  population: SAF
 extends: [defaults]
-data: {source: ard}
 ard:
   analyses:
     - id: AE
@@ -147,7 +151,8 @@ template's default; nothing the template does on its own):
 id: T-14-3-1
 kind: table
 label: Treatment-Emergent Adverse Events by System Organ Class and Preferred Term
-population: SAF
+common:
+  population: SAF
 extends: [defaults]
 template:
   name: ae_soc_pt
@@ -163,13 +168,13 @@ population named so that `adsl_sub` is in reach; the analysis then reads
 it by `data`, with no `dataset` and no `population` of its own:
 
 ```yaml
+data:
+  - id: lb_worst
+    label: one row a subject and parameter, baseline and worst post-baseline category
+    from: ADLB
+    population: SAF
+    code: !r 'post <- dplyr::filter(adlb, USUBJID %in% adsl_sub$USUBJID, ONTRTFL == "Y"); dplyr::summarise(dplyr::group_by(post, USUBJID, TRT01A, PARAMCD), WORST = max(ANRIND), .groups = "drop")'
 ard:
-  analysis_data:
-    - id: lb_worst
-      label: one row a subject and parameter, baseline and worst post-baseline category
-      from: ADLB
-      population: SAF
-      code: !r 'post <- dplyr::filter(adlb, USUBJID %in% adsl_sub$USUBJID, ONTRTFL == "Y"); dplyr::summarise(dplyr::group_by(post, USUBJID, TRT01A, PARAMCD), WORST = max(ANRIND), .groups = "drop")'
   analyses:
     - {id: SHIFT, method: categorical, data: lb_worst, by: [TRT01A, PARAMCD], variables: [WORST], denominator: column}
 ```
@@ -186,7 +191,8 @@ makes them, and the check refuses a draft that writes them.  Never drop
 id: F-14-2-2
 kind: figure
 label: "Kaplan-Meier Plot of Overall Survival"
-population: ITT
+common:
+  population: ITT
 extends: [defaults]
 template:
   name: km_survival
@@ -220,7 +226,7 @@ it to these rules (every agent of tflspec#512 tripped on them):
 
 ## The fields, exactly
 
-`ard.analysis_data`, one item each: `id`, `label`, `from` (a dataset of
+`data` (a table's or listing's flat list of definitions), one item each: `id`, `label`, `from` (a dataset of
 `spec/data.yml`, or an analysis data above it), `population`, `subjects`,
 `where`, `add`, `derive`, `keep`, `distinct`, `code` -- no other key.
 `population` and `subjects` are one or the other; with `code`, only `id`,
@@ -308,8 +314,8 @@ needs that variable in `by`.
   heading shows the label.  Several keys: `page_by: [ANALYTE, RENALGR]` and a heading of two
   lines, `"Analyte: {ANALYTE}
 Group: {RENALGR}"`.
-- **Every subject** (a report of all subjects, no flag): `population:
-  ALL` -- the study's `spec/data.yml` lists it beside the flags' sets.
+- **Every subject** (a report of all subjects, no flag): `common:
+  {population: ALL}` -- the study's `spec/data.yml` lists it beside the flags' sets.
 - **A p-value column** (a test of each variable between the arms, beside
   the counts): one analysis a test, the same `by` and `variables` as the
   counts', and a comparison column that reads its record --
@@ -402,7 +408,10 @@ Group: {RENALGR}"`.
 | `"{n} ({p:.1%})"` | `"{n} ({p:.1f%}%)"` -- `.1%` is not a tflspec format; `.1f%` prints no sign, so the shell's `%` goes after the brace |
 | a key of your own (`notes:`, `comment:`, `denominator_note:`) | none: a key the schema does not have is refused; a note is an `ai: assumptions` or `ai: confirm` item |
 | `extends: defaults` | `extends: [defaults]` |
-| `population: Safety Analysis Set` | `population: SAF` -- the id from `spec/data.yml` |
+| `population: Safety Analysis Set` | `common: {population: SAF}` -- the id from `spec/data.yml`; never a top-level `population:` |
+| `ard: {analysis_data: [...], analyses: [...]}` | `data: [...]` (the definitions) and `ard: {analyses: [...]}` |
+| `data: {source: ard}` in a table | nothing: a table always reads its ARD |
+| a table's rework steps under `data:` or `ard: data:` | the first item of `content:`: `- rework: {steps: [...]}` |
 | `kind: Table` | `kind: table` |
 
 ## Before you save a draft: read it once more

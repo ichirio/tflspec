@@ -4,7 +4,8 @@ An example: a demographics table as its template (`spec/outputs/T-14-1-1.yml`), 
 id: T-14-1-1
 kind: table
 label: "Demographic and Baseline Characteristics"
-population: SAF
+common:
+  population: SAF
 extends: [defaults]
 template:
   name: demog
@@ -19,7 +20,8 @@ page:
 id: T-14-3-1
 kind: table
 label: "Treatment-Emergent Adverse Events by System Organ Class and Preferred Term"
-population: SAF
+common:
+  population: SAF
 extends: [defaults]
 template:
   name: ae_soc_pt
