@@ -36,6 +36,8 @@ tfl_read_data_code <- function(datasets, dataset) {
     return(sprintf("stop(\"tflspec: dataset %s is not in the data catalog.\")",
                    dataset))
   }
+  # (the study's setup file has read it, with its derive: tflspec.study_setup)
+  if (isTRUE(getOption("tflspec.study_setup"))) return(character())
   obj <- .r_name(dataset)
   .drop_attached_ns(c(sprintf("%s <- %s", obj, .reader(r$path[1L])),
                       .derive_code(obj, r$derive[1L])))
@@ -404,7 +406,9 @@ print.tfl_listing_spec <- function(x, ...) {
 #'   factor in its list's order (it sorts so), its values as the list has
 #'   them.  Before them the arms are put in their numeric order by
 #'   `order_levels()` (`TRT01A` by `TRT01AN`; a list wins), so a sort on
-#'   an arm sorts so.
+#'   an arm sorts so.  The columns are factors of the codes, in the list's
+#'   order (for sorting); a label, when the display needs one, goes in the
+#'   listing's `rework` code, e.g. `SEX = unname(cl_sex[as.character(SEX)])`.
 #' @param part `"all"` (the whole of it), `"data"` (the data, up to its
 #'   order: what a report's content step of its own code reads as `data`)
 #'   or `"content"` (the listing laid out from a `data` made before -- by a

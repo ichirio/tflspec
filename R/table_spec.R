@@ -679,7 +679,7 @@
 #'   \item{`order`}{Number; the order the variables appear in
 #'     (`plan_levels(variable = c("AGE", "SEX"))`: the values of the ARD's
 #'     `variable` column; one not numbered comes after, in the ARD's order).}
-#'   \item{`levels`}{The order of its values: `Grade 0 | Grade 1 | Total`;
+#'   \item{`levels`}{The order of its values (the codes the ARD holds): `Grade 0 | Grade 1 | Total`;
 #'     `F = Female | M = Male` gives each value its text too (a named order,
 #'     `plan_levels(SEX = c(F = "Female", M = "Male"))`).}
 #'   \item{`empty_levels`}{`show` (blank, the default) or `hide`: whether
@@ -1416,8 +1416,8 @@ print.tfl_table_spec <- function(x, ...) {
 }
 
 # plan_labels(): a variable's heading (variables$label) -- what the ARD
-# does not have.  Its values' text is the ARD's own: the ARD program puts
-# the code lists' labels on the data (set_levels()).
+# does not have.  Its values' text comes from the code lists too, in
+# .ard_spec_value_labels(): the ARD holds the codes.
 .ard_spec_labels <- function(sp) {
   v <- .ard_spec_variables(sp)
   v <- v[!is.na(v$label), , drop = FALSE]
@@ -1488,11 +1488,11 @@ print.tfl_table_spec <- function(x, ...) {
 }
 
 # plan_levels(): a variable's own `levels` (variables sheet), else the code
-# list's order of its values -- as the ARD has them: their labels (the ARD
-# program puts them on the data), a value without one itself.  A column the
-# plan makes takes its order from the plan (the stack's layers), and its
-# code list only its labels (plan_labels()): a list that names some of its
-# values does not drop the others.
+# list's order of its values -- as the ARD has them: the codes (the ARD
+# program makes the listed columns factors of them; the labels are
+# plan_labels()').  A column the plan makes takes its order from the plan
+# (the stack's layers), and its code list only its labels (plan_labels()): a
+# list that names some of its values does not drop the others.
 .ard_spec_levels <- function(sp) {
   v <- sp$variables[!is.na(sp$variables$levels), , drop = FALSE]
   out <- stats::setNames(lapply(v$levels, function(x) .levels_named(.ard_spec_split(x))), v$variable)
@@ -1501,8 +1501,7 @@ print.tfl_table_spec <- function(x, ...) {
   for (cl in cls) {
     var <- cl$variable[1L]
     if (var %in% own) next
-    lab <- if (is.null(cl$label)) cl$value else ifelse(is.na(cl$label), cl$value, cl$label)
-    if (is.null(out[[var]])) out[[var]] <- lab
+    if (is.null(out[[var]])) out[[var]] <- as.character(cl$value)
   }
   if (!length(out)) return(NULL)
   out
@@ -1530,9 +1529,15 @@ print.tfl_table_spec <- function(x, ...) {
   unique(v$variable[k])
 }
 
-# plan_labels() of a column the plan makes: its code list's labels, by value
-# (`subgroup = c(ALL = "All Subjects", SEX = "Sex")`)
-.ard_spec_value_labels <- function(sp) {
+# plan_labels() of the values: each code-listed variable the report's
+# analyses group by or analyse, its code list's labels by code (`SEX =
+# c(F = "Female", M = "Male")`, the list as its ARD program narrows it:
+# .ard_spec_read_lists(); all the listed variables, whole, without the ARD
+# definition `ard_spec`), and of a column the plan makes, its code list's
+# labels by value (`subgroup = c(ALL = "All Subjects", SEX = "Sex")`).  A
+# list with no labels gives no entry.  Without `derived` (a spec file's
+# content), only a plan column's: the variables' lists are the study's.
+.ard_spec_value_labels <- function(sp, ard_spec = NULL, derived = TRUE) {
   own <- .ard_spec_plan_cols(sp)
   out <- list()
   for (cl in .ard_spec_codelists(sp)) {
@@ -1540,6 +1545,13 @@ print.tfl_table_spec <- function(x, ...) {
     if (!var %in% own || is.null(cl$label) || all(is.na(cl$label))) next
     k <- !is.na(cl$label)
     out[[var]] <- stats::setNames(cl$label[k], cl$value[k])
+  }
+  if (!isTRUE(derived)) return(out)
+  lists <- .ard_spec_read_lists(sp, ard_spec)
+  for (var in names(lists)) {
+    cl <- lists[[var]]
+    if (is.null(names(cl)) || !length(cl)) next
+    out[[var]] <- stats::setNames(unname(cl), names(cl))
   }
   out
 }

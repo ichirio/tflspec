@@ -804,8 +804,9 @@
 .cl_name <- function(v) paste0("cl_", gsub("[^a-z0-9]+", "_", tolower(v)))
 
 # The report's code lists at its program's head: `cl_sex <- c(F =
-# "Female", M = "Male")`, the values named by... -- each value (a name) and
-# what it is in the ARD; a list without labels, its values
+# "Female", M = "Male")`, each code (a name) and its label -- the label the
+# table plan applies; the ARD holds the codes; a list without labels, its
+# values
 .codelists_lines <- function(levels) {
   nm <- function(v) ifelse(make.names(v) == v, v, encodeString(v, quote = "\""))
   unlist(lapply(names(levels), function(v) {
@@ -827,31 +828,35 @@
 
 # The step that puts the report's code lists on a data:
 # set_levels(SEX = cl_sex, ...), laid out as a step of a pipe
-.levels_call <- function(levels) {
-  step <- .lay(.cl("set_levels", stats::setNames(as.list(.cl_name(names(levels))),
-                                                 names(levels))), lead = 2L)
+# (`narrow`: a variable's expression, the list narrowed -- `cl_x[c("A")]` --
+# in place of its `cl_<variable>`)
+.levels_call <- function(levels, narrow = list()) {
+  args <- stats::setNames(as.list(.cl_name(names(levels))), names(levels))
+  for (v in intersect(names(narrow), names(args))) args[[v]] <- narrow[[v]]
+  step <- .lay(.cl("set_levels", args), lead = 2L)
   gsub("\n", "\n  ", step, fixed = TRUE)
 }
 
-# a report's code (`code`) with the mark of the code lists' step replaced
+# a report's code (`code`) with the mark of the code lists' step replaced, in
+# each data by the lists as that data's filter leaves them (.def_narrowing())
 .levels_put <- function(code, levels) {
   if (!length(levels)) return(code)
-  gsub(.levels_step, .levels_call(levels), code, fixed = TRUE)
+  for (k in which(grepl(.levels_step, code, fixed = TRUE))) {
+    at <- regexpr(.levels_step, code[k], fixed = TRUE)
+    call <- .levels_call(levels, .def_narrowing(code, k, levels))
+    code[k] <- paste0(substr(code[k], 1L, at - 1L), call,
+                      substring(code[k], at + attr(at, "match.length")))
+  }
+  code
 }
 
 # An analysis's `post` steps.  complete_hierarchy() is written in full:
 # `variables =` the row's, `under =` from its report's code lists (the
-# values and their parents as they are in the ARD, the lists' labels),
+# values and their parents as they are in the ARD: the codes),
 # whichever of them the step does not give itself.
 .post_steps <- function(x, r) {
   steps <- as.list(.split_post(r$post))
-  lv <- attr(x, "levels")[[r$output_id]]
   un <- attr(x, "under")[[r$output_id]]
-  in_ard <- function(v, values) {
-    cl <- lv[[v]]
-    if (is.null(names(cl))) return(values)
-    ifelse(values %in% names(cl), unname(cl[values]), values)
-  }
   lapply(steps, function(s) {
     e <- tryCatch(str2lang(s), error = function(err) NULL)
     if (!is.call(e) || !identical(e[[1L]], quote(complete_hierarchy))) return(s)
@@ -868,9 +873,10 @@
       for (k in seq_along(vars)[-1L]) {
         u <- un[[vars[k]]]
         if (!length(u)) next
-        child <- in_ard(vars[k], names(u))
+        # (the codes, as the data holds them)
+        child <- names(u)
         nm <- ifelse(make.names(child) == child, child, .q(child))
-        pairs[[vars[k]]] <- .cl("c", as.list(paste(nm, "=", .q(in_ard(vars[k - 1L], unname(u))))))
+        pairs[[vars[k]]] <- .cl("c", as.list(paste(nm, "=", .q(unname(u)))))
       }
       if (length(pairs)) args$under <- .cl("list", pairs)
     }
@@ -957,10 +963,18 @@
     r <- x$datasets[x$datasets$dataset == ds, ]
     obj <- .r_name(ds)
     d <- .split_bar(r$derive[1L])
+    # (no code lists here: they go on each analysis set and each analysis
+    # data, after its filter)
+    steps <- c(.order_levels_step(cats, if (has_adsl && toupper(ds) != "ADSL") "adsl"))
+    if (isTRUE(getOption("tflspec.study_setup"))) {
+      # the study's setup file has read it, with its derive: the object's own
+      # steps, and no line when none is left
+      if (length(steps)) code <- c(code, .make_code(obj, obj, steps))
+      next
+    }
     code <- c(code, .make_code(obj, .reader(r$path[1L]), c(
       if (length(d)) sprintf("dplyr::mutate(%s)", paste(d, collapse = ", ")),
-      .order_levels_step(cats, if (has_adsl && toupper(ds) != "ADSL") "adsl"),
-      if (length(levels)) .levels_step)))
+      steps)))
   }
   pop_code <- character()
   for (pid in pops) {
@@ -969,9 +983,9 @@
     src <- .r_name(r$dataset[1L])
     pop_code <- c(pop_code, .make_code(obj, src, c(
       if (!is.na(r$where[1L])) sprintf("dplyr::filter(%s)", r$where[1L]),
-      # an analysis set with every record of its dataset: its factors as they are
-      .derive_steps(r$derive[1L], if (!is.na(r$where[1L]) ||
-                                     length(.split_bar(r$derive[1L]))) levels))))
+      # the code lists after its filter and its derive, always: the factors
+      # are made of the records the set keeps
+      .derive_steps(r$derive[1L], levels))))
   }
   list(data = code, pops = pop_code, used_ds = used_ds, pops_id = pops)
 }
@@ -1006,12 +1020,13 @@
   # its pop_<id> (#520): a code step's `adsl_sub` is in reach in the
   # program, the preview and the build check alike
   subs <- .ard_data_part_subs(x, dl$pops_id)
-  c(if (length(levels)) c(
+  # (the code lists' step, with each data's lists as its filter leaves them)
+  .levels_put(c(if (length(levels)) c(
       "# ---- code lists: each value in its order ----",
       .codelists_lines(levels), ""),
     "# ---- data ----", dl$data,
     if (length(dl$pops)) c("", "# ---- populations ----", dl$pops, subs),
-    if (length(made)) c("", "# ---- analysis data ----", made))
+    if (length(made)) c("", "# ---- analysis data ----", made)), levels)
 }
 
 # `adsl_sub <- pop_saf` for each analysis set the data part makes: one
@@ -1191,7 +1206,10 @@
       }
       # no dataset and no population: no data (as before, `data` is NULL)
       if (is.null(src)) return("NULL")
-      if (is.null(whr) && is.null(join) && src %in% taken) return(src)  # a dataset or a population
+      # (a population, or a dataset read as it is; with code lists, a dataset
+      # has none yet: it is made again under a name of its own, with them)
+      if (is.null(whr) && is.null(join) && src %in% taken &&
+          !(is.null(pop) && length(lv))) return(src)
       key <- paste(c(src, pop, whr), collapse = "\r")
       if (!is.na(data_of[key])) return(data_of[[key]])
       base <- paste(c(if (!is.na(r$dataset)) .r_name(r$dataset) else

@@ -482,18 +482,6 @@
   args
 }
 
-# The labels of .tpl_levels() named by their codes when a list's codes differ
-# from its labels (`c(LOW = "Low")`), so the program maps them as the build does
-.tpl_levels_coded <- function(levels, vars, codelists) {
-  for (v in names(levels)) {
-    cl <- codelists[[v]]
-    if (is.character(cl)) next
-    val <- vapply(cl, function(r) as.character(r$value), "")
-    if (!identical(unname(val), unname(levels[[v]]))) names(levels[[v]]) <- val
-  }
-  levels
-}
-
 # A template's code lists (`codelists` of its result) added to the report's:
 # the report's list keeps its values, the template's gives the ones it lacks
 .tpl_add_codelists <- function(cl, add) {
@@ -808,9 +796,11 @@ tfl_template_to_spec <- function(output, study) {
   lv <- Filter(function(it) identical(it$fn, "plan_levels"), tp$items)
   vars <- setdiff(unlist(lapply(lv, function(it) names(it$args))), c("variable", ".drop_empty"))
   vars <- intersect(vars, names(output$codelists))
-  levels <- .tpl_levels(vars, output$codelists)
-  levels <- .tpl_levels_coded(levels, vars, output$codelists)
-  cl <- if (length(levels)) c("# the code lists: each value in its order, as the table shows it",
+  # (each code in its order, named by its label when the list has labels:
+  # the template's plan_labels() applies them)
+  levels <- stats::setNames(lapply(vars, function(v)
+    .tpl_cl_dict(output$codelists[[v]]) %||% .tpl_levels(v, output$codelists)[[v]]), vars)
+  cl <- if (length(levels)) c("# the code lists: each code in its order (its label, when it has one)",
                               .codelists_lines(levels), "")
   call <- do.call(.spec_call, c(if (generic) list(.tpl_call_name(t, TRUE), .spec_sym(data), called)
                                 else list(.tpl_call_name(t, FALSE, called), .spec_sym(data)), args,

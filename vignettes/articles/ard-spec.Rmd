@@ -212,8 +212,8 @@ cat(tfl_ard_as_custom(spec, "T-14-3-1", "SER")$code, sep = "\n")
 
 A table spec's `codelists` sheet (one row a value: `output_id`,
 `variable`, `value`, `label`, `order`) gives the order of a variable's
-values and what each value is in the data the report's program makes
-(`label`; blank: the value itself). **A code list is a report's**: every
+values and the text the table's display shows for each (`label`; blank:
+the value itself; the data and the ARD hold the value). **A code list is a report's**: every
 row names its report, and a blank `output_id` is an error (a code list two
 reports use is copied into each; the same arm may print one way in one
 table and another way in the next).
@@ -222,11 +222,14 @@ Handed to the ARD program, a report's code lists of the variables its
 analyses read (`by`, `strata`, `variables`, and the names in `args`,
 `code` and `post`) are written at the program's head (`cl_sex <- c(F =
 "Female", M = "Male")`) and put on those columns before any analysis
-(`set_levels(SEX = cl_sex)`): each becomes a factor in the list's order
-with the labels as its values, so **the ARD holds "Female"**, keeps the
-order and **counts a value no record has** (`n = 0`). A value the list
-does not have stops the program, naming the column and the value; a
-condition on such a column is written in its labels (`SEX == "Female"`).
+(`set_levels(SEX = cl_sex)`): each becomes a factor of the codes in the
+list's order, so **the ARD holds "F"**, keeps the order and **counts a
+value no record has** (`n = 0`); the factor is made after the analysis's
+filter, its levels narrowed to the values the filter's simple conditions
+leave. A value the list does not have stops the program, naming the
+column and the value; a condition on such a column is written in codes
+(`SEX == "F"`; a label stops it). The labels are the table plan's
+(`plan_labels()`), not the ARD's.
 A variable the table only prints is not made a factor. A data made from
 another -- an analysis set, an analysis data, an analysis's own subset --
 is made factors again as its last step (`|> .levels()`): a value the list

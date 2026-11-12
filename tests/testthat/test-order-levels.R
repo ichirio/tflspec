@@ -35,7 +35,7 @@ test_that("order_levels(): a code list, else the numeric pair, else the values s
   # a code list wins, with set_levels()'s stop on a value it does not have
   cl_arm <- c(`Drug A` = "Drug A", `Drug B` = "Drug B", Placebo = "Placebo")
   r2 <- e$order_levels(d[1:4, ], c("SEX", "RACE"), SEX = c(F = "Female", M = "Male"), TRT01A = cl_arm)
-  expect_identical(levels(r2$SEX), c("Female", "Male"))
+  expect_identical(levels(r2$SEX), c("F", "M"))
   expect_identical(levels(r2$TRT01A), names(cl_arm))
   expect_identical(levels(r2$RACE), c("WHITE", "BLACK", "ASIAN"))
   expect_error(e$order_levels(d, SEX = c(M = "Male")), "SEX has values its code list does not")

@@ -408,7 +408,9 @@ fig_cl_draw <- function(d, id = "F-14-2-2") {
   tflspec:::.ai_fig_draw(st, id, "out")$plot
 }
 
-# the colour variable's levels and the legend's labels of a drawn plot
+# the colour variable's levels (the data holds the codes) and the legend's
+# labels of a drawn plot (a layer_code's own plot: no scale labels unless
+# its code writes them, from the program's `cl_trt01p`)
 fig_cl_levels <- function(p) {
   b <- ggplot2::ggplot_build(p)
   sc <- b$plot$scales$get_scales("colour")
@@ -426,7 +428,7 @@ test_that("a figure with layer_code and its own codelists is drawn (set_levels i
   expect_false(grepl("set_levels", fr$rtf_problem %||% "", fixed = TRUE), info = fr$rtf_problem)
   expect_false(is.na(fr$png), info = paste(fr$first, fr$rtf_problem))
   expect_true(file.exists(file.path(d, fr$png)))
-  expect_identical(fig_cl_levels(fig_cl_draw(d))$levels, c("Own Control", "Own Drug X"))
+  expect_identical(fig_cl_levels(fig_cl_draw(d))$levels, c("Control", "Drug X"))
 })
 
 test_that("a figure's code list from a layer it extends is the draw's, as its own would be (#656)", {
@@ -439,14 +441,14 @@ test_that("a figure's code list from a layer it extends is the draw's, as its ow
   in_layer <- fig_cl_draw(fig_cl_study(layer = c("  TRT01P:", entries("List"))))
   in_own <- fig_cl_draw(fig_cl_study(own = c("  TRT01P:", entries("List"))))
   expect_identical(fig_cl_levels(in_layer), fig_cl_levels(in_own))
-  expect_identical(fig_cl_levels(in_layer)$levels, c("List Drug X", "List Control"))
-  expect_identical(fig_cl_levels(in_layer)$labels, c("List Drug X", "List Control"))
+  expect_identical(fig_cl_levels(in_layer)$levels, c("Drug X", "Control"))
+  expect_identical(fig_cl_levels(in_layer)$labels, c("Drug X", "Control"))
   # the report's own list over its layer's, for the same variable
   both <- fig_cl_draw(fig_cl_study(own = c("  TRT01P:", entries("Own")),
                                    layer = c("  TRT01P:", entries("Layer"))))
-  expect_identical(fig_cl_levels(both)$levels, c("Own Drug X", "Own Control"))
+  expect_identical(fig_cl_levels(both)$levels, c("Drug X", "Control"))
   # a layer's list on a variable the data has not stops nothing
   other <- fig_cl_draw(fig_cl_study(layer = c("  TRT01P:", entries("List"),
                                               "  NOSUCHVAR:", "    - {value: a, label: A}")))
-  expect_identical(fig_cl_levels(other)$levels, c("List Drug X", "List Control"))
+  expect_identical(fig_cl_levels(other)$levels, c("Drug X", "Control"))
 })

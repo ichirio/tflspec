@@ -22,12 +22,18 @@ code: a string or a comment keeps what it says), and an ARD program
 does not write \code{library(cards)} itself.  A package not listed keeps
 its prefix (\verb{cardx::}).
 \item \code{tflspec.study_setup}: \code{TRUE} when the study's setup file sets the
-study-wide options -- today the rounding, \code{rtfreporter.rounding} and
-\code{cards.round_type}, written by \code{\link[=tfl_study_setup_code]{tfl_study_setup_code()}}.  The ARD setup
+study-wide options and reads the study's input data -- today the
+rounding, \code{rtfreporter.rounding} and \code{cards.round_type}, and one object
+per dataset of the data catalog (\code{adsl <- readRDS(...)}, with its
+\code{derive}), written by \code{\link[=tfl_study_setup_code]{tfl_study_setup_code()}}.  The ARD setup
 (\code{\link[=tfl_ard_code]{tfl_ard_code()}}) and the report setup (\code{\link[=tfl_report_setup_code]{tfl_report_setup_code()}})
-then do not write them again; their other options stay.  A report's
+then do not write the rounding again; their other options stay.  The
+ARD, listing and figure programs do not read the files: a dataset's
+line becomes its steps on the object (\code{adsl <- adsl |> order_levels(...)}),
+and none when it has no step.  A report's
 \code{plan_digits(rounding = )} that is the study's is left out of its
-program either way.
+program either way.  tflspec's own runs of a program (\code{\link[=tfl_build_ard]{tfl_build_ard()}}
+and the like) do not use the option: they read the files themselves.
 }
 
 Unset or \code{FALSE} (the default), the code is as it has always been:
