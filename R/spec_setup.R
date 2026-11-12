@@ -5,8 +5,8 @@
 # header and footer sheets, written from the study's defaults
 # (spec/defaults.yml, `page:`) and from a report of the YAML spec.  The
 # lines are the ones a report's program refers to after the setup
-# (tfl_report_code(output, setup = TRUE, study = ): study_header,
-# study_header_lines ...), made the same way (.page_band()).
+# (tfl_report_code(output, setup = TRUE, study = ): header_<name> ...),
+# made the same way (.page_band()).
 
 #' The lines of the study's setup file that tflspec owns
 #'

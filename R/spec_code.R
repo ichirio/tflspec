@@ -1972,30 +1972,10 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
     # report has its own
     if (setup && !isTRUE(attr(sp, "bands_own")[[sheet]]) &&
         length(.ard_spec_band(sp, sheet))) {
-      return(.spec_sym(.setup_band_names[[sheet]]))
+      return(.spec_sym(.setup_band_object(sheet, .sheets_style_name)))
     }
     b <- .ard_spec_band(sp, sheet, tokens)
     if (!length(b)) return(NULL)
-    # its own lines with the study's, the study's by the name the setup
-    # gives them (study_footer_lines): a change of the study's lines reaches
-    # the report -- when they are the study's lines as the setup writes them
-    if (setup) {
-      rows <- attr(sp, "bands_study")[[sheet]]
-      st <- stats::setNames(list(rows), sheet)
-      sb <- if (NROW(rows)) .ard_spec_band(st, sheet, tokens)
-      n <- length(sb)
-      if (n && length(b) > n && identical(sb, .ard_spec_band(st, sheet))) {
-        lines <- .spec_sym(paste0(.setup_band_names[[sheet]], "_lines"))
-        if (identical(utils::tail(b, n), sb)) {
-          return(.spec_call(paste0("rtf_", sheet),
-                            .spec_call("c", utils::head(b, -n), lines)))
-        }
-        if (identical(utils::head(b, n), sb)) {
-          return(.spec_call(paste0("rtf_", sheet),
-                            .spec_call("c", lines, utils::tail(b, -n))))
-        }
-      }
-    }
     .spec_call(paste0("rtf_", sheet), b)
   }
   hdr <- band("header")
@@ -2041,8 +2021,12 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
   st
 }
 
-# the names the setup code gives the study's header and footer
-.setup_band_names <- c(header = "study_header", footer = "study_footer")
+# the bands the setup code writes (a header and a footer object each) and the
+# name of the configuration the sheets' default rows are: the objects are
+# header_standard and footer_standard, as the YAML spec's setup writes them
+# for a study converted from these sheets
+.setup_band_names <- c(header = "header", footer = "footer")
+.sheets_style_name <- "standard"
 
 #' The study's setup code for its report programs
 #'
@@ -2054,8 +2038,8 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
 #' `COMPANY`, `STUDY_ID` ...) as
 #' `options(rtfreporter.tokens = list(...))`, and its running header and
 #' footer (the header and footer sheets' default rows) as
-#' `study_header <- rtf_header(..., drop_empty_rows = TRUE)` and
-#' `study_footer <- rtf_footer(...)` (a line a report's tokens leave empty
+#' `header_standard <- rtf_header(..., drop_empty_rows = TRUE)` and
+#' `footer_standard <- rtf_footer(...)` (a line a report's tokens leave empty
 #' is left out of that report's file).
 #' A study's report programs source it and are written with
 #' `tfl_report_code(setup = TRUE)`: each then says only its own tokens
@@ -2125,13 +2109,9 @@ tfl_report_setup_code <- function(spec) {
     if (!length(b)) next
     # a line of tokens of one's own goes when a report's are empty
     own <- setdiff(.ard_spec_used_tokens(one[sheet]), .ard_spec_rtf_tokens)
-    nm <- .setup_band_names[[sheet]]
-    lines <- paste0(nm, "_lines")
-    call <- .spec_call(paste0("rtf_", sheet), .spec_sym(lines),
-                       drop_empty_rows = if (length(own)) TRUE)
-    out <- c(out,
-             paste(lines, "<-", .spec_call_code(b, 0L, lead = nchar(lines) + 4L)),
-             paste(nm, "<-", .spec_call_code(call, 0L, lead = nchar(nm) + 4L)))
+    nm <- .setup_band_object(sheet, .sheets_style_name)
+    call <- .spec_call(paste0("rtf_", sheet), b, drop_empty_rows = if (length(own)) TRUE)
+    out <- c(out, paste(nm, "<-", .spec_call_code(call, 0L, lead = nchar(nm) + 4L)))
   }
   if (!length(out)) return(character())
   .drop_attached_ns(unlist(strsplit(out, "\n", fixed = TRUE)))
@@ -2185,7 +2165,7 @@ tfl_report_tokens <- function(spec, output_id = NULL, study = NULL) {
 #'   ([tfl_report_setup_code()]), so it leaves out what that defines: the
 #'   study's tokens (rtfreporter fills from the document's first, then
 #'   `options(rtfreporter.tokens = )`), and the study's header and footer,
-#'   said by name (`study_header`, `study_footer`; a line the report's
+#'   said by name (`header_standard`, `footer_standard`; a line the report's
 #'   tokens leave empty, a blank `<{OUTPUT_POPULATION}>`, is left out when
 #'   the file is written) -- unless the report has its own, written here
 #'   as before.

@@ -15,11 +15,11 @@ su_sheets <- function() {
                         value = c("Sample Pharma", "ABC-123", "(none)")))
 }
 
-# the study: its default page configuration (a set "std"), its tokens study.yml's
+# the study: its default page configuration (a set "standard"), its tokens study.yml's
 su_study <- function(page = su_page(), tokens = su_tokens) {
-  structure(list(study = list(settings = list(program_dir = "programs/tfl", style = "std"),
+  structure(list(study = list(settings = list(program_dir = "programs/tfl", style = "standard"),
                               tokens = tokens),
-                 styles = list(std = list(page = page)), defaults = list()),
+                 styles = list(standard = list(page = page)), defaults = list()),
             class = "tfl_study_spec")
 }
 su_tokens <- list(COMPANY = "Sample Pharma", STUDY_ID = "ABC-123", GONE = tfl_unset())
@@ -42,18 +42,17 @@ su_output <- function() {
 test_that("a study's setup code from its configuration is what its sheets write: the options; the bands per configuration", {
   yaml <- tfl_report_setup_code(su_study())
   sheets <- tfl_report_setup_code(su_sheets())
-  # (the options and tokens: the same lines; the sheets' header and footer
-  # are study_header / study_footer, the YAML route's one pair a configuration)
-  n <- grep("^header_std <-", yaml)[1L] - 1L
-  expect_identical(yaml[seq_len(n)], sheets[seq_len(n)])
+  # (the sheets' default rows are the configuration "standard": both routes
+  # write the same setup, header_standard / footer_standard)
+  expect_identical(yaml, sheets)
   txt <- paste(yaml, collapse = "\n")
   expect_match(txt, "rtfreporter.font = \"Arial\"", fixed = TRUE)
   expect_match(txt, "rtfreporter.font_size_half_points = 16", fixed = TRUE)
   expect_match(txt, "COMPANY = \"Sample Pharma\"", fixed = TRUE)
   expect_false(grepl("GONE", txt, fixed = TRUE))
-  expect_match(txt, "header_std <- rtf_header(", fixed = TRUE)
+  expect_match(txt, "header_standard <- rtf_header(", fixed = TRUE)
   expect_match(txt, "drop_empty_rows = TRUE", fixed = TRUE)
-  expect_match(txt, "footer_std <- rtf_footer(", fixed = TRUE)
+  expect_match(txt, "footer_standard <- rtf_footer(", fixed = TRUE)
 })
 
 test_that("a configuration that says nothing of the page has no setup code", {
@@ -72,8 +71,8 @@ test_that("a report's program after the setup refers to the setup's names", {
   setup <- tfl_report_setup_code(st)
   code <- tfl_report_code(su_output(), content = "plan", setup = TRUE, study = st)
   txt <- paste(code, collapse = "\n")
-  expect_match(txt, "header = header_std", fixed = TRUE)
-  expect_match(txt, "footer = footer_std", fixed = TRUE)
+  expect_match(txt, "header = header_standard", fixed = TRUE)
+  expect_match(txt, "footer = footer_standard", fixed = TRUE)
   expect_false(grepl("COMPANY", txt, fixed = TRUE))
   # the setup defines every name the report's code uses
   env <- new.env(parent = asNamespace("rtfreporter"))
@@ -81,7 +80,7 @@ test_that("a report's program after the setup refers to the setup's names", {
                  rtfreporter.font_size_half_points = NULL)
   on.exit(options(old), add = TRUE)
   eval(parse(text = setup), env)
-  expect_true(all(c("header_std", "footer_std") %in% ls(env)))
+  expect_true(all(c("header_standard", "footer_standard") %in% ls(env)))
   expect_identical(getOption("rtfreporter.tokens")$COMPANY, "Sample Pharma")
 })
 

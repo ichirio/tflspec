@@ -38,9 +38,9 @@ rp_output <- function() {
 # a study whose default configuration (rp) says no page: a report's page is its own
 rp_study <- function(page = list(), tokens = NULL) {
   structure(list(study = list(settings = list(program_dir = "programs/tfl",
-                                              program = "{output_id}.R", style = "rp"),
+                                              program = "{output_id}.R", style = "standard"),
                               tokens = tokens),
-                 styles = list(rp = list(data = list(), codelists = list(), content = list(),
+                 styles = list(standard = list(data = list(), codelists = list(), content = list(),
                                          page = page))),
             class = "tfl_study_spec")
 }
@@ -95,9 +95,8 @@ test_that("after the study's setup code, a YAML report says what its sheets say"
                                                      "footer", "tokens"))])
   sheets <- tfl_report_code(rp_sheets(), "T-1", content = "plan", setup = TRUE)
   yaml <- tfl_report_code(o, content = "plan", setup = TRUE, study = study)
-  # (the YAML setup names the configuration's bands header_rp / footer_rp)
-  expect_identical(sub("footer_rp", "study_footer", sub("header_rp", "study_header", yaml)), sheets)
-  expect_true(any(grepl("header = header_rp", yaml, fixed = TRUE)))
+  expect_identical(yaml, sheets)
+  expect_true(any(grepl("header = header_standard", yaml, fixed = TRUE)))
   expect_error(tfl_report_code(tfl_resolve_output(o, study), setup = TRUE, study = study),
                "as read")
 })
