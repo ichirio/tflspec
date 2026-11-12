@@ -112,6 +112,22 @@
   if (is.character(nm) && length(nm) == 1L && !is.na(nm) && nzchar(nm)) nm else "tfl_standard"
 }
 
+# The line numbers the sheets give a configuration's band lines (the inverse
+# of how the converter splits the default rows): the `first` lines keep their
+# own numbers; the `last` lines keep theirs when all are above the first lines'
+# and above `rep_max` (the highest of the reports' own lines), else they are
+# numbered above those, in order.  list(first = , last = ): the number by the
+# line's key.
+.cfg_numbers <- function(blocks, rep_max = 0) {
+  num <- function(x) suppressWarnings(as.numeric(x))
+  first <- as.character(names(.page_sorted(blocks$first %||% list())))
+  last <- as.character(names(.page_sorted(blocks$last %||% list())))
+  top <- max(c(num(first), rep_max, 0), na.rm = TRUE)
+  keep <- length(last) && !anyNA(num(last)) && min(num(last)) > top
+  last_n <- if (keep || !length(last)) last else as.character(as.integer(top + seq_along(last)))
+  list(first = stats::setNames(as.list(first), first), last = stats::setNames(as.list(last_n), last))
+}
+
 # A band's lines in order: a map by line number, sorted by the number
 .page_sorted <- function(m) {
   m <- .page_args(m)

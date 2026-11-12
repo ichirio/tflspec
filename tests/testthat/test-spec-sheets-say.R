@@ -109,21 +109,25 @@ test_that("what a figure of items has no place for is named in the notes, by rep
 
 # -- item 3: options:, styles:, style: have no place on the sheets -------------------
 
-test_that("defaults.yml options:, styles: and a report's style: are named in the notes", {
+test_that("defaults.yml options: and a built-in style: are named in the notes; a study's own style: is kept", {
   d <- rts_study(list(
     "defaults.yml" = c("options:", "  rtfreporter.png_device: ragg", "styles:", "  compact:",
                        "    page: {rtf_style: {font_size_half_points: 16}}", "content: []"),
-    "outputs/T-1.yml" = rts_table("T-1", "defaults", "style: compact")))
+    "outputs/T-1.yml" = rts_table("T-1", "defaults", "style: compact"),
+    "outputs/T-2.yml" = rts_table("T-2", "defaults", "style: tfl_small")))
   x <- rts_trip(d)
   nc <- x$sh$not_converted
   expect_match(nc$reason[nc$part == "options"], "rtfreporter.png_device", fixed = TRUE)
-  expect_match(nc$reason[nc$part == "styles"], "compact", fixed = TRUE)
-  expect_identical(nc$output[nc$part == "style"], "T-1")
+  expect_identical(nc$output[nc$part == "style"], "T-2")
+  expect_false("styles" %in% nc$part)
   # and they reach the person: the file, one message
-  expect_true(all(c("options", "styles", "style") %in% vapply(x$nc, function(e) e$sheet, "")))
-  expect_identical(sum(grepl("3 parts", x$msgs, fixed = TRUE)), 1L)
-  # what the sheets cannot hold is gone from the YAML: said, not hidden
-  expect_null(tfl_read_outputs(x$to)[["T-1"]]$style)
+  expect_true(all(c("options", "style") %in% vapply(x$nc, function(e) e$sheet, "")))
+  expect_identical(sum(grepl("2 parts", x$msgs, fixed = TRUE)), 1L)
+  # the study's own style: goes through the sheets (the pattern cell), a built-in one is gone: said, not hidden
+  outs <- tfl_read_outputs(x$to)
+  expect_identical(outs[["T-1"]]$style, "compact")
+  expect_null(outs[["T-2"]]$style)
+  expect_identical(x$sh$table$report$pattern[x$sh$table$report$output_id %in% "T-1"], "@compact")
 })
 
 test_that("a study with none of them has no such note", {

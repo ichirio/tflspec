@@ -158,3 +158,83 @@ test_that("the setup file writes each configuration's header and footer as heade
   expect_false(grepl("header = header_acme", rc, fixed = TRUE))
   expect_match(rc, "BODY", fixed = TRUE)
 })
+
+test_that("YAML -> sheets -> YAML keeps the configurations' lines, a report's per-line overrides, its style and a default not named standard", {
+  skip_if_not_installed("openxlsx")
+  env <- environment()
+  rt_styles <- c(
+    "styles:",
+    "  acme:",
+    "    page:",
+    "      rtf_page: {orientation: portrait}",
+    "      header:",
+    "        first:",
+    "          '1': {left: ACME, right: \"Page {PAGE} of {TOTAL_PAGES}\"}",
+    "          '2': {left: \"Protocol: {STUDY_ID}\"}",
+    "      footer:",
+    "        last:",
+    "          '99': {left: \"{PROGRAM}\"}",
+    "  wide:",
+    "    page:",
+    "      rtf_page: {orientation: landscape}",
+    "      header:",
+    "        first:",
+    "          '1': {left: WIDE}")
+  d <- pc_dir(c(pc_defaults, rt_styles), "settings: {style: acme}
+tokens: {COMPANY: Acme Pharma}", env = env)
+  o <- pc_report(d)
+  # first / last per-line overrides: an !unset, a new text; a body line
+  o$page$header <- list(first = list(`2` = tfl_unset()))
+  o$page$footer <- list(`50` = list(left = "Note"), last = list(`99` = list(left = "Own")))
+  tfl_write_output(o, file.path(d, "outputs", "T-14-1-1.yml"))
+  o2 <- o
+  o2$id <- "T-2"
+  o2$style <- "wide"
+  o2$page$header <- NULL
+  o2$page$footer <- NULL
+  tfl_write_output(o2, file.path(d, "outputs", "T-2.yml"))
+  s <- tfl_read_study_spec(d)
+  outs <- tfl_read_outputs(d)
+  sh <- tfl_sheets_from_yaml(d)
+  # (the sheets: the lines keep their numbers; an override is the same number)
+  hd <- sh$table$header
+  expect_identical(hd$line[is.na(hd$output_id)], c("1", "2"))
+  expect_identical(hd$left[!is.na(hd$output_id) & hd$output_id == "T-14-1-1"], "(none)")
+  expect_identical(hd$line[!is.na(hd$output_id) & hd$output_id == "T-14-1-1"], "2")
+  ft <- sh$table$footer
+  expect_identical(sort(ft$line[ft$output_id %in% "T-14-1-1"]), c("50", "99"))
+  expect_false(any(c("first", "last") %in% c(hd$line, ft$line)))
+  expect_identical(sh$table$report$pattern[sh$table$report$output_id %in% "T-2"], "@wide")
+  to <- withr::local_tempdir()
+  suppressMessages(tfl_yaml_from_sheets(sh, to, overwrite = TRUE))
+  s2 <- tfl_read_study_spec(to)
+  outs2 <- tfl_read_outputs(to)
+  expect_identical(s2$study$settings$style, "acme")
+  for (nm in c("acme", "wide")) {
+    expect_equal(s2$styles[[nm]]$page$header, s$styles[[nm]]$page$header, info = nm)
+    expect_equal(s2$styles[[nm]]$page$footer, s$styles[[nm]]$page$footer, info = nm)
+    expect_equal(s2$styles[[nm]]$page$rtf_page, s$styles[[nm]]$page$rtf_page, info = nm)
+  }
+  expect_identical(outs2[["T-2"]]$style, "wide")
+  expect_null(outs2[["T-14-1-1"]]$style)
+  h2 <- outs2[["T-14-1-1"]]$page$header
+  expect_s3_class(h2$first[["2"]], "tfl_unset")
+  f2 <- outs2[["T-14-1-1"]]$page$footer
+  expect_identical(f2$last[["99"]]$left, "Own")
+  expect_identical(f2[["50"]]$left, "Note")
+  # the reports resolve to the same pages
+  lines <- function(p) lapply(p, function(l) paste(unlist(l), collapse = "|"))
+  for (id in c("T-14-1-1", "T-2")) {
+    r1 <- tfl_resolve_output(outs[[id]], s)$page
+    r2 <- tfl_resolve_output(outs2[[id]], s2)$page
+    for (b in c("header", "footer")) expect_identical(lines(r2[[b]]), lines(r1[[b]]), info = paste(id, b))
+    expect_identical(r2$rtf_page$orientation, r1$rtf_page$orientation, info = id)
+  }
+  # and the sheets of the result are the sheets again
+  sh2 <- tfl_sheets_from_yaml(to)
+  for (k in c("header", "footer")) {
+    a <- sh$table[[k]]; b <- sh2$table[[k]]
+    key <- function(x) paste(x$output_id, x$line, x$left, x$center, x$right)
+    expect_setequal(key(b), key(a))
+  }
+})
