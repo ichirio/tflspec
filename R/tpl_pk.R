@@ -55,8 +55,8 @@
 
 .tpl_pk_body <- function(a, ctx) {
   pop <- a$population
-  subj <- paste0("adsl_", tolower(pop))
-  set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(pop))
+  subj <- .tpl_subj_id()
+  set <- .tpl_set_id(a)
   tm <- a$time
   q <- function(x) sprintf("\"%s\"", gsub("\"", "\\\"", x, fixed = TRUE))
   order <- if (length(a$time_order)) sprintf("%s = reorder_by(%s, %s)", tm, tm, a$time_order)
@@ -70,13 +70,12 @@
     where = if (length(where)) tfl_r(.tpl_and_all(where)),
     derive = if (length(derive)) tfl_r(paste(derive, collapse = " | "))))
   sets <- list(
-    list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
-         population = pop),
-    rec(set, "the subjects' concentrations", a$where,
+    list(id = subj, from = "ADSL", population = pop),
+    rec(set, "The subjects' concentrations.", a$where,
         c(order, if (length(a$blq)) blq_value)),
-    rec(paste0(set, "_s"), "the concentrations summarised",
+    rec(.tpl_noun_id(a, "summ"), "The concentrations summarised.",
         c(a$where, sprintf("!is.na(%s)", a$value)), order))
-  analyses <- list(list(id = "CONC", method = "continuous", data = paste0(set, "_s"),
+  analyses <- list(list(id = "CONC", method = "continuous", data = .tpl_noun_id(a, "summ"),
                         by = c(a$by, tm), variables = a$value,
                         args = tfl_r(.tpl_pk_statistic)))
   summary <- list(

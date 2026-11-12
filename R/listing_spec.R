@@ -448,11 +448,21 @@ tfl_listing_code <- function(spec, output_id = NULL, datasets = NULL,
                       if (!is.na(l_data)) paste("analysis data", l_data) else
                         paste("the subjects of", l_pop)))
   }
+  # the data part of the ARD program (R/ard_code.R): the datasets, the analysis
+  # set (the object <dataset>_sub), the analysis data
+  made <- if (own && !identical(part, "content")) {
+    .ard_data_part(ard, l$output_id, data = if (!is.na(l_data)) l_data else character(),
+                   population_id = if (is.na(l_data)) l_pop,
+                   dataset = if (is.na(l_data)) l$dataset)
+  }
   obj <- if (!is.na(l_data)) l_data else .r_name(l$dataset)
   join <- NULL
   if (is.na(l_data) && !is.na(l_pop)) {
-    pop <- paste0("pop_", .r_name(l_pop))
     pop_ds <- ard$populations$dataset[ard$populations$population_id %in% l_pop][1L]
+    # (the set's object as the data part names it; the dataset itself when the
+    # set has no condition)
+    pop <- unname(attr(made, "renamed")[paste0("pop_", .r_name(l_pop))])
+    if (!length(pop) || is.na(pop)) pop <- .r_name(pop_ds)
     if (identical(pop_ds, l$dataset)) obj <- pop else
       join <- .subjects_join(pop, .study_value(ard, "id", "USUBJID"))
   }
@@ -522,15 +532,18 @@ tfl_listing_code <- function(spec, output_id = NULL, datasets = NULL,
     from <- if (toupper(l$dataset) != "ADSL" && "ADSL" %in% toupper(also)) .r_name("ADSL")
     steps <- c(.order_levels_step(NULL, from), steps)
   }
+  # one section, `# ---- data ----`: the datasets, the analysis set, the
+  # records; the program's own reads (without the study's setup) before it
   read <- if (own) {
-    made <- .ard_data_part(ard, l$output_id, data = if (!is.na(l_data)) l_data else character(),
-                           population_id = if (is.na(l_data)) l_pop,
-                           dataset = if (is.na(l_data)) l$dataset)
     also <- setdiff(also, ard$datasets$dataset[.r_name(ard$datasets$dataset) %in%
                                                  sub(" <-.*", "", made)])
     c(made, "", if (length(also)) paste0("# also: ", paste(also, collapse = ", "), " (data catalog)"))
-  } else c(paste0("# the data: ", paste(c(l$dataset, also), collapse = ", "), " (data catalog)"),
-           tfl_read_data_code(datasets, l$dataset))
+  } else {
+    inputs <- c(tfl_read_data_code(datasets, l$dataset),
+                unlist(lapply(also, function(d) tfl_read_data_code(datasets, d))))
+    also <- character()
+    c(if (length(inputs)) c("# ---- input data ----", inputs, ""), "# ---- data ----")
+  }
   c(if (length(lv)) .codelists_head(lv),
     read,
     unlist(lapply(also, function(d) tfl_read_data_code(datasets, d))),

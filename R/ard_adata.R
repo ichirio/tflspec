@@ -279,33 +279,42 @@
   do.call(rbind, pr)
 }
 
+# The comment above a built dataset (DATA-PART 6, N11): what it is -- the
+# subjects, the records, the denominator -- and where each step takes its
+# input from, then the definition's own label.  Lines of at most 80 columns.
+.adata_comment <- function(id, what = NULL, label = NA) {
+  txt <- paste(c(paste0(id, ":"), what,
+                 if (!is.na(label) && nzchar(trimws(label))) trimws(label)),
+               collapse = " ")
+  paste0("# ", strwrap(txt, width = 78L, simplify = TRUE))
+}
+
 # The lines that make the analysis data `ids` (in their order); `levels`:
 # the code lists, each data made factors again (.derive_steps()); `avoid`:
 # the program's names, which a data's own code does not assign; `reads`:
-# each data's columns the analyses read (kept whatever `keep` says)
+# each data's columns the analyses read (kept whatever `keep` says); `dens`:
+# the data an analysis divides by (the denominators)
 .adata_lines <- function(x, ids, subj, levels = NULL, avoid = character(),
-                         reads = list(), needs = list()) {
+                         reads = list(), needs = list(), dens = character()) {
   ad <- .adata_sheet(x)
   out <- character()
   lv <- if (length(levels)) .levels_step
   for (id in ids) {
     r <- ad[match(id, ad$data_id), ]
-    # what it is, as the definition says, above it (a reviewer maps the SAP
-    # to the code by it)
     lbl <- r$label %||% NA
-    if (!is.na(lbl) && nzchar(trimws(lbl))) out <- c(out, sprintf("# %s: %s", id, lbl))
-    # written as R: its value is the data.  One expression is the data
-    # itself; several run in local() (what they make on the way stays
-    # inside)
+    # written as R: its value is the data.  What comes before its last
+    # expression stays as it is, the last is the data (.code_as_program()); R
+    # that assigns a name the program has runs in local()
     if (!is.na(r$code %||% NA)) {
+      # what it is, as the definition says, above it (a reviewer maps the SAP
+      # to the code by it)
+      if (!is.na(lbl) && nzchar(trimws(lbl))) out <- c(out, .adata_comment(id, NULL, lbl))
       code <- trimws(r$code)
       # (made from another analysis data, which has the code lists on
       # already: none after it -- a level its code adds, demog's Missing,
       # stays)
       lv_c <- if (!(r$from %||% NA) %in% ad$data_id) lv
-      one <- tryCatch(length(parse(text = code, keep.source = FALSE)) == 1L,
-                      error = function(e) FALSE)
-      made <- if (one) .code_as_program(code, id, list(lv_c), c(avoid, ids))
+      made <- .code_as_program(code, id, list(lv_c), c(avoid, ids))
       if (is.null(made)) {
         made <- c(sprintf("%s <- local({\n%s\n})", id,
                           paste0("  ", strsplit(code, "\n", fixed = TRUE)[[1L]],
@@ -338,23 +347,41 @@
     # three stages: the denominator (the population's subjects: its own
     # data), the target subjects (the records joined to them, the subjects'
     # columns replacing theirs), the target records (the report's condition,
-    # after the join).  A data of the subjects already: `add` a left join
-    left <- if (length(add)) c(
-      sprintf("dplyr::select(-dplyr::any_of(%s))", .lay(.c_str(add), width = Inf)),
-      sprintf("dplyr::left_join(dplyr::select(%s, %s), by = %s)",
-              .adata_add_from(ad, id), paste(unique(c(subj, add)), collapse = ", "),
-              .q(subj)))
-    if (is.null(pop)) {
+    # after the join).  A data of the subjects already: `add` takes its
+    # columns by the same join
+    add_from <- .adata_add_from(ad, id)
+    if (is.null(pop) && length(add) && !is.na(add_from)) {
       base <- src
-      steps0 <- c(flt, left)
+      steps0 <- c(.subjects_join(add_from, subj, add), flt)
+      kind <- "made"
+    } else if (is.null(pop)) {
+      base <- src
+      steps0 <- flt
+      kind <- "made"
     } else if (!from_data && is.na(r$subjects) && identical(r$from, pop_ds)) {
       # the population itself (its dataset): its subjects, the condition
       base <- pop
-      steps0 <- c(flt, left)
+      steps0 <- flt
+      kind <- "subjects"
     } else {
       base <- src
       steps0 <- c(.subjects_join(pop, subj, take), flt)
+      kind <- "records"
     }
+    # what it is, above it
+    lab_pop <- if (!is.na(pid)) {
+      k <- match(pid, x$populations$population_id)
+      pl <- x$populations$label[k] %||% NA
+      sprintf("population %s%s", pid, if (!is.na(pl)) sprintf(" (%s)", pl) else "")
+    }
+    what <- switch(kind,
+      subjects = paste0("the subjects. ", lab_pop, if (!is.null(whr)) "; subset"),
+      records = sprintf("the records. %s of the subjects of %s%s%s",
+                        toupper(if (from_data) .adata_dataset(ad, id) %||% src else r$from),
+                        pop, if (length(take)) sprintf(", %s from ADSL", paste(take, collapse = ", ")) else "",
+                        if (!is.null(whr)) "; where" else ""),
+      made = if (id %in% dens) "the denominator." else sprintf("made from %s.", src))
+    out <- c(out, .adata_comment(id, what, lbl))
     # what follows the rows: the columns added, derived, the columns kept,
     # one row per ..., its code lists
     steps <- c(steps0, .derive_steps(r$derive),
