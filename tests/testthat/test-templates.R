@@ -654,8 +654,11 @@ test_that("hierarchical of one level; demog and ae_pt_freq on their layouts", {
   expect_identical(p$ard$analyses[[1L]][c("id", "label")], list(id = "TEAE_PT", label = "TEAE by PT"))
   expect_identical(p$ard$analysis_data[[2L]]$where, h1$ard$analysis_data[[2L]]$where)
   expect_identical(vapply(p$content, `[[`, "", "fn"),
-                   c("normalize_ard", "table_plan", "plan_sort", "plan_filter", "plan_col_header",
+                   c("normalize_ard", "table_plan", "plan_sort", "plan_col_header",
                      "plan_paginate_rows"))
+  # (min_pct: the terms kept are the ARD's, a step after it; the plan filters no rows)
+  expect_identical(as.character(p$ard$analyses[[1L]]$post), "keep_min_pct(5)")
+  expect_null(h1$ard$analyses[[1L]]$post)
   # demog is a template of its own (no longer summary's variant): its population is the report's
   d <- tfl_template_expand("demog", dmv(categorical = "SEX"))
   expect_identical(d$ard$analysis_data[[1L]]$id, "adsl_saf")
