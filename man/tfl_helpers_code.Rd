@@ -11,15 +11,14 @@ The code, one element per line.
 }
 \description{
 The R code of the functions the programs tflspec writes call:
-\code{set_levels()} (the code lists on a data: each listed column a factor in
-the list's order, its values as the list has them in the ARD; a value
+\code{set_levels()} (the code lists on a data: each listed column a factor of
+the codes in the list's order, as the ARD holds them, no labels; a value
 not listed stops the program), \code{reorder_by()} (a column in another's
 order when the data has it: \code{PARAM} by \code{PARAMN}), \code{order_levels()} (the arm
 variables and the categories it names as factors, set in the data step
 before the ARD: each in its code list's order, else its numeric pair's
 -- \code{TRT01A} by \code{TRT01AN}, \code{SEX} by \code{SEXN}, \code{RACE} by \code{RACEN} --, else
-as it is, which the ARD sorts: cards orders text by \code{order(x, method = "radix")},
-the C locale's byte order; a factor already in the data keeps
+as it is, which the ARD sorts: cards orders text by \code{order(x, method = "radix")}, the C locale's byte order; a factor already in the data keeps
 its levels; a blank is missing, not a level; \code{from = adsl} orders a
 records data's arm, which has no number of its own, by the matching arm
 and number of ADSL, the records' values kept and a value ADSL lacks

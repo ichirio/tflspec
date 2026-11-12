@@ -118,10 +118,11 @@ format, or a `cells` row's `digits`, wins.
 
 ## A report's code lists, and the variables' labels
 
-A report's `codelists` rows say what each value is in the data its program
-makes: the ARD program puts the labels on the data (see
-[The ARD spec](ard-spec.html)), so the ARD already holds "Female", and the
-table only orders the ARD's values (`plan_levels()`, in the labels).
+A report's `codelists` rows give each value's order and its label: the ARD
+program makes the column a factor of the codes (see
+[The ARD spec](ard-spec.html)), so the ARD holds "F", the table orders the
+ARD's values (`plan_levels()`, in codes) and shows the labels through
+`plan_labels()`.
 A variable's heading is the **`variables`** sheet's `label`
 (`plan_labels()`). The code list of `variable` (an earlier form of the
 headings) is moved to the `variables` sheet's `label` when the table spec
@@ -130,7 +131,7 @@ lists.
 
 ```{r, message = FALSE}
 adsl <- adsl[adsl$SAFFL == "Y", ]    # the sample study's ADSL, safety set
-adsl$SEX <- factor(adsl$SEX, c("F", "M"), c("Female", "Male"))  # as set_levels()
+adsl$SEX <- factor(adsl$SEX, c("F", "M"))  # as set_levels(): the codes
 ard2 <- cards::ard_stack(
   adsl, .by = TRT01A,
   cards::ard_summary(variables = AGE),

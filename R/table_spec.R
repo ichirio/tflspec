@@ -676,7 +676,7 @@
 #'   \item{`order`}{Number; the order the variables appear in
 #'     (`plan_levels(variable = c("AGE", "SEX"))`: the values of the ARD's
 #'     `variable` column; one not numbered comes after, in the ARD's order).}
-#'   \item{`levels`}{The order of its values: `Grade 0 | Grade 1 | Total`;
+#'   \item{`levels`}{The order of its values (the codes the ARD holds): `Grade 0 | Grade 1 | Total`;
 #'     `F = Female | M = Male` gives each value its text too (a named order,
 #'     `plan_levels(SEX = c(F = "Female", M = "Male"))`).}
 #'   \item{`empty_levels`}{`show` (blank, the default) or `hide`: whether

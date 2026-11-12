@@ -1037,12 +1037,15 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #'   names in `args`, `code` and `post`) count: the program writes them at
 #'   its head (`cl_sex <- c(F = "Female", M = "Male")`) and puts them on
 #'   the data the analyses read (`set_levels(SEX = cl_sex)`): each column a
-#'   factor in the list's order, its values the labels (a value without one
-#'   stays itself) -- the ARD holds `"Female"`, and counts a level no record
-#'   has (`n = 0`).  A value the list does not have (not NA) stops the
-#'   program.  An analysis's `where` on such a column is written in its
-#'   labels: one that names a value whose label differs stops here.  In the
-#'   study's program, each report's part reads its data again with its own.
+#'   factor of the codes in the list's order -- the ARD holds `"F"`, not
+#'   `"Female"`, and counts a level no record has (`n = 0`).  The factor is
+#'   made after the analysis's filter, and its levels are narrowed to the
+#'   values the filter's simple conditions leave.  A value the list does not
+#'   have (not NA) stops the program.  An analysis's `where` on such a column
+#'   is written in codes: a label stops it here (write `"F"` for
+#'   `"Female"`).  The labels are applied by the report's table plan
+#'   (`plan_labels`), not in the ARD.  In the study's program, each report's
+#'   part reads its data again with its own.
 #'   `NULL` (default): the data as read.
 #' @inheritParams tfl_write_ard_spec
 #' @return The code, one element per line.
