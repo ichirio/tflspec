@@ -1001,3 +1001,47 @@ tfl_write_study_part <- function(study, part = c("defaults", "patterns", "data",
   if (is.null(o)) return(file.path(.spec_dir(dir), "outputs"))
   if (grepl("^([A-Za-z]:)?[/\\]", o)) o else file.path(dir, o)
 }
+
+#' The page configurations of a study
+#'
+#' A study's page configurations: the style sets a report picks with
+#' `style:` -- the built-in ones tflspec ships (`standard`, the base and
+#' nothing more; `stf_t02`) and the study's own (`defaults.yml`'s
+#' `styles:`).  A set holds the settings that differ from the study's base:
+#' the `page` half (the `rtf_*` calls' arguments) and the `content` half
+#' (the table look verbs, such as `plan_style` and `plan_paginate_rows`).
+#' The study's default is the set `settings.style` of `study.yml` names
+#' (`standard` when it names none).
+#'
+#' @param study The study: a `tfl_study_spec` ([tfl_read_study_spec()]) or
+#'   the path of the study's folder.
+#' @return A data frame, one row a set: `name`; `source` (`"built-in"` or
+#'   `"study"`); `default` (`TRUE` for the one a report without `style:`
+#'   gets); `page_keys` and `content_verbs` (what the set holds, comma
+#'   joined; empty for none).  A study's set named as a built-in one does
+#'   not replace it: the row is the built-in's.
+#' @examples
+#' s <- tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
+#' tfl_styles(s)
+#' @export
+tfl_styles <- function(study) {
+  fn <- "tfl_styles()"
+  if (is.character(study) && length(study) == 1L && !is.na(study)) {
+    study <- tfl_read_study_spec(study)
+  }
+  if (!inherits(study, "tfl_study_spec")) {
+    .ard_stop(sprintf("%s: `study` is a tfl_study_spec, or the path of a study's folder.", fn))
+  }
+  own <- setdiff(names(study$styles), .tpl_style_builtin_names)
+  nm <- c(.tpl_style_builtin_names, own)
+  sets <- lapply(nm, function(n) .tpl_style_set(n, study))
+  dflt <- .tpl_study_read1("settings.style", NULL, study) %||% "standard"
+  data.frame(
+    name = nm,
+    source = ifelse(nm %in% .tpl_style_builtin_names, "built-in", "study"),
+    default = nm == dflt,
+    page_keys = vapply(sets, function(x) paste(names(x$page), collapse = ", "), ""),
+    content_verbs = vapply(sets, function(x)
+      paste(unique(vapply(x$content, function(it) it$fn, "")), collapse = ", "), ""),
+    stringsAsFactors = FALSE)
+}
