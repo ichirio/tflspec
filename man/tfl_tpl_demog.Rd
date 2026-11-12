@@ -39,7 +39,7 @@ The table template \code{demog}, layout \code{summary}. Its program is one call,
    \code{blanks_counted} \tab other \tab call \tab study: plan_blanks.counted, no fallback \tab plan_blanks.counted \tab blank rows count in a page's rows (plan_blanks(counted = )) \cr
    \code{border_header} \tab other \tab call \tab study: plan_style.border_header, no fallback \tab plan_style.border_header \tab the rule round the column heading (plan_style(border_header = )) \cr
    \code{border_group} \tab other \tab call \tab  \tab plan_style.border_group \tab a rule under each block (plan_style(border_group = ), e.g. list(bottom = TRUE)); NULL: none \cr
-   \code{style} \tab other \tab call \tab study: settings.style, else standard \tab settings.style \tab the style set (font, borders, page) the report starts from: a set of the study's defaults.yml 'styles:' or a built-in one (standard, stf_t02); unset: none \cr
+   \code{style} \tab other \tab call \tab study: settings.style, else tfl_standard \tab settings.style \tab the style set (font, borders, page) the report starts from: a set of the study's defaults.yml 'styles:' or a built-in one (tfl_standard, tfl_small, stf_t02); unset: none \cr
 }
 }
 
