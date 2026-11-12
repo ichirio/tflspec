@@ -195,9 +195,12 @@ test_that("the style helper: defaults.yml's styles: first, then the built-in set
   expect_length(.tpl_style_set("standard", NULL)$content, 0L)
 })
 
-test_that("the set's extends: demog [defaults], stf_t02_demog {content: none}; the 27 the old order", {
+test_that("the set's extends: demog, summary, disposition, ae_overview, param_change [defaults], stf_t02_demog {content: none}; the other 23 the old order", {
+  # (extends [defaults], batch 2 (ii)): summary, disposition, ae_overview and
+  # param_change are layered; 29 templates, 6 layered, 23 the old order
   expect_identical(sort(Filter(function(n) .tpl_layered(n), tfl_templates()$name)),
-                   c("demog", "stf_t02_demog"))
+                   c("ae_overview", "demog", "disposition", "param_change", "stf_t02_demog", "summary"))
+  expect_length(Filter(function(n) !.tpl_layered(n), tfl_templates()$name), 23L)
   # (an alias is its template: stf_t14_ae_soc_pt is ae_soc_pt's, not migrated)
   expect_false(.tpl_layered("stf_t14_ae_soc_pt"))
   expect_identical(.tpl_get("demog", "test")$extends, "defaults")
@@ -232,11 +235,13 @@ test_that("the set's extends: demog [defaults], stf_t02_demog {content: none}; t
   expect_true("style:stf_t02" %in% from2)
   expect_identical(ro2$page$header, ro1$page$header)
   expect_identical(ro2$page$rtf_page$orientation, "landscape")
-  # the same arguments in a template not yet migrated read the study's content layer
+  # (extends [defaults], batch 2 (ii)): summary has the same set as demog: the
+  # study's content is laid under its items, its own items marked template:summary
   o0 <- tfl_output("T-9", "table", population = "SAF",
                    template = list(name = "summary", args = list(by = "TRT01A", continuous = "AGE")))
-  expect_true("defaults" %in% vapply(tfl_resolve_output(o0, s)$content,
-                                      function(it) it$from %||% "", ""))
+  from0 <- vapply(tfl_resolve_output(o0, s1)$content, function(it) it$from %||% "", "")
+  expect_true("defaults" %in% from0)
+  expect_true("template:summary" %in% from0)
   expect_identical(tfl_resolve_output(o0, s)$page, ro1$page)
   # another template of the same study is not migrated: the old order
   o3 <- tfl_output("T-10", "table", population = "SAF",

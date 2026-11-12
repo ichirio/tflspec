@@ -4,7 +4,7 @@
 \alias{tflspec_code_options}
 \title{How the generated programs name folders and packages}
 \description{
-Two options make the code tflspec writes fit a study's setup file (such
+Three options make the code tflspec writes fit a study's setup file (such
 as tflplanner's \code{programs/study_setup.R}), which defines the study's
 folders as variables and attaches the packages every program uses.
 }
@@ -21,10 +21,17 @@ in the program, the code of the spec it carries included (only the
 code: a string or a comment keeps what it says), and an ARD program
 does not write \code{library(cards)} itself.  A package not listed keeps
 its prefix (\verb{cardx::}).
+\item \code{tflspec.study_setup}: \code{TRUE} when the study's setup file sets the
+study-wide options -- today the rounding, \code{rtfreporter.rounding} and
+\code{cards.round_type}, written by \code{\link[=tfl_study_setup_code]{tfl_study_setup_code()}}.  The ARD setup
+(\code{\link[=tfl_ard_code]{tfl_ard_code()}}) and the report setup (\code{\link[=tfl_report_setup_code]{tfl_report_setup_code()}})
+then do not write them again; their other options stay.  A report's
+\code{plan_digits(rounding = )} that is the study's is left out of its
+program either way.
 }
 
-Unset (the default), the code is as it has always been: literal paths
-and \verb{pkg::} on every call.  The functions that write code read them:
+Unset or \code{FALSE} (the default), the code is as it has always been:
+literal paths, \verb{pkg::} on every call, the rounding in each setup.  The functions that write code read them:
 \code{\link[=tfl_ard_code]{tfl_ard_code()}}, \code{\link[=tfl_build_ard]{tfl_build_ard()}}, \code{\link[=tfl_table_code]{tfl_table_code()}},
 \code{\link[=tfl_report_code]{tfl_report_code()}}, \code{\link[=tfl_report_setup_code]{tfl_report_setup_code()}}, \code{\link[=tfl_listing_code]{tfl_listing_code()}},
 \code{\link[=tfl_read_data_code]{tfl_read_data_code()}}, \code{\link[=tfl_fig_design_code]{tfl_fig_design_code()}} and

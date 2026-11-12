@@ -37,7 +37,8 @@ A \code{\link[rtfreporter:table_plan]{rtfreporter::table_plan()}}.
 The A use of a template SPEC, one function for them all: the template's
 items run on the data, as the report's content.  \code{tfl_tpl(ard, "demog", population = "SAF")} is what a template report's program calls; a
 study's defaults the template does not take as its parameters are added
-after the call -- or, for a template whose set has its \code{extends} (demog),
+after the call -- or, for a template whose set has its \code{extends} (demog,
+summary, disposition, ae_overview, param_change),
 given as \code{study}, under the template's items.  The template's parameters,
 their defaults and where each ends: \code{tfl_tpl_help()} (and
 \verb{?tpl_<name>}).
