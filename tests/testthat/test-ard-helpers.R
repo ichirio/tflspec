@@ -225,13 +225,16 @@ test_that("keep_min_pct(): the terms of a percentage of subjects or more, in any
     lv(ard$variable_level) %in% kept))
   expect_identical(sum(!k$context %in% "hierarchical" | startsWith(k$variable, "..")),
                    sum(!ard$context %in% "hierarchical" | startsWith(ard$variable, "..")))
-  # a SOC stays on its own percentage, whether or not a term below it passes
+  # a SOC stays when a term below it passes (not on its own percentage)
+  under <- k$variable %in% "AEDECOD" & k$group1 %in% "TRT01A"
+  expect_identical(soc(k), sort(unique(lv(k$group2_level[under]))))
   r <- ard[ard$variable %in% "AEBODSYS" & ard$stat_name == "p" & ard$group1 %in% "TRT01A", ]
   soc_arm <- split(unlist(r$stat), lv(r$variable_level))
-  expect_identical(soc(k), sort(names(soc_arm)[vapply(soc_arm, function(v) any(v >= 0.2), NA)]))
-  expect_gt(length(setdiff(soc(k), unique(lv(k$group2_level[k$variable %in% "AEDECOD"])))), 0L)
-  # an ARD with no Total column keeps no term for "total"; no records, nothing to drop
-  expect_identical(pts(e$keep_min_pct(stack(by = TRT01A), 5, "total")), character())
+  own <- names(soc_arm)[vapply(soc_arm, function(v) any(v >= 0.2), NA)]
+  expect_gt(length(setdiff(own, soc(k))), 0L)
+  # "total" on an ARD with no Total column stops, naming the way out;
+  # no records, nothing to drop
+  expect_error(e$keep_min_pct(stack(by = TRT01A), 5, "total"), "Total column.*\"any\"")
   expect_identical(e$keep_min_pct(ard[0L, ], 5), ard[0L, ])
 })
 

@@ -617,6 +617,12 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
 #' their defaults and where each ends: `tfl_tpl_help()` (and
 #' `?tpl_<name>`).
 #'
+#' The template's steps of the ARD program are not run here: the data is
+#' used as given.  `where`, and `min_pct` of the SOC / PT templates, are
+#' steps of the ARD the report's program writes (`keep_min_pct()`, of
+#' [tfl_helpers_code()]); `tfl_tpl(ard, "ae_pt_freq", min_pct = 5)` on an
+#' ARD made by hand shows all its terms.
+#'
 #' @param x The data: the ARD, not yet normalized (a table); the dataset as
 #'   the program made it, its subjects kept already (a listing).
 #' @param name The template's name ([tfl_templates()]): a layout, a display
@@ -1177,6 +1183,10 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
 .tpl_min_pct_post <- function(min_pct, min_pct_in = "any", a = NULL, tn = "template") {
   if (is.null(min_pct)) return(NULL)
   in_ <- .tpl_choice(a, "min_pct_in", c("any", "all", "total"), tn, value = min_pct_in)
+  if (identical(in_, "total") && !isTRUE(a[["total"]])) {
+    .ard_stop(sprintf(paste0("%s: min_pct_in = \"total\" needs the Total column: add it ",
+                             "(total = TRUE), or use min_pct_in = \"any\"."), tn))
+  }
   tfl_r(if (identical(in_, "any")) sprintf("keep_min_pct(%s)", format(min_pct))
         else sprintf("keep_min_pct(%s, \"%s\")", format(min_pct), in_))
 }
@@ -1260,7 +1270,12 @@ tfl_template_variant("ae_disc_soc_pt", from = "ae_soc_pt",
 #' Adverse events by SOC and PT: a table plan from the template `ae_soc_pt`
 #'
 #' A display template on the `hierarchical` layout: treatment-emergent
-#' events (`TRTEMFL == "Y"`), the subjects with any event first.
+#' events (`TRTEMFL == "Y"`), the subjects with any event first.  With
+#' `min_pct`, the ARD program keeps the PTs of that percentage of subjects
+#' or more (`min_pct_in`: in any column, every column, or the Total column
+#' with `total = TRUE`) and the SOCs over them (`keep_min_pct()`); this
+#' function shows the terms of the ARD it is given, so `min_pct` here does
+#' not filter it.
 #'
 #' @inheritParams tpl_demog
 #' @param ... The template's other parameters: `hierarchy`, `where`,
@@ -1314,6 +1329,11 @@ names(.tpl_pt_params) <- vapply(.tpl_pt_params, `[[`, "", "name")
 
 .tpl_pt_body <- function(a, ctx) {
   in_ <- .tpl_choice(a, "min_pct_in", c("any", "all", "total"), ctx$template$name)
+  if (!is.null(a$min_pct) && identical(in_, "total")) {
+    .ard_stop(sprintf(paste0("%s: min_pct_in = \"total\" needs the Total column, which this ",
+                             "template does not have: use min_pct_in = \"any\" (or \"all\")."),
+                      ctx$template$name))
+  }
   # hierarchical's ARD and items, of one level (the term); then its own
   # order, the terms kept and the page
   # (hierarchical's defaults for what ae_pt_freq does not take)
@@ -1348,8 +1368,9 @@ names(.tpl_pt_params) <- vapply(.tpl_pt_params, `[[`, "", "name")
 #' first group of the code list of `by`, or the column `sort_by` names --
 #' and, with `min_pct`, only the terms of that percentage of subjects or
 #' more: in any column (`min_pct_in = "any"`, as FDA's tables of common
-#' adverse events), in every column (`"all"`) or in the Total column
-#' (`"total"`).
+#' adverse events) or in every column (`"all"`).  The terms kept are a
+#' step of the ARD program (`keep_min_pct()`); this function shows the
+#' terms of the ARD it is given, so `min_pct` here does not filter it.
 #'
 #' @inheritParams tpl_demog
 #' @param ... The template's other parameters: `term`, `by`, `where`,

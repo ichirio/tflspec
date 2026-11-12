@@ -33,10 +33,19 @@ test_that("expanded: one level, sorted by the code list's first group, the ARD's
   b <- tfl_template_expand("ae_pt_freq", list(population = "SAF", min_pct = 10, min_pct_in = "all"))
   expect_identical(ptf_post(b), "keep_min_pct(10, \"all\")")
   expect_false("plan_filter" %in% ptf_fn(b))
-  t <- tfl_template_expand("ae_pt_freq", list(population = "SAF", min_pct = 5, min_pct_in = "total"))
-  expect_identical(ptf_post(t), "keep_min_pct(5, \"total\")")
-  expect_false("plan_filter" %in% ptf_fn(t))
+  # (ae_pt_freq has no Total column: min_pct_in = "total" stops)
+  expect_error(tfl_template_expand("ae_pt_freq", list(population = "SAF", min_pct = 5,
+                                                      min_pct_in = "total")),
+               "Total column.*\"any\"")
+  t <- tfl_template_expand("ae_pt_freq", list(population = "SAF", min_pct_in = "total"))
   expect_identical(ptf_arg(t, "plan_sort", "keys")[2L], "-n[Total]")
+  # ae_soc_pt: "total" with the Total column; without it, a stop
+  h <- tfl_template_expand("ae_soc_pt", list(population = "SAF", min_pct = 5,
+                                             min_pct_in = "total", total = TRUE))
+  expect_identical(as.character(h$ard$analyses[[1L]]$post), "keep_min_pct(5, \"total\")")
+  expect_error(tfl_template_expand("ae_soc_pt", list(population = "SAF", min_pct = 5,
+                                                     min_pct_in = "total")),
+               "total = TRUE")
   s <- tfl_template_expand("ae_pt_freq", list(population = "SAF", sort_by = "Control"),
                            codelists = ptf_cl)
   expect_identical(ptf_arg(s, "plan_sort", "keys")[2L], "-n[Control]")

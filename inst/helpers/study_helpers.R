@@ -225,10 +225,10 @@ drop_empty_groups <- function(ard) {
 # % of subjects or more have, the other terms' rows dropped: in `met_in`
 # "any" column (each arm, and the Total column when the ARD has one),
 # "all" of them, or the "total" column alone (an ARD with no Total column
-# keeps no term).  The last two levels' rows (SOC and PT) each stand on
-# their own percentage; a level above them (a SOC over HLT and PT) stays
-# when a row below it does.  The overall row and the by variable's counts
-# stay.  (cards::filter_ard_hierarchical() drops the Total column's rows.)
+# stops).  The last level's rows (the PT) stand on their own percentage;
+# a level above it (the SOC) stays when a term below it does.  The overall
+# row and the by variable's counts stay.  (cards::filter_ard_hierarchical()
+# drops the Total column's rows.)
 #   ard |> keep_min_pct(5)
 #   ard |> keep_min_pct(10, "all")
 keep_min_pct <- function(ard, pct, met_in = c("any", "all", "total")) {
@@ -258,16 +258,21 @@ keep_min_pct <- function(ard, pct, met_in = c("any", "all", "total")) {
   n <- length(vars)
   p <- vapply(ard$stat, function(s) if (length(s)) suppressWarnings(as.numeric(s[[1L]])) else NA_real_, 0)
   at <- term & ard$stat_name %in% "p" & !is.na(p)
-  # (the last two levels: their own percentage)
-  own <- at & depth >= n - 1L
+  if (met_in == "total" && any(at) && !any(at & column == "")) {
+    stop("keep_min_pct(): met_in = \"total\" needs the Total column, and the ARD has none: ",
+         "add the Total column (ard_stack_hierarchical(overall = TRUE)), or use met_in = \"any\".",
+         call. = FALSE)
+  }
+  # (the last level: its own percentage)
+  own <- at & depth == n
   pass <- vapply(split(seq_len(nrow(ard))[own], path[own]), function(i) {
     v <- if (met_in == "total") p[i][column[i] == ""] else p[i]
     if (!length(v)) return(FALSE)
     if (met_in == "all") all(v >= pct / 100) else any(v >= pct / 100)
   }, NA)
   kept <- names(pass)[pass]
-  # (a level above: when a row below it stays)
-  up <- unique(path[term & depth < n - 1L])
+  # (a level above: when a term below it stays)
+  up <- unique(path[term & depth < n])
   kept <- c(kept, up[vapply(up, function(u) any(startsWith(kept, paste0(u, "\r"))), NA)])
   ard[!term | path %in% kept, , drop = FALSE]
 }
