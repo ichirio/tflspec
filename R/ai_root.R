@@ -22,7 +22,7 @@
             if (is.null(p$where)) "every subject" else paste0("`", as.character(p$where), "`"))
   }, "")
   ds <- vapply(st$data$datasets %||% list(), function(d) d$dataset %||% "", "")
-  tok <- .page_output_tokens_used(st$defaults$page %||% list())
+  tok <- .page_output_tokens_used(.page_config_flat(list(page = .study_default_page(st))))
   cls <- names(st$defaults$codelists %||% list())
   c("# This study's facts",
     "",

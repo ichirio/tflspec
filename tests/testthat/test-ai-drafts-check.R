@@ -133,17 +133,18 @@ test_that("a figure's draft keeps its own file through the check: its page, its 
   expect_true(r$reports$status[r$reports$output_id == "F-14-2-2"] %in% c("ok", "warning"))
   back <- tfl_read_output(f)
   expect_identical(back$page$titles[["2"]]$center, "Kaplan-Meier Plot of Overall Survival")
-  # the footer line moved below the study's own (spec/defaults.yml: line 1)
-  expect_identical(names(back$page$footer), "2")
-  expect_identical(back$page$footer[["2"]]$left, "CI = confidence interval.")
+  # the footer line is a body line: the study's configuration prints its own
+  # lines below it, so nothing is moved
+  expect_identical(names(back$page$footer), "1")
+  expect_identical(back$page$footer[["1"]]$left, "CI = confidence interval.")
   # a table's footer lines too, once: the second check leaves them
   t <- tfl_read_output(dc_draft(d, "T-14-1-1"))
   t$page$footer <- list("1" = list(left = "Age at informed consent."), "2" = list(left = "Fictional data."))
   tfl_write_output(t, dc_draft(d, "T-14-1-1"))
   suppressMessages(tfl_ai_collect_answers(d))
-  expect_identical(names(tfl_read_output(dc_draft(d, "T-14-1-1"))$page$footer), c("2", "3"))
+  expect_identical(names(tfl_read_output(dc_draft(d, "T-14-1-1"))$page$footer), c("1", "2"))
   suppressMessages(tfl_ai_collect_answers(d))
-  expect_identical(names(tfl_read_output(dc_draft(d, "T-14-1-1"))$page$footer), c("2", "3"))
+  expect_identical(names(tfl_read_output(dc_draft(d, "T-14-1-1"))$page$footer), c("1", "2"))
 })
 
 test_that("a page line with a key that is no cell (an unquoted comma): an error that says to quote", {
