@@ -19,7 +19,7 @@
             doc = "only the subjects normal at baseline, in n and in the N"),
   tfl_param("baseline", "BNRIND", doc = "the category at baseline"),
   tfl_param("baseline_value", "NORMAL", doc = "the value of `baseline` that is normal"),
-  tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<population>"),
+  tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_sub"),
   tfl_param("heading", "Parameter / Category", doc = "the label column's heading"),
   tfl_param("header_n", "set", type = "choice", choices = c("set", "tested", "none"), doc = paste(
     "the arm headings' N, set apart from the cells' N (a parameter's subjects with a value):",

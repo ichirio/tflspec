@@ -576,11 +576,20 @@
 # join keeps the records of `pop`'s subjects and carries `take`;
 # `relationship` asserts `pop` has one row a subject.  With no column to take
 # the join is by the subject alone.
-.subjects_join <- function(pop, subj, take = character()) {
+.subjects_join <- function(pop, subj, take = character(), soft = character()) {
   take <- setdiff(unique(take), subj)
-  c(if (length(take)) sprintf("dplyr::select(-dplyr::any_of(%s))", .lay(.c_str(take), width = Inf)),
+  soft <- setdiff(unique(soft), c(subj, take))
+  # (`soft`: a stratum that may be the records' own, not the subjects' -- the
+  # generator does not know the subjects' columns: what `pop` has of it
+  # replaces the records', what it has not leaves them)
+  drop <- if (length(soft)) {
+    sprintf("dplyr::select(-dplyr::any_of(names(dplyr::select(%s, dplyr::any_of(%s)))))", pop,
+            .lay(.c_str(c(take, soft)), width = Inf))
+  } else if (length(take)) sprintf("dplyr::select(-dplyr::any_of(%s))", .lay(.c_str(take), width = Inf))
+  keep <- c(subj, take, if (length(soft)) sprintf("dplyr::any_of(%s)", .lay(.c_str(soft), width = Inf)))
+  c(drop,
     sprintf("dplyr::inner_join(dplyr::select(%s, %s), by = %s, relationship = \"many-to-one\")",
-            pop, paste(c(subj, take), collapse = ", "), .q(subj)))
+            pop, paste(keep, collapse = ", "), .q(subj)))
 }
 
 .stat_arg <- function(method, stats) {
@@ -1217,8 +1226,10 @@
         src <- ds
         # (not a column the population's derive makes: the record's own)
         g <- grp[match(i, rows)]
-        join <- .subjects_join(pop, subj, setdiff(take_of[[g]], .derive_names(
-          x$populations$derive[x$populations$population_id %in% pid])))
+        tk <- setdiff(take_of[[g]], .derive_names(
+          x$populations$derive[x$populations$population_id %in% pid]))
+        # (the first, the arm, is the subjects'; the rest may be the records' own)
+        join <- .subjects_join(pop, subj, utils::head(setdiff(tk, subj), 1L), utils::tail(setdiff(tk, subj), -1L))
       }
       # no dataset and no population: no data (as before, `data` is NULL)
       if (is.null(src)) return("NULL")
@@ -1236,7 +1247,7 @@
       auto_ds[[nm]] <<- if (!is.na(r$dataset)) r$dataset else pop_ds
       rid <- r$records %||% NA
       rk <- if (!is.na(rid)) match(rid, .records_sheet(x)$record_id) else NA
-      take_txt <- setdiff(take_of[[grp[match(i, rows)]]] %||% character(), subj)
+      take_txt <- unique(setdiff(take_of[[grp[match(i, rows)]]] %||% character(), subj))
       auto_note[[nm]] <<- paste0(
         "the records. ",
         if (!is.na(rk)) paste0(rid, if (!is.na(.records_sheet(x)$label[rk]))
@@ -1406,7 +1417,7 @@
   out <- character()
   for (k in seq_along(code)) {
     hit <- which(startsWith(code[k], paste0(new, " <- ")))
-    if (length(hit)) out <- c(out, sprintf("# %s: %s", new[hit[1L]], note[[hit[1L]]]))
+    if (length(hit)) out <- c(out, .adata_comment(new[hit[1L]], note[[hit[1L]]]))
     out <- c(out, code[k])
   }
   attr(out, "renamed") <- new
@@ -1593,7 +1604,11 @@
     ds <- tryCatch(all.vars(parse(text = code[def], keep.source = FALSE)[[1L]][[3L]])[1L],
                    error = function(e) NA_character_)
     if (is.na(ds)) next
-    sub_word <- paste0("(^|[^A-Za-z0-9._])", gsub(".", "\\.", ds, fixed = TRUE), "_sub[0-9]*($|[^A-Za-z0-9._])")
+    # (the name the set's object gets: <dataset>_sub, the second set of a
+    # dataset <dataset>_sub2 ...)
+    defs <- grep(paste0("^pop_[A-Za-z0-9._]+ <- .*\\b", ds, "\\b"), code)
+    nm <- paste0(.r_name(ds), "_sub", if (match(def, defs, nomatch = 1L) > 1L) match(def, defs))
+    sub_word <- paste0("(^|[^A-Za-z0-9._])", gsub(".", "\\.", nm, fixed = TRUE), "($|[^A-Za-z0-9._])")
     # (the data that is itself `<dataset>_sub` is that object: merged)
     if (!identical(d, paste0(.r_name(ds), "_sub")) && any(grepl(sub_word, code[-c(k, def)]))) next
     if (!piped) {

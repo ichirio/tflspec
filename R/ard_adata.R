@@ -365,7 +365,8 @@
       kind <- "subjects"
     } else {
       base <- src
-      steps0 <- c(.subjects_join(pop, subj, take), flt)
+      nd <- setdiff(take, add)
+      steps0 <- c(.subjects_join(pop, subj, c(add, utils::head(nd, 1L)), utils::tail(nd, -1L)), flt)
       kind <- "records"
     }
     # what it is, above it

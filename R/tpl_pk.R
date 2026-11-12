@@ -50,7 +50,7 @@
   tfl_param("split_at", NULL, doc = paste(
     "the time point that starts a second block of columns (each block its",
     "pages, the group's first); NULL: one")),
-  tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<population>")
+  tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_sub")
 )
 
 .tpl_pk_body <- function(a, ctx) {

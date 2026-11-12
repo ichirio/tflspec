@@ -65,7 +65,7 @@
     tfl_param("subset", NULL, unset = "step_off",
               doc = "which subjects (R, on the analysis set's ADSL): PART == \"Part 1\"; unset: all"),
     tfl_param("data", "ADSL", unset = "stop", doc = "a subject-level dataset"),
-    tfl_param("data_id", NULL, doc = "the analysis data's id when `data` is not ADSL; NULL: <data>_<population>"),
+    tfl_param("data_id", NULL, doc = "the analysis data's id when `data` is not ADSL; NULL: <data>_sub"),
     # (fixed in both, canon 1.31: the percentages are over the analysis set)
     tfl_param("denominator", NULL, doc = "fixed: the percentages are over the analysis set"),
     tfl_param("formats", NULL, tier = "usual",

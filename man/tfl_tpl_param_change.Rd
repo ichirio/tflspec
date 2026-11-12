@@ -23,7 +23,7 @@ The table template \code{param_change}, layout \code{summary}. Its program is on
    \code{baseline_label} \tab other \tab call \tab Baseline \tab  \tab the baseline's heading \cr
    \code{value_label} \tab other \tab call \tab Value \tab  \tab the value's heading \cr
    \code{change_label} \tab other \tab call \tab Change from baseline \tab  \tab the change's heading \cr
-   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<population> \cr
+   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_sub \cr
    \code{data_label} \tab other \tab call \tab  \tab  \tab the analysis data's label \cr
    \code{formats} \tab usual \tab call \tab mean = 1; sd = 2; median = 1; min = 1; max = 1 \tab plan_digits \tab the cells' decimals (plan_digits()): by statistic (mean 1, sd 2, median 1, min 1, max 1), and a parameter's own, only for the parameters that differ, by its PARAMCD: \{GLUC: \{mean: 2, sd: 3\}\}; given by name, merged key by key; unset: none given here. The table's digits: an ARD built alone keeps cards' default formats \cr
    \code{cells} \tab usual \tab call \tab study: plan_cells.continuous, else n = \{N\}; Mean (SD) = \{mean\} (\{sd\}), \{mean\} (-); Median = ... \tab plan_cells.continuous \tab the rows of a value or a change: where each statistic goes (placement only, \{mean\}) \cr

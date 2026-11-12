@@ -351,11 +351,16 @@
   if (identical(v, "data") || !is.null(.den_numbers(v))) return(invisible())
   ids <- function(ad) vapply(ad %||% list(), function(e) as.character(e$id %||% ""), "")
   have <- unique(c(ids(x$ard$analysis_data), ids(output$ard$analysis_data)))
-  if (!v %in% have) {
+  # (another analysis set's subjects, named by its id as adsl_<id>: the
+  # template makes them as the object adsl_den)
+  pops <- unlist(lapply(c(x$ard$analysis_data, output$ard$analysis_data),
+                        function(e) if (!is.null(e$population) && identical(e$id, "adsl_den"))
+                          as.character(e$population)))
+  if (!v %in% have && !v %in% paste0("adsl_", tolower(pops))) {
     .ard_stop(sprintf(paste0(
       "%s: template %s: denominator \"%s\" is not an analysis data of the report (%s).",
-      " The template makes %s and the other analysis sets' adsl_<id>; the report's own come from its `ard:`."),
-      output$id, t$name, v, paste(have, collapse = ", "), paste0("adsl_", tolower(args$population))))
+      " The template makes %s and, for another analysis set, adsl_<id> (the object adsl_den); the report's own come from its `ard:`."),
+      output$id, t$name, v, paste(have, collapse = ", "), .tpl_subj_id()))
   }
   invisible()
 }

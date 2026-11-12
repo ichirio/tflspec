@@ -28,7 +28,7 @@ The table template \code{pk_conc}, layout \code{listing_summary}. Its program is
    \code{summary_label} \tab other \tab call \tab Summary Statistics \tab  \tab the summary's heading row \cr
    \code{stats} \tab other \tab call \tab N = \{N:.0f\}; Mean = \{mean:.4s\}; SD = \{sd:.5s\}; SE = \{se:.... \tab  \tab the summary's rows: label = cell \cr
    \code{split_at} \tab other \tab call \tab  \tab  \tab the time point that starts a second block of columns (each block its pages, the group's first); NULL: one \cr
-   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<population> \cr
+   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_sub \cr
 }
 }
 
