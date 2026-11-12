@@ -526,13 +526,15 @@ test_that("plan_levels() the ARD already says is left out of the program and the
     tfl_item("plan_levels", args)))
   code <- function(o) paste(tfl_content_code(o, pipe = "|>"), collapse = "\n")
   # the code lists and the variables in the ARD's order: nothing to say
-  c1 <- code(lv(list(variable = c("AGE", "SEX"), TRT01A = c("A", "B"), SEX = c("Female", "Male"))))
+  c1 <- code(lv(list(variable = c("AGE", "SEX"), TRT01A = c("A", "B"), SEX = c("F", "M"))))
   expect_false(grepl("plan_levels", c1, fixed = TRUE))
   expect_false(grepl("cl_", c1, fixed = TRUE))
   # a report's own order is kept: another order of the values, of the variables
-  c2 <- code(lv(list(variable = c("SEX", "AGE"), SEX = c("Male", "Female"))))
+  c2 <- code(lv(list(variable = c("SEX", "AGE"), SEX = c("M", "F"))))
   expect_match(c2, 'variable = c("SEX", "AGE")', fixed = TRUE)
-  expect_match(c2, "SEX = cl_sex", fixed = TRUE)
+  # (the head names each code by its label; the plan_labels() applies them)
+  expect_match(c2, "SEX = names(cl_sex)", fixed = TRUE)
+  expect_match(c2, "plan_labels(SEX = c(F = \"Female\", M = \"Male\"))", fixed = TRUE)
   # the first variables in the ARD's order (the rest after them): nothing to say
   expect_false(grepl("plan_levels", code(lv(list(variable = "AGE"))), fixed = TRUE))
   # an analysis that is not cards' (cardx's survfit names the arms from the
@@ -595,7 +597,7 @@ test_that("a workbook's table leaves out the plan_levels() its ARD says, as its 
   expect_false(grepl("cl_", with_ard, fixed = TRUE))
   # without the ARD definition: as before
   bare <- paste(tfl_table_code(sp, "T", pipe = "|>"), collapse = "\n")
-  expect_match(bare, "SEX = cl_sex", fixed = TRUE)
+  expect_match(bare, "SEX = names(cl_sex)", fixed = TRUE)
   # the bridge with the ARD definition: a report's own items (what its file
   # and the builder write back) without the orders its code lists give
   lv_of <- function(items) {
@@ -607,12 +609,12 @@ test_that("a workbook's table leaves out the plan_levels() its ARD says, as its 
   expect_null(lv_of(own)$TRT01A)
   expect_null(lv_of(own)$SEX)
   # a report's own order (the variables sheet's levels) stays
-  sp$variables$levels <- c(NA, "Male | Female")
+  sp$variables$levels <- c(NA, "M | F")
   sp$variables$output_id <- "T"
   expect_identical(lv_of(tflspec:::.plan_content_from_sheets(sp, "T", own = TRUE, ard_spec = ard))$SEX,
-                   c("Male", "Female"))
+                   c("M", "F"))
   own <- paste(tfl_table_code(sp, "T", pipe = "|>", ard_spec = ard), collapse = "\n")
-  expect_match(own, "SEX = cl_sex", fixed = TRUE)
+  expect_match(own, "SEX = names(cl_sex)", fixed = TRUE)
   expect_false(grepl("TRT01A = cl_trt01a", own, fixed = TRUE))
 })
 
