@@ -85,10 +85,9 @@ test_that("build = TRUE: a report the checks pass is built; one that cannot be m
 test_that("page: titles under a study header that prints the label, title and population: a warning (#518)", {
   skip_if_not_installed("haven")
   d <- cs_study()
-  writeLines(c("page:", "  header:", "    '4': {center: '{OUTPUT_LABEL}'}", "    '5': {center: '{OUTPUT_TITLE}'}",
-               "    '6': {center: '({OUTPUT_POPULATION})'}"),
-             file.path(d, "spec", "defaults.yml"))
+  # (the built-in tfl_standard's header prints the label, title and population)
   o <- tfl_output("T-DM", "table", population = "SAF", label = "Demographics", extends = "defaults",
+                  style = "tfl_standard",
                   template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE", categorical = "SEX")),
                   page = list(titles = list("1" = list(center = "Table 14.1.1"),
                                             "2" = list(center = "Demographics"))))
@@ -108,7 +107,8 @@ test_that("page: titles under a study header that prints the label, title and po
   o$page <- NULL
   tfl_write_output(o, file.path(d, "spec", "outputs", "T-DM.yml"))
   expect_false("page" %in% tfl_check_spec(d)$part)
-  # the agent's instructions say so
+  # the agent's instructions say so (the study's default configuration prints them)
+  yaml::write_yaml(list(settings = list(style = "tfl_standard")), file.path(d, "study.yml"))
   s <- tflspec:::.ai_spec_settings(d)
   expect_identical(s$titles_in_header, c("OUTPUT_LABEL", "OUTPUT_TITLE", "OUTPUT_POPULATION"))
   expect_match(tflspec:::.ai_titles_text(s$titles_in_header), "no `page: titles`", fixed = TRUE)

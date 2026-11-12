@@ -117,22 +117,27 @@ test_that("tfl_styles() lists the built-in sets and the study's, and marks the d
   s <- st_study()
   ts <- tfl_styles(s)
   expect_true(all(c("name", "source", "default", "page_keys", "content_verbs") %in% names(ts)))
-  expect_identical(ts$source[match(c("standard", "stf_t02", "small"), ts$name)],
-                   c("built-in", "built-in", "study"))
-  expect_identical(ts$page_keys[ts$name == "small"], "rtf_page, rtf_style")
-  expect_identical(ts$content_verbs[ts$name == "small"], "plan_style, plan_paginate_rows")
-  expect_identical(ts$name[ts$default], "standard")
-  # the study's default pick (settings.style) is marked; a path is read
-  s$study$settings <- list(style = "small")
-  expect_identical(tfl_styles(s)$name[tfl_styles(s)$default], "small")
+  expect_identical(ts$name[1:3], c("tfl_standard", "tfl_small", "stf_t02"))
+  expect_true(all(ts$source == "built-in"))
+  expect_setequal(strsplit(ts$page_keys[ts$name == "tfl_small"], ", ")[[1L]],
+                  c("rtf_page", "rtf_style", "rtf_tables", "header", "footer"))
+  expect_identical(ts$content_verbs[ts$name == "tfl_small"], "plan_style, plan_paginate_rows")
+  expect_identical(ts$name[ts$default], "tfl_standard")
+  # the study's own set is listed with source "study"; the default pick
+  # (settings.style) is marked; a path is read
+  s$styles <- list(acme = st_compact())
+  s$study$settings <- list(style = "acme")
+  ts2 <- tfl_styles(s)
+  expect_identical(ts2$source[ts2$name == "acme"], "study")
+  expect_identical(ts2$name[ts2$default], "acme")
   expect_identical(tfl_styles(system.file("extdata", "spec-yaml", package = "tflspec")), ts)
   expect_error(tfl_styles(1L), "tfl_study_spec")
 })
 
-test_that("the sample study's `small` set: a report with style: small gets its margins, font and rows", {
+test_that("the built-in tfl_small: a report with style: tfl_small gets its margins, font, rows and the same header and footer", {
   s <- st_study()
   o <- st_report()
-  o$style <- "small"
+  o$style <- "tfl_small"
   # the sample report says its own rows a page (30): its own item wins; without it the set's 42 reaches the table
   o$content <- Filter(function(it) it$fn != "plan_paginate_rows", o$content)
   ro <- tfl_resolve_output(o, s)
@@ -144,8 +149,17 @@ test_that("the sample study's `small` set: a report with style: small gets its m
   expect_identical(ps$args$font_size_half_points, 14L)
   pr <- ro$content[[match("plan_paginate_rows", fns)]]
   expect_identical(pr$args$max_rows, 42L)
-  expect_identical(tfl_resolve_output(st_report(), s)$content[[match("plan_paginate_rows", vapply(tfl_resolve_output(st_report(), s)$content, `[[`, "", "fn"))]]$args$max_rows, 30L)
-  # the default report is unchanged
   r0 <- tfl_resolve_output(st_report(), s)
+  expect_identical(r0$content[[match("plan_paginate_rows", vapply(r0$content, `[[`, "", "fn"))]]$args$max_rows, 30L)
+  # the default report is tfl_standard: rtfreporter's margins
   expect_null(r0$page$rtf_page$margin_left_in)
+  # the same header and footer lines, the sample's tokens filled
+  expect_identical(ro$page$header, r0$page$header)
+  expect_identical(ro$page$footer, r0$page$footer)
+  code <- paste(tfl_report_code(ro, content = "plan", study = s), collapse = "
+")
+  expect_match(code, "Sample Pharma", fixed = TRUE)
+  expect_match(code, "Page {PAGE} of {TOTAL_PAGES}", fixed = TRUE)
+  expect_match(code, "{PROGRAM}", fixed = TRUE)
+  expect_match(code, "font_size_half_points = 14", fixed = TRUE)
 })
