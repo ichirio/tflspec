@@ -17,12 +17,18 @@
 #'   does not write `library(cards)` itself.  A package not listed keeps
 #'   its prefix (`cardx::`).
 #' * `tflspec.study_setup`: `TRUE` when the study's setup file sets the
-#'   study-wide options -- today the rounding, `rtfreporter.rounding` and
-#'   `cards.round_type`, written by [tfl_study_setup_code()].  The ARD setup
+#'   study-wide options and reads the study's input data -- today the
+#'   rounding, `rtfreporter.rounding` and `cards.round_type`, and one object
+#'   per dataset of the data catalog (`adsl <- readRDS(...)`, with its
+#'   `derive`), written by [tfl_study_setup_code()].  The ARD setup
 #'   ([tfl_ard_code()]) and the report setup ([tfl_report_setup_code()])
-#'   then do not write them again; their other options stay.  A report's
+#'   then do not write the rounding again; their other options stay.  The
+#'   ARD, listing and figure programs do not read the files: a dataset's
+#'   line becomes its steps on the object (`adsl <- adsl |> order_levels(...)`),
+#'   and none when it has no step.  A report's
 #'   `plan_digits(rounding = )` that is the study's is left out of its
-#'   program either way.
+#'   program either way.  tflspec's own runs of a program ([tfl_build_ard()]
+#'   and the like) do not use the option: they read the files themselves.
 #'
 #' Unset or `FALSE` (the default), the code is as it has always been:
 #' literal paths, `pkg::` on every call, the rounding in each setup.  The functions that write code read them:

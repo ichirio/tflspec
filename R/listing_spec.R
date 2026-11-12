@@ -36,6 +36,8 @@ tfl_read_data_code <- function(datasets, dataset) {
     return(sprintf("stop(\"tflspec: dataset %s is not in the data catalog.\")",
                    dataset))
   }
+  # (the study's setup file has read it, with its derive: tflspec.study_setup)
+  if (isTRUE(getOption("tflspec.study_setup"))) return(character())
   obj <- .r_name(dataset)
   .drop_attached_ns(c(sprintf("%s <- %s", obj, .reader(r$path[1L])),
                       .derive_code(obj, r$derive[1L])))
