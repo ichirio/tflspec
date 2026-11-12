@@ -475,6 +475,8 @@ tfl_schema_check <- function(item) {
                      .schema_removed[[fn]][[a]]))
     } else if (!ka %in% known && !is.null(.schema_guide_old_text(fn, ent, a))) {
       bad(a, .schema_guide_old_text(fn, ent, a), "warning")
+    } else if (!ka %in% known && !is.null(ent$figure) && !is.null(.fig_legacy_arg_text(fn, a))) {
+      bad(a, .fig_legacy_arg_text(fn, a), "warning")
     } else if (!ka %in% known) {
       if (identical(fn, "plan_cells") && !a %in% .cells_kinds && make.names(a) != a) {
         # a row's label as an entry of its own ("Mean (SD)": [...]) names

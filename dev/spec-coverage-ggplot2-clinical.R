@@ -734,3 +734,93 @@ fig_spider_ref <- ggplot(sp2, aes(x = ADY, y = PCHG, group = USUBJID)) +
   labs(x = "Week", y = "Change in tumour size (%)") +
   theme_bw() +
   theme(legend.position = "bottom", legend.box = "vertical")
+
+# ---- Round 15: the same figures as programs written for ggplot2 before 3.4 / 3.5 write them
+# (size for a line's width, fun.y, ..count.., guide_legend(title.position =),
+# legend.position = c(x, y), geom_errorbarh(), guide = FALSE, expand_scale())
+
+# a KM plot of an older program
+fig_old_km <- ggplot(km, aes(x = time, y = surv, colour = TRTA)) +
+  geom_step(size = 0.8) +
+  geom_hline(yintercept = 0.5, linetype = "dotted", size = 0.4) +
+  scale_y_continuous(limits = c(0, 1), expand = expand_scale(mult = c(0, 0.02))) +
+  scale_colour_manual(values = c("grey40", "#1F78B4", "#E31A1C")) +
+  guides(colour = guide_legend(title = NULL, keywidth = 2.5, label.hjust = 0)) +
+  labs(x = "Months", y = "Survival probability") +
+  theme_bw() +
+  theme(legend.position = c(0.85, 0.85), legend.background = element_rect(colour = "grey70", size = 0.3),
+        panel.grid.minor = element_line(size = 0.2))
+
+# a forest plot of an older program: the horizontal error bars
+fig_old_forest <- ggplot(fo, aes(x = hr, y = level)) +
+  geom_vline(xintercept = 1, linetype = "dashed", size = 0.5) +
+  geom_errorbarh(aes(xmin = lcl, xmax = ucl), height = 0.2, size = 0.6) +
+  geom_point(shape = 15, size = 3) +
+  scale_x_log10() +
+  labs(x = "Hazard ratio (95% CI)", y = NULL) +
+  theme_classic() +
+  theme(axis.line = element_line(size = 0.4))
+
+# the mean +/- SE over time of an older program: fun.y, a legend inside
+fig_old_mean <- ggplot(mt, aes(x = AVISITN, y = CHG, colour = TRTA)) +
+  stat_summary(fun.y = mean, geom = "line", size = 0.8, position = position_dodge(width = 0.5)) +
+  stat_summary(fun.y = mean, geom = "point", size = 2, position = position_dodge(width = 0.5)) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.3, size = 0.5,
+               position = position_dodge(width = 0.5)) +
+  stat_summary(fun.y = mean, fun.ymin = min, fun.ymax = max, geom = "linerange", alpha = 0.2,
+               size = 2, position = position_dodge(width = 0.5)) +
+  scale_x_continuous(breaks = c(0, 2, 4, 8, 12)) +
+  guides(colour = guide_legend(title.position = "top", title.hjust = 0.5, nrow = 1)) +
+  labs(x = "Week", y = "Mean (SE) change from baseline", colour = "Treatment") +
+  theme_bw() +
+  theme(legend.position = "bottom", legend.title.align = 0.5)
+
+# a bar chart of percentages by the stat's own counts, the old dotted form
+fig_old_pct <- ggplot(ae, aes(x = AESOC, fill = AESEV)) +
+  geom_bar(aes(y = ..count.. / sum(..count..)), position = "dodge") +
+  geom_text(aes(y = ..count.. / sum(..count..), label = ..count..), stat = "count",
+            position = position_dodge(width = 0.9), vjust = -0.3, size = 3) +
+  scale_y_continuous(labels = scales::percent, expand = expand_scale(mult = c(0, 0.1))) +
+  scale_fill_brewer(palette = "Blues", guide = guide_legend(reverse = TRUE, label.position = "left")) +
+  labs(x = NULL, y = "Percent of events") +
+  theme_minimal()
+
+# a CDF plot of an older program
+fig_old_cdf <- ggplot(cd, aes(x = CHG, colour = TRTA)) +
+  stat_ecdf(geom = "step", size = 0.7) +
+  geom_vline(xintercept = 0, colour = "grey50", size = 0.3) +
+  scale_colour_manual(values = c("grey30", "#33A02C", "#6A3D9A"), guide = guide_legend(byrow = TRUE, ncol = 2)) +
+  labs(x = "Change from baseline", y = "Cumulative proportion") +
+  theme_bw() +
+  theme(legend.position = c(0.2, 0.8), legend.title = element_blank())
+
+# a box plot of an older program: stat(), a legend turned off with FALSE
+fig_old_box <- ggplot(lb, aes(x = AVISIT, y = AVAL, fill = TRTA)) +
+  geom_boxplot(size = 0.4, outlier.size = 0.8) +
+  stat_summary(aes(group = TRTA), fun.y = mean, geom = "point", shape = 23, size = 2,
+               position = position_dodge(width = 0.75)) +
+  scale_fill_grey(start = 0.5, end = 0.9) +
+  guides(fill = FALSE) +
+  labs(x = NULL, y = "ALT (U/L)") +
+  theme_classic() +
+  theme(panel.border = element_rect(fill = NA, size = 0.5))
+
+# a heat map of an older program: the colour bar's size and title
+fig_old_heat <- ggplot(hm, aes(x = x, y = y, fill = r)) +
+  geom_tile(colour = "white", size = 0.5) +
+  scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B", limits = c(-1, 1)) +
+  guides(fill = guide_colourbar(barwidth = 15, barheight = 0.8, title.position = "top",
+                                title.hjust = 0.5)) +
+  labs(x = NULL, y = NULL, fill = "Correlation") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+# a waterfall plot of an older program: aes_string(), the bars' outline
+fig_old_waterfall <- ggplot(wf, aes_string(x = "reorder(USUBJID, -PCHG)", y = "PCHG", fill = "BOR")) +
+  geom_col(width = 0.8, colour = "grey30", linewidth = 0.2) +
+  geom_hline(yintercept = c(20, -30), linetype = "dashed", size = 0.4) +
+  scale_fill_manual(values = c(CR = "#1A9850", PR = "#91CF60", SD = "#FEE08B", PD = "#D73027")) +
+  labs(x = NULL, y = "Best change from baseline (%)") +
+  theme_classic() +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
+        legend.position = c(0.9, 0.8), legend.text.align = 0)

@@ -644,7 +644,9 @@ tfl_plot <- function(name, items = list(), from = "own") {
 
 # A term of a ggplot chain (a call) as an item: its function, its
 # arguments by name (positional ones named by the function's formals)
-.fig_lang_item <- function(e, env = NULL) {
+.fig_lang_item <- function(e, env = NULL, rename_fn = TRUE) {
+  # ggplot2's spellings of before 3.5 / 4.0 as 4.0 writes them (fig_legacy.R)
+  e <- .fig_lang_modern(e, rename_fn)
   f <- .fig_deparse(e[[1L]])
   fun <- .fig_find_fun(f, env)
   e <- .fig_name_args(e, fun)
@@ -1139,6 +1141,16 @@ tfl_fig_content_from_design <- function(design) {
 #' `{fn:, args:}` with its arguments named and any that is no constant as
 #' `!r` in it, `1:5` as the numbers.
 #'
+#' ggplot2's spellings of before 3.4 / 3.5 are read as ggplot2 4.0 writes
+#' them, where ggplot2 takes the old one as the new: a line's `size` is its
+#' `linewidth` (`geom_line()`, `geom_hline()`, `element_rect()` ...),
+#' `stat_summary(fun.y =)` is `fun`, `..count..` and `stat(count)` are
+#' `after_stat(count)`, a guide's `title.position`, `keywidth`,
+#' `label.hjust` ... its `theme = theme(legend.title.position =, ...)`,
+#' `guide = FALSE` is `"none"`, `theme(legend.position = c(x, y))` is
+#' `"inside"` with `legend.position.inside`, `expand_scale()` is
+#' `expansion()`.
+#'
 #' @param fn The function's name (`plan_cells`, `geom_line`).
 #' @param args The item's arguments, a named list.
 #' @param text The arguments as R: what goes between the call's
@@ -1175,7 +1187,7 @@ tfl_args_from_r <- function(fn, text) {
                 error = function(err) .ard_stop(sprintf("tfl_args_from_r(): not R: %s", conditionMessage(err))))
   if (.fig_is_figure_fn(fn)) {
     e[[1L]] <- .fig_fn_sym(fn)
-    it <- .fig_lang_item(e)
+    it <- .fig_lang_item(e, rename_fn = FALSE)
     if (identical(it$fn, ".r")) {
       .ard_stop(sprintf("tfl_args_from_r(): an argument of %s() with no name its formals can give it.", fn))
     }

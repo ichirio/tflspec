@@ -113,9 +113,8 @@
 "ggplot2","geom_histogram","mapping","yes","aes_eval; geom_histogram","","geom",2,3
 "ggplot2","geom_histogram","position","yes","position_stack; scale_viridis","","geom",2,2
 "ggplot2","geom_hline","data","yes","geom_abline","","geom",3,2
-"ggplot2","geom_hline","linewidth","yes","scale_linetype","","geom",3,1
+"ggplot2","geom_hline","linewidth","yes","aes_linetype_size_shape; scale_linetype","","geom",3,2
 "ggplot2","geom_hline","mapping","yes","geom_abline; scale_linetype","","geom",3,3
-"ggplot2","geom_hline","size","partial","aes_linetype_size_shape","1 of 1 uses: geom_hline has no argument `size` (it has: mapping, stat, position, yintercept, na.rm, show.legend, inherit.aes, linetype, colour, linewidth, alpha, data, lineend, group, key_glyph, layout) (geom_hline(yintercept = 25, size = 3.5))","geom",3,1
 "ggplot2","geom_hline","yintercept","yes","aes_linetype_size_shape; fortify.lm; geom_abline; position_stack","","geom",3,5
 "ggplot2","geom_jitter","","yes","expansion; geom_jitter; geom_rug; position_jitter","","geom",3,8
 "ggplot2","geom_jitter","height","yes","geom_jitter; position_jitter","","geom",3,2
@@ -189,9 +188,8 @@
 "ggplot2","geom_segment","data","yes","geom_segment","","geom",3,1
 "ggplot2","geom_segment","lineend","partial","geom_segment","1 of 2 uses: as R: df2$lineend (geom_segment(lineend = df2$lineend, linejoin = df2$linejoin, size = 3, arrow = arrow(length = unit(0.3, ""inches""))))","geom",3,2
 "ggplot2","geom_segment","linejoin","partial","geom_segment","1 of 1 uses: as R: df2$linejoin (geom_segment(lineend = df2$lineend, linejoin = df2$linejoin, size = 3, arrow = arrow(length = unit(0.3, ""inches""))))","geom",3,1
-"ggplot2","geom_segment","linewidth","yes","geom_segment","","geom",3,1
+"ggplot2","geom_segment","linewidth","yes","aes_position; geom_segment","","geom",3,3
 "ggplot2","geom_segment","mapping","yes","aes_position; geom_segment","","geom",3,7
-"ggplot2","geom_segment","size","partial","aes_position; geom_segment","2 of 2 uses: geom_segment has no argument `size` (it has: mapping, stat, position, arrow, arrow.fill, lineend, linejoin, na.rm, show.legend, inherit.aes, data, x, y, xend, yend, colour, linewidth, linetype, alpha, group, key_glyph, layout) (geom_segment(aes(yend = 0, xend = x), size = 10))","geom",3,2
 "ggplot2","geom_smooth","","yes","coord_cartesian; geom_smooth; gg-add","","geom",2,4
 "ggplot2","geom_smooth","formula","yes","element; geom_smooth","","geom",2,2
 "ggplot2","geom_smooth","method","yes","element; geom_abline; geom_smooth","","geom",2,5

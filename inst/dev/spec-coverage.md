@@ -1485,6 +1485,87 @@ Probes: date breaks by `seq(as.Date(...), by = "1 week", ...)` (a date
 scale's `date_breaks: 1 week` is the typed form), the deprecated
 `guide_legend(byrow =)`.
 
+### Round 15 (2026-11-12): an older program's spellings, read as ggplot2 4.0 writes them
+
+The measures were at their ceiling, and the gaps left (round 14) were R
+of the figure's own objects.  What a statistical programmer brings into a
+SPEC most often is not a new figure but an old program: code written for
+ggplot2 before 3.4 / 3.5, which ggplot2 4.0 still draws (with a
+deprecation warning) but which tflspec read as written -- untyped, flagged,
+or a "no argument" warning of the check.  This round adds eight such
+figures to the clinical measure (`fig_old_km`, `fig_old_forest`,
+`fig_old_mean`, `fig_old_pct`, `fig_old_cdf`, `fig_old_box`,
+`fig_old_heat`, `fig_old_waterfall`: the clinical figures as an older
+program writes them) and reads their spellings as ggplot2 4.0 writes them
+(`R/fig_legacy.R`), only where ggplot2 itself takes the old spelling as
+the new, so the figure draws the same.
+
+| Measure | Before | After |
+|---|---:|---:|
+| **Clinical figures, 58 (eight new, weighted)** | **97.9%** (uses 1051 / 26 / 3) | **99.6%** (1080 / 3 / 0) |
+| clinical: geom_*() | 96.9% | 99.1% |
+| clinical: scale_*() | 98.5% | 99.9% |
+| clinical: theme() | 99.4% | 100.0% |
+| clinical: guides | 87.5% | 100.0% |
+| clinical: stat_*() (shown apart) | 95.8% | 100.0% |
+| clinical, the 50 figures of round 14 alone (uses) | 955 / 6 / 0 | 958 / 3 / 0 |
+| ggplot2's own examples | 97.6% (1204 / 65 / 3) | 97.8% (1207 / 62 / 3) |
+| ggplot2's arguments (3409) and aesthetics (826), the extensions (351), scales' helpers (138) | 100% | 100% |
+
+(The round 14 figures gain `guide_colourbar(title.position = "top")` of
+three heat maps; the examples `geom_hline(size =)` and
+`geom_segment(size =)`.)
+
+Round 15, read from code (`tfl_args_from_r()`, a figure's terms):
+
+- **A line's `size` is its `linewidth`** in the layers whose geom renames
+  it (ggplot2's `rename_size`, and `size` no aesthetic of its own):
+  `geom_line()`, `geom_step()`, `geom_hline()` / `_vline()`,
+  `geom_errorbar()`, `geom_tile()`, `geom_ribbon()`, `stat_ecdf()`,
+  `stat_summary(geom = "line")` ...; `element_line()` and
+  `element_rect()`'s `size`.  Not a point's or a text's size, not
+  `geom_boxplot()`'s (an aesthetic too), not a bar's (ggplot2 4.0 drops
+  it), not when `linewidth` is given or mapped.  The check's warning for
+  a SPEC that writes it says so: "geom_line(size = ) is the line's width:
+  linewidth since ggplot2 3.4.0" (before: "geom_line has no argument
+  `size`").
+- **`stat_summary(fun.y =, fun.ymin =, fun.ymax =)`** (and
+  `stat_summary_bin()`) are `fun`, `fun.min`, `fun.max`.
+- **A stat's variable by `..count..` or `stat(count)`** is `after_stat()`
+  of the whole value, as ggplot2 evaluates it: `aes(y = ..count.. /
+  sum(..count..))` is `after_stat(count/sum(count))`.
+- **`aes_string(x = "AVISITN", y = "AVAL")`** is `aes(x = AVISITN, y =
+  AVAL)` when every value is a text that is R.
+- **`geom_errorbarh(height =)`** is `geom_errorbar(width =, orientation =
+  "y")`, what ggplot2 4.0's `geom_errorbarh()` calls (a forest plot's bars);
+  `tfl_args_from_r("geom_errorbarh", ...)` keeps the function asked for.
+- **A guide's arguments of before 3.5.0 are its `theme`**, as ggplot2
+  sets them: `guide_legend(title.position = "top", keywidth = 2,
+  label.hjust = 0.5)` is `guide_legend(theme = theme(legend.title.position
+  = "top", legend.key.width = unit(2, "lines"), legend.text =
+  element_text(hjust = 0.5)))`; `title.hjust` / `title.theme`,
+  `label.position`, `byrow`, `keyheight`, `barwidth` / `barheight` (in
+  `default.unit`), `label = FALSE`, `frame.*`, `ticks.*`, `axis.*`.  A
+  setting the guide's `theme` has wins; `ticks = FALSE` / `axis = FALSE`
+  (which ggplot2 4.0 does not set) and an object where a number goes are
+  left as written, with the check's warning.
+- **`guides(fill = FALSE)`, a scale's `guide = FALSE`** are `"none"`.
+- **`theme(legend.position = c(0.8, 0.2))`** is `legend.position =
+  "inside", legend.position.inside = c(0.8, 0.2)`;
+  **`legend.title.align` / `legend.text.align`** the element's `hjust`
+  (`legend.title = element_text(hjust = 0.5)`, added to an
+  `element_text()` given).
+- **`expand_scale()`** is `expansion()`.
+
+The SPEC is read in the new form, so the generated code is written in it;
+**no code generated from an existing SPEC changes** (the writer is
+untouched, and a SPEC holding an old spelling is written as before, with
+the check's warning).
+
+What is left (partial), clinical: a layer's data as a subset of the
+figure's own object (`km[km$censored, ]`; `~ subset(.x, censored)` is the
+typed form), colours named by an object (`setNames(cols, arm)`).
+
 ### The extension packages (ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale, patchwork)
 
 The same measure, the same file (`package` says which), over the
