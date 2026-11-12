@@ -58,6 +58,9 @@ test_that("code lists make the listed columns factors of the codes: no labels in
                          population_id = "SAF", by = "ARM", where = "SEX == \"Female\"",
                          variables = "SEX"))
   expect_error(tfl_ard_code(sp3, codelists = cl), "SEX: write \"F\" for \"Female\"", fixed = TRUE)
+  # (and the ARS, which reads the code lists from the table spec)
+  expect_error(tfl_ars(sp3, table_spec = list(codelists = cl), dir = dir),
+               "SEX: write \"F\" for \"Female\"", fixed = TRUE)
   sp3b <- sp3
   sp3b$analyses$where <- "SEX == \"F\""
   expect_no_error(tfl_ard_code(sp3b, codelists = cl))

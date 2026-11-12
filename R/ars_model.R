@@ -261,6 +261,11 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
   if (!is.null(purpose)) purpose <- match.arg(toupper(purpose), .ars_purposes)
   if (!is.null(reason)) reason <- match.arg(toupper(reason), .ars_reasons)
   x <- ard_spec
+  # a condition written with a code list's label stops, as in the ARD
+  # program: the ARS compares the data's values, which are the codes
+  if (!is.null(table_spec)) {
+    .check_where_labels(x$analyses, .codelist_levels_by(table_spec, x$analyses))
+  }
   un <- data.frame(where = character(), item = character(),
                    reason = character(), stringsAsFactors = FALSE)
   miss <- function(where, item, why) {

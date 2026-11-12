@@ -40,7 +40,7 @@ test_that("shift: percent_of total -- each arm's body rows add to 100% of its To
   d <- sh_study(withr::local_tempdir())
   args <- list(population = "SAF", where = 'PARAMCD %in% c("ALT", "HGB")',
                percent_of = "total", missing_label = "Missing",
-               cell = "{n} ({p:.1f%}%)", param_page = FALSE)
+               cell = "{n} ({p:.1f%}%)", page_by = FALSE)
   r <- sh_report(d, args)
   t <- as.data.frame(suppressMessages(rtfreporter::plan_apply(r$plan, "table")))
   t[] <- lapply(t, function(v) if (is.factor(v)) as.character(v) else v)
@@ -146,7 +146,7 @@ test_that("shift: built with a code list on the categories, the rows run Low ...
   cl <- rows(c("LOW", "Low"), c("NORMAL", "Normal"), c("HIGH", "High"))
   # (Missing and Total are still listed: the analysis data holds them)
   r <- sh_report(d, list(population = "SAF", where = 'PARAMCD %in% c("ALT", "HGB")',
-                         param_page = FALSE, missing_label = "Missing"),
+                         page_by = FALSE, missing_label = "Missing"),
                  codelists = list(BNRIND = c(cl, rows(c("Missing", "Missing"), c("Total", "Total"))),
                                   ANRIND = cl))
   t <- as.data.frame(suppressMessages(rtfreporter::plan_apply(r$plan, "table")))
@@ -266,14 +266,14 @@ test_that("shift: a parameter with fewer subjects shows its own N on its own pag
   expect_true(grepl("Control (N=75)", txt, fixed = TRUE))
 })
 
-test_that("shift: header_n = 'none' shows no N; param_page = FALSE shows the set's N (#630)", {
+test_that("shift: header_n = 'none' shows no N; page_by = FALSE shows the set's N (#630)", {
   sn_skip()
   d <- sn_study(withr::local_tempdir())
   p <- sn_report(d, list(header_n = "none"))
   pg <- suppressMessages(rtfreporter::plan_apply(p, "pages"))
   for (g in pg) expect_false(any(grepl("N=", sn_hdr1(g), fixed = TRUE)))
   # (one page of several parameters has no tested N, but the set's N is one an arm)
-  p <- sn_report(d, list(param_page = FALSE))
+  p <- sn_report(d, list(page_by = FALSE))
   pg <- suppressMessages(rtfreporter::plan_apply(p, "pages"))
   saf <- tflspec::adsl[tflspec::adsl$SAFFL == "Y", ]
   for (g in pg) {
@@ -282,13 +282,13 @@ test_that("shift: header_n = 'none' shows no N; param_page = FALSE shows the set
                                                 sum(saf$TRT01A == "Control"))))
   }
   # ("tested" is a page's parameter's N: without the page it stops, not no N)
-  expect_error(suppressWarnings(sn_report(d, list(param_page = FALSE, header_n = "tested"))),
-               "header_n = \"tested\" needs param_page = TRUE", fixed = TRUE)
+  expect_error(suppressWarnings(sn_report(d, list(page_by = FALSE, header_n = "tested"))),
+               "header_n = \"tested\" needs page_by", fixed = TRUE)
   pg <- suppressMessages(rtfreporter::plan_apply(sn_report(d, list(header_n = "none")), "pages"))
   expect_identical(names(pg), c("Parameter: ALT", "Parameter: AST"))
   expect_identical(sn_hdr1(pg[[1L]]), c("", "Drug X", "Control"))
   # the N's analysis is there only when it is shown: the set's GROUPN (default,
-  # with or without param_page), or the tested subjects' (only with param_page)
+  # with or without page_by), or the tested subjects' (only with page_by)
   x <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "V", params = "ALT"))
   expect_identical(vapply(x$ard$analyses, `[[`, "", "id"), c("SHIFT", "GROUPN"))
   expect_identical(x$ard$analyses[[2L]]$data, "adsl_sub")
@@ -296,7 +296,7 @@ test_that("shift: header_n = 'none' shows no N; param_page = FALSE shows the set
                                              header_n = "none"))
   expect_length(y$ard$analyses, 1L)
   z <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "V", params = "ALT",
-                                             param_page = FALSE))
+                                             page_by = FALSE))
   expect_identical(vapply(z$ard$analyses, `[[`, "", "id"), c("SHIFT", "GROUPN"))
   t1 <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "V", params = "ALT",
                                               header_n = "tested"))
@@ -304,8 +304,8 @@ test_that("shift: header_n = 'none' shows no N; param_page = FALSE shows the set
   # (the tested N is a page's parameter's: without the page it stops, not no N)
   expect_error(tfl_template_expand("lab_shift", list(population = "SAF", visit = "V",
                                                      params = "ALT", header_n = "tested",
-                                                     param_page = FALSE)),
-               "lab_shift: header_n = \"tested\" needs param_page = TRUE", fixed = TRUE)
+                                                     page_by = FALSE)),
+               "lab_shift: header_n = \"tested\" needs page_by", fixed = TRUE)
   # FALSE and TRUE are not values: an error naming the values
   expect_error(tfl_template_expand("shift", list(population = "SAF", header_n = FALSE)),
                "\"set\".*\"tested\".*\"none\"")
@@ -318,8 +318,8 @@ test_that("shift: header_n = 'none' shows no N; param_page = FALSE shows the set
 # the report with code lists whose codes differ from the labels, and the
 # program it writes run by a child R
 sh_codelist_program <- function(d, cl, extra, rscript) {
-  paged <- is.null(extra$param_page)
-  info <- if (paged) "default" else "param_page = FALSE"
+  paged <- is.null(extra$page_by)
+  info <- if (paged) "default" else "page_by = FALSE"
   args <- c(list(population = "SAF", where = 'PARAMCD %in% c("ALT", "HGB")',
                  levels = c("LOW", "NORMAL", "HIGH"), missing_label = "Missing"), extra)
   r <- sh_report(d, args, codelists = list(BNRIND = cl, ANRIND = cl))
@@ -371,10 +371,10 @@ test_that("shift: Missing and Total need not be in the code list; the program ma
   has <- suppressWarnings(system2(rscript, c("-e", shQuote("cat(requireNamespace('tflspec', quietly = TRUE))")),
                                   stdout = TRUE, stderr = FALSE))
   skip_if_not(identical(utils::tail(has, 1L), "TRUE"), "tflspec is not installed where a child R looks")
-  # param_page = FALSE, and the default (a page a parameter, each with its N)
-  for (pp in list(list(param_page = FALSE), list())) {
+  # page_by = FALSE, and the default (a page a parameter, each with its N)
+  for (pp in list(list(page_by = FALSE), list())) {
     # (the page N needs rtfreporter#898, as the #630 tests do)
-    if (is.null(pp$param_page)) sn_skip()
+    if (is.null(pp$page_by)) sn_skip()
     sh_codelist_program(d, cl, pp, rscript)
   }
 })

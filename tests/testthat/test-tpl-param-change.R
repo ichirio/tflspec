@@ -367,7 +367,7 @@ test_that("cells as items ({label, template}); a page a parameter, named in the 
   pg <- Filter(function(i) i$fn == "plan_paginate_rows", x$content)[[1L]]$args
   expect_identical(pg$page_by, "group1")
   expect_identical(pg$heading, "Parameter: {value}")
-  y <- tfl_template_expand("param_change", c(pc_args, list(param_page = FALSE)))
+  y <- tfl_template_expand("param_change", c(pc_args, list(page_by = FALSE)))
   pg <- Filter(function(i) i$fn == "plan_paginate_rows", y$content)[[1L]]$args
   expect_null(pg$page_by)
   expect_false("plan_hide" %in% vapply(y$content, `[[`, "", "fn"))
