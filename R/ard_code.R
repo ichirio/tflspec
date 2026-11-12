@@ -222,7 +222,7 @@
 # the names the setup and tflspec give (a study's code does not assign them)
 .ard_helper_names <- c("set_levels", "tag_ard", "fmt_pvalue", "fmt_ard",
                        "keep_stats", "save_ard", "fmt_default", "tfl_stats",
-                       "complete_hierarchy", "relevel_ard", "drop_empty_groups",
+                       "complete_hierarchy", "relevel_ard", "drop_empty_groups", "keep_min_pct",
                        "ard_hierarchical_or_none", "order_arms", "order_levels")
 
 # the packages an ARD program attaches (its setup's library() calls), and

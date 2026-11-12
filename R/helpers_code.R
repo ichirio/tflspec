@@ -22,7 +22,9 @@
 #' nested count's code-list values no subject has, counted 0),
 #' `drop_empty_groups()` (the rows of a group no record fell in -- the
 #' baseline visit in a change's records, whose level a code list put back
-#' -- so its cells stay empty), `relevel_ard()` (an ARD's
+#' -- so its cells stay empty), `keep_min_pct()` (a nested count's terms that
+#' a percentage of subjects or more have, in any, every or the Total column;
+#' the other terms' rows dropped), `relevel_ard()` (an ARD's
 #' columns in their code lists' order, after an analysis that is not
 #' cards'), `save_ard()` (one report's rows into the
 #' study ARD, and what was built in `ard_status.csv`), and what a figure

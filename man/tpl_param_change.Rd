@@ -19,7 +19,7 @@ no default), then \code{params}, \code{visits}, \code{where}, \code{layout}, \co
 statistic, and a parameter's own by its PARAMCD:
 \code{list(mean = 2, GLUC = list(sd = 3))}), \code{cells} (label = template, or a
 list of \code{list(label = , template = )}: placement only),
-\code{header_n}, \code{param_page}, \code{param_heading}, \code{heading} and the look
+\code{header_n}, \code{page_by}, \code{page_heading}, \code{split}, \code{heading} and the look
 (\code{stub_name}, \code{blanks}, \code{border_header}, \code{widths}, \code{max_rows} ...).}
 
 \item{codelists}{The report's code lists, for the order and labels of
@@ -42,5 +42,5 @@ that have one: the baseline visit's change cells stay empty.
 \code{baseline = TRUE} puts the baseline's (\code{BASE}) before them.
 
 Each parameter is a page of its own, \verb{Parameter: <PARAM>} in its titles
-(\code{param_page = FALSE}: one table, the parameter a row heading).
+(\code{page_by = !unset}: one table, the parameter a row heading).
 }

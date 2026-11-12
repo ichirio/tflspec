@@ -8,7 +8,7 @@ tfl_tpl_help(
   name,
   study = NULL,
   population = NULL,
-  tier = c("required", "usual", "other")
+  tier = c("required", "key", "usual", "other")
 )
 }
 \arguments{
@@ -24,7 +24,7 @@ study's spec folder; \code{NULL} for none (the \code{study} column is then
 parameters taken from the report's \verb{population:}
 (\code{"output.population"}); \code{NULL} for none.}
 
-\item{tier}{The tiers to print: \code{"required"}, \code{"usual"}, \code{"other"}
+\item{tier}{The tiers to print: \code{"required"}, \code{"key"}, \code{"usual"}, \code{"other"}
 (all by default; \code{c("required", "usual")} folds the others away).}
 }
 \value{

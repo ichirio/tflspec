@@ -19,12 +19,13 @@ The table template \code{hierarchical}, layout \code{hierarchical}. Its program 
    \code{any_row_label} \tab other \tab call \tab Any event \tab  \tab that row's label \cr
    \code{heading} \tab usual \tab call \tab System Organ Class,    Preferred Term \tab  \tab the label column's heading, a line a level \cr
    \code{sort} \tab other \tab call \tab .overall, group1, .depth, -n, label \tab plan_sort \tab the rows' order (plan_sort()) \cr
-   \code{min_pct} \tab usual \tab call \tab  \tab plan_filter \tab the rows kept: this \% of subjects or more (plan_filter()); NULL: all \cr
+   \code{min_pct} \tab usual \tab call \tab  \tab  \tab the rows kept: this \% of subjects or more (a step of the ARD); NULL: all \cr
    \code{min_pct_in} \tab other \tab call \tab any \tab  \tab where min_pct is met: "any" column, "all" of them, or the "total" column \cr
    \code{count_cell} \tab other \tab call \tab study: plan_cells.categorical, no fallback \tab plan_cells.categorical \tab a count's cell, n (\%) (plan_cells(categorical = )); NULL: the study standard's \cr
    \code{denominator} \tab other \tab call \tab  \tab  \tab the percentages' denominator: NULL (default): the analysis set's subjects; "data": the subjects with a record kept; a number: that many subjects in every column; numbers named by the values of 'by' ('c("Drug X" = 60, "Control" = 55)'): that many in each column; the id of an analysis data ('adsl_itt', or one of the report's own): its subjects in each column \cr
    \code{total} \tab other \tab call \tab FALSE \tab plan_total \tab TRUE: a Total column (the analysis again without 'by', plan_total()) \cr
    \code{header_n} \tab other \tab call \tab denominator \tab  \tab the arm headings' N: "denominator" (default): the arm's subjects the percentages are of ('denominator'); "set": the same, when 'denominator' is NULL (the analysis set); "tested": the same, when 'denominator' is "data" (the records' subjects); a header N apart from the denominator is not supported yet; "none": no N \cr
+   \code{split} \tab other \tab call \tab group_force \tab plan_paginate_rows.split \tab how a page break is placed (plan_paginate_rows(split = )): "none" one page; "group_safe" whole groups to a page; "group_force" a cut every 'max_rows' rows, a group continued on the next page; "rows" and "by_value" are cut by position or by value (they need their own arguments, a 'plan_paginate_rows' item) \cr
 }
 }
 
