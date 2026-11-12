@@ -246,7 +246,9 @@
   src <- .split_bar(.study_value(x, "source", NA))
   libs <- if (isTRUE(getOption("tflspec.plain_ns"))) "cards" else
     setdiff(.ard_pkgs, getOption("tflspec.user_attached"))
-  ct <- .cards_round_type(.study_value(x, "rounding", NA))
+  # (the study's setup file sets it when option tflspec.study_setup is TRUE)
+  ct <- if (isTRUE(getOption("tflspec.study_setup"))) NULL else
+    .cards_round_type(.study_value(x, "rounding", NA))
   c(if (length(libs)) sprintf("library(%s)", libs),
     if (length(src)) c(
       "",

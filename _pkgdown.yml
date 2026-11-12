@@ -278,6 +278,7 @@ reference:
       - tfl_report
       - tfl_report_code
       - tfl_report_setup_code
+      - tfl_study_setup_code
       - tfl_report_tokens
       - tfl_report_overwrite
       - tfl_report_path

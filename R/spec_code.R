@@ -2102,8 +2102,9 @@ tfl_report_setup_code <- function(spec) {
   }
   # the study's rounding, once for every report
   # (and the same value for cards, in the same call, as the YAML route writes it)
+  # (the study's setup file sets it when option tflspec.study_setup is TRUE)
   rnd <- .ard_spec_study_value(sp, "rounding")
-  if (!is.na(rnd)) {
+  if (!is.na(rnd) && !isTRUE(getOption("tflspec.study_setup"))) {
     ct <- .cards_round_type(rnd)
     ro <- c(list("options", rtfreporter.rounding = rnd), if (!is.null(ct)) list(cards.round_type = ct))
     out <- c(out, .spec_call_code(do.call(.spec_call, ro), 0L))
