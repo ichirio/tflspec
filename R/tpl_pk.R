@@ -50,7 +50,8 @@
   tfl_param("split_at", NULL, doc = paste(
     "the time point that starts a second block of columns (each block its",
     "pages, the group's first); NULL: one")),
-  tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<population>")
+  tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<population>"),
+  .tpl_split_param("none")
 )
 
 .tpl_pk_body <- function(a, ctx) {
@@ -103,8 +104,9 @@
            lines = list(list(row_label = "", .values = a$time_heading),
                         list(row_label = a$subject_heading, .values = "{col}")),
            span = tfl_r("list(c(.values = \"one\"), c(.values = \"each\"))"))),
-         tfl_item("plan_paginate_rows", list(page_by = a$by, heading = heading,
-                                             heading_at = "title")),
+         tfl_item("plan_paginate_rows", list(
+           split = .tpl_choice(a, "split", .tpl_split_choices, "pk_conc"),
+           page_by = a$by, heading = heading, heading_at = "title")),
          tfl_item("plan_columns", list(decimal = ".values"))),
     if (length(a$split_at)) list(tfl_item("plan_paginate_cols", list(
       at = a$split_at, order = "down"))))
