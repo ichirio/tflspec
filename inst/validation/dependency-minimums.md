@@ -9,7 +9,7 @@ latest of those versions, raised to what a dependency needs in turn
 (testthat needs ps and ggplot2 needs withr of a version).
 
 **The two ends.** *The minimum environment* is R at the minimum
-`DESCRIPTION` names (`Depends: R (>= 4.2)`) with every direct dependency at
+`DESCRIPTION` names (`Depends: R (>= 4.3)`) with every direct dependency at
 exactly its minimum (the R-CMD-check job *minimum environment*). The
 suggested packages with no minimum, and every indirect dependency, come
 from CRAN as it was on **2026-06-20**: the Posit Package Manager snapshot of
@@ -41,7 +41,7 @@ pick (a function of a later version is listed, not called; the catalogue
 
 | Package | Minimum | What needs it (function or argument -> version) | Source |
 |---|---|---|---|
-| R (`Depends`) | 4.2 | cardx 0.3.1 (below) depends on R (>= 4.2), and the minimum environment installs the suggested packages. What tflspec itself uses needs less: the native pipe and `\(x)` -> 4.1.0; cards 0.8.0 needs R (>= 4.1). `car`, whose dependencies (quantreg, MatrixModels, Matrix) need a newer R, is left out of that job, as it is from the R 4.2 row. | cardx 0.3.1 `DESCRIPTION`; R NEWS 4.1.0 |
+| R (`Depends`) | 4.3 | R 4.3: rtfreporter (a hard dependency) needs R >= 4.3 (rtfreporter #1044). Tried 4.2 first: cardx 0.3.1 depends on R (>= 4.2) and the minimum environment installed with it, until rtfreporter `next` raised its own floor to 4.3 and made 4.2 impossible. cardx 0.3.1 (below) depends on R (>= 4.2), and the minimum environment installs the suggested packages. What tflspec itself uses needs less: the native pipe and `\(x)` -> 4.1.0; cards 0.8.0 needs R (>= 4.1). `car`, whose dependencies (quantreg, MatrixModels, Matrix) need a newer R, is left out of that job, as it is from the R 4.2 row. | cardx 0.3.1 `DESCRIPTION`; R NEWS 4.1.0 |
 | grDevices, stats, utils (`Imports`) | none | They ship with R, so their version is R's. | -- |
 | ggplot2 | 3.5.2 | `coord_radial()` (the polar figures) -> 3.5.0, the first of the two ggplot2 lines the figure designs are written for (3.5.x and 4.0.x, `inst/fig/ggplot2_compat.csv`); `standardise_aes_names()`, `get_element_tree()` -> 3.3.0; `geom_bin_2d()` -> 3.3.4; `expansion()` -> 3.3.0; `geom_col()` -> 2.2.0. Raised from 3.5.0 to 3.5.2, the 3.5 release the workflow's ggplot2 3.5.x row tests: in the first minimum-environment run with 3.5.0, patchwork (the version at the snapshot) did not load ("object 'is_ggplot' is not exported by 'namespace:ggplot2'"), and ggh4x needs ggplot2 >= 3.5.2. Not counted: `coord_transform()` -> 4.0.0 (the compat test's row for it holds on either line). | ggplot2 NEWS 3.5.0, 3.5.2; `NAMESPACE` of each release; CI run 43350697356 |
 | jsonlite | 2.0.0 | `toJSON(auto_unbox = , null = , na = , digits = , pretty = )`, `fromJSON(simplifyVector = , simplifyDataFrame = , simplifyMatrix = )` -> 1.0. Raised to 2.0.0, the version whose `toJSON(pretty = TRUE)` the golden prompts (`test-ai-prompt.R`) and the JSON the prompts show are written with: with 1.0 a short array of strings is printed one item to a line, with 2.0.0 on one line (the first minimum-environment run, `Snapshot of code has changed`). | jsonlite NEWS 2.0.0 (the `prettify()` rewrite in R); CI run 43353809021 |
@@ -65,7 +65,7 @@ pick (a function of a later version is listed, not called; the catalogue
 ## Changes
 
 The minimums before this table was made, and why each changed: R 4.1 ->
-4.2 (cardx 0.3.1, which the minimum environment installs); testthat 3.0.0
+4.3 (rtfreporter #1044; 4.2 first, for cardx 0.3.1); testthat 3.0.0
 -> 3.1.7 (`local_mocked_bindings()`); mmrm none -> 0.3.18 (`contrasts`); withr (none -> 2.5.0) follows
 ggplot2 3.5.2; jsonlite, openxlsx, readxl and yaml had no minimum and now
 have the one in the table; ggplot2 (3.5.0 was already there, raised to 3.5.2 by the first CI run), cards, cardx, siera and rtfreporter are unchanged.

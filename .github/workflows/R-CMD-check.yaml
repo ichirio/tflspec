@@ -45,7 +45,7 @@ jobs:
           # the oldest R tested: a suggested package that cannot be installed
           # on it (it, or what it needs, wants a newer R) is left out
           # (`pkgs`), and the check lets a suggested package be missing
-          - {os: ubuntu-latest,  r: '4.2', pkgs: 'car=?ignore-before-r=4.5.0', force-suggests: 'false'}
+          - {os: ubuntu-latest,  r: '4.3', pkgs: 'car=?ignore-before-r=4.5.0', force-suggests: 'false'}
           - {os: macos-latest,   r: 'release'}
           - {os: windows-latest, r: 'release'}
           - {os: ubuntu-latest,  r: 'release', gg: 'ggplot2@3.5.2 ggsurvfit@1.1.0', want: '3.5.2'}
@@ -108,14 +108,14 @@ jobs:
   minimum-environment:
     runs-on: ubuntu-24.04
 
-    name: ubuntu-24.04 (R 4.2, minimum environment)
+    name: ubuntu-24.04 (R 4.3, minimum environment)
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
-      R_MIN: '4.2'
+      R_MIN: '4.3'
       PPM_DATE: '2026-06-20'
-      # suggested packages left out (space-separated): car, as in the R 4.2
+      # suggested packages left out (space-separated): car, as in the R 4.3
       # row above (what it needs wants a newer R); ggrepel, whose newest version
       # at the snapshot needs withr >= 3.0.2, more than the minimum; ggsurvfit
       # comes below, at 1.1.0, as in the ggplot2 3.5.x row (1.2.0 needs ggplot2
