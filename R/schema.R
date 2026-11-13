@@ -723,17 +723,26 @@ tfl_schema_check <- function(item) {
 }
 
 # An !r expression that is numbers written as arithmetic of numbers, in
-# c() and `:` too (2^(-2:2), c(-10^(2:0), 0, 10^(0:2)), 0:4 * 12), as
-# those numbers (at most 1000), else NULL: numbers of the spec written as R
+# c() and `:` too (2^(-2:2), c(-10^(2:0), 0, 10^(0:2)), 0:4 * 12), and
+# base R's functions of numbers (seq(0.05, 0.95, by = 0.05), range(c(0.25,
+# 4)), log10(c(1, 10)), rev(), rep()), as those numbers (at most 1000),
+# else NULL: numbers of the spec written as R
+.schema_r_numbers_fns <- c("+", "-", "*", "/", "^", "(", ":", "c", "seq", "seq_len", "rev",
+                           "sort", "range", "min", "max", "abs", "sqrt", "exp", "log", "log2",
+                           "log10", "round", "signif", "rep")
 .schema_r_numbers <- function(v) {
   e <- tryCatch(str2lang(as.character(unclass(v))), error = function(err) NULL)
   ok <- function(x) {
     if (is.numeric(x)) return(length(x) == 1L)
     if (is.name(x)) return(as.character(x) %in% c("pi", "Inf"))
     if (!is.call(x) || !is.name(x[[1L]])) return(FALSE)
-    if (!as.character(x[[1L]]) %in% c("+", "-", "*", "/", "^", "(", ":", "c")) return(FALSE)
+    if (!as.character(x[[1L]]) %in% .schema_r_numbers_fns) return(FALSE)
     a <- as.list(x)[-1L]
-    is.null(names(a)) && all(vapply(a, ok, NA))
+    # (named: seq()'s by / length.out ..., rep()'s times / each, log()'s base)
+    nm <- names(a) %||% rep("", length(a))
+    all(nm %in% c("", "from", "to", "by", "length.out", "times", "each", "base", "digits",
+                  "decreasing")) &&
+      all(vapply(a, function(y) ok(y) || is.logical(y), NA))
   }
   if (is.null(e) || !ok(e)) return(NULL)
   n <- tryCatch(eval(e, baseenv()), error = function(err) NULL)

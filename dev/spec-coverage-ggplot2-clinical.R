@@ -824,3 +824,63 @@ fig_old_waterfall <- ggplot(wf, aes_string(x = "reorder(USUBJID, -PCHG)", y = "P
   theme_classic() +
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
         legend.position = c(0.9, 0.8), legend.text.align = 0)
+
+# ---- round 16: a program's own objects of constants ---------------------------
+# What a program makes once and uses in its calls -- the dodge, the arms'
+# colours, the axis' breaks, the study's theme, an arrow -- read in place
+# of their names (tfl_fig_content_from_r())
+
+# mean +/- SE over time: one dodge for three layers, the colours by arm
+pd <- position_dodge(width = 0.4)
+arm_cols <- setNames(c("grey40", "#1F78B4", "#E31A1C"), arm)
+wk_breaks <- c(0, 2, 4, 8, 12)
+wk_labels <- paste("Week", wk_breaks)
+study_theme <- theme_bw(base_size = 9) +
+  theme(legend.position = "bottom", panel.grid.minor = element_blank())
+fig_prog_mean <- ggplot(mt, aes(x = AVISITN, y = CHG, colour = TRTA)) +
+  stat_summary(fun = mean, geom = "line", position = pd) +
+  stat_summary(fun = mean, geom = "point", size = 2, position = pd) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.4, position = pd) +
+  scale_colour_manual(values = arm_cols, name = NULL) +
+  scale_x_continuous(breaks = wk_breaks, labels = wk_labels) +
+  labs(x = NULL, y = "Mean (SE) change from baseline") +
+  study_theme
+
+# a forest plot: the ratio axis' breaks and its title made first
+hr_breaks <- c(0.25, 0.5, 1, 2, 4)
+hr_title <- "Hazard ratio (95% CI)"
+pt_col <- "#08519C"
+fig_prog_forest <- ggplot(fo, aes(x = hr, y = level)) +
+  geom_vline(xintercept = 1, linetype = "dashed") +
+  geom_errorbar(aes(xmin = lcl, xmax = ucl), width = 0.2, orientation = "y", colour = pt_col) +
+  geom_point(shape = 15, size = 3, colour = pt_col) +
+  scale_x_log10(breaks = hr_breaks, labels = hr_breaks, limits = range(hr_breaks)) +
+  facet_grid(rows = vars(group), scales = "free_y", space = "free_y", switch = "y") +
+  labs(x = hr_title, y = NULL) +
+  study_theme
+
+# a waterfall plot: the responses' colours, the thresholds, one blank
+# element for the x axis' text and ticks
+bor_cols <- c(CR = "#1A9850", PR = "#91CF60", SD = "#FEE08B", PD = "#D73027")
+cuts <- c(-30, 20)
+no_x <- element_blank()
+fig_prog_waterfall <- ggplot(wf, aes(x = reorder(USUBJID, -PCHG), y = PCHG, fill = BOR)) +
+  geom_col(width = 0.8) +
+  geom_hline(yintercept = cuts, linetype = "dashed") +
+  scale_fill_manual(values = bor_cols, drop = FALSE) +
+  labs(x = NULL, y = "Best change from baseline (%)", fill = "BOR") +
+  theme_classic() +
+  theme(axis.text.x = no_x, axis.ticks.x = no_x, legend.position = "top")
+
+# a CDF plot: line types by arm, a label function and an arrow made first
+arm_lty <- setNames(c("solid", "dashed", "dotted"), arm)
+pct_lab <- scales::label_percent(accuracy = 1)
+my_arrow <- arrow(length = unit(0.2, "cm"), type = "closed")
+fig_prog_cdf <- ggplot(cd, aes(x = CHG, colour = TRTA, linetype = TRTA)) +
+  stat_ecdf(geom = "step", pad = FALSE) +
+  annotate("segment", x = -15, xend = -10, y = 0.9, yend = 0.9, arrow = my_arrow) +
+  scale_linetype_manual(values = arm_lty, name = NULL) +
+  scale_colour_manual(values = arm_cols, name = NULL) +
+  scale_y_continuous(labels = pct_lab) +
+  labs(x = "Change from baseline", y = "Cumulative percent of patients") +
+  study_theme

@@ -33,6 +33,9 @@
 # package not installed, its data drawn at random twice otherwise, a
 # global theme set) is not judged on its drawing; a call inside a
 # function's definition (aes({{ x }})) is no SPEC's and left out.
+# Since round 16 (2026-11-13) a call is read with the page's objects of
+# constants made before it (pd <- position_dodge(0.3), cols <- c(...)) in
+# place of their names, as tfl_fig_content_from_r() reads a program.
 
 suppressPackageStartupMessages({
   library(tflspec)
@@ -50,6 +53,11 @@ r_number <- if (exists(".schema_r_number", ns)) get(".schema_r_number", ns) else
 r_numbers <- if (exists(".schema_r_numbers", ns)) get(".schema_r_numbers", ns) else function(v) NULL
 # (texts built of constants, !r paste0("W", seq(0, 24, by = 4)): typed where a list<string> goes)
 r_texts <- if (exists(".schema_r_texts", ns)) get(".schema_r_texts", ns) else function(v) NULL
+# (the program's objects of constants, pd <- position_dodge(0.3), read in
+# place of their names, as tfl_fig_content_from_r() reads a program: none
+# before it)
+prog_const <- if (exists(".fig_prog_is_const", ns)) get(".fig_prog_is_const", ns) else function(e, k) FALSE
+prog_subst <- if (exists(".fig_prog_subst", ns)) get(".fig_prog_subst", ns) else function(e, consts) e
 # the R in a value (any !r but NULL and a number), the first, or NULL
 r_in <- function(v) {
   if (inherits(v, "tfl_r")) {
@@ -148,6 +156,7 @@ for (page in names(pages)) {
   exprs <- pages[[page]]
   if (is.null(exprs)) next
   env <- new.env(parent = globalenv())
+  consts <- list()
   for (e in exprs) {
     ps <- paths_of(e)
     snap <- as.list(env, all.names = TRUE)
@@ -164,7 +173,7 @@ for (page in names(pages)) {
     for (p in ps) {
       t <- get_at(e, p)
       fn <- scope_fn(as.character(t[[1L]]))
-      it <- tryCatch(lang_item(t), error = failed)
+      it <- tryCatch(lang_item(prog_subst(t, consts)), error = failed)
       base <- list(fn = fn, page = page_of(page, e), code = dep(t))
       if (inherits(it, "failed") || identical(it$fn, ".r")) {
         use(base, arg = "", status = "no", note = if (inherits(it, "failed")) it$msg else "read as R, the whole call")
@@ -198,6 +207,10 @@ for (page in names(pages)) {
     }
     run(e, env)
     theme_set(old_theme)
+    if (is.call(e) && identical(e[[1L]], as.name("<-")) && is.name(e[[2L]])) {
+      lhs <- as.character(e[[2L]])
+      consts[[lhs]] <- if (isTRUE(prog_const(e[[3L]], names(consts)))) prog_subst(e[[3L]], consts)
+    }
   }
 }
 u <- do.call(rbind, uses)

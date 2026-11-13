@@ -1566,6 +1566,97 @@ What is left (partial), clinical: a layer's data as a subset of the
 figure's own object (`km[km$censored, ]`; `~ subset(.x, censored)` is the
 typed form), colours named by an object (`setNames(cols, arm)`).
 
+### Round 16 (2026-11-13): a program's own objects, a whole program read
+
+What round 15 left was R of the figure's own objects (`position = pd`,
+`values = cols`, `theme(axis.text.x = no_x)`), and a statistical
+programmer's figure is a program, not one call: the objects it makes once
+and uses in several calls, the plot built in steps, several plots
+arranged by patchwork, `ggsave()`'s size.  `tfl_args_from_r()` read one
+call, so each of those objects stayed `!r`.  The new
+`tfl_fig_content_from_r()` (`R/fig_program.R`) reads the program into a
+figure report's content and its data part; the two measures read a call
+with its page's objects of constants made before it, as it does.  Four
+new clinical figures, written as a program writes them (`fig_prog_mean`,
+`fig_prog_forest`, `fig_prog_waterfall`, `fig_prog_cdf`: one dodge for
+three layers, the arms' colours by `setNames(..., arm)`, the visits'
+breaks and labels, a study theme `theme_bw() + theme(...)` added by name,
+the ratio axis' breaks, an `element_blank()` and an `arrow()` made once).
+
+| Measure | Before | After |
+|---|---:|---:|
+| **Clinical figures, 62 (four new, weighted)** | **99.0%** (uses 1129 / 23 / 0) | **99.7%** (1150 / 2 / 0) |
+| clinical: geom_*() | 98.7% | 99.1% |
+| clinical: scale_*() | 98.6% | 100.0% |
+| clinical: theme() | 99.9% | 100.0% |
+| clinical: labs | 99.6% | 100.0% |
+| clinical: stat_*() (shown apart) | 99.9% | 100.0% |
+| clinical, the 58 figures of round 15 alone (uses) | 1080 / 3 / 0 | 1081 / 2 / 0 |
+| **ggplot2's own examples** | **97.8%** (1207 / 62 / 3) | **98.5%** (1230 / 39 / 3) |
+| examples: theme() | 97.0% | 100.0% |
+| examples: facets | 93.3% | 96.0% |
+| examples: scale_*() | 97.7% | 98.2% |
+| ggplot2's arguments (3409) and aesthetics (826), the extensions (351), scales' helpers (138) | 100% | 100% (rerun, unchanged) |
+
+(The round 15 figure gaining: `fig_km`'s `scale_colour_manual(values =
+setNames(c(...), arm))`, `arm` an object of constants of the page.  The
+examples: `red_text` / `red_line` of `theme()` and `theme_sub_axis_bottom()`,
+`dodge` of `geom_col()` / `geom_errorbar()`, `cols` of
+`scale_colour_manual()`, `to_string` of the labellers, `q10` of
+`geom_quantile()`, `my_arrow` of a guide's theme.)
+
+Round 16:
+
+- **`tfl_fig_content_from_r(code)`**: a ggplot2 program (text, lines or
+  an `.R` file) as `list(data = list(source = "code", steps), content)`.
+  - An object of constants is read in place of its name: `pd <-
+    position_dodge(0.3)` then `geom_line(position = pd)` is `position:
+    {fn: position_dodge, args: {width: 0.3}}`; `cols <- c(Placebo =
+    "grey40", ...)` the map of colours; `my_theme <- theme_bw() +
+    theme(...)` then `+ my_theme` its terms.  A value of constants is built
+    of constants, the program's other objects of constants, and ggplot2's,
+    scales', grid's, patchwork's, RColorBrewer's, viridisLite's and the
+    extensions' exports and base R's value builders (`c()`, `setNames()`,
+    `seq()`, `paste0()`, `range()`, `unit()`, arithmetic ...); `aes()`,
+    `vars()`, a formula and a function written out (its body of
+    constants) are too.  Not `ggplot()`, `Sys.Date()`, `nrow()` or any
+    function of the data.
+  - A name inside `aes()` / `vars()` / `after_stat()` is a column, never
+    replaced; an object's part (`cols[1:2]`, `df$colour`) stays R.  An
+    object whose name is left somewhere stays in the data part.
+  - The plot: a `+` chain from `ggplot()` / `ggsurvfit()` / `ggcuminc()`,
+    bare or assigned, and `p <- p + ...`; the plot printed or saved last
+    is the figure.  `theme_set(theme_bw())` before it is its first term.
+  - Plots arranged by patchwork (`p_km / p_risk`, `p1 | p2`, `p1 + p2`,
+    `wrap_plots(p1, p2, ncol = 1)`, `+ plot_layout()`, `+
+    plot_annotation()`, `& theme()`) are named plots (`p_km` is `km`) and
+    `wrap_plots`.
+  - `ggsave()`'s width / height (in its `units`, as inches), `dpi`, the
+    file and its format are the `tfl_image` item.
+  - Every other line is the data part, one code step in the program's
+    order; `library()` and `print()` are left out.
+  - The attributes `objects` (the names read in place) and `problems`
+    (`tfl_schema_check()` of each item, with its position).
+- **Numbers by base R's functions of numbers** count as numbers where a
+  list of numbers goes (`.schema_r_numbers()`): `seq(0.05, 0.95, by =
+  0.05)`, `range(c(0.25, 4))`, `rev()`, `sort()`, `min()` / `max()`,
+  `log10()` ..., `rep()`; before only arithmetic, `c()` and `:`.  The
+  SPEC keeps them as written; no generated code changes.
+- `dev/spec-coverage-ggplot2-examples.R` reads a call with its page's
+  objects of constants made before it.
+
+**No code generated from an existing SPEC changes**: the writer is
+untouched.  Code read through `tfl_fig_content_from_r()` writes the
+objects' values in place (`position = position_dodge(width = 0.3)` in
+each layer), so it draws the same.
+
+What is left (partial), clinical: a layer's data as a subset of the
+figure's own object (`km[km$censored, ]`, `sw[sw$ongoing, ]`; typed as
+`~ subset(.x, censored)`).  Examples: objects of the data
+(`states_map$long`, `tidy(ci)`, `df2$lineend`), `Sys.Date() - 30`,
+grobs and rasters, a labeller in plotmath (`alpha^.(vs)`),
+`position_rank()` / `guide_describe()` (not ggplot2 4.0.3 exports).
+
 ### The extension packages (ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale, patchwork)
 
 The same measure, the same file (`package` says which), over the
