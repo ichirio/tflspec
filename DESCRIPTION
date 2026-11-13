@@ -26,14 +26,14 @@ Roxygen: list(markdown = TRUE)
 Depends:
     R (>= 4.2)
 Imports:
-    ggplot2 (>= 3.5.0),
+    ggplot2 (>= 3.5.2),
     grDevices,
     jsonlite (>= 1.0),
     openxlsx (>= 4.0.0),
     readxl (>= 1.2.0),
     rlang,
     rtfreporter (>= 0.8.2.9100),
-    yaml (>= 2.1.15),
+    yaml (>= 2.2.0),
     stats,
     utils
 Suggests:
