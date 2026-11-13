@@ -29,7 +29,7 @@ Imports:
     ggplot2 (>= 3.5.2),
     grDevices,
     jsonlite (>= 2.0.0),
-    openxlsx (>= 4.2.4),
+    openxlsx (>= 4.2.5),
     readxl (>= 1.2.0),
     rlang,
     rtfreporter (>= 0.8.2.9100),
