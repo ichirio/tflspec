@@ -263,13 +263,36 @@
 
 # The set a `style` parameter names, for the parameter that takes it
 # (a template's `style`, `tfl_param("style", study = "settings.style",
-# default = "standard")`).  A name tflspec ships ("standard", "stf_t02")
-# always is tflspec's set: a study's `styles:` of the same name does not
-# replace it.  Any other name is the study's own set (spec/defaults.yml
-# `styles:`).  A layer: `data`, `codelists`, `content`, `page`.  A name
-# neither has stops, naming the sets there are.
+# default = "tfl_standard")`).  A name tflspec ships ("tfl_standard",
+# "tfl_small", "stf_t02") is tflspec's set: a study's `styles:` may not take
+# it (tfl_read_study_spec() stops).  Any other name is the study's own set
+# (spec/defaults.yml `styles:`).  A set is a page configuration: its `page`
+# (complete for the page step) and its `content`.  A name neither has stops,
+# naming the sets there are.
+.tpl_style_page_yaml <- function(margin = NULL) c(
+  "page:",
+  if (!is.null(margin)) sprintf("  rtf_page: {margin_left_in: %s, margin_right_in: %s}", margin, margin),
+  "  rtf_tables: {auto_section: true}",
+  "  header:",
+  "    first:",
+  "      - {left: \"{COMPANY}\", right: \"{STATUS}\"}",
+  "      - {left: \"Protocol: {STUDY_ID}\", right: \"Page {PAGE} of {TOTAL_PAGES}\"}",
+  "      - {center: \"{OUTPUT_LABEL}\"}",
+  "      - {center: \"{OUTPUT_TITLE}\"}",
+  "      - {center: \"<{OUTPUT_POPULATION}>\"}",
+  "  footer:",
+  "    last:",
+  "      - {left: \"{PROGRAM}\", right: \"{DATETIME}\"}")
 .tpl_style_builtin_yaml <- c(
-  standard = "{}",
+  tfl_standard = paste(.tpl_style_page_yaml(), collapse = "
+"),
+  tfl_small = paste(c(
+    .tpl_style_page_yaml(0.5),
+    "  rtf_style: {font_size_half_points: 14}",
+    "content:",
+    "  - plan_style: {font_size_half_points: 14}",
+    "  - plan_paginate_rows: {max_rows: 42}"), collapse = "
+"),
   # FDA STF IG v2.0, section 2.1.2, Table 2's look (not an FDA format)
   stf_t02 = paste(
     "content:",
@@ -289,18 +312,19 @@
 .tpl_style_builtin_names <- names(.tpl_style_builtin_yaml)
 .tpl_style_builtin_set <- function(name) {
   y <- yaml::yaml.load(.tpl_style_builtin_yaml[[name]], handlers = .yaml_handlers())
-  .layer_from_list(if (length(y)) y else list(), paste0("style:", name))
+  .style_set_from_list(if (length(y)) y else list(), name)
 }
 .tpl_style_set <- function(name, study = NULL) {
   if (!is.character(name) || length(name) != 1L || is.na(name) || !nzchar(name)) {
     .ard_stop("`style` is one style's name (a set of defaults.yml's styles:, or a built-in one).")
   }
+  # a built-in name is always the built-in set (the reader stops a study's)
   if (name %in% .tpl_style_builtin_names) return(.tpl_style_builtin_set(name))
   set <- study$styles[[name]]
   if (is.null(set)) {
     .ard_stop(sprintf("no style %s in defaults.yml's styles: or among the built-in sets (%s).",
                       dQuote(name, FALSE),
-                      paste(unique(c(names(study$styles), .tpl_style_builtin_names)), collapse = ", ")))
+                      paste(.style_names(study), collapse = ", ")))
   }
   set
 }

@@ -156,14 +156,14 @@ test_that("what the study's reports share is written once, in a setup", {
   expect_match(set, "COMPANY = \"Sample \\\"Pharma\\\"\"", fixed = TRUE)
   expect_match(set, "STUDY_ID = \"ABC-123\"", fixed = TRUE)
   expect_false(grepl("OUTPUT_TITLE =", set, fixed = TRUE))
-  expect_match(set, "study_header <- rtf_header(", fixed = TRUE)
+  expect_match(set, "header_standard <- rtf_header(", fixed = TRUE)
   expect_match(set, "{OUTPUT_LABEL}", fixed = TRUE)
   # the report then says the header by name, and only its own tokens
   opt <- paste(tfl_report_code(sp, "T-14-1-1", content = "pages", setup = TRUE),
                collapse = "\n")
   expect_false(grepl("COMPANY", opt, fixed = TRUE))
   expect_false(grepl("rtf_header", opt, fixed = TRUE))
-  expect_match(opt, "header = study_header", fixed = TRUE)
+  expect_match(opt, "header = header_standard", fixed = TRUE)
   expect_match(opt, "OUTPUT_TITLE = \"Demographics\"", fixed = TRUE)
   # standing alone (the default): as before
   doc <- paste(tfl_report_code(sp, "T-14-1-1", content = "pages"), collapse = "\n")
@@ -179,7 +179,7 @@ test_that("only a report with its own header writes it", {
   sp <- setup_spec()
   l <- paste(tfl_report_code(sp, "L-16-2-7", content = "pages", setup = TRUE),
              collapse = "\n")
-  expect_match(l, "header = study_header", fixed = TRUE)
+  expect_match(l, "header = header_standard", fixed = TRUE)
   expect_match(l, "OUTPUT_TITLE = \"\"", fixed = TRUE)
   hd <- rbind(setup_spec()$header,
               data.frame(output_id = "T-14-1-1", line = "1", left = "Own",

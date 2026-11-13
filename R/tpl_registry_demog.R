@@ -139,9 +139,9 @@
     tfl_param("border_group", NULL, type = "list", multiple = FALSE, fields = c("edge", "line"),
               doc = paste("a rule under each block (plan_style(border_group = ), e.g. list(bottom = TRUE));",
                           "NULL: none")),
-    tfl_param("style", "standard", type = "text", study = "settings.style", unset = "step_off",
+    tfl_param("style", "tfl_standard", type = "text", study = "settings.style", unset = "step_off",
               doc = paste("the style set (font, borders, page) the report starts from: a set of the",
-                          "study's defaults.yml `styles:` or a built-in one (standard, stf_t02);",
+                          "study's defaults.yml `styles:` or a built-in one (tfl_standard, tfl_small, stf_t02);",
                           "unset: none")))
   names(p) <- vapply(p, `[[`, "", "name")
   for (q in add) {

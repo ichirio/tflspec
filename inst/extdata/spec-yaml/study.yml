@@ -1,0 +1,3 @@
+# The sample study (tflspec's YAML spec, stage 0 fixture): its tokens.  The page of
+# its reports is the built-in configuration tfl_standard (tfl_styles()).
+tokens: {COMPANY: Sample Pharma, STATUS: DRAFT, ANALYSIS_TYPE: Final Analysis}

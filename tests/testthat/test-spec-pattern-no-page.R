@@ -67,9 +67,9 @@ pnp_pat <- "SEX: [{value: M, label: PatM}, {value: F, label: PatF}]"
 pnp_def <- "SEX: [{value: M, label: DefM}, {value: F, label: DefF}]"
 pnp_notes <- function(sh) sh$not_converted[sh$not_converted$part == "codelists", ]
 
-test_that("`page: {}`: the pattern keeps its place and the output does not change (#662)", {
+test_that("a pattern with no rows: it keeps its place and the output does not change (#662)", {
   skip_on_cran()
-  d <- pnp_study(page = "page: {}")
+  d <- pnp_study(page = "content: []")
   rt <- pnp_check(d)
   r <- rt$sheets$table$report
   expect_identical(r$output_id[!is.na(r$output_id)], c("T-A", "@pp"))
@@ -77,14 +77,10 @@ test_that("`page: {}`: the pattern keeps its place and the output does not chang
   expect_identical(nrow(pnp_notes(rt$sheets)), 0L)
 })
 
-test_that("an orientation only keeps the pattern, with no marker (#662)", {
+test_that("a pattern's `page:` stops: the page is the page configuration's, not a pattern's", {
   skip_on_cran()
   d <- pnp_study(page = c("page:", "  rtf_page: {orientation: landscape}"))
-  rt <- pnp_check(d)
-  r <- rt$sheets$table$report
-  expect_identical(r$output_id[!is.na(r$output_id)], "T-A")
-  expect_true("@pp" %in% rt$sheets$table$page$output_id)
-  expect_identical(tfl_read_study_spec(rt$dir)$patterns$pp$page$rtf_page$orientation, "landscape")
+  expect_error(tfl_read_study_spec(d), "pp.yml `page:` moved to a page configuration")
 })
 
 test_that("a pattern with code lists only: the sheets work, and its lists stay in YAML, said (#662)", {
@@ -121,7 +117,7 @@ test_that("the defaults' code lists are said to stay in YAML (#662)", {
 test_that("a report's own list is a row, and says nothing (#662)", {
   skip_on_cran()
   own <- c("codelists:", "  SEX: [{value: M, label: OwnM}, {value: F, label: OwnF}]")
-  d <- pnp_study(page = "page: {}", own = own)
+  d <- pnp_study(page = "content: []", own = own)
   rt <- pnp_check(d)
   expect_identical(rt$sheets$table$codelists$label, c("OwnM", "OwnF"))
   expect_identical(nrow(pnp_notes(rt$sheets)), 0L)
@@ -130,7 +126,7 @@ test_that("a report's own list is a row, and says nothing (#662)", {
 
 test_that("the marker row changes no default: the report's rows come out the same (#662)", {
   skip_on_cran()
-  d <- pnp_study(page = "page: {}")
+  d <- pnp_study(page = "content: []")
   sp <- tfl_table_spec(tfl_sheets_from_yaml(d)$table)
   r <- sp$report
   own <- r[!is.na(r$output_id) & r$output_id == "T-A", , drop = FALSE]
@@ -149,22 +145,9 @@ test_that("the marker row changes no default: the report's rows come out the sam
 
 test_that("a report naming a pattern that does not exist still stops (#662)", {
   skip_on_cran()
-  d <- pnp_study(page = "page: {}")
+  d <- pnp_study(page = "content: []")
   f <- file.path(d, "spec", "outputs", "T-A.yml")
   writeLines(sub("patterns/pp", "patterns/pq", readLines(f)), f)
   sh <- suppressWarnings(tfl_sheets_from_yaml(d))
   expect_error(tfl_table_spec(sh$table), "no page pattern of that name")
-})
-
-test_that("a pattern with titles gets no marker row; a study with no layer lists no note (#662)", {
-  skip_on_cran()
-  d <- pnp_study(page = c("page:", "  titles:", "    '1': {center: A title}"))
-  sh <- tfl_sheets_from_yaml(d)
-  r <- sh$table$report
-  expect_identical(r$output_id[!is.na(r$output_id)], "T-A")
-  expect_true("@pp" %in% sh$table$titles$output_id)
-  expect_no_error(tfl_table_spec(sh$table))
-  expect_identical(nrow(pnp_notes(sh)), 0L)
-  rt <- pnp_check(d)
-  expect_identical(rt$sheets$table$titles$output_id, sh$table$titles$output_id)
 })

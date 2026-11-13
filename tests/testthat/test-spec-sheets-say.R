@@ -109,21 +109,25 @@ test_that("what a figure of items has no place for is named in the notes, by rep
 
 # -- item 3: options:, styles:, style: have no place on the sheets -------------------
 
-test_that("defaults.yml options:, styles: and a report's style: are named in the notes", {
+test_that("defaults.yml options: and a built-in style: are named in the notes; a study's own style: is kept", {
   d <- rts_study(list(
     "defaults.yml" = c("options:", "  rtfreporter.png_device: ragg", "styles:", "  compact:",
                        "    page: {rtf_style: {font_size_half_points: 16}}", "content: []"),
-    "outputs/T-1.yml" = rts_table("T-1", "defaults", "style: compact")))
+    "outputs/T-1.yml" = rts_table("T-1", "defaults", "style: compact"),
+    "outputs/T-2.yml" = rts_table("T-2", "defaults", "style: tfl_small")))
   x <- rts_trip(d)
   nc <- x$sh$not_converted
   expect_match(nc$reason[nc$part == "options"], "rtfreporter.png_device", fixed = TRUE)
-  expect_match(nc$reason[nc$part == "styles"], "compact", fixed = TRUE)
-  expect_identical(nc$output[nc$part == "style"], "T-1")
+  expect_identical(nc$output[nc$part == "style"], "T-2")
+  expect_false("styles" %in% nc$part)
   # and they reach the person: the file, one message
-  expect_true(all(c("options", "styles", "style") %in% vapply(x$nc, function(e) e$sheet, "")))
-  expect_identical(sum(grepl("3 parts", x$msgs, fixed = TRUE)), 1L)
-  # what the sheets cannot hold is gone from the YAML: said, not hidden
-  expect_null(tfl_read_outputs(x$to)[["T-1"]]$style)
+  expect_true(all(c("options", "style") %in% vapply(x$nc, function(e) e$sheet, "")))
+  expect_identical(sum(grepl("2 parts", x$msgs, fixed = TRUE)), 1L)
+  # the study's own style: goes through the sheets (the pattern cell), a built-in one is gone: said, not hidden
+  outs <- tfl_read_outputs(x$to)
+  expect_identical(outs[["T-1"]]$style, "compact")
+  expect_null(outs[["T-2"]]$style)
+  expect_identical(x$sh$table$report$pattern[x$sh$table$report$output_id %in% "T-1"], "@compact")
 })
 
 test_that("a study with none of them has no such note", {
@@ -189,7 +193,7 @@ test_that("a program differs when an analysis reads the variable the defaults' l
 
 test_that("a pattern with content items no longer stops the conversion: dropped, named", {
   for (cs in list(c("content:", "  - plan_cells: {categorical: '{n}'}"),
-                  c("content:", "  - plan_footnotes: {pages: [Note]}", "page:", "  tokens: {A: b}"))) {
+                  c("content:", "  - plan_footnotes: {pages: [Note]}"))) {
     d <- rts_study(list("patterns/p.yml" = cs,
                         "outputs/T-1.yml" = rts_table(extends = c("defaults", "patterns/p"))))
     x <- rts_trip(d)
@@ -202,10 +206,6 @@ test_that("a pattern with content items no longer stops the conversion: dropped,
     expect_true("patterns/p" %in% back$extends)
     expect_length(tfl_read_study_spec(x$to)$patterns$p$content, 0L)
   }
-  # a pattern with page parts only says nothing
-  d <- rts_study(list("patterns/p.yml" = c("page:", "  tokens: {A: b}"),
-                      "outputs/T-1.yml" = rts_table(extends = c("defaults", "patterns/p"))))
-  expect_false(any(rts_trip(d)$sh$not_converted$part %in% "content"))
 })
 
 test_that("a study.yml settings: key the sheet does not read is kept, not a stop", {
@@ -271,15 +271,20 @@ rts_flat_study <- function(env = parent.frame()) {
                    "objects:", "  - {id: n_saf, code: !r 200L, label: Subjects of the safety set}",
                    "groups:", "  - id: AGEG", "    label: Age group", "    levels:",
                    "      - {level: Young, where: !r AGE < 65}", "      - {level: Old, where: !r AGE >= 65}"),
-    "defaults.yml" = c("page:", "  header:", "    1: {left: A, row_height_twips: 360}",
-                       "    2: {left: B, right: C}", "  footer:", "    1: {left: F, row_height_twips: 240}",
-                       "  titles:", "    1: {center: T, row_height_twips: 400}",
-                       "  footnotes:", "    1: {left: N, row_height_twips: 200}",
-                       "  rtf_document:", "    watermark: {fn: rtf_watermark, args: {text: DRAFT, angle: 30.0}}",
+    "defaults.yml" = c("styles:", "  std:", "    page:",
+                       "      header:", "        1: {left: A, row_height_twips: 360}",
+                       "        2: {left: B, right: C}", "      footer:", "        1: {left: F, row_height_twips: 240}",
+                       "      titles:", "        1: {center: T, row_height_twips: 400}",
+                       "      footnotes:", "        1: {left: N, row_height_twips: 200}",
+                       "      rtf_document:", "        watermark: {fn: rtf_watermark, args: {text: DRAFT, angle: 30.0}}",
                        "content: []"),
     "outputs/T-1.yml" = rts_table(),
     "outputs/T-2.yml" = c(rts_table("T-2")[1:5], "page:", "  titles:", "    1: {center: Own, row_height_twips: 500}",
-                          rts_table("T-2")[-(1:5)])), env = env)
+                          rts_table("T-2")[-(1:5)])),
+    study = c("study_id: MIN-1", "title: minimal", "settings:", "  rounding: sas",
+              "  output_path: output/tfl", "  program_dir: programs/tfl",
+              "  file: '{output_id}.rtf'", "  style: std", "keys:", "  id: USUBJID"),
+    env = env)
 }
 
 # a study's YAML files as parsed lists, the tags kept
@@ -306,10 +311,11 @@ test_that("an unedited write and import changes nothing: the lines' heights stay
   expect_identical(rts_parsed(d), before)
   # the heights are there
   y <- yaml::read_yaml(file.path(d, "spec", "defaults.yml"), handlers = .yaml_handlers())
-  expect_identical(y$page$header[["1"]]$row_height_twips, 360L)
-  expect_identical(y$page$titles[["1"]]$row_height_twips, 400L)
-  expect_identical(y$page$footnotes[["1"]]$row_height_twips, 200L)
-  expect_identical(y$page$footer[["1"]]$row_height_twips, 240L)
+  pg <- y$styles$std$page
+  expect_identical(pg$header[["1"]]$row_height_twips, 360L)
+  expect_identical(pg$titles[["1"]]$row_height_twips, 400L)
+  expect_identical(pg$footnotes[["1"]]$row_height_twips, 200L)
+  expect_identical(pg$footer[["1"]]$row_height_twips, 240L)
 })
 
 test_that("an edit to a line's text keeps the line's height", {
@@ -326,8 +332,8 @@ test_that("an edit to a line's text keeps the line's height", {
   r <- tfl_import_spec_xlsx(d, xl, write = TRUE)
   expect_identical(r$changes$to[r$changes$sheet == "header"], "left=A (edited); row_height_twips=360")
   y <- yaml::read_yaml(file.path(d, "spec", "defaults.yml"), handlers = .yaml_handlers())
-  expect_identical(y$page$header[["1"]]$left, "A (edited)")
-  expect_identical(y$page$header[["1"]]$row_height_twips, 360L)
+  expect_identical(y$styles$std$page$header[["1"]]$left, "A (edited)")
+  expect_identical(y$styles$std$page$header[["1"]]$row_height_twips, 360L)
 })
 
 test_that("an edit to the records or objects sheet is said, per sheet, and not taken in", {

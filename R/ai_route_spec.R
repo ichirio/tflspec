@@ -41,8 +41,10 @@
   s <- .ai_spec_defaults
   for (f in file.path(study_dir, c(file.path("spec", "defaults.yml"), "study.yml"))) {
     y <- if (file.exists(f)) tryCatch(yaml::read_yaml(f), error = function(e) NULL)
-    if (is.list(y) && identical(basename(f), "defaults.yml") && is.list(y$page)) {
-      s$titles_in_header <- .page_output_tokens_used(y$page)
+    if (is.list(y) && identical(basename(f), "defaults.yml")) {
+      st <- tryCatch(tfl_read_study_spec(study_dir), error = function(e) NULL)
+      pg <- if (!is.null(st)) .page_config_flat(list(page = .study_default_page(st)))
+      if (length(pg)) s$titles_in_header <- .page_output_tokens_used(pg)
     }
     ai <- if (is.list(y)) y$ai else NULL
     if (!is.list(ai)) next
@@ -453,28 +455,11 @@ tfl_ai_decisions_write <- function(study_dir, x) {
 }
 
 # A draft's footer lines (the shell's footnotes, written as `page: footer`)
-# numbered below the study's own footer lines (spec/defaults.yml's: the
-# program, the date), not over them: a draft whose lines collide with the
-# study's is written again with its lines moved down.  Once moved, they
-# collide no more, so a later check leaves them.
+# are body lines: the study's configuration prints its `last` lines (the
+# program, the date) below them, and nothing is moved.
 .ai_drafts_footer_below <- function(study_dir) {
-  area <- file.path(study_dir, "ai", "spec", "outputs")
-  df <- file.path(study_dir, "spec", "defaults.yml")
-  if (!dir.exists(area) || !file.exists(df)) return(invisible(NULL))
-  y <- tryCatch(.yaml_read_file(df, handlers = .yaml_handlers()), error = function(e) NULL)
-  own <- suppressWarnings(as.integer(names(y$page$footer %||% list())))
-  n <- if (length(own) && !all(is.na(own))) max(own, na.rm = TRUE) else 0L
-  if (n < 1L) return(invisible(NULL))
-  for (f in list.files(area, "[.]ya?ml$", full.names = TRUE)) {
-    o <- tryCatch(tfl_read_output(f), error = function(e) NULL)
-    ft <- o$page$footer
-    if (is.null(o) || !length(ft) || inherits(ft, "tfl_unset")) next
-    k <- suppressWarnings(as.integer(names(ft)))
-    if (anyNA(k) || !any(k <= n)) next
-    names(ft) <- as.character(n + seq_along(ft))
-    o$page$footer <- ft
-    tfl_write_output(o, f)
-  }
+  # (the study's footer lines are its configuration's `last` block: a draft's
+  # footer lines are body lines, printed above them, so they cannot collide)
   invisible(NULL)
 }
 

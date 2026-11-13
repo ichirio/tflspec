@@ -147,8 +147,9 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
     }
     # its own titles under a study header that prints the label, the title
     # and the population from the report's keys: printed twice (#518)
-    if (length(.page_args(o$page$titles)) && ("defaults" %in% .extends_step(o, "page"))) {
-      tok <- .page_output_tokens_used(study$defaults$page %||% list())
+    if (length(.page_args(o$page$titles))) {
+      cfg <- tryCatch(.report_style(o, study)$set, error = function(e) NULL)
+      tok <- .page_output_tokens_used(.page_config_flat(cfg))
       if (length(tok)) {
         add(output_id = id, part = "page", item = "titles", level = "warning",
             message = sprintf(paste0("the study's header prints the report's label, title and population ",
