@@ -29,8 +29,8 @@
                       paste(format(a$adjust), collapse = ", "),
                       paste(sprintf("\"%s\"", .tpl_ancova_adjust), collapse = ", ")))
   }
-  subj <- paste0("adsl_", tolower(pop))
-  set <- paste0(tolower(a$data), "_", tolower(pop), "_", tolower(a$param))
+  subj <- .tpl_subj_id()
+  set <- paste0(tolower(a$data), "_sub")
   where <- c(sprintf("PARAMCD == \"%s\" & AVISIT == \"%s\"", a$param, a$visit), a$where)
   model <- sprintf("formula = %s ~ %s, method = \"lm\"", a$response,
                    paste(c(a$by, a$covariates), collapse = " + "))
@@ -47,8 +47,7 @@
     post = post(what, level), formats = formats, purpose = "PRIMARY OUTCOME MEASURE"))
   ard <- list(
     analysis_data = list(
-      list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
-           population = pop),
+      list(id = subj, from = "ADSL", population = pop),
       list(id = set, from = a$data, subjects = subj,
            where = tfl_r(.tpl_and_all(where)))),
     analyses = list(
@@ -61,24 +60,24 @@
         if (is.null(a$ref)) sprintf("ref <- levels(factor(data$%s))[1L]", a$by) else
           sprintf("ref <- \"%s\"", a$ref),
         "message(\"ancova: the reference arm is \", ref)",
-        "data <- data |>",
+        "ref_data <- data |>",
         "  # the reference arm first (a relevel): each difference is an arm minus it",
         sprintf("  dplyr::mutate(%s = factor(%s, levels = c(ref, setdiff(levels(factor(%s)), ref))))",
                 a$by, a$by, a$by),
-        sprintf("fit <- stats::lm(%s ~ %s, data = data)", a$response,
+        sprintf("fit <- stats::lm(%s ~ %s, data = ref_data)", a$response,
                 paste(c(a$by, a$covariates), collapse = " + ")),
         if (identical(a$adjust, "tukey")) c(
           "# each other arm minus the reference arm, Tukey-adjusted.  emmeans changes \"tukey\"",
           "# to \"sidak\" for the contrast against one arm; the pairwise contrast keeps the",
           "# Tukey family of all pairs (\"revpairwise\": a later arm minus an earlier one, so",
           "# \"arm - reference\"), of which the rows against the reference arm are kept",
-          sprintf("diffs <- emmeans::emmeans(fit, specs = ~ %s, data = data) |>", a$by),
+          sprintf("diffs <- emmeans::emmeans(fit, specs = ~ %s, data = ref_data) |>", a$by),
           "  emmeans::contrast(method = \"revpairwise\", adjust = \"tukey\") |>",
           "  summary(infer = TRUE, level = 0.95)",
           "diffs <- diffs[endsWith(as.character(diffs$contrast), paste(\" -\", ref)), ]") else c(
           "# each other arm minus the reference arm, adjusted as `adjust` says (emmeans'",
           "# own default for these differences is not \"none\", so it is always given)",
-          sprintf("diffs <- emmeans::emmeans(fit, specs = ~ %s, data = data) |>", a$by),
+          sprintf("diffs <- emmeans::emmeans(fit, specs = ~ %s, data = ref_data) |>", a$by),
           sprintf("  emmeans::contrast(method = \"trt.vs.ctrl\", ref = 1L, adjust = \"%s\") |>",
                   a$adjust),
           "  summary(infer = TRUE, level = 0.95)"),

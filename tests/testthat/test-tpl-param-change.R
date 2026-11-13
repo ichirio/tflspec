@@ -10,20 +10,20 @@ pc_args <- list(population = "SAF", by = "TRT01A", data = "ADLB", params = c("AL
 # the ARD as the study's program makes it (its analysis data's steps)
 pc_ard <- function(x) {
   eval(parse(text = tfl_helpers_code()))  # reorder_by()
-  adsl_saf <- adsl[adsl$SAFFL == "Y", ]
+  adsl_sub <- adsl[adsl$SAFFL == "Y", ]
   d <- x$ard$analysis_data
   e <- function(s) eval(parse(text = s))
-  adlb_saf <- adlb[adlb$USUBJID %in% adsl_saf$USUBJID, ]
-  adlb_saf <- adlb_saf[eval(parse(text = d[[2L]]$where), adlb_saf), ]
-  if (length(d[[2L]]$derive)) adlb_saf <- e(sprintf("dplyr::mutate(adlb_saf, %s)",
+  adlb_sub <- adlb[adlb$USUBJID %in% adsl_sub$USUBJID, ]
+  adlb_sub <- adlb_sub[eval(parse(text = d[[2L]]$where), adlb_sub), ]
+  if (length(d[[2L]]$derive)) adlb_sub <- e(sprintf("dplyr::mutate(adlb_sub, %s)",
                                                     gsub(" | ", ", ", d[[2L]]$derive, fixed = TRUE)))
-  chg <- adlb_saf[!is.na(adlb_saf$CHG), ]
+  chg <- adlb_sub[!is.na(adlb_sub$CHG), ]
   if (length(d[[3L]]$derive)) chg$AVISIT <- droplevels(chg$AVISIT)
   st <- ~ cards::continuous_summary_fns(c("N", "mean", "sd", "median", "min", "max"))
   # (as the template's ARD: by PARAMCD; its text, PARAM, is the table's)
   cards::bind_ard(
-    cards::ard_tabulate(adsl_saf, variables = TRT01A),
-    cards::ard_summary(adlb_saf, by = c(TRT01A, PARAMCD, AVISIT), variables = AVAL, statistic = st),
+    cards::ard_tabulate(adsl_sub, variables = TRT01A),
+    cards::ard_summary(adlb_sub, by = c(TRT01A, PARAMCD, AVISIT), variables = AVAL, statistic = st),
     drop_empty_groups(cards::ard_summary(chg, by = c(TRT01A, PARAMCD, AVISIT), variables = CHG,
                                          statistic = st)))
 }
@@ -41,7 +41,7 @@ pc_skip <- function() {
 test_that("expanded: the records kept, the visits in their order, the change's own data", {
   x <- tfl_template_expand("param_change", pc_args)
   d <- x$ard$analysis_data
-  expect_identical(vapply(d, `[[`, "", "id"), c("adsl_saf", "adlb_saf", "adlb_saf_chg"))
+  expect_identical(vapply(d, `[[`, "", "id"), c("adsl_sub", "adlb_sub", "adlb_chg"))
   expect_match(d[[2L]]$where, "PARAMCD %in% c(\"ALT\", \"AST\")", fixed = TRUE)
   expect_match(d[[2L]]$where, "AVISIT %in% c(\"BASELINE\"", fixed = TRUE)
   expect_identical(as.character(d[[2L]]$derive), "AVISIT = reorder_by(AVISIT, AVISITN)")

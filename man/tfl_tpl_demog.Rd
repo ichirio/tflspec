@@ -14,7 +14,7 @@ The table template \code{demog}, layout \code{summary}. Its program is one call,
    \code{by} \tab required \tab call \tab  \tab  \tab the column variable (the arms); not a default and not the study's treatment \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1"; unset: all \cr
    \code{data} \tab other \tab call \tab ADSL \tab  \tab a subject-level dataset \cr
-   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id when 'data' is not ADSL; NULL: <data>_<population> \cr
+   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id when 'data' is not ADSL; NULL: <data>_sub \cr
    \code{formats} \tab usual \tab call \tab  \tab  \tab the ARD's formats (precision): per statistic, and per variable (BMIBL: \{mean: 2, sd: 3\}); given by name, merged over the statistics catalog's (tfl_ard_statistics(), by default N 0, mean 1, sd 2, median 1, min 0, max 0, p xx.x\%); a number is the decimals, "xx.x\%" a proportion as a percent; unset: none given here \cr
    \code{total} \tab usual \tab call \tab FALSE \tab  \tab TRUE: a Total column, last (each analysis again without 'by') \cr
    \code{missing_row} \tab other \tab call \tab TRUE \tab  \tab TRUE (default): a Missing row, last, for each categorical variable that has missing values (NA or blank). FALSE: no Missing row; missing values are left out of the counts, and the percentages stay over the analysis set. \cr

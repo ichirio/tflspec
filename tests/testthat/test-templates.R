@@ -28,7 +28,7 @@ test_that("tfl_template_expand(): the items, marked as the template's", {
   expect_identical(vapply(x$content, `[[`, "", "fn"),
                    c("table_plan", "plan_cells", "plan_labels", "plan_paginate_rows"))
   expect_true(all(vapply(x$content, `[[`, "", "from") == "template:demog"))
-  expect_identical(x$ard$analysis_data[[1L]]$id, "adsl_saf")
+  expect_identical(x$ard$analysis_data[[1L]]$id, "adsl_sub")
   expect_identical(vapply(x$ard$analyses, `[[`, "", "id"), c("GROUPN", "CONT", "CAT"))
   # (`stack` is gone from demog: the plain unknown-parameter error)
   expect_error(tfl_template_expand("demog", dmv(stack = TRUE)), "no parameter 'stack'")
@@ -39,7 +39,7 @@ test_that("tfl_template_expand(): the items, marked as the template's", {
   # a dataset other than ADSL: its own analysis data, its records kept by `where`
   z <- tfl_template_expand("summary", list(population = "SAF", by = "TRT01A", continuous = "AVAL",
                                            data = "ADVS", where = 'PARAMCD == "SYSBP"'))
-  expect_identical(z$ard$analysis_data[[2L]]$id, "advs_saf")
+  expect_identical(z$ard$analysis_data[[2L]]$id, "advs_sub")
   expect_s3_class(z$ard$analysis_data[[2L]]$where, "tfl_r")
 })
 
@@ -164,7 +164,7 @@ test_that("summary: categorical variables too; disposition on the same body (bat
   expect_identical(vapply(x$ard$analyses, `[[`, "", "id"), c("GROUPN", "CAT"))
   expect_identical(x$ard$analyses[[2L]]$statistics, c("n", "p"))
   # (the percentages over the analysis set, passed explicitly: canon 1.38)
-  expect_identical(x$ard$analyses[[2L]]$denominator, "adsl_saf")
+  expect_identical(x$ard$analyses[[2L]]$denominator, "adsl_sub")
   expect_false("plan_cells" %in% vapply(x$content, `[[`, "", "fn"))
   expect_identical(x$content[[length(x$content)]]$args, list(max_rows = 30L, split = "group_safe"))
   # the rows a page are a parameter now (the look, canon 1.29)
@@ -204,7 +204,7 @@ test_that("shift and lab_shift: baseline by post category, a block a parameter",
   x <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "CYCLE 2 DAY 1",
                                              params = c("ALT", "AST")))
   # (the records kept in the code that keeps a subject once, at its worst)
-  expect_match(x$ard$analysis_data[[1L]]$code,
+  expect_match(x$ard$analysis_data[[2L]]$code,
                'AVISIT == "CYCLE 2 DAY 1" & PARAMCD %in% c("ALT", "AST")', fixed = TRUE)
   expect_identical(x$ard$analyses[[1L]]$by, c("TRT01A", "PARAMCD", "BNRIND"))
   expect_identical(x$content[[1L]]$args$cols, c("TRT01A", ".label"))
@@ -221,7 +221,7 @@ test_that("shift: a subject once at its worst, a Missing and a Total row, a page
   a <- list(population = "SAF", where = 'PARAMCD %in% c("ALT", "AST")',
             missing_label = "Missing", header_n = "tested")
   x <- tfl_template_expand("shift", a)
-  ad <- x$ard$analysis_data[[1L]]
+  ad <- x$ard$analysis_data[[2L]]
   expect_null(ad$where)
   lb <- adlb
   lb$BNRIND[lb$PARAMCD == "ALT" & lb$USUBJID == lb$USUBJID[1L]] <- NA
@@ -230,10 +230,12 @@ test_that("shift: a subject once at its worst, a Missing and a Total row, a page
     adsl_sub <- adsl[adsl$SAFFL == "Y", ]
     eval(parse(text = ad$code))
   })
-  body <- d[d$BNRIND != "Total", ]
+  body <- d
+  # (the Total row: an object of its own, every subject once more)
+  tot <- eval(parse(text = x$ard$analysis_data[[3L]]$code), list(adlb_sub = d))
   expect_false(anyDuplicated(body[c("USUBJID", "PARAMCD")]) > 0L)
   expect_false(any(body$ABLFL %in% "Y"))
-  expect_identical(sum(d$BNRIND == "Total"), nrow(body))
+  expect_identical(sum(tot$BNRIND == "Total"), nrow(body))
   expect_true("Missing" %in% body$BNRIND)
   # a transport file's "" for no value: a blank after baseline is no record,
   # a blank at baseline is Missing
@@ -262,21 +264,21 @@ test_that("shift: a subject once at its worst, a Missing and a Total row, a page
   # (the page's N on: a group a page, the parameter out of the stub, no hide)
   expect_true("plan_paginate_group" %in% fns)
   expect_false(any(c("plan_paginate_rows", "plan_hide") %in% fns))
-  expect_identical(x$ard$analysis_data[[2L]]$id, "adlb_saf_den")
+  expect_identical(x$ard$analysis_data[[4L]]$id, "adlb_den")
   # the defaults: a missing baseline is out (no Missing row), the header N is the
   # set's (a page a parameter by paginate_rows, the parameter hidden)
   dflt <- tfl_template_expand("shift", list(population = "SAF"))
   expect_identical(Filter(function(i) i$fn == "plan_levels", dflt$content)[[1L]]$args$BNRIND,
                    c("LOW", "NORMAL", "HIGH", "Total"))
-  expect_match(dflt$ard$analysis_data[[1L]]$code, '!BNRIND %in% c(NA, "")', fixed = TRUE)
-  expect_identical(dflt$ard$analyses[[1L]]$denominator, "adlb_saf_den")
+  expect_match(dflt$ard$analysis_data[[2L]]$code, '!BNRIND %in% c(NA, "")', fixed = TRUE)
+  expect_identical(dflt$ard$analyses[[1L]]$denominator, "adlb_den")
   expect_true(all(c("plan_paginate_rows", "plan_hide") %in% vapply(dflt$content, `[[`, "", "fn")))
   expect_false("plan_paginate_group" %in% vapply(dflt$content, `[[`, "", "fn"))
   # run on the records: the subject with no baseline is in no row and not in the Total
   d3 <- local({
     adlb <- lb
     adsl_sub <- adsl[adsl$SAFFL == "Y", ]
-    eval(parse(text = dflt$ard$analysis_data[[1L]]$code))
+    eval(parse(text = dflt$ard$analysis_data[[2L]]$code))
   })
   gone <- lb$USUBJID[1L]
   expect_false(any(d3$USUBJID == gone & d3$PARAMCD == "ALT"))
@@ -287,8 +289,8 @@ test_that("shift: a subject once at its worst, a Missing and a Total row, a page
   a$header_n <- "set"
   r <- tfl_template_expand("shift", c(a, list(worst = NULL, page_by = FALSE)))
   expect_null(r$ard$analyses[[1L]]$denominator)
-  expect_null(r$ard$analysis_data[[1L]]$code)
-  expect_identical(as.character(r$ard$analysis_data[[1L]]$where), a$where)
+  expect_null(r$ard$analysis_data[[2L]]$code)
+  expect_identical(as.character(r$ard$analysis_data[[2L]]$where), a$where)
   expect_false(any(c("plan_paginate_rows", "plan_hide") %in%
                      vapply(r$content, `[[`, "", "fn")))
 })
@@ -628,7 +630,7 @@ test_that("summary has no mean (CI) analysis of its own; km_table and orr", {
   o <- tfl_template_expand("orr", list(responders = c("CR", "PR", "SD")))
   # (every subject of the set a row: the set's subjects, then the records joined to them)
   expect_identical(vapply(o$ard$analysis_data, `[[`, "", "id"),
-                   c("adsl_itt", "adrs_bor_records", "adrs_bor"))
+                   c("adsl_sub", "adrs_sub", "adrs_resp"))
   expect_match(as.character(o$ard$analysis_data[[3L]]$code),
                'dplyr::mutate(RESP = AVALC %in% c("CR", "PR", "SD"))', fixed = TRUE)
   expect_identical(tpl_item(o, "plan_labels")$args$variable$RESP, "Objective response rate (CR + PR + SD)")
@@ -661,9 +663,9 @@ test_that("hierarchical of one level; demog and ae_pt_freq on their layouts", {
   expect_null(h1$ard$analyses[[1L]]$post)
   # demog is a template of its own (no longer summary's variant): its population is the report's
   d <- tfl_template_expand("demog", dmv(categorical = "SEX"))
-  expect_identical(d$ard$analysis_data[[1L]]$id, "adsl_saf")
+  expect_identical(d$ard$analysis_data[[1L]]$id, "adsl_sub")
   # (and its one more set, #770's: the categorical variables with a Missing level)
-  expect_identical(d$ard$analysis_data[[2L]]$id, "adsl_saf_m")
+  expect_identical(d$ard$analysis_data[[2L]]$id, "adsl_miss")
 })
 
 test_that("ae_overview: a subjects analysis and a row a flag", {
@@ -671,7 +673,7 @@ test_that("ae_overview: a subjects analysis and a row a flag", {
   expect_error(tfl_template_expand("ae_overview", list(population = "SAF")), "needs 'by'")
   x <- tfl_template_expand("ae_overview", list(population = "SAF", by = "TRT01A"))
   # (the percentages over the analysis set, passed explicitly: canon 1.38)
-  expect_identical(unique(vapply(x$ard$analyses[-1L], `[[`, "", "denominator")), "adsl_saf")
+  expect_identical(unique(vapply(x$ard$analyses[-1L], `[[`, "", "denominator")), "adsl_sub")
   expect_identical(vapply(x$ard$analyses, `[[`, "", "method"), c("categorical", rep("subjects", 6)))
   expect_null(x$ard$analyses[[2L]]$where)   # ANY: every event kept
   expect_identical(as.character(x$ard$analyses[[5L]]$where), 'AESER == "Y"')
@@ -680,7 +682,7 @@ test_that("ae_overview: a subjects analysis and a row a flag", {
   ser <- list(list(id = "SER", label = "Serious", where = 'AESER == "Y"'))
   f <- tfl_template_expand("ae_overview", list(flags = ser, population = "ITT", by = "TRT01A"))
   expect_identical(tpl_item(f, "plan_labels")$args, list(variable = list(SER = "Serious")))
-  expect_identical(f$ard$analysis_data[[2L]]$id, "adae_itt")
+  expect_identical(f$ard$analysis_data[[2L]]$id, "adae_sub")
   skip_if_not_installed("cards")
   saf <- adsl[adsl$SAFFL == "Y", ]
   te <- adae[adae$TRTEMFL == "Y", ]
@@ -745,7 +747,7 @@ test_that("a map of name and text also takes a list of {name, text}: the mapping
   m <- tfl_template_expand("shift", list(population = "SAF", worst_by = list(HGB = "LOW, HIGH, NORMAL")))
   l <- tfl_template_expand("shift", list(population = "SAF", worst_by = nt(HGB = "LOW, HIGH, NORMAL")))
   expect_identical(l, m)
-  expect_match(as.character(l$ard$analysis_data[[1L]]$code),
+  expect_match(as.character(l$ard$analysis_data[[2L]]$code),
                'PARAMCD == "HGB" ~ match(ANRIND, c("LOW", "HIGH", "NORMAL"))', fixed = TRUE)
 })
 

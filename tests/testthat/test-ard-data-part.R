@@ -7,8 +7,8 @@ dp_spec <- function() {
   tfl_ard_spec(list(
     datasets = data.frame(dataset = c("ADSL", "ADAE"), path = c("adsl.rds", "adae.rds")),
     populations = data.frame(population_id = "SAF", dataset = "ADSL", where = "SAFFL == \"Y\""),
-    analysis_data = data.frame(output_id = "L-1", data_id = c("adae_saf", "adae_ser"),
-                               from = c("ADAE", "adae_saf"), population_id = c("SAF", NA),
+    analysis_data = data.frame(output_id = "L-1", data_id = c("adae_sub", "adae_ser"),
+                               from = c("ADAE", "adae_sub"), population_id = c("SAF", NA),
                                where = c(NA, "AESER == \"Y\"")),
     analyses = data.frame(output_id = "T-1", analysis_id = "A1", method = "categorical",
                           dataset = "ADSL", population_id = "SAF", by = "TRT01A",
@@ -19,12 +19,12 @@ test_that("tfl_ard_code(part = \"data\"): a report's datasets, analysis sets and
   x <- dp_spec()
   code <- tfl_ard_code(x, "L-1", part = "data")
   expect_true(any(grepl("^adae <- readRDS", code)))
-  expect_true(any(grepl("^pop_saf <- ", code)))
-  expect_true(any(grepl("^adae_saf <- ", code)))
+  expect_true(any(grepl("^adsl_sub <- ", code)))
+  expect_true(any(grepl("^adae_sub <- ", code)))
   expect_true(any(grepl("^adae_ser <- ", code)))
   expect_false(any(grepl("ard_|save_ard|report_id", code)))
   # the data named, with those it is made from
-  one <- tfl_ard_code(x, "L-1", part = "data", data = "adae_saf")
+  one <- tfl_ard_code(x, "L-1", part = "data", data = "adae_sub")
   expect_false(any(grepl("^adae_ser <- ", one)))
   expect_error(tfl_ard_code(x, "L-1", part = "data", data = "nope"), "does not define")
   expect_error(tfl_ard_code(x, part = "data"), "one report's data")
@@ -42,14 +42,17 @@ test_that("a listing reads an analysis data, or the subjects of an analysis set"
   expect_true(any(grepl("^data <- adae_ser", l1)))
   l2 <- tfl_listing_code(sp, "L-2", ard = x)
   expect_true(any(grepl("^data <- adae", l2)))
-  expect_true(any(grepl("semi_join(dplyr::select(pop_saf, USUBJID)", l2, fixed = TRUE)))
+  expect_true(any(grepl("dplyr::select(adsl_sub, USUBJID),", l2, fixed = TRUE)))
   # the analysis set's own dataset: the analysis set itself
-  expect_true(any(grepl("^data <- pop_saf", tfl_listing_code(sp, "L-3", ard = x))))
+  expect_true(any(grepl("^data <- adsl_sub", tfl_listing_code(sp, "L-3", ard = x))))
   expect_error(tfl_listing_code(sp, "L-1", x$datasets), "give the ARD definition")
   # a listing of a dataset alone: as before, no ARD needed
   plain <- tfl_listing_spec(data.frame(output_id = "L-4", dataset = "ADAE"),
                             data.frame(output_id = "L-4", vars = "USUBJID"))
-  expect_true(any(grepl("^# the data: ADAE", tfl_listing_code(plain, "L-4", x$datasets))))
+  l4 <- tfl_listing_code(plain, "L-4", x$datasets)
+  expect_true(any(l4 == "# ---- input data ----"))
+  expect_true(any(l4 == "# ---- data ----"))
+  expect_true(any(grepl("^adae <- ", l4)))
   expect_error(tfl_listing_spec(data.frame(output_id = "L-9", dataset = "ADAE", data = "adae_ser"),
                                 data.frame(output_id = "L-9", vars = "USUBJID")),
                "its `data` or a `dataset`")
@@ -115,13 +118,13 @@ test_that("a YAML study: the listing's data and analysis set through the sheets;
   expect_match(paste(readLines(rtf, warn = FALSE), collapse = " "), "\\pict", fixed = TRUE)
 })
 
-test_that("the data part names each analysis set as a report's own code reads it: adsl_sub beside pop_saf (#520)", {
+test_that("the data part names each analysis set as a report's own code reads it: adsl_sub, built once (#520)", {
   x <- dp_spec()
   code <- tfl_ard_code(x, "L-1", part = "data")
-  expect_true(any(grepl("^adsl_sub <- pop_saf$", code)))
+  expect_true(any(grepl("adsl_sub <- filter(adsl, SAFFL", code, fixed = TRUE)))
   sp <- tfl_listing_spec(data.frame(output_id = "L-2", dataset = "ADAE", population_id = "SAF", sort = "USUBJID"),
                          data.frame(output_id = "L-2", vars = "USUBJID"))
-  expect_true(any(grepl("^adsl_sub <- pop_saf$", tfl_listing_code(sp, "L-2", ard = x, part = "data"))))
+  expect_true(any(grepl("adsl_sub <- dplyr::filter(adsl, SAFFL", tfl_listing_code(sp, "L-2", ard = x, part = "data"), fixed = TRUE)))
   # two sets of one dataset: the second is adsl_sub2
   x2 <- tfl_ard_spec(list(
     datasets = data.frame(dataset = c("ADSL", "ADAE"), path = c("adsl.rds", "adae.rds")),
@@ -132,6 +135,6 @@ test_that("the data part names each analysis set as a report's own code reads it
     analyses = data.frame(output_id = "T-9", analysis_id = "A1", method = "categorical",
                           dataset = "ADSL", population_id = "SAF", by = "TRT01A", variables = "SEX")))
   code2 <- tfl_ard_code(x2, "L-9", part = "data")
-  expect_true(any(grepl("^adsl_sub <- pop_saf$", code2)))
-  expect_true(any(grepl("^adsl_sub2 <- pop_itt$", code2)))
+  expect_true(any(grepl("adsl_sub <- filter(adsl, SAFFL", code2, fixed = TRUE)))
+  expect_true(any(grepl("adsl_sub2 <- filter(adsl, ITTFL", code2, fixed = TRUE)))
 })

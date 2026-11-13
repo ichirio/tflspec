@@ -76,12 +76,12 @@ test_that("shift: percent_of total -- each arm's body rows add to 100% of its To
 test_that("shift: worst_by gives a parameter its own order from the worst", {
   x <- tfl_template_expand("shift", list(population = "SAF",
                                          worst_by = list(HGB = c("LOW", "HIGH", "NORMAL"))))
-  code <- as.character(x$ard$analysis_data[[1L]]$code)
+  code <- as.character(x$ard$analysis_data[[2L]]$code)
   expect_match(code, 'PARAMCD == "HGB" ~ match(ANRIND, c("LOW", "HIGH", "NORMAL"))', fixed = TRUE)
   expect_match(code, 'TRUE ~ match(ANRIND, c("HIGH", "LOW", "NORMAL"))', fixed = TRUE)
   # a text of the order, as a sheet holds it
   y <- tfl_template_expand("shift", list(population = "SAF", worst_by = list(HGB = "LOW, HIGH, NORMAL")))
-  expect_identical(as.character(y$ard$analysis_data[[1L]]$code), code)
+  expect_identical(as.character(y$ard$analysis_data[[2L]]$code), code)
   # run on the records: a subject both LOW and HIGH for HGB is LOW, for ALT HIGH
   skip_if_not_installed("dplyr")
   lb <- data.frame(USUBJID = c("S1", "S1", "S1", "S1"), PARAMCD = c("HGB", "HGB", "ALT", "ALT"),
@@ -291,7 +291,7 @@ test_that("shift: header_n = 'none' shows no N; page_by = FALSE shows the set's 
   # with or without page_by), or the tested subjects' (only with page_by)
   x <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "V", params = "ALT"))
   expect_identical(vapply(x$ard$analyses, `[[`, "", "id"), c("SHIFT", "GROUPN"))
-  expect_identical(x$ard$analyses[[2L]]$data, "adsl_saf")
+  expect_identical(x$ard$analyses[[2L]]$data, "adsl_sub")
   y <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "V", params = "ALT",
                                              header_n = "none"))
   expect_length(y$ard$analyses, 1L)
@@ -525,20 +525,20 @@ test_that("shift, lab_shift: post_header leaves the ARD and its program unchange
 test_that("shift: a where with | is its own argument of the filter (no brackets needed)", {
   w <- "ONTRTFL == \"Y\" | ABLFL == \"Y\""
   x <- tfl_template_expand("shift", list(population = "SAF", where = w))
-  code <- strsplit(as.character(x$ard$analysis_data[[1L]]$code), "
+  code <- strsplit(as.character(x$ard$analysis_data[[2L]]$code), "
 ", fixed = TRUE)[[1L]]
-  f <- parse(text = grep("dplyr::filter(d,", code, fixed = TRUE, value = TRUE))[[1L]][[3L]]
-  args <- as.list(f)[-(1:2)]
+  f <- parse(text = sub(" [|]>$", "", grep("dplyr::filter(", code, fixed = TRUE, value = TRUE)))[[1L]]
+  args <- as.list(f)[-1L]
   # (ABLFL, the post-baseline category, the baseline category -- a missing
   # baseline is out by default -- and the where)
   expect_length(args, 4L)
   expect_identical(deparse(args[[4L]]), w)
   # with a Missing row, no baseline filter: as before
   y <- tfl_template_expand("shift", list(population = "SAF", where = w, missing_label = "Missing"))
-  code2 <- strsplit(as.character(y$ard$analysis_data[[1L]]$code), "
+  code2 <- strsplit(as.character(y$ard$analysis_data[[2L]]$code), "
 ", fixed = TRUE)[[1L]]
-  f2 <- parse(text = grep("dplyr::filter(d,", code2, fixed = TRUE, value = TRUE))[[1L]][[3L]]
-  expect_length(as.list(f2)[-(1:2)], 3L)
+  f2 <- parse(text = sub(" [|]>$", "", grep("dplyr::filter(", code2, fixed = TRUE, value = TRUE)))[[1L]]
+  expect_length(as.list(f2)[-1L], 3L)
 })
 
 test_that("a heading of two lines: one header text with a line break, as the hierarchical tables write it", {

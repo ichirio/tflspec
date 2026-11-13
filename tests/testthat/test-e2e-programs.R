@@ -115,9 +115,9 @@ test_that("a denominator's by column the subjects' data lacks (AESEV): the recor
                                                label = "AEDECOD")))), f)
   r <- ep_run_child(d, "T-AE")
   # the join takes from ADSL only what it has; AESEV is dropped from nothing
-  expect_true(any(grepl("select(-any_of(intersect(c(\"TRT01A\", \"AESEV\"), names(adsl_saf))))",
+  expect_true(any(grepl("select(-any_of(names(select(adsl_saf, any_of(c(\"TRT01A\", \"AESEV\"))))))",
                         r$code, fixed = TRUE)))
-  expect_true(any(grepl("select(adsl_saf, USUBJID, any_of(c(\"TRT01A\", \"AESEV\")))",
+  expect_true(any(grepl("select(adsl_saf, USUBJID, TRT01A, any_of(\"AESEV\"))",
                         r$code, fixed = TRUE)))
   expect_false(is.null(r$ard), info = paste(r$out, collapse = "\n"))
   expect_false(any(grepl("doesn't exist", r$out)))
