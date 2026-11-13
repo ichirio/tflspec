@@ -14,18 +14,21 @@ the path of the study's folder.}
 A data frame, one row a set: \code{name}; \code{source} (\code{"built-in"} or
 \code{"study"}); \code{default} (\code{TRUE} for the one a report without \verb{style:}
 gets); \code{page_keys} and \code{content_verbs} (what the set holds, comma
-joined; empty for none).  A study's set named as a built-in one does
-not replace it: the row is the built-in's.
+joined; empty for none).
 }
 \description{
 A study's page configurations: the style sets a report picks with
-\verb{style:} -- the built-in ones tflspec ships (\code{standard}, the base and
-nothing more; \code{stf_t02}) and the study's own (\code{defaults.yml}'s
-\verb{styles:}).  A set holds the settings that differ from the study's base:
-the \code{page} half (the \verb{rtf_*} calls' arguments) and the \code{content} half
-(the table look verbs, such as \code{plan_style} and \code{plan_paginate_rows}).
-The study's default is the set \code{settings.style} of \code{study.yml} names
-(\code{standard} when it names none).
+\verb{style:} -- the built-in ones tflspec ships (\code{tfl_standard}, \code{tfl_small}
+and \code{stf_t02}) and the study's own (\code{defaults.yml}'s \verb{styles:}).  A set
+is the report's whole page for the page step -- the settings (\code{rtf_page},
+\code{rtf_style}, \code{rtf_document}, \code{rtf_tables}, \code{rtf_figures}, \code{rtf_titles},
+\code{rtf_footnotes}, \code{rtf_header}, \code{rtf_footer}) and the fixed lines of
+the header, footer, titles and footnotes in the blocks \code{first} and
+\code{last} -- and, as an option, the table look that goes with it (the
+\code{content} half: \code{plan_style}, \code{plan_paginate_rows} ...), laid over
+\code{defaults.yml}'s \verb{content:}.  A study's set may not take the name of a
+built-in one.  The study's default is the set \code{settings.style} of
+\code{study.yml} names (\code{tfl_standard} when it names none).
 }
 \examples{
 s <- tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))

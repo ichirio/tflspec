@@ -16,27 +16,27 @@ ad_expand <- function(name, ...) {
 ad_an <- function(x, id) Filter(function(a) identical(a$id, id), x$ard$analyses)[[1L]]
 ad_sets <- function(x) vapply(x$ard$analysis_data, `[[`, "", "id")
 
-test_that("summary (data ADSL), disposition and ae_overview carry denominator = adsl_saf", {
+test_that("summary (data ADSL), disposition and ae_overview carry denominator = adsl_sub", {
   s <- ad_expand("summary", categorical = "SEX", missing_row = FALSE)
-  expect_identical(ad_an(s, "CAT")$denominator, "adsl_saf")
+  expect_identical(ad_an(s, "CAT")$denominator, "adsl_sub")
   expect_identical(ad_an(s, "CAT")$denominator, ad_an(s, "GROUPN")$data)
   d <- ad_expand("disposition")
-  expect_identical(ad_an(d, "DISP")$denominator, "adsl_saf")
+  expect_identical(ad_an(d, "DISP")$denominator, "adsl_sub")
   ae <- ad_expand("ae_overview")
   fl <- Filter(function(a) identical(a$method, "subjects"), ae$ard$analyses)
   expect_length(fl, 6L)
-  for (a in fl) expect_identical(a$denominator, "adsl_saf", info = a$id)
-  expect_identical(ad_an(ae, "GROUPN")$data, "adsl_saf")
+  for (a in fl) expect_identical(a$denominator, "adsl_sub", info = a$id)
+  expect_identical(ad_an(ae, "GROUPN")$data, "adsl_sub")
   # header_n "denominator" with no denominator is still "set"
   h <- ad_expand("ae_overview", header_n = "denominator")
-  expect_identical(ad_an(h, "GROUPN")$data, "adsl_saf")
+  expect_identical(ad_an(h, "GROUPN")$data, "adsl_sub")
 })
 
 test_that("summary on records keeps the records set as the denominator", {
   x <- ad_expand("summary", data = "ADAE", categorical = "AEBODSYS")
   cat <- ad_an(x, "CAT")
-  expect_identical(cat$data, "adae_saf")
-  expect_identical(cat$denominator, "adae_saf")
+  expect_identical(cat$data, "adae_sub")
+  expect_identical(cat$denominator, "adae_sub")
   expect_false(any(grepl("_m$", ad_sets(x))))
   # a given denominator keeps working
   y <- ad_expand("summary", categorical = "SEX", denominator = 50)
@@ -48,16 +48,16 @@ test_that("missing_row on summary and disposition: TRUE (default), FALSE, !unset
     args <- if (identical(tn, "summary")) list(categorical = "SEX") else list()
     id <- if (identical(tn, "summary")) "CAT" else "DISP"
     on <- do.call(ad_expand, c(list(tn), args))
-    expect_true("adsl_saf_m" %in% ad_sets(on), info = tn)
-    expect_identical(ad_an(on, id)$data, "adsl_saf_m", info = tn)
-    expect_identical(ad_an(on, id)$denominator, "adsl_saf", info = tn)
+    expect_true("adsl_miss" %in% ad_sets(on), info = tn)
+    expect_identical(ad_an(on, id)$data, "adsl_miss", info = tn)
+    expect_identical(ad_an(on, id)$denominator, "adsl_sub", info = tn)
     expect_identical(do.call(ad_expand, c(list(tn), args, list(missing_row = TRUE))), on)
     for (v in list(FALSE, tfl_unset())) {
       off <- do.call(ad_expand, c(list(tn), args, list(missing_row = v)))
-      expect_false("adsl_saf_m" %in% ad_sets(off), info = tn)
-      expect_identical(ad_an(off, id)$data, "adsl_saf", info = tn)
+      expect_false("adsl_miss" %in% ad_sets(off), info = tn)
+      expect_identical(ad_an(off, id)$data, "adsl_sub", info = tn)
       # (still over the analysis set: missing values are only left out of the counts)
-      expect_identical(ad_an(off, id)$denominator, "adsl_saf", info = tn)
+      expect_identical(ad_an(off, id)$denominator, "adsl_sub", info = tn)
     }
     a <- tfl_tpl_args(tn)
     expect_identical(a$effective[a$param == "missing_row"], "TRUE", info = tn)

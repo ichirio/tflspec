@@ -9,7 +9,9 @@ test_that("the study spec reads its files; missing ones are empty", {
   expect_identical(fns, c("plan_cells", "plan_col_header", "plan_stub", "plan_blanks", "plan_style"))
   expect_true(all(vapply(s$defaults$content, `[[`, "", "from") == "defaults"))
   expect_s3_class(s$defaults$content[[which(fns == "plan_style")]]$args$border_header, "tfl_call")
-  expect_identical(s$defaults$page$header[["2"]]$left, "Protocol: {STUDY_ID}")
+  expect_identical(s$defaults$page, list())
+  expect_identical(tflspec:::.tpl_style_set("tfl_standard", s)$page$header$first[["2"]]$left, "Protocol: {STUDY_ID}")
+  expect_identical(s$study$tokens$COMPANY, "Sample Pharma")
   expect_identical(s$patterns, stats::setNames(list(), character()))
   expect_identical(s$toc, list())
   outs <- tfl_read_outputs(yml_dir())
@@ -47,8 +49,8 @@ test_that("a report over the defaults: maps by key, items by function, order kep
   cells <- out$content[[which(fns == "plan_cells")]]$args
   expect_identical(cells$categorical, "{n:.0f} ({p:.1f%})")
   expect_identical(names(cells$continuous)[1L], "n")
-  # page: the defaults' header lines stay, the report's titles and tokens join
-  expect_identical(out$page$header[["1"]]$right, "DRAFT")
+  # page: the configuration's header lines (tfl_standard), the report's titles and tokens join
+  expect_identical(out$page$header[["1"]]$right, "{STATUS}")
   expect_identical(out$page$titles[["2"]]$center, "Demographic Characteristics")
   expect_identical(out$page$tokens$COMPANY, "Sample Pharma")
   expect_identical(out$page$tokens$OUTPUT_POPULATION, "Safety Analysis Set")
@@ -58,26 +60,31 @@ test_that("a report over the defaults: maps by key, items by function, order kep
 test_that("!unset removes a key of the layers; extends: none uses no layer", {
   s <- tfl_read_study_spec(yml_dir())
   o <- tfl_read_outputs(yml_dir())[["T-14-1-1"]]
-  o$page$header <- list(`2` = tfl_unset(), `6` = list(center = "<{OUTPUT_POPULATION}>"))
+  o$page$header <- list(`2` = tfl_unset(), `6` = list(center = "A body line"))
   o$page$tokens$ANALYSIS_TYPE <- tfl_unset()
   r <- tfl_resolve_output(o, s)
-  expect_identical(names(r$page$header), c("1", "4", "5", "6"))
-  expect_identical(names(r$page$tokens), c("COMPANY", "OUTPUT_POPULATION"))
+  # (the configuration's five lines, then the body: a body line never takes
+  # a configuration line's place)
+  expect_identical(names(r$page$header), as.character(1:6))
+  expect_identical(r$page$header[["6"]]$center, "A body line")
+  expect_identical(names(r$page$tokens), c("COMPANY", "STATUS", "OUTPUT_POPULATION"))
   expect_false(any(rapply(r$page, function(x) inherits(x, "tfl_unset"), how = "unlist")))
   o$extends <- "none"
   r0 <- tfl_resolve_output(o, s)
   expect_identical(vapply(r0$content, `[[`, "", "from"), rep("own", 6L))
-  expect_null(r0$page$header[["1"]])
+  # (no file layer: the report keeps its page configuration)
+  expect_identical(r0$page$header[["1"]]$left, "{COMPANY}")
 })
 
 test_that("a pattern between the defaults and the report, nearest last", {
   d <- withr::local_tempdir()
   dir.create(file.path(d, "patterns"))
   dir.create(file.path(d, "outputs"))
-  writeLines(c("content:", "  - plan_stub: {name: row_label}", "  - plan_blanks: {first: true}",
-               "page:", "  tokens: {A: defaults, B: defaults}"), file.path(d, "defaults.yml"))
-  writeLines(c("content:", "  - plan_blanks: {first: false, last: true}",
-               "page:", "  tokens: {B: pattern, C: pattern}"), file.path(d, "patterns", "compact.yml"))
+  writeLines(c("content:", "  - plan_stub: {name: row_label}", "  - plan_blanks: {first: true}"),
+             file.path(d, "defaults.yml"))
+  writeLines("tokens: {A: study, B: study}", file.path(d, "study.yml"))
+  writeLines(c("content:", "  - plan_blanks: {first: false, last: true}"),
+             file.path(d, "patterns", "compact.yml"))
   writeLines(c("id: T-1", "kind: table", "extends: [patterns/compact, defaults]",
                "content:", "  - table_plan: {cols: ARM}",
                "page:", "  tokens: {C: own}"), file.path(d, "outputs", "T-1.yml"))
@@ -86,7 +93,7 @@ test_that("a pattern between the defaults and the report, nearest last", {
   expect_identical(vapply(r$content, function(it) paste(it$fn, it$from), ""),
                    c("table_plan own", "plan_stub defaults", "plan_blanks pattern:compact"))
   expect_identical(r$content[[3L]]$args, list(first = FALSE, last = TRUE))
-  expect_identical(r$page$tokens, list(A = "defaults", B = "pattern", C = "own"))
+  expect_identical(r$page$tokens, list(A = "study", B = "study", C = "own"))
   expect_error(tfl_resolve_output(tfl_output("T-2", "table", extends = "patterns/nope"), s), "No pattern")
 })
 
@@ -196,7 +203,7 @@ test_that("the defaults' content is a table's: a figure or a listing takes their
                      if (kind == "listing") c("plan_listing", "plan_paginate_rows") else "plan_listing",
                      info = kind)
     # the page still comes from the defaults
-    expect_identical(r$page$header[["1"]]$right, "DRAFT", info = kind)
+    expect_identical(r$page$header[["1"]]$right, "{STATUS}", info = kind)
   }
   # a table keeps them
   o <- tfl_output("X-1", "table", content = list(tfl_item("table_plan", list())))

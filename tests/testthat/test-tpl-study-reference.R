@@ -179,20 +179,21 @@ test_that("the style helper: defaults.yml's styles: first, then the built-in set
   l <- .tpl_style_set("compact", s)
   expect_identical(l$content[[1L]]$fn, "plan_paginate_rows")
   expect_identical(l$content[[1L]]$args$max_rows, 40L)
-  # the built-in `standard`: an empty set, whether or not the study has one
-  l0 <- .tpl_style_set("standard", s)
+  # the built-in `tfl_standard`: a page and no content, whether or not the study has a set
+  l0 <- .tpl_style_set("tfl_standard", s)
   expect_length(l0$content, 0L)
+  expect_true(length(l0$page$header) > 0L)
   expect_identical(names(l0), c("data", "codelists", "content", "page"))
   # a built-in name always is the built-in: a study's set of that name does not replace it
   s2 <- sr_study(defaults = c("styles:", "  standard:", "    content:",
                               "      - plan_paginate_rows: {max_rows: 12}"))
-  expect_length(.tpl_style_set("standard", s2)$content, 0L)
+  expect_length(.tpl_style_set("tfl_standard", s2)$content, 0L)
   expect_identical(.tpl_style_set("stf_t02", s2)$content[[1L]]$fn, "plan_style")
   # no such set: the names that exist
-  expect_error(.tpl_style_set("nope", s), "no style \"nope\".*compact, standard")
+  expect_error(.tpl_style_set("nope", s), "no style \"nope\".*compact, tfl_standard")
   expect_error(.tpl_style_set(c("a", "b"), s), "one style")
   # no study: the built-in sets alone
-  expect_length(.tpl_style_set("standard", NULL)$content, 0L)
+  expect_length(.tpl_style_set("tfl_standard", NULL)$content, 0L)
 })
 
 test_that("the set's extends: demog, summary, disposition, ae_overview, param_change [defaults], stf_t02_demog {content: none}; the other 23 the old order", {
@@ -233,7 +234,8 @@ test_that("the set's extends: demog, summary, disposition, ae_overview, param_ch
   from2 <- vapply(ro2$content, function(it) it$from %||% "", "")
   expect_false("defaults" %in% from2)
   expect_true("style:stf_t02" %in% from2)
-  expect_identical(ro2$page$header, ro1$page$header)
+  # (stf_t02 is a content set: it has no page, so no header comes from it)
+  expect_null(ro2$page$header)
   expect_identical(ro2$page$rtf_page$orientation, "landscape")
   # (extends [defaults], batch 2 (ii)): summary has the same set as demog: the
   # study's content is laid under its items, its own items marked template:summary

@@ -159,7 +159,9 @@
 #' For each report and variable there is one list: the report's own when
 #' it has one (a template's own lists among them, as the sheets hold them),
 #' else the one of the layers it extends (a pattern's over the defaults').
-#' A report that extends nothing (`extends: none`) has only its own.
+#' A report that extends nothing (`extends: none`) has only its own.  The
+#' ARD holds each row's `value` (the code); its `label` is applied by the
+#' report's table plan (`plan_labels`), and by a figure's legend.
 #'
 #' @param study The study's spec, as [tfl_read_study_spec()] reads it.
 #' @param outputs The reports, as [tfl_sheets_from_spec()] takes them: a

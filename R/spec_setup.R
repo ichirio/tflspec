@@ -5,22 +5,34 @@
 # header and footer sheets, written from the study's defaults
 # (spec/defaults.yml, `page:`) and from a report of the YAML spec.  The
 # lines are the ones a report's program refers to after the setup
-# (tfl_report_code(output, setup = TRUE, study = ): study_header,
-# study_header_lines ...), made the same way (.page_band()).
+# (tfl_report_code(output, setup = TRUE, study = ): header_<name> ...),
+# made the same way (.page_band()).
 
 #' The lines of the study's setup file that tflspec owns
 #'
 #' A study's setup file (tflplanner's `programs/study_setup.R`) is sourced by
-#' every ARD and report program.  This gives the lines tflspec writes in it:
-#' the study's rounding as one `options()` call, `rtfreporter.rounding` and
-#' (for "sas" and "r") `cards.round_type`.  With option `tflspec.study_setup`
-#' set to `TRUE` ([tflspec_code_options]) the ARD and report setups do not
-#' write the rounding again.
+#' every ARD and report program.  This gives the lines tflspec writes in it,
+#' two parts:
+#'
+#' * the study's rounding as one `options()` call, `rtfreporter.rounding` and
+#'   (for "sas" and "r") `cards.round_type`;
+#' * the study's input data: one statement per dataset of its data catalog
+#'   (`spec/data.yml`, or the `datasets` sheet), ADSL first, the others in the
+#'   catalog's order -- `adsl <- readRDS(file.path(path_adam, "adsl.rds"))`,
+#'   with `|> dplyr::mutate(...)` for a dataset that has a `derive`.  The
+#'   reader follows the file's extension and the folder variables of option
+#'   `tflspec.paths`, as in the ARD program.
+#'
+#' With option `tflspec.study_setup` set to `TRUE` ([tflspec_code_options])
+#' the ARD, listing and figure programs do not write them again: they start
+#' from the objects (`adsl <- adsl |> order_levels(...)`), and the ARD and
+#' report setups leave the rounding out.
 #'
 #' @param study The study: what [tfl_read_study_spec()] gives, or a
-#'   table / report spec of the sheets (its `study` sheet's `rounding`).
+#'   table / report spec of the sheets (its `study` sheet's `rounding`, its
+#'   `datasets` sheet).
 #' @return A character vector, one element per line; `character()` when the
-#'   study says no rounding.
+#'   study says no rounding and has no dataset.
 #' @seealso [tflspec_code_options]
 #' @examples
 #' st <- tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
@@ -33,17 +45,62 @@ tfl_study_setup_code <- function(study) {
            "or a table / report spec of the sheets.", call. = FALSE)
     if (is.na(v)) NULL else v
   }
-  if (is.null(rnd)) return(character())
-  ct <- .cards_round_type(rnd)
-  ro <- c(list("options", rtfreporter.rounding = rnd), if (!is.null(ct)) list(cards.round_type = ct))
-  c("# the study's rounding (every ARD and report program)",
-    .spec_call_code(do.call(.spec_call, ro), 0L))
+  out <- character()
+  if (!is.null(rnd)) {
+    ct <- .cards_round_type(rnd)
+    ro <- c(list("options", rtfreporter.rounding = rnd), if (!is.null(ct)) list(cards.round_type = ct))
+    out <- c("# the study's rounding (every ARD and report program)",
+             .spec_call_code(do.call(.spec_call, ro), 0L))
+  }
+  dl <- .study_data_lines(.study_catalog(study))
+  if (length(dl)) {
+    out <- c(out, if (length(out)) "",
+             "# the study's input data (every ARD, listing and figure program uses them)", dl)
+  }
+  out
+}
+
+# The study's data catalog as a data frame (dataset, path, derive), ADSL
+# first and the others as the catalog has them: from the YAML study's
+# data.yml, or the `datasets` sheet of a spec of the sheets; none: no rows
+.study_catalog <- function(study) {
+  ds <- if (inherits(study, "tfl_study_spec")) {
+    d <- lapply(study$data$datasets %||% list(), function(z)
+      data.frame(dataset = as.character(z$dataset %||% NA_character_)[1L],
+                 path = as.character(z$path %||% NA_character_)[1L],
+                 derive = as.character(z$derive %||% NA_character_)[1L],
+                 stringsAsFactors = FALSE))
+    if (length(d)) do.call(rbind, d)
+  } else if (is.data.frame(study$datasets)) {
+    d <- study$datasets
+    data.frame(dataset = as.character(d$dataset), path = as.character(d$path),
+               derive = as.character(if (is.null(d$derive)) rep(NA_character_, nrow(d)) else d$derive),
+               stringsAsFactors = FALSE)
+  }
+  if (is.null(ds) || !nrow(ds)) return(data.frame(dataset = character(), path = character(),
+                                                 derive = character(), stringsAsFactors = FALSE))
+  ds <- ds[!is.na(ds$dataset) & nzchar(ds$dataset) & !is.na(ds$path) & nzchar(ds$path), , drop = FALSE]
+  ds[order(toupper(ds$dataset) != "ADSL"), , drop = FALSE]
+}
+
+# One statement a dataset of the catalog: the read, and its derive as an ARD
+# program writes it (.ard_data_lines())
+.study_data_lines <- function(ds) {
+  code <- unlist(lapply(seq_len(nrow(ds)), function(i) {
+    d <- .split_bar(ds$derive[i])
+    .make_code(.r_name(ds$dataset[i]), .reader(ds$path[i]),
+               if (length(d)) sprintf("dplyr::mutate(%s)", paste(d, collapse = ", ")))
+  }))
+  if (length(code)) .drop_attached_ns(code) else character()
 }
 
 # The setup code of a study's spec, one element a line (none: the study's
-# defaults say no font, size, tokens, header or footer)
+# defaults say no font, size, tokens, header or footer).  The font and size
+# are its default configuration's; the tokens study.yml's `tokens:`; each
+# configuration's header and footer are written once, as objects
+# header_<name> and footer_<name>.
 .study_setup_code <- function(study) {
-  pg <- study$defaults$page %||% list()
+  pg <- .page_config_flat(list(page = .study_default_page(study)))
   out <- character()
   # the company's font and size, for every report
   opts <- list()
@@ -83,8 +140,8 @@ tfl_study_setup_code <- function(study) {
   if (length(opts)) {
     out <- c(out, .spec_call_code(do.call(.spec_call, c(list("options"), opts)), 0L))
   }
-  # the study's tokens
-  tk <- .page_args(pg$tokens)
+  # the study's tokens (study.yml)
+  tk <- .study_tokens(study)
   if (length(tk)) {
     v <- vapply(tk, function(x) if (length(x) != 1L || is.na(x)) "" else as.character(x), "")
     keep <- !trimws(v) %in% .ard_spec_omit
@@ -93,21 +150,21 @@ tfl_study_setup_code <- function(study) {
       out <- c(out, .spec_call_code(.spec_call("options", rtfreporter.tokens = tok), 0L))
     }
   }
-  # the running header and footer: their lines, and the band
-  for (band in names(.setup_band_names)) {
-    b <- .page_band(pg, band, NULL)
-    if (!length(b)) next
-    # a line of tokens of one's own goes when a report's are empty
-    own <- setdiff(.page_used_tokens(pg[band]), .ard_spec_rtf_tokens)
-    nm <- .setup_band_names[[band]]
-    lines <- paste0(nm, "_lines")
-    # (its look as the study's page says it: page.rtf_header / rtf_footer)
-    style <- .band_style(pg, band)
-    if (is.null(style$drop_empty_rows) && length(own)) style$drop_empty_rows <- TRUE
-    call <- do.call(.spec_call, c(list(paste0("rtf_", band), .spec_sym(lines)), style))
-    out <- c(out,
-             paste(lines, "<-", .spec_call_code(b, 0L, lead = nchar(lines) + 4L)),
-             paste(nm, "<-", .spec_call_code(call, 0L, lead = nchar(nm) + 4L)))
+  # the running header and footer of each configuration: the lines and the band
+  for (nm in .setup_style_names(study)) {
+    cpg <- .page_config_flat(.tpl_style_set(nm, study))
+    for (band in names(.setup_band_names)) {
+      b <- .page_band(cpg, band, NULL)
+      if (!length(b)) next
+      # a line of tokens of one's own goes when a report's are empty
+      own <- setdiff(.page_used_tokens(cpg[band]), .ard_spec_rtf_tokens)
+      obj <- .setup_band_object(band, nm)
+      # (its look as the configuration says it: page.rtf_header / rtf_footer)
+      style <- .band_style(cpg, band)
+      if (is.null(style$drop_empty_rows) && length(own)) style$drop_empty_rows <- TRUE
+      call <- do.call(.spec_call, c(list(paste0("rtf_", band), b), style))
+      out <- c(out, paste(obj, "<-", .spec_call_code(call, 0L, lead = nchar(obj) + 4L)))
+    }
   }
   if (!length(out)) return(character())
   .drop_attached_ns(unlist(strsplit(out, "\n", fixed = TRUE)))

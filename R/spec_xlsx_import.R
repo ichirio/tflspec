@@ -42,7 +42,7 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
   files <- list()
   get_file <- function(rel) {
     if (is.null(files[[rel]])) {
-      f <- file.path(if (identical(rel, "study.yml")) dirname(spec) else spec, rel)
+      f <- file.path(if (identical(rel, "study.yml")) dir else spec, rel)
       files[[rel]] <<- list(path = f, y = if (file.exists(f)) yaml::read_yaml(f, handlers = .yaml_handlers()) %||% list() else list())
     }
     files[[rel]]$y
@@ -56,6 +56,36 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
     if (is.na(output_id) || !nzchar(output_id)) "defaults.yml"
     else if (startsWith(output_id, "@")) file.path("patterns", paste0(substring(output_id, 2L), ".yml"))
     else out_rel(output_id)
+  }
+
+  # the page of a scope: a report's or a pattern's `page:`; the defaults' is the
+  # study's default page configuration (a set of defaults.yml's styles:, its
+  # lines as one numbered list: the first block), its tokens study.yml's
+  default_name <- function() {
+    nm <- get_file("study.yml")$settings$style
+    if (is.character(nm) && length(nm) == 1L && nzchar(nm)) nm else "tfl_standard"
+  }
+  page_orig <- list()
+  page_get <- function(rel) {
+    y <- get_file(rel)
+    if (!identical(rel, "defaults.yml")) return(y$page %||% list())
+    nm <- default_name()
+    if (is.null(y$styles[[nm]])) {
+      stop("tfl_import_spec_xlsx(): the default page rows are the study's default page configuration, ",
+           "and ", nm, " is not a set of defaults.yml's styles: (a built-in one); copy it into ",
+           "styles: under your own name and set study.yml's settings: style.", call. = FALSE)
+    }
+    cfg <- .page_config_check(.calls_in(y$styles[[nm]]$page %||% list()), "defaults.yml styles")
+    pg <- .page_resolve(cfg, NULL, NULL)
+    if (is.null(page_orig[[rel]])) page_orig[[rel]] <<- pg
+    pg
+  }
+  page_set <- function(rel, page) {
+    # (the default page as the file says it, unchanged: the file is not written)
+    if (identical(rel, "defaults.yml") && identical(page, page_orig[[rel]])) return(invisible())
+    y <- get_file(rel)
+    if (identical(rel, "defaults.yml")) y$styles[[default_name()]]$page <- page else y$page <- page
+    set_file(rel, y)
   }
 
   # a list of maps (rows) under `path_in` of the file `rel`, updated by key
@@ -202,8 +232,8 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
   for (band in c("header", "footer", "titles", "footnotes")) {
     by_scope(band, function(id, part) {
       rel <- scope_rel(id)
-      y <- get_file(rel)
-      m <- y$page[[band]] %||% list()
+      pg <- page_get(rel)
+      m <- pg[[band]] %||% list()
       for (i in seq_len(nrow(part))) {
         line <- as.character(part$line[i])
         cells <- list()
@@ -229,14 +259,17 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
         }
         m[[line]] <- cells
       }
-      y$page[[band]] <- m
-      set_file(rel, y)
+      pg[[band]] <- m
+      page_set(rel, pg)
     })
   }
   by_scope("tokens", function(id, part) {
     rel <- scope_rel(id)
+    # (the study's tokens are study.yml's `tokens:`)
+    study_tk <- identical(rel, "defaults.yml")
+    if (study_tk) rel <- "study.yml"
     y <- get_file(rel)
-    m <- y$page$tokens %||% list()
+    m <- (if (study_tk) y$tokens else y$page$tokens) %||% list()
     for (i in seq_len(nrow(part))) {
       v <- .conv_cell(part$value[i], "value", character(), character(), function(...) NULL, NA, "tokens", i)
       key <- paste(if (is.na(id)) "" else id, part$name[i], sep = " / ")
@@ -247,14 +280,13 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
       }
       m[[part$name[i]]] <- v
     }
-    y$page$tokens <- m
+    if (study_tk) y$tokens <- m else y$page$tokens <- m
     set_file(rel, y)
   })
   for (sh in c("page", "report")) {
     by_scope(sh, function(id, part) {
       rel <- scope_rel(id)
-      y <- get_file(rel)
-      page <- y$page %||% list()
+      page <- page_get(rel)
       # (the page as the writer read it, calls resolved: a watermark is a call;
       # unedited, its cell is what the page says)
       before <- .page_columns(.calls_in(page))[[sh]]
@@ -267,8 +299,7 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
           page <- .page_put(page, sh, cn, v, function(...) NULL, id)
         }
       }
-      y$page <- page
-      set_file(rel, y)
+      page_set(rel, page)
     })
   }
 

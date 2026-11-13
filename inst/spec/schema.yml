@@ -1319,7 +1319,8 @@ rtf_footer:
     description: 'A report''s code lists, one row a value of a variable -- its place
       and what it is in the data the report''s program makes (the ARD, a listing''s
       or a figure''s data): the program puts them on the columns it reads (cl_<variable>,
-      set_levels()), each a factor in the list''s order, its values the labels. A
+      set_levels()), each a factor of the codes in the list''s order (the data and the ARD keep the
+      codes; the table plan''s labels, and a figure''s legend, show the labels). A
       value the list does not have stops the program. Every row names its report in
       `output_id` (a blank one is an error: copy the rows into each report that uses
       them). A variable''s `levels` on the variables sheet, when given, is the order

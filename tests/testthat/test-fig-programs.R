@@ -9,7 +9,7 @@
 fig_program_cases <- function() {
   cl <- data.frame(output_id = "F-MEAN", variable = "TRTA",
                    value = c("Placebo", "Xanomeline Low Dose", "Xanomeline High Dose"),
-                   label = NA, order = 1:3)
+                   label = c("Placebo", "Low Dose", "High Dose"), order = 1:3)
   km_add <- tfl_fig_template("km_risk_table", data = "ADTTE", param = "OS",
                              pop = "FASFL", group = "TRT01P")
   km_add$layers[[length(km_add$layers)]]$method <- "add_risktable"
@@ -316,4 +316,23 @@ test_that("a filter that drops an arm leaves no unused level in the legend, stra
   chk(a, b)
   expect_identical(levels(b$env$sm$TRT01P)[levels(b$env$sm$TRT01P) %in% b$env$sm$TRT01P],
                    c("Placebo", "Drug A"))
+})
+
+test_that("a code list with labels: the data holds the codes, the legend shows the labels (#786)", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("dplyr")
+  code <- fig_program_code(fig_program_cases()$mean_se_codelists)
+  env <- new.env(parent = tflspec:::.fig_pkg_env(c("dplyr", "ggplot2")))
+  env$adsl <- tflspec::adsl
+  env$adsl$TRTA <- c(Control = "Placebo", `Drug X` = "Xanomeline High Dose")[as.character(env$adsl$TRT01A)]
+  # (the figure takes the arm and the flag from ADSL: ADVS has none of its own)
+  env$advs <- tflspec::advs[setdiff(names(tflspec::advs), c("TRTA", "SAFFL"))]
+  eval(parse(text = tfl_fig_setup_code()), env)
+  eval(parse(text = tfl_helpers_code()), env)
+  eval(parse(text = code), env)
+  arms <- c("Placebo", "Xanomeline Low Dose", "Xanomeline High Dose")
+  expect_identical(levels(env$advs_sysbp$TRTA), arms)
+  sc <- ggplot2::ggplot_build(env$plot)$plot$scales$get_scales("colour")
+  # (the sample's data has two of the three arms)
+  expect_identical(sc$get_labels(arms[c(1, 3)]), c("Placebo", "High Dose"))
 })

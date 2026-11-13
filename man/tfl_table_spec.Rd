@@ -190,7 +190,7 @@ The key \code{.stat_group} then names them in \code{cols} (\code{TRT01A | .stat_
 \item{\code{order}}{Number; the order the variables appear in
 (\code{plan_levels(variable = c("AGE", "SEX"))}: the values of the ARD's
 \code{variable} column; one not numbered comes after, in the ARD's order).}
-\item{\code{levels}}{The order of its values: \verb{Grade 0 | Grade 1 | Total};
+\item{\code{levels}}{The order of its values (the codes the ARD holds): \verb{Grade 0 | Grade 1 | Total};
 \code{F = Female | M = Male} gives each value its text too (a named order,
 \code{plan_levels(SEX = c(F = "Female", M = "Male"))}).}
 \item{\code{empty_levels}}{\code{show} (blank, the default) or \code{hide}: whether

@@ -65,7 +65,7 @@
     tfl_param("subset", NULL, unset = "step_off",
               doc = "which subjects (R, on the analysis set's ADSL): PART == \"Part 1\"; unset: all"),
     tfl_param("data", "ADSL", unset = "stop", doc = "a subject-level dataset"),
-    tfl_param("data_id", NULL, doc = "the analysis data's id when `data` is not ADSL; NULL: <data>_<population>"),
+    tfl_param("data_id", NULL, doc = "the analysis data's id when `data` is not ADSL; NULL: <data>_sub"),
     # (fixed in both, canon 1.31: the percentages are over the analysis set)
     tfl_param("denominator", NULL, doc = "fixed: the percentages are over the analysis set"),
     tfl_param("formats", NULL, tier = "usual",
@@ -139,9 +139,9 @@
     tfl_param("border_group", NULL, type = "list", multiple = FALSE, fields = c("edge", "line"),
               doc = paste("a rule under each block (plan_style(border_group = ), e.g. list(bottom = TRUE));",
                           "NULL: none")),
-    tfl_param("style", "standard", type = "text", study = "settings.style", unset = "step_off",
+    tfl_param("style", "tfl_standard", type = "text", study = "settings.style", unset = "step_off",
               doc = paste("the style set (font, borders, page) the report starts from: a set of the",
-                          "study's defaults.yml `styles:` or a built-in one (standard, stf_t02);",
+                          "study's defaults.yml `styles:` or a built-in one (tfl_standard, tfl_small, stf_t02);",
                           "unset: none")))
   names(p) <- vapply(p, `[[`, "", "name")
   for (q in add) {
@@ -345,11 +345,10 @@
   }
   nn <- function(x) Filter(Negate(is.null), x)
   pop <- a$population
-  subj <- paste0("adsl_", tolower(pop))
+  subj <- .tpl_subj_id()
   hn <- if (is.null(a$header_n)) "none" else .tpl_header_n_stack(a, ctx, den = NULL)
   grp_set <- subj
-  sets <- list(list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
-                    population = pop))
+  sets <- list(list(id = subj, from = "ADSL", population = pop))
   set <- subj
   adsl <- identical(toupper(a[["data"]]), "ADSL")
   if (!is.null(a$where) && adsl) {
@@ -357,7 +356,7 @@
                              "for which subjects, use `subset`."), tn))
   }
   if (!adsl) {
-    set <- a[["data_id"]] %||% paste0(tolower(a[["data"]]), "_", tolower(pop))
+    set <- .tpl_set_id(a)
     sets <- c(sets, list(nn(list(id = set, from = a[["data"]], subjects = subj,
                                  where = if (!is.null(a$where)) tfl_r(a$where)))))
   }
@@ -407,9 +406,10 @@
   lev <- vals
   cat_set <- set
   if (!is.null(ml) && length(cat)) {
-    cat_set <- paste0(set, "_m")
+    # (preparation of the analysis, not a definition of subjects: `adsl_miss`)
+    cat_set <- "adsl_miss"
     sets <- c(sets, list(list(
-      id = cat_set, label = "with a Missing level for a variable that has missing values",
+      id = cat_set, label = "With a Missing level for a variable that has missing values.",
       from = set, code = tfl_r(.tpl_demog_missing_code(set, cat, ml)))))
   }
   ov <- if (isTRUE(a[["total"]])) TRUE

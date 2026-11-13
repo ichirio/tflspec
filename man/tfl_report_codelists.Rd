@@ -39,7 +39,9 @@ rows with the layers' lists added, report by report.
 For each report and variable there is one list: the report's own when
 it has one (a template's own lists among them, as the sheets hold them),
 else the one of the layers it extends (a pattern's over the defaults').
-A report that extends nothing (\code{extends: none}) has only its own.
+A report that extends nothing (\code{extends: none}) has only its own.  The
+ARD holds each row's \code{value} (the code); its \code{label} is applied by the
+report's table plan (\code{plan_labels}), and by a figure's legend.
 }
 \examples{
 d <- system.file("extdata", "spec-yaml", package = "tflspec")

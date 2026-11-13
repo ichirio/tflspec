@@ -1,7 +1,11 @@
 # ---- data ------------------------------------------------------------------
 # ---- code lists: each value in its order, as it is in the data ----
 # (a value a list does not have stops the program: add it to the list)
-cl_trta <- c("Placebo", "Xanomeline Low Dose", "Xanomeline High Dose")
+cl_trta <- c(
+  Placebo = "Placebo",
+  "Xanomeline Low Dose" = "Low Dose",
+  "Xanomeline High Dose" = "High Dose"
+)
 
 advs_sysbp <- advs |>
   order_levels(from = adsl) |>
@@ -45,7 +49,11 @@ plot <- ggplot() +
     width = 0.2,
     position = pd
   ) +
-  scale_colour_manual(values = pal, breaks = names(pal)) +
+  scale_colour_manual(
+    values = pal,
+    breaks = names(pal),
+    labels = cl_trta[names(pal)]
+  ) +
   labs(x = "Visit", y = "Mean (+/- SE) SYSBP") +
   theme_tfl(theme = "boxed") +
   theme(legend.position = "bottom", legend.title = element_blank())

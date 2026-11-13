@@ -10,23 +10,23 @@ la_ard <- function(x, lb = adlb) {
   eval(parse(text = tfl_helpers_code()))  # reorder_by()
   saf <- adsl[adsl$SAFFL == "Y", ]
   d <- x$ard$analysis_data
-  adlb_saf <- lb[lb$USUBJID %in% saf$USUBJID, ]
-  if (length(d[[2L]]$where)) adlb_saf <- adlb_saf[eval(parse(text = d[[2L]]$where), adlb_saf), ]
-  adlb_saf <- eval(parse(text = sprintf("dplyr::mutate(adlb_saf, %s)", d[[2L]]$derive)))
-  adlb_saf_n <- eval(parse(text = d[[3L]]$code))
-  adlb_saf_cat <- if (length(d) == 5L) {
-    adlb_saf_worst <- eval(parse(text = d[[4L]]$code))
+  adlb_sub <- lb[lb$USUBJID %in% saf$USUBJID, ]
+  if (length(d[[2L]]$where)) adlb_sub <- adlb_sub[eval(parse(text = d[[2L]]$where), adlb_sub), ]
+  adlb_sub <- eval(parse(text = sprintf("dplyr::mutate(adlb_sub, %s)", d[[2L]]$derive)))
+  adlb_n <- eval(parse(text = d[[3L]]$code))
+  adlb_cat <- if (length(d) == 5L) {
+    adlb_worst <- eval(parse(text = d[[4L]]$code))
     eval(parse(text = d[[5L]]$code))
   } else {
-    v <- adlb_saf[eval(parse(text = d[[4L]]$where), adlb_saf), ]
+    v <- adlb_sub[eval(parse(text = d[[4L]]$where), adlb_sub), ]
     v <- eval(parse(text = sprintf("dplyr::mutate(v, %s)", d[[4L]]$derive)))
     dplyr::distinct(v, USUBJID, TRT01A, PARAM, ANRIND)
   }
   ct <- rlang::sym(x$ard$analyses[[2L]]$variables)
   cards::bind_ard(
     cards::ard_tabulate(saf, variables = TRT01A),
-    cards::ard_tabulate(adlb_saf_cat, by = c(TRT01A, PARAM), variables = !!ct,
-                        denominator = adlb_saf_n))
+    cards::ard_tabulate(adlb_cat, by = c(TRT01A, PARAM), variables = !!ct,
+                        denominator = adlb_n))
 }
 la_tab <- function(p) {
   t <- as.data.frame(suppressMessages(rtfreporter::plan_apply(p, "table")))
@@ -55,13 +55,13 @@ test_that("expanded: the records kept, the N's data, each subject once a categor
   x <- tfl_template_expand("lab_abnormal", la_args)
   d <- x$ard$analysis_data
   expect_identical(vapply(d, `[[`, "", "id"),
-                   c("adsl_saf", "adlb_saf", "adlb_saf_n", "adlb_saf_cat"))
+                   c("adsl_sub", "adlb_sub", "adlb_n", "adlb_cat"))
   expect_identical(as.character(d[[2L]]$where), "ONTRTFL == \"Y\"")
-  expect_identical(d[[3L]]$code, "dplyr::distinct(adlb_saf, USUBJID, TRT01A, PARAM)")
+  expect_identical(d[[3L]]$code, "dplyr::distinct(adlb_sub, USUBJID, TRT01A, PARAM)")
   expect_identical(as.character(d[[4L]]$where), "ANRIND %in% c(\"LOW\", \"HIGH\")")
   expect_identical(d[[4L]]$distinct, "USUBJID | TRT01A | PARAM | ANRIND")
   an <- x$ard$analyses[[2L]]
-  expect_identical(an$denominator, "adlb_saf_n")
+  expect_identical(an$denominator, "adlb_n")
   expect_identical(an$by, c("TRT01A", "PARAM"))
   # the parameters, baseline normal: the records kept
   y <- tfl_template_expand("lab_abnormal", c(la_args[-3L], list(
@@ -72,7 +72,7 @@ test_that("expanded: the records kept, the N's data, each subject once a categor
   z <- tfl_template_expand("lab_abnormal", list(population = "SAF", category = "MCRIT1ML",
                                                 levels = c("1", "2", "3"), cumulative = TRUE))
   expect_identical(vapply(z$ard$analysis_data, `[[`, "", "id")[4:5],
-                   c("adlb_saf_worst", "adlb_saf_cat"))
+                   c("adlb_worst", "adlb_cat"))
   expect_match(z$ard$analysis_data[[4L]]$code, "max(match(MCRIT1ML, c(\"1\", \"2\", \"3\")))",
                fixed = TRUE)
   expect_error(tfl_template_expand("lab_abnormal", list(population = "SAF", cumulative = TRUE)),

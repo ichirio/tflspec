@@ -149,12 +149,14 @@ mention them in the assumptions only when they change what you write
   assumption when they differ from `label`) then the population, each `{center: ...}` (`left` when the
   shell shows them left-aligned); `footnotes:` by line number, each
   `{left: ...}`.  Line numbers are quoted keys: `'1':`, `'2':`.
-- **`spec/defaults.yml`'s `page:`** for what every output shares: the
-  running `header:` and `footer:` lines the shells show at the top and
-  bottom of the page (`{PAGE}`, `{TOTAL_PAGES}`, `{PROGRAM}`,
-  `{DATETIME}` where the shell shows "Page x of y", a program name, a run
-  date), and the page itself when the shells say it (`rtf_page:
-  {orientation: landscape}`).
+- **a page configuration in `spec/defaults.yml`'s `styles:`** (named by
+  `study.yml`'s `settings: {style: ...}`) for what every output shares:
+  under its `page:`, the running `header:` and `footer:` lines the shells
+  show at the top and bottom of the page (`{PAGE}`, `{TOTAL_PAGES}`,
+  `{PROGRAM}`, `{DATETIME}` where the shell shows "Page x of y", a program
+  name, a run date; lines at the top of the band under `first:`, at the
+  bottom under `last:`), and the page itself when the shells say it
+  (`rtf_page: {orientation: landscape}`).  A `page:` in `defaults.yml` stops.
 - `study.yml`'s `settings:` `program` / `file` only when the TOC names the
   programs or the files by a rule (`{output_id}.R`); else leave them out.
 
@@ -339,8 +341,9 @@ written:
 - the report's `codelists:` when the shell shows labels ("Male") for
   coded values ("M"): `codelists: {SEX: [{value: M, label: Male}, {value:
   F, label: Female}]}`, in the order printed.  The program then makes the
-  column a factor in that order with the labels as its values, so the ARD
-  holds "Male" -- and `plan_levels` names the labels.
+  column a factor of the codes in that order, so the ARD holds "M" and
+  `plan_levels` (and a `where`) name the codes; the table shows the labels
+  through `plan_labels`.
 
 You rarely know the data's values.  Write the shell's labels, say in the
 assumptions which values you assumed, and ask for the code list.  A
@@ -583,10 +586,11 @@ The figure's titles and footnotes are its `page:`, as a table's.
 ## 7. The page
 
 From the shell (else the TOC, §2.4): each report's `page.titles` and `page.footnotes`.
-From the shells' page, once in `spec/defaults.yml`'s `page:`: the
+From the shells' page, once in a page configuration (`spec/defaults.yml`'s
+`styles:`, named by `study.yml`'s `settings: {style: ...}`): the
 `header` and `footer` lines, the page (`rtf_page: {orientation:
 landscape, paper_size: letter}` -- ask when not shown), the font when the
-shell names it.  `tokens:` only for a text the shells repeat as a
+shell names it.  `tokens:` (in `study.yml`) only for a text the shells repeat as a
 placeholder (`{STUDY}`).  Everything else left out: the defaults are
 rtfreporter's clinical layout.
 
@@ -761,11 +765,12 @@ Age group, n (%)
 → `table_plan: {cols: TRT01A, rows: {group: variable}}`;
 `plan_total: {label: Total}`.
 → `plan_levels`: `TRT01A` the arms in the shell's order; `AGEGR1`
-`['<65', '>=65']`; `SEX` `[Male, Female]`.
+`['<65', '>=65']`; `SEX` `[M, F]` (the codes; the order of the
+code list, so it can be left out).
 → `plan_labels`: `AGE` "Age (years)", `SEX` "Sex, n (%)", `AGEGR1` "Age
 group, n (%)", in that order.
 → `codelists`: `SEX` `M` → Male, `F` → Female: the shell shows words, the
-data codes; the codes are an assumption.
+data codes (the table shows the labels); the codes are an assumption.
 → `plan_cells`: the four `continuous` rows of §3.3 and `categorical`
 `'{n} ({p:.1f%})'`.
 → `plan_stub: {name: row_label, before: true}`, `plan_blanks: {where:

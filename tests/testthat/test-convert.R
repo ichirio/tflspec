@@ -73,7 +73,7 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   r <- tfl_convert_sheets_to_yaml(from, to, overwrite = TRUE)
   rel <- sub(paste0("^", normalizePath(to, "/"), "/"), "", normalizePath(r$files, "/"))
   expect_setequal(rel, c("study.yml", "spec/data.yml", "spec/defaults.yml",
-                         "spec/patterns/Compact.yml", "spec/outputs/T-1.yml", "spec/outputs/L-1.yml",
+                         "spec/outputs/T-1.yml", "spec/outputs/L-1.yml",
                          "spec/outputs/F-1.yml", "spec/toc.yml", "spec/_not_converted.yml"))
   # study.yml: the meta without the stamps, the keys, the setup as !r
   st <- yaml::read_yaml(file.path(to, "study.yml"), handlers = tflspec:::.yaml_handlers())
@@ -93,12 +93,16 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   expect_identical(dt$populations[[1L]]$label, "Safety Analysis Set")
   # the study spec reads what was written
   s <- tfl_read_study_spec(to)
-  expect_identical(s$defaults$page$header[["1"]]$left, "Acme")
-  expect_identical(s$defaults$page$footer[["99"]]$left, "{PROGRAM}")
-  expect_identical(s$defaults$page$tokens$COMPANY, "Acme")
+  # the default rows are the study's page configuration (its default), the
+  # tokens study.yml's; a pattern's page rows are a page configuration too
+  expect_identical(s$styles$standard$page$header$first[["1"]]$left, "Acme")
+  expect_identical(s$styles$standard$page$footer$last[["99"]]$left, "{PROGRAM}")
+  expect_identical(s$study$tokens$COMPANY, "Acme")
+  expect_identical(s$study$settings$style, "standard")
   expect_null(s$codelists)                     # a code list is a report's, or a layer's
-  expect_identical(names(s$patterns), "Compact")
-  expect_identical(s$patterns$Compact$page$rtf_page$margin_top_in, 0.5)
+  # (a pattern with page rows is a page configuration: no pattern file)
+  expect_length(s$patterns, 0L)
+  expect_identical(s$styles$Compact$page$rtf_page$margin_top_in, 0.5)
   expect_identical(vapply(s$toc$outputs, `[[`, "", "id"), c("T-1", "L-1", "F-1"))
   expect_identical(s$toc$outputs[[1L]]$sets, c("Topline", "Final"))
   expect_identical(s$toc$outputs[[1L]]$section, "14.1")
@@ -106,7 +110,8 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   outs <- tfl_read_outputs(to)
   t1 <- outs[["T-1"]]
   expect_identical(t1$kind, "table")
-  expect_identical(t1$extends, c("patterns/Compact", "defaults"))
+  expect_identical(t1$extends, "defaults")
+  expect_identical(t1$style, "Compact")
   expect_identical(t1$population, "SAF")
   expect_identical(t1$data$source, "ard")
   expect_identical(t1$ard$analysis_data[[1L]]$id, "adsl_saf")
@@ -120,11 +125,14 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   # the content through the package's bridge from the sheets
   expect_true(length(t1$content) > 0L)
   expect_identical(t1$content[[1L]]$fn, "table_plan")
-  # the report's header line 2 is (none): an unset, resolved to nothing
-  expect_s3_class(t1$page$header[["2"]], "tfl_unset")
+  # the report's header line 2 is (none): the configuration's line 2 unset, resolved to nothing
+  expect_s3_class(t1$page$header$first[["2"]], "tfl_unset")
   r1 <- tfl_resolve_output(t1, s)
+  # (a report row with a default row's number overrides that line, (none) drops it;
+  # the default row 99 is higher than the reports' rows: a `last` line)
   expect_identical(names(r1$page$header), "1")
   expect_identical(r1$page$footer[["1"]]$left, "SD = Standard Deviation.")
+  expect_identical(r1$page$footer[["2"]]$left, "{PROGRAM}")
   expect_identical(r1$page$tokens$OUTPUT_TITLE, "Demographics")
   # the listing: its data, its columns as items, its spec and pages
   l1 <- outs[["L-1"]]
@@ -378,6 +386,9 @@ test_that("a quoted page cell and a written \n mean in the YAML what they mean i
   tfl_yaml_from_sheets(sheets, to, overwrite = TRUE)
   st <- tfl_read_study_spec(to)
   o <- tfl_read_outputs(to)[["T-7"]]
+  # (the sheets say no header or footer: the report names a configuration with none)
+  st$styles$plain <- list(data = list(), codelists = list(), content = list(), page = list())
+  o$style <- "plain"
   # the YAML holds the text itself
   expect_identical(o$page$titles[["1"]]$center, "Table 7\nDemographics")
   expect_identical(o$page$titles[["2"]]$center, "  Indented")

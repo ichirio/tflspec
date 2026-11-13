@@ -18,8 +18,8 @@
 
 .tpl_eair_body <- function(a, ctx) {
   pop <- a$population
-  subj <- paste0("adsl_", tolower(pop))
-  set <- paste0(tolower(a$data), "_", tolower(pop))
+  subj <- .tpl_subj_id()
+  set <- paste0(tolower(a$data), "_sub")
   h <- a$hierarchy
   # each subject with each term (a level's): at risk to the day of their
   # first event, else for the whole exposure
@@ -52,15 +52,14 @@
       "  # at risk to the first event with a day, else for the whole exposure (years)\n",
       "  dplyr::mutate(EVENT = !is.na(EVENT),\n",
       sprintf("    YEARS = dplyr::if_else(EVENT & !is.na(DAY), DAY, %s) / 365.25)", a$exposure))
-    list(id = paste0(set, suffix), label = paste("each subject's time at risk of", what),
+    list(id = paste0(tolower(a$data), suffix), label = paste0("Each subject's time at risk of ", what, "."),
          from = set, code = code)
   }
   levels <- list(list("_risk", character(), h[1L], "any event"),
                  list("_risk_soc", h[1L], h[1L], paste("each", h[1L])),
                  list("_risk_pt", h, h, paste("each", h[length(h)])))
   sets <- c(list(
-    list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
-         population = pop),
+    list(id = subj, from = "ADSL", population = pop),
     Filter(Negate(is.null), list(
       id = set, from = a$data, subjects = subj,
       where = if (!is.null(a$where)) tfl_r(a$where), derive = tfl_r(paste("DAY =", a$start))))),
@@ -69,7 +68,7 @@
   # hierarchical ARD: its own rows of each level)
   rate <- function(id, l) {
     k <- length(l[[3L]]) + 1L
-    list(id = id, method = "cardx::ard_incidence_rate", data = paste0(set, l[[1L]]),
+    list(id = id, method = "cardx::ard_incidence_rate", data = paste0(tolower(a$data), l[[1L]]),
          by = a$by, strata = l[[3L]],
          args = tfl_r(sprintf(paste("time = YEARS, count = EVENT, id = USUBJID,",
                                     "n_person_time = %s, unit_label = \"years\""), a$per)),

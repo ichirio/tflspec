@@ -32,11 +32,9 @@ test_that("the sheets of the fixture study come back: the report list, the page 
   expect_identical(sh$planner$population[2L], "SAF")
   rp <- sh$table$report
   expect_identical(rp$type[rp$output_id %in% "T-14-1-1"], "table")
-  # the defaults' rtf_tables(auto_section = TRUE) as the report sheet's study row
-  expect_identical(rp$auto_section[is.na(rp$output_id)], "TRUE")
-  h <- sh$table$header
-  expect_true(all(is.na(h$output_id)))
-  expect_identical(h$left[h$line == "2"], "Protocol: {STUDY_ID}")
+  # the built-in default configuration is no row of the study's sheets
+  expect_false("TRUE" %in% rp$auto_section[is.na(rp$output_id)])
+  expect_false(any(is.na(sh$table$header$output_id)))
   expect_identical(sh$table$tokens$value[sh$table$tokens$name == "COMPANY"], "Sample Pharma")
   expect_identical(sh$table$titles$center, c("Table 14.1.1", "Demographic Characteristics"))
   expect_identical(sh$ard$analyses$analysis_id, c("GROUPN", "CONT", "CAT"))

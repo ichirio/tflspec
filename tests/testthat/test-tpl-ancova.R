@@ -59,15 +59,15 @@ an_skip <- function() {
 test_that("expanded: the records of the parameter and visit, the model by cardx", {
   x <- tfl_template_expand("ancova", an_args)
   d <- x$ard$analysis_data
-  expect_identical(vapply(d, `[[`, "", "id"), c("adsl_saf", "advs_saf_sysbp"))
+  expect_identical(vapply(d, `[[`, "", "id"), c("adsl_sub", "advs_sub"))
   expect_identical(as.character(d[[2L]]$where),
                    "PARAMCD == \"SYSBP\" & AVISIT == \"CYCLE 2 DAY 1\"")
   an <- x$ard$analyses
   expect_identical(vapply(an, `[[`, "", "method"),
                    c("categorical", "cardx::ard_emmeans_emmeans", "custom"))
   expect_match(an[[3L]]$code, "ref <- levels(factor(data$TRT01A))[1L]", fixed = TRUE)
-  expect_match(an[[3L]]$code, "fit <- stats::lm(CHG ~ TRT01A + BASE, data = data)", fixed = TRUE)
-  expect_match(an[[3L]]$code, "emmeans::emmeans(fit, specs = ~ TRT01A, data = data)", fixed = TRUE)
+  expect_match(an[[3L]]$code, "fit <- stats::lm(CHG ~ TRT01A + BASE, data = ref_data)", fixed = TRUE)
+  expect_match(an[[3L]]$code, "emmeans::emmeans(fit, specs = ~ TRT01A, data = ref_data)", fixed = TRUE)
   expect_match(an[[3L]]$code,
                "emmeans::contrast(method = \"trt.vs.ctrl\", ref = 1L, adjust = \"none\")",
                fixed = TRUE)
@@ -75,7 +75,7 @@ test_that("expanded: the records of the parameter and visit, the model by cardx"
   y <- tfl_template_expand("ancova", c(an_args, list(response = "PCHG",
                                                      covariates = c("BASE", "AGE"),
                                                      where = "ANL01FL == \"Y\"")))
-  expect_match(y$ard$analyses[[3L]]$code, "stats::lm(PCHG ~ TRT01A + BASE + AGE, data = data)",
+  expect_match(y$ard$analyses[[3L]]$code, "stats::lm(PCHG ~ TRT01A + BASE + AGE, data = ref_data)",
                fixed = TRUE)
   z <- tfl_template_expand("ancova", c(an_args, list(ref = "Drug Y")))
   expect_match(z$ard$analyses[[3L]]$code, "ref <- \"Drug Y\"", fixed = TRUE)

@@ -236,7 +236,7 @@
 # what tfl_table_plan() runs, and what tfl_table_code() writes.  `roles` are
 # the plan's (the workbook's, and any given in the call), which decide the
 # label column's name.
-.plan_spec_steps <- function(roles, sp) {
+.plan_spec_steps <- function(roles, sp, ard_spec = NULL, derived = TRUE) {
   st <- list()
   add <- function(fun, ...) st[[length(st) + 1L]] <<- .spec_call(fun, ...)
   sa <- .ard_spec_table_args(sp)
@@ -255,12 +255,21 @@
                    if (length(de)) list(.drop_empty = de)))
   }
   lb <- .ard_spec_labels(sp)
-  vl <- .ard_spec_value_labels(sp)
+  # derived: the variables' code-list labels, which a program writes but a
+  # spec file does not (the study's lists are their one source); a column
+  # the plan makes keeps its labels either way
+  vl <- .ard_spec_value_labels(sp, ard_spec, derived = derived)
   # the variables' headings under `variable` (they never meet a variable's
   # value labels, SEX = c(F = )); a key column's label under its own key
   keycols <- unique(as.character(unlist(roles[c("cols", "rows")], use.names = FALSE)))
   lbv <- lb[!names(lb) %in% keycols]
   lbk <- lb[names(lb) %in% keycols]
+  # a key column that has value labels too: its own label joins them (one
+  # entry a variable, the label the sheets give winning)
+  for (k in intersect(names(lbk), names(vl))) {
+    vl[[k]] <- c(vl[[k]][names(vl[[k]]) != k], stats::setNames(unname(lbk[[k]]), k))
+    lbk <- lbk[names(lbk) != k]
+  }
   if (length(lb) || length(vl)) {
     # (a list: one heading is a map in the file too, its variable named)
     do.call(add, c(list("plan_labels"), if (length(lbv)) list(variable = as.list(lbv)), as.list(lbk), vl))
@@ -463,7 +472,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
                                  output_id = output_id), output_id)
   # (the study sheet's rounding is the setup's option, tfl_report_setup_code());
   # the items no column says (content_more), each in its place, too
-  items <- .items_for_program(.plan_content_more(.plan_content_items(sp), sp$tables))
+  items <- .items_for_program(.plan_content_more(.plan_content_items(sp, ard_spec), sp$tables))
   # (a normalize_ard() in content_more is the table's own: not one more
   # from the definitions)
   if (isTRUE(normalize)) {
@@ -612,8 +621,18 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
     head$args <- c(list(.spec_sym(data)), head$args)
   }
   # the levels as code lists at the head, cl_<variable> as the ARD programs
-  # write them, plan_levels() naming them
+  # write them (the codes in their order, each named by its label when
+  # plan_labels() has one), plan_levels() naming them
   cl <- character()
+  label_of <- function(k) {
+    for (s in steps) {
+      if (!identical(s$fun, "plan_labels")) next
+      x <- s$args[[k]]
+      if (is.list(x) && length(x) && all(vapply(x, is.character, NA))) x <- unlist(x)
+      if (is.character(x) && !is.null(names(x))) return(x)
+    }
+    NULL
+  }
   for (i in seq_along(steps)) {
     if (!identical(steps[[i]]$fun, "plan_levels")) next
     a <- steps[[i]]$args
@@ -621,9 +640,20 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
     v <- setdiff(names(a), c(".drop_empty", "variable"))
     v <- v[vapply(a[v], is.character, NA)]
     if (!length(v)) next
-    cl <- c("# the code lists: each value in its order, as the table shows it",
-            .codelists_lines(a[v]), "")
-    for (k in v) a[[k]] <- .spec_sym(.cl_name(k))
+    lists <- a[v]
+    labelled <- logical()
+    for (k in v) {
+      lab <- if (is.null(names(a[[k]]))) label_of(k)
+      labelled[k] <- !is.null(lab)
+      if (labelled[[k]]) {
+        lists[[k]] <- stats::setNames(ifelse(a[[k]] %in% names(lab), unname(lab[a[[k]]]), a[[k]]), a[[k]])
+      }
+    }
+    cl <- c("# the code lists: each code in its order (its label, when it has one)",
+            .codelists_lines(lists), "")
+    for (k in v) {
+      a[[k]] <- .spec_sym(if (labelled[[k]]) sprintf("names(%s)", .cl_name(k)) else .cl_name(k))
+    }
     steps[[i]]$args <- a
   }
   first <- if (is.null(head)) data else .spec_call_code(.content_print(head), 0L)
@@ -654,9 +684,9 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 # (.schema_from_r()).  The bridge from the sheets: a workbook and a spec
 # file reach the same code through it, and the converter to spec files
 # writes its result.
-.plan_content_items <- function(sp) {
+.plan_content_items <- function(sp, ard_spec = NULL, derived = TRUE) {
   roles <- .plan_spec_roles(sp)
-  steps <- .plan_spec_steps(roles, sp)
+  steps <- .plan_spec_steps(roles, sp, ard_spec, derived)
   c(list(tfl_item("table_plan", .schema_from_r("table_plan", roles))),
     lapply(steps, function(st) tfl_item(st$fun, .schema_from_r(st$fun, st$args))))
 }
@@ -697,7 +727,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   } else {
     sp <- .ard_spec_scope(sp, output_id)
   }
-  items <- .plan_content_items(sp)
+  items <- .plan_content_items(sp, ard_spec, derived = FALSE)
   if (defaults && !length(items[[1L]]$args)) items <- items[-1L]
   if (!defaults && !is.null(ard_spec)) {
     items <- .levels_prune_sheets(items, sp, ard_spec, output_id %||% attr(sp, "output_id"),
@@ -1429,6 +1459,10 @@ tfl_content_run <- function(output, data) {
   for (it in output$content) .schema_need_version(it)
   # a template's `widths = "auto"` with no code list for the arms: the ARD's
   output$content <- .tpl_auto_widths(output, data)
+  # the code lists' labels: the ARD holds the codes, so the plan has them
+  if (identical(output$kind, "table")) {
+    output$content <- .tpl_labels_items(output$content, output$codelists, covered = TRUE)
+  }
   # plan_levels() the ARD already says: left out, as the program does
   if (identical(output$kind, "table")) output$content <- .levels_prune(output$content, output)
   # a table of records (its data a dataset: a table_plan(value = ) with
@@ -1621,6 +1655,10 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
   # the study's rounding is the setup's option, not a report's item
   if (!is.null(attr(output, "study_rounding"))) {
     output$content <- .items_for_program(output$content, attr(output, "study_rounding"))
+  }
+  # the code lists' labels: the ARD holds the codes, so the plan has them
+  if (identical(output$kind, "table")) {
+    output$content <- .tpl_labels_items(output$content, output$codelists, covered = TRUE)
   }
   # plan_levels() the ARD already says (a code list applied when the ARD is
   # made, the variables in its order): not written (R/spec_levels.R)
@@ -1970,32 +2008,15 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
     # the study's, defined once by the setup code: the report says its name
     # (rtfreporter leaves out a line its tokens leave empty), unless the
     # report has its own
-    if (setup && !isTRUE(attr(sp, "bands_own")[[sheet]]) &&
-        length(.ard_spec_band(sp, sheet))) {
-      return(.spec_sym(.setup_band_names[[sheet]]))
+    # (the report's own lines are its own; a pattern's are its page
+    # configuration's, which the setup says by name: header_<name>)
+    own <- attr(sp, "bands_report") %||% attr(sp, "bands_own")
+    if (setup && !isTRUE(own[[sheet]]) && length(.ard_spec_band(sp, sheet))) {
+      nm <- attr(sp, "style")
+      return(.spec_sym(.setup_band_object(sheet, if (is.null(nm) || is.na(nm)) .sheets_style_name(sp) else nm)))
     }
     b <- .ard_spec_band(sp, sheet, tokens)
     if (!length(b)) return(NULL)
-    # its own lines with the study's, the study's by the name the setup
-    # gives them (study_footer_lines): a change of the study's lines reaches
-    # the report -- when they are the study's lines as the setup writes them
-    if (setup) {
-      rows <- attr(sp, "bands_study")[[sheet]]
-      st <- stats::setNames(list(rows), sheet)
-      sb <- if (NROW(rows)) .ard_spec_band(st, sheet, tokens)
-      n <- length(sb)
-      if (n && length(b) > n && identical(sb, .ard_spec_band(st, sheet))) {
-        lines <- .spec_sym(paste0(.setup_band_names[[sheet]], "_lines"))
-        if (identical(utils::tail(b, n), sb)) {
-          return(.spec_call(paste0("rtf_", sheet),
-                            .spec_call("c", utils::head(b, -n), lines)))
-        }
-        if (identical(utils::head(b, n), sb)) {
-          return(.spec_call(paste0("rtf_", sheet),
-                            .spec_call("c", lines, utils::tail(b, -n))))
-        }
-      }
-    }
     .spec_call(paste0("rtf_", sheet), b)
   }
   hdr <- band("header")
@@ -2041,8 +2062,16 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
   st
 }
 
-# the names the setup code gives the study's header and footer
-.setup_band_names <- c(header = "study_header", footer = "study_footer")
+# the bands the setup code writes (a header and a footer object each) and the
+# name of the configuration the sheets' default rows are (the study sheet's
+# `style` row, study.yml's settings.style, else standard): the objects are
+# header_<name> and footer_<name>, as the YAML spec's setup writes them
+.setup_band_names <- c(header = "header", footer = "footer")
+.sheets_style_name <- function(sp) {
+  nm <- .ard_spec_study_value(sp, "style")
+  if (is.character(nm) && length(nm) == 1L && !is.na(nm) && nzchar(nm) &&
+      !nm %in% .tpl_style_builtin_names) nm else "standard"
+}
 
 #' The study's setup code for its report programs
 #'
@@ -2054,8 +2083,8 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
 #' `COMPANY`, `STUDY_ID` ...) as
 #' `options(rtfreporter.tokens = list(...))`, and its running header and
 #' footer (the header and footer sheets' default rows) as
-#' `study_header <- rtf_header(..., drop_empty_rows = TRUE)` and
-#' `study_footer <- rtf_footer(...)` (a line a report's tokens leave empty
+#' `header_standard <- rtf_header(..., drop_empty_rows = TRUE)` and
+#' `footer_standard <- rtf_footer(...)` (a line a report's tokens leave empty
 #' is left out of that report's file).
 #' A study's report programs source it and are written with
 #' `tfl_report_code(setup = TRUE)`: each then says only its own tokens
@@ -2118,20 +2147,31 @@ tfl_report_setup_code <- function(spec) {
       out <- c(out, .spec_call_code(.spec_call("options", rtfreporter.tokens = tok), 0L))
     }
   }
-  for (sheet in names(.setup_band_names)) {
-    one <- sp
-    one[[sheet]] <- study(sp[[sheet]])
-    b <- .ard_spec_band(one, sheet)
-    if (!length(b)) next
-    # a line of tokens of one's own goes when a report's are empty
-    own <- setdiff(.ard_spec_used_tokens(one[sheet]), .ard_spec_rtf_tokens)
-    nm <- .setup_band_names[[sheet]]
-    lines <- paste0(nm, "_lines")
-    call <- .spec_call(paste0("rtf_", sheet), .spec_sym(lines),
-                       drop_empty_rows = if (length(own)) TRUE)
-    out <- c(out,
-             paste(lines, "<-", .spec_call_code(b, 0L, lead = nchar(lines) + 4L)),
-             paste(nm, "<-", .spec_call_code(call, 0L, lead = nchar(nm) + 4L)))
+  # the header and footer of each page configuration: the default rows' (named
+  # by the study's style), then each pattern with page rows -- its rows over
+  # the default ones, a (none) line gone -- as the YAML route's setup writes them
+  dflt <- .sheets_style_name(sp)
+  for (cfg in unique(c(dflt, .sheets_config_names(sp)))) {
+    for (sheet in names(.setup_band_names)) {
+      one <- sp
+      rows <- study(sp[[sheet]])
+      if (!identical(cfg, dflt) && !is.null(rows)) {
+        prow <- sp[[sheet]][!is.na(sp[[sheet]]$output_id) & sp[[sheet]]$output_id == paste0("@", cfg), , drop = FALSE]
+        if (nrow(prow)) {
+          keep <- !(.ard_spec_rowkey(rows, sheet) %in% .ard_spec_rowkey(prow, sheet))
+          prow$output_id <- rep(NA_character_, nrow(prow))
+          rows <- rbind(rows[keep, , drop = FALSE], prow)
+        }
+      }
+      one[[sheet]] <- rows
+      b <- .ard_spec_band(one, sheet)
+      if (!length(b)) next
+      # a line of tokens of one's own goes when a report's are empty
+      own <- setdiff(.ard_spec_used_tokens(one[sheet]), .ard_spec_rtf_tokens)
+      nm <- .setup_band_object(sheet, cfg)
+      call <- .spec_call(paste0("rtf_", sheet), b, drop_empty_rows = if (length(own)) TRUE)
+      out <- c(out, paste(nm, "<-", .spec_call_code(call, 0L, lead = nchar(nm) + 4L)))
+    }
   }
   if (!length(out)) return(character())
   .drop_attached_ns(unlist(strsplit(out, "\n", fixed = TRUE)))
@@ -2185,7 +2225,7 @@ tfl_report_tokens <- function(spec, output_id = NULL, study = NULL) {
 #'   ([tfl_report_setup_code()]), so it leaves out what that defines: the
 #'   study's tokens (rtfreporter fills from the document's first, then
 #'   `options(rtfreporter.tokens = )`), and the study's header and footer,
-#'   said by name (`study_header`, `study_footer`; a line the report's
+#'   said by name (`header_standard`, `footer_standard`; a line the report's
 #'   tokens leave empty, a blank `<{OUTPUT_POPULATION}>`, is left out when
 #'   the file is written) -- unless the report has its own, written here
 #'   as before.

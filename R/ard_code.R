@@ -161,12 +161,16 @@
   paste(lines, collapse = "\n")
 }
 
-# The names R code assigns, or NA when it defines a function or assigns
+# The names R code assigns, or NA when it defines a named function or assigns
 # with <<- (code that is best run in a scope of its own)
 .code_assigns <- function(code) {
   tk <- .code_tokens(code)
   if (is.null(tk)) return(NA)
-  if (any(tk$token == "FUNCTION") || any(tk$text %in% c("<<-", "->>"))) {
+  # (a function written inside a call, `lapply(x, function(n) n)`, is not one
+  # the code defines)
+  fn <- which(tk$token == "FUNCTION")
+  defined <- length(fn) > 0L && any(fn > 1L & tk$token[pmax(fn - 1L, 1L)] %in% c("LEFT_ASSIGN", "EQ_ASSIGN"))
+  if (defined || any(tk$text %in% c("<<-", "->>"))) {
     return(NA)
   }
   n <- nrow(tk)
@@ -175,19 +179,31 @@
   unique(c(tk$text[left[left > 1L] - 1L], tk$text[right[right < n] + 1L]))
 }
 
+# One expression that is no assignment and has no `<<-` (a function inside
+# it may assign what it likes)
+.code_plain_single <- function(code) {
+  tk <- .code_tokens(code)
+  !is.null(tk) && !any(tk$text %in% c("<<-", "->>", "->"))
+}
+
 # The code of a `custom` analysis (or an analysis data's `code`) as the
 # program's own lines: everything before its last expression as it is, the
 # last made `name` (through `steps`).  NULL when that does not read well:
 # the code assigns a name the program has (`avoid`), defines a function,
 # or ends in an assignment -- then it runs in local() as before.
 .code_as_program <- function(code, name, steps, avoid) {
-  as <- .code_assigns(code)
-  if (anyNA(as) || any(as %in% avoid)) return(NULL)
   ex <- tryCatch(parse(text = code, keep.source = TRUE), error = function(e) NULL)
   if (!length(ex)) return(NULL)
   last <- ex[[length(ex)]]
   if (is.call(last) && as.character(last[[1L]])[1L] %in% c("<-", "=", "<<-")) {
     return(NULL)
+  }
+  # one expression assigns nothing of its own at the top (a function in it
+  # keeps what it assigns); several: what they assign must be no name of the
+  # program's
+  if (length(ex) > 1L || !.code_plain_single(code)) {
+    as <- .code_assigns(code)
+    if (anyNA(as) || any(as %in% avoid)) return(NULL)
   }
   sr <- attr(ex, "srcref")[[length(ex)]]
   lines <- strsplit(code, "\n", fixed = TRUE)[[1L]]
@@ -207,7 +223,7 @@
   # a call over several lines, its pipe going on from its last argument's
   # line: laid out as the program's own calls are (its closing bracket on a
   # line of its own); one with a comment inside stays as it is
-  if (plain && is.call(last) && l2 > l1 && !grepl("#", head, fixed = TRUE)) {
+  if (plain && is.call(last) && l2 > l1 && !grepl("#|[|]>|function|[{]", head)) {
     head <- .expr_cl(last)
   }
   # what follows it (a comment) goes above
@@ -486,8 +502,8 @@
   if (den %in% x$analysis_data$data_id) return(den)
   obj <- .r_name(den)
   if (is.null(pop)) obj else
-    sprintf("dplyr::semi_join(%s, dplyr::select(%s, %s), by = %s)", obj, population,
-            subj, .q(subj))
+    sprintf("dplyr::inner_join(%s, dplyr::select(%s, %s), by = %s, relationship = \"many-to-one\")",
+            obj, population, subj, .q(subj))
 }
 
 # A denominator of numbers: one whole number (`86`), or whole numbers
@@ -554,20 +570,26 @@
   unique(unlist(lapply(c(r$by, r$strata %||% NA), .split_bar)))
 }
 
-# The target subjects: records joined to their subjects' data `pop`.  The
-# subject-level columns `take` come from it, replacing the records' own of
-# the same name (inner_join); with none, a semi_join keeps the subjects
-.subjects_join <- function(pop, subj, take = character()) {
+# The target subjects: records joined to their subjects' data `pop`, one
+# inner_join (never a semi_join): the records drop the columns `take` (the
+# subjects' data has them: its values replace the records' own), then the
+# join keeps the records of `pop`'s subjects and carries `take`;
+# `relationship` asserts `pop` has one row a subject.  With no column to take
+# the join is by the subject alone.
+.subjects_join <- function(pop, subj, take = character(), soft = character()) {
   take <- setdiff(unique(take), subj)
-  if (!length(take)) {
-    return(sprintf("dplyr::semi_join(dplyr::select(%s, %s), by = %s)", pop, subj, .q(subj)))
-  }
-  # only the columns the subjects' data has: one it does not have (a
-  # stratum of the records themselves, AESEV) stays the records' own
-  tk <- .lay(.c_str(take), width = Inf)
-  c(sprintf("dplyr::select(-dplyr::any_of(intersect(%s, names(%s))))", tk, pop),
-    sprintf("dplyr::inner_join(dplyr::select(%s, %s, dplyr::any_of(%s)), by = %s)", pop,
-            subj, tk, .q(subj)))
+  soft <- setdiff(unique(soft), c(subj, take))
+  # (`soft`: a stratum that may be the records' own, not the subjects' -- the
+  # generator does not know the subjects' columns: what `pop` has of it
+  # replaces the records', what it has not leaves them)
+  drop <- if (length(soft)) {
+    sprintf("dplyr::select(-dplyr::any_of(names(dplyr::select(%s, dplyr::any_of(%s)))))", pop,
+            .lay(.c_str(c(take, soft)), width = Inf))
+  } else if (length(take)) sprintf("dplyr::select(-dplyr::any_of(%s))", .lay(.c_str(take), width = Inf))
+  keep <- c(subj, take, if (length(soft)) sprintf("dplyr::any_of(%s)", .lay(.c_str(soft), width = Inf)))
+  c(drop,
+    sprintf("dplyr::inner_join(dplyr::select(%s, %s), by = %s, relationship = \"many-to-one\")",
+            pop, paste(keep, collapse = ", "), .q(subj)))
 }
 
 .stat_arg <- function(method, stats) {
@@ -804,8 +826,9 @@
 .cl_name <- function(v) paste0("cl_", gsub("[^a-z0-9]+", "_", tolower(v)))
 
 # The report's code lists at its program's head: `cl_sex <- c(F =
-# "Female", M = "Male")`, the values named by... -- each value (a name) and
-# what it is in the ARD; a list without labels, its values
+# "Female", M = "Male")`, each code (a name) and its label -- the label the
+# table plan applies; the ARD holds the codes; a list without labels, its
+# values
 .codelists_lines <- function(levels) {
   nm <- function(v) ifelse(make.names(v) == v, v, encodeString(v, quote = "\""))
   unlist(lapply(names(levels), function(v) {
@@ -827,31 +850,35 @@
 
 # The step that puts the report's code lists on a data:
 # set_levels(SEX = cl_sex, ...), laid out as a step of a pipe
-.levels_call <- function(levels) {
-  step <- .lay(.cl("set_levels", stats::setNames(as.list(.cl_name(names(levels))),
-                                                 names(levels))), lead = 2L)
+# (`narrow`: a variable's expression, the list narrowed -- `cl_x[c("A")]` --
+# in place of its `cl_<variable>`)
+.levels_call <- function(levels, narrow = list()) {
+  args <- stats::setNames(as.list(.cl_name(names(levels))), names(levels))
+  for (v in intersect(names(narrow), names(args))) args[[v]] <- narrow[[v]]
+  step <- .lay(.cl("set_levels", args), lead = 2L)
   gsub("\n", "\n  ", step, fixed = TRUE)
 }
 
-# a report's code (`code`) with the mark of the code lists' step replaced
+# a report's code (`code`) with the mark of the code lists' step replaced, in
+# each data by the lists as that data's filter leaves them (.def_narrowing())
 .levels_put <- function(code, levels) {
   if (!length(levels)) return(code)
-  gsub(.levels_step, .levels_call(levels), code, fixed = TRUE)
+  for (k in which(grepl(.levels_step, code, fixed = TRUE))) {
+    at <- regexpr(.levels_step, code[k], fixed = TRUE)
+    call <- .levels_call(levels, .def_narrowing(code, k, levels))
+    code[k] <- paste0(substr(code[k], 1L, at - 1L), call,
+                      substring(code[k], at + attr(at, "match.length")))
+  }
+  code
 }
 
 # An analysis's `post` steps.  complete_hierarchy() is written in full:
 # `variables =` the row's, `under =` from its report's code lists (the
-# values and their parents as they are in the ARD, the lists' labels),
+# values and their parents as they are in the ARD: the codes),
 # whichever of them the step does not give itself.
 .post_steps <- function(x, r) {
   steps <- as.list(.split_post(r$post))
-  lv <- attr(x, "levels")[[r$output_id]]
   un <- attr(x, "under")[[r$output_id]]
-  in_ard <- function(v, values) {
-    cl <- lv[[v]]
-    if (is.null(names(cl))) return(values)
-    ifelse(values %in% names(cl), unname(cl[values]), values)
-  }
   lapply(steps, function(s) {
     e <- tryCatch(str2lang(s), error = function(err) NULL)
     if (!is.call(e) || !identical(e[[1L]], quote(complete_hierarchy))) return(s)
@@ -868,9 +895,10 @@
       for (k in seq_along(vars)[-1L]) {
         u <- un[[vars[k]]]
         if (!length(u)) next
-        child <- in_ard(vars[k], names(u))
+        # (the codes, as the data holds them)
+        child <- names(u)
         nm <- ifelse(make.names(child) == child, child, .q(child))
-        pairs[[vars[k]]] <- .cl("c", as.list(paste(nm, "=", .q(in_ard(vars[k - 1L], unname(u))))))
+        pairs[[vars[k]]] <- .cl("c", as.list(paste(nm, "=", .q(unname(u)))))
       }
       if (length(pairs)) args$under <- .cl("list", pairs)
     }
@@ -957,10 +985,18 @@
     r <- x$datasets[x$datasets$dataset == ds, ]
     obj <- .r_name(ds)
     d <- .split_bar(r$derive[1L])
+    # (no code lists here: they go on each analysis set and each analysis
+    # data, after its filter)
+    steps <- c(.order_levels_step(cats, if (has_adsl && toupper(ds) != "ADSL") "adsl"))
+    if (isTRUE(getOption("tflspec.study_setup"))) {
+      # the study's setup file has read it, with its derive: the object's own
+      # steps, and no line when none is left
+      if (length(steps)) code <- c(code, .make_code(obj, obj, steps))
+      next
+    }
     code <- c(code, .make_code(obj, .reader(r$path[1L]), c(
       if (length(d)) sprintf("dplyr::mutate(%s)", paste(d, collapse = ", ")),
-      .order_levels_step(cats, if (has_adsl && toupper(ds) != "ADSL") "adsl"),
-      if (length(levels)) .levels_step)))
+      steps)))
   }
   pop_code <- character()
   for (pid in pops) {
@@ -969,9 +1005,9 @@
     src <- .r_name(r$dataset[1L])
     pop_code <- c(pop_code, .make_code(obj, src, c(
       if (!is.na(r$where[1L])) sprintf("dplyr::filter(%s)", r$where[1L]),
-      # an analysis set with every record of its dataset: its factors as they are
-      .derive_steps(r$derive[1L], if (!is.na(r$where[1L]) ||
-                                     length(.split_bar(r$derive[1L]))) levels))))
+      # the code lists after its filter and its derive, always: the factors
+      # are made of the records the set keeps
+      .derive_steps(r$derive[1L], levels))))
   }
   list(data = code, pops = pop_code, used_ds = used_ds, pops_id = pops)
 }
@@ -1001,36 +1037,35 @@
   xo$analysis_data <- ad_o
   made <- .adata_lines(xo, ids, subj, levels,
                        avoid = c(.r_name(dl$used_ds), paste0("pop_", .r_name(dl$pops_id))))
-  # the analysis set under the name a report's own code reads it by --
-  # <dataset>_sub, as the ARD program names it (.ard_sub_names()) -- beside
-  # its pop_<id> (#520): a code step's `adsl_sub` is in reach in the
-  # program, the preview and the build check alike
-  subs <- .ard_data_part_subs(x, dl$pops_id)
-  c(if (length(levels)) c(
+  # one section, `# ---- data ----`: the datasets as the setup (or the
+  # program's own reads) made them, the analysis set, the analysis data.  The
+  # analysis set is the object <dataset>_sub (.ard_sub_names()), so a code
+  # step's `adsl_sub` is in reach in the program, the preview and the build
+  # check alike
+  setup <- isTRUE(getOption("tflspec.study_setup"))
+  head <- c(if (length(dl$data) && !setup) c("# ---- input data ----", dl$data, ""),
+            "# ---- data ----", if (setup) dl$data)
+  code <- c(head,
+            if (length(dl$pops)) c(if (length(head) > 1L) "", dl$pops),
+            if (length(made)) c(if (length(dl$pops) || length(head) > 1L) "", made))
+  code <- .pop_identity(.pop_as_adata(code, ids))
+  # (the code lists' step, with each data's lists as its filter leaves them)
+  code <- .levels_put(c(if (length(levels)) c(
       "# ---- code lists: each value in its order ----",
-      .codelists_lines(levels), ""),
-    "# ---- data ----", dl$data,
-    if (length(dl$pops)) c("", "# ---- populations ----", dl$pops, subs),
-    if (length(made)) c("", "# ---- analysis data ----", made))
+      .codelists_lines(levels), ""), code), levels)
+  .data_tidy(.ard_sub_names(code, x, character(), character()))
 }
 
-# `adsl_sub <- pop_saf` for each analysis set the data part makes: one
-# set of a dataset is <dataset>_sub, a second <dataset>_sub2 (the ARD
-# program's numbering)
-.ard_data_part_subs <- function(x, pops_id) {
-  pops <- x$populations
-  if (!length(pops_id) || is.null(pops)) return(character())
-  k <- match(pops_id, pops$population_id)
-  k <- k[!is.na(k)]
-  if (!length(k)) return(character())
-  ds <- .r_name(pops$dataset[k])
-  nm <- paste0(ds, "_sub")
-  for (d in unique(ds)) {
-    at <- which(ds == d)
-    if (length(at) > 1L) nm[at[-1L]] <- paste0(d, "_sub", seq_along(at)[-1L] + 0L)
-  }
-  c("# the sets as a report's own code reads them (<dataset>_sub)",
-    sprintf("%s <- pop_%s", nm, .r_name(pops$population_id[k])))
+# A program's data section without a blank line after its heading or two
+# blank lines in a row (what a part left empty leaves)
+.data_tidy <- function(code) {
+  blank <- !nzchar(code)
+  drop <- which(blank & c(FALSE, blank[-length(blank)]))
+  after <- which(code == "# ---- data ----") + 1L
+  after <- after[after <= length(code) & blank[pmin(after, length(code))]]
+  drop <- unique(c(drop, after))
+  if (!length(drop)) return(code)
+  structure(code[-drop], renamed = attr(code, "renamed"))
 }
 
 # ---- the program ---------------------------------------------------------
@@ -1083,16 +1118,21 @@
     dl <- .ard_data_lines(x, a, nad, lv1)
     used_ds <- dl$used_ds
     pops <- dl$pops_id
+    # one data section (`# ---- data ----`): the datasets as the setup file
+    # (or the program's own reads) made them, the analysis set, the analysis
+    # data; the program's own reads, and the named values, come before it
+    setup <- isTRUE(getOption("tflspec.study_setup"))
+    ob1 <- c(ob_study, if (!several) ob_report(outs[1L]))
     code <- c(code,
               if (length(lv1)) c(
                 "# ---- code lists: each value in its order, as it is in the ARD ----",
                 "# (a value a list does not have stops the program: add it to the list)",
                 .codelists_lines(lv1), ""),
-              "# ---- data ----",
-              dl$data,
-              if (length(dl$pops) && !several) c("", "# ---- populations ----", dl$pops))
-    ob1 <- c(ob_study, if (!several) ob_report(outs[1L]))
-    if (length(ob1)) code <- c(code, "", "# ---- objects ----", ob1)
+              if (length(dl$data) && !setup) c("# ---- input data ----", dl$data, ""),
+              if (length(ob1)) c("# ---- objects ----", ob1, ""),
+              if (!several || (setup && length(dl$data))) "# ---- data ----",
+              if (setup) dl$data,
+              if (length(dl$pops) && !several) c(if (setup && length(dl$data)) "", dl$pops))
   }
   keys <- tfl_ard_methods()
   par <- a$parent %||% rep(NA_character_, nrow(a))
@@ -1149,7 +1189,7 @@
       unique(unlist(lapply(on, function(i) .den_needs(rd[i, ], keys))))
     })
     made <- .adata_lines(xo, named[[o]], subj, lv, avoid = taken, reads = reads,
-                         needs = needs)
+                         needs = needs, dens = rd$denominator)
     # the analyses reading the same records (dataset, analysis set, where)
     # share one data: it takes the union of the ADSL columns they need
     grp <- paste(a$dataset[rows], a$population_id[rows], a$where[rows], sep = "\r")
@@ -1167,7 +1207,7 @@
         taken <<- c(taken, nm)
         data_of[[key]] <<- nm
         auto_ds[[nm]] <<- .adata_dataset(ad_o, dcol[i]) %||% dcol[i]
-        auto_note[[nm]] <<- sprintf("%s (%s)", dcol[i], r$where)
+        auto_note[[nm]] <<- sprintf("made from %s; where", dcol[i])
         made <<- c(made, .made_line(nm, dcol[i], r$where, lv))
         return(nm)
       }
@@ -1186,12 +1226,17 @@
         src <- ds
         # (not a column the population's derive makes: the record's own)
         g <- grp[match(i, rows)]
-        join <- .subjects_join(pop, subj, setdiff(take_of[[g]], .derive_names(
-          x$populations$derive[x$populations$population_id %in% pid])))
+        tk <- setdiff(take_of[[g]], .derive_names(
+          x$populations$derive[x$populations$population_id %in% pid]))
+        # (the first, the arm, is the subjects'; the rest may be the records' own)
+        join <- .subjects_join(pop, subj, utils::head(setdiff(tk, subj), 1L), utils::tail(setdiff(tk, subj), -1L))
       }
       # no dataset and no population: no data (as before, `data` is NULL)
       if (is.null(src)) return("NULL")
-      if (is.null(whr) && is.null(join) && src %in% taken) return(src)  # a dataset or a population
+      # (a population, or a dataset read as it is; with code lists, a dataset
+      # has none yet: it is made again under a name of its own, with them)
+      if (is.null(whr) && is.null(join) && src %in% taken &&
+          !(is.null(pop) && length(lv))) return(src)
       key <- paste(c(src, pop, whr), collapse = "\r")
       if (!is.na(data_of[key])) return(data_of[[key]])
       base <- paste(c(if (!is.na(r$dataset)) .r_name(r$dataset) else
@@ -1202,12 +1247,15 @@
       auto_ds[[nm]] <<- if (!is.na(r$dataset)) r$dataset else pop_ds
       rid <- r$records %||% NA
       rk <- if (!is.na(rid)) match(rid, .records_sheet(x)$record_id) else NA
+      take_txt <- unique(setdiff(take_of[[grp[match(i, rows)]]] %||% character(), subj))
       auto_note[[nm]] <<- paste0(
+        "the records. ",
         if (!is.na(rk)) paste0(rid, if (!is.na(.records_sheet(x)$label[rk]))
           paste0(" \u2014 ", .records_sheet(x)$label[rk])) else
           if (!is.na(r$dataset)) r$dataset else pop_ds,
-        if (!is.null(whr)) sprintf(" (%s)", whr),
-        if (!is.null(join)) sprintf("; of the %s subjects", pop))
+        if (!is.null(join)) sprintf(" of the subjects of %s", pop),
+        if (!is.null(join) && length(take_txt)) sprintf(", %s from ADSL", paste(take_txt, collapse = ", ")),
+        if (!is.null(whr)) "; where")
       made <<- c(made, .make_code(nm, src, c(
         join, if (!is.null(whr)) sprintf("dplyr::filter(%s)", whr),
         if (length(lv)) .levels_step)))
@@ -1224,7 +1272,8 @@
                 sprintf("report_id <- %s", .q(o)), part, made)
       seg_an <- length(code) + 1L
     } else if (length(made)) {
-      code <- c(code, "", "# ---- analysis data ----", made)
+      code <- c(code, if (length(code) && nzchar(code[length(code)]) &&
+                          code[length(code)] != "# ---- data ----") "", made)
     }
     if (!several) code <- c(code, "", "# ---- analyses ----")
     # each analysis's ARD under a name of its own: ard_<id>
@@ -1291,6 +1340,7 @@
   }
   out <- .ard_sub_names(.levels_where_read(.pop_identity(.pop_as_adata(code, ad$data_id)), lv1),
                         x, one_ds, one_note)
+  out <- structure(.data_tidy(out), renamed = attr(out, "renamed"))
   attr(out, "data_names") <- .data_names_renamed(one_dn, attr(out, "renamed"), x)
   attr(out, "renamed") <- NULL
   out
@@ -1337,9 +1387,8 @@
     if (d %in% pop_obj) {
       k <- match(d, pop_obj)
       ds <- pops$dataset[k]
-      note[[d]] <- paste0(pops$population_id[k],
-                          if (!is.na(pops$label[k] %||% NA)) paste0(" \u2014 ", pops$label[k]),
-                          if (!is.na(pops$where[k])) sprintf(" (%s)", pops$where[k]))
+      note[[d]] <- paste0("the subjects. population ", pops$population_id[k],
+                          if (!is.na(pops$label[k] %||% NA)) paste0(" (", pops$label[k], ")"))
     } else {
       ds <- auto_ds[[d]]
       note[[d]] <- auto_note[[d]]
@@ -1368,7 +1417,7 @@
   out <- character()
   for (k in seq_along(code)) {
     hit <- which(startsWith(code[k], paste0(new, " <- ")))
-    if (length(hit)) out <- c(out, sprintf("# %s: %s", new[hit[1L]], note[[hit[1L]]]))
+    if (length(hit)) out <- c(out, .adata_comment(new[hit[1L]], note[[hit[1L]]]))
     out <- c(out, code[k])
   }
   attr(out, "renamed") <- new
@@ -1555,32 +1604,25 @@
     ds <- tryCatch(all.vars(parse(text = code[def], keep.source = FALSE)[[1L]][[3L]])[1L],
                    error = function(e) NA_character_)
     if (is.na(ds)) next
-    sub_word <- paste0("(^|[^A-Za-z0-9._])", gsub(".", "\\.", ds, fixed = TRUE), "_sub[0-9]*($|[^A-Za-z0-9._])")
-    if (any(grepl(sub_word, code[-c(k, def)]))) next
+    # (the name the set's object gets: <dataset>_sub, the second set of a
+    # dataset <dataset>_sub2 ...)
+    defs <- grep(paste0("^pop_[A-Za-z0-9._]+ <- .*\\b", ds, "\\b"), code)
+    nm <- paste0(.r_name(ds), "_sub", if (match(def, defs, nomatch = 1L) > 1L) match(def, defs))
+    sub_word <- paste0("(^|[^A-Za-z0-9._])", gsub(".", "\\.", nm, fixed = TRUE), "($|[^A-Za-z0-9._])")
+    # (the data that is itself `<dataset>_sub` is that object: merged)
+    if (!identical(d, paste0(.r_name(ds), "_sub")) && any(grepl(sub_word, code[-c(k, def)]))) next
     if (!piped) {
       code[k] <- paste0(d, substring(code[def], nchar(p) + 1L))
     } else {
       set <- .pipe_of(substring(code[def], nchar(p) + 5L))
       if (is.null(set)) next
       rest <- sub("^[^\n]*\n", "", code[k])
-      # the set's condition and the subjects' in one filter() when they meet
       steps <- strsplit(set, " |>\n", fixed = TRUE)[[1L]]
       # (its code lists once, at the end: the subjects' steps put them)
       steps <- steps[steps != paste0("  ", .levels_step)]
       set <- paste(steps, collapse = " |>\n")
-      first <- sub("\n.*$", "", rest)
-      fl <- "^  ((dplyr::)?filter)\\(([^\n]*)\\)( \\|>)?$"
-      n <- length(steps)
-      both <- if (n > 1L && grepl(fl, steps[n]) && grepl(fl, first)) {
-        sprintf("  %s(%s, %s)%s", sub(fl, "\\1", first), sub(fl, "\\3", steps[n]),
-                sub(fl, "\\3", first), if (grepl(" \\|>$", first)) " |>" else "")
-      }
-      code[k] <- if (!is.null(both) && nchar(sub("dplyr::", "", both, fixed = TRUE)) <= 80L) {
-        paste0(d, " <- ", paste(steps[-n], collapse = " |>\n"), " |>\n",
-               both, substring(rest, nchar(first) + 1L))
-      } else {
-        paste0(d, " <- ", set, " |>\n", rest)
-      }
+      # (the set's condition and the subset are two filter() calls)
+      code[k] <- paste0(d, " <- ", set, " |>\n", rest)
     }
     drop <- c(drop, def)
   }

@@ -1,6 +1,6 @@
 # The demog family (demog, stf_t02_demog): the categorical percentages are over
 # the analysis set -- the report's analysis data after its population and
-# filters (adsl_saf) -- not over the subjects with a value; a variable with
+# filters (adsl_sub) -- not over the subjects with a value; a variable with
 # missing values (NA or blank) gets a Missing row, last.  Fictional data only.
 
 dd_pops <- list(list(id = "SAF", label = "Safety Analysis Set"))
@@ -24,22 +24,22 @@ test_that("demog family: the % denominator is the analysis data GROUPN counts", 
   for (tpl in c("demog", "stf_t02_demog")) {
     x <- dd_expand(tpl)
     cat <- dd_an(x, "CAT")
-    expect_identical(cat$denominator, "adsl_saf", info = tpl)
+    expect_identical(cat$denominator, "adsl_sub", info = tpl)
     expect_identical(dd_an(x, "GROUPN")$data, cat$denominator, info = tpl)
     expect_identical(dd_an(x, "CONT")$data, cat$denominator, info = tpl)
     # the categorical analysis reads the same set with a Missing level made on it
-    expect_identical(cat$data, "adsl_saf_m", info = tpl)
-    m <- dd_set(x, "adsl_saf_m")
-    expect_identical(m$from, "adsl_saf", info = tpl)
+    expect_identical(cat$data, "adsl_miss", info = tpl)
+    m <- dd_set(x, "adsl_miss")
+    expect_identical(m$from, "adsl_sub", info = tpl)
     expect_match(as.character(m$code), "Missing", fixed = TRUE, info = tpl)
   }
 })
 
 test_that("demog family: the report's filter narrows the set the denominator names", {
   x <- dd_expand("demog", subset = "SEX == \"F\"")
-  expect_identical(dd_an(x, "CAT")$denominator, "adsl_saf")
-  expect_match(as.character(dd_set(x, "adsl_saf")$where), "SEX", fixed = TRUE)
-  expect_identical(dd_an(x, "GROUPN")$data, "adsl_saf")
+  expect_identical(dd_an(x, "CAT")$denominator, "adsl_sub")
+  expect_match(as.character(dd_set(x, "adsl_sub")$where), "SEX", fixed = TRUE)
+  expect_identical(dd_an(x, "GROUPN")$data, "adsl_sub")
 })
 
 test_that("demog family: denominator is no parameter; summary and disposition keep it, the set by default", {
@@ -49,11 +49,11 @@ test_that("demog family: denominator is no parameter; summary and disposition ke
   expect_true("denominator" %in% tfl_tpl_args("disposition")$param)
   # (canon 1.38: the analysis set, passed explicitly; a Missing level made on it, row 361)
   s <- dd_expand("summary", categorical = "SEX")
-  expect_identical(dd_an(s, "CAT")$denominator, "adsl_saf")
-  expect_identical(dd_an(s, "CAT")$data, "adsl_saf_m")
+  expect_identical(dd_an(s, "CAT")$denominator, "adsl_sub")
+  expect_identical(dd_an(s, "CAT")$data, "adsl_miss")
   d <- dd_expand("disposition", categorical = "EOSSTT")
-  expect_identical(dd_an(d, "DISP")$denominator, "adsl_saf")
-  expect_identical(dd_an(d, "DISP")$data, "adsl_saf_m")
+  expect_identical(dd_an(d, "DISP")$denominator, "adsl_sub")
+  expect_identical(dd_an(d, "DISP")$data, "adsl_miss")
 })
 
 dd_study <- function(blank_race = TRUE, args = list(), template = "demog", codelists = list()) {
@@ -94,8 +94,8 @@ test_that("demog: % over the analysis set, a Missing row for the variable that h
   expect_true(any(grepl("n8078$", txt)))
   code <- paste(suppressMessages(tfl_ard_code(tfl_read_study_spec(d), output_id = "T-DD")),
                 collapse = "\n")
-  expect_match(code, "denominator = adsl_saf", fixed = TRUE)
-  expect_match(code, "ard_groupn <- adsl_saf |>", fixed = TRUE)
+  expect_match(code, "denominator = adsl_sub", fixed = TRUE)
+  expect_match(code, "ard_groupn <- adsl_sub |>", fixed = TRUE)
 })
 
 test_that("demog: the report's filter makes the denominator that subset", {
@@ -138,15 +138,15 @@ test_that("summary with its default denominator: % over the analysis set, a Miss
 test_that("missing_row: TRUE (default) is the Missing step; FALSE and !unset turn it off", {
   on <- dd_expand("demog")
   expect_identical(dd_expand("demog", missing_row = TRUE), on)
-  expect_true("adsl_saf_m" %in% vapply(on$ard$analysis_data, `[[`, "", "id"))
+  expect_true("adsl_miss" %in% vapply(on$ard$analysis_data, `[[`, "", "id"))
   for (v in list(FALSE, tfl_unset())) {
     off <- dd_expand("demog", missing_row = v)
-    expect_false("adsl_saf_m" %in% vapply(off$ard$analysis_data, `[[`, "", "id"))
+    expect_false("adsl_miss" %in% vapply(off$ard$analysis_data, `[[`, "", "id"))
     cat <- dd_an(off, "CAT")
-    expect_identical(cat$data, "adsl_saf")
+    expect_identical(cat$data, "adsl_sub")
     # (the percentages stay over the analysis set)
-    expect_identical(cat$denominator, "adsl_saf")
-    expect_identical(dd_an(off, "GROUPN")$data, "adsl_saf")
+    expect_identical(cat$denominator, "adsl_sub")
+    expect_identical(dd_an(off, "GROUPN")$data, "adsl_sub")
   }
   a <- tfl_tpl_args("demog")
   expect_identical(a$effective[a$param == "missing_row"], "TRUE")
@@ -160,11 +160,11 @@ test_that("missing_row is no parameter of stf_t02_demog; summary and disposition
   expect_error(dd_expand("stf_t02_demog", missing_row = FALSE), "there is no `missing_row` parameter")
   for (v in list(FALSE, tfl_unset())) {
     off <- dd_expand("summary", categorical = "SEX", missing_row = v)
-    expect_identical(dd_an(off, "CAT")$data, "adsl_saf")
-    expect_identical(dd_an(off, "CAT")$denominator, "adsl_saf")
+    expect_identical(dd_an(off, "CAT")$data, "adsl_sub")
+    expect_identical(dd_an(off, "CAT")$denominator, "adsl_sub")
   }
   # (stf_t02_demog keeps the Missing step)
-  expect_true("adsl_saf_m" %in% vapply(dd_expand("stf_t02_demog")$ard$analysis_data, `[[`, "", "id"))
+  expect_true("adsl_miss" %in% vapply(dd_expand("stf_t02_demog")$ard$analysis_data, `[[`, "", "id"))
 })
 
 test_that("missing_row = FALSE: no Missing row, other percentages as with TRUE; code and export show it", {
@@ -176,14 +176,14 @@ test_that("missing_row = FALSE: no Missing row, other percentages as with TRUE; 
   st <- tfl_read_study_spec(d)
   code <- paste(suppressMessages(tfl_ard_code(st, output_id = "T-DD")), collapse = "
 ")
-  expect_false(grepl("adsl_saf_m", code, fixed = TRUE))
-  expect_match(code, "denominator = adsl_saf", fixed = TRUE)
+  expect_false(grepl("adsl_miss", code, fixed = TRUE))
+  expect_match(code, "denominator = adsl_sub", fixed = TRUE)
   cs <- tfl_template_to_spec(tfl_read_output(file.path(d, "spec", "outputs", "T-DD.yml")), st)
-  expect_false("adsl_saf_m" %in% vapply(cs$ard$analysis_data, `[[`, "", "id"))
+  expect_false("adsl_miss" %in% vapply(cs$ard$analysis_data, `[[`, "", "id"))
   d2 <- dd_study()
   st2 <- tfl_read_study_spec(d2)
   cs2 <- tfl_template_to_spec(tfl_read_output(file.path(d2, "spec", "outputs", "T-DD.yml")), st2)
-  expect_true("adsl_saf_m" %in% vapply(cs2$ard$analysis_data, `[[`, "", "id"))
+  expect_true("adsl_miss" %in% vapply(cs2$ard$analysis_data, `[[`, "", "id"))
 })
 
 # canon 1.31 (user, 2026-11-10): a Missing row only for a variable with missing
@@ -212,8 +212,8 @@ test_that("demog family: a code-listed variable has a Missing row only when it h
                   collapse = "\n")
     # (the lists have no Missing value; the Missing step comes after them)
     expect_false(grepl("Missing = \"Missing\"", code, fixed = TRUE), info = tpl)
-    expect_false(grepl("adsl_saf_m |> set_levels", code, fixed = TRUE), info = tpl)
-    expect_lt(regexpr("set_levels(", code, fixed = TRUE), regexpr("adsl_saf_m <-", code, fixed = TRUE))
+    expect_false(grepl("adsl_miss |> set_levels", code, fixed = TRUE), info = tpl)
+    expect_lt(regexpr("set_levels(", code, fixed = TRUE), regexpr("adsl_miss <-", code, fixed = TRUE))
     # nothing missing: no Missing row at all
     expect_false(any(grepl("Missing", dd_text(dd_study(blank_race = FALSE, args = lv, template = tpl)))),
                  info = tpl)

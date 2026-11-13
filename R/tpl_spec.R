@@ -263,13 +263,36 @@
 
 # The set a `style` parameter names, for the parameter that takes it
 # (a template's `style`, `tfl_param("style", study = "settings.style",
-# default = "standard")`).  A name tflspec ships ("standard", "stf_t02")
-# always is tflspec's set: a study's `styles:` of the same name does not
-# replace it.  Any other name is the study's own set (spec/defaults.yml
-# `styles:`).  A layer: `data`, `codelists`, `content`, `page`.  A name
-# neither has stops, naming the sets there are.
+# default = "tfl_standard")`).  A name tflspec ships ("tfl_standard",
+# "tfl_small", "stf_t02") is tflspec's set: a study's `styles:` may not take
+# it (tfl_read_study_spec() stops).  Any other name is the study's own set
+# (spec/defaults.yml `styles:`).  A set is a page configuration: its `page`
+# (complete for the page step) and its `content`.  A name neither has stops,
+# naming the sets there are.
+.tpl_style_page_yaml <- function(margin = NULL) c(
+  "page:",
+  if (!is.null(margin)) sprintf("  rtf_page: {margin_left_in: %s, margin_right_in: %s}", margin, margin),
+  "  rtf_tables: {auto_section: true}",
+  "  header:",
+  "    first:",
+  "      - {left: \"{COMPANY}\", right: \"{STATUS}\"}",
+  "      - {left: \"Protocol: {STUDY_ID}\", right: \"Page {PAGE} of {TOTAL_PAGES}\"}",
+  "      - {center: \"{OUTPUT_LABEL}\"}",
+  "      - {center: \"{OUTPUT_TITLE}\"}",
+  "      - {center: \"<{OUTPUT_POPULATION}>\"}",
+  "  footer:",
+  "    last:",
+  "      - {left: \"{PROGRAM}\", right: \"{DATETIME}\"}")
 .tpl_style_builtin_yaml <- c(
-  standard = "{}",
+  tfl_standard = paste(.tpl_style_page_yaml(), collapse = "
+"),
+  tfl_small = paste(c(
+    .tpl_style_page_yaml(0.5),
+    "  rtf_style: {font_size_half_points: 14}",
+    "content:",
+    "  - plan_style: {font_size_half_points: 14}",
+    "  - plan_paginate_rows: {max_rows: 42}"), collapse = "
+"),
   # FDA STF IG v2.0, section 2.1.2, Table 2's look (not an FDA format)
   stf_t02 = paste(
     "content:",
@@ -289,18 +312,19 @@
 .tpl_style_builtin_names <- names(.tpl_style_builtin_yaml)
 .tpl_style_builtin_set <- function(name) {
   y <- yaml::yaml.load(.tpl_style_builtin_yaml[[name]], handlers = .yaml_handlers())
-  .layer_from_list(if (length(y)) y else list(), paste0("style:", name))
+  .style_set_from_list(if (length(y)) y else list(), name)
 }
 .tpl_style_set <- function(name, study = NULL) {
   if (!is.character(name) || length(name) != 1L || is.na(name) || !nzchar(name)) {
     .ard_stop("`style` is one style's name (a set of defaults.yml's styles:, or a built-in one).")
   }
+  # a built-in name is always the built-in set (the reader stops a study's)
   if (name %in% .tpl_style_builtin_names) return(.tpl_style_builtin_set(name))
   set <- study$styles[[name]]
   if (is.null(set)) {
     .ard_stop(sprintf("no style %s in defaults.yml's styles: or among the built-in sets (%s).",
                       dQuote(name, FALSE),
-                      paste(unique(c(names(study$styles), .tpl_style_builtin_names)), collapse = ", ")))
+                      paste(.style_names(study), collapse = ", ")))
   }
   set
 }
@@ -351,11 +375,16 @@
   if (identical(v, "data") || !is.null(.den_numbers(v))) return(invisible())
   ids <- function(ad) vapply(ad %||% list(), function(e) as.character(e$id %||% ""), "")
   have <- unique(c(ids(x$ard$analysis_data), ids(output$ard$analysis_data)))
-  if (!v %in% have) {
+  # (another analysis set's subjects, named by its id as adsl_<id>: the
+  # template makes them as the object adsl_den)
+  pops <- unlist(lapply(c(x$ard$analysis_data, output$ard$analysis_data),
+                        function(e) if (!is.null(e$population) && identical(e$id, "adsl_den"))
+                          as.character(e$population)))
+  if (!v %in% have && !v %in% paste0("adsl_", tolower(pops))) {
     .ard_stop(sprintf(paste0(
       "%s: template %s: denominator \"%s\" is not an analysis data of the report (%s).",
-      " The template makes %s and the other analysis sets' adsl_<id>; the report's own come from its `ard:`."),
-      output$id, t$name, v, paste(have, collapse = ", "), paste0("adsl_", tolower(args$population))))
+      " The template makes %s and, for another analysis set, adsl_<id> (the object adsl_den); the report's own come from its `ard:`."),
+      output$id, t$name, v, paste(have, collapse = ", "), .tpl_subj_id()))
   }
   invisible()
 }
@@ -457,18 +486,6 @@
     args$plot <- c(args$plot, list(risk_title = v))
   }
   args
-}
-
-# The labels of .tpl_levels() named by their codes when a list's codes differ
-# from its labels (`c(LOW = "Low")`), so the program maps them as the build does
-.tpl_levels_coded <- function(levels, vars, codelists) {
-  for (v in names(levels)) {
-    cl <- codelists[[v]]
-    if (is.character(cl)) next
-    val <- vapply(cl, function(r) as.character(r$value), "")
-    if (!identical(unname(val), unname(levels[[v]]))) names(levels[[v]]) <- val
-  }
-  levels
 }
 
 # A template's code lists (`codelists` of its result) added to the report's:
@@ -785,9 +802,11 @@ tfl_template_to_spec <- function(output, study) {
   lv <- Filter(function(it) identical(it$fn, "plan_levels"), tp$items)
   vars <- setdiff(unlist(lapply(lv, function(it) names(it$args))), c("variable", ".drop_empty"))
   vars <- intersect(vars, names(output$codelists))
-  levels <- .tpl_levels(vars, output$codelists)
-  levels <- .tpl_levels_coded(levels, vars, output$codelists)
-  cl <- if (length(levels)) c("# the code lists: each value in its order, as the table shows it",
+  # (each code in its order, named by its label when the list has labels:
+  # the template's plan_labels() applies them)
+  levels <- stats::setNames(lapply(vars, function(v)
+    .tpl_cl_dict(output$codelists[[v]]) %||% .tpl_levels(v, output$codelists)[[v]]), vars)
+  cl <- if (length(levels)) c("# the code lists: each code in its order (its label, when it has one)",
                               .codelists_lines(levels), "")
   call <- do.call(.spec_call, c(if (generic) list(.tpl_call_name(t, TRUE), .spec_sym(data), called)
                                 else list(.tpl_call_name(t, FALSE, called), .spec_sym(data)), args,

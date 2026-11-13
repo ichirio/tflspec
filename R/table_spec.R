@@ -240,7 +240,10 @@
 .ard_spec_study_keys <- list(rounding = c("r", "sas"),
                              # any text: where the files go, where the
                              # programs are (for {PROGRAM})
-                             output_path = NULL, program_dir = NULL)
+                             output_path = NULL, program_dir = NULL,
+                             # the name of the default page configuration
+                             # (the default page rows' set; YAML settings.style)
+                             style = NULL)
 
 # What a report's own row replaces a default row by.  `tables` has one row
 # per report, so its key is the report itself.
@@ -676,7 +679,7 @@
 #'   \item{`order`}{Number; the order the variables appear in
 #'     (`plan_levels(variable = c("AGE", "SEX"))`: the values of the ARD's
 #'     `variable` column; one not numbered comes after, in the ARD's order).}
-#'   \item{`levels`}{The order of its values: `Grade 0 | Grade 1 | Total`;
+#'   \item{`levels`}{The order of its values (the codes the ARD holds): `Grade 0 | Grade 1 | Total`;
 #'     `F = Female | M = Male` gives each value its text too (a named order,
 #'     `plan_levels(SEX = c(F = "Female", M = "Male"))`).}
 #'   \item{`empty_levels`}{`show` (blank, the default) or `hide`: whether
@@ -1155,6 +1158,9 @@ print.tfl_table_spec <- function(x, ...) {
   tokens_study <- character()
   page_study <- character()
   bands_own <- c(header = FALSE, footer = FALSE)
+  # (the report's own rows alone, not its pattern's: a header or footer that
+  # is the page configuration's, said by name, needs none of the report's)
+  bands_report <- c(header = FALSE, footer = FALSE)
   # the study's own header and footer rows (Standard): a report's program
   # names the lines it shares with them (tfl_report_code(setup = TRUE))
   bands_study <- list()
@@ -1162,11 +1168,15 @@ print.tfl_table_spec <- function(x, ...) {
   # the blank rows (Standard) -- as if the report had written them, merged
   # first with its own by the same rule
   pat <- .ard_spec_report_pattern(sp$report, output_id)
+  # (a pattern with page rows is the page configuration of its name, the YAML
+  # route's `style:`; NA: the study's default one)
+  style <- if (!is.na(pat) && pat %in% .sheets_config_names(sp)) pat else NA_character_
   for (s in names(.ard_spec_schema())) {
     d <- sp[[s]]
     prow <- if (!is.na(pat) && s %in% .ard_spec_pattern_sheets)
       d[d$output_id %in% paste0("@", pat), , drop = FALSE]
     d <- d[is.na(d$output_id) | d$output_id == output_id, , drop = FALSE]
+    if (s %in% names(bands_report)) bands_report[[s]] <- any(!is.na(d$output_id))
     if (NROW(prow)) d <- .ard_spec_over_pattern(d, prow, s, output_id)
     mine <- !is.na(d$output_id)
     # a header or footer of the report's own (not the study's): written in
@@ -1215,6 +1225,8 @@ print.tfl_table_spec <- function(x, ...) {
   attr(sp, "tokens_study") <- tokens_study
   attr(sp, "page_study") <- page_study
   attr(sp, "bands_own") <- bands_own
+  attr(sp, "bands_report") <- bands_report
+  attr(sp, "style") <- style
   attr(sp, "bands_study") <- bands_study
   sp
 }
@@ -1413,8 +1425,8 @@ print.tfl_table_spec <- function(x, ...) {
 }
 
 # plan_labels(): a variable's heading (variables$label) -- what the ARD
-# does not have.  Its values' text is the ARD's own: the ARD program puts
-# the code lists' labels on the data (set_levels()).
+# does not have.  Its values' text comes from the code lists too, in
+# .ard_spec_value_labels(): the ARD holds the codes.
 .ard_spec_labels <- function(sp) {
   v <- .ard_spec_variables(sp)
   v <- v[!is.na(v$label), , drop = FALSE]
@@ -1485,11 +1497,11 @@ print.tfl_table_spec <- function(x, ...) {
 }
 
 # plan_levels(): a variable's own `levels` (variables sheet), else the code
-# list's order of its values -- as the ARD has them: their labels (the ARD
-# program puts them on the data), a value without one itself.  A column the
-# plan makes takes its order from the plan (the stack's layers), and its
-# code list only its labels (plan_labels()): a list that names some of its
-# values does not drop the others.
+# list's order of its values -- as the ARD has them: the codes (the ARD
+# program makes the listed columns factors of them; the labels are
+# plan_labels()').  A column the plan makes takes its order from the plan
+# (the stack's layers), and its code list only its labels (plan_labels()): a
+# list that names some of its values does not drop the others.
 .ard_spec_levels <- function(sp) {
   v <- sp$variables[!is.na(sp$variables$levels), , drop = FALSE]
   out <- stats::setNames(lapply(v$levels, function(x) .levels_named(.ard_spec_split(x))), v$variable)
@@ -1498,8 +1510,7 @@ print.tfl_table_spec <- function(x, ...) {
   for (cl in cls) {
     var <- cl$variable[1L]
     if (var %in% own) next
-    lab <- if (is.null(cl$label)) cl$value else ifelse(is.na(cl$label), cl$value, cl$label)
-    if (is.null(out[[var]])) out[[var]] <- lab
+    if (is.null(out[[var]])) out[[var]] <- as.character(cl$value)
   }
   if (!length(out)) return(NULL)
   out
@@ -1527,9 +1538,15 @@ print.tfl_table_spec <- function(x, ...) {
   unique(v$variable[k])
 }
 
-# plan_labels() of a column the plan makes: its code list's labels, by value
-# (`subgroup = c(ALL = "All Subjects", SEX = "Sex")`)
-.ard_spec_value_labels <- function(sp) {
+# plan_labels() of the values: each code-listed variable the report's
+# analyses group by or analyse, its code list's labels by code (`SEX =
+# c(F = "Female", M = "Male")`, the list as its ARD program narrows it:
+# .ard_spec_read_lists(); all the listed variables, whole, without the ARD
+# definition `ard_spec`), and of a column the plan makes, its code list's
+# labels by value (`subgroup = c(ALL = "All Subjects", SEX = "Sex")`).  A
+# list with no labels gives no entry.  Without `derived` (a spec file's
+# content), only a plan column's: the variables' lists are the study's.
+.ard_spec_value_labels <- function(sp, ard_spec = NULL, derived = TRUE) {
   own <- .ard_spec_plan_cols(sp)
   out <- list()
   for (cl in .ard_spec_codelists(sp)) {
@@ -1537,6 +1554,13 @@ print.tfl_table_spec <- function(x, ...) {
     if (!var %in% own || is.null(cl$label) || all(is.na(cl$label))) next
     k <- !is.na(cl$label)
     out[[var]] <- stats::setNames(cl$label[k], cl$value[k])
+  }
+  if (!isTRUE(derived)) return(out)
+  lists <- .ard_spec_read_lists(sp, ard_spec)
+  for (var in names(lists)) {
+    cl <- lists[[var]]
+    if (is.null(names(cl)) || !length(cl)) next
+    out[[var]] <- stats::setNames(unname(cl), names(cl))
   }
   out
 }
