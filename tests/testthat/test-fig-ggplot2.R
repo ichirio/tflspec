@@ -49,7 +49,8 @@ test_that("a geom drawn by another stat takes that stat's parameters (geom_step(
 
 test_that("a list argument is written list() and read back as a map", {
   e <- .fig_item_lang(tfl_item("geom_smooth", list(method = "glm", method.args = list(family = "binomial"))))
-  expect_identical(.fig_deparse(e), "geom_smooth(method = \"glm\", method.args = list(family = \"binomial\"))")
+  # (a glm's family by its name is its function, written bare)
+  expect_identical(.fig_deparse(e), "geom_smooth(method = \"glm\", method.args = list(family = binomial))")
   back <- .fig_lang_item(str2lang("stat_summary(fun.data = mean_cl_normal, fun.args = list(conf.int = 0.9))"))
   expect_identical(back$args$fun.args, list(conf.int = 0.9))
   # a function by its name: the name (written back bare)
@@ -114,7 +115,7 @@ test_that("the catalog's new cards: labelled, their shown arguments typed, each 
   # every row of the shared arguments is a known kind, and its type parses
   g <- .fig_gg_args()
   expect_true(all(g$kind %in% c(unname(.schema_gg_prefix), "labs", "helper", "plot", "ggsurvfit_layer",
-                                "compose")))
+                                "compose", "scales")))
   expect_false(anyDuplicated(paste(g$kind, g$arg, g$only)) > 0L)
   for (t in unique(g$type)) expect_false(is.null(.schema_type(t)$kind), info = t)
 })
@@ -559,6 +560,173 @@ test_that("a scale's expand takes waiver() and expand_scale() too", {
   }
 })
 
+test_that("a negative number in c() is a constant: limits, reference lines, a zoom", {
+  for (code in c("scale_y_continuous(limits = c(-100, 100), breaks = c(-100, -30, 0, 20, 100))",
+                 "geom_hline(yintercept = c(-30, 20), linetype = \"dashed\")",
+                 "coord_cartesian(xlim = c(-25, 20), expand = FALSE)",
+                 "scale_fill_gradient2(limits = c(-1, 1), midpoint = 0)")) {
+    it <- .fig_lang_item(str2lang(code))
+    expect_false(any(vapply(it$args, inherits, NA, "tfl_r")), info = code)
+    expect_identical(nrow(tfl_schema_check(it)), 0L, info = code)
+    expect_identical(.fig_deparse(.fig_item_lang(it)), code)
+  }
+  expect_identical(.fig_lang_item(quote(scale_y_continuous(limits = c(-100, 100))))$args$limits, c(-100, 100))
+  # a named one too; anything else in c() stays R
+  expect_identical(.fig_lang_item(quote(scale_shape_manual(values = c(A = -1, B = 2))))$args$values,
+                   list(A = -1, B = 2))
+  expect_s3_class(.fig_lang_item(quote(scale_x_continuous(breaks = c(-x, 0))))$args$breaks, "tfl_r")
+})
+
+test_that("reference lines take one line type, colour and width a line", {
+  a <- list(yintercept = c(-30, 0, 20), linetype = c("dashed", "solid", "dashed"),
+            colour = c("grey40", "black", "grey40"), linewidth = c(0.4, 0.6, 0.4))
+  for (fn in c("geom_hline", "geom_vline")) {
+    b <- a
+    if (fn == "geom_vline") names(b)[1L] <- "xintercept"
+    expect_identical(nrow(gg_problems(fn, b)), 0L, info = fn)
+  }
+  expect_identical(gg_code("geom_hline", a[1:2]),
+                   "geom_hline(yintercept = c(-30, 0, 20), linetype = c(\"dashed\", \"solid\", \"dashed\"))")
+  expect_identical(gg_problems("geom_hline", list(linewidth = c("a", "b")))$level, "error")
+  p <- ggplot2::ggplot() + eval(.fig_item_lang(tfl_item("geom_hline", a[1:2])), asNamespace("ggplot2"))
+  expect_identical(ggplot2::layer_data(p)$linetype, c("dashed", "solid", "dashed"))
+})
+
+test_that("a function of named ones (function<rev>): a discrete scale's limits = rev, written bare", {
+  ty <- .schema_type("function<rev>")
+  expect_true(.schema_ok("rev", ty))
+  expect_false(.schema_ok("sort", ty))
+  expect_identical(.schema_show(ty), "function<rev>")
+  for (fn in c("scale_y_discrete", "scale_x_discrete", "scale_fill_manual", "scale_colour_brewer")) {
+    expect_identical(nrow(gg_problems(fn, list(limits = "rev"))), 0L, info = fn)
+    expect_identical(gg_code(fn, list(limits = "rev")), paste0(fn, "(limits = rev)"), info = fn)
+  }
+  # the levels themselves are text, as before
+  expect_identical(gg_code("scale_y_discrete", list(limits = c("Age", "Sex"))),
+                   "scale_y_discrete(limits = c(\"Age\", \"Sex\"))")
+  expect_identical(gg_code("scale_y_discrete", list(limits = "Placebo")),
+                   "scale_y_discrete(limits = \"Placebo\")")
+  it <- .fig_lang_item(quote(scale_y_discrete(limits = rev)))
+  expect_identical(it$args$limits, "rev")
+  # an object of the figure's own stays R
+  expect_s3_class(.fig_lang_item(quote(scale_y_discrete(limits = my_levels)))$args$limits, "tfl_r")
+  d <- data.frame(x = 1:3, y = c("a", "b", "c"))
+  p <- ggplot2::ggplot(d, ggplot2::aes(x, y)) + ggplot2::geom_point() +
+    eval(.fig_item_lang(tfl_item("scale_y_discrete", list(limits = "rev"))), asNamespace("ggplot2"))
+  expect_identical(as.numeric(ggplot2::get_layer_data(p)$y), c(3, 2, 1))
+})
+
+test_that("a labeller by its name is written bare, in a facet and in labeller()", {
+  for (code in c("facet_wrap(facets = \"PARAMCD\", labeller = label_both)",
+                 "facet_grid(rows = vars(vs), cols = vars(cyl), labeller = labeller(vs = label_both, .cols = label_value))",
+                 "facet_grid(rows = vars(PARAMCD), labeller = labeller(PARAMCD = label_wrap_gen(width = 10)))")) {
+    it <- .fig_lang_item(str2lang(code))
+    expect_identical(nrow(tfl_schema_check(it)), 0L, info = code)
+    expect_identical(.fig_deparse(.fig_item_lang(it)), code)
+  }
+  expect_identical(.fig_lang_item(quote(facet_wrap(~ A, labeller = label_both)))$args$labeller, "label_both")
+  # a labeller of the figure's own stays R
+  expect_s3_class(.fig_lang_item(quote(facet_wrap(~ A, labeller = to_string)))$args$labeller, "tfl_r")
+  # facet_wrap() of a two-sided formula: both sides' columns
+  expect_identical(.fig_lang_item(quote(facet_wrap(year ~ cyl)))$args$facets, list("year", "cyl"))
+})
+
+test_that("the default colour scales' type: colours or a palette function, gradient or viridis", {
+  expect_identical(nrow(gg_problems("scale_colour_discrete", list(type = c("black", "#1F78B4")))), 0L)
+  expect_identical(gg_code("scale_fill_discrete", list(type = c("black", "red"))),
+                   "scale_fill_discrete(type = c(\"black\", \"red\"))")
+  expect_identical(nrow(gg_problems("scale_fill_continuous", list(type = "viridis"))), 0L)
+  expect_identical(gg_problems("scale_fill_continuous", list(type = "rain bow"))$level, "error")
+  expect_identical(gg_code("scale_colour_continuous", list(type = "scale_colour_viridis_c")),
+                   "scale_colour_continuous(type = scale_colour_viridis_c)")
+})
+
+test_that("a layer's data as a formula of the plot's: ~ subset(.x, censored)", {
+  a <- list(data = "~ subset(.x, censored)", shape = 3)
+  expect_identical(nrow(gg_problems("geom_point", a)), 0L)
+  expect_identical(gg_code("geom_point", a), "geom_point(data = ~subset(.x, censored), shape = 3)")
+  # an object by its name, as before
+  expect_identical(gg_code("geom_point", list(data = "km_cens")), "geom_point(data = km_cens)")
+  it <- .fig_lang_item(quote(geom_point(data = ~ subset(.x, censored))))
+  expect_identical(it$args$data, "~subset(.x, censored)")
+  d <- data.frame(x = 1:4, y = 1:4, censored = c(TRUE, FALSE, TRUE, FALSE))
+  p <- ggplot2::ggplot(d, ggplot2::aes(x, y)) + eval(.fig_item_lang(tfl_item("geom_point", a)), asNamespace("ggplot2"))
+  expect_identical(nrow(ggplot2::get_layer_data(p)), 2L)
+})
+
+test_that("a function written out (lambda): a summary's fun.min, a scale's labels, a bin width", {
+  ty <- .schema_type("lambda")
+  expect_true(.schema_ok("function(y) mean(y) - sd(y)", ty))
+  expect_true(.schema_ok("\\(x) paste0(x, \"%\")", ty))
+  expect_false(.schema_ok("mean", ty))
+  expect_false(.schema_ok("function(y) mean(y", ty))
+  expect_false(.schema_ok("functional(y)", ty))
+  a <- list(fun = "mean", fun.min = "function(y) mean(y) - sd(y)",
+            fun.max = "function(y) mean(y) + sd(y)", geom = "pointrange")
+  expect_identical(nrow(gg_problems("stat_summary", a)), 0L)
+  expect_identical(gg_code("stat_summary", a[1:2]),
+                   "stat_summary(fun = mean, fun.min = function(y) mean(y) - sd(y))")
+  # the geom with the stat's form (the GUI's)
+  b <- list(stat = "summary", fun.data = "\\(y) data.frame(y = median(y), ymin = min(y), ymax = max(y))")
+  expect_identical(nrow(gg_problems("geom_errorbar", b)), 0L)
+  expect_identical(gg_code("geom_errorbar", b),
+                   "geom_errorbar(stat = \"summary\", fun.data = function(y) data.frame(y = median(y), ymin = min(y), ymax = max(y)))")
+  # a scale's labels: a function written out or a formula is code, a text is text
+  expect_identical(gg_code("scale_y_continuous", list(labels = "function(x) paste0(x, \"%\")")),
+                   "scale_y_continuous(labels = function(x) paste0(x, \"%\"))")
+  expect_identical(gg_code("scale_x_continuous", list(labels = "~ paste(\"Week\", .x)")),
+                   "scale_x_continuous(labels = ~paste(\"Week\", .x))")
+  expect_identical(gg_code("scale_x_continuous", list(labels = c("BL", "W4"))),
+                   "scale_x_continuous(labels = c(\"BL\", \"W4\"))")
+  expect_identical(nrow(gg_problems("geom_histogram", list(binwidth = "function(x) 2 * IQR(x) / length(x)^(1/3)"))), 0L)
+  # read from code: the text of the function (\(x) as function(x)), and back
+  it <- .fig_lang_item(quote(stat_summary(fun.min = function(y) mean(y) - sd(y), fun.max = \(y) max(y))))
+  expect_identical(it$args$fun.min, "function(y) mean(y) - sd(y)")
+  expect_identical(it$args$fun.max, "function(y) max(y)")
+  expect_identical(nrow(tfl_schema_check(it)), 0L)
+  it <- .fig_lang_item(quote(scale_y_continuous(labels = function(x) sprintf("%+.1f", x))))
+  expect_identical(it$args$labels, "function(x) sprintf(\"%+.1f\", x)")
+  # a function of several statements keeps its lines and parses back
+  f <- quote(stat_summary(fun = function(y) {
+    m <- mean(y)
+    m
+  }))
+  it <- .fig_lang_item(f)
+  expect_true(is.character(it$args$fun) && grepl("\n", it$args$fun, fixed = TRUE))
+  expect_true(.schema_is_lambda(it$args$fun))
+  # where no lambda goes, a function stays R
+  expect_s3_class(.fig_lang_item(quote(geom_point(colour = function(x) x)))$args$colour, "tfl_r")
+  # it draws
+  d <- data.frame(x = rep(1:2, each = 4), y = c(1, 2, 3, 4, 2, 4, 6, 8))
+  p <- ggplot2::ggplot(d, ggplot2::aes(x, y)) +
+    eval(.fig_item_lang(tfl_item("stat_summary", a)), asNamespace("ggplot2")) +
+    eval(.fig_item_lang(tfl_item("scale_y_continuous", list(labels = "function(x) paste0(x, \"%\")"))),
+         asNamespace("ggplot2"))
+  ld <- ggplot2::get_layer_data(p)
+  expect_equal(ld$ymin, c(2.5 - stats::sd(1:4), 5 - stats::sd(c(2, 4, 6, 8))))
+  b <- ggplot2::ggplot_build(p)
+  expect_true(all(grepl("%$", stats::na.omit(b$layout$panel_scales_y[[1L]]$get_labels()))))
+})
+
+test_that("numbers written as arithmetic are numbers where a list of numbers goes", {
+  expect_identical(.schema_r_numbers(tfl_r("2^(-2:2)")), c(0.25, 0.5, 1, 2, 4))
+  expect_identical(.schema_r_numbers(tfl_r("c(-10^(2:0), 0, 10^(0:2))")),
+                   c(-100, -10, -1, 0, 1, 10, 100))
+  expect_identical(.schema_r_numbers(tfl_r("0:4 * 12")), c(0, 12, 24, 36, 48))
+  expect_null(.schema_r_numbers(tfl_r("2^(-k:k)")))
+  expect_null(.schema_r_numbers(tfl_r("c(a = 1)")))
+  # (base R's functions of numbers are numbers since round 16, log(2); others not)
+  expect_equal(.schema_r_numbers(tfl_r("log(2)")), log(2))
+  expect_null(.schema_r_numbers(tfl_r("sum(1, 2)")))
+  ty <- .schema_type("list<number>")
+  expect_true(.schema_ok(tfl_r("2^(-2:2)"), ty))
+  expect_false(.schema_ok(tfl_r("my_breaks"), ty))
+  expect_false(.schema_ok(tfl_r("2^(-2:2)"), .schema_type("list<logical>")))
+  a <- list(transform = "log2", breaks = tfl_r("2^(-2:2)"), limits = tfl_r("2^c(-2, 2)"))
+  expect_identical(nrow(gg_problems("scale_x_continuous", a)), 0L)
+  expect_identical(gg_code("scale_x_continuous", a[2]), "scale_x_continuous(breaks = 2^(-2:2))")
+})
+
 test_that("an argument whose values differ by function is typed by the function (ggh4x, stat_bin, facet_wrap, coord_radial)", {
   skip_if_not_installed("ggh4x")
   skip_if_not(utils::packageVersion("ggplot2") >= "4.0.0")
@@ -628,4 +796,105 @@ test_that("an argument whose values differ by function is typed by the function 
     expect_identical(tfl_schema(fn)$args$type$type, "string")
   }
   expect_identical(tfl_schema("scale_colour_brewer")$args$type$type, "enum[seq|div|qual]")
+})
+
+test_that("a date on a date axis: a reference line, annotate(), coord_cartesian()'s xlim", {
+  a <- list(xintercept = "2025-01-31", linetype = "dashed")
+  expect_identical(nrow(gg_problems("geom_vline", a)), 0L)
+  expect_identical(gg_code("geom_vline", a), "geom_vline(xintercept = as.Date(\"2025-01-31\"), linetype = \"dashed\")")
+  expect_identical(gg_code("geom_vline", list(xintercept = c("2025-01-31", "2025-06-30"))),
+                   "geom_vline(xintercept = as.Date(c(\"2025-01-31\", \"2025-06-30\")))")
+  # numbers stay numbers; a text that is no date is no reference line's
+  expect_identical(gg_code("geom_hline", list(yintercept = c(-30, 20))), "geom_hline(yintercept = c(-30, 20))")
+  expect_true(nrow(gg_problems("geom_vline", list(xintercept = "Week 4"))) > 0L)
+  b <- list(geom = "text", x = "2025-01-31", y = 12.5, label = "Data cut-off")
+  expect_identical(nrow(gg_problems("annotate", b)), 0L)
+  expect_identical(gg_code("annotate", b),
+                   "annotate(geom = \"text\", x = as.Date(\"2025-01-31\"), y = 12.5, label = \"Data cut-off\")")
+  # a level of a discrete axis that is no date stays text
+  expect_identical(gg_code("annotate", list(geom = "text", x = "Week 4", y = 1, label = "a")),
+                   "annotate(geom = \"text\", x = \"Week 4\", y = 1, label = \"a\")")
+  c1 <- list(xlim = c("2024-01-01", NA))
+  expect_identical(nrow(gg_problems("coord_cartesian", c1)), 0L)
+  expect_identical(gg_code("coord_cartesian", c1), "coord_cartesian(xlim = as.Date(c(\"2024-01-01\", NA)))")
+  # read from code and back
+  for (e in list(quote(geom_vline(xintercept = as.Date("2025-01-31"))),
+                 quote(annotate("text", x = as.Date("2025-01-31"), y = 1, label = "cut")),
+                 quote(coord_cartesian(xlim = as.Date(c("2024-01-01", NA)))))) {
+    it <- .fig_lang_item(e)
+    expect_false(any(vapply(it$args, inherits, NA, "tfl_r")), info = deparse(e))
+    expect_identical(nrow(tfl_schema_check(it)), 0L, info = deparse(e))
+  }
+  # it draws on a date axis
+  d <- data.frame(x = as.Date("2024-01-01") + 0:400, y = 1)
+  p <- ggplot2::ggplot(d, ggplot2::aes(x, y)) + ggplot2::geom_point() +
+    eval(.fig_item_lang(tfl_item("geom_vline", a)), asNamespace("ggplot2")) +
+    eval(.fig_item_lang(tfl_item("annotate", b)), asNamespace("ggplot2")) +
+    eval(.fig_item_lang(tfl_item("coord_cartesian", c1)), asNamespace("ggplot2"))
+  expect_no_error(suppressWarnings(ggplot2::ggplot_build(p)))
+})
+
+test_that("a layer's data as a function of the plot's, written out", {
+  a <- list(data = "function(d) subset(d, AVAL > ANRHI)", colour = "red")
+  expect_identical(nrow(gg_problems("geom_point", a)), 0L)
+  expect_identical(gg_code("geom_point", a), "geom_point(data = function(d) subset(d, AVAL > ANRHI), colour = \"red\")")
+  it <- .fig_lang_item(quote(geom_point(data = function(d) subset(d, HIGH), size = 2)))
+  expect_identical(it$args$data, "function(d) subset(d, HIGH)")
+  expect_identical(nrow(tfl_schema_check(it)), 0L)
+  # an object by its name and the formula as before
+  expect_identical(gg_code("geom_point", list(data = "km")), "geom_point(data = km)")
+  expect_identical(gg_code("geom_point", list(data = "~ subset(.x, censored)")), "geom_point(data = ~subset(.x, censored))")
+  d <- data.frame(x = 1:4, y = 1:4, HIGH = c(TRUE, FALSE, TRUE, FALSE))
+  p <- ggplot2::ggplot(d, ggplot2::aes(x, y)) + eval(.fig_item_lang(it), asNamespace("ggplot2"))
+  expect_identical(nrow(ggplot2::layer_data(p)), 2L)
+})
+
+test_that("legend.justification by its sides' names; a theme's margin as a unit", {
+  a <- list(legend.position = "inside", legend.justification = c("right", "top"))
+  expect_identical(nrow(gg_problems("theme", a)), 0L)
+  expect_identical(gg_code("theme", a["legend.justification"]),
+                   "theme(legend.justification = c(\"right\", \"top\"))")
+  expect_identical(nrow(gg_problems("theme", list(legend.justification = c(1, 1)))), 0L)
+  expect_true(nrow(gg_problems("theme", list(legend.justification = c("right", "up")))) > 0L)
+  m <- list(plot.margin = tfl_call("unit", list(x = c(1, 1, 1, 1), units = "cm")))
+  expect_identical(nrow(gg_problems("theme", m)), 0L)
+  expect_identical(gg_code("theme", m), "theme(plot.margin = unit(c(1, 1, 1, 1), \"cm\"))")
+  it <- .fig_lang_item(quote(theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))))
+  expect_identical(nrow(tfl_schema_check(it)), 0L)
+  expect_identical(nrow(gg_problems("theme", list(legend.margin = tfl_call("margin", list(t = -5))))), 0L)
+  p <- ggplot2::ggplot(data.frame(x = 1, y = 1), ggplot2::aes(x, y)) + ggplot2::geom_point() +
+    eval(.fig_item_lang(tfl_item("theme", c(a, m))), asNamespace("ggplot2"))
+  grDevices::pdf(NULL)
+  on.exit(grDevices::dev.off())
+  expect_no_error(ggplot2::ggplotGrob(p))
+})
+
+test_that("a mapping's label by scales, a factor's order by forcats: of a mapping's form", {
+  for (e in list(quote(geom_text(aes(label = scales::percent(pct, accuracy = 1)))),
+                 quote(geom_point(aes(x = hr, y = forcats::fct_rev(level)))),
+                 quote(geom_point(aes(y = fct_reorder(level, hr)))),
+                 quote(geom_text(aes(label = formatC(est, format = "f", digits = 2)))),
+                 quote(geom_text(aes(label = stringr::str_wrap(term, 20)))))) {
+    it <- .fig_lang_item(e)
+    expect_false(any(vapply(it$args$mapping, inherits, NA, "tfl_r")), info = deparse(e))
+    expect_identical(nrow(tfl_schema_check(it)), 0L, info = deparse(e))
+    expect_identical(.fig_item_lang(it)[["mapping"]], e[[2L]], info = deparse(e))
+  }
+  expect_identical(.fig_aes_head(quote(scales::percent(x))), "scales::percent")
+  expect_identical(.fig_aes_head(quote(f(x)(y))), NA_character_)
+  # another package's function stays R
+  it <- .fig_lang_item(quote(geom_text(aes(label = foo::bar(x)))))
+  expect_s3_class(it$args$mapping$label, "tfl_r")
+  expect_true(nrow(gg_problems("geom_text", list(mapping = list(label = "foo::bar(x)")))) > 0L)
+})
+
+test_that("a gradient's colour places by scales::rescale()", {
+  a <- list(colours = c("blue", "white", "red"),
+            values = tfl_call("scales::rescale", list(x = c(-1, 0, 1))), limits = c(-1, 1))
+  expect_identical(nrow(gg_problems("scale_fill_gradientn", a)), 0L)
+  expect_identical(gg_code("scale_fill_gradientn", a["values"]),
+                   "scale_fill_gradientn(values = scales::rescale(c(-1, 0, 1)))")
+  it <- .fig_lang_item(quote(scale_fill_gradientn(colours = c("blue", "red"), values = scales::rescale(c(-1, 0, 1)))))
+  expect_s3_class(it$args$values, "tfl_call")
+  expect_identical(nrow(tfl_schema_check(it)), 0L)
 })

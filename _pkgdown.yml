@@ -297,6 +297,7 @@ reference:
     contents:
       - tfl_fig_design
       - tfl_fig_content_from_design
+      - tfl_fig_content_from_r
       - tfl_fig_forest_analyses
       - tfl_fig_templates
       - tfl_fig_parts

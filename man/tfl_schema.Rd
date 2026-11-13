@@ -55,22 +55,56 @@ spelling of an aesthetic (\code{color}, \code{pch}, \code{lty}) is checked as th
 it spells.  \code{theme()} takes ggplot2 4.0's default palettes
 (\code{palette.colour.discrete} ...).
 
+A figure item's values are checked down to the calls inside them, each
+by its own entry: \code{theme(axis.text = element_text(sizee = 9))} and
+\code{scale_y_continuous(labels = scales::label_percent(acuracy = 1))} warn
+(no such argument), \code{element_text(size = "big")} is an error, and so is
+\code{scales::label_procent()} (scales has no such function).  A guide's
+argument of before ggplot2 3.5.0 (\code{guide_legend(title.position =)})
+warns with the theme setting it is now.
+
 The types, in a short notation: \code{string}, \code{integer}, \code{number} (a
-number written as arithmetic of numbers, \verb{!r 1/5}, is one),
+number written as arithmetic of numbers, \verb{!r 1/5}, is one; numbers so
+written, \verb{!r 2^(-2:2)}, are a \verb{list<number>}; texts built of constants,
+\verb{!r paste0("W", seq(0, 24, by = 4))} or \verb{!r sprintf("Day \%d", 1:10)},
+are a \verb{list<string>}, kept as written and judged by the check: one that
+does not evaluate is an error),
 \code{logical}, \code{enum[a|b]}, \code{column}, \code{stat}, \code{template}, \code{r} (\code{!r}),
 \code{formula} (\code{!r}, written \verb{~ <text>}), \code{guard} (\code{!r}, a two-sided
 \code{cond ~ "text"}), \code{function} (a function by its name, \code{mean_se} or
-\code{Hmisc::smean.cl.normal}, written bare: \code{fun.data = mean_se}), \code{tilde}
+\code{Hmisc::smean.cl.normal}, written bare: \code{fun.data = mean_se}),
+\verb{function<f1, f2>} (one of those functions by its name, written bare: a
+discrete scale's \code{limits: rev}, a facet's \code{labeller: label_both}, a
+scale's \code{labels: abs} or \code{labels: scales::percent}), \code{tilde}
 (a formula as its text, \code{y ~ x} or \code{~ . / 7}, written as the formula),
+\code{lambda} (a function written out as its text, \code{function(y) mean(y) - sd(y)} or \code{\\(x) paste0(x, "\%")}, written as the function: a summary's
+\code{fun.min}, a scale's \code{labels}; a lambda or a formula is written as code
+where the type also takes text),
 \code{date} (a date as its text, \code{2024-01-01}; a sequence of them, \code{NA} an
-open end, written \code{as.Date(c("2024-01-01", NA))}),
+open end, written \code{as.Date(c("2024-01-01", NA))}: a date scale's
+\code{limits} and \code{breaks}, \code{coord_cartesian()}'s \code{xlim}, a reference line's
+\code{xintercept}, \code{annotate()}'s \code{x}; a text of that form is a date there,
+not a level of a discrete axis),
+\code{math} (a plotmath expression as its text, \code{10^.x}, written bare:
+\code{scales::label_math(10^.x)}); a title in plotmath, of \code{labs()}, a
+scale's \code{name} or a guide's \code{title}, is the call R writes, its
+expression as its text: \code{{fn: expression, args: {expr: AUC[0 - 24] ~ (ng/mL)}}} written \code{expression(AUC[0 - 24] ~ (ng/mL))} (\code{quote()},
+\code{bquote()} likewise),
 \code{call} and \verb{call<fn>} (\verb{\{fn:, args:\}}; \verb{call<label_*>} takes any
 function whose name the pattern matches, of any package:
-\code{{fn: scales::label_percent}}; base R's that clinical figures write as
+\code{{fn: scales::label_percent}}; scales' helpers of a scale's value --
+\verb{label_*()}, \verb{*_format()}, \verb{breaks_*()}, \code{trans_breaks()},
+\verb{transform_*()}, \verb{pal_*()}, \code{rescale()} -- are entries of the kind
+\code{scales}, their arguments typed (\code{accuracy}, \code{suffix},
+\code{style_positive}, \code{base}, \code{width} ...); base R's that clinical figures write as
 a value are typed where they fit: \code{seq()} for breaks,
 \code{{fn: seq, args: {from: 0, to: 52, by: 4}}} written \code{seq(0, 52, by = 4)};
-\code{alpha()} for a colour; grDevices' palettes, \code{hcl.colors()} ..., for a
-scale's colours), \verb{list<T>} (a sequence), \verb{vec<K, V>} (a map that is a
+\code{alpha()} for a colour; grDevices' palettes, \code{hcl.colors()} ...,
+\code{RColorBrewer::brewer.pal()} and viridisLite's \code{viridis()} ..., for a
+scale's colours; \code{data.frame()} of constants for a layer's \code{data}
+(reference lines with a legend), its columns of one length; a glm's
+family in \code{method.args}, \code{{family: binomial}} written bare or
+\code{{fn: binomial, args: {link: probit}}}), \verb{list<T>} (a sequence), \verb{vec<K, V>} (a map that is a
 named vector in R), \verb{map<K, V>} (a map that is a named list),
 \verb{rows<f1, f2, ...>} (a sequence of maps that is a data frame) and \code{T|U}
 (either).
@@ -97,11 +131,17 @@ a call of \code{factor()}, \code{as.factor()}, \code{ordered()}, \code{as.numeri
 \code{rev()}, \code{abs()}, \code{sqrt()}, \code{exp()}, \code{log()} / \code{log2()} / \code{log10()} /
 \code{log1p()}, \code{round()}, \code{after_stat()}, \code{after_scale()}, \code{stage()},
 \code{ifelse()}, \code{cut()}, \code{is.na()}, \code{nchar()}, \code{toupper()} / \code{tolower()},
-\code{substr()} or \code{trimws()}, or of the arithmetic or a comparison (\code{<},
+\code{substr()}, \code{trimws()}, \code{formatC()}, \code{prettyNum()}, \code{scales::percent()} /
+\code{number()} / \code{comma()} / \code{pvalue()}, forcats' \code{fct_rev()} /
+\code{fct_reorder()} / \code{fct_relevel()} / \code{fct_inorder()} / \code{fct_infreq()} or
+\code{stringr::str_wrap()} (by \code{pkg::fn} or bare), or of the arithmetic or a comparison (\code{<},
 \code{<=}, \code{==}, \code{!=}, \verb{\%in\%}, \code{!}, \code{&}, \code{|}), of columns, constants, their
 arithmetic and \code{c()}, \code{sum()}, \code{max()}, \code{min()}, \code{mean()}, \code{median()},
 \code{length()}, \code{alpha()}, \code{pmin()}, \code{pmax()}, \code{cumsum()}, \code{[},
-\code{duplicated()}, \code{unique()}, \code{rank()} (\code{x: factor(AVISITN)},
+\code{duplicated()}, \code{unique()}, \code{rank()}, \code{sd()}, \code{var()}, \code{quantile()},
+\code{IQR()}, \code{mad()}; a summary at its top too, \code{mean()}, \code{median()},
+\code{min()}, \code{max()}, \code{sum()}, \code{quantile()} (a Bland-Altman plot's
+\code{yintercept: mean(AVAL - BASE) + 1.96 * sd(AVAL - BASE)}) (\code{x: factor(AVISITN)},
 \code{y: after_stat(density)}, \code{x: reorder(USUBJID, -PCHG)},
 \code{fill: after_scale(alpha(colour, 0.4))}, a waterfall's
 \code{fill: PCHG <= -30} or \code{fill: ifelse(PCHG <= -30, "PR", "SD/PD")};

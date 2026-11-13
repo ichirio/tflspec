@@ -123,6 +123,36 @@ ext_scope <- list(
                 wrap_elements = 2, inset_element = 1, guide_area = 1, area = 1, free = 1)
 )
 
+# scales' helpers a scale's value is made by (2026-11-09): each argument
+# written in the scale's slot that takes the helper (labels, breaks,
+# transform, palette ...), so a SPEC writes it as a value: yes when it is
+# typed and labelled by its kind (inst/fig/gg_args.csv's `scales` rows) and
+# the check judges it; partial when written and accepted but untyped (or
+# not checked: a call inside a value); no when the check does not know it.
+# The weights: a clinical figure's percent, number and p-value labels, its
+# breaks every n, its log axes (PK concentrations, ratios) 3 or 2.
+scales_scope <- c(label_percent = 3, label_number = 3, breaks_width = 3, label_comma = 2,
+                  label_pvalue = 2, breaks_pretty = 2, breaks_log = 2, label_log = 2,
+                  label_math = 2, math_format = 2, trans_breaks = 2, trans_format = 2,
+                  transform_log = 2, label_wrap = 2, label_date = 2, breaks_extended = 1,
+                  label_date_short = 1, label_scientific = 1, label_dollar = 1, label_ordinal = 1,
+                  label_dictionary = 1, label_parse = 1, label_glue = 1, label_timespan = 1,
+                  breaks_timespan = 1, minor_breaks_n = 1, minor_breaks_width = 1,
+                  minor_breaks_log = 1, transform_pseudo_log = 1, transform_exp = 1,
+                  transform_boxcox = 1, transform_reverse = 1, transform_sqrt = 1,
+                  percent_format = 1, comma_format = 1, number_format = 1, pal_brewer = 1,
+                  pal_hue = 1, pal_viridis = 1, rescale = 1)
+# the scale and its slot a helper is written in
+scales_slot <- function(fn) {
+  if (startsWith(fn, "minor_breaks_")) return(c("scale_y_continuous", "minor_breaks"))
+  if (startsWith(fn, "breaks_") || identical(fn, "trans_breaks")) return(c("scale_y_continuous", "breaks"))
+  if (startsWith(fn, "transform_")) return(c("scale_y_continuous", "transform"))
+  if (startsWith(fn, "pal_")) return(c("scale_colour_discrete", "palette"))
+  if (identical(fn, "rescale")) return(c("scale_colour_gradientn", "values"))
+  if (fn %in% c("label_date", "label_date_short", "breaks_timespan")) return(c("scale_x_date", "labels"))
+  c("scale_y_continuous", "labels")
+}
+
 # arguments no one writes in a SPEC: deprecated, internal
 drop_args <- c("...", "fun.y", "fun.ymin", "fun.ymax", "flipped_aes", "super", "call", "scale_name",
                "trans", "size", "fatten", "draw_quantiles", "legend.text.align", "legend.title.align",
@@ -227,6 +257,34 @@ for (pkg in names(ext_scope)) {
   }
 }
 
+scales_status <- function(fn, arg) {
+  sl <- scales_slot(fn)
+  call_args <- list()
+  if (nzchar(arg)) call_args[[arg]] <- tfl_r("NULL")
+  inner <- structure(list(fn = paste0("scales::", fn), package = NULL, args = call_args),
+                     class = "tfl_call")
+  args <- list()
+  args[[sl[2L]]] <- inner
+  p <- tryCatch(tfl_schema_check(tfl_item(sl[1L], args)), error = function(e) {
+    data.frame(arg = arg, message = conditionMessage(e), level = "error")
+  })
+  unknown <- grepl("no argument|no function|neither the schema", p$message)
+  if (any(unknown)) return(list(status = "no", where = "", note = p$message[unknown][1L]))
+  ent <- tryCatch(tfl_schema(paste0("scales::", fn)), error = function(e) NULL)
+  typed <- !is.null(ent) && (!nzchar(arg) || !is.null(ent$args[[arg]]$label))
+  where <- if (is.null(ent)) "not checked (a call inside a value)" else "formals; gg_args.csv: scales"
+  list(status = if (typed) "yes" else "partial", where = where,
+       note = sprintf("in %s(%s = )", sl[1L], sl[2L]))
+}
+if (requireNamespace("scales", quietly = TRUE)) {
+  for (key in names(scales_scope)) {
+    a <- setdiff(names(formals(getExportedValue("scales", key))), c("...", ".envir"))
+    # (rescale()'s and the oob_*()'s x is the values: rescale(x = c(-1, 0, 1)))
+    if (!length(a)) a <- ""
+    for (x in a) add("scales", key, x, scales_scope[[key]], scales_status(key, x), package = "scales")
+  }
+}
+
 # ---- a layer's aesthetics ----
 # One row a layer's aesthetic (geom_errorbar's xmin): yes when the check
 # judges a mapping's names (an unknown aesthetic warns) and the card marks
@@ -294,7 +352,8 @@ pct <- function(d) {
 }
 is_aes <- startsWith(cov$argument, "aes: ")
 aes_cov <- cov[is_aes, , drop = FALSE]
-ext <- cov[cov$package != "ggplot2" & !is_aes, , drop = FALSE]
+sc <- cov[cov$package == "scales", , drop = FALSE]
+ext <- cov[!cov$package %in% c("ggplot2", "scales") & !is_aes, , drop = FALSE]
 cov_all <- cov
 cov <- cov[cov$package == "ggplot2" & !is_aes, , drop = FALSE]
 main <- cov[cov$group != "stat", , drop = FALSE]
@@ -321,6 +380,11 @@ if (nrow(ext)) {
   for (pkg in unique(ext$package)) cat(sprintf("  %-10s %5.1f%%\n", pkg, pct(ext[ext$package == pkg, ])))
   cat("arguments:", nrow(ext), " yes:", sum(ext$covered == "yes"), " partial:",
       sum(ext$covered == "partial"), " no:", sum(ext$covered == "no"), "\n")
+}
+if (nrow(sc)) {
+  cat(sprintf("scales' helpers: %.1f%%\n", pct(sc)))
+  cat("arguments:", nrow(sc), " yes:", sum(sc$covered == "yes"), " partial:",
+      sum(sc$covered == "partial"), " no:", sum(sc$covered == "no"), "\n")
 }
 cov <- cov_all
 
