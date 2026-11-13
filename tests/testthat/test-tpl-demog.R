@@ -33,7 +33,8 @@ b1_folder <- function(env = parent.frame(), na = TRUE, defaults = b1_defaults) {
   }
   haven::write_xpt(sl, file.path(d, "adam", "adsl.xpt"))
   suppressMessages(tfl_ai_study_init(d, adam = "adam", study_id = "B1-01"))
-  writeLines(defaults, file.path(d, "spec", "defaults.yml"))
+  # (the study's default configuration, `standard`, which tfl_ai_study_init() names, empty)
+  writeLines(c(defaults, "styles:", "  standard:", "    page: {}"), file.path(d, "spec", "defaults.yml"))
   d
 }
 b1_run <- function(d, o) {
