@@ -29,6 +29,7 @@ The table template \code{pk_conc}, layout \code{listing_summary}. Its program is
    \code{stats} \tab other \tab call \tab N = \{N:.0f\}; Mean = \{mean:.4s\}; SD = \{sd:.5s\}; SE = \{se:.... \tab  \tab the summary's rows: label = cell \cr
    \code{split_at} \tab other \tab call \tab  \tab  \tab the time point that starts a second block of columns (each block its pages, the group's first); NULL: one \cr
    \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_sub \cr
+   \code{split} \tab other \tab call \tab none \tab plan_paginate_rows.split \tab how a page break is placed (plan_paginate_rows(split = )): "none" one page; "group_safe" whole groups to a page; "group_force" a cut every 'max_rows' rows, a group continued on the next page; "rows" and "by_value" are cut by position or by value (they need their own arguments, a 'plan_paginate_rows' item) \cr
 }
 }
 

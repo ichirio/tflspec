@@ -19,6 +19,7 @@ The table template \code{ae_eair}, layout \code{hierarchical}. Its program is on
    \code{start} \tab other \tab call \tab ASTDY \tab  \tab the event's day from the start of treatment: a variable or R (ASTDT - TRTSDT + 1) \cr
    \code{per} \tab other \tab call \tab 100 \tab  \tab the rate per this many person-years \cr
    \code{overall} \tab other \tab call \tab Any TEAE \tab  \tab the any-record row's label \cr
+   \code{split} \tab other \tab call \tab group_force \tab plan_paginate_rows.split \tab how a page break is placed (plan_paginate_rows(split = )): "none" one page; "group_safe" whole groups to a page; "group_force" a cut every 'max_rows' rows, a group continued on the next page; "rows" and "by_value" are cut by position or by value (they need their own arguments, a 'plan_paginate_rows' item) \cr
 }
 }
 

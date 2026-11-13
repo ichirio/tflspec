@@ -99,8 +99,9 @@ denominators, the header N and, through them, the records) and \code{where}
 else none.}
 
 \item{tier}{How often it is set, for a help page and an input form:
-\code{"required"}, \code{"usual"} (shown with its default) or \code{"other"} (folded
-away); \code{NULL}: \code{"required"} when \code{required}, else \code{"other"}.}
+\code{"required"}, \code{"key"} (it has a default but stays on top, with a marker),
+\code{"usual"} (shown with its default) or \code{"other"} (folded away); \code{NULL}:
+\code{"required"} when \code{required}, else \code{"other"}.}
 
 \item{step}{Where its value is used: \code{"call"} (the default), an argument
 of the template's call in a report's program, or \code{"data"}, a step that

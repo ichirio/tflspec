@@ -26,7 +26,8 @@
     "\"set\" (default): the arm's subjects in the analysis set (with `subset`);",
     "\"tested\": the arm's subjects with a record kept (after `where`, `params` and",
     "`baseline_normal`), one N for all the parameters; \"none\": no N.  \"denominator\" is",
-    "not one N here, the cells' N differs by parameter"))
+    "not one N here, the cells' N differs by parameter")),
+  .tpl_split_param("group_safe")
 )
 
 .tpl_la_body <- function(a, ctx) {
@@ -100,7 +101,8 @@
          tfl_item("plan_col_header", list(header = list(
            list(line = "1", cols = "row_label", text = .tpl_lines(a$heading)),
            list(line = "1", cols = ".values", span = "each", text = if (identical(hn, "none")) "{col}" else "{col}\n(N={n})")))),
-         tfl_item("plan_paginate_rows", list(max_rows = 30L, split = "group_safe"))))
+         tfl_item("plan_paginate_rows", list(
+           max_rows = 30L, split = .tpl_choice(a, "split", .tpl_split_choices, "lab_abnormal")))))
   list(ard = list(analysis_data = sets, analyses = analyses),
        data = list(source = "ard", object = "ard"), content = content)
 }

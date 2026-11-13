@@ -60,7 +60,7 @@ test_that("a shift report's code lists in the study defaults label its rows and 
   f <- file.path(d, "spec", "outputs", "T-SH.yml")
   tfl_write_output(tfl_output("T-SH", "table", common = list(population = "SAF"), extends = "defaults",
     template = list(name = "shift", args = list(population = "SAF", where = 'PARAMCD == "ALT"',
-                                                param_page = FALSE, levels = c("Low", "Normal", "High")))), f)
+                                                page_by = FALSE, levels = c("Low", "Normal", "High")))), f)
   st <- tfl_read_study_spec(d)
   ard <- suppressMessages(tfl_build_ard(st, output_id = "T-SH", dir = d, save = FALSE))
   ro <- tfl_resolve_output(tfl_read_output(f), st)

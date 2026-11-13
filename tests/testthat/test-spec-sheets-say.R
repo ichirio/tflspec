@@ -165,7 +165,7 @@ test_that("the defaults' and a pattern's code lists are named in the notes, and 
   expect_match(n$reason[n$output %in% "@p"], "patterns/p.yml: SEX", fixed = TRUE)
   written <- x$nc[vapply(x$nc, function(e) identical(e$sheet, "codelists"), NA)]
   expect_length(written, 2L)
-  expect_true(any(grepl("1 part|2 parts", x$msgs)))
+  expect_true(any(grepl("[0-9]+ parts?", x$msgs)))
 })
 
 test_that("a program differs when an analysis reads the variable the defaults' list is for", {

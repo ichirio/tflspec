@@ -26,9 +26,10 @@ The table template \code{lab_shift}, layout \code{shift}. Its program is one cal
    \code{post_header} \tab other \tab call \tab \{col\} \tab  \tab the header over each post-baseline category ('\{col\}': the category; a typed \\n breaks the line) \cr
    \code{missing_label} \tab other \tab call \tab  \tab  \tab the row of the subjects with no baseline category, counted in the Total and in the \% denominator; NULL (default): those subjects are left out of the table, not in any row or N \cr
    \code{total_label} \tab other \tab call \tab Total \tab  \tab the row of all the subjects; NULL: none \cr
-   \code{param_page} \tab other \tab call \tab TRUE \tab  \tab TRUE: a page a parameter, named in the titles by 'param_heading' \cr
-   \code{param_heading} \tab other \tab call \tab Parameter: \{value\} \tab  \tab a parameter's page name ('\{value\}': the parameter); the last title line, or where the title line '\{PAGE_HEADING\}' is \cr
-   \code{header_n} \tab other \tab call \tab set \tab  \tab the arm headings' N, set apart from the \% denominator ('percent_of'): "set" (default): the arm's subjects in the analysis set (with 'subset'); "tested": the page's subjects with a baseline and a post-baseline category (needs 'param_page'); "none": no N \cr
+   \code{page_by} \tab other \tab call \tab PARAMCD \tab  \tab the variable a page a value is cut by: the parameter's (the default), named in the titles by 'page_heading'; unset: no page a value, one table, the parameter a row heading \cr
+   \code{page_heading} \tab other \tab call \tab Parameter: \{value\} \tab  \tab a parameter's page name ('\{value\}': the parameter); the last title line, or where the title line '\{PAGE_HEADING\}' is; used with 'page_by' \cr
+   \code{header_n} \tab other \tab call \tab set \tab  \tab the arm headings' N, set apart from the \% denominator ('percent_of'): "set" (default): the arm's subjects in the analysis set (with 'subset'); "tested": the page's subjects with a baseline and a post-baseline category (needs 'page_by'); "none": no N \cr
+   \code{split} \tab other \tab call \tab none \tab plan_paginate_rows.split \tab how a page break is placed (plan_paginate_rows(split = )): "none" one page; "group_safe" whole groups to a page; "group_force" a cut every 'max_rows' rows, a group continued on the next page; "rows" and "by_value" are cut by position or by value (they need their own arguments, a 'plan_paginate_rows' item) \cr
 }
 }
 

@@ -236,7 +236,7 @@
 # what tfl_table_plan() runs, and what tfl_table_code() writes.  `roles` are
 # the plan's (the workbook's, and any given in the call), which decide the
 # label column's name.
-.plan_spec_steps <- function(roles, sp, ard_spec = NULL) {
+.plan_spec_steps <- function(roles, sp, ard_spec = NULL, derived = TRUE) {
   st <- list()
   add <- function(fun, ...) st[[length(st) + 1L]] <<- .spec_call(fun, ...)
   sa <- .ard_spec_table_args(sp)
@@ -255,7 +255,10 @@
                    if (length(de)) list(.drop_empty = de)))
   }
   lb <- .ard_spec_labels(sp)
-  vl <- .ard_spec_value_labels(sp, ard_spec)
+  # derived: the variables' code-list labels, which a program writes but a
+  # spec file does not (the study's lists are their one source); a column
+  # the plan makes keeps its labels either way
+  vl <- .ard_spec_value_labels(sp, ard_spec, derived = derived)
   # the variables' headings under `variable` (they never meet a variable's
   # value labels, SEX = c(F = )); a key column's label under its own key
   keycols <- unique(as.character(unlist(roles[c("cols", "rows")], use.names = FALSE)))
@@ -681,9 +684,9 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 # (.schema_from_r()).  The bridge from the sheets: a workbook and a spec
 # file reach the same code through it, and the converter to spec files
 # writes its result.
-.plan_content_items <- function(sp, ard_spec = NULL) {
+.plan_content_items <- function(sp, ard_spec = NULL, derived = TRUE) {
   roles <- .plan_spec_roles(sp)
-  steps <- .plan_spec_steps(roles, sp, ard_spec)
+  steps <- .plan_spec_steps(roles, sp, ard_spec, derived)
   c(list(tfl_item("table_plan", .schema_from_r("table_plan", roles))),
     lapply(steps, function(st) tfl_item(st$fun, .schema_from_r(st$fun, st$args))))
 }
@@ -724,7 +727,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   } else {
     sp <- .ard_spec_scope(sp, output_id)
   }
-  items <- .plan_content_items(sp, ard_spec)
+  items <- .plan_content_items(sp, ard_spec, derived = FALSE)
   if (defaults && !length(items[[1L]]$args)) items <- items[-1L]
   if (!defaults && !is.null(ard_spec)) {
     items <- .levels_prune_sheets(items, sp, ard_spec, output_id %||% attr(sp, "output_id"),

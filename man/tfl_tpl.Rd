@@ -43,6 +43,13 @@ given as \code{study}, under the template's items.  The template's parameters,
 their defaults and where each ends: \code{tfl_tpl_help()} (and
 \verb{?tpl_<name>}).
 }
+\details{
+The template's steps of the ARD program are not run here: the data is
+used as given.  \code{where}, and \code{min_pct} of the SOC / PT templates, are
+steps of the ARD the report's program writes (\code{keep_min_pct()}, of
+\code{\link[=tfl_helpers_code]{tfl_helpers_code()}}); \code{tfl_tpl(ard, "ae_pt_freq", min_pct = 5)} on an
+ARD made by hand shows all its terms.
+}
 \examples{
 if (requireNamespace("cards", quietly = TRUE)) {
   saf <- adsl[adsl$SAFFL == "Y", ]

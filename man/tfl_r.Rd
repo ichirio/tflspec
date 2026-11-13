@@ -91,9 +91,10 @@ is the template's items (\code{\link[=tfl_templates]{tfl_templates()}}) with \co
 \code{content} adding to them or changing them (\code{\link[=tfl_resolve_output]{tfl_resolve_output()}},
 \code{\link[=tfl_template_to_spec]{tfl_template_to_spec()}}); \code{NULL} none.}
 
-\item{style}{The study's style the report picks (\code{"compact"}: a set of
-\code{defaults.yml}'s \verb{styles:}, its look -- page and table details);
-\code{NULL}: \code{standard}.}
+\item{style}{The study's page configuration the report picks (\code{"compact"}:
+a style set of \code{defaults.yml}'s \verb{styles:}, its look -- page and table
+details; \code{\link[=tfl_styles]{tfl_styles()}} lists them); \code{NULL}: the study's
+\code{settings.style}, else \code{standard}.}
 }
 \value{
 \code{tfl_r()}: a string of class \code{tfl_r}; \code{tfl_unset()}: an object
@@ -108,7 +109,7 @@ report is made of:
 \itemize{
 \item \code{tfl_r()}: a string of R code, written as the \code{!r} tag (\verb{where: !r "p > 0.5"}); kept as it is and put into the program unquoted.  A
 condition in a language-neutral subset (column names, numbers,
-strings, \verb{== != < <= > >=}, \verb{& | !}, \verb{\%in\% c(...)}, \verb{is.na()},
+strings, \verb{== != < <= > >=}, \verb{& | !}, \verb{\%in\% c(...)}, erb{is.na()},
 parentheses) is written, and read, without the tag in a slot that
 takes only R (\code{plan_filter(where)}): a Python reader can parse it
 without R.  \code{!r} stays for the rest of R (\code{between()}), and is still

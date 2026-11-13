@@ -1533,8 +1533,9 @@ print.tfl_table_spec <- function(x, ...) {
 # .ard_spec_read_lists(); all the listed variables, whole, without the ARD
 # definition `ard_spec`), and of a column the plan makes, its code list's
 # labels by value (`subgroup = c(ALL = "All Subjects", SEX = "Sex")`).  A
-# list with no labels gives no entry.
-.ard_spec_value_labels <- function(sp, ard_spec = NULL) {
+# list with no labels gives no entry.  Without `derived` (a spec file's
+# content), only a plan column's: the variables' lists are the study's.
+.ard_spec_value_labels <- function(sp, ard_spec = NULL, derived = TRUE) {
   own <- .ard_spec_plan_cols(sp)
   out <- list()
   for (cl in .ard_spec_codelists(sp)) {
@@ -1543,6 +1544,7 @@ print.tfl_table_spec <- function(x, ...) {
     k <- !is.na(cl$label)
     out[[var]] <- stats::setNames(cl$label[k], cl$value[k])
   }
+  if (!isTRUE(derived)) return(out)
   lists <- .ard_spec_read_lists(sp, ard_spec)
   for (var in names(lists)) {
     cl <- lists[[var]]

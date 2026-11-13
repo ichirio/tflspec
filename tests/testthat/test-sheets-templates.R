@@ -35,7 +35,8 @@ test_that("a template report is a row of the templates sheet, read back as the s
   expect_false("T-9" %in% sh$table$tables$output_id)
   # the report list and row are there as for any report
   expect_true(all(c("T-9", "T-8") %in% sh$planner$output_id))
-  expect_equal(nrow(sh$not_converted), 0L)
+  # (only the sample's style sets, which no sheet holds, are said)
+  expect_equal(nrow(sh$not_converted[sh$not_converted$part != "styles", , drop = FALSE]), 0L)
   f <- st_xlsx(sh)
   back <- tfl_read_template_sheets(f)
   expect_identical(names(back), "T-9")

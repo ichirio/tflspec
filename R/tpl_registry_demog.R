@@ -122,6 +122,9 @@
                           "takes them (row_label: 40, .values: 18)")),
     tfl_param("max_rows", 30L, type = "number", study = "plan_paginate_rows.max_rows",
               doc = "rows a page (plan_paginate_rows(max_rows = ))"),
+    # (fixed in the family: a block is never split over pages, canon 1.2; `!unset`
+    # reads as any value given: "there is no `split` parameter")
+    .tpl_split_param("group_safe", unset = "omit"),
     tfl_param("blanks", NULL, type = "text", study = "plan_blanks.where", maps_to = "plan_blanks.where",
               doc = paste("blank rows: TRUE between the blocks, FALSE none, or where (plan_blanks(where = ));",
                           "FALSE also sets both ends off; NULL: none made here")),
@@ -154,6 +157,7 @@
     p[[k]]["default"] <- list(defaults[[k]])
   }
   if (!"denominator" %in% vapply(add, `[[`, "", "name")) fixed_value <- union("denominator", fixed_value)
+  fixed_value <- union("split", fixed_value)
   for (k in c(fixed, fixed_value)) p[[k]]["study"] <- list(FALSE)
   for (k in fixed_value) {
     p[[k]]$hidden <- TRUE
@@ -266,9 +270,9 @@
 # value columns, NA when not known -- "auto" then gives none), the blank
 # rows, the stub (its name and place; `heading`: the stub's heading, demog's),
 # the rules (plan_style) and the rows a page (`page`: plan_paginate_rows()'s
-# other arguments, `split` first).  NULL for each the parameters do not make.
-.tpl_look_items <- function(a, tn, ncol = NA_integer_, heading = NULL,
-                            page = list(split = "group_safe")) {
+# other arguments, after `split`, which is the template's parameter).  NULL for
+# each the parameters do not make.
+.tpl_look_items <- function(a, tn, ncol = NA_integer_, heading = NULL, page = list()) {
   nn <- function(x) Filter(Negate(is.null), x)
   w <- a$widths
   widths <- NULL
@@ -315,7 +319,8 @@
   list(widths = widths, blank = blank, stub = stub,
        style = if (length(look)) tfl_item("plan_style", look),
        paginate = tfl_item("plan_paginate_rows", nn(c(
-         list(max_rows = if (!is.null(a$max_rows)) as.integer(a$max_rows)), page))))
+         list(max_rows = if (!is.null(a$max_rows)) as.integer(a$max_rows),
+              split = .tpl_choice(a, "split", .tpl_split_choices, tn)), page))))
 }
 
 # `ids`: the categorical analysis's id and label in the ARD (disposition's
@@ -492,8 +497,8 @@
           "formats", "missing_row", "missing_label"),
   content = c("order", "labels", "categorical_levels", "cells", "sd_missing", "count_cell",
               "total_label", "header_n", "col_header", "heading", "stub_name", "stub_before",
-              "widths", "max_rows", "blanks", "blanks_first", "blanks_last", "blanks_counted",
-              "border_header", "border_group", "style"))
+              "widths", "max_rows", "split", "blanks", "blanks_first", "blanks_last",
+              "blanks_counted", "border_header", "border_group", "style"))
 
 # (`extends`: its family's `[defaults]`, canon 1.27: the study's defaults are
 # laid under the template's items, and its references read them)

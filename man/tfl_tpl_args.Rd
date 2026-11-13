@@ -21,7 +21,7 @@ parameters taken from the report's \verb{population:}
 }
 \value{
 A data frame, one row a parameter in the template's order:
-\code{param}, \code{tier} (\code{"required"}, \code{"usual"}, \code{"other"}), \code{step}
+\code{param}, \code{tier} (\code{"required"}, \code{"key"}, \code{"usual"}, \code{"other"}), \code{step}
 (\code{"call"}, an argument of the template's call, or \code{"data"}, of a step
 preparing the analysis data: \code{\link[=tfl_param]{tfl_param()}}\verb{(step = )}), \code{type},
 \code{required}, \code{default} (the layout's, a short text; the reference for a

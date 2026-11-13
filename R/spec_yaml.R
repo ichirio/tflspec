@@ -78,9 +78,10 @@
 #'   is the template's items ([tfl_templates()]) with `ard`, `data` and
 #'   `content` adding to them or changing them ([tfl_resolve_output()],
 #'   [tfl_template_to_spec()]); `NULL` none.
-#' @param style The study's style the report picks (`"compact"`: a set of
-#'   `defaults.yml`'s `styles:`, its look -- page and table details);
-#'   `NULL`: `standard`.
+#' @param style The study's page configuration the report picks (`"compact"`:
+#'   a style set of `defaults.yml`'s `styles:`, its look -- page and table
+#'   details; [tfl_styles()] lists them); `NULL`: the study's
+#'   `settings.style`, else `standard`.
 #' @return `tfl_r()`: a string of class `tfl_r`; `tfl_unset()`: an object
 #'   of class `tfl_unset`; the rest: lists of class `tfl_call`, `tfl_item`,
 #'   `tfl_output`.
