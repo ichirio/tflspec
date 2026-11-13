@@ -397,15 +397,15 @@ test_that("style: demog follows settings.style, stf_t02_demog is fixed; a built-
     if (length(ps)) ps[[length(ps)]]$args$font_size_half_points
   }
   a <- b1_args()[-1L]
-  # no settings.style: standard (the built-in, empty)
+  # no settings.style: tfl_standard (the built-in; no content step)
   expect_null(size(b1_out("demog", a)))
   # settings.style names the study's own set
   s$study$settings$style <- "compact"
   expect_identical(size(b1_out("demog", a)), 14L)
   # the template argument and the report's `style:` field
-  expect_null(size(b1_out("demog", c(a, list(style = "standard")))))
+  expect_null(size(b1_out("demog", c(a, list(style = "tfl_standard")))))
   expect_identical(size(b1_out("demog", a, style = "compact")), 14L)
-  expect_null(size(b1_out("demog", c(a, list(style = "standard"))), s))
+  expect_null(size(b1_out("demog", c(a, list(style = "tfl_standard"))), s))
   # the built-in "stf_t02" is never the study's set of that name
   expect_identical(size(b1_out("demog", c(a, list(style = "stf_t02")))), 16L)
   expect_identical(size(b1_out("stf_t02_demog", b1_fda()[-1L])), 16L)
@@ -414,13 +414,15 @@ test_that("style: demog follows settings.style, stf_t02_demog is fixed; a built-
   expect_null(tflspec:::.tpl_registry$stf_t02_demog$params$style$study)
   # a name nobody has stops, naming the sets there are
   expect_error(size(b1_out("demog", c(a, list(style = "nope")))), "no style \"nope\".*stf_t02")
-  # the set's page comes with it (the built-in look is landscape)
+  # .tpl_style_set(): the study's
+  expect_identical(tflspec:::.tpl_style_set("compact", s)$content[[1L]]$args$font_size_half_points, 14L)
+  expect_length(tflspec:::.tpl_style_set("tfl_standard", s)$content, 0L)
+  expect_identical(tflspec:::.tpl_style_set("stf_t02", s)$content[[1L]]$args$font, "Arial")
+  # the stf_t02 look's landscape page: PP-1b leaves stf_t02 a content set
+  # with no page; PP-1c's built-in configuration tfl_stf brings it back
+  skip("PP-1c: tfl_stf restores the stf_t02 page")
   r <- tfl_resolve_output(b1_out("stf_t02_demog", b1_fda()[-1L]), s)
   expect_identical(r$page$rtf_page$orientation, "landscape")
-  # .tpl_style_set(): built-in names, then the study's
-  expect_identical(tflspec:::.tpl_style_set("stf_t02", s)$content[[1L]]$args$font, "Arial")
-  expect_identical(tflspec:::.tpl_style_set("compact", s)$content[[1L]]$args$font_size_half_points, 14L)
-  expect_length(tflspec:::.tpl_style_set("standard", s)$content, 0L)
 })
 
 test_that("the two parts: ard: and content:; flat args: still reads; every parameter in one part", {

@@ -318,8 +318,9 @@
   if (!is.character(name) || length(name) != 1L || is.na(name) || !nzchar(name)) {
     .ard_stop("`style` is one style's name (a set of defaults.yml's styles:, or a built-in one).")
   }
+  # a built-in name is always the built-in set (the reader stops a study's)
+  if (name %in% .tpl_style_builtin_names) return(.tpl_style_builtin_set(name))
   set <- study$styles[[name]]
-  if (is.null(set) && name %in% .tpl_style_builtin_names) return(.tpl_style_builtin_set(name))
   if (is.null(set)) {
     .ard_stop(sprintf("no style %s in defaults.yml's styles: or among the built-in sets (%s).",
                       dQuote(name, FALSE),
