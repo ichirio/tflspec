@@ -24,16 +24,16 @@ LazyData: true
 Language: en-GB
 Roxygen: list(markdown = TRUE)
 Depends:
-    R (>= 4.1)
+    R (>= 4.3)
 Imports:
-    ggplot2 (>= 3.5.0),
+    ggplot2 (>= 3.5.2),
     grDevices,
-    jsonlite,
-    openxlsx,
-    readxl,
+    jsonlite (>= 2.0.0),
+    openxlsx (>= 4.2.5),
+    readxl (>= 1.2.0),
     rlang,
     rtfreporter (>= 0.8.2.9100),
-    yaml,
+    yaml (>= 2.3.5),
     stats,
     utils
 Suggests:
@@ -54,7 +54,7 @@ Suggests:
     haven,
     jsonvalidate,
     magrittr,
-    mmrm,
+    mmrm (>= 0.3.18),
     officer,
     parameters,
     patchwork,
@@ -64,10 +64,10 @@ Suggests:
     siera (>= 0.5.6),
     smd,
     survival,
-    testthat (>= 3.0.0),
+    testthat (>= 3.1.7),
     tibble,
     tidyr,
-    withr,
+    withr (>= 2.5.0),
     writexl,
     xml2
 Remotes:
