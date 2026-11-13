@@ -115,9 +115,12 @@ jobs:
       R_KEEP_PKG_SOURCE: yes
       R_MIN: '4.2'
       PPM_DATE: '2026-06-18'
-      # suggested packages left out, as in the R 4.2 row above: what they
-      # need wants a newer R (the check lets a suggested package be missing)
-      LEFT_OUT: 'car'
+      # suggested packages left out (space-separated): car, as in the R 4.2
+      # row above (what it needs wants a newer R); ggh4x and ggrepel, whose newest
+      # version at the snapshot needs ggplot2 >= 3.5.2 (ggrepel also withr >=
+      # 3.0.2), more than the minimum; ggsurvfit comes below, at 1.1.0, as in the
+      # ggplot2 3.5.x row (1.2.0 needs ggplot2 >= 4.0.0)
+      LEFT_OUT: 'car ggh4x ggrepel ggsurvfit'
 
     steps:
       - uses: actions/checkout@v4
@@ -171,7 +174,7 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           dependencies: '"hard"'
-          extra-packages: any::rcmdcheck ${{ steps.pins.outputs.refs }} car=?ignore-before-r=4.5.0
+          extra-packages: any::rcmdcheck ${{ steps.pins.outputs.refs }} car=?ignore-before-r=4.5.0 ggsurvfit@1.1.0
           needs: check
 
       - name: The repository and the versions installed
