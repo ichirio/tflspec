@@ -187,7 +187,7 @@ going and leaves the message in the `error` / `warning` column.
 | the document / its code / its file | `tfl_report(spec, output_id, content = plan)` / `tfl_report_code(spec)` / `tfl_report_path(spec)` |
 | a listing's program / its pages | `tfl_listing_code(spec)` / `tfl_listing(data, spec)` |
 | a figure: start / check / write the script / its size on the page | `tfl_fig_template()` / `tfl_check_fig_design()` / `tfl_fig_design_code()` / `tfl_fig_page_size()` |
-| a figure report's content of function calls; a design as one | `tfl_content_code(report)` / `tfl_content_run(report, data)` (§7.1); `tfl_fig_content_from_design(design)`; a named plot `tfl_plot(name, items)` |
+| a figure report's content of function calls; a design as one; a ggplot2 program as one | `tfl_content_code(report)` / `tfl_content_run(report, data)` (§7.1); `tfl_fig_content_from_design(design)`; `tfl_fig_content_from_r(code)` (its objects of constants read in place, `pd <- position_dodge(0.3)`); a named plot `tfl_plot(name, items)` |
 | an item's arguments as R text, and back (the builder's R form) | `tfl_args_to_r(fn, args)` / `tfl_args_from_r(fn, text)` |
 | review the whole definition: errors, what is probably wrong, what to set by hand | `tfl_review_spec(spec, ard, listings, figures)`; against the data: `facts = tfl_data_facts(data, populations = ard)`; the rules: `tfl_review_rules()`; each row's sentence is `template` filled with `args` (`message` is the two put together; the sentences beyond the rules': `tfl_review_templates()`) |
 | attach this manual to a chat session | `tflspec_ai_manual()` (its path) |
@@ -952,7 +952,7 @@ back): rename the value or choose another separator.
 `tfl_item_written` `tfl_item_own` `tfl_convert_sheets_to_yaml`
 `tfl_yaml_from_sheets` `tfl_sheets_from_yaml` `tfl_sheets_from_spec` `tfl_report_codelists` `tfl_write_spec_xlsx`
 `tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_check_spec` `tfl_check_build` `tfl_check_reports` `tfl_check_fix_text` `tfl_data_code` `tfl_schema_help` `tfl_ai_decisions_read` `tfl_ai_decisions_write` `tfl_ai_confirm` `tfl_content_code` `tfl_content_run`
-`tfl_ai_unpack` `tfl_args_to_r` `tfl_args_from_r` `tfl_fig_content_from_design`
+`tfl_ai_unpack` `tfl_args_to_r` `tfl_args_from_r` `tfl_fig_content_from_design` `tfl_fig_content_from_r`
 
 **Manual:** `tflspec_ai_manual` `tfl_adam_metadata` `tfl_ai_review`
 
