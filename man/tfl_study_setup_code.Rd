@@ -8,19 +8,34 @@ tfl_study_setup_code(study)
 }
 \arguments{
 \item{study}{The study: what \code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}} gives, or a
-table / report spec of the sheets (its \code{study} sheet's \code{rounding}).}
+table / report spec of the sheets (its \code{study} sheet's \code{rounding}, its
+\code{datasets} sheet).}
 }
 \value{
 A character vector, one element per line; \code{character()} when the
-study says no rounding.
+study says no rounding and has no dataset.
 }
 \description{
 A study's setup file (tflplanner's \code{programs/study_setup.R}) is sourced by
-every ARD and report program.  This gives the lines tflspec writes in it:
-the study's rounding as one \code{options()} call, \code{rtfreporter.rounding} and
-(for "sas" and "r") \code{cards.round_type}.  With option \code{tflspec.study_setup}
-set to \code{TRUE} (\link{tflspec_code_options}) the ARD and report setups do not
-write the rounding again.
+every ARD and report program.  This gives the lines tflspec writes in it,
+two parts:
+}
+\details{
+\itemize{
+\item the study's rounding as one \code{options()} call, \code{rtfreporter.rounding} and
+(for "sas" and "r") \code{cards.round_type};
+\item the study's input data: one statement per dataset of its data catalog
+(\code{spec/data.yml}, or the \code{datasets} sheet), ADSL first, the others in the
+catalog's order -- \code{adsl <- readRDS(file.path(path_adam, "adsl.rds"))},
+with \verb{|> dplyr::mutate(...)} for a dataset that has a \code{derive}.  The
+reader follows the file's extension and the folder variables of option
+\code{tflspec.paths}, as in the ARD program.
+}
+
+With option \code{tflspec.study_setup} set to \code{TRUE} (\link{tflspec_code_options})
+the ARD, listing and figure programs do not write them again: they start
+from the objects (\code{adsl <- adsl |> order_levels(...)}), and the ARD and
+report setups leave the rounding out.
 }
 \examples{
 st <- tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))

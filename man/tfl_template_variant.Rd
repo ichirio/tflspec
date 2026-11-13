@@ -11,7 +11,8 @@ tfl_template_variant(
   label = NULL,
   example = NULL,
   ai = NULL,
-  hide = NULL
+  hide = NULL,
+  key = NULL
 )
 }
 \arguments{
@@ -36,6 +37,10 @@ report's \verb{template: args:} may not give them.  They keep their
 defaults and the study standard's values (\code{tfl_param(study = )}), as
 the look of a figure's report type takes the figure style standard's;
 a report changes that with its own items (\code{+}) or \verb{plot:}.}
+
+\item{key}{Parameters of \code{from} that are \code{"key"} in the variant: they
+have a default but stay on top of its input form (the tier of
+\code{\link[=tfl_param]{tfl_param()}}); \code{NULL}: each keeps \code{from}'s tier.}
 }
 \value{
 \code{name}, invisibly.

@@ -25,6 +25,7 @@ The table template \code{lab_abnormal}, layout \code{summary}. Its program is on
    \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<population> \cr
    \code{heading} \tab other \tab call \tab Parameter / Category \tab  \tab the label column's heading \cr
    \code{header_n} \tab other \tab call \tab set \tab  \tab the arm headings' N, set apart from the cells' N (a parameter's subjects with a value): "set" (default): the arm's subjects in the analysis set (with 'subset'); "tested": the arm's subjects with a record kept (after 'where', 'params' and 'baseline_normal'), one N for all the parameters; "none": no N.  "denominator" is not one N here, the cells' N differs by parameter \cr
+   \code{split} \tab other \tab call \tab group_safe \tab plan_paginate_rows.split \tab how a page break is placed (plan_paginate_rows(split = )): "none" one page; "group_safe" whole groups to a page; "group_force" a cut every 'max_rows' rows, a group continued on the next page; "rows" and "by_value" are cut by position or by value (they need their own arguments, a 'plan_paginate_rows' item) \cr
 }
 }
 

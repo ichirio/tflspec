@@ -36,9 +36,16 @@ cll_sex_report <- function(d, id, extends = "[defaults]", codelists = NULL, vari
              file.path(d, "spec", "outputs", paste0(id, ".yml")))
 }
 
-cll_labels <- function(ard, id) {
+# the ARD holds the codes
+cll_codes <- function(ard, id) {
   x <- ard[ard$output_id == id & ard$variable == "SEX", ]
   unique(unlist(lapply(x$variable_level, as.character)))
+}
+# the labels of the list that wins for a report: the program's head, `cl_sex <- c(M = "DefM", ...)`
+cll_labels <- function(d, id) {
+  code <- tfl_ard_code(tfl_read_study_spec(d), id, save = FALSE)
+  line <- grep("^cl_sex <- ", code, value = TRUE)
+  if (length(line)) unname(eval(parse(text = line[1L])))
 }
 cll_build <- function(d, ...) {
   suppressMessages(tfl_build_ard(tfl_read_study_spec(d), dir = d, save = FALSE, ...))
@@ -54,7 +61,7 @@ test_that("a shift report's code lists in the study defaults label its rows and 
   f <- file.path(d, "spec", "outputs", "T-SH.yml")
   tfl_write_output(tfl_output("T-SH", "table", population = "SAF", extends = "defaults",
     template = list(name = "shift", args = list(population = "SAF", where = 'PARAMCD == "ALT"',
-                                                param_page = FALSE, levels = c("Low", "Normal", "High")))), f)
+                                                page_by = FALSE, levels = c("Low", "Normal", "High")))), f)
   st <- tfl_read_study_spec(d)
   ard <- suppressMessages(tfl_build_ard(st, output_id = "T-SH", dir = d, save = FALSE))
   ro <- tfl_resolve_output(tfl_read_output(f), st)
@@ -73,9 +80,11 @@ test_that("a pattern's list wins over the defaults' for the same variable (#647)
                                 "T-B" = list(extends = "[patterns/pp, defaults]"),
                                 "T-C" = list(extends = "[patterns/pp]")))
   ard <- cll_build(d)
-  expect_identical(cll_labels(ard, "T-A"), c("DefM", "DefF"))
-  expect_identical(cll_labels(ard, "T-B"), c("PatM", "PatF"))
-  expect_identical(cll_labels(ard, "T-C"), c("PatM", "PatF"))
+  expect_identical(cll_labels(d, "T-A"), c("DefM", "DefF"))
+  expect_identical(cll_labels(d, "T-B"), c("PatM", "PatF"))
+  expect_identical(cll_labels(d, "T-C"), c("PatM", "PatF"))
+  # (the ARD holds the codes, in the list's order)
+  expect_identical(cll_codes(ard, "T-B"), c("M", "F"))
 })
 
 test_that("a pattern and the defaults give a list each: the variables of both (#647)", {
@@ -96,7 +105,8 @@ test_that("the report's own list wins over the layer's, per variable (#647)", {
   expect_identical(cl$label[cl$variable == "SEX"], c("OwnM", "OwnF"))
   # (the layer's list of another variable stays)
   expect_identical(cl$label[cl$variable == "RACE"], "White")
-  expect_identical(cll_labels(cll_build(d), "T-D"), c("OwnM", "OwnF"))
+  expect_identical(cll_labels(d, "T-D"), c("OwnM", "OwnF"))
+  expect_identical(cll_codes(cll_build(d), "T-D"), c("M", "F"))
 })
 
 test_that("a report that extends nothing gets nothing from the layers: its program is as without the list (#647)", {
@@ -108,7 +118,7 @@ test_that("a report that extends nothing gets nothing from the layers: its progr
   expect_identical(code, tfl_ard_code(tfl_read_study_spec(without), "T-E", save = FALSE))
   expect_false(any(grepl("cl_sex|DefM", code)))
   expect_identical(nrow(tfl_report_codelists(tfl_read_study_spec(with))), 0L)
-  expect_identical(cll_labels(cll_build(with), "T-E"), c("F", "M"))
+  expect_identical(cll_codes(cll_build(with), "T-E"), c("F", "M"))
 })
 
 test_that("a layer's list of a variable the report does not analyse is ignored (#647)", {
@@ -132,7 +142,8 @@ test_that("a table with no template takes the defaults' list: the program carrie
   expect_true(any(grepl('c(M = "DefM", F = "DefF")', code, fixed = TRUE)))
   expect_true(any(grepl("set_levels(", code, fixed = TRUE)))
   ard <- cll_build(d, output_id = "T-A")
-  expect_identical(cll_labels(ard, "T-A"), c("DefM", "DefF"))
+  expect_identical(cll_labels(d, "T-A"), c("DefM", "DefF"))
+  expect_identical(cll_codes(ard, "T-A"), c("M", "F"))
   # a level the data lacks is counted as the lists have it: two levels, three arms
   x <- ard[ard$variable == "SEX" & ard$stat_name == "n", ]
   expect_identical(nrow(x), 2L * length(unique(stats::na.omit(tflspec::adsl$ARM))))
@@ -185,8 +196,10 @@ test_that("a spec/codelists.yml left in the study is ignored, beside a layer's l
   expect_false(anyNA(cl$output_id))
   expect_identical(cl$label, c("DefM", "DefF"))
   ard <- cll_build(d)
-  expect_identical(cll_labels(ard, "T-A"), c("DefM", "DefF"))
-  expect_identical(cll_labels(ard, "T-E"), c("F", "M"))
+  expect_identical(cll_labels(d, "T-A"), c("DefM", "DefF"))
+  expect_identical(cll_codes(ard, "T-A"), c("M", "F"))
+  expect_identical(cll_labels(d, "T-E"), NULL)
+  expect_identical(cll_codes(ard, "T-E"), c("F", "M"))
 })
 
 test_that("tfl_report_codelists(): the sheets' shape, none when no report has a list, `outputs` as read (#647)", {

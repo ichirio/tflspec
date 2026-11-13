@@ -1,8 +1,8 @@
 #' The functions a study's generated programs call
 #'
 #' The R code of the functions the programs tflspec writes call:
-#' `set_levels()` (the code lists on a data: each listed column a factor in
-#' the list's order, its values as the list has them in the ARD; a value
+#' `set_levels()` (the code lists on a data: each listed column a factor of
+#' the codes in the list's order, as the ARD holds them, no labels; a value
 #' not listed stops the program), `reorder_by()` (a column in another's
 #' order when the data has it: `PARAM` by `PARAMN`), `order_levels()` (the arm
 #' variables and the categories it names as factors, set in the data step

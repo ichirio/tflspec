@@ -29,8 +29,9 @@ The table template \code{param_change}, layout \code{summary}. Its program is on
    \code{cells} \tab usual \tab call \tab study: plan_cells.continuous, else n = \{N\}; Mean (SD) = \{mean\} (\{sd\}), \{mean\} (-); Median = ... \tab plan_cells.continuous \tab the rows of a value or a change: where each statistic goes (placement only, \{mean\}) \cr
    \code{sd_missing} \tab other \tab call \tab study: settings.sd_missing, else - \tab settings.sd_missing \tab what prints in place of the SD when a group has no SD (n = 1): \{mean\} (<sd_missing>); "" prints the mean alone; unset: no such guard; no effect when 'cells' is given \cr
    \code{header_n} \tab other \tab call \tab set \tab  \tab the arm headings' N: "set": the arm's subjects in the analysis set; "none" or unset: no N \cr
-   \code{param_page} \tab other \tab call \tab TRUE \tab  \tab TRUE: a page a parameter, named in the titles by 'param_heading' \cr
-   \code{param_heading} \tab other \tab call \tab Parameter: \{value\} \tab  \tab a parameter's page name ('\{value\}': the parameter); the last title line, or where the title line '\{PAGE_HEADING\}' is \cr
+   \code{page_by} \tab other \tab call \tab PARAMCD \tab  \tab the variable a page a value is cut by: the parameter's (the default), named in the titles by 'page_heading'; unset: no page a value, one table, the parameter a row heading \cr
+   \code{page_heading} \tab other \tab call \tab Parameter: \{value\} \tab  \tab a parameter's page name ('\{value\}': the parameter); the last title line, or where the title line '\{PAGE_HEADING\}' is; used with 'page_by' \cr
+   \code{split} \tab other \tab call \tab group_safe \tab plan_paginate_rows.split \tab how a page break is placed (plan_paginate_rows(split = )): "none" one page; "group_safe" whole groups to a page; "group_force" a cut every 'max_rows' rows, a group continued on the next page; "rows" and "by_value" are cut by position or by value (they need their own arguments, a 'plan_paginate_rows' item) \cr
    \code{param_labels} \tab other \tab call \tab  \tab  \tab each parameter's text by its PARAMCD \{GLUC: "Glucose (mg/dL)"\}; given by name, merged; NULL: the study's PARAMCD code list's labels, else the codes print \cr
    \code{heading} \tab other \tab call \tab  \tab  \tab the label column's heading \cr
    \code{stub_name} \tab other \tab call \tab study: plan_stub.name, no fallback \tab plan_stub.name \tab the row-title column's name (plan_stub(name = )) \cr
@@ -70,7 +71,7 @@ The aliases follow the numbering of these publications, and the titles are short
 \section{Example}{
 
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{plan <- tfl_tpl(ard, "param_change", population = "SAF", by = "TRT01A", data = "ADLB", params = c("ALT", "AST"), where = "ANL01FL == \\"Y\\"")
+\if{html}{\out{<div class="sourceCode">}}\preformatted{plan <- tfl_tpl(ard, "param_change", population = "SAF", by = "TRT01A", data = "ADLB", params = c("ALT", "AST"), where = "ANL01FL == \\"Y\\"", param_labels = list(ALT = "Alanine Aminotransferase (U/L)", AST = "Aspartate Aminotransferase (U/L)"))
 }\if{html}{\out{</div>}}
 }
 

@@ -339,8 +339,9 @@ written:
 - the report's `codelists:` when the shell shows labels ("Male") for
   coded values ("M"): `codelists: {SEX: [{value: M, label: Male}, {value:
   F, label: Female}]}`, in the order printed.  The program then makes the
-  column a factor in that order with the labels as its values, so the ARD
-  holds "Male" -- and `plan_levels` names the labels.
+  column a factor of the codes in that order, so the ARD holds "M" and
+  `plan_levels` (and a `where`) name the codes; the table shows the labels
+  through `plan_labels`.
 
 You rarely know the data's values.  Write the shell's labels, say in the
 assumptions which values you assumed, and ask for the code list.  A
@@ -761,11 +762,12 @@ Age group, n (%)
 → `table_plan: {cols: TRT01A, rows: {group: variable}}`;
 `plan_total: {label: Total}`.
 → `plan_levels`: `TRT01A` the arms in the shell's order; `AGEGR1`
-`['<65', '>=65']`; `SEX` `[Male, Female]`.
+`['<65', '>=65']`; `SEX` `[M, F]` (the codes; the order of the
+code list, so it can be left out).
 → `plan_labels`: `AGE` "Age (years)", `SEX` "Sex, n (%)", `AGEGR1` "Age
 group, n (%)", in that order.
 → `codelists`: `SEX` `M` → Male, `F` → Female: the shell shows words, the
-data codes; the codes are an assumption.
+data codes (the table shows the labels); the codes are an assumption.
 → `plan_cells`: the four `continuous` rows of §3.3 and `categorical`
 `'{n} ({p:.1f%})'`.
 → `plan_stub: {name: row_label, before: true}`, `plan_blanks: {where:

@@ -423,11 +423,11 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
   # its rows): they stay in the YAML
   # (in the YAML they stay; a study written from the sheets has not got them,
   # and a report that reads the variable is then made without the list: its
-  # ARD program loses the set_levels() step -- the values' order and labels, #689)
+  # ARD program loses the set_levels() step -- the values' order, and the table its labels, #689)
   cl_said <- function(cl, whose, file) paste0(
     whose, " code lists (", file, ": ", paste(names(cl), collapse = ", "), ") stay in YAML, not on the sheets: ",
     "a study written from the sheets has not got them, so a report that reads one of these variables ",
-    "is made without the list and its ARD program does not set the values' order and labels")
+    "is made without the list: its ARD program does not set the values' order, and its table has no labels for them")
   if (length(s$defaults$codelists)) {
     note(NA_character_, "codelists", cl_said(s$defaults$codelists, "the defaults'", "defaults.yml"))
   }

@@ -1596,14 +1596,22 @@ tfl_read_fig_design <- function(path) {
   # R, a vector named by the values): every scale of the values, so that
   # the legends stay one
   ll <- .pv(plot, "legend_labels")
-  ll <- if (is.null(ll)) "" else sprintf(", labels = %s", as.character(ll))
+  # (a code list with labels on the colour variable: the data holds the
+  # codes, the legend shows the labels -- those of the breaks)
+  cb <- plot$colour_by
+  cl_lab <- if (is.character(cb) && length(cb) == 1L && !is.null(names(levels[[cb]])))
+    .cl_name(cb)
+  leg_lab <- function(obj) {
+    if (!is.null(ll)) return(sprintf(", labels = %s", as.character(ll)))
+    if (!is.null(cl_lab)) sprintf(", labels = %s[names(%s)]", cl_lab, obj) else ""
+  }
   scales <- if (!is.null(plot$colour_by)) list(
     if (maps("colour") || any(kinds == "km_curve"))
-      sprintf("scale_colour_manual(values = pal, breaks = names(pal)%s)", ll),
+      sprintf("scale_colour_manual(values = pal, breaks = names(pal)%s)", leg_lab("pal")),
     if (maps("fill") || any(kinds == "km_ci"))
-      sprintf("scale_fill_manual(values = pal, breaks = names(pal), na.value = \"grey80\"%s)", ll),
-    if (arm[["linetype"]]) sprintf("scale_linetype_manual(values = lty, breaks = names(lty)%s)", ll),
-    if (arm[["shape"]]) sprintf("scale_shape_manual(values = shp, breaks = names(shp)%s)", ll))
+      sprintf("scale_fill_manual(values = pal, breaks = names(pal), na.value = \"grey80\"%s)", leg_lab("pal")),
+    if (arm[["linetype"]]) sprintf("scale_linetype_manual(values = lty, breaks = names(lty)%s)", leg_lab("lty")),
+    if (arm[["shape"]]) sprintf("scale_shape_manual(values = shp, breaks = names(shp)%s)", leg_lab("shp")))
   finish <- c(scales, ax$terms,
     if (length(labs_args)) sprintf("labs(%s)", paste(labs_args, collapse = ", ")),
     as.list(.fig_theme_code(plot, setup)),
@@ -1729,8 +1737,9 @@ tfl_read_fig_design <- function(path) {
 #'   `codelists` sheet, or a data frame with `output_id`, `variable`,
 #'   `value`, `label`, `order`): the rows of `plot_id` are put on the
 #'   figure's data, last of its data steps -- each listed column a factor
-#'   in its list's order, its values as the list has them (`cl_<variable>`
-#'   and `set_levels()`, see [tfl_helpers_code()]).  The arms
+#'   in its list's order, its codes (`cl_<variable>` and `set_levels()`, see
+#'   [tfl_helpers_code()]); a list with labels also gives the legend of the
+#'   colour variable its labels (`labels = cl_<variable>` in the scales).  The arms
 #'   are first put in their numeric order by `order_levels()` (`TRT01P` by
 #'   `TRT01PN`), first step of each dataset read (see `order_arms`); a code
 #'   list wins.

@@ -12,7 +12,8 @@
   tfl_param("start", "ASTDY",
             doc = "the event's day from the start of treatment: a variable or R (ASTDT - TRTSDT + 1)"),
   tfl_param("per", 100, doc = "the rate per this many person-years"),
-  tfl_param("overall", "Any TEAE", doc = "the any-record row's label")
+  tfl_param("overall", "Any TEAE", doc = "the any-record row's label"),
+  .tpl_split_param("group_force")
 )
 
 .tpl_eair_body <- function(a, ctx) {
@@ -97,7 +98,8 @@
       list(line = "2", cols = "row_label",
            text = "System Organ Class\n   Preferred Term"),
       list(line = "2", cols = ".values", span = "each", text = sprintf("n (EAIR per %s PY)", a$per))))),
-    tfl_item("plan_paginate_rows", list(max_rows = 22L, split = "group_force")))
+    tfl_item("plan_paginate_rows", list(
+      max_rows = 22L, split = .tpl_choice(a, "split", .tpl_split_choices, "ae_eair"))))
   list(ard = list(analysis_data = sets, analyses = analyses),
        data = list(source = "ard", object = "ard"), content = content)
 }

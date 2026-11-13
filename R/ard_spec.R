@@ -1037,12 +1037,15 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #'   names in `args`, `code` and `post`) count: the program writes them at
 #'   its head (`cl_sex <- c(F = "Female", M = "Male")`) and puts them on
 #'   the data the analyses read (`set_levels(SEX = cl_sex)`): each column a
-#'   factor in the list's order, its values the labels (a value without one
-#'   stays itself) -- the ARD holds `"Female"`, and counts a level no record
-#'   has (`n = 0`).  A value the list does not have (not NA) stops the
-#'   program.  An analysis's `where` on such a column is written in its
-#'   labels: one that names a value whose label differs stops here.  In the
-#'   study's program, each report's part reads its data again with its own.
+#'   factor of the codes in the list's order -- the ARD holds `"F"`, not
+#'   `"Female"`, and counts a level no record has (`n = 0`).  The factor is
+#'   made after the analysis's filter, and its levels are narrowed to the
+#'   values the filter's simple conditions leave.  A value the list does not
+#'   have (not NA) stops the program.  An analysis's `where` on such a column
+#'   is written in codes: a label stops it here (write `"F"` for
+#'   `"Female"`).  The labels are applied by the report's table plan
+#'   (`plan_labels`), not in the ARD.  In the study's program, each report's
+#'   part reads its data again with its own.
 #'   `NULL` (default): the data as read.
 #' @inheritParams tfl_write_ard_spec
 #' @return The code, one element per line.
@@ -1238,8 +1241,10 @@ tfl_build_ard <- function(spec, dir = ".", output_id = NULL, save = TRUE,
                        statistics = NULL, methods = NULL, codelists = NULL,
                        sheets = NULL) {
   # run where nothing is attached and no folder variable is defined
+  # (and where the program reads its data itself: the study's setup file is
+  # not run)
   old <- options(tflspec.paths = NULL, tflspec.attached = NULL,
-                 tflspec.plain_ns = TRUE)
+                 tflspec.plain_ns = TRUE, tflspec.study_setup = FALSE)
   on.exit(options(old), add = TRUE)
   # (the program's setup sets cards' rounding; put back as it was)
   old_cr <- options("cards.round_type")
@@ -1361,32 +1366,36 @@ tfl_ard_as_custom <- function(spec, output_id, analysis_id) {
 }
 
 # An analysis's condition runs on its data after the code lists are put on
-# it (set_levels()): a listed variable's values are their labels there.  A
-# condition that names a value whose label differs (SEX == "F" where F is
-# Female) would keep no row: it stops, and says the label to write.
+# it (set_levels()): a listed variable's values are its codes there, as in
+# the ADaM data.  A condition that names a value that is a label of the
+# variable's list, not one of its codes (SEX == "Female" where F is Female),
+# would keep no row: it stops, and says the code to write.
 .check_where_labels <- function(a, levels) {
   if (!length(levels)) return(invisible(NULL))
   for (i in which(!is.na(a$where))) {
     lv <- levels[[a$output_id[i]]]
     if (!length(lv)) next
-    bad <- .where_values_not_labels(a$where[i], lv)
+    bad <- .where_labels_not_codes(a$where[i], lv)
     if (length(bad)) {
       .ard_stop(sprintf(paste0(
-        "%s / %s: `where` is `%s`, but the analysis's data have the code ",
-        "lists' labels by then -- write %s."),
+        "%s / %s: `where` is `%s`, but the analysis's data hold the code ",
+        "lists' codes, not their labels -- %s."),
         a$output_id[i], a$analysis_id[i], a$where[i],
-        paste(sprintf("%s for %s", encodeString(unname(bad), quote = "\""),
-                      encodeString(names(bad), quote = "\"")), collapse = ", ")))
+        paste(sprintf("%s: write %s for %s", names(bad),
+                      encodeString(vapply(bad, `[[`, "", "code"), quote = "\""),
+                      encodeString(vapply(bad, `[[`, "", "label"), quote = "\"")),
+              collapse = "; ")))
     }
   }
   invisible(NULL)
 }
 
-# The values a condition compares a listed variable with whose label
-# differs: named vector, label named by the value
-.where_values_not_labels <- function(where, lv) {
+# The values a condition compares a listed variable with that are a label of
+# its list and no code of it: a list of list(code =, label =), named by the
+# variable
+.where_labels_not_codes <- function(where, lv) {
   e <- tryCatch(str2lang(where), error = function(err) NULL)
-  out <- character()
+  out <- list()
   walk <- function(x) {
     if (!is.call(x)) return(invisible())
     op <- as.character(x[[1L]])[1L]
@@ -1399,53 +1408,18 @@ tfl_ard_as_custom <- function(spec, output_id, analysis_id) {
         if (is.null(names(cl))) next
         vals <- tryCatch(eval(other, baseenv()), error = function(err) NULL)
         if (!is.character(vals)) next
-        hit <- vals[vals %in% names(cl) & !vals %in% cl]
-        out <<- c(out, stats::setNames(unname(cl[hit]), hit))
+        for (lab in unique(vals[vals %in% unname(cl) & !vals %in% names(cl)])) {
+          out[[length(out) + 1L]] <<- stats::setNames(
+            list(list(code = names(cl)[match(lab, unname(cl))], label = lab)),
+            as.character(v))
+        }
       }
     }
     for (y in as.list(x)[-1L]) walk(y)
   }
   walk(e)
-  out[!duplicated(names(out))]
-}
-
-# A condition written in the code lists' labels as the data's own values
-# (SEX == "Female" -> SEX == "F"), for what reads the data as they are
-# (ARS); a condition with no listed variable, as it is
-.where_labels_to_values <- function(where, lv) {
-  if (is.na(where) || !length(lv)) return(where)
-  e <- tryCatch(str2lang(where), error = function(err) NULL)
-  if (is.null(e)) return(where)
-  changed <- FALSE
-  back <- function(cl, vals) {
-    to <- stats::setNames(names(cl), unname(cl))
-    ifelse(vals %in% names(to), unname(to[vals]), vals)
-  }
-  walk <- function(x) {
-    if (!is.call(x)) return(x)
-    op <- as.character(x[[1L]])[1L]
-    if (op %in% c("==", "!=", "%in%") && length(x) == 3L) {
-      for (k in 2:3) {
-        v <- x[[k]]
-        if (!is.name(v)) next
-        cl <- lv[[as.character(v)]]
-        if (is.null(names(cl))) next
-        other <- x[[5L - k]]
-        vals <- tryCatch(eval(other, baseenv()), error = function(err) NULL)
-        if (!is.character(vals)) next
-        new <- back(cl, vals)
-        if (identical(new, vals)) next
-        changed <<- TRUE
-        x[[5L - k]] <- if (length(new) == 1L) new else as.call(c(as.name("c"), as.list(new)))
-      }
-      return(x)
-    }
-    for (j in seq_along(x)[-1L]) x[[j]] <- walk(x[[j]])
-    x
-  }
-  e <- walk(e)
-  if (!changed) return(where)
-  paste(deparse(e, width.cutoff = 500L), collapse = " ")
+  out <- unlist(out, recursive = FALSE)
+  out[!duplicated(paste(names(out), vapply(out, `[[`, "", "label")))]
 }
 
 # ---- named values (sheet `objects`) ------------------------------------------
