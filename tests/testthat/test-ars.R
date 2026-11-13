@@ -468,10 +468,10 @@ tpl_ars <- function(template, args = list()) {
   list(spec = sp, ars = tfl_ars(sp))
 }
 
-test_that("demog: the denominator is the analysis set (adsl_saf), so GROUPN and nothing said", {
+test_that("demog: the denominator is the fixed adsl_sub, so GROUPN and nothing said", {
   x <- tpl_ars("demog")
   expect_identical(x$spec$analyses$denominator[x$spec$analyses$analysis_id == "CAT"],
-                   "adsl_saf")
+                   "adsl_sub")
   ids <- vapply(x$ars$analyses, `[[`, "", "id")
   expect_false(any(grepl("NONMISS", ids)))
   for (id in grep("^An_T-DD_CAT_", ids, value = TRUE)) {
@@ -480,13 +480,13 @@ test_that("demog: the denominator is the analysis set (adsl_saf), so GROUPN and 
   expect_false(any(tfl_ars_unmapped(x$ars)$item == "denominator"))
 })
 
-test_that("summary on ADSL: an explicit analysis set denominator is GROUPN (after #774)", {
+test_that("summary on ADSL: the explicit adsl_sub denominator is GROUPN (after #774)", {
   skip_if_not_installed("haven")
   x <- tpl_ars("summary", list(data = "ADSL"))
   cat_row <- x$spec$analyses[x$spec$analyses$analysis_id == "CAT", ]
   skip_if_not(!is.na(cat_row$denominator),
               "the summary expansion carries no explicit denominator yet (#774)")
-  expect_identical(cat_row$denominator, "adsl_saf")
+  expect_identical(cat_row$denominator, "adsl_sub")
   ids <- vapply(x$ars$analyses, `[[`, "", "id")
   expect_false(any(grepl("NONMISS", ids)))
   for (id in grep("^An_T-DD_CAT_", ids, value = TRUE)) {
