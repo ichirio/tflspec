@@ -245,3 +245,115 @@ tokens: {COMPANY: Acme Pharma}", env = env)
     expect_true(any(startsWith(code, "footer_acme <-")))
   }
 })
+
+# A study with three configurations: acme (the default), compact (acme's
+# header and footer, another page) and wide (its own header); a report each
+pc_three <- function(env) {
+  hd <- c("      header:",
+          "        first:",
+          "          '1': {left: ACME, right: \"Page {PAGE} of {TOTAL_PAGES}\"}",
+          "          '2': {left: \"Protocol: {STUDY_ID}\"}",
+          "      footer:",
+          "        last:",
+          "          '99': {left: \"{PROGRAM}\"}")
+  styles <- c("styles:", "  acme:", "    page:", "      rtf_page: {orientation: portrait}", hd,
+              "  compact:", "    page:", "      rtf_page: {orientation: landscape, margin_left_in: 0.5}", hd,
+              "  wide:", "    page:", "      rtf_page: {orientation: landscape}",
+              "      header:", "        first:", "          '1': {left: WIDE}",
+              "      footer:", "        last:", "          '99': {left: \"{PROGRAM}\"}")
+  d <- pc_dir(c(pc_defaults, styles), "settings: {style: acme}\ntokens: {COMPANY: Acme Pharma}", env = env)
+  o <- pc_report(d)
+  for (k in list(c("T-2", "compact"), c("T-3", "wide"))) {
+    o2 <- o
+    o2$id <- k[1L]
+    o2$style <- k[2L]
+    tfl_write_output(o2, file.path(d, "outputs", paste0(k[1L], ".yml")))
+  }
+  d
+}
+pc_sheets_spec <- function(sh) {
+  tfl_table_spec(sh$table[intersect(names(sh$table), c("study", names(tflspec:::.ard_spec_schema())))])
+}
+
+test_that("the sheets route names a report's page configuration like the YAML route: header_<style>, with an object for each", {
+  env <- environment()
+  d <- pc_three(env)
+  s <- tfl_read_study_spec(d)
+  outs <- tfl_read_outputs(d)
+  sh <- tfl_sheets_from_yaml(d)
+  sp <- pc_sheets_spec(sh)
+  # (the configuration whose header is the default's: its own object, as the YAML route has it)
+  for (id in c("T-14-1-1", "T-2", "T-3")) {
+    want <- c("T-14-1-1" = "acme", "T-2" = "compact", "T-3" = "wide")[[id]]
+    a <- paste(tfl_report_code(outs[[id]], setup = TRUE, study = s), collapse = "\n")
+    b <- paste(tfl_report_code(sp, id, setup = TRUE), collapse = "\n")
+    for (code in list(a, b)) {
+      expect_match(code, sprintf("header = header_%s", want), fixed = TRUE, info = id)
+      expect_match(code, sprintf("footer = footer_%s", want), fixed = TRUE, info = id)
+    }
+  }
+  # the setups say the same objects, in the same order
+  objects <- function(code) code[seq(min(grep("^header_", code)), length(code))]
+  expect_identical(objects(tfl_report_setup_code(sp)), objects(tfl_report_setup_code(s)))
+  expect_true(all(c("header_compact", "footer_compact", "header_wide", "footer_wide") %in%
+                    sub(" <-.*", "", grep("^(header|footer)_", tfl_report_setup_code(sp), value = TRUE))))
+  # a report's own header line is written out, not named
+  sp$header <- rbind(sp$header, data.frame(output_id = "T-2", line = "7", left = "BODY",
+                                           center = NA, right = NA, row_height_twips = NA))
+  code <- paste(tfl_report_code(sp, "T-2", setup = TRUE), collapse = "\n")
+  expect_false(grepl("header = header_compact", code, fixed = TRUE))
+  expect_match(code, "BODY", fixed = TRUE)
+})
+
+test_that("the sheets bridge writes the new form: styles with first / last blocks, a report's style:, no patterns file", {
+  env <- environment()
+  d <- pc_three(env)
+  sh <- tfl_sheets_from_yaml(d)
+  to <- withr::local_tempdir()
+  suppressMessages(tfl_yaml_from_sheets(sh, to, overwrite = TRUE))
+  expect_false(dir.exists(file.path(to, "spec", "patterns")))
+  y <- yaml::read_yaml(file.path(to, "spec", "defaults.yml"))
+  # (a band's lines are in its blocks, the default one's too, a plain line `first`)
+  expect_identical(names(y$styles$acme$page$header), "first")
+  expect_identical(names(y$styles$compact$page$header), "first")
+  # (no report says a footer line: the default one's lines are `first`, as the split goes by the reports' numbers)
+  expect_true(all(names(y$styles$acme$page$footer) %in% c("first", "last")))
+  expect_identical(names(y$styles$wide$page$header), "first")
+  outs <- tfl_read_outputs(to)
+  expect_identical(outs[["T-2"]]$style, "compact")
+  expect_identical(as.character(unlist(outs[["T-2"]]$extends)), "defaults")
+  expect_identical(outs[["T-3"]]$style, "wide")
+  # the same as the study written the YAML way
+  s2 <- tfl_read_study_spec(to)
+  s1 <- tfl_read_study_spec(d)
+  for (nm in c("acme", "compact", "wide")) {
+    expect_equal(s2$styles[[nm]]$page$header, s1$styles[[nm]]$page$header, info = nm)
+  }
+})
+
+test_that("a configuration with nothing that differs from the default is still a known name on the sheets", {
+  env <- environment()
+  hd <- c("      header:", "        first:", "          '1': {left: ACME}")
+  d <- pc_dir(c(pc_defaults, "styles:", "  acme:", "    page:", "      rtf_page: {orientation: portrait}", hd,
+                "  plain:", "    page:", "      rtf_page: {orientation: portrait}", hd,
+                "  wide:", "    page:", "      rtf_page: {orientation: landscape}", hd),
+              "settings: {style: acme}", env = env)
+  o <- pc_report(d)
+  o$id <- "T-2"
+  o$style <- "plain"
+  tfl_write_output(o, file.path(d, "outputs", "T-2.yml"))
+  sh <- tfl_sheets_from_yaml(d)
+  rp <- sh$table$report
+  # (plain: one empty row of the report sheet; wide has rows of its own and no marker)
+  expect_identical(sum(rp$output_id %in% "@plain"), 1L)
+  expect_identical(sum(sh$table$page$output_id %in% "@plain"), 0L)
+  expect_identical(sum(rp$output_id %in% "@wide"), 0L)
+  expect_identical(rp$pattern[rp$output_id %in% "T-2"], "@plain")
+  # (the sheets take the report's pattern cell: no "no page pattern of that name")
+  expect_no_error(pc_sheets_spec(sh))
+  sp <- pc_sheets_spec(sh)
+  expect_identical(attr(tflspec:::.ard_spec_scope(sp, "T-2"), "pattern"), "plain")
+  # and a configuration with a line of its own has no marker row
+  sh2 <- tfl_sheets_from_yaml(pc_three(env))
+  expect_identical(sum(sh2$table$report$output_id %in% c("@compact", "@wide")), 0L)
+})

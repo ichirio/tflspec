@@ -2008,9 +2008,12 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
     # the study's, defined once by the setup code: the report says its name
     # (rtfreporter leaves out a line its tokens leave empty), unless the
     # report has its own
-    if (setup && !isTRUE(attr(sp, "bands_own")[[sheet]]) &&
-        length(.ard_spec_band(sp, sheet))) {
-      return(.spec_sym(.setup_band_object(sheet, .sheets_style_name(sp))))
+    # (the report's own lines are its own; a pattern's are its page
+    # configuration's, which the setup says by name: header_<name>)
+    own <- attr(sp, "bands_report") %||% attr(sp, "bands_own")
+    if (setup && !isTRUE(own[[sheet]]) && length(.ard_spec_band(sp, sheet))) {
+      nm <- attr(sp, "style")
+      return(.spec_sym(.setup_band_object(sheet, if (is.null(nm) || is.na(nm)) .sheets_style_name(sp) else nm)))
     }
     b <- .ard_spec_band(sp, sheet, tokens)
     if (!length(b)) return(NULL)
@@ -2144,16 +2147,31 @@ tfl_report_setup_code <- function(spec) {
       out <- c(out, .spec_call_code(.spec_call("options", rtfreporter.tokens = tok), 0L))
     }
   }
-  for (sheet in names(.setup_band_names)) {
-    one <- sp
-    one[[sheet]] <- study(sp[[sheet]])
-    b <- .ard_spec_band(one, sheet)
-    if (!length(b)) next
-    # a line of tokens of one's own goes when a report's are empty
-    own <- setdiff(.ard_spec_used_tokens(one[sheet]), .ard_spec_rtf_tokens)
-    nm <- .setup_band_object(sheet, .sheets_style_name(sp))
-    call <- .spec_call(paste0("rtf_", sheet), b, drop_empty_rows = if (length(own)) TRUE)
-    out <- c(out, paste(nm, "<-", .spec_call_code(call, 0L, lead = nchar(nm) + 4L)))
+  # the header and footer of each page configuration: the default rows' (named
+  # by the study's style), then each pattern with page rows -- its rows over
+  # the default ones, a (none) line gone -- as the YAML route's setup writes them
+  dflt <- .sheets_style_name(sp)
+  for (cfg in unique(c(dflt, .sheets_config_names(sp)))) {
+    for (sheet in names(.setup_band_names)) {
+      one <- sp
+      rows <- study(sp[[sheet]])
+      if (!identical(cfg, dflt) && !is.null(rows)) {
+        prow <- sp[[sheet]][!is.na(sp[[sheet]]$output_id) & sp[[sheet]]$output_id == paste0("@", cfg), , drop = FALSE]
+        if (nrow(prow)) {
+          keep <- !(.ard_spec_rowkey(rows, sheet) %in% .ard_spec_rowkey(prow, sheet))
+          prow$output_id <- rep(NA_character_, nrow(prow))
+          rows <- rbind(rows[keep, , drop = FALSE], prow)
+        }
+      }
+      one[[sheet]] <- rows
+      b <- .ard_spec_band(one, sheet)
+      if (!length(b)) next
+      # a line of tokens of one's own goes when a report's are empty
+      own <- setdiff(.ard_spec_used_tokens(one[sheet]), .ard_spec_rtf_tokens)
+      nm <- .setup_band_object(sheet, cfg)
+      call <- .spec_call(paste0("rtf_", sheet), b, drop_empty_rows = if (length(own)) TRUE)
+      out <- c(out, paste(nm, "<-", .spec_call_code(call, 0L, lead = nchar(nm) + 4L)))
+    }
   }
   if (!length(out)) return(character())
   .drop_attached_ns(unlist(strsplit(out, "\n", fixed = TRUE)))

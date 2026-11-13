@@ -244,9 +244,8 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       if (!length(pg[[b]]) || !is.list(pg[[b]])) next
       sb <- .conv_band_split(sp, b, pg[[b]])
       sb_all[[b]] <- sb
-      if (length(sb$last)) {
-        pg[[b]] <- Filter(length, list(first = pg[[b]][sb$first], last = pg[[b]][sb$last]))
-      }
+      # (a configuration's lines are its blocks: plain lines are `first`, said so)
+      pg[[b]] <- Filter(length, list(first = pg[[b]][sb$first], last = pg[[b]][sb$last]))
     }
     dsplits[[name]] <<- sb_all
     pg
@@ -300,6 +299,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   # (a pattern's page rows are a page configuration, a style set of the
   # pattern's name; the pattern file holds nothing else)
   pat_styles <- list()
+  named_pats <- .conv_extends_patterns(sp$report)
   for (p in pats) {
     pg <- page_of(p)
     pg$tokens <- NULL
@@ -309,7 +309,11 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     pg <- split_page(pg, substring(p, 2L))
     set <- .conv_style_set(pg, note, substring(p, 2L))
     if (length(set)) pat_styles[[substring(p, 2L)]] <- set
-    put(file.path("spec", "patterns", paste0(substring(p, 2L), ".yml")), list())
+    # (a page configuration has no pattern file: only a pattern that is none,
+    # or one a report's `extends` cell names)
+    if (!length(set) || substring(p, 2L) %in% named_pats) {
+      put(file.path("spec", "patterns", paste0(substring(p, 2L), ".yml")), list())
+    }
   }
   if (length(pat_styles)) defaults$styles <- c(defaults$styles, pat_styles)
   style_names <- names(defaults$styles)
@@ -597,6 +601,38 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   out
 }
 
+# The patterns the report sheet's `extends` cells name (patterns/<name>): the
+# pattern files a study written from the sheets needs
+.conv_extends_patterns <- function(report) {
+  cells <- if (is.data.frame(report)) report$extends
+  cells <- cells[!is.na(cells)]
+  if (!length(cells)) return(character())
+  m <- unlist(regmatches(cells, gregexpr("patterns/[A-Za-z][A-Za-z0-9_]*", cells)))
+  unique(substring(m, nchar("patterns/") + 1L))
+}
+
+# The patterns of the sheets (the `@<name>` rows) that are page configurations:
+# the ones with page rows (a header, footer, titles or footnotes line, a page
+# or report column a configuration holds).  A pattern with none, the one empty
+# row that names it, is no more than a name.
+.sheets_config_names <- function(sp) {
+  ids <- unique(unlist(lapply(.ard_spec_pattern_sheets, function(s) {
+    d <- sp[[s]]
+    if (is.null(d) || !nrow(d) || is.null(d$output_id)) return(character())
+    oid <- d$output_id
+    oid[!is.na(oid) & startsWith(oid, "@")]
+  })))
+  scope <- function(d, id) {
+    if (is.null(d) || !nrow(d)) return(d[0, , drop = FALSE])
+    d[!is.na(d$output_id) & d$output_id == id, , drop = FALSE]
+  }
+  keep <- vapply(ids, function(p) {
+    pg <- .conv_page(sp, p, scope, function(...) NULL)
+    length(pg[intersect(names(pg), .page_config_keys)]) > 0L
+  }, NA)
+  substring(ids[keep], 2L)
+}
+
 # The study's default configuration's name: study.yml's settings.style when it
 # is a name of the study's own, else "standard"
 .conv_default_name <- function(meta, sp = NULL) {
@@ -732,9 +768,10 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
                          figures = "design", style_names = character()) {
   rrow <- scope(sp$report, id)
   pattern <- if (nrow(rrow) && !is.null(rrow$pattern) && !is.na(rrow$pattern[1L])) rrow$pattern[1L]
-  extends <- c(if (!is.null(pattern)) paste0("patterns/", sub("^@", "", pattern)), "defaults")
   # the `pattern` cell of a pattern that is a page configuration picks it: the report's style
+  # (the report then extends the defaults alone: a page configuration is no pattern file)
   style <- if (!is.null(pattern) && sub("^@", "", pattern) %in% style_names) sub("^@", "", pattern)
+  extends <- c(if (!is.null(pattern) && is.null(style)) paste0("patterns/", sub("^@", "", pattern)), "defaults")
   # the `extends` cell, when the report has one, says the chain as written
   # (`none` stays `none`); its first pattern has to be the `pattern` cell's
   if (nrow(rrow) && !is.null(rrow$extends) && !is.na(rrow$extends[1L]) && nzchar(trimws(rrow$extends[1L]))) {

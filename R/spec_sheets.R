@@ -273,6 +273,11 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
                pr = .page_columns(dpage))
   for (nm in setdiff(names(s$styles), dflt)) {
     page_rows(s$styles[[nm]]$page, paste0("@", nm), base = base)
+    # (a configuration with nothing that differs from the default rows has no
+    # row: one empty row of the report sheet keeps its name, which a report's
+    # pattern cell needs to be known)
+    mine <- vapply(rows, function(l) any(vapply(l, function(r) identical(r$output_id, paste0("@", nm)), NA)), NA)
+    if (!any(mine)) add("report", list(output_id = paste0("@", nm)))
     if (length(s$styles[[nm]]$content)) {
       note(paste0("@", nm), "content", paste0("a page configuration's content (", nm, ") is not kept: no sheet holds it"))
     }

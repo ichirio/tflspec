@@ -73,7 +73,7 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   r <- tfl_convert_sheets_to_yaml(from, to, overwrite = TRUE)
   rel <- sub(paste0("^", normalizePath(to, "/"), "/"), "", normalizePath(r$files, "/"))
   expect_setequal(rel, c("study.yml", "spec/data.yml", "spec/defaults.yml",
-                         "spec/patterns/Compact.yml", "spec/outputs/T-1.yml", "spec/outputs/L-1.yml",
+                         "spec/outputs/T-1.yml", "spec/outputs/L-1.yml",
                          "spec/outputs/F-1.yml", "spec/toc.yml", "spec/_not_converted.yml"))
   # study.yml: the meta without the stamps, the keys, the setup as !r
   st <- yaml::read_yaml(file.path(to, "study.yml"), handlers = tflspec:::.yaml_handlers())
@@ -100,7 +100,8 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   expect_identical(s$study$tokens$COMPANY, "Acme")
   expect_identical(s$study$settings$style, "standard")
   expect_null(s$codelists)                     # a code list is a report's, or a layer's
-  expect_identical(names(s$patterns), "Compact")
+  # (a pattern with page rows is a page configuration: no pattern file)
+  expect_length(s$patterns, 0L)
   expect_identical(s$styles$Compact$page$rtf_page$margin_top_in, 0.5)
   expect_identical(vapply(s$toc$outputs, `[[`, "", "id"), c("T-1", "L-1", "F-1"))
   expect_identical(s$toc$outputs[[1L]]$sets, c("Topline", "Final"))
@@ -109,7 +110,8 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   outs <- tfl_read_outputs(to)
   t1 <- outs[["T-1"]]
   expect_identical(t1$kind, "table")
-  expect_identical(t1$extends, c("patterns/Compact", "defaults"))
+  expect_identical(t1$extends, "defaults")
+  expect_identical(t1$style, "Compact")
   expect_identical(t1$population, "SAF")
   expect_identical(t1$data$source, "ard")
   expect_identical(t1$ard$analysis_data[[1L]]$id, "adsl_saf")
