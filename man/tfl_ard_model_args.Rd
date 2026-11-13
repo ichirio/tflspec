@@ -54,6 +54,18 @@ so are \code{corstr = "exch"}, no \code{id} or \code{id = USUBJID} (text: one cl
 for the whole data) of geeglm() and \code{method = "logit"} of polr().
 \code{formula} and \code{data} are cardx's to give.
 
+A regression row's pairwise contrasts (\code{add_pairwise_contrasts = TRUE})
+are emmeans': \code{emmeans_args = list(...)} goes to \code{emmeans::emmeans()}
+through broom.helpers' \code{tidy_plus_plus()}, so \code{tfl_ard_model_args("emmeans", "emmeans")} lists its arguments too -- \code{weights = "proportional"} (the LS
+means SAS's OM option gives), \code{regrid = "response"} (differences of
+proportions from a logistic model), \code{at = list(BASE = 50)}.  emmeans()
+drops a name it does not know without a word, so \code{tfl_ard_spec()} says
+one (\verb{wieghts =}), as it says \code{object}, \code{specs}, \code{level} and \code{adjust},
+which \code{tidy_plus_plus()} writes itself or takes from \code{conf.level} and
+\code{contrasts_adjust}, and \code{emmeans_args} without the pairwise contrasts.
+An MMRM's \code{cov_struct()} has its \code{group} (a column in quotes: the
+covariance by arm) and \code{heterogeneous} judged too.
+
 The catalog is \code{inst/ard/model_args.csv} (\code{fn}, \code{arg}, \code{default},
 \code{kind}, \code{hint}, \code{choices}); a company adds rows with
 \verb{options(tflspec.ard_model_args = <data frame>)}.
@@ -63,6 +75,9 @@ tfl_ard_model_args("survfit", "survival")
 tfl_ard_model_args("glm")
 tfl_ard_model_args("glm.nb", "MASS")
 tfl_ard_model_args("polr", "MASS")
+if (requireNamespace("emmeans", quietly = TRUE)) {
+  tfl_ard_model_args("emmeans", "emmeans")
+}
 if (requireNamespace("geepack", quietly = TRUE)) {
   tfl_ard_model_args("geeglm", "geepack")
 }

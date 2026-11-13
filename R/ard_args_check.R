@@ -36,7 +36,8 @@
     pkg <- sub("::.*$", "", call)
     tag <- paste(a$output_id[i], a$analysis_id[i], sep = " / ")
     out <- c(out, .ard_arg_value_problems(tag, call, a$args[i]),
-             .model_args_problems(tag, call, a$args[i]))
+             .model_args_problems(tag, call, a$args[i]),
+             .emmeans_args_problems(tag, call, a$args[i]))
     given <- tryCatch(.args_given(a$args[i]), error = function(e) character())
     known <- c(names(fm), ".overall", ".missing", "by", "variables", "strata",
                "denominator", "statistic")

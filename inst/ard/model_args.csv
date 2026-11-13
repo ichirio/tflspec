@@ -77,3 +77,17 @@ MASS::polr,Hess,FALSE,logical,"TRUE: the Hessian is kept with the fit, so the st
 MASS::polr,weights,,variable,"Case weights: a column of the data, not in quotes (WTS).",
 MASS::polr,contrasts,NULL,list,"The contrasts of the factors: list(TRT01P = ""contr.sum"").",
 MASS::polr,control,,list,"optim()'s control, where polr()'s ... go: list(maxit = 500, reltol = 1e-10).",
+emmeans::emmeans,weights,equal,choice,"How the LS means average over the other factors of the model: equal (default; SAS's LSMEANS), proportional (in proportion to the data's frequencies: SAS's OM / OBSMARGINS), outer, cells or flat; or a numeric vector.",equal | proportional | outer | cells | flat
+emmeans::emmeans,type,link,choice,"The scale of the estimates: link (the model's linear predictor) or response (back-transformed: odds and rate ratios; tidy_plus_plus() sets it with exponentiate = TRUE).",link | response | lp | linear.predictor | unlink | mu
+emmeans::emmeans,at,,list,"The covariates' values the LS means are taken at, as a list: list(BASE = 50) (default: each covariate's mean).",
+emmeans::emmeans,cov.reduce,mean,code,"How a covariate is reduced to the value the LS means are taken at: mean (default), median, or a function.",
+emmeans::emmeans,df,,number,"Fixed degrees of freedom for the tests and intervals (Inf: z tests); default: the model's.",
+emmeans::emmeans,nuisance,,text,"Factors averaged over before the grid is built (a large model): c(""SITEID"").",
+emmeans::emmeans,wt.nuis,equal,choice,"How the nuisance factors are averaged: equal (default) or proportional.",equal | proportional
+emmeans::emmeans,regrid,,choice,"Re-grid the estimates on another scale before the contrasts: response (differences of probabilities or rates rather than ratios), log, none.",response | log | none | pass | unlink | mu | TRUE | FALSE
+emmeans::emmeans,offset,,number,"An offset added to the predictions (a Poisson or negative binomial model's log exposure), replacing the model's.",
+emmeans::emmeans,by,,text,"A factor the contrasts are made within: ""AVISIT"" (each visit's arm comparisons).",
+emmeans::emmeans,mode,,text,"The kind of estimate of a multinomial or ordinal model (polr: ""latent"", ""linear.predictor"", ""cum.prob"", ""exc.prob"", ""prob"", ""mean.class"").",
+emmeans::emmeans,bias.adjust,FALSE,logical,"TRUE: a bias adjustment of the back-transformed estimates (type = ""response"").",
+emmeans::emmeans,sigma,,number,"The residual SD the bias adjustment of back-transformed estimates uses (bias.adjust = TRUE); default: the model's.",
+emmeans::emmeans,non.nuisance,,text,"The factors kept in the grid, all others nuisance (the opposite of nuisance): c(""TRT01P"").",

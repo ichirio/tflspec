@@ -30,7 +30,11 @@
   `mmrm::mmrm` = c("mmrm::mmrm_control", "mmrm:::h_get_optimizers"),
   # (since 2026-11-12: geeglm()'s `...` go to both geese.control() and the
   # glm() it fits first, so only the names glm.control() has too pass both)
-  `geepack::geeglm` = "stats::glm.control")
+  `geepack::geeglm` = "stats::glm.control",
+  # (since 2026-11-13: not a model -- the `emmeans_args = list(...)` a
+  # regression row's pairwise contrasts give emmeans(); its `...` go to
+  # ref_grid() and update(), which drop a name they do not know)
+  `emmeans::emmeans` = "emmeans::ref_grid")
 .model_dots_ignored <- c("stats::lm", "stats::aov")
 
 # A model function whose `...` go to a function that already gets most of
@@ -83,6 +87,9 @@
 .model_arg_names <- function(key) {
   f <- .model_fun(key)
   if (is.null(f)) return(NULL)
+  # (emmeans(): its own, ref_grid()'s, update()'s options and the model
+  # methods' arguments, R/ard_emmeans_args.R)
+  if (identical(key, "emmeans::emmeans")) return(unname(.emmeans_arg_names()))
   own <- names(formals(f))
   if (!"..." %in% own) return(list(own))
   if (key %in% names(.model_dots_names)) return(list(own, .model_dots_names[[key]]))
@@ -139,6 +146,19 @@
 #' for the whole data) of geeglm() and `method = "logit"` of polr().
 #' `formula` and `data` are cardx's to give.
 #'
+#' A regression row's pairwise contrasts (`add_pairwise_contrasts = TRUE`)
+#' are emmeans': `emmeans_args = list(...)` goes to `emmeans::emmeans()`
+#' through broom.helpers' `tidy_plus_plus()`, so `tfl_ard_model_args("emmeans",
+#' "emmeans")` lists its arguments too -- `weights = "proportional"` (the LS
+#' means SAS's OM option gives), `regrid = "response"` (differences of
+#' proportions from a logistic model), `at = list(BASE = 50)`.  emmeans()
+#' drops a name it does not know without a word, so `tfl_ard_spec()` says
+#' one (`wieghts =`), as it says `object`, `specs`, `level` and `adjust`,
+#' which `tidy_plus_plus()` writes itself or takes from `conf.level` and
+#' `contrasts_adjust`, and `emmeans_args` without the pairwise contrasts.
+#' An MMRM's `cov_struct()` has its `group` (a column in quotes: the
+#' covariance by arm) and `heterogeneous` judged too.
+#'
 #' The catalog is `inst/ard/model_args.csv` (`fn`, `arg`, `default`,
 #' `kind`, `hint`, `choices`); a company adds rows with
 #' `options(tflspec.ard_model_args = <data frame>)`.
@@ -157,6 +177,9 @@
 #' tfl_ard_model_args("glm")
 #' tfl_ard_model_args("glm.nb", "MASS")
 #' tfl_ard_model_args("polr", "MASS")
+#' if (requireNamespace("emmeans", quietly = TRUE)) {
+#'   tfl_ard_model_args("emmeans", "emmeans")
+#' }
 #' if (requireNamespace("geepack", quietly = TRUE)) {
 #'   tfl_ard_model_args("geeglm", "geepack")
 #' }
@@ -175,7 +198,7 @@ tfl_ard_model_args <- function(method, package = "base") {
     fm <- formals(f)
     # (an argument with no default is the empty symbol: not touched as a value)
     no_default <- vapply(fm, is.name, NA) & as.character(fm) == ""
-    for (a in setdiff(names(fm), c("formula", "data", "...", "x", "y"))) {
+    for (a in setdiff(names(fm), c("formula", "data", "...", "x", "y", "object", "specs"))) {
       if (a %in% vapply(rows, `[[`, "", "arg")) next
       required <- no_default[[a]]
       d <- if (required) NULL else fm[[a]]
@@ -425,7 +448,8 @@ tfl_ard_model_args <- function(method, package = "base") {
 .model_number_floor <- list(init.theta = c(0, 1), scale = c(0, 0),
                             scale.value = c(0, 1), epsilon = c(0, 1),
                             maxit = c(1, 0), maxiter = c(1, 0),
-                            iter.max = c(1, 0), outer.max = c(1, 0))
+                            iter.max = c(1, 0), outer.max = c(1, 0),
+                            df = c(0, 1))
 
 # A link written as glm.nb() takes it: a name (log) or text ("log"), one of
 # the choices; a call (power(1/3)) is the program's
@@ -483,12 +507,31 @@ tfl_ard_model_args <- function(method, package = "base") {
                           ty[1L], utils::packageVersion("mmrm"),
                           paste(mmrm::cov_types("abbr"), collapse = ", ")))
   }
-  for (k in c("visits", "subject")) {
+  for (k in c("visits", "subject", "group")) {
     if (is.null(a[[k]])) {
-      out <- c(out, sprintf("`%s` (the column, in quotes) is not given", k))
+      if (!identical(k, "group")) {
+        out <- c(out, sprintf("`%s` (the column, in quotes) is not given", k))
+      }
     } else if (is.name(a[[k]])) {
       out <- c(out, sprintf("`%s` is a column in quotes (\"%s\"), not %s", k,
                             as.character(a[[k]]), as.character(a[[k]])))
+    }
+  }
+  # (since 2026-11-13: cov_struct()'s other names -- `group` a column in
+  # quotes, the covariance by arm; `heterogeneous` TRUE / FALSE -- and a
+  # name it does not have, on which it stops)
+  het <- .literal_value(a[["heterogeneous"]])
+  if (!is.null(a[["heterogeneous"]]) && !is.null(het) &&
+      !(is.logical(het) && length(het) == 1L && !is.na(het))) {
+    out <- c(out, "`heterogeneous` is TRUE or FALSE")
+  }
+  fm <- if (requireNamespace("mmrm", quietly = TRUE)) names(formals(mmrm::cov_struct))
+  if (!is.null(fm)) {
+    bad <- .args_not_matched(setdiff(names(a)[!is.na(names(a))], pos), fm)
+    if (length(bad)) {
+      out <- c(out, sprintf("cov_struct() has no argument %s (it has: %s): mmrm would stop on it",
+                            paste0("`", bad, "`", collapse = ", "),
+                            paste(setdiff(fm, "..."), collapse = ", ")))
     }
   }
   if (!length(out)) return(NULL)

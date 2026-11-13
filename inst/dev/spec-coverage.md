@@ -236,6 +236,37 @@ its parts and `zcor`, polr()'s `model`).
 | cardx model arguments | 90.9% (60 / 18) | 100.0% (78 / 0) |
 | weight-3 functions only | 100.0% | 100.0% |
 
+2026-11-13 (wider scope; cards 0.9.0, cardx 0.3.4, still the CRAN
+versions; broom.helpers 1.23.0, emmeans 2.0.4, mmrm 0.3.19): the arguments
+of `emmeans::emmeans()` (and `ref_grid()`, where its `...` go) a
+regression row writes in `emmeans_args = list(...)` for its pairwise
+contrasts -- 15 more arguments of 1 function (weight 2: the LS means'
+weights, SAS's OM, a logistic model's differences of proportions, the
+covariates' values; by design left out: `object` / `specs`, which
+tidy_plus_plus() gives, `data`, `options` written as its parts, `contr`,
+`counterfactuals`, `fac.reduce`, the multivariate `mult.names` /
+`mult.levs`, `rg.limit`).
+
+| Scope (2026-11-13, wider) | 2026-11-13 before | 2026-11-13 after |
+|---|---:|---:|
+| **cards / cardx, weighted** | **99.5%** (530 yes / 15 partial) | **99.9%** (541 / 4) |
+| cards ard_*() | 100.0% | 100.0% |
+| cardx ard_*() | 100.0% | 100.0% |
+| cards post helpers | 100.0% | 100.0% |
+| cards code helpers | 100.0% | 100.0% |
+| cardx CI helpers | 100.0% | 100.0% |
+| cardx model arguments | 100.0% | 100.0% |
+| emmeans arguments in emmeans_args (new) | 50.0% (0 / 15) | 86.7% (11 / 4) |
+| weight-3 functions only | 100.0% | 100.0% |
+
+(2026-11-13 before: this branch before the run (tflspec@next c4aaa4e
+merged) on the wider scope -- `emmeans_args` had to be a list, but its
+names reached emmeans() unchecked (emmeans drops one it does not know) and
+their values were not judged: partial.  The 4 partial after: `cov.reduce`,
+`cov.keep`, `tran` and `nesting` -- their names checked, their R (a
+function, a formula, a list of nests) taken as it is.  On the 2026-11-12
+scope the run starts and ends at 100.0%.)
+
 (2026-11-12 before: this branch before the run (tflspec@next 7af5a42
 merged) on the wider scope -- the two models' arguments could be written
 as R in `method.args` and reached the model, but were neither described
@@ -293,6 +324,45 @@ function, but the catalog did not describe it and its value was not
 judged: partial.  2026-10-31 before: the same, with
 `update_ard_fmt_fun()` in the `post` scope -- written as R in `post`, its
 names checked, its values not judged.)
+
+### Added 2026-11-13
+
+* **`emmeans_args = list(...)` is judged** (`R/ard_emmeans_args.R`): a
+  regression row's pairwise contrasts (`add_pairwise_contrasts = TRUE`)
+  are `emmeans::emmeans(object = <model>, specs = <term>, <emmeans_args>)`
+  then `pairs()` and `confint(level = conf.level)` (broom.helpers 1.23.0).
+  emmeans 2.0.4 gives its `...` to `ref_grid()` and `update()`, which keep
+  the names they know (by their beginning) and drop the rest without a
+  word: `wieghts = "proportional"` gave the equal-weights LS means
+  (reproduced on R's mtcars: an LS mean of 19.88, the equal weights', instead of 22.26).
+  Now said when the spec is read:
+  * a name neither `emmeans()`, `ref_grid()`, `update()`'s options nor a
+    model method of the installed emmeans (`mode`, `vcov.`, `lmer.df` ...)
+    takes;
+  * `object` / `specs` (tidy_plus_plus() replaces them), `adjust` (pairs()
+    is called with Tukey or `contrasts_adjust`: verified, the emmeans
+    option is overridden) and `level` / `alpha` (confint() is called with
+    `conf.level`: verified);
+  * `emmeans_args` without `add_pairwise_contrasts = TRUE` (emmeans() is
+    never called);
+  * values the catalog describes (`inst/ard/model_args.csv`, fn
+    `emmeans::emmeans`): `weights` (equal, proportional -- SAS's OM --,
+    outer, cells, flat, or numbers), `type`, `regrid` (response: a
+    logistic model's differences of proportions), `at` (a list), `df`
+    (above 0), `nuisance`, `non.nuisance`, `wt.nuis`, `offset`, `by`,
+    `mode`, `bias.adjust`, `sigma`.
+  `tfl_ard_model_args("emmeans", "emmeans")` lists them for a GUI.  A
+  test builds a logistic row with `regrid = "response", weights =
+  "proportional"`, compares it with cardx's call written by hand and with
+  `emmeans()` itself, and shows the equal-weights result differs.
+* **MMRM's `cov_struct()`: its other names** (gap 5): `group` is a column
+  in quotes (`group = "TRTA"`: a covariance by arm; `group = TRTA` would
+  stop mmrm), `heterogeneous` TRUE / FALSE, and a name `cov_struct()` does
+  not have (`groups =`) is said -- mmrm would stop on it.
+* Looked at but not added: emmeans arguments for `ard_emmeans_emmeans()` /
+  `ard_emmeans_contrast()` -- cardx 0.3.4 checks their `...` (it stops on
+  any name) and calls `emmeans::emmeans()` itself, so an LS means row
+  cannot set `weights`; the regression row's pairwise contrasts can.
 
 ### Added 2026-11-12
 
@@ -737,7 +807,8 @@ Every argument in scope is described and its value judged (since
    the row leaves out, so none reaches the call twice.)  Since 2026-11-11
    a name a function takes in `...` and drops is said too
    (`ard_survival_survfit()`, `ard_tabulate_max()`,
-   `ard_tabulate_value()`, `ard_aod_wald_test()`).  The catalog
+   `ard_tabulate_value()`, `ard_aod_wald_test()`); since 2026-11-13 a
+   name in `emmeans_args = list(...)` that emmeans() would drop.  The catalog
    names the arguments clinical tables use, not every argument of the
    function they reach (`stats::aov()`'s, `car::vif(type =)` -- a method's
    argument, not the generic's -- are not described).
@@ -749,8 +820,9 @@ Every argument in scope is described and its value judged (since
    judged; since 2026-11-12 also `geepack::geeglm()` and `MASS::polr()`.)
    Left: `nlme::gls()` (its formula is `model =`, which cardx does not
    give: not offered) and `nlme::lme()` (its formula is `fixed =`, which
-   cardx's `formula =` does not reach either), a study's own model, and
-   `cov_struct(group =)`'s column, taken as written.  A list made by the program
+   cardx's `formula =` does not reach either) and a study's own model
+   (since 2026-11-13 `cov_struct(group =, heterogeneous =)` and its names
+   are judged).  A list made by the program
    (`method.args = my_args`) is the program's.
 6. Not in scope by design: `rename_ard_groups_shift()` /
    `_reverse()` (the table code reads the by columns in the row's order:
@@ -758,6 +830,11 @@ Every argument in scope is described and its value judged (since
    shells.  A denominator of numbers is the denominator column (`86`,
    `c("Drug X" = 86, "Placebo" = 85)`); a data frame written in `args` is
    the program's.
+7. (since 2026-11-13) An LS means row (`lsmeans` / `lsmeans_diff`:
+   `ard_emmeans_emmeans()` / `ard_emmeans_contrast()`) cannot set
+   emmeans' `weights` (SAS's OM): cardx 0.3.4 stops on any name in their
+   `...`.  A regression row's pairwise contrasts can (`emmeans_args`); the
+   LS means rows need a cardx change first.
 
 ## rtfreporter (table SPEC)
 
@@ -811,6 +888,18 @@ Percentage: yes counts 1, partial 0.5.
 | 2026-11-10 after  | 52.1% (332 / 20 / 305 of 657) | 59.4% (332 / 20 / 224 of 576) | 41 / 7 / 67 |
 | 2026-11-11 before / after | 52.1% (332 / 20 / 305 of 657) | 59.4% (332 / 20 / 224 of 576) | 41 / 7 / 67 |
 | 2026-11-12 before / after | 53.0% (332 / 20 / 293 of 645) | 59.4% (332 / 20 / 224 of 576) | 42 / 6 / 66 |
+| 2026-11-13 before / after | 53.2% (332 / 20 / 291 of 643) | 59.4% (332 / 20 / 224 of 576) | 42 / 6 / 66 |
+
+(2026-11-13: rtfreporter@next 93951c8 (its changes since 5c7d0ac: the
+table of contents -- long entries wrap before the page numbers, one page
+sequence from the first page, `toc_page_numbering` removed from
+`assemble_rtf()` / `assemble_folder()` --, the gt adapter's captions,
+footnote marks and stub header, `stub_spec(label =)` on a promoted labels
+row, `as_rtftables()` listing defaults for a list, rlistings' `max_rows`,
+`blank_rows` counted over the whole body: no new exported argument a SPEC
+writes) and tflspec@next c4aaa4e merged.  The two removed arguments were
+helpers (file assembly), so only "all arguments" moves.  The run went to
+cards / cardx.)
 
 (2026-11-12: rtfreporter@next 5c7d0ac (its changes since dd1e0cb:
 `rtf_default_format()` and `rtf_document(default_format =)` removed, as
