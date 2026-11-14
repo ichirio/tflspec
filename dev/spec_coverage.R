@@ -76,6 +76,20 @@ via_plan <- c(
 via_plan <- c(via_plan, col_spec = "plan_cell_style(cols =)")
 # rtf_table_style()'s fields: plan_style() takes each as its own argument
 via_style <- c(names(formals(rtfreporter::rtf_table_style)))
+# widen_ard()'s arguments: a SPEC writes the plan, whose plan_apply() builds
+# widen_ard()'s argument list from the roles and the plan verbs
+# (rtfreporter's .plan_spread_args(): the names never change), so each is
+# said by the verb that owns it, not as widen_ard()'s own (since 2026-11-14)
+via_widen <- c(x = "the pipe (table_plan(x))",
+               cols = "table_plan(cols)", rows = "table_plan(rows)",
+               label = "table_plan(label)", show_keys = "table_plan(show_keys)",
+               stats = "plan_cells(stats)", value = "table_plan(value) / plan_cells(value)",
+               cells = "plan_cells(...)", na = "plan_cells(na)", notes = "plan_cells(notes)",
+               levels = "plan_levels(...)", labels = "plan_labels(...)",
+               sort = "plan_sort(...)", sort_stat = "plan_sort(stat)",
+               sep = "plan_columns(sep)", rounding = "plan_digits(rounding)",
+               stat_groups = "plan_stat_groups(...)", compare = "plan_compare(...)",
+               filter = "plan_filter(...)")
 # the program a report says it was written by: rtf_document(program =,
 # program_fallback =), which tflspec fills (generate_rtfreport()'s are the
 # same value given at the end)
@@ -160,6 +174,9 @@ for (fn in ns) {
     } else if (fn == "rtf_table_style" && a %in% via_style) {
       add(fn, a, "partial", paste0("content: plan_style(", a, ")"),
           "said by plan_style()'s own argument, not an rtf_table_style() value")
+    } else if (fn == "widen_ard" && a %in% names(via_widen)) {
+      add(fn, a, "partial", paste0("content: ", via_widen[[a]]),
+          "said by table_plan() / the plan verb that owns it; plan_apply() calls widen_ard() with it")
     } else if (paste(fn, a, sep = ".") %in% names(deprecated)) {
       add(fn, a, "no", "", paste("[helper]", deprecated[[paste(fn, a, sep = ".")]]))
     } else if (grepl("^plan_", fn)) {

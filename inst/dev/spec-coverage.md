@@ -147,6 +147,180 @@ fitting routine, `control` written as its parts, the fit's parts).
 | cardx model arguments | 89.3% (39 / 21) | 100.0% (60 / 0) |
 | weight-3 functions only | 99.6% | 100.0% |
 
+2026-11-08 (wider scope; cards 0.9.0, cardx 0.3.4, still the CRAN
+versions; broom.helpers 1.23.0): the rest of the arguments
+`ard_regression()` / `ard_regression_basic()` pass on to
+`broom.helpers::tidy_plus_plus()` that clinical tables use -- 12 more
+arguments of each (pairwise contrasts, reference rows, labels; left out:
+`model_matrix_attr`, `instrumental_suffix`, `relabel_poly`,
+`disambiguate_*`, `group_by` / `group_labels` (multinomial models),
+`keep_model`, `tidy_post_fun`, `quiet`, `strict` -- rarely changed).
+
+| Scope (2026-11-08, wider) | 2026-11-08 before | 2026-11-08 after |
+|---|---:|---:|
+| **cards / cardx, weighted** | **99.4%** (472 yes / 24 partial) | **100.0%** (496 / 0) |
+| cards ard_*() | 100.0% | 100.0% |
+| cardx ard_*() | 98.8% (254 / 24) | 100.0% (278 / 0) |
+| cards post helpers | 100.0% | 100.0% |
+| cards code helpers | 100.0% | 100.0% |
+| cardx CI helpers | 100.0% | 100.0% |
+| cardx model arguments | 100.0% | 100.0% |
+| weight-3 functions only | 99.4% | 100.0% |
+
+2026-11-09 (wider scope; cards 0.9.0, cardx 0.3.4, still the CRAN
+versions; car 3.1, survival 3.8): 14 more passed-on arguments of 7
+functions that clinical tables use -- the Wilcoxon tests' `conf.int` (the
+Hodges-Lehmann estimate and its interval) and `digits.rank`, the CMH
+test's `conf.level` (the common odds ratio's interval), Fisher's
+`conf.int`, `or`, `workspace` and `hybrid`, and `car::Anova()`'s
+`white.adjust` (a robust, HC3 ANCOVA), `singular.ok` and
+`error.estimate`.  Left out: `car::Anova(vcov. =, error.df =)` (a matrix
+or function of the program's), `stats::wilcox.test(tol.root =)`,
+`effectsize`'s `verbose`, the tests' `subset` / `na.action` (the
+population's and the derivation's), `chisq.test(p =, rescale.p =)` and
+`prop.test(p =)` (one-sample forms cardx does not run).
+
+| Scope (2026-11-09, wider) | 2026-11-09 before | 2026-11-09 after |
+|---|---:|---:|
+| **cards / cardx, weighted** | **98.8%** (496 yes / 14 partial) | **100.0%** (510 / 0) |
+| cards ard_*() | 100.0% | 100.0% |
+| cardx ard_*() | 97.6% (278 / 14) | 100.0% (292 / 0) |
+| cards post helpers | 100.0% | 100.0% |
+| cards code helpers | 100.0% | 100.0% |
+| cardx CI helpers | 100.0% | 100.0% |
+| cardx model arguments | 100.0% | 100.0% |
+| weight-3 functions only | 98.5% | 100.0% |
+
+2026-11-10 (wider scope; cards 0.9.0, cardx 0.3.4, effectsize 1.0.3, smd
+0.8.0): 3 more passed-on arguments of the effect sizes -- `reference` of
+`effectsize::cohens_d()` / `hedges_g()` (the by level compared with:
+"Placebo", which sets the sign) and `cohens_d(adjust =)` (the small-sample
+correction).  One argument left the scope: `ard_smd_smd(na.rm =)`, which
+cardx gives `smd::smd()` itself (`na.rm = TRUE`) -- written in `args` too,
+it stopped the analysis, so the catalog no longer offers it.
+
+| Scope (2026-11-10, wider) | 2026-11-10 before | 2026-11-10 after |
+|---|---:|---:|
+| **cards / cardx, weighted** | **99.8%** (510 yes / 3 partial) | **100.0%** (512 / 0) |
+| cards ard_*() | 100.0% | 100.0% |
+| cardx ard_*() | 99.6% (292 / 3) | 100.0% (294 / 0) |
+| cards post helpers | 100.0% | 100.0% |
+| cards code helpers | 100.0% | 100.0% |
+| cardx CI helpers | 100.0% | 100.0% |
+| cardx model arguments | 100.0% | 100.0% |
+| weight-3 functions only | 100.0% | 100.0% |
+
+2026-11-11 (the same scope; cards 0.9.0, cardx 0.3.4, still the CRAN
+versions): **100.0% before and after (512 yes / 0 partial)**.  The run
+added checks (below), not arguments: a name a function takes in `...` and
+drops, and a hint to `method.args` for a model's argument written beside
+the function's own.
+
+2026-11-12 (wider scope; cards 0.9.0, cardx 0.3.4, still the CRAN
+versions; geepack 1.3.13, MASS 7.3-60.0.1): two more models cardx fits
+from `method` / `package` -- `geepack::geeglm()` (a GEE model: a
+responder analysis over visits, weight 2) and `MASS::polr()` (a
+proportional odds model of an ordinal scale, weight 2) -- 18 more
+arguments of 2 functions (by design left out: their starting values,
+`subset` / `na.action`, geeglm()'s fitting routine, `control` written as
+its parts and `zcor`, polr()'s `model`).
+
+| Scope (2026-11-12, wider) | 2026-11-12 before | 2026-11-12 after |
+|---|---:|---:|
+| **cards / cardx, weighted** | **99.0%** (512 yes / 18 partial) | **100.0%** (530 / 0) |
+| cards ard_*() | 100.0% | 100.0% |
+| cardx ard_*() | 100.0% | 100.0% |
+| cards post helpers | 100.0% | 100.0% |
+| cards code helpers | 100.0% | 100.0% |
+| cardx CI helpers | 100.0% | 100.0% |
+| cardx model arguments | 90.9% (60 / 18) | 100.0% (78 / 0) |
+| weight-3 functions only | 100.0% | 100.0% |
+
+2026-11-13 (wider scope; cards 0.9.0, cardx 0.3.4, still the CRAN
+versions; broom.helpers 1.23.0, emmeans 2.0.4, mmrm 0.3.19): the arguments
+of `emmeans::emmeans()` (and `ref_grid()`, where its `...` go) a
+regression row writes in `emmeans_args = list(...)` for its pairwise
+contrasts -- 15 more arguments of 1 function (weight 2: the LS means'
+weights, SAS's OM, a logistic model's differences of proportions, the
+covariates' values; by design left out: `object` / `specs`, which
+tidy_plus_plus() gives, `data`, `options` written as its parts, `contr`,
+`counterfactuals`, `fac.reduce`, the multivariate `mult.names` /
+`mult.levs`, `rg.limit`).
+
+| Scope (2026-11-13, wider) | 2026-11-13 before | 2026-11-13 after |
+|---|---:|---:|
+| **cards / cardx, weighted** | **99.5%** (530 yes / 15 partial) | **99.9%** (541 / 4) |
+| cards ard_*() | 100.0% | 100.0% |
+| cardx ard_*() | 100.0% | 100.0% |
+| cards post helpers | 100.0% | 100.0% |
+| cards code helpers | 100.0% | 100.0% |
+| cardx CI helpers | 100.0% | 100.0% |
+| cardx model arguments | 100.0% | 100.0% |
+| emmeans arguments in emmeans_args (new) | 50.0% (0 / 15) | 86.7% (11 / 4) |
+| weight-3 functions only | 100.0% | 100.0% |
+
+2026-11-14 (wider scope; cards 0.9.0, cardx 0.3.4, still the CRAN
+versions; broom.helpers 1.23.0, emmeans 2.0.4): the rest of
+`broom.helpers::tidy_plus_plus()`'s arguments `ard_regression()` /
+`ard_regression_basic()` pass on -- `quiet`, `strict`, `tidy_post_fun`,
+`group_by` / `group_labels` (a multinomial model's response levels),
+`relabel_poly`, `disambiguate_terms` / `disambiguate_sep`,
+`model_matrix_attr`, `instrumental_suffix`: 10 more arguments of each
+(left out on 2026-11-08 as rarely changed; still left out: `keep_model`,
+a model column the ARD cannot hold, and `model` / `tidy_fun`, which cardx
+writes itself).  And the 4 emmeans arguments left partial on 2026-11-13
+(`cov.reduce`, `cov.keep`, `tran`, `nesting`) are judged.
+
+| Scope (2026-11-14, wider) | 2026-11-14 before | 2026-11-14 after |
+|---|---:|---:|
+| **cards / cardx, weighted** | **99.5%** (541 yes / 24 partial) | **100.0%** (565 / 0) |
+| cards ard_*() | 100.0% | 100.0% |
+| cardx ard_*() | 99.3% (294 / 20) | 100.0% (314 / 0) |
+| cards post helpers | 100.0% | 100.0% |
+| cards code helpers | 100.0% | 100.0% |
+| cardx CI helpers | 100.0% | 100.0% |
+| cardx model arguments | 100.0% | 100.0% |
+| emmeans arguments in emmeans_args | 86.7% (11 / 4) | 100.0% (15 / 0) |
+| weight-3 functions only | 99.7% | 100.0% |
+
+(2026-11-14 before: this branch before the run (tflspec@next 6fa6b81
+merged; a tflspec built from it) measured by this run's script on the
+wider scope -- the 20 tidy_plus_plus() arguments could be written as R in
+`args` and reached it (their names known as its own), but were not
+described and their values not judged; emmeans' 4 as on 2026-11-13:
+partial.  On the 2026-11-13 scope the run goes from 99.9% to 100.0%.)
+
+(2026-11-13 before: this branch before the run (tflspec@next c4aaa4e
+merged) on the wider scope -- `emmeans_args` had to be a list, but its
+names reached emmeans() unchecked (emmeans drops one it does not know) and
+their values were not judged: partial.  The 4 partial after: `cov.reduce`,
+`cov.keep`, `tran` and `nesting` -- their names checked, their R (a
+function, a formula, a list of nests) taken as it is.  On the 2026-11-12
+scope the run starts and ends at 100.0%.)
+
+(2026-11-12 before: this branch before the run (tflspec@next 7af5a42
+merged) on the wider scope -- the two models' arguments could be written
+as R in `method.args` and reached the model, but were neither described
+nor their names checked: partial.  On the 2026-11-11 scope the run starts
+and ends at 100.0%.)
+
+(2026-11-10 before: this branch before the run (tflspec@next f04b06d
+merged) on the wider scope -- the 3 arguments could be written as R in
+`args` and reached effectsize, but were not described and their values
+not judged: partial.  On the 2026-11-09 scope the run starts and ends at
+100.0%.)
+
+(2026-11-09 before: this branch before the run (tflspec@next 0890a63
+merged) on the wider scope -- the 14 arguments could be written as R in
+`args` and reached their function, but were not described and their
+values not judged: partial.  On the 2026-11-08 scope the run starts and
+ends at 100.0%.)
+
+(2026-11-08 before: tflspec@next 8a948f7 on the wider scope -- the 24
+arguments could be written as R in `args` and reached tidy_plus_plus(),
+but were not described and their values not judged: partial.  On the
+2026-11-07 scope the run starts and ends at 100.0%.)
+
 (2026-11-07 before: this branch before the run (tflspec@next d237a12
 merged), measured by this run's script: `mmrm(covariance =, weights =)`
 taken as R; glm.nb()'s arguments reached the model unchecked (its `...`
@@ -181,6 +355,235 @@ function, but the catalog did not describe it and its value was not
 judged: partial.  2026-10-31 before: the same, with
 `update_ard_fmt_fun()` in the `post` scope -- written as R in `post`, its
 names checked, its values not judged.)
+
+### Added 2026-11-14
+
+* **emmeans' `cov.reduce`, `cov.keep`, `tran` and `nesting` are judged**
+  (`R/ard_emmeans_args.R`; catalog kinds `reducer`, `keep`, `tran`,
+  `nesting` in `inst/ard/model_args.csv`), in a regression row's
+  `emmeans_args = list(...)`:
+  * `cov.reduce`: a function not in quotes (`median`, `function(x) ...`,
+    `stats::median`), TRUE / FALSE, a two-sided formula (`BASE ~ TRT01P`)
+    or a list of functions / formulas by covariate.  `"median"` in quotes,
+    a number or a one-sided formula stops `ref_grid()` ("Invalid
+    'cov.reduce' argument") -- the ARD keeps the error, the cells are empty.
+  * `cov.keep`: names in quotes or a whole number.
+  * `tran`: a name the installed emmeans knows (read from its
+    `.make.link()`: log, logit, sqrt, log10, log2, log1p, inverse ...) or
+    `make.tran(...)`.  emmeans takes **any other name as the identity
+    without a word**: reproduced on R's mtcars and in a test on cards'
+    ADSL -- `tran = "logg", type = "response"` on a response made log
+    beforehand gave the arms' differences on the log scale instead of
+    their ratios.
+  * `nesting`: `"SITEID %in% COUNTRY"` (several separated by commas) or a
+    list; a number or TRUE stops emmeans.
+  A test compares a row with `tran = "log", type = "response"` with
+  cardx's call written by hand and with `emmeans()` itself.
+* **tidy_plus_plus()'s other arguments** (`inst/ard/passed_args.csv`, 10
+  rows for each regression function): `quiet`, `strict`, `relabel_poly`,
+  `disambiguate_terms`, `model_matrix_attr` (TRUE / FALSE),
+  `disambiguate_sep`, `instrumental_suffix` (text), `tidy_post_fun` (a
+  function), `group_by` (columns of the tidied table, `auto_group_by()` or
+  NULL: a new code shape, `select`) and `group_labels` (labels by name).
+* Looked at but not added: **a proportional odds model's `p.values = TRUE`**
+  (broom's `tidy.polr()`).  Inside cardx it never gives broom's p-values:
+  `tidy.polr()` refits the model with `MASS::dropterm()` for its LR
+  tests, which cannot find cardx's model data, so broom.helpers falls back
+  to `parameters` and its Wald p-values (cards' ADSL, `AGEGR1 ~ SEX`: 0.4815
+  through cardx, broom's LR 0.480 directly); with a 3-level factor broom
+  gives none at all.  A row that wants polr's p-values writes `tidy_fun =
+  broom.helpers::tidy_parameters` (Wald) -- gap 8.  `p.values` stays
+  uncatalogued, so it is said for a model whose tidier does not take it
+  (an lm).
+
+### Added 2026-11-13
+
+* **`emmeans_args = list(...)` is judged** (`R/ard_emmeans_args.R`): a
+  regression row's pairwise contrasts (`add_pairwise_contrasts = TRUE`)
+  are `emmeans::emmeans(object = <model>, specs = <term>, <emmeans_args>)`
+  then `pairs()` and `confint(level = conf.level)` (broom.helpers 1.23.0).
+  emmeans 2.0.4 gives its `...` to `ref_grid()` and `update()`, which keep
+  the names they know (by their beginning) and drop the rest without a
+  word: `wieghts = "proportional"` gave the equal-weights LS means
+  (reproduced on R's mtcars: an LS mean of 19.88, the equal weights', instead of 22.26).
+  Now said when the spec is read:
+  * a name neither `emmeans()`, `ref_grid()`, `update()`'s options nor a
+    model method of the installed emmeans (`mode`, `vcov.`, `lmer.df` ...)
+    takes;
+  * `object` / `specs` (tidy_plus_plus() replaces them), `adjust` (pairs()
+    is called with Tukey or `contrasts_adjust`: verified, the emmeans
+    option is overridden) and `level` / `alpha` (confint() is called with
+    `conf.level`: verified);
+  * `emmeans_args` without `add_pairwise_contrasts = TRUE` (emmeans() is
+    never called);
+  * values the catalog describes (`inst/ard/model_args.csv`, fn
+    `emmeans::emmeans`): `weights` (equal, proportional -- SAS's OM --,
+    outer, cells, flat, or numbers), `type`, `regrid` (response: a
+    logistic model's differences of proportions), `at` (a list), `df`
+    (above 0), `nuisance`, `non.nuisance`, `wt.nuis`, `offset`, `by`,
+    `mode`, `bias.adjust`, `sigma`.
+  `tfl_ard_model_args("emmeans", "emmeans")` lists them for a GUI.  A
+  test builds a logistic row with `regrid = "response", weights =
+  "proportional"`, compares it with cardx's call written by hand and with
+  `emmeans()` itself, and shows the equal-weights result differs.
+* **MMRM's `cov_struct()`: its other names** (gap 5): `group` is a column
+  in quotes (`group = "TRTA"`: a covariance by arm; `group = TRTA` would
+  stop mmrm), `heterogeneous` TRUE / FALSE, and a name `cov_struct()` does
+  not have (`groups =`) is said -- mmrm would stop on it.
+* Looked at but not added: emmeans arguments for `ard_emmeans_emmeans()` /
+  `ard_emmeans_contrast()` -- cardx 0.3.4 checks their `...` (it stops on
+  any name) and calls `emmeans::emmeans()` itself, so an LS means row
+  cannot set `weights`; the regression row's pairwise contrasts can.
+
+### Added 2026-11-12
+
+* **A GEE model, `geepack::geeglm()`**, through `method = "geeglm",
+  package = "geepack"` and `method.args = list(family = binomial, id =
+  factor(USUBJID), corstr = "exchangeable")` (or a call in `x`): the
+  responder analysis over visits that some efficacy tables give with
+  `exponentiate = TRUE` (odds ratios with robust, sandwich intervals).
+  `inst/ard/model_args.csv` describes `family`, `id`, `waves`, `corstr`
+  (independence, exchangeable, ar1, unstructured ...), `std.err` (san.se,
+  jack, j1s, fij), `scale.fix`, `scale.value`, `weights`, `offset`,
+  `contrasts`, and the `maxit`, `epsilon` and `trace` that its `...` give
+  both `glm.control()` and `geese.control()`.  Names and values are
+  judged.  Two mistakes are now reported when the spec is read:
+  * no `id`: geeglm() stops ("id variable not found");
+  * **`id = USUBJID`**: geeglm() finds its clusters where `as.numeric(id)`
+    changes.  ADaM's USUBJID is text, so the whole data is one cluster.
+    The program runs, with only a warning that cardx keeps in the ARD, and
+    the standard errors and p-values are wrong (a p-value of 0 on cards'
+    ADLB, against 0.099 with `id = factor(USUBJID)`).  The warning says to
+    write `id = factor(USUBJID)`.
+* **A proportional odds model, `MASS::polr()`**, through `method =
+  "polr", package = "MASS"`: an ordinal scale's odds ratios.  The catalog
+  describes `method` (logistic, probit, loglog, cloglog, cauchit),
+  `Hess`, `weights`, `contrasts` and `control`.  `control` is the only
+  name polr()'s `...` may carry to `optim()`: polr() gives optim() its
+  `par`, `fn`, `gr`, `method` and `hessian` itself, and a second one
+  stops it.  broom's `tidy.polr(p.values = TRUE)` is passed on as before
+  and is known.
+* The tests run both: a GEE row and a polr row give the same ARD as
+  cardx's call written by hand, and the GEE odds ratios are those of
+  `geeglm()` fitted directly.
+* geepack joins Suggests (for the tests and the example of
+  `tfl_ard_model_args("geeglm", "geepack")`); MASS ships with R.
+
+### Added 2026-11-11
+
+* **A name a function drops is said.**  Some functions take `...` and do
+  nothing with them -- neither pass them on nor check them: cardx 0.3.4's
+  `ard_survival_survfit()` (its data.frame method), `ard_tabulate_max()`
+  and `ard_aod_wald_test()`, and cards 0.9.0's `ard_tabulate_value()`.  A
+  name they do not have was ignored without a word: `conf.type =
+  "log-log"` written beside `times` (not in `method.args`) left the
+  Kaplan-Meier intervals "log"; `denominater = ADSL` in an AE by maximum
+  severity row left the default denominator.  It is now a warning when
+  the spec is read.  Which functions drop their `...` is read from the
+  installed code, as for the ones that check them.
+* **A model's argument beside the function's own points to
+  `method.args`.**  When the misplaced name is an argument of the model
+  the row fits (`conf.type` of `survival::survfit()`, `family` of
+  `stats::glm()` beside `ard_regression(method = "glm")`), the warning
+  says to write it in `method.args = list(conf.type = ...)`.  The same
+  hint is added to the warnings for a name `tidy_plus_plus()` and broom's
+  tidier do not have, and for a name a function that checks its `...`
+  does not have (`ard_stats_anova()`, `ard_emmeans_*()`).
+* **Gap 4: the CMH test's passed-on names.**  cardx lists the row's `...`
+  for `mantelhaen.test()` and fills only the names the row leaves out with
+  the test's defaults, so no name reaches the call twice.  A test now
+  checks that and compares `correct = FALSE` with
+  `stats::mantelhaen.test()`.
+* Looked at, not added: `ard_stats_aov()` passes `...` to `stats::aov()`,
+  but its table is the sequential (type I) sums of squares, which
+  `contrasts =` does not change, and `weights =` stops in cardx's call
+  ("..1 used in an incorrect context").  Use `ard_car_anova()` with a
+  weighted model in `x`.  `ard_stats_anova()` checks its `...` (it stops
+  on any), so `anova(test = "Chisq")` cannot be passed on; its `method`
+  chooses the test.
+
+### Added 2026-11-10
+
+* **Cohen's d / Hedges' g against a reference level**:
+  `ard_effectsize_cohens_d(reference = "Placebo")` and `hedges_g()`'s --
+  the difference is the other level minus the reference (by default the
+  first level minus the second); `cohens_d(adjust = TRUE)` gives the
+  small-sample (Hedges) correction.  A test compares the row's estimate
+  with `effectsize::cohens_d(reference =)` and `hedges_g()`.
+* **A name cardx writes itself is said** (all passed-on calls): cardx
+  writes some of the arguments of the call that takes `...`
+  (`paired = TRUE` of `ard_stats_paired_t_test()`, `paired` and `ci` of
+  the effect sizes, `na.rm = TRUE` of `ard_smd_smd()`).  The same name in
+  `args` reaches that call twice, and R stops ("formal argument matched by
+  multiple actual arguments"); cardx keeps the error in the ARD and the
+  table's cells are empty.  The names are read from the installed cardx's
+  code.  A test checks that the catalog offers none of them, and so
+  `ard_smd_smd(na.rm =)` left it.
+* **Names passed on to effectsize and smd are checked** (gap 4):
+  effectsize's `cohens_d()` / `hedges_g()` drop a name they do not have
+  (`pooled_SD = FALSE` left the pooled SD without a word); `smd::smd()`
+  has no `...` and stops on one.
+
+### Added 2026-11-09
+
+* **The Hodges-Lehmann estimate** (`ard_stats_wilcox_test()`,
+  `ard_stats_paired_wilcox_test()`, `ard_stats_wilcox_test_onesample()`
+  with `conf.int = TRUE`): the location shift (median difference) and its
+  interval besides the p-value; `digits.rank` (above 0) makes values equal
+  but for floating point ties.  A test compares the row's estimate and
+  lower limit with `stats::wilcox.test(conf.int = TRUE)`.
+* **The CMH common odds ratio's level** (`ard_stats_mantelhaen_test(conf.level
+  =)`, between 0 and 1); a test compares the 90% limits with
+  `stats::mantelhaen.test()`.
+* **Fisher's options**: `conf.int` (the conditional odds ratio),
+  `or` (the null odds ratio, above 0), `workspace` (a whole number, 1 or
+  more: a grade by arm table that stops with FEXACT error 7 needs
+  `workspace = 2e7`), `hybrid`.  `B` (fisher.test() and chisq.test()) is
+  1 or more.
+* **A robust ANCOVA** (`ard_car_anova(white.adjust =)`, car's
+  Anova.lm(): FALSE, TRUE or one of `"hc3"`, `"hc0"` ... `"hc4"` -- the
+  heteroscedasticity-consistent covariance the covariate-adjustment
+  guidances suggest), `singular.ok`, and a GLM's F test's
+  `error.estimate`.  A test compares the treatment p-value with
+  `car::Anova(type = "III", white.adjust = "hc3")` and with the
+  model-based one (they differ).  A choice that is TRUE / FALSE is judged
+  as written (`white.adjust = TRUE`).
+* **A catalogued name car's method of the model does not have is said**
+  (gap 4): `white.adjust =` with `x = glm(...)` (Anova.glm() would ignore
+  it: no robust covariance), `test.statistic =` with `x = lm(...)`.  Before,
+  a name the catalog described was taken whatever the model.
+
+### Added 2026-11-08
+
+* **The pairwise comparisons of a model's arms** (`ard_regression()`'s
+  `add_pairwise_contrasts = TRUE`, by emmeans): each arm against each
+  other in one row -- `pairwise_variables` (the terms compared),
+  `pairwise_reverse` (Drug A / Placebo or the other way round),
+  `keep_model_terms`, `contrasts_adjust` (one of emmeans' adjustments:
+  `none`, `tukey`, `bonferroni`, `holm`, `sidak`, `dunnettx`, `mvt` ...; a
+  value not one of them is said) and `emmeans_args` (a list:
+  `list(type = "response")`).  A test builds an ANCOVA row's contrasts
+  and compares them with the arms' mean differences and the model's own
+  t test; `pairwise_reverse = FALSE` turns each sign.
+* **The reference rows and labels**: `no_reference_row` (columns),
+  `add_estimate_to_reference_rows` (a hazard ratio of 1.00 for placebo),
+  `variable_labels` (a list or formula), `term_labels` (labels by name:
+  `c(SEXM = "Male")`; a vector with no names is said),
+  `categorical_terms_pattern` (`"{level} vs {reference_level}"`),
+  `interaction_sep`.  `ard_regression_basic()` the same, with its own
+  default (`add_estimate_to_reference_rows = FALSE`).
+* **A name passed on to `tidy_plus_plus()` is looked for in it and in
+  broom's `tidy()` method of the model** (gap 4): `exponentaite = TRUE`
+  reached broom's `tidy.coxph()` / `tidy.glm()`, whose `...` is ignored --
+  the table showed log hazard (odds) ratios without a word.  The model is
+  the one `method` / `package` name or the call `x` writes (`lm`, `glm`,
+  `coxph`, `glm.nb` (`tidy.negbin()`), `survreg`, `mmrm` ...).  A name R
+  matches by its beginning (`exponent =`) is tidy_plus_plus()'s; a study's
+  own tidier (`tidy_fun =`), a model by a name (`x = fit`) or one broom has
+  no method for is not judged.
+* rtfreporter's new `plan_paginate_rows(na_label =)` (the name of a page
+  whose BY value is blank, rtfreporter@next 29e1c24) has a schema entry
+  (type, label, help); it was passed on by its formals before.
 
 ### Added 2026-11-07
 
@@ -464,9 +867,20 @@ Every argument in scope is described and its value judged (since
    judged; a function bound to another name (`f <- cards::ard_tabulate`)
    is not.
 4. A passed-on argument's name is checked (since 2026-11-04) when it
-   reaches a stats or survival function, and (since 2026-11-05) the
-   `car::Anova()` method of a model written in `x`; one passed to
-   broom.helpers, effectsize or smd, which pass `...` on again, is not.  The catalog
+   reaches a stats or survival function, (since 2026-11-05) the
+   `car::Anova()` method of a model written in `x` (since 2026-11-09 a
+   catalogued name too: `white.adjust =` with a glm) and (since 2026-11-08)
+   `broom.helpers::tidy_plus_plus()` with broom's tidier of the model and
+   (since 2026-11-10) effectsize's `cohens_d()` / `hedges_g()` and
+   `smd::smd()`; since 2026-11-10 a name cardx writes itself in that call
+   (`paired =`, `na.rm =`) is said too.  (Closed 2026-11-11:
+   `mantelhaen.test()`'s arguments cardx gives as a list fill only what
+   the row leaves out, so none reaches the call twice.)  Since 2026-11-11
+   a name a function takes in `...` and drops is said too
+   (`ard_survival_survfit()`, `ard_tabulate_max()`,
+   `ard_tabulate_value()`, `ard_aod_wald_test()`); since 2026-11-13 a
+   name in `emmeans_args = list(...)` that emmeans() would drop (and since
+   2026-11-14 a `tran` name emmeans would take as the identity).  The catalog
    names the arguments clinical tables use, not every argument of the
    function they reach (`stats::aov()`'s, `car::vif(type =)` -- a method's
    argument, not the generic's -- are not described).
@@ -475,9 +889,12 @@ Every argument in scope is described and its value judged (since
    (`survival::survreg()`, `MASS::glm.nb()`, `nlme::gls()`, a study's own)
    takes its names as written.  (Since 2026-11-07 also `MASS::glm.nb()`
    and `survival::survreg()`, and `mmrm(covariance =, weights =)` are
-   judged.)  Left: `nlme::gls()` (its formula is `model =`, which cardx
-   does not give: not offered), a study's own model, and `cov_struct(group
-   =)`'s column, taken as written.  A list made by the program
+   judged; since 2026-11-12 also `geepack::geeglm()` and `MASS::polr()`.)
+   Left: `nlme::gls()` (its formula is `model =`, which cardx does not
+   give: not offered) and `nlme::lme()` (its formula is `fixed =`, which
+   cardx's `formula =` does not reach either) and a study's own model
+   (since 2026-11-13 `cov_struct(group =, heterogeneous =)` and its names
+   are judged).  A list made by the program
    (`method.args = my_args`) is the program's.
 6. Not in scope by design: `rename_ard_groups_shift()` /
    `_reverse()` (the table code reads the by columns in the row's order:
@@ -485,6 +902,17 @@ Every argument in scope is described and its value judged (since
    shells.  A denominator of numbers is the denominator column (`86`,
    `c("Drug X" = 86, "Placebo" = 85)`); a data frame written in `args` is
    the program's.
+7. (since 2026-11-13) An LS means row (`lsmeans` / `lsmeans_diff`:
+   `ard_emmeans_emmeans()` / `ard_emmeans_contrast()`) cannot set
+   emmeans' `weights` (SAS's OM): cardx 0.3.4 stops on any name in their
+   `...`.  A regression row's pairwise contrasts can (`emmeans_args`); the
+   LS means rows need a cardx change first.
+8. (since 2026-11-14) A proportional odds model's p-values: `p.values =
+   TRUE` (broom's `tidy.polr()`) cannot run its LR tests inside cardx
+   (`MASS::dropterm()` cannot refit cardx's model), so broom.helpers falls
+   back to `parameters`' Wald p-values with a message.  Write `tidy_fun =
+   broom.helpers::tidy_parameters` for Wald p-values on purpose; LR
+   p-values need a change in cardx or broom.
 
 ## rtfreporter (table SPEC)
 
@@ -532,6 +960,86 @@ Percentage: yes counts 1, partial 0.5.
 | 2026-11-05 before / after | 51.6% (326 / 19 / 305 of 650) | 59.0% (326 / 19 / 224 of 569) | 41 / 7 / 67 |
 | 2026-11-06 before / after | 51.6% (326 / 19 / 305 of 650) | 59.0% (326 / 19 / 224 of 569) | 41 / 7 / 67 |
 | 2026-11-07 before / after | 51.6% (326 / 19 / 305 of 650) | 59.0% (326 / 19 / 224 of 569) | 41 / 7 / 67 |
+| 2026-11-08 before / after | 51.7% (327 / 19 / 305 of 651) | 59.0% (327 / 19 / 224 of 570) | 41 / 7 / 67 |
+| 2026-11-09 before / after | 51.7% (327 / 19 / 305 of 651) | 59.0% (327 / 19 / 224 of 570) | 41 / 7 / 67 |
+| 2026-11-10 before | 51.9% (331 / 20 / 306 of 657) | 59.2% (331 / 20 / 225 of 576) | 40 / 8 / 67 |
+| 2026-11-10 after  | 52.1% (332 / 20 / 305 of 657) | 59.4% (332 / 20 / 224 of 576) | 41 / 7 / 67 |
+| 2026-11-11 before / after | 52.1% (332 / 20 / 305 of 657) | 59.4% (332 / 20 / 224 of 576) | 41 / 7 / 67 |
+| 2026-11-12 before / after | 53.0% (332 / 20 / 293 of 645) | 59.4% (332 / 20 / 224 of 576) | 42 / 6 / 66 |
+| 2026-11-13 before / after | 53.2% (332 / 20 / 291 of 643) | 59.4% (332 / 20 / 224 of 576) | 42 / 6 / 66 |
+| 2026-11-14 before | 53.2% (332 / 20 / 291 of 643) | 59.4% (332 / 20 / 224 of 576) | 42 / 6 / 66 |
+| 2026-11-14 after  | 54.7% (332 / 39 / 272 of 643) | 61.0% (332 / 39 / 205 of 576) | 42 / 7 / 65 |
+
+(2026-11-14: rtfreporter@next 2629a3c (its changes since 93951c8 are the
+CRAN review before 0.9.0 -- graphics and tools in Imports, resource files
+read from the installed package only, `?plan_after`'s example, tests'
+skips: no new exported argument) and tflspec@next 6fa6b81 merged.  The
+measure's correction: `widen_ard()`'s 19 arguments were "no" (tflspec
+calls it, the argument is not said), but a SPEC writes the plan, and
+rtfreporter's `plan_apply()` builds `widen_ard()`'s argument list from the
+roles and the plan verbs (`.plan_spread_args()`: `cols` / `rows` /
+`label` / `show_keys` / `value` from `table_plan()`, `cells` / `stats` /
+`na` / `notes` from `plan_cells()`, `levels`, `labels`, `sort` /
+`sort_stat`, `sep` from `plan_columns()`, `rounding` from
+`plan_digits()`, `stat_groups`, `compare`, `filter`) with the names
+unchanged.  Each is now partial -- said by the verb that owns it, as
+`rtf_table_style()`'s fields are by `plan_style()`'s.  Nothing new a SPEC
+writes; the run went mostly to cards / cardx.)
+
+(2026-11-13: rtfreporter@next 93951c8 (its changes since 5c7d0ac: the
+table of contents -- long entries wrap before the page numbers, one page
+sequence from the first page, `toc_page_numbering` removed from
+`assemble_rtf()` / `assemble_folder()` --, the gt adapter's captions,
+footnote marks and stub header, `stub_spec(label =)` on a promoted labels
+row, `as_rtftables()` listing defaults for a list, rlistings' `max_rows`,
+`blank_rows` counted over the whole body: no new exported argument a SPEC
+writes) and tflspec@next c4aaa4e merged.  The two removed arguments were
+helpers (file assembly), so only "all arguments" moves.  The run went to
+cards / cardx.)
+
+(2026-11-12: rtfreporter@next 5c7d0ac (its changes since dd1e0cb:
+`rtf_default_format()` and `rtf_document(default_format =)` removed, as
+0.9.0 plans; `assemble_rtf()`'s table of contents -- `toc_style`, a
+hanging indent, `toc_title` line breaks -- and `pull_ard(levels =)` in
+the data's order: no new argument a SPEC writes) and tflspec@next
+7af5a42 merged.  The 12 removed arguments were helpers (deprecated), so
+only "all arguments" moves; `assemble_rtf(toc_style =)` is a new helper
+(file assembly).  tflspec writes no call to `rtf_default_format()`: an
+old SPEC's `page.rtf_default_format` is read as `rtf_style()`'s shared
+level.  The run went to cards / cardx.)
+
+(2026-11-11: rtfreporter@next dd1e0cb (its changes since 48b954d are the
+validation kit's traceability matrix and the quality plan: no new exported
+argument) and tflspec@next 3e8c9c1 merged; the run went to cards / cardx --
+the table is unchanged.  Gap 1 below, `rtf_section(page =)`, was looked at
+again: it takes page numbers, which a SPEC does not know before the
+document is laid out, so it stays a gap until rtfreporter can start a
+section at an object.  Gap 3, `rtf_table_style()` as a value, needs a
+`plan_style()` argument that takes one in rtfreporter first.)
+
+(2026-11-10: rtfreporter@next 48b954d (its changes since b1182ae: the
+header, footer, title and footnote borders as the whole block's,
+`rtf_titles(border =)`, `plan_titles(border =)`, `plan_footnotes(border
+=)`, `plan_cell_style(row =)`, `plan_style(border_group =)`, band rows'
+`bold` / `italic` / `underline` as list fields) and tflspec@next f04b06d.
+The plan verbs' new arguments passed on by their formals already (yes);
+the run gives `plan_titles(border =)`, `plan_footnotes(border =)` and
+`plan_cell_style(row =)` schema entries (type, check, help) and passes
+`page.rtf_titles.border` on to `rtf_titles(border =)` (no -> yes).
+`plan_style(border_group =)`'s schema entry is tflspec#762's.)
+
+(2026-11-09: rtfreporter@next b1182ae (its changes since 29e1c24 are the
+header N read from a total stated by group, a maintainer change, tests and
+an internal helper dropped: no new exported argument) and tflspec@next
+0890a63 merged; the run went to cards / cardx -- the table is unchanged.)
+
+(2026-11-08: rtfreporter@next 29e1c24 (its changes since ccbcfe4 are
+pagination under `page_by` -- a listing record kept whole, a stub's
+heading rows on each page, a total column's {n} -- and one new argument,
+`plan_paginate_rows(na_label =)`, the text a blank BY value prints as)
+and tflspec@next 8a948f7.  The new argument was passed on by its formals
+already (yes); the run gives it a schema entry (its type and help).  The
+run went mostly to cards / cardx.)
 
 (2026-11-07: rtfreporter@next ccbcfe4 (its changes since 1e1a693 are
 widen_ard()'s labels, plan_digits()' message for a row key's value and the

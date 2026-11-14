@@ -59,3 +59,38 @@ survival::survreg,rel.tolerance,1e-09,number,"The fit's relative convergence tol
 survival::survreg,outer.max,10,number,"The most outer iterations of a penalized fit (survreg.control()).",
 survival::survreg,debug,0,number,"Above 0: the iterations are printed (survreg.control()).",
 survival::survreg,iter.max,30,number,"The same as maxiter, its older name (survreg.control()).",
+geepack::geeglm,family,gaussian,family,"The error distribution and link: binomial (a responder analysis over visits: odds ratios with exponentiate = TRUE), poisson (counts), gaussian.",
+geepack::geeglm,id,,variable,"The subject, not in quotes and as a factor or number: factor(USUBJID) (text gives one cluster for the whole data). Required; the data sorted by it (and the visits within it): rows of a subject that are not together are clusters of their own.",
+geepack::geeglm,waves,,variable,"The visit column, not in quotes (AVISITN): the order of the visits within a subject, for an ar1 or unstructured working correlation.",
+geepack::geeglm,corstr,independence,choice,"The working correlation: independence (default), exchangeable (SAS PROC GENMOD's TYPE=EXCH), ar1, unstructured, userdefined or fixed.",independence | exchangeable | ar1 | unstructured | userdefined | fixed
+geepack::geeglm,std.err,san.se,choice,"The standard errors: san.se (the robust sandwich, default), jack (approximate jackknife), j1s (one-step jackknife) or fij (fully iterated jackknife).",san.se | jack | j1s | fij
+geepack::geeglm,scale.fix,FALSE,logical,"TRUE: the scale is fixed at scale.value, not estimated.",
+geepack::geeglm,scale.value,1,number,"The fixed scale, above 0, used with scale.fix = TRUE (1).",
+geepack::geeglm,weights,,variable,"Prior weights: a column of the data, not in quotes (WTS).",
+geepack::geeglm,offset,,variable,"An offset of the linear predictor: log(EXPDUR) for a rate model.",
+geepack::geeglm,contrasts,NULL,list,"The contrasts of the factors: list(TRTA = ""contr.sum"").",
+geepack::geeglm,maxit,25,number,"The most iterations the fit takes (glm.control() and geese.control()).",
+geepack::geeglm,epsilon,1e-04,number,"The fit's convergence tolerance (glm.control() and geese.control(); geese's default 1e-04).",
+geepack::geeglm,trace,FALSE,logical,"TRUE: the iterations are printed (glm.control() and geese.control()).",
+MASS::polr,method,logistic,choice,"The link of the cumulative model: logistic (the proportional odds model: odds ratios with exponentiate = TRUE), probit, loglog, cloglog or cauchit.",logistic | probit | loglog | cloglog | cauchit
+MASS::polr,Hess,FALSE,logical,"TRUE: the Hessian is kept with the fit, so the standard errors need no refit (broom's tidy.polr() gives p-values with p.values = TRUE next to exponentiate).",
+MASS::polr,weights,,variable,"Case weights: a column of the data, not in quotes (WTS).",
+MASS::polr,contrasts,NULL,list,"The contrasts of the factors: list(TRT01P = ""contr.sum"").",
+MASS::polr,control,,list,"optim()'s control, where polr()'s ... go: list(maxit = 500, reltol = 1e-10).",
+emmeans::emmeans,weights,equal,choice,"How the LS means average over the other factors of the model: equal (default; SAS's LSMEANS), proportional (in proportion to the data's frequencies: SAS's OM / OBSMARGINS), outer, cells or flat; or a numeric vector.",equal | proportional | outer | cells | flat
+emmeans::emmeans,type,link,choice,"The scale of the estimates: link (the model's linear predictor) or response (back-transformed: odds and rate ratios; tidy_plus_plus() sets it with exponentiate = TRUE).",link | response | lp | linear.predictor | unlink | mu
+emmeans::emmeans,at,,list,"The covariates' values the LS means are taken at, as a list: list(BASE = 50) (default: each covariate's mean).",
+emmeans::emmeans,cov.reduce,mean,reducer,"How a covariate is reduced to the value the LS means are taken at: mean (default), median, TRUE / FALSE (FALSE: each of its distinct values), a function, a two-sided formula (BASE ~ TRT01P: the covariate predicted from the arms), or a list of these by covariate -- not in quotes.",
+emmeans::emmeans,df,,number,"Fixed degrees of freedom for the tests and intervals (Inf: z tests); default: the model's.",
+emmeans::emmeans,nuisance,,text,"Factors averaged over before the grid is built (a large model): c(""SITEID"").",
+emmeans::emmeans,wt.nuis,equal,choice,"How the nuisance factors are averaged: equal (default) or proportional.",equal | proportional
+emmeans::emmeans,regrid,,choice,"Re-grid the estimates on another scale before the contrasts: response (differences of probabilities or rates rather than ratios), log, none.",response | log | none | pass | unlink | mu | TRUE | FALSE
+emmeans::emmeans,offset,,number,"An offset added to the predictions (a Poisson or negative binomial model's log exposure), replacing the model's.",
+emmeans::emmeans,by,,text,"A factor the contrasts are made within: ""AVISIT"" (each visit's arm comparisons).",
+emmeans::emmeans,mode,,text,"The kind of estimate of a multinomial or ordinal model (polr: ""latent"", ""linear.predictor"", ""cum.prob"", ""exc.prob"", ""prob"", ""mean.class"").",
+emmeans::emmeans,bias.adjust,FALSE,logical,"TRUE: a bias adjustment of the back-transformed estimates (type = ""response"").",
+emmeans::emmeans,sigma,,number,"The residual SD the bias adjustment of back-transformed estimates uses (bias.adjust = TRUE); default: the model's.",
+emmeans::emmeans,non.nuisance,,text,"The factors kept in the grid, all others nuisance (the opposite of nuisance): c(""TRT01P"").",
+emmeans::emmeans,cov.keep,,keep,"Covariates kept with all their values rather than reduced, by name in quotes (c(""VISITNUM"")), or a number: a covariate with that many distinct values or fewer is kept as a factor (emmeans' default: 2).",
+emmeans::emmeans,tran,,tran,"The transformation of the response the model was fitted on, when emmeans cannot see it (the response made log beforehand): ""log"" (type = ""response"" then gives ratios), ""logit"", ""sqrt"" ...; or make.tran(...). A name emmeans does not know is taken as no transformation.",logit | probit | cauchit | cloglog | identity | log | sqrt | 1/mu^2 | inverse | reciprocal | log10 | log2 | log1p | asin.sqrt | asinh.sqrt | atanh | exp
+emmeans::emmeans,nesting,,nesting,"Factors nested in others, in quotes: ""SITEID %in% COUNTRY"" (several separated by commas), or list(SITEID = ""COUNTRY""); NULL: none.",

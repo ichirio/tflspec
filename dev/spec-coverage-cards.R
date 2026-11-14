@@ -240,11 +240,19 @@ model_fns <- list(
   # (since 2026-11-07: a negative binomial rate model, a parametric
   # survival model)
   `MASS::glm.nb` = c("MASS::glm.nb", "stats::glm.control"),
-  `survival::survreg` = c("survival::survreg", "survival::survreg.control"))
+  `survival::survreg` = c("survival::survreg", "survival::survreg.control"),
+  # (since 2026-11-12: a GEE model -- a responder analysis over visits --
+  # and a proportional odds model of an ordinal scale; geeglm()'s `...` go
+  # to glm.control() and geese.control(), polr()'s to optim(control =))
+  `geepack::geeglm` = c("geepack::geeglm", "stats::glm.control"),
+  `MASS::polr` = "MASS::polr")
 # (weight 2: a negative binomial model is the rate model of recurrent
-# events -- exacerbations, relapses -- in some studies; weight 1: survreg()
-# is rarely a clinical table's model)
-model_weight <- c(`MASS::glm.nb` = 2, `survival::survreg` = 1)
+# events -- exacerbations, relapses -- in some studies; a GEE model the
+# repeated binary response's (responders by visit) and a proportional odds
+# model an ordinal scale's (mRS, an ordinal clinical status scale) in some
+# efficacy tables; weight 1: survreg() is rarely a clinical table's model)
+model_weight <- c(`MASS::glm.nb` = 2, `survival::survreg` = 1,
+                  `geepack::geeglm` = 2, `MASS::polr` = 2)
 model_by_design <- c(
   subset = "the population's and the analysis's where",
   na.action = "the analysis data's missing values are the derivation's",
@@ -260,6 +268,7 @@ model_by_design <- c(
   optimizer_control = "computing", disable_theta_vcov = "computing",
   emmeans_gcomp_vars = "emmeans' own", drop_visit_levels = "computing",
   optimizers = "computing", toler.chol = "numerical tolerance",
+  zcor = "a working correlation the program builds (a matrix)",
   toler.inf = "numerical tolerance", survcheckallow = "data checks")
 mfun <- function(k) {
   pkg <- sub(":::?.*$", "", k)
@@ -270,12 +279,15 @@ mcat <- utils::read.csv("inst/ard/model_args.csv", stringsAsFactors = FALSE,
                         na.strings = "")
 has_model_check <- exists(".model_args_problems", ns)
 model_judged <- c("logical", "number", "choice", "text", "variable", "family", "list",
-                  "link", "vector", "covariance")
+                  "link", "vector", "covariance", "reducer", "keep", "tran", "nesting")
 for (key in names(model_fns)) {
   fs <- lapply(model_fns[[key]], mfun)
   if (any(vapply(fs, is.null, NA))) next
   args <- setdiff(unique(unlist(lapply(fs, function(f) names(formals(f))))),
                   c("formula", "data", "...", "x", "y"))
+  # (the names a model's `...` may carry that no formals show: polr()'s
+  # optim(control =))
+  args <- union(args, get0(".model_dots_names", ns, ifnotfound = list())[[key]])
   # (the arguments a method keyword writes them for)
   via <- switch(key,
     `survival::survfit` = "method: km / km_diff; args: method.args = list(...) or x = survival::survfit(...)",
@@ -291,7 +303,8 @@ for (key in names(model_fns)) {
   # R, their names not checked)
   checked <- has_model_check &&
     (!key %in% names(model_weight) ||
-       key %in% names(get0(".model_dots_to", ns, ifnotfound = list())) &&
+       key %in% c(names(get0(".model_dots_to", ns, ifnotfound = list())),
+                  names(get0(".model_dots_names", ns, ifnotfound = list()))) &&
        any(mcat$fn == key))
   for (a in args) {
     r <- mcat[mcat$fn == key & mcat$arg == a, , drop = FALSE]
@@ -310,6 +323,51 @@ for (key in names(model_fns)) {
     } else {
       add("cardx model arguments", key, a, "partial", via,
           "R in method.args; its name checked against the installed function, not described")
+    }
+  }
+}
+
+# ---- emmeans::emmeans()'s arguments in emmeans_args (since 2026-11-13) ----
+# A regression row's `emmeans_args = list(...)` (ard_regression() /
+# ard_regression_basic(), add_pairwise_contrasts = TRUE): tidy_plus_plus()
+# gives them to emmeans::emmeans(), whose `...` go to ref_grid() and
+# update() (which drop a name they do not know).  emmeans()'s and
+# ref_grid()'s own arguments; a tflspec before R/ard_emmeans_args.R takes
+# the list as R, its names not checked: partial.  Weight 2: the pairwise
+# contrasts' LS means weights (SAS's OM), scale (differences of
+# proportions) and covariate values are some efficacy tables'.
+emm_by_design <- c(
+  object = "tidy_plus_plus()'s own (the model)",
+  specs = "tidy_plus_plus()'s own (the term compared)",
+  data = "the model's data (cardx's)", options = "update()'s options written as their parts",
+  contr = "tidy_plus_plus()'s pairs() makes the contrasts",
+  counterfactuals = "g-computation (another analysis)",
+  fac.reduce = "averaging written as weights",
+  mult.names = "multivariate responses", mult.levs = "multivariate responses",
+  rg.limit = "computing")
+emm_fs <- lapply(c("emmeans::emmeans", "emmeans::ref_grid"), mfun)
+if (!any(vapply(emm_fs, is.null, NA))) {
+  w2 <- c(w2, "emmeans::emmeans")
+  via <- "method: regression / regression_basic; args: emmeans_args = list(...), add_pairwise_contrasts = TRUE"
+  checked <- exists(".emmeans_args_problems", ns)
+  args <- setdiff(unique(unlist(lapply(emm_fs, function(f) names(formals(f))))), "...")
+  for (a in args) {
+    r <- mcat[mcat$fn == "emmeans::emmeans" & mcat$arg == a, , drop = FALSE]
+    if (a %in% names(emm_by_design)) {
+      add("emmeans arguments (emmeans_args)", "emmeans::emmeans", a, "no", via,
+          paste0("[by design] ", emm_by_design[[a]]))
+    } else if (!checked) {
+      add("emmeans arguments (emmeans_args)", "emmeans::emmeans", a, "partial", via,
+          "R in emmeans_args; not described, its name not checked (emmeans drops a name it does not know)")
+    } else if (nrow(r) && r$kind[1L] %in% model_judged) {
+      add("emmeans arguments (emmeans_args)", "emmeans::emmeans", a, "yes", via,
+          paste0("inst/ard/model_args.csv: ", r$kind[1L], "; its name and value judged"))
+    } else if (nrow(r)) {
+      add("emmeans arguments (emmeans_args)", "emmeans::emmeans", a, "partial", via,
+          paste0("inst/ard/model_args.csv: ", r$kind[1L], "; its name checked, R taken as it is"))
+    } else {
+      add("emmeans arguments (emmeans_args)", "emmeans::emmeans", a, "partial", via,
+          "R in emmeans_args; its name checked against the installed emmeans, not described")
     }
   }
 }

@@ -18,8 +18,15 @@ test_that("each passed-on argument is one of the function it is passed to", {
     if (!requireNamespace(pkg, quietly = TRUE)) next
     f <- utils::getS3method(fn, "default", optional = TRUE, envir = asNamespace(pkg))
     if (is.null(f)) f <- getExportedValue(pkg, fn)
-    expect_true(d$arg[i] %in% names(formals(f)),
-                info = paste(d$passed_to[i], d$arg[i]))
+    has <- names(formals(f))
+    # (car::Anova(white.adjust =) is Anova.lm()'s, error.estimate Anova.glm()'s)
+    for (cl in c("lm", "glm")) {
+      m <- utils::getS3method(fn, cl, optional = TRUE, envir = asNamespace(pkg))
+      if (identical(d$passed_to[i], "car::Anova") && is.function(m)) {
+        has <- c(has, names(formals(m)))
+      }
+    }
+    expect_true(d$arg[i] %in% has, info = paste(d$passed_to[i], d$arg[i]))
   }
 })
 
@@ -184,11 +191,11 @@ test_that("a passed-on name the function it reaches does not have is said", {
   # a name of the function's own, the catalog's or the one reached: none
   expect_no_warning(exact_spec(test_row("ttest", "var.equal = TRUE, paired = FALSE")))
   expect_no_warning(exact_spec(test_row("chisq", "rescale.p = FALSE", "SEX")))
-  # a name for a function that passes `...` on again (broom.helpers'
-  # tidier, car's methods): not judged
+  # a name for a study's own tidier (`tidy_fun =`): not judged
   expect_no_warning(exact_spec(list(
     method = "regression", population_id = "SAF",
-    args = "formula = AGE ~ TRT01A, method = \"lm\", tidy_extra = 1")))
+    args = paste("formula = AGE ~ TRT01A, method = \"lm\",",
+                 "tidy_fun = my_tidier, tidy_extra = 1"))))
   # the median's CI reaches t.test() or wilcox.test(): either one's names
   expect_no_warning(exact_spec(test_row(
     "mean_ci", "method = \"wilcox.test\", exact = FALSE, correct = FALSE")))
@@ -222,4 +229,386 @@ test_that("a name passed on to car::Anova() is looked for in the model's method"
   # a model by a name, or one car has no method for: not judged
   expect_no_warning(exact_spec(anova_row("x = fit, tpye = 3")))
   expect_no_warning(exact_spec(anova_row("x = my_model(data), tpye = 3")))
+})
+
+test_that("a name passed on to tidy_plus_plus() is looked for in it and in broom's tidier", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom")
+  skip_if_not_installed("broom.helpers")
+  reg_row <- function(args, method = "regression") list(
+    method = method, population_id = "SAF", args = args)
+  glm_args <- paste("formula = I(SEX == \"F\") ~ TRT01A, method = \"glm\",",
+                    "method.args = list(family = binomial)")
+  # broom's tidy.glm() ignores a name it does not have: log odds ratios
+  expect_warning(exact_spec(reg_row(paste(glm_args, ", exponentaite = TRUE"))),
+    paste0("ard_regression\\(\\) has no argument `exponentaite`, and passes it on to ",
+           "broom.helpers::tidy_plus_plus\\(\\) and broom's tidy.glm\\(\\)"))
+  expect_warning(exact_spec(reg_row(paste(glm_args, ", add_pairwise_contarsts = TRUE"),
+                                    "cardx::ard_regression_basic")),
+    "ard_regression_basic\\(\\) has no argument `add_pairwise_contarsts`")
+  expect_warning(exact_spec(reg_row(
+    "formula = AGE ~ TRT01A, method = \"lm\", tidy_extra = 1")),
+    "broom's tidy.lm\\(\\)")
+  # tidy_plus_plus()'s own names, the catalog's, the tidier's: none; a name
+  # R matches by its beginning is tidy_plus_plus()'s (exponent = )
+  expect_no_warning(exact_spec(reg_row(paste(
+    glm_args, ", exponent = TRUE, add_pairwise_contrasts = TRUE,",
+    "contrasts_adjust = \"none\", quiet = TRUE, group_by = NULL"))))
+  # a model in `x`: its tidier (survival's Cox model, tidy.coxph())
+  skip_if_not_installed("survival")
+  expect_warning(exact_spec(reg_row(paste(
+    "x = survival::coxph(survival::Surv(AGE, SEX == \"F\") ~ TRT01A, data = data),",
+    "exponentiaet = TRUE"))),
+    "has no argument `exponentiaet`.*broom's tidy.coxph\\(\\)")
+  expect_identical(.tidy_args_unknown(
+    "T / A", "cardx::ard_regression", "exponentiaet",
+    "method = \"coxph\", package = \"survival\", exponentiaet = TRUE",
+    character()) |> length(), 1L)
+  # a model by a name, a study's own model or tidier: not judged
+  expect_no_warning(exact_spec(reg_row("x = fit, exponentaite = TRUE")))
+  expect_no_warning(exact_spec(reg_row(
+    "formula = AGE ~ TRT01A, method = \"my_model\", exponentaite = TRUE")))
+  expect_identical(.tidy_args_unknown(
+    "T / A", "cardx::ard_regression", "exponentaite",
+    "method = \"lm\", tidy_fun = broom.helpers::tidy_parameters, exponentaite = TRUE",
+    character()), character())
+})
+
+test_that("tidy_plus_plus()'s pairwise contrasts, reference rows and labels are judged", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  reg_row <- function(args) list(method = "regression", population_id = "SAF",
+    args = paste("formula = AGE ~ TRT01A + SEX, method = \"lm\",", args))
+  expect_warning(exact_spec(reg_row("add_pairwise_contrasts = \"yes\"")),
+                 "ard_regression\\(add_pairwise_contrasts = \\) is TRUE or FALSE")
+  expect_warning(exact_spec(reg_row("contrasts_adjust = \"tukeyhsd\"")),
+                 "ard_regression\\(contrasts_adjust = \\) is one of \"none\", \"tukey\"")
+  expect_warning(exact_spec(reg_row("emmeans_args = \"response\"")),
+                 "ard_regression\\(emmeans_args = \\) is a list")
+  expect_warning(exact_spec(reg_row("term_labels = c(\"Male\")")),
+                 "ard_regression\\(term_labels = \\) is labels by name")
+  expect_warning(exact_spec(reg_row("variable_labels = \"Treatment\"")),
+                 "ard_regression\\(variable_labels = \\) is a list")
+  expect_warning(exact_spec(reg_row("no_reference_row = 1")),
+                 "ard_regression\\(no_reference_row = \\) is a column")
+  expect_no_warning(exact_spec(reg_row(paste(
+    "add_pairwise_contrasts = TRUE, pairwise_variables = \"TRT01A\",",
+    "contrasts_adjust = \"none\", pairwise_reverse = FALSE, keep_model_terms = TRUE,",
+    "emmeans_args = list(type = \"response\"), no_reference_row = \"SEX\",",
+    "add_estimate_to_reference_rows = FALSE, term_labels = c(SEXM = \"Male\"),",
+    "variable_labels = list(TRT01A = \"Treatment\"),",
+    "categorical_terms_pattern = \"{level} vs {reference_level}\",",
+    "interaction_sep = \" x \""))))
+  a <- tfl_ard_args("cardx::ard_regression")
+  expect_identical(a$passed_to[a$arg == "contrasts_adjust"], "broom.helpers::tidy_plus_plus")
+  b <- tfl_ard_args("cardx::ard_regression_basic")
+  # ard_regression_basic()'s own default
+  expect_identical(b$default[b$arg == "add_estimate_to_reference_rows"], "FALSE")
+})
+
+test_that("a row's pairwise contrasts are each pair of arms' difference (emmeans)", {
+  skip_on_cran()
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("dplyr")
+  skip_if_not_installed("broom.helpers")
+  skip_if_not_installed("emmeans")
+  adam <- exact_data()
+  dir <- exact_dir(adam)
+  on.exit(unlink(dir, recursive = TRUE))
+  ard <- suppressMessages(tfl_build_ard(exact_spec(list(
+    method = "regression", population_id = "SAF", args = paste(
+      "formula = AGE ~ TRT01A, method = \"lm\", add_pairwise_contrasts = TRUE,",
+      "contrasts_adjust = \"none\""))), dir = dir, save = FALSE))
+  pop <- adam$ADSL[adam$ADSL$SAFFL == "Y", ]
+  m <- tapply(pop$AGE, factor(pop$TRT01A), mean)
+  want <- unlist(lapply(seq_along(m)[-1L], function(j)
+    vapply(seq_len(j - 1L), function(i) m[[j]] - m[[i]], 0)))
+  est <- unname(unlist(ard$stat[ard$stat_name == "estimate"]))
+  expect_length(est, length(want))
+  # (the sign follows emmeans' order of the pair: pairwise_reverse)
+  expect_equal(sort(abs(est)), sort(abs(want)), tolerance = 1e-8)
+  # pairwise_reverse = FALSE: each pair the other way round
+  ard2 <- suppressMessages(tfl_build_ard(exact_spec(list(
+    method = "regression", population_id = "SAF", args = paste(
+      "formula = AGE ~ TRT01A, method = \"lm\", add_pairwise_contrasts = TRUE,",
+      "contrasts_adjust = \"none\", pairwise_reverse = FALSE"))), dir = dir, save = FALSE))
+  expect_equal(unname(unlist(ard2$stat[ard2$stat_name == "estimate"])), -est,
+               tolerance = 1e-8)
+  # unadjusted: the p-value of one pair is the model's t test of it
+  fit <- stats::lm(AGE ~ factor(TRT01A), data = pop)
+  p <- unname(unlist(ard$stat[ard$stat_name == "p.value"]))
+  expect_true(any(abs(p - summary(fit)$coefficients[2L, 4L]) < 1e-8))
+})
+
+test_that("Hodges-Lehmann, the CMH odds ratio's level, Fisher's options and a robust ANCOVA are judged", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  row <- function(method, args, by = "TRT01A", variables = "AGE", strata = NULL)
+    list(method = method, population_id = "SAF", by = by, variables = variables,
+         strata = strata, args = args)
+  # the values, by kind (and a floor)
+  expect_warning(exact_spec(row("cardx::ard_stats_wilcox_test", "conf.int = \"yes\"", "SEX")),
+                 "ard_stats_wilcox_test\\(conf.int = \\) is TRUE or FALSE")
+  expect_warning(exact_spec(row("cardx::ard_stats_wilcox_test", "digits.rank = 0", "SEX")),
+                 "digits.rank = \\) is a number above 0")
+  expect_warning(exact_spec(row("cardx::ard_stats_mantelhaen_test", "conf.level = 90",
+                                variables = "EFFFL", by = "SEX", strata = "AGEGR1")),
+                 "ard_stats_mantelhaen_test\\(conf.level = \\) is between 0 and 1")
+  expect_warning(exact_spec(row("cardx::ard_stats_fisher_test", "or = 0", variables = "SEX")),
+                 "ard_stats_fisher_test\\(or = \\) is a number above 0")
+  expect_warning(exact_spec(row("cardx::ard_stats_fisher_test", "workspace = 0", variables = "SEX")),
+                 "workspace = \\) is a number at least 1")
+  expect_warning(exact_spec(row("cardx::ard_stats_fisher_test", "B = 0", variables = "SEX")),
+                 "B = \\) is a number at least 1")
+  expect_no_warning(exact_spec(row("cardx::ard_stats_fisher_test",
+    "conf.int = FALSE, or = 2, workspace = 2e7, hybrid = TRUE", variables = "SEX")))
+  expect_no_warning(exact_spec(row("cardx::ard_stats_paired_wilcox_test",
+    "conf.int = TRUE, digits.rank = 7", by = NULL)))
+  # car::Anova(white.adjust =): FALSE, TRUE or one of the HC types
+  p <- function(code) .arg_value_problem("white.adjust", str2lang(code), "choice",
+                                         "FALSE | TRUE | hc3 | hc0 | hc1 | hc2 | hc4")
+  expect_null(p("TRUE"))
+  expect_null(p("\"hc3\""))
+  expect_match(p("\"HC3\""), "is one of \"FALSE\", \"TRUE\", \"hc3\"")
+  a <- tfl_ard_args("cardx::ard_car_anova")
+  expect_identical(a$kind[a$arg == "white.adjust"], "choice")
+  expect_identical(a$kind[a$arg == "singular.ok"], "logical")
+})
+
+test_that("a catalogued name car's method of the model does not have is said", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("car")
+  anova_row <- function(args) list(method = "anova", population_id = "SAF",
+                                   args = args)
+  # Anova.glm() has no white.adjust: the robust covariance would be ignored
+  expect_warning(exact_spec(anova_row(paste(
+    "x = glm(I(SEX == \"F\") ~ TRT01A, family = binomial, data = data),",
+    "white.adjust = \"hc3\""))),
+    "has no argument `white.adjust`, and passes it on to car's Anova.glm\\(\\)")
+  # Anova.lm() has no test.statistic (an lm's test is F)
+  expect_warning(exact_spec(anova_row(
+    "x = lm(AGE ~ TRT01A + SEX, data = data), test.statistic = \"Wald\"")),
+    "has no argument `test.statistic`, and passes it on to car's Anova.lm\\(\\)")
+  expect_no_warning(exact_spec(anova_row(
+    "x = lm(AGE ~ TRT01A + SEX, data = data), white.adjust = TRUE, singular.ok = FALSE")))
+})
+
+test_that("the passed-on Hodges-Lehmann estimate, CMH level, Fisher's odds ratio and HC3 ANCOVA reach their functions", {
+  skip_on_cran()
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("dplyr")
+  skip_if_not_installed("broom", "1.0.8")
+  adam <- exact_data()
+  dir <- exact_dir(adam)
+  on.exit(unlink(dir, recursive = TRUE))
+  run <- function(r) suppressMessages(tfl_build_ard(exact_spec(c(
+    list(population_id = "SAF"), r)), dir = dir, save = FALSE))
+  stat <- function(ard, nm) unname(unlist(ard$stat[ard$stat_name == nm]))
+  pop <- adam$ADSL[adam$ADSL$SAFFL == "Y", ]
+  # Wilcoxon: the Hodges-Lehmann shift and its interval (conf.int = TRUE)
+  ard <- run(list(method = "cardx::ard_stats_wilcox_test", by = "SEX",
+                  variables = "AGE", args = "conf.int = TRUE, exact = FALSE"))
+  want <- stats::wilcox.test(AGE ~ SEX, data = pop, conf.int = TRUE, exact = FALSE)
+  expect_equal(stat(ard, "estimate"), unname(want$estimate), tolerance = 1e-8)
+  expect_equal(stat(ard, "conf.low"), want$conf.int[1L], tolerance = 1e-8)
+  # CMH: the common odds ratio's 90% interval
+  ard <- run(list(method = "cardx::ard_stats_mantelhaen_test", by = "SEX",
+                  variables = "EFFFL", strata = "AGEGR1", args = "conf.level = 0.9"))
+  want <- stats::mantelhaen.test(table(pop$SEX, pop$EFFFL, pop$AGEGR1),
+                                 conf.level = 0.9)
+  expect_equal(stat(ard, "conf.low"), want$conf.int[1L], tolerance = 1e-8)
+  expect_equal(stat(ard, "conf.high"), want$conf.int[2L], tolerance = 1e-8)
+  # Fisher: the null odds ratio moves the p-value, not the estimate
+  ard <- run(list(method = "cardx::ard_stats_fisher_test", by = "SEX",
+                  variables = "EFFFL", args = "or = 2"))
+  want <- stats::fisher.test(pop$EFFFL, pop$SEX, or = 2)
+  expect_equal(stat(ard, "p.value"), want$p.value, tolerance = 1e-10)
+  # ANCOVA with the HC3 covariance (car::Anova.lm(white.adjust = "hc3"))
+  skip_if_not_installed("car")
+  ard <- run(list(method = "anova", args = paste(
+    "x = lm(AGE ~ TRT01A + BMIBL, data = data), type = \"III\", white.adjust = \"hc3\"")))
+  fit <- stats::lm(AGE ~ TRT01A + BMIBL, data = pop)
+  want <- suppressMessages(car::Anova(fit, type = "III", white.adjust = "hc3"))
+  got <- ard[ard$variable == "TRT01A" & ard$stat_name == "p.value", ]
+  expect_equal(unname(unlist(got$stat)), want["TRT01A", "Pr(>F)"], tolerance = 1e-10)
+  expect_false(isTRUE(all.equal(unname(unlist(got$stat)),
+    car::Anova(fit, type = "III")["TRT01A", "Pr(>F)"])))
+})
+
+test_that("no catalogued passed-on argument is one cardx writes itself", {
+  skip_if_not_installed("cardx")
+  d <- .ard_catalog_csv("passed_args.csv")
+  for (i in seq_len(nrow(d))) {
+    expect_false(d$arg[i] %in% .cardx_sets_args(d$call[i], d$passed_to[i]),
+                 info = paste(d$call[i], d$arg[i]))
+  }
+  # what cardx 0.3.4 writes itself: ard_smd_smd()'s na.rm = TRUE
+  skip_if_not_installed("smd")
+  expect_true(all(c("na.rm", "std.error") %in%
+                    .cardx_sets_args("cardx::ard_smd_smd", "smd::smd")))
+  expect_true("paired" %in% .cardx_sets_args("cardx::ard_stats_paired_t_test",
+                                             "stats::t.test"))
+})
+
+test_that("a name cardx gives the function itself, and effectsize's and smd's names, are said", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  test_row <- function(method, args, by = "SEX")
+    list(method = method, population_id = "SAF", by = by, variables = "AGE", args = args)
+  # cardx writes paired = TRUE / na.rm = TRUE itself: R would stop on a second one
+  expect_warning(exact_spec(test_row("cardx::ard_stats_paired_t_test", "id = USUBJID, paired = TRUE")),
+                 "gives stats::t.test\\(\\) `paired` itself")
+  skip_if_not_installed("smd")
+  expect_warning(exact_spec(test_row("cardx::ard_smd_smd", "na.rm = TRUE")),
+                 "gives smd::smd\\(\\) `na.rm` itself")
+  # smd() has no `...`: a name it does not have stops it
+  expect_warning(exact_spec(test_row("cardx::ard_smd_smd", "gerf = 2L")),
+                 "passes it on to smd::smd\\(\\), which has none either")
+  expect_no_warning(exact_spec(test_row("cardx::ard_smd_smd", "gref = 2L")))
+  # effectsize drops a name it does not have
+  skip_if_not_installed("effectsize")
+  expect_warning(exact_spec(test_row("cardx::ard_effectsize_cohens_d", "pooled_SD = FALSE")),
+                 "passes it on to effectsize::cohens_d\\(\\), which has none either")
+  expect_warning(exact_spec(test_row("cardx::ard_effectsize_hedges_g", "paired = TRUE")),
+                 "gives effectsize::hedges_g\\(\\) `paired` itself")
+  expect_no_warning(exact_spec(test_row("cardx::ard_effectsize_cohens_d",
+                                        "pooled_sd = FALSE, reference = \"M\", adjust = TRUE")))
+  expect_no_warning(exact_spec(test_row("cardx::ard_effectsize_cohens_d", "var.equal = FALSE")))
+  expect_identical(
+    .passed_args_unknown("T / A", "cardx::ard_effectsize_cohens_d", "pooled", "pooled = FALSE"),
+    character())
+})
+
+test_that("Cohen's d's reference level and small-sample correction reach effectsize", {
+  skip_on_cran()
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("dplyr")
+  skip_if_not_installed("effectsize", "0.8.8")
+  skip_if_not_installed("parameters")
+  adam <- exact_data()
+  dir <- exact_dir(adam)
+  on.exit(unlink(dir, recursive = TRUE))
+  run <- function(method, args) suppressMessages(tfl_build_ard(exact_spec(list(
+    method = method, population_id = "SAF", by = "SEX", variables = "AGE", args = args)),
+    dir = dir, save = FALSE))
+  stat <- function(ard, nm) unname(unlist(ard$stat[ard$stat_name == nm]))
+  pop <- adam$ADSL[adam$ADSL$SAFFL == "Y", ]
+  lv <- sort(unique(pop$SEX))
+  d0 <- stat(run("cardx::ard_effectsize_cohens_d", NA_character_), "estimate")
+  d1 <- stat(run("cardx::ard_effectsize_cohens_d", sprintf("reference = \"%s\"", lv[1L])),
+             "estimate")
+  want <- effectsize::cohens_d(AGE ~ SEX, data = pop, reference = lv[1L])$Cohens_d
+  expect_equal(d1, want, tolerance = 1e-10)
+  expect_equal(d1, -d0, tolerance = 1e-10)
+  g <- stat(run("cardx::ard_effectsize_cohens_d", "adjust = TRUE"), "estimate")
+  expect_equal(g, effectsize::hedges_g(AGE ~ SEX, data = pop)$Hedges_g, tolerance = 1e-10)
+})
+
+test_that("a name a function takes in `...` and drops is said, with method.args as the hint", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("survival")
+  # what the installed code does with `...`
+  expect_true(.dots_ignored("cardx::ard_survival_survfit"))
+  expect_true(.dots_ignored("cardx::ard_tabulate_max"))
+  expect_true(.dots_ignored("cards::ard_tabulate_value"))
+  expect_false(.dots_ignored("cardx::ard_stats_t_test"))      # passed on
+  expect_false(.dots_ignored("cards::ard_summary"))           # checked
+  expect_false(.dots_ignored("cardx::ard_regression"))        # passed on
+  km <- function(args) list(
+    method = "km", dataset = "ADTTE", population_id = "SAF", variables = "TRTA",
+    args = paste("y = \"survival::Surv(AVAL, 1 - CNSR)\", times = 60,", args))
+  # conf.type beside times is dropped: the intervals stay "log"
+  expect_warning(exact_spec(km("conf.type = \"log-log\"")), paste0(
+    "ard_survival_survfit\\(\\) has no argument `conf.type`, and drops what its ",
+    "`...` take without a word .*it would be ignored -- `conf.type` is ",
+    "survival::survfit\\(\\)'s: write it in `method.args = list\\(conf.type = ...\\)`"))
+  expect_no_warning(exact_spec(km("method.args = list(conf.type = \"log-log\")")))
+  # a misspelt name of the function's own: no method.args hint
+  w <- tryCatch(exact_spec(list(
+    method = "cardx::ard_tabulate_max", dataset = "ADAE", population_id = "SAF",
+    by = "TRTA", variables = "AESEV", args = "id = USUBJID, denominater = ADSL")),
+    warning = function(w) conditionMessage(w))
+  expect_match(w, "ard_tabulate_max\\(\\) has no argument `denominater`, and drops")
+  expect_false(grepl("method.args", w, fixed = TRUE))
+})
+
+test_that("a model's argument beside ard_regression()'s own points to method.args", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom.helpers")
+  skip_if_not_installed("broom")
+  expect_match(
+    .method_args_hint("cardx::ard_regression",
+                      "formula = AGE ~ TRT01A, method = \"glm\", family = binomial",
+                      c("family", "nope")),
+    "`family` is stats::glm\\(\\)'s: write it in `method.args = list\\(family = ...\\)`")
+  expect_identical(.method_args_hint("cardx::ard_regression",
+                                     "x = fit", "family"), "")
+  expect_identical(.method_args_hint("cardx::ard_stats_t_test", "", "family"), "")
+  expect_warning(exact_spec(list(
+    method = "cardx::ard_regression", population_id = "SAF", variables = "AGE",
+    args = "formula = AGE ~ TRT01A, method = \"glm\", family = gaussian")),
+    "`family` is stats::glm\\(\\)'s: write it in `method.args")
+})
+
+test_that("the CMH test's options reach mantelhaen.test() over cardx's defaults", {
+  skip_on_cran()
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom")
+  # cardx lists the row's `...` and fills only the names they leave out
+  # with mantelhaen.test()'s defaults: no name reaches the call twice
+  expect_identical(.cardx_sets_args("cardx::ard_stats_mantelhaen_test",
+                                    "stats::mantelhaen.test"), character())
+  adsl <- as.data.frame(cards::ADSL)
+  adsl <- adsl[adsl$TRT01A != "Xanomeline High Dose", ]
+  adsl$TRT01A <- factor(adsl$TRT01A)
+  adsl$SEX <- factor(adsl$SEX)
+  adsl$AGEGR1 <- factor(adsl$AGEGR1)
+  ard <- cardx::ard_stats_mantelhaen_test(adsl, by = "TRT01A", variables = "SEX",
+                                          strata = "AGEGR1", correct = FALSE)
+  ref <- stats::mantelhaen.test(adsl$SEX, adsl$TRT01A, adsl$AGEGR1, correct = FALSE)
+  expect_equal(unlist(ard$stat[ard$stat_name == "p.value"]), ref$p.value)
+})
+
+test_that("tidy_plus_plus()'s other arguments are judged (2026-11-14)", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom")
+  skip_if_not_installed("broom.helpers")
+  # described for both regression functions, passed on to tidy_plus_plus()
+  for (fn in c("cardx::ard_regression", "cardx::ard_regression_basic")) {
+    a <- tfl_ard_args(fn)
+    new <- c("quiet", "strict", "tidy_post_fun", "group_by", "group_labels",
+             "relabel_poly", "disambiguate_terms", "disambiguate_sep",
+             "model_matrix_attr", "instrumental_suffix")
+    expect_true(all(new %in% a$arg), info = fn)
+    expect_true(all(nzchar(a$hint[a$arg %in% new])), info = fn)
+    expect_true(all(a$passed_to[a$arg %in% new] == "broom.helpers::tidy_plus_plus"),
+                info = fn)
+  }
+  reg_row <- function(args) list(method = "regression", population_id = "SAF",
+    args = paste("formula = AGE ~ TRT01A + SEX, method = \"lm\",", args))
+  bad <- list(
+    c("quiet = \"yes\"", "ard_regression\\(quiet = \\) is TRUE or FALSE"),
+    c("strict = 1", "ard_regression\\(strict = \\) is TRUE or FALSE"),
+    c("tidy_post_fun = \"my_fun\"", "ard_regression\\(tidy_post_fun = \\) is a function"),
+    c("group_by = 1", "ard_regression\\(group_by = \\) is columns of the tidied table"),
+    c("group_labels = c(\"a\")", "ard_regression\\(group_labels = \\) is labels by name"),
+    c("disambiguate_sep = 1", "ard_regression\\(disambiguate_sep = \\) is text"),
+    c("relabel_poly = \"no\"", "ard_regression\\(relabel_poly = \\) is TRUE or FALSE"))
+  for (b in bad) expect_warning(exact_spec(reg_row(b[1L])), b[2L], info = b[1L])
+  expect_no_warning(exact_spec(reg_row(paste(
+    "quiet = TRUE, strict = FALSE, tidy_post_fun = function(x) x,",
+    "group_by = NULL, group_labels = c(a = \"A\"), relabel_poly = TRUE,",
+    "disambiguate_terms = FALSE, disambiguate_sep = \"_\", model_matrix_attr = TRUE,",
+    "instrumental_suffix = \" (IV)\""))))
+  expect_no_warning(exact_spec(reg_row("group_by = broom.helpers::auto_group_by()")))
+  # (not catalogued: polr's p.values -- inside cardx, broom's tidy.polr()
+  # cannot refit the model for its LR tests, and broom.helpers falls back to
+  # parameters' Wald p-values; a name lm's tidier does not take is said)
+  expect_warning(exact_spec(reg_row("p.values = TRUE")),
+                 "has no argument `p.values`.*broom's tidy.lm\\(\\)")
 })

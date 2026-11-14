@@ -36,10 +36,17 @@
     pkg <- sub("::.*$", "", call)
     tag <- paste(a$output_id[i], a$analysis_id[i], sep = " / ")
     out <- c(out, .ard_arg_value_problems(tag, call, a$args[i]),
-             .model_args_problems(tag, call, a$args[i]))
+             .model_args_problems(tag, call, a$args[i]),
+             .emmeans_args_problems(tag, call, a$args[i]))
     given <- tryCatch(.args_given(a$args[i]), error = function(e) character())
     known <- c(names(fm), ".overall", ".missing", "by", "variables", "strata",
                "denominator", "statistic")
+    if ("..." %in% names(fm) && .dots_ignored(call)) {
+      out <- c(out, .dots_ignored_problems(
+        tag, call, .args_not_matched(setdiff(given, known), names(fm)), fm,
+        a$args[i]))
+      next
+    }
     if ("..." %in% names(fm) && !.dots_checked(call)) {
       # (a name R matches by its beginning is the function's own argument)
       out <- c(out, .passed_args_unknown(
@@ -51,10 +58,10 @@
     if (!length(bad)) next
     has <- setdiff(names(fm), c("...", if (isTRUE(attr(fm, "data_first"))) names(fm)[1L]))
     out <- c(out, sprintf(
-      "%s: %s %s's %s() has no argument %s (it has: %s); the program would stop on it",
+      "%s: %s %s's %s() has no argument %s (it has: %s); the program would stop on it%s",
       tag, pkg, utils::packageVersion(pkg),
       sub("^.*::", "", call), paste0("`", bad, "`", collapse = ", "),
-      paste(has, collapse = ", ")))
+      paste(has, collapse = ", "), .method_args_hint(call, a$args[i], bad)))
   }
   c(out, .post_args_unknown(a))
 }
@@ -103,7 +110,8 @@
 # take one shape of R only: a list or formula of cards' selectors
 # (`fmt_fun = AGE ~ list(mean = 1L)`, `value = list(AEREL = "Y")`), a list
 # (`method.args = list(var.equal = TRUE)`), names (`stats_to_remove`), a
-# function (`tidy_fun`, `.f`), a model (`x = lm(...)`), an expression of
+# function (`tidy_fun`, `.f`), labels by name (`term_labels = c(SEXM =
+# "Male")`: a list or a named vector), a model (`x = lm(...)`), an expression of
 # the ARD's columns (a `post` step's `filter`, `expr`, `rows`).  An
 # argument of one function only is `function$arg`: the stratum weights
 # (numbers between 0 and 1 that add up to 1), the levels a pairwise
@@ -114,11 +122,16 @@
   fmt_fun = "selectors", stat_label = "selectors", value = "selectors",
   label = "selectors", abnormal = "list", formulas = "list",
   method.args = "list", stats_to_remove = "character", tidy_fun = "function",
+  emmeans_args = "list", variable_labels = "selectors", term_labels = "labels",
   .f = "function", x = "call", expr = "expression", filter = "expression",
   rows = "expression", by_level = "list", levels = "list", sort = "sort",
   `ard_categorical_ci$weights` = "weights", `ard_pairwise$include` = "values",
   `add_calculated_row$fmt_fun` = "fmt", `update_ard_fmt_fun$fmt_fun` = "fmt",
-  `replace_null_statistic$value` = "scalar")
+  `replace_null_statistic$value` = "scalar",
+  # (since 2026-11-14: tidy_plus_plus()'s other arguments a regression row
+  # passes on -- a function applied to the tidied table, the groups of a
+  # multi-component model by tidyselect, their labels by name)
+  tidy_post_fun = "function", group_by = "select", group_labels = "labels")
 
 .ard_code_shape <- function(fn, arg) {
   key <- paste0(fn, "$", arg)
@@ -155,7 +168,10 @@
       scalar = made || (!is.null(v) && length(v) == 1L),
       selectors = made || is_call_of(e, "list") || is_call_of(e, "~"),
       list = made || is_call_of(e, "list"),
+      labels = made || is_call_of(e, "list") ||
+        (is.character(v) && !is.null(names(v)) && all(nzchar(names(v)))),
       character = made || is.character(v),
+      select = made || is.character(v),
       `function` = made || is_fn(e),
       call = is.call(e) && is.null(v),
       expression = is.call(e) || is.logical(v),
@@ -165,7 +181,9 @@
     want <- switch(shape,
       selectors = "a list (list(mean = 1L)) or a formula (AGE ~ list(mean = 1L))",
       list = "a list: list(...)",
+      labels = "labels by name, a list or a named vector: c(SEXM = \"Male\")",
       character = "names in quotes: c(\"term\", \"label\")",
+      select = "columns of the tidied table (y.level), auto_group_by() or NULL",
       `function` = "a function: pkg::fun, function(x) ... or ~ ...",
       call = "R that makes the object: lm(AVAL ~ TRT01P, data = data)",
       expression = "an expression of the ARD's statistics, not in quotes: n >= 2",
@@ -186,11 +204,18 @@
     if (arg %in% c("conf.level", "conf.int") && any(v <= 0 | v >= 1)) {
       return(sprintf("is between 0 and 1 (0.95 for 95%%); got %s", shown))
     }
+    lo <- .ard_number_floor[[paste0(fn, "$", arg)]]
+    if (!is.null(lo) && any(if (lo[2L] > 0) v <= lo[1L] else v < lo[1L])) {
+      return(sprintf("is a number %s %s; got %s",
+                     if (lo[2L] > 0) "above" else "at least", lo[1L], shown))
+    }
   }
   if (identical(kind, "choice") && nzchar(choices %||% "")) {
     ch <- .split_bar(choices)
-    # a number among the choices as a number (car::Anova(type = 3))
-    if (!(is.character(v) || is.numeric(v)) || !all(as.character(v) %in% ch)) {
+    # a number among the choices as a number (car::Anova(type = 3)), TRUE /
+    # FALSE among them as they are (car::Anova(white.adjust = TRUE))
+    if (!(is.character(v) || is.numeric(v) || is.logical(v)) ||
+        !all(as.character(v) %in% ch)) {
       return(sprintf("is one of %s; got %s",
                      paste0("\"", ch, "\"", collapse = ", "), shown))
     }
@@ -213,6 +238,19 @@
   }
   NULL
 }
+
+# The passed-on numbers with a floor, by `function$arg`: c(floor, 1 when
+# the floor itself is not allowed).  fisher.test()'s odds ratio under the
+# null is above 0, its workspace and the replicates of a simulated p-value
+# 1 or more, wilcox.test()'s digits of the ranks above 0.
+.ard_number_floor <- list(
+  `ard_stats_fisher_test$or` = c(0, 1),
+  `ard_stats_fisher_test$workspace` = c(1, 0),
+  `ard_stats_fisher_test$B` = c(1, 0),
+  `ard_stats_chisq_test$B` = c(1, 0),
+  `ard_stats_wilcox_test$digits.rank` = c(0, 1),
+  `ard_stats_paired_wilcox_test$digits.rank` = c(0, 1),
+  `ard_stats_wilcox_test_onesample$digits.rank` = c(0, 1))
 
 # A format string cards takes for a statistic (alias_as_fmt_fun()): an x,
 # then x's, at most one point and an optional % at the end ("xx",
@@ -408,17 +446,31 @@
 # of inst/ard/passed_args.csv); a name the catalog describes is known.
 # Only the functions that take nothing else are judged: those of stats and
 # survival (their tests' methods name every argument they use; a `...`
-# there is ignored or stops).  broom.helpers, car, effectsize and smd pass
-# `...` on again (to the tidier, a model's method ...), so a name not
-# theirs may still be right: not judged.
+# there is ignored or stops), car::Anova()'s method of the model
+# (.anova_args_unknown()) and, since 2026-11-08, broom.helpers'
+# tidy_plus_plus() with broom's tidier of the model (.tidy_args_unknown()).
+# Since 2026-11-10 also effectsize's cohens_d() / hedges_g(), which drop
+# a name they do not have, and smd::smd(), which stops on one
+# (R/ard_passed_sets.R); and, for every function reached, a name cardx
+# writes itself in that call (`paired =` of ard_effectsize_cohens_d(),
+# `na.rm =` of ard_smd_smd()), which stops the analysis.
 .passed_args_unknown <- function(tag, call, given, args = NA_character_) {
   if (!length(given)) return(character())
   d <- .ard_catalog_rows("passed_args.csv", "tflspec.ard_passed_args",
                          c("call", "arg"))
   d <- d[d$call == call, , drop = FALSE]
   to <- unique(d$passed_to)
+  twice <- .cardx_sets_problems(tag, call, given, to)
+  if (length(twice)) return(twice)
+  if (length(to) && all(startsWith(to, "effectsize::"))) {
+    return(.effectsize_args_unknown(tag, call, given, to))
+  }
+  if (identical(to, "smd::smd")) return(.smd_args_unknown(tag, call, given))
   if (identical(to, "car::Anova")) {
     return(.anova_args_unknown(tag, call, given, args, d$arg))
+  }
+  if (identical(to, "broom.helpers::tidy_plus_plus")) {
+    return(.tidy_args_unknown(tag, call, given, args, d$arg))
   }
   if (!length(to) || !all(sub("::.*$", "", to) %in% c("stats", "survival"))) {
     return(character())
@@ -464,7 +516,8 @@
 # The same for cardx::ard_car_anova(), which passes `...` to car::Anova():
 # since 2026-11-05 a name is looked for in the method of the model that
 # `x` fits (`x = lm(...)`: car's Anova.lm(); glm, coxph, aov, mlm ... the
-# same), whose `...` takes nothing else -- `tpye = "III"` would be ignored
+# same), whose `...` takes nothing else (since 2026-11-09 a catalogued name
+# too: `white.adjust =` with a glm) -- `tpye = "III"` would be ignored
 # and give type II.  A name R matches by its beginning (`typ = ` is
 # `type = `) is the argument's.  A model by a name (`x = fit`), or one car has no
 # method for, is not judged.
@@ -479,8 +532,10 @@
   if (!is.function(m)) return(character())
   fm <- names(formals(m))
   has <- setdiff(unique(c(names(formals(car::Anova)), fm)), "...")
-  # (`typ = "III"` is `type =`, as R matches it)
-  bad <- .args_not_matched(setdiff(given, c(has, catalogued)), fm)
+  # (`typ = "III"` is `type =`, as R matches it).  A name the catalog
+  # describes is judged by the method too: `white.adjust =` is Anova.lm()'s,
+  # ignored by Anova.glm(); `test.statistic =` the other way round.
+  bad <- .args_not_matched(setdiff(given, has), fm)
   if (!length(bad)) return(character())
   sprintf(paste(
     "%s: cardx %s's %s() has no argument %s, and passes it on to car's",
@@ -488,4 +543,54 @@
     tag, utils::packageVersion("cardx"), sub("^.*::", "", call),
     paste0("`", bad, "`", collapse = ", "), fit,
     paste(setdiff(has, c("mod", "x")), collapse = ", "))
+}
+
+# The same for cardx::ard_regression() / ard_regression_basic(), which
+# pass `...` to broom.helpers::tidy_plus_plus(), which passes what it does
+# not name to the tidier -- by default broom's tidy() method of the model
+# (tidy.coxph(), tidy.glm(), tidy.lm(), tidy.negbin(), tidy.survreg() ...),
+# whose `...` is ignored: `exponentaite = TRUE` gave log hazard ratios
+# without a word.  Since 2026-11-08 a name is looked for in both.  The
+# model is the one `method` / `package` names (`method = "coxph", package =
+# "survival"`) or the call `x` writes (`x = survival::coxph(...)`); a
+# study's own tidier (`tidy_fun =`), a model by a name (`x = fit`) or one
+# broom has no tidy() method for (broom.helpers then tries parameters) is
+# not judged.  A name R matches by its beginning (`exponent =`) is
+# tidy_plus_plus()'s.
+.tidy_args_unknown <- function(tag, call, given, args, catalogued) {
+  if (!requireNamespace("broom.helpers", quietly = TRUE) ||
+      !requireNamespace("broom", quietly = TRUE)) return(character())
+  a <- tryCatch(.args_list(args), error = function(e) list())
+  if ("tidy_fun" %in% names(a)) return(character())
+  key <- NA_character_
+  if (is.call(a[["x"]])) {
+    head <- paste(deparse(a[["x"]][[1L]]), collapse = "")
+    key <- if (grepl("::", head, fixed = TRUE)) sub(":::", "::", head, fixed = TRUE) else
+      .model_key(head, "base")
+  } else if (!is.null(a[["method"]])) {
+    p <- if (is.null(a[["package"]])) "base" else .literal_value(a[["package"]])
+    if (!is.null(p)) key <- .model_key(a[["method"]], p)
+  }
+  if (is.na(key)) return(character())
+  # the class of the model the function makes (glm.nb()'s is "negbin")
+  cls <- switch(sub("^.*::", "", key), glm.nb = "negbin", sub("^.*::", "", key))
+  pkg <- sub("::.*$", "", key)
+  # (a model package registers its own tidy() method: mmrm's tidy.mmrm())
+  if (!requireNamespace(pkg, quietly = TRUE)) return(character())
+  m <- tryCatch(utils::getS3method("tidy", cls, optional = TRUE,
+                                   envir = asNamespace("broom")),
+                error = function(e) NULL)
+  if (!is.function(m)) return(character())
+  tpp <- names(formals(broom.helpers::tidy_plus_plus))
+  has <- setdiff(unique(c(tpp, names(formals(m)))), "...")
+  bad <- .args_not_matched(setdiff(given, c(has, catalogued)), tpp)
+  if (!length(bad)) return(character())
+  sprintf(paste(
+    "%s: cardx %s's %s() has no argument %s, and passes it on to",
+    "broom.helpers::tidy_plus_plus() and broom's tidy.%s(), which have none",
+    "either (they have: %s); it would be ignored%s"),
+    tag, utils::packageVersion("cardx"), sub("^.*::", "", call),
+    paste0("`", bad, "`", collapse = ", "), cls,
+    paste(setdiff(has, c("model", "x", "tidy_fun")), collapse = ", "),
+    .method_args_hint(call, args, bad))
 }
