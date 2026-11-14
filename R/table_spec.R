@@ -241,7 +241,10 @@
 .ard_spec_study_keys <- list(rounding = c("r", "sas"),
                              # any text: where the files go, where the
                              # programs are (for {PROGRAM})
-                             output_path = NULL, program_dir = NULL)
+                             output_path = NULL, program_dir = NULL,
+                             # the name of the default page configuration
+                             # (the default page rows' set; YAML settings.style)
+                             style = NULL)
 
 # What a report's own row replaces a default row by.  `tables` has one row
 # per report, so its key is the report itself.
@@ -1156,6 +1159,9 @@ print.tfl_table_spec <- function(x, ...) {
   tokens_study <- character()
   page_study <- character()
   bands_own <- c(header = FALSE, footer = FALSE)
+  # (the report's own rows alone, not its pattern's: a header or footer that
+  # is the page configuration's, said by name, needs none of the report's)
+  bands_report <- c(header = FALSE, footer = FALSE)
   # the study's own header and footer rows (Standard): a report's program
   # names the lines it shares with them (tfl_report_code(setup = TRUE))
   bands_study <- list()
@@ -1163,11 +1169,15 @@ print.tfl_table_spec <- function(x, ...) {
   # the blank rows (Standard) -- as if the report had written them, merged
   # first with its own by the same rule
   pat <- .ard_spec_report_pattern(sp$report, output_id)
+  # (a pattern with page rows is the page configuration of its name, the YAML
+  # route's `style:`; NA: the study's default one)
+  style <- if (!is.na(pat) && pat %in% .sheets_config_names(sp)) pat else NA_character_
   for (s in names(.ard_spec_schema())) {
     d <- sp[[s]]
     prow <- if (!is.na(pat) && s %in% .ard_spec_pattern_sheets)
       d[d$output_id %in% paste0("@", pat), , drop = FALSE]
     d <- d[is.na(d$output_id) | d$output_id == output_id, , drop = FALSE]
+    if (s %in% names(bands_report)) bands_report[[s]] <- any(!is.na(d$output_id))
     if (NROW(prow)) d <- .ard_spec_over_pattern(d, prow, s, output_id)
     mine <- !is.na(d$output_id)
     # a header or footer of the report's own (not the study's): written in
@@ -1216,6 +1226,8 @@ print.tfl_table_spec <- function(x, ...) {
   attr(sp, "tokens_study") <- tokens_study
   attr(sp, "page_study") <- page_study
   attr(sp, "bands_own") <- bands_own
+  attr(sp, "bands_report") <- bands_report
+  attr(sp, "style") <- style
   attr(sp, "bands_study") <- bands_study
   sp
 }

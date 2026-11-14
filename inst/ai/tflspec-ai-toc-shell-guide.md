@@ -149,12 +149,14 @@ mention them in the assumptions only when they change what you write
   assumption when they differ from `label`) then the population, each `{center: ...}` (`left` when the
   shell shows them left-aligned); `footnotes:` by line number, each
   `{left: ...}`.  Line numbers are quoted keys: `'1':`, `'2':`.
-- **`spec/defaults.yml`'s `page:`** for what every output shares: the
-  running `header:` and `footer:` lines the shells show at the top and
-  bottom of the page (`{PAGE}`, `{TOTAL_PAGES}`, `{PROGRAM}`,
-  `{DATETIME}` where the shell shows "Page x of y", a program name, a run
-  date), and the page itself when the shells say it (`rtf_page:
-  {orientation: landscape}`).
+- **a page configuration in `spec/defaults.yml`'s `styles:`** (named by
+  `study.yml`'s `settings: {style: ...}`) for what every output shares:
+  under its `page:`, the running `header:` and `footer:` lines the shells
+  show at the top and bottom of the page (`{PAGE}`, `{TOTAL_PAGES}`,
+  `{PROGRAM}`, `{DATETIME}` where the shell shows "Page x of y", a program
+  name, a run date; lines at the top of the band under `first:`, at the
+  bottom under `last:`), and the page itself when the shells say it
+  (`rtf_page: {orientation: landscape}`).  A `page:` in `defaults.yml` stops.
 - `study.yml`'s `settings:` `program` / `file` only when the TOC names the
   programs or the files by a rule (`{output_id}.R`); else leave them out.
 
@@ -585,10 +587,11 @@ The figure's titles and footnotes are its `page:`, as a table's.
 ## 7. The page
 
 From the shell (else the TOC, §2.4): each report's `page.titles` and `page.footnotes`.
-From the shells' page, once in `spec/defaults.yml`'s `page:`: the
+From the shells' page, once in a page configuration (`spec/defaults.yml`'s
+`styles:`, named by `study.yml`'s `settings: {style: ...}`): the
 `header` and `footer` lines, the page (`rtf_page: {orientation:
 landscape, paper_size: letter}` -- ask when not shown), the font when the
-shell names it.  `tokens:` only for a text the shells repeat as a
+shell names it.  `tokens:` (in `study.yml`) only for a text the shells repeat as a
 placeholder (`{STUDY}`).  Everything else left out: the defaults are
 rtfreporter's clinical layout.
 

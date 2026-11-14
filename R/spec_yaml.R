@@ -79,9 +79,9 @@
 #'   `content` adding to them or changing them ([tfl_resolve_output()],
 #'   [tfl_template_to_spec()]); `NULL` none.
 #' @param style The study's page configuration the report picks (`"compact"`:
-#'   a style set of `defaults.yml`'s `styles:`, its look -- page and table
-#'   details; [tfl_styles()] lists them); `NULL`: the study's
-#'   `settings.style`, else `standard`.
+#'   a style set of `defaults.yml`'s `styles:`, or a built-in one such as
+#'   `"tfl_small"`; [tfl_styles()] lists them); `NULL`: the template's set
+#'   value, else the study's `settings.style`, else `tfl_standard`.
 #' @return `tfl_r()`: a string of class `tfl_r`; `tfl_unset()`: an object
 #'   of class `tfl_unset`; the rest: lists of class `tfl_call`, `tfl_item`,
 #'   `tfl_output`.

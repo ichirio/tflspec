@@ -49,7 +49,11 @@ tfl_write_spec_xlsx <- function(dir, path) {
     note(NA_character_, "groups", "condition-defined groups (data.yml groups:) have no sheet in this workbook")
   }
   # the defaults and patterns: the page parts, the code list templates
-  scopes <- c(list(list(id = NA_character_, layer = s$defaults)),
+  # (the default rows are the study's default page configuration, when it is
+  # the study's own, and its tokens)
+  dflt <- .style_default_name(s)
+  dpage <- .page_resolve(if (dflt %in% names(s$styles)) s$styles[[dflt]]$page, .study_tokens(s), NULL)
+  scopes <- c(list(list(id = NA_character_, layer = list(page = dpage, content = s$defaults$content))),
               lapply(names(s$patterns), function(n) list(id = paste0("@", n), layer = s$patterns[[n]])))
   for (sc in scopes) {
     .flat_page(sc$layer$page, sc$id, add_rows, note)

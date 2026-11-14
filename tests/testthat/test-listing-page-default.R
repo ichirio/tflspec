@@ -31,7 +31,9 @@
   writeLines(c("id: L-1", "kind: listing", "label: AEs", "common: {population: SAF}", ext,
                "data: {source: dataset, dataset: ADAE, population: SAF, where: !r 'AESEV == \"MILD\"'}",
                extra, "content:", content,
-               "page:", "  titles: {'1': {center: Listing 1}}"),
+               # (no running header or footer: the page breaks are the plain ones)
+               "page:", "  titles: {'1': {center: Listing 1}}",
+               "  header: !unset", "  footer: !unset"),
              file.path(sp, "outputs", "L-1.yml"))
   d
 }
@@ -130,7 +132,9 @@ test_that("the listing template has one page size item, 22 rows", {
                "template:",
                "  name: listing",
                "  args: {data: ADAE, columns: [{vars: [USUBJID], label: Subject}]}",
-               "page:", "  titles: {'1': {center: Listing 1}}"),
+               # (no running header or footer: the page breaks are the plain ones)
+               "page:", "  titles: {'1': {center: Listing 1}}",
+               "  header: !unset", "  footer: !unset"),
              file.path(d, "spec", "outputs", "L-1.yml"))
   ro <- .lp_resolved(d)
   expect_identical(sum(.lp_fns(ro) == "plan_paginate_rows"), 1L)

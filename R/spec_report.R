@@ -227,11 +227,9 @@
 }
 
 # The running header or footer as rtf_section() takes it: rtf_header(lines).
-# After the study's setup code (`split`), a report without lines of its
-# own says the study's by name (study_header); one whose own lines come
-# before or after the study's, the study's by the name of their lines
-# (study_header_lines) -- when they are the study's lines as the setup
-# writes them.
+# After the study's setup code (`split`), a report whose band is its
+# configuration's lines as they are (no body line, no line changed) says the
+# configuration's by name (header_<name>, footer_<name>).
 .page_section_band <- function(pg, band, tokens, split = NULL) {
   b <- .page_band(pg, band, tokens)
   if (!length(b)) return(NULL)
@@ -240,27 +238,11 @@
   # page says them (page.rtf_header, page.rtf_footer)
   style <- .band_style(pg, band)
   call <- function(lines) do.call(.spec_call, c(list(fn, lines), style))
-  if (is.null(split)) return(call(b))
-  nm <- .setup_band_names[[band]]
-  study_lines <- split$bands_study[[band]]
-  # (the study's band by name only when its look is the study's too)
-  same_look <- identical(style, split$band_style_study[[band]] %||% list())
-  if (!same_look) return(call(b))
-  if (!isTRUE(split$bands_own[[band]]) && length(study_lines)) return(.spec_sym(nm))
-  if (length(study_lines)) {
-    st <- stats::setNames(list(study_lines), band)
-    sb <- .page_band(st, band, tokens)
-    n <- length(sb)
-    if (n && length(b) > n && identical(sb, .page_band(st, band, NULL))) {
-      lines <- .spec_sym(paste0(nm, "_lines"))
-      if (identical(utils::tail(b, n), sb)) {
-        return(call(.spec_call("c", utils::head(b, -n), lines)))
-      }
-      if (identical(utils::head(b, n), sb)) {
-        return(call(.spec_call("c", lines, utils::tail(b, -n))))
-      }
-    }
-  }
+  nm <- split$band_obj[[band]]
+  if (is.null(nm)) return(call(b))
+  # (the configuration's band by name only when its look is the configuration's too)
+  same_look <- identical(style, split$band_style_cfg[[band]] %||% list())
+  if (same_look && identical(b, .page_band(split$cfg_flat, band, tokens))) return(.spec_sym(nm))
   call(b)
 }
 
@@ -312,48 +294,47 @@
   page
 }
 
-# The study's and the report's parts of a report's page (the report as
-# read, before its layers are put together): the study's is its defaults,
-# the report's its pattern and its own.  `page_study`: the study's font
-# and size the report does not say; `tokens_study`: the study's tokens the
-# report does not say; `bands_own`: the report has lines of its own in its
-# header or footer (an !unset line too); `bands_study`: the study's lines
-# the report's do not replace.
+# What the study's setup code says for a report (the report as read, before
+# its layers are put together): `page_study`: the study's font and size the
+# report does not say and its configuration does not change (the setup's
+# options() give them); `tokens_study`: the study's tokens the report does
+# not say; `cfg_flat`: the report's configuration as a resolved page;
+# `band_obj`: the setup's objects holding the configuration's header and
+# footer (header_<name>, footer_<name>); `band_style_cfg`: their look.
 .page_split <- function(output, study) {
   if (isTRUE(attr(output, "resolved")) || is.null(study)) {
     .ard_stop(paste0("tfl_report_code(setup = TRUE): give the report as read ",
                      "(tfl_read_output(), not resolved) and its `study`."))
   }
-  chain <- .extends_step(output, "page")
-  study_pg <- if ("defaults" %in% chain) study$defaults$page %||% list() else list()
-  layers <- c(lapply(setdiff(chain, "defaults"), function(nm) .layer_of(nm, study)$page),
-              list(output$page))
-  said <- function(key, sub = NULL) any(vapply(layers, function(l) {
-    v <- l[[key]]
+  cfg <- .report_style(output, study)
+  cfg_pg <- .page_config_flat(cfg$set)
+  study_pg <- .page_config_flat(list(page = .study_default_page(study)))
+  own <- output$page %||% list()
+  said <- function(key, sub = NULL) {
+    v <- own[[key]]
     if (!is.null(sub)) v <- if (.is_map(v)) v[[sub]] else NULL
     !is.null(v) && length(v) > 0L
-  }, NA))
-  font_said <- function(p) length(p$rtf_document$font_table %||% list()) > 0L
-  lang_said <- function(p) length(p$rtf_document$font_lang %||% list()) > 0L
-  size_said <- function(p) !is.null(.page_style(p)$font_size_half_points)
-  page_study <- c(if (font_said(study_pg) && !said("rtf_document", "font_table")) "font",
-                  if (lang_said(study_pg) && !said("rtf_document", "font_lang")) "font_lang",
-                  if (size_said(study_pg) && !said("rtf_style", "font_size_half_points") &&
-                      !said("rtf_default_format", "font_size_half_points"))
-                    "font_size_half_points")
-  own_tokens <- unique(unlist(lapply(layers, function(l) names(l$tokens))))
-  tokens_study <- setdiff(names(.page_args(study_pg$tokens)), own_tokens)
-  bands_own <- c(header = said("header"), footer = said("footer"))
-  bands_study <- lapply(c(header = "header", footer = "footer"), function(b) {
-    own_keys <- unique(unlist(lapply(layers, function(l) names(l[[b]]))))
-    m <- .page_args(study_pg[[b]])
-    m[setdiff(names(m), own_keys)]
-  })
-  band_style_study <- lapply(c(header = "header", footer = "footer"),
-                             function(b) .band_style(study_pg, b))
-  list(page_study = page_study, tokens_study = tokens_study,
-       bands_own = bands_own, bands_study = bands_study, band_style_study = band_style_study)
+  }
+  font_of <- function(p) .page_args(p$rtf_document)$font_table
+  lang_of <- function(p) .page_args(p$rtf_document)$font_lang
+  size_of <- function(p) .page_style(p)$font_size_half_points
+  same <- function(get) identical(get(cfg_pg), get(study_pg))
+  page_study <- c(
+    if (length(font_of(study_pg)) && same(font_of) && !said("rtf_document", "font_table")) "font",
+    if (length(lang_of(study_pg)) && same(lang_of) && !said("rtf_document", "font_lang")) "font_lang",
+    if (!is.null(size_of(study_pg)) && same(size_of) && !said("rtf_style", "font_size_half_points") &&
+        !said("rtf_default_format", "font_size_half_points")) "font_size_half_points")
+  tokens_study <- setdiff(names(.study_tokens(study)), names(.page_args(own$tokens)))
+  bands <- c(header = "header", footer = "footer")
+  obj <- if (cfg$name %in% .setup_style_names(study)) {
+    lapply(bands, function(b) .setup_band_object(b, cfg$name))
+  } else list()
+  list(page_study = page_study, tokens_study = tokens_study, cfg_flat = cfg_pg,
+       band_obj = obj, band_style_cfg = lapply(bands, function(b) .band_style(cfg_pg, b)))
 }
+
+# the object the setup code gives a configuration's header or footer
+.setup_band_object <- function(band, name) paste0(band, "_", gsub("[^A-Za-z0-9_.]", "_", name))
 
 # A content's place on the page, as rtfreporter's rtf_tables() /
 # rtf_figures() take it: on the page of the content before it

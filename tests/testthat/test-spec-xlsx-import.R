@@ -32,8 +32,8 @@ test_that("edited rows update their items by key; new rows add; the rest is unto
   expect_true(any(r$changes$sheet == "codelists" & r$changes$to == "Ctrl"))
   # the files: the defaults' token, the report's title, analyses, footnote, code list
   s <- tfl_read_study_spec(d)
-  expect_identical(s$defaults$page$tokens$COMPANY, "Acme Pharma")
-  expect_identical(s$defaults$page$header[["1"]]$right, "DRAFT")   # untouched
+  expect_identical(s$study$tokens$COMPANY, "Acme Pharma")
+  expect_identical(s$study$tokens$STATUS, "DRAFT")   # untouched
   o <- tfl_read_outputs(d)[["T-14-1-1"]]
   expect_identical(o$page$titles[["2"]]$center, "Demographics (edited)")
   expect_identical(o$page$footnotes[["2"]]$left, "New note.")

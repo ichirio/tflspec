@@ -31,7 +31,7 @@
   }
   lb <- .layers_below(output, study)
   own <- length(output$style) == 1L && !is.na(output$style)
-  lb$style_name <- if (!is.null(lb$style)) if (own) output$style else "standard"
+  lb$style_name <- if (!is.null(lb$style)) if (own) output$style else .style_default_name(study)
   lb$style_route <- if (own) "own" else "template"
   lb
 }
@@ -39,7 +39,7 @@
 # The style of a template report, resolved before anything else (canon
 # 1.32): the report's `style:` field, else its `style` argument, else the
 # set's value -- the study's `settings.style` the parameter refers to, else
-# its fallback -- else "standard".  A template that fixes its style stops
+# its fallback -- else "tfl_standard".  A template that fixes its style stops
 # on another one.  `set`: the style set (.tpl_style_set()), NULL when the
 # style is unset or the template has no `style`; `route`: where the name is
 # from (.tpl_param_route()).
@@ -65,7 +65,7 @@
       nm <- hit$value
       route <- .tpl_param_route(p, NULL, hit$key)
     } else {
-      nm <- p$default %||% "standard"
+      nm <- p$default %||% .style_default_name(study)
       route <- .tpl_param_route(p)
     }
   }
@@ -295,13 +295,13 @@ tfl_study_value <- function(study, key, output = NULL) {
 
 # The range a report's references read (.tpl_study_read()): `content`, the
 # layers' content merged, and `layers`, each layer's content nearest first.
-# No report: the `settings.style` set (else `standard`) over the defaults.
+# No report: the `settings.style` set (else `tfl_standard`) over the defaults.
 # A report whose content step lays nothing (`{content: none}`) reads none:
 # its content references take their fallbacks (canon 1.32).  NULL: the old
 # range (study$defaults$content) -- a template not yet migrated.
 .tpl_ref_range <- function(output, study) {
   if (is.null(output)) {
-    nm <- .tpl_study_read1("settings.style", NULL, study) %||% "standard"
+    nm <- .style_default_name(study)
     st <- tryCatch(.tpl_style_set(nm, study), error = function(e) NULL)
     layers <- c(if (!is.null(st)) list(st$content), list(study$defaults$content))
   } else {

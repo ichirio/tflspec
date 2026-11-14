@@ -5,8 +5,8 @@
 # header and footer sheets, written from the study's defaults
 # (spec/defaults.yml, `page:`) and from a report of the YAML spec.  The
 # lines are the ones a report's program refers to after the setup
-# (tfl_report_code(output, setup = TRUE, study = ): study_header,
-# study_header_lines ...), made the same way (.page_band()).
+# (tfl_report_code(output, setup = TRUE, study = ): header_<name> ...),
+# made the same way (.page_band()).
 
 #' The lines of the study's setup file that tflspec owns
 #'
@@ -95,9 +95,12 @@ tfl_study_setup_code <- function(study) {
 }
 
 # The setup code of a study's spec, one element a line (none: the study's
-# defaults say no font, size, tokens, header or footer)
+# defaults say no font, size, tokens, header or footer).  The font and size
+# are its default configuration's; the tokens study.yml's `tokens:`; each
+# configuration's header and footer are written once, as objects
+# header_<name> and footer_<name>.
 .study_setup_code <- function(study) {
-  pg <- study$defaults$page %||% list()
+  pg <- .page_config_flat(list(page = .study_default_page(study)))
   out <- character()
   # the company's font and size, for every report
   opts <- list()
@@ -137,8 +140,8 @@ tfl_study_setup_code <- function(study) {
   if (length(opts)) {
     out <- c(out, .spec_call_code(do.call(.spec_call, c(list("options"), opts)), 0L))
   }
-  # the study's tokens
-  tk <- .page_args(pg$tokens)
+  # the study's tokens (study.yml)
+  tk <- .study_tokens(study)
   if (length(tk)) {
     v <- vapply(tk, function(x) if (length(x) != 1L || is.na(x)) "" else as.character(x), "")
     keep <- !trimws(v) %in% .ard_spec_omit
@@ -147,21 +150,21 @@ tfl_study_setup_code <- function(study) {
       out <- c(out, .spec_call_code(.spec_call("options", rtfreporter.tokens = tok), 0L))
     }
   }
-  # the running header and footer: their lines, and the band
-  for (band in names(.setup_band_names)) {
-    b <- .page_band(pg, band, NULL)
-    if (!length(b)) next
-    # a line of tokens of one's own goes when a report's are empty
-    own <- setdiff(.page_used_tokens(pg[band]), .ard_spec_rtf_tokens)
-    nm <- .setup_band_names[[band]]
-    lines <- paste0(nm, "_lines")
-    # (its look as the study's page says it: page.rtf_header / rtf_footer)
-    style <- .band_style(pg, band)
-    if (is.null(style$drop_empty_rows) && length(own)) style$drop_empty_rows <- TRUE
-    call <- do.call(.spec_call, c(list(paste0("rtf_", band), .spec_sym(lines)), style))
-    out <- c(out,
-             paste(lines, "<-", .spec_call_code(b, 0L, lead = nchar(lines) + 4L)),
-             paste(nm, "<-", .spec_call_code(call, 0L, lead = nchar(nm) + 4L)))
+  # the running header and footer of each configuration: the lines and the band
+  for (nm in .setup_style_names(study)) {
+    cpg <- .page_config_flat(.tpl_style_set(nm, study))
+    for (band in names(.setup_band_names)) {
+      b <- .page_band(cpg, band, NULL)
+      if (!length(b)) next
+      # a line of tokens of one's own goes when a report's are empty
+      own <- setdiff(.page_used_tokens(cpg[band]), .ard_spec_rtf_tokens)
+      obj <- .setup_band_object(band, nm)
+      # (its look as the configuration says it: page.rtf_header / rtf_footer)
+      style <- .band_style(cpg, band)
+      if (is.null(style$drop_empty_rows) && length(own)) style$drop_empty_rows <- TRUE
+      call <- do.call(.spec_call, c(list(paste0("rtf_", band), b), style))
+      out <- c(out, paste(obj, "<-", .spec_call_code(call, 0L, lead = nchar(obj) + 4L)))
+    }
   }
   if (!length(out)) return(character())
   .drop_attached_ns(unlist(strsplit(out, "\n", fixed = TRUE)))

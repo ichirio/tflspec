@@ -3,18 +3,16 @@
 # `extends` cell is there only when the chain is not what that alone reads
 # back as, [first pattern, defaults].
 
-# a study of fictional reports, one per chain; the defaults and the patterns
-# set the token COMPANY (and others), so the winning layer shows
+# a study of fictional reports, one per chain (the page has no file layer:
+# a pattern holds content only)
 ex_study <- function(chains) {
   d <- withr::local_tempdir(.local_envir = parent.frame())
   src <- system.file("extdata", "spec-yaml", package = "tflspec")
   dir.create(file.path(d, "outputs"))
   dir.create(file.path(d, "patterns"))
-  dl <- readLines(file.path(src, "defaults.yml"))
-  dl <- sub("tokens: {COMPANY: Sample Pharma,", "tokens: {COMPANY: FromDefaults, TONLYD: d,", dl, fixed = TRUE)
-  writeLines(dl, file.path(d, "defaults.yml"))
-  writeLines(c("page:", "  tokens: {COMPANY: FromP, TONLYP: p}"), file.path(d, "patterns", "p.yml"))
-  writeLines(c("page:", "  tokens: {COMPANY: FromQ, TONLYQ: q}"), file.path(d, "patterns", "q.yml"))
+  file.copy(file.path(src, "defaults.yml"), file.path(d, "defaults.yml"))
+  writeLines(c("content:", "  - plan_blanks: {first: true}"), file.path(d, "patterns", "p.yml"))
+  writeLines(c("content:", "  - plan_blanks: {first: false}"), file.path(d, "patterns", "q.yml"))
   ol <- readLines(file.path(src, "outputs", "T-14-1-1.yml"))
   for (id in names(chains)) {
     x <- sub("id: T-14-1-1", paste0("id: ", id), ol, fixed = TRUE)
@@ -42,12 +40,6 @@ ex_roundtrip <- function(d) {
   list(sheets = sh, dir = to)
 }
 
-ex_token <- function(d, id, tok = "COMPANY") {
-  s <- tfl_read_study_spec(d)
-  o <- tfl_resolve_output(tfl_read_outputs(d)[[id]], s)
-  o$page$tokens[[tok]]
-}
-
 test_that("the chains of the issue's table come back as written, in memory", {
   d <- ex_study(ex_chains)
   rt <- ex_roundtrip(d)
@@ -58,24 +50,6 @@ test_that("the chains of the issue's table come back as written, in memory", {
   expect_identical(ex_chain(rt$dir, "T-none"), "none")
   expect_identical(ex_chain(rt$dir, "T-alone"), "patterns/p")
   expect_identical(ex_chain(rt$dir, "T-two"), c("patterns/p", "patterns/q", "defaults"))
-})
-
-test_that("the winning layer is the same after the round trip", {
-  d <- ex_study(ex_chains)
-  rt <- ex_roundtrip(d)
-  for (id in names(ex_chains)) {
-    for (tok in c("COMPANY", "TONLYD", "TONLYP", "TONLYQ")) {
-      expect_identical(ex_token(rt$dir, id, tok), ex_token(d, id, tok), info = paste(id, tok))
-    }
-  }
-  # COMPANY is set by the defaults and the pattern: the order decides
-  expect_identical(ex_token(rt$dir, "T-flip"), "FromDefaults")
-  expect_identical(ex_token(rt$dir, "T-pdef"), "FromP")
-  expect_identical(ex_token(rt$dir, "T-two"), "FromP")
-  expect_identical(ex_token(rt$dir, "T-twoflip"), "FromQ")
-  expect_null(ex_token(rt$dir, "T-none"))
-  expect_null(ex_token(rt$dir, "T-none", "TONLYD"))
-  expect_identical(ex_token(rt$dir, "T-two", "TONLYQ"), "q")
 })
 
 test_that("the unchanged forms get no extends cell; the others do", {
@@ -120,9 +94,6 @@ test_that("the chains also go through the spec workbook", {
   for (id in names(ex_chains)) {
     expect_identical(ex_chain(to, id), ex_chain(d, id), info = id)
   }
-  expect_identical(ex_token(to, "T-flip"), "FromDefaults")
-  expect_identical(ex_token(to, "T-two"), "FromP")
-  expect_null(ex_token(to, "T-none"))
 })
 
 test_that("a report with no extends: reads as [defaults] and comes back unchanged", {

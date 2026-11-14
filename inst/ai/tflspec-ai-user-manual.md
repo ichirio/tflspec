@@ -52,7 +52,8 @@ differ, trust the package, not this file, and fetch the matching copy with
    spec**, and the main path; §6 shows a table's file key by key.
 5. **`id` (`output_id`) is the key.**  A report file says only what
    differs from what it extends (`extends: [defaults]`): the study's
-   `spec/defaults.yml` holds the page and the items every table shares.
+   `spec/defaults.yml` holds the items every table shares and the study's
+   page configurations (`styles:`: the page, a report picks one with `style:`).
 6. **Write values as YAML**: a list `[TRT01A, SEX]`, a map
    `{AGE: Age (years)}`, a number, `true` / `false`; a cell template is
    always quoted (`"{n} ({p:.1f%})"`); `!r` marks R code and only where the
@@ -290,9 +291,14 @@ removes what a layer below set. It reads in flow style too: `{b: !unset}`.
 arguments merge by key; in `content`, the report's items of one function
 replace every item of that function below it, in the place the first had;
 a function only the report has goes after them.  `defaults.yml` holds the
-study-wide content and page (the running header and footer, the
-rounding); a pattern (`@Compact` of the report sheets) is
-`patterns/<name>.yml`.
+study-wide content (the rounding ...) and the page configurations
+(`styles:`, a style set each: the page's settings and the fixed lines of the
+header, footer, titles and footnotes in the blocks `first` and `last`; a
+report's own lines print between them; `tfl_styles()` lists the sets and the
+built-in `tfl_standard` and `tfl_small`, a study set may not take their names);
+the study's tokens are `study.yml`'s `tokens:`.  There is no page layer of
+files: a `page:` in `defaults.yml`, or `extends: {page: ...}`, stops.  A
+pattern is `patterns/<name>.yml`.
 
 ---
 ## 6. A table's report file — the code spec
@@ -1374,7 +1380,7 @@ file.
 | `report` | `type` (`table` / `listing` / `figure`), `file` (`{output_id}.rtf`), `program`, `auto_section`, `section_align`, `auto_title`, `title_align`, `table_font_size_half_points`, `title_font_size_half_points`, `footnote_font_size_half_points`, `page_header`, `page_footer`, `watermark` (`DRAFT`), `figure_width_in`, `figure_height_in` (a figure's size on the page: a number of inches, `fit` -- the page's body -- or blank, the figure's own size as rtfreporter places it -- `tfl_fig_page_size()`; a design's `plot` has only `dpi`, the resolution), `ard_source`, `pattern`, `ard_object` (the ARD's name in the report's program, default `ard`), `page_break`, `space_before`, `first_rows`, `cont_title` (as in a layout row, §11.1), `data_code` and `content_code` (a step that is the report's own R instead of the definition: the data step leaves `data`, a figure's `df`; the content step leaves `content`; the report's datasets by their names in lower case, and `ard` when it reads its ARD, are in reach -- `tfl_check_code()`) |
 | `page` | `paper_size`, `orientation`, `width_in`, `height_in`, margins `margin_*_in`, `header_dist_in`, `footer_dist_in`, `font` (the document's font; the study's row goes to the setup's `options()`), `font_lang` (the language of a font slot: `east_asian = ja`), `font_size_half_points`, `title_format`, `footnote_format`, `title_width`, `footnote_width`, `markup`, `page_more` (the page's rtfreporter arguments no column says, as YAML: `{rtf_header: {font_size_half_points: 16}}`) |
 | `header`, `footer`, `titles`, `footnotes` | `line`, `left`, `center`, `right` — a report's line replaces the default line of the same number; a report's line that says `(none)` takes it out |
-| `tokens` | `name`, `value` — a token of one's own, `{STUDY}` in any of the cells above (`rtf_document(tokens = )`); a report's row replaces the default of the same name, `(none)` takes it out; names upper case, not rtfreporter's own. A report's own tokens work without a row: `{OUTPUT_ID}`, `{OUTPUT_LABEL}` ("Table 14.1.1" from the ID; rows `OUTPUT_KIND_TABLE` / `_LISTING` / `_FIGURE` change the words), `{OUTPUT_TITLE}` `{OUTPUT_POPULATION}` `{OUTPUT_SECTION}` `{STUDY_ID}` (blank unless a row gives them); a line left with only empty tokens is not printed. What every report shares (the default token rows, the default header / footer) can be written once: `tfl_report_setup_code(spec)` (`options(rtfreporter.tokens = )`, `study_header`, `study_footer`; for the YAML spec `tfl_report_setup_code(study)`, from `spec/defaults.yml`), and each program with `tfl_report_code(..., setup = TRUE)` |
+| `tokens` | `name`, `value` — a token of one's own, `{STUDY}` in any of the cells above (`rtf_document(tokens = )`); a report's row replaces the default of the same name, `(none)` takes it out; names upper case, not rtfreporter's own. A report's own tokens work without a row: `{OUTPUT_ID}`, `{OUTPUT_LABEL}` ("Table 14.1.1" from the ID; rows `OUTPUT_KIND_TABLE` / `_LISTING` / `_FIGURE` change the words), `{OUTPUT_TITLE}` `{OUTPUT_POPULATION}` `{OUTPUT_SECTION}` `{STUDY_ID}` (blank unless a row gives them); a line left with only empty tokens is not printed. What every report shares (the default token rows, the default header / footer) can be written once: `tfl_report_setup_code(spec)` (`options(rtfreporter.tokens = )`, `study_header`, `study_footer`; for the YAML spec `tfl_report_setup_code(study)`, from the study's page configurations, `header_<name>` and `footer_<name>` each, and `study.yml`'s `tokens:`), and each program with `tfl_report_code(..., setup = TRUE)` |
 
 Page tokens in the running header / footer: `{PAGE}`, `{TOTAL_PAGES}`,
 `{PROGRAM}` (or `{PROGRAM_FULL}`, its absolute path), `{DATETIME}`.

@@ -171,28 +171,117 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
   }
 
   # -- the page parts ----------------------------------------------------------
-  page_rows <- function(page, id) {
-    for (band in c("header", "footer", "titles", "footnotes")) {
-      m <- page[[band]]
-      if (inherits(m, "tfl_unset")) next
-      for (line in names(m)) {
-        cells <- m[[line]]
-        r <- list(output_id = id, line = line)
-        if (inherits(cells, "tfl_unset")) { r$left <- "(none)"; add(band, r); next }
-        for (cn in c("left", "center", "right", "row_height_twips")) {
-          if (!is.null(cells[[cn]])) r[[cn]] <- cell(cells[[cn]])
-        }
-        add(band, r)
+  # the highest line number of a band among the reports' own (body) lines:
+  # a configuration's `last` lines are numbered above it
+  rep_max <- stats::setNames(vector("list", length(.page_bands)), .page_bands)
+  for (band in .page_bands) {
+    mx <- 0
+    for (o in outs) {
+      x <- o$page[[band]]
+      if (is.list(x) && !inherits(x, "tfl_unset")) {
+        n <- suppressWarnings(as.numeric(names(.page_own_band(x)$body)))
+        n <- n[!is.na(n)]
+        if (length(n)) mx <- max(mx, n)
       }
     }
+    rep_max[[band]] <- mx
+  }
+  add_band_line <- function(band, id, line, cells) {
+    r <- list(output_id = id, line = line)
+    if (inherits(cells, "tfl_unset")) { r$left <- "(none)"; add(band, r); return(invisible()) }
+    for (cn in c("left", "center", "right", "row_height_twips")) {
+      if (!is.null(cells[[cn]])) r[[cn]] <- cell(cells[[cn]])
+    }
+    add(band, r)
+  }
+  # a configuration band's lines by their sheet number
+  band_lines <- function(page, band) {
+    cb <- .page_config_band(page[[band]], band, "the page configuration") %||% list()
+    nums <- .cfg_numbers(cb, rep_max[[band]])
+    out <- list()
+    for (blk in .page_blocks) for (k in names(cb[[blk]])) out[[nums[[blk]][[k]] %||% k]] <- cb[[blk]][[k]]
+    out
+  }
+  # a band's rows: `m` the lines as written (a configuration's blocks, or a
+  # report's body lines and `first` / `last` overrides); `nums` the sheets'
+  # numbers of the configuration's lines (its own numbers, a `last` line
+  # renumbered above the reports' only when they would not follow them)
+  band_rows <- function(band, m, id, nums, config) {
+    add_line <- function(line, cells) add_band_line(band, id, line, cells)
+    if (config) {
+      for (blk in .page_blocks) {
+        for (k in names(m[[blk]])) add_line(nums[[blk]][[k]] %||% k, m[[blk]][[k]])
+      }
+      return(invisible())
+    }
+    ob <- .page_own_band(m)
+    # (an override says the configuration line's number)
+    for (blk in .page_blocks) {
+      if (inherits(ob[[blk]], "tfl_unset")) next
+      for (k in names(ob[[blk]])) add_line(nums[[blk]][[k]] %||% k, ob[[blk]][[k]])
+    }
+    # (a body line takes a number the configuration does not use, else it would
+    # read as an override of that line)
+    taken <- c(unlist(nums$first), unlist(nums$last))
+    free <- max(suppressWarnings(as.numeric(c(taken, names(ob$body)))), 0, na.rm = TRUE)
+    for (k in names(ob$body)) {
+      line <- k
+      if (k %in% taken) {
+        free <- free + 1
+        line <- as.character(as.integer(free))
+        note(id, paste0("page.", band), paste0("line ", k, " is a number of the page configuration's lines on the sheets; written as line ", line))
+      }
+      add_line(line, ob$body[[k]])
+    }
+  }
+  # a page: its bands (rows by line), tokens, and the rtfreporter arguments
+  # as the page and report columns; `cfg` the configuration's page a report's
+  # lines are numbered against (NULL for the configuration's own rows)
+  page_rows <- function(page, id, cfg = NULL, config = is.null(cfg), base = NULL) {
+    for (band in .page_bands) {
+      m <- page[[band]]
+      if (!is.null(base)) {
+        # a `@name` configuration lies over the default rows, as a pattern's rows
+        # do: its rows are what differs; a default line it lacks is (none)
+        xl <- band_lines(page, band)
+        bl <- base$lines[[band]]
+        for (n in names(xl)) if (!identical(bl[[n]], xl[[n]])) add_band_line(band, id, n, xl[[n]])
+        for (n in setdiff(names(bl), names(xl))) add_band_line(band, id, n, tfl_unset())
+        next
+      }
+      if (inherits(m, "tfl_unset") || is.null(m)) next
+      cb <- .page_config_band(if (config) m else cfg[[band]], band, "the page configuration")
+      nums <- .cfg_numbers(cb, rep_max[[band]])
+      band_rows(band, m, id, nums, config)
+    }
     for (nm in names(page$tokens)) add("tokens", list(output_id = id, name = nm, value = cell(page$tokens[[nm]])))
-    # the rtfreporter functions' arguments back as the page and report columns
     pr <- .page_columns(page)
+    if (!is.null(base)) {
+      for (sh in names(pr)) pr[[sh]] <- pr[[sh]][!vapply(names(pr[[sh]]), function(k) identical(pr[[sh]][[k]], base$pr[[sh]][[k]]), NA)]
+    }
     for (sh in c("page", "report")) if (length(pr[[sh]])) add(sh, c(list(output_id = id), pr[[sh]]))
     for (k in setdiff(names(page), .page_known)) note(id, paste0("page.", k), "no sheet for it")
   }
-  page_rows(s$defaults$page, NA_character_)
-  for (nm in names(s$patterns)) page_rows(s$patterns[[nm]]$page, paste0("@", nm))
+  # the study's default page configuration (when the study has its own: a
+  # built-in one is every report's anyway) with its tokens are the default
+  # rows; its other configurations are `@name` rows, as a pattern's
+  dflt <- .style_default_name(s)
+  dpage <- if (dflt %in% names(s$styles)) s$styles[[dflt]]$page else list()
+  dpage$tokens <- .study_tokens(s)
+  page_rows(dpage, NA_character_)
+  base <- list(lines = stats::setNames(lapply(.page_bands, function(b) band_lines(dpage, b)), .page_bands),
+               pr = .page_columns(dpage))
+  for (nm in setdiff(names(s$styles), dflt)) {
+    page_rows(s$styles[[nm]]$page, paste0("@", nm), base = base)
+    # (a configuration with nothing that differs from the default rows has no
+    # row: one empty row of the report sheet keeps its name, which a report's
+    # pattern cell needs to be known)
+    mine <- vapply(rows, function(l) any(vapply(l, function(r) identical(r$output_id, paste0("@", nm)), NA)), NA)
+    if (!any(mine)) add("report", list(output_id = paste0("@", nm)))
+    if (length(s$styles[[nm]]$content)) {
+      note(paste0("@", nm), "content", paste0("a page configuration's content (", nm, ") is not kept: no sheet holds it"))
+    }
+  }
 
   # -- the ARD's study-wide sheets ----------------------------------------------
   ard <- list()
@@ -249,19 +338,30 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
                                   vapply(o$extends, paste, "", collapse = " | ")), collapse = "; ")
     }
     pat <- if (!is.list(o$extends)) grep("^patterns/", o$extends, value = TRUE)
+    # (a report's own configuration, a study set that is not the default, is
+    # the `@name` of its rows: the pattern cell says it, the extends cell the
+    # chain when that is not [<pattern>, defaults])
+    sty <- if (is.character(o$style) && length(o$style) == 1L && o$style != dflt &&
+               o$style %in% names(s$styles) && !length(pat) &&
+               (is.null(o$extends) || identical(as.character(unlist(o$extends)), "defaults")) &&
+               !is.list(o$extends)) o$style
     if (length(pat)) rr$pattern <- paste0("@", substring(pat[1L], 10L))
+    else if (!is.null(sty)) rr$pattern <- paste0("@", sty)
+    pat_cell <- if (length(pat)) pat[1L] else if (!is.null(sty)) paste0("patterns/", sty)
+    # (the pattern cell alone reads back as [<pattern>, defaults], a style's too)
     # (what the pattern cell alone reads back as is [first pattern, defaults];
     # any other chain -- the order flipped, `none`, a pattern alone, two
     # patterns -- is said in the `extends` cell)
-    if (!is.null(o$extends) && !is.list(o$extends) && !identical(as.character(unlist(o$extends)),
-                                          c(if (length(pat)) pat[1L], "defaults"))) {
+    if (!is.null(o$extends) && !is.list(o$extends) && is.null(sty) &&
+        !identical(as.character(unlist(o$extends)), c(pat_cell, "defaults"))) {
       rr$extends <- .sheet_cell(o$extends)
     }
     for (k in c("file", "program")) if (!is.null(e[[k]])) rr[[k]] <- cell(e[[k]])
     # the report row: its kind, pattern, file and program here, its
     # rtfreporter arguments from page_rows() -- one row
     before <- length(rows$report %||% list())
-    page_rows(o$page, id)
+    rs <- tryCatch(.report_style(o, s), error = function(e) NULL)
+    page_rows(o$page, id, cfg = rs$set$page %||% list())
     after <- rows$report %||% list()
     if (length(after) > before) {
       extra <- after[[length(after)]]
@@ -413,14 +513,11 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     note(NA_character_, "options", paste0(
       "defaults.yml options: (", paste(names(s$options), collapse = ", "), ") is not kept: no sheet or column holds it"))
   }
-  if (length(s$styles)) {
-    note(NA_character_, "styles", paste0(
-      "defaults.yml styles: (", paste(names(s$styles), collapse = ", "), ") is not kept: no sheet or column holds it"))
-  }
   for (id in names(outs)) {
-    if (length(outs[[id]]$style)) {
-      note(id, "style", paste0("style: ", paste(unlist(outs[[id]]$style), collapse = ", "),
-                               " is not kept: no sheet or column holds it; the report no longer picks its look"))
+    st <- outs[[id]]$style
+    if (length(st) && !(is.character(st) && length(st) == 1L && (st %in% names(s$styles) || st == dflt))) {
+      note(id, "style", paste0("style: ", paste(unlist(st), collapse = ", "),
+                               " is a built-in configuration or not the study's: no sheet or column holds it"))
     }
   }
   # the layers' code lists have no sheet of their own (a report's own are
@@ -455,6 +552,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
   settings <- s$study$settings %||% list()
   # every report's file and program go back to the report sheet's study row
   fp <- settings[intersect(c("file", "program"), names(settings))]
+  # (the default style is the default rows' page configuration; its name stays a study row)
   settings <- settings[setdiff(names(settings), c("file", "program"))]
   table$study <- data.frame(key = as.character(names(settings)), value = vapply(settings, cell, ""), stringsAsFactors = FALSE)
   for (sh in c(names(.ard_spec_schema()), .ard_spec_pattern_sheets)) {

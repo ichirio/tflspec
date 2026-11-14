@@ -191,10 +191,10 @@ test_that("no heading to place: the mark's row is dropped (no parameter pages; d
   expect_identical(t$text, hd_shell_texts)
   # the mark in the study's defaults: a report with a heading has it there, one without drops it
   df <- file.path(d, "spec", "defaults.yml")
-  writeLines(c(readLines(df), "  titles:", "    '1': {center: Table 14.3.4.2}",
-               "    '2': {center: Shift Table of Laboratory Values}",
-               "    '3': {left: \"{PAGE_HEADING}\"}",
-               "    '4': {center: (Safety Analysis Set)}"), df)
+  writeLines(c(readLines(df), "      titles:", "        '1': {center: Table 14.3.4.2}",
+               "        '2': {center: Shift Table of Laboratory Values}",
+               "        '3': {left: \"{PAGE_HEADING}\"}",
+               "        '4': {center: (Safety Analysis Set)}"), df)
   hd_write(d, "T-SHD", "shift")
   hd_write(d, "T-DMD", "demog")
   t <- hd_page1(d, "T-SHD")
