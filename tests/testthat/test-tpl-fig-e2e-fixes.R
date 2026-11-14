@@ -30,7 +30,7 @@ e2e_study <- function(d, data, id, template, args) {
     haven::write_xpt(tflspec:::.ai_chr(data[[n]]), file.path(d, "adam", paste0(n, ".xpt")))
   }
   tfl_ai_study_init(d, adam = "adam", study_id = "E2E-1")
-  o <- tfl_output(id, "figure", population = "SAF", extends = "defaults",
+  o <- tfl_output(id, "figure", common = list(population = "SAF"), extends = "defaults",
                   template = list(name = template, args = args))
   tfl_write_output(o, file.path(d, "spec", "outputs", paste0(id, ".yml")))
   invisible(d)

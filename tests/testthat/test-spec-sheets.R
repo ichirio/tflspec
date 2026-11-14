@@ -39,7 +39,7 @@ test_that("the sheets of the fixture study come back: the report list, the page 
   expect_identical(sh$table$titles$center, c("Table 14.1.1", "Demographic Characteristics"))
   expect_identical(sh$ard$analyses$analysis_id, c("GROUPN", "CONT", "CAT"))
   expect_identical(sh$ard$analyses$variables[3L], "AGEGR1 | SEX | RACE | ECOGBL")
-  expect_identical(sh$ard$analysis_data$data_id, "adsl_saf")
+  expect_identical(sh$ard$analysis_data$data_id, "adsl_sub")
   expect_identical(sh$ard$analysis_data$population_id, "SAF")
   expect_identical(sh$table$codelists$label[2L], "Control 100 mg")
   # a nested statistic map is not a cell: left blank

@@ -104,8 +104,8 @@
 #'   `"<verb>.<argument>"` source is read, `study.yml`'s `settings:` the
 #'   `"settings.<name>"` ones (`"settings.treatment"` for the `by`).
 #' @param population The report's analysis set: the value of the
-#'   parameters taken from the report's `population:`
-#'   (`"output.population"`); `NULL` for none.
+#'   parameters taken from the report's `common: population`
+#'   (`"output.common.population"`); `NULL` for none.
 #' @return A data frame, one row a parameter in the template's order:
 #'   `param`, `tier` (`"required"`, `"key"`, `"usual"`, `"other"`), `step`
 #'   (`"call"`, an argument of the template's call, or `"data"`, of a step
@@ -140,7 +140,7 @@ tfl_tpl_args <- function(name, study = NULL, population = NULL) {
   root <- chain[[length(chain)]]
   root_p <- lapply(root$params, .tpl_param_typed)
   names(root_p) <- vapply(root_p, `[[`, "", "name")
-  output <- list(population = population)
+  output <- list(common = list(population = population))
   # (a template with an `extends` in its set reads the range its reports
   # read when they write no `extends` or `style:`: the settings.style set
   # over the defaults, or none under `{content: none}`)

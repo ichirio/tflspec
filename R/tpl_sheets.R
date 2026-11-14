@@ -65,7 +65,7 @@ tfl_read_template_sheets <- function(path) {
     if (isTRUE(tp$params$population$hidden)) {
       if (!is.null(pop) && !is.null(cell_pop) && !identical(pop, cell_pop)) {
         .ard_stop(sprintf(paste0("%s: %s: the `population` column says %s and the `args` cell %s; ",
-                                 "the analysis set is the report's `population:`: give it once."),
+                                 "the analysis set is the report's `common: population`: give it once."),
                           fn, id, pop, cell_pop))
       }
       pop <- pop %||% cell_pop
@@ -81,7 +81,7 @@ tfl_read_template_sheets <- function(path) {
       }
     }
     out[[id]] <- list(id = id, kind = val(t$kind[i]) %||% "table", label = val(t$label[i]),
-                      population = pop, extends = NULL,
+                      common = if (!is.null(pop)) list(population = pop), extends = NULL,
                       template = list(name = val(t$template[i]), args = args))
   }
   out

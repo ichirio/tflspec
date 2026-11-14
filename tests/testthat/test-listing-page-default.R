@@ -28,7 +28,7 @@
     writeLines(c("content:", pattern), file.path(sp, "patterns", "paged.yml"))
     ext <- "extends: [patterns/paged]"
   }
-  writeLines(c("id: L-1", "kind: listing", "label: AEs", "population: SAF", ext,
+  writeLines(c("id: L-1", "kind: listing", "label: AEs", "common: {population: SAF}", ext,
                "data: {source: dataset, dataset: ADAE, population: SAF, where: !r 'AESEV == \"MILD\"'}",
                extra, "content:", content,
                # (no running header or footer: the page breaks are the plain ones)
@@ -128,7 +128,7 @@ test_that("the listing template has one page size item, 22 rows", {
   skip_lp()
   d <- .lp_study(.lp_cols)
   on.exit(unlink(d, recursive = TRUE))
-  writeLines(c("id: L-1", "kind: listing", "label: AEs", "population: SAF",
+  writeLines(c("id: L-1", "kind: listing", "label: AEs", "common: {population: SAF}",
                "template:",
                "  name: listing",
                "  args: {data: ADAE, columns: [{vars: [USUBJID], label: Subject}]}",

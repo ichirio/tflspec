@@ -59,7 +59,7 @@
 #'   haven::write_xpt(as.data.frame(lapply(adsl, chr)), file.path(d, "adam", "adsl.xpt"))
 #'   tfl_ai_study_init(d, adam = "adam", study_id = "EX-1")
 #'   tfl_write_output(
-#'     tfl_output("T-DM", "table", population = "SAF",
+#'     tfl_output("T-DM", "table", common = list(population = "SAF"),
 #'                template = list(name = "demog", args = list(population = "SAF"))),
 #'     file.path(d, "spec", "outputs", "T-DM.yml"))
 #'   p <- tfl_check_spec(d)
@@ -154,7 +154,7 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
         add(output_id = id, part = "page", item = "titles", level = "warning",
             message = sprintf(paste0("the study's header prints the report's label, title and population ",
                                      "already (%s): `page: titles` prints them twice. Remove `page: titles`; ",
-                                     "`label:` and `population:` fill the header."),
+                                     "`label:` and `common: population` fill the header."),
                               paste0("{", tok, "}", collapse = ", ")))
       }
     }

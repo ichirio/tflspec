@@ -10,7 +10,7 @@ test_that("a KM type report with no data: steps: expanding the sheets warns; its
                        full.names = TRUE), d, recursive = TRUE)
   s <- tfl_read_study_spec(d)
   outs <- tfl_read_outputs(d)
-  o <- tfl_output("F-9", "figure", population = "SAF",
+  o <- tfl_output("F-9", "figure", common = list(population = "SAF"),
                   template = list(name = "km_survival", args = list(by = "TRT01A")))
   expect_error(tfl_resolve_output(o, s), "says its data in its own `data:` steps")
   sh <- NULL

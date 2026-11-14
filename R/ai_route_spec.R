@@ -148,12 +148,12 @@
 
 # The titles: the shell's (the TOC's when the shell has none for the report), as `page: titles` -- unless the study standard's
 # header prints the label, the title and the population from the report's
-# `label:` and `population:` (its tokens): then none, or they print twice
+# `label:` and `common: population` (its tokens): then none, or they print twice
 .ai_titles_text <- function(tokens) {
   if (!length(tokens)) return(paste0("`page: titles`, from the shell (the TOC's title only when none for this ",
                                   "report can be read from the shell; an assumption when it differs from `label`);"))
   sprintf(paste0("**no `page: titles`**: the study's header prints the report's label, title ",
-                 "and population itself (%s) from `label:` and `population:` -- write those two ",
+                 "and population itself (%s) from `label:` and `common: population` -- write those two ",
                  "keys (the title as the shell shows it, in `label:`), and no titles, or they print twice;"),
           paste0("{", tokens, "}", collapse = ", "))
 }

@@ -6,14 +6,13 @@ outputs:
   - id: T-14-3-5
     kind: table
     label: Shift from Baseline in Laboratory Normal Range Indicator at Cycle 2 Day 1
-    population: SAF
+    common: {population: SAF}
     extends: [defaults]
+    data:
+      - {id: adlb_c2, from: ADLB, population: SAF, where: !r 'AVISIT == "CYCLE 2 DAY 1" & PARAMCD %in% c("ALT", "AST")'}
     ard:
-      analysis_data:
-        - {id: adlb_c2, from: ADLB, population: SAF, where: !r 'AVISIT == "CYCLE 2 DAY 1" & PARAMCD %in% c("ALT", "AST")'}
       analyses:
         - {id: SHIFT, method: categorical, data: adlb_c2, by: [TRT01A, PARAMCD, BNRIND], variables: [ANRIND]}
-    data: {source: ard}
     content:
       - table_plan: {cols: [TRT01A, .label], rows: {group: PARAMCD}, label: BNRIND}
       - plan_cells: {categorical: "{n}"}

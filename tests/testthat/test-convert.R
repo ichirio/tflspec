@@ -112,7 +112,7 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   expect_identical(t1$kind, "table")
   expect_identical(t1$extends, "defaults")
   expect_identical(t1$style, "Compact")
-  expect_identical(t1$population, "SAF")
+  expect_identical(t1$common$population, "SAF")
   expect_identical(t1$data$source, "ard")
   expect_identical(t1$ard$analysis_data[[1L]]$id, "adsl_saf")
   expect_identical(t1$ard$analyses[[2L]]$id, "AGE")

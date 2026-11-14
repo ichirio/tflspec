@@ -68,7 +68,7 @@ dd_study <- function(blank_race = TRUE, args = list(), template = "demog", codel
   }
   haven::write_xpt(a, file.path(d, "adam", "adsl.xpt"))
   tfl_ai_study_init(d, adam = "adam", study_id = "DD-1")
-  o <- tfl_output("T-DD", "table", population = "SAF", label = "demog", codelists = codelists,
+  o <- tfl_output("T-DD", "table", common = list(population = "SAF"), label = "demog", codelists = codelists,
     template = list(name = template, args = c(list(
       by = "TRT01A", continuous = "AGE", categorical = c("SEX", "RACE")), args)))
   tfl_write_output(o, file.path(d, "spec", "outputs", "T-DD.yml"))

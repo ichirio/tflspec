@@ -19,7 +19,7 @@ sn_study <- function(root) {
 # the output built to its RTF text
 sn_rtf <- function(d, id, name, args, kind = "table") {
   f <- file.path(d, "spec", "outputs", paste0(id, ".yml"))
-  tfl_write_output(tfl_output(id, kind, population = if (kind == "table") "SAF",
+  tfl_write_output(tfl_output(id, kind, common = list(population = if (kind == "table") "SAF"),
                               extends = "defaults",
                               template = list(name = name, args = args)), f)
   out <- suppressWarnings(suppressMessages(tfl_run_output(id, dir = d)))

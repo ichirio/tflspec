@@ -4,7 +4,8 @@ An example: Kaplan-Meier curves of progression-free survival by arm, with a dash
 id: F-14-2-1
 kind: figure
 label: "Kaplan-Meier Plot of Progression-Free Survival"
-population: SAF
+common:
+  population: SAF
 extends: [defaults]
 template:
   name: km_survival

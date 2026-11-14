@@ -969,7 +969,9 @@ rtf_footer:
       from a dataset or an analysis data above it, the subjects of a population, the
       records a condition keeps, columns of the population added, columns derived,
       one row per set of values. In that order. An analysis names one in `data`, or
-      as its `denominator`.'
+      as its `denominator`. In a YAML report these rows are its `data:` list (a
+      definition''s `id` is the `data_id`); a subjects row (from ADSL, no `subjects`)
+      with no population takes the report''s `common: population`.'
     columns:
       - column: data_id
         description: 'The data''s name, and its object''s name in the ARD program:
@@ -1883,6 +1885,16 @@ rtf_footer:
           content''s pipe starts from it and the generated code follows the name.
           Blank: ard.'
         example: ard_dm
+      - column: treatment
+        description: 'The report''s arm variable (`common: treatment` of its YAML):
+          one ADSL variable (TRT01A). The report''s analysis set is `common: population`:
+          the planner and templates sheets'' `population` column. Blank: none.'
+        example: TRT01A
+      - column: population_label
+        description: 'The text {OUTPUT_POPULATION} prints (`common: population_label`):
+          for a report with no analysis set, or in place of the set''s label. Blank:
+          the set''s label.'
+        example: All subjects
   - sheet: page
     description: 'Report: one row a report; the page (rtf_page()) and the document''s
       style (rtf_style()). Blank: rtfreporter''s options (landscape

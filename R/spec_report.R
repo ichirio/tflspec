@@ -376,12 +376,15 @@
   own <- list()
   lab <- output$label
   if (is.character(lab) && length(lab) == 1L && !is.na(lab) && nzchar(lab)) own$OUTPUT_TITLE <- lab
-  pop <- output$population
+  # (`common: population_label` is the text when there is no set, and wins when there is one)
+  pop <- .out_population(output)
   if (is.character(pop) && length(pop) == 1L && !is.na(pop) && nzchar(pop)) {
     def <- Filter(function(p) identical(p$id, pop), study$data$populations %||% list())
     pl <- if (length(def)) def[[1L]]$label
     own$OUTPUT_POPULATION <- if (is.character(pl) && length(pl) == 1L && nzchar(pl)) pl else pop
   }
+  ppl <- output$common$population_label
+  if (is.character(ppl) && length(ppl) == 1L && !is.na(ppl) && nzchar(ppl)) own$OUTPUT_POPULATION <- ppl
   own
 }
 

@@ -280,7 +280,7 @@ test_that("in a study: the ARD program runs and the table is made from it", {
   }
   tfl_ai_study_init(d, adam = "adam", study_id = "PC-1")
   f <- file.path(d, "spec", "outputs", "T-9-3.yml")
-  tfl_write_output(tfl_output("T-9-3", "table", population = "SAF", label = "Liver tests",
+  tfl_write_output(tfl_output("T-9-3", "table", common = list(population = "SAF"), label = "Liver tests",
                               extends = "defaults",
                               template = list(name = "param_change",
                                               args = c(pc_args[-1L], list(population = "SAF")))),
@@ -326,7 +326,7 @@ test_that("vs_change's table (removed) from param_change: a baseline block, its 
              cells = list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})", SE = "{se:.2f}",
                           `95% CI of the mean` = "{mean_lcl:.1f}, {mean_ucl:.1f}",
                           Median = "{median:.1f}", `Min, Max` = "{min:.0f}, {max:.0f}"))
-  o <- tfl_output("T-P", "table", population = "SAF", extends = "defaults",
+  o <- tfl_output("T-P", "table", common = list(population = "SAF"), extends = "defaults",
                   template = list(name = "param_change", args = pc))
   f <- file.path(d, "spec", "outputs", "T-P.yml")
   tfl_write_output(o, f)
@@ -396,7 +396,7 @@ pch_study <- function() tfl_read_study_spec(system.file("extdata", "spec-yaml", 
 # a report extending the study's defaults, resolved, run on the ARD the program makes
 pch_run <- function(content = list(), args = list(), extends = "defaults", template = TRUE) {
   a <- utils::modifyList(pc_args, args)
-  o <- tfl_output("T-PCH", "table", population = "SAF", extends = extends, content = content,
+  o <- tfl_output("T-PCH", "table", common = list(population = "SAF"), extends = extends, content = content,
                   template = if (template) list(name = "param_change", args = a))
   ro <- tfl_resolve_output(o, pch_study())
   ard <- pc_ard(tfl_template_expand("param_change", a))
@@ -474,7 +474,7 @@ test_that("a table with its own plan_stub and no name takes the layers' name; ex
   pc_skip()
   st <- function(r) Filter(function(it) it$fn == "plan_stub", r$content)
   base <- list(tfl_item("table_plan", list(cols = "TRT01A", rows = list(group = "variable"))))
-  ro <- tfl_resolve_output(tfl_output("T-N", "table", population = "SAF", extends = "defaults",
+  ro <- tfl_resolve_output(tfl_output("T-N", "table", common = list(population = "SAF"), extends = "defaults",
                                       content = list(tfl_item("plan_stub", list(indent = 2L)))),
                            pch_study())
   # merged by argument: the layers' item (name, before), the report's indent on top
@@ -485,7 +485,7 @@ test_that("a table with its own plan_stub and no name takes the layers' name; ex
   ard <- rtfreporter::normalize_ard(cards::bind_ard(
     cards::ard_tabulate(saf, variables = TRT01A),
     cards::ard_tabulate(saf, by = TRT01A, variables = c(AGEGR1, SEX))))
-  ro <- tfl_resolve_output(tfl_output("T-N", "table", population = "SAF", extends = "defaults",
+  ro <- tfl_resolve_output(tfl_output("T-N", "table", common = list(population = "SAF"), extends = "defaults",
                                       content = c(base, list(tfl_item("plan_stub", list(indent = 2L))))),
                            pch_study())
   p <- suppressMessages(tfl_content_run(ro, ard))
@@ -496,12 +496,12 @@ test_that("a table with its own plan_stub and no name takes the layers' name; ex
   expect_match(paste(tfl_content_code(ro), collapse = "\n"),
                "plan_stub(name = \"row_label\", before = TRUE, indent = 2)", fixed = TRUE)
   # no plan_stub below (extends: none): as written
-  rn <- tfl_resolve_output(tfl_output("T-N", "table", population = "SAF", extends = "none",
+  rn <- tfl_resolve_output(tfl_output("T-N", "table", common = list(population = "SAF"), extends = "none",
                                       content = list(tfl_item("plan_stub", list(indent = 2L)))),
                            pch_study())
   expect_identical(st(rn)[[1L]]$args, list(indent = 2L))
   # a report with no plan_stub: the layers' item, as before
-  r0 <- tfl_resolve_output(tfl_output("T-N", "table", population = "SAF", extends = "defaults",
+  r0 <- tfl_resolve_output(tfl_output("T-N", "table", common = list(population = "SAF"), extends = "defaults",
                                       content = list(tfl_item("plan_paginate_rows", list(max_rows = 9L)))),
                            pch_study())
   expect_identical(st(r0)[[1L]]$args, list(name = "row_label", before = TRUE))
@@ -525,7 +525,7 @@ test_that("heading with no study plan_stub (extends: none, tpl_param_change()) b
     if (it$fn == "plan_stub") it$args <- list(name = "stub_x", indent = 3L)
     it
   })
-  o <- tfl_output("T-PCH", "table", population = "SAF", extends = "defaults",
+  o <- tfl_output("T-PCH", "table", common = list(population = "SAF"), extends = "defaults",
                   template = list(name = "param_change",
                                   args = utils::modifyList(pc_args, list(heading = "H"))))
   ro <- tfl_resolve_output(o, s)

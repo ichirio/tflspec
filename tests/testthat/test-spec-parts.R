@@ -95,7 +95,7 @@ test_that("in a study: tfl_run_output() builds a table of a listing and its summ
   tfl_ai_study_init(d, adam = "adam", study_id = "SP-1")
   keep <- "PARAMCD == \"ALT\" & AVISIT %in% c(\"BASELINE\", \"CYCLE 2 DAY 1\")"
   o <- tfl_output(
-    "T-LB", "table", population = "SAF", label = "ALT by subject",
+    "T-LB", "table", common = list(population = "SAF"), label = "ALT by subject",
     data = list(source = "dataset", dataset = "ADLB", population = "SAF", where = tfl_r(keep)),
     ard = list(
       analysis_data = list(
@@ -172,7 +172,7 @@ test_that("tfl_data_code(): each object the table and its parts read, a dataset 
   tfl_ai_study_init(d, adam = "adam", study_id = "SP-3")
   st <- tfl_read_study_spec(d)
   keep <- "PARAMCD == \"ALT\""
-  o <- tfl_output("T-LB", "table", population = "SAF",
+  o <- tfl_output("T-LB", "table", common = list(population = "SAF"),
     data = list(source = "dataset", dataset = "ADLB", population = "SAF", where = tfl_r(keep)),
     content = list(
       tfl_item("table_plan", list(cols = "AVISIT", rows = list(subject = tfl_r("~ \"{USUBJID}\"")), value = "AVAL")),

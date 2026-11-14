@@ -81,7 +81,6 @@ sa_yaml_study <- function(dir) {
     writeLines(c(paste("id:", id), "kind: table", "extends: none", "ard:", "  analyses:",
                  paste("    - id:", an), paste("      method:", method),
                  "      population: SAF", "      by: [ARM]", paste0("      variables: [", vars, "]"),
-                 "data:", "  source: ard", "  object: ard",
                  "content:", "  - table_plan: {cols: ARM}"),
                file.path(dir, "spec", "outputs", paste0(id, ".yml")))
   }

@@ -113,7 +113,7 @@ test_that("in a study: the ARD program runs (its analysis data made from the rec
                      file.path(d, "adam", paste0(x, ".xpt")))
   }
   tfl_ai_study_init(d, adam = "adam", study_id = "MG-1")
-  o <- tfl_output("T-9-2", "table", population = "SAF", label = "AEs by maximum severity",
+  o <- tfl_output("T-9-2", "table", common = list(population = "SAF"), label = "AEs by maximum severity",
                   extends = "defaults",
                   template = list(name = "ae_max_grade", args = list(population = "SAF",
                                                                      grade_levels = mg_lv)))
@@ -141,7 +141,7 @@ test_that("grade_in = cols: the arm's N is over every column, the any-grade colu
   saf <- tflspec::adsl[tflspec::adsl$SAFFL == "Y", ]
   arms <- unique(saf$TRT01A)
   for (any in c("Any grade", "Total")) {
-    o <- tfl_output("T-9-3", "table", population = "SAF", extends = "defaults",
+    o <- tfl_output("T-9-3", "table", common = list(population = "SAF"), extends = "defaults",
                     template = list(name = "ae_max_grade",
                                     args = list(population = "SAF", grade_levels = mg_lv,
                                                 grade_in = "cols", any_grade = any)))

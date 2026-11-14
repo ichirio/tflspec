@@ -157,7 +157,7 @@ hn_lab_study <- function(root) {
 # a study's report from a template: its ARD, the header's text
 hn_report <- function(d, name, args) {
   f <- file.path(d, "spec", "outputs", "T-HN.yml")
-  tfl_write_output(tfl_output("T-HN", "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("T-HN", "table", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = name, args = args)), f)
   st <- tfl_read_study_spec(d)
   ard <- suppressMessages(tfl_build_ard(st, output_id = "T-HN", dir = d, save = FALSE))

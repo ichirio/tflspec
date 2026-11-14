@@ -60,7 +60,7 @@ test_that("tflspec.study_setup leaves the rounding out of the report setup", {
     study = data.frame(key = "rounding", value = "sas", stringsAsFactors = FALSE))
   expect_false(any(grepl("rounding|round_type", tfl_report_setup_code(sp))))
   # a report's rounding that is the study's stays out of its program
-  out <- tfl_output("T-9", "table", population = "SAF", content = list(
+  out <- tfl_output("T-9", "table", common = list(population = "SAF"), content = list(
     tfl_item("table_plan", list(cols = "TRT01A")),
     tfl_item("plan_digits", list(AGE = 0))))
   code <- tfl_content_code(tfl_resolve_output(out, ssc_study("sas")))

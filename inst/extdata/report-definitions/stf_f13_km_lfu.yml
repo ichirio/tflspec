@@ -12,7 +12,8 @@
 id: F-STF-13
 kind: figure
 label: Kaplan-Meier Plot of Time to Loss to Follow-Up, Safety Population
-population: SAF
+common:
+  population: SAF
 extends: defaults
 data:
   steps:

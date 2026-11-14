@@ -42,7 +42,7 @@ trc_study <- function(content, env = parent.frame()) {
   y <- list(content = tflspec:::.items_to_list(list(tfl_item("normalize_ard", list()))))
   writeLines(yaml::as.yaml(y, indent.mapping.sequence = TRUE, handlers = tflspec:::.yaml_out_handlers()),
              file.path(d, "spec", "defaults.yml"))
-  o <- tfl_output("T-1", "table", label = "One", population = "SAF", extends = "defaults",
+  o <- tfl_output("T-1", "table", label = "One", common = list(population = "SAF"), extends = "defaults",
                   data = list(source = "ard", object = "ard"), content = content)
   tfl_write_output(o, file.path(d, "spec", "outputs", "T-1.yml"))
   d
