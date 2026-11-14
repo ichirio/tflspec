@@ -6,12 +6,11 @@ outputs:
   - id: T-14-3-1
     kind: table
     label: Treatment-Emergent Adverse Events by System Organ Class and Preferred Term
-    population: SAF
+    common: {population: SAF}
     extends: [defaults]
     ard:
       analyses:
         - {id: AE, method: hierarchical, dataset: ADAE, population: SAF, where: !r TRTEMFL == "Y", by: [TRT01A], variables: [AEBODSYS, AEDECOD], args: !r over_variables = TRUE}
-    data: {source: ard}
     content:
       - normalize_ard: {hierarchy: [AEBODSYS, AEDECOD], overall: Subjects with at least one TEAE}
       - table_plan: {cols: TRT01A, rows: {group1: AEBODSYS}}

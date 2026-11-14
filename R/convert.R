@@ -686,7 +686,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
 
 .page_put <- function(page, sheet, col, v, note, id) {
   # (the data's and the content's code are not the page's: .conv_output())
-  if (identical(sheet, "report") && col %in% c("data_code", "content_code", "ard_object")) return(page)
+  if (identical(sheet, "report") && col %in% c("data_code", "content_code", "ard_object", "treatment", "population_label")) return(page)
   if (identical(sheet, "page") && identical(col, "page_more")) {
     # what no column says, as YAML (tfl_sheets_from_yaml()'s .page_more())
     more <- .calls_in(yaml::yaml.load(v, handlers = .yaml_handlers()))
@@ -944,6 +944,10 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if (!is.null(ad$output_id)) ad <- ad[!is.na(ad$output_id) & ad$output_id == id, , drop = FALSE]
     if (nrow(ad)) ard_part$analysis_data <- .conv_rows(ad, note, id, "analysis_data", r_cols = c("where", "derive", "code"),
                                                     list_cols = c("add", "keep", "distinct"), rename = c(data_id = "id", population_id = "population"))
+    # (the report's subjects definition has no set of its own: `common: population`)
+    if (!is.null(ard_part$analysis_data)) {
+      ard_part$analysis_data <- lapply(ard_part$analysis_data, .entry_pop_strip, entry$population %||% NA_character_)
+    }
     an <- ard$analyses[!is.na(ard$analyses$output_id) & ard$analyses$output_id == id, , drop = FALSE]
     if (nrow(an)) {
       ard_part$analyses <- .conv_rows(an, note, id, "analyses", r_cols = c("where", "args", "post", "code"),
@@ -981,7 +985,11 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     tr <- sp$tables[!is.na(sp$tables$output_id) & sp$tables$output_id == id, , drop = FALSE]
     if (nrow(tr) && !is.na(tr$note[1L]) && nzchar(trimws(tr$note[1L]))) tr$note[1L]
   }
-  out <- tfl_output(id, kind, label = entry$label %||% NA, population = entry$population %||% NA,
+  common <- list(population = entry$population)
+  for (k in c("treatment", "population_label")) {
+    if (nrow(rrow) && k %in% names(rrow) && !is.na(rrow[[k]][1L]) && nzchar(rrow[[k]][1L])) common[[k]] <- rrow[[k]][1L]
+  }
+  out <- tfl_output(id, kind, label = entry$label %||% NA, common = common,
                     extends = extends, data = data, codelists = codelists, content = content,
                     page = page_of(id, style), ard = ard_part)
   if (!is.null(style)) out$style <- style

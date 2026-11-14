@@ -143,12 +143,12 @@ test_that("in a study: demog and ae_soc_pt of Part 1's subjects; N and counts th
   dm <- list(by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX"))
   sub <- list(subset = "PART == \"Part 1\"")
   outs <- list(
-    tfl_output("T-9-1", "table", population = "SAF", label = "Demographics, Part 1",
+    tfl_output("T-9-1", "table", common = list(population = "SAF"), label = "Demographics, Part 1",
                extends = "defaults", template = list(name = "demog", args = c(dm, sub))),
-    tfl_output("T-9-2", "table", population = "SAF", label = "TEAEs, Part 1",
+    tfl_output("T-9-2", "table", common = list(population = "SAF"), label = "TEAEs, Part 1",
                extends = "defaults", template = list(name = "ae_soc_pt", args = sub)),
     # the same set's name in another report, every subject: its own
-    tfl_output("T-9-3", "table", population = "SAF", label = "Demographics",
+    tfl_output("T-9-3", "table", common = list(population = "SAF"), label = "Demographics",
                extends = "defaults", template = list(name = "demog", args = dm)))
   for (o in outs) tfl_write_output(o, file.path(d, "spec", "outputs", paste0(o$id, ".yml")))
   st <- tfl_read_study_spec(d)
@@ -213,7 +213,7 @@ test_that("a figure (km) of Part 1's subjects: A = B = the template SPEC", {
   sl <- subset_adsl()
   haven::write_xpt(tflspec:::.ai_chr(sl), file.path(d, "adam", "adsl.xpt"))
   data$adsl <- as.data.frame(haven::read_xpt(file.path(d, "adam", "adsl.xpt")))
-  o <- tfl_output("F-9-2", "figure", population = "SAF", label = "KM curves, Part 1",
+  o <- tfl_output("F-9-2", "figure", common = list(population = "SAF"), label = "KM curves, Part 1",
                   extends = "defaults",
                   template = list(name = "km",
                                   args = list(param = "PFS", by = "TRT01A", risk_table = FALSE,

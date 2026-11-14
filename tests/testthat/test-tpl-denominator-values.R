@@ -263,7 +263,7 @@ dv_study <- function(root) {
 # a report of a template: its ARD (as a data frame) and the header's text
 dv_report <- function(s, name, args, own = NULL) {
   f <- file.path(s$dir, "spec", "outputs", "T-DV.yml")
-  tfl_write_output(tfl_output("T-DV", "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("T-DV", "table", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = name, args = c(list(population = "SAF"), args)),
                               ard = own), f)
   st <- tfl_read_study_spec(s$dir)
@@ -301,7 +301,7 @@ dv_skip <- function() {
 test_that("an analysis data the report does not have stops, naming what it has", {
   dv_skip()
   s <- dv_study(withr::local_tempdir())
-  o <- tfl_output("T-DV", "table", population = "SAF", extends = "defaults",
+  o <- tfl_output("T-DV", "table", common = list(population = "SAF"), extends = "defaults",
                   template = list(name = "ae_soc_pt", args = list(population = "SAF",
                                                                   denominator = "adsl_zzz")))
   st <- tfl_read_study_spec(s$dir)
@@ -453,7 +453,7 @@ test_that("a named vector is a small data frame in the program; a number is a nu
   s <- dv_study(withr::local_tempdir())
   f <- file.path(s$dir, "spec", "outputs", "T-DV.yml")
   code <- function(den) {
-    tfl_write_output(tfl_output("T-DV", "table", population = "SAF", extends = "defaults",
+    tfl_write_output(tfl_output("T-DV", "table", common = list(population = "SAF"), extends = "defaults",
                                 template = list(name = "ae_soc_pt",
                                                 args = list(population = "SAF", denominator = den))), f)
     st <- tfl_read_study_spec(s$dir)

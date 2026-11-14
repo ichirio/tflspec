@@ -35,7 +35,7 @@ te_layers <- function(settings = list()) {
 }
 
 te_demog <- function(..., args = list(), name = "demog") {
-  tfl_output("T-9", "table", population = "SAF", ...,
+  tfl_output("T-9", "table", common = list(population = "SAF"), ...,
              template = list(name = name, args = c(list(by = "TRT01A", continuous = "AGE"), args)))
 }
 
@@ -75,7 +75,7 @@ test_that("extends' forms: files, none, a map by step; NULL for a template repor
   expect_null(tfl_read_output(f)$extends)
   # (a template report's `extends: [defaults]`, as every writer wrote it before:
   # not written, its template's)
-  writeLines(c("id: T-9", "kind: table", "population: SAF", "extends: [defaults]", "template:",
+  writeLines(c("id: T-9", "kind: table", "common: {population: SAF}", "extends: [defaults]", "template:",
                "  name: stf_t02_demog", "  args: {by: TRT01A, continuous: AGE}"), f)
   expect_null(tfl_read_output(f)$extends)
   # a code SPEC that writes none: defaults
@@ -141,7 +141,7 @@ test_that("T3: stf_t02_demog fixes the content step; `template:` holds no extend
   # (`none` for every step keeps the content step none)
   expect_identical(tfl_output_extends(te_demog(name = "stf_t02_demog", extends = "none"), "content"),
                    character())
-  o <- tfl_output("T-9", "table", population = "SAF",
+  o <- tfl_output("T-9", "table", common = list(population = "SAF"),
                   template = list(name = "stf_t02_demog", extends = "none",
                                   args = list(by = "TRT01A", continuous = "AGE")))
   expect_error(tfl_resolve_output(o, s), "`extends` is the report's field, not `template:`'s")
@@ -313,7 +313,7 @@ test_that("T10: the templates sheet leaves extends unwritten; an stf_t02_demog r
   r <- tfl_read_template_sheets(f)
   expect_true(all(vapply(r, function(x) is.null(x$extends), NA)))
   x <- r[[1L]]
-  o <- tfl_output(x$id, x$kind, label = x$label %||% NA_character_, population = x$population,
+  o <- tfl_output(x$id, x$kind, label = x$label %||% NA_character_, common = list(population = x$common$population),
                   template = list(name = "stf_t02_demog", args = list(by = "TRT01A", continuous = "AGE")))
   expect_identical(tfl_output_extends(o, "content"), character())
   expect_s3_class(tfl_resolve_output(o, te_layers()), "tfl_output")
@@ -387,7 +387,7 @@ test_that("T11: tfl_tpl(study = ) carries the study's items; the program runs as
   rs <- tfl_resolve_output(te_demog(name = "summary"), s)
   expect_true(any(grepl("study = list(", tfl_content_code(rs), fixed = TRUE)))
   # a template not yet migrated keeps the study's lines after the call
-  ro3 <- tfl_output("T-10", "table", population = "SAF",
+  ro3 <- tfl_output("T-10", "table", common = list(population = "SAF"),
                     template = list(name = "ae_soc_pt", args = list(population = "SAF",
                                                                    hierarchy = c("AEBODSYS", "AEDECOD"))))
   rs <- tfl_resolve_output(ro3, s)

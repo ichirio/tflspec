@@ -121,7 +121,7 @@ tt_study <- function(root) {
 }
 tt_report <- function(d, id, name, args) {
   f <- file.path(d, "spec", "outputs", paste0(id, ".yml"))
-  tfl_write_output(tfl_output(id, "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output(id, "table", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = name, args = args)), f)
   f
 }
@@ -216,7 +216,7 @@ test_that("the layout's own page and column header: the study standard's replace
   s <- tfl_read_study_spec(d)
   fn_args <- function(ro, fn) Filter(function(i) identical(i$fn, fn), ro$content)
   res <- function(name, args) {
-    tfl_resolve_output(tfl_output("T-9", "table", population = "SAF",
+    tfl_resolve_output(tfl_output("T-9", "table", common = list(population = "SAF"),
                                   template = list(name = name, args = args)), s)
   }
   # no plan_paginate_rows in the standard: the layout's

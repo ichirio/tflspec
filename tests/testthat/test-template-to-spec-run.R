@@ -39,7 +39,7 @@ tsr_output <- function(nm) {
   # (demog, stf_t02_demog, summary and disposition take the analysis set from
   # the report's `population:`)
   if (nm %in% c("demog", "stf_t02_demog", "summary", "disposition")) args$population <- NULL
-  tfl_output(paste0("X-", gsub("_", "-", nm)), tp$kind[tp$name == nm], population = "SAF",
+  tfl_output(paste0("X-", gsub("_", "-", nm)), tp$kind[tp$name == nm], common = list(population = "SAF"),
              label = nm, template = list(name = nm, args = args),
              data = own)
 }

@@ -76,7 +76,7 @@ test_that("tfl_template_run() and tfl_template_params(); a company's template in
   expect_identical(sum(tab[[2L]] %in% "Median"), 1L)
   # the program calls the company's function
   s <- tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
-  o <- tfl_output("T-9", "table", population = "SAF",
+  o <- tfl_output("T-9", "table", common = list(population = "SAF"),
                   template = list(name = "tc_demog", args = list()))
   expect_match(tfl_content_code(tfl_resolve_output(o, s)), "plan <- tc_demog(", fixed = TRUE, all = FALSE)
 })

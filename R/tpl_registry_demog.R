@@ -55,7 +55,7 @@
                               drop = character(), add = list()) {
   p <- list(
     tfl_param("population", required = TRUE, unset = "stop",
-              doc = "the analysis set's id: the report's `population:` field, not a template parameter"),
+              doc = "the analysis set's id: the report's `common: population`, not a template parameter"),
     tfl_param("continuous", NULL, tier = "required", unset = "stop",
               doc = "the continuous variables, in order (required: this or `categorical`)"),
     tfl_param("categorical", NULL, tier = "required", unset = "stop",

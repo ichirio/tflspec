@@ -35,7 +35,7 @@ test_that("in a study: A (the data steps, the call) = B (the design) = the templ
   on.exit(unlink(d, recursive = TRUE))
   data <- tplfig_study(d, c("adsl", "adtte"), "KMR-1")
   for (nm in c("km_survival", "km_cumulative")) {
-    o <- tfl_output(paste0("F-9-", nm), "figure", population = "SAF", label = "KM",
+    o <- tfl_output(paste0("F-9-", nm), "figure", common = list(population = "SAF"), label = "KM",
                     extends = "defaults",
                     data = list(steps = list(list(step = "read", dataset = "ADTTE"),
                                              list(step = "param", value = "PFS"))),
@@ -69,7 +69,7 @@ test_that("in a study: km_survival with plot: risk_title, the code carries it an
   on.exit(unlink(d, recursive = TRUE))
   data <- tplfig_study(d, c("adsl", "adtte"), "KMR-2")
   mk <- function(id, plot) {
-    o <- tfl_output(id, "figure", population = "SAF", label = "KM",
+    o <- tfl_output(id, "figure", common = list(population = "SAF"), label = "KM",
                     extends = "defaults",
                     data = list(steps = list(list(step = "read", dataset = "ADTTE"),
                                              list(step = "param", value = "PFS"))),
@@ -99,7 +99,7 @@ km_plot_value <- list(censor_shape = 2, censor_size = 6, censor_stroke = 2, medi
 
 # a report of the type in a study, with the layers each key is about drawn
 km_plot_report <- function(nm, plot = NULL) {
-  o <- tfl_output(paste0("F-9-", nm), "figure", population = "SAF", label = "KM",
+  o <- tfl_output(paste0("F-9-", nm), "figure", common = list(population = "SAF"), label = "KM",
                   extends = "defaults",
                   data = list(steps = list(list(step = "read", dataset = "ADTTE"),
                                            list(step = "param", value = "PFS"))),

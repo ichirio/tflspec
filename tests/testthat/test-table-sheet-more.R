@@ -130,7 +130,7 @@ t689_study <- function(content, ard = NULL, defaults = list(tfl_item("normalize_
   writeLines(yaml::as.yaml(y, indent.mapping.sequence = TRUE,
                            handlers = tflspec:::.yaml_out_handlers()),
              file.path(d, "spec", "defaults.yml"))
-  o <- tfl_output("T-1", "table", label = "One", population = "SAF", extends = "defaults",
+  o <- tfl_output("T-1", "table", label = "One", common = list(population = "SAF"), extends = "defaults",
                   data = list(source = "ard", object = "ard"), content = content, ard = ard)
   tfl_write_output(o, file.path(d, "spec", "outputs", "T-1.yml"))
   d
@@ -282,7 +282,7 @@ test_that("a template's hierarchy (ae_max_grade) comes back whole", {
   skip_if_not_installed("rtfreporter")
   d <- t689_study(t689_head)
   s <- tfl_read_study_spec(d)
-  o <- tfl_output("T-mg", "table", population = "SAF", extends = "defaults",
+  o <- tfl_output("T-mg", "table", common = list(population = "SAF"), extends = "defaults",
                   template = list(name = "ae_max_grade",
                                   args = list(population = "SAF", hierarchy = c("AEBODSYS", "AEDECOD"))))
   b <- suppressMessages(tfl_template_to_spec(o, s))

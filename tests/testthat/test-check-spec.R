@@ -12,7 +12,7 @@ cs_study <- function() {
 test_that("a clean report: no rows; the versions come with it", {
   skip_if_not_installed("haven")
   d <- cs_study()
-  tfl_write_output(tfl_output("T-DM", "table", population = "SAF",
+  tfl_write_output(tfl_output("T-DM", "table", common = list(population = "SAF"),
                               template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE", categorical = "SEX"))),
                    file.path(d, "spec", "outputs", "T-DM.yml"))
   p <- tfl_check_spec(d)
@@ -29,7 +29,7 @@ test_that("an argument cards does not have, a function it does not have, an item
   d <- cs_study()
   an <- function(id, method, args = NULL) Filter(Negate(is.null), list(
     id = id, method = method, data = "adsl_saf", by = "TRT01A", variables = "AGE", args = args))
-  o <- tfl_output("T-AGE", "table", population = "SAF", label = "Age",
+  o <- tfl_output("T-AGE", "table", common = list(population = "SAF"), label = "Age",
     ard = list(analysis_data = list(list(id = "adsl_saf", from = "ADSL", population = "SAF")),
                analyses = list(an("AGE", "cards::ard_summary", "nope = 1"))),
     content = list(tfl_item("table_plan", list(cols = "TRT01A", nope = 2))))
@@ -53,11 +53,11 @@ test_that("build = TRUE: a report the checks pass is built; one that cannot be m
   skip_if_not_installed("cards")
   skip_if_not_installed("ggsurvfit")
   d <- cs_study()
-  tfl_write_output(tfl_output("T-DM", "table", population = "SAF",
+  tfl_write_output(tfl_output("T-DM", "table", common = list(population = "SAF"),
                               template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE", categorical = "SEX"))),
                    file.path(d, "spec", "outputs", "T-DM.yml"))
   # a KM of ADTTE, which the study does not have: read, it cannot be made
-  tfl_write_output(tfl_output("F-KM", "figure", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("F-KM", "figure", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = "km_survival", args = list(by = "TRT01A")),
                               data = list(steps = list(list(step = "read", dataset = "ADTTE"),
                                                        list(step = "param", value = "PFS")))),
@@ -86,7 +86,7 @@ test_that("page: titles under a study header that prints the label, title and po
   skip_if_not_installed("haven")
   d <- cs_study()
   # (the built-in tfl_standard's header prints the label, title and population)
-  o <- tfl_output("T-DM", "table", population = "SAF", label = "Demographics", extends = "defaults",
+  o <- tfl_output("T-DM", "table", common = list(population = "SAF"), label = "Demographics", extends = "defaults",
                   style = "tfl_standard",
                   template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE", categorical = "SEX")),
                   page = list(titles = list("1" = list(center = "Table 14.1.1"),

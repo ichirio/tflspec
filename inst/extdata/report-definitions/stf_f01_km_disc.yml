@@ -15,7 +15,8 @@
 id: F-STF-01
 kind: figure
 label: Kaplan-Meier Plot of Time to Permanent Discontinuation of Treatment, Safety Population
-population: SAF
+common:
+  population: SAF
 extends: defaults
 data:
   steps:

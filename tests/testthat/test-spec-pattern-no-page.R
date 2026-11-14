@@ -21,10 +21,10 @@ pnp_study <- function(pattern = NULL, page = NULL, defaults = NULL, own = NULL, 
                file.path(spec, "patterns", "pp.yml"))
   }
   if (is.null(extends)) extends <- if (!is.null(pattern) || !is.null(page)) "[patterns/pp, defaults]" else "[defaults]"
-  writeLines(c("id: T-A", "kind: table", "population: SAF", paste0("extends: ", extends), own,
+  writeLines(c("id: T-A", "kind: table", "common: {population: SAF}", paste0("extends: ", extends), own,
                "ard:", "  analyses:", "    - id: A1", "      method: categorical",
                "      population: SAF", "      by: [ARM]", "      variables: [SEX]",
-               "data:", "  source: ard", "  object: ard", "content:", "  - table_plan: {cols: ARM}"),
+               "content:", "  - table_plan: {cols: ARM}"),
              file.path(spec, "outputs", "T-A.yml"))
   d
 }

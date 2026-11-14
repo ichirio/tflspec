@@ -108,7 +108,7 @@ test_that("first to last: the report's argument, the study's default, the varian
   tfl_template_variant("sum_as", from = "summary",
                        defaults = list(by = "TRT01A", categorical = "SEX", cells = vc))
   cells_of <- function(args) {
-    o <- tfl_output("T-9", "table", population = "SAF",
+    o <- tfl_output("T-9", "table", common = list(population = "SAF"),
                     template = list(name = "sum_as", args = args))
     ro <- tfl_resolve_output(o, s)
     pc <- Filter(function(it) identical(it$fn, "plan_cells"), ro$content)
@@ -137,7 +137,7 @@ test_that("summary variant: the YAML's template:, A and B make the same RTF; A c
   ard <- cards::bind_ard(cards::ard_tabulate(saf, variables = TRT01A),
                          cards::ard_summary(saf, by = TRT01A, variables = AGE),
                          cards::ard_tabulate(saf, by = TRT01A, variables = c(AGEGR1, SEX)))
-  o <- tfl_output("T-9", "table", population = "SAF", label = "Demographics",
+  o <- tfl_output("T-9", "table", common = list(population = "SAF"), label = "Demographics",
                   template = list(name = "sum_as", args = list()))
   r <- tv_rtfs(o, ard, s)
   expect_match(r$code, "# template sum_as: a variant of summary", fixed = TRUE, all = FALSE)
@@ -159,7 +159,7 @@ test_that("ae_soc_pt: the YAML's template:, A and B make the same RTF", {
   ae <- adae[adae$USUBJID %in% saf$USUBJID, ]
   ard <- cards::ard_stack_hierarchical(ae, variables = c(AEBODSYS, AEDECOD), by = TRT01A,
                                        denominator = saf, id = USUBJID, over_variables = TRUE)
-  o <- tfl_output("T-9", "table", population = "SAF", label = "AEs",
+  o <- tfl_output("T-9", "table", common = list(population = "SAF"), label = "AEs",
                   template = list(name = "ae_soc_pt_all", args = list(population = "SAF")))
   r <- tv_rtfs(o, ard, s)
   expect_match(paste(r$code, collapse = "\n"), "plan <- tflspec::tfl_tpl(\n  ard,\n  \"hierarchical\",", fixed = TRUE)

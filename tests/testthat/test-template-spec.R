@@ -7,7 +7,7 @@ ts_study <- function() tfl_read_study_spec(system.file("extdata", "spec-yaml", p
 
 ts_output <- function(content = list(tfl_item("plan_paginate_rows", list(max_rows = 24L))),
                       args = list()) {
-  tfl_output("T-9", "table", population = "SAF",
+  tfl_output("T-9", "table", common = list(population = "SAF"),
              codelists = list(TRT01A = list(list(value = "Drug X"), list(value = "Control"))),
              content = content,
              template = list(name = "demog", args = utils::modifyList(list(
@@ -152,7 +152,7 @@ test_that("every template as a template SPEC: resolved as its items written out 
     ex <- .tpl_examples[[nm]]
     # (demog's analysis set is the report's `population:`, not an argument)
     if (nm %in% c("demog", "stf_t02_demog", "summary", "disposition")) ex$population <- NULL
-    o <- tfl_output(paste0("X-", nm), tp$kind[tp$name == nm], population = "SAF",
+    o <- tfl_output(paste0("X-", nm), tp$kind[tp$name == nm], common = list(population = "SAF"),
                     template = list(name = nm, args = ex), data = own)
     ro <- tfl_resolve_output(o, s)
     w <- tfl_template_to_spec(o, s)
@@ -165,7 +165,7 @@ test_that("every template as a template SPEC: resolved as its items written out 
 
 test_that("shift: the study's plan_stub(name, before) keeps the template's stub columns (vars)", {
   s <- ts_study()
-  o <- tfl_output("X-shift", "table", population = "SAF",
+  o <- tfl_output("X-shift", "table", common = list(population = "SAF"),
                   template = list(name = "shift", args = .tpl_examples$shift))
   st <- Filter(function(it) identical(it$fn, "plan_stub"), tfl_resolve_output(o, s)$content)
   expect_length(st, 1L)
@@ -178,7 +178,7 @@ test_that("shift: the study's plan_stub(name, before) keeps the template's stub 
 
 # a report's own column header over a template's keeps the template's stub heading (#635)
 hs_output <- function(header = NULL, template = "ae_soc_pt") {
-  tfl_output("T-9", "table", population = "SAF",
+  tfl_output("T-9", "table", common = list(population = "SAF"),
              content = if (!is.null(header)) list(tfl_item("plan_col_header", list(header = header))) else
                list(tfl_item("plan_paginate_rows", list(max_rows = 24L))),
              template = list(name = template, args = if (template == "demog") list(by = "TRT01A", continuous = "AGE") else list(population = "SAF")))

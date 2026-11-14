@@ -7,7 +7,7 @@ test_that("a table with no widths gets them written, with an assumption; one wit
   saveRDS(tflspec::adsl, file.path(d, "adam", "adsl.rds"))
   invisible(tfl_ai_study_init(d, adam = "adam", study_id = "ONCO-01", overwrite = TRUE))
   mk <- function(id, extra = list()) {
-    o <- tfl_output(id, "table", population = "SAF")
+    o <- tfl_output(id, "table", common = list(population = "SAF"))
     o$extends <- list("defaults")
     o$ard <- list(analyses = list(list(id = "AGE", method = "continuous", dataset = "ADSL",
                                        population = "SAF", by = list("TRT01A"),
@@ -52,7 +52,7 @@ test_that("a table whose widths come from the study's defaults is left alone, qu
   y <- readLines(f, encoding = "UTF-8")
   at <- grep("^  - plan_blanks:", y)
   writeLines(append(y, "  - plan_columns: {widths: {row_label: 2, .values: 1}}", after = at), f)
-  o <- tfl_output("T-3", "table", population = "SAF")
+  o <- tfl_output("T-3", "table", common = list(population = "SAF"))
   o$extends <- list("defaults")
   o$ard <- list(analyses = list(list(id = "AGE", method = "continuous", dataset = "ADSL",
                                      population = "SAF", by = list("TRT01A"),
@@ -102,7 +102,7 @@ fw_code <- function(id, cols, var = "USUBJID") {
              content = list(tfl_item("plan_listing", list(type = "multiline", cols = cols))))
 }
 fw_tpl <- function(id, columns) {
-  tfl_output(id, "listing", label = id, extends = "defaults", population = "SAF",
+  tfl_output(id, "listing", label = id, extends = "defaults", common = list(population = "SAF"),
              template = list(name = "listing", args = list(
                data = "ADAE", columns = columns, where = "AESER == \"Y\"",
                sort = c("TRT01A", "USUBJID"))))
@@ -294,7 +294,7 @@ fw_tables <- function(ids, bad = character(), env = parent.frame()) {
   saveRDS(tflspec::adsl, file.path(d, "adam", "adsl.rds"))
   invisible(tfl_ai_study_init(d, adam = "adam", study_id = "ONCO-01", overwrite = TRUE))
   for (id in ids) {
-    o <- tfl_output(id, "table", population = "SAF")
+    o <- tfl_output(id, "table", common = list(population = "SAF"))
     o$extends <- list("defaults")
     o$ard <- list(analyses = list(list(id = "AGE", method = "continuous",
                                        dataset = if (id %in% bad) "NOSUCH" else "ADSL",

@@ -317,7 +317,7 @@ d2_report <- function(s, name, args, own = NULL) {
   # (`by` is required, no default; disposition's status variable too)
   if (name %in% c("summary", "disposition", "ae_overview") && is.null(args$by)) args$by <- "TRT01A"
   if (name == "disposition" && is.null(args$categorical)) args$categorical <- "EOSSTT"
-  tfl_write_output(tfl_output("T-DV", "table", population = pop, extends = "defaults",
+  tfl_write_output(tfl_output("T-DV", "table", common = list(population = pop), extends = "defaults",
                               template = list(name = name, args = c(
                                 # (demog, summary and disposition take the analysis set from the
                                 # report's `population:`)
@@ -355,7 +355,7 @@ test_that("an analysis data the report does not have stops, naming what it has",
   st <- tfl_read_study_spec(s$dir)
   have <- list(summary = "adsl_sub, adsl_miss", ae_overview = "adsl_sub, adae_sub")
   for (tpl in names(have)) {
-    o <- tfl_output("T-DV", "table", population = "SAF", extends = "defaults",
+    o <- tfl_output("T-DV", "table", common = list(population = "SAF"), extends = "defaults",
                     template = list(name = tpl, args = c(
                       if (tpl != "summary") list(population = "SAF"),
                       list(by = "TRT01A", denominator = "adsl_zzz"),

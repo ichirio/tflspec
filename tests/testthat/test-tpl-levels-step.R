@@ -17,7 +17,7 @@ lvs_study <- function(root, data = c("adsl", "adlb")) {
 
 lvs_report <- function(d, name, args, population = "SAF", codelists = list()) {
   f <- file.path(d, "spec", "outputs", "T-LV.yml")
-  tfl_write_output(tfl_output("T-LV", "table", population = population, extends = "defaults",
+  tfl_write_output(tfl_output("T-LV", "table", common = list(population = population), extends = "defaults",
                               codelists = codelists, template = list(name = name, args = args)), f)
   st <- tfl_read_study_spec(d)
   ard <- suppressMessages(tfl_build_ard(st, output_id = "T-LV", dir = d, save = FALSE))

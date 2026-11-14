@@ -24,7 +24,7 @@ rts_study <- function(files = list(), study = NULL, env = parent.frame()) {
 }
 
 rts_table <- function(id = "T-1", extends = "defaults", ...) {
-  c(paste0("id: ", id), "kind: table", "label: One", "population: SAF",
+  c(paste0("id: ", id), "kind: table", "label: One", "common: {population: SAF}",
     paste0("extends: [", paste(extends, collapse = ", "), "]"), ...,
     "content:", "  - table_plan: {cols: TRT01A, rows: {group: variable}}")
 }
@@ -65,7 +65,7 @@ test_that("a study that lost nothing says nothing, and its list is the converter
 # -- item 2: a figure written as items -------------------------------------------
 
 rts_fig <- function(id = "F-1", top = NULL, data_extra = NULL) {
-  c(paste0("id: ", id), "kind: figure", "label: Fig one", "population: SAF", "extends: none", top,
+  c(paste0("id: ", id), "kind: figure", "label: Fig one", "common: {population: SAF}", "extends: none", top,
     "data:", data_extra, "  steps:", "    - {step: read, dataset: ADTTE}", "    - {step: param, value: PFS}",
     "content:", "  - ggplot: {data: data, mapping: {x: AVAL, y: AGE}}", "  - geom_point: {size: 2}",
     "  - scale_x_continuous: {limits: !r 'c(0, 10)'}", "  - labs: {x: Time}")
