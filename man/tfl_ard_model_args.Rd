@@ -64,7 +64,13 @@ one (\verb{wieghts =}), as it says \code{object}, \code{specs}, \code{level} and
 which \code{tidy_plus_plus()} writes itself or takes from \code{conf.level} and
 \code{contrasts_adjust}, and \code{emmeans_args} without the pairwise contrasts.
 An MMRM's \code{cov_struct()} has its \code{group} (a column in quotes: the
-covariance by arm) and \code{heterogeneous} judged too.
+covariance by arm) and \code{heterogeneous} judged too.  Since 2026-11-14 so
+are emmeans' \code{cov.reduce} (a function, TRUE / FALSE, a two-sided formula
+or a list of them: \code{"median"} in quotes stops emmeans), \code{cov.keep}
+(names or a number), \code{tran} (a name the installed emmeans knows:
+\code{"logg"} would be taken as no transformation, so \code{type = "response"}
+gives differences on the log scale instead of ratios) and \code{nesting}
+(\code{"SITEID \%in\% COUNTRY"} or a list).
 
 The catalog is \code{inst/ard/model_args.csv} (\code{fn}, \code{arg}, \code{default},
 \code{kind}, \code{hint}, \code{choices}); a company adds rows with

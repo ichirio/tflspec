@@ -8,7 +8,7 @@ test_that("each catalogued model argument is one of the installed function's", {
   d <- .ard_catalog_csv("model_args.csv")
   expect_true(all(d$kind %in% c("logical", "number", "choice", "text", "code",
                                 "variable", "family", "list", "link", "vector",
-                                "covariance")))
+                                "covariance", "reducer", "keep", "tran", "nesting")))
   expect_false(anyDuplicated(paste(d$fn, d$arg)) > 0L)
   for (key in unique(d$fn)) {
     has <- .model_arg_names(key)

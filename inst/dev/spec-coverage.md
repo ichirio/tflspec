@@ -259,6 +259,37 @@ tidy_plus_plus() gives, `data`, `options` written as its parts, `contr`,
 | emmeans arguments in emmeans_args (new) | 50.0% (0 / 15) | 86.7% (11 / 4) |
 | weight-3 functions only | 100.0% | 100.0% |
 
+2026-11-14 (wider scope; cards 0.9.0, cardx 0.3.4, still the CRAN
+versions; broom.helpers 1.23.0, emmeans 2.0.4): the rest of
+`broom.helpers::tidy_plus_plus()`'s arguments `ard_regression()` /
+`ard_regression_basic()` pass on -- `quiet`, `strict`, `tidy_post_fun`,
+`group_by` / `group_labels` (a multinomial model's response levels),
+`relabel_poly`, `disambiguate_terms` / `disambiguate_sep`,
+`model_matrix_attr`, `instrumental_suffix`: 10 more arguments of each
+(left out on 2026-11-08 as rarely changed; still left out: `keep_model`,
+a model column the ARD cannot hold, and `model` / `tidy_fun`, which cardx
+writes itself).  And the 4 emmeans arguments left partial on 2026-11-13
+(`cov.reduce`, `cov.keep`, `tran`, `nesting`) are judged.
+
+| Scope (2026-11-14, wider) | 2026-11-14 before | 2026-11-14 after |
+|---|---:|---:|
+| **cards / cardx, weighted** | **99.5%** (541 yes / 24 partial) | **100.0%** (565 / 0) |
+| cards ard_*() | 100.0% | 100.0% |
+| cardx ard_*() | 99.3% (294 / 20) | 100.0% (314 / 0) |
+| cards post helpers | 100.0% | 100.0% |
+| cards code helpers | 100.0% | 100.0% |
+| cardx CI helpers | 100.0% | 100.0% |
+| cardx model arguments | 100.0% | 100.0% |
+| emmeans arguments in emmeans_args | 86.7% (11 / 4) | 100.0% (15 / 0) |
+| weight-3 functions only | 99.7% | 100.0% |
+
+(2026-11-14 before: this branch before the run (tflspec@next 6fa6b81
+merged; a tflspec built from it) measured by this run's script on the
+wider scope -- the 20 tidy_plus_plus() arguments could be written as R in
+`args` and reached it (their names known as its own), but were not
+described and their values not judged; emmeans' 4 as on 2026-11-13:
+partial.  On the 2026-11-13 scope the run goes from 99.9% to 100.0%.)
+
 (2026-11-13 before: this branch before the run (tflspec@next c4aaa4e
 merged) on the wider scope -- `emmeans_args` had to be a list, but its
 names reached emmeans() unchecked (emmeans drops one it does not know) and
@@ -324,6 +355,46 @@ function, but the catalog did not describe it and its value was not
 judged: partial.  2026-10-31 before: the same, with
 `update_ard_fmt_fun()` in the `post` scope -- written as R in `post`, its
 names checked, its values not judged.)
+
+### Added 2026-11-14
+
+* **emmeans' `cov.reduce`, `cov.keep`, `tran` and `nesting` are judged**
+  (`R/ard_emmeans_args.R`; catalog kinds `reducer`, `keep`, `tran`,
+  `nesting` in `inst/ard/model_args.csv`), in a regression row's
+  `emmeans_args = list(...)`:
+  * `cov.reduce`: a function not in quotes (`median`, `function(x) ...`,
+    `stats::median`), TRUE / FALSE, a two-sided formula (`BASE ~ TRT01P`)
+    or a list of functions / formulas by covariate.  `"median"` in quotes,
+    a number or a one-sided formula stops `ref_grid()` ("Invalid
+    'cov.reduce' argument") -- the ARD keeps the error, the cells are empty.
+  * `cov.keep`: names in quotes or a whole number.
+  * `tran`: a name the installed emmeans knows (read from its
+    `.make.link()`: log, logit, sqrt, log10, log2, log1p, inverse ...) or
+    `make.tran(...)`.  emmeans takes **any other name as the identity
+    without a word**: reproduced on R's mtcars and in a test on cards'
+    ADSL -- `tran = "logg", type = "response"` on a response made log
+    beforehand gave the arms' differences on the log scale instead of
+    their ratios.
+  * `nesting`: `"SITEID %in% COUNTRY"` (several separated by commas) or a
+    list; a number or TRUE stops emmeans.
+  A test compares a row with `tran = "log", type = "response"` with
+  cardx's call written by hand and with `emmeans()` itself.
+* **tidy_plus_plus()'s other arguments** (`inst/ard/passed_args.csv`, 10
+  rows for each regression function): `quiet`, `strict`, `relabel_poly`,
+  `disambiguate_terms`, `model_matrix_attr` (TRUE / FALSE),
+  `disambiguate_sep`, `instrumental_suffix` (text), `tidy_post_fun` (a
+  function), `group_by` (columns of the tidied table, `auto_group_by()` or
+  NULL: a new code shape, `select`) and `group_labels` (labels by name).
+* Looked at but not added: **a proportional odds model's `p.values = TRUE`**
+  (broom's `tidy.polr()`).  Inside cardx it never gives broom's p-values:
+  `tidy.polr()` refits the model with `MASS::dropterm()` for its LR
+  tests, which cannot find cardx's model data, so broom.helpers falls back
+  to `parameters` and its Wald p-values (cards' ADSL, `AGEGR1 ~ SEX`: 0.4815
+  through cardx, broom's LR 0.480 directly); with a 3-level factor broom
+  gives none at all.  A row that wants polr's p-values writes `tidy_fun =
+  broom.helpers::tidy_parameters` (Wald) -- gap 8.  `p.values` stays
+  uncatalogued, so it is said for a model whose tidier does not take it
+  (an lm).
 
 ### Added 2026-11-13
 
@@ -808,7 +879,8 @@ Every argument in scope is described and its value judged (since
    a name a function takes in `...` and drops is said too
    (`ard_survival_survfit()`, `ard_tabulate_max()`,
    `ard_tabulate_value()`, `ard_aod_wald_test()`); since 2026-11-13 a
-   name in `emmeans_args = list(...)` that emmeans() would drop.  The catalog
+   name in `emmeans_args = list(...)` that emmeans() would drop (and since
+   2026-11-14 a `tran` name emmeans would take as the identity).  The catalog
    names the arguments clinical tables use, not every argument of the
    function they reach (`stats::aov()`'s, `car::vif(type =)` -- a method's
    argument, not the generic's -- are not described).
@@ -835,6 +907,12 @@ Every argument in scope is described and its value judged (since
    emmeans' `weights` (SAS's OM): cardx 0.3.4 stops on any name in their
    `...`.  A regression row's pairwise contrasts can (`emmeans_args`); the
    LS means rows need a cardx change first.
+8. (since 2026-11-14) A proportional odds model's p-values: `p.values =
+   TRUE` (broom's `tidy.polr()`) cannot run its LR tests inside cardx
+   (`MASS::dropterm()` cannot refit cardx's model), so broom.helpers falls
+   back to `parameters`' Wald p-values with a message.  Write `tidy_fun =
+   broom.helpers::tidy_parameters` for Wald p-values on purpose; LR
+   p-values need a change in cardx or broom.
 
 ## rtfreporter (table SPEC)
 
@@ -889,6 +967,24 @@ Percentage: yes counts 1, partial 0.5.
 | 2026-11-11 before / after | 52.1% (332 / 20 / 305 of 657) | 59.4% (332 / 20 / 224 of 576) | 41 / 7 / 67 |
 | 2026-11-12 before / after | 53.0% (332 / 20 / 293 of 645) | 59.4% (332 / 20 / 224 of 576) | 42 / 6 / 66 |
 | 2026-11-13 before / after | 53.2% (332 / 20 / 291 of 643) | 59.4% (332 / 20 / 224 of 576) | 42 / 6 / 66 |
+| 2026-11-14 before | 53.2% (332 / 20 / 291 of 643) | 59.4% (332 / 20 / 224 of 576) | 42 / 6 / 66 |
+| 2026-11-14 after  | 54.7% (332 / 39 / 272 of 643) | 61.0% (332 / 39 / 205 of 576) | 42 / 7 / 65 |
+
+(2026-11-14: rtfreporter@next 2629a3c (its changes since 93951c8 are the
+CRAN review before 0.9.0 -- graphics and tools in Imports, resource files
+read from the installed package only, `?plan_after`'s example, tests'
+skips: no new exported argument) and tflspec@next 6fa6b81 merged.  The
+measure's correction: `widen_ard()`'s 19 arguments were "no" (tflspec
+calls it, the argument is not said), but a SPEC writes the plan, and
+rtfreporter's `plan_apply()` builds `widen_ard()`'s argument list from the
+roles and the plan verbs (`.plan_spread_args()`: `cols` / `rows` /
+`label` / `show_keys` / `value` from `table_plan()`, `cells` / `stats` /
+`na` / `notes` from `plan_cells()`, `levels`, `labels`, `sort` /
+`sort_stat`, `sep` from `plan_columns()`, `rounding` from
+`plan_digits()`, `stat_groups`, `compare`, `filter`) with the names
+unchanged.  Each is now partial -- said by the verb that owns it, as
+`rtf_table_style()`'s fields are by `plan_style()`'s.  Nothing new a SPEC
+writes; the run went mostly to cards / cardx.)
 
 (2026-11-13: rtfreporter@next 93951c8 (its changes since 5c7d0ac: the
 table of contents -- long entries wrap before the page numbers, one page

@@ -45,8 +45,10 @@ expression of the ARD's columns (a \code{post} step's \code{filter}, \code{expr}
 add up to 1), the levels \code{ard_pairwise(include =)} compares (a vector),
 the format of one statistic (\code{add_calculated_row(fmt_fun =)},
 \code{update_ard_fmt_fun(fmt_fun =)}: a whole number of decimals, \code{"xx.x"} /
-\code{"xx.x\%"}, or a function) and the value \code{replace_null_statistic(value =)}
-gives (one value).
+\code{"xx.x\%"}, or a function), the value \code{replace_null_statistic(value =)}
+gives (one value) and, since 2026-11-14, tidy_plus_plus()'s
+\code{tidy_post_fun} (a function), \code{group_by} (columns of the tidied table,
+\code{auto_group_by()} or NULL) and \code{group_labels} (labels by name).
 
 A company adds its own rows with \verb{options(tflspec.ard_args = <data frame>)}: \code{call} (or \code{*} for every function), \code{arg}, \code{kind}, \code{hint},
 \code{choices}; a row for the same call and argument wins, and a row for the
@@ -58,7 +60,10 @@ does the work follow its own, with \code{passed_to} naming that function:
 \code{broom.helpers::tidy_plus_plus()}; so are \code{add_pairwise_contrasts = TRUE}
 with \code{contrasts_adjust = "none"}, each pair of arms compared by emmeans,
 \code{no_reference_row}, \code{add_estimate_to_reference_rows}, \code{emmeans_args},
-\code{term_labels} and \code{categorical_terms_pattern = "{level} vs {reference_level}"}), \code{ard_car_anova(type = "III")} (to
+\code{term_labels}, \code{categorical_terms_pattern = "{level} vs {reference_level}"} and, since 2026-11-14, \code{quiet}, \code{strict},
+\code{relabel_poly}, \code{disambiguate_terms} / \code{disambiguate_sep}, \code{group_by} /
+\code{group_labels}, \code{tidy_post_fun}, \code{model_matrix_attr} and
+\code{instrumental_suffix}), \code{ard_car_anova(type = "III")} (to
 \code{car::Anova()}), \code{ard_stats_t_test(var.equal = TRUE)},
 \code{ard_stats_chisq_test(correct = FALSE)},
 \code{ard_stats_mantelhaen_test(exact = TRUE)} ... (to \code{stats}' tests),

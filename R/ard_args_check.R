@@ -127,7 +127,11 @@
   rows = "expression", by_level = "list", levels = "list", sort = "sort",
   `ard_categorical_ci$weights` = "weights", `ard_pairwise$include` = "values",
   `add_calculated_row$fmt_fun` = "fmt", `update_ard_fmt_fun$fmt_fun` = "fmt",
-  `replace_null_statistic$value` = "scalar")
+  `replace_null_statistic$value` = "scalar",
+  # (since 2026-11-14: tidy_plus_plus()'s other arguments a regression row
+  # passes on -- a function applied to the tidied table, the groups of a
+  # multi-component model by tidyselect, their labels by name)
+  tidy_post_fun = "function", group_by = "select", group_labels = "labels")
 
 .ard_code_shape <- function(fn, arg) {
   key <- paste0(fn, "$", arg)
@@ -167,6 +171,7 @@
       labels = made || is_call_of(e, "list") ||
         (is.character(v) && !is.null(names(v)) && all(nzchar(names(v)))),
       character = made || is.character(v),
+      select = made || is.character(v),
       `function` = made || is_fn(e),
       call = is.call(e) && is.null(v),
       expression = is.call(e) || is.logical(v),
@@ -178,6 +183,7 @@
       list = "a list: list(...)",
       labels = "labels by name, a list or a named vector: c(SEXM = \"Male\")",
       character = "names in quotes: c(\"term\", \"label\")",
+      select = "columns of the tidied table (y.level), auto_group_by() or NULL",
       `function` = "a function: pkg::fun, function(x) ... or ~ ...",
       call = "R that makes the object: lm(AVAL ~ TRT01P, data = data)",
       expression = "an expression of the ARD's statistics, not in quotes: n >= 2",

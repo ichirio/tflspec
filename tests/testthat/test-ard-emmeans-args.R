@@ -143,3 +143,94 @@ test_that("mmrm's cov_struct(): group, heterogeneous and a name it does not have
     "cov_struct(\"us\", visits = \"AVISIT\", subject = \"USUBJID\", groups = \"TRTA\")")),
     "cov_struct\\(\\) has no argument `groups`.*mmrm would stop on it")
 })
+
+test_that("emmeans' cov.reduce, cov.keep, tran and nesting are judged (2026-11-14)", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("emmeans")
+  # the catalog describes them, by emmeans' own shapes
+  m <- tfl_ard_model_args("emmeans", "emmeans")
+  kinds <- stats::setNames(m$kind, m$arg)
+  expect_identical(unname(kinds[c("cov.reduce", "cov.keep", "tran", "nesting")]),
+                   c("reducer", "keep", "tran", "nesting"))
+  expect_true(all(c("cov.reduce", "cov.keep", "tran", "nesting") %in% m$arg[m$described]))
+  # the names emmeans knows a transformation by, read from the installed
+  # emmeans (any other is taken as the identity)
+  tr <- .emmeans_tran_names()
+  expect_true(all(c("log", "logit", "sqrt", "log10", "identity") %in% tr))
+  expect_false("logg" %in% tr)
+  pw <- "add_pairwise_contrasts = TRUE, "
+  bad <- list(
+    c("cov.reduce = \"median\"", "emmeans\\(cov.reduce = \\) is a function, not in quotes"),
+    c("cov.reduce = ~ AGE", "emmeans\\(cov.reduce = \\) is a two-sided formula"),
+    c("cov.reduce = list(AGE = \"mean\")", "emmeans\\(cov.reduce = \\) is a list of functions"),
+    c("cov.reduce = 50", "emmeans\\(cov.reduce = \\) is a function"),
+    c("cov.keep = TRUE", "emmeans\\(cov.keep = \\) is covariates by name"),
+    c("cov.keep = 2.5", "emmeans\\(cov.keep = \\) is covariates by name"),
+    c("tran = \"logg\", type = \"response\"",
+      "emmeans\\(tran = \\) is a transformation emmeans .* knows by name.*no transformation"),
+    c("nesting = \"SEX\"", "emmeans\\(nesting = \\) is the factors nested"),
+    c("nesting = TRUE", "emmeans\\(nesting = \\) is the factors nested"))
+  for (b in bad) {
+    expect_warning(exact_spec(reg_row(paste0(pw, "emmeans_args = list(", b[1L], ")"))),
+                   b[2L], info = b[1L])
+  }
+  # all fine: emmeans' shapes, and the program's objects or calls
+  for (x in c(
+    "cov.reduce = median", "cov.reduce = FALSE", "cov.reduce = stats::median",
+    "cov.reduce = function(x) stats::quantile(x, 0.5)",
+    "cov.reduce = AGE ~ TRT01A", "cov.reduce = list(AGE = median)",
+    "cov.reduce = my_reducers",
+    "cov.keep = \"AGE\"", "cov.keep = 3", "cov.keep = c(\"AGE\", \"BMIBL\")",
+    "tran = \"log\", type = \"response\"", "tran = \"logit\"",
+    "tran = emmeans::make.tran(\"genlog\", 1)", "tran = my_tran",
+    "nesting = \"SITEID %in% COUNTRY\"", "nesting = list(SITEID = \"COUNTRY\")",
+    "nesting = NULL")) {
+    expect_no_warning(exact_spec(reg_row(paste0(pw, "emmeans_args = list(", x, ")"))),
+                      message = x)
+  }
+})
+
+test_that("emmeans_args' tran reaches emmeans(): ratios of a response made log beforehand", {
+  skip_on_cran()
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("dplyr")
+  skip_if_not_installed("broom.helpers")
+  skip_if_not_installed("emmeans")
+  adam <- exact_data()
+  dir <- exact_dir(adam)
+  on.exit(unlink(dir, recursive = TRUE))
+  # an ANCOVA of log(AGE) made beforehand: emmeans cannot see the log, so
+  # `tran = "log"` with `type = "response"` gives the arms' ratios
+  args <- function(ea) paste(
+    "formula = LAGE ~ TRT01A + SEX, method = \"lm\",",
+    "add_pairwise_contrasts = TRUE, contrasts_adjust = \"none\", emmeans_args =", ea)
+  ea <- "list(tran = \"log\", type = \"response\")"
+  cs <- list(
+    row = list(method = "regression", population_id = "SAF", args = args(ea)),
+    pop_derive = "LAGE = log(AGE)",
+    hand = paste("cardx::ard_regression(data, formula = LAGE ~ TRT01A + SEX,",
+                 "method = \"lm\", add_pairwise_contrasts = TRUE,",
+                 "contrasts_adjust = \"none\", emmeans_args =", ea, ")"))
+  r <- exact_run(cs, adam, dir)
+  expect_true(isTRUE(r$same), info = r$error)
+  d <- exact_inputs(cs$row, adam, pop_derive = cs$pop_derive)$data
+  fit <- stats::lm(LAGE ~ TRT01A + SEX, data = d)
+  want <- function(...) {
+    e <- emmeans::emmeans(fit, "TRT01A", type = "response", ...)
+    as.data.frame(graphics::pairs(e, adjust = "none", reverse = TRUE))
+  }
+  ratio <- want(tran = "log")
+  expect_true("ratio" %in% names(ratio))
+  # a name emmeans does not know is the identity: differences on the log
+  # scale, without a word (what the check now says)
+  logg <- want(tran = "logg")
+  expect_true("estimate" %in% names(logg))
+  expect_equal(exp(logg$estimate), ratio$ratio, tolerance = 1e-8)
+  ard <- suppressMessages(suppressWarnings(
+    tfl_build_ard(exact_spec(cs$row, pop_derive = cs$pop_derive), dir = dir,
+                  save = FALSE)))
+  est <- ard[ard$stat_name == "estimate" & ard$variable == "TRT01A", ]
+  expect_equal(unname(unlist(est$stat)), ratio$ratio, tolerance = 1e-8)
+})

@@ -572,3 +572,43 @@ test_that("the CMH test's options reach mantelhaen.test() over cardx's defaults"
   ref <- stats::mantelhaen.test(adsl$SEX, adsl$TRT01A, adsl$AGEGR1, correct = FALSE)
   expect_equal(unlist(ard$stat[ard$stat_name == "p.value"]), ref$p.value)
 })
+
+test_that("tidy_plus_plus()'s other arguments are judged (2026-11-14)", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom")
+  skip_if_not_installed("broom.helpers")
+  # described for both regression functions, passed on to tidy_plus_plus()
+  for (fn in c("cardx::ard_regression", "cardx::ard_regression_basic")) {
+    a <- tfl_ard_args(fn)
+    new <- c("quiet", "strict", "tidy_post_fun", "group_by", "group_labels",
+             "relabel_poly", "disambiguate_terms", "disambiguate_sep",
+             "model_matrix_attr", "instrumental_suffix")
+    expect_true(all(new %in% a$arg), info = fn)
+    expect_true(all(nzchar(a$hint[a$arg %in% new])), info = fn)
+    expect_true(all(a$passed_to[a$arg %in% new] == "broom.helpers::tidy_plus_plus"),
+                info = fn)
+  }
+  reg_row <- function(args) list(method = "regression", population_id = "SAF",
+    args = paste("formula = AGE ~ TRT01A + SEX, method = \"lm\",", args))
+  bad <- list(
+    c("quiet = \"yes\"", "ard_regression\\(quiet = \\) is TRUE or FALSE"),
+    c("strict = 1", "ard_regression\\(strict = \\) is TRUE or FALSE"),
+    c("tidy_post_fun = \"my_fun\"", "ard_regression\\(tidy_post_fun = \\) is a function"),
+    c("group_by = 1", "ard_regression\\(group_by = \\) is columns of the tidied table"),
+    c("group_labels = c(\"a\")", "ard_regression\\(group_labels = \\) is labels by name"),
+    c("disambiguate_sep = 1", "ard_regression\\(disambiguate_sep = \\) is text"),
+    c("relabel_poly = \"no\"", "ard_regression\\(relabel_poly = \\) is TRUE or FALSE"))
+  for (b in bad) expect_warning(exact_spec(reg_row(b[1L])), b[2L], info = b[1L])
+  expect_no_warning(exact_spec(reg_row(paste(
+    "quiet = TRUE, strict = FALSE, tidy_post_fun = function(x) x,",
+    "group_by = NULL, group_labels = c(a = \"A\"), relabel_poly = TRUE,",
+    "disambiguate_terms = FALSE, disambiguate_sep = \"_\", model_matrix_attr = TRUE,",
+    "instrumental_suffix = \" (IV)\""))))
+  expect_no_warning(exact_spec(reg_row("group_by = broom.helpers::auto_group_by()")))
+  # (not catalogued: polr's p.values -- inside cardx, broom's tidy.polr()
+  # cannot refit the model for its LR tests, and broom.helpers falls back to
+  # parameters' Wald p-values; a name lm's tidier does not take is said)
+  expect_warning(exact_spec(reg_row("p.values = TRUE")),
+                 "has no argument `p.values`.*broom's tidy.lm\\(\\)")
+})

@@ -123,3 +123,120 @@
   }
   out
 }
+
+# ---- the values of cov.reduce, cov.keep, tran and nesting (2026-11-14) ----
+# emmeans takes R of its own shapes in these four; the catalog's kinds
+# `reducer`, `keep`, `tran` and `nesting` (inst/ard/model_args.csv), judged
+# by .model_value_problem().  A name (an object of the program) is the
+# program's; a call that makes the value (make.tran(...), my_reducers())
+# too.
+
+# cov.reduce: a function (mean, median, function(x) ..., stats::median),
+# TRUE / FALSE, a two-sided formula (BASE ~ TRT01P: the covariate predicted
+# from the arms), or a list of functions and formulas by covariate.
+# ref_grid() stops on anything else ("Invalid 'cov.reduce' argument"):
+# `"median"` in quotes, a number, a one-sided formula.
+.emmeans_reducer_problem <- function(e, shown) {
+  want <- paste("is a function, not in quotes (median, function(x) ...), TRUE / FALSE,",
+                "a two-sided formula (BASE ~ TRT01P) or a list of them by covariate")
+  one <- function(x, top) {
+    if (is.name(x)) return(TRUE)
+    if (top && is.logical(x) && length(x) == 1L && !is.na(x)) return(TRUE)
+    if (!is.call(x)) return(FALSE)
+    fn <- x[[1L]]
+    if (identical(fn, as.name("~"))) return(length(x) == 3L)
+    if (identical(fn, as.name("function")) || identical(fn, as.name("::")) ||
+        identical(fn, as.name(":::"))) return(TRUE)
+    if (identical(fn, as.name("list"))) {
+      if (!top) return(FALSE)
+      els <- as.list(x)[-1L]
+      nm <- names(els) %||% rep("", length(els))
+      return(length(els) > 0L && all(nzchar(nm)) &&
+               all(vapply(els, one, NA, top = FALSE)))
+    }
+    # (any other call makes the value: the program's)
+    is.null(.literal_value(x))
+  }
+  if (is.null(e) || one(e, TRUE)) return(NULL)
+  if (is.call(e) && identical(e[[1L]], as.name("~"))) {
+    return(sprintf("is a two-sided formula (BASE ~ TRT01P): emmeans stops on %s", shown))
+  }
+  if (is.call(e) && identical(e[[1L]], as.name("list"))) {
+    return(sprintf(paste("is a list of functions or two-sided formulas named by",
+                         "covariate (list(BASE = median)); got %s"), shown))
+  }
+  sprintf("%s; got %s", want, shown)
+}
+
+# cov.keep: covariates kept with all their values, by name, or a number (a
+# covariate with that many distinct values or fewer is kept).
+.emmeans_keep_problem <- function(e, shown) {
+  if (is.name(e) || is.null(e)) return(NULL)
+  v <- .literal_value(e)
+  if (is.call(e) && is.null(v)) return(NULL)
+  if (is.character(v)) return(NULL)
+  if (is.numeric(v) && length(v) == 1L && !is.na(v) && v >= 0 && v == round(v)) {
+    return(NULL)
+  }
+  sprintf(paste("is covariates by name in quotes (c(\"VISITNUM\")) or a whole",
+                "number (3: a covariate with 3 values or fewer is kept); got %s"), shown)
+}
+
+# The transformations emmeans knows by name: the links its .make.link()
+# names (the `%in%` vector and the switch()'s cases of the installed
+# emmeans).  Any other name is taken as the identity, without a word.
+# NULL when they cannot be read (then the catalog's choices are used).
+.emmeans_tran_names <- function() {
+  if (!requireNamespace("emmeans", quietly = TRUE)) return(NULL)
+  f <- get0(".make.link", envir = asNamespace("emmeans"), mode = "function")
+  if (is.null(f)) return(NULL)
+  out <- character()
+  walk <- function(x) {
+    if (!is.call(x)) return(invisible())
+    if (identical(x[[1L]], as.name("%in%")) && is.call(x[[3L]])) {
+      v <- .literal_value(x[[3L]])
+      if (is.character(v)) out <<- c(out, v)
+    }
+    if (identical(x[[1L]], as.name("switch"))) {
+      nm <- names(as.list(x))[-c(1L, 2L)]
+      out <<- c(out, nm[nzchar(nm)])
+    }
+    xs <- as.list(x)[-1L]
+    for (i in seq_along(xs)) if (is.call(xs[[i]])) walk(xs[[i]])
+    invisible()
+  }
+  walk(body(f))
+  if (length(out)) unique(out) else NULL
+}
+
+# tran: a name emmeans knows ("log", "logit", "sqrt" ...), or make.tran(...)
+# / a list of linkfun, linkinv, mu.eta (R that makes it: the program's).
+.emmeans_tran_problem <- function(e, choices, shown) {
+  if (is.name(e) || is.null(e)) return(NULL)
+  v <- .literal_value(e)
+  if (is.call(e) && is.null(v)) return(NULL)
+  known <- .emmeans_tran_names() %||% .split_bar(choices)
+  if (is.character(v) && length(v) == 1L && v %in% known) return(NULL)
+  sprintf(paste("is a transformation emmeans %s knows by name (%s) or make.tran(...);",
+                "got %s -- emmeans would take it as no transformation, so",
+                "type = \"response\" would not back-transform"),
+          if (requireNamespace("emmeans", quietly = TRUE))
+            as.character(utils::packageVersion("emmeans")) else "",
+          paste0("\"", utils::head(known, 12L), "\"", collapse = ", "), shown)
+}
+
+# nesting: "A %in% B" (several separated by commas; B may be (B1 * B2)),
+# a list (list(SITEID = "COUNTRY")) or NULL.  A number or TRUE stops
+# emmeans; text without %in% names no nesting.
+.emmeans_nesting_problem <- function(e, shown) {
+  if (is.name(e) || is.null(e)) return(NULL)
+  v <- .literal_value(e)
+  if (is.call(e) && is.null(v)) return(NULL)
+  if (is.character(v) && !anyNA(v)) {
+    parts <- trimws(unlist(strsplit(v, ",", fixed = TRUE)))
+    if (length(parts) && all(grepl("^\\S.*\\s+%in%\\s+\\S", parts))) return(NULL)
+  }
+  sprintf(paste("is the factors nested, in quotes: \"SITEID %%in%% COUNTRY\"",
+                "(several separated by commas) or list(SITEID = \"COUNTRY\"); got %s"),
+          shown)
+}

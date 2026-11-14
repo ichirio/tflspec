@@ -279,7 +279,7 @@ mcat <- utils::read.csv("inst/ard/model_args.csv", stringsAsFactors = FALSE,
                         na.strings = "")
 has_model_check <- exists(".model_args_problems", ns)
 model_judged <- c("logical", "number", "choice", "text", "variable", "family", "list",
-                  "link", "vector", "covariance")
+                  "link", "vector", "covariance", "reducer", "keep", "tran", "nesting")
 for (key in names(model_fns)) {
   fs <- lapply(model_fns[[key]], mfun)
   if (any(vapply(fs, is.null, NA))) next

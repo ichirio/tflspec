@@ -157,7 +157,13 @@
 #' which `tidy_plus_plus()` writes itself or takes from `conf.level` and
 #' `contrasts_adjust`, and `emmeans_args` without the pairwise contrasts.
 #' An MMRM's `cov_struct()` has its `group` (a column in quotes: the
-#' covariance by arm) and `heterogeneous` judged too.
+#' covariance by arm) and `heterogeneous` judged too.  Since 2026-11-14 so
+#' are emmeans' `cov.reduce` (a function, TRUE / FALSE, a two-sided formula
+#' or a list of them: `"median"` in quotes stops emmeans), `cov.keep`
+#' (names or a number), `tran` (a name the installed emmeans knows:
+#' `"logg"` would be taken as no transformation, so `type = "response"`
+#' gives differences on the log scale instead of ratios) and `nesting`
+#' (`"SITEID %in% COUNTRY"` or a list).
 #'
 #' The catalog is `inst/ard/model_args.csv` (`fn`, `arg`, `default`,
 #' `kind`, `hint`, `choices`); a company adds rows with
@@ -430,6 +436,11 @@ tfl_ard_model_args <- function(method, package = "base") {
                    fn, shown))
   }
   if (identical(kind, "covariance")) return(.model_covariance_problem(e, shown))
+  # (emmeans' own shapes, since 2026-11-14: R/ard_emmeans_args.R)
+  if (identical(kind, "reducer")) return(.emmeans_reducer_problem(e, shown))
+  if (identical(kind, "keep")) return(.emmeans_keep_problem(e, shown))
+  if (identical(kind, "tran")) return(.emmeans_tran_problem(e, choices, shown))
+  if (identical(kind, "nesting")) return(.emmeans_nesting_problem(e, shown))
   if (identical(kind, "number") && arg %in% names(.model_number_floor)) {
     v <- .literal_value(e)
     lo <- .model_number_floor[[arg]]

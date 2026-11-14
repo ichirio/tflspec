@@ -80,7 +80,7 @@ MASS::polr,control,,list,"optim()'s control, where polr()'s ... go: list(maxit =
 emmeans::emmeans,weights,equal,choice,"How the LS means average over the other factors of the model: equal (default; SAS's LSMEANS), proportional (in proportion to the data's frequencies: SAS's OM / OBSMARGINS), outer, cells or flat; or a numeric vector.",equal | proportional | outer | cells | flat
 emmeans::emmeans,type,link,choice,"The scale of the estimates: link (the model's linear predictor) or response (back-transformed: odds and rate ratios; tidy_plus_plus() sets it with exponentiate = TRUE).",link | response | lp | linear.predictor | unlink | mu
 emmeans::emmeans,at,,list,"The covariates' values the LS means are taken at, as a list: list(BASE = 50) (default: each covariate's mean).",
-emmeans::emmeans,cov.reduce,mean,code,"How a covariate is reduced to the value the LS means are taken at: mean (default), median, or a function.",
+emmeans::emmeans,cov.reduce,mean,reducer,"How a covariate is reduced to the value the LS means are taken at: mean (default), median, TRUE / FALSE (FALSE: each of its distinct values), a function, a two-sided formula (BASE ~ TRT01P: the covariate predicted from the arms), or a list of these by covariate -- not in quotes.",
 emmeans::emmeans,df,,number,"Fixed degrees of freedom for the tests and intervals (Inf: z tests); default: the model's.",
 emmeans::emmeans,nuisance,,text,"Factors averaged over before the grid is built (a large model): c(""SITEID"").",
 emmeans::emmeans,wt.nuis,equal,choice,"How the nuisance factors are averaged: equal (default) or proportional.",equal | proportional
@@ -91,3 +91,6 @@ emmeans::emmeans,mode,,text,"The kind of estimate of a multinomial or ordinal mo
 emmeans::emmeans,bias.adjust,FALSE,logical,"TRUE: a bias adjustment of the back-transformed estimates (type = ""response"").",
 emmeans::emmeans,sigma,,number,"The residual SD the bias adjustment of back-transformed estimates uses (bias.adjust = TRUE); default: the model's.",
 emmeans::emmeans,non.nuisance,,text,"The factors kept in the grid, all others nuisance (the opposite of nuisance): c(""TRT01P"").",
+emmeans::emmeans,cov.keep,,keep,"Covariates kept with all their values rather than reduced, by name in quotes (c(""VISITNUM"")), or a number: a covariate with that many distinct values or fewer is kept as a factor (emmeans' default: 2).",
+emmeans::emmeans,tran,,tran,"The transformation of the response the model was fitted on, when emmeans cannot see it (the response made log beforehand): ""log"" (type = ""response"" then gives ratios), ""logit"", ""sqrt"" ...; or make.tran(...). A name emmeans does not know is taken as no transformation.",logit | probit | cauchit | cloglog | identity | log | sqrt | 1/mu^2 | inverse | reciprocal | log10 | log2 | log1p | asin.sqrt | asinh.sqrt | atanh | exp
+emmeans::emmeans,nesting,,nesting,"Factors nested in others, in quotes: ""SITEID %in% COUNTRY"" (several separated by commas), or list(SITEID = ""COUNTRY""); NULL: none.",
