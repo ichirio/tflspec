@@ -172,9 +172,9 @@ tag_ard <- function(ard, report_id, analysis_id, population = NA_character_,
 # statistic's value columns (stat, stat_label, stat_fmt, fmt_fun, fmt_fn,
 # warning, error): the ids, every group and its level, variable,
 # variable_level, context, stat_name, and any other column a wrapper adds
-# (`pairwise`); a *_level is compared as text, NULL as missing.  Two rows of one item with the same key stop the
-# program (the same ard_tabulate() written twice, two conditions that are
-# the same); rows of different items with the same key, analysis_id left
+# (`pairwise`); a *_level is compared as text, NULL as missing.  Two rows
+# of one item with the same key stop the program (the same ard_tabulate()
+# written twice, two conditions that are the same); rows of different items with the same key, analysis_id left
 # out, give a warning and are all kept.
 #   ard <- bind_items(ard_dm, ard_lab)
 bind_items <- function(...) {
