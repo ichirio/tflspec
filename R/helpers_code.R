@@ -1,7 +1,8 @@
 #' The functions a study's generated programs call
 #'
 #' The R code of the functions the programs tflspec writes call:
-#' `set_levels()` (the code lists on a data: each listed column a factor of
+#' `blank_as_na()` (a character column's `""`, and a factor's, as `NA`: what
+#' `study$adam` holds), `set_levels()` (the code lists on a data: each listed column a factor of
 #' the codes in the list's order, as the ARD holds them, no labels; a value
 #' not listed stops the program), `reorder_by()` (a column in another's
 #' order when the data has it: `PARAM` by `PARAMN`), `order_levels()` (the arm

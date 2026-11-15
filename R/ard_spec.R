@@ -334,7 +334,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   }
   # an argument the installed function does not have: said now, with the
   # version, rather than by the program when it runs
-  w <- .ard_args_unknown(x)
+  w <- c(.ard_args_unknown(x), .blank_text_notes(x))
   if (length(w)) warning(paste(w, collapse = "\n  "), call. = FALSE)
   x
 }
@@ -1363,6 +1363,56 @@ tfl_ard_as_custom <- function(spec, output_id, analysis_id) {
   fmt <- if (!length(fmt)) NA_character_ else
     paste(ifelse(is.na(fmt), names(fmt), paste0(names(fmt), "=", fmt)), collapse = " | ")
   list(code = body, formats = fmt, method = "custom")
+}
+
+# In study$adam a blank is NA (blank_as_na()), so a test for a blank text
+# (`X == ""`, `X != ""`, `nzchar(X)`) in an R field of the definition finds
+# nothing there: one note a place, `<id> / <field>: <text>: in study$adam a
+# blank is NA -- write is.na(X)` (`!is.na(X)` for `!= ""` and `nzchar(X)`).
+# The fields: populations where / derive, records where, datasets derive,
+# analysis data where / derive / code / then, analyses where / post / code.
+.blank_text_notes <- function(x) {
+  id <- function(d) {
+    if (!is.null(d$data_id)) paste(d$output_id, d$data_id, sep = " / ") else if (!is.null(d$analysis_id))
+      paste(d$output_id, d$analysis_id, sep = " / ") else if (!is.null(d$record_id)) d$record_id else
+      if (!is.null(d$population_id)) d$population_id else d$dataset
+  }
+  sheets <- list(
+    list(x$populations, c("where", "derive")), list(x$records, "where"),
+    list(x$datasets, "derive"), list(.adata_sheet(x), c("where", "derive", "code", "then")),
+    list(x$analyses, c("where", "post", "code")))
+  out <- character()
+  for (s in sheets) {
+    d <- s[[1L]]
+    if (!is.data.frame(d) || !nrow(d)) next
+    tag <- id(d)
+    for (f in intersect(s[[2L]], names(d))) {
+      for (i in which(!is.na(d[[f]]))) {
+        for (m in .blank_text_found(d[[f]][i])) {
+          out <- c(out, sprintf("%s / %s: %s: in study$adam a blank is NA -- write %s",
+                                tag[i], f, m[[1L]], m[[2L]]))
+        }
+      }
+    }
+  }
+  unique(out)
+}
+
+# The tests for a blank text in an R text: a list of c(the text, what to write)
+.blank_text_found <- function(txt) {
+  col <- "([A-Za-z.][A-Za-z0-9._$]*(?:\\([^()]*\\))?)"
+  q <- "(?:\"\"|'')"
+  found <- function(pat, fun) {
+    hits <- regmatches(txt, gregexpr(pat, txt, perl = TRUE))[[1L]]
+    lapply(hits, function(h) c(h, fun(regmatches(h, regexec(pat, h, perl = TRUE))[[1L]])))
+  }
+  isna <- function(v, neg) paste0(if (neg) "!" else "", "is.na(", v, ")")
+  c(found(paste0(col, "\\s*(==|!=)\\s*", q),
+          function(g) isna(g[2L], g[3L] == "!=")),
+    found(paste0(q, "\\s*(==|!=)\\s*", col),
+          function(g) isna(g[3L], g[2L] == "!=")),
+    found("(!?)\\s*nzchar\\(\\s*([^()]*?)\\s*\\)",
+          function(g) isna(g[3L], g[2L] != "!")))
 }
 
 # An analysis's condition runs on its data after the code lists are put on

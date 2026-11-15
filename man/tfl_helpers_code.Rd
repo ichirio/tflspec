@@ -11,7 +11,8 @@ The code, one element per line.
 }
 \description{
 The R code of the functions the programs tflspec writes call:
-\code{set_levels()} (the code lists on a data: each listed column a factor of
+\code{blank_as_na()} (a character column's \code{""}, and a factor's, as \code{NA}: what
+\code{study$adam} holds), \code{set_levels()} (the code lists on a data: each listed column a factor of
 the codes in the list's order, as the ARD holds them, no labels; a value
 not listed stops the program), \code{reorder_by()} (a column in another's
 order when the data has it: \code{PARAM} by \code{PARAMN}), \code{order_levels()} (the arm
