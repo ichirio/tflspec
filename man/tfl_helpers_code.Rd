@@ -24,7 +24,9 @@ records data's arm, which has no number of its own, by the matching arm
 and number of ADSL, the records' values kept and a value ADSL lacks
 last; a value with two numbers there is an error), \code{order_arms()} (the arm
 variables alone: \code{order_levels()} with no categories), \code{tag_ard()} (the report, analysis and
-analysis set in front of an analysis's ARD), \code{fmt_ard()} and
+analysis set in front of an analysis's ARD), \code{bind_items()} (a report's items into one
+ARD: no row lost, the columns in order, a statistic twice in one item an error, the
+same statistic in two items a warning), \code{fmt_ard()} and
 \code{fmt_pvalue()} (formats after a call), \code{keep_stats()} (only the
 statistics asked for), \code{ard_hierarchical_or_none()} (nested counts,
 and the ARD of no records: the overall row 0), \code{complete_hierarchy()} (a
