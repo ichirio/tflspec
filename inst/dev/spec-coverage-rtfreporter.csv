@@ -163,6 +163,7 @@
 "rtfreporter","normalize_ard","stack","yes","content: normalize_ard","schema.yml type"
 "rtfreporter","normalize_ard","stack_sep","yes","content: normalize_ard","schema.yml type"
 "rtfreporter","normalize_ard","stack_nest","yes","content: normalize_ard","schema.yml type"
+"rtfreporter","normalize_ard","combine","yes","content: normalize_ard","schema.yml type"
 "rtfreporter","overall_row","label","no","","lower-level API: a SPEC cannot call it"
 "rtfreporter","overall_row","from","no","","lower-level API: a SPEC cannot call it"
 "rtfreporter","paginate_cols","x","no","","lower-level API: a SPEC cannot call it"
