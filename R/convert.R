@@ -946,7 +946,8 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
                                                     list_cols = c("add", "keep", "distinct"), rename = c(data_id = "id", population_id = "population"))
     # (the report's subjects definition has no set of its own: `common: population`)
     if (!is.null(ard_part$analysis_data)) {
-      ard_part$analysis_data <- lapply(ard_part$analysis_data, .entry_pop_strip, entry$population %||% NA_character_)
+      ard_part$analysis_data <- lapply(ard_part$analysis_data, .entry_pop_strip, entry$population %||% NA_character_,
+                                      .pop_from(ard$populations, entry$population))
     }
     an <- ard$analyses[!is.na(ard$analyses$output_id) & ard$analyses$output_id == id, , drop = FALSE]
     if (nrow(an)) {

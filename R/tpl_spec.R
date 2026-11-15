@@ -572,7 +572,7 @@ tfl_template_to_spec <- function(output, study) {
       output$common <- .common_in(c(list(population = pop), output$common[setdiff(names(output$common), "population")]),
                                   paste0("tfl_template_to_spec(): ", output$id))
       if (length(output$ard$analysis_data)) {
-        output$ard$analysis_data <- lapply(output$ard$analysis_data, .entry_pop_strip, pop)
+        output$ard$analysis_data <- lapply(output$ard$analysis_data, .entry_pop_strip, pop, .pop_from(study$data$populations, pop))
       }
     }
   }
