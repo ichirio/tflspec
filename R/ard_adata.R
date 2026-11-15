@@ -123,13 +123,58 @@
 # The analysis data the code of the rows `ids` reads by name (a data made
 # by `code` may read another of its report's: a template's subset set)
 .adata_code_reads <- function(ad, ids) {
-  code <- ad$code[match(ids, ad$data_id)] %||% NA
+  code <- c(ad$code[match(ids, ad$data_id)] %||% NA,
+            ad$then[match(ids, ad$data_id)] %||% NA)
   code <- code[!is.na(code)]
   if (!length(code)) return(character())
   unique(unlist(lapply(code, function(x) {
     intersect(tryCatch(all.names(parse(text = x, keep.source = FALSE)),
                        error = function(e) character()), ad$data_id)
   })))
+}
+
+# An `arrange` element: a variable name, or desc(name)
+.arrange_re <- paste0("^([A-Za-z.][A-Za-z0-9._]*|",
+                      "desc\\( *[A-Za-z.][A-Za-z0-9._]* *\\))$")
+
+# The variables an `arrange` cell sorts by (desc(X) as X)
+.arrange_names <- function(x) {
+  v <- .split_bar(x)
+  v <- v[grepl(.arrange_re, v)]
+  sub("^desc\\( *([^ )]*) *\\)$", "\\1", v)
+}
+
+# The pieces of a `then` (R text): its steps at the top-level `|>`s, each
+# one a step of the data's pipe (the text itself when it does not split)
+.then_steps <- function(x) {
+  if (is.null(x) || is.na(x) || !nzchar(trimws(x))) return(character())
+  ch <- strsplit(x, "", fixed = TRUE)[[1L]]
+  n <- length(ch)
+  depth <- 0L
+  quote <- ""
+  cut <- integer()
+  i <- 1L
+  while (i <= n) {
+    c <- ch[i]
+    if (nzchar(quote)) {
+      if (c == "\\") i <- i + 1L else if (c == quote) quote <- ""
+    } else if (c %in% c("\"", "'", "`")) {
+      quote <- c
+    } else if (c %in% c("(", "[", "{")) {
+      depth <- depth + 1L
+    } else if (c %in% c(")", "]", "}")) {
+      depth <- max(0L, depth - 1L)
+    } else if (c == "|" && depth == 0L && i < n && ch[i + 1L] == ">") {
+      cut <- c(cut, i)
+      i <- i + 1L
+    }
+    i <- i + 1L
+  }
+  from <- c(1L, cut + 2L)
+  to <- c(cut - 1L, n)
+  out <- trimws(vapply(seq_along(from), function(k)
+    if (to[k] >= from[k]) paste(ch[from[k]:to[k]], collapse = "") else "", ""))
+  out[nzchar(out)]
 }
 
 # The problems of the sheet and of the analyses' `data`, as rows
@@ -209,6 +254,19 @@
           tag(i), sQuote(piece, FALSE)))
       }
     }
+    # `arrange`: each element a variable name or desc(name)
+    for (piece in .split_bar(ad$arrange[i] %||% NA)) {
+      if (!grepl(.arrange_re, piece)) {
+        add_d(i, "arrange", sprintf(paste(
+          "%s: `arrange` element %s is not a variable name or desc(name)"),
+          tag(i), sQuote(piece, FALSE)))
+      }
+    }
+    thn <- ad$then[i] %||% NA
+    if (!is.na(thn) && is.null(tryCatch(parse(text = thn, keep.source = FALSE),
+                                        error = function(e) NULL))) {
+      add_d(i, "then", sprintf("%s: `then` does not read as R", tag(i)))
+    }
     s <- ad$subjects[i]
     if (!is.na(s)) {
       if (!s %in% above) {
@@ -229,7 +287,7 @@
       # (`population_id` with `code`: the set's subjects are made first,
       # in reach as <dataset>_sub; the other columns are for a data the
       # columns make)
-      also <- c("subjects", "where", "add", "derive", "keep", "distinct")
+      also <- c("subjects", "where", "add", "derive", "arrange", "keep", "distinct", "then")
       also <- also[vapply(also, function(cn) !is.na(ad[[cn]][i] %||% NA), NA)]
       if (length(also)) {
         add_d(i, "code", sprintf(paste(
@@ -335,6 +393,8 @@
     add <- .split_bar(r$add)
     keep <- .split_bar(r$keep)
     dis <- .split_bar(r$distinct)
+    arr <- .split_bar(r$arrange %||% NA)
+    thn <- .then_steps(r$then %||% NA)
     # the subject-level columns it takes: those asked for (`add`), and the
     # groups the analyses' denominators count by (their by, strata)
     # (not the columns the population's derive makes: a record's TRTA,
@@ -384,6 +444,9 @@
     # what follows the rows: the columns added, derived, the columns kept,
     # one row per ..., its code lists
     steps <- c(steps0, .derive_steps(r$derive),
+               # the sort, before the columns kept (a sort variable need not
+               # be kept; distinct() keeps the first row in this order)
+               if (length(arr)) sprintf("dplyr::arrange(%s)", paste(arr, collapse = ", ")),
                # the columns kept: the subject, those the analyses read on
                # it (their by, strata, variables), and the ones asked for
                if (length(keep)) sprintf("dplyr::select(%s)",
@@ -391,6 +454,8 @@
                                                collapse = ", ")),
                if (length(dis)) sprintf("dplyr::distinct(%s, .keep_all = TRUE)",
                                         paste(dis, collapse = ", ")),
+               # the R the row adds after its keys, a step each
+               thn,
                # the same rows as the data it is made from: the same levels --
                # but a dataset read as it is has none yet
                if (length(c(steps0, .split_bar(r$derive), dis, add)) ||

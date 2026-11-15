@@ -49,7 +49,8 @@
   # condition-defined groups (the ARS's grouping factors): a row a level
   groups = c("group_id", "label", "level", "where"),
   analysis_data = c("output_id", "data_id", "from", "population_id", "subjects",
-                    "where", "add", "derive", "keep", "distinct", "code"),
+                    "where", "add", "derive", "arrange", "keep", "distinct", "code",
+                    "then"),
   analyses = c("output_id", "analysis_id", "parent", "label", "method",
                "data", "dataset", "records",
                "population_id", "where", "by", "overall", "strata", "groups", "variables",

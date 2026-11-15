@@ -36,7 +36,7 @@ df <- function(...) data.frame(..., stringsAsFactors = FALSE)
 | `study` | key | `id` (the subject key), `output` (where the ARD goes), `source` (R files of the study's own functions) |
 | `datasets` | dataset | `dataset`, `level`, `path` (relative to the study folder), `derive` (columns made on reading) |
 | `populations` | analysis set | `population_id`, `dataset`, `where`, `derive` |
-| `analysis_data` | named data of a report | `output_id`, `data_id`, `from`, `population_id`, `subjects`, `where`, `add`, `derive`, `keep`, `distinct`, `code` |
+| `analysis_data` | named data of a report | `output_id`, `data_id`, `from`, `population_id`, `subjects`, `where`, `add`, `derive`, `arrange`, `keep`, `distinct`, `code`, `then` |
 | `analyses` | analysis | `output_id`, `analysis_id`, `method`, `data` or `dataset` + `population_id`, `where`, `by`, `strata`, `variables`, `statistics`, `denominator`, `formats`, `args`, `code`, `parent`, `post`, ... |
 
 Every column is described on its header cell's comment in the workbook,
@@ -97,8 +97,10 @@ Each row makes one data, in this order:
 3. the records `where` keeps;
 4. columns of the population's data added by the subject key (`add`);
 5. columns derived (`derive`), and the columns kept (`keep`, after
-   `derive`: a derived column may be named);
-6. one row per set of values (`distinct`).
+   `derive`: a derived column may be named); the rows can be sorted before
+   that (`arrange`: names or `desc(name)`);
+6. one row per set of values (`distinct`, the first row in the sort);
+7. R added at the end (`then`: a pipe of steps; not with `code`).
 
 `data_id` is the object's name in the program. An analysis names it in
 its `data` column instead of `dataset` / `population_id`.

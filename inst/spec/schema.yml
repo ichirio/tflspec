@@ -1005,6 +1005,12 @@ rtf_footer:
         description: 'New columns, NAME = R expression, | between them (transform());
           a column the code lists list becomes a factor in their order; blank: none.'
         example: PHASE = APHASE
+      - column: arrange
+        description: 'The sort variables, | between them, each a name or desc(name)
+          (dplyr::arrange()); after derive, before keep (a sort variable need not
+          be kept; distinct keeps the first row in this order). Never changes the
+          number of rows; blank: the order as it is.'
+        example: USUBJID | desc(ASTDT)
       - column: keep
         description: 'The columns kept, | between them (the subject key always), after
           derive (a derived column may be named); blank: every column.'
@@ -1021,6 +1027,12 @@ rtf_footer:
           data above are in reach. With it, the columns but from are left blank;
           blank: the columns make the data.'
         example: dplyr::filter(adae, USUBJID %in% adsl_sub$USUBJID, AETOXGR >= 3)
+      - column: then
+        description: 'R added after the other columns'' work, at the end of the data''s
+          pipe (a pipe of several steps is fine: dplyr::mutate(...) |> dplyr::filter(...));
+          the data is its first argument. Not together with code (code makes the
+          whole data); blank: nothing added.'
+        example: dplyr::mutate(AVAL = round(AVAL, 1)) |> dplyr::filter(AVAL > 0)
   - sheet: analyses
     description: 'ARD: one analysis a row; each becomes one cards / cardx call in
       the ARD program, its result tagged with output_id, analysis_id and population_id.'

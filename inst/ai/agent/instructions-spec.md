@@ -227,10 +227,15 @@ it to these rules (every agent of tflspec#512 tripped on them):
 
 `data` (a table's or listing's flat list of definitions), one item each: `id`, `from` (a dataset of
 `spec/data.yml`, or an analysis data above it), `population`, `subjects`,
-`where`, `add`, `derive`, `keep`, `distinct`, `code` -- no other key (a data has no
-`label`: its `id` names it; a note is a YAML comment).
+`where`, `add`, `derive`, `arrange`, `keep`, `distinct`, `code`, `then` -- no other key
+(a data has no `label`: its `id` names it; a note is a YAML comment).
 `population` and `subjects` are one or the other; with `code`, only `id`,
 `from` and `population`.
+`arrange` is the sort, a list of names or `desc(name)` (`[USUBJID, desc(ASTDT)]`), done
+after `derive` and before `keep` and `distinct` (`distinct` keeps the first row in that
+order). `then` is R added at the end of the data's pipe, the data its first argument
+(`then: !r dplyr::mutate(AVAL = round(AVAL, 1)) |> dplyr::filter(AVAL > 0)`); it cannot
+be written with `code`.
 
 `ard.analyses`, one item each: `id`, `method`, then **either** `data`
 (an analysis data's id of this report) **or** `dataset` with

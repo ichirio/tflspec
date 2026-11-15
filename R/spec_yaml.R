@@ -779,7 +779,7 @@ tfl_write_output <- function(x, path) {
 # a sequence): written as a sequence even when it holds one name, as the
 # reader read it (`by: [TRT01A]` read is "TRT01A", written `- TRT01A`)
 .seq_keys <- list(
-  analysis_data = c("add", "keep", "distinct"),
+  analysis_data = c("add", "arrange", "keep", "distinct"),
   analyses = c("by", "strata", "variables", "statistics", "formats"),
   listing_col = "vars")
 

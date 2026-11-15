@@ -246,6 +246,17 @@ test_that("A01: columns an analysis data adds are the population's data's, not i
   expect_true(any(r$rule == "A01" & grepl("NOPE", r$message, fixed = TRUE)))
 })
 
+test_that("A01: an arrange variable the data does not have is found, desc() read through", {
+  s <- .rv_study()
+  s$ard$analysis_data$arrange <- NA_character_
+  s$ard$analysis_data$arrange[3] <- "USUBJID | desc(AEDECOD)"
+  r <- .rv_review(s)
+  expect_false(any(r$rule == "A01" & grepl("AEDECOD", r$message, fixed = TRUE)))
+  s$ard$analysis_data$arrange[3] <- "USUBJID | desc(NOPE)"
+  r <- .rv_review(s)
+  expect_true(any(r$rule == "A01" & grepl("NOPE", r$message, fixed = TRUE)))
+})
+
 test_that("a figure with analyses of its own is not reviewed as a table (#293 P6)", {
   s <- .rv_study()
   # T-2's analyses as a figure's own ARD: no table rules for it
