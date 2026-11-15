@@ -27,21 +27,15 @@ te_layers <- function(settings = list()) {
     "styles:",
     "  compact:",
     "    content:",
-    "      - plan_style: {font: S, header_align: center}",
-    "page:",
-    "  header:",
-    "    1: {left: Defaults}"),
+    "      - plan_style: {font: S, header_align: center}"),
     patterns = list(x = c(
       "content:",
-      "  - plan_style: {font: P, align: right}",
-      "page:",
-      "  header:",
-      "    1: {left: Pattern}")),
+      "  - plan_style: {font: P, align: right}")),
     settings = settings)
 }
 
 te_demog <- function(..., args = list(), name = "demog") {
-  tfl_output("T-9", "table", population = "SAF", ...,
+  tfl_output("T-9", "table", common = list(population = "SAF"), ...,
              template = list(name = name, args = c(list(by = "TRT01A", continuous = "AGE"), args)))
 }
 
@@ -50,22 +44,24 @@ te_item <- function(ro, fn) Filter(function(it) identical(it$fn, fn), ro$content
 test_that("extends' forms: files, none, a map by step; NULL for a template report; checked", {
   expect_identical(tfl_output("T-1", "table")$extends, "defaults")
   expect_null(te_demog()$extends)
-  o <- tfl_output("T-1", "table", extends = list(content = "none", page = list("patterns/x", "defaults")))
-  expect_identical(o$extends, list(content = "none", page = c("patterns/x", "defaults")))
+  o <- tfl_output("T-1", "table", extends = list(content = "none", data = list("patterns/x", "defaults")))
+  expect_identical(o$extends, list(content = "none", data = c("patterns/x", "defaults")))
   e <- tfl_output_extends(o)
-  expect_identical(names(e), c("data", "ard", "content", "page"))
+  expect_identical(names(e), c("data", "ard", "content"))
   expect_identical(e$content, character())
-  expect_identical(e$data, "defaults")
-  expect_identical(tfl_output_extends(o, "page"), c("patterns/x", "defaults"))
+  expect_identical(e$data, c("patterns/x", "defaults"))
+  expect_identical(tfl_output_extends(o, "data"), c("patterns/x", "defaults"))
+  # the page step has no files: the page comes from the page configuration
+  expect_error(tfl_output("T-1", "table", extends = list(page = "none")), "no step page")
   expect_identical(tfl_output_extends(tfl_output("T-1", "table", extends = "none"), "data"), character())
   expect_error(tfl_output("T-1", "table", extends = list(foo = "none")),
-               "no step 'foo'; the steps: data, ard, content, page")
+               "no step 'foo'; the steps: data, ard, content")
   expect_error(tfl_output("T-1", "table", extends = list(content = 1)), "a map by step")
-  expect_error(tfl_output_extends(o, "plot"), "one of data, ard, content, page")
+  expect_error(tfl_output_extends(o, "plot"), "one of data, ard, content")
   # a template report's: its template's, a map's other steps its template's too (Q1)
   expect_identical(tfl_output_extends(te_demog())$content, "defaults")
-  expect_identical(tfl_output_extends(te_demog(extends = list(page = "none")))$content, "defaults")
-  expect_identical(tfl_output_extends(te_demog(extends = list(page = "none")))$page, character())
+  expect_identical(tfl_output_extends(te_demog(extends = list(data = "none")))$content, "defaults")
+  expect_identical(tfl_output_extends(te_demog(extends = list(data = "none")))$data, character())
   expect_identical(tfl_output_extends(te_demog(name = "stf_t02_demog"))$content, character())
   expect_identical(tfl_output_extends(te_demog(extends = "defaults"))$content, "defaults")
   # written and read back: a map as a map, NULL not written
@@ -79,7 +75,7 @@ test_that("extends' forms: files, none, a map by step; NULL for a template repor
   expect_null(tfl_read_output(f)$extends)
   # (a template report's `extends: [defaults]`, as every writer wrote it before:
   # not written, its template's)
-  writeLines(c("id: T-9", "kind: table", "population: SAF", "extends: [defaults]", "template:",
+  writeLines(c("id: T-9", "kind: table", "common: {population: SAF}", "extends: [defaults]", "template:",
                "  name: stf_t02_demog", "  args: {by: TRT01A, continuous: AGE}"), f)
   expect_null(tfl_read_output(f)$extends)
   # a code SPEC that writes none: defaults
@@ -99,8 +95,6 @@ test_that("T1: one order -- report > template > style > pattern > defaults; a co
   # (border_header: the template's, as its reference read it -- the one rule)
   rt <- attr(ro, "template")$routes
   expect_identical(rt$route[rt$param == "border_header"], "study:plan_style.border_header")
-  # the page: the pattern's over the defaults'
-  expect_identical(ro$page$header[["1"]]$left, "Pattern")
   # a code SPEC: the same layers, no template
   c0 <- tfl_output("T-1", "table", extends = c("patterns/x", "defaults"), style = "compact",
                    content = list(tfl_item("plan_style", list(font = "R"))))
@@ -116,7 +110,7 @@ test_that("T2: the map forms on demog and stf_t02_demog; an unknown step stops",
   # {content: none} written on demog: no study content, the page kept
   r1 <- tfl_resolve_output(te_demog(extends = list(content = "none")), s)
   expect_false(any(c("defaults", "pattern:x") %in% from(r1)))
-  expect_identical(r1$page$header[["1"]]$left, "Defaults")
+  expect_identical(r1$page$header[["1"]]$left, "{COMPANY}")
   # none written: its set's [defaults], the same as written
   r0 <- tfl_resolve_output(te_demog(), s, provenance = TRUE)
   expect_true("defaults" %in% unlist(lapply(r0$content, function(it) it$arg_from)))
@@ -126,9 +120,8 @@ test_that("T2: the map forms on demog and stf_t02_demog; an unknown step stops",
   # [patterns/x, defaults] lays the pattern
   r2 <- tfl_resolve_output(te_demog(extends = c("patterns/x", "defaults")), s, provenance = TRUE)
   expect_true("pattern:x" %in% unlist(lapply(r2$content, function(it) it$arg_from)))
-  # stf_: its page from the map, its content still none
-  r3 <- tfl_resolve_output(te_demog(name = "stf_t02_demog", extends = list(page = "patterns/x")), s)
-  expect_identical(r3$page$header[["1"]]$left, "Pattern")
+  # stf_: its content still none, whatever the other steps lay
+  r3 <- tfl_resolve_output(te_demog(name = "stf_t02_demog", extends = list(data = "patterns/x")), s)
   expect_false(any(c("defaults", "pattern:x") %in% from(r3)))
   expect_true("style:stf_t02" %in% from(r3))
   expect_error(te_demog(extends = list(contents = "none")), "no step 'contents'")
@@ -148,7 +141,7 @@ test_that("T3: stf_t02_demog fixes the content step; `template:` holds no extend
   # (`none` for every step keeps the content step none)
   expect_identical(tfl_output_extends(te_demog(name = "stf_t02_demog", extends = "none"), "content"),
                    character())
-  o <- tfl_output("T-9", "table", population = "SAF",
+  o <- tfl_output("T-9", "table", common = list(population = "SAF"),
                   template = list(name = "stf_t02_demog", extends = "none",
                                   args = list(by = "TRT01A", continuous = "AGE")))
   expect_error(tfl_resolve_output(o, s), "`extends` is the report's field, not `template:`'s")
@@ -252,7 +245,7 @@ test_that("T7: a stop value takes its maps_to out of the study's layers (A, B, t
   b <- tfl_template_to_spec(o, s)
   expect_s3_class(Filter(function(it) it$fn == "plan_blanks", b$content)[[1L]]$args$where, "tfl_unset")
   expect_identical(b$extends, "defaults")
-  expect_identical(b$style, "standard")
+  expect_identical(b$style, "tfl_standard")
   rb <- tfl_resolve_output(b, s)
   expect_identical(lapply(ro$content, unclass), lapply(rb$content, unclass))
   # none written: the set's [defaults], the same
@@ -320,7 +313,7 @@ test_that("T10: the templates sheet leaves extends unwritten; an stf_t02_demog r
   r <- tfl_read_template_sheets(f)
   expect_true(all(vapply(r, function(x) is.null(x$extends), NA)))
   x <- r[[1L]]
-  o <- tfl_output(x$id, x$kind, label = x$label %||% NA_character_, population = x$population,
+  o <- tfl_output(x$id, x$kind, label = x$label %||% NA_character_, common = list(population = x$common$population),
                   template = list(name = "stf_t02_demog", args = list(by = "TRT01A", continuous = "AGE")))
   expect_identical(tfl_output_extends(o, "content"), character())
   expect_s3_class(tfl_resolve_output(o, te_layers()), "tfl_output")
@@ -394,7 +387,7 @@ test_that("T11: tfl_tpl(study = ) carries the study's items; the program runs as
   rs <- tfl_resolve_output(te_demog(name = "summary"), s)
   expect_true(any(grepl("study = list(", tfl_content_code(rs), fixed = TRUE)))
   # a template not yet migrated keeps the study's lines after the call
-  ro3 <- tfl_output("T-10", "table", population = "SAF",
+  ro3 <- tfl_output("T-10", "table", common = list(population = "SAF"),
                     template = list(name = "ae_soc_pt", args = list(population = "SAF",
                                                                    hierarchy = c("AEBODSYS", "AEDECOD"))))
   rs <- tfl_resolve_output(ro3, s)

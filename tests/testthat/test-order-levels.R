@@ -101,7 +101,7 @@ test_that("a records dataset without TRT01AN gets the arms' order of ADSL", {
   want <- rev(arms)
   expect_false(identical(want, arms))
   put <- function(id, name, args) {
-    tfl_write_output(tfl_output(id, "table", population = "SAF", extends = "defaults",
+    tfl_write_output(tfl_output(id, "table", common = list(population = "SAF"), extends = "defaults",
                                 template = list(name = name, args = args)),
                      file.path(d, "spec", "outputs", paste0(id, ".yml")))
   }
@@ -120,7 +120,7 @@ test_that("RACE follows RACEN, SEX follows SEXN, where ADSL has the pair", {
   skip_if_not_installed("cards")
   skip_if_not_installed("haven")
   out <- function(d) {
-    tfl_write_output(tfl_output("T-SU", "table", population = "SAF", extends = "defaults",
+    tfl_write_output(tfl_output("T-SU", "table", common = list(population = "SAF"), extends = "defaults",
                                 template = list(name = "summary",
                                                 args = list(by = "TRT01A", continuous = "AGE",
                                                             categorical = c("SEX", "RACE")))),

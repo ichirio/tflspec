@@ -136,7 +136,7 @@ aw639_draft <- function(d, codelists = FALSE, title = "Table 14.3.5", widths = N
     "  - id: T-14-3-5",
     "    kind: table",
     "    label: Shift table",
-    "    population: SAF",
+    "    common: {population: SAF}",
     "    extends: [defaults]",
     if (codelists) cl,
     "    template:",

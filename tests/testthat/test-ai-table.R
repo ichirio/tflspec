@@ -249,7 +249,7 @@ test_that("the table context and prompt: the reports, the study's files, the dat
                fixed = TRUE)
   expect_match(p$system, "- `plan_cells`: How the statistics become cell text.", fixed = TRUE)
   expect_match(p$system, "- `hierarchical`: Nested counts", fixed = TRUE)
-  expect_match(p$system, "### ard: analysis_data", fixed = TRUE)
+  expect_match(p$system, "### data: the definitions", fixed = TRUE)
   expect_match(p$system, "## Example", fixed = TRUE)
   expect_match(p$user, "`spec/defaults.yml`: what every report starts from", fixed = TRUE)
   expect_match(p$user, "SEX (char) Sex: F | M", fixed = TRUE)
@@ -323,7 +323,7 @@ test_that("a flawed answer: each problem names the report, the item and the key"
   x <- sub("- plan_total: {label: Total}", "- plan_magic: {label: Total}", x, fixed = TRUE)
   x <- sub("population: ITT, where", "population: FULL, where", x, fixed = TRUE)
   x <- sub("method: proportion_ci", "method: proportion", x, fixed = TRUE)
-  x <- sub("    data: {source: ard}", "    data: {source: ard}\n    colour: red", x, fixed = TRUE)
+  x <- sub("    extends: [defaults]", "    extends: [defaults]\n    colour: red", x, fixed = TRUE)
   a <- tfl_ai_parse(x, "table")
   p <- tfl_ai_check(a, ctx)
   has <- function(where, what) {

@@ -5,7 +5,7 @@
 tp_study <- function() tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
 
 tp_output <- function(template, population = "SAF", id = "T-9") {
-  tfl_output(id, "table", population = population,
+  tfl_output(id, "table", common = list(population = population),
              codelists = list(TRT01A = list(list(value = "Drug X"), list(value = "Control"))),
              template = template)
 }
@@ -121,7 +121,7 @@ test_that("population: args equal to the report's, or the report has none: used,
   # the report has no `population:`: the template's is used
   none <- tp_output(list(name = "ae_soc_pt", args = list(population = "SAF")),
                     population = NULL)
-  expect_true(is.na(none$population))
+  expect_true(is.na(tflspec:::.out_population(none)))
   r <- tfl_resolve_output(none, s)
   expect_identical(r$ard$analysis_data[[1L]]$population, "SAF")
   expect_identical(r$content, base$content)
@@ -130,7 +130,7 @@ test_that("population: args equal to the report's, or the report has none: used,
 test_that("population: args differing from the report's: built with the template's, with the message (as before)", {
   s <- tp_study()
   o <- tp_output(list(name = "ae_soc_pt", args = list(population = "ITT")))
-  expect_message(r <- tfl_resolve_output(o, s), "overrides the study standard \\(output.population\\)")
+  expect_message(r <- tfl_resolve_output(o, s), "overrides the study standard \\(output.common.population\\)")
   expect_identical(r$ard$analysis_data[[1L]]$population, "ITT")
   o <- tp_output(list(name = "ae_soc_pt", ard = list(population = "ITT")))
   expect_message(r <- tfl_resolve_output(o, s), "overrides the study standard")
@@ -149,8 +149,8 @@ test_that("tfl_check_spec(): a template's population that differs from the repor
   p <- tflspec:::.check_static_rows(mk(list(population = "ITT")), "T1")
   expect_identical(p$level, "warning")
   expect_identical(p$item, "population")
-  expect_match(p$message, "(ITT) differs from the report's `population:` (SAF)", fixed = TRUE)
-  expect_match(p$message, "make the report's `population:` the one to use", fixed = TRUE)
+  expect_match(p$message, "(ITT) differs from the report's `common: population` (SAF)", fixed = TRUE)
+  expect_match(p$message, "make the report's `common: population` the one to use", fixed = TRUE)
 })
 
 test_that("demog has no `population` parameter: the report's `population:` drives it, args naming it stop", {
@@ -161,7 +161,7 @@ test_that("demog has no `population` parameter: the report's `population:` drive
   for (key in c("args", "ard")) {
     bad <- tp_output(list(name = "demog", args = list(by = "TRT01A", continuous = "AGE")))
     bad$template[[key]] <- c(bad$template[[key]], list(population = "SAF"))
-    expect_error(tfl_resolve_output(bad, s), "takes the analysis set from the report's `population:` field")
+    expect_error(tfl_resolve_output(bad, s), "takes the analysis set from the report's `common: population`")
   }
 })
 

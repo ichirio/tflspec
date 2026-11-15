@@ -52,12 +52,13 @@ test_that("the program runs in rtfreporter", {
   expect_s3_class(doc, "rtf_document")
 })
 
-test_that("the study setup: its bands' look in study_header / study_footer", {
-  st <- structure(list(defaults = list(page = bs_page(list(
-    rtf_header = list(border = tfl_call("rtf_border", list(bottom = TRUE))))))),
-    class = "tfl_study_spec")
+test_that("the study setup: its bands' look in header_<name> / footer_<name>", {
+  st <- structure(list(study = list(settings = list(style = "std")),
+                       styles = list(std = list(page = bs_page(list(
+                         rtf_header = list(border = tfl_call("rtf_border", list(bottom = TRUE)))))))),
+                  class = "tfl_study_spec")
   code <- paste(tflspec:::.study_setup_code(st), collapse = "\n")
-  expect_match(code, "study_header <- rtf_header\\([^|]*border = rtf_border\\(bottom = TRUE\\)")
+  expect_match(code, "header_std <- rtf_header\\([^|]*border = rtf_border\\(bottom = TRUE\\)")
 })
 
 test_that("a band's text colour: page.rtf_header.color / page.rtf_footer.color", {

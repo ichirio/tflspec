@@ -502,8 +502,8 @@
   tp <- o$template
   args <- tp$args %||% list()
   if (is.null(args$population) && "population" %in% names(tfl_template_params(tp$name)) &&
-      !is.na(o$population %||% NA)) {
-    args$population <- o$population
+      !is.na(.out_population(o))) {
+    args$population <- .out_population(o)
   }
   x <- tfl_template_expand(tp$name, args)
   o$ard <- x$ard
@@ -556,7 +556,7 @@
     tfl_item(l$layer, l[setdiff(names(l), "layer")])
   })
   o <- tfl_output(id, kind = "figure", label = if (length(ttl)) ttl[1L] else NA_character_,
-                  population = if (length(pop)) pop else NA_character_,
+                  common = list(population = if (length(pop)) pop else NA_character_),
                   template = list(name = tp$name, args = tp$args %||% list()), content = content,
                   data = if (length(design$data)) list(steps = design$data) else NULL,
                   page = if (length(ttl)) list(titles = as.list(ttl)) else list())

@@ -49,7 +49,11 @@ tfl_write_spec_xlsx <- function(dir, path) {
     note(NA_character_, "groups", "condition-defined groups (data.yml groups:) have no sheet in this workbook")
   }
   # the defaults and patterns: the page parts, the code list templates
-  scopes <- c(list(list(id = NA_character_, layer = s$defaults)),
+  # (the default rows are the study's default page configuration, when it is
+  # the study's own, and its tokens)
+  dflt <- .style_default_name(s)
+  dpage <- .page_resolve(if (dflt %in% names(s$styles)) s$styles[[dflt]]$page, .study_tokens(s), NULL)
+  scopes <- c(list(list(id = NA_character_, layer = list(page = dpage, content = s$defaults$content))),
               lapply(names(s$patterns), function(n) list(id = paste0("@", n), layer = s$patterns[[n]])))
   for (sc in scopes) {
     .flat_page(sc$layer$page, sc$id, add_rows, note)
@@ -61,7 +65,14 @@ tfl_write_spec_xlsx <- function(dir, path) {
     if (inherits(o$content, "tfl_r")) note(id, "content", "the content as R code is not rows")
     else if (length(o$content)) note(id, "content", "the layers (content) are not rows")
     add_rows("objects", .flat_report_objects_rows(o, id, note))
-    for (e in o$ard$analysis_data %||% list()) add_rows("analysis_data", list(.flat_map(c(list(output_id = id), e), "analysis_data", id, note)))
+    # (the report's `common: population` is the set of its subjects definition)
+    for (e in o$ard$analysis_data %||% list()) {
+      e <- .entry_pop_inject(e, .out_population(o))
+      add_rows("analysis_data", list(.flat_map(c(list(output_id = id), e), "analysis_data", id, note)))
+    }
+    for (k in c("treatment", "population_label")) {
+      if (!is.null(o$common[[k]])) note(id, paste0("common.", k), "not rows (the workbook has no place for it)")
+    }
     for (e in o$ard$analyses %||% list()) {
       if (!is.null(e$denominator)) e$denominator <- .den_cell(e$denominator)
       if ("by" %in% names(e) && !length(e$by)) e$by <- tfl_unset()

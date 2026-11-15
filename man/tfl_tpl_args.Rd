@@ -17,7 +17,7 @@ study's spec folder; \code{NULL} for none (the \code{study} column is then
 
 \item{population}{The report's analysis set: the value of the
 parameters taken from the report's \verb{population:}
-(\code{"output.population"}); \code{NULL} for none.}
+(\code{"output.common.population"}); \code{NULL} for none.}
 }
 \value{
 A data frame, one row a parameter in the template's order:

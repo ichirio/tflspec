@@ -17,8 +17,11 @@ warning naming it (\code{tfl_read_outputs()}); \code{FALSE} (default) to stop th
 }
 \value{
 \code{tfl_read_study_spec()}: a list of class \code{tfl_study_spec} --
-\code{study}, \code{data}, \code{defaults}, \code{styles} (by name: \code{defaults.yml}'s
-\verb{styles:}, the look a report picks with \verb{style:}), \code{figure_style}
+\code{study} (\code{study.yml}, its \verb{tokens:} the study's tokens), \code{data},
+\code{defaults}, \code{styles} (by name: \code{defaults.yml}'s \verb{styles:}, the page
+configurations a report picks with \verb{style:}; a set holds \code{page} and
+\code{content} only, its page keys a closed list, and may not take the name
+of a built-in one), \code{figure_style}
 (\code{defaults.yml}'s \verb{figure_style:}: the study's figure style standard,
 tflspec's built-in one for a part it does not give),
 \code{patterns} (by name), \code{toc}, \code{dir}.  \code{tfl_read_outputs()}: a named list of \code{tfl_output}, by id.

@@ -209,8 +209,8 @@
                       id, t$name, paste(sQuote(stage, FALSE), collapse = ", ")))
   }
   if ("population" %in% hidden) {
-    .ard_stop(sprintf(paste0("%s: template %s takes the analysis set from the report's `population:` ",
-                             "field, not from `template:`."), id, t$name))
+    .ard_stop(sprintf(paste0("%s: template %s takes the analysis set from the report's `common: population`, ",
+                             "not from `template:`."), id, t$name))
   }
   if (length(hidden)) {
     .ard_stop(sprintf(paste0("%s: template %s takes %s from the study standard, not from ",
@@ -263,13 +263,36 @@
 
 # The set a `style` parameter names, for the parameter that takes it
 # (a template's `style`, `tfl_param("style", study = "settings.style",
-# default = "standard")`).  A name tflspec ships ("standard", "stf_t02")
-# always is tflspec's set: a study's `styles:` of the same name does not
-# replace it.  Any other name is the study's own set (spec/defaults.yml
-# `styles:`).  A layer: `data`, `codelists`, `content`, `page`.  A name
-# neither has stops, naming the sets there are.
+# default = "tfl_standard")`).  A name tflspec ships ("tfl_standard",
+# "tfl_small", "stf_t02") is tflspec's set: a study's `styles:` may not take
+# it (tfl_read_study_spec() stops).  Any other name is the study's own set
+# (spec/defaults.yml `styles:`).  A set is a page configuration: its `page`
+# (complete for the page step) and its `content`.  A name neither has stops,
+# naming the sets there are.
+.tpl_style_page_yaml <- function(margin = NULL) c(
+  "page:",
+  if (!is.null(margin)) sprintf("  rtf_page: {margin_left_in: %s, margin_right_in: %s}", margin, margin),
+  "  rtf_tables: {auto_section: true}",
+  "  header:",
+  "    first:",
+  "      - {left: \"{COMPANY}\", right: \"{STATUS}\"}",
+  "      - {left: \"Protocol: {STUDY_ID}\", right: \"Page {PAGE} of {TOTAL_PAGES}\"}",
+  "      - {center: \"{OUTPUT_LABEL}\"}",
+  "      - {center: \"{OUTPUT_TITLE}\"}",
+  "      - {center: \"<{OUTPUT_POPULATION}>\"}",
+  "  footer:",
+  "    last:",
+  "      - {left: \"{PROGRAM}\", right: \"{DATETIME}\"}")
 .tpl_style_builtin_yaml <- c(
-  standard = "{}",
+  tfl_standard = paste(.tpl_style_page_yaml(), collapse = "
+"),
+  tfl_small = paste(c(
+    .tpl_style_page_yaml(0.5),
+    "  rtf_style: {font_size_half_points: 14}",
+    "content:",
+    "  - plan_style: {font_size_half_points: 14}",
+    "  - plan_paginate_rows: {max_rows: 42}"), collapse = "
+"),
   # FDA STF IG v2.0, section 2.1.2, Table 2's look (not an FDA format)
   stf_t02 = paste(
     "content:",
@@ -289,18 +312,19 @@
 .tpl_style_builtin_names <- names(.tpl_style_builtin_yaml)
 .tpl_style_builtin_set <- function(name) {
   y <- yaml::yaml.load(.tpl_style_builtin_yaml[[name]], handlers = .yaml_handlers())
-  .layer_from_list(if (length(y)) y else list(), paste0("style:", name))
+  .style_set_from_list(if (length(y)) y else list(), name)
 }
 .tpl_style_set <- function(name, study = NULL) {
   if (!is.character(name) || length(name) != 1L || is.na(name) || !nzchar(name)) {
     .ard_stop("`style` is one style's name (a set of defaults.yml's styles:, or a built-in one).")
   }
+  # a built-in name is always the built-in set (the reader stops a study's)
   if (name %in% .tpl_style_builtin_names) return(.tpl_style_builtin_set(name))
   set <- study$styles[[name]]
   if (is.null(set)) {
     .ard_stop(sprintf("no style %s in defaults.yml's styles: or among the built-in sets (%s).",
                       dQuote(name, FALSE),
-                      paste(unique(c(names(study$styles), .tpl_style_builtin_names)), collapse = ", ")))
+                      paste(.style_names(study), collapse = ", ")))
   }
   set
 }
@@ -351,11 +375,16 @@
   if (identical(v, "data") || !is.null(.den_numbers(v))) return(invisible())
   ids <- function(ad) vapply(ad %||% list(), function(e) as.character(e$id %||% ""), "")
   have <- unique(c(ids(x$ard$analysis_data), ids(output$ard$analysis_data)))
-  if (!v %in% have) {
+  # (another analysis set's subjects, named by its id as adsl_<id>: the
+  # template makes them as the object adsl_den)
+  pops <- unlist(lapply(c(x$ard$analysis_data, output$ard$analysis_data),
+                        function(e) if (!is.null(e$population) && identical(e$id, "adsl_den"))
+                          as.character(e$population)))
+  if (!v %in% have && !v %in% paste0("adsl_", tolower(pops))) {
     .ard_stop(sprintf(paste0(
       "%s: template %s: denominator \"%s\" is not an analysis data of the report (%s).",
-      " The template makes %s and the other analysis sets' adsl_<id>; the report's own come from its `ard:`."),
-      output$id, t$name, v, paste(have, collapse = ", "), paste0("adsl_", tolower(args$population))))
+      " The template makes %s and, for another analysis set, adsl_<id> (the object adsl_den); the report's own come from its `ard:`."),
+      output$id, t$name, v, paste(have, collapse = ", "), .tpl_subj_id()))
   }
   invisible()
 }
@@ -513,7 +542,7 @@
 #' @examples
 #' d <- system.file("extdata", "spec-yaml", package = "tflspec")
 #' s <- tfl_read_study_spec(d)
-#' o <- tfl_output("T-9", "table", population = "SAF",
+#' o <- tfl_output("T-9", "table", common = list(population = "SAF"),
 #'                 template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE")))
 #' b <- tfl_template_to_spec(o, s)
 #' vapply(b$content, function(it) it$fn, "")
@@ -534,6 +563,19 @@ tfl_template_to_spec <- function(output, study) {
   # (canon: B = A, explicit `extends` and `style:`)
   output$extends <- .extends_compact(lb$extends)
   output$ard <- .merge_ard(e$x$ard, output$ard)
+  # the report's analysis set is its `common: population`, and the subjects
+  # definition does not repeat it (the code SPEC's `data:` says what the
+  # report adds to the set)
+  if (output$kind %in% c("table", "listing")) {
+    pop <- .na_scalar(as.character(e$args$population %||% output$common$population %||% NA))
+    if (!is.na(pop)) {
+      output$common <- .common_in(c(list(population = pop), output$common[setdiff(names(output$common), "population")]),
+                                  paste0("tfl_template_to_spec(): ", output$id))
+      if (length(output$ard$analysis_data)) {
+        output$ard$analysis_data <- lapply(output$ard$analysis_data, .entry_pop_strip, pop)
+      }
+    }
+  }
   own <- if (.tpl_composes(output$data, e$x)) .tpl_compose_data(output$data, e$x) else output$data
   output$data <- .merge_map(e$x$data %||% list(), own %||% list())
   output$content <- if (inherits(ro$content, "tfl_r")) ro$content else .tpl_own_part(ro$content)

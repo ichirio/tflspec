@@ -15,7 +15,7 @@ pk_study <- function(root) {
 
 pk_report <- function(d, args) {
   f <- file.path(d, "spec", "outputs", "T-PK.yml")
-  tfl_write_output(tfl_output("T-PK", "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("T-PK", "table", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = "pk_conc", args = args)), f)
   st <- tfl_read_study_spec(d)
   ro <- tfl_resolve_output(tfl_read_output(f), st)
@@ -30,13 +30,13 @@ test_that("pk_conc expands to a listing with its summary laid under it", {
   expect_identical(fns[1:3], c("table_plan", "plan_cells", tflspec:::.spec_part$fn))
   expect_true(all(c("plan_blanks", "plan_col_header", "plan_paginate_rows",
                     "plan_paginate_cols") %in% fns))
-  expect_identical(x$data, list(source = "dataset", data = "adpc_pk"))
+  expect_identical(x$data, list(source = "dataset", data = "adpc_sub"))
   part <- x$content[[3L]]$args
   expect_identical(part$data$source, "ard")
   expect_identical(vapply(part$content, `[[`, "", "fn"), c("normalize_ard", "table_plan", "plan_cells"))
   # the listing's records: the time points in order, a BLQ sample missing
   ad <- x$ard$analysis_data
-  expect_identical(vapply(ad, `[[`, "", "id"), c("adsl_pk", "adpc_pk", "adpc_pk_s"))
+  expect_identical(vapply(ad, `[[`, "", "id"), c("adsl_sub", "adpc_sub", "adpc_summ"))
   expect_match(unclass(ad[[2L]]$derive), "ATPT = reorder_by(ATPT, ATPTN)", fixed = TRUE)
   expect_match(unclass(ad[[2L]]$derive), "AVAL = ifelse(BLQFL == \"Y\", -Inf, AVAL)", fixed = TRUE)
   expect_match(unclass(ad[[3L]]$where), "!is.na(AVAL)", fixed = TRUE)
@@ -140,7 +140,7 @@ test_that("an AI draft with pk_conc builds in tfl_ai_run(): the parts' objects, 
     "  - id: T-14-3-5",
     "    kind: table",
     "    label: Drug X Plasma Concentrations by Subject",
-    "    population: SAF",
+    "    common: {population: SAF}",
     "    extends: [defaults]",
     "    template: {name: pk_conc, args: {blq: BLQFL == \"Y\", split_at: 4 hr}}",
     "    page: {titles: {\"1\": {center: Table 14.3.5}}}",

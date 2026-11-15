@@ -149,12 +149,14 @@ mention them in the assumptions only when they change what you write
   assumption when they differ from `label`) then the population, each `{center: ...}` (`left` when the
   shell shows them left-aligned); `footnotes:` by line number, each
   `{left: ...}`.  Line numbers are quoted keys: `'1':`, `'2':`.
-- **`spec/defaults.yml`'s `page:`** for what every output shares: the
-  running `header:` and `footer:` lines the shells show at the top and
-  bottom of the page (`{PAGE}`, `{TOTAL_PAGES}`, `{PROGRAM}`,
-  `{DATETIME}` where the shell shows "Page x of y", a program name, a run
-  date), and the page itself when the shells say it (`rtf_page:
-  {orientation: landscape}`).
+- **a page configuration in `spec/defaults.yml`'s `styles:`** (named by
+  `study.yml`'s `settings: {style: ...}`) for what every output shares:
+  under its `page:`, the running `header:` and `footer:` lines the shells
+  show at the top and bottom of the page (`{PAGE}`, `{TOTAL_PAGES}`,
+  `{PROGRAM}`, `{DATETIME}` where the shell shows "Page x of y", a program
+  name, a run date; lines at the top of the band under `first:`, at the
+  bottom under `last:`), and the page itself when the shells say it
+  (`rtf_page: {orientation: landscape}`).  A `page:` in `defaults.yml` stops.
 - `study.yml`'s `settings:` `program` / `file` only when the TOC names the
   programs or the files by a rule (`{output_id}.R`); else leave them out.
 
@@ -187,8 +189,10 @@ A listing shell has a column header and one row per record.  A figure
 shell is a sketch: axes, groups, a legend, sometimes a number-at-risk
 table below.
 
-A table's report file is then: `data: {source: ard, object: ard}` (it
-reads the study ARD), its `ard:` (§4), its `content:` -- the items below,
+A table's report file is then: its `common:` (`population`, `treatment`), its
+`ard:` (§4; a table always reads the study ARD, so it writes no `data:` map; its
+datasets, when it needs more than a dataset and a condition, are the flat
+`data:` list), its `content:` -- the items below,
 in this order -- and its `page:`.
 
 ### 3.2 The roles → `table_plan`
@@ -400,8 +404,7 @@ for the right `by`.  Group the shell's blocks by method:
 
 Every analysis: `id` (short, unique within the report, upper case: `AGE`,
 `SEX`, `AE`, `ANYTEAE`), `label` (its name for a person), `method`,
-`dataset` (or `data`, an analysis data of the report's `ard:
-{analysis_data: [...]}`), `population` (a population `id`), `by` (the
+`dataset` (or `data`, a definition of the report's `data:` list), `population` (a population `id`), `by` (the
 arm; the same for every analysis of one table), `variables`.  One
 analysis may cover several variables of the same method (`[AGE,
 WEIGHTBL]`); it may not mix methods.
@@ -431,7 +434,7 @@ analysis set").
   `dichotomous` on an event dataset.
 - Of the row's subjects: `row`; of the column's records: `column`.
 - Of another set (treatment-emergent events over the treated set; a
-  parameter's subjects at a visit): an entry of `ard.analysis_data` that
+  parameter's subjects at a visit): an entry of the report's `data:` that
   makes the denominator (`distinct: [USUBJID]`, or `[USUBJID, AVISIT]`)
   and `denominator` its `id`.
 
@@ -584,10 +587,11 @@ The figure's titles and footnotes are its `page:`, as a table's.
 ## 7. The page
 
 From the shell (else the TOC, §2.4): each report's `page.titles` and `page.footnotes`.
-From the shells' page, once in `spec/defaults.yml`'s `page:`: the
+From the shells' page, once in a page configuration (`spec/defaults.yml`'s
+`styles:`, named by `study.yml`'s `settings: {style: ...}`): the
 `header` and `footer` lines, the page (`rtf_page: {orientation:
 landscape, paper_size: letter}` -- ask when not shown), the font when the
-shell names it.  `tokens:` only for a text the shells repeat as a
+shell names it.  `tokens:` (in `study.yml`) only for a text the shells repeat as a
 placeholder (`{STUDY}`).  Everything else left out: the defaults are
 rtfreporter's clinical layout.
 
@@ -733,7 +737,7 @@ The kind from the id.  The `Phase` column is empty: nothing to do.
 assumption).
 
 → `spec/toc.yml`: four entries in the TOC's order, each `id`, `kind`,
-`label` (Title2), `section` (`'14.1'` ...), `population: SAF`.
+`label` (Title2), `section` (`'14.1'` ...), `population: SAF` (a TOC entry's; the report file writes it as `common: {population: SAF}`).
 → each report's `page.titles`: `'1'` Title1, `'2'` Title2, `'3'` the
 population, all `center`; T-2's `page.footnotes` its two lines, `left`.
 → `spec/defaults.yml`'s `page`: `header` line 1 (`left` "XYZ-001",

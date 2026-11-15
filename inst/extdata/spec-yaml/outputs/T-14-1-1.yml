@@ -4,31 +4,30 @@
 id: T-14-1-1
 kind: table
 label: Demographics
-population: SAF
+common:
+  population: SAF
+  treatment: TRT01A
 extends: [defaults]
+data:
+  - id: adsl_sub
+    from: ADSL
 ard:
-  analysis_data:
-    - id: adsl_saf
-      from: ADSL
-      population: SAF
   analyses:
     - id: GROUPN
       method: cards::ard_tabulate
-      data: adsl_saf
+      data: adsl_sub
       variables: [TRT01A]
     - id: CONT
       method: cards::ard_summary
-      data: adsl_saf
+      data: adsl_sub
       by: [TRT01A]
       variables: [AGE]
       statistic: {AGE: [N, mean, sd, median, min, max]}
     - id: CAT
       method: cards::ard_tabulate
-      data: adsl_saf
+      data: adsl_sub
       by: [TRT01A]
       variables: [AGEGR1, SEX, RACE, ECOGBL]
-data:
-  source: ard
 codelists:
   TRT01A:
     - {value: Drug X, label: Drug X 200 mg}

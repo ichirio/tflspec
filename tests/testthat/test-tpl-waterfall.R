@@ -39,7 +39,7 @@ test_that("in a study: A (the data steps, the call) = B (the design) = the templ
   on.exit(unlink(d, recursive = TRUE))
   data <- tplfig_study(d, c("adsl", "adtr", "adrs"), "WF-1")
   for (resp in c(FALSE, TRUE)) {
-    o <- tfl_output(paste0("F-9-", resp), "figure", population = "SAF", label = "Waterfall",
+    o <- tfl_output(paste0("F-9-", resp), "figure", common = list(population = "SAF"), label = "Waterfall",
                     extends = "defaults",
                     template = list(name = "waterfall",
                                     args = list(param = "SUMDIAM", by_response = resp,

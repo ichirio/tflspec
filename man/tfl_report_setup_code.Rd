@@ -22,8 +22,8 @@ tokens (the tokens sheet's default rows, a blank \code{output_id}:
 \code{COMPANY}, \code{STUDY_ID} ...) as
 \code{options(rtfreporter.tokens = list(...))}, and its running header and
 footer (the header and footer sheets' default rows) as
-\code{study_header <- rtf_header(..., drop_empty_rows = TRUE)} and
-\code{study_footer <- rtf_footer(...)} (a line a report's tokens leave empty
+\code{header_standard <- rtf_header(..., drop_empty_rows = TRUE)} and
+\code{footer_standard <- rtf_footer(...)} (a line a report's tokens leave empty
 is left out of that report's file).
 A study's report programs source it and are written with
 \code{tfl_report_code(setup = TRUE)}: each then says only its own tokens

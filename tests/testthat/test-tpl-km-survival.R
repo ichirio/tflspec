@@ -38,7 +38,7 @@ test_that("in a study: km_survival, A (the data steps, the call) = B (the design
   d <- tempfile()
   on.exit(unlink(d, recursive = TRUE))
   data <- tplfig_study(d, c("adsl", "adtte"), "KM-1")
-  o <- tfl_output("F-9-1", "figure", population = "SAF", label = "KM curves",
+  o <- tfl_output("F-9-1", "figure", common = list(population = "SAF"), label = "KM curves",
                   extends = "defaults",
                   data = list(steps = list(
                     list(step = "read", dataset = "ADTTE"),

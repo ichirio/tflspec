@@ -41,7 +41,7 @@ test_that("in a study: the ARD built; A (the call, the layout) = B (the design) 
   d <- tempfile()
   on.exit(unlink(d, recursive = TRUE))
   data <- tplfig_study(d, c("adsl", "adtte"), "FR-1")
-  o <- tfl_output("F-9-1", "figure", population = "SAF", label = "Forest",
+  o <- tfl_output("F-9-1", "figure", common = list(population = "SAF"), label = "Forest",
                   extends = "defaults",
                   template = list(name = "forest_hr",
                                   args = list(param = "PFS", population = "SAF",
@@ -115,7 +115,7 @@ test_that("ref: the reference arm is put first by a relevel; comparison only sho
   on.exit(unlink(d, recursive = TRUE))
   data <- tplfig_study(d, c("adsl", "adtte"), "FR-2")
   # (the bundled data's arms: Drug X first, TRT01PN 1)
-  o <- tfl_output("F-9-2", "figure", population = "SAF", label = "Forest", extends = "defaults",
+  o <- tfl_output("F-9-2", "figure", common = list(population = "SAF"), label = "Forest", extends = "defaults",
                   template = list(name = "forest_hr", args = list(
                     param = "OS", population = "SAF", group = "TRT01P", subgroups = "SEX",
                     ref = "Control", comparison = "Drug X")))
@@ -160,7 +160,7 @@ test_that("n_by_arm: each arm's events / subjects, a column each; the call's loo
   d <- tempfile()
   on.exit(unlink(d, recursive = TRUE))
   data <- tplfig_study(d, c("adsl", "adtte"), "FR-3")
-  o <- tfl_output("F-9-3", "figure", population = "SAF", label = "Forest", extends = "defaults",
+  o <- tfl_output("F-9-3", "figure", common = list(population = "SAF"), label = "Forest", extends = "defaults",
                   template = list(name = "forest_hr", args = list(
                     param = "PFS", population = "SAF", subgroups = "SEX",
                     favours = c("Drug X", "Control"), n_by_arm = c("Control", "Drug X"))))

@@ -75,7 +75,7 @@ if (requireNamespace("haven", quietly = TRUE)) {
   haven::write_xpt(as.data.frame(lapply(adsl, chr)), file.path(d, "adam", "adsl.xpt"))
   tfl_ai_study_init(d, adam = "adam", study_id = "EX-1")
   tfl_write_output(
-    tfl_output("T-DM", "table", population = "SAF",
+    tfl_output("T-DM", "table", common = list(population = "SAF"),
                template = list(name = "demog", args = list(population = "SAF"))),
     file.path(d, "spec", "outputs", "T-DM.yml"))
   p <- tfl_check_spec(d)

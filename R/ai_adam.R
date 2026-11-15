@@ -440,7 +440,8 @@ tfl_ai_study_init <- function(dir, adam = "adam", study_id = "STUDY-01", title =
   pops <- .ai_adam_populations(file.path(adam_dir, files[nm == "ADSL"]), fn)
   study <- list(study_id = study_id, title = title %||% study_id,
                 settings = list(rounding = "sas", output_path = "output/tfl",
-                                program_dir = "programs/tfl", file = "{output_id}.rtf"),
+                                program_dir = "programs/tfl", file = "{output_id}.rtf",
+                                style = "standard"),
                 keys = list(id = "USUBJID"))
   data <- list(
     datasets = lapply(seq_along(nm), function(i) list(dataset = nm[i], level = "ADaM",
@@ -494,11 +495,16 @@ tfl_ai_study_init <- function(dir, adam = "adam", study_id = "STUDY-01", title =
     "  - plan_cells: {categorical: \"{n} ({p:.1f%})\"}",
     "  - plan_stub: {name: row_label, heading: \"\", before: true}",
     "  - plan_blanks: {where: between_groups}",
-    "page:",
-    "  header:",
-    sprintf("    '1': {left: \"%s\", right: \"Page {PAGE} of {TOTAL_PAGES}\"}", study_id),
-    "  footer:",
-    "    '1': {left: \"{PROGRAM}\", right: \"{DATETIME}\"}")
+    "# the study's page configuration (study.yml settings: style); the first lines",
+    "# of the header, the last lines of the footer",
+    "styles:",
+    "  standard:",
+    "    page:",
+    "      header:",
+    sprintf("        '1': {left: \"%s\", right: \"Page {PAGE} of {TOTAL_PAGES}\"}", study_id),
+    "      footer:",
+    "        last:",
+    "          '1': {left: \"{PROGRAM}\", right: \"{DATETIME}\"}")
 }
 
 # A data frame's factors as character (as an XPT file holds them).

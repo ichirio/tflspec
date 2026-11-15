@@ -52,7 +52,8 @@ differ, trust the package, not this file, and fetch the matching copy with
    spec**, and the main path; §6 shows a table's file key by key.
 5. **`id` (`output_id`) is the key.**  A report file says only what
    differs from what it extends (`extends: [defaults]`): the study's
-   `spec/defaults.yml` holds the page and the items every table shares.
+   `spec/defaults.yml` holds the items every table shares and the study's
+   page configurations (`styles:`: the page, a report picks one with `style:`).
 6. **Write values as YAML**: a list `[TRT01A, SEX]`, a map
    `{AGE: Age (years)}`, a number, `true` / `false`; a cell template is
    always quoted (`"{n} ({p:.1f%})"`); `!r` marks R code and only where the
@@ -261,10 +262,12 @@ sections follow this order.
 
 | Key | What it holds |
 |---|---|
-| `id`, `kind`, `label`, `population` | as in the TOC; the file is named after `id` |
+| `id`, `kind`, `label` | as in the TOC; the file is named after `id` |
+| `common` | what several steps of the report read: `population` (an analysis set's `id`: the report's subjects), `treatment` (its arm variable), `population_label` (the text `{OUTPUT_POPULATION}` prints when the report has no set, or in place of the set's label); a report may have no population.  Any other key stops; so does a top-level `population:` (`population:` -> `common: population`) |
 | `extends` | the layers under it, nearest first: `[defaults]` (the usual), `[patterns/<name>, defaults]`, or `none` |
-| `ard` | the report's part of the study ARD: `analyses:` (the `analyses` sheet's rows, `analysis_id` as `id`, `population_id` as `population`) and `analysis_data:` (`data_id` as `id`) -- §A.1 |
-| `data` | what the report reads.  `source: ard` (a table: the study ARD, `object: ard`; `steps:` its Rework, optional R after the content's `normalize_ard()` and before `table_plan()`: it starts from `data`, which is the object normalized by the `normalize_ard` item (`data <- ard` when there is none), and leaves `data`; a Rework that never names `data` is an error); `source: dataset` (a listing: `dataset`, `where`, `sort`); `source: code` (a figure: `steps:`, the design's data steps of §7; or `code: !r ...`, the report's own R) |
+| `data` (a table, a listing) | the report's datasets: a flat list of definitions (`id`, `label`, `from`, `population`, `subjects`, `where`, `add`, `derive`, `keep`, `distinct`, `code`: the `analysis_data` sheet's rows, `data_id` as `id`), in build order, named `<dataset>_sub` / `_den` / `_<noun>` (`adsl_sub`, `adae_sub`, `adlb_den`) -- §A.1.  A subjects definition (`from: ADSL`, no `subjects`) without a `population` of its own takes `common: population`.  A table writes no `data: {source: ard}` (it always reads its ARD: that map stops); `ard: analysis_data:` stops (it is `data:`) |
+| `ard` | the report's part of the study ARD: `analyses:` (the `analyses` sheet's rows, `analysis_id` as `id`, `population_id` as `population`) -- §A.1 |
+| `data` (a figure, or a listing's records) | what the report reads, a map.  a table's Rework is not written here: it is the first item of `content:`, `- rework: {steps: [...]}` (optional R after the content's `normalize_ard()` and before `table_plan()`: it starts from `data`, which is the object normalized by the `normalize_ard` item (`data <- ard` when there is none), and leaves `data`; a Rework that never names `data` is an error; `object: ard` names the ARD object; written under `ard: data:` or `data:` it stops); `source: dataset` (a listing: `dataset`, `where`, `sort`); `source: code` (a figure: `steps:`, the design's data steps of §7; or `code: !r ...`, the report's own R) |
 | `codelists` | by variable, a list of `{value, label}` in the order printed (the `codelists` sheet); a nested count's inner value may say `under:` (its parent's value, for `complete_hierarchy()`) |
 | `content` | the report, a list of items, each one call: `- plan_cells: {categorical: '{n} ({p:.1f%})'}`.  A table's items are rtfreporter's `normalize_ard()`, `table_plan()` and `plan_*()` verbs; a listing's `plan_listing()` (its columns `listing_col()` calls); a figure's the calls of its plot -- `ggplot`, `geom_*`, `scale_*`, `labs`, `theme` ..., and `tfl_image` last (§7.1).  Or `content: !r ...`, the report's own R |
 | `page` | the document: `titles`, `footnotes`, `header`, `footer` (maps by line number: `'1': {center: Table 14.1.1}`), `tokens`, and rtfreporter's calls by name (`rtf_page: {orientation: landscape}`, `rtf_tables: {auto_section: true}`, `rtf_document: {watermark: DRAFT}`); where a table's page names print is better said in its content, `plan_paginate_group: {heading_at: section}` -- a page's `rtf_tables: {auto_section: }` given wins |
@@ -288,9 +291,14 @@ removes what a layer below set. It reads in flow style too: `{b: !unset}`.
 arguments merge by key; in `content`, the report's items of one function
 replace every item of that function below it, in the place the first had;
 a function only the report has goes after them.  `defaults.yml` holds the
-study-wide content and page (the running header and footer, the
-rounding); a pattern (`@Compact` of the report sheets) is
-`patterns/<name>.yml`.
+study-wide content (the rounding ...) and the page configurations
+(`styles:`, a style set each: the page's settings and the fixed lines of the
+header, footer, titles and footnotes in the blocks `first` and `last`; a
+report's own lines print between them; `tfl_styles()` lists the sets and the
+built-in `tfl_standard` and `tfl_small`, a study set may not take their names);
+the study's tokens are `study.yml`'s `tokens:`.  There is no page layer of
+files: a `page:` in `defaults.yml`, or `extends: {page: ...}`, stops.  A
+pattern is `patterns/<name>.yml`.
 
 ---
 ## 6. A table's report file — the code spec
@@ -302,14 +310,13 @@ The sample study's demographics table (`spec/outputs/T-14-1-1.yml`):
 id: T-14-1-1
 kind: table
 label: Demographic and Baseline Characteristics
-population: SAF
+common: {population: SAF, treatment: TRT01A}
 extends: [defaults]
 ard:
   analyses:
     - {id: N, method: total_n, dataset: ADSL, population: SAF}
     - {id: AGE, method: continuous, dataset: ADSL, population: SAF, by: [TRT01A], overall: true, variables: [AGE]}
     - {id: CAT, method: categorical, dataset: ADSL, population: SAF, by: [TRT01A], overall: true, variables: [SEX, AGEGR1, RACE]}
-data: {source: ard}
 codelists:
   SEX:
     - {value: M, label: Male}
@@ -341,8 +348,8 @@ page:
 | a Total column | `overall: true` on the analyses; `plan_total: {label: Total}` |
 | a block of rows per variable | one analysis for the variables one method summarises (`continuous`, `categorical`); `rows: {group: variable}` |
 | SOC / PT rows | `method: hierarchical`, `variables: [AEBODSYS, AEDECOD]`; `normalize_ard: {hierarchy: [AEBODSYS, AEDECOD], overall: <the any-AE row>}`; `rows: {group1: AEBODSYS}`; `plan_sort: {keys: [.overall, group1, .depth, -n, label]}` |
-| a rate with its CI (ORR) | an `analysis_data` with `where` (the parameter) and `derive` (`!r 'RESP = AVALC %in% c("CR", "PR")'`); `method: proportion_ci`; `plan_cells: {proportion_ci: {"n (%)": "{n} ({estimate:.1f%})", 95% CI: "[{conf.low:.1f%}, {conf.high:.1f%}]"}}` |
-| a shift table (baseline down, worst post-baseline across, a Total row, the % of the arm's subjects with a post-baseline value) | an `analysis_data` that `code` makes (a subject and parameter a row: `BASECAT`, `WORST`), a second one of its subjects a parameter each (`keep`, `distinct`: the denominator); `by: [TRT01A, PARAMCD]`, `strata: [WORST]`, `variables: [BASECAT]`, `denominator: lb_den`; a second analysis of `WORST` by the same keys for the Total row; `table_plan: {cols: [TRT01A, WORST], rows: {group1: PARAMCD}}`; `plan_total: {label: Total, direction: rows}` (the full form is in the agent's instructions) |
+| a rate with its CI (ORR) | a `data:` definition with `where` (the parameter) and `derive` (`!r 'RESP = AVALC %in% c("CR", "PR")'`); `method: proportion_ci`; `plan_cells: {proportion_ci: {"n (%)": "{n} ({estimate:.1f%})", 95% CI: "[{conf.low:.1f%}, {conf.high:.1f%}]"}}` |
+| a shift table (baseline down, worst post-baseline across, a Total row, the % of the arm's subjects with a post-baseline value) | a `data:` definition that `code` makes (a subject and parameter a row: `BASECAT`, `WORST`), a second one of its subjects a parameter each (`keep`, `distinct`: the denominator); `by: [TRT01A, PARAMCD]`, `strata: [WORST]`, `variables: [BASECAT]`, `denominator: lb_den`; a second analysis of `WORST` by the same keys for the Total row; `table_plan: {cols: [TRT01A, WORST], rows: {group1: PARAMCD}}`; `plan_total: {label: Total, direction: rows}` (the full form is in the agent's instructions) |
 | (the shift table as before, no Total row) | `by: [TRT01A, PARAMCD, BNRIND]`, `variables: [ANRIND]`; `table_plan: {cols: [TRT01A, .label], rows: {group: PARAMCD}, label: BNRIND}`; `plan_stub: {vars: [group, BNRIND]}`; the arm as a spanner `{line: "1", cols: .values, span: TRT01A, text: "{col1}"}` |
 | `xx.x (xx.xx)`, `xx (xx.x)` | the template's decimals: `"{mean:.1f} ({sd:.2f})"`, `"{n} ({p:.1f%})"` |
 | row headings, the order of the arms and values | `plan_labels`, `plan_levels`; a value printed in other words: `codelists` |
@@ -352,7 +359,7 @@ page:
 | a title line that changes with the page (`Parameter: <PARAM>`, a parameter a page) | `plan_paginate_rows: {page_by: [PARAMCD], heading: "Parameter: {PARAM}", heading_at: title}` (two keys: `page_by: [ANALYTE, RENALGR]`, a heading of two lines with `\n`); the heading goes under the report's titles on each page, or where a titles line `{PAGE_HEADING}` is (the shell's Parameter line above the population line) |
 | a listing with its summary under it (the PK samples) | the listing as the table (`table_plan: {cols: ATPT, rows: {subject: !r '~ "{USUBJID}/{AGE}/{SEX}"'}, value: AVAL}`), the summary as a part: `plan_append: {name: summary, data: {source: ard}, content: [...]}`, the whole-table items after it |
 | a p-value column (Fisher / chi-square of a categorical, Kruskal-Wallis / one-way of a continuous, a t-test of two arms) | one analysis a test with the counts' `by` and `variables` (`method: fisher`, `kruskal` ...), and `plan_compare: {p: "{p.value:.3f}"}` -- the column named as you like, the p-value on the variable's first row |
-| every subject, no flag | `population: ALL` (in `spec/data.yml` beside the flags' sets) |
+| every subject, no flag | `common: {population: ALL}` (in `spec/data.yml` beside the flags' sets) |
 | the KM legend with each arm's median (95% CI) | the template: `template: {name: km_survival, args: {legend_median: true}}`; the wording is `legend_median_text` with `{arm}`, `{median}`, `{lcl}`, `{ucl}` (default `"{arm}: {median} ({lcl}, {ucl})"`), e.g. `args: {legend_median: true, legend_median_text: "{arm}, Median (95% CI): {median} ({lcl}, {ucl})"}`; by hand, the plot's `legend_labels` (R: a vector named by the arms) |
 
 The keys of `ard:` are the ARD sheets' columns (Appendix A.1) under their
@@ -468,7 +475,7 @@ layers:                                 # what is drawn, in order
 ```
 
 A read may take one of the report's own analysis data instead of a dataset
-(`{step: read, data: adtte_os}`, its `ard: analysis_data:` row `adtte_os`):
+(`{step: read, data: adtte_os}`, its `ard: analysis_data:` row `adtte_os`; a figure keeps its definitions under `ard:` until its own batch):
 the program makes it first (`tfl_ard_code(part = "data")`), as a table's
 analyses do, and the figure starts from it.
 
@@ -844,8 +851,8 @@ column: ARS's `methodId` comes from the spec.
 
 A listing reads a dataset (`data: {source: dataset, dataset: ADAE, where: !r 'AESER == "Y"', sort: [USUBJID, ASTDY]}`),
 the subjects of an analysis set in it (`population: SAF`), or one of the
-report's own analysis data (`data: adae_ser`, instead of `dataset` and
-`population`; its `ard: analysis_data:` row),
+report's own definitions (the report's `data:` is then the flat list of them,
+and the listing prints the last one; or the map `data: {source: dataset, data: adae_ser}`),
 and its `content:` is one `plan_listing` item, its columns
 `listing_col()` calls:
 
@@ -1373,7 +1380,7 @@ file.
 | `report` | `type` (`table` / `listing` / `figure`), `file` (`{output_id}.rtf`), `program`, `auto_section`, `section_align`, `auto_title`, `title_align`, `table_font_size_half_points`, `title_font_size_half_points`, `footnote_font_size_half_points`, `page_header`, `page_footer`, `watermark` (`DRAFT`), `figure_width_in`, `figure_height_in` (a figure's size on the page: a number of inches, `fit` -- the page's body -- or blank, the figure's own size as rtfreporter places it -- `tfl_fig_page_size()`; a design's `plot` has only `dpi`, the resolution), `ard_source`, `pattern`, `ard_object` (the ARD's name in the report's program, default `ard`), `page_break`, `space_before`, `first_rows`, `cont_title` (as in a layout row, §11.1), `data_code` and `content_code` (a step that is the report's own R instead of the definition: the data step leaves `data`, a figure's `df`; the content step leaves `content`; the report's datasets by their names in lower case, and `ard` when it reads its ARD, are in reach -- `tfl_check_code()`) |
 | `page` | `paper_size`, `orientation`, `width_in`, `height_in`, margins `margin_*_in`, `header_dist_in`, `footer_dist_in`, `font` (the document's font; the study's row goes to the setup's `options()`), `font_lang` (the language of a font slot: `east_asian = ja`), `font_size_half_points`, `title_format`, `footnote_format`, `title_width`, `footnote_width`, `markup`, `page_more` (the page's rtfreporter arguments no column says, as YAML: `{rtf_header: {font_size_half_points: 16}}`) |
 | `header`, `footer`, `titles`, `footnotes` | `line`, `left`, `center`, `right` — a report's line replaces the default line of the same number; a report's line that says `(none)` takes it out |
-| `tokens` | `name`, `value` — a token of one's own, `{STUDY}` in any of the cells above (`rtf_document(tokens = )`); a report's row replaces the default of the same name, `(none)` takes it out; names upper case, not rtfreporter's own. A report's own tokens work without a row: `{OUTPUT_ID}`, `{OUTPUT_LABEL}` ("Table 14.1.1" from the ID; rows `OUTPUT_KIND_TABLE` / `_LISTING` / `_FIGURE` change the words), `{OUTPUT_TITLE}` `{OUTPUT_POPULATION}` `{OUTPUT_SECTION}` `{STUDY_ID}` (blank unless a row gives them); a line left with only empty tokens is not printed. What every report shares (the default token rows, the default header / footer) can be written once: `tfl_report_setup_code(spec)` (`options(rtfreporter.tokens = )`, `study_header`, `study_footer`; for the YAML spec `tfl_report_setup_code(study)`, from `spec/defaults.yml`), and each program with `tfl_report_code(..., setup = TRUE)` |
+| `tokens` | `name`, `value` — a token of one's own, `{STUDY}` in any of the cells above (`rtf_document(tokens = )`); a report's row replaces the default of the same name, `(none)` takes it out; names upper case, not rtfreporter's own. A report's own tokens work without a row: `{OUTPUT_ID}`, `{OUTPUT_LABEL}` ("Table 14.1.1" from the ID; rows `OUTPUT_KIND_TABLE` / `_LISTING` / `_FIGURE` change the words), `{OUTPUT_TITLE}` `{OUTPUT_POPULATION}` `{OUTPUT_SECTION}` `{STUDY_ID}` (blank unless a row gives them); a line left with only empty tokens is not printed. What every report shares (the default token rows, the default header / footer) can be written once: `tfl_report_setup_code(spec)` (`options(rtfreporter.tokens = )`, `study_header`, `study_footer`; for the YAML spec `tfl_report_setup_code(study)`, from the study's page configurations, `header_<name>` and `footer_<name>` each, and `study.yml`'s `tokens:`), and each program with `tfl_report_code(..., setup = TRUE)` |
 
 Page tokens in the running header / footer: `{PAGE}`, `{TOTAL_PAGES}`,
 `{PROGRAM}` (or `{PROGRAM_FULL}`, its absolute path), `{DATETIME}`.

@@ -24,7 +24,7 @@
   ttl <- ctx$titles %||% character()
   pop <- ctx$population$id
   o <- tfl_output(id, kind = "figure", label = if (length(ttl)) ttl[1L] else NA_character_,
-                  population = if (length(pop)) pop else NA_character_,
+                  common = list(population = if (length(pop)) pop else NA_character_),
                   data = data, content = content,
                   page = if (length(ttl)) list(titles = as.list(ttl)) else list())
   for (k in c("template", "ggplot2_version", "plot", "plots", "compose")) {

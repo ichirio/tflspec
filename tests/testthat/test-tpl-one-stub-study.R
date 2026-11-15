@@ -19,7 +19,7 @@ test_that("ae_pt_freq and ae_overview draw in a study of the default standard", 
   expect_identical(stub[[1L]]$args$name, "row_label")
   ids <- c(ae_pt_freq = "T-9-4", ae_overview = "T-9-5")
   for (nm in names(ids)) {
-    tfl_write_output(tfl_output(ids[[nm]], "table", population = "SAF", label = nm,
+    tfl_write_output(tfl_output(ids[[nm]], "table", common = list(population = "SAF"), label = nm,
                                 extends = "defaults",
                                 template = list(name = nm, args = list(population = "SAF", by = "TRT01A"))),
                      file.path(d, "spec", "outputs", paste0(ids[[nm]], ".yml")))

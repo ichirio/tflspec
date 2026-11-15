@@ -28,7 +28,7 @@ test_that("a report file reads: tags, nested calls, content items", {
   expect_s3_class(out, "tfl_output")
   expect_identical(out$id, "T-14-1-1")
   expect_identical(out$kind, "table")
-  expect_identical(out$population, "SAF")
+  expect_identical(out$common$population, "SAF")
   expect_identical(out$extends, "defaults")
   fns <- vapply(out$content, `[[`, "", "fn")
   expect_identical(fns, c("table_plan", "plan_labels", "plan_cells", "plan_digits",
@@ -43,7 +43,7 @@ test_that("a report file reads: tags, nested calls, content items", {
   expect_identical(out$content[[3L]]$args$continuous[["Mean (SD)"]], "{mean} ({sd})")
   expect_identical(out$content[[4L]]$args$continuous$sd, 2L)    # plan_digits: by statistic
   # data and page
-  expect_identical(out$data$source, "ard")
+  expect_identical(out$ard$analysis_data[[1L]]$id, "adsl_sub")
   expect_identical(out$ard$analyses[[2L]]$statistic$AGE[[2L]], "mean")
   expect_identical(out$page$titles[["1"]]$center, "Table 14.1.1")
   expect_identical(out$codelists$TRT01A[[2L]]$label, "Control 100 mg")
@@ -131,7 +131,7 @@ test_that("a file of several reports gives a list, each over the file's base", {
   writeLines(c(
     "base:",
     "  kind: table",
-    "  population: SAF",
+    "  common: {population: SAF}",
     "  content:",
     "    - table_plan: {cols: TRT01A}",
     "outputs:",
@@ -139,12 +139,12 @@ test_that("a file of several reports gives a list, each over the file's base", {
     "    label: A",
     "  - id: T-B",
     "    label: B",
-    "    population: ITT"), f)
+    "    common: {population: ITT}"), f)
   outs <- tfl_read_output(f)
   expect_length(outs, 2L)
   expect_identical(vapply(outs, `[[`, "", "id"), c("T-A", "T-B"))
-  expect_identical(outs[[1L]]$population, "SAF")
-  expect_identical(outs[[2L]]$population, "ITT")
+  expect_identical(outs[[1L]]$common$population, "SAF")
+  expect_identical(outs[[2L]]$common$population, "ITT")
   expect_identical(outs[[2L]]$content[[1L]]$fn, "table_plan")
 })
 
@@ -214,9 +214,9 @@ test_that("an NA argument (table_plan(label = NA)) is written .na and read back 
 test_that("one-element sequences of ard: and listing_col vars stay sequences (text round trip)", {
   txt <- c(
     "id: T-1", "kind: table", "extends:", "  - defaults",
-    "ard:", "  analysis_data:", "    - id: adsl", "      from: ADSL",
-    "      keep:", "        - USUBJID",
-    "  analyses:", "    - id: DEM", "      method: categorical", "      data: adsl",
+    "data:", "  - id: adsl", "    from: ADSL",
+    "    keep:", "      - USUBJID",
+    "ard:", "  analyses:", "    - id: DEM", "      method: categorical", "      data: adsl",
     "      by:", "        - TRT01A", "      variables:", "        - SEX",
     "content:", "  - table_plan:", "      cols: TRT01A",
     "  - plan_listing:", "      cols:", "        - fn: listing_col", "          args:",

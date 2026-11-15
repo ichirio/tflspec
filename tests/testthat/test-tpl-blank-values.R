@@ -22,7 +22,7 @@ bv_study <- function(root, data) {
 }
 
 bv_put <- function(d, id, name, args, population = "SAF") {
-  tfl_write_output(tfl_output(id, "table", population = population, extends = "defaults",
+  tfl_write_output(tfl_output(id, "table", common = list(population = population), extends = "defaults",
                               template = list(name = name, args = args)),
                    file.path(d, "spec", "outputs", paste0(id, ".yml")))
 }
@@ -164,7 +164,7 @@ test_that("forest_hr: a blank subgroup value is no subgroup", {
   pfs <- tt$USUBJID[tt$PARAMCD == "PFS" & tt$SAFFL == "Y"]
   ad$SEX[ad$USUBJID %in% pfs[c(2, 30, 60)]] <- ""
   d <- bv_study(withr::local_tempdir(), list(adsl = ad, adtte = tt))
-  tfl_write_output(tfl_output("F-1", "figure", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("F-1", "figure", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = "forest_hr",
                                               args = list(param = "PFS", population = "SAF"))),
                    file.path(d, "spec", "outputs", "F-1.yml"))
@@ -238,7 +238,7 @@ test_that("stat_block: the study's stub folded first, built to RTF, the numbers 
   cells <- list(N = "{N}", "ORR(%) 95%CI" = c("{n} ({estimate:.1f%})", "{conf.low:.1f%}, {conf.high:.1f%}"))
   for (ext in c("defaults", "none")) {
     id <- paste0("T-SB-", ext)
-    o <- tfl_output(id, "table", population = "ITT", extends = ext,
+    o <- tfl_output(id, "table", common = list(population = "ITT"), extends = ext,
       ard = list(
         analysis_data = list(list(id = "adrs_bor", from = "ADRS", population = "ITT",
                                   where = tfl_r("PARAMCD == \"BOR\""),
@@ -296,7 +296,7 @@ test_that("tfl_check_spec() accepts orr's columns layout and stat_block's cells"
   bv_put(d, "T-O5", "orr", list(population = "ITT", stat_layout = "cols", conf_level = 0.9),
          population = "ITT")
   cells <- list(N = "{N}", "ORR(%) 95%CI" = c("{n} ({estimate:.1f%})", "{conf.low:.1f%}, {conf.high:.1f%}"))
-  tfl_write_output(tfl_output("T-SB", "table", population = "ITT", extends = "defaults",
+  tfl_write_output(tfl_output("T-SB", "table", common = list(population = "ITT"), extends = "defaults",
     ard = list(
       analysis_data = list(list(id = "adrs_bor", from = "ADRS", population = "ITT",
                                 where = tfl_r("PARAMCD == \"BOR\""),

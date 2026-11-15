@@ -14,7 +14,7 @@ The table template \code{stf_t02_demog}, layout \code{summary}. Its program is o
    \code{by} \tab required \tab call \tab  \tab  \tab the column variable (the arms); not a default and not the study's treatment \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1"; unset: all \cr
    \code{data} \tab other \tab call \tab ADSL \tab  \tab a subject-level dataset \cr
-   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id when 'data' is not ADSL; NULL: <data>_<population> \cr
+   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id when 'data' is not ADSL; NULL: <data>_sub \cr
    \code{total} \tab usual \tab call \tab TRUE \tab  \tab TRUE: a Total column, last (each analysis again without 'by') \cr
    \code{missing_label} \tab other \tab call \tab Missing \tab  \tab that row's label \cr
    \code{order} \tab other \tab call \tab SEX, AGE, AGEGR1, RACE, ETHNIC, COUNTRY \tab plan_levels.variable \tab the blocks' order (plan_levels(variable = )); NULL: the continuous, then the categorical \cr

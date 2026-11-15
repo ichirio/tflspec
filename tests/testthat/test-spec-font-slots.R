@@ -46,15 +46,16 @@ test_that("the program runs in rtfreporter and writes the slots' fonts", {
 })
 
 test_that("the study setup: options() with the slots and the languages", {
-  st <- structure(list(defaults = list(page = list(rtf_document = list(
-    font_table = list(list(name = fs_slots)), font_lang = list(east_asian = "ja"))))),
+  st <- structure(list(study = list(settings = list(style = "std")),
+                       styles = list(std = list(page = list(rtf_document = list(
+    font_table = list(list(name = fs_slots)), font_lang = list(east_asian = "ja")))))),
     class = "tfl_study_spec")
   code <- paste(tflspec:::.study_setup_code(st), collapse = "\n")
   expect_match(code, "rtfreporter.font = c(latin = \"Times New Roman\", east_asian = \"MS Mincho\")",
                fixed = TRUE)
   expect_match(code, "rtfreporter.font_lang = c(east_asian = \"ja\")", fixed = TRUE)
   # one family: a string, as before
-  st$defaults$page$rtf_document <- list(font_table = list(list(name = "Courier New")))
+  st$styles$std$page$rtf_document <- list(font_table = list(list(name = "Courier New")))
   expect_match(paste(tflspec:::.study_setup_code(st), collapse = "\n"),
                "rtfreporter.font = \"Courier New\"", fixed = TRUE)
 })
@@ -62,9 +63,10 @@ test_that("the study setup: options() with the slots and the languages", {
 test_that("the sheets say the slots and the languages, and give them back", {
   d <- withr::local_tempdir()
   dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)
-  writeLines(c("page:", "  rtf_document:", "    font_table:",
-               "      - name: {latin: Times New Roman, east_asian: MS Mincho}",
-               "    font_lang: {east_asian: ja}"), file.path(d, "spec", "defaults.yml"))
+  writeLines(c("styles:", "  std:", "    page:", "      rtf_document:", "        font_table:",
+               "          - name: {latin: Times New Roman, east_asian: MS Mincho}",
+               "        font_lang: {east_asian: ja}"), file.path(d, "spec", "defaults.yml"))
+  writeLines("settings: {style: std}", file.path(d, "study.yml"))
   tfl_write_output(tfl_output("T-1", "table", extends = "defaults"),
                    file.path(d, "spec", "outputs", "T-1.yml"))
   sh <- tfl_sheets_from_yaml(d)
@@ -88,12 +90,14 @@ test_that("a sheets-only study's setup writes the slots and languages as the YAM
     page = data.frame(output_id = NA,
                       font = "latin = Times New Roman | east_asian = MS Mincho",
                       font_lang = "east_asian = ja", font_size_half_points = "20"))
-  st <- structure(list(defaults = list(page = list(
+  st <- structure(list(study = list(settings = list(style = "std")),
+                       styles = list(std = list(page = list(
     rtf_document = list(font_table = list(list(name = fs_slots)), font_lang = list(east_asian = "ja")),
-    rtf_style = list(font_size_half_points = 20L)))),
+    rtf_style = list(font_size_half_points = 20L))))),
     class = "tfl_study_spec")
   from_sheets <- tfl_report_setup_code(sp)
-  expect_identical(from_sheets, tflspec:::.study_setup_code(st))
+  # (the options; the YAML route also writes the configuration's header and footer)
+  expect_identical(from_sheets, tflspec:::.study_setup_code(st)[seq_along(from_sheets)])
   code <- paste(from_sheets, collapse = "\n")
   expect_match(code, "rtfreporter.font = c(latin = \"Times New Roman\", east_asian = \"MS Mincho\")",
                fixed = TRUE)

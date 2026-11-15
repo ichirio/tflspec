@@ -59,7 +59,7 @@
 #' dir.create(file.path(d, "adam"), recursive = TRUE, showWarnings = FALSE)
 #' saveRDS(tflspec::adsl, file.path(d, "adam", "adsl.rds"))
 #' invisible(tfl_ai_study_init(d, adam = "adam", study_id = "ONCO-01", overwrite = TRUE))
-#' o <- tfl_output("T-1", "table", population = "SAF")
+#' o <- tfl_output("T-1", "table", common = list(population = "SAF"))
 #' o$extends <- list("defaults")
 #' o$ard <- list(analyses = list(list(id = "AGE", method = "continuous", dataset = "ADSL",
 #'                                    population = "SAF", by = list("TRT01A"),

@@ -6,7 +6,7 @@ req_vars <- data.frame(dataset = c("ADSL", "ADSL", "ADLB", "ADLB", "ADLB", "ADLB
                        variable = c("USUBJID", "TRT01A", "USUBJID", "PARAMCD", "PARAM", "AVAL"),
                        stringsAsFactors = FALSE)
 req_out <- function(analysis, population = "SAF", rows = list(group = "variable"), data = NULL) {
-  tfl_output("T-1", "table", label = "Labs", population = population, extends = "defaults",
+  tfl_output("T-1", "table", label = "Labs", common = list(population = population), extends = "defaults",
              ard = list(analysis_data = data, analyses = list(analysis)),
              content = list(tfl_item("table_plan", list(cols = "TRT01A", rows = rows))))
 }

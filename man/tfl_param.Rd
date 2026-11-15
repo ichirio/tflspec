@@ -57,7 +57,7 @@ set are not read;
 \item \code{"figure_style.<key>"} (\code{"figure_style.km.theme"}: the type, then the
 key): \code{defaults.yml}'s \verb{figure_style:}, else tflspec's built-in
 figure style;
-\item \code{"output.<field>"}: the report's own field (\code{"output.population"}).
+\item \code{"output.<field>"}: the report's own field (\code{"output.common.population"}).
 }
 
 A character vector names several keys one setting can be written under

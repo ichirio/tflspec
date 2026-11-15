@@ -29,11 +29,11 @@ test_that("one report: <dataset>_sub, the second of a dataset _sub2, each under 
   code <- tfl_ard_code(sb_spec("cards::ard_tabulate(data, variables = TRT01A)"),
                        output_id = "T1", save = FALSE, part = "body")
   expect_true(all(c(
-    "# adsl_sub: SAF — Safety Analysis Set (SAFFL == \"Y\")",
+    "# adsl_sub: the subjects. population SAF (Safety Analysis Set)",
     "adsl_sub <- filter(adsl, SAFFL == \"Y\")",
-    "# adsl_sub2: ITT — ITT Set (ITTFL == \"Y\")",
-    "adsl_sub2 <- filter(adsl, ITTFL == \"Y\")",
-    "# adae_sub: ADAE (TRTEMFL == \"Y\"); of the adsl_sub subjects") %in% code))
+    "# adsl_sub2: the subjects. population ITT (ITT Set)",
+    "adsl_sub2 <- filter(adsl, ITTFL == \"Y\")") %in% code))
+  expect_true(any(startsWith(code, "# adae_sub: the records. ADAE of the subjects of adsl_sub")))
   txt <- paste(code, collapse = "\n")
   expect_match(txt, "ard_age <- adsl_sub2 |>", fixed = TRUE)
   expect_match(txt, "denominator = adsl_sub,", fixed = TRUE)

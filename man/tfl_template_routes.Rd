@@ -31,7 +31,7 @@ and an input form's labels read this one record.
 \examples{
 d <- system.file("extdata", "spec-yaml", package = "tflspec")
 s <- tfl_read_study_spec(d)
-o <- tfl_output("T-9", "table", population = "SAF",
+o <- tfl_output("T-9", "table", common = list(population = "SAF"),
                 template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE")))
 r <- tfl_template_routes(o, s)
 r[r$route != "template", c("param", "value", "route")]

@@ -6,7 +6,7 @@ mg_lv <- c("MILD", "MODERATE", "SEVERE")
 # overall (as one more SOC, the overall row's), in each SOC, in each PT
 mg_ard <- function(x, ae = adae[adae$SAFFL == "Y" & adae$TRTEMFL == "Y", ]) {
   saf <- adsl[adsl$SAFFL == "Y", ]
-  adae_saf <- ae
+  adae_sub <- ae
   data <- lapply(x$ard$analysis_data[3:5], function(d) eval(parse(text = d$code)))
   h <- function(d, v) cards::ard_stack_hierarchical(d, variables = cards::all_of(v),
                                                     by = TRT01A, denominator = saf, id = USUBJID)
@@ -26,7 +26,7 @@ mg_skip <- function() {
 test_that("expanded: the highest record overall, in each SOC and PT; the overall block pinned", {
   x <- tfl_template_expand("ae_max_grade", list(population = "SAF", grade_levels = mg_lv))
   ids <- vapply(x$ard$analysis_data, `[[`, "", "id")
-  expect_identical(ids, c("adsl_saf", "adae_saf", "adae_saf_max", "adae_saf_max_soc", "adae_saf_max_pt"))
+  expect_identical(ids, c("adsl_sub", "adae_sub", "adae_max", "adae_max_soc", "adae_max_pt"))
   code <- vapply(x$ard$analysis_data[3:5], `[[`, "", "code")
   expect_match(code[1L], "by = c(USUBJID)", fixed = TRUE)
   expect_match(code[1L], "dplyr::mutate(", fixed = TRUE)
@@ -113,7 +113,7 @@ test_that("in a study: the ARD program runs (its analysis data made from the rec
                      file.path(d, "adam", paste0(x, ".xpt")))
   }
   tfl_ai_study_init(d, adam = "adam", study_id = "MG-1")
-  o <- tfl_output("T-9-2", "table", population = "SAF", label = "AEs by maximum severity",
+  o <- tfl_output("T-9-2", "table", common = list(population = "SAF"), label = "AEs by maximum severity",
                   extends = "defaults",
                   template = list(name = "ae_max_grade", args = list(population = "SAF",
                                                                      grade_levels = mg_lv)))
@@ -141,7 +141,7 @@ test_that("grade_in = cols: the arm's N is over every column, the any-grade colu
   saf <- tflspec::adsl[tflspec::adsl$SAFFL == "Y", ]
   arms <- unique(saf$TRT01A)
   for (any in c("Any grade", "Total")) {
-    o <- tfl_output("T-9-3", "table", population = "SAF", extends = "defaults",
+    o <- tfl_output("T-9-3", "table", common = list(population = "SAF"), extends = "defaults",
                     template = list(name = "ae_max_grade",
                                     args = list(population = "SAF", grade_levels = mg_lv,
                                                 grade_in = "cols", any_grade = any)))

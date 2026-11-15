@@ -73,7 +73,11 @@ test_that("the definition becomes code and the code the study ARD", {
   # program's data, by its name
   expect_true(any(code ==
     paste0("adae_sub <- adae |>\n",
-           "  semi_join(select(adsl_sub, USUBJID), by = \"USUBJID\") |>\n",
+           "  inner_join(\n",
+           "    select(adsl_sub, USUBJID),\n",
+           "    by = \"USUBJID\",\n",
+           "    relationship = \"many-to-one\"\n",
+           "  ) |>\n",
            "  filter(TRTEMFL == \"Y\")")))
   expect_true(any(grepl("adsl_sub[adsl_sub$TRT01A != \"Placebo\", ]", code, fixed = TRUE)))
   expect_false(any(grepl("local(", code, fixed = TRUE)))

@@ -83,7 +83,7 @@ test_that("a SPEC's `!unset` (flat args:, ard:, content:) reaches the body as ab
   for (template in list(list(name = "us_t", args = list(mr = tfl_unset())),
                         list(name = "us_t", ard = list(mr = tfl_unset())),
                         list(name = "us_t", content = list(mr = tfl_unset())))) {
-    o <- tfl_output("T-9", "table", population = "SAF", template = template)
+    o <- tfl_output("T-9", "table", common = list(population = "SAF"), template = template)
     r <- tfl_resolve_output(o, s)
     expect_s3_class(attr(r, "template")$args$mr, "tfl_unset")
     expect_identical(Filter(function(i) identical(i$fn, "plan_paginate_rows"), r$content)[[1L]]$args$max_rows, 30L)
@@ -105,7 +105,7 @@ test_that("a study value or fallback that is `!unset` means omit", {
   withr::defer(rm("us_s", envir = tflspec:::.tpl_registry))
   s <- us_study()
   s$study$settings$mr <- tfl_unset()
-  o <- tfl_output("T-9", "table", population = "SAF", template = list(name = "us_s"))
+  o <- tfl_output("T-9", "table", common = list(population = "SAF"), template = list(name = "us_s"))
   # (the fallback `!unset` is omitted; the study's `!unset` is omitted)
   x <- tflspec:::.tpl_expand_for(o, s, list(), NULL, warn = FALSE)
   expect_null(x$x$seen$ind)
@@ -143,7 +143,7 @@ test_that("tfl_check_spec() accepts `!unset` on a template argument", {
             d, recursive = TRUE)
   yml <- file.path(d, "spec", "outputs")
   dir.create(yml, recursive = TRUE, showWarnings = FALSE)
-  tfl_write_output(tfl_output("T-US", "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("T-US", "table", common = list(population = "SAF"), extends = "defaults",
     template = list(name = "summary", args = list(by = "TRT01A", continuous = "AGE", cells = tfl_unset(),
                                                   sd_missing = tfl_unset()))),
     file.path(yml, "T-US.yml"))
@@ -264,7 +264,7 @@ test_that("tfl_item_own() keeps an `!unset` argument of a named-arguments verb",
 # ---- the program writes `!unset` readably; inner calls leave it out ----------
 
 us_unset_output <- function() {
-  tfl_output("T-9", "table", population = "SAF", template = list(name = "summary",
+  tfl_output("T-9", "table", common = list(population = "SAF"), template = list(name = "summary",
     args = list(by = "TRT01A", continuous = "AGE", cells = tfl_unset(), sd_missing = tfl_unset(),
                 total = tfl_unset())))
 }

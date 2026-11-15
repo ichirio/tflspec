@@ -20,7 +20,7 @@ ss_study <- function(treatment = "TRT01P") {
   s
 }
 ss_resolve <- function(name, args, s, population = "SAF") {
-  o <- tfl_output("T-9", "table", population = population,
+  o <- tfl_output("T-9", "table", common = list(population = population),
                   template = list(name = name, args = args))
   tfl_resolve_output(o, s)
 }
@@ -36,13 +36,13 @@ test_that("the report's population: the template's population, written in its pr
   expect_match(paste(code, collapse = "\n"), "\"ae_soc_pt\",\\s+population = \"SAF\"")
   # the report's own argument wins, and says so
   expect_message(ro2 <- ss_resolve("ae_soc_pt", list(population = "SCRF"), s),
-                 "overrides the study standard \\(output.population\\)")
+                 "overrides the study standard \\(output.common.population\\)")
   expect_identical(attr(ro2, "template")$args$population, "SCRF")
   # demog: the analysis set is the report's `population:` only, never an argument
   ro3 <- ss_resolve("demog", list(by = "TRT01A", continuous = "AGE"), s)
   expect_identical(attr(ro3, "template")$args$population, "SAF")
   expect_error(ss_resolve("demog", list(by = "TRT01A", continuous = "AGE", population = "SCRF"), s),
-               "takes the analysis set from the report's `population:`")
+               "takes the analysis set from the report's `common: population`")
 })
 
 test_that("study.yml's settings: treatment: the templates' by", {
@@ -126,7 +126,7 @@ test_that("km_survival: the analysis set's subjects, by data.yml's definition (a
   writeLines(c("populations:", "  - id: SAF", "    dataset: ADSL", "    where: !r SAFFL == \"Y\""),
              file.path(d, "data.yml"))
   s <- tfl_read_study_spec(d)
-  o <- tfl_output("F-9", "figure", population = "SAF",
+  o <- tfl_output("F-9", "figure", common = list(population = "SAF"),
                   template = list(name = "km", args = list(param = "PFS", by = "TRT01A",
                                                                 risk_table = FALSE, median_line = FALSE,
                                                                 pvalue = FALSE)))
@@ -160,11 +160,11 @@ test_that("km_survival: the analysis set's subjects, by data.yml's definition (a
   left <- list(list(step = "read", dataset = "ADTTE"), list(step = "join", dataset = "ADSL"))
   expect_true(any(tfl_check_fig_design(tfl_fig_design(data = left))$field %in% "vars"))
   # an id the study does not define
-  o$population <- "ITT"
+  o$common$population <- "ITT"
   expect_error(tfl_resolve_output(o, s), "population ITT is not in `populations`")
   # a study that defines none stops too, as a table's analysis data does
   s$data$populations <- NULL
-  o$population <- "SAF"
+  o$common$population <- "SAF"
   expect_error(tfl_resolve_output(o, s), "population SAF is not in `populations`")
   # the semi join keeps the rows of the set's subjects: the same as the flag
   df <- adtte[adtte$PARAMCD == adtte$PARAMCD[1L], ]

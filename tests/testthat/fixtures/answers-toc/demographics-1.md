@@ -6,14 +6,13 @@ outputs:
   - id: T-14-1-1
     kind: table
     label: Demographic and Baseline Characteristics
-    population: SAF
+    common: {population: SAF}
     extends: [defaults]
     ard:
       analyses:
         - {id: N, method: total_n, dataset: ADSL, population: SAF}
         - {id: AGE, method: continuous, dataset: ADSL, population: SAF, by: [TRT01A], overall: true, variables: [AGE]}
         - {id: CAT, method: categorical, dataset: ADSL, population: SAF, by: [TRT01A], overall: true, variables: [SEX, AGEGR1, RACE]}
-    data: {source: ard}
     codelists:
       SEX:
         - {value: M, label: Male}

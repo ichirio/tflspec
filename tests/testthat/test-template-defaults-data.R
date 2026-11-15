@@ -68,7 +68,7 @@ test_that("an ADSL with no ETHNIC: demog's table of the variables given, as writ
   sl$ETHNIC <- NULL
   haven::write_xpt(tflspec:::.ai_chr(sl), file.path(d, "adam", "adsl.xpt"))
   tfl_ai_study_init(d, adam = "adam", study_id = "NO-ETH")
-  o <- tfl_output("T-9-1", "table", population = "SAF", label = "Demographics",
+  o <- tfl_output("T-9-1", "table", common = list(population = "SAF"), label = "Demographics",
                   extends = "defaults",
                   template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE",
                                                               categorical = c("AGEGR1", "SEX", "RACE"))))

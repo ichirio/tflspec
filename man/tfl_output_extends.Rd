@@ -13,21 +13,22 @@ tfl_output_extends(output, step = NULL)
 }
 \value{
 The files laid under \code{step}, nearest first (\code{character(0)}:
-none); \code{NULL} \code{step}: a list by step (\code{data}, \code{ard}, \code{content},
-\code{page}).
+none); \code{NULL} \code{step}: a list by step (\code{data}, \code{ard}, \code{content}).
 }
 \description{
 What a report extends, step by step: the files laid under it -- the
 study's \code{defaults}, its patterns (\verb{patterns/<name>}) -- in each of the
-steps a report is made in (\code{data}, \code{ard}, \code{content}, \code{page}), nearest
+steps a report is made in (\code{data}, \code{ard}, \code{content}), nearest
 first.  The report's \verb{extends:} says it, as a list of files for every
 step, \code{none}, or a map by step (\code{{content: none}}).  A step the map does
 not name, or a template report that writes none, takes its template's
 (a template's set holds its \code{extends}, \code{\link[=tfl_template]{tfl_template()}}), else
 \code{defaults}.  A report's style set is laid over these files in any case.
+The page step has no files: its page is the report's page configuration
+(\verb{style:}, \code{\link[=tfl_styles]{tfl_styles()}}), and an \code{extends} that names \code{page} stops.
 }
 \examples{
 o <- tfl_output("T-1", "table", extends = list(content = "none"))
 tfl_output_extends(o)
-tfl_output_extends(o, "page")
+tfl_output_extends(o, "data")
 }

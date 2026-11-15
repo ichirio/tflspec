@@ -9,7 +9,7 @@ The table template \code{ae_max_grade}, layout \code{hierarchical}. Its program 
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab required \tab call \tab report: population, required \tab output.population \tab the analysis set's id (SAF) \cr
+   \code{population} \tab required \tab call \tab report: population, required \tab output.common.population \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
    \code{grade} \tab key \tab call \tab AESEV \tab  \tab the severity or grade variable (AESEV, AETOXGR) \cr
    \code{grade_levels} \tab other \tab call \tab  \tab  \tab its values, lowest first: the rank of the maximum, and the order the table shows them in; NULL: the code list of 'grade' \cr
@@ -18,7 +18,7 @@ The table template \code{ae_max_grade}, layout \code{hierarchical}. Its program 
    \code{by} \tab other \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the column variable \cr
    \code{data} \tab other \tab call \tab ADAE \tab  \tab the dataset of records \cr
    \code{where} \tab other \tab call \tab TRTEMFL == "Y" \tab  \tab the records kept (R) \cr
-   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<population> \cr
+   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_sub \cr
    \code{overall} \tab other \tab call \tab Any TEAE \tab  \tab the any-record row's label \cr
    \code{any_grade} \tab other \tab call \tab Any grade \tab  \tab the label of a term's count at any grade \cr
    \code{sort} \tab other \tab call \tab n \tab  \tab the SOCs and PTs by their count, most first ("n"), or by "name" \cr

@@ -67,7 +67,10 @@ test_that("a report with no pattern is as before: Standard, its study parts left
   expect_identical(tfl_report_code(tfl_table_spec(pattern_spec()), "T2"),
                    tfl_report_code(tfl_table_spec(sp), "T2"))
   # the study's setup is Standard's only
-  expect_false(any(grepl("PK", tfl_report_setup_code(s))))
+  # (and the pattern's configuration has an object of its own, after Standard's)
+  code <- tfl_report_setup_code(s)
+  expect_false(any(grepl("PK", code[seq_len(min(grep("^header_Compact", code)) - 1L)])))
+  expect_true(any(grepl("PK", code)))
 })
 
 test_that("the patterns are not reports", {

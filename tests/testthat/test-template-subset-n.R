@@ -19,7 +19,7 @@ sn_study <- function(root) {
 # the output built to its RTF text
 sn_rtf <- function(d, id, name, args, kind = "table") {
   f <- file.path(d, "spec", "outputs", paste0(id, ".yml"))
-  tfl_write_output(tfl_output(id, kind, population = if (kind == "table") "SAF",
+  tfl_write_output(tfl_output(id, kind, common = list(population = if (kind == "table") "SAF"),
                               extends = "defaults",
                               template = list(name = name, args = args)), f)
   out <- suppressWarnings(suppressMessages(tfl_run_output(id, dir = d)))
@@ -75,8 +75,8 @@ test_that("denominator = \"data\": the records' subjects, within the subset", {
     if (tpl == "hierarchical") a$hierarchy <- c("AEBODSYS", "AEDECOD")
     # (the records, narrowed to the subset, one row a subject, are the denominator)
     x <- tfl_template_expand(tpl, a)
-    expect_identical(x$ard$analyses[[1L]]$denominator, paste0(x$ard$analysis_data[[2L]]$id, "_den"))
-    expect_match(x$ard$analysis_data[[3L]]$code, "dplyr::distinct(adae_saf, USUBJID, TRT01A)", fixed = TRUE)
+    expect_identical(x$ard$analyses[[1L]]$denominator, sub("_sub$", "_den", x$ard$analysis_data[[2L]]$id))
+    expect_match(x$ard$analysis_data[[3L]]$code, "dplyr::distinct(adae_sub, USUBJID, TRT01A)", fixed = TRUE)
     expect_identical(as.character(x$ard$analysis_data[[1L]]$where), sub)
   }
   # the header N of ae_soc_pt: Part 1's subjects with a record kept

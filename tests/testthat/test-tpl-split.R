@@ -64,7 +64,7 @@ test_that("split on ae_soc_pt changes the breaks of the table", {
   tfl_ai_study_init(d, adam = "adam", study_id = "SP-1")
   run <- function(id, args) {
     f <- file.path(d, "spec", "outputs", paste0(id, ".yml"))
-    tfl_write_output(tfl_output(id, "table", population = "SAF", extends = "defaults",
+    tfl_write_output(tfl_output(id, "table", common = list(population = "SAF"), extends = "defaults",
                                 template = list(name = "ae_soc_pt", args = args)), f)
     st <- tfl_read_study_spec(d)
     ard <- suppressMessages(tfl_build_ard(st, output_id = id, dir = d, save = FALSE))

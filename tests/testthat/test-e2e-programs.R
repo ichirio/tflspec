@@ -39,7 +39,7 @@ test_that("lab_abnormal on a data without PARAMN: the parameters in their own or
   expect_false("PARAMN" %in% names(adlb))
   d <- ep_study(withr::local_tempdir(), c("adsl", "adlb"))
   f <- file.path(d, "spec", "outputs", "T-LA.yml")
-  tfl_write_output(tfl_output("T-LA", "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("T-LA", "table", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = "lab_abnormal",
                                               args = list(levels = c("LOW", "HIGH")))), f)
   r <- ep_run_child(d, "T-LA")
@@ -81,7 +81,7 @@ test_that("ancova: the differences by emmeans' trt.vs.ctrl, adjusted as `adjust`
   skip_if_not_installed("emmeans")
   d <- ep_study(withr::local_tempdir(), c("adsl", "advs"))
   f <- file.path(d, "spec", "outputs", "T-AN.yml")
-  tfl_write_output(tfl_output("T-AN", "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("T-AN", "table", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = "ancova", args = list(
                                 data = "ADVS", param = "SYSBP", visit = "CYCLE 2 DAY 1"))), f)
   r <- ep_run_child(d, "T-AN")
@@ -98,7 +98,7 @@ test_that("a denominator's by column the subjects' data lacks (AESEV): the recor
   d <- ep_study(withr::local_tempdir(), c("adsl", "adae"))
   f <- file.path(d, "spec", "outputs", "T-AE.yml")
   tfl_write_output(tfl_output(
-    "T-AE", "table", population = "SAF", extends = "defaults", label = "TEAE by severity",
+    "T-AE", "table", common = list(population = "SAF"), extends = "defaults", label = "TEAE by severity",
     ard = list(
       analysis_data = list(
         list(id = "adsl_saf", from = "ADSL", population = "SAF"),
@@ -115,9 +115,9 @@ test_that("a denominator's by column the subjects' data lacks (AESEV): the recor
                                                label = "AEDECOD")))), f)
   r <- ep_run_child(d, "T-AE")
   # the join takes from ADSL only what it has; AESEV is dropped from nothing
-  expect_true(any(grepl("select(-any_of(intersect(c(\"TRT01A\", \"AESEV\"), names(adsl_saf))))",
+  expect_true(any(grepl("select(-any_of(names(select(adsl_saf, any_of(c(\"TRT01A\", \"AESEV\"))))))",
                         r$code, fixed = TRUE)))
-  expect_true(any(grepl("select(adsl_saf, USUBJID, any_of(c(\"TRT01A\", \"AESEV\")))",
+  expect_true(any(grepl("select(adsl_saf, USUBJID, TRT01A, any_of(\"AESEV\"))",
                         r$code, fixed = TRUE)))
   expect_false(is.null(r$ard), info = paste(r$out, collapse = "\n"))
   expect_false(any(grepl("doesn't exist", r$out)))

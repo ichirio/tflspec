@@ -27,11 +27,10 @@ cll_study <- function(defaults = NULL, pattern = NULL, file = NULL, reports = li
 
 # a table of one categorical analysis (no template), by ARM
 cll_sex_report <- function(d, id, extends = "[defaults]", codelists = NULL, variables = "SEX") {
-  writeLines(c(paste("id:", id), "kind: table", "population: SAF",
+  writeLines(c(paste("id:", id), "kind: table", "common: {population: SAF}",
                paste0("extends: ", extends), codelists,
                "ard:", "  analyses:", "    - id: A1", "      method: categorical",
                "      population: SAF", "      by: [ARM]", paste0("      variables: [", variables, "]"),
-               "data:", "  source: ard", "  object: ard",
                "content:", "  - table_plan: {cols: ARM}"),
              file.path(d, "spec", "outputs", paste0(id, ".yml")))
 }
@@ -59,7 +58,7 @@ test_that("a shift report's code lists in the study defaults label its rows and 
                   ": [{value: LOW, label: Low}, {value: NORMAL, label: Normal}, {value: HIGH, label: High}]")
   d <- cll_study(defaults = lists)
   f <- file.path(d, "spec", "outputs", "T-SH.yml")
-  tfl_write_output(tfl_output("T-SH", "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("T-SH", "table", common = list(population = "SAF"), extends = "defaults",
     template = list(name = "shift", args = list(population = "SAF", where = 'PARAMCD == "ALT"',
                                                 page_by = FALSE, levels = c("Low", "Normal", "High")))), f)
   st <- tfl_read_study_spec(d)

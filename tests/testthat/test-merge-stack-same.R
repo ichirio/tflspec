@@ -23,7 +23,7 @@ test_that("a report that repeats a stacking item of its layers updates it, not a
 
 test_that("a template with a part (pk_conc) and a report that writes the same part: one part", {
   st <- tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
-  o <- tfl_output("X-PK", "table", label = "pk", population = "SAF",
+  o <- tfl_output("X-PK", "table", label = "pk", common = list(population = "SAF"),
                   template = list(name = "pk_conc", args = list(population = "SAF")))
   parts <- function(r) Filter(function(i) identical(i$fn, "plan_append"), r$content)
   expect_length(parts(tfl_resolve_output(o, st)), 1L)

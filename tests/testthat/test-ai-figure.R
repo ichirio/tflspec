@@ -58,7 +58,7 @@ test_that("the figure's answer: its report file in the design's form, the same d
   o <- tfl_read_output(file.path(d, fr$file))
   expect_identical(o$kind, "figure")
   expect_identical(o$label, "Kaplan-Meier Plot of Overall Survival")
-  expect_identical(o$population, "ITT")
+  expect_identical(o$common$population, "ITT")
   expect_identical(o$data$source, "code")
   # the design as the figure designer gets it back: the answer's design
   a <- tfl_ai_parse(readLines(ex, encoding = "UTF-8"), "figure")
@@ -121,7 +121,7 @@ test_that("an agent's figure draft with its layers as `layers:` (the instruction
   # the agent's file: no template, the layers beside an empty content
   f <- file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml")
   writeLines(c(
-    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "population: ITT",
+    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "common: {population: ITT}",
     "extends: [defaults]",
     "data:", "  source: code", "  steps:",
     "    - {step: read, dataset: ADRS}", "    - {step: flag, variable: ITTFL}",
@@ -168,7 +168,7 @@ test_that("a built figure's facts beside its PNG; a figure of the agent's own co
   # the fallback after two fixes: the data steps, and one layer_code that draws the whole plot
   f <- file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml")
   writeLines(c(
-    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "population: ITT",
+    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "common: {population: ITT}",
     "extends: [defaults]",
     "data:", "  source: code", "  steps:",
     "    - {step: read, dataset: ADRS}", "    - {step: flag, variable: ITTFL}",
@@ -200,7 +200,7 @@ test_that("a km_survival draft with `codelists` for its arms is drawn (set_level
   ai_drafts_from_fixtures(d)
   f <- file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml")
   writeLines(c(
-    "id: F-14-2-2", "kind: figure", "label: Kaplan-Meier Plot of Overall Survival", "population: ITT",
+    "id: F-14-2-2", "kind: figure", "label: Kaplan-Meier Plot of Overall Survival", "common: {population: ITT}",
     "extends: [defaults]",
     "data:", "  source: code", "  steps:",
     "    - {step: read, dataset: ADTTE}", "    - {step: flag, variable: ITTFL}",
@@ -326,7 +326,7 @@ fig_codelists_study <- function(own = FALSE) {
   ai_drafts_from_fixtures(d)
   f <- file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml")
   writeLines(c(
-    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "population: ITT",
+    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "common: {population: ITT}",
     "extends: [defaults]",
     "data:", "  source: code", "  steps:",
     if (own) c("    - {step: read, dataset: ADTTE}", "    - {step: flag, variable: ITTFL}",
@@ -384,7 +384,7 @@ fig_cl_study <- function(own = NULL, layer = NULL) {
     writeLines(c(readLines(f), "codelists:", layer), f)
   }
   writeLines(c(
-    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "population: ITT",
+    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "common: {population: ITT}",
     "extends: [defaults]",
     "data:", "  source: code", "  steps:",
     "    - {step: read, dataset: ADRS}", "    - {step: flag, variable: ITTFL}",

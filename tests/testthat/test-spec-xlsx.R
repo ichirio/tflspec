@@ -6,18 +6,15 @@ test_that("the rows of a YAML spec go to a workbook; the rest is listed", {
   f <- withr::local_tempfile(fileext = ".xlsx")
   r <- tfl_write_spec_xlsx(d, f)
   expect_true(file.exists(f))
-  expect_true(all(c("analysis_data", "analyses", "codelists", "tokens", "header", "footer",
+  expect_true(all(c("analysis_data", "analyses", "codelists", "tokens",
                     "titles", "footnotes", "_not_in_xlsx") %in% r$sheets))
   rd <- function(s) as.data.frame(readxl::read_excel(f, s, col_types = "text"))
   an <- rd("analyses")
   expect_identical(an$output_id, rep("T-14-1-1", 3L))
   expect_identical(an$id, c("GROUPN", "CONT", "CAT"))
   expect_identical(an$variables[3L], "AGEGR1 | SEX | RACE | ECOGBL")
-  # the defaults' header lines keyed blank, the report's titles by its id
-  h <- rd("header")
-  expect_true(all(is.na(h$output_id)))
-  expect_identical(h$line, c("1", "2", "4", "5", "6"))
-  expect_identical(h$right[1L], "DRAFT")
+  # the built-in default configuration's header is no row of the study; the report's titles by its id
+  expect_false("header" %in% r$sheets)
   ti <- rd("titles")
   expect_identical(ti$output_id, c("T-14-1-1", "T-14-1-1"))
   tk <- rd("tokens")
@@ -30,7 +27,6 @@ test_that("the rows of a YAML spec go to a workbook; the rest is listed", {
   expect_true(any(nx$output %in% "T-14-1-1" & nx$part == "content"))
   expect_true(any(is.na(nx$output) & nx$part == "content"))
   expect_true(any(nx$part == "analyses.statistic"))
-  # rtf_tables(auto_section) is a column of the report sheet now
-  rp <- rd("report")
-  expect_identical(rp$auto_section[is.na(rp$output_id)], "TRUE")
+  # (the built-in configuration's rtf_tables(auto_section) is no row of the study either)
+  expect_false("report" %in% r$sheets)
 })

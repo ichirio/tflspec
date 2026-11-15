@@ -13,7 +13,7 @@
 # ============================================================================
 
 # The report file's keys an answer may write, in the order written.
-.ai_table_keys <- c("id", "kind", "label", "population", "extends", "ard", "data",
+.ai_table_keys <- c("id", "kind", "label", "common", "extends", "data", "ard",
                     "codelists", "content", "page", "template")
 
 # The functions a table's content may call: the table's stage of the schema
@@ -221,10 +221,10 @@
       "- `id`*: the report's number as the user's message writes it (its file's name keeps letters, digits, '.', '_' and '-').",
       "- `kind`*: `table`; `listing` for a listing (its own section below).",
       "- `label`: the report's title, without its number and analysis set.",
-      "- `population`: the analysis set's `id` (spec/data.yml).",
+      "- `common`: what several steps read: `population`, the analysis set's `id` (spec/data.yml); `treatment`, the arm variable (`TRT01A`); `population_label`, the text `{OUTPUT_POPULATION}` prints when the report has no set. Never a top-level `population:`.",
       "- `extends`: `[defaults]`: the study's defaults under this report.",
-      "- `ard`: the report's analyses, made before any table: `analysis_data` (named data the analyses read) and `analyses` (one cards / cardx call each). Below.",
-      "- `data`: `{source: ard}`: the table reads its rows of the study ARD.",
+      "- `data`: the report's datasets, a flat list of definitions made before any table (one dataset each; named data the analyses read). Below. A table writes no `data: {source: ard}`: it always reads its ARD.",
+      "- `ard`: the report's analyses, made before any table: `analyses` (one cards / cardx call each). Below. Never `ard: analysis_data` (that is `data:`).",
       "- `codelists`: by variable, its values in the order printed, each `{value: <as in the data>, label: <as printed>}`; the ARD then holds the labels, in that order.",
       "- `content`: the table: a list of items, one a function call written `- <function>: {<argument>: <value>, ...}` (the functions below). `table_plan` first.",
       "- `page`: `titles` and `footnotes`, each a mapping by line number (`\"1\": {center: Table 14.1.1}`, `\"1\": {left: <footnote>}`); the line keys are quoted.",
@@ -233,8 +233,8 @@
   if ("ard" %in% parts) {
     f <- .ai_table_ard_fields()
     m <- tfl_ard_methods()
-    out <- c(out, "### ard: analysis_data", "",
-             "Each a mapping with these fields (all optional but `id` and `from`):", "",
+    out <- c(out, "### data: the definitions", "",
+             "Each a mapping with these fields (all optional but `id` and `from`); named `<dataset>_sub` (the report's part of a dataset: `adsl_sub` its subjects, `adae_sub` its records), `<dataset>_den` (a denominator) or `<dataset>_<noun>`:", "",
              sprintf("- `%s`: %s", f$analysis_data$field, f$analysis_data$description), "",
              "### ard: analyses", "",
              "Each a mapping with these fields (`id`, `method` and, but for `total_n`, `variables` required):", "",
@@ -275,7 +275,7 @@
   if ("listing" %in% parts) {
     out <- c(out, "### A listing", "",
       "A listing (`kind: listing`) prints records, not statistics: it has no `ard: analyses` and no `table_plan`.", "",
-      "- `data`*: the records: `{source: dataset, dataset: <ADaM dataset>, population: <analysis set id>, where: !r '<R condition on its columns>', sort: [<variable>, -<variable, descending>]}`; or `{source: dataset, data: <an analysis_data id of this report>}`, that data in `ard: analysis_data` (its `population` there), when the records need more than a condition (ADSL's columns added, derived columns).",
+      "- `data`*: the records: `{source: dataset, dataset: <ADaM dataset>, population: <analysis set id>, where: !r '<R condition on its columns>', sort: [<variable>, -<variable, descending>]}`; or, when the records need more than a condition (ADSL's columns added, derived columns), a flat list of definitions (as a table's `data:`), the listing printing the last one.",
       "- The analysis set is required: `data.population`, or the analysis data's. A dataset of parameters (PARAMCD: ADLB, ADVS ...) is kept to the shell's (`where: !r 'PARAMCD == \"ALT\"'`) or shows PARAM / PARAMCD in a column. When the shell does not say them, ask -- do not guess.",
       "- `content`*: one `plan_listing` item, its `cols` the shell's columns in order, each `{fn: listing_col, args: {vars: [<variables stacked in the column>], label: <header>, width: <characters>, collapse_repeats: true}}` (`collapse_repeats`: a value printed once while it repeats, as a subject's id; that column has to be wide enough for its longest value on one line: a value that wraps repeats on every record); `type: multiline` unless the shell is one line a record. A listing with no page size pages at 22 rows (the header on every page); write `plan_paginate_rows: {max_rows: <n>}` only when the shell says otherwise.",
       "- `page`: its titles and footnotes, as a table's.",
@@ -356,8 +356,11 @@
     if (!is.null(id) && !grepl("^[A-Za-z0-9._-]+$", id)) o$id <- id <- .ai_file_id(id)
     if (!is.null(id)) at <- paste(at, id)
     for (k in setdiff(names(o), .ai_table_keys)) {
-      p <- .ai_problem(p, paste(at, k), sprintf(
-        "is not a key of a report file; its keys are %s", paste(.ai_table_keys, collapse = ", ")))
+      p <- .ai_problem(p, paste(at, k), if (identical(k, "population")) {
+        "`population:` -> `common: population` (write `common: {population: <analysis set id>}`)"
+      } else {
+        sprintf("is not a key of a report file; its keys are %s", paste(.ai_table_keys, collapse = ", "))
+      })
     }
     r <- tryCatch(.output_from_list(o[intersect(names(o), .ai_table_keys)]),
                   error = function(e) e)
@@ -574,7 +577,7 @@
                          paste(pops, collapse = ", ")))
     }
   }
-  if (!is.na(o[["population"]])) chk_pop("population", o[["population"]])
+  if (!is.na(.out_population(o))) chk_pop("common population", .out_population(o))
   if (is.na(o[["label"]])) add("label", "the report has no label (its title)", "warning")
   # a code list under `page:` is ignored there: it belongs under `codelists:`
   for (k in setdiff(names(o[["page"]]), .page_known)) {
@@ -596,7 +599,7 @@
   par_rx <- "\\bPARAM(CD|N)?\\b"
   says_par <- function(x) any(grepl(par_rx, unlist(lapply(x, as.character))))
   ad_par <- list()
-  has_pop <- !is.na(o[["population"]])
+  has_pop <- !is.na(.out_population(o))
   bds <- if (!is.null(vars)) unique(vars$dataset[vars$variable %in% "PARAMCD"]) else character()
   unkept <- character()
   for (j in seq_along(ad)) {
@@ -697,8 +700,8 @@
     }
   }
   if (!has_pop) {
-    add("population", paste(
-      "the report names no analysis set (population: the report's, an analysis's or its data's):",
+    add("common population", paste(
+      "the report names no analysis set (`common: population`: the report's, an analysis's or its data's):",
       "write the one the shell says; if the shell does not say it, ask it in a question --",
       "do not guess"))
   }

@@ -6,7 +6,7 @@ adiff_study <- function() {
   dir.create(file.path(d, "ai", "spec", "outputs"), recursive = TRUE)
   dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)
   mk <- function(id, label, where) {
-    o <- tfl_output(id, "table", label = label, population = "SAF")
+    o <- tfl_output(id, "table", label = label, common = list(population = "SAF"))
     o$ard <- list(analyses = list(list(id = "AE", method = "hierarchical", dataset = "ADAE",
                                        where = tfl_r(where), variables = list("AEDECOD"))))
     o$page <- list(titles = list(`1` = list(center = id), `2` = list(center = label)))
@@ -99,7 +99,7 @@ aw_study <- function(env = parent.frame()) {
   d
 }
 aw_table <- function(d, id, widths = FALSE) {
-  o <- tfl_output(id, "table", population = "SAF")
+  o <- tfl_output(id, "table", common = list(population = "SAF"))
   o$extends <- list("defaults")
   o$ard <- list(analyses = list(list(id = "AGE", method = "continuous", dataset = "ADSL",
                                      population = "SAF", by = list("TRT01A"),
