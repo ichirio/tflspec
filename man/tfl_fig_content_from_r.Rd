@@ -42,6 +42,17 @@ several plots arranged by patchwork (\code{p_km / p_risk}, \code{p1 | p2},
 each is a \code{\link[=tfl_plot]{tfl_plot()}} named as in the program (without \code{p_}), then
 \code{wrap_plots}.  \code{theme_set(theme_bw())} before a plot is the plot's
 theme, its first term.
+\item \strong{The data piped into the plot} (\code{adlb \%>\% filter(PARAMCD == "ALT") \%>\% ggplot(aes(...))}, the native \verb{|>}, magrittr's \code{.}) or computed
+in \code{ggplot()}'s own \code{data} (or \code{ggsurvfit()}'s fit) is an object of
+the data part, \code{plot_data} (\code{p_data} for a plot \code{p}, \code{plot_fit} for a
+fit), so the item names it.  A layer's data that is a part of the
+plot's (\code{km[km$censored, ]}, \code{subset(km, censored)}, \code{km \%>\% filter(censored)}, \code{. \%>\% filter(censored)}) is its formula, \code{~ subset(.x, censored)}; any other computed there is an object of the
+data part too.
+\item \strong{Terms as ggplot2 adds them}: a list of terms (\code{+ list(geom_hline(...), theme_bw())}, or an object of them), \code{+ NULL}, \code{{ }}, and \code{if (flag) term} or a step \code{if (flag) p <- p + term} whose flag is a constant of
+the program (\code{show_ci <- TRUE}) -- the branch it takes.  A condition
+of the data stays R.  \code{theme_update()} after \code{theme_set()} is the
+plot's theme with those settings, and \verb{ggplot2::} before a call is
+dropped (the figure's code attaches ggplot2).
 \item \strong{\code{ggsave()}}'s width, height (in its \code{units}), dpi and file are the
 \code{tfl_image} item's.
 \item \strong{Every other line} (reading and deriving the data, an object of the

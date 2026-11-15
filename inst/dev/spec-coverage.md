@@ -1657,6 +1657,78 @@ figure's own object (`km[km$censored, ]`, `sw[sw$ongoing, ]`; typed as
 grobs and rasters, a labeller in plotmath (`alpha^.(vs)`),
 `position_rank()` / `guide_describe()` (not ggplot2 4.0.3 exports).
 
+### Round 17 (2026-11-15): a tidyverse program, read whole and drawn again
+
+Round 16 read a program; it did not read the way most programs are
+written now: the data piped into `ggplot()`.  `adlb %>% filter(PARAMCD
+== "ALT") %>% ggplot(aes(...)) + ...` was "no plot: no ggplot() in the
+code", and so was a `ggsurvfit()` with its fit piped in.  A fifth
+measure, `dev/spec-coverage-ggplot2-program-measure.R`, takes 19 clinical
+programs written in the tidyverse's way for it
+(`dev/spec-coverage-ggplot2-programs.R`, made-up ADaM-like data: lab
+profiles, mean +/- SE, waterfall, KM by ggsurvfit and as a data frame,
+forest, CDF, heat map, swimmer, histogram, box plot, two plots by
+patchwork), reads each with `tfl_fig_content_from_r()`, writes the
+content back as the figure's code (what a figure report generates), runs
+that code on the same data and compares the figure with the program's
+own: the layers' data, the axes' labels, the plot's labels and its
+complete theme.  One row a program (`inst/dev/spec-coverage-ggplot2-programs.csv`);
+a program counts 1 when it reads, runs and draws the same with no value
+of R and no problem of the check, 0.5 when it draws the same with values
+of R or warnings, 0 otherwise.
+
+| Programs measure (19 programs) | Before | After |
+|---|---:|---:|
+| **score** | **23.7%** | **100.0%** |
+| read by tfl_fig_content_from_r() | 9 | 19 |
+| the code written back runs | 8 | 19 |
+| draws the same | 8 | 19 |
+| items' values typed / R | 94 / 11 | 241 / 0 |
+| problems of the check (errors) | 2 | 0 |
+
+The other measures were rerun with ggplot2 4.0.4 and came out unchanged:
+the clinical figures 99.7% (uses 1150 / 2 / 0), ggplot2's own examples
+98.5% (1230 / 39 / 3), the arguments (3409), aesthetics (826),
+extensions (351) and scales' helpers (138) 100%.
+
+Round 17 (`R/fig_program.R`):
+
+- **The data piped into the plot** (`%>%`, the native `|>`, magrittr's
+  `.` as `ggplot(data = ., ...)`), or computed in `ggplot()`'s own
+  `data` (`ggplot(data = fst %>% mutate(...))`, `adlb[adlb$PARAMCD ==
+  "ALT", ]`), is an object of the data part, `plot_data` (`p_data` for a
+  plot `p`; a name the program uses is not taken), and the item names it.
+  `ggsurvfit()`'s fit piped in is `plot_fit`.
+- **A layer's data that is a part of the plot's** is its formula, `~
+  subset(.x, censored)`: `km[km$censored, ]`, `subset(km, censored)`,
+  `km %>% filter(censored, time > 0)` (`censored & time > 0`),
+  `dplyr::filter(km, censored)` and magrittr's function `. %>%
+  filter(censored)`.  Any other data computed in a layer is an object of
+  the data part (`alt_geom_point <- adlb %>% filter(AVAL > 40)`).  This
+  closes round 16's last clinical partial in a program (the clinical
+  measure reads one call, so it still counts `km[km$censored, ]` there).
+- **Terms as ggplot2 adds them**: a list of terms (`+ list(labs(...),
+  theme_bw())`, or an object of them, `ref_lines <-
+  list(geom_hline(...), geom_vline(...))`), `+ NULL`, `{ }`, `if (flag)
+  term [else term]`, and a step `if (show_ci) { p <- p + geom_ribbon(...)
+  }`, when the flag is a constant of the program: the branch it takes,
+  the flag read in place.  A condition of the data stays R.
+- **`theme_update()`** after `theme_set()` (or alone, on ggplot2's
+  default theme) is the plot's theme with those settings.
+- **`ggplot2::` before a call** is dropped (the figure's code attaches
+  ggplot2); before, `ggplot2::aes()` was an error of the check
+  ("an !r expression").
+- `R/fig_content.R`: a list of a function's arguments (`x_scales`,
+  `method.args` ...) whose values include numbers or texts built of
+  constants (`list(breaks = seq(0, 60, by = 12))`) is a map still, the
+  number R the check judges; before, the whole list was R.
+
+**No code generated from an existing SPEC changes**: the writer is
+untouched.  What changes is how a program is read.
+
+What is left: a condition of the data (`if (nrow(d) > 10)`), plots made
+in a function or a loop, `%+%`, `last_plot()`.
+
 ### The extension packages (ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale, patchwork)
 
 The same measure, the same file (`package` says which), over the

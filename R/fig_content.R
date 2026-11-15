@@ -531,7 +531,12 @@ tfl_plot <- function(name, items = list(), from = "own") {
         all(nzchar(names(a) %||% rep("", length(a))))) {
       vals <- lapply(stats::setNames(names(a), names(a)),
                      function(k) .fig_lang_value(a[[k]], k, type = .fig_list_arg_type(arg, k)))
-      if (!any(vapply(vals, inherits, NA, "tfl_r"))) return(vals)
+      # (numbers or texts built of constants, breaks = seq(0, 60, by = 12),
+      # are a value the check judges: the list a map still)
+      r_ok <- function(v) {
+        !inherits(v, "tfl_r") || !is.null(.schema_r_numbers(v)) || !is.null(.schema_r_texts(v))
+      }
+      if (all(vapply(vals, r_ok, NA))) return(vals)
     }
     # a negative number, a vector of constants (a negative number among
     # them: limits = c(-100, 100), yintercept = c(-30, 20))
