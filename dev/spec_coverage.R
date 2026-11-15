@@ -90,6 +90,55 @@ via_widen <- c(x = "the pipe (table_plan(x))",
                sep = "plan_columns(sep)", rounding = "plan_digits(rounding)",
                stat_groups = "plan_stat_groups(...)", compare = "plan_compare(...)",
                filter = "plan_filter(...)")
+# The other functions plan_apply() calls with the plan verbs' values
+# (rtfreporter's ?plan_verbs, "Where each argument goes": the verbs keep
+# the names of the function that does the job), since 2026-11-15.  Each
+# such argument is said by its verb, not as the function's own: partial,
+# as widen_ard()'s.  `x` / `data` is the table plan_apply() builds; the
+# generics' `...` are their methods' arguments, which the verb names.
+via_verbs <- list(
+  listing_spec = c(cols = "plan_listing(...)", type = "plan_listing(type)",
+                   sep = "plan_listing(sep)", spacer = "plan_listing(spacer)",
+                   spacer_rel_width = "plan_listing(spacer_rel_width)",
+                   layout = "plan_listing(layout)", wrap = "plan_listing(wrap)",
+                   align = "plan_listing(align)", record = "plan_listing(record)",
+                   blank_row = "plan_blanks(where = \"records\" / \"none\")"),
+  stub_cols = c(data = "the table plan_apply() builds", vars = "plan_stub(vars)",
+                label = "plan_stub(name)", indent = "plan_stub(indent)",
+                group_summary = "plan_stub(group_summary)"),
+  stub_spec = c(vars = "plan_stub(vars, before = FALSE)", label = "plan_stub(name)",
+                indent = "plan_stub(indent)", group_summary = "plan_stub(group_summary)"),
+  rtftable = c(data = "the table plan_apply() builds",
+               col_header = "plan_col_header(header)",
+               col_header_align = "plan_col_header(col_header_align)",
+               col_spec = "plan_cell_style(cols =)", row_title = "plan_columns(row_title)",
+               border = "plan_style(border)", blank_rows = "plan_blanks(where)",
+               style = "plan_style (rtf_table_style()'s fields)",
+               col_rel_width = "plan_columns(widths)",
+               column_widths_twips = "plan_columns(column_widths_twips)",
+               cell_styles = "plan_cell_style(where =)"),
+  as_rtftables = c(x = "the table plan_apply() builds",
+                   ... = paste("plan_paginate_group(), plan_paginate_rows(), plan_row_group(),",
+                               "plan_hide(), plan_blanks(), plan_sort(), plan_columns(auto_width,",
+                               "cell_format), plan_col_header(header_sep), plan_style()")),
+  paginate_cols = c(x = "the table plan_apply() builds",
+                    ... = "plan_paginate_cols(at, cut_by, every, keep, col_header, fit ...)"),
+  set_decimal_split = c(x = "the table plan_apply() builds", ... = "plan_columns(decimal)"),
+  set_col_header = c(x = "the table plan_apply() builds",
+                     ... = "plan_col_header(header / lines, values)"),
+  style_header = c(x = "the table plan_apply() builds",
+                   ... = "plan_cell_style(header = TRUE, row, cols, bold ...)"),
+  style_cols = c(x = "the table plan_apply() builds",
+                 ... = "plan_cell_style(cols, bold, align, color ...)"),
+  style_zone = c(x = "the table plan_apply() builds",
+                 ... = "plan_style(border, border_header ... border_group)"))
+# rtftable()'s look: plan_style()'s arguments of the same name
+via_verbs$rtftable <- c(via_verbs$rtftable, local({
+  same <- setdiff(intersect(names(formals(rtfreporter::rtftable)),
+                            names(formals(rtfreporter::plan_style))),
+                  names(via_verbs$rtftable))
+  stats::setNames(paste0("plan_style(", same, ")"), same)
+}))
 # the program a report says it was written by: rtf_document(program =,
 # program_fallback =), which tflspec fills (generate_rtfreport()'s are the
 # same value given at the end)
@@ -177,6 +226,9 @@ for (fn in ns) {
     } else if (fn == "widen_ard" && a %in% names(via_widen)) {
       add(fn, a, "partial", paste0("content: ", via_widen[[a]]),
           "said by table_plan() / the plan verb that owns it; plan_apply() calls widen_ard() with it")
+    } else if (a %in% names(via_verbs[[fn]])) {
+      add(fn, a, "partial", paste0("content: ", via_verbs[[fn]][[a]]),
+          "said by the plan verb that owns it; plan_apply() calls the function with it")
     } else if (paste(fn, a, sep = ".") %in% names(deprecated)) {
       add(fn, a, "no", "", paste("[helper]", deprecated[[paste(fn, a, sep = ".")]]))
     } else if (grepl("^plan_", fn)) {

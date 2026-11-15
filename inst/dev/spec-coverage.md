@@ -283,6 +283,16 @@ writes itself).  And the 4 emmeans arguments left partial on 2026-11-13
 | emmeans arguments in emmeans_args | 86.7% (11 / 4) | 100.0% (15 / 0) |
 | weight-3 functions only | 99.7% | 100.0% |
 
+2026-11-15 (the same scope; cards 0.9.0, cardx 0.3.4, still the CRAN
+versions): **100.0% before and after (565 yes / 0 partial)**.  Every
+argument in scope was already described and judged, so the run adds a check
+of the row's own columns rather than arguments: a `by`, `variables` or
+`strata` cell that lists its columns with commas or spaces
+(`PARAM, tox_dir, BTOXGRL`) instead of `|` is now an error when the
+definition is read.  Before, it was written into the call as it was, and
+the call gave the other columns to other arguments by their position (see
+"Added 2026-11-15").
+
 (2026-11-14 before: this branch before the run (tflspec@next 6fa6b81
 merged; a tflspec built from it) measured by this run's script on the
 wider scope -- the 20 tidy_plus_plus() arguments could be written as R in
@@ -355,6 +365,35 @@ function, but the catalog did not describe it and its value was not
 judged: partial.  2026-10-31 before: the same, with
 `update_ard_fmt_fun()` in the `post` scope -- written as R in `post`, its
 names checked, its values not judged.)
+
+### Added 2026-11-15
+
+* **A `by` / `variables` / `strata` cell lists its columns with `|`** (an
+  error when the definition is read: `.ard_column_list_problems()`,
+  `R/ard_spec.R`).  Each piece between the `|`s is written into the call
+  as it is, so a cell `PARAM, tox_dir, BTOXGRL` gave
+  `ard_tabulate(by = PARAM, tox_dir, BTOXGRL, variables = ...)`.  R then
+  passes `tox_dir` to `ard_tabulate()`'s next argument by position, which is
+  `strata`, so the counts change with no error.  A cell with spaces
+  (`TRTA AESEV`, or a line break typed in a cell) gave a program that does
+  not parse.  The error names the cell and the fix (`PARAM | tox_dir |
+  BTOXGRL`).  A piece that is one R expression still passes: a selector
+  (`starts_with("LB")`, `where(is.factor)`), a vector (`c(A, B)`), `-USUBJID`.
+* **A lab shift table by direction, through a SPEC** (weight 3: lab
+  shift).  ADaM keeps the grade toward low and toward high apart
+  (`ATOXGRL` / `BTOXGRL`, `ATOXGRH` / `BTOXGRH`).  The ARD definition can
+  already write such a table:
+  * its `analysis_data` makes the records of each direction, with a
+    direction column (`where = !is.na(BTOXGRL)`, `derive = tox_dir = "Low"`);
+  * one categorical analysis for each direction, `by = PARAM | tox_dir |
+    BTOXGRL`.
+
+  The content's `normalize_ard(combine = list(worst_gr = c("ATOXGRL",
+  "ATOXGRH"), base_gr = c("BTOXGRL", "BTOXGRH")))` (rtfreporter#1081, area
+  C) then reads the two directions' variables as one row variable and one
+  column key.  A test builds the ARD from the definition on fictional
+  records, runs the generated content and checks every count against the
+  records.
 
 ### Added 2026-11-14
 
@@ -969,6 +1008,41 @@ Percentage: yes counts 1, partial 0.5.
 | 2026-11-13 before / after | 53.2% (332 / 20 / 291 of 643) | 59.4% (332 / 20 / 224 of 576) | 42 / 6 / 66 |
 | 2026-11-14 before | 53.2% (332 / 20 / 291 of 643) | 59.4% (332 / 20 / 224 of 576) | 42 / 6 / 66 |
 | 2026-11-14 after  | 54.7% (332 / 39 / 272 of 643) | 61.0% (332 / 39 / 205 of 576) | 42 / 7 / 65 |
+| 2026-11-15 before | 54.7% (333 / 39 / 272 of 644) | 61.1% (333 / 39 / 205 of 577) | 42 / 7 / 65 |
+| 2026-11-15 after  | 59.5% (333 / 100 / 211 of 644) | 66.4% (333 / 100 / 144 of 577) | 42 / 18 / 54 |
+
+(2026-11-15: rtfreporter@next bb25b9c and tflspec@next 60b8e25 merged.
+rtfreporter's one new argument since 2629a3c is `normalize_ard(combine =)`
+(#1081).  It reads variables that the data keeps apart (ADaM's ATOXGRL /
+ATOXGRH) as one table dimension, for a lab shift table by direction.  It
+was passed on by its formals already (yes, which is why "before" has one
+more yes than 2026-11-14 after); this run gives it a schema entry
+(`map<string, list<column>>`: type, check, help) and a test that runs a
+whole shift table by direction from a SPEC.
+
+The rest of the gain comes only from correcting the measure, as
+`widen_ard()`'s did on 2026-11-14; it changes nothing a SPEC can write.
+rtfreporter's `?plan_verbs` ("Where each argument goes") says which
+function each verb's arguments go to, with the names unchanged, and
+`plan_apply()` calls those functions with them.  So 61 arguments that were
+"no" are now partial, each said by the verb that owns it:
+* `listing_spec()` (10 of 11): `plan_listing()`'s arguments, and
+  `blank_row` from `plan_blanks(where =)`;
+* `stub_cols()` / `stub_spec()` (5 and 4): `plan_stub()`;
+* `rtftable()` (28 of 29): `plan_style()`'s arguments of the same name,
+  `plan_columns(widths, row_title, column_widths_twips)`,
+  `plan_col_header()`, `plan_cell_style()` (`col_spec`, `cell_styles`),
+  `plan_blanks()`;
+* the generics' `x` / `...`: `as_rtftables()`, `paginate_cols()`
+  (`plan_paginate_cols()`), `set_decimal_split()` (`plan_columns(decimal)`),
+  `set_col_header()`, `style_header()` / `style_cols()`
+  (`plan_cell_style()`) and `style_zone()` (`plan_style(border_*)`).
+
+Still "no": `listing_spec(blank_row_first)` (`plan_blanks(first =)` goes to
+`as_rtftables()`), `layout` and `label_span` of `stub_cols()` /
+`stub_spec()`, `rtftable(read_attributes)`, and the lower-level helpers
+that no verb names (`fmt_*()`, `col_cell()`, `set_blank_rows()`,
+`auto_col_widths()` ...).)
 
 (2026-11-14: rtfreporter@next 2629a3c (its changes since 93951c8 are the
 CRAN review before 0.9.0 -- graphics and tools in Imports, resource files
@@ -1133,10 +1207,13 @@ deprecated, the validation kit a helper.)
 
 ### Where the gaps are
 
-Most "no" rows are rtfreporter's lower-level table API -- `rtftable()`,
-`widen_ard()`, `as_rtftable(s)()`, the `style_*()`, `set_*()`, `fmt_*()`,
-`paginate*()` and `listing_*()` helpers -- which the plan verbs already
-stand for: a SPEC says the plan, not these calls.  The gaps that a SPEC
+Most "no" rows are rtfreporter's lower-level table API -- `as_rtftable()`,
+the `fmt_*()`, `col_*()`, `set_blank_rows()`, `*_col_widths()` and
+`listing_wrap()` helpers -- which the plan verbs already stand for: a SPEC
+says the plan, not these calls.  (Since 2026-11-14 / 2026-11-15 the
+arguments `plan_apply()` passes on from a verb -- `widen_ard()`'s,
+`rtftable()`'s, `listing_spec()`'s, `stub_cols()`'s, the `style_*()` /
+`set_*()` / `paginate_cols()` generics' -- count as partial.)  The gaps that a SPEC
 could usefully close next:
 
 1. `rtf_section(page =)`: a section of its own header from a page on (a
