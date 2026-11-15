@@ -503,6 +503,13 @@ tfl_read_output <- function(path) {
       stop(who, ": `data:` is a list of definitions (`id`, `from`, ...) or, for a listing, ",
            "a map of its records.", call. = FALSE)
     }
+    for (r in d) {
+      if (!is.null(r[["label"]])) {
+        stop(who, ": data row `", as.character(r[["id"]] %||% "?"), "`: `label:` is no longer a key ",
+             "of a data row (the id names it; write a YAML comment if you want a note).",
+             call. = FALSE)
+      }
+    }
     y[["data"]] <- y[["place_map"]]
     y[["place_map"]] <- NULL
     y$ard <- c(list(analysis_data = d), y$ard[setdiff(names(y$ard), "analysis_data")])

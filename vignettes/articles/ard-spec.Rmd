@@ -36,7 +36,7 @@ df <- function(...) data.frame(..., stringsAsFactors = FALSE)
 | `study` | key | `id` (the subject key), `output` (where the ARD goes), `source` (R files of the study's own functions) |
 | `datasets` | dataset | `dataset`, `level`, `path` (relative to the study folder), `derive` (columns made on reading) |
 | `populations` | analysis set | `population_id`, `dataset`, `where`, `derive` |
-| `analysis_data` | named data of a report | `output_id`, `data_id`, `label`, `from`, `population_id`, `subjects`, `where`, `add`, `derive`, `keep`, `distinct`, `code` |
+| `analysis_data` | named data of a report | `output_id`, `data_id`, `from`, `population_id`, `subjects`, `where`, `add`, `derive`, `keep`, `distinct`, `code` |
 | `analyses` | analysis | `output_id`, `analysis_id`, `method`, `data` or `dataset` + `population_id`, `where`, `by`, `strata`, `variables`, `statistics`, `denominator`, `formats`, `args`, `code`, `parent`, `post`, ... |
 
 Every column is described on its header cell's comment in the workbook,
@@ -96,8 +96,8 @@ Each row makes one data, in this order:
    denominator's subjects);
 3. the records `where` keeps;
 4. columns of the population's data added by the subject key (`add`);
-5. columns derived (`derive`), and the columns kept (`keep`; with
-   `derive`, a `transmute()`);
+5. columns derived (`derive`), and the columns kept (`keep`, after
+   `derive`: a derived column may be named);
 6. one row per set of values (`distinct`).
 
 `data_id` is the object's name in the program. An analysis names it in
@@ -107,7 +107,6 @@ its `data` column instead of `dataset` / `population_id`.
 adata <- df(
   output_id = "T-14-3-1",
   data_id = c("adsl_saf", "adae_teae", "adae_ser"),
-  label = c("Safety set", "TEAEs of the safety set", "Serious TEAEs"),
   from = c("ADSL", "ADAE", "adae_teae"),
   population_id = c("SAF", NA, NA),
   subjects = c(NA, "adsl_saf", NA),
@@ -142,7 +141,7 @@ adata2 <- adata[1:2, ]
 adata2$output_id <- "T-14-3-2"     # its own copy of the two data
 adata2 <- rbind(adata2, df(
   output_id = "T-14-3-2",
-  data_id = "adae_first", label = "First TEAE of each subject and term",
+  data_id = "adae_first",
   from = "adae_teae", population_id = NA, subjects = NA, where = NA,
   keep = NA))
 adata2$code <- c(NA, NA, paste(

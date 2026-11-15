@@ -23,7 +23,7 @@
   h <- a$hierarchy
   # each subject with each term (a level's): at risk to the day of their
   # first event, else for the whole exposure
-  risk <- function(suffix, keys, what) {
+  risk <- function(suffix, keys) {
     ks <- c("USUBJID", keys)
     one <- function(x, q = "") {
       if (length(x) == 1L) paste0(q, x, q) else sprintf("c(%s)", paste0(q, x, q, collapse = ", "))
@@ -52,8 +52,7 @@
       "  # at risk to the first event with a day, else for the whole exposure (years)\n",
       "  dplyr::mutate(EVENT = !is.na(EVENT),\n",
       sprintf("    YEARS = dplyr::if_else(EVENT & !is.na(DAY), DAY, %s) / 365.25)", a$exposure))
-    list(id = paste0(tolower(a$data), suffix), label = paste0("Each subject's time at risk of ", what, "."),
-         from = set, code = code)
+    list(id = paste0(tolower(a$data), suffix), from = set, code = code)
   }
   levels <- list(list("_risk", character(), h[1L], "any event"),
                  list("_risk_soc", h[1L], h[1L], paste("each", h[1L])),
@@ -63,7 +62,7 @@
     Filter(Negate(is.null), list(
       id = set, from = a$data, subjects = subj,
       where = if (!is.null(a$where)) tfl_r(a$where), derive = tfl_r(paste("DAY =", a$start))))),
-    lapply(levels, function(l) risk(l[[1L]], l[[2L]], l[[4L]])))
+    lapply(levels, function(l) risk(l[[1L]], l[[2L]])))
   # the rate of a level, the innermost term as the variable (the shape of a
   # hierarchical ARD: its own rows of each level)
   rate <- function(id, l) {

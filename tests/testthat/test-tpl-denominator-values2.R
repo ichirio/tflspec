@@ -389,7 +389,7 @@ d2_by_hand <- function(s) {
        fem = vapply(arms, function(a) sum(saf$TRT01A == a & saf$SEX == "F"), 0L))
 }
 d2_own <- list(analysis_data = list(list(
-  id = "adsl_female", label = "Safety set, women", from = "ADSL", population = "SAF",
+  id = "adsl_female", from = "ADSL", population = "SAF",
   where = tfl_r("SEX == \"F\""))))
 
 test_that("hand counts of the fixture: the checks below rest on them", {

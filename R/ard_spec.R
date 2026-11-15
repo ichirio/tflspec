@@ -48,7 +48,7 @@
   objects = c("output_id", "object_id", "code", "label"),
   # condition-defined groups (the ARS's grouping factors): a row a level
   groups = c("group_id", "label", "level", "where"),
-  analysis_data = c("output_id", "data_id", "label", "from", "population_id", "subjects",
+  analysis_data = c("output_id", "data_id", "from", "population_id", "subjects",
                     "where", "add", "derive", "keep", "distinct", "code"),
   analyses = c("output_id", "analysis_id", "parent", "label", "method",
                "data", "dataset", "records",
@@ -156,9 +156,28 @@
   "data"
 }
 
+.data_label_gone <- paste0("`label` is no longer a column of the analysis_data sheet ",
+                           "(the data_id names it); delete the column.")
+
+# An analysis_data row has no label (its data_id names it): a `label` column
+# that is empty is dropped (the sheet has no such column), a value in it stops
+.adata_label_check <- function(d) {
+  if (!"label" %in% names(d)) return(invisible())
+  v <- trimws(as.character(d[["label"]]))
+  hit <- which(!is.na(v) & nzchar(v))
+  if (!length(hit)) return(invisible())
+  i <- hit[1L]
+  id <- if ("data_id" %in% names(d)) as.character(d[["data_id"]][i]) else
+    if ("id" %in% names(d)) as.character(d[["id"]][i]) else NA_character_
+  rep_id <- if ("output_id" %in% names(d)) as.character(d[["output_id"]][i]) else NA_character_
+  stop(if (!is.na(rep_id)) paste0(rep_id, ": "), "data row `", id, "`: ",
+       .data_label_gone, call. = FALSE)
+}
+
 .normalize_ard_sheet <- function(d, sheet) {
   cols <- .ard_spec_sheets[[sheet]]
   d <- as.data.frame(d, stringsAsFactors = FALSE)
+  if (identical(sheet, "analysis_data")) .adata_label_check(d)
   out <- lapply(cols, function(c) {
     v <- if (c %in% names(d)) as.character(d[[c]]) else
       rep(NA_character_, nrow(d))

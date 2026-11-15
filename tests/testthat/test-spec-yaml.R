@@ -238,3 +238,20 @@ test_that("plan_digits()'s rounding must be spelled as its value (\"SAS\" stops;
   expect_match(tfl_content_code(o), 'rounding = "sas"', fixed = TRUE, all = FALSE)
   expect_identical(tflspec:::.ard_spec_study_value(tfl_table_spec(study = c(rounding = "SAS")), "rounding"), "sas")
 })
+
+test_that("a data row with `label:` stops, naming the report and the row", {
+  f <- tempfile(fileext = ".yml")
+  on.exit(unlink(f), add = TRUE)
+  writeLines(c("id: T-1", "kind: table", "data:",
+               "  - id: adsl_sub", "    from: ADSL", "    population: SAF",
+               "  - id: adsl_p2", "    label: Safety set, phase 2", "    from: ADSL",
+               "content:", "  - table_plan: {cols: TRT01A}"), f)
+  expect_error(tfl_read_output(f),
+               "T-1: data row `adsl_p2`: `label:` is no longer a key of a data row (the id names it; write a YAML comment if you want a note).",
+               fixed = TRUE)
+  writeLines(c("id: T-1", "kind: table", "data:",
+               "  - id: adsl_p2", "    # Safety set, phase 2", "    from: ADSL",
+               "content:", "  - table_plan: {cols: TRT01A}"), f)
+  o <- tfl_read_output(f)
+  expect_identical(names(o$ard$analysis_data[[1L]]), c("id", "from"))
+})

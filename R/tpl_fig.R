@@ -417,7 +417,7 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
                                 censor = a$censor)$analyses
   ard <- list(
     analysis_data = list(Filter(Negate(is.null), list(
-      id = set, label = sprintf("%s of %s, with the subgroups", a$param, a$population),
+      id = set,
       from = a$data, population = a$population,
       where = tfl_r(.tpl_and(sprintf("PARAMCD == %s", q(a$param)), a$where)),
       # (the reference arm first: `ref` is a relevel, else the first level is

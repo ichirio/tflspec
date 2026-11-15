@@ -409,7 +409,7 @@
     # (preparation of the analysis, not a definition of subjects: `adsl_miss`)
     cat_set <- "adsl_miss"
     sets <- c(sets, list(list(
-      id = cat_set, label = "With a Missing level for a variable that has missing values.",
+      id = cat_set,
       from = set, code = tfl_r(.tpl_demog_missing_code(set, cat, ml)))))
   }
   ov <- if (isTRUE(a[["total"]])) TRUE

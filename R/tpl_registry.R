@@ -237,7 +237,7 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     k("min_pct_in", "choice", choices = c("any", "all", "total")),
     # what the report is of: the analysis set, which subjects, which records
     k(c("population", "subset", "where"), "text", group = "target"),
-    k(c("data", "data_id", "data_label", "analysis_id",
+    k(c("data", "data_id", "analysis_id",
         "analysis_label", "overall", "any_grade", "cat_id", "cat_label", "ci_id", "ci_label",
         "ci_method", "groupn_label", "median_label", "time_prefix", "time_unit", "unit",
         "when", "visit_label", "param_label", "baseline_label", "value_label", "change_label", "cell", "start",
@@ -1174,7 +1174,7 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
 # The analysis data `denominator = "data"` is for a template of records: the
 # subjects of `set` (the records kept), one row a subject and arm
 .tpl_den_records <- function(set, by, ds) {
-  list(id = paste0(tolower(ds), "_den"), label = "The subjects with a record kept.", from = set,
+  list(id = paste0(tolower(ds), "_den"), from = set,
        code = tfl_r(sprintf("dplyr::distinct(%s, %s)", set, paste(c("USUBJID", by), collapse = ", "))))
 }
 
@@ -1301,7 +1301,7 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
   # the any-record row: its label, when it is shown
   overall <- if (isTRUE(a[["any_row"]])) a[["any_row_label"]]
   set <- .tpl_set_id(a)
-  d <- list(id = set, label = a[["data_label"]], from = a[["data"]], subjects = subj,
+  d <- list(id = set, from = a[["data"]], subjects = subj,
             where = if (!is.null(a$where)) tfl_r(a$where))
   nn <- function(x) Filter(Negate(is.null), x)
   # "data": the percentages' denominator is the records' subjects -- the
@@ -1313,7 +1313,7 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
       list(id = subj, from = "ADSL", population = pop)),
       dn$extra, list(nn(d)),
       if (rec_den) list(list(
-        id = den_id, label = "The subjects with a record kept.", from = set,
+        id = den_id, from = set,
         code = tfl_r(sprintf("dplyr::distinct(%s, %s)", set,
                              paste(c("USUBJID", a$by), collapse = ", ")))))),
     analyses = list(nn(list(
@@ -1412,8 +1412,6 @@ tpl_hierarchical <- function(ard, population, hierarchy, ..., codelists = NULL) 
   tfl_param("data", "ADAE", doc = "the dataset of records"),
   tfl_param("where", "TRTEMFL == \"Y\"", doc = "the records kept (R)"),
   tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_sub"),
-  tfl_param("data_label", "Treatment-emergent AEs of the safety set",
-            doc = "the analysis data's label"),
   tfl_param("analysis_id", "TEAE_PT", doc = "the analysis's id"),
   tfl_param("analysis_label", "TEAE by PT", doc = "the analysis's label"),
   tfl_param("overall", "Any TEAE", doc = "the any-record row's label; NULL: none"),
@@ -1564,7 +1562,7 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
       list(id = subj, from = "ADSL", population = pop)),
       dn$extra, list(Filter(Negate(is.null), d)),
       if (rec_den) list(list(
-        id = den_id, label = "The subjects with a record kept.", from = set,
+        id = den_id, from = set,
         code = tfl_r(sprintf("dplyr::distinct(%s, %s)", set,
                              paste(c("USUBJID", a$by), collapse = ", "))))),
       lapply(maxes, function(m) Filter(Negate(is.null), m))),
@@ -1857,20 +1855,17 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
       list(list(id = subj, from = "ADSL", population = a$population)),
       list(Filter(Negate(is.null), list(
         id = set, from = a$data,
-        label = if (worst) sprintf(paste0("the records. %s of the subjects of %s, %s from ADSL; after baseline with a baseline and ",
-                                          "a post-baseline category; one record a subject and parameter, the worst category."),
-                                   toupper(a$data), subj, paste(a$by, collapse = ", ")),
         subjects = if (!worst) subj,
         code = if (worst) tfl_r(.tpl_shift_code(a, subj)),
         where = if (!worst && !is.null(a$where)) tfl_r(a$where)))),
       # (the Total row: every subject once more, under the baseline's Total)
       if (worst && length(a$total_label)) list(list(
-        id = tot, label = "With the Total row: every subject once more under the baseline's Total.",
+        id = tot,
         from = a$data, code = tfl_r(.tpl_shift_total_code(a, set)))),
       # (written as R: a `keep` would keep the columns the analysis reads,
       # the baseline's among them, and cards would look for its levels)
       if (total || page_n) list(list(
-        id = den, label = "The subjects with a category after baseline, a parameter each.",
+        id = den,
         from = set,
         code = tfl_r(sprintf("dplyr::distinct(%s, %s)", set,
                              paste(c("USUBJID", a$by, a$param), collapse = ", ")))))),
@@ -2298,7 +2293,6 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
       tfl_param("value_label", "Value", doc = "the value's heading"),
       tfl_param("change_label", "Change from baseline", doc = "the change's heading"),
       tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_sub"),
-      tfl_param("data_label", NULL, doc = "the analysis data's label"),
       tfl_param("formats", .tpl_pc_digits, tier = "usual", unset = "step_off", doc = paste(
         "the cells' decimals (plan_digits()): by statistic (mean 1, sd 2, median 1, min 1, max 1),",
         "and a parameter's own, only for the parameters that differ, by its PARAMCD:",
@@ -2373,7 +2367,7 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
   chg <- .tpl_noun_id(a, "chg")
   sets <- list(
     list(id = subj, from = "ADSL", population = pop),
-    nn(list(id = set, label = a$data_label, from = a$data, subjects = subj,
+    nn(list(id = set, from = a$data, subjects = subj,
             where = if (length(where)) tfl_r(.tpl_and_all(where)),
             derive = if (length(ord)) tfl_r(paste(ord, collapse = " | ")))),
     # the change: the records that have one (no baseline visit's, so its
@@ -2701,11 +2695,10 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
     ard <- list(
       analysis_data = list(
         list(id = subj, from = "ADSL", population = a$population),
-        list(id = rec, label = sprintf("%s records.", a$param),
+        list(id = rec,
              from = a$data, subjects = subj,
              where = tfl_r(.tpl_and(sprintf("PARAMCD == \"%s\"", a$param), a$where))),
-        list(id = set, from = rec, code = tfl_r(code),
-             label = sprintf("%s of the subjects, each subject of the set a row.", a$param))),
+        list(id = set, from = rec, code = tfl_r(code))),
       analyses = c(
         list(list(id = a$param, method = "categorical", data = set, by = a$by,
                   variables = a$category, denominator = subj),

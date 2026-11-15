@@ -170,7 +170,6 @@ it by `data`, with no `dataset` and no `population` of its own:
 ```yaml
 data:
   - id: lb_worst
-    label: one row a subject and parameter, baseline and worst post-baseline category
     from: ADLB
     population: SAF
     code: !r 'post <- dplyr::filter(adlb, USUBJID %in% adsl_sub$USUBJID, ONTRTFL == "Y"); dplyr::summarise(dplyr::group_by(post, USUBJID, TRT01A, PARAMCD), WORST = max(ANRIND), .groups = "drop")'
@@ -226,11 +225,12 @@ it to these rules (every agent of tflspec#512 tripped on them):
 
 ## The fields, exactly
 
-`data` (a table's or listing's flat list of definitions), one item each: `id`, `label`, `from` (a dataset of
+`data` (a table's or listing's flat list of definitions), one item each: `id`, `from` (a dataset of
 `spec/data.yml`, or an analysis data above it), `population`, `subjects`,
-`where`, `add`, `derive`, `keep`, `distinct`, `code` -- no other key.
+`where`, `add`, `derive`, `keep`, `distinct`, `code` -- no other key (a data has no
+`label`: its `id` names it; a note is a YAML comment).
 `population` and `subjects` are one or the other; with `code`, only `id`,
-`label`, `from` and `population`.
+`from` and `population`.
 
 `ard.analyses`, one item each: `id`, `method`, then **either** `data`
 (an analysis data's id of this report) **or** `dataset` with
@@ -402,7 +402,7 @@ Group: {RENALGR}"`.
 | `where: !r TRTEMFL == "Y"` (works, but needs no tag) | `where: TRTEMFL == "Y"` -- a condition is written bare (names, numbers, strings, `== != < <= > >=`, `& \| !`, `%in% c(...)`, `is.na()`, parentheses); R beyond that (`between()`) carries `!r` |
 | `data: [{step: read, dataset: ADTTE}, ...]` | `data: {source: code, steps: [{step: read, dataset: ADTTE}, ...]}` |
 | an analysis with `data: lb_worst` **and** `population: SAF` | one of the two: `data` alone, or `dataset` with `population` |
-| an analysis data with `code` **and** `where` / `add` / `derive` | `code` with `id`, `label`, `from`, `population` only |
+| an analysis data with `code` **and** `where` / `add` / `derive` | `code` with `id`, `from`, `population` only |
 | `table_plan: {cols: [TRT01A, WORST]}` with `variables: [WORST]` | `cols: TRT01A` -- a variable's levels are rows; to have them across, put the variable in `by` |
 | `plan_cells: {categorical: {n} ({p:.1f%})}` | `plan_cells: {categorical: "{n} ({p:.1f%})"}` -- braces in a text: quote it |
 | `"{n} ({p:.1%})"` | `"{n} ({p:.1f%}%)"` -- `.1%` is not a tflspec format; `.1f%` prints no sign, so the shell's `%` goes after the brace |
