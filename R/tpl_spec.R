@@ -505,8 +505,10 @@
   cl
 }
 
-# A report's ard: over the template's: an entry of the report's replaces the
-# template's of the same id, the others go after
+# A report's ard: over the template's: an analysis of the report's replaces
+# the template's of the same id; a data row merges key by key into the
+# template's row of its id (what the report does not write stays the
+# template's); the others go after
 .merge_ard <- function(tpl, own) {
   if (!length(tpl)) return(own)
   if (!length(own)) return(tpl)
@@ -517,7 +519,14 @@
     ids <- vapply(a, function(e) e$id %||% NA_character_, "")
     for (e in b) {
       k <- match(e$id %||% NA_character_, ids)
-      if (!is.na(k)) a[[k]] <- e else a <- c(a, list(e))
+      if (is.na(k)) {
+        a <- c(a, list(e))
+      } else if (identical(part, "analysis_data") && is.list(a[[k]]) && is.list(e)) {
+        # (a data row: the keys the report writes, over the template's row)
+        for (key in names(e)) a[[k]][[key]] <- e[[key]]
+      } else {
+        a[[k]] <- e
+      }
     }
     out[[part]] <- a
   }
