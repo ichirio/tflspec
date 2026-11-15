@@ -123,7 +123,8 @@ tfl_study_setup_code <- function(study) {
   if (!nrow(ds)) return(character())
   nm <- .r_name(ds$dataset)
   delayed <- function(name, expr, env) {
-    .lay(.cl("delayedAssign", list(.q(name), expr, assign.env = env)), width = Inf)
+    # (an argument a line when the call is long: readable code)
+    .lay(.cl("delayedAssign", list(.q(name), expr, assign.env = env)))
   }
   org <- vapply(seq_len(nrow(ds)), function(i) {
     d <- .split_bar(ds$derive[i])

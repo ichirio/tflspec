@@ -122,6 +122,16 @@ ssc_sheets <- function(rounding = NULL) {
                           variables = "SEX")))
 }
 
+# a long delayedAssign() as the setup writes it: an argument a line
+ssc_wrapped <- function(name, expr, env) {
+  c("delayedAssign(", sprintf("  \"%s\",", name), paste0("  ", expr, ","),
+    paste0("  assign.env = ", env), ")")
+}
+# the lines one after another in the code
+ssc_has <- function(code, lines) {
+  grepl(paste(lines, collapse = "\n"), paste(code, collapse = "\n"), fixed = TRUE)
+}
+
 # the lines of a study with no code lists, the adam_org lines given
 ssc_no_lists <- function(...) {
   c("# the study's input data, read when first used: study$adam_org (the ADaM as read,",
@@ -139,8 +149,10 @@ test_that("tfl_study_setup_code() reads the study's datasets: the YAML study", {
   st <- ssc_yaml_study(ssc_data_yaml)
   code <- tfl_study_setup_code(st)
   expect_identical(code, ssc_no_lists(
-    "delayedAssign(\"adsl\", haven::read_xpt(\"data/adam/adsl.xpt\"), assign.env = study$adam_org)",
-    "delayedAssign(\"adae\", readRDS(\"data/adam/adae.rds\") |> dplyr::mutate(AEDUR = AENDY - ASTDY + 1), assign.env = study$adam_org)"))
+    ssc_wrapped("adsl", "haven::read_xpt(\"data/adam/adsl.xpt\")", "study$adam_org"),
+    ssc_wrapped("adae", "readRDS(\"data/adam/adae.rds\") |> dplyr::mutate(AEDUR = AENDY - ASTDY + 1)",
+                "study$adam_org")))
+  expect_true(all(nchar(code) <= 100L))
   # the rounding first, as it was
   st$study$settings$rounding <- "sas"
   both <- tfl_study_setup_code(st)
@@ -151,8 +163,8 @@ test_that("tfl_study_setup_code() reads the study's datasets: the YAML study", {
   # the folder variables of tflspec.paths
   old <- options(tflspec.paths = c(path_adam = "data/adam"))
   on.exit(options(old), add = TRUE)
-  expect_true(any(grepl("delayedAssign(\"adsl\", haven::read_xpt(file.path(path_adam, \"adsl.xpt\"))",
-                        tfl_study_setup_code(st), fixed = TRUE)))
+  expect_true(ssc_has(tfl_study_setup_code(st), ssc_wrapped(
+    "adsl", "haven::read_xpt(file.path(path_adam, \"adsl.xpt\"))", "study$adam_org")))
   options(old)
   # no dataset, no rounding: nothing
   expect_identical(tfl_study_setup_code(ssc_study()), character())
@@ -162,7 +174,8 @@ test_that("tfl_study_setup_code() reads the study's datasets: the sheets", {
   code <- tfl_study_setup_code(ssc_sheets())
   expect_identical(code, ssc_no_lists(
     "delayedAssign(\"adsl\", readRDS(\"adsl.rds\"), assign.env = study$adam_org)",
-    "delayedAssign(\"adae\", readRDS(\"adae.rds\") |> dplyr::mutate(AEDUR = AENDY - ASTDY + 1), assign.env = study$adam_org)"))
+    ssc_wrapped("adae", "readRDS(\"adae.rds\") |> dplyr::mutate(AEDUR = AENDY - ASTDY + 1)",
+                "study$adam_org")))
   expect_identical(tfl_study_setup_code(ssc_sheets("r"))[-(1:3)], code)
   sp <- tfl_table_spec(
     tables = data.frame(output_id = "T1", cols = "TRT01A", stringsAsFactors = FALSE),
@@ -243,10 +256,14 @@ test_that("the setup writes the study's code lists and both environments", {
   expect_true("study <- list(adam_org = new.env(), adam = new.env())" %in% code)
   expect_false("study$adam <- study$adam_org" %in% code)
   expect_true("delayedAssign(\"adsl\", readRDS(\"adsl.rds\"), assign.env = study$adam_org)" %in% code)
-  expect_true("delayedAssign(\"adae\", readRDS(\"adae.rds\") |> dplyr::mutate(AEDUR = AENDY - ASTDY + 1), assign.env = study$adam_org)" %in% code)
+  expect_true(ssc_has(code, ssc_wrapped(
+    "adae", "readRDS(\"adae.rds\") |> dplyr::mutate(AEDUR = AENDY - ASTDY + 1)", "study$adam_org")))
   # every dataset's adam line passes all the lists
-  expect_true("delayedAssign(\"adsl\", set_levels(study$adam_org$adsl, SEX = cl_sex, RACE = cl_race), assign.env = study$adam)" %in% code)
-  expect_true("delayedAssign(\"adae\", set_levels(study$adam_org$adae, SEX = cl_sex, RACE = cl_race), assign.env = study$adam)" %in% code)
+  expect_true(ssc_has(code, ssc_wrapped(
+    "adsl", "set_levels(study$adam_org$adsl, SEX = cl_sex, RACE = cl_race)", "study$adam")))
+  expect_true(ssc_has(code, ssc_wrapped(
+    "adae", "set_levels(study$adam_org$adae, SEX = cl_sex, RACE = cl_race)", "study$adam")))
+  expect_true(all(nchar(code) <= 100L))
   # the objects the programs use now
   expect_identical(utils::tail(code, 3L), c(
     "# (until the report programs read study$adam: the objects they use now)",
