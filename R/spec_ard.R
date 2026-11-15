@@ -219,6 +219,8 @@ tfl_report_codelists <- function(study, outputs = NULL, rows = NULL) {
       .ard_stop(sprintf("%s: %s", ids[i], conditionMessage(e)))
     })
     below <- .codelists_norm(below)
+    # (a listing takes no layer's list, as tfl_resolve_output() gives it)
+    if (identical(outputs[[i]]$kind, "listing")) below <- list()
     below <- below[setdiff(names(below), mine$variable)]
     rbind(mine, .codelist_rows_of(ids[i], below, names(own)))
   })
