@@ -207,7 +207,9 @@ test_that("demog family: a code-listed variable has a Missing row only when it h
     expect_true(any(grepl("^[^A-Za-z]*Missing.*3 \\(3\\.8\\)", txt)), info = tpl)
     # last of RACE's rows, after the list's values (0 rows too)
     expect_gt(which(grepl("^[^A-Za-z]*Missing", txt)), max(which(grepl("^[^A-Za-z]*UNKNOWN", txt))))
-    expect_true(any(grepl("^[^A-Za-z]*UNKNOWN0 \\(0\\.0\\)", txt)), info = tpl)
+    # (the count cell has the zero guard: a zero prints "0" alone, not "0 (0.0)")
+    expect_true(any(grepl("^[^A-Za-z]*UNKNOWN0+$", txt)), info = tpl)
+    expect_false(any(grepl("^[^A-Za-z]*UNKNOWN.*0 \\(0\\.0\\)", txt)), info = tpl)
     code <- paste(suppressMessages(tfl_ard_code(tfl_read_study_spec(d), output_id = "T-DD")),
                   collapse = "\n")
     # (the lists have no Missing value; the Missing step comes after them)
