@@ -110,6 +110,49 @@ test_that("the subjects definition takes the report's analysis set; a definition
   expect_identical(tflspec:::.entry_pop_strip(list(id = "x", from = "ADSL", population = "ITT"), "SAF")$population, "ITT")
 })
 
+test_that("the subjects definition of the population's own dataset (not only ADSL) takes the set", {
+  skip_if_not_installed("openxlsx")
+  d <- tempfile("dr-pop-")
+  on.exit(unlink(d, recursive = TRUE))
+  dir.create(d)
+  dir.create(file.path(d, "outputs"))
+  writeLines(c("tokens: {COMPANY: Sample Pharma}"), file.path(d, "study.yml"))
+  writeLines(c("datasets:",
+               "  - {dataset: ADSL, level: ADaM, path: data/adsl.rds}",
+               "  - {dataset: ADSLX, level: ADaM, path: data/adslx.rds}",
+               "  - {dataset: ADAE, level: ADaM, path: data/adae.rds}",
+               "populations:",
+               "  - {id: SAF, dataset: ADSL, where: !r SAFFL == \"Y\"}",
+               "  - {id: SAFX, dataset: ADSLX, where: !r SAFFL == \"Y\"}"),
+             file.path(d, "data.yml"))
+  rep <- function(id, pop, from) {
+    writeLines(c(paste0("id: ", id), "kind: table", "common:", paste0("  population: ", pop),
+                 "data:", paste0("  - {id: sub, from: ", from, "}"),
+                 "  - {id: ae, from: ADAE, subjects: sub}", "content: []"),
+               file.path(d, "outputs", paste0(id, ".yml")))
+  }
+  rep("T-1", "SAF", "ADSL")
+  rep("T-2", "SAFX", "ADSLX")
+  rep("T-3", "SAF", "ADSLX")
+  ad <- tfl_sheets_from_yaml(d)$ard$analysis_data
+  pop_of <- function(out, id) ad$population_id[ad$output_id == out & ad$data_id == id]
+  # ADSL as before; the population's own dataset takes it too
+  expect_identical(pop_of("T-1", "sub"), "SAF")
+  expect_identical(pop_of("T-2", "sub"), "SAFX")
+  # a subject-level dataset that is not the set's dataset is left alone
+  expect_true(is.na(pop_of("T-3", "sub")))
+  # a record-level definition keeps its subjects: no set of its own
+  expect_true(is.na(pop_of("T-2", "ae")))
+  # the helpers: the datasets a subjects definition reads
+  pops <- list(list(id = "SAFX", dataset = "ADSLX"), list(id = "SAF", dataset = "ADSL"))
+  expect_identical(tflspec:::.pop_from(pops, "SAFX"), c("ADSL", "ADSLX"))
+  expect_identical(tflspec:::.pop_from(pops, NA_character_), "ADSL")
+  a <- list(id = "x", from = "ADSLX")
+  expect_identical(tflspec:::.entry_pop_inject(a, "SAFX", c("ADSL", "ADSLX"))$population, "SAFX")
+  expect_null(tflspec:::.entry_pop_inject(a, "SAFX")$population)
+  expect_null(tflspec:::.entry_pop_strip(c(a, population = "SAFX"), "SAFX", c("ADSL", "ADSLX"))$population)
+})
+
 test_that("YAML -> sheets -> YAML keeps common: and data: of the sample report", {
   skip_if_not_installed("openxlsx")
   d0 <- system.file("extdata", "spec-yaml", package = "tflspec")
