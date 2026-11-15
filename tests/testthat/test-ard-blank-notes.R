@@ -77,3 +77,22 @@ test_that("tfl_check_spec() gives the note, not an error", {
   expect_match(w$message, "write !is.na(TRT01A)", fixed = TRUE)
   expect_false(any(p$level == "error"))
 })
+
+test_that("a template's own code (!nzchar(chr)) is no note; the report's own rows are", {
+  skip_if_not_installed("haven")
+  skip_if_not_installed("cards")
+  d <- file.path(withr::local_tempdir(), "study")
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  haven::write_xpt(tflspec:::.ai_chr(tflspec::adsl), file.path(d, "adam", "adsl.xpt"))
+  tfl_ai_study_init(d, adam = "adam", study_id = "CS-1")
+  for (id in c("T-D", "T-S", "T-DI")) {
+    tfl_write_output(tfl_output(id, "table", common = list(population = "SAF"),
+      template = list(name = c("T-D" = "demog", "T-S" = "summary", "T-DI" = "disposition")[[id]],
+                      args = list(by = "TRT01A", continuous = "AGE", categorical = "EOSSTT"))),
+      file.path(d, "spec", "outputs", paste0(id, ".yml")))
+  }
+  expect_true(any(grepl("nzchar", unlist(lapply(c("T-D", "T-S", "T-DI"), function(id)
+    tfl_ard_code(d |> tfl_read_study_spec(), output_id = id, save = FALSE))))))
+  p <- tfl_check_spec(d)
+  expect_false(any(grepl("a blank is NA", p$message)))
+})

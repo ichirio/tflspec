@@ -314,6 +314,13 @@ tfl_read_ard_spec <- function(path, check = TRUE, statistics = NULL,
 #' in one place.
 #' @export
 tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
+  .tfl_ard_spec(x, statistics, methods)
+}
+
+# (`blank_notes`: the notes about a blank text test, in what a person wrote;
+# off for a definition a study's files and templates make, where tfl_check_spec()
+# says them about the report's own rows)
+.tfl_ard_spec <- function(x, statistics = NULL, methods = NULL, blank_notes = TRUE) {
   old <- .set_catalogs(statistics, methods)
   on.exit(options(old), add = TRUE)
   x <- .ard_spec_shaped(x)
@@ -334,7 +341,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   }
   # an argument the installed function does not have: said now, with the
   # version, rather than by the program when it runs
-  w <- c(.ard_args_unknown(x), .blank_text_notes(x))
+  w <- c(.ard_args_unknown(x), if (blank_notes) .blank_text_notes(x))
   if (length(w)) warning(paste(w, collapse = "\n  "), call. = FALSE)
   x
 }
@@ -1396,6 +1403,25 @@ tfl_ard_as_custom <- function(spec, output_id, analysis_id) {
     }
   }
   unique(out)
+}
+
+# The notes for the entries of a YAML study's own files (a list of lists: a
+# report's analysis data or analyses, the study's populations ...), as one
+# line each: `<id> / <field>: <text>: in study$adam ...`; `tag`: each entry's
+# place, `fields`: the R fields
+.blank_entry_notes <- function(entries, fields, tag = function(e) as.character(e$id %||% NA)[1L]) {
+  out <- character()
+  for (e in entries) {
+    for (f in intersect(fields, names(e))) {
+      v <- e[[f]]
+      if (!is.character(v) || length(v) != 1L || is.na(v)) next
+      for (m in .blank_text_found(v)) {
+        out <- c(out, sprintf("%s / %s: %s: in study$adam a blank is NA -- write %s",
+                              tag(e), f, m[[1L]], m[[2L]]))
+      }
+    }
+  }
+  out
 }
 
 # The tests for a blank text in an R text: a list of c(the text, what to write)
