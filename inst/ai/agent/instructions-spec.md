@@ -237,7 +237,23 @@ it to these rules (every agent of tflspec#512 tripped on them):
 `population` -- never both --, `where`, `by`, `variables`, `strata`,
 `overall`, `denominator`, `args`, `statistics`, `label`, `parent`,
 `records`, `groups`, `optional`, `formats`, `post`, `code`, `purpose`,
-`reason` -- no other key.  `method` is one of: continuous, categorical,
+`reason`, `derive`, `levels`, `params`, `conditions`, `ards` -- no other key.
+
+An item runs one process once for each of its `conditions`: `params:`
+names the parameters the process takes, `conditions:` gives them (a map a
+run, its keys the params), and the process writes `{name}` where it uses
+one -- in `by` / `variables` / `strata` a whole column name
+(`by: [PARAM, tox_dir, "{base}"]`), in `where` / `derive` / `post` R
+(`where: !r "{where}"`, `derive: !r tox_dir = "{tox_dir}"`), in `levels`
+(`levels: {PARAM: "{graded_params}", tox_dir: "{tox_dir}"}`), `args`,
+`denominator`. A value is a text, a list (`[a, b]`), or `!r` R (an
+expression only in where / derive / post). Quote `"{name}"` in YAML. Several
+calls on the same data: `ards:`, a list of call maps (`method`, `by`,
+`variables`, `strata`, `statistics`, `denominator`, `formats`, `args`,
+`overall`, `optional`, `code`), a field an element leaves out the item's;
+`post` and the rest are the item's. `derive` makes the item's own columns
+(lower case, `tox_dir`), `levels` sets the values' levels (no labels). Not
+with `groups` or `parent`.  `method` is one of: continuous, categorical,
 dichotomous, missing, hierarchical, max, subjects, total_n,
 proportion_ci, mean_ci, ttest, wilcox, chisq, fisher, cmh, prop_diff,
 lsmeans, lsmeans_diff, km, logrank, abnormal, incidence_rate, regression,

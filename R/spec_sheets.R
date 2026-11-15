@@ -307,7 +307,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
            where = cell(l$where))
     })
   }), recursive = FALSE), .ard_spec_sheets$groups)
-  adata <- list(); analyses <- list()
+  adata <- list(); analyses <- list(); conditions <- list()
   listings <- list(); listing_cols <- list(); fig_rows <- list()
   figures <- list()
   toc_index <- stats::setNames(s$toc$outputs %||% list(), vapply(s$toc$outputs %||% list(), function(e) e$id %||% "", ""))
@@ -422,13 +422,11 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       objs[[length(objs) + 1L]] <- c(list(output_id = id), m)
     }
     for (a in o$ard$analyses %||% list()) {
-      if (!is.null(a$denominator)) a$denominator <- .den_cell(a$denominator)
-      # (`by: []`: no columns, said so)
-      if ("by" %in% names(a) && !length(a$by)) a$by <- tfl_unset()
-      m <- lapply(a, cell); m$analysis_id <- m$id; m$id <- NULL
-      if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
       if (!is.null(a$ref)) note(id, paste0("analyses.", a$id), "a reference to another report's analysis (ref) has no sheet")
-      analyses[[length(analyses) + 1L]] <- c(list(output_id = id), m)
+      # (an item: its `ards:` a row each, its `conditions:` the conditions sheet)
+      it <- .ard_item_sheet_rows(a, id, cell)
+      analyses <- c(analyses, it$analyses)
+      conditions <- c(conditions, it$conditions)
     }
     if (o$kind == "table") {
       if (!code_content) {
@@ -546,6 +544,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
   ard$objects <- .rows_df(objs, .ard_spec_sheets$objects)
   ard$analysis_data <- .rows_df(adata, c("output_id", .ard_spec_sheets$analysis_data))
   ard$analyses <- .rows_df(analyses, .ard_spec_sheets$analyses)
+  ard$conditions <- .rows_df(conditions, .ard_spec_sheets$conditions)
 
   # the table and report sheets as data frames (the study sheet from study.yml's settings)
   table <- list()

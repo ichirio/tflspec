@@ -773,7 +773,7 @@ tfl_write_output <- function(x, path) {
 # reader read it (`by: [TRT01A]` read is "TRT01A", written `- TRT01A`)
 .seq_keys <- list(
   analysis_data = c("add", "keep", "distinct"),
-  analyses = c("by", "strata", "variables", "statistics", "formats"),
+  analyses = c("by", "strata", "variables", "statistics", "formats", "params"),
   listing_col = "vars")
 
 .seqs_out <- function(x, keys) {
@@ -792,6 +792,11 @@ tfl_write_output <- function(x, path) {
   for (part in c("analysis_data", "analyses")) {
     if (is.list(ard[[part]]) && is.null(names(ard[[part]]))) {
       ard[[part]] <- lapply(ard[[part]], .seqs_out, .seq_keys[[part]])
+      # (an item's calls, `ards:`, the same)
+      if (identical(part, "analyses")) ard[[part]] <- lapply(ard[[part]], function(a) {
+        if (is.list(a) && is.list(a$ards)) a$ards <- lapply(a$ards, .seqs_out, .seq_keys$analyses)
+        a
+      })
     }
   }
   ard

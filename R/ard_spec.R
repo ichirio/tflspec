@@ -52,9 +52,12 @@
                     "where", "add", "derive", "keep", "distinct", "code"),
   analyses = c("output_id", "analysis_id", "parent", "label", "method",
                "data", "dataset", "records",
-               "population_id", "where", "by", "overall", "strata", "groups", "variables",
+               "population_id", "where", "derive", "levels", "by", "overall", "strata",
+               "groups", "params", "variables",
                "optional", "statistics", "denominator", "formats", "args", "post",
-               "code", "purpose", "reason"))
+               "code", "purpose", "reason"),
+  # an item's conditions: a row a cell (the item's run, its param, its value)
+  conditions = c("output_id", "analysis_id", "row", "param", "value"))
 
 .split_bar <- function(x) {
   if (is.null(x) || is.na(x) || !nzchar(x)) return(character())
@@ -336,6 +339,8 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   # version, rather than by the program when it runs
   w <- .ard_args_unknown(x)
   if (length(w)) warning(paste(w, collapse = "\n  "), call. = FALSE)
+  w <- .ard_conditions_warnings(x, x$analyses)
+  if (length(w)) warning(paste(w, collapse = "\n  "), call. = FALSE)
   x
 }
 
@@ -359,6 +364,16 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   }
   blank <- if (nrow(g)) apply(is.na(g) | g == "", 1L, all) else logical()
   x$groups <- g[!blank, , drop = FALSE]
+  # (an item's conditions: none, an empty sheet; its cells text)
+  cs <- x$conditions
+  if (!is.null(cs) && !is.data.frame(cs)) cs <- as.data.frame(cs, stringsAsFactors = FALSE)
+  if (is.null(cs)) {
+    cs <- as.data.frame(stats::setNames(rep(list(character()), 5L), .ard_spec_sheets$conditions),
+                        stringsAsFactors = FALSE)
+  }
+  cs[] <- lapply(cs, function(v) as.character(v))
+  blank <- if (nrow(cs)) apply(is.na(cs) | cs == "", 1L, all) else logical()
+  x$conditions <- cs[!blank, , drop = FALSE]
   for (s in intersect(names(.ard_spec_sheets), names(x))) {
     for (c in setdiff(.ard_spec_sheets[[s]], names(x[[s]]))) {
       x[[s]][[c]] <- rep(NA_character_, nrow(x[[s]]))
@@ -387,11 +402,14 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
     if (length(i)) add(i[1L], k, sprintf("`analyses$%s` is blank in row(s) %s",
                                          k, paste(i, collapse = ", ")))
   }
-  dup <- duplicated(paste(a$output_id, a$analysis_id))
-  if (any(dup)) add(which(dup)[1L], "analysis_id", sprintf(
-    "output_id / analysis_id repeated: %s",
-    paste(unique(paste(a$output_id, a$analysis_id)[dup]), collapse = ", ")))
-  pr <- c(pr, list(.ard_parent_problems(a), .adata_problems(x, a), .ard_groups_problems(x, a)))
+  # (the rows of an item of several calls, `ards`, are one id one after
+  # another: one id in two places is two analyses, repeated)
+  pr <- c(pr, list(.ard_conditions_problems(x, a)))
+  pr <- c(pr, list(.ard_parent_problems(a), .ard_groups_problems(x, a)))
+  # (the checks below read each item's fields on all its rows, and a
+  # column {param} as the values the conditions give it)
+  a <- .ard_params_view(a, x)
+  pr <- c(pr, list(.adata_problems(x, a)))
   for (i in which(!is.na(a$post %||% rep(NA, nrow(a))))) {
     tag <- paste(a$output_id[i], a$analysis_id[i], sep = " / ")
     if (!is.na(a$parent[i] %||% NA)) {

@@ -947,8 +947,11 @@
     if (is.na(k)) "" else keys$kind[k]
   }, "")
   v <- unique(unlist(lapply(a$variables[kind == "categorical"], .split_bar)))
+  # (not the columns an item makes, nor those its levels order)
+  own <- c(.derive_names(a$derive %||% NA),
+           unlist(lapply(a$levels %||% NA, function(l) names(.levels_parse(l)))))
   # (not the arms: order_levels() finds them by their names)
-  setdiff(v[!grepl("^(TRT|ARM|ACTARM)", v)], names(levels))
+  setdiff(v[!grepl("^(TRT|ARM|ACTARM)", v)], c(names(levels), own))
 }
 
 # order_levels() as a step of a read: the categories named when there are
@@ -1079,6 +1082,12 @@
 # arguments after output_id (`args`, a named list of R), and a comment above.
 .ard_body_lines <- function(x, a, levels = NULL, save = NULL) {
   subj <- .study_value(x, "id", "USUBJID")
+  # the items' rows as written (their {params}); the rest of the program
+  # reads them as the data does (.ard_params_view())
+  a_own <- a
+  a <- .ard_params_view(a, x)
+  run <- .ard_runs(a)
+  later <- duplicated(run)
   # an analysis on an analysis data is of its population: the data is its
   # own report's (analysis_data is by report); the named data each report
   # reads (and its denominator), with the rows they are made from
@@ -1179,8 +1188,10 @@
     reads <- lapply(stats::setNames(named[[o]], named[[o]]), function(d) {
       on <- !is.na(dcol[rows]) & dcol[rows] == d
       den <- !is.na(rd$denominator) & rd$denominator == d
-      unique(c(unlist(lapply(c(rd$by[on], rd$strata[on], rd$variables[on]), .split_bar)),
-               unlist(lapply(rd$by[den], .split_bar))))
+      # (not the columns an item's derive makes on it)
+      setdiff(unique(c(unlist(lapply(c(rd$by[on], rd$strata[on], rd$variables[on]), .split_bar)),
+                       unlist(lapply(rd$by[den], .split_bar)))),
+              .derive_names(rd$derive[on]))
     })
     # the subject-level columns each data takes from its subjects' data:
     # the groups its analyses' denominators count by (by, strata)
@@ -1277,13 +1288,14 @@
     }
     if (!several) code <- c(code, "", "# ---- analyses ----")
     # each analysis's ARD under a name of its own: ard_<id>
-    top <- rows[is.na(par[rows])]
+    top <- rows[is.na(par[rows]) & !later[rows]]
     fun_names <- .ard_fun_names()
     ard_names <- make.unique(c(taken, fun_names,
                                paste0("ard_", gsub("[^a-z0-9]+", "_",
                                                    tolower(a$analysis_id[top])))),
                              sep = "_")[-seq_along(c(taken, fun_names))]
     avoid <- c(taken, ard_names, paste0(ard_names, "_conditions"), paste0(ard_names, "_one"),
+               paste0(ard_names, "_data"),
                "ard", "ards", "report_id", if (length(lv)) .cl_name(names(lv)),
                .ard_helper_names)
     for (j in seq_along(top)) {
@@ -1291,9 +1303,15 @@
       r <- a[i, ]
       kids <- which(!is.na(par) & par == r$analysis_id &
                       a$output_id == r$output_id)
+      own <- which(run == run[i])
       lines <- if (length(kids)) {
         .ard_wrapper_lines(xo, r, a[kids, , drop = FALSE], keys, subj,
                            data_name[[as.character(i)]], ard_names[j])
+      } else if (.ard_is_item(a_own[own, , drop = FALSE])) {
+        # an item: its process (where, derive, levels, its calls), once for
+        # each of its conditions
+        .ard_item_lines(xo, a_own[own, , drop = FALSE], a[own, , drop = FALSE], keys, subj,
+                        data_name[[as.character(i)]], ard_names[j])
       } else if (length(.split_bar(r$groups %||% NA))) {
         # condition-defined groups: the analysis once in each level
         .ard_groups_lines(xo, r, .ard_analysis_lines(xo, r, keys, subj, "data", "ard",

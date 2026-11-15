@@ -76,6 +76,12 @@ tfl_write_spec_xlsx <- function(dir, path) {
     for (e in o$ard$analyses %||% list()) {
       if (!is.null(e$denominator)) e$denominator <- .den_cell(e$denominator)
       if ("by" %in% names(e) && !length(e$by)) e$by <- tfl_unset()
+      # (an item's conditions and calls: said, not dropped, as the groups)
+      for (k in intersect(c("conditions", "ards"), names(e))) {
+        note(id, paste0("analyses.", e$id, ".", k), "an item's conditions / calls have no rows in this workbook")
+        e[[k]] <- NULL
+      }
+      if (is.list(e$levels)) e$levels <- .levels_cell(e$levels)
       add_rows("analyses", list(.flat_map(c(list(output_id = id), e), "analyses", id, note)))
     }
     if (!is.null(o$data)) {

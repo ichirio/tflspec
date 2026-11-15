@@ -951,8 +951,10 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     }
     an <- ard$analyses[!is.na(ard$analyses$output_id) & ard$analyses$output_id == id, , drop = FALSE]
     if (nrow(an)) {
-      ard_part$analyses <- .conv_rows(an, note, id, "analyses", r_cols = c("where", "args", "post", "code"),
-                                      list_cols = c("by", "strata", "variables", "statistics", "formats"),
+      ard_part$analyses <- .conv_rows(an, note, id, "analyses",
+                                      r_cols = c("where", "derive", "args", "post", "code"),
+                                      list_cols = c("by", "strata", "variables", "statistics", "formats",
+                                                    "params"),
                                       rename = c(analysis_id = "id", population_id = "population"))
       # a denominator of numbers: a number, or a map by the by's values
       ard_part$analyses <- lapply(ard_part$analyses, function(m) {
@@ -960,6 +962,8 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
         if (inherits(m$by, "tfl_unset")) m$by <- list()
         m
       })
+      # an item's rows (ards) as one, its conditions with it
+      ard_part$analyses <- .ard_items_yaml(ard_part$analyses, an, ard$conditions)
     }
   }
   # a report whose data or content is its R code (the report row's

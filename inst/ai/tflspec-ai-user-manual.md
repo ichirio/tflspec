@@ -1084,7 +1084,8 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
 | `objects` | `output_id`, `object_id`, `code`, `label` | named values the ARD program makes at its top (`object_id <- code`, `label` a comment above): the study's (`output_id` blank; data.yml `objects:`) before a report's own (its `ard: objects:`); an analysis names one as its `denominator`, or in its `args` / `where`. YAML: `objects: [{id: n_saf_jp, code: !r 'c("Drug X" = 40, "Placebo" = 38)', label: ...}]` |
 | `groups` | `group_id`, `label`, `level`, `where` | condition-defined groups (CDISC ARS grouping factors; data.yml `groups:`, each with its `levels:`): a row a level, the condition (R) its records meet -- levels may overlap ("1 or 2", ">= 3 months"), a level with no `where` is every record ("All"). An analysis's `groups` runs it once in each level of each group named; its rows say the group's `label` in `group2` and the level in `group2_level`, in this sheet's order |
 | `analysis_data` | `output_id`, `data_id`, `label`, `from`, `population_id`, `subjects`, `where`, `add`, `derive`, `keep`, `distinct`, `code` | named data a report's analyses read (a report's, by `output_id`: the same `data_id` may mean something else in another report; a row names only its own report's rows above it): made `from` a dataset or an analysis data above, kept to a population's subjects and the records `where` keeps, with columns of the population's data added by the subject key (`add`), columns derived, and one row per set of values (`distinct`: `USUBJID | APHASE`, a denominator per subject and phase) -- in that order; `subjects` (instead of `population_id`) keeps the subjects of an analysis data above, a report's own subjects (the numerator kept to the denominator's), and `keep` the columns kept (with `derive`, transmute()). `data_id` is the object's name in the ARD program (lower case, not a dataset's or the program's own `<dataset>_sub`). When the columns cannot say it, `code` is R that makes the data itself (its value is the data; the datasets, the analysis set's data `<dataset>_sub` and the analysis data above are in reach); then the other columns but `from` stay blank |
-| `analyses` | `output_id`, `analysis_id`, `parent`, `label`, `method`, `data`, `dataset`, `records`, `population_id`, `where`, `by`, `overall`, `strata`, `groups`, `variables`, `optional`, `statistics`, `denominator`, `formats`, `args`, `post`, `code`, `purpose`, `reason` | one analysis a row; `parent`: the analysis this one runs inside (a `stack`, `subgroups` or `pairwise` analysis of the same report; it takes the parent's dataset, population and `where`); `records`: a `records` sheet set instead of `dataset` and `where`; `groups`: the condition-defined groups it runs in (each level's rows in `group2` / `group2_level`); both ids become ARD columns; `optional` (`TRUE`): the variables are the ones the data has of them (`any_of()`); `post`: steps on the ARD after the call, `\|` between them (`cards::add_calculated_row()`, `complete_hierarchy()` ...); `purpose` / `reason` (CDISC terms) only for `tfl_ars()` |
+| `analyses` | `output_id`, `analysis_id`, `parent`, `label`, `method`, `data`, `dataset`, `records`, `population_id`, `where`, `derive`, `levels`, `by`, `overall`, `strata`, `groups`, `params`, `variables`, `optional`, `statistics`, `denominator`, `formats`, `args`, `post`, `code`, `purpose`, `reason` | one analysis a row; `parent`: the analysis this one runs inside (a `stack`, `subgroups` or `pairwise` analysis of the same report; it takes the parent's dataset, population and `where`); `records`: a `records` sheet set instead of `dataset` and `where`; `groups`: the condition-defined groups it runs in (each level's rows in `group2` / `group2_level`); both ids become ARD columns; `optional` (`TRUE`): the variables are the ones the data has of them (`any_of()`); `post`: steps on the ARD after the call, `\|` between them (`cards::add_calculated_row()`, `complete_hierarchy()` ...); `purpose` / `reason` (CDISC terms) only for `tfl_ars()`; `params`: the parameters the item's process takes, its `conditions` a run each (below); `derive` / `levels`: the item's own columns and levels, after its `where`; rows of one `analysis_id` one after another: the item's calls (YAML `ards:`), its own columns on the first |
+| `conditions` | `output_id`, `analysis_id`, `row`, `param`, `value` | an item's conditions (YAML `conditions:`, a map a run): a row a cell; `value` a text, `a \| b` (several), or R after `!r` (`!r 0.9`, `!r LBTOXL != ""`) |
 
 - `method`: a keyword — `continuous`, `categorical`, `dichotomous`,
   `missing`, `hierarchical`, `max`, `subjects`, `total_n`, `proportion_ci`,
@@ -1223,6 +1224,40 @@ km  <- list(output_id = "T-14-2-2", analysis_id = "KM", population_id = "SAF",
 cox <- list(output_id = "T-14-2-2", analysis_id = "HR", population_id = "SAF",
             dataset = "ADTTE", method = "cardx::ard_regression",
             args = 'formula = survival::Surv(AVAL, 1 - CNSR) ~ TRTA, method = "coxph", package = "survival"')
+```
+
+An item that runs one process for each of several conditions (a lab
+shift in each direction, a response rate in each subgroup level) declares
+its parameters in `params:` and gives them in `conditions:`, a map a run;
+the process writes `{name}` where it uses one: in `by` / `variables` /
+`strata` a whole column name (`dplyr::all_of(name)`), in `where` /
+`derive` / `post` R (`!!name`), in `levels` / `args` / `denominator` the
+value (`name`). Several calls on the same data are `ards:` (a field an
+element leaves out is the item's). The program writes the table
+`ard_<id>_conditions`, the process `ard_<id>_one(<params>)`, and
+`purrr::pmap(ard_<id>_conditions, ard_<id>_one) |> dplyr::bind_rows()`.
+A `{name}` the process uses that is not a param stops; a param it does
+not use, or a row's key that is not a param, is a warning.
+
+```yaml
+- id: SHIFT
+  data: adlb_worst
+  params: [tox_dir, graded_params, worst, base, where]
+  conditions:
+    - {tox_dir: Low, graded_params: [Albumin (g/L), Sodium (mmol/L)],
+       worst: ATOXGRL, base: BTOXGRL, where: !r LBTOXL != "" & !is.na(ATOXGRL)}
+    - {tox_dir: High, graded_params: [Creatinine (umol/L), Sodium (mmol/L)],
+       worst: ATOXGRH, base: BTOXGRH, where: !r LBTOXH != "" & !is.na(ATOXGRH)}
+  where: !r "{where}"
+  derive: !r tox_dir = "{tox_dir}"
+  levels: {PARAM: "{graded_params}", tox_dir: "{tox_dir}"}
+  method: categorical
+  statistics: [n, p]
+  ards:
+    - {by: [PARAM, tox_dir, "{base}"], variables: ["{worst}"]}
+    - {by: [PARAM, tox_dir], variables: ["{worst}"]}
+    - {by: [PARAM, tox_dir], variables: ["{base}"]}
+    - {by: [PARAM], variables: [tox_dir]}
 ```
 
 #### A.1.1 CDISC ARS — writing and reading the analyses as the standard

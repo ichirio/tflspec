@@ -31,8 +31,11 @@ toy_spec <- function(analyses) {
 test_that("a definition is checked", {
   expect_error(toy_spec(spec_df(list(output_id = "T1", analysis_id = "A",
                                      method = "no pe"))), "unknown method")
+  # (rows of one id one after another are one item's calls, ards: an id
+  # in two places is repeated)
   expect_error(toy_spec(spec_df(
     list(output_id = "T1", analysis_id = "A", method = "categorical"),
+    list(output_id = "T1", analysis_id = "B", method = "categorical"),
     list(output_id = "T1", analysis_id = "A", method = "categorical"))),
     "repeated")
   expect_error(toy_spec(spec_df(list(output_id = "T1", analysis_id = "A",

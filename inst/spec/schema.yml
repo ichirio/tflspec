@@ -1069,8 +1069,20 @@ rtf_footer:
         example: SAF
       - column: where
         description: 'An R condition on the data, applied after the population (on
-          an analysis data: after its own conditions); blank: every row.'
+          an analysis data: after its own conditions); blank: every row. With params:
+          inside the item''s process, {param} its condition (`{where}` -> filter(!!where)).'
         example: TRTEMFL == "Y"
+      - column: derive
+        description: 'An item''s new columns, NAME = R expression, | between them,
+          made after its where (dplyr::mutate()); a {param} is its value (`tox_dir
+          = "{tox_dir}"` -> mutate(tox_dir = !!tox_dir)). Columns the ARD step makes
+          are lower case. Blank: none.'
+        example: tox_dir = "{tox_dir}"
+      - column: levels
+        description: 'An item''s levels, after its derive (set_levels()): VAR = values,
+          ; between variables, | between values, or a {param} (the condition''s values);
+          the values only, no labels. Blank: none.'
+        example: PARAM = {graded_params}; tox_dir = {tox_dir}
       - column: by
         description: 'Grouping variables (cards'' by), | between them. In a table
           with columns (table_plan(cols = TRT01A)) every analysis has them -- blank is a
@@ -1092,6 +1104,14 @@ rtf_footer:
         description: 'Groups of the groups sheet the analysis runs in, each level once
           (group2 / group2_level), | between them; blank: none.'
         example: AGEGRP | SEX
+      - column: params
+        description: 'The parameters the item''s process takes, | between them: the
+          columns of its conditions (the conditions sheet), one run a row; the process
+          writes {name} where it uses one (by / variables / strata: all_of(name); where
+          / derive / post: !!name; levels / args / denominator / code: name). An item
+          of several calls is several rows of one analysis_id one after another (its
+          ards), the item''s own columns on the first. Blank: one run, no params.'
+        example: tox_dir | graded_params | worst | base | where
       - column: variables
         description: The variables analysed (cards' variables), | between them.
         example: AGE | BMIBL
@@ -1147,6 +1167,27 @@ rtf_footer:
         description: 'For CDISC ARS: SPECIFIED IN PROTOCOL / SPECIFIED IN SAP / DATA
           DRIVEN / REQUESTED BY REGULATORY AGENCY; blank: SPECIFIED IN SAP.'
         example: SPECIFIED IN SAP
+  - sheet: conditions
+    description: 'ARD: an item''s conditions (YAML conditions:, a map a run), one
+      row a cell: the item (output_id, analysis_id), its run (row) and param, and the
+      value. The program writes them as a table (ard_<id>_conditions) and runs the
+      item''s process (ard_<id>_one) on each row with purrr::pmap().'
+    columns:
+      - column: analysis_id
+        description: The item (an analysis with params).
+        example: SHIFT
+      - column: row
+        description: The run, 1, 2, ...
+        example: '1'
+      - column: param
+        description: 'A param of the item; a name starting with . is tflspec''s own
+          (none yet: ignored).'
+        example: worst
+      - column: value
+        description: 'Its value: a text, values a | b (c()), or R after !r (a number
+          !r 0.9, an expression !r LBTOXL != "" -- quote(), used in where / derive /
+          post).'
+        example: ATOXGRL
   - sheet: tables
     description: 'Table: one row a report. Its roles (table_plan()) and the table-wide
       options; a verb written in code afterwards wins.'
