@@ -132,6 +132,21 @@ test_that("a layer's list of a variable the report does not analyse is ignored (
   expect_true("RACE" %in% tfl_report_codelists(tfl_read_study_spec(with))$variable)
 })
 
+test_that("a resolved table keeps its own lists first, and of a layer's only the variables its ARD reads", {
+  skip_on_cran()
+  own <- c("codelists:", "  ARM: [{value: A, label: Arm A}]", "  AGEGR1: [{value: '<65'}]")
+  d <- cll_study(defaults = c(cll_sex, "RACE: [{value: WHITE, label: White}]"),
+                 reports = list("T-A" = list(extends = "[defaults]", codelists = own)))
+  st <- tfl_read_study_spec(d)
+  r <- tfl_resolve_output(tfl_read_output(file.path(d, "spec", "outputs", "T-A.yml")), st)
+  # (its own lists, read or not, in their order; the defaults' SEX it reads;
+  # not the defaults' RACE, which no analysis reads: its content has no labels for it)
+  expect_identical(names(r$codelists), c("ARM", "AGEGR1", "SEX"))
+  code <- tfl_content_code(r)
+  expect_false(any(grepl("White", code, fixed = TRUE)))
+  expect_true(any(grepl("DefM", code, fixed = TRUE)))
+})
+
 test_that("a table with no template takes the defaults' list: the program carries it and runs (#647)", {
   skip_on_cran()
   d <- cll_study(defaults = cll_sex, reports = list("T-A" = list(extends = "[defaults]")))
