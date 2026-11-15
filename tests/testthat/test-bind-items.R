@@ -62,6 +62,20 @@ test_that("bind_items() stops on a statistic twice in one item", {
   expect_no_error(suppressWarnings(e$bind_items(bi_dm(e), bi_dm(e, "DM2"))))
 })
 
+test_that("bind_items(): a column a wrapper adds (pairwise) is part of the key", {
+  e <- bi_env()
+  dm <- bi_dm(e)
+  a <- dm
+  a$pairwise <- "A vs B"
+  b <- dm
+  b$pairwise <- "A vs C"
+  # rows identical but for `pairwise`: two statistics, no error
+  expect_no_error(r <- e$bind_items(dplyr::bind_rows(a, b)))
+  expect_identical(nrow(r), nrow(a) + nrow(b))
+  # identical including `pairwise`: the one-item error
+  expect_error(e$bind_items(dplyr::bind_rows(a, a)), "item DM: .*rows with the same key")
+})
+
 test_that("bind_items() warns on the same statistic in two items, rows kept", {
   e <- bi_env()
   dm <- bi_dm(e)

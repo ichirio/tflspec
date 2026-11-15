@@ -168,10 +168,11 @@ tag_ard <- function(ard, report_id, analysis_id, population = NA_character_,
 # (group1, group1_level, group2, ... -- items with different numbers of
 # groups get the one order), variable, variable_level, context, stat_name,
 # stat_label, stat, fmt_fun, warning, error, then any other.  The class
-# card stays.  A row's key is the ids, every group and its level, variable,
-# variable_level, context and stat_name (the statistic's value, label,
-# format, warning and error are not in it; a *_level is compared as text,
-# NULL as missing).  Two rows of one item with the same key stop the
+# card stays.  A row's key is every column but analysis_id and the
+# statistic's value columns (stat, stat_label, stat_fmt, fmt_fun, fmt_fn,
+# warning, error): the ids, every group and its level, variable,
+# variable_level, context, stat_name, and any other column a wrapper adds
+# (`pairwise`); a *_level is compared as text, NULL as missing.  Two rows of one item with the same key stop the
 # program (the same ard_tabulate() written twice, two conditions that are
 # the same); rows of different items with the same key, analysis_id left
 # out, give a warning and are all kept.
@@ -207,8 +208,8 @@ bind_items <- function(...) {
     z[is.na(z)] <- "\001NA"
     z
   }
-  kc <- intersect(c(setdiff(ids, "analysis_id"), groups, "variable", "variable_level",
-                    "context", "stat_name"), names(ard))
+  kc <- setdiff(names(ard), c("analysis_id", "stat", "stat_label", "stat_fmt", "fmt_fun",
+                              "fmt_fn", "warning", "error"))
   key <- do.call(paste, c(lapply(ard[kc], as_key), sep = "\002"))
   aid <- as.character(ard$analysis_id)
   # what a row is called in a message: its variable and statistic
