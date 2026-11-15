@@ -24,12 +24,26 @@ two parts:
 \itemize{
 \item the study's rounding as one \code{options()} call, \code{rtfreporter.rounding} and
 (for "sas" and "r") \code{cards.round_type};
-\item the study's input data: one statement per dataset of its data catalog
-(\code{spec/data.yml}, or the \code{datasets} sheet), ADSL first, the others in the
-catalog's order -- \code{adsl <- readRDS(file.path(path_adam, "adsl.rds"))},
-with \verb{|> dplyr::mutate(...)} for a dataset that has a \code{derive}.  The
-reader follows the file's extension and the folder variables of option
-\code{tflspec.paths}, as in the ARD program.
+\item the study's input data, in two versions, each read when first used
+(\code{delayedAssign()}): \code{study$adam_org}, an environment with one object per
+dataset of its data catalog (\code{spec/data.yml}, or the \code{datasets} sheet),
+ADSL first, the others in the catalog's order, as the file has it
+(\code{adsl}: \code{readRDS(file.path(path_adam, "adsl.rds"))}, with
+\verb{|> dplyr::mutate(...)} for a dataset that has a \code{derive}); and
+\code{study$adam}, the same datasets with the study's code lists' levels
+(\code{set_levels()}: each listed column a factor of its list's codes in
+its order; the values as read).  The study's code lists are those of
+\code{spec/defaults.yml} (\verb{codelists:}), written first as \code{cl_<variable>}
+objects, as the ARD program writes a report's.  A study with no code
+list has no \verb{cl_*} objects, and \code{study$adam} is \code{study$adam_org} (the
+same environment; a message says so when the file is sourced).  A spec
+of the sheets has no study-wide code list (a row of its \code{codelists}
+sheet is a report's), so it is written this way.  The reader follows
+the file's extension and the folder variables of option
+\code{tflspec.paths}, as in the ARD program.  The last lines make the
+objects the ARD, listing and figure programs use now (\code{adsl}) the
+datasets of \code{study$adam_org}; they go when those programs read
+\code{study$adam}.
 }
 
 With option \code{tflspec.study_setup} set to \code{TRUE} (\link{tflspec_code_options})

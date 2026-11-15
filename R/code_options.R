@@ -18,9 +18,13 @@
 #'   its prefix (`cardx::`).
 #' * `tflspec.study_setup`: `TRUE` when the study's setup file sets the
 #'   study-wide options and reads the study's input data -- today the
-#'   rounding, `rtfreporter.rounding` and `cards.round_type`, and one object
-#'   per dataset of the data catalog (`adsl <- readRDS(...)`, with its
-#'   `derive`), written by [tfl_study_setup_code()].  The ARD setup
+#'   rounding, `rtfreporter.rounding` and `cards.round_type`, the study's
+#'   code lists (`cl_<variable>`), and the data catalog's datasets read when
+#'   first used, in two environments: `study$adam_org` (as the file has
+#'   them, with the `derive`) and `study$adam` (with the code lists'
+#'   levels), and, until the programs read `study$adam`, one object per
+#'   dataset (`adsl`) that is its `study$adam_org`'s,
+#'   written by [tfl_study_setup_code()].  The ARD setup
 #'   ([tfl_ard_code()]) and the report setup ([tfl_report_setup_code()])
 #'   then do not write the rounding again; their other options stay.  The
 #'   ARD, listing and figure programs do not read the files: a dataset's

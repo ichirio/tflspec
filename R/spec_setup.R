@@ -16,12 +16,26 @@
 #'
 #' * the study's rounding as one `options()` call, `rtfreporter.rounding` and
 #'   (for "sas" and "r") `cards.round_type`;
-#' * the study's input data: one statement per dataset of its data catalog
-#'   (`spec/data.yml`, or the `datasets` sheet), ADSL first, the others in the
-#'   catalog's order -- `adsl <- readRDS(file.path(path_adam, "adsl.rds"))`,
-#'   with `|> dplyr::mutate(...)` for a dataset that has a `derive`.  The
-#'   reader follows the file's extension and the folder variables of option
-#'   `tflspec.paths`, as in the ARD program.
+#' * the study's input data, in two versions, each read when first used
+#'   (`delayedAssign()`): `study$adam_org`, an environment with one object per
+#'   dataset of its data catalog (`spec/data.yml`, or the `datasets` sheet),
+#'   ADSL first, the others in the catalog's order, as the file has it
+#'   (`adsl`: `readRDS(file.path(path_adam, "adsl.rds"))`, with
+#'   `|> dplyr::mutate(...)` for a dataset that has a `derive`); and
+#'   `study$adam`, the same datasets with the study's code lists' levels
+#'   (`set_levels()`: each listed column a factor of its list's codes in
+#'   its order; the values as read).  The study's code lists are those of
+#'   `spec/defaults.yml` (`codelists:`), written first as `cl_<variable>`
+#'   objects, as the ARD program writes a report's.  A study with no code
+#'   list has no `cl_*` objects, and `study$adam` is `study$adam_org` (the
+#'   same environment; a message says so when the file is sourced).  A spec
+#'   of the sheets has no study-wide code list (a row of its `codelists`
+#'   sheet is a report's), so it is written this way.  The reader follows
+#'   the file's extension and the folder variables of option
+#'   `tflspec.paths`, as in the ARD program.  The last lines make the
+#'   objects the ARD, listing and figure programs use now (`adsl`) the
+#'   datasets of `study$adam_org`; they go when those programs read
+#'   `study$adam`.
 #'
 #' With option `tflspec.study_setup` set to `TRUE` ([tflspec_code_options])
 #' the ARD, listing and figure programs do not write them again: they start
@@ -52,12 +66,26 @@ tfl_study_setup_code <- function(study) {
     out <- c("# the study's rounding (every ARD and report program)",
              .spec_call_code(do.call(.spec_call, ro), 0L))
   }
-  dl <- .study_data_lines(.study_catalog(study))
-  if (length(dl)) {
-    out <- c(out, if (length(out)) "",
-             "# the study's input data (every ARD, listing and figure program uses them)", dl)
-  }
+  dl <- .study_data_lines(.study_catalog(study), .study_codelists(study))
+  if (length(dl)) out <- c(out, if (length(out)) "", dl)
   out
+}
+
+# The study's code lists as the programs' lists, each variable's codes in
+# their order, named by the code when a label is given (c(F = "Female")),
+# else the codes alone: study.yml's / defaults.yml's `codelists:` (the
+# study's own lists, those of no report).  The sheets have no study-wide
+# code list (a row of `codelists` is a report's), so a spec of the sheets
+# has none.  Empty list: none.
+.study_codelists <- function(study) {
+  cl <- if (inherits(study, "tfl_study_spec")) .codelists_norm(study$defaults$codelists) else list()
+  out <- lapply(cl, function(rows) {
+    codes <- vapply(rows, function(r) as.character(r$value), "")
+    lab <- .tpl_cl_dict(rows)
+    # (a list whose labels are its codes: the codes alone)
+    if (is.null(lab) || all(names(lab) == unname(lab))) codes else lab
+  })
+  out[lengths(out) > 0L]
 }
 
 # The study's data catalog as a data frame (dataset, path, derive), ADSL
@@ -83,15 +111,49 @@ tfl_study_setup_code <- function(study) {
   ds[order(toupper(ds$dataset) != "ADSL"), , drop = FALSE]
 }
 
-# One statement a dataset of the catalog: the read, and its derive as an ARD
-# program writes it (.ard_data_lines())
-.study_data_lines <- function(ds) {
-  code <- unlist(lapply(seq_len(nrow(ds)), function(i) {
+# The study's input data, read when first used: two environments,
+# study$adam_org (each dataset as the file has it, with the catalog's
+# derive) and study$adam (the study's code lists' levels on it; the values
+# as they were read).  The study's code lists come first (`cl_<variable>`,
+# as the ARD program writes them).  A study with no code lists has no
+# second environment: study$adam is study$adam_org.  The last lines keep
+# the objects the ARD, listing and figure programs use now (`adsl`) as the
+# datasets of study$adam_org, until those programs read study$adam.
+.study_data_lines <- function(ds, levels = list()) {
+  if (!nrow(ds)) return(character())
+  nm <- .r_name(ds$dataset)
+  delayed <- function(name, expr, env) {
+    .lay(.cl("delayedAssign", list(.q(name), expr, assign.env = env)), width = Inf)
+  }
+  org <- vapply(seq_len(nrow(ds)), function(i) {
     d <- .split_bar(ds$derive[i])
-    .make_code(.r_name(ds$dataset[i]), .reader(ds$path[i]),
-               if (length(d)) sprintf("dplyr::mutate(%s)", paste(d, collapse = ", ")))
-  }))
-  if (length(code)) .drop_attached_ns(code) else character()
+    code <- .make_code(".x", .reader(ds$path[i]),
+                       if (length(d)) sprintf("dplyr::mutate(%s)", paste(d, collapse = ", ")))
+    delayed(nm[i], sub("^[.]x <- ", "", code), "study$adam_org")
+  }, "")
+  head <- if (length(levels)) {
+    adam <- vapply(seq_len(nrow(ds)), function(i) {
+      args <- c(list(paste0("study$adam_org$", nm[i])),
+                stats::setNames(as.list(.cl_name(names(levels))), names(levels)))
+      delayed(nm[i], .cl("set_levels", args), "study$adam")
+    }, "")
+    c("# the study's code lists (spec/defaults.yml codelists:)", .codelists_lines(levels), "",
+      "# the study's input data, read when first used: study$adam_org (the ADaM as read,",
+      "# with the catalog's derive), study$adam (the study's code lists' levels; values as read)",
+      "study <- list(adam_org = new.env(), adam = new.env())", org, adam)
+  } else {
+    c("# the study's input data, read when first used: study$adam_org (the ADaM as read,",
+      "# with the catalog's derive); the study has no code lists, so study$adam is the same",
+      "study <- list(adam_org = new.env())", org,
+      "study$adam <- study$adam_org",
+      "message(\"The study has no code lists: study$adam is study$adam_org.\")")
+  }
+  code <- c(head, "",
+            "# (until the report programs read study$adam: the objects they use now)",
+            sprintf("delayedAssign(%s, study$adam_org$%s)", .q(nm), nm))
+  code <- .drop_attached_ns(code)
+  unlist(lapply(code, function(l) if (nzchar(l)) strsplit(l, "
+", fixed = TRUE)[[1L]] else ""))
 }
 
 # The setup code of a study's spec, one element a line (none: the study's
