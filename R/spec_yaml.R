@@ -459,6 +459,16 @@ tfl_read_output <- function(path) {
   a
 }
 
+# A definition's `derive:` written as a map (`{AGEGR2: <R>}`) is its pieces
+# `name = expression`, as the one text of `|`-separated pieces says them
+.derive_map_in <- function(e) {
+  v <- if (is.list(e)) e[["derive"]]
+  if (is.list(v) && length(v) && !is.null(names(v)) && !inherits(v, "tfl_r")) {
+    e[["derive"]] <- paste(sprintf("%s = %s", names(v), vapply(v, as.character, "")), collapse = " | ")
+  }
+  e
+}
+
 # A table's or listing's `data:` as the file says it (the flat list of
 # definitions) in the model: the definitions are the ARD's `analysis_data`,
 # a listing printing the last one.  The old places stop: `ard: analysis_data:`,
@@ -505,6 +515,7 @@ tfl_read_output <- function(path) {
     }
     y[["data"]] <- y[["place_map"]]
     y[["place_map"]] <- NULL
+    d <- lapply(d, .derive_map_in)
     y$ard <- c(list(analysis_data = d), y$ard[setdiff(names(y$ard), "analysis_data")])
     if (identical(y$kind, "listing") && is.null(y[["data"]])) {
       y[["data"]] <- list(source = "dataset", data = as.character(d[[length(d)]]$id %||% ""))
