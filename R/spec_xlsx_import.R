@@ -361,7 +361,7 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
       v <- .conv_cell(part[[cn]][i], cn, r_cols, list_cols, function(...) NULL, NA, sheet, i)
       if (!is.null(v)) m[[cn]] <- v
     }
-    if (length(pop)) m <- .entry_pop_strip(m, pop)
+    if (length(pop)) m <- .entry_pop_strip(m, pop, .pop_from(get_file("data.yml")$populations, pop))
     kv <- .flat_text(m[[key_col]])
     j <- .find_row(rows, list(key_col), kv)
     key <- paste(id, kv, sep = " / ")
