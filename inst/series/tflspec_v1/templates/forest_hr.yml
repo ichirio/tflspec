@@ -19,6 +19,14 @@ params:
     step: data
     tier: usual
     description: The reference arm; empty for the first in the code list.
+  comparison:
+    type: level
+    input: pick
+    choices: levels(by)
+    default: ~
+    step: content
+    tier: usual
+    description: The arm shown against the reference; empty for the first arm with an interval.
   conditions:
     type: rows<subgroup,subgroup_lvl,where>
     input: table

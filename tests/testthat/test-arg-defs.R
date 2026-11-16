@@ -94,7 +94,3 @@ test_that("a choice source outside the 14 words stops", {
   expect_identical(.arg_choice_words("from_args(continuous, categorical), report_data"),
                    c("from_args(continuous, categorical)", "report_data"))
 })
-
-test_that("tfl_template_resolve() is named for the screen, not written yet", {
-  expect_error(tfl_template_resolve(list()), "not written yet")
-})

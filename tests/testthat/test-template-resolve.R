@@ -1,0 +1,205 @@
+# tfl_template_resolve(): the 7 SAMPLE-01 reports of the tflspec_v1 series
+# (fictional study) as code SPECs.
+
+tr_study <- function() {
+  list(settings = list(rounding = "sas", output_path = "output/tfl"),
+       series_settings = list(tflspec_v1 = list(style = "standard", max_rows = 25L)))
+}
+
+tr_report <- function(text) {
+  f <- tempfile(fileext = ".yml")
+  on.exit(unlink(f), add = TRUE)
+  writeLines(text, f)
+  tflspec:::.series_read_yaml(f)
+}
+
+tr_reports <- function() {
+  list(
+    demog = tr_report(c(
+      "id: T-14-1-1", "kind: table", "label: Demographic characteristics",
+      "template:", "  name: tflspec_v1/demog", "  analysis:", "    by: TRT01A",
+      "    continuous: [AGE]", "    categorical: [AGEGR1, SEX, RACE, ETHNIC]")),
+    ae = tr_report(c(
+      "id: T-14-3-1", "kind: table", "label: TEAEs by SOC / PT",
+      "template:", "  name: tflspec_v1/ae_soc_pt", "  analysis:", "    by: TRT01A")),
+    lab = tr_report(c(
+      "id: T-14-4-1", "kind: table", "label: Shift in chemistry toxicity grade",
+      "data:", "  - id: adlb_sub",
+      "    where: !r APHASE == \"P2\" & PARCAT1 == \"CHEMISTRY\"",
+      "template:", "  name: tflspec_v1/lab_tox_shift", "  analysis:", "    by: TRT01A",
+      "    graded_params:", "      Low: [Albumin (g/L), Sodium (mmol/L)]",
+      "      High: [Creatinine (umol/L), Sodium (mmol/L)]")),
+    orr = tr_report(c(
+      "id: T-14-2-4", "kind: table", "label: Overall response rate by subgroup",
+      "data:", "  - id: adsl_sub", "    from: ADSLX", "    population: none",
+      "    where: !r TRT01AN == 1", "  - id: adrs_sub",
+      "    where: !r PARAMCD == \"BORC\"", "    add: [TR01AG1, BRCA, AGEGR1]",
+      "template:", "  name: tflspec_v1/orr_subgroup", "  analysis:", "    by: TR01AG1",
+      "    conditions:",
+      "      - {subgroup: BRCA, subgroup_lvl: POSITIVE, where: !r BRCA == \"POSITIVE\"}",
+      "      - {subgroup: AGEGR1, subgroup_lvl: \"<65\", where: !r AGEGR1 == \"<65\"}",
+      "    conf_level: 0.9")),
+    listing = tr_report(c(
+      "id: L-16-2-8", "kind: listing", "label: Listing of severe TEAEs",
+      "data:", "  - id: adsl_sub", "    from: ADSLX", "    population: SAFX",
+      "  - id: lst_sub", "    from: ADAE", "    where: !r AESEV == \"SEVERE\"",
+      "    arrange: [TRT01AN, USUBJID, ASTDT]",
+      "template:", "  name: tflspec_v1/listing", "  data:", "    from: ADAE",
+      "  content:", "    columns: [USUBJID, AEDECOD, AESEV]")),
+    km = tr_report(c(
+      "id: F-14-2-3", "kind: figure", "label: KM curves",
+      "data:", "  - id: adsl_sub", "    population: SAF", "  - id: adtte_sub",
+      "    where: !r PARAMCD == \"TTSKIN\"",
+      "template:", "  name: tflspec_v1/km_simple", "  analysis:", "    by: TRT01A",
+      "    time_unit: days")),
+    forest = tr_report(c(
+      "id: F-14-2-4", "kind: figure", "label: Hazard ratio by subgroup",
+      "data:", "  - id: adsl_sub", "    population: SAF", "  - id: adtte_sub",
+      "    where: !r PARAMCD == \"TTSKIN\"", "    add: [TRT01A, SEX]",
+      "template:", "  name: tflspec_v1/forest_hr", "  analysis:", "    by: TRT01A",
+      "    conditions:", "      - {subgroup: SEX, subgroup_lvl: F, where: !r SEX == \"F\"}",
+      "    ref: Control", "  content:", "    comparison: Drug X"))
+  )
+}
+
+tr_ids <- function(out) vapply(out$ard$analyses, function(a) a$id, "")
+
+test_that("the 7 SAMPLE-01 reports resolve to code SPECs", {
+  reps <- tr_reports()
+  for (n in names(reps)) {
+    out <- tfl_template_resolve(reps[[n]], study = tr_study())
+    expect_s3_class(out, "tfl_output")
+    expect_identical(out$id, reps[[n]]$id)
+    expect_true("BIGN" %in% tr_ids(out), info = n)
+  }
+})
+
+test_that("demog: an analysis a variable, its id the variable's name", {
+  out <- tfl_template_resolve(tr_reports()$demog, study = tr_study())
+  expect_identical(tr_ids(out), c("BIGN", "AGE", "AGEGR1", "SEX", "RACE", "ETHNIC"))
+  an <- out$ard$analyses
+  expect_identical(an[[2L]]$variables, "AGE")
+  expect_identical(an[[2L]]$method, "continuous")
+  expect_identical(an[[3L]]$by, "TRT01A")
+  expect_identical(an[[3L]]$type, "ard")
+  expect_identical(an[[1L]]$variables, "TRT01A")
+  # the series' formats; the study's max_rows over the series's
+  expect_identical(an[[2L]]$formats$mean, 2L)
+  expect_identical(attr(out, "origins")[["max_rows"]], "study")
+  expect_identical(attr(out, "origins")[["by"]], "report")
+  expect_identical(attr(out, "args")$max_rows, 25L)
+})
+
+test_that("demog: analysis_ids name a variable's analysis", {
+  rep <- tr_reports()$demog
+  rep$template$analysis$analysis_ids <- list(AGE = "AGE_STATS")
+  out <- tfl_template_resolve(rep, study = tr_study())
+  expect_identical(tr_ids(out)[2:3], c("AGE_STATS", "AGEGR1"))
+})
+
+test_that("ORR: the conditions rows, the template's ALL row first", {
+  out <- tfl_template_resolve(tr_reports()$orr, study = tr_study())
+  orr <- out$ard$analyses[[2L]]
+  expect_identical(orr$id, "ORR")
+  expect_identical(orr$params, c("subgroup", "subgroup_lvl", "where"))
+  cn <- orr$conditions
+  expect_s3_class(cn, "data.frame")
+  expect_identical(names(cn), c("subgroup", "subgroup_lvl", "where"))
+  expect_identical(cn$subgroup, c("ALL", "BRCA", "AGEGR1"))
+  expect_identical(cn$where[[1L]], "TRUE")
+  expect_identical(cn$where[[2L]], "BRCA == \"POSITIVE\"")
+  # the item's params stay as written; the template's are filled in
+  expect_match(as.character(orr$derive), "subgroup = \"{subgroup}\"", fixed = TRUE)
+  expect_match(as.character(orr$derive), "AVALCAT1 = dplyr::if_else", fixed = TRUE)
+  expect_identical(as.character(orr$where), "{where}")
+  expect_match(as.character(orr$args), "conf.level = 0.9", fixed = TRUE)
+  expect_identical(orr$by, c("subgroup", "subgroup_lvl", "TR01AG1"))
+  # the report's data rows merged into the template's by id
+  d <- out$ard$analysis_data
+  adrs <- d[[which(vapply(d, function(r) r$id, "") == "adrs_sub")]]
+  expect_identical(adrs$from, "ADRS")
+  expect_identical(adrs$add, c("TR01AG1", "BRCA", "AGEGR1"))
+  expect_identical(as.character(adrs$where), "PARAMCD == \"BORC\"")
+})
+
+test_that("lab: a condition row reads one entry of a map argument", {
+  out <- tfl_template_resolve(tr_reports()$lab, study = tr_study())
+  sh <- out$ard$analyses[[2L]]
+  expect_identical(sh$conditions$tox_dir, c("Low", "High"))
+  expect_identical(sh$conditions$graded_params[[1L]], c("Albumin (g/L)", "Sodium (mmol/L)"))
+  expect_identical(sh$levels$PARAM, "{graded_params}")
+  expect_length(sh$ards, 4L)})
+
+test_that("a conditions row may name its own analysis_id", {
+  rows <- list(list(tox_dir = "High", analysis_id = "ALT_HIGH"), list(tox_dir = "Low"))
+  cn <- tflspec:::.tr_conditions(rows, "tox_dir", "SHIFT", "t")
+  expect_identical(names(cn), c("tox_dir", "analysis_id"))
+  expect_identical(cn$analysis_id, c("ALT_HIGH", NA))
+  expect_named(tflspec:::.tr_conditions(rows[2L], "tox_dir", "SHIFT", "t"), "tox_dir")
+  expect_error(tflspec:::.tr_conditions(list(list(zz = 1)), "tox_dir", "SHIFT", "t"), "zz")
+})
+
+test_that("analyses: per variable, per level, per columns, none", {
+  env <- list(v = c("AGE", "SEX"))
+  it <- function(...) c(list(id = "X", method = "categorical", data = "d", variables = "{v}"), list(...))
+  ti <- tflspec:::.tr_item
+  ids <- function(x) vapply(x, function(a) a$id, "")
+  expect_identical(ids(ti(it(analyses = list(per = "variable", ids = list(AGE = "AGE1"))), env, "t")),
+                   c("AGE1", "SEX"))
+  lv <- ti(it(analyses = list(per = "level")), env, "t")
+  expect_length(lv, 1L)
+  expect_identical(lv[[1L]]$analysis_per, "level")
+  pc <- ti(it(analyses = list(per = c("PARAMCD", "direction"))), env, "t")
+  expect_identical(pc[[1L]]$analysis_per, "PARAMCD|direction")
+  expect_null(pc[[1L]]$analyses)
+  expect_identical(ids(ti(it(), env, "t")), "X")
+})
+
+test_that("a required argument with no value stops, naming it", {
+  rep <- tr_reports()$demog
+  rep$template$analysis$by <- NULL
+  expect_error(tfl_template_resolve(rep, study = tr_study()), "needs by")
+  rep <- tr_reports()$demog
+  rep$template$analysis$colour <- "red"
+  expect_error(tfl_template_resolve(rep, study = tr_study()), "no argument colour")
+})
+
+test_that("the fill: braces, splicing, NULL drops a key, when", {
+  env <- list(by = c("A", "B"), n = 2L, none = NULL, flag = FALSE, m = list(x = "X1"))
+  f <- tflspec:::.tr_fill
+  expect_identical(f(c("{by}", "C"), env), c("A", "B", "C"))
+  expect_identical(f("{{by}} {n}", env), "{by} 2")
+  expect_identical(f(list(a = "{none}", b = 1), env), list(b = 1))
+  expect_identical(f("{m: x}", env), "X1")
+  expect_identical(f("{p} {n}", env, shadow = "n"), "{p} {n}")
+  w <- tflspec:::.tr_when
+  expect_false(w(list(when = "flag"), env, "t"))
+  expect_true(w(list(when = "n"), env, "t"))
+  expect_false(w(list(when = "none"), env, "t"))
+  expect_error(w(list(when = "zz"), env, "t"), "not one of its arguments")
+})
+
+test_that("tfl_series_list() and a study's series values", {
+  sl <- tfl_series_list()
+  expect_true("tflspec_v1" %in% sl$name)
+  expect_identical(names(sl), c("name", "label", "released", "path", "source"))
+  v <- tfl_series_settings(tr_study(), "tflspec_v1")
+  expect_identical(v$max_rows, 25L)
+  expect_identical(attr(v, "origins")[["max_rows"]], "study")
+  expect_identical(attr(v, "origins")[["total"]], "series")
+
+  d <- tempfile("study")
+  dir.create(d)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  writeLines(c("# a study", "settings:", "  rounding: sas", "series_settings:",
+               "  tflspec_v1:", "    max_rows: 25", "other: 1"), file.path(d, "study.yml"))
+  tfl_series_settings_set(d, "tflspec_v1", list(max_rows = 20L, total = TRUE))
+  y <- yaml::read_yaml(file.path(d, "study.yml"))
+  expect_identical(y$series_settings$tflspec_v1$max_rows, 20L)
+  expect_true(y$series_settings$tflspec_v1$total)
+  expect_identical(y$other, 1L)
+  expect_identical(readLines(file.path(d, "study.yml"))[1L], "# a study")
+  tfl_series_settings_set(d, "tflspec_v1", list(max_rows = NULL, total = NULL))
+  expect_null(yaml::read_yaml(file.path(d, "study.yml"))$series_settings)
+  expect_error(tfl_series_settings_set(d, "tflspec_v1", list(zz = 1)), "not a value")
+})

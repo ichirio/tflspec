@@ -378,26 +378,3 @@ tfl_arg_defs <- function(fn = NULL, template = NULL) {
   step <- .arg_step_for_stage(ent$stage)
   .arg_table(args, step, paste0(.schema_fn_name(fn), "."), fn)
 }
-
-#' A report's template with its values filled in
-#'
-#' Reads the report's template, puts the report's arguments over the
-#' template's defaults, resolves the series' and the study's values, fills in
-#' the `"{name}"` spots of the template's `data:` rows and analysis items, and
-#' merges the report's own `data:` rows by id.  The result is a plain code
-#' SPEC (what the code SPEC's cards show and what the generator reads), and
-#' each value carries where it came from (`report`, `template`, `study`,
-#' `series`, `fixed`).
-#'
-#' Not written yet: the name is fixed so that the screen can be written
-#' against it.
-#'
-#' @param report A report SPEC (a list, as read) or its file.
-#' @param template A template, `"<series>/<template>"`; default the report's
-#'   `template: name:`.
-#' @param study The study (its `study.yml` settings and `series_settings:`).
-#' @return The report as a code SPEC: `data:` and `analysis:` lists.
-#' @export
-tfl_template_resolve <- function(report, template = NULL, study = NULL) {
-  stop("tfl_template_resolve(): not written yet (package C).", call. = FALSE)
-}
