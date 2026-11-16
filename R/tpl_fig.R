@@ -92,7 +92,7 @@
   # records are left out, and said (else a line or a visit of their own, the
   # colours shifted, the value off its real visit)
   f$stats <- c(list(list(step = "filter",
-    expr = sprintf("!is.na(%s) & %s != \"\" & !is.na(%s) & %s != \"\"", group, group, visit_var, visit_var),
+    expr = sprintf("!is.na(%s) & !is.na(%s)", group, visit_var),
     label = sprintf("the records with an empty %s or %s have no place in a line: left out, with a warning",
                     group, visit_var),
     warn = sprintf("mean_%s: {n} records with an empty %s or %s were left out", interval, group, visit_var))),
@@ -226,7 +226,7 @@ tpl_mean_ci <- function(data, group = "TRT01A", value = "AVAL", visit_var = "AVI
     if (length(k)) {
       f$stats[[k]]$levels <- paste(f$stats[[k]]$levels, "Missing", sep = " | ")
       f$stats <- append(f$stats, list(list(step = "derive", variable = "BOR",
-        expr = "ifelse(is.na(BOR) | BOR == \"\", \"Missing\", as.character(BOR))")), k - 1L)
+        expr = "ifelse(is.na(BOR), \"Missing\", as.character(BOR))")), k - 1L)
       f$plot$colours <- list(Missing = "grey80")
     }
   }
@@ -422,13 +422,8 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
       where = tfl_r(.tpl_and(sprintf("PARAMCD == %s", q(a$param)), a$where)),
       # (the reference arm first: `ref` is a relevel, else the first level is
       # the reference)
-      # (a blank arm is a missing one first: coxph keeps "" as an arm of its
-      # own, and the model and the subgroups' models read this data)
-      derive = tfl_r(paste(c(
-        sprintf("%s = replace(%s, !is.na(%s) & as.character(%s) == \"\", NA)",
-                a$group, a$group, a$group, a$group),
-        if (length(a$ref)) .forest_ref_derive(a$group, a$ref[1L])),
-        collapse = " | ")),
+      # (a blank arm is NA already in study$adam: no step of its own)
+      derive = if (length(a$ref)) tfl_r(.forest_ref_derive(a$group, a$ref[1L])),
       add = if (length(a$subgroups)) as.list(a$subgroups)))),
     analyses = lapply(seq_len(nrow(an)), function(i) list(
       id = an$analysis_id[i], label = an$label[i], method = "custom", data = set,
