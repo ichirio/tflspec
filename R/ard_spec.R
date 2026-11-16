@@ -54,7 +54,65 @@
                "data", "dataset", "records",
                "population_id", "where", "by", "overall", "strata", "groups", "variables",
                "optional", "statistics", "denominator", "formats", "args", "post",
-               "code", "purpose", "reason"))
+               "code", "purpose", "reason",
+               # a template's item: its type, the params its condition rows
+               # give, its own columns and how its analyses are named
+               "type", "params", "derive", "levels", "missing_row", "missing_label",
+               "analysis_per"),
+  # an item's condition rows (an item with params): a row a run, in `row`
+  # order; then a column a param, the items' params together (a cell blank
+  # where an item has no such param), and row_analysis_id, a row's own id
+  conditions = c("output_id", "analysis_id", "row"),
+  # an item's several calls (ards:): a row a call, its keys (by, variables,
+  # ...) as columns; each call is the item's analysis_id
+  ards = c("output_id", "analysis_id", "row"))
+
+# The sheets whose columns are not fixed: their keys first, then a column a
+# param (conditions) or a key of a call (ards)
+.ard_open_sheets <- c("conditions", "ards")
+
+# An item's condition rows from the conditions sheet `cs`: a data frame of
+# its params in row order (a param a row does not give NA), and
+# analysis_id when a row gives its own (row_analysis_id); NULL for none.
+# A key with a value that is not one of the item's params stops.
+.item_cond_rows <- function(cs, output_id, analysis_id, params) {
+  if (!is.data.frame(cs) || !nrow(cs)) return(NULL)
+  d <- cs[cs$output_id %in% output_id & cs$analysis_id %in% analysis_id, , drop = FALSE]
+  if (!nrow(d)) return(NULL)
+  d <- d[order(suppressWarnings(as.integer(d$row))), , drop = FALSE]
+  given <- function(v) !is.na(v) & nzchar(trimws(as.character(v)))
+  keys <- setdiff(names(d), c(.ard_spec_sheets$conditions, "row_analysis_id", "note"))
+  used <- keys[vapply(keys, function(k) any(given(d[[k]])), NA)]
+  bad <- setdiff(used, params)
+  if (length(bad)) {
+    stop(sprintf("conditions of %s (report %s): %s %s not one of its params (%s).",
+                 analysis_id, output_id, paste(bad, collapse = ", "),
+                 if (length(bad) > 1L) "are" else "is",
+                 if (length(params)) paste(params, collapse = ", ") else "none"),
+         call. = FALSE)
+  }
+  out <- data.frame(row.names = seq_len(nrow(d)))
+  for (p in params) {
+    out[[p]] <- if (p %in% names(d)) as.character(d[[p]]) else rep(NA_character_, nrow(d))
+  }
+  own <- d$row_analysis_id
+  if (!is.null(own) && any(given(own))) out$analysis_id <- as.character(own)
+  out
+}
+
+# An item's calls from the ards sheet: a list, a call a list of its cells
+# (by, variables, ...: text as on the sheet), in row order; NULL for none
+.item_ards_rows <- function(as, output_id, analysis_id) {
+  if (!is.data.frame(as) || !nrow(as)) return(NULL)
+  d <- as[as$output_id %in% output_id & as$analysis_id %in% analysis_id, , drop = FALSE]
+  if (!nrow(d)) return(NULL)
+  d <- d[order(suppressWarnings(as.integer(d$row))), , drop = FALSE]
+  keys <- setdiff(names(d), c(.ard_spec_sheets$ards, "note"))
+  lapply(seq_len(nrow(d)), function(k) {
+    v <- vapply(keys, function(c) as.character(d[[c]][k]), "")
+    as.list(v[!is.na(v) & nzchar(trimws(v))])
+  })
+}
 
 .split_bar <- function(x) {
   if (is.null(x) || is.na(x) || !nzchar(x)) return(character())
@@ -159,6 +217,8 @@
 .normalize_ard_sheet <- function(d, sheet) {
   cols <- .ard_spec_sheets[[sheet]]
   d <- as.data.frame(d, stringsAsFactors = FALSE)
+  # (a conditions or ards sheet: its params' or keys' columns after its own)
+  if (sheet %in% .ard_open_sheets) cols <- c(cols, setdiff(names(d), c(cols, "note")))
   out <- lapply(cols, function(c) {
     v <- if (c %in% names(d)) as.character(d[[c]]) else
       rep(NA_character_, nrow(d))
@@ -227,6 +287,7 @@ tfl_read_ard_spec <- function(path, check = TRUE, statistics = NULL,
     d <- if (s %in% sheets) .xlsx_text(path, s) else
       data.frame(matrix(character(), 0, length(cols),
                         dimnames = list(NULL, cols)))
+    if (s %in% .ard_open_sheets) cols <- c(cols, setdiff(names(d), c(cols, "note")))
     bad <- setdiff(names(d), c(cols, "note"))
     if (length(bad)) {
       stop("Sheet `", s, "` has columns it does not read: ",

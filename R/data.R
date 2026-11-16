@@ -122,6 +122,10 @@
 #'     \item{ANRLO, ANRHI, ANRIND, BNRIND}{normal range and indicator (and at
 #'       baseline)}
 #'     \item{ATOXGR, BTOXGR}{CTCAE grade (and at baseline)}
+#'     \item{ATOXGRL, ATOXGRH, BTOXGRL, BTOXGRH}{the grade in each direction,
+#'       low and high (and at baseline), fictional: ALT, AST and bilirubin
+#'       graded high, haemoglobin, neutrophils and platelets low, `NA` in the
+#'       other direction}
 #'     \item{ABLFL, ONTRTFL}{baseline and on-treatment record flags}
 #'   }
 #' @inherit adsl source
@@ -157,6 +161,7 @@
 #'     \item{AVISIT, AVISITN, ADT, ADY}{visit (`WEEK 6`, ...; `OVERALL` for
 #'       BOR), date, study day}
 #'     \item{AVALC, AVAL}{response (CR, PR, SD, PD, NE) and its code 1-5}
+#'     \item{AVALCAT1}{`Response` (CR or PR) or `Non-response`}
 #'     \item{ANL01FL}{analysis flag}
 #'   }
 #' @inherit adsl source
