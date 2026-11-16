@@ -22,13 +22,14 @@
 #'   ADSL first, the others in the catalog's order, as the file has it
 #'   (`adsl`: `readRDS(file.path(path_adam, "adsl.rds"))`, with
 #'   `|> dplyr::mutate(...)` for a dataset that has a `derive`); and
-#'   `study$adam`, the same datasets with the study's code lists' levels
-#'   (`set_levels()`: each listed column a factor of its list's codes in
-#'   its order; the values as read).  The study's code lists are those of
+#'   `study$adam`, the same datasets with blanks as `NA` (`blank_as_na()`:
+#'   a `""` of a character column or of a factor) and then the study's code
+#'   lists' levels (`set_levels()`: each listed column a factor of its list's
+#'   codes in its order; the values as read).  The study's code lists are those of
 #'   `spec/defaults.yml` (`codelists:`), written first as `cl_<variable>`
 #'   objects, as the ARD program writes a report's.  A study with no code
-#'   list has no `cl_*` objects, and `study$adam` is `study$adam_org` (the
-#'   same environment; a message says so when the file is sourced).  A spec
+#'   list has no `cl_*` objects, and `study$adam` is `study$adam_org` with
+#'   blanks as `NA` (a message says so when the file is sourced).  A spec
 #'   of the sheets has no study-wide code list (a row of its `codelists`
 #'   sheet is a report's), so it is written this way.  The reader follows
 #'   the file's extension and the folder variables of option
@@ -113,10 +114,10 @@ tfl_study_setup_code <- function(study) {
 
 # The study's input data, read when first used: two environments,
 # study$adam_org (each dataset as the file has it, with the catalog's
-# derive) and study$adam (the study's code lists' levels on it; the values
-# as they were read).  The study's code lists come first (`cl_<variable>`,
+# derive) and study$adam (blank_as_na() on it, then the study's code lists'
+# levels; the values as they were read otherwise).  The study's code lists come first (`cl_<variable>`,
 # as the ARD program writes them).  A study with no code lists has no
-# second environment: study$adam is study$adam_org.  The last lines keep
+# code lists, study$adam is the same with blanks as NA only.  The last lines keep
 # the objects the ARD, listing and figure programs use now (`adsl`) as the
 # datasets of study$adam_org, until those programs read study$adam.
 .study_data_lines <- function(ds, levels = list()) {
@@ -132,22 +133,30 @@ tfl_study_setup_code <- function(study) {
                        if (length(d)) sprintf("dplyr::mutate(%s)", paste(d, collapse = ", ")))
     delayed(nm[i], sub("^[.]x <- ", "", code), "study$adam_org")
   }, "")
+  # study$adam: the same with blanks as NA (blank_as_na()), then the code lists
+  # (set_levels()) when the study has them
+  adam <- vapply(seq_len(nrow(ds)), function(i) {
+    src <- paste0("study$adam_org$", nm[i])
+    expr <- if (length(levels)) {
+      args <- stats::setNames(as.list(.cl_name(names(levels))), names(levels))
+      step <- gsub("\n", "\n  ", .lay(.cl("set_levels", args), lead = 4L), fixed = TRUE)
+      paste0(src, " |>\n  blank_as_na() |>\n  ", step)
+    } else {
+      .cl("blank_as_na", list(src))
+    }
+    delayed(nm[i], expr, "study$adam")
+  }, "")
   head <- if (length(levels)) {
-    adam <- vapply(seq_len(nrow(ds)), function(i) {
-      args <- c(list(paste0("study$adam_org$", nm[i])),
-                stats::setNames(as.list(.cl_name(names(levels))), names(levels)))
-      delayed(nm[i], .cl("set_levels", args), "study$adam")
-    }, "")
     c("# the study's code lists (spec/defaults.yml codelists:)", .codelists_lines(levels), "",
       "# the study's input data, read when first used: study$adam_org (the ADaM as read,",
-      "# with the catalog's derive), study$adam (the study's code lists' levels; values as read)",
+      "# with the catalog's derive), study$adam (blanks as NA, then the study's code lists'",
+      "# levels)",
       "study <- list(adam_org = new.env(), adam = new.env())", org, adam)
   } else {
     c("# the study's input data, read when first used: study$adam_org (the ADaM as read,",
-      "# with the catalog's derive); the study has no code lists, so study$adam is the same",
-      "study <- list(adam_org = new.env())", org,
-      "study$adam <- study$adam_org",
-      "message(\"The study has no code lists: study$adam is study$adam_org.\")")
+      "# with the catalog's derive), study$adam (blanks as NA; the study has no code lists)",
+      "study <- list(adam_org = new.env(), adam = new.env())", org, adam,
+      "message(\"The study has no code lists: study$adam is study$adam_org with blanks as NA.\")")
   }
   code <- c(head, "",
             "# (until the report programs read study$adam: the objects they use now)",

@@ -142,7 +142,7 @@
   if (!is.null(rnd) && !"rounding" %in% ard$study$key) {
     ard$study <- rbind(ard$study, data.frame(key = "rounding", value = rnd, stringsAsFactors = FALSE))
   }
-  list(spec = tfl_ard_spec(ard), codelists = .report_codelists(study, tfl_read_outputs(study$dir, skip_bad = TRUE),
+  list(spec = .tfl_ard_spec(ard, blank_notes = FALSE), codelists = .report_codelists(study, tfl_read_outputs(study$dir, skip_bad = TRUE),
                                b$table$codelists, output_id))
 }
 

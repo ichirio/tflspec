@@ -35,6 +35,26 @@ set_levels <- function(data, ...) {
   data
 }
 
+# A blank is missing: every character column's "" becomes NA, and so does a
+# factor's (the "" level is dropped, the other levels and their order kept).
+# Other types stay.  study$adam is the ADaM as read with this done, so a
+# program tests a blank with is.na(), not == "" or nzchar().
+#   blank_as_na(adsl)
+blank_as_na <- function(data) {
+  for (v in names(data)) {
+    x <- data[[v]]
+    if (is.character(x)) {
+      x[!is.na(x) & x == ""] <- NA
+    } else if (is.factor(x) && any(levels(x) == "")) {
+      x <- factor(as.character(x), levels = setdiff(levels(x), ""), ordered = is.ordered(x))
+    } else {
+      next
+    }
+    data[[v]] <- x
+  }
+  data
+}
+
 # A column in another's order, when the data has it: reorder(factor(x), by)
 # for a program's data step (PARAM by PARAMN, AVISIT by AVISITN).  An order
 # is not a condition that defines the report, so a data without the order
