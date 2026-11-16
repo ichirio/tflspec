@@ -23,7 +23,8 @@ test_that("condition rows: a tribble of the params, a function of one row, the d
   code <- tfl_ard_code(sp, output_id = "T", save = FALSE)
   txt <- paste(code, collapse = "\n")
   expect_match(txt, "~subgroup, ~subgroup_lvl, ~where,", fixed = TRUE)
-  expect_match(txt, "\"Sex\", \"F\", \"SEX == \\\"F\\\"\",", fixed = TRUE)
+  expect_match(txt, "\"Sex\", \"F\", quote(SEX == \"F\"),", fixed = TRUE)
+  expect_match(txt, "filter(!!where)", fixed = TRUE)
   expect_match(txt, "function(subgroup, subgroup_lvl, where) {", fixed = TRUE)
   expect_match(txt, "mutate(subgroup = subgroup, subgroup_lvl = subgroup_lvl)", fixed = TRUE)
   expect_match(txt, "purrr::pmap(", fixed = TRUE)
@@ -118,4 +119,61 @@ test_that("analyses per columns: a condition row's id from its data, or the row'
   expect_match(txt, paste0("analysis_id = if (nzchar(analysis_id)) analysis_id else ",
                            "toupper(paste(unique(data$SEX), unique(data$TRTA), sep = \"_\"))"),
                fixed = TRUE)
+})
+
+test_that("levels reading params: the function's argument (.env$p), not a column of that name", {
+  cond <- data.frame(tox_dir = c("Low", "High"), stringsAsFactors = FALSE)
+  sp <- item_spec(
+    list(method = "categorical", population_id = "SAF", by = "TRTA", variables = "SEX"),
+    list(params = "tox_dir", conditions = list(cond),
+         derive = "tox_dir = \"{tox_dir}\"", levels = "tox_dir = \"{tox_dir}\""))
+  txt <- paste(tfl_ard_code(sp, output_id = "T", save = FALSE), collapse = "\n")
+  expect_match(txt, "tox_dir = tox_dir, tox_dir = factor(tox_dir, levels = .env$tox_dir)", fixed = TRUE)
+})
+
+test_that("ards: an item's several calls, one analysis_id, bound in the item (and in each condition row)", {
+  skip_if_not_installed("cards")
+  adam <- exact_data()
+  dir <- exact_dir(adam)
+  on.exit(unlink(dir, recursive = TRUE))
+  calls <- list(list(by = "TRTA", variables = "SEX"), list(by = "TRTA", variables = "RACE"))
+  sp <- item_spec(
+    list(method = "categorical", population_id = "SAF", by = "TRTA", variables = "SEX"),
+    list(ards = list(calls)))
+  txt <- paste(tfl_ard_code(sp, output_id = "T", save = FALSE), collapse = "\n")
+  expect_match(txt, "ard_a <- bind_items(ard_a_1, ard_a_2)", fixed = TRUE)
+  ard <- suppressMessages(tfl_build_ard(sp, dir = dir, output_id = "T", save = FALSE))
+  expect_identical(unique(ard$analysis_id), "A")
+  expect_setequal(unique(ard$variable), c("SEX", "RACE"))
+  # with condition rows: bound inside the row's function
+  cond <- data.frame(sexv = c("F", "M"), stringsAsFactors = FALSE)
+  sp2 <- item_spec(
+    list(method = "categorical", population_id = "SAF", by = "TRTA", variables = "SEX"),
+    list(params = "sexv", conditions = list(cond), where = "SEX == \"{sexv}\"",
+         ards = list(calls)))
+  txt2 <- paste(tfl_ard_code(sp2, output_id = "T", save = FALSE), collapse = "\n")
+  expect_match(txt2, "  ard <- bind_items(ard_1, ard_2)", fixed = TRUE)
+  ard2 <- suppressMessages(tfl_build_ard(sp2, dir = dir, output_id = "T", save = FALSE))
+  saf <- adam$ADSL[adam$ADSL$SAFFL == "Y", ]
+  n_race <- ard2[ard2$variable == "RACE" & ard2$stat_name == "n", ]
+  expect_identical(as.integer(sum(unlist(n_race$stat))), nrow(saf))
+})
+
+test_that("type: model: the call kept under its own name, its data the item's, not in the ARD", {
+  sp <- tfl_ard_spec(exact_spec(list(method = "categorical", population_id = "SAF",
+                                     variables = "SEX")))
+  a <- sp$analyses
+  m <- a
+  m$analysis_id <- "FIT"
+  m$method <- "stats::lm"
+  m$args <- "AGE ~ SEX"
+  sp$analyses <- rbind(a, m)
+  sp$analyses$type <- c(NA, "model")
+  code <- tfl_ard_code(sp, output_id = "T", save = FALSE)
+  txt <- paste(code, collapse = "\n")
+  expect_match(txt, "# FIT: a model, kept as fit (not in the ARD)", fixed = TRUE)
+  # (stats:: is left off, as the program writes an attached package's calls)
+  expect_match(txt, "fit <- (stats::)?lm\\(AGE ~ SEX, data = ")
+  expect_false(grepl("bind_items(ard_a, fit", txt, fixed = TRUE))
+  expect_false(grepl("tag_ard(report_id, \"FIT\"", txt, fixed = TRUE))
 })
