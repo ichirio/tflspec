@@ -144,3 +144,19 @@ test_that("a series figure naming a figure content the table lacks stops", {
   o$figure <- "nonesuch"
   expect_error(tfl_content_code(o), "names the figure `nonesuch`")
 })
+
+test_that("km_simple's legend choices and y_label default are km_curves()'s", {
+  skip_if_not_installed("ggplot2", "3.5.2")
+  skip_if_not_installed("ggsurvfit")
+  skip_if_not_installed("survival")
+  t <- .series_read_yaml(.template_file("tflspec_v1/km_simple"))
+  expect_identical(t$params$legend$type, "enum[inside|bottom|none]")
+  expect_identical(t$params$legend$default, "bottom")
+  d <- sfc_adtte()
+  fit <- ggsurvfit::survfit2(ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ TRT01A, data = d)
+  p <- km_curves(fit)
+  expect_identical(ggplot2::get_labs(p)$y, t$params$y_label$default)
+  for (lg in c("inside", "bottom", "none")) {
+    expect_no_error(ggplot2::ggplot_build(km_curves(fit, params = list(legend = lg))))
+  }
+})
