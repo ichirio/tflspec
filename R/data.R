@@ -161,6 +161,7 @@
 #'     \item{AVISIT, AVISITN, ADT, ADY}{visit (`WEEK 6`, ...; `OVERALL` for
 #'       BOR), date, study day}
 #'     \item{AVALC, AVAL}{response (CR, PR, SD, PD, NE) and its code 1-5}
+#'     \item{AVALCAT1}{`Response` (CR or PR) or `Non-response`}
 #'     \item{ANL01FL}{analysis flag}
 #'   }
 #' @inherit adsl source
