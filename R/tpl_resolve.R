@@ -105,6 +105,12 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   }
   rows <- lapply(rows, function(r) {
     r <- .tr_fill(r, env)
+    # (the templates' subjects_in: the code SPEC's subjects, until it is
+    # renamed there)
+    if (!is.null(r$subjects_in)) {
+      r$subjects <- r$subjects_in
+      r$subjects_in <- NULL
+    }
     r[!vapply(r, function(v) inherits(v, "tfl_unset"), NA)]
   })
   rows <- lapply(rows, .derive_map_in)
@@ -113,6 +119,16 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   for (it in tpl$analysis %||% list()) {
     items <- c(items, .tr_item(it, env, template))
   }
+  # a denominator that is an item (BIGN, canon 23a41ff): that item's data
+  ids <- vapply(items, function(a) a$id %||% NA_character_, "")
+  for (i in seq_along(items)) {
+    dn <- items[[i]]$denominator
+    if (is.character(dn) && length(dn) == 1L && dn %in% ids) {
+      items[[i]]$denominator <- items[[match(dn, ids)]]$data
+    }
+  }
+  # a figure's analyses read the report's data rows as their analysis data
+  kind <- report$kind %||% tpl$kind %||% "table"
 
   content <- .tr_fill(tpl$content %||% list(), env)
   if (is.list(report$content)) content <- c(content, report$content)
@@ -123,7 +139,8 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
             label = report$label %||% tpl$label, common = report$common,
             extends = report$extends %||% tpl$extends, style = report$style %||% tpl$style,
             figure = tpl$figure, data = rows,
-            ard = if (length(items)) list(analyses = items),
+            ard = if (length(items)) c(if (identical(kind, "figure")) list(analysis_data = rows),
+                                       list(analyses = items)),
             codelists = report$codelists, content = content, page = page)
   y <- y[!vapply(y, is.null, NA)]
   out <- .output_from_list(y)

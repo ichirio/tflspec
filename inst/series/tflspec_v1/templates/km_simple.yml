@@ -92,11 +92,6 @@ analysis:
     data: adsl_sub
     variables: ["{by}"]
     formats: "{formats}"
-  - id: km_fit
-    type: model
-    method: survfit
-    data: adtte_sub
-    args: !r ggsurvfit::Surv_CNSR({time}, {censor}) ~ {by}
 page:
   titles: ~
   footnotes: ~
