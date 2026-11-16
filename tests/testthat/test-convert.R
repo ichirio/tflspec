@@ -99,7 +99,7 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   expect_identical(s$styles$standard$page$footer$last[["99"]]$left, "{PROGRAM}")
   expect_identical(s$study$tokens$COMPANY, "Acme")
   expect_identical(s$study$settings$style, "standard")
-  expect_null(s$codelists)                     # a code list is a report's, or a layer's
+  expect_identical(s$codelists, list())        # a code list is a report's, or a layer's
   # (a pattern with page rows is a page configuration: no pattern file)
   expect_length(s$patterns, 0L)
   expect_identical(s$styles$Compact$page$rtf_page$margin_top_in, 0.5)

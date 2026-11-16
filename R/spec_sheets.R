@@ -535,8 +535,16 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     whose, " code lists (", file, ": ", paste(names(cl), collapse = ", "), ") stay in YAML, not on the sheets: ",
     "a study written from the sheets has not got them, so a report that reads one of these variables ",
     "is made without the list: its ARD program does not set the values' order, and its table has no labels for them")
-  if (length(s$defaults$codelists)) {
-    note(NA_character_, "codelists", cl_said(s$defaults$codelists, "the defaults'", "defaults.yml"))
+  # (the study's own lists, by name, and its ADaM metadata: no sheet holds them)
+  if (length(s$codelists)) {
+    note(NA_character_, "codelists", paste0(
+      "the study's code lists (defaults.yml: ", paste(names(s$codelists), collapse = ", "),
+      ") stay in YAML, not on the sheets: a study written from the sheets has not got them"))
+  }
+  if (nrow(s$adam_meta$variables %||% data.frame())) {
+    note(NA_character_, "adam_meta", paste0(
+      "the study's ADaM metadata (defaults.yml adam_meta:) stays in YAML, not on the sheets: ",
+      "a study written from the sheets has not got it, so study$adam has no levels from it"))
   }
   for (nm in names(s$patterns)) {
     if (length(s$patterns[[nm]]$codelists)) {

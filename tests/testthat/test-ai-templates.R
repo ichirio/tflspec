@@ -505,36 +505,38 @@ aitpl_layer_lists <- paste0(c("ANRIND", "BNRIND"),
 
 test_that("shift: `levels` covered by the code lists of the layers the draft extends pass (#647)", {
   skip_on_cran()
-  d <- aitpl_layer_study(defaults = aitpl_layer_lists)
-  expect_identical(nrow(aitpl_shift_check(extends = "defaults", study_dir = d)), 0L)
   # a pattern's, the draft extending it
   dp <- aitpl_layer_study(pattern = aitpl_layer_lists)
   expect_identical(nrow(aitpl_shift_check(extends = "[patterns/pp, defaults]", study_dir = dp)), 0L)
   # not a layer the draft extends: not its lists
-  p <- aitpl_shift_check(extends = "none", study_dir = d)
+  p <- aitpl_shift_check(extends = "none", study_dir = dp)
   expect_identical(p$severity, "error")
   p <- aitpl_shift_check(extends = "defaults", study_dir = dp)
   expect_identical(p$severity, "error")
+  # the study's own lists (defaults.yml codelists:) are no layer's: not the draft's
+  d <- aitpl_layer_study(defaults = aitpl_layer_lists)
+  p <- aitpl_shift_check(extends = "defaults", study_dir = d)
+  expect_identical(p$severity, "error")
   # lab_shift: the same lists
   expect_identical(nrow(aitpl_shift_check("lab_shift", c("visit: Week 4", "params: [ALT]", "levels: [Low, Normal, High]"),
-                                          extends = "defaults", study_dir = d)), 0L)
+                                          extends = "[patterns/pp, defaults]", study_dir = dp)), 0L)
 })
 
 test_that("shift: `levels` the layers' lists do not cover are the same error as with the report's own list (#647)", {
   skip_on_cran()
-  d <- aitpl_layer_study(defaults = aitpl_layer_lists)
+  d <- aitpl_layer_study(pattern = aitpl_layer_lists)
   own <- aitpl_shift_check(args = "levels: [Low, Normal, Extreme]", codelists = TRUE)
-  layer <- aitpl_shift_check(args = "levels: [Low, Normal, Extreme]", extends = "defaults", study_dir = d)
+  layer <- aitpl_shift_check(args = "levels: [Low, Normal, Extreme]", extends = "[patterns/pp, defaults]", study_dir = d)
   expect_identical(layer$severity, own$severity)
   expect_identical(layer$problem, own$problem)
   # one column's list only (the other column's has none): the error of the own lists
-  one <- aitpl_layer_study(defaults = aitpl_layer_lists[1])
-  p <- aitpl_shift_check(extends = "defaults", study_dir = one)
+  one <- aitpl_layer_study(pattern = aitpl_layer_lists[1])
+  p <- aitpl_shift_check(extends = "[patterns/pp, defaults]", study_dir = one)
   expect_identical(p$severity, "error")
   expect_match(p$problem, "both ANRIND and BNRIND", fixed = TRUE)
   # the draft's own list of one column and the layer's of the other: both are the report's
-  mix <- aitpl_shift_check(codelists = TRUE, cl_vars = "ANRIND", extends = "defaults",
-                           study_dir = aitpl_layer_study(defaults = aitpl_layer_lists[2]))
+  mix <- aitpl_shift_check(codelists = TRUE, cl_vars = "ANRIND", extends = "[patterns/pp, defaults]",
+                           study_dir = aitpl_layer_study(pattern = aitpl_layer_lists[2]))
   expect_identical(nrow(mix), 0L)
 })
 

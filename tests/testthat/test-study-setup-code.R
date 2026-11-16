@@ -102,6 +102,8 @@ ssc_yaml_study <- function(data_lines) {
   file.copy(system.file("extdata", "spec-yaml", package = "tflspec"), d, recursive = TRUE)
   sp <- file.path(d, "spec-yaml")
   writeLines(data_lines, file.path(sp, "data.yml"))
+  # (a study with no code lists and no ADaM metadata; a test gives its own)
+  writeLines("content: []", file.path(sp, "defaults.yml"))
   tfl_read_study_spec(sp)
 }
 ssc_data_yaml <- c("datasets:",
@@ -244,9 +246,7 @@ ssc_lists_study <- function() {
                          "  - dataset: ADSL", "    path: adsl.rds",
                          "  - dataset: ADAE", "    path: adae.rds",
                          "    derive: AEDUR = AENDY - ASTDY + 1"))
-  st$defaults$codelists <- list(
-    SEX = list(list(value = "F", label = "Female"), list(value = "M", label = "Male")),
-    RACE = c("WHITE", "ASIAN"))
+  st$codelists <- list(SEX = c(F = "Female", M = "Male"), RACE = c("WHITE", "ASIAN"))
   st
 }
 
@@ -296,8 +296,7 @@ test_that("the setup's code reads each dataset when first used", {
   st <- ssc_yaml_study(c("datasets:",
                          "  - dataset: ADSL", "    path: data/adam/adsl.rds",
                          "  - dataset: ADAE", "    path: data/adam/adae.rds"))
-  st$defaults$codelists <- list(SEX = list(list(value = "F", label = "Female"),
-                                           list(value = "M", label = "Male")))
+  st$codelists <- list(SEX = c(F = "Female", M = "Male"))
   old <- options(tflspec.paths = c(path_adam = "data/adam"))
   on.exit(options(old), add = TRUE)
   code <- tfl_study_setup_code(st)
@@ -334,7 +333,7 @@ test_that("study$adam has the blanks as NA, study$adam_org as read (with and wit
   saveRDS(adsl, file.path(d, "adsl.rds"))
   for (lists in c(TRUE, FALSE)) {
     st <- ssc_yaml_study(c("datasets:", "  - dataset: ADSL", "    path: data/adam/adsl.rds"))
-    if (lists) st$defaults$codelists <- list(SEX = c("F", "M"))
+    if (lists) st$codelists <- list(SEX = c("F", "M"))
     old <- options(tflspec.paths = c(path_adam = "data/adam"))
     code <- tfl_study_setup_code(st)
     options(old)
@@ -423,7 +422,7 @@ test_that("adam_levels: none -- the blanks are NA in study$adam all the same", {
                      RACE = c("", "ASIAN", "WHITE"), stringsAsFactors = FALSE)
   saveRDS(adsl, file.path(d, "adsl.rds"))
   st <- ssc_yaml_study(c("datasets:", "  - dataset: ADSL", "    path: data/adam/adsl.rds"))
-  st$defaults$codelists <- list(SEX = c("F", "M"))
+  st$codelists <- list(SEX = c("F", "M"))
   st$study$settings$adam_levels <- "none"
   old <- options(tflspec.paths = c(path_adam = "data/adam"))
   code <- tfl_study_setup_code(st)

@@ -23,7 +23,7 @@
   }, "")
   ds <- vapply(st$data$datasets %||% list(), function(d) d$dataset %||% "", "")
   tok <- .page_output_tokens_used(.page_config_flat(list(page = .study_default_page(st))))
-  cls <- names(st$defaults$codelists %||% list())
+  cls <- names(st$codelists %||% list())
   c("# This study's facts",
     "",
     "Read-only: the person's study as it is now (its analysis sets, datasets and",
@@ -56,7 +56,8 @@
     "## The study's code lists",
     "",
     if (length(cls)) {
-      c("These variables have one already; a draft writes its own only when the shell differs:",
+      c("The study keeps these lists, by name (spec/defaults.yml codelists:). A report does not",
+        "get them through extends:; a draft writes its own `codelists:` for a variable it lists:",
         "", paste0("- ", cls))
     } else "None.")
 }

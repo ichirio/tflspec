@@ -150,14 +150,7 @@ tfl_study_setup_code <- function(study) {
 # code list (a row of `codelists` is a report's), so a spec of the sheets
 # has none.  Empty list: none.
 .study_codelists <- function(study) {
-  cl <- if (inherits(study, "tfl_study_spec")) .codelists_norm(study$defaults$codelists) else list()
-  out <- lapply(cl, function(rows) {
-    codes <- vapply(rows, function(r) as.character(r$value), "")
-    lab <- .tpl_cl_dict(rows)
-    # (a list whose labels are its codes: the codes alone)
-    if (is.null(lab) || all(names(lab) == unname(lab))) codes else lab
-  })
-  out[lengths(out) > 0L]
+  if (inherits(study, "tfl_study_spec")) study$codelists %||% list() else list()
 }
 
 # The study's data catalog as a data frame (dataset, path, derive), ADSL

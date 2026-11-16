@@ -21,14 +21,40 @@
 #' and `tfl_read_outputs()` the report files under `spec/outputs/`
 #' (subfolders too; a file with `outputs:` holds several).  An id in two
 #' files stops the read.  A `spec/codelists.yml` is not read (a code list is
-#' a report's or a layer's), with a message.
+#' the study's, `codelists:` in `spec/defaults.yml`, or a report's), with a
+#' message.
+#'
+#' `spec/defaults.yml` holds the study's code lists and its ADaM metadata,
+#' two things kept apart:
+#'
+#' * `codelists:` the study's code lists for display, by name (`SEX: [{value:
+#'   F, label: Female}, ...]`; the lists of value-level metadata too).  A
+#'   report or a template refers to one by its name (`study$codelists$SEX`);
+#'   none reaches a report through `extends:`.
+#' * `adam_meta:` the ADaM metadata in the shape [tfl_read_define()] gives
+#'   (until a define is read): each part a list of rows, `variables: [{dataset:
+#'   ADSL, variable: SEX, codelist: CL.SEX}, ...]` (the code list's OID) and
+#'   `codelists: [{codelist: CL.SEX, name: Sex, value: F, decode: Female,
+#'   order: 1}, ...]` (a value a row); `datasets:`, `external:` and
+#'   `value_level:` may be given too.  A row may give any column of the
+#'   define's table, the others are `NA`.  A part or a column the define does
+#'   not have stops the read, as do a variable or a value given twice and a
+#'   variable whose code list is not there.  Under study.yml's `settings:
+#'   adam_levels: codelists` (the default) `study$adam` gets the levels of
+#'   the code lists it maps to each dataset's variables, and of those only
+#'   ([tfl_study_setup_code()]); a value that reads as yes or no in YAML (`Y`,
+#'   `N`) is written in quotes.
 #'
 #' @param dir The study folder (holds `study.yml` and `spec/`).
 #' @param skip_bad `TRUE` to leave out a report file that cannot be read, with a
 #'   warning naming it (`tfl_read_outputs()`); `FALSE` (default) to stop there.
 #' @return `tfl_read_study_spec()`: a list of class `tfl_study_spec` --
 #'   `study` (`study.yml`, its `tokens:` the study's tokens), `data`,
-#'   `defaults`, `styles` (by name: `defaults.yml`'s `styles:`, the page
+#'   `defaults`, `codelists` (the study's code lists by name, each a
+#'   character vector of the codes in order, named by the code when the list
+#'   has labels: `c(F = "Female", M = "Male")`), `adam_meta` (a
+#'   `tfl_define`, its tables empty when `defaults.yml` has no `adam_meta:`),
+#'   `styles` (by name: `defaults.yml`'s `styles:`, the page
 #'   configurations a report picks with `style:`; a set holds `page` and
 #'   `content` only, its page keys a closed list, and may not take the name
 #'   of a built-in one), `figure_style`
@@ -77,7 +103,7 @@ tfl_read_study_spec <- function(dir) {
     stop("tfl_read_study_spec(): defaults.yml styles: ", .page_builtin_note(reserved[1L]), call. = FALSE)
   }
   if (file.exists(file.path(spec, "codelists.yml"))) {
-    message("spec/codelists.yml is not read: a code list is a report's or a layer's ",
+    message("spec/codelists.yml is not read: a code list is the study's or a report's ",
             "(`codelists:` in spec/defaults.yml or the report's file).")
   }
   # a study defines reports, not templates (a report's own args and cards
@@ -91,7 +117,11 @@ tfl_read_study_spec <- function(dir) {
   structure(list(
     study = study,
     data = .calls_in(rd(file.path(spec, "data.yml")) %||% list()),
-    defaults = .layer_from_list(dflt, "defaults"),
+    # (the study's code lists are not a layer's: a report refers to them by
+    # name, study$codelists, and none reaches it through extends:)
+    defaults = .layer_from_list(dflt[setdiff(names(dflt), c("codelists", "adam_meta"))], "defaults"),
+    codelists = .study_codelists_read(dflt$codelists),
+    adam_meta = .adam_meta_read(dflt$adam_meta, "defaults.yml"),
     styles = stats::setNames(lapply(names(styles), function(nm)
       .style_set_from_list(styles[[nm]], nm)), names(styles)),
     patterns = patterns,
