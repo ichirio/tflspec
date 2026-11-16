@@ -11,10 +11,35 @@
 # treatment palette, the theme's terms (pp_theme_lines()), the km censor
 # mark, the common ADaM subgroup labels (.forest_sub_labels()).
 
-# The registry: the name a template's `figure:` gives -> its function.
-# A later figure adds its entry here.
+# The registry, one table: the name a template's `figure:` gives -> its
+# function, and what a report's program calls it with (tfl_content_code()
+# writes that call).  A later figure adds its entry here.
+#   fn      the exported function's name
+#   model   the model object the function's first argument takes: its name in
+#           the program and the call that makes it, with the template's
+#           arguments in {braces} (NULL: the function takes the ARD only)
+#   params  the template's arguments that go into the function's `params`
+.fig_content_table <- function() {
+  list(
+    km_curves = list(
+      fn = "km_curves",
+      model = list(
+        arg = "km_fit",
+        call = paste0("ggsurvfit::survfit2(ggsurvfit::Surv_CNSR({time}, {censor}) ~ {by}, ",
+                      "data = adtte_sub)")),
+      params = c("time_unit", "x_label", "y_label", "legend")),
+    forest_hr = list(
+      fn = "forest_hr",
+      model = NULL,
+      params = c("comparison", "subgroup_labels", "favours", "x_breaks", "size_by_n",
+                 "bold_headings", "n_by_arm")))
+}
+
+# The registry's functions by name
 .fig_content_fns <- function() {
-  list(km_curves = km_curves, forest_hr = forest_hr)
+  tb <- .fig_content_table()
+  stats::setNames(lapply(tb, function(e) get(e$fn, envir = asNamespace("tflspec"), mode = "function")),
+                  names(tb))
 }
 
 #' The figure content function a template names
