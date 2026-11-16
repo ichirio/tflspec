@@ -1026,7 +1026,6 @@ back): rename the value or choose another separator.
 `tfl_sankey_data` `tfl_plot_sunburst` `tfl_sunburst_data`
 
 **Data:** `tfl_read_adam` `tfl_example_adam`
-`tfl_series_dir` `tfl_series_read` `tfl_pin_series` `tfl_series_check_lock`
 
 **Review:** `tfl_review_spec` `tfl_review_rules` `tfl_review_templates`
 `tfl_data_facts` `tfl_ard_facts`
