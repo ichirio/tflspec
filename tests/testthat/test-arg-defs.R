@@ -18,6 +18,7 @@ test_that("the data row's and the analysis item's keys are defined", {
   expect_true(all(c("id", "type", "method", "data", "params", "conditions", "derive",
                     "levels", "ards", "analysis_ids", "when") %in% a$name))
   cc <- a$columns[[which(a$name == "conditions")]]
+  expect_identical(cc[[1L]], "params")
   expect_identical(cc$where$input, "condition")
   expect_false(cc$analysis_id$required)
   expect_true(a$free[a$name == "formats"])

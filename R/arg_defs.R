@@ -256,7 +256,7 @@
                   description = "The columns of the conditions table, in order."),
     conditions = list(type = "rows<map<string,string|r>>", input = "table",
                       # (the item's params are the columns; these two have their own form)
-                      columns = list(where = list(type = "r", input = "condition"),
+                      columns = list("params", where = list(type = "r", input = "condition"),
                                      analysis_id = list(type = "string", input = "text",
                                                         required = FALSE)),
                       tier = "other",
@@ -373,8 +373,9 @@
 #'     \item{ordered}{a pick of several whose order matters.}
 #'     \item{columns}{(a list column) a table's columns, defined the same way;
 #'       `"params"` for a template's conditions table (its columns are the item's
-#'       `params:`); an item's conditions: `where` and an optional `analysis_id`
-#'       defined, the other columns the item's params.}
+#'       `params:`); in a list, an unnamed `"params"` marks where the item's
+#'       params go (an item's conditions: `"params"`, `where`, an optional
+#'       `analysis_id`).}
 #'     \item{tier}{`required`, `usual` or `other` (shown folded).}
 #'     \item{description}{one line.}
 #'   }

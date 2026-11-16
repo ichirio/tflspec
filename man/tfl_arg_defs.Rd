@@ -43,8 +43,9 @@ the closed words \verb{vars(<data>)}, \verb{levels(<var>)}, \verb{codelist(<name
 \item{ordered}{a pick of several whose order matters.}
 \item{columns}{(a list column) a table's columns, defined the same way;
 \code{"params"} for a template's conditions table (its columns are the item's
-\verb{params:}); an item's conditions: \code{where} and an optional \code{analysis_id}
-defined, the other columns the item's params.}
+\verb{params:}); in a list, an unnamed \code{"params"} marks where the item's
+params go (an item's conditions: \code{"params"}, \code{where}, an optional
+\code{analysis_id}).}
 \item{tier}{\code{required}, \code{usual} or \code{other} (shown folded).}
 \item{description}{one line.}
 }
