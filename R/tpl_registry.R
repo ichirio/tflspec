@@ -2733,7 +2733,8 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
         cells = stats::setNames(list("{n} ({estimate:.1f%})", "[{conf.low:.1f%}, {conf.high:.1f%}]"),
                                 c("n (%)", ci_lab))), ctx, others = "n (%)", header = FALSE, levels = TRUE))
       fn <- vapply(blk, `[[`, "", "fn")
-      blk[[match("plan_cells", fn)]]$args$categorical <- "{n} ({p:.1f%})"
+      blk[[match("plan_cells", fn)]]$args$categorical <- list(tfl_r("n == 0 ~ \"0\""), "{n} ({p:.1f%})")
+      blk[[match("plan_cells", fn)]]$args$na <- "-"
       # (the rate's row: its block's heading says it, its level is no label;
       # the arm's N over its two columns, rtfreporter#709)
       content <- c(blk, list(levels_item, labels_item,

@@ -59,6 +59,7 @@ Suggests:
     parameters,
     patchwork,
     pdftools,
+    purrr (>= 1.0.0),
     rstudioapi,
     scales,
     siera (>= 0.5.6),

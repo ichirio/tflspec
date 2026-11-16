@@ -492,7 +492,7 @@ tfl_ai_study_init <- function(dir, adam = "adam", study_id = "STUDY-01", title =
     "# (extends: [defaults]).",
     "content:",
     "  - normalize_ard: {}",
-    "  - plan_cells: {categorical: \"{n} ({p:.1f%})\"}",
+    "  - plan_cells: {categorical: [!r \"n == 0 ~ '0'\", \"{n} ({p:.1f%})\"], na: \"-\"}",
     "  - plan_stub: {name: row_label, heading: \"\", before: true}",
     "  - plan_blanks: {where: between_groups}",
     "# the study's page configuration (study.yml settings: style); the first lines",

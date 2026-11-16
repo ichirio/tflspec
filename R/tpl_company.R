@@ -556,7 +556,7 @@ tfl_use_company_templates <- function(path, package = basename(path),
     "# header, the label column, the blank rows, the widths, the style).",
     "content:",
     "  - normalize_ard: {}",
-    "  - plan_cells: {default: \"{n:.0f} ({p:.1f%})\"}",
+    "  - plan_cells: {default: [!r \"n == 0 ~ '0'\", \"{n:.0f} ({p:.1f%})\"], na: \"-\"}",
     "  - plan_digits: {rounding: sas}",
     "  - plan_stub: {name: row_label, heading: \"\", before: true}",
     "  - plan_blanks: {where: between_groups, first: true, last: true}"))

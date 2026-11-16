@@ -99,9 +99,7 @@ test_that("first to last: the report's argument, the study's default, the varian
             d, recursive = TRUE)
   f <- file.path(d, "defaults.yml")
   y <- readLines(f)
-  y <- sub("- plan_cells: {categorical: \"{n:.0f} ({p:.1f%})\"}",
-           "- plan_cells: {categorical: \"{n:.0f} ({p:.1f%})\", continuous: {n: \"{N:.0f}\"}}",
-           y, fixed = TRUE)
+  y <- sub("na: \"-\"}", "na: \"-\", continuous: {n: \"{N:.0f}\"}}", y, fixed = TRUE)
   writeLines(y, f)
   s <- tfl_read_study_spec(d)
   vc <- list(n = "{N:.0f}", Mean = "{mean:.2f}")

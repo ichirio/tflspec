@@ -329,7 +329,7 @@ test_that("the study standard reaches demog through its references; other verbs 
   expect_setequal(tp$study, c("population", "count_cell", "col_header", "stub_name", "stub_before", "blanks",
                               "blanks_first", "blanks_last", "blanks_counted", "border_header"))
   expect_identical(tp$args$blanks, "between_groups")
-  expect_identical(tp$args$count_cell, "{n:.0f} ({p:.1f%})")
+  expect_identical(vapply(tp$args$count_cell, as.character, ""), c("n == 0 ~ '0'", "{n:.0f} ({p:.1f%})"))
   expect_identical(tp$args$stub_name, "row_label")
   expect_identical(tp$args$col_header[[2L]]$row_label, "Characteristic")
   fns <- vapply(r$content, `[[`, "", "fn")

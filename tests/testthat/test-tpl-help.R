@@ -77,7 +77,8 @@ test_that("tfl_tpl_args(): the study standard's values, layer study: <key>", {
   a <- tfl_tpl_args("demog", study = s)
   r <- function(nm) a[a$param == nm, , drop = FALSE]
   # the sample study's plan_cells(categorical = )
-  expect_identical(r("count_cell")$effective, "{n:.0f} ({p:.1f%})")
+  # (a guard list, shown as its parts joined)
+  expect_identical(r("count_cell")$effective, "n == 0 ~ '0'; {n:.0f} ({p:.1f%})")
   expect_identical(r("count_cell")$layer, "study: plan_cells.categorical")
   # (the look reaches the template through a reference only: plan_stub.name)
   expect_identical(r("stub_name")$effective, "row_label")

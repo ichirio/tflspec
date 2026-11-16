@@ -146,7 +146,7 @@ test_that("orr(stat_layout = \"cols\"): each arm's rate and CI side by side, the
   expect_identical(t[["Drug X____90% CI"]][last], "[30.0, 48.7]")
   # the counts by their own cell, no CI beside them
   expect_identical(t[["Drug X____n (%)"]][1:(last - 1L)], c("2 (2.4)", "3 (3.7)", "7 (8.5)", "30 (36.6)", "40 (48.8)"))
-  expect_true(all(is.na(t[["Drug X____90% CI"]][1:(last - 1L)])))
+  expect_true(all(t[["Drug X____90% CI"]][1:(last - 1L)] == "-"))
   # the arm's N over its two columns (rtfreporter#709)
   p <- suppressMessages(tfl_content_run(tfl_resolve_output(tfl_read_output(f), st), ard))
   g <- tempfile(fileext = ".rtf")
