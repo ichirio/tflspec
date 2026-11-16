@@ -794,7 +794,33 @@ tfl_write_output <- function(x, path) {
       ard[[part]] <- lapply(ard[[part]], .seqs_out, .seq_keys[[part]])
     }
   }
+  # an item's condition rows (a data frame, as tfl_template_resolve() gives
+  # them) a list of maps, `where` an R condition; its calls' keys sequences
+  if (is.list(ard$analyses) && is.null(names(ard$analyses))) {
+    ard$analyses <- lapply(ard$analyses, function(a) {
+      if (!is.list(a)) return(a)
+      if (is.data.frame(a$conditions)) a$conditions <- .cond_df_out(a$conditions)
+      if (is.list(a$ards)) a$ards <- lapply(a$ards, .seqs_out, .seq_keys$analyses)
+      a
+    })
+  }
   ard
+}
+
+# condition rows as YAML's list of maps: a missing cell no key, a cell of
+# several values a sequence, `where` an R condition (!r)
+.cond_df_out <- function(cd) {
+  lapply(seq_len(nrow(cd)), function(k) {
+    m <- list()
+    for (p in names(cd)) {
+      v <- cd[[p]][[k]]
+      if (inherits(v, "tfl_r")) { m[[p]] <- v; next }
+      v <- unlist(v)
+      if (!length(v) || (length(v) == 1L && (is.na(v) || !nzchar(trimws(v))))) next
+      m[[p]] <- if (p == "where") tfl_r(as.character(v)) else if (length(v) > 1L) as.list(v) else v
+    }
+    m
+  })
 }
 
 # content items as they are written: `- fn: {args}`

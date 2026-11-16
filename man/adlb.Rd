@@ -15,6 +15,10 @@ with the subject keys (as in \link{adex}) and
 \item{ANRLO, ANRHI, ANRIND, BNRIND}{normal range and indicator (and at
 baseline)}
 \item{ATOXGR, BTOXGR}{CTCAE grade (and at baseline)}
+\item{ATOXGRL, ATOXGRH, BTOXGRL, BTOXGRH}{the grade in each direction,
+low and high (and at baseline), fictional: ALT, AST and bilirubin
+graded high, haemoglobin, neutrophils and platelets low, \code{NA} in the
+other direction}
 \item{ABLFL, ONTRTFL}{baseline and on-treatment record flags}
 }
 }

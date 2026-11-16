@@ -16,6 +16,20 @@
 # reductions follow grade >= 3 adverse events.  Base R only; seeded (the
 # caller's random number state is left as it was).
 
+# The grade in each direction (fictional, for a shift table by direction):
+# ALT, AST and bilirubin are graded high, haemoglobin, neutrophils and
+# platelets low; a test has no grade in the other direction (NA).
+adlb_tox_dirs <- function(adlb) {
+  high <- adlb$PARAMCD %in% c("ALT", "AST", "BILI")
+  low <- adlb$PARAMCD %in% c("HGB", "NEUT", "PLAT")
+  na <- NA_character_
+  adlb$ATOXGRL <- ifelse(low, adlb$ATOXGR, na)
+  adlb$ATOXGRH <- ifelse(high, adlb$ATOXGR, na)
+  adlb$BTOXGRL <- ifelse(low, adlb$BTOXGR, na)
+  adlb$BTOXGRH <- ifelse(high, adlb$BTOXGR, na)
+  adlb
+}
+
 gen_onco <- function(n = 160, seed = 20261016, dco = as.Date("2026-06-30")) {
   rng <- ".Random.seed"
   if (exists(rng, envir = globalenv(), inherits = FALSE)) {
@@ -371,6 +385,7 @@ gen_onco <- function(n = 160, seed = 20261016, dco = as.Date("2026-06-30")) {
   )
   adlb$CHG <- ifelse(bl, NA_real_, round(adlb$AVAL - adlb$BASE, lb_par$digits[p]))
   adlb$PCHG <- ifelse(bl, NA_real_, round(100 * (adlb$AVAL - adlb$BASE) / adlb$BASE, 1))
+  adlb <- adlb_tox_dirs(adlb)
 
   vs <- rbind_all(vs)
   vs_par <- c(WEIGHT = "Weight (kg)", SYSBP = "Systolic Blood Pressure (mmHg)",
@@ -623,7 +638,9 @@ gen_onco <- function(n = 160, seed = 20261016, dco = as.Date("2026-06-30")) {
     ANL01FL = "Analysis Flag 01", ANRLO = "Analysis Normal Range Lower Limit",
     ANRHI = "Analysis Normal Range Upper Limit", ANRIND = "Analysis Reference Range Indicator",
     BNRIND = "Baseline Reference Range Indicator", ATOXGR = "Analysis Toxicity Grade",
-    BTOXGR = "Baseline Toxicity Grade", EXPLDOS = "Planned Dose (mg)", EXDOSRFL = "Dose Reduced Flag",
+    BTOXGR = "Baseline Toxicity Grade", ATOXGRL = "Analysis Toxicity Grade Low",
+    ATOXGRH = "Analysis Toxicity Grade High", BTOXGRL = "Baseline Toxicity Grade Low",
+    BTOXGRH = "Baseline Toxicity Grade High", EXPLDOS = "Planned Dose (mg)", EXDOSRFL = "Dose Reduced Flag",
     ASTDT = "Analysis Start Date", AENDT = "Analysis End Date", ASTDY = "Analysis Start Relative Day",
     AENDY = "Analysis End Relative Day", AESEQ = "Sequence Number", AETERM = "Reported Term for the Adverse Event",
     AEDECOD = "Dictionary-Derived Term", AEBODSYS = "Body System or Organ Class",
