@@ -258,6 +258,15 @@ reference:
       - tfl_template_run
       - tfl_test_templates
       - tfl_use_company_templates
+  - title: Template SPEC, series
+    desc: >
+      A series is a versioned folder of template SPECs (`tflspec_v1`, ...)
+      with its common values in `series.yml`.  A study changes them in
+      `study.yml` `series_settings:` and pins the files its reports use in
+      `spec/series.lock`.
+    contents:
+      - tfl_series_dir
+      - tfl_pin_series
   - title: Template SPEC, a template's help
     desc: >
       A template's parameters by tier (required, usual, other): the value
@@ -308,6 +317,14 @@ reference:
       - tfl_fig_compat
       - tfl_fig_data_name
       - tfl_r
+  - subtitle: Figure content functions
+    desc: >
+      The ggplot a figure template names in its `figure:` key, drawn from
+      what the template's analysis makes (a model, the ARD).
+    contents:
+      - tfl_figure_fn
+      - km_curves
+      - forest_hr
   - subtitle: Figure style
     desc: Every look-and-feel value of a study's figures, in one place.
     contents:

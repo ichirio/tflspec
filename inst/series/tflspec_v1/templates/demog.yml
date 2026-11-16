@@ -1,0 +1,157 @@
+# tflspec_v1/templates/demog.yml
+template: demog
+label: Demographics
+params:
+  by:
+    type: list<column>
+    input: pick
+    choices: vars(adsl_sub)
+    required: true
+    step: analysis
+    tier: required
+    description: The column variable(s); the groups across.
+  continuous:
+    type: list<column>
+    input: pick
+    choices: vars(adsl_sub)
+    ordered: true
+    step: analysis
+    tier: usual
+    description: The continuous variables, in the order of the rows (this or categorical).
+  categorical:
+    type: list<column>
+    input: pick
+    choices: vars(adsl_sub)
+    ordered: true
+    step: analysis
+    tier: usual
+    description: The categorical variables, in the order of the rows (this or continuous).
+  total:
+    type: logical
+    input: pick
+    choices: fixed
+    default: !series total
+    step: analysis
+    tier: usual
+    description: A Total column from the overall rows.
+  missing_row:
+    type: logical
+    input: pick
+    choices: fixed
+    default: true
+    step: analysis
+    tier: usual
+    description: A row for the missing values of a categorical variable.
+  missing_label:
+    type: string
+    input: text
+    default: !series missing_label
+    step: analysis
+    tier: other
+    description: The label of the missing row.
+  denominator:
+    type: string
+    input: pick
+    choices: report_data
+    default: adsl_sub
+    step: analysis
+    tier: usual
+    description: The data row whose subjects are the group Ns (BIGN) and the
+      percentages' denominator; both come from the one BIGN item.
+  analysis_ids:
+    type: map<column,string>
+    input: table
+    choices: vars(adsl_sub)
+    default: ~
+    step: analysis
+    tier: other
+    description: An analysis id for each variable; empty for the variable's name.
+  formats:
+    type: map<string,number|string>
+    input: table
+    choices: stats
+    free: true
+    default: !series formats
+    step: analysis
+    tier: usual
+    description: The decimals (or the format) of each statistic; VAR:stat for one variable.
+  labels:
+    type: map<column,string>
+    input: table
+    choices: vars(adsl_sub)
+    default: ~
+    step: content
+    tier: usual
+    description: The row label of each variable; empty for the variable's label.
+  cells:
+    type: map<string,string>
+    input: table
+    ordered: true
+    default:
+      n: "{N}"
+      Mean (SD): "{mean} ({sd})"
+      Median: "{median}"
+      Min, Max: "{min}, {max}"
+    step: content
+    tier: usual
+    description: The rows of a continuous variable, label to cell template, in order.
+  count_cell:
+    type: string
+    input: text
+    default: !series count_cell
+    step: content
+    tier: usual
+    description: The cell template of a categorical count.
+  max_rows:
+    type: number
+    input: text
+    default: !series max_rows
+    step: content
+    tier: other
+    description: The most rows a page holds.
+extends: !series extends
+style: !series style
+data:
+  - id: adsl_sub
+    from: ADSL
+    population: !series population_safety
+analysis:
+  - id: BIGN
+    label: Subjects per group
+    method: categorical
+    data: "{denominator}"
+    variables: ["{by}"]
+    formats: "{formats}"
+  - id: CONT
+    analyses: {per: variable, ids: "{analysis_ids}"}
+    label: Continuous
+    method: continuous
+    data: adsl_sub
+    by: ["{by}"]
+    overall: "{total}"
+    variables: "{continuous}"
+    statistics: [N, mean, sd, median, min, max]
+    formats: "{formats}"
+  - id: CAT
+    analyses: {per: variable, ids: "{analysis_ids}"}
+    label: Categorical
+    method: categorical
+    data: adsl_sub
+    by: ["{by}"]
+    overall: "{total}"
+    variables: "{categorical}"
+    statistics: [n, p]
+    denominator: BIGN
+    missing_row: "{missing_row}"
+    missing_label: "{missing_label}"
+    formats: "{formats}"
+content:
+  - table_plan: {cols: "{by}", rows: {group: variable}}
+  - plan_labels: "{labels}"
+  - plan_cells:
+      continuous: "{cells}"
+      categorical: "{count_cell}"
+  - plan_paginate_rows: {max_rows: "{max_rows}", split: group_safe}
+page:
+  titles: ~
+  footnotes: ~
