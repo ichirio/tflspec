@@ -11,12 +11,16 @@ test_that("the data row's and the analysis item's keys are defined", {
   d <- tfl_arg_defs(fn = "data")
   expect_identical(names(d), cols)
   expect_true(all(c("id", "from", "population", "subjects_in", "add", "where", "derive",
-                    "keep", "distinct", "arrange", "then", "code", "when") %in% d$name))
+                    "keep", "distinct", "arrange", "then", "code") %in% d$name))
+
+  expect_false("when" %in% d$name)
   expect_true(all(d$step == "data"))
   expect_identical(d$input[d$name == "where"], "condition")
   a <- tfl_arg_defs(fn = "analysis")
   expect_true(all(c("id", "type", "method", "data", "params", "conditions", "derive",
-                    "levels", "ards", "analysis_ids", "when") %in% a$name))
+                    "levels", "ards", "analysis_ids") %in% a$name))
+
+  expect_false("when" %in% a$name)
   cc <- a$columns[[which(a$name == "conditions")]]
   expect_identical(cc[[1L]], "params")
   expect_identical(cc$where$input, "condition")
@@ -43,12 +47,10 @@ test_that("generic defs name another argument with from_args(), a plain vars() i
   ch <- function(x, n) x$choices[[which(x$name == n)]]
   expect_identical(ch(d, "where"), "vars(from_args(from))")
   expect_identical(ch(d, "add"), "vars(from_args(subjects_in))")
-  expect_identical(ch(d, "when"), "from_args(params)")
   expect_identical(ch(d, "subjects_in"), c("report_data", "fixed"))
   expect_identical(d$values[[which(d$name == "subjects_in")]], "none")
   a <- tfl_arg_defs(fn = "analysis")
   expect_identical(ch(a, "variables"), "vars(from_args(data))")
-  expect_identical(ch(a, "when"), "from_args(params)")
   expect_silent(.arg_check_choices("vars(from_args(from))", "x"))
   expect_error(.arg_check_choices("vars(report_data(from))", "x"), "vars\\(\\) takes")
 })
@@ -72,10 +74,10 @@ test_that("the paginate functions are the page step, other stages stay content",
   expect_true(all(tfl_arg_defs(fn = "plan_blanks")$step == "content"))
 })
 
-test_that("an r argument is a text box, a condition only for where / when", {
+test_that("an r argument is a text box, a condition only for where", {
   expect_identical(.arg_input_for_type("r", "code"), "text")
   expect_identical(.arg_input_for_type("r", "where"), "condition")
-  expect_identical(.arg_input_for_type("r", "when"), "condition")
+  expect_identical(.arg_input_for_type("r", "when"), "text")
   expect_identical(.arg_input_for_type("r"), "text")
 })
 

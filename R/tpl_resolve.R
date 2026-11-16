@@ -33,8 +33,7 @@
 #' one analysis, the item's id.  An item's `conditions:` is a data frame,
 #' one row a run, its columns the item's `params` (and `analysis_id`, a
 #' row's own id, when a row gives one): the template's rows first, then the
-#' report's (`"{conditions}"`).  An item or data row whose `when:` names an
-#' argument with no value (or `false`) is left out.
+#' report's (`"{conditions}"`).
 #'
 #' @param report A report SPEC (a list, as read) or its file.
 #' @param template A template, `"<series>/<template>"`; default the report's
@@ -93,9 +92,9 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
          " (required: the report gives no value and the template no default).", call. = FALSE)
   }
 
-  # data: rows -- the template's (those its when: keeps), the report's merged
-  # in by id key by key, then filled in
-  rows <- Filter(function(r) .tr_when(r, env, template), tpl$data %||% list())
+  # data: rows -- the template's, the report's merged in by id key by key,
+  # then filled in
+  rows <- tpl$data %||% list()
   for (r in report$data %||% list()) {
     k <- match(r$id %||% NA_character_, vapply(rows, function(e) e$id %||% NA_character_, ""))
     if (is.na(k)) {
@@ -105,17 +104,31 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
     }
   }
   rows <- lapply(rows, function(r) {
-    r$when <- NULL
     r <- .tr_fill(r, env)
+    # (the templates' subjects_in: the code SPEC's subjects, until it is
+    # renamed there)
+    if (!is.null(r$subjects_in)) {
+      r$subjects <- r$subjects_in
+      r$subjects_in <- NULL
+    }
     r[!vapply(r, function(v) inherits(v, "tfl_unset"), NA)]
   })
   rows <- lapply(rows, .derive_map_in)
 
   items <- list()
   for (it in tpl$analysis %||% list()) {
-    if (!.tr_when(it, env, template)) next
     items <- c(items, .tr_item(it, env, template))
   }
+  # a denominator that is an item (BIGN, canon 23a41ff): that item's data
+  ids <- vapply(items, function(a) a$id %||% NA_character_, "")
+  for (i in seq_along(items)) {
+    dn <- items[[i]]$denominator
+    if (is.character(dn) && length(dn) == 1L && dn %in% ids) {
+      items[[i]]$denominator <- items[[match(dn, ids)]]$data
+    }
+  }
+  # a figure's analyses read the report's data rows as their analysis data
+  kind <- report$kind %||% tpl$kind %||% "table"
 
   content <- .tr_fill(tpl$content %||% list(), env)
   if (is.list(report$content)) content <- c(content, report$content)
@@ -126,7 +139,8 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
             label = report$label %||% tpl$label, common = report$common,
             extends = report$extends %||% tpl$extends, style = report$style %||% tpl$style,
             figure = tpl$figure, data = rows,
-            ard = if (length(items)) list(analyses = items),
+            ard = if (length(items)) c(if (identical(kind, "figure")) list(analysis_data = rows),
+                                       list(analyses = items)),
             codelists = report$codelists, content = content, page = page)
   y <- y[!vapply(y, is.null, NA)]
   out <- .output_from_list(y)
@@ -175,36 +189,12 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   out
 }
 
-# Is a row or item kept?  `when:` names an argument: kept when it has a
-# value and is not false; an R condition or a logical as it is
-.tr_when <- function(x, env, template) {
-  w <- x$when
-  if (is.null(w)) return(TRUE)
-  if (is.logical(w)) return(isTRUE(w))
-  if (inherits(w, "tfl_r")) {
-    w <- .tr_text(as.character(w), env)
-    if (w %in% c("TRUE", "FALSE")) return(identical(w, "TRUE"))
-    stop("template ", template, ": when: ", w, " is not TRUE or FALSE once filled in.", call. = FALSE)
-  }
-  nm <- sub("^\\{(.*)\\}$", "\\1", trimws(as.character(w)[1L]))
-  neg <- startsWith(nm, "!")
-  nm <- sub("^!", "", nm)
-  if (!nm %in% names(env)) {
-    stop("template ", template, ": when: ", nm, " is not one of its arguments.", call. = FALSE)
-  }
-  v <- env[[nm]]
-  has <- !is.null(v) && length(v) > 0L && !identical(v, FALSE) && !inherits(v, "tfl_unset") &&
-    !(is.character(v) && !any(nzchar(v)))
-  if (neg) !has else has
-}
-
 # One analysis item as its analyses (canon fc7bd00).  `analyses: {per, ids}`:
 #   per: variable   an analysis a variable, its id ids[var] else the variable
 #   per: level      one row, analysis_per "level" (the generator's ids a level)
 #   per: [cols]     one row, analysis_per the columns |-joined (an id a value)
 #   no per          one analysis, the item's id
 .tr_item <- function(it, env, template) {
-  it$when <- NULL
   shadow <- as.character(unlist(it$params))
   cond <- it$conditions
   it$conditions <- NULL
