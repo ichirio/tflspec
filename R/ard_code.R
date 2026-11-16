@@ -759,6 +759,10 @@
       return(paste0(to, .lay(.cl(s1$fn, c(list(src), s1$args)), lead = nchar(to))))
     }
     s <- steps[[1L]]
+    # (a step that is not a plain call, f(...): piped as it is)
+    if (!grepl("^[A-Za-z.][A-Za-z0-9._:]*\\(.*\\)$", s)) {
+      return(sprintf("%s <- %s |> %s", obj, src, s))
+    }
     inner <- sub("^[^(]*\\((.*)\\)$", "\\1", s)
     fn <- sub("\\(.*$", "", s)
     return(sprintf("%s <- %s(%s%s)", obj, fn, src, if (nzchar(inner)) paste0(", ", inner) else ""))

@@ -364,3 +364,58 @@ test_that("asked twice, the fingerprint, the analysis data sheet and the code li
   expect_identical(.codelist_levels(cl, "T1"), lv)
   expect_error(.codelist_levels(bad, "T1"), "output_id")
 })
+
+test_that("then: R piped onto the end of a data after its keys; read as R; not with code", {
+  d <- ad_rows()
+  d$then <- c(NA, NA, "dplyr::arrange(USUBJID) |> dplyr::slice_head(n = 1, by = USUBJID)", NA)
+  x <- ad_spec(d, an_rows())
+  code <- tfl_ard_code(x, output_id = "T1", save = FALSE, part = "body")
+  i <- grep("^adae_ser <- adae_teae", code)
+  expect_length(i, 1L)
+  # after the row's own steps, a step each, as written
+  at <- vapply(c("AESER == \"Y\"", "SER = 1", "arrange(USUBJID)", "slice_head(n = 1, by = USUBJID)"),
+               function(s) regexpr(s, code[i], fixed = TRUE)[[1L]], 1L)
+  expect_true(all(at > 0L))
+  expect_false(is.unsorted(at))
+  expect_match(code[i], "arrange\\(USUBJID\\) \\|>\n  (dplyr::)?slice_head\\(")
+  # a row of only a then: its one step piped onto the data it is made from
+  d1 <- ad_rows()
+  d1$where[3L] <- NA
+  d1$derive[3L] <- NA
+  d1$then <- c(NA, NA, "(\\(z) z[z$AESER == \"Y\", ])()", NA)
+  code1 <- tfl_ard_code(ad_spec(d1, an_rows()), output_id = "T1", save = FALSE, part = "body")
+  expect_true(any(grepl("^adae_ser <- adae_teae \\|> \\(", code1)))
+  # checked: R, and not with code (code makes the whole data)
+  bad <- d
+  bad$then[3L] <- "dplyr::filter("
+  expect_error(ad_spec(bad, an_rows()), "`then` does not read as R", fixed = TRUE)
+  bad <- d
+  bad$where[3L] <- NA
+  bad$derive[3L] <- NA
+  bad$code <- c(NA, NA, "adae_teae", NA)
+  expect_error(ad_spec(bad, an_rows()), "`code` makes the data itself; `then`", fixed = TRUE)
+  # a then blank in every row keeps the fingerprint; a then counts
+  plain <- ad_spec(ad_rows(), an_rows())
+  blank <- ad_rows()
+  blank$then <- NA_character_
+  expect_identical(tfl_ard_spec_hash(ad_spec(blank, an_rows()), "T1"), tfl_ard_spec_hash(plain, "T1"))
+  expect_false(identical(tfl_ard_spec_hash(x, "T1"), tfl_ard_spec_hash(plain, "T1")))
+
+  skip_if_not_installed("cards")
+  skip_if_not_installed("dplyr", "1.1.0")
+  dir <- tempfile("then-ard")
+  dir.create(dir)
+  on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+  saveRDS(cards::ADSL, file.path(dir, "adsl.rds"))
+  saveRDS(cards::ADAE, file.path(dir, "adae.rds"))
+  a <- tfl_build_ard(x, dir = dir, output_id = "T1", save = FALSE)
+  # SER counts a record a subject now: its n the subjects with a serious AE
+  ser <- a[a$analysis_id == "SER" & a$stat_name == "n", ]
+  adae <- cards::ADAE
+  adsl <- cards::ADSL
+  teae <- adae[adae$TRTEMFL == "Y" & adae$USUBJID %in% adsl$USUBJID[adsl$SAFFL == "Y"], ]
+  first <- teae[teae$AESER == "Y", ]
+  first <- first[order(first$USUBJID), ]
+  first <- first[!duplicated(first$USUBJID) & first$AESEV == "SEVERE", ]
+  expect_identical(sum(as.integer(unlist(ser$stat))), nrow(first))
+})

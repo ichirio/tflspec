@@ -33,7 +33,10 @@ adlb
 Six laboratory parameters of the simulated study XYZ-ONC-01 (see
 \link{adsl}) on day 1 of each cycle (cycle 1 is the baseline): ALT, AST,
 bilirubin, haemoglobin, neutrophils, platelets, with normal ranges and
-CTCAE grades for shift tables.
+CTCAE grades for shift tables.  Each subject's worst post-baseline record
+of a parameter is a row of its own as well, \code{AVISIT}
+\code{"WORST POST-BASELINE"} (\code{AVISITN} 99): a copy of the record with the
+highest grade (the earliest of equal grades), \code{ONTRTFL} blank.
 }
 \seealso{
 Other oncology sample data:

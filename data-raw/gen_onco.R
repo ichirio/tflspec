@@ -30,6 +30,28 @@ adlb_tox_dirs <- function(adlb) {
   adlb
 }
 
+# Each subject's worst post-baseline record of a test, as an ADaM holds it:
+# a row of its own, AVISIT "WORST POST-BASELINE" (AVISITN 99), a copy of
+# the post-baseline record with the highest grade (the earliest of equal
+# grades), after that test's visits.  A test is graded in one direction
+# (ATOXGRL or ATOXGRH, the other NA), so the one row a subject and test is
+# the worst of that direction.  It is no visit of its own: ONTRTFL blank,
+# so the on-treatment records stay as they were.  No random numbers.
+adlb_worst <- function(adlb) {
+  post <- which(adlb$ABLFL != "Y")
+  key <- paste(adlb$lb_i[post], adlb$PARAMCD[post])
+  o <- order(match(key, unique(key)), -as.integer(adlb$ATOXGR[post]), adlb$AVISITN[post])
+  w <- adlb[post[o][!duplicated(key[o])], , drop = FALSE]
+  w$AVISIT <- "WORST POST-BASELINE"
+  w$AVISITN <- 99
+  w$ONTRTFL <- ""
+  out <- rbind(adlb, w)
+  k <- paste(out$lb_i, out$PARAMCD)
+  out <- out[order(match(k, unique(k)), out$AVISITN), , drop = FALSE]
+  rownames(out) <- NULL
+  out
+}
+
 gen_onco <- function(n = 160, seed = 20261016, dco = as.Date("2026-06-30")) {
   rng <- ".Random.seed"
   if (exists(rng, envir = globalenv(), inherits = FALSE)) {
@@ -385,7 +407,7 @@ gen_onco <- function(n = 160, seed = 20261016, dco = as.Date("2026-06-30")) {
   )
   adlb$CHG <- ifelse(bl, NA_real_, round(adlb$AVAL - adlb$BASE, lb_par$digits[p]))
   adlb$PCHG <- ifelse(bl, NA_real_, round(100 * (adlb$AVAL - adlb$BASE) / adlb$BASE, 1))
-  adlb <- adlb_tox_dirs(adlb)
+  adlb <- adlb_worst(adlb_tox_dirs(adlb))
 
   vs <- rbind_all(vs)
   vs_par <- c(WEIGHT = "Weight (kg)", SYSBP = "Systolic Blood Pressure (mmHg)",

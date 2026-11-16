@@ -14,12 +14,26 @@
   is.list(t) && is.character(t$name) && length(t$name) == 1L && !.fig_preset_named(t)
 }
 
+# A report on a series template (`<series>/<template>`) as its code SPEC:
+# what tfl_template_resolve() makes of it with the study's study.yml values,
+# a plain report from there (none of the old registry's template marks);
+# any other report as it is.  The old registry knows no series name.
+.series_as_code <- function(output, study) {
+  ts <- .tpl_spec_of(output)
+  if (is.null(ts) || !grepl("/", ts$name, fixed = TRUE)) return(output)
+  out <- tfl_template_resolve(.output_to_list(output), study = study$study %||% list())
+  attr(out, "template") <- attr(out, "args") <- attr(out, "origins") <- NULL
+  out
+}
+
 # The layers below a report.  A template with an `extends` in its set:
 # the style its `style` parameter resolves to first (.tpl_style_first()),
 # over the files each step of the report's `extends` names; any other
 # report (a template not yet migrated too): its own `style:` field.
 # `style_name` and `style_route` say which style and where it came from.
 .tpl_layers_below <- function(output, study) {
+  # (a series template's report: its code SPEC's layers)
+  output <- .series_as_code(output, study)
   ts <- .tpl_spec_of(output)
   t <- if (!is.null(ts)) .tpl_get(ts$name, sprintf("%s: template:", output$id))
   if (!is.null(t$extends)) {

@@ -23,8 +23,9 @@
 #' series' and the study's values (`!series`, `!study`, `!fixed`), fills in
 #' the `"{name}"` spots of the template's `data:` rows, analysis items,
 #' content and page, and merges the report's own `data:` rows into the
-#' template's by id, key by key.  The result is a plain code SPEC, as
-#' [tfl_read_output()] reads one.
+#' template's by id, key by key; a report row with `code:` makes the whole
+#' data, and replaces the template's row of its id.  The result is a plain
+#' code SPEC, as [tfl_read_output()] reads one.
 #'
 #' An analysis item's `analyses:` (`per`, `ids`) says its analyses: `per:
 #' variable` one a variable (its id the variable's entry in `ids`, else the
@@ -92,13 +93,16 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
          " (required: the report gives no value and the template no default).", call. = FALSE)
   }
 
-  # data: rows -- the template's, the report's merged in by id key by key,
-  # then filled in
+  # data: rows -- the template's, the report's merged in by id key by key
+  # (a report row with `code:` makes the whole data: it replaces the
+  # template's row of its id), then filled in
   rows <- tpl$data %||% list()
   for (r in report$data %||% list()) {
     k <- match(r$id %||% NA_character_, vapply(rows, function(e) e$id %||% NA_character_, ""))
     if (is.na(k)) {
       rows <- c(rows, list(r))
+    } else if (!is.null(r$code) && !inherits(r$code, "tfl_unset")) {
+      rows[[k]] <- r
     } else {
       for (key in names(r)) rows[[k]][key] <- list(r[[key]])
     }

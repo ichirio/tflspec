@@ -81,6 +81,38 @@ e2e_check_bign <- function(r, pop) {
   expect_identical(got[names(want)], stats::setNames(as.integer(want), names(want)))
 }
 
+# The worst grade's Total column of a Lab analysis (by the arm, PARAM and
+# tox_dir: three groups), summed: the records counted
+e2e_worst_total <- function(ard, id) {
+  r <- ard[ard$analysis_id == id & ard$variable == "worst" & ard$stat_name == "n", , drop = FALSE]
+  g <- grep("^group[0-9]+$", names(r), value = TRUE)
+  has <- matrix(vapply(g, function(cn) {
+    v <- r[[cn]]
+    if (is.list(v)) vapply(v, function(x) !is.null(x) && length(x) && !is.na(x[[1L]]), NA) else !is.na(v)
+  }, logical(nrow(r))), nrow = nrow(r))
+  sum(as.integer(unlist(r$stat[rowSums(has) == 3L])))
+}
+
+# The safety subjects (with an arm) that have a worst record of the test
+e2e_worst_subjects <- function(adlb, saf, paramcd) {
+  s <- saf$USUBJID[!is.na(saf$TRT01A) & nzchar(saf$TRT01A)]
+  w <- adlb[adlb$AVISIT == "WORST POST-BASELINE" & adlb$PARAMCD == paramcd & adlb$USUBJID %in% s, ]
+  length(unique(w$USUBJID))
+}
+
+# An ADaM with no worst record: record_where TRUE, and the template's
+# adlb_sub row given a then that picks each subject's worst record
+e2e_lab_then <- function() {
+  e2e_rd(c(
+    "id: T-5", "kind: table", "label: Lab shift, the worst record by then",
+    "data:", "  - id: adlb_sub",
+    paste0("    then: !r 'dplyr::filter(AVISIT != \"WORST POST-BASELINE\", !ABLFL %in% \"Y\") |> ",
+           "dplyr::slice_max(ATOXGRH, n = 1, with_ties = FALSE, by = c(USUBJID, PARAMCD))'"),
+    "template:", "  name: tflspec_v1/lab_tox_shift", "  data:", "    record_where: !r TRUE",
+    "  analysis:", "    by: TRT01A",
+    "    conditions:", "      - {tox_dir: High, param: Alanine Aminotransferase (U/L)}"))
+}
+
 skip_e2e <- function() {
   skip_on_cran()
   skip_if_not_installed("haven")
@@ -199,6 +231,12 @@ test_that("ORR, forest and Lab: condition rows through the sheets, the program r
   }
   expect_identical(sum(grepl("<- bind_items(ard_1, ard_2, ard_3, ard_4)", lab$code, fixed = TRUE)), 1L)
   e2e_check_bign(lab, saf)
+  # the worst record (record_where): one record a subject, test and direction
+  expect_true(any(grepl("filter(AVISIT == \"WORST POST-BASELINE\")", lab$code, fixed = TRUE)))
+  for (k in list(c("ALT_HIGH", "ALT"), c("HGB_LOW", "HGB"))) {
+    expect_identical(e2e_worst_total(lab$ard, k[[1L]]), e2e_worst_subjects(data$adlb, saf, k[[2L]]),
+                     info = k[[1L]])
+  }
 })
 
 test_that("conditions and ards: YAML -> sheets -> YAML, one to one; the workbook keeps their columns", {
@@ -417,4 +455,86 @@ test_that("the sample ADRS has AVALCAT1 (orr_subgroup's default category): CR / 
   expect_true("AVALCAT1" %in% names(a))
   expect_identical(a$AVALCAT1 == "Response", a$AVALC %in% c("CR", "PR"))
   expect_setequal(unique(a$AVALCAT1), c("Response", "Non-response"))
+})
+
+test_that("Lab with no worst record in the ADaM: record_where TRUE and a then on adlb_sub give the same ARD", {
+  skip_e2e()
+  skip_if_not_installed("dplyr", "1.1.0")
+  d <- file.path(tempdir(), "tpl-e2e-then")
+  unlink(d, recursive = TRUE)
+  on.exit(unlink(d, recursive = TRUE))
+  data <- tplfig_study(d, c("adsl", "adlb"), id = "E2E-6")
+  saf <- data$adsl[data$adsl$SAFFL == "Y", ]
+  rep <- tfl_template_resolve(e2e_lab_then(), study = e2e_settings)
+  ad <- rep$ard$analysis_data
+  lb <- ad[[match("adlb_sub", vapply(ad, function(r) r$id, ""))]]
+  # the template's row with the report's then over it, key by key
+  expect_identical(as.character(lb$where), "TRUE")
+  expect_identical(lb$subjects, "adsl_sub")
+  expect_match(as.character(lb$then), "slice_max(ATOXGRH", fixed = TRUE)
+  th <- e2e_run(rep, d)
+  # the then last on the row's pipe, as written, a step each
+  i <- grep("^adlb_sub <- ", th$code)
+  expect_length(i, 1L)
+  expect_match(th$code[i], "filter(TRUE)", fixed = TRUE)
+  last <- str2lang(th$code[i])[[3L]]
+  expect_true(deparse(last[[1L]]) %in% c("slice_max", "dplyr::slice_max"))
+  expect_true(deparse(last[[2L]][[1L]]) %in% c("filter", "dplyr::filter"))
+  expect_identical(e2e_worst_total(th$ard, "ALT_HIGH"), e2e_worst_subjects(data$adlb, saf, "ALT"))
+  # the same counts as the ADaM's own worst record (record_where's default)
+  lab <- e2e_run(tfl_template_resolve(e2e_reports()$lab, study = e2e_settings), d)
+  key <- function(a) {
+    a <- a[a$analysis_id == "ALT_HIGH", , drop = FALSE]
+    cols <- c(grep("^group[0-9]+(_level)?$", names(a), value = TRUE), "variable", "variable_level",
+              "stat_name", "stat")
+    sort(do.call(paste, lapply(a[cols], function(v) if (is.list(v)) vapply(v, function(x)
+      if (is.null(x) || !length(x)) "NA" else paste(format(x), collapse = ","), "") else as.character(v))))
+  }
+  expect_identical(key(th$ard), key(lab$ard))
+
+  # then through the sheets and back: the analysis_data sheet's column, !r
+  f <- file.path(d, "spec", "outputs", "T-5.yml")
+  tfl_write_output(rep, f)
+  sh <- tfl_sheets_from_yaml(d)
+  ad5 <- sh$ard$analysis_data[sh$ard$analysis_data$output_id == "T-5", ]
+  expect_match(ad5$then[ad5$data_id == "adlb_sub"], "slice_max(ATOXGRH", fixed = TRUE)
+  out <- file.path(tempdir(), "tpl-e2e-then-back")
+  unlink(out, recursive = TRUE)
+  on.exit(unlink(out, recursive = TRUE), add = TRUE)
+  suppressMessages(tfl_yaml_from_sheets(sh, out))
+  y <- tfl_read_output(file.path(out, "spec", "outputs", "T-5.yml"))
+  lb_back <- y$ard$analysis_data[[match("adlb_sub", vapply(y$ard$analysis_data, function(r) r$id, ""))]]
+  expect_s3_class(lb_back$then, "tfl_r")
+  expect_identical(as.character(lb_back$then), as.character(lb$then))
+})
+
+test_that("a series report resolves as a code SPEC first: no lookup in the old registry (the report program)", {
+  skip_e2e()
+  d <- file.path(tempdir(), "tpl-e2e-resolve")
+  unlink(d, recursive = TRUE)
+  on.exit(unlink(d, recursive = TRUE))
+  tplfig_study(d, c("adsl", "adae", "adlb"), id = "E2E-7")
+  reps <- e2e_planner_reports()
+  for (k in c("ae", "lab")) {
+    lines <- reps[[k]]
+    f <- file.path(d, "spec", "outputs", paste0(sub("^id: ", "", lines[1L]), ".yml"))
+    writeLines(lines, f)
+    st <- tfl_read_study_spec(d)
+    o <- tfl_read_output(f)
+    ro <- tfl_resolve_output(o, st)
+    expect_null(ro$template, info = k)
+    expect_null(attr(ro, "template"), info = k)
+    expect_true("BIGN" %in% vapply(ro$ard$analyses, function(a) a$id, ""), info = k)
+    # the page and style (the report program's) are read through the same layers
+    expect_error(tflspec:::.report_style(o, st), NA)
+    unlink(f)
+  }
+  # Lab through the planner's path: both condition rows reach the sheets and
+  # the program, each with its four calls (variables given)
+  lab <- e2e_planner(reps$lab, d, run = FALSE)
+  cs <- lab$sheets$ard$conditions
+  expect_identical(cs$param[cs$output_id == "T-14"], c("Alanine Aminotransferase (U/L)", "Hemoglobin (g/L)"))
+  ar <- lab$sheets$ard$ards
+  expect_identical(ar$variables[ar$output_id == "T-14"], c("worst", "worst", "base", "tox_dir"))
+  expect_true(any(grepl("Hemoglobin (g/L)", lab$code, fixed = TRUE)))
 })
