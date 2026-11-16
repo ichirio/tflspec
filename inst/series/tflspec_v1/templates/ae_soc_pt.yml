@@ -34,7 +34,8 @@ params:
     default: adsl_sub
     step: analysis
     tier: usual
-    description: The data row whose subjects are the percentages' denominator.
+    description: The data row whose subjects are the group Ns (BIGN) and the
+      percentages' denominator; both come from the one BIGN item.
   total:
     type: logical
     input: pick
@@ -46,10 +47,10 @@ params:
   min_pct:
     type: number
     input: text
-    default: ~
+    default: 0
     step: analysis
     tier: other
-    description: Keep only the rows with at least this percentage; empty keeps all.
+    description: Keep only the rows with at least this percentage; 0 keeps every row.
   min_pct_in:
     type: enum[any|all|overall]
     input: pick
@@ -82,17 +83,18 @@ analysis:
   - id: BIGN
     label: Subjects per group
     method: categorical
-    data: adsl_sub
+    data: "{denominator}"
     variables: ["{by}"]
     formats: "{formats}"
   - id: AE
+    analyses: {per: level}      # AE_ANY, AE_L1, AE_L2
     label: Adverse events by SOC and PT
     method: hierarchical
     data: adae_sub
     by: ["{by}"]
     overall: "{total}"
     variables: "{hierarchy}"
-    denominator: "{denominator}"
+    denominator: BIGN
     args: !r over_variables = {any_row}
     post: !r keep_min_pct({min_pct}, "{min_pct_in}")
     formats: "{formats}"

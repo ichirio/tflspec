@@ -6,18 +6,16 @@ params:
     type: string
     input: pick
     choices: study_data
-    required: true
     step: data
-    tier: required
+    tier: usual
     description: The dataset of the records.
   columns:
     type: list<column>
     input: pick
     choices: vars(lst_sub)
     ordered: true
-    required: true
     step: content
-    tier: required
+    tier: other
     description: The columns of the listing, in order.
   by:
     type: column
