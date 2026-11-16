@@ -42,7 +42,7 @@ test_that("edited rows update their items by key; new rows add; the rest is unto
   # what the workbook cannot hold is as it was
   expect_identical(vapply(o$content, `[[`, "", "fn")[6L], "plan_cell_style")
   expect_s3_class(o$content[[6L]]$args$where, "tfl_r")
-  expect_identical(o$ard$analyses[[2L]]$statistic$AGE[[2L]], "mean")
+  expect_identical(o$ard$analyses[[2L]]$statistics[[2L]], "mean")
   # the same workbook again: nothing changes
   r2 <- tfl_import_spec_xlsx(d, f)
   expect_identical(nrow(r2$changes), 0L)
