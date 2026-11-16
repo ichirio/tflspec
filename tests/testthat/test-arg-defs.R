@@ -17,7 +17,10 @@ test_that("the data row's and the analysis item's keys are defined", {
   a <- tfl_arg_defs(fn = "analysis")
   expect_true(all(c("id", "type", "method", "data", "params", "conditions", "derive",
                     "levels", "ards", "analysis_ids", "when") %in% a$name))
-  expect_identical(a$columns[[which(a$name == "conditions")]], "params")
+  cc <- a$columns[[which(a$name == "conditions")]]
+  expect_identical(cc$where$input, "condition")
+  expect_false(cc$analysis_id$required)
+  expect_true(a$free[a$name == "formats"])
   expect_identical(a$values[[which(a$name == "type")]], c("ard", "model", "value"))
   expect_identical(a$default_kind[a$name == "type"], "value")
   expect_true(a$required[a$name == "method"])

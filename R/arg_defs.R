@@ -254,7 +254,11 @@
                 required = TRUE, tier = "required", description = "The data: row the item reads."),
     params = list(type = "list<string>", input = "text", tier = "other",
                   description = "The columns of the conditions table, in order."),
-    conditions = list(type = "rows<map<string,string|r>>", input = "table", columns = "params",
+    conditions = list(type = "rows<map<string,string|r>>", input = "table",
+                      # (the item's params are the columns; these two have their own form)
+                      columns = list(where = list(type = "r", input = "condition"),
+                                     analysis_id = list(type = "string", input = "text",
+                                                        required = FALSE)),
                       tier = "other",
                       description = "One row a run of the item: a split of the data or one analysis."),
     where = list(type = "r", input = "condition", choices = "vars(from_args(data))",
@@ -272,7 +276,7 @@
     denominator = list(type = "string", input = "pick", choices = "report_data", free = FALSE,
                        description = "The data: row of the % denominator."),
     overall = list(type = "logical", input = "pick", description = "A total over the by groups."),
-    formats = list(type = "map<string,number|string>", input = "table", choices = "stats",
+    formats = list(type = "map<string,number|string>", input = "table", choices = "stats", free = TRUE,
                    description = "Digits by statistic; VAR:stat for one variable."),
     analysis_ids = list(type = "map<column,string>", input = "table", choices = "from_args(variables)",
                         tier = "other",
@@ -368,8 +372,9 @@
 #'     \item{free}{a pick that also takes a value not in the list.}
 #'     \item{ordered}{a pick of several whose order matters.}
 #'     \item{columns}{(a list column) a table's columns, defined the same way;
-#'       `"params"` for a conditions table (its columns are the item's
-#'       `params:`).}
+#'       `"params"` for a template's conditions table (its columns are the item's
+#'       `params:`); an item's conditions: `where` and an optional `analysis_id`
+#'       defined, the other columns the item's params.}
 #'     \item{tier}{`required`, `usual` or `other` (shown folded).}
 #'     \item{description}{one line.}
 #'   }
