@@ -16,7 +16,7 @@ pl_spec <- function(label = NA) {
     datasets = pl_df(list(dataset = "ADSL", path = "adam/ADSL.rds")),
     populations = pl_df(list(population_id = "SAF", dataset = "ADSL",
                              where = "SAFFL == \"Y\"", label = label)),
-    analyses = pl_df(list(output_id = "DM", analysis_id = "GROUPN",
+    analyses = pl_df(list(output_id = "DM", analysis_id = "BIGN",
                           method = "categorical", population_id = "SAF",
                           variables = "TRT01A")))
   for (n in names(.ard_spec_sheets)) {

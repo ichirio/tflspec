@@ -1846,7 +1846,7 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
   # each page's N ("tested"): the arm's subjects for the page's parameter,
   # from the same records as the table (the Total row's, or the set's own)
   page_n <- paged && identical(hn, "tested")
-  # the set's N ("set"): GROUPN counts the arm in the analysis set's ADSL
+  # the set's N ("set"): BIGN counts the arm in the analysis set's ADSL
   # (the subset's subjects when there is one), as the other templates do
   set_n <- identical(hn, "set")
   # (with a `subset` the set's ADSL data is there: made here when `worst` is
@@ -1881,7 +1881,7 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
         denominator = if (total) den))),
       if (page_n) list(list(id = paste0(a$analysis_id, "_N"), method = "categorical",
                             data = den, by = a$param, variables = a$by)),
-      if (set_n) list(list(id = "GROUPN", method = "categorical", data = gsubj,
+      if (set_n) list(list(id = "BIGN", method = "categorical", data = gsubj,
                            variables = a$by, purpose = "PRIMARY OUTCOME MEASURE"))))
   # the columns: the ARD's order (the code list applied when it is made),
   # or `by_levels` when the report says them
@@ -2387,7 +2387,7 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
   # 1.42): the report's, else the study's PARAMCD code list's
   ptext <- if (length(a$param_labels)) unlist(a$param_labels) else .tpl_code_labels(ctx$codelists[["PARAMCD"]])
   analyses <- c(
-    list(list(id = "GROUPN", method = "categorical", data = subj, variables = a$by,
+    list(list(id = "BIGN", method = "categorical", data = subj, variables = a$by,
               purpose = "PRIMARY OUTCOME MEASURE")),
     if (isTRUE(a$baseline)) list(an("BASELINE", set, "BASE")),
     # (the change of a visit with no change records -- the baseline, whose
@@ -2714,7 +2714,7 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
         # the header N: the arm's subjects in the analysis set, counted apart
         # (not left to the best response and the rate agreeing on it)
         if (!identical(hn, "none")) list(list(
-          id = "GROUPN", method = "categorical", data = subj, variables = a$by,
+          id = "BIGN", method = "categorical", data = subj, variables = a$by,
           purpose = "PRIMARY OUTCOME MEASURE"))))
     # (the arms' order: an order given, else the code list's -- the program
     # puts it on the data, and on the survfit / CI analysis too, relevel_ard();
@@ -2868,7 +2868,7 @@ tpl_orr <- function(ard, population = "ITT", ..., codelists = NULL) {
       analyses = c(
         # (the header N: the set's subjects, or the data the percentages are of)
         if (!identical(hn, "none")) list(list(
-          id = "GROUPN", method = "categorical",
+          id = "BIGN", method = "categorical",
           data = if (identical(hn, "denominator")) den else subj,
           variables = a$by, purpose = "PRIMARY OUTCOME MEASURE")),
         lapply(a$flags, flag)))

@@ -77,7 +77,8 @@ analysis:
     derive: !r worst = if ("{tox_dir}" == "Low") ATOXGRL else ATOXGRH | base = if ("{tox_dir}" == "Low") BTOXGRL else BTOXGRH | tox_dir = "{tox_dir}"
     levels: {PARAM: "{param}", tox_dir: "{tox_dir}"}
     method: categorical
-    statistics: [n, p]
+    # (N, the analysis's own denominator, stays in the ARD: canon 2026-11-16)
+    statistics: [n, N, p]
     denominator: BIGN
     formats: "{formats}"
     ards:

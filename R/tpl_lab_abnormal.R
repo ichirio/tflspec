@@ -86,7 +86,7 @@
                        paste(c("USUBJID", a$by), collapse = ", ")))), cats))
   analyses <- list(
     if (!identical(hn, "none")) list(
-      id = "GROUPN", method = "categorical",
+      id = "BIGN", method = "categorical",
       data = if (identical(hn, "tested")) .tpl_noun_id(a, "tested") else subj,
       variables = a$by, purpose = "PRIMARY OUTCOME MEASURE"),
     list(id = "ABNORMAL", method = "categorical", data = .tpl_noun_id(a, "cat"),

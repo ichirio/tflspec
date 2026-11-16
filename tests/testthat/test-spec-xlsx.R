@@ -11,7 +11,7 @@ test_that("the rows of a YAML spec go to a workbook; the rest is listed", {
   rd <- function(s) as.data.frame(readxl::read_excel(f, s, col_types = "text"))
   an <- rd("analyses")
   expect_identical(an$output_id, rep("T-14-1-1", 3L))
-  expect_identical(an$id, c("GROUPN", "CONT", "CAT"))
+  expect_identical(an$id, c("BIGN", "CONT", "CAT"))
   expect_identical(an$variables[3L], "AGEGR1 | SEX | RACE | ECOGBL")
   # the built-in default configuration's header is no row of the study; the report's titles by its id
   expect_false("header" %in% r$sheets)

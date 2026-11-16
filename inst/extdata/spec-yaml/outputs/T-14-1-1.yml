@@ -13,7 +13,7 @@ data:
     from: ADSL
 ard:
   analyses:
-    - id: GROUPN
+    - id: BIGN
       method: cards::ard_tabulate
       data: adsl_sub
       variables: [TRT01A]
