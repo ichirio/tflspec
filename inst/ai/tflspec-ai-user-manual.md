@@ -970,6 +970,8 @@ back): rename the value or choose another separator.
 `tpl_shift` `tpl_lab_shift` `tpl_listing` `tpl_km_table` `tpl_param_change` `tpl_pk_conc` `tpl_lab_abnormal` `tpl_ae_eair` `tpl_ancova` `tpl_mean_se` `tpl_mean_ci` `tpl_waterfall` `tpl_forest_hr` `tpl_forest_layout` `tpl_orr` `tpl_stat_block` `tpl_ae_overview`
 `tfl_read_template_sheets` `tfl_write_template_yaml`
 
+**Template SPEC, series (versioned folders of templates; study.yml `series_settings:`, spec/series.lock):** `tfl_series_dir` `tfl_series_read` `tfl_pin_series` `tfl_series_check_lock`
+
 **AI-assisted drafting:** `tfl_ai_tasks` `tfl_ai_context` `tfl_ai_schema`
 `tfl_ai_prompt` `tfl_ai_parse` `tfl_ai_check` `tfl_ai_repair_prompt`
 `tfl_ai_diff` `tfl_ai_read_shell` `tfl_ai_adam_summary` `tfl_ai_doc_text` `tfl_ai_batches`
