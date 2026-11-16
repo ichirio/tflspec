@@ -59,8 +59,17 @@
 }
 
 .arg_check_choices <- function(choices, where) {
-  words <- sub("[(].*$", "", .arg_choice_words(choices))
+  entries <- .arg_choice_words(choices)
+  words <- sub("[(].*$", "", entries)
   bad <- setdiff(words, .arg_choice_sources)
+  # vars(<name>) is a data row id; vars(from_args(<arg>)) the columns of the
+  # data another argument names.  Nothing else nests in vars().
+  inner <- sub("^vars[(](.*)[)]$", "\\1", entries[words == "vars" & grepl("^vars[(].*[)]$", entries)])
+  inner <- inner[grepl("[(]", inner) & !grepl("^from_args[(].*[)]$", inner)]
+  if (length(inner)) {
+    stop(sprintf("%s: vars() takes a data row id or from_args(<arg>), not %s.", where,
+                 paste(encodeString(inner, quote = "\""), collapse = ", ")), call. = FALSE)
+  }
   if (length(bad)) {
     stop(sprintf("%s: unknown choice source %s; the sources are %s.", where,
                  paste(encodeString(bad, quote = "\""), collapse = ", "),
@@ -92,11 +101,11 @@
 }
 
 # the input form a type takes when the definition does not say
-.arg_input_for_type <- function(type) {
+.arg_input_for_type <- function(type, name = "") {
   type <- as.character(type %||% "string")
   if (identical(type, "logical") || startsWith(type, "enum[")) return("pick")
   if (grepl("^(list<)?(column|level)>?$", type)) return("pick")
-  if (identical(type, "r")) return("condition")
+  if (identical(type, "r")) return(if (name %in% c("where", "when")) "condition" else "text")
   if (grepl("^(rows|map|vec)<", type)) return("table")
   "text"
 }
@@ -105,6 +114,32 @@
 # finishing, the page's output
 .arg_step_for_stage <- function(stage) {
   if (identical(stage, "output")) "page" else "content"
+}
+
+# the plan_paginate_*() functions are the page step
+.arg_page_fns <- c("plan_paginate_rows", "plan_paginate_cols", "plan_paginate_group")
+
+# What a schema function's argument gets where schema.yml is silent: a column
+# argument without choices picks from the ARD (normalize_ard) or from the
+# table's columns (plan_*); normalize_ard's hierarchy is ordered.
+.arg_schema_fill <- function(fn, args) {
+  column_type <- function(d) {
+    is.list(d) && grepl("^(list<)?column>?$", as.character(d$type %||% ""))
+  }
+  for (n in names(args)) {
+    d <- args[[n]]
+    if (column_type(d) && is.null(d$choices)) {
+      if (identical(fn, "normalize_ard")) {
+        args[[n]]$choices <- "ard"
+      } else if (startsWith(fn, "plan_")) {
+        args[[n]]$choices <- "columns"
+      }
+    }
+    if (identical(fn, "normalize_ard") && n %in% c("hierarchy", ".hierarchy")) {
+      args[[n]]$ordered <- TRUE
+    }
+  }
+  args
 }
 
 .arg_enum_values <- function(type) {
@@ -117,7 +152,7 @@
 .arg_row <- function(name, d, step, label_prefix, where) {
   if (!is.list(d)) d <- list(default = d)
   type <- as.character(d$type %||% "string")
-  input <- as.character(d$input %||% .arg_input_for_type(type))
+  input <- as.character(d$input %||% .arg_input_for_type(type, name))
   if (!input %in% .arg_input_forms) {
     stop(sprintf("%s: argument `%s`: input %s is not one of %s.", where, name,
                  encodeString(input, quote = "\""), paste(.arg_input_forms, collapse = ", ")),
@@ -180,26 +215,26 @@
                 description = "The dataset the row reads: a study dataset or a row above."),
     population = list(type = "string", input = "pick", choices = "populations", free = FALSE,
                       description = "The analysis set the row keeps (data.yml's where)."),
-    subjects_in = list(type = "string", input = "pick", choices = "report_data", free = FALSE,
+    subjects_in = list(type = "string", input = "pick", choices = "report_data, fixed", free = FALSE,
                        values = "none",
                        description = "The row whose subjects are kept (inner join); none keeps all."),
-    add = list(type = "list<column>", input = "pick", choices = "vars(subjects_in)",
+    add = list(type = "list<column>", input = "pick", choices = "vars(from_args(subjects_in))",
                description = "Columns of the subjects' row added by USUBJID."),
-    where = list(type = "r", input = "condition", choices = "vars(from)",
+    where = list(type = "r", input = "condition", choices = "vars(from_args(from))",
                  description = "The records kept."),
-    derive = list(type = "map<column,r>", input = "table", choices = "vars(from)",
+    derive = list(type = "map<column,r>", input = "table", choices = "vars(from_args(from))",
                   description = "Columns made: name = R."),
-    keep = list(type = "list<column>", input = "pick", choices = "vars(from)", ordered = TRUE,
+    keep = list(type = "list<column>", input = "pick", choices = "vars(from_args(from))", ordered = TRUE,
                 description = "The columns kept (USUBJID and add: always)."),
-    distinct = list(type = "list<column>", input = "pick", choices = "vars(from)",
+    distinct = list(type = "list<column>", input = "pick", choices = "vars(from_args(from))",
                     description = "One row a set of these columns."),
-    arrange = list(type = "list<column>", input = "pick", choices = "vars(from)", ordered = TRUE,
+    arrange = list(type = "list<column>", input = "pick", choices = "vars(from_args(from))", ordered = TRUE,
                    description = "The row order (a minus for descending)."),
     then = list(type = "r", input = "text",
                 description = "R after the keys above, on the row's data."),
     code = list(type = "r", input = "text", tier = "other",
                 description = "R for a row the keys cannot say."),
-    when = list(type = "string", input = "pick", choices = "from_args", tier = "other",
+    when = list(type = "string", input = "pick", choices = "from_args(params)", tier = "other",
                 description = "A template's row only when this argument has a value or is true.")
   )
 }
@@ -219,25 +254,29 @@
                 required = TRUE, tier = "required", description = "The data: row the item reads."),
     params = list(type = "list<string>", input = "text", tier = "other",
                   description = "The columns of the conditions table, in order."),
-    conditions = list(type = "rows<map<string,string|r>>", input = "table", columns = "params",
+    conditions = list(type = "rows<map<string,string|r>>", input = "table",
+                      # (the item's params are the columns; these two have their own form)
+                      columns = list("params", where = list(type = "r", input = "condition"),
+                                     analysis_id = list(type = "string", input = "text",
+                                                        required = FALSE)),
                       tier = "other",
                       description = "One row a run of the item: a split of the data or one analysis."),
-    where = list(type = "r", input = "condition", choices = "vars(data)",
+    where = list(type = "r", input = "condition", choices = "vars(from_args(data))",
                  description = "The records the item uses (a condition row's where: \"{where}\")."),
-    derive = list(type = "map<column,r>", input = "table", choices = "vars(data)", tier = "other",
+    derive = list(type = "map<column,r>", input = "table", choices = "vars(from_args(data))", tier = "other",
                   description = "Columns made for the item: name = R."),
-    levels = list(type = "map<column,list<level>>", input = "table", choices = "vars(data)",
+    levels = list(type = "map<column,list<level>>", input = "table", choices = "vars(from_args(data))",
                   tier = "other", description = "The values of a column, in order (set_levels)."),
-    by = list(type = "list<column>", input = "pick", choices = "vars(data)", ordered = TRUE,
+    by = list(type = "list<column>", input = "pick", choices = "vars(from_args(data))", ordered = TRUE,
               description = "The grouping columns."),
-    variables = list(type = "list<column>", input = "pick", choices = "vars(data)", ordered = TRUE,
+    variables = list(type = "list<column>", input = "pick", choices = "vars(from_args(data))", ordered = TRUE,
                      description = "The analysis variables."),
     statistics = list(type = "list<string>", input = "pick", choices = "stats", ordered = TRUE,
                       description = "The statistics kept."),
     denominator = list(type = "string", input = "pick", choices = "report_data", free = FALSE,
                        description = "The data: row of the % denominator."),
     overall = list(type = "logical", input = "pick", description = "A total over the by groups."),
-    formats = list(type = "map<string,number|string>", input = "table", choices = "stats",
+    formats = list(type = "map<string,number|string>", input = "table", choices = "stats", free = TRUE,
                    description = "Digits by statistic; VAR:stat for one variable."),
     analysis_ids = list(type = "map<column,string>", input = "table", choices = "from_args(variables)",
                         tier = "other",
@@ -245,13 +284,13 @@
     args = list(type = "r", input = "text", tier = "other",
                 description = "The function's other arguments, as R."),
     ards = list(type = "rows<map<string,list<column>>>", input = "table",
-                columns = list(by = list(type = "list<column>", input = "pick", choices = "vars(data)"),
+                columns = list(by = list(type = "list<column>", input = "pick", choices = "vars(from_args(data))"),
                                variables = list(type = "list<column>", input = "pick",
-                                                choices = "vars(data)")),
+                                                choices = "vars(from_args(data))")),
                 tier = "other",
                 description = "Several calls of the method, one analysis_id (no id of their own)."),
     post = list(type = "r", input = "text", tier = "other", description = "R on the item's result."),
-    when = list(type = "string", input = "pick", choices = "from_args", tier = "other",
+    when = list(type = "string", input = "pick", choices = "from_args(params)", tier = "other",
                 description = "A template's item only when this argument has a value or is true."),
     code = list(type = "r", input = "text", tier = "other",
                 description = "R for an item the keys cannot say.")
@@ -333,8 +372,10 @@
 #'     \item{free}{a pick that also takes a value not in the list.}
 #'     \item{ordered}{a pick of several whose order matters.}
 #'     \item{columns}{(a list column) a table's columns, defined the same way;
-#'       `"params"` for a conditions table (its columns are the item's
-#'       `params:`).}
+#'       `"params"` for a template's conditions table (its columns are the item's
+#'       `params:`); in a list, an unnamed `"params"` marks where the item's
+#'       params go (an item's conditions: `"params"`, `where`, an optional
+#'       `analysis_id`).}
 #'     \item{tier}{`required`, `usual` or `other` (shown folded).}
 #'     \item{description}{one line.}
 #'   }
@@ -371,10 +412,7 @@ tfl_arg_defs <- function(fn = NULL, template = NULL) {
     stop(sprintf("tfl_arg_defs(): %s is not a function of the schema.",
                  encodeString(fn, quote = "\"")), call. = FALSE)
   }
-  args <- ent$args %||% list()
-  if (!is.null(ent$dots)) {
-    args <- c(args, list("..." = ent$dots))
-  }
-  step <- .arg_step_for_stage(ent$stage)
+  args <- .arg_schema_fill(fn, ent$args %||% list())
+  step <- if (fn %in% .arg_page_fns) "page" else .arg_step_for_stage(ent$stage)
   .arg_table(args, step, paste0(.schema_fn_name(fn), "."), fn)
 }
