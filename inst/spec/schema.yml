@@ -470,7 +470,7 @@ normalize_ard:
     stack: {main: true, label: "Stacked analyses", help: "Stacks parallel subgroup analyses (ALL, SEX, AGEGR1 ...) as one pair of keys, subgroup and subgroup_level, for a subgroup table. e.g. subgroup = ALL, SEX, AGEGR1", type: "map<string, list<column>|string>"}
     stack_sep: {label: "Stack separator", help: "The text between a crossed layer's names and values (\" / \": AGEGR1 / SEX). e.g. \" x \"", type: string}
     stack_nest: {label: "Nest the stack", help: "TRUE: a crossed layer's outer value goes to subgroup_outer (Age Group by Sex, 65-80, F as three levels). e.g. TRUE", type: logical}
-    combine: {label: "Combined variables", help: "Variables the data keeps apart read as one table dimension: each a new name and the two or more variables under it. For a lab shift table by direction, ADaM's grade toward low and toward high. Needs an rtfreporter whose normalize_ard() has combine (rtfreporter#1081). e.g. worst_gr = ATOXGRL, ATOXGRH; base_gr = BTOXGRL, BTOXGRH", type: "map<string, list<column>>"}
+    combine: {label: "Combined variables", help: "Reads two or more ARD variables as one key column under a new name, e.g. a lab shift table's Low and High grades. e.g. worst_gr = ATOXGRL, ATOXGRH", type: "map<string, list<column>>"}
 
 rtf_col_header:
   package: rtfreporter

@@ -180,7 +180,7 @@ test_that("every other exported function of cards / cardx has a decided use", {
 })
 
 test_that("two outputs with the same statistics keep their own rows", {
-  # the study ARD is bound with dplyr::bind_rows(), not cards::bind_ard():
+  # the study ARD is bound with bind_items(), not cards::bind_ard():
   # bind_ard() does not count output_id / analysis_id as part of a row's key,
   # so the same statistic in two outputs stops it (different values) or loses
   # one output's rows (the same values)
@@ -199,6 +199,24 @@ test_that("two outputs with the same statistics keep their own rows", {
   expect_identical(n[["T"]], n[["T2"]])
   expect_identical(exact_numbers(tfl_ard_for(ard, "T")),
                    exact_numbers(tfl_ard_for(ard, "T2")))
+})
+
+test_that("items are bound with bind_items(); a study program ends with bind_items(ards)", {
+  skip_if_not_installed("cards")
+  sp <- exact_spec(list(method = "continuous", dataset = "ADSL", population_id = "SAF",
+                        by = "ARM", variables = "AGE"))
+  two <- sp$analyses
+  two$analysis_id <- "B"
+  sp$analyses <- rbind(sp$analyses, two)
+  # (a report of two items: its items in one call)
+  rep_code <- tfl_ard_code(sp, output_id = "T", save = FALSE)
+  expect_true(any(grepl("bind_items(ard_a, ard_b)", rep_code, fixed = TRUE)))
+  expect_false(any(grepl("bind_rows(ard_", rep_code, fixed = TRUE)))
+  # (a study of two reports: its reports' ARDs in one, a list)
+  two$output_id <- "T2"
+  sp$analyses <- rbind(sp$analyses, two)
+  code <- tfl_ard_code(sp, save = FALSE)
+  expect_identical(code[max(which(nzchar(code)))], "ard <- bind_items(ards)")
 })
 
 test_that("the hints of by and strata say what differs, function by function (#139)", {

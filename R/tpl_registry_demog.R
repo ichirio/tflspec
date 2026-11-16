@@ -527,7 +527,7 @@
              RACE = "Race, n (%)", ETHNIC = "Ethnicity, n (%)",
              COUNTRY = "Country of participation, n (%)"),
   cells = list(`Mean (SD)` = "{mean} ({sd})", `Median (min, max)` = "{median} ({min}, {max})"),
-  count_cell = "{n} ({p})",
+  count_cell = list(tfl_r("n == 0 ~ \"0\""), "{n} ({p})"),
   categorical_levels = list(
     RACE = c("AMERICAN INDIAN OR ALASKA NATIVE", "ASIAN", "BLACK OR AFRICAN AMERICAN",
              "NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER", "WHITE", "MULTIPLE", "OTHER",

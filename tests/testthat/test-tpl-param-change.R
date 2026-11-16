@@ -291,7 +291,7 @@ test_that("in a study: the ARD program runs and the table is made from it", {
   expect_true(nrow(t) > 0L)
   expect_identical(unique(t$group2), pc_args$visits)
   # a code list on the visits puts the baseline level back on the change's
-  # records: its change cells stay empty all the same (no "0" for n)
+  # records: its change cells stay empty ("-") all the same (no "0" for n)
   o <- tfl_read_output(f)
   o$codelists <- list(AVISIT = lapply(pc_args$visits, function(v) list(value = v, label = tools::toTitleCase(tolower(v)))))
   tfl_write_output(o, f)
@@ -302,7 +302,7 @@ test_that("in a study: the ARD program runs and the table is made from it", {
   t <- pc_tab(suppressMessages(tfl_content_run(tfl_resolve_output(tfl_read_output(f), st), ard)))
   chg <- grep("Change", names(t), value = TRUE)
   expect_true(length(chg) > 0L)
-  expect_true(all(is.na(unlist(t[t$group2 == "Baseline", chg]))))
+  expect_true(all(unlist(t[t$group2 == "Baseline", chg]) == "-"))
 })
 
 test_that("vs_change's table (removed) from param_change: a baseline block, its labels and cells", {

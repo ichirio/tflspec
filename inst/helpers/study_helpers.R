@@ -35,6 +35,37 @@ set_levels <- function(data, ...) {
   data
 }
 
+# A blank is missing: every character column's "" becomes NA, and so does a
+# factor's (the "" level is dropped, the other levels and their order kept).
+# Other types stay.  study$adam is the ADaM as read with this done, so a
+# program tests a blank with is.na(), not == "" or nzchar().
+#   blank_as_na(adsl)
+# A missing value as a level of its own (a categorical variable's missing
+# row): NA becomes `label`, the last level; the other levels and their
+# order kept.  cards counts no NA, so the row needs a level.
+#   missing_level(SEX, "Missing")
+missing_level <- function(x, label = "Missing") {
+  lv <- if (is.factor(x)) levels(x) else sort(unique(as.character(x[!is.na(x)])))
+  x <- as.character(x)
+  x[is.na(x)] <- label
+  factor(x, levels = unique(c(lv, label)))
+}
+
+blank_as_na <- function(data) {
+  for (v in names(data)) {
+    x <- data[[v]]
+    if (is.character(x)) {
+      x[!is.na(x) & x == ""] <- NA
+    } else if (is.factor(x) && any(levels(x) == "")) {
+      x <- factor(as.character(x), levels = setdiff(levels(x), ""), ordered = is.ordered(x))
+    } else {
+      next
+    }
+    data[[v]] <- x
+  }
+  data
+}
+
 # A column in another's order, when the data has it: reorder(factor(x), by)
 # for a program's data step (PARAM by PARAMN, AVISIT by AVISITN).  An order
 # is not a condition that defines the report, so a data without the order
@@ -158,6 +189,104 @@ tag_ard <- function(ard, report_id, analysis_id, population = NA_character_,
   ard <- as.data.frame(ard)
   cbind(output_id = report_id, analysis_id = analysis_id,
         population_id = population, ard, stringsAsFactors = FALSE)
+}
+
+# One report's items into one ARD: the tagged ARDs of its items (tag_ard()),
+# bound as they are, never a row lost (dplyr::bind_rows(); cards::bind_ard()
+# does not count output_id / analysis_id in a row's key, and drops the later
+# item's rows).  The columns in the order the ARD is read in: the ids
+# (output_id, analysis_id, population_id), the groups in number order
+# (group1, group1_level, group2, ... -- items with different numbers of
+# groups get the one order), variable, variable_level, context, stat_name,
+# stat_label, stat, fmt_fun, warning, error, then any other.  The class
+# card stays.  A row's key is every column but analysis_id and the
+# statistic's value columns (stat, stat_label, stat_fmt, fmt_fun, fmt_fn,
+# warning, error): the ids, every group and its level, variable,
+# variable_level, context, stat_name, and any other column a wrapper adds
+# (`pairwise`); a *_level is compared as text, NULL as missing.  Two rows
+# of one item with the same key stop the program (the same ard_tabulate()
+# written twice, two conditions that are the same); rows of different items with the same key, analysis_id left
+# out, give a warning and are all kept.
+#   ard <- bind_items(ard_dm, ard_lab)
+bind_items <- function(...) {
+  items <- list(...)
+  if (length(items) == 1L && is.list(items[[1L]]) && !is.data.frame(items[[1L]])) {
+    items <- items[[1L]]
+  }
+  items <- Filter(Negate(is.null), items)
+  ard <- dplyr::bind_rows(items)
+  if (!"analysis_id" %in% names(ard)) {
+    stop("bind_items(): the ARDs have no analysis_id: tag each one with tag_ard().", call. = FALSE)
+  }
+  if (all(vapply(items, inherits, NA, what = "card")) && !inherits(ard, "card")) {
+    class(ard) <- c("card", class(ard))
+  }
+  # the columns in order
+  nm <- names(ard)
+  ids <- intersect(c("output_id", "analysis_id", "population_id"), nm)
+  gn <- sort(unique(as.integer(gsub("[^0-9]", "",
+                                   grep("^group[0-9]+(_level)?$", nm, value = TRUE)))))
+  groups <- intersect(as.vector(rbind(paste0("group", gn), paste0("group", gn, "_level"))), nm)
+  stats <- intersect(c("variable", "variable_level", "context", "stat_name", "stat_label",
+                       "stat", "fmt_fun", "warning", "error"), nm)
+  ard <- ard[, c(ids, groups, stats, setdiff(nm, c(ids, groups, stats))), drop = FALSE]
+  # the key of a row: values as text, a missing one (or a NULL) apart
+  as_key <- function(x) {
+    z <- if (is.list(x)) {
+      vapply(x, function(e) if (is.null(e) || !length(e)) NA_character_ else
+        paste(as.character(e), collapse = ","), "")
+    } else as.character(x)
+    z[is.na(z)] <- "\001NA"
+    z
+  }
+  kc <- setdiff(names(ard), c("analysis_id", "stat", "stat_label", "stat_fmt", "fmt_fun",
+                              "fmt_fn", "warning", "error"))
+  key <- do.call(paste, c(lapply(ard[kc], as_key), sep = "\002"))
+  aid <- as.character(ard$analysis_id)
+  # what a row is called in a message: its variable and statistic
+  what <- paste0(as_key(ard$variable), " ", as_key(ard$stat_name))
+  what <- gsub("\001NA", "NA", what, fixed = TRUE)
+  more <- function(x, n = 3L) {
+    x <- unique(x)
+    paste0(paste(utils::head(x, n), collapse = ", "),
+           if (length(x) > n) sprintf(" and %d more", length(x) - n))
+  }
+  # one item: the same key twice is an error
+  dup <- duplicated(paste(aid, key, sep = "\003")) | duplicated(paste(aid, key, sep = "\003"), fromLast = TRUE)
+  if (any(dup)) {
+    msgs <- vapply(unique(aid[dup]), function(a) {
+      i <- which(dup & aid == a)
+      sprintf("item %s: %d rows with the same key (%s)", a, length(i), more(what[i]))
+    }, "")
+    stop(sprintf(paste0("bind_items(): a statistic twice in one item -- %s.  Each statistic of an ",
+                        "item is one row: remove the repeated analysis or condition."),
+                 paste(msgs, collapse = "; ")), call. = FALSE)
+  }
+  # two items: the same key is a warning, the rows stay
+  multi <- tapply(aid, key, function(a) length(unique(a)) > 1L)
+  rows <- which(key %in% names(multi)[multi])
+  if (length(rows)) {
+    pairs <- list()
+    for (k in unique(key[rows])) {
+      i <- which(key == k)
+      ids_k <- unique(aid[i])
+      same <- length(unique(as_key(ard$stat[i]))) == 1L
+      for (p in utils::combn(ids_k, 2L, simplify = FALSE)) {
+        pk <- paste(p, collapse = "\003")
+        pairs[[pk]] <- rbind(pairs[[pk]], data.frame(
+          what = what[i[1L]], same = same, stringsAsFactors = FALSE))
+      }
+    }
+    for (pk in names(pairs)) {
+      p <- strsplit(pk, "\003", fixed = TRUE)[[1L]]
+      d <- pairs[[pk]]
+      warning(sprintf(
+        "bind_items(): items %s and %s both have %d statistic(s) with the same key: %s (%s); all rows kept.",
+        p[1L], p[2L], nrow(d), more(d$what),
+        if (all(d$same)) "the same values" else "values differ in some"), call. = FALSE)
+    }
+  }
+  ard
 }
 
 # A p-value as text: <0.001, else 3 decimals
