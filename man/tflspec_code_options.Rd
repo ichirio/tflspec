@@ -28,8 +28,8 @@ code lists (\verb{cl_<variable>}), and the data catalog's datasets read when
 first used, in two environments: \code{study$adam_org} (as the file has
 them, with the \code{derive}) and \code{study$adam} (blanks as \code{NA}, and the
 code lists' levels unless study.yml's \code{settings: adam_levels} is
-\code{none}), and, until the programs read \code{study$adam}, one object per
-dataset (\code{adsl}) that is its \code{study$adam_org}'s,
+\code{none}), and one object per dataset (\code{adsl}) that is its
+\code{study$adam}'s: the programs always read \code{study$adam},
 written by \code{\link[=tfl_study_setup_code]{tfl_study_setup_code()}}.  The ARD setup
 (\code{\link[=tfl_ard_code]{tfl_ard_code()}}) and the report setup (\code{\link[=tfl_report_setup_code]{tfl_report_setup_code()}})
 then do not write the rounding again; their other options stay.  The
@@ -38,11 +38,14 @@ line becomes its steps on the object (\code{adsl <- adsl |> order_levels(...)}),
 and none when it has no step.  A report's
 \code{plan_digits(rounding = )} that is the study's is left out of its
 program either way.  tflspec's own runs of a program (\code{\link[=tfl_build_ard]{tfl_build_ard()}}
-and the like) do not use the option: they read the files themselves.
+and the like) do not use the option: they read the files themselves,
+with the blanks as \code{NA} (\code{blank_as_na()}), as \code{study$adam} has them.
 }
 
 Unset or \code{FALSE} (the default), the code is as it has always been:
-literal paths, \verb{pkg::} on every call, the rounding in each setup.  The functions that write code read them:
+literal paths, \verb{pkg::} on every call, the rounding in each setup; a
+program reads each dataset itself, with \code{blank_as_na()} after its
+\code{derive} (a blank text value is \code{NA}, as in \code{study$adam}).  The functions that write code read them:
 \code{\link[=tfl_ard_code]{tfl_ard_code()}}, \code{\link[=tfl_build_ard]{tfl_build_ard()}}, \code{\link[=tfl_table_code]{tfl_table_code()}},
 \code{\link[=tfl_report_code]{tfl_report_code()}}, \code{\link[=tfl_report_setup_code]{tfl_report_setup_code()}}, \code{\link[=tfl_listing_code]{tfl_listing_code()}},
 \code{\link[=tfl_read_data_code]{tfl_read_data_code()}}, \code{\link[=tfl_fig_design_code]{tfl_fig_design_code()}} and

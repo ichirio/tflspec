@@ -43,9 +43,10 @@ of the sheets has no study-wide code list (a row of its \code{codelists}
 sheet is a report's), so it is written this way.  The reader follows
 the file's extension and the folder variables of option
 \code{tflspec.paths}, as in the ARD program.  The last lines make the
-objects the ARD, listing and figure programs use now (\code{adsl}) the
-datasets of \code{study$adam_org}; they go when those programs read
-\code{study$adam}.
+objects the ARD, listing and figure programs read (\code{adsl}) the
+datasets of \code{study$adam}: the generated programs always read
+\code{study$adam}, and \code{study$adam_org} is there for a program a person
+writes on the data as the file has it.
 }
 
 study.yml's \code{settings: adam_levels} says whether \code{study$adam} gets the

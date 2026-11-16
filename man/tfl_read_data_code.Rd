@@ -21,5 +21,8 @@ have gives a \code{stop()} line, so the program says so when it runs.
 Writes \code{adsl <- haven::read_xpt("data/adam/adsl.xpt")} (the reader follows
 the file's extension: \code{.rds}, \code{.xpt}, \code{.sas7bdat}, \code{.csv}, \code{.parquet}, and \code{.rda} /
 \code{.RData} holding one dataset)
-into an object named after the dataset, and its derived columns.
+into an object named after the dataset, its derived columns, and
+\code{adsl <- blank_as_na(adsl)} (a blank text value is \code{NA}, as in the
+study's \code{study$adam}; \code{blank_as_na()} is a study helper,
+\code{\link[=tfl_helpers_code]{tfl_helpers_code()}}).
 }
