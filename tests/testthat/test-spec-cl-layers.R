@@ -1,6 +1,7 @@
 # A report's code lists from the layers it extends (patterns; the study's own
-# lists in defaults.yml are study$codelists, a layer's no more) reach its ARD program, as they reach its RTF (#647).  Package fictional
-# data (adsl, adlb); the expectations are counted from the lists written.
+# lists in defaults.yml are study$codelists, a layer's no more) reach its ARD
+# program, as they reach its RTF (#647).  Package fictional data (adsl,
+# adlb); the expectations are counted from the lists written.
 
 cll_study <- function(defaults = NULL, pattern = NULL, file = NULL, reports = list(), shift = FALSE,
                       env = parent.frame()) {

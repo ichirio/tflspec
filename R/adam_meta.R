@@ -184,6 +184,60 @@
   c("study$adam_meta <- list(", ind(tv), ind(tc), ")")
 }
 
+# The set_levels() step of a program's own read of `dataset` (no study
+# setup): adam_meta's levels, as study$adam has them (a step as text; NULL
+# when it maps none of its variables)
+.adam_meta_read_step <- function(meta, dataset) {
+  st <- .adam_meta_step(meta, dataset)
+  if (is.null(st)) NULL else .lay(st, width = Inf)
+}
+
+# The head of a program that reads `datasets` itself (no study setup) and
+# puts adam_meta's levels on them: `study$adam_meta`, the rows its reads
+# use, which adam_codes() reads; none when adam_meta maps none of them
+.adam_meta_block <- function(meta, datasets) {
+  if (is.null(meta) || !nrow(.adam_meta_vars(meta, datasets))) return(character())
+  c("# ---- the study's ADaM metadata: the levels the reads put on, as study$adam has them ----",
+    "study <- list()", .adam_meta_lines(meta, datasets), "")
+}
+
+# A dataset read in tflspec's own runs (no program: an AI draw, a figure's
+# content) with adam_meta's levels on it, as study$adam has them (the study
+# helpers' set_levels() and the codes adam_codes() gives); under
+# adam_levels: none, or for a variable adam_meta does not map, as it is
+.adam_meta_levels <- function(d, dataset, study) {
+  if (is.null(dataset) || !inherits(study, "tfl_study_spec") ||
+      identical(.study_adam_levels(study), "none")) {
+    return(d)
+  }
+  v <- .adam_meta_vars(study$adam_meta, dataset)
+  if (!nrow(v)) return(d)
+  lists <- stats::setNames(lapply(v$codelist, function(cl) .adam_codes(study$adam_meta, cl)), v$variable)
+  do.call(.helpers_env()$set_levels, c(list(d), lists))
+}
+
+# The study helpers (tfl_helpers_code()), once a session
+.helpers_env <- function() {
+  if (is.null(.helpers_memo$env)) {
+    env <- new.env(parent = globalenv())
+    eval(parse(text = tfl_helpers_code()), env)
+    .helpers_memo$env <- env
+  }
+  .helpers_memo$env
+}
+.helpers_memo <- new.env(parent = emptyenv())
+
+# A report's code lists with the columns adam_meta maps (in any dataset)
+# as listed too: their levels are study$adam's, kept (a zero row counts),
+# not dropped as an unlisted category's are (.unlisted_vars())
+.adam_listed <- function(levels, meta) {
+  v <- meta$variables
+  if (is.null(v) || !nrow(v)) return(levels)
+  extra <- setdiff(unique(v$variable[!is.na(v$codelist)]), names(levels))
+  if (!length(extra)) return(levels)
+  c(levels, stats::setNames(rep(list(character()), length(extra)), extra))
+}
+
 # A data frame as tibble::tribble(), a row a line, the columns lined up:
 # text in quotes, a whole number with its L, a missing value NA
 .tribble_lines <- function(d) {

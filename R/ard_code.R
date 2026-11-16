@@ -1003,10 +1003,10 @@
       next
     }
     # (the program's own read is study$adam's: the derive, then the blanks
-    # as NA)
+    # as NA, then the levels of the code lists adam_meta maps in it)
     code <- c(code, .make_code(obj, .reader(r$path[1L]), c(
       if (length(d)) sprintf("dplyr::mutate(%s)", paste(d, collapse = ", ")),
-      .blank_read_step, steps)))
+      .blank_read_step, .adam_meta_read_step(x$adam_meta, ds), steps)))
   }
   pop_code <- character()
   for (pid in pops) {
@@ -1053,7 +1053,8 @@
   # step's `adsl_sub` is in reach in the program, the preview and the build
   # check alike
   setup <- isTRUE(getOption("tflspec.study_setup"))
-  head <- c(if (length(dl$data) && !setup) c("# ---- input data ----", dl$data, ""),
+  head <- c(if (!setup) .adam_meta_block(x$adam_meta, dl$used_ds),
+            if (length(dl$data) && !setup) c("# ---- input data ----", dl$data, ""),
             "# ---- data ----", if (setup) dl$data)
   code <- c(head,
             if (length(dl$pops)) c(if (length(head) > 1L) "", dl$pops),
@@ -1126,6 +1127,10 @@
   if (own_data) {
     used_ds <- character()
     pops <- character()
+    # (each report's part reads its data: the ADaM metadata its reads use, once)
+    if (!isTRUE(getOption("tflspec.study_setup"))) {
+      code <- c(code, .adam_meta_block(x$adam_meta, .ard_data_lines(x, a, nad, NULL)$used_ds))
+    }
   } else {
     dl <- .ard_data_lines(x, a, nad, lv1)
     used_ds <- dl$used_ds
@@ -1136,6 +1141,7 @@
     setup <- isTRUE(getOption("tflspec.study_setup"))
     ob1 <- c(ob_study, if (!several) ob_report(outs[1L]))
     code <- c(code,
+              if (!setup) .adam_meta_block(x$adam_meta, used_ds),
               if (length(lv1)) c(
                 "# ---- code lists: each value in its order, as it is in the ARD ----",
                 "# (a value a list does not have stops the program: add it to the list)",
@@ -1550,7 +1556,8 @@
   fmt_fun <- .call_fmt_fun(r, keys, given, fmt)
   lv <- attr(x, "levels")[[r$output_id]]
   node <- .analysis_node(r, keys, subj, has, den, data = data,
-                         population = pop_name, fmt_fun = fmt_fun, codelists = lv)
+                         population = pop_name, fmt_fun = fmt_fun,
+                         codelists = .adam_listed(lv, x$adam_meta))
   # overall: the same call without its by too, bound under it -- cards'
   # overall rows, no group, which a table reads as its Total column
   if (isTRUE(.ard_yes(r$overall %||% NA)) && !is.na(r$by) &&
@@ -1560,7 +1567,7 @@
     total <- TRUE
     node <- .cl("dplyr::bind_rows", list(.piped(node, data), .piped(.analysis_node(
       r0, keys, subj, has, den, data = data, population = pop_name,
-      fmt_fun = fmt_fun, codelists = lv), data)))
+      fmt_fun = fmt_fun, codelists = .adam_listed(lv, x$adam_meta)), data)))
   } else {
     total <- FALSE
   }
@@ -1864,7 +1871,8 @@
   fmt_fun <- .call_fmt_fun(r, keys, given, fmt)
   lv <- attr(x, "levels")[[r$output_id]]
   node <- .analysis_node(r, keys, subj, has, den, data = data,
-                         population = pop_name, fmt_fun = fmt_fun, codelists = lv)
+                         population = pop_name, fmt_fun = fmt_fun,
+                         codelists = .adam_listed(lv, x$adam_meta))
   overall <- isTRUE(.ard_yes(r$overall %||% NA)) && !is.na(r$by) &&
     !call_fn %in% c("(code)", "(subjects)")
   keep <- if (!kind %in% c("continuous", "categorical", "missing") &&

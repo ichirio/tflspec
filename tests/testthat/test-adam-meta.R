@@ -102,3 +102,117 @@ test_that("the package's sample keeps code lists by name and an adam_meta", {
   expect_identical(st$codelists$SEX, c(F = "Female", M = "Male"))
   expect_identical(st$adam_meta$variables$codelist, c("CL.SEX", "CL.AGEGR1", "CL.RACE"))
 })
+
+# ---- the programs' own reads: adam_meta's levels, as study$adam has them -----
+
+# A study on the package's ADSL (factors as text) whose adam_meta maps ADSL.SEX
+# to a list with a code no subject has (U); a report counts SEX by ARM
+amt_run_study <- function(levels = NULL, env = parent.frame()) {
+  skip_if_not_installed("haven")
+  d <- withr_tempdir(env)
+  dir.create(file.path(d, "adam"))
+  haven::write_xpt(.ai_chr(tflspec::adsl), file.path(d, "adam", "adsl.xpt"))
+  suppressMessages(tfl_ai_study_init(d, adam = "adam", study_id = "AM-1"))
+  if (!is.null(levels)) {
+    st <- yaml::read_yaml(file.path(d, "study.yml"))
+    st$settings$adam_levels <- levels
+    yaml::write_yaml(st, file.path(d, "study.yml"))
+  }
+  cat("adam_meta:",
+      "  variables: [{dataset: ADSL, variable: SEX, codelist: CL.SEX}]",
+      "  codelists:",
+      "    - {codelist: CL.SEX, value: M, order: 2}",
+      "    - {codelist: CL.SEX, value: F, order: 1}",
+      "    - {codelist: CL.SEX, value: U, order: 3}", "",
+      sep = "\n", file = file.path(d, "spec", "defaults.yml"), append = TRUE)
+  writeLines(c("id: T-AM", "kind: table", "common: {population: SAF}", "extends: none",
+               "ard:", "  analyses:", "    - id: A1", "      method: categorical",
+               "      population: SAF", "      by: [ARM]", "      variables: [SEX]",
+               "content:", "  - table_plan: {cols: ARM}"),
+             file.path(d, "spec", "outputs", "T-AM.yml"))
+  d
+}
+amt_sex <- function(ard) {
+  x <- ard[ard$variable == "SEX" & ard$stat_name == "n" & !is.na(ard$group1), ]
+  unique(unlist(lapply(x$variable_level, as.character)))
+}
+
+test_that("the ARD program's own read puts adam_meta's levels on, after its study$adam_meta", {
+  skip_on_cran()
+  d <- amt_run_study()
+  st <- tfl_read_study_spec(d)
+  code <- tfl_ard_code(st, "T-AM", save = FALSE)
+  i <- which(code == "study <- list()")
+  expect_length(i, 1L)
+  expect_true(any(grepl("~dataset, ~variable, ~codelist", code, fixed = TRUE)))
+  j <- grep("set_levels(SEX = adam_codes(\"CL.SEX\"))", code, fixed = TRUE)
+  expect_length(j, 1L)
+  expect_lt(i, j)
+  # (blanks as NA first, then the levels)
+  expect_match(code[j], "blank_as_na() |>\n  set_levels(SEX", fixed = TRUE)
+  # (no report list of SEX: the program keeps the study's levels, the zero row of U)
+  expect_false(any(grepl("^cl_sex", code)))
+  ard <- suppressMessages(tfl_build_ard(st, dir = d, output_id = "T-AM", save = FALSE))
+  expect_identical(amt_sex(ard), c("F", "M", "U"))
+  u <- ard[ard$variable == "SEX" & ard$stat_name == "n" &
+             vapply(ard$variable_level, function(v) identical(as.character(v), "U"), NA), ]
+  expect_true(nrow(u) > 0L && all(unlist(u$stat) == 0))
+  # the setup and the program reading study$adam: the same ARD
+  old <- options(tflspec.study_setup = TRUE)
+  on.exit(options(old), add = TRUE)
+  setup <- tfl_study_setup_code(st)
+  prog <- tfl_ard_code(st, "T-AM", save = FALSE)
+  options(old)
+  expect_false(any(grepl("study <- list()", prog, fixed = TRUE)))
+  env <- new.env(parent = globalenv())
+  wd <- setwd(d)
+  on.exit(setwd(wd), add = TRUE)
+  eval(parse(text = tfl_helpers_code()), env)
+  suppressMessages(eval(parse(text = c(setup, prog)), env))
+  setwd(wd)
+  keep <- setdiff(names(ard), "fmt_fun")
+  expect_identical(as.data.frame(env$ard)[keep], as.data.frame(ard)[keep])
+})
+
+test_that("adam_levels: none -- the own read has no levels; nor has a study with no adam_meta", {
+  skip_on_cran()
+  d <- amt_run_study("none")
+  st <- tfl_read_study_spec(d)
+  code <- tfl_ard_code(st, "T-AM", save = FALSE)
+  expect_false(any(grepl("set_levels(SEX = adam_codes", code, fixed = TRUE)))
+  expect_false("study <- list()" %in% code)
+  ard <- suppressMessages(tfl_build_ard(st, dir = d, output_id = "T-AM", save = FALSE))
+  expect_identical(amt_sex(ard), c("F", "M"))
+  # the fingerprint: under codelists adam_meta counts, under none it does not
+  st2 <- tfl_read_study_spec(amt_run_study())
+  h <- function(s) grep("definition = ", tfl_ard_code(s, "T-AM", save = TRUE, part = "body"), value = TRUE)
+  expect_false(identical(h(st), h(st2)))
+})
+
+test_that("a listing's own read and tflspec's own reads put the same levels on", {
+  skip_on_cran()
+  d <- amt_run_study()
+  st <- tfl_read_study_spec(d)
+  ard <- tflspec:::.ard_spec_of_study(st, output_id = "T-AM")$spec
+  expect_identical(ard$adam_meta$variables$variable, "SEX")
+  sp <- tfl_listing_spec(data.frame(output_id = "L-1", dataset = "ADSL", sort = "USUBJID"),
+                         data.frame(output_id = "L-1", vars = "USUBJID | SEX"))
+  code <- tfl_listing_code(sp, "L-1", ard = ard, part = "data")
+  expect_true("adsl <- set_levels(adsl, SEX = adam_codes(\"CL.SEX\"))" %in% code)
+  expect_lt(which(code == "study <- list()"), which(code == "adsl <- blank_as_na(adsl)"))
+  env <- new.env(parent = globalenv())
+  eval(parse(text = tfl_helpers_code()), env)
+  wd <- setwd(d)
+  on.exit(setwd(wd), add = TRUE)
+  suppressMessages(eval(parse(text = code), env))
+  setwd(wd)
+  expect_identical(levels(env$data$SEX), c("F", "M", "U"))
+  # without adam_meta: as before
+  expect_false(any(grepl("adam_codes", tfl_read_data_code(ard$datasets, "ADSL"))))
+  # the AI draws' read (.ai_read_adam()): the same levels; none under none
+  a <- .ai_read_adam(file.path(d, "adam", "adsl.xpt"), "ADSL", st)
+  expect_identical(levels(a$SEX), c("F", "M", "U"))
+  b <- .ai_read_adam(file.path(d, "adam", "adsl.xpt"), "ADSL", tfl_read_study_spec(amt_run_study("none")))
+  expect_true(is.character(b$SEX))
+  expect_true(is.character(.ai_read_adam(file.path(d, "adam", "adsl.xpt"))$SEX))
+})

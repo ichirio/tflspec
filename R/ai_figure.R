@@ -84,7 +84,7 @@
     i <- match(r, have)
     if (is.na(i)) .ard_stop(sprintf("%s reads %s, which spec/data.yml does not list.", id, r))
     .data_file_must_exist(r, ds[[i]]$path, ".")
-    assign(tolower(r), .ai_read_adam(ds[[i]]$path), envir = env)
+    assign(tolower(r), .ai_read_adam(ds[[i]]$path, r, st), envir = env)
   }
   code <- as.character(code)
   # the PNG under the study's output path, as the RTF's
@@ -122,8 +122,9 @@
 # A dataset file as a data frame: .xpt / .sas7bdat (haven), .rds, .parquet (arrow).
 # A figure's dataset as its program reads it: study$adam's, the blanks as
 # NA (blank_as_na(), the study helper: a character column's "" and a
-# factor's "" level)
-.ai_read_adam <- function(path) {
+# factor's "" level), then the levels of the code lists the study's
+# adam_meta maps to `dataset`'s variables (adam_levels: codelists)
+.ai_read_adam <- function(path, dataset = NULL, study = NULL) {
   d <- .ai_read_dataset(path)
   for (v in names(d)) {
     x <- d[[v]]
@@ -136,7 +137,7 @@
     }
     d[[v]] <- x
   }
-  d
+  .adam_meta_levels(d, dataset, study)
 }
 
 .ai_read_dataset <- function(path) {

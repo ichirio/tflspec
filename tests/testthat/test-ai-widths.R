@@ -111,7 +111,7 @@ test_that("a listing's columns get widths from their variables and headers", {
 # (resolved over its layers, widths left out): a rewritten draft that changes
 # the columns gets widths made again, not the old names.
 
-aw639_study <- function(root) {
+aw639_study <- function(root, pattern = NULL) {
   ad <- file.path(root, "adam")
   dir.create(ad, recursive = TRUE, showWarnings = FALSE)
   for (x in c("adsl", "adlb")) {
@@ -120,13 +120,20 @@ aw639_study <- function(root) {
     haven::write_xpt(df, file.path(ad, paste0(x, ".xpt")))
   }
   d <- file.path(root, "study")
+  # (a pattern the drafts may extend: written before the study is prepared,
+  # so the prepared context knows it)
+  if (length(pattern)) {
+    dir.create(file.path(d, "spec", "patterns"), recursive = TRUE, showWarnings = FALSE)
+    writeLines(pattern, file.path(d, "spec", "patterns", "lab.yml"))
+  }
   tfl_ai_prepare(unit = "toc", d, system.file("ai", "example", "onco_toc_shell.xlsx", package = "tflspec"),
                  adam = normalizePath(ad, winslash = "/"), quiet = TRUE, size = 3L)
   d
 }
 
 # the Issue's draft: the shift template, its codelists optional, its widths optional
-aw639_draft <- function(d, codelists = FALSE, title = "Table 14.3.5", widths = NULL) {
+aw639_draft <- function(d, codelists = FALSE, title = "Table 14.3.5", widths = NULL,
+                        extends = "[defaults]") {
   cl <- c("    codelists:",
           paste0("      ", c("ANRIND", "BNRIND"),
                  ": [{value: LOW, label: Low}, {value: NORMAL, label: Normal}, {value: HIGH, label: High}]"))
@@ -137,7 +144,7 @@ aw639_draft <- function(d, codelists = FALSE, title = "Table 14.3.5", widths = N
     "    kind: table",
     "    label: Shift table",
     "    common: {population: SAF}",
-    "    extends: [defaults]",
+    paste0("    extends: ", extends),
     if (codelists) cl,
     "    template:",
     "      name: shift",
@@ -219,22 +226,21 @@ test_that("a rewrite that changes only a title gets the same widths (#639)", {
 
 test_that("a layer's change makes the widths of a rewritten draft again (#639)", {
   aw639_skip()
-  d <- aw639_study(withr::local_tempdir())
-  aw639_draft(d)
+  # (a pattern the draft extends: the study's own lists in defaults.yml reach
+  # no report, a pattern's do)
+  d <- aw639_study(withr::local_tempdir(),
+                   pattern = c("codelists:", "  SEX: [{value: F, label: Female}, {value: M, label: Male}]"))
+  pf <- file.path(d, "spec", "patterns", "lab.yml")
+  aw639_draft(d, extends = "[patterns/lab, defaults]")
   r1 <- aw639_run(d)
   expect_true(any(grepl("____LOW$", names(r1$widths))))
-  f <- file.path(d, "spec", "defaults.yml")
-  y <- yaml::read_yaml(f)
-  y$codelists <- list(ANRIND = list(list(value = "LOW", label = "Low"), list(value = "NORMAL", label = "Normal"),
-                                    list(value = "HIGH", label = "High")),
-                      BNRIND = list(list(value = "LOW", label = "Low"), list(value = "NORMAL", label = "Normal"),
-                                    list(value = "HIGH", label = "High")))
-  yaml::write_yaml(y, f)
+  lv <- "[{value: LOW, label: Low}, {value: NORMAL, label: Normal}, {value: HIGH, label: High}]"
+  writeLines(c("codelists:", paste0("  ", c("ANRIND", "BNRIND"), ": ", lv)), pf)
   # the same draft written again (its text unchanged): the layer it extends
   # is what changed.  Since #655 a layer's code list reaches the ARD, so the
   # list renames the columns (____LOW -> ____Low): the widths are made again
   # for the draft as the layers now make it, and name the new columns.
-  aw639_draft(d)
+  aw639_draft(d, extends = "[patterns/lab, defaults]")
   r2 <- aw639_run(d)
   expect_identical(r2$rp$status, "ok")
   expect_false(is.na(r2$rp$rtf))

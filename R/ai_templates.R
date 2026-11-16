@@ -617,7 +617,7 @@
     i <- match(r, have)
     if (is.na(i)) .ard_stop(sprintf("%s reads %s, which spec/data.yml does not list.", o$id, r))
     .data_file_must_exist(r, ds[[i]]$path, ".")
-    data[[tolower(r)]] <- .ai_read_adam(ds[[i]]$path)
+    data[[tolower(r)]] <- .ai_read_adam(ds[[i]]$path, r, st)
   }
   if (length(o$ard$analyses %||% list())) {
     data$ard <- suppressMessages(tfl_build_ard(st, dir = ".", output_id = o$id, save = FALSE))
