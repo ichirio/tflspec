@@ -27,7 +27,10 @@ required field is there (an analysis's \code{purpose} above all: it is the
 SAP's decision, so \code{\link[=tfl_ars]{tfl_ars()}} leaves it blank when the spec does), each
 id is used once in its class, and each reference (\code{methodId},
 \code{analysisSetId}, \code{dataSubsetId}, \code{groupingId}, an operation, an output or
-analysis of the list of contents) names something that is there.  With
+analysis of the list of contents) names something that is there, and each
+sub-clause of an analysis set's or data subset's \code{compoundExpression}
+carries its \code{level} and \code{order} and a \code{subClauseId} naming a set / subset
+(or its own \code{condition} or \code{compoundExpression}).  With
 \code{schema = TRUE} and the jsonvalidate package installed, the JSON is
 also checked against CDISC's JSON Schema for ARS v1.0
 (\code{system.file("ars", "ars_ldm.json", package = "tflspec")}).

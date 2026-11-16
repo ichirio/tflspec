@@ -32,7 +32,7 @@ the study folder, with forward slashes, when inside it; else as given
 (absolute);
 \item \code{toc_sheet}, \code{sheets}, \code{toc_cols}, \code{sheet_roles}, \code{study_id}, \code{title},
 \code{size}, \code{language}, \code{workbook}, \code{max_chars}, \code{unit}, \code{templates},
-\code{area}, \code{datasets}, \code{max_levels}, \code{agent_reads}, \code{agent_max_reads}: the
+\code{area}, \code{datasets}, \code{max_levels}, \code{agent_reads}, \code{agent_max_reads}, \code{ars}: the
 values; a list (\code{sheets}, \code{shells}, \code{docs}, \code{datasets}, \code{agent_reads}) is
 a YAML list, \code{toc_cols} and \code{sheet_roles} a YAML map.
 }

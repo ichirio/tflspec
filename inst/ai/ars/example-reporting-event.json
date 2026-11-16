@@ -1,0 +1,149 @@
+{
+  "id": "RE_XYZDEMO01",
+  "name": "XYZ-DEMO-01 reporting event (fictional example)",
+  "version": 1,
+  "mainListOfContents": {
+    "name": "Main list of contents",
+    "contentsList": {
+      "listItems": [
+        {
+          "name": "Table 14.3.1.1 Treatment-emergent and serious treatment-emergent adverse events",
+          "level": 1,
+          "order": 1,
+          "outputId": "Out_14_3_1_1"
+        }
+      ]
+    }
+  },
+  "analysisSets": [
+    {
+      "id": "AnalysisSet_SAF",
+      "name": "Safety analysis set",
+      "label": "Safety",
+      "level": 1,
+      "order": 1,
+      "condition": {
+        "dataset": "ADSL",
+        "variable": "SAFFL",
+        "comparator": "EQ",
+        "value": ["Y"]
+      }
+    }
+  ],
+  "dataSubsets": [
+    {
+      "id": "Dss_TEAE",
+      "name": "Treatment-emergent adverse events",
+      "level": 1,
+      "order": 1,
+      "condition": {
+        "dataset": "ADAE",
+        "variable": "TRTEMFL",
+        "comparator": "EQ",
+        "value": ["Y"]
+      }
+    },
+    {
+      "id": "Dss_SER",
+      "name": "Serious adverse events",
+      "level": 1,
+      "order": 2,
+      "condition": {
+        "dataset": "ADAE",
+        "variable": "AESER",
+        "comparator": "EQ",
+        "value": ["Y"]
+      }
+    },
+    {
+      "id": "Dss_TEAE_SER",
+      "name": "Serious treatment-emergent adverse events",
+      "level": 1,
+      "order": 3,
+      "compoundExpression": {
+        "logicalOperator": "AND",
+        "whereClauses": [
+          {
+            "subClauseId": "Dss_TEAE",
+            "level": 2,
+            "order": 1
+          },
+          {
+            "subClauseId": "Dss_SER",
+            "level": 2,
+            "order": 2
+          }
+        ]
+      }
+    }
+  ],
+  "analysisGroupings": [
+    {
+      "id": "AnlsGrouping_TRT01A",
+      "name": "Actual treatment",
+      "groupingDataset": "ADSL",
+      "groupingVariable": "TRT01A",
+      "dataDriven": true
+    }
+  ],
+  "methods": [
+    {
+      "id": "Mth_CountSubj",
+      "name": "Count of subjects",
+      "operations": [
+        {
+          "id": "Mth_CountSubj_n",
+          "name": "Number of subjects",
+          "order": 1,
+          "resultPattern": "XX"
+        }
+      ]
+    }
+  ],
+  "analyses": [
+    {
+      "id": "An_TEAE",
+      "name": "Subjects with a treatment-emergent adverse event",
+      "purpose": {"controlledTerm": "PRIMARY OUTCOME MEASURE"},
+      "reason": {"controlledTerm": "SPECIFIED IN SAP"},
+      "dataset": "ADAE",
+      "variable": "USUBJID",
+      "analysisSetId": "AnalysisSet_SAF",
+      "dataSubsetId": "Dss_TEAE",
+      "orderedGroupings": [
+        {"order": 1, "groupingId": "AnlsGrouping_TRT01A", "resultsByGroup": true}
+      ],
+      "methodId": "Mth_CountSubj"
+    },
+    {
+      "id": "An_TEAE_SER",
+      "name": "Subjects with a serious treatment-emergent adverse event",
+      "purpose": {"controlledTerm": "PRIMARY OUTCOME MEASURE"},
+      "reason": {"controlledTerm": "SPECIFIED IN SAP"},
+      "dataset": "ADAE",
+      "variable": "USUBJID",
+      "analysisSetId": "AnalysisSet_SAF",
+      "dataSubsetId": "Dss_TEAE_SER",
+      "orderedGroupings": [
+        {"order": 1, "groupingId": "AnlsGrouping_TRT01A", "resultsByGroup": true}
+      ],
+      "methodId": "Mth_CountSubj"
+    }
+  ],
+  "outputs": [
+    {
+      "id": "Out_14_3_1_1",
+      "name": "Table 14.3.1.1 Treatment-emergent and serious treatment-emergent adverse events",
+      "displays": [
+        {
+          "order": 1,
+          "display": {
+            "id": "Disp_14_3_1_1",
+            "name": "Table 14.3.1.1",
+            "displayTitle": "Treatment-emergent and serious treatment-emergent adverse events (Safety analysis set)"
+          }
+        }
+      ]
+    }
+  ]
+}
