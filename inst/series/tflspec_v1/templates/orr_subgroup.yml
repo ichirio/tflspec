@@ -1,0 +1,106 @@
+# tflspec_v1/templates/orr_subgroup.yml
+template: orr_subgroup
+label: Response rate with its CI, overall and in each subgroup level
+params:
+  by:
+    type: list<column>
+    input: pick
+    choices: vars(adsl_sub)
+    required: true
+    step: analysis
+    tier: required
+    description: The column variable(s); the groups across.
+  category:
+    type: column
+    input: pick
+    choices: vars(adrs_sub)
+    default: AVALCAT1
+    step: data
+    tier: other
+    description: The column of the response category.
+  conditions:
+    type: rows<subgroup,subgroup_lvl,where>
+    input: table
+    columns: params
+    default: []
+    step: analysis
+    tier: usual
+    description: The subgroup rows, one a subgroup level, after the ALL row.
+  overall_row:
+    type: logical
+    input: pick
+    choices: fixed
+    default: !series overall_row
+    step: analysis
+    tier: other
+    description: The ALL row, overall, before the subgroup rows.
+  responder:
+    type: level
+    input: pick
+    choices: levels(category)
+    free: true
+    default: Response
+    step: analysis
+    tier: usual
+    description: The category level counted as a response.
+  ci_method:
+    type: enum[clopper-pearson|wilson|wald|agresti-coull|jeffreys]
+    input: pick
+    choices: fixed
+    default: clopper-pearson
+    step: analysis
+    tier: usual
+    description: The method of the confidence interval.
+  conf_level:
+    type: number
+    input: text
+    default: !series conf_level
+    step: analysis
+    tier: usual
+    description: The confidence level of the interval.
+  formats:
+    type: map<string,number|string>
+    input: table
+    choices: stats
+    free: true
+    default: !series formats
+    step: analysis
+    tier: usual
+    description: The decimals (or the format) of each statistic.
+extends: !series extends
+style: !series style
+data:
+  - id: adsl_sub
+    from: ADSL
+    population: ITT
+  - id: adrs_sub
+    from: ADRS
+    subjects_in: adsl_sub
+    add: ["{by}"]
+    where: !r PARAMCD == "BOR"
+    keep: ["{category}"]
+analysis:
+  - id: BIGN
+    label: Subjects per group
+    method: categorical
+    data: adsl_sub
+    variables: ["{by}"]
+    formats: "{formats}"
+  - id: ORR
+    label: Response rate with its CI, overall and in each subgroup level
+    method: proportion_ci
+    data: adrs_sub
+    params: [subgroup, subgroup_lvl, where]
+    conditions:
+      - {subgroup: ALL, subgroup_lvl: ALL, where: !r TRUE}
+      - "{conditions}"
+    where: !r "{where}"
+    derive: !r subgroup = "{subgroup}" | subgroup_lvl = "{subgroup_lvl}" | {category} = dplyr::if_else({category} %in% "{responder}", "{responder}", "Non-response")
+    by: [subgroup, subgroup_lvl, "{by}"]
+    variables: ["{category}"]
+    args: !r value = list({category} = "{responder}"), method = "{ci_method}", conf.level = {conf_level}
+    post: !r dplyr::filter(stat_name %in% c("N", "n", "estimate", "conf.low", "conf.high"))
+    formats: "{formats}"
+page:
+  titles: ~
+  footnotes: ~
