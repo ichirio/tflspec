@@ -26,5 +26,8 @@ function files (the study key \code{source}; a file not there counts as
 \code{"missing"}).  An ARD built from a definition whose fingerprint differs
 from the one now is outdated.  A column blank in every analysis row of
 the output does not count, so a column added to the definition later
-leaves the fingerprints as they were.
+leaves the fingerprints as they were.  The study key \code{adam_levels}
+(study.yml's \code{settings: adam_levels}, which \code{\link[=tfl_sheets_from_spec]{tfl_sheets_from_spec()}} puts
+on the \code{study} sheet when it is \code{none}) counts: \code{none} gives another
+fingerprint than \code{codelists}, the default, which leaves it as it was.
 }

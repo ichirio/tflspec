@@ -175,6 +175,11 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   if (!is.null(ard$study) && nrow(ard$study)) {
     keys <- stats::setNames(as.list(ard$study$value), ard$study$key)
     keys <- keys[!vapply(keys, is.na, NA)]
+    # (adam_levels is a setting: the ARD's study sheet only carries it)
+    if (!is.null(keys$adam_levels) && is.null(study$settings$adam_levels)) {
+      study$settings$adam_levels <- keys$adam_levels
+    }
+    keys$adam_levels <- NULL
     if (length(keys)) study$keys <- keys
   }
   if (!is.null(plan)) {

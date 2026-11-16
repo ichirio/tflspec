@@ -97,5 +97,6 @@ test_that("a listing's data is read through the folder's variable too", {
                        tflspec.attached = "dplyr")
   cat <- data.frame(dataset = "ADAE", path = "data/adam/adae.rds")
   expect_identical(tfl_read_data_code(cat, "ADAE"),
-                   "adae <- readRDS(file.path(path_adam, \"adae.rds\"))")
+                   c("adae <- readRDS(file.path(path_adam, \"adae.rds\"))",
+                     "adae <- blank_as_na(adae)"))
 })

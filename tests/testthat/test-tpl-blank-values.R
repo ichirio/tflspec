@@ -162,7 +162,7 @@ test_that("forest_hr: a blank subgroup value is no subgroup", {
   tt <- tflspec::adtte
   ad <- tflspec::adsl
   pfs <- tt$USUBJID[tt$PARAMCD == "PFS" & tt$SAFFL == "Y"]
-  ad$SEX[ad$USUBJID %in% pfs[c(2, 30, 60)]] <- ""
+  ad$SEX[ad$USUBJID %in% pfs[c(2, 30, 60)]] <- NA
   d <- bv_study(withr::local_tempdir(), list(adsl = ad, adtte = tt))
   tfl_write_output(tfl_output("F-1", "figure", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = "forest_hr",
@@ -176,7 +176,8 @@ test_that("forest_hr: a blank subgroup value is no subgroup", {
   p <- tt[tt$PARAMCD == "PFS" & tt$SAFFL == "Y", ]
   p$SEX <- ad$SEX[match(p$USUBJID, ad$USUBJID)]
   n <- bv_stat(a, "TRT01A", "Control", "F", "n_obs", "HR_SEX")
-  expect_equal(n, sum(p$TRT01A == "Control" & p$SEX == "F"))
+  # (the subjects with SEX missing are in no subgroup)
+  expect_equal(n, sum(p$TRT01A == "Control" & p$SEX == "F", na.rm = TRUE))
 })
 
 test_that("ae_eair: an event with no day uses the subject's other events; none: counted, warned", {
