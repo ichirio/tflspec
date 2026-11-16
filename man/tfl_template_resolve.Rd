@@ -23,8 +23,8 @@ each came from (\code{"report"}, \code{"template"}, \code{"series"}, \code{"stud
 }
 \description{
 Reads the report's template (\verb{template: name: <series>/<template>}), puts
-the report's arguments (\verb{template: analysis:}, \verb{content:}, ... or
-directly under \verb{template:}) over the template's defaults, resolves the
+the report's arguments (\verb{template: args:}, the step sections
+\verb{template: analysis:}, \verb{content:}, ... or directly under \verb{template:}) over the template's defaults, resolves the
 series' and the study's values (\code{!series}, \code{!study}, \code{!fixed}), fills in
 the \code{"{name}"} spots of the template's \verb{data:} rows, analysis items,
 content and page, and merges the report's own \verb{data:} rows into the

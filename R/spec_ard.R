@@ -214,6 +214,7 @@ tfl_report_codelists <- function(study, outputs = NULL, rows = NULL) {
     ids <- ids[ids %in% output_id]
   }
   made <- lapply(seq_along(outputs), function(i) {
+    .adam_levels_name_check(outputs[[i]], study)
     mine <- own[own$output_id == ids[i], , drop = FALSE]
     below <- tryCatch(.layers_below(outputs[[i]], study)$acc$codelists, error = function(e) {
       .ard_stop(sprintf("%s: %s", ids[i], conditionMessage(e)))

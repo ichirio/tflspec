@@ -238,3 +238,15 @@ test_that("lab: record_where is adlb_sub's where; a report row merges key by key
   # (the other rows as they were)
   expect_identical(row_of(tfl_template_resolve(rep3, study = tr_study()), "adsl_sub"), row_of(out, "adsl_sub"))
 })
+
+test_that("a flat args: under template: is read as the step sections are", {
+  rep <- tr_reports()$demog
+  a <- rep$template$analysis
+  rep$template$analysis <- NULL
+  rep$template$args <- a
+  out <- tfl_template_resolve(rep, study = tr_study())
+  expect_identical(tr_ids(out), c("BIGN", "AGE", "AGEGR1", "SEX", "RACE", "ETHNIC"))
+  expect_identical(attr(out, "origins")[["by"]], "report")
+  rep$template$args$nonesuch <- 1
+  expect_error(tfl_template_resolve(rep, study = tr_study()), "has no argument nonesuch")
+})
