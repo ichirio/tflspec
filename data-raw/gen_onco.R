@@ -449,6 +449,8 @@ gen_onco <- function(n = 160, seed = 20261016, dco = as.Date("2026-06-30")) {
                AVISIT = "OVERALL", AVISITN = NA_real_, ADT = bor$ADT, AVALC = bor$AVALC,
                AVAL = unname(code[bor$AVALC]))
   )
+  # the response category (a template's default category, CR / PR a response)
+  adrs$AVALCAT1 <- ifelse(adrs$AVALC %in% c("CR", "PR"), "Response", "Non-response")
   adrs <- adrs[order(adrs$rs_i, adrs$PARAMCD == "BOR", adrs$ADT), ]
   adrs$ANL01FL <- "Y"
 
@@ -632,7 +634,7 @@ gen_onco <- function(n = 160, seed = 20261016, dco = as.Date("2026-06-30")) {
     DCUTDT = "Data Cutoff Date", BSLD = "Baseline Sum of Diameters (mm)",
     PARAMCD = "Parameter Code", PARAM = "Parameter", PARAMN = "Parameter (N)", PARCAT1 = "Parameter Category 1",
     AVISIT = "Analysis Visit", AVISITN = "Analysis Visit (N)", ADT = "Analysis Date", ADY = "Analysis Relative Day",
-    AVAL = "Analysis Value", AVALC = "Analysis Value (C)", AVALU = "Analysis Value Unit",
+    AVAL = "Analysis Value", AVALC = "Analysis Value (C)", AVALCAT1 = "Analysis Value Category 1", AVALU = "Analysis Value Unit",
     BASE = "Baseline Value", CHG = "Change from Baseline", PCHG = "Percent Change from Baseline",
     NADIR = "Nadir Before This Assessment", ABLFL = "Baseline Record Flag", ONTRTFL = "On Treatment Record Flag",
     ANL01FL = "Analysis Flag 01", ANRLO = "Analysis Normal Range Lower Limit",

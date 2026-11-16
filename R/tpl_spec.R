@@ -541,7 +541,9 @@
 #' merged with the report's own `ard:`, `data:` and `content:`, and the
 #' `template:` taken out.  Each item the template made keeps the mark
 #' `from = "template:<name>"`.  The report is then a code SPEC: later
-#' changes of the template do not reach it.
+#' changes of the template do not reach it.  A series template
+#' (`<series>/<template>`) is written out by [tfl_template_resolve()], with
+#' the study's `study.yml` values.
 #'
 #' @param output A `tfl_output` as read from its file ([tfl_read_output()]).
 #' @param study Its study ([tfl_read_study_spec()]).
@@ -560,6 +562,11 @@ tfl_template_to_spec <- function(output, study) {
   if (!inherits(output, "tfl_output")) .ard_stop("tfl_template_to_spec(): `output` is a tfl_output.")
   if (!inherits(study, "tfl_study_spec")) .ard_stop("tfl_template_to_spec(): `study` is a tfl_study_spec.")
   if (is.null(.tpl_spec_of(output))) return(output)
+  # a series template (`<series>/<template>`): the code SPEC is what
+  # tfl_template_resolve() makes of it, with the study's settings
+  if (grepl("/", output$template$name, fixed = TRUE)) {
+    return(tfl_template_resolve(.output_to_list(output), study = study$study %||% list()))
+  }
   lb <- .tpl_layers_below(output, study)
   # (the resolve below says what `plot:` does not reach, once)
   e <- .tpl_expand_for(output, study, lb, .merge_map(lb$acc$codelists, output$codelists), warn = FALSE)
