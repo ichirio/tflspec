@@ -188,6 +188,7 @@
   row$free <- as.logical(free)
   row$ordered <- as.logical(ordered)
   row$columns <- I(list(d$columns))
+  row$fixed_rows <- I(list(NULL))
   row$tier <- tier
   row$description <- as.character(d$description %||% d$help %||% "")
   row
@@ -299,6 +300,43 @@
 
 # ---- a template's params: ---------------------------------------------------
 
+# The rows a template writes with fixed values in the same list as a table
+# param's "{name}" (forest_hr's conditions: the ALL row): a data frame, its
+# attribute "position" each row's place, "before" or "after" "{name}"; NULL
+# when there are none.
+.arg_fixed_rows <- function(body, name) {
+  spot <- paste0("{", name, "}")
+  found <- NULL
+  walk <- function(x) {
+    if (!is.null(found) || !is.list(x)) return(invisible())
+    if (is.null(names(x))) {
+      at <- which(vapply(x, function(e) identical(e, spot), TRUE))
+      if (length(at)) {
+        is_map <- vapply(x, function(e) is.list(e) && !is.null(names(e)), TRUE)
+        idx <- setdiff(which(is_map), at[1L])
+        if (length(idx)) {
+          found <<- list(rows = x[idx], pos = ifelse(idx < at[1L], "before", "after"))
+        }
+        return(invisible())
+      }
+    }
+    for (e in x) walk(e)
+  }
+  walk(body)
+  if (is.null(found)) return(NULL)
+  cell <- function(v) {
+    if (is.null(v)) return(NA_character_)
+    if (inherits(v, "tfl_r")) return(as.character(unclass(v)))
+    if (inherits(v, "tfl_tagged")) return(as.character(unlist(v$value))[1L])
+    paste(as.character(unlist(v)), collapse = ", ")
+  }
+  cols <- unique(unlist(lapply(found$rows, names)))
+  df <- as.data.frame(stats::setNames(lapply(cols, function(cn)
+    vapply(found$rows, function(r) cell(r[[cn]]), "")), cols), stringsAsFactors = FALSE)
+  attr(df, "position") <- found$pos
+  df
+}
+
 # The template file of "<series>/<template>": the first series folder that has
 # it (the option tflspec.series_dir, tflplanner's home standards/series/, the
 # package's own series).
@@ -376,6 +414,11 @@
 #'       `params:`); in a list, an unnamed `"params"` marks where the item's
 #'       params go (an item's conditions: `"params"`, `where`, an optional
 #'       `analysis_id`).}
+#'     \item{fixed_rows}{(a list column) a template's table param: the rows
+#'       the template writes with fixed values next to its `"{name}"` (the
+#'       ALL row of forest_hr's conditions), a data frame whose attribute
+#'       `"position"` gives each row's place, `"before"` or `"after"` the
+#'       report's rows; `NULL` otherwise.}
 #'     \item{tier}{`required`, `usual` or `other` (shown folded).}
 #'     \item{description}{one line.}
 #'   }
@@ -397,8 +440,11 @@ tfl_arg_defs <- function(fn = NULL, template = NULL) {
       stop(sprintf("template %s: params: is a map of argument definitions.", template),
            call. = FALSE)
     }
-    return(.arg_table(defs, "analysis", paste0("template.", sub("/", ".", template, fixed = TRUE), "."),
-                      sprintf("template %s", template)))
+    out <- .arg_table(defs, "analysis", paste0("template.", sub("/", ".", template, fixed = TRUE), "."),
+                      sprintf("template %s", template))
+    y$params <- NULL
+    for (i in seq_len(nrow(out))) out$fixed_rows[i] <- list(.arg_fixed_rows(y, out$name[i]))
+    return(out)
   }
   fn <- as.character(fn)[1L]
   if (identical(fn, "data")) {

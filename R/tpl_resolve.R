@@ -10,7 +10,6 @@
 #   "{name}"        a whole value: the param's value as it is (a vector is
 #                   spliced into a list; NULL drops the key)
 #   "... {name} ..." inside text or R: the value as text
-#   "{name: key}"   one entry of a map param
 #   "{{" / "}}"     a brace
 # Inside an item with `params:`, a "{p}" of one of those params is the
 # item's (the generator's one-row function's argument): left as written.
@@ -31,8 +30,9 @@
 #' variable` one a variable (its id the variable's entry in `ids`, else the
 #' variable's name); `per: level` or `per: [columns]` one row whose
 #' `analysis_per` tells the generator how to name the analyses; no `per`
-#' one analysis, the item's id (`analysis_ids:` is read as `analyses: ids:`).  An item's `conditions:` is a data frame, one row a run, its
-#' columns the item's `params` (and `analysis_id`, a row's own id, when a row gives one): the template's rows first, then the
+#' one analysis, the item's id.  An item's `conditions:` is a data frame,
+#' one row a run, its columns the item's `params` (and `analysis_id`, a
+#' row's own id, when a row gives one): the template's rows first, then the
 #' report's (`"{conditions}"`).  An item or data row whose `when:` names an
 #' argument with no value (or `false`) is left out.
 #'
@@ -203,8 +203,6 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
 #   per: level      one row, analysis_per "level" (the generator's ids a level)
 #   per: [cols]     one row, analysis_per the columns |-joined (an id a value)
 #   no per          one analysis, the item's id
-# (`analysis_ids:` is read as analyses: ids: with per: variable, until the
-# templates are changed)
 .tr_item <- function(it, env, template) {
   it$when <- NULL
   shadow <- as.character(unlist(it$params))
@@ -212,10 +210,6 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   it$conditions <- NULL
   an <- it$analyses
   it$analyses <- NULL
-  if ("analysis_ids" %in% names(it)) {
-    an <- list(per = an$per %||% "variable", ids = it$analysis_ids %||% an$ids)
-    it$analysis_ids <- NULL
-  }
   an <- .tr_fill(an, env, shadow)
   f <- .tr_fill(it, env, shadow)
   if (!is.null(f$params)) f$params <- as.character(unlist(f$params))
@@ -260,14 +254,7 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   out
 }
 
-.tr_ref_re <- "\\{([A-Za-z_][A-Za-z0-9_.]*)(?: *: *([^{}]+?))?\\}"
-
-# a param's value, or one entry of it ("{name: key}")
-.tr_lookup <- function(env, nm, key) {
-  v <- env[[nm]]
-  if (!is.na(key) && nzchar(key)) v <- v[[trimws(key)]]
-  v
-}
+.tr_ref_re <- "\\{([A-Za-z_][A-Za-z0-9_.]*)\\}"
 
 # a value as text, for a "{name}" inside text or R
 .tr_as_text <- function(v) {
@@ -285,9 +272,8 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   regmatches(s, m) <- lapply(regmatches(s, m), function(hits) {
     vapply(hits, function(h) {
       nm <- sub(paste0("^", .tr_ref_re, "$"), "\\1", h, perl = TRUE)
-      key <- sub(paste0("^", .tr_ref_re, "$"), "\\2", h, perl = TRUE)
       if (!nm %in% names(env) || nm %in% shadow) return(h)
-      .tr_as_text(.tr_lookup(env, nm, key))
+      .tr_as_text(env[[nm]])
     }, "", USE.NAMES = FALSE)
   })
   gsub("\002", "}", gsub("\001", "{", s, fixed = TRUE), fixed = TRUE)
@@ -297,9 +283,8 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
 .tr_whole <- function(s, env, shadow) {
   if (!grepl(paste0("^", .tr_ref_re, "$"), s, perl = TRUE)) return(list(hit = FALSE))
   nm <- sub(paste0("^", .tr_ref_re, "$"), "\\1", s, perl = TRUE)
-  key <- sub(paste0("^", .tr_ref_re, "$"), "\\2", s, perl = TRUE)
   if (!nm %in% names(env) || nm %in% shadow) return(list(hit = FALSE))
-  list(hit = TRUE, value = .tr_lookup(env, nm, key))
+  list(hit = TRUE, value = env[[nm]])
 }
 
 # a value with its "{name}" spots filled in

@@ -27,14 +27,16 @@ tr_reports <- function() {
       "data:", "  - id: adlb_sub",
       "    where: !r APHASE == \"P2\" & PARCAT1 == \"CHEMISTRY\"",
       "template:", "  name: tflspec_v1/lab_tox_shift", "  analysis:", "    by: TRT01A",
-      "    graded_params:", "      Low: [Albumin (g/L), Sodium (mmol/L)]",
-      "      High: [Creatinine (umol/L), Sodium (mmol/L)]")),
+      "    conditions:", "      - {tox_dir: Low, param: Albumin (g/L)}",
+      "      - {tox_dir: High, param: Creatinine (umol/L)}",
+      "      - {tox_dir: High, param: Sodium (mmol/L), analysis_id: NA_HIGH2}")),
     orr = tr_report(c(
       "id: T-14-2-4", "kind: table", "label: Overall response rate by subgroup",
       "data:", "  - id: adsl_sub", "    from: ADSLX", "    population: none",
       "    where: !r TRT01AN == 1", "  - id: adrs_sub",
-      "    where: !r PARAMCD == \"BORC\"", "    add: [TR01AG1, BRCA, AGEGR1]",
-      "template:", "  name: tflspec_v1/orr_subgroup", "  analysis:", "    by: TR01AG1",
+      "    where: !r PARAMCD == \"BORC\"",
+      "template:", "  name: tflspec_v1/orr_subgroup", "  data:", "    subgroup_vars: [BRCA, AGEGR1]",
+      "  analysis:", "    by: TR01AG1",
       "    conditions:",
       "      - {subgroup: BRCA, subgroup_lvl: POSITIVE, where: !r BRCA == \"POSITIVE\"}",
       "      - {subgroup: AGEGR1, subgroup_lvl: \"<65\", where: !r AGEGR1 == \"<65\"}",
@@ -58,7 +60,7 @@ tr_reports <- function() {
       "    where: !r PARAMCD == \"TTSKIN\"", "    add: [TRT01A, SEX]",
       "template:", "  name: tflspec_v1/forest_hr", "  analysis:", "    by: TRT01A",
       "    conditions:", "      - {subgroup: SEX, subgroup_lvl: F, where: !r SEX == \"F\"}",
-      "    ref: Control", "  content:", "    comparison: Drug X"))
+      "    ref: Control", "    comparison: Drug X"))
   )
 }
 
@@ -122,12 +124,15 @@ test_that("ORR: the conditions rows, the template's ALL row first", {
   expect_identical(as.character(adrs$where), "PARAMCD == \"BORC\"")
 })
 
-test_that("lab: a condition row reads one entry of a map argument", {
+test_that("lab: a condition row a test and a direction, its id by PARAMCD and tox_dir", {
   out <- tfl_template_resolve(tr_reports()$lab, study = tr_study())
   sh <- out$ard$analyses[[2L]]
-  expect_identical(sh$conditions$tox_dir, c("Low", "High"))
-  expect_identical(sh$conditions$graded_params[[1L]], c("Albumin (g/L)", "Sodium (mmol/L)"))
-  expect_identical(sh$levels$PARAM, "{graded_params}")
+  expect_identical(sh$conditions$tox_dir, c("Low", "High", "High"))
+  expect_identical(sh$conditions$param[[2L]], "Creatinine (umol/L)")
+  # (a row's own id; the others the per rule's)
+  expect_identical(sh$conditions$analysis_id, c(NA, NA, "NA_HIGH2"))
+  expect_identical(sh$analysis_per, "PARAMCD|tox_dir")
+  expect_identical(sh$levels$PARAM, "{param}")
   expect_length(sh$ards, 4L)})
 
 test_that("a conditions row may name its own analysis_id", {
@@ -170,7 +175,6 @@ test_that("the fill: braces, splicing, NULL drops a key, when", {
   expect_identical(f(c("{by}", "C"), env), c("A", "B", "C"))
   expect_identical(f("{{by}} {n}", env), "{by} 2")
   expect_identical(f(list(a = "{none}", b = 1), env), list(b = 1))
-  expect_identical(f("{m: x}", env), "X1")
   expect_identical(f("{p} {n}", env, shadow = "n"), "{p} {n}")
   w <- tflspec:::.tr_when
   expect_false(w(list(when = "flag"), env, "t"))

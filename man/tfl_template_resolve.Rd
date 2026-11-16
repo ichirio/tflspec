@@ -35,7 +35,7 @@ template's by id, key by key.  The result is a plain code SPEC, as
 An analysis item's \verb{analyses:} (\code{per}, \code{ids}) says its analyses: \verb{per: variable} one a variable (its id the variable's entry in \code{ids}, else the
 variable's name); \verb{per: level} or \verb{per: [columns]} one row whose
 \code{analysis_per} tells the generator how to name the analyses; no \code{per}
-one analysis, the item's id (\verb{analysis_ids:} is read as \verb{analyses: ids:}).  An item's \verb{conditions:} is a data frame, one row a run, its
+one analysis, the item's id.  An item's \verb{conditions:} is a data frame, one row a run, its
 columns the item's \code{params} (and \code{analysis_id}, a row's own id, when a row gives one): the template's rows first, then the
 report's (\code{"{conditions}"}).  An item or data row whose \verb{when:} names an
 argument with no value (or \code{false}) is left out.
