@@ -142,7 +142,7 @@ test_that("tfl_content_run() runs a series figure report's program on the object
 test_that("a series figure naming a figure content the table lacks stops", {
   o <- tfl_template_resolve(sfc_km(), study = sfc_study)
   o$figure <- "nonesuch"
-  expect_error(tfl_content_code(o), "names the figure `nonesuch`")
+  expect_error(tfl_content_code(o), "not a figure content")
 })
 
 test_that("km_simple's legend choices and y_label default are km_curves()'s", {

@@ -492,12 +492,12 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       # a figure of items (R/fig_content.R): its data and items as they are,
       # the design list's `content` (read back by .conv_output(), #689)
       fd <- list(template = o$template, data = o$data$steps, content = .items_to_list(o$content))
-      for (k in c("ggplot2_version", "plot", "plots", "compose")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]
+      for (k in c("ggplot2_version", "plot", "plots", "compose", "figure")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]
       figures[[id]] <- fd
       # what the design list has no place for is said, by the report
       lost <- c(setdiff(names(o$data), c("steps", "code", "datasets", "ard", "source")),
                 if (!is.null(o$data$source) && !identical(o$data$source, "code")) "source")
-      lost <- c(lost, setdiff(names(o), c(.output_fields, "template", "ggplot2_version", "plot", "plots", "compose")))
+      lost <- c(lost, setdiff(names(o), c(.output_fields, "template", "ggplot2_version", "plot", "plots", "compose", "figure")))
       if (length(lost)) {
         note(id, "figure", paste0("a figure of items: ", paste(unique(lost), collapse = ", "),
                                    " is not kept (the design list has no place for it)"))
@@ -508,6 +508,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       if (code_content) oc$content <- list()
       fd <- .fig_design_of_output(oc)
       if (!is.null(o$template)) fd$template <- o$template
+      if (!is.null(o$figure)) fd$figure <- o$figure
       # a figure that is its own code and nothing of the designer's has no
       # design
       if (!(code_content && identical(names(fd), "layers"))) figures[[id]] <- fd

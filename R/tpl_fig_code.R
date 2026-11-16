@@ -235,16 +235,16 @@
 # ARD (`ard`) and the appearance `params` -- into `content`.  NULL when the
 # report is not one.
 .content_fig_series_code <- function(output, name = "content") {
+  if (is.null(output$figure)) return(NULL)
   tp <- attr(output, "template")
-  fig <- output$figure
-  if (!is.character(tp) || length(tp) != 1L || !is.character(fig) || length(fig) != 1L) return(NULL)
-  tb <- .fig_content_table()
-  e <- tb[[fig]]
-  if (is.null(e)) {
-    .ard_stop(sprintf("%s: template %s names the figure `%s`; one of %s.", output$id, tp, fig,
-                      paste(names(tb), collapse = ", ")))
+  key <- tryCatch(.fig_content_key(output), error = function(e) .ard_stop(conditionMessage(e)))
+  if (length(output$content)) {
+    .ard_stop(sprintf("%s: a report with `figure:` has no `content:` (the figure content is the call).",
+                      output$id))
   }
-  args <- attr(output, "args") %||% list()
+  fig <- key$name
+  e <- .fig_content_table()[[fig]]
+  args <- key$args
   # the model: its call with the template's arguments (a required one the
   # report did not give is the resolve's stop, not here)
   model <- NULL
@@ -253,6 +253,11 @@
     for (k in names(args)) {
       v <- args[[k]]
       if (is.character(v) && length(v) == 1L) call <- gsub(paste0("{", k, "}"), v, call, fixed = TRUE)
+    }
+    left <- regmatches(call, gregexpr("[{][A-Za-z_.]+[}]", call))[[1L]]
+    if (length(left)) {
+      .ard_stop(sprintf("%s: figure %s needs %s in its `args`.", output$id %||% "report", fig,
+                        paste(gsub("[{}]", "", unique(left)), collapse = ", ")))
     }
     model <- .fig_series_model_lines(e$model$arg, call)
   }
@@ -269,7 +274,8 @@
   # (a comma after each argument but the last)
   n_comma <- length(call_args) - if (length(params)) 0L else 1L
   call_args <- paste0(call_args, c(rep(",", n_comma), rep("", length(call_args) - n_comma)))
-  code <- c(sprintf("# template %s: the figure content %s()", tp, e$fn),
+  code <- c(if (is.character(tp)) sprintf("# template %s: the figure content %s()", tp, e$fn)
+            else sprintf("# the figure content %s()", e$fn),
             model,
             sprintf("%s <- %s(", name, fn),
             call_args, params,

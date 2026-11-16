@@ -35,6 +35,42 @@
                  "bold_headings", "n_by_arm")))
 }
 
+# The names a figure content's model call reads ({by}, {time}, {censor})
+.fig_model_args <- function(e) {
+  if (is.null(e$model)) return(character())
+  m <- regmatches(e$model$call, gregexpr("[{][A-Za-z_.]+[}]", e$model$call))[[1L]]
+  unique(gsub("[{}]", "", m))
+}
+
+# A figure report's content key, `figure: {name, args}`: the content
+# function's name (a name of the table) and its arguments -- the model's
+# ({by}, {time}, {censor}) then the function's `params`.  A report that has
+# it as a list has it as written; a report resolved from a series template
+# (`figure:` a name, the template's arguments in its `args` attribute) gets
+# it from the arguments.  NULL for a report with neither.
+.fig_content_key <- function(output) {
+  fig <- output$figure
+  if (is.null(fig)) return(NULL)
+  tb <- .fig_content_table()
+  if (is.list(fig)) {
+    name <- fig$name
+    args <- fig$args %||% list()
+  } else {
+    name <- fig
+    args <- NULL
+  }
+  if (!is.character(name) || length(name) != 1L || is.na(name) || !name %in% names(tb)) {
+    stop(sprintf("%s: the figure `%s` is not a figure content; one of %s.", output$id %||% "report",
+                 paste(format(name), collapse = " "), paste(names(tb), collapse = ", ")), call. = FALSE)
+  }
+  if (is.null(args)) {
+    given <- attr(output, "args") %||% list()
+    keep <- c(.fig_model_args(tb[[name]]), tb[[name]]$params)
+    args <- Filter(Negate(is.null), given[intersect(keep, names(given))])
+  }
+  list(name = name, args = args)
+}
+
 # The registry's functions by name
 .fig_content_fns <- function() {
   tb <- .fig_content_table()

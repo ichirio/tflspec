@@ -565,7 +565,10 @@ tfl_template_to_spec <- function(output, study) {
   # a series template (`<series>/<template>`): the code SPEC is what
   # tfl_template_resolve() makes of it, with the study's settings
   if (grepl("/", output$template$name, fixed = TRUE)) {
-    return(tfl_template_resolve(.output_to_list(output), study = study$study %||% list()))
+    out <- tfl_template_resolve(.output_to_list(output), study = study$study %||% list())
+    # a figure template's content: the report's `figure: {name, args}`
+    if (!is.null(out$figure)) out$figure <- .fig_content_key(out)
+    return(out)
   }
   lb <- .tpl_layers_below(output, study)
   # (the resolve below says what `plot:` does not reach, once)
