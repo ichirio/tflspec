@@ -239,7 +239,10 @@ generate_rtfreport(tfl_report(o, content = plan, study = st), "T-1.rtf")
 **study.yml** — `study_id`, `title`; `settings:` the table and report
 study keys (`rounding`: `sas` / `r`; `program_dir`; `program` and
 `file`, each report's program and RTF file, `{output_id}.R` /
-`{output_id}.rtf`); `keys:` the ARD's (`id`: the subject key, `USUBJID`;
+`{output_id}.rtf`; `adam_levels`: `codelists`, the default, puts the
+study's code lists' levels on `study$adam`, `none` does not -- blanks are
+`NA` either way, a report's own levels and labels written as values still
+work, and naming a study code list (`cl_sex`) stops); `keys:` the ARD's (`id`: the subject key, `USUBJID`;
 `output`: where the study ARD goes; `source`: R files of the study's own
 analysis functions).
 
@@ -1271,7 +1274,7 @@ sp$ard; sp$report; sp$table       # fill sp$ard$datasets$path before running
 `tfl_table_spec_template(ard)` (scaffolds `tables` / `variables` / `cells`
 from an ARD). A workbook may be split over several files; a sheet is said
 once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `r`;
-`output_path`; `program_dir`).
+`output_path`; `program_dir`; `adam_levels`: `codelists` / `none`).
 
 **tables** (one row a table) — the roles and the table-wide layers:
 
