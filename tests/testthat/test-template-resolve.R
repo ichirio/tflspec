@@ -169,18 +169,13 @@ test_that("a required argument with no value stops, naming it", {
   expect_error(tfl_template_resolve(rep, study = tr_study()), "no argument colour")
 })
 
-test_that("the fill: braces, splicing, NULL drops a key, when", {
+test_that("the fill: braces, splicing, NULL drops a key", {
   env <- list(by = c("A", "B"), n = 2L, none = NULL, flag = FALSE, m = list(x = "X1"))
   f <- tflspec:::.tr_fill
   expect_identical(f(c("{by}", "C"), env), c("A", "B", "C"))
   expect_identical(f("{{by}} {n}", env), "{by} 2")
   expect_identical(f(list(a = "{none}", b = 1), env), list(b = 1))
   expect_identical(f("{p} {n}", env, shadow = "n"), "{p} {n}")
-  w <- tflspec:::.tr_when
-  expect_false(w(list(when = "flag"), env, "t"))
-  expect_true(w(list(when = "n"), env, "t"))
-  expect_false(w(list(when = "none"), env, "t"))
-  expect_error(w(list(when = "zz"), env, "t"), "not one of its arguments")
 })
 
 test_that("tfl_series_list() and a study's series values", {

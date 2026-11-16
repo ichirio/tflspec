@@ -37,8 +37,7 @@ variable's name); \verb{per: level} or \verb{per: [columns]} one row whose
 \code{analysis_per} tells the generator how to name the analyses; no \code{per}
 one analysis, the item's id.  An item's \verb{conditions:} is a data frame, one row a run, its
 columns the item's \code{params} (and \code{analysis_id}, a row's own id, when a row gives one): the template's rows first, then the
-report's (\code{"{conditions}"}).  An item or data row whose \verb{when:} names an
-argument with no value (or \code{false}) is left out.
+report's (\code{"{conditions}"}).
 }
 \seealso{
 \code{\link[=tfl_arg_defs]{tfl_arg_defs()}}, \code{\link[=tfl_series_dir]{tfl_series_dir()}}
