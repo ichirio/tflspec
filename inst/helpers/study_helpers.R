@@ -40,6 +40,17 @@ set_levels <- function(data, ...) {
 # Other types stay.  study$adam is the ADaM as read with this done, so a
 # program tests a blank with is.na(), not == "" or nzchar().
 #   blank_as_na(adsl)
+# A missing value as a level of its own (a categorical variable's missing
+# row): NA becomes `label`, the last level; the other levels and their
+# order kept.  cards counts no NA, so the row needs a level.
+#   missing_level(SEX, "Missing")
+missing_level <- function(x, label = "Missing") {
+  lv <- if (is.factor(x)) levels(x) else sort(unique(as.character(x[!is.na(x)])))
+  x <- as.character(x)
+  x[is.na(x)] <- label
+  factor(x, levels = unique(c(lv, label)))
+}
+
 blank_as_na <- function(data) {
   for (v in names(data)) {
     x <- data[[v]]
