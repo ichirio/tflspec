@@ -258,6 +258,11 @@
     return(NULL)
   }
   if (is.name(head) && as.character(head) %in% names(plots)) return(as.character(head))
+  # (p %+% ast: p with other data)
+  if (is.call(head) && identical(.fig_deparse(head[[1L]]), "%+%") && length(head) == 3L &&
+      is.name(head[[2L]]) && as.character(head[[2L]]) %in% names(plots)) {
+    return(as.character(head[[2L]]))
+  }
   if (is.call(head) && sub("^.*::", "", .fig_deparse(head[[1L]])) %in% .fig_p_fns) return("")
   NULL
 }
@@ -409,6 +414,18 @@
 #'   of the data stays R.  `theme_update()` after `theme_set()` is the
 #'   plot's theme with those settings, and `ggplot2::` before a call is
 #'   dropped (the figure's code attaches ggplot2).
+#' * **A plot function of the program** (`lab_plot <- function(data,
+#'   param, ylab = "Value") { ... ggplot() ... }`): each call
+#'   (`lab_plot(adlb, "ALT")`, also inside `print()`, `ggsave()` or a
+#'   patchwork arrangement) is read as the lines the function runs, its
+#'   arguments (or defaults) in place of its formals.  Its local objects are
+#'   named for the call (`d` of `lab_plot(adlb, "ALT")` is `d_alt`), so two
+#'   calls keep their data apart; inside `aes()` / `vars()` a column named
+#'   by an argument (`.data[[yvar]]`, `!!sym(yvar)`, `{{ y }}`) is the
+#'   column, and `...` is the arguments given there.  A call inside a loop
+#'   (`for`, `lapply()`, `purrr::map()`) is left to the data part, the
+#'   function's definition with it.  `p %+% ast` is `p` with that data, and
+#'   `last_plot()` the plot made last.
 #' * **`ggsave()`**'s width, height (in its `units`), dpi and file are the
 #'   `tfl_image` item's.
 #' * **Every other line** (reading and deriving the data, an object of the
@@ -459,13 +476,47 @@ tfl_fig_content_from_r <- function(code) {
   global_theme <- NULL
   n_bare <- 0L
   if_flags <- character()
+  # (the program's plot functions, the plot made last)
+  plot_fns <- list()
+  fns_used <- character()
+  n_inline <- 0L
+  last_made <- NULL
   add_plot <- function(nm, e) {
     head <- .fig_prog_plot_head(e, plots)
     terms <- .fig_prog_terms(e)
-    if (nzchar(head)) terms <- c(plots[[head]], terms[-1L])
-    else if (!is.null(global_theme)) terms <- c(terms[1L], list(global_theme), terms[-1L])
+    if (nzchar(head)) {
+      base <- plots[[head]]
+      h1 <- terms[[1L]]
+      # (p %+% ast: p's terms with ast its data; p %+% geom_point(): a term)
+      if (is.call(h1) && identical(.fig_deparse(h1[[1L]]), "%+%")) {
+        if (.fig_prog_is_term(h1[[3L]])) base <- c(base, list(h1[[3L]]))
+        else base <- .fig_prog_new_data(base, h1[[3L]])
+      }
+      terms <- c(base, terms[-1L])
+    } else if (!is.null(global_theme)) terms <- c(terms[1L], list(global_theme), terms[-1L])
     plots[[nm]] <<- terms
     shown <<- nm
+    last_made <<- nm
+  }
+  # a call of a plot function of the program: the lines it runs, and the
+  # name of the plot it returns
+  inline_one <- function(x) {
+    fn <- as.character(x[[1L]])
+    n_inline <<- n_inline + 1L
+    if (n_inline > 100L) return(NULL)
+    tag <- .fig_prog_call_tag(x, n_inline)
+    r <- .fig_prog_inline(x, plot_fns[[fn]], fresh, tag)
+    if (is.null(r) || is.null(r$value)) return(NULL)
+    fns_used <<- c(fns_used, fn)
+    # (a function that saves or prints its plot last: that line, read as
+    # the program's own; the call itself no value)
+    v <- r$value
+    if (is.call(v) && sub("^.*::", "", .fig_deparse(v[[1L]])) %in% c("ggsave", "print", "plot")) {
+      return(list(lines = c(r$lines, list(v)), name = NULL))
+    }
+    if (is.name(v)) return(list(lines = r$lines, name = v))
+    target <- as.name(fresh(paste0(fn, "_", tag)))
+    list(lines = c(r$lines, list(call("<-", target, v))), name = target)
   }
   # (the names the program uses: a name made for its data is none of them)
   taken <- unique(all.names(ex))
@@ -501,7 +552,25 @@ tfl_fig_content_from_r <- function(code) {
         next
       }
     }
+    # (a call of a plot function that saved its plot: nothing left)
+    if (is.null(e)) next
+    # (last_plot(): the plot made last)
+    e <- .fig_prog_last_plot(e, last_made)
     f <- if (is.call(e)) sub("^.*::", "", .fig_deparse(e[[1L]])) else ""
+    # (a plot function of the program: kept, its calls read as its lines)
+    if (f %in% c("<-", "=") && is.name(e[[2L]]) && .fig_prog_is_plot_fn(e[[3L]])) {
+      plot_fns[[as.character(e[[2L]])]] <- e[[3L]]
+      data_lines <- c(data_lines, .fig_deparse_r(e))
+      line_const <- c(line_const, as.character(e[[2L]]))
+      next
+    }
+    if (length(plot_fns)) {
+      h <- .fig_prog_hoist(e, plot_fns, inline_one)
+      if (length(h$lines) || !identical(h$e, e)) {
+        queue <- c(h$lines, list(h$e), queue)
+        next
+      }
+    }
     if (f %in% c("library", "require", "requireNamespace", "suppressPackageStartupMessages")) next
     if (f %in% c("<-", "=") && is.name(e[[2L]])) {
       lhs <- as.character(e[[2L]])
@@ -622,6 +691,14 @@ tfl_fig_content_from_r <- function(code) {
     content <- read_plot(plots[[nm]], nm)
   }
   content <- c(content, list(image %||% tfl_item("tfl_image", list())))
+  # (a plot function still called in the data part: its definition kept)
+  if (length(plot_fns)) {
+    own <- line_const %in% names(plot_fns)
+    used <- unlist(lapply(data_lines[!own], function(l) {
+      tryCatch(all.names(parse(text = l, keep.source = FALSE)), error = function(err) character())
+    }))
+    left <- c(left, intersect(names(plot_fns), used))
+  }
   # an object of constants is the data part's no more, but where its name is left
   data_lines <- data_lines[!nzchar(line_const) | line_const %in% left]
   steps <- if (length(data_lines)) {
@@ -630,7 +707,7 @@ tfl_fig_content_from_r <- function(code) {
     list()
   }
   out <- list(data = list(source = "code", steps = steps), content = content)
-  attr(out, "objects") <- unique(c(read_in, if_flags))
+  attr(out, "objects") <- unique(c(read_in, if_flags, fns_used))
   probs <- lapply(seq_along(content), function(i) {
     its <- if (inherits(content[[i]], "tfl_plot")) content[[i]]$items else content[i]
     p <- do.call(rbind, lapply(its, function(it) {

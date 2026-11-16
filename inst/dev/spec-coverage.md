@@ -1729,6 +1729,62 @@ untouched.  What changes is how a program is read.
 What is left: a condition of the data (`if (nrow(d) > 10)`), plots made
 in a function or a loop, `%+%`, `last_plot()`.
 
+### Round 18 (2026-11-16): a plot made by a function of the program, `%+%`, `last_plot()`
+
+Round 17 left plots made in a function.  A programmer who draws the same
+figure for several parameters writes the plot once, as a function of the
+program, and calls it (`lab_mean(adlb, "ALT") / lab_mean(adlb, "AST")`):
+that program was "no plot: no ggplot() in the code".  Four programs join
+the programs measure (`dev/spec-coverage-ggplot2-programs.R`): a plot
+function called twice and stacked by patchwork, its data summarised inside
+it and a default built of another argument; a function given its columns
+by name (`.data[[yvar]]`, `!!sym(colvar)`); one given a column bare (`{{ y
+}}`) and a layer's settings (`...`); a plot drawn again on other data
+(`p_alt %+% ast`) and finished on `last_plot()`.
+
+| Programs measure | Before | After |
+|---|---:|---:|
+| **score (23 programs)** | **82.6%** | **100.0%** |
+| read by tfl_fig_content_from_r() | 20 | 23 |
+| the code written back runs | 19 | 23 |
+| draws the same | 19 | 23 |
+| items' values typed / R | 248 / 0 | 289 / 0 |
+
+The 19 programs of round 17 are unchanged (100%).  The arguments',
+aesthetics', ggplot2's examples' and clinical figures' measures read one
+call, which this round does not change (rerun below).
+
+Round 18 (`R/fig_program_fn.R`, `R/fig_program.R`):
+
+- **A plot function of the program** (`f <- function(...) { ... ggplot()
+  ... }`): each call, bare, assigned, in `print()`, `ggsave(plot =)` or a
+  patchwork arrangement, is read as the lines the function runs, its
+  arguments (or its defaults, built of the others) in place of its
+  formals; the expression it returns (`return()`, `invisible()`,
+  `print()`, its last line) is the plot.  Its local objects are named for
+  the call by its first text argument (`d` of `lab_mean(adlb, "ALT")` is
+  `d_alt`, a line of the data part), so two calls keep their data apart
+  and the plots are named `lab_mean_alt`, `lab_mean_ast`.
+- **Columns named by an argument** inside `aes()` / `vars()`:
+  `.data[[yvar]]`, `!!sym(yvar)` (`rlang::sym`, `ensym`, `as.name`) with
+  `yvar = "CHG"`, and `{{ y }}` with `y = AVAL` given bare, are the
+  column (`y: CHG`); a bare name there stays a column, never the argument.
+  `...` is the arguments given at the call (`geom_boxplot(...)` with
+  `width = 0.5`).
+- A call inside a loop (`for`, `lapply()`, `purrr::map()` ...) is not
+  read: it stays in the data part, and so does the function's definition
+  (kept only while something there calls it).
+- **`p %+% ast`** is `p`'s terms with `ast` as `ggplot()`'s data
+  (`p %+% geom_point()`, a term, as `+`); **`last_plot()`** is the plot
+  made last.
+
+**No code generated from an existing SPEC changes**: the writer is
+untouched.  What changes is how a program is read.
+
+What is left: a condition of the data (`if (nrow(d) > 10)`), a figure
+per value of a loop (several figures from one program), a plot function
+that calls itself or builds its terms by `Reduce()`.
+
 ### The extension packages (ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale, patchwork)
 
 The same measure, the same file (`package` says which), over the

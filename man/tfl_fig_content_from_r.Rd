@@ -53,6 +53,17 @@ the program (\code{show_ci <- TRUE}) -- the branch it takes.  A condition
 of the data stays R.  \code{theme_update()} after \code{theme_set()} is the
 plot's theme with those settings, and \verb{ggplot2::} before a call is
 dropped (the figure's code attaches ggplot2).
+\item \strong{A plot function of the program} (\verb{lab_plot <- function(data, param, ylab = "Value") \{ ... ggplot() ... \}}): each call
+(\code{lab_plot(adlb, "ALT")}, also inside \code{print()}, \code{ggsave()} or a
+patchwork arrangement) is read as the lines the function runs, its
+arguments (or defaults) in place of its formals.  Its local objects are
+named for the call (\code{d} of \code{lab_plot(adlb, "ALT")} is \code{d_alt}), so two
+calls keep their data apart; inside \code{aes()} / \code{vars()} a column named
+by an argument (\code{.data[[yvar]]}, \code{!!sym(yvar)}, \code{{{ y }}}) is the
+column, and \code{...} is the arguments given there.  A call inside a loop
+(\code{for}, \code{lapply()}, \code{purrr::map()}) is left to the data part, the
+function's definition with it.  \code{p \%+\% ast} is \code{p} with that data, and
+\code{last_plot()} the plot made last.
 \item \strong{\code{ggsave()}}'s width, height (in its \code{units}), dpi and file are the
 \code{tfl_image} item's.
 \item \strong{Every other line} (reading and deriving the data, an object of the

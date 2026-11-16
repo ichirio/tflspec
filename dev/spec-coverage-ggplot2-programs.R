@@ -293,4 +293,56 @@ adlb %>%
   facet_wrap(vars(TRT01A), ncol = 3, labeller = label_wrap_gen(width = 12)) +
   scale_x_continuous(breaks = c(0, 2, 4, 8, 12)) +
   labs(x = "Week", y = "Change from baseline in ALT (U/L)")
+
+#### program: plot_fn_params
+# one plot function for every parameter, two of its plots stacked
+lab_mean <- function(data, param, ylab = paste(param, "(U/L)")) {
+  d <- data %>%
+    filter(PARAMCD == param) %>%
+    group_by(TRTA, AVISITN) %>%
+    summarise(m = mean(AVAL), se = sd(AVAL) / sqrt(n()), .groups = "drop")
+  ggplot(d, aes(AVISITN, m, colour = TRTA)) +
+    geom_line() +
+    geom_errorbar(aes(ymin = m - se, ymax = m + se), width = 0.3) +
+    labs(x = "Week", y = ylab, colour = NULL) +
+    theme_bw()
+}
+lab_mean(adlb, "ALT") / lab_mean(adlb, "AST", ylab = "AST (U/L), mean +/- SE") +
+  plot_layout(guides = "collect")
+
+#### program: plot_fn_columns
+# a plot function given its columns by name, .data[[ ]] and !!sym()
+profile_plot <- function(d, yvar, colvar, title) {
+  ggplot(d, aes(AVISITN, .data[[yvar]], group = USUBJID)) +
+    geom_line(aes(colour = !!sym(colvar)), alpha = 0.4) +
+    geom_hline(yintercept = 0, linetype = "dashed") +
+    ggtitle(title) +
+    theme_minimal()
+}
+p <- profile_plot(adlb %>% filter(PARAMCD == "ALT"), "CHG", "TRTA",
+                  title = "Change from baseline in ALT")
+print(p)
+
+#### program: plot_fn_embrace
+# a plot function given a column bare ({{ }}) and a layer's settings (...)
+box_by_arm <- function(data, y, ...) {
+  data %>%
+    ggplot(aes(TRTA, {{ y }}, fill = TRTA)) +
+    geom_boxplot(...) +
+    labs(x = NULL) +
+    theme_classic() +
+    theme(legend.position = "none")
+}
+box_by_arm(adtr, PCHG, width = 0.5, outlier.shape = 1)
+
+#### program: same_plot_other_data
+# the plot made once, drawn again on other data (%+%), finished on the last plot
+p_alt <- adlb %>%
+  filter(PARAMCD == "ALT") %>%
+  ggplot(aes(AVISITN, AVAL, group = USUBJID)) +
+  geom_line(alpha = 0.3) +
+  labs(x = "Week", y = "ALT (U/L)")
+ast <- adlb %>% filter(PARAMCD == "AST")
+p_alt %+% ast + labs(y = "AST (U/L)")
+last_plot() + theme_bw()
 # nolint end

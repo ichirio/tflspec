@@ -18,3 +18,7 @@
 "step_if",TRUE,TRUE,TRUE,13,0,0,0,1,""
 "bar_reorder_flip",TRUE,TRUE,TRUE,10,0,0,0,1,""
 "spaghetti_join",TRUE,TRUE,TRUE,12,0,0,0,1,""
+"plot_fn_params",TRUE,TRUE,TRUE,23,0,0,0,1,""
+"plot_fn_columns",TRUE,TRUE,TRUE,9,0,0,0,1,""
+"plot_fn_embrace",TRUE,TRUE,TRUE,8,0,0,0,1,""
+"same_plot_other_data",TRUE,TRUE,TRUE,8,0,0,0,1,""
