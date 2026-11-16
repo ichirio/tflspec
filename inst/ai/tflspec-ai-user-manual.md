@@ -1021,7 +1021,6 @@ back): rename the value or choose another separator.
 `tfl_fig_forest` `tfl_fig_mean` `tfl_fig_box` `tfl_fig_bar`
 `tfl_fig_scatter` `tfl_fig_individual` `tfl_fig_pk` `tfl_fig_ae_dot`
 `tfl_fig_butterfly` `tfl_fig_edish` `tfl_fig_sankey` `tfl_fig_sunburst`
-`tfl_figure_fn` `km_curves` `forest_hr`
 
 **Sankey / sunburst:** `tfl_plot_sankey` `tfl_plot_sankey_batch`
 `tfl_sankey_data` `tfl_plot_sunburst` `tfl_sunburst_data`
