@@ -60,6 +60,31 @@ test_that("every template has its keys, a BIGN item and ids on its items", {
   }
 })
 
+test_that("the percentages' denominator is BIGN and the items say how analysis ids are made", {
+  skip_if(!nzchar(series_dir()), "the series folder is not installed")
+  ts <- series_templates()
+  for (nm in c("demog", "ae_soc_pt", "lab_tox_shift")) {
+    a <- ts[[paste0(nm, ".yml")]]$analysis
+    ids <- vapply(a, function(x) x$id, character(1))
+    den <- unlist(lapply(a, function(x) x$denominator))
+    expect_identical(unique(den), "BIGN", info = nm)
+    expect_identical(sum(ids == "BIGN"), 1L, info = nm)
+  }
+  lab <- ts[["lab_tox_shift.yml"]]
+  expect_identical(lab$params$conditions$type,
+                   "rows<tox_dir,param,worst,base,where>")
+  expect_null(lab$params$graded_params)
+  shift <- lab$analysis[[2]]
+  expect_identical(shift$analyses$per, c("PARAMCD", "direction"))
+  expect_null(shift$analysis_id)
+  ts_ae <- ts[["ae_soc_pt.yml"]]$analysis[[2]]
+  expect_identical(ts_ae$analyses$per, "level")
+  expect_null(ts[["orr_subgroup.yml"]]$analysis[[2]]$analyses)
+  dm <- ts[["demog.yml"]]$analysis
+  expect_identical(dm[[2]]$analyses$per, "variable")
+  expect_null(dm[[2]]$analysis_ids)
+})
+
 test_that("every param is an argument definition with closed words", {
   skip_if(!nzchar(series_dir()), "the series folder is not installed")
   inputs <- c("pick", "text", "condition", "table")

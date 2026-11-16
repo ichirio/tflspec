@@ -10,14 +10,14 @@ params:
     step: analysis
     tier: required
     description: The column variable(s); the groups across.
-  graded_params:
-    type: map<enum[Low|High],list<level>>
+  conditions:
+    type: rows<tox_dir,param,worst,base,where>
     input: table
-    choices: levels(PARAM)
+    columns: params
     required: true
     step: analysis
     tier: required
-    description: The parameters graded, for Low and for High.
+    description: One row a lab test and direction, each its own analysis, its id <PARAMCD>_<direction> such as ALT_HIGH (an optional analysis_id column overrides it); tox_dir Low or High, param a level of PARAM, worst and base the grade columns (ATOXGRL and BTOXGRL for Low, ATOXGRH and BTOXGRH for High), where the rows with a grade. Each analysis's N can differ from the output's N.
   denominator:
     type: string
     input: pick
@@ -25,7 +25,8 @@ params:
     default: adsl_sub
     step: analysis
     tier: usual
-    description: The data row whose subjects are the percentages' denominator.
+    description: The data row whose subjects are the group Ns (BIGN) and the
+      percentages' denominator; both come from the one BIGN item.
   formats:
     type: map<string,number|string>
     input: table
@@ -50,24 +51,21 @@ analysis:
   - id: BIGN
     label: Subjects per group
     method: categorical
-    data: adsl_sub
+    data: "{denominator}"
     variables: ["{by}"]
     formats: "{formats}"
   - id: SHIFT
+    analyses: {per: [PARAMCD, direction]}   # ALT_HIGH, ...
     label: Shift in toxicity grade, baseline to worst, in each direction
     data: adlb_sub
-    params: [tox_dir, graded_params, worst, base, where]
-    conditions:
-      - {tox_dir: Low, worst: ATOXGRL, base: BTOXGRL, graded_params: "{graded_params: Low}",
-         where: !r "!is.na(LBTOXL) & !is.na(BTOXGRL) & !is.na(ATOXGRL)"}
-      - {tox_dir: High, worst: ATOXGRH, base: BTOXGRH, graded_params: "{graded_params: High}",
-         where: !r "!is.na(LBTOXH) & !is.na(BTOXGRH) & !is.na(ATOXGRH)"}
+    params: [tox_dir, param, worst, base, where]
+    conditions: "{conditions}"
     where: !r "{where}"
     derive: !r tox_dir = "{tox_dir}"
-    levels: {PARAM: "{graded_params}", tox_dir: "{tox_dir}"}
+    levels: {PARAM: "{param}", tox_dir: "{tox_dir}"}
     method: categorical
     statistics: [n, p]
-    denominator: "{denominator}"
+    denominator: BIGN
     formats: "{formats}"
     ards:
       - {by: ["{by}", PARAM, tox_dir, "{base}"], variables: ["{worst}"]}   # cells

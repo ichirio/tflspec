@@ -58,7 +58,8 @@ params:
     default: adsl_sub
     step: analysis
     tier: usual
-    description: The data row whose subjects are the percentages' denominator.
+    description: The data row whose subjects are the group Ns (BIGN) and the
+      percentages' denominator; both come from the one BIGN item.
   analysis_ids:
     type: map<column,string>
     input: table
@@ -120,10 +121,11 @@ analysis:
   - id: BIGN
     label: Subjects per group
     method: categorical
-    data: adsl_sub
+    data: "{denominator}"
     variables: ["{by}"]
     formats: "{formats}"
   - id: CONT
+    analyses: {per: variable, ids: "{analysis_ids}"}
     label: Continuous
     method: continuous
     data: adsl_sub
@@ -132,8 +134,8 @@ analysis:
     variables: "{continuous}"
     statistics: [N, mean, sd, median, min, max]
     formats: "{formats}"
-    analysis_ids: "{analysis_ids}"
   - id: CAT
+    analyses: {per: variable, ids: "{analysis_ids}"}
     label: Categorical
     method: categorical
     data: adsl_sub
@@ -141,11 +143,10 @@ analysis:
     overall: "{total}"
     variables: "{categorical}"
     statistics: [n, p]
-    denominator: "{denominator}"
+    denominator: BIGN
     missing_row: "{missing_row}"
     missing_label: "{missing_label}"
     formats: "{formats}"
-    analysis_ids: "{analysis_ids}"
 content:
   - table_plan: {cols: "{by}", rows: {group: variable}}
   - plan_labels: "{labels}"
