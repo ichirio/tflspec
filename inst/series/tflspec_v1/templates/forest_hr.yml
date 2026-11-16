@@ -80,7 +80,7 @@ data:
     subjects_in: adsl_sub
     add: ["{by}", "{subgroup_vars}"]
     where: !r PARAMCD == "OS"
-    derive: !r '{by} = stats::relevel(factor({by}), ref = "{ref}")'
+    derive: !r '{by} = stats::relevel(factor({by}), ref = c(intersect("{ref}", {by}), levels(factor({by})))[1])'
 analysis:
   - id: BIGN
     label: Subjects per group

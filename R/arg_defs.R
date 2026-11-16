@@ -105,7 +105,7 @@
   type <- as.character(type %||% "string")
   if (identical(type, "logical") || startsWith(type, "enum[")) return("pick")
   if (grepl("^(list<)?(column|level)>?$", type)) return("pick")
-  if (identical(type, "r")) return(if (name %in% c("where", "when")) "condition" else "text")
+  if (identical(type, "r")) return(if (identical(name, "where")) "condition" else "text")
   if (grepl("^(rows|map|vec)<", type)) return("table")
   "text"
 }
@@ -234,9 +234,7 @@
     then = list(type = "r", input = "text",
                 description = "R after the keys above, on the row's data."),
     code = list(type = "r", input = "text", tier = "other",
-                description = "R for a row the keys cannot say."),
-    when = list(type = "string", input = "pick", choices = "from_args(params)", tier = "other",
-                description = "A template's row only when this argument has a value or is true.")
+                description = "R for a row the keys cannot say.")
   )
 }
 
@@ -291,8 +289,6 @@
                 tier = "other",
                 description = "Several calls of the method, one analysis_id (no id of their own)."),
     post = list(type = "r", input = "text", tier = "other", description = "R on the item's result."),
-    when = list(type = "string", input = "pick", choices = "from_args(params)", tier = "other",
-                description = "A template's item only when this argument has a value or is true."),
     code = list(type = "r", input = "text", tier = "other",
                 description = "R for an item the keys cannot say.")
   )
