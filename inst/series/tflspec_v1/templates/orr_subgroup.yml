@@ -26,14 +26,15 @@ params:
     step: analysis
     tier: usual
     description: The subgroup rows, one a subgroup level, after the ALL row.
-  overall_row:
-    type: logical
+  subgroup_vars:
+    type: list<column>
     input: pick
-    choices: fixed
-    default: !series overall_row
-    step: analysis
-    tier: other
-    description: The ALL row, overall, before the subgroup rows.
+    choices: vars(adsl_sub)
+    ordered: true
+    default: []
+    step: data
+    tier: usual
+    description: The subject-level variables the subgroup conditions read, joined from adsl_sub.
   responder:
     type: level
     input: pick
@@ -72,11 +73,11 @@ style: !series style
 data:
   - id: adsl_sub
     from: ADSL
-    population: ITT
+    population: !series population_efficacy
   - id: adrs_sub
     from: ADRS
     subjects_in: adsl_sub
-    add: ["{by}"]
+    add: ["{by}", "{subgroup_vars}"]
     where: !r PARAMCD == "BOR"
     keep: ["{category}"]
 analysis:

@@ -47,10 +47,10 @@ params:
   min_pct:
     type: number
     input: text
-    default: ~
+    default: 0
     step: analysis
     tier: other
-    description: Keep only the rows with at least this percentage; empty keeps all.
+    description: Keep only the rows with at least this percentage; 0 keeps every row.
   min_pct_in:
     type: enum[any|all|overall]
     input: pick

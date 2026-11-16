@@ -41,6 +41,7 @@ test_that("every file in the tflspec_v1 series folder parses", {
   expect_identical(s$name, "tflspec_v1")
   expect_true(is.list(s$values))
   expect_null(s$values$header_n)
+  expect_null(s$values$overall_row)
 })
 
 test_that("every template has its keys, a BIGN item and ids on its items", {
@@ -72,14 +73,37 @@ test_that("the percentages' denominator is BIGN and the items say how analysis i
   }
   lab <- ts[["lab_tox_shift.yml"]]
   expect_identical(lab$params$conditions$type,
-                   "rows<tox_dir,param,worst,base,where>")
+                   "rows<tox_dir,param>")
   expect_null(lab$params$graded_params)
   shift <- lab$analysis[[2]]
+  for (f in c("orr_subgroup.yml", "forest_hr.yml")) {
+    t <- ts[[f]]
+    expect_null(t$params$overall_row, info = f)
+    expect_identical(t$params$subgroup_vars$type, "list<column>", info = f)
+  }
   expect_identical(shift$analyses$per, c("PARAMCD", "direction"))
   expect_null(shift$analysis_id)
   ts_ae <- ts[["ae_soc_pt.yml"]]$analysis[[2]]
   expect_identical(ts_ae$analyses$per, "level")
   expect_null(ts[["orr_subgroup.yml"]]$analysis[[2]]$analyses)
+  ls <- ts[["listing.yml"]]$params
+  expect_null(ls$from$required)
+  expect_null(ls$columns$required)
+  expect_identical(ls$columns$tier, "other")
+  cmp <- ts[["forest_hr.yml"]]$params$comparison
+  expect_identical(cmp$type, "string")
+  expect_identical(cmp$input, "pick")
+  expect_identical(cmp$step, "analysis")
+  expect_identical(cmp$tier, "usual")
+  expect_identical(cmp$description, "The arm compared against the reference")
+  expect_match(ts[["km_simple.yml"]]$data[[2]]$derive,
+               "[[\"{time_unit}\"]]", fixed = TRUE)
+  expect_false(grepl("days_per_month", ts[["km_simple.yml"]]$data[[2]]$derive))
+  expect_equal(ts[["ae_soc_pt.yml"]]$params$min_pct$default, 0)
+  expect_identical(ts[["orr_subgroup.yml"]]$data[[1]]$population,
+                   "population_efficacy")
+  expect_null(ts[["demog.yml"]]$params$continuous$required)
+  expect_null(ts[["demog.yml"]]$params$categorical$required)
   dm <- ts[["demog.yml"]]$analysis
   expect_identical(dm[[2]]$analyses$per, "variable")
   expect_null(dm[[2]]$analysis_ids)

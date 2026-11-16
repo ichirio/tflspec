@@ -15,18 +15,16 @@ params:
     input: pick
     choices: vars(adsl_sub)
     ordered: true
-    required: true
     step: analysis
-    tier: required
+    tier: usual
     description: The continuous variables, in the order of the rows (this or categorical).
   categorical:
     type: list<column>
     input: pick
     choices: vars(adsl_sub)
     ordered: true
-    required: true
     step: analysis
-    tier: required
+    tier: usual
     description: The categorical variables, in the order of the rows (this or continuous).
   total:
     type: logical
