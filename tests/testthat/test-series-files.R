@@ -81,7 +81,7 @@ test_that("the percentages' denominator is BIGN and the items say how analysis i
     expect_null(t$params$overall_row, info = f)
     expect_identical(t$params$subgroup_vars$type, "list<column>", info = f)
   }
-  expect_identical(shift$analyses$per, c("PARAMCD", "direction"))
+  expect_identical(shift$analyses$per, c("PARAMCD", "tox_dir"))
   expect_null(shift$analysis_id)
   ts_ae <- ts[["ae_soc_pt.yml"]]$analysis[[2]]
   expect_identical(ts_ae$analyses$per, "level")

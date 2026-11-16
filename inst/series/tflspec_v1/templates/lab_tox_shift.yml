@@ -55,7 +55,7 @@ analysis:
     variables: ["{by}"]
     formats: "{formats}"
   - id: SHIFT
-    analyses: {per: [PARAMCD, direction]}   # ALT_HIGH, ...
+    analyses: {per: [PARAMCD, tox_dir]}   # ALT_HIGH, ...
     label: Shift in toxicity grade, baseline to worst, in each direction
     data: adlb_sub
     params: [tox_dir, param]
