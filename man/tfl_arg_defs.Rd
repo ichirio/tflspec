@@ -46,6 +46,11 @@ the closed words \verb{vars(<data>)}, \verb{levels(<var>)}, \verb{codelist(<name
 \verb{params:}); in a list, an unnamed \code{"params"} marks where the item's
 params go (an item's conditions: \code{"params"}, \code{where}, an optional
 \code{analysis_id}).}
+\item{fixed_rows}{(a list column) a template's table param: the rows
+the template writes with fixed values next to its \code{"{name}"} (the
+ALL row of forest_hr's conditions), a data frame whose attribute
+\code{"position"} gives each row's place, \code{"before"} or \code{"after"} the
+report's rows; \code{NULL} otherwise.}
 \item{tier}{\code{required}, \code{usual} or \code{other} (shown folded).}
 \item{description}{one line.}
 }

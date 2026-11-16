@@ -1,5 +1,5 @@
 cols <- c("name", "label_key", "step", "input", "type", "required", "default",
-          "default_kind", "choices", "values", "free", "ordered", "columns", "tier",
+          "default_kind", "choices", "values", "free", "ordered", "columns", "fixed_rows", "tier",
           "description")
 
 test_that("tfl_arg_defs() takes fn or template, one of them", {
@@ -148,6 +148,17 @@ test_that("a choice source outside the 14 words stops", {
                    c("from_args(continuous, categorical)", "report_data"))
 })
 
-test_that("tfl_template_resolve() is named for the screen, not written yet", {
-  expect_error(tfl_template_resolve(list()), "not written yet")
+test_that("fixed_rows: the rows a template writes next to a table param's \"{name}\"", {
+  body <- list(analysis = list(list(id = "HR", conditions = list(
+    list(subgroup = "ALL", subgroup_lvl = "ALL", where = tfl_r("TRUE")), "{conditions}"))))
+  fr <- tflspec:::.arg_fixed_rows(body, "conditions")
+  expect_identical(fr$subgroup, "ALL")
+  expect_identical(fr$where, "TRUE")
+  expect_identical(attr(fr, "position"), "before")
+  expect_null(tflspec:::.arg_fixed_rows(body, "by"))
+  d <- tfl_arg_defs(template = "tflspec_v1/forest_hr")
+  fx <- d$fixed_rows[[which(d$name == "conditions")]]
+  expect_identical(fx$subgroup, "ALL")
+  expect_null(d$fixed_rows[[which(d$name == "by")]])
+  expect_null(tfl_arg_defs(fn = "analysis")$fixed_rows[[1L]])
 })
