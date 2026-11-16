@@ -162,7 +162,7 @@ test_that("forest_hr: a blank subgroup value is no subgroup", {
   tt <- tflspec::adtte
   ad <- tflspec::adsl
   pfs <- tt$USUBJID[tt$PARAMCD == "PFS" & tt$SAFFL == "Y"]
-  ad$SEX[ad$USUBJID %in% pfs[c(2, 30, 60)]] <- ""
+  ad$SEX[ad$USUBJID %in% pfs[c(2, 30, 60)]] <- NA
   d <- bv_study(withr::local_tempdir(), list(adsl = ad, adtte = tt))
   tfl_write_output(tfl_output("F-1", "figure", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = "forest_hr",
