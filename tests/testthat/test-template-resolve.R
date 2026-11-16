@@ -207,3 +207,15 @@ test_that("tfl_series_list() and a study's series values", {
   expect_null(yaml::read_yaml(file.path(d, "study.yml"))$series_settings)
   expect_error(tfl_series_settings_set(d, "tflspec_v1", list(zz = 1)), "not a value")
 })
+
+test_that("a flat args: under template: is read as the step sections are", {
+  rep <- tr_reports()$demog
+  a <- rep$template$analysis
+  rep$template$analysis <- NULL
+  rep$template$args <- a
+  out <- tfl_template_resolve(rep, study = tr_study())
+  expect_identical(tr_ids(out), c("BIGN", "AGE", "AGEGR1", "SEX", "RACE", "ETHNIC"))
+  expect_identical(attr(out, "origins")[["by"]], "report")
+  rep$template$args$nonesuch <- 1
+  expect_error(tfl_template_resolve(rep, study = tr_study()), "has no argument nonesuch")
+})
