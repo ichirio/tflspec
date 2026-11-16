@@ -759,6 +759,10 @@
       return(paste0(to, .lay(.cl(s1$fn, c(list(src), s1$args)), lead = nchar(to))))
     }
     s <- steps[[1L]]
+    # (a step that is not a plain call, f(...): piped as it is)
+    if (!grepl("^[A-Za-z.][A-Za-z0-9._:]*\\(.*\\)$", s)) {
+      return(sprintf("%s <- %s |> %s", obj, src, s))
+    }
     inner <- sub("^[^(]*\\((.*)\\)$", "\\1", s)
     fn <- sub("\\(.*$", "", s)
     return(sprintf("%s <- %s(%s%s)", obj, fn, src, if (nzchar(inner)) paste0(", ", inner) else ""))
@@ -962,6 +966,10 @@
   sprintf("order_levels(%s)", paste(args, collapse = ", "))
 }
 
+# A program's own read of a dataset (no study setup file): the blanks as
+# NA, as study$adam has them (blank_as_na(), a study helper)
+.blank_read_step <- "blank_as_na()"
+
 # The datasets and populations analyses `a` (and analysis data `nad`)
 # read: their lines, with set_levels() when there are code lists
 .ard_data_lines <- function(x, a, nad, levels = NULL) {
@@ -993,14 +1001,19 @@
     # data, after its filter)
     steps <- c(.order_levels_step(cats, if (has_adsl && toupper(ds) != "ADSL") "adsl"))
     if (isTRUE(getOption("tflspec.study_setup"))) {
-      # the study's setup file has read it, with its derive: the object's own
-      # steps, and no line when none is left
+      # the study's setup file has read it, with its derive: the object is
+      # study$adam's (blanks NA, the study's code lists' levels: a column
+      # with one is a factor already, which order_levels() leaves as it is,
+      # and the report's code lists are set again after each filter); the
+      # object's own steps, and no line when none is left
       if (length(steps)) code <- c(code, .make_code(obj, obj, steps))
       next
     }
+    # (the program's own read is study$adam's: the derive, then the blanks
+    # as NA)
     code <- c(code, .make_code(obj, .reader(r$path[1L]), c(
       if (length(d)) sprintf("dplyr::mutate(%s)", paste(d, collapse = ", ")),
-      steps)))
+      .blank_read_step, steps)))
   }
   pop_code <- character()
   for (pid in pops) {

@@ -1025,6 +1025,12 @@ rtf_footer:
           data above are in reach. With it, the columns but from are left blank;
           blank: the columns make the data.'
         example: dplyr::filter(adae, USUBJID %in% adsl_sub$USUBJID, AETOXGR >= 3)
+      - column: then
+        description: 'R piped onto the end of the data, after the other columns''
+          work (and the code lists'' levels), as written: the data is its first
+          argument; a pipe of several steps is fine, and it may do anything R does.
+          Not together with code (code makes the whole data); blank: nothing added.'
+        example: dplyr::slice_max(ATOXGRH, n = 1, with_ties = FALSE, by = USUBJID)
   - sheet: analyses
     description: 'ARD: one analysis a row; each becomes one cards / cardx call in
       the ARD program, its result tagged with output_id, analysis_id and population_id.'

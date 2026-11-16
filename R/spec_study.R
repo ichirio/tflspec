@@ -214,6 +214,9 @@ tfl_read_outputs <- function(dir, skip_bad = FALSE) {
 tfl_resolve_output <- function(output, study, provenance = FALSE) {
   if (!inherits(output, "tfl_output")) stop("tfl_resolve_output(): `output` is a tfl_output.", call. = FALSE)
   if (!inherits(study, "tfl_study_spec")) stop("tfl_resolve_output(): `study` is a tfl_study_spec.", call. = FALSE)
+  # a series template (`<series>/<template>`): its code SPEC, resolved as
+  # any report from there
+  output <- .series_as_code(output, study)
   # (adam_levels: none -- a study code list named stops)
   .adam_levels_name_check(output, study)
   # (a template with an `extends` in its set: the style its `style`

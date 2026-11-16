@@ -27,6 +27,19 @@ params:
     tier: usual
     description: The data row whose subjects are the group Ns (BIGN) and the
       percentages' denominator; both come from the one BIGN item.
+  record_where:
+    type: r
+    input: condition
+    choices: vars(ADLB)
+    default: !r AVISIT == "WORST POST-BASELINE"
+    step: data
+    tier: usual
+    description: The records that are each subject's worst, one a subject, test
+      and direction (the ADaM's own worst record); the template does not compute
+      it. Written in the adlb_sub data row's where. For an ADaM with no worst
+      record, set this to TRUE and give the report's adlb_sub row a then (R that picks
+      the record, such as dplyr::slice_max()), or replace the row's where / then
+      in the report.
   formats:
     type: map<string,number|string>
     input: table
@@ -46,7 +59,7 @@ data:
     from: ADLB
     subjects_in: adsl_sub
     add: ["{by}"]
-    where: ~
+    where: !r "{record_where}"
 analysis:
   - id: BIGN
     label: Subjects per group

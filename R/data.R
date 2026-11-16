@@ -110,7 +110,10 @@
 #' Six laboratory parameters of the simulated study XYZ-ONC-01 (see
 #' [adsl]) on day 1 of each cycle (cycle 1 is the baseline): ALT, AST,
 #' bilirubin, haemoglobin, neutrophils, platelets, with normal ranges and
-#' CTCAE grades for shift tables.
+#' CTCAE grades for shift tables.  Each subject's worst post-baseline record
+#' of a parameter is a row of its own as well, `AVISIT`
+#' `"WORST POST-BASELINE"` (`AVISITN` 99): a copy of the record with the
+#' highest grade (the earliest of equal grades), `ONTRTFL` blank.
 #'
 #' @format `adlb`: a data frame, one row per subject, parameter and visit,
 #'   with the subject keys (as in [adex]) and
