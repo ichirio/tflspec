@@ -118,6 +118,8 @@
 
 # (the same, with what it calls: attributes libs, reads ...)
 .content_fig_code_out <- function(output) {
+  series <- .content_fig_series_code(output)
+  if (!is.null(series)) return(series)
   if (.fig_new_content(output$content)) return(.fig_content_code(output))
   # (the design as its list: tfl_fig_design_code() reads it as a design)
   design <- .fig_design_of_output(output)

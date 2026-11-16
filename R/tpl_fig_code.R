@@ -223,3 +223,71 @@
     unlist(lapply(own, function(o) c(paste("#", o$label %||% "the report's own code"), o$stmt))),
     sprintf("%s <- p", name))
 }
+
+# ---- a series template's figure: the content function's call ----------------------
+
+# A figure report resolved from a series template (tfl_template_resolve():
+# its `template` attribute is the template's name, `<series>/<template>`)
+# whose template names its content in `figure:` (km_curves, forest_hr): the
+# program calls that function (.fig_content_table(), tfl_figure_fn()) with
+# the report's resolved arguments -- the model object when the function
+# takes one (km_fit, made from the data the program's data part made), the
+# ARD (`ard`) and the appearance `params` -- into `content`.  NULL when the
+# report is not one.
+.content_fig_series_code <- function(output, name = "content") {
+  tp <- attr(output, "template")
+  fig <- output$figure
+  if (!is.character(tp) || length(tp) != 1L || !is.character(fig) || length(fig) != 1L) return(NULL)
+  tb <- .fig_content_table()
+  e <- tb[[fig]]
+  if (is.null(e)) {
+    .ard_stop(sprintf("%s: template %s names the figure `%s`; one of %s.", output$id, tp, fig,
+                      paste(names(tb), collapse = ", ")))
+  }
+  args <- attr(output, "args") %||% list()
+  # the model: its call with the template's arguments (a required one the
+  # report did not give is the resolve's stop, not here)
+  model <- NULL
+  if (!is.null(e$model)) {
+    call <- e$model$call
+    for (k in names(args)) {
+      v <- args[[k]]
+      if (is.character(v) && length(v) == 1L) call <- gsub(paste0("{", k, "}"), v, call, fixed = TRUE)
+    }
+    model <- .fig_series_model_lines(e$model$arg, call)
+  }
+  given <- Filter(Negate(is.null), args[intersect(e$params, names(args))])
+  params <- if (length(given)) {
+    c("  params = list(",
+      paste0("    ", names(given), " = ", vapply(given, .fig_arg_code, ""),
+             c(rep(",", length(given) - 1L), "")),
+      "  )")
+  }
+  fn <- paste0("tflspec::", e$fn)
+  call_args <- c(if (!is.null(e$model)) paste0("  ", e$model$arg, " = ", e$model$arg),
+                 "  ard = ard")
+  # (a comma after each argument but the last)
+  n_comma <- length(call_args) - if (length(params)) 0L else 1L
+  call_args <- paste0(call_args, c(rep(",", n_comma), rep("", length(call_args) - n_comma)))
+  code <- c(sprintf("# template %s: the figure content %s()", tp, e$fn),
+            model,
+            sprintf("%s <- %s(", name, fn),
+            call_args, params,
+            ")")
+  .fig_code_out(code, character(), character(), character(), ard = TRUE)
+}
+
+# `km_fit <- ggsurvfit::survfit2(a, b)` as `km_fit <- f(` one argument a
+# line `)`: the call's top-level arguments split
+.fig_series_model_lines <- function(name, call) {
+  ex <- str2lang(call)
+  fn <- paste(deparse(ex[[1L]]), collapse = "")
+  a <- as.list(ex)[-1L]
+  txt <- vapply(seq_along(a), function(i) {
+    v <- paste(deparse(a[[i]], width.cutoff = 500L), collapse = " ")
+    if (nzchar(names(a)[i] %||% "")) paste(names(a)[i], "=", v) else v
+  }, "")
+  c(sprintf("%s <- %s(", name, fn),
+    paste0("  ", txt, c(rep(",", length(txt) - 1L), "")),
+    ")")
+}
