@@ -52,7 +52,7 @@ test_that("the program names the categories of its categorical analyses, the one
   spec <- exact_spec(list(method = "categorical", dataset = "ADSL", population_id = "SAF",
                           by = "ARM", variables = "SEX|RACE"))
   code <- paste(tfl_ard_code(spec, part = "body"), collapse = "\n")
-  expect_match(code, "adsl <- readRDS(\"adam/ADSL.rds\") |> order_levels(c(\"SEX\", \"RACE\"))", fixed = TRUE)
+  expect_match(code, "adsl <- readRDS(\"adam/ADSL.rds\") |>\n  blank_as_na() |>\n  order_levels(c(\"SEX\", \"RACE\"))", fixed = TRUE)
   # a code list is the order of its variable: not named
   cl <- data.frame(output_id = "T", variable = "SEX", value = c("M", "F"),
                    label = c("Male", "Female"), order = 1:2)
@@ -62,7 +62,7 @@ test_that("the program names the categories of its categorical analyses, the one
   cont <- exact_spec(list(method = "continuous", dataset = "ADSL", population_id = "SAF",
                           by = "ARM", variables = "AGE"))
   expect_match(paste(tfl_ard_code(cont, part = "body"), collapse = "\n"),
-               "adsl <- readRDS(\"adam/ADSL.rds\") |> order_levels()", fixed = TRUE)
+               "adsl <- readRDS(\"adam/ADSL.rds\") |>\n  blank_as_na() |>\n  order_levels()", fixed = TRUE)
 })
 
 # a study of the package's data: the arms numbered against the alphabet
@@ -109,7 +109,7 @@ test_that("a records dataset without TRT01AN gets the arms' order of ADSL", {
   st <- tfl_read_study_spec(d)
   code <- paste(tfl_ard_code(st, output_id = "T-LA", save = FALSE, dir = d), collapse = "\n")
   # the records keep their arm; its order is ADSL's
-  expect_match(code, "adlb <- haven::read_xpt(\"adam/adlb.xpt\") |> order_levels(", fixed = TRUE)
+  expect_match(code, "adlb <- haven::read_xpt(\"adam/adlb.xpt\") |>\n  blank_as_na() |>\n  order_levels(", fixed = TRUE)
   expect_match(code, "from = adsl", fixed = TRUE)
   ard <- suppressMessages(suppressWarnings(tfl_build_ard(st, d, output_id = "T-LA", save = FALSE)))
   expect_identical(lv_levels(ard, "ABNORMAL"), want)

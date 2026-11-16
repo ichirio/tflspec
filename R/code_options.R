@@ -23,8 +23,8 @@
 #'   first used, in two environments: `study$adam_org` (as the file has
 #'   them, with the `derive`) and `study$adam` (blanks as `NA`, and the
 #'   code lists' levels unless study.yml's `settings: adam_levels` is
-#'   `none`), and, until the programs read `study$adam`, one object per
-#'   dataset (`adsl`) that is its `study$adam_org`'s,
+#'   `none`), and one object per dataset (`adsl`) that is its
+#'   `study$adam`'s: the programs always read `study$adam`,
 #'   written by [tfl_study_setup_code()].  The ARD setup
 #'   ([tfl_ard_code()]) and the report setup ([tfl_report_setup_code()])
 #'   then do not write the rounding again; their other options stay.  The
@@ -33,10 +33,13 @@
 #'   and none when it has no step.  A report's
 #'   `plan_digits(rounding = )` that is the study's is left out of its
 #'   program either way.  tflspec's own runs of a program ([tfl_build_ard()]
-#'   and the like) do not use the option: they read the files themselves.
+#'   and the like) do not use the option: they read the files themselves,
+#'   with the blanks as `NA` (`blank_as_na()`), as `study$adam` has them.
 #'
 #' Unset or `FALSE` (the default), the code is as it has always been:
-#' literal paths, `pkg::` on every call, the rounding in each setup.  The functions that write code read them:
+#' literal paths, `pkg::` on every call, the rounding in each setup; a
+#' program reads each dataset itself, with `blank_as_na()` after its
+#' `derive` (a blank text value is `NA`, as in `study$adam`).  The functions that write code read them:
 #' [tfl_ard_code()], [tfl_build_ard()], [tfl_table_code()],
 #' [tfl_report_code()], [tfl_report_setup_code()], [tfl_listing_code()],
 #' [tfl_read_data_code()], [tfl_fig_design_code()] and

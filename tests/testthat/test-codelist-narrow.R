@@ -101,7 +101,7 @@ test_that("the program writes the narrowed list in set_levels(), and the ARD has
   # the lists are written whole at the head; the dataset is read with no step of theirs
   expect_match(code, "cl_paramcd <- c(", fixed = TRUE)
   expect_match(code, "  GLUC = \"Glucose\"", fixed = TRUE)
-  expect_match(code, "adlb <- readRDS(\"adam/ADLB.rds\") |> order_levels(from = adsl)", fixed = TRUE)
+  expect_match(code, "adlb <- readRDS(\"adam/ADLB.rds\") |>\n  blank_as_na() |>\n  order_levels(from = adsl)", fixed = TRUE)
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, codelists = cl))
   # two parameters, not the list's five: the filter left two
   expect_identical(narrow_levels(ard, "A"), c("ALT", "AST"))
@@ -188,7 +188,7 @@ test_that("the code lists are on every analysis set, always, and not on the data
   cl <- data.frame(output_id = "T", variable = "SEX", value = c("M", "F"),
                    label = c("Male", "Female"), order = c("1", "2"))
   code <- paste(tfl_ard_code(sp, part = "body", codelists = cl), collapse = "\n")
-  expect_match(code, "adsl <- readRDS(\"adam/ADSL.rds\") |> order_levels()", fixed = TRUE)
+  expect_match(code, "adsl <- readRDS(\"adam/ADSL.rds\") |>\n  blank_as_na() |>\n  order_levels()", fixed = TRUE)
   expect_match(code, "set_levels(SEX = cl_sex)", fixed = TRUE)
   # an analysis set with every record of its dataset has them too
   sp$populations$where <- NA

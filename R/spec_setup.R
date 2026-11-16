@@ -34,9 +34,10 @@
 #'   sheet is a report's), so it is written this way.  The reader follows
 #'   the file's extension and the folder variables of option
 #'   `tflspec.paths`, as in the ARD program.  The last lines make the
-#'   objects the ARD, listing and figure programs use now (`adsl`) the
-#'   datasets of `study$adam_org`; they go when those programs read
-#'   `study$adam`.
+#'   objects the ARD, listing and figure programs read (`adsl`) the
+#'   datasets of `study$adam`: the generated programs always read
+#'   `study$adam`, and `study$adam_org` is there for a program a person
+#'   writes on the data as the file has it.
 #'
 #' study.yml's `settings: adam_levels` says whether `study$adam` gets the
 #' study's code lists' levels: `codelists` (the default, also when the key
@@ -188,9 +189,9 @@ tfl_study_setup_code <- function(study) {
 # levels; the values as they were read otherwise).  The study's code lists come first (`cl_<variable>`,
 # as the ARD program writes them).  A study with no code lists has no
 # code lists, study$adam is the same with blanks as NA only; so is it under
-# `adam_levels` "none" (`levels` empty then).  The last lines keep
-# the objects the ARD, listing and figure programs use now (`adsl`) as the
-# datasets of study$adam_org, until those programs read study$adam.
+# `adam_levels` "none" (`levels` empty then).  The last lines make the
+# objects the ARD, listing and figure programs read (`adsl`) the datasets
+# of study$adam: the generated programs always read study$adam.
 .study_data_lines <- function(ds, levels = list(), adam_levels = "codelists") {
   if (!nrow(ds)) return(character())
   nm <- .r_name(ds$dataset)
@@ -235,8 +236,8 @@ tfl_study_setup_code <- function(study) {
       "message(\"The study has no code lists: study$adam is study$adam_org with blanks as NA.\")")
   }
   code <- c(head, "",
-            "# (until the report programs read study$adam: the objects they use now)",
-            sprintf("delayedAssign(%s, study$adam_org$%s)", .q(nm), nm))
+            "# (the objects the ARD, listing and figure programs read: study$adam's)",
+            sprintf("delayedAssign(%s, study$adam$%s)", .q(nm), nm))
   code <- .drop_attached_ns(code)
   unlist(lapply(code, function(l) if (nzchar(l)) strsplit(l, "
 ", fixed = TRUE)[[1L]] else ""))
