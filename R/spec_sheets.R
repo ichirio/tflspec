@@ -287,6 +287,12 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
   ard <- list()
   keys <- s$study$keys %||% list()
   ard$study <- data.frame(key = names(keys), value = vapply(keys, cell, ""), stringsAsFactors = FALSE)
+  # (settings: adam_levels: none on the ARD's study sheet: the ARD's
+  # fingerprint, tfl_ard_spec_hash(), counts it)
+  if (identical(.study_adam_levels(s), "none")) {
+    ard$study <- rbind(ard$study[!ard$study$key %in% "adam_levels", , drop = FALSE],
+                       data.frame(key = "adam_levels", value = "none", stringsAsFactors = FALSE))
+  }
   ard$datasets <- .rows_df(lapply(s$data$datasets %||% list(), function(e) lapply(e, cell)), .ard_spec_sheets$datasets)
   ard$populations <- .rows_df(lapply(s$data$populations %||% list(), function(e) {
     m <- lapply(e, cell); if (!is.null(m$id)) { m$population_id <- m$id; m$id <- NULL }; m

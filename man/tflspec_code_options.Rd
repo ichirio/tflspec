@@ -26,8 +26,9 @@ study-wide options and reads the study's input data -- today the
 rounding, \code{rtfreporter.rounding} and \code{cards.round_type}, the study's
 code lists (\verb{cl_<variable>}), and the data catalog's datasets read when
 first used, in two environments: \code{study$adam_org} (as the file has
-them, with the \code{derive}) and \code{study$adam} (with the code lists'
-levels), and, until the programs read \code{study$adam}, one object per
+them, with the \code{derive}) and \code{study$adam} (blanks as \code{NA}, and the
+code lists' levels unless study.yml's \code{settings: adam_levels} is
+\code{none}), and, until the programs read \code{study$adam}, one object per
 dataset (\code{adsl}) that is its \code{study$adam_org}'s,
 written by \code{\link[=tfl_study_setup_code]{tfl_study_setup_code()}}.  The ARD setup
 (\code{\link[=tfl_ard_code]{tfl_ard_code()}}) and the report setup (\code{\link[=tfl_report_setup_code]{tfl_report_setup_code()}})
