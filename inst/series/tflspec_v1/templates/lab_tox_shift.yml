@@ -1,0 +1,79 @@
+# tflspec_v1/templates/lab_tox_shift.yml
+template: lab_tox_shift
+label: Shift in toxicity grade, baseline to worst, in each direction
+params:
+  by:
+    type: list<column>
+    input: pick
+    choices: vars(adsl_sub)
+    required: true
+    step: analysis
+    tier: required
+    description: The column variable(s); the groups across.
+  graded_params:
+    type: map<enum[Low|High],list<level>>
+    input: table
+    choices: levels(PARAM)
+    required: true
+    step: analysis
+    tier: required
+    description: The parameters graded, for Low and for High.
+  denominator:
+    type: string
+    input: pick
+    choices: report_data
+    default: adsl_sub
+    step: analysis
+    tier: usual
+    description: The data row whose subjects are the percentages' denominator.
+  formats:
+    type: map<string,number|string>
+    input: table
+    choices: stats
+    free: true
+    default: !series formats
+    step: analysis
+    tier: usual
+    description: The decimals (or the format) of each statistic.
+extends: !series extends
+style: !series style
+data:
+  - id: adsl_sub
+    from: ADSL
+    population: !series population_safety
+  - id: adlb_sub
+    from: ADLB
+    subjects_in: adsl_sub
+    add: ["{by}"]
+    where: ~
+analysis:
+  - id: BIGN
+    label: Subjects per group
+    method: categorical
+    data: adsl_sub
+    variables: ["{by}"]
+    formats: "{formats}"
+  - id: SHIFT
+    label: Shift in toxicity grade, baseline to worst, in each direction
+    data: adlb_sub
+    params: [tox_dir, graded_params, worst, base, where]
+    conditions:
+      - {tox_dir: Low, worst: ATOXGRL, base: BTOXGRL, graded_params: "{graded_params: Low}",
+         where: !r "!is.na(LBTOXL) & !is.na(BTOXGRL) & !is.na(ATOXGRL)"}
+      - {tox_dir: High, worst: ATOXGRH, base: BTOXGRH, graded_params: "{graded_params: High}",
+         where: !r "!is.na(LBTOXH) & !is.na(BTOXGRH) & !is.na(ATOXGRH)"}
+    where: !r "{where}"
+    derive: !r tox_dir = "{tox_dir}"
+    levels: {PARAM: "{graded_params}", tox_dir: "{tox_dir}"}
+    method: categorical
+    statistics: [n, p]
+    denominator: "{denominator}"
+    formats: "{formats}"
+    ards:
+      - {by: ["{by}", PARAM, tox_dir, "{base}"], variables: ["{worst}"]}   # cells
+      - {by: ["{by}", PARAM, tox_dir], variables: ["{worst}"]}            # Total column
+      - {by: ["{by}", PARAM, tox_dir], variables: ["{base}"]}             # Total row
+      - {by: ["{by}", PARAM], variables: [tox_dir]}                       # corner
+page:
+  titles: ~
+  footnotes: ~
