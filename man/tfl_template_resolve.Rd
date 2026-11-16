@@ -28,8 +28,9 @@ directly under \verb{template:}) over the template's defaults, resolves the
 series' and the study's values (\code{!series}, \code{!study}, \code{!fixed}), fills in
 the \code{"{name}"} spots of the template's \verb{data:} rows, analysis items,
 content and page, and merges the report's own \verb{data:} rows into the
-template's by id, key by key.  The result is a plain code SPEC, as
-\code{\link[=tfl_read_output]{tfl_read_output()}} reads one.
+template's by id, key by key; a report row with \verb{code:} makes the whole
+data, and replaces the template's row of its id.  The result is a plain
+code SPEC, as \code{\link[=tfl_read_output]{tfl_read_output()}} reads one.
 }
 \details{
 An analysis item's \verb{analyses:} (\code{per}, \code{ids}) says its analyses: \verb{per: variable} one a variable (its id the variable's entry in \code{ids}, else the

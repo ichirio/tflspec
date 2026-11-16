@@ -202,3 +202,39 @@ test_that("tfl_series_list() and a study's series values", {
   expect_null(yaml::read_yaml(file.path(d, "study.yml"))$series_settings)
   expect_error(tfl_series_settings_set(d, "tflspec_v1", list(zz = 1)), "not a value")
 })
+
+test_that("lab: record_where is adlb_sub's where; a report row merges key by key, one with code replaces the template's", {
+  rep <- tr_reports()$lab
+  # (the template's rows alone: the sample report writes its own where)
+  rep$data <- NULL
+  out <- tfl_template_resolve(rep, study = tr_study())
+  row_of <- function(o, id) {
+    d <- o$ard$analysis_data
+    d[[match(id, vapply(d, function(r) r$id, ""))]]
+  }
+  lb <- row_of(out, "adlb_sub")
+  expect_s3_class(lb$where, "tfl_r")
+  expect_identical(as.character(lb$where), "AVISIT == \"WORST POST-BASELINE\"")
+  expect_identical(attr(out, "origins")[["record_where"]], "template")
+  # record_where TRUE and a then on the template's row: key by key
+  rep2 <- rep
+  rep2$template$data <- list(record_where = tfl_r("TRUE"))
+  rep2$data <- list(list(id = "adlb_sub",
+                         then = tfl_r("dplyr::slice_max(ATOXGRH, n = 1, with_ties = FALSE, by = USUBJID)")))
+  lb2 <- row_of(tfl_template_resolve(rep2, study = tr_study()), "adlb_sub")
+  expect_identical(as.character(lb2$where), "TRUE")
+  expect_identical(as.character(lb2$then), "dplyr::slice_max(ATOXGRH, n = 1, with_ties = FALSE, by = USUBJID)")
+  expect_identical(lb2$from, "ADLB")
+  expect_identical(lb2$subjects, "adsl_sub")
+  expect_identical(lb2$add, "TRT01A")
+  # a row with code: the template's row of that id replaced whole
+  rep3 <- rep
+  rep3$data <- list(list(id = "adlb_sub", from = "ADLB",
+                         code = tfl_r("dplyr::filter(adlb, USUBJID %in% adsl_sub$USUBJID)")))
+  lb3 <- row_of(tfl_template_resolve(rep3, study = tr_study()), "adlb_sub")
+  expect_identical(as.character(lb3$code), "dplyr::filter(adlb, USUBJID %in% adsl_sub$USUBJID)")
+  expect_identical(lb3$from, "ADLB")
+  for (k in c("where", "subjects", "subjects_in", "add", "derive")) expect_null(lb3[[k]], info = k)
+  # (the other rows as they were)
+  expect_identical(row_of(tfl_template_resolve(rep3, study = tr_study()), "adsl_sub"), row_of(out, "adsl_sub"))
+})

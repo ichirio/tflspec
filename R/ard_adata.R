@@ -9,7 +9,9 @@
 #  of the population's (or that data's) added by the subject key, columns
 #  derived (the code lists made factors of them too), the columns kept, and
 #  one row for each set of values of some columns (a denominator per
-#  subject and phase).  In that order.  Or, when the columns cannot say it,
+#  subject and phase).  In that order; then `then`, R piped onto the end of
+#  the data (several steps in one pipe; anything R does).  Or, when the
+#  columns cannot say it,
 #  `code`: R that makes the data itself (the program's objects in reach:
 #  the datasets, pop_<population>, the analysis data above), the other
 #  columns but `from` left blank.  An analysis names one in `data` (instead of `dataset` /
@@ -123,13 +125,50 @@
 # The analysis data the code of the rows `ids` reads by name (a data made
 # by `code` may read another of its report's: a template's subset set)
 .adata_code_reads <- function(ad, ids) {
-  code <- ad$code[match(ids, ad$data_id)] %||% NA
+  code <- c(ad$code[match(ids, ad$data_id)] %||% NA,
+            ad$then[match(ids, ad$data_id)] %||% NA)
   code <- code[!is.na(code)]
   if (!length(code)) return(character())
   unique(unlist(lapply(code, function(x) {
     intersect(tryCatch(all.names(parse(text = x, keep.source = FALSE)),
                        error = function(e) character()), ad$data_id)
   })))
+}
+
+# The pieces of a `then` (R text): its steps at the top-level `|>`s, each
+# one a step of the data's pipe (the text itself when it does not split)
+.then_steps <- function(x) {
+  if (is.null(x) || !length(x) || is.na(x) || !nzchar(trimws(x))) return(character())
+  ch <- strsplit(x, "", fixed = TRUE)[[1L]]
+  n <- length(ch)
+  depth <- 0L
+  quote <- ""
+  cut <- integer()
+  i <- 1L
+  while (i <= n) {
+    c <- ch[i]
+    if (nzchar(quote)) {
+      if (c == "\\") i <- i + 1L else if (c == quote) quote <- ""
+    } else if (c %in% c("\"", "'", "`")) {
+      quote <- c
+    } else if (c == "#") {
+      # a comment: to the end of its line
+      while (i < n && ch[i + 1L] != "\n") i <- i + 1L
+    } else if (c %in% c("(", "[", "{")) {
+      depth <- depth + 1L
+    } else if (c %in% c(")", "]", "}")) {
+      depth <- max(0L, depth - 1L)
+    } else if (c == "|" && depth == 0L && i < n && ch[i + 1L] == ">") {
+      cut <- c(cut, i)
+      i <- i + 1L
+    }
+    i <- i + 1L
+  }
+  from <- c(1L, cut + 2L)
+  to <- c(cut - 1L, n)
+  out <- trimws(vapply(seq_along(from), function(k)
+    if (to[k] >= from[k]) paste(ch[from[k]:to[k]], collapse = "") else "", ""))
+  out[nzchar(out)]
 }
 
 # The problems of the sheet and of the analyses' `data`, as rows
@@ -209,6 +248,12 @@
           tag(i), sQuote(piece, FALSE)))
       }
     }
+    # `then`: R, piped onto the end of the data
+    thn <- ad$then[i] %||% NA
+    if (!is.na(thn) && is.null(tryCatch(parse(text = thn, keep.source = FALSE),
+                                        error = function(e) NULL))) {
+      add_d(i, "then", sprintf("%s: `then` does not read as R", tag(i)))
+    }
     s <- ad$subjects[i]
     if (!is.na(s)) {
       if (!s %in% above) {
@@ -229,7 +274,7 @@
       # (`population_id` with `code`: the set's subjects are made first,
       # in reach as <dataset>_sub; the other columns are for a data the
       # columns make)
-      also <- c("subjects", "where", "add", "derive", "keep", "distinct")
+      also <- c("subjects", "where", "add", "derive", "keep", "distinct", "then")
       also <- also[vapply(also, function(cn) !is.na(ad[[cn]][i] %||% NA), NA)]
       if (length(also)) {
         add_d(i, "code", sprintf(paste(
@@ -337,6 +382,7 @@
     add <- .split_bar(r$add)
     keep <- .split_bar(r$keep)
     dis <- .split_bar(r$distinct)
+    thn <- .then_steps(r$then %||% NA)
     # the subject-level columns it takes: those asked for (`add`), and the
     # groups the analyses' denominators count by (their by, strata)
     # (not the columns the population's derive makes: a record's TRTA,
@@ -384,7 +430,7 @@
       made = if (id %in% dens) "the denominator." else sprintf("made from %s.", src))
     out <- c(out, .adata_comment(id, what, lbl))
     # what follows the rows: the columns added, derived, the columns kept,
-    # one row per ..., its code lists
+    # one row per ..., its code lists; then the row's own R (`then`)
     steps <- c(steps0, .derive_steps(r$derive),
                # the columns kept: the subject, those the analyses read on
                # it (their by, strata, variables), and the ones asked for
@@ -396,7 +442,9 @@
                # the same rows as the data it is made from: the same levels --
                # but a dataset read as it is has none yet
                if (length(c(steps0, .split_bar(r$derive), dis, add)) ||
-                   (is.null(pop) && !from_data)) lv)
+                   (is.null(pop) && !from_data)) lv,
+               # the R the row adds after its keys, as written (a step each)
+               thn)
     out <- c(out, .make_code(id, base, steps))
   }
   out
