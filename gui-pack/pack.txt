@@ -1,0 +1,573 @@
+=== series folder layout ===
+tflspec_v1/                  # a series: one folder, the version in its name
+  series.yml                  # the common file (name, label, released, fixes, needs, values)
+  templates/
+    demog.yml                 # formats: !series formats
+    ae_soc_pt.yml
+    ...
+  styles/
+    tfl_standard.yml
+acme_v1/                      # a company series: a copy of tflspec_v1, then changed
+  series.yml
+  templates/...
+
+=== tflspec_v1/series.yml ===
+# tflspec_v1/series.yml   (the series's one common file; the values are under values:)
+name: tflspec_v1
+label: tflspec templates
+released: 2026-11-16
+needs: tflspec (>= 0.x)
+fixes: []
+values:                                # read only where a template writes !series <key>
+  extends: [defaults]
+  style: tfl_standard
+  style_listing: tfl_small
+  population_safety: SAF
+  population_efficacy: FAS
+  formats: {N: 0, mean: 2, sd: 3, median: 1, min: 0, max: 0, p: "xx.x%", "AGE:mean": 1, "AGE:sd": 2}
+  total: false
+  total_label: Total
+  header_n: denominator
+  missing_label: Missing
+  sd_missing: "-"
+  count_cell: "{n} ({p:.1f%})"
+  max_rows: 30
+  overall_row: true
+  conf_level: 0.95
+  time: AVAL
+  censor: CNSR
+  time_unit: months
+  days_per_month: 30.4375
+
+=== study.yml excerpt ===
+# SAMPLE-01/study.yml (excerpt)
+settings:
+  rounding: sas
+  output_path: output/tfl
+series_settings:                       # only when needed: a block only for a series whose values the study changes; keys = that series's values: keys
+  tflspec_v1:                          # copied from tflspec_v1/series.yml values:, then edited
+    style: standard                    # was settings.style
+    max_rows: 25                       # edited (series: 30)
+  hoge_template_v1:                    # a company series (example; a report would name it hoge_template_v1/<template>)
+    formats: {N: 0, mean: 1, sd: 2, median: 1, min: 0, max: 0, p: "xx.x%"}   # edited (hoge series: mean 2, sd 3)
+
+=== spec/series.lock ===
+# SAMPLE-01/spec/series.lock (written by tfl_pin_series() from the report SPECs; never hand-edited)
+tflspec_v1:
+  path: <series folder>/tflspec_v1
+  series: 41d7e2...                    # md5 of series.yml
+  templates:                           # the templates the study's reports use
+    demog: 3f9c1a...                   # md5 of the template file (canon 11-12)
+    ae_soc_pt: 8b02d4...
+    lab_tox_shift: c71e90...
+    orr_subgroup: 05aa3f...
+    listing: e4d218...
+    km_simple: 9d6b7c...
+    forest_hr: 2c8f51...
+
+=== template DM_TPL ===
+# tflspec_v1/templates/demog.yml
+template: demog
+label: Demographics
+params:                                # what a report sets under template: analysis: ({name} below)
+  # by:            (required, no default)
+  # continuous:    (required: this or categorical)
+  # categorical:   (required: this or continuous)
+  total: !series total
+  missing_row: true
+  missing_label: !series missing_label
+  denominator: adsl_sub                # canon 1.31: the analysis data; a report may change it
+  analysis_ids: ~                      # (proposal) {VAR: id}; ~: each variable's name
+  formats: !series formats
+  # appearance params (labels, cells, count_cell, header_n, ...): the content's, not on this page
+extends: !series extends
+style: !series style
+data:
+  - id: adsl_sub
+    from: ADSL
+    population: !series population_safety
+analysis:
+  - id: BIGN
+    label: Subjects per group
+    method: categorical
+    data: adsl_sub
+    variables: ["{by}"]
+    formats: "{formats}"
+  - id: CONT
+    label: Continuous
+    method: continuous
+    data: adsl_sub
+    by: ["{by}"]
+    overall: "{total}"
+    variables: "{continuous}"
+    statistics: [N, mean, sd, median, min, max]
+    formats: "{formats}"
+    analysis_ids: "{analysis_ids}"     # [Q1]
+  - id: CAT
+    label: Categorical
+    method: categorical
+    data: adsl_sub
+    by: ["{by}"]
+    overall: "{total}"
+    variables: "{categorical}"
+    statistics: [n, p]
+    denominator: "{denominator}"
+    missing_row: "{missing_row}"       # [Q2]
+    missing_label: "{missing_label}"   # [Q2]
+    formats: "{formats}"
+    analysis_ids: "{analysis_ids}"     # [Q1]
+
+=== template AE_TPL ===
+# tflspec_v1/templates/ae_soc_pt.yml
+template: ae_soc_pt
+label: Adverse events by SOC and PT
+params:
+  # by:  (required, no default)
+  hierarchy: [AEBODSYS, AEDECOD]       # canon 11-12: a default, may be changed
+  any_row: true
+  denominator: adsl_sub                # canon 1.38
+  total: !series total
+  min_pct: ~
+  min_pct_in: any
+  formats: !series formats
+  # appearance params (any_row_label, heading, sort, count_cell, header_n, split): the content's
+extends: !series extends
+style: !series style
+data:
+  - id: adsl_sub
+    from: ADSL
+    population: !series population_safety
+  - id: adae_sub
+    from: ADAE
+    subjects_in: adsl_sub
+    add: ["{by}"]                      # the column variable, from ADSL
+    where: !r TRTEMFL == "Y"
+analysis:
+  - id: BIGN
+    label: Subjects per group
+    method: categorical
+    data: adsl_sub                     # the % denominator data row
+    variables: ["{by}"]
+    formats: "{formats}"
+  - id: AE
+    label: Adverse events by SOC and PT
+    method: hierarchical
+    data: adae_sub
+    by: ["{by}"]
+    overall: "{total}"
+    variables: "{hierarchy}"
+    denominator: "{denominator}"
+    args: !r over_variables = {any_row}
+    post: !r keep_min_pct({min_pct}, "{min_pct_in}")   # [Q3] only when min_pct is set
+    formats: "{formats}"
+
+=== template LAB_TPL ===
+# tflspec_v1/templates/lab_tox_shift.yml   (proposed; the name is provisional)
+template: lab_tox_shift
+label: Shift in toxicity grade, baseline to worst, in each direction
+params:
+  # by:             (required, no default)
+  # graded_params:  (required: the PARAMs graded, for Low and for High)
+  denominator: adsl_sub                # canon 1.38
+  formats: !series formats
+  # appearance params (cell: !series count_cell, ...): the content's
+extends: !series extends
+style: !series style
+data:
+  - id: adsl_sub
+    from: ADSL
+    population: !series population_safety
+  - id: adlb_sub
+    from: ADLB
+    subjects_in: adsl_sub
+    add: ["{by}"]
+    where: ~                           # the visit, the phase: the report's
+analysis:
+  - id: BIGN
+    label: Subjects per group
+    method: categorical
+    data: adsl_sub
+    variables: ["{by}"]
+    formats: "{formats}"
+  - id: SHIFT
+    label: Shift in toxicity grade, baseline to worst, in each direction
+    data: adlb_sub
+    params: [tox_dir, graded_params, worst, base, where]
+    conditions:
+      - {tox_dir: Low, worst: ATOXGRL, base: BTOXGRL, graded_params: "{graded_params: Low}",
+         where: !r !is.na(LBTOXL) & !is.na(BTOXGRL) & !is.na(ATOXGRL)}
+      - {tox_dir: High, worst: ATOXGRH, base: BTOXGRH, graded_params: "{graded_params: High}",
+         where: !r !is.na(LBTOXH) & !is.na(BTOXGRH) & !is.na(ATOXGRH)}
+    where: !r "{where}"
+    derive: !r tox_dir = "{tox_dir}"
+    levels: {PARAM: "{graded_params}", tox_dir: "{tox_dir}"}
+    method: categorical
+    statistics: [n, p]
+    denominator: "{denominator}"
+    formats: "{formats}"
+    ards:
+      - {by: ["{by}", PARAM, tox_dir, "{base}"], variables: ["{worst}"]}   # cells
+      - {by: ["{by}", PARAM, tox_dir], variables: ["{worst}"]}            # Total column
+      - {by: ["{by}", PARAM, tox_dir], variables: ["{base}"]}             # Total row
+      - {by: ["{by}", PARAM], variables: [tox_dir]}                       # corner
+
+=== template ORR_TPL ===
+# tflspec_v1/templates/orr_subgroup.yml   (proposed; the name is provisional)
+template: orr_subgroup
+label: Response rate with its CI, overall and in each subgroup level
+params:
+  # by:         (required, no default)
+  conditions: []                       # the report's subgroup rows (subgroup, subgroup_lvl, where), after ALL (canon 782da95)
+  overall_row: !series overall_row     # the condition row ALL
+  category: AVALCAT1
+  responder: Response
+  ci_method: clopper-pearson
+  conf_level: !series conf_level
+  formats: !series formats
+  # appearance params (heading, ...): the content's
+extends: !series extends
+style: !series style
+data:
+  - id: adsl_sub
+    from: ADSL
+    population: ITT                    # template's own: response analyses use ITT
+  - id: adrs_sub
+    from: ADRS
+    subjects_in: adsl_sub
+    add: ["{by}"]                      # the subgroup columns: the report's add:
+    where: !r PARAMCD == "BOR"
+    keep: ["{category}"]
+analysis:
+  - id: BIGN
+    label: Subjects per group
+    method: categorical
+    data: adsl_sub
+    variables: ["{by}"]
+    formats: "{formats}"
+  - id: ORR
+    label: Response rate with its CI, overall and in each subgroup level
+    method: proportion_ci
+    data: adrs_sub
+    params: [subgroup, subgroup_lvl, where]
+    conditions:                        # the ALL row first, then the report's rows (canon 782da95)
+      - {subgroup: ALL, subgroup_lvl: ALL, where: !r TRUE}   # overall_row: true
+      - "{conditions}"
+    where: !r "{where}"
+    derive: !r subgroup = "{subgroup}" | subgroup_lvl = "{subgroup_lvl}" | {category} = dplyr::if_else({category} %in% "{responder}", "{responder}", "Non-response")
+    by: [subgroup, subgroup_lvl, "{by}"]
+    variables: ["{category}"]
+    args: !r value = list({category} = "{responder}"), method = "{ci_method}", conf.level = {conf_level}
+    post: !r dplyr::filter(stat_name %in% c("N", "n", "estimate", "conf.low", "conf.high"))
+    formats: "{formats}"
+
+=== template L_TPL ===
+# tflspec_v1/templates/listing.yml
+template: listing
+label: Listing of records
+params:
+  # from:     (required: the dataset of the records)
+  # columns:  (required: the content's)
+  by: ~
+  formats: !series formats             # header (N=xx): uses n, p
+  # appearance params (by_break, by_heading, by_na_label, ...): the content's
+extends: !series extends
+style: !series style_listing           # canon 11-12
+data:
+  - id: adsl_sub
+    from: ADSL
+    population: !series population_safety
+  - id: lst_sub
+    from: "{from}"
+    subjects_in: adsl_sub
+    add: ~                             # canon 11-12 subject_vars: none
+    where: ~
+    arrange: ~
+analysis:
+  - id: BIGN
+    label: Subjects, total
+    method: cards::ard_total_n         # [Q5] by: ~; with a by, method: categorical, variables: ["{by}"]
+    data: adsl_sub
+
+=== template KM_TPL ===
+# tflspec_v1/templates/km_simple.yml
+template: km_simple
+label: KM curves
+figure: km_curves                      # tfl_definition() (R): the figure content (ggplot), not on this page
+params:
+  # by:  (required, no default; canon 11-10)
+  time: !series time
+  censor: !series censor
+  time_unit: !series time_unit
+  days_per_month: !series days_per_month
+  formats: !series formats             # legend N: uses n
+  # appearance params (x_label, y_label, legend): the figure content's
+extends: !series extends
+style: !series style
+data:
+  - id: adsl_sub
+    from: ADSL
+    population: !series population_efficacy
+  - id: adtte_sub
+    from: ADTTE
+    subjects_in: adsl_sub
+    add: ["{by}"]
+    where: !r PARAMCD == "OS"
+    derive: !r {time} = {time} / {days_per_month}   # [Q3] only when time_unit is months
+analysis:
+  - id: BIGN
+    label: Subjects per group
+    method: categorical
+    data: adsl_sub
+    variables: ["{by}"]
+    formats: "{formats}"
+  - id: km_fit
+    type: model                        # [Q6] not in the ARD: the figure content draws from it
+    method: survfit
+    data: adtte_sub
+    args: !r ggsurvfit::Surv_CNSR({time}, {censor}) ~ {by}
+
+=== template FO_TPL ===
+# tflspec_v1/templates/forest_hr.yml
+template: forest_hr
+label: Forest plot, hazard ratio by subgroup
+figure: forest_hr                      # tfl_definition() (R): the figure content (ggplot), not on this page
+params:
+  # by:         (required, no default; canon 11-10)
+  conditions: []                       # the report's subgroup rows (subgroup, subgroup_lvl, where), after ALL (canon 782da95)
+  overall_row: !series overall_row     # the condition row ALL
+  ref: ~                               # the reference arm; ~: the first in the code list
+  time: !series time
+  censor: !series censor
+  formats: !series formats
+  # appearance params (comparison, subgroup_labels, favours, x_breaks, ...): the figure content's
+extends: !series extends
+style: !series style
+data:
+  - id: adsl_sub
+    from: ADSL
+    population: !series population_efficacy
+  - id: adtte_sub
+    from: ADTTE
+    subjects_in: adsl_sub
+    add: ["{by}"]                      # the subgroup columns: the report's add:
+    where: !r PARAMCD == "OS"
+    derive: !r {by} = stats::relevel(factor({by}), ref = "{ref}")   # [Q3] only when ref is set
+analysis:
+  - id: BIGN
+    label: Subjects per group
+    method: categorical
+    data: adsl_sub
+    variables: ["{by}"]
+    formats: "{formats}"
+  - id: HR
+    label: Hazard ratio, overall and in each subgroup level
+    method: regression
+    data: adtte_sub
+    params: [subgroup, subgroup_lvl, where]
+    conditions:                        # the ALL row first, then the report's rows (canon 782da95)
+      - {subgroup: ALL, subgroup_lvl: ALL, where: !r TRUE}   # overall_row: true
+      - "{conditions}"
+    where: !r "{where}"
+    args: !r survival::coxph(ggsurvfit::Surv_CNSR({time}, {censor}) ~ {by}, data = data), exponentiate = TRUE
+    post: !r dplyr::mutate(group1 = "subgroup", group1_level = list("{subgroup}"), group2 = "subgroup_lvl", group2_level = list("{subgroup_lvl}"))
+    formats: "{formats}"
+
+=== report SPEC DM_REP (SAMPLE-01) ===
+id: T-14-1-1
+kind: table
+label: Demographic characteristics
+# default: extends: [defaults]           (!series extends: not in SAMPLE-01's tflspec_v1 block -> series file)
+# default: style: standard               (!series style: SAMPLE-01's tflspec_v1 block)
+# (no data: rows written: the template's row is used as it is)
+# default: data: - id: adsl_sub          (template default)
+# default:         from: ADSL            (template default)
+# default:         population: SAF       (!series population_safety: not in SAMPLE-01's tflspec_v1 block -> series file)
+template:
+  name: tflspec_v1/demog
+  analysis:
+    by: TRT01A
+    continuous: [AGE]
+    categorical: [AGEGR1, SEX, RACE, ETHNIC]
+    # default: data: adsl_sub            (template default)
+    # default: total: false              (!series total: not in SAMPLE-01's tflspec_v1 block -> series file)
+    # default: missing_row: true         (template default)
+    # default: missing_label: Missing    (!series missing_label: not in SAMPLE-01's tflspec_v1 block -> series file)
+    # default: formats: !series formats   (not in SAMPLE-01's tflspec_v1 block -> series file)
+    # default:   AGE: mean 1, sd 2; other variables: mean 2, sd 3 (N 0, median 1, min 0, max 0)   (!series formats: not in SAMPLE-01's tflspec_v1 block -> series file)
+    # default: denominator: "{data}" -> adsl_sub   (template default)
+  # content: (not shown: this page is data and analysis)
+
+=== report SPEC AE_REP (SAMPLE-01) ===
+id: T-14-3-1
+kind: table
+label: TEAEs by SOC / PT
+# default: extends: [defaults]            (!series extends: not in SAMPLE-01's tflspec_v1 block -> series file)
+# default: style: standard                (!series style: SAMPLE-01's tflspec_v1 block)
+# (no data: rows written)
+# default: data: - id: adsl_sub           (template default: from ADSL)
+# default:         population: SAF       (!series population_safety: not in SAMPLE-01's tflspec_v1 block -> series file)
+# default:       - id: adae_sub           (template default: from ADAE, subjects_in adsl_sub,
+# default:                                  add ["{by}"], where TRTEMFL == "Y")
+template:
+  name: tflspec_v1/ae_soc_pt
+  analysis:
+    by: TRT01A
+    # default: data: adae_sub              (template default)
+    # default: hierarchy: [AEBODSYS, AEDECOD]  (template default)
+    # default: any_row: true               (template default)
+    # default: denominator: adsl_sub       (template default)
+    # default: total: false                (!series total: not in SAMPLE-01's tflspec_v1 block -> series file)
+    # default: formats: N 0, mean 2, sd 3, median 1, min 0, max 0, p "xx.x%"
+    # default:   (!series formats: not in SAMPLE-01's tflspec_v1 block -> series file)
+    # default: min_pct: ~                  (template default: no keep_min_pct() step)
+    # default: min_pct_in: any             (template default; used only when min_pct is set)
+
+=== report SPEC LAB_REP (SAMPLE-01) ===
+id: T-14-4-1
+kind: table
+label: Shift in chemistry toxicity grade (draft)
+# default: extends: [defaults]            (!series extends: not in SAMPLE-01's tflspec_v1 block -> series file)
+# default: style: standard                (!series style: SAMPLE-01's tflspec_v1 block)
+data:
+  - id: adlb_sub
+    where: !r APHASE == "P2" & ANL01FL == "Y" & PARCAT1 == "CHEMISTRY" & AVISIT == "WORST POST-BASELINE"
+    # default: from: ADLB                 (template default)
+    # default: subjects_in: adsl_sub      (template default)
+    # default: add: ["{by}"]              (template default)
+# default: - id: adsl_sub                 (template default: from ADSL)
+# default:   population: SAF              (!series population_safety: not in SAMPLE-01's tflspec_v1 block -> series file)
+template:
+  name: tflspec_v1/lab_tox_shift
+  analysis:
+    by: TRT01A
+    graded_params:
+      Low: [Albumin (g/L), Potassium (mmol/L), Sodium (mmol/L)]
+      High: [Alanine Aminotransferase (U/L), Aspartate Aminotransferase (U/L),
+             Creatinine (umol/L), Potassium (mmol/L), Sodium (mmol/L)]
+    # default: data: adlb_sub              (template default)
+    # default: conditions: Low (worst ATOXGRL, base BTOXGRL,
+    # default:                  where !is.na(LBTOXL) & !is.na(BTOXGRL) & !is.na(ATOXGRL)),
+    # default:              High (ATOXGRH, BTOXGRH, where !is.na(LBTOXH) & !is.na(BTOXGRH) & !is.na(ATOXGRH))   (template default)
+    # default: levels: {PARAM: "{graded_params}", tox_dir: "{tox_dir}"}   (template default)
+    # default: denominator: adsl_sub       (template default)
+    # default: formats: N 0, mean 2, sd 3, median 1, min 0, max 0, p "xx.x%"
+    # default:   (!series formats: not in SAMPLE-01's tflspec_v1 block -> series file)
+
+=== report SPEC ORR_REP (SAMPLE-01) ===
+id: T-14-2-4
+kind: table
+label: Overall response rate by subgroup (draft)
+# default: extends: [defaults]            (!series extends: not in SAMPLE-01's tflspec_v1 block -> series file)
+# default: style: standard                (!series style: SAMPLE-01's tflspec_v1 block)
+data:
+  - id: adsl_sub
+    from: ADSLX
+    population: none                      # no analysis set (canon 11-15: the value none)
+    where: !r TRT01AN == 1
+  - id: adrs_sub
+    where: !r PARAMCD == "BORC" & PARQUAL == "INVESTIGATOR"
+    # default: from: ADRS                 (template default)
+    # default: subjects_in: adsl_sub      (template default)
+    add: [TR01AG1, BRCA, AGEGR1, PRBEVA]    # the by and subgroup columns (the template's: ["{by}"])
+    # default: keep: ["{category}"]       (template default)
+template:
+  name: tflspec_v1/orr_subgroup
+  analysis:
+    by: TR01AG1
+    conditions:                           # after the template's ALL row (canon 782da95)
+      - {subgroup: BRCA, subgroup_lvl: POSITIVE, where: !r BRCA == "POSITIVE"}
+      - {subgroup: BRCA, subgroup_lvl: NEGATIVE, where: !r BRCA == "NEGATIVE"}
+      - {subgroup: AGEGR1, subgroup_lvl: "<65", where: !r AGEGR1 == "<65"}
+      - {subgroup: AGEGR1, subgroup_lvl: ">=65", where: !r AGEGR1 == ">=65"}
+      - {subgroup: PRBEVA, subgroup_lvl: "Yes", where: !r PRBEVA == "Yes"}
+      - {subgroup: PRBEVA, subgroup_lvl: "No", where: !r PRBEVA == "No"}
+    conf_level: 0.9
+    # default: data: adrs_sub              (template default)
+    # default: overall_row: true           (!series overall_row: not in SAMPLE-01's tflspec_v1 block -> series file)
+    # default: category: AVALCAT1          (template default)
+    # default: responder: Response         (template default)
+    # default: ci_method: clopper-pearson  (template default)
+    # default: formats: N 0, mean 2, sd 3, median 1, min 0, max 0, p "xx.x%"
+    # default:   (!series formats: not in SAMPLE-01's tflspec_v1 block -> series file)
+
+=== report SPEC L_REP (SAMPLE-01) ===
+id: L-16-2-8
+kind: listing
+label: 'Listing of severe treatment-emergent adverse events: data step only'
+# default: extends: [defaults]            (!series extends: not in SAMPLE-01's tflspec_v1 block -> series file)
+# default: style: tfl_small               (!series style_listing: not in SAMPLE-01's tflspec_v1 block -> series file)
+data:
+  - id: adsl_sub
+    from: ADSLX
+    population: SAFX
+  - id: lst_sub
+    from: ADAE
+    where: !r AESEV == "SEVERE" & TRTEMFL == "Y"
+    arrange: [TRT01AN, USUBJID, ASTDT]
+    # default: subjects_in: adsl_sub      (template default)
+    # default: add: ~                     (template default)
+template:
+  name: tflspec_v1/listing
+  # content: (not shown: this page is data and analysis; the required columns and data: lst_sub are there)
+  # default: content: formats: N 0, ..., p "xx.x%"   (!series formats: not in SAMPLE-01's tflspec_v1 block -> series file; header (N=xx))
+
+=== report SPEC KM_REP (SAMPLE-01) ===
+id: F-14-2-3
+kind: figure
+label: KM curves of the time to first skin disorder (designed)
+# default: extends: [defaults]            (!series extends: not in SAMPLE-01's tflspec_v1 block -> series file)
+# default: style: standard                (!series style: SAMPLE-01's tflspec_v1 block)
+data:
+  - id: adsl_sub
+    population: SAF
+    # default: from: ADSL                 (template default)
+  - id: adtte_sub
+    where: !r PARAMCD == "TTSKIN"
+    # default: from: ADTTE                (template default)
+    # default: subjects_in: adsl_sub      (template default)
+    # default: add: ["{by}"]              (template default)
+template:
+  name: tflspec_v1/km_simple
+  analysis:
+    by: TRT01A
+    time_unit: days
+    # default: data: adtte_sub             (template default)
+    # default: time: AVAL                  (!series time: not in SAMPLE-01's tflspec_v1 block -> series file)
+    # default: censor: CNSR                (!series censor: not in SAMPLE-01's tflspec_v1 block -> series file)
+    # default: days_per_month: 30.4375     (!series days_per_month: not in SAMPLE-01's tflspec_v1 block -> series file; not used: time_unit is days)
+    # default: formats: N 0, mean 2, sd 3, median 1, min 0, max 0, p "xx.x%"   (!series formats: not in SAMPLE-01's tflspec_v1 block -> series file; legend N)
+  # content: km_curve, censor_mark, hline, ard_number x 3 (not shown; reads T-14-2-2's ARD)
+
+=== report SPEC FO_REP (SAMPLE-01) ===
+id: F-14-2-4
+kind: figure
+label: Hazard ratio of the time to first skin disorder by subgroup (forest plot, its own ARD)
+# default: extends: [defaults]            (!series extends: not in SAMPLE-01's tflspec_v1 block -> series file)
+# default: style: standard                (!series style: SAMPLE-01's tflspec_v1 block)
+data:
+  - id: adsl_sub
+    population: SAF
+    # default: from: ADSL                 (template default)
+  - id: adtte_sub
+    where: !r PARAMCD == "TTSKIN"
+    # default: from: ADTTE                (template default)
+    # default: subjects_in: adsl_sub      (template default)
+    add: [TRT01A, SEX, AGEGR1]            # the by and subgroup columns (the template's: ["{by}"])
+template:
+  name: tflspec_v1/forest_hr
+  analysis:
+    by: TRT01A
+    conditions:                           # after the template's ALL row (canon 782da95)
+      - {subgroup: SEX, subgroup_lvl: F, where: !r SEX == "F"}
+      - {subgroup: SEX, subgroup_lvl: M, where: !r SEX == "M"}
+      - {subgroup: AGEGR1, subgroup_lvl: "<65", where: !r AGEGR1 == "<65"}
+      - {subgroup: AGEGR1, subgroup_lvl: ">=65", where: !r AGEGR1 == ">=65"}
+    ref: Control
+    # default: data: adtte_sub             (template default)
+    # default: overall_row: true           (!series overall_row: not in SAMPLE-01's tflspec_v1 block -> series file)
+    # default: time: AVAL                  (!series time: not in SAMPLE-01's tflspec_v1 block -> series file)
+    # default: censor: CNSR                (!series censor: not in SAMPLE-01's tflspec_v1 block -> series file)
+    # default: formats: N 0, mean 2, sd 3, median 1, min 0, max 0, p "xx.x%"
+    # default:   (!series formats: not in SAMPLE-01's tflspec_v1 block -> series file)
+  content:
+    comparison: Drug X
