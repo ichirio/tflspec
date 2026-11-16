@@ -35,8 +35,8 @@ differ, trust the package, not this file, and fetch the matching copy with
    rendering are **rtfreporter's**. A program that runs a table spec starts
    with `library(rtfreporter)`.
 3. **Every tflspec function is `tfl_*`** (and `tflspec_ai_manual()`).
-   The functions the generated programs call as they run (`set_levels()`,
-   `tag_ard()`, `fmt_ard()`, `keep_stats()`, `fmt_pvalue()`, `save_ard()`)
+   The functions the generated programs call as they run (`blank_as_na()`, `set_levels()`,
+   `tag_ard()`, `bind_items()`, `fmt_ard()`, `keep_stats()`, `fmt_pvalue()`, `save_ard()`)
    are not tflspec's exports: `tfl_helpers_code()` gives their code, which a
    study keeps in a file of its own (tflplanner: `programs/study_helpers.R`),
    so the programs run without tflspec.

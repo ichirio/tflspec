@@ -239,7 +239,8 @@
 .ard_helper_names <- c("set_levels", "tag_ard", "fmt_pvalue", "fmt_ard",
                        "keep_stats", "save_ard", "fmt_default", "tfl_stats",
                        "complete_hierarchy", "relevel_ard", "drop_empty_groups", "keep_min_pct",
-                       "ard_hierarchical_or_none", "order_arms", "order_levels")
+                       "ard_hierarchical_or_none", "order_arms", "order_levels", "bind_items",
+                       "blank_as_na")
 
 # the packages an ARD program attaches (its setup's library() calls), and
 # those R attaches itself: their functions without `pkg::`
@@ -1283,7 +1284,8 @@
                                paste0("ard_", gsub("[^a-z0-9]+", "_",
                                                    tolower(a$analysis_id[top])))),
                              sep = "_")[-seq_along(c(taken, fun_names))]
-    avoid <- c(taken, ard_names, "ard", "ards", "report_id", if (length(lv)) .cl_name(names(lv)),
+    avoid <- c(taken, ard_names, paste0(ard_names, "_conditions"), paste0(ard_names, "_one"),
+               "ard", "ards", "report_id", if (length(lv)) .cl_name(names(lv)),
                .ard_helper_names)
     for (j in seq_along(top)) {
       i <- top[j]
@@ -1306,7 +1308,7 @@
     }
     # (one analysis: its ARD as it is)
     bound <- if (length(ard_names) == 1L) ard_names else
-      .cl("dplyr::bind_rows", as.list(ard_names))
+      .cl("bind_items", as.list(ard_names))
     if (several) {
       seg <- seq.int(seg_from, length(code))
       renamed <- .ard_sub_names(.levels_where_read(code[seg], lv, first_an = seg_an - seg_from + 1L),
@@ -1327,11 +1329,12 @@
           list("report_id"), save$args)))))
     } else .pipe_code("ard", bound))
   }
-  # dplyr::bind_rows(), not cards::bind_ard(): bind_ard() does not count
-  # output_id / analysis_id as part of a row's key, so the same statistic in
-  # two outputs (AGE's mean in two analysis sets) would stop it, or, with the
-  # same value, lose one output's rows.  The class card is kept by tag_ard().
-  if (several) code <- c(code, "", "ard <- dplyr::bind_rows(ards)")
+  # bind_items(), not cards::bind_ard(): bind_ard() does not count output_id
+  # / analysis_id as part of a row's key, so the same statistic in two
+  # outputs (AGE's mean in two analysis sets) would stop it, or, with the
+  # same value, lose one output's rows.  bind_items() keeps them in the key,
+  # stops on a statistic twice in one item and warns across items.
+  if (several) code <- c(code, "", "ard <- bind_items(ards)")
   # (one report's program: an analysis set that is only its adsl_<set> is
   # made once, under that name; the study's keeps pop_* for every report)
   if (several) {
@@ -1892,38 +1895,35 @@
   gd <- x$groups
   ids <- .split_bar(r$groups)
   defs <- lapply(ids, function(g) gd[gd$group_id == g, , drop = FALSE])
-  list_name <- paste0("groups_", name)
-  lvl <- function(d) {
+  tab_name <- paste0(name, "_conditions")
+  fun_name <- paste0(name, "_one")
+  glabel <- function(d) if (!is.na(d$label[1L])) d$label[1L] else d$group_id[1L]
+  # a row of the table: group, level, where (a level of no name, the whole
+  # group's "All", is "" here; a blank condition is TRUE)
+  rows <- unlist(lapply(defs, function(d) {
     vapply(seq_len(nrow(d)), function(k) {
       w <- d$where[k]
-      # (a level of no name -- the whole group, "All" -- is "NA" here, as R
-      # names no list element "", and prints as an empty level)
-      lv <- if (is.na(d$level[k]) || !nzchar(d$level[k])) "NA" else d$level[k]
-      sprintf("    %s = %s", .q(lv),
-              .q(if (is.na(w) || !nzchar(trimws(w))) "TRUE" else w))
+      lv <- if (is.na(d$level[k])) "" else d$level[k]
+      f <- c(.q(glabel(d)), .q(lv), .q(if (is.na(w) || !nzchar(trimws(w))) "TRUE" else w))
+      one <- paste0("  ", paste(f, collapse = ", "), ",")
+      # (a row too long for a line: a field a line, a tribble's row is not
+      # bound to one)
+      if (nchar(one) > 100L) paste0("  ", f, ",", collapse = "\n") else one
     }, "")
-  }
-  glabel <- function(d) if (!is.na(d$label[1L])) d$label[1L] else d$group_id[1L]
-  head <- c(sprintf("# %s: in each level of %s (group2 / group2_level)", r$analysis_id,
-                    paste(ids, collapse = ", ")),
-            sprintf("%s <- list(", list_name),
-            unlist(lapply(seq_along(defs), function(k) {
-              d <- defs[[k]]
-              body <- lvl(d)
-              body[-length(body)] <- paste0(body[-length(body)], ",")
-              c(sprintf("  %s = list(", .q(glabel(d))), body,
-                if (k < length(defs)) "  )," else "  )")
-            })),
-            ")")
+  }))
+  rows[length(rows)] <- sub(",$", "", rows[length(rows)])
   inner <- unlist(strsplit(inner, "\n", fixed = TRUE))
-  c(head,
-    sprintf("%s <- dplyr::bind_rows(unlist(lapply(names(%s), function(group) {", name, list_name),
-    sprintf("  lapply(names(%s[[group]]), function(level) {", list_name),
-    sprintf("    data <- dplyr::filter(%s, !!rlang::parse_expr(%s[[group]][[level]]))",
-            data, list_name),
-    paste0("    ", inner),
-    "    dplyr::mutate(ard, group2 = group,",
-    "                  group2_level = list(if (identical(level, \"NA\")) \"\" else level))",
-    "  })",
-    "}), recursive = FALSE))")
+  c(sprintf("# %s: in each level of %s (group2 / group2_level)", r$analysis_id,
+            paste(ids, collapse = ", ")),
+    sprintf("%s <- dplyr::tribble(", tab_name),
+    "  ~group, ~level, ~where,",
+    rows,
+    ")",
+    sprintf("%s <- function(group, level, where) {", fun_name),
+    sprintf("  data <- dplyr::filter(%s, !!rlang::parse_expr(where))", data),
+    paste0("  ", inner),
+    "  dplyr::mutate(ard, group2 = group, group2_level = list(level))",
+    "}",
+    sprintf("%s <- purrr::pmap(%s, %s) |>", name, tab_name, fun_name),
+    "  dplyr::bind_rows()")
 }

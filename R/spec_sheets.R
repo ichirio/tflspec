@@ -412,7 +412,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     }
     # the report's ARD analyses and analysis data, whatever its kind
     for (a in o$ard$analysis_data %||% list()) {
-      a <- .entry_pop_inject(a, .out_population(o))
+      a <- .entry_pop_inject(a, .out_population(o), .pop_from(s$data$populations, .out_population(o)))
       m <- lapply(a, cell); m$data_id <- m$id; m$id <- NULL
       if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
       adata[[length(adata) + 1L]] <- c(list(output_id = id), m)

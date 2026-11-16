@@ -440,23 +440,47 @@ tfl_read_output <- function(path) {
 # The report's analysis set (NA when it has none)
 .out_population <- function(o) .na_scalar(o$common$population)
 
-# The report's subjects definition (`from: ADSL`, no `subjects`, no code) has
-# no `population` of its own: the report's `common: population` is its set.
-# Written out in the sheets (the ARD's definition); a definition that names
-# its own set (a denominator of another set) keeps it
-.entry_is_subjects <- function(a) {
+# The report's subjects definition (`from: ADSL`, or from the dataset its
+# analysis set is defined on: data.yml `populations:`; no `subjects`, no code)
+# has no `population` of its own: the report's `common: population` is its
+# set.  Written out in the sheets (the ARD's definition); a definition that
+# names its own set (a denominator of another set) keeps it.  A definition of
+# a record-level dataset takes its subjects from `subjects:`, not from here
+.entry_is_subjects <- function(a, from = "ADSL") {
   is.list(a) && is.null(a$subjects) && is.null(a$code) &&
-    identical(toupper(as.character(a$from %||% "")), "ADSL")
+    toupper(as.character(a$from %||% "")) %in% from
 }
-.entry_pop_inject <- function(a, pop) {
-  if (length(pop) == 1L && !is.na(pop) && is.null(a$population) && .entry_is_subjects(a)) a$population <- pop
+# The datasets a subjects definition reads: ADSL, and the dataset of the
+# set `pop` in the study's populations (a list of maps, or the sheet)
+.pop_from <- function(pops, pop) {
+  ds <- character()
+  if (is.data.frame(pops)) pops <- lapply(seq_len(nrow(pops)), function(i) as.list(pops[i, , drop = FALSE]))
+  for (p in pops) {
+    if (is.list(p) && identical(as.character(p$id %||% p$population_id), as.character(pop))) {
+      ds <- as.character(p$dataset)
+    }
+  }
+  unique(toupper(c("ADSL", stats::na.omit(ds))))
+}
+.entry_pop_inject <- function(a, pop, from = "ADSL") {
+  if (length(pop) == 1L && !is.na(pop) && is.null(a$population) && .entry_is_subjects(a, from)) a$population <- pop
   a
 }
 # ... and the file's form, where it is the report's set, says nothing of it
-.entry_pop_strip <- function(a, pop) {
+.entry_pop_strip <- function(a, pop, from = "ADSL") {
   if (length(pop) == 1L && !is.na(pop) && identical(as.character(a$population), pop) &&
-      .entry_is_subjects(a)) a$population <- NULL
+      .entry_is_subjects(a, from)) a$population <- NULL
   a
+}
+
+# A definition's `derive:` written as a map (`{AGEGR2: <R>}`) is its pieces
+# `name = expression`, as the one text of `|`-separated pieces says them
+.derive_map_in <- function(e) {
+  v <- if (is.list(e)) e[["derive"]]
+  if (is.list(v) && length(v) && !is.null(names(v)) && !inherits(v, "tfl_r")) {
+    e[["derive"]] <- paste(sprintf("%s = %s", names(v), vapply(v, as.character, "")), collapse = " | ")
+  }
+  e
 }
 
 # A table's or listing's `data:` as the file says it (the flat list of
@@ -505,6 +529,7 @@ tfl_read_output <- function(path) {
     }
     y[["data"]] <- y[["place_map"]]
     y[["place_map"]] <- NULL
+    d <- lapply(d, .derive_map_in)
     y$ard <- c(list(analysis_data = d), y$ard[setdiff(names(y$ard), "analysis_data")])
     if (identical(y$kind, "listing") && is.null(y[["data"]])) {
       y[["data"]] <- list(source = "dataset", data = as.character(d[[length(d)]]$id %||% ""))

@@ -142,7 +142,7 @@
   if (!is.null(rnd) && !"rounding" %in% ard$study$key) {
     ard$study <- rbind(ard$study, data.frame(key = "rounding", value = rnd, stringsAsFactors = FALSE))
   }
-  list(spec = tfl_ard_spec(ard), codelists = .report_codelists(study, tfl_read_outputs(study$dir, skip_bad = TRUE),
+  list(spec = .tfl_ard_spec(ard, blank_notes = FALSE), codelists = .report_codelists(study, tfl_read_outputs(study$dir, skip_bad = TRUE),
                                b$table$codelists, output_id))
 }
 
@@ -219,6 +219,8 @@ tfl_report_codelists <- function(study, outputs = NULL, rows = NULL) {
       .ard_stop(sprintf("%s: %s", ids[i], conditionMessage(e)))
     })
     below <- .codelists_norm(below)
+    # (a listing takes no layer's list, as tfl_resolve_output() gives it)
+    if (identical(outputs[[i]]$kind, "listing")) below <- list()
     below <- below[setdiff(names(below), mine$variable)]
     rbind(mine, .codelist_rows_of(ids[i], below, names(own)))
   })

@@ -287,7 +287,10 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
     if (isTRUE(provenance)) acc$content <- prov
   }
   output$data <- if (length(acc$data)) acc$data else output$data
-  output$codelists <- acc$codelists
+  # (a layer's code list -- the study's defaults, a pattern -- is the
+  # report's only for a variable its ARD reads, as set_levels() takes it;
+  # the report's own lists stay)
+  output$codelists <- .codelists_read(acc$codelists, own$codelists, output)
   if (!is.null(tpl$x$codelists)) output$codelists <- .tpl_add_codelists(acc$codelists, tpl$x$codelists)
   output$content <- .any_label_default(acc$content, output, study)
   output$content <- .listing_rows_default(output$content, output$kind, provenance)
@@ -1067,4 +1070,32 @@ tfl_styles <- function(study) {
     content_verbs = vapply(sets, function(x)
       paste(unique(vapply(x$content, function(it) it$fn, "")), collapse = ", "), ""),
     stringsAsFactors = FALSE)
+}
+
+# The code lists a resolved report keeps: its own first, in its order, then
+# of its layers' those of the variables its ARD reads (a table with
+# analyses: their variables, by and strata, and the names their code and
+# arguments use).  A listing (no ARD) keeps its own only; a report with no
+# analyses (a figure, a table of its own code) keeps them all.
+.codelists_read <- function(all, own, output) {
+  if (!length(all)) return(all)
+  all <- all[c(intersect(names(own), names(all)), setdiff(names(all), names(own)))]
+  if (identical(output$kind, "listing")) return(all[intersect(names(own), names(all))])
+  if (!identical(output$kind, "table")) return(all)
+  an <- output$ard$analyses
+  if (!length(an) || !is.list(an)) return(all)
+  txt <- function(v) {
+    v <- unlist(lapply(v, function(x) if (inherits(x, "tfl_r")) unclass(x) else x))
+    as.character(v[!is.na(v)])
+  }
+  vars <- unlist(lapply(an, function(a) {
+    if (!is.list(a)) return(NULL)
+    cols <- unlist(lapply(txt(c(a$variables, a$by, a$strata)), .split_bar))
+    code <- txt(c(a$args, a$code, a$post))
+    syms <- unlist(lapply(code, function(s) tryCatch(all.names(parse(text = s)),
+                                                     error = function(e) NULL)))
+    c(cols, syms)
+  }))
+  keep <- names(all) %in% c(names(own), vars)
+  all[keep]
 }
