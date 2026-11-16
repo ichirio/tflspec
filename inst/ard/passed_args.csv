@@ -1,5 +1,5 @@
 call,arg,passed_to,default,kind,hint,choices
-cardx::ard_regression,exponentiate,broom.helpers::tidy_plus_plus,FALSE,logical,"TRUE: the estimates and their confidence limits exponentiated -- hazard ratios of a Cox model, odds ratios of a logistic one, rate ratios of a Poisson one.",
+cardx::ard_regression,exponentiate,broom.helpers::tidy_plus_plus,FALSE,logical,"TRUE: the estimates and their confidence limits exponentiated -- hazard ratios of a Cox model, odds ratios of a logistic one, rate ratios of a Poisson one; not for a linear model (lm, mmrm, a glm with no family), whose differences exp() does not make ratios.",
 cardx::ard_regression,conf.level,broom.helpers::tidy_plus_plus,0.95,number,"Confidence level of the estimates, a number between 0 and 1 (0.95).",
 cardx::ard_regression,conf.int,broom.helpers::tidy_plus_plus,TRUE,logical,TRUE (default): the confidence limits of the estimates too.,
 cardx::ard_regression,intercept,broom.helpers::tidy_plus_plus,FALSE,logical,TRUE: the intercept is reported too.,
@@ -30,7 +30,7 @@ cardx::ard_regression,disambiguate_terms,broom.helpers::tidy_plus_plus,TRUE,logi
 cardx::ard_regression,disambiguate_sep,broom.helpers::tidy_plus_plus,""".""",text,"The text joining a variable's name and its level in a disambiguated term: ""."" (default).",
 cardx::ard_regression,model_matrix_attr,broom.helpers::tidy_plus_plus,TRUE,logical,"TRUE (default): the model matrix's attributes kept to identify the terms; FALSE for a model whose matrix cannot be rebuilt.",
 cardx::ard_regression,instrumental_suffix,broom.helpers::tidy_plus_plus,""" (instrumental)""",text,"The text added to the label of an instrumental variable's term (an IV regression): "" (instrumental)"" (default).",
-cardx::ard_regression_basic,exponentiate,broom.helpers::tidy_plus_plus,FALSE,logical,"TRUE: the estimates and their confidence limits exponentiated -- hazard ratios of a Cox model, odds ratios of a logistic one, rate ratios of a Poisson one.",
+cardx::ard_regression_basic,exponentiate,broom.helpers::tidy_plus_plus,FALSE,logical,"TRUE: the estimates and their confidence limits exponentiated -- hazard ratios of a Cox model, odds ratios of a logistic one, rate ratios of a Poisson one; not for a linear model (lm, mmrm, a glm with no family), whose differences exp() does not make ratios.",
 cardx::ard_regression_basic,conf.level,broom.helpers::tidy_plus_plus,0.95,number,"Confidence level of the estimates, a number between 0 and 1 (0.95).",
 cardx::ard_regression_basic,conf.int,broom.helpers::tidy_plus_plus,TRUE,logical,TRUE (default): the confidence limits of the estimates too.,
 cardx::ard_regression_basic,intercept,broom.helpers::tidy_plus_plus,FALSE,logical,TRUE: the intercept is reported too.,

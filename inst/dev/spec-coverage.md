@@ -293,6 +293,16 @@ definition is read.  Before, it was written into the call as it was, and
 the call gave the other columns to other arguments by their position (see
 "Added 2026-11-15").
 
+2026-11-16 (the same scope; cards 0.9.0, cardx 0.3.4, still the CRAN
+versions; broom.helpers 1.23.0, emmeans 2.0.4): **100.0% before and after
+(565 yes / 0 partial)**.  The run adds two checks of the scale a model
+row's estimates are on, judged by the model the row fits (see "Added
+2026-11-16"): `exponentiate = TRUE` on a model with no ratios (a linear
+model, a glm with no family or an identity / probit link), and an LS means
+row of a logistic or count model with no `response_type =
+"dichotomous"`, whose estimates are log odds.  Both gave wrong numbers with
+no warning.
+
 (2026-11-14 before: this branch before the run (tflspec@next 6fa6b81
 merged; a tflspec built from it) measured by this run's script on the
 wider scope -- the 20 tidy_plus_plus() arguments could be written as R in
@@ -365,6 +375,36 @@ function, but the catalog did not describe it and its value was not
 judged: partial.  2026-10-31 before: the same, with
 `update_ard_fmt_fun()` in the `post` scope -- written as R in `post`, its
 names checked, its values not judged.)
+
+### Added 2026-11-16
+
+* **`exponentiate = TRUE` is judged by the model** (a warning when the
+  spec is read: `.exponentiate_problems()`, `R/ard_model_scale.R`).  exp()
+  of a model's estimates is a ratio only on a log, logit or complementary
+  log-log scale.  Seen with cardx 0.3.4 and broom.helpers 1.23.0 on cards'
+  ADSL:
+  * a glm with no family (gaussian) gave exp() of the differences of mean
+    age (0.437 for a difference of -0.83 years), and one with `binomial(link
+    = "identity")` or `"probit"` exp() of risk differences or probits,
+    with no warning;
+  * an lm() row is stopped by broom.helpers, and cardx keeps the error in
+    the ARD: the cells come out empty; survreg()'s tidier does the same.
+
+  The model is the one `method` / `package` names, with its family or
+  link from `method.args`, or the call in `x`.  A family held in an object
+  of the program, a model by a name, or a study's own tidier is not
+  judged.  `glm.nb(link = sqrt)` and `polr(method = "probit")` are said
+  too.  The catalog's hint for `exponentiate` says so.
+* **An LS means row of a logistic model must say `response_type =
+  "dichotomous"`** (a warning: `.emmeans_scale_problems()`).  cardx's
+  `ard_emmeans_emmeans()` / `ard_emmeans_contrast()` (the keywords
+  `lsmeans` / `lsmeans_diff`) regrid emmeans' estimates to the response
+  only when `response_type = "dichotomous"`; at the default
+  (`"continuous"`) a logistic model's LS means are each arm's log odds
+  (0.47 for a proportion of 61.6%) and the differences are differences of
+  log odds.  A glm, geeglm or glm.nb row with a link other than the
+  identity and no `"dichotomous"` is now said.  The catalog's hint for
+  `response_type` says so.
 
 ### Added 2026-11-15
 
@@ -919,7 +959,10 @@ Every argument in scope is described and its value judged (since
    (`ard_survival_survfit()`, `ard_tabulate_max()`,
    `ard_tabulate_value()`, `ard_aod_wald_test()`); since 2026-11-13 a
    name in `emmeans_args = list(...)` that emmeans() would drop (and since
-   2026-11-14 a `tran` name emmeans would take as the identity).  The catalog
+   2026-11-14 a `tran` name emmeans would take as the identity).  Since
+   2026-11-16 the scale of a model row's estimates is judged by its model:
+   `exponentiate = TRUE` on a model with no ratios, and an LS means row of
+   a logistic or count model without `response_type = "dichotomous"`.  The catalog
    names the arguments clinical tables use, not every argument of the
    function they reach (`stats::aov()`'s, `car::vif(type =)` -- a method's
    argument, not the generic's -- are not described).
@@ -1010,6 +1053,14 @@ Percentage: yes counts 1, partial 0.5.
 | 2026-11-14 after  | 54.7% (332 / 39 / 272 of 643) | 61.0% (332 / 39 / 205 of 576) | 42 / 7 / 65 |
 | 2026-11-15 before | 54.7% (333 / 39 / 272 of 644) | 61.1% (333 / 39 / 205 of 577) | 42 / 7 / 65 |
 | 2026-11-15 after  | 59.5% (333 / 100 / 211 of 644) | 66.4% (333 / 100 / 144 of 577) | 42 / 18 / 54 |
+| 2026-11-16 before / after | 59.5% (333 / 100 / 211 of 644) | 66.4% (333 / 100 / 144 of 577) | 42 / 18 / 54 |
+
+(2026-11-16: rtfreporter@next 8e2d5a3 (its changes since bb25b9c are the
+0.9.0 freeze's Word checks, validation records for `normalize_ard(combine
+=)`'s guards, help text and regenerated examples: no new exported
+argument) and tflspec@next 016511d merged, whose schema now carries
+`normalize_ard(combine =)`'s entry itself.  The run went to cards / cardx;
+the table is unchanged.)
 
 (2026-11-15: rtfreporter@next bb25b9c and tflspec@next 60b8e25 merged.
 rtfreporter's one new argument since 2629a3c is `normalize_ard(combine =)`

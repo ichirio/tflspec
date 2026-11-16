@@ -259,7 +259,10 @@ test_that("a negative binomial model (MASS::glm.nb) has its arguments checked", 
                  "exponentiate = TRUE,", extra))
   # glm.nb()'s own names and glm.control()'s, where its `...` go
   expect_no_warning(exact_spec(nb("method.args = list(link = log, init.theta = 2, maxit = 50)")))
-  expect_no_warning(exact_spec(nb("method.args = list(link = \"sqrt\")")))
+  # (a valid link; since 2026-11-16 exponentiate = TRUE on it is said:
+  # R/ard_model_scale.R)
+  expect_warning(exact_spec(nb("method.args = list(link = \"sqrt\")")),
+                 "^T / A: ard_regression\\(exponentiate = TRUE\\): glm.nb\\(\\) with `link = sqrt`")
   expect_warning(exact_spec(nb("method.args = list(lnik = log)")),
                  "gives `lnik`, which MASS .*'s glm.nb\\(\\) does not have")
   expect_warning(exact_spec(nb("method.args = list(link = logit)")),

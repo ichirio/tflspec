@@ -37,7 +37,9 @@
     tag <- paste(a$output_id[i], a$analysis_id[i], sep = " / ")
     out <- c(out, .ard_arg_value_problems(tag, call, a$args[i]),
              .model_args_problems(tag, call, a$args[i]),
-             .emmeans_args_problems(tag, call, a$args[i]))
+             .emmeans_args_problems(tag, call, a$args[i]),
+             .exponentiate_problems(tag, call, a$args[i]),
+             .emmeans_scale_problems(tag, call, a$args[i]))
     given <- tryCatch(.args_given(a$args[i]), error = function(e) character())
     known <- c(names(fm), ".overall", ".missing", "by", "variables", "strata",
                "denominator", "statistic")
@@ -562,15 +564,7 @@
       !requireNamespace("broom", quietly = TRUE)) return(character())
   a <- tryCatch(.args_list(args), error = function(e) list())
   if ("tidy_fun" %in% names(a)) return(character())
-  key <- NA_character_
-  if (is.call(a[["x"]])) {
-    head <- paste(deparse(a[["x"]][[1L]]), collapse = "")
-    key <- if (grepl("::", head, fixed = TRUE)) sub(":::", "::", head, fixed = TRUE) else
-      .model_key(head, "base")
-  } else if (!is.null(a[["method"]])) {
-    p <- if (is.null(a[["package"]])) "base" else .literal_value(a[["package"]])
-    if (!is.null(p)) key <- .model_key(a[["method"]], p)
-  }
+  key <- .regression_model(a)$key
   if (is.na(key)) return(character())
   # the class of the model the function makes (glm.nb()'s is "negbin")
   cls <- switch(sub("^.*::", "", key), glm.nb = "negbin", sub("^.*::", "", key))
