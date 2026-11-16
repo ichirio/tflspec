@@ -34,6 +34,55 @@ test_that("a schema function's arguments come back in the same table", {
   expect_error(tfl_arg_defs(fn = "no_such_function"), "not a function of the schema")
 })
 
+test_that("generic defs name another argument with from_args(), a plain vars() is a data row", {
+  d <- tfl_arg_defs(fn = "data")
+  ch <- function(x, n) x$choices[[which(x$name == n)]]
+  expect_identical(ch(d, "where"), "vars(from_args(from))")
+  expect_identical(ch(d, "add"), "vars(from_args(subjects_in))")
+  expect_identical(ch(d, "when"), "from_args(params)")
+  expect_identical(ch(d, "subjects_in"), c("report_data", "fixed"))
+  expect_identical(d$values[[which(d$name == "subjects_in")]], "none")
+  a <- tfl_arg_defs(fn = "analysis")
+  expect_identical(ch(a, "variables"), "vars(from_args(data))")
+  expect_identical(ch(a, "when"), "from_args(params)")
+  expect_silent(.arg_check_choices("vars(from_args(from))", "x"))
+  expect_error(.arg_check_choices("vars(report_data(from))", "x"), "vars\\(\\) takes")
+})
+
+test_that("a schema column argument without choices gets ard (normalize_ard) or columns (plan_*)", {
+  n <- tfl_arg_defs(fn = "normalize_ard")
+  expect_identical(n$choices[[which(n$name == "keys")]], "ard")
+  expect_identical(n$choices[[which(n$name == "hierarchy")]], "ard")
+  expect_true(n$ordered[n$name == "hierarchy"])
+  p <- tfl_arg_defs(fn = "plan_paginate_rows")
+  expect_identical(p$choices[[which(p$name == "page_by")]], "columns")
+  g <- tfl_arg_defs(fn = "plan_paginate_group")
+  expect_identical(g$choices[[which(g$name == "col")]], "columns")
+})
+
+test_that("the paginate functions are the page step, other stages stay content", {
+  for (f in c("plan_paginate_rows", "plan_paginate_cols", "plan_paginate_group")) {
+    expect_true(all(tfl_arg_defs(fn = f)$step == "page"), info = f)
+  }
+  expect_true(all(tfl_arg_defs(fn = "normalize_ard")$step == "content"))
+  expect_true(all(tfl_arg_defs(fn = "plan_blanks")$step == "content"))
+})
+
+test_that("an r argument is a text box, a condition only for where / when", {
+  expect_identical(.arg_input_for_type("r", "code"), "text")
+  expect_identical(.arg_input_for_type("r", "where"), "condition")
+  expect_identical(.arg_input_for_type("r", "when"), "condition")
+  expect_identical(.arg_input_for_type("r"), "text")
+})
+
+test_that("no row is made for a ... argument", {
+  for (f in c("plan_cells", "rtf_col_header", "cell_rows")) {
+    d <- tfl_arg_defs(fn = f)
+    expect_false("..." %in% d$name, info = f)
+    expect_false(any(grepl("...", d$label_key, fixed = TRUE)), info = f)
+  }
+})
+
 test_that("a template's params: are read the same way, tags kept", {
   dir <- tempfile("series")
   dir.create(file.path(dir, "test_v1", "templates"), recursive = TRUE)
