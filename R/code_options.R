@@ -21,8 +21,9 @@
 #'   rounding, `rtfreporter.rounding` and `cards.round_type`, the study's
 #'   code lists (`cl_<variable>`), and the data catalog's datasets read when
 #'   first used, in two environments: `study$adam_org` (as the file has
-#'   them, with the `derive`) and `study$adam` (with the code lists'
-#'   levels), and, until the programs read `study$adam`, one object per
+#'   them, with the `derive`) and `study$adam` (blanks as `NA`, and the
+#'   code lists' levels unless study.yml's `settings: adam_levels` is
+#'   `none`), and, until the programs read `study$adam`, one object per
 #'   dataset (`adsl`) that is its `study$adam_org`'s,
 #'   written by [tfl_study_setup_code()].  The ARD setup
 #'   ([tfl_ard_code()]) and the report setup ([tfl_report_setup_code()])

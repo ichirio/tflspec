@@ -38,6 +38,19 @@
 #'   datasets of `study$adam_org`; they go when those programs read
 #'   `study$adam`.
 #'
+#' study.yml's `settings: adam_levels` says whether `study$adam` gets the
+#' study's code lists' levels: `codelists` (the default, also when the key
+#' is not there) as above, or `none`: no `cl_*` objects and `study$adam` is
+#' `study$adam_org` with blanks as `NA` only.  `study$adam` always has its
+#' blanks as `NA`, and `study$adam_org` is always the dataset as the file
+#' has it.  The setup's first line says the setting (`# ADaM levels:
+#' codelists`), and it is part of each ARD's fingerprint
+#' ([tfl_ard_spec_hash()]), so changing it marks the ARD outdated.  Under
+#' `none` a report's own levels and labels written as values still work; a
+#' report that names a study code list (its object, `cl_sex`) stops, with
+#' "adam_levels: none -- the study code list SEX (cl_sex) is not read".  A
+#' spec of the sheets says it on its `study` sheet (key `adam_levels`).
+#'
 #' With option `tflspec.study_setup` set to `TRUE` ([tflspec_code_options])
 #' the ARD, listing and figure programs do not write them again: they start
 #' from the objects (`adsl <- adsl |> order_levels(...)`), and the ARD and
@@ -47,7 +60,8 @@
 #'   table / report spec of the sheets (its `study` sheet's `rounding`, its
 #'   `datasets` sheet).
 #' @return A character vector, one element per line; `character()` when the
-#'   study says no rounding and has no dataset.
+#'   study says no rounding and has no dataset.  With a dataset, the first
+#'   line says the study's `adam_levels`.
 #' @seealso [tflspec_code_options]
 #' @examples
 #' st <- tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
@@ -67,9 +81,65 @@ tfl_study_setup_code <- function(study) {
     out <- c("# the study's rounding (every ARD and report program)",
              .spec_call_code(do.call(.spec_call, ro), 0L))
   }
-  dl <- .study_data_lines(.study_catalog(study), .study_codelists(study))
-  if (length(dl)) out <- c(out, if (length(out)) "", dl)
+  al <- .study_adam_levels(study)
+  dl <- .study_data_lines(.study_catalog(study),
+                          if (identical(al, "none")) list() else .study_codelists(study),
+                          adam_levels = al)
+  if (length(dl)) {
+    # (the setting first: the setup's own record of it)
+    out <- c(sprintf("# ADaM levels: %s", al), "", out, if (length(out)) "", dl)
+  }
   out
+}
+
+# study.yml's `settings: adam_levels`: does study$adam get the study's code
+# lists' levels -- "codelists" (the default; the key not there) or "none".
+# A spec of the sheets: its study sheet's key `adam_levels`.
+.adam_levels_values <- c("codelists", "none")
+.study_adam_levels <- function(study) {
+  v <- if (inherits(study, "tfl_study_spec")) study$study$settings$adam_levels else
+    if (is.list(study) && is.data.frame(study$study)) .ard_spec_study_value(study, "adam_levels")
+  .adam_levels_check(v, "study.yml: settings: adam_levels")
+}
+
+# A value of adam_levels, checked: NULL, NA or "" is the default "codelists"
+.adam_levels_check <- function(v, where) {
+  if (is.null(v) || !length(v) || is.na(v[1L]) || !nzchar(trimws(as.character(v[1L])))) {
+    return("codelists")
+  }
+  v <- trimws(as.character(v[1L]))
+  if (!v %in% .adam_levels_values) {
+    stop(sprintf("%s is %s; got %s.", where,
+                 paste(.adam_levels_values, collapse = " or "), encodeString(v, quote = "\"")),
+         call. = FALSE)
+  }
+  v
+}
+
+# Under adam_levels: none the setup reads no study code list (no cl_*
+# objects): a report that names one (cl_sex, in its code, derive, levels or
+# labels) stops.  Its own lists (its `codelists:`) are its program's: they
+# stay; so do levels and labels written as values.
+.adam_levels_name_check <- function(output, study) {
+  if (!inherits(study, "tfl_study_spec") || !identical(.study_adam_levels(study), "none")) {
+    return(invisible(NULL))
+  }
+  lists <- names(.study_codelists(study))
+  if (!length(lists)) return(invisible(NULL))
+  objs <- stats::setNames(.cl_name(lists), lists)
+  objs <- objs[!objs %in% .cl_name(names(output$codelists %||% list()))]
+  parts <- unclass(output)[setdiff(names(output), c("codelists", "id", "title", "titles", "footnotes"))]
+  txt <- tryCatch(as.character(unlist(parts, use.names = FALSE)), error = function(e) character())
+  txt <- txt[!is.na(txt)]
+  if (!length(objs) || !length(txt)) return(invisible(NULL))
+  m <- unlist(regmatches(txt, gregexpr("(?<![A-Za-z0-9_.])cl_[a-z0-9_]+(?![A-Za-z0-9_.])", txt,
+                                       perl = TRUE)))
+  hit <- objs[objs %in% m]
+  if (length(hit)) {
+    stop(sprintf("%s: adam_levels: none -- the study code list %s (%s) is not read.",
+                 output$id %||% "the report", names(hit)[1L], hit[[1L]]), call. = FALSE)
+  }
+  invisible(NULL)
 }
 
 # The study's code lists as the programs' lists, each variable's codes in
@@ -117,10 +187,11 @@ tfl_study_setup_code <- function(study) {
 # derive) and study$adam (blank_as_na() on it, then the study's code lists'
 # levels; the values as they were read otherwise).  The study's code lists come first (`cl_<variable>`,
 # as the ARD program writes them).  A study with no code lists has no
-# code lists, study$adam is the same with blanks as NA only.  The last lines keep
+# code lists, study$adam is the same with blanks as NA only; so is it under
+# `adam_levels` "none" (`levels` empty then).  The last lines keep
 # the objects the ARD, listing and figure programs use now (`adsl`) as the
 # datasets of study$adam_org, until those programs read study$adam.
-.study_data_lines <- function(ds, levels = list()) {
+.study_data_lines <- function(ds, levels = list(), adam_levels = "codelists") {
   if (!nrow(ds)) return(character())
   nm <- .r_name(ds$dataset)
   delayed <- function(name, expr, env) {
@@ -146,7 +217,12 @@ tfl_study_setup_code <- function(study) {
     }
     delayed(nm[i], expr, "study$adam")
   }, "")
-  head <- if (length(levels)) {
+  head <- if (identical(adam_levels, "none")) {
+    c("# the study's input data, read when first used: study$adam_org (the ADaM as read,",
+      "# with the catalog's derive), study$adam (blanks as NA; adam_levels: none, so not the",
+      "# study's code lists' levels)",
+      "study <- list(adam_org = new.env(), adam = new.env())", org, adam)
+  } else if (length(levels)) {
     c("# the study's code lists (spec/defaults.yml codelists:)", .codelists_lines(levels), "",
       "# the study's input data, read when first used: study$adam_org (the ADaM as read,",
       "# with the catalog's derive), study$adam (blanks as NA, then the study's code lists'",
