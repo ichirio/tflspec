@@ -142,9 +142,9 @@ ssc_no_lists <- function(...) {
     "delayedAssign(\"adae\", blank_as_na(study$adam_org$adae), assign.env = study$adam)",
     "message(\"The study has no code lists: study$adam is study$adam_org with blanks as NA.\")",
     "",
-    "# (until the report programs read study$adam: the objects they use now)",
-    "delayedAssign(\"adsl\", study$adam_org$adsl)",
-    "delayedAssign(\"adae\", study$adam_org$adae)")
+    "# (the objects the ARD, listing and figure programs read: study$adam's)",
+    "delayedAssign(\"adsl\", study$adam$adsl)",
+    "delayedAssign(\"adae\", study$adam$adae)")
 }
 
 test_that("tfl_study_setup_code() reads the study's datasets: the YAML study", {
@@ -270,11 +270,11 @@ test_that("the setup writes the study's code lists and both environments", {
       "  assign.env = study$adam", ")")), info = ds)
   }
   expect_true(all(nchar(code) <= 100L))
-  # the objects the programs use now
+  # the objects the programs read: study$adam's
   expect_identical(utils::tail(code, 3L), c(
-    "# (until the report programs read study$adam: the objects they use now)",
-    "delayedAssign(\"adsl\", study$adam_org$adsl)",
-    "delayedAssign(\"adae\", study$adam_org$adae)"))
+    "# (the objects the ARD, listing and figure programs read: study$adam's)",
+    "delayedAssign(\"adsl\", study$adam$adsl)",
+    "delayedAssign(\"adae\", study$adam$adae)"))
   expect_false(any(grepl("message(", code, fixed = TRUE)))
   expect_no_error(parse(text = code))
 })
@@ -315,7 +315,9 @@ test_that("the setup's code reads each dataset when first used", {
   expect_identical(levels(env$study$adam$adsl$SEX), c("F", "M"))
   expect_identical(as.character(env$study$adam$adsl$SEX), c("M", "F", "M"))
   expect_identical(class(env$study$adam_org$adsl$SEX), "character")
-  expect_identical(env$adsl, env$study$adam_org$adsl)
+  # (the object the programs read is study$adam's: the code list's factor)
+  expect_identical(env$adsl, env$study$adam$adsl)
+  expect_identical(levels(env$adsl$SEX), c("F", "M"))
   # adae has no file: it stops only when it is used
   expect_error(suppressWarnings(env$study$adam_org$adae))
   expect_error(suppressWarnings(env$adae))
@@ -349,7 +351,8 @@ test_that("study$adam has the blanks as NA, study$adam_org as read (with and wit
     expect_identical(as.character(a$GRP), c("a", NA, "b"))
     # as read
     expect_identical(env$study$adam_org$adsl, adsl)
-    expect_identical(env$adsl, adsl)
+    # the object the programs read: study$adam's, the blanks NA
+    expect_identical(env$adsl, a)
   }
 })
 

@@ -2900,7 +2900,7 @@ tfl_fig_forest_analyses <- function(data = "ADTTE", param = "OS", pop = "FASFL",
   # the same inside ard_strata()
   # (the subjects the model leaves out without a word -- no arm, no time or
   # censoring flag -- are said, with their count)
-  no_arm <- sprintf("(is.na(data$%s) | data$%s == \"\")", group, group)
+  no_arm <- sprintf("is.na(data$%s)", group)
   said <- function(cond, id, text) paste0(
     "n_", id, " <- sum(", cond, ")\n",
     "if (n_", id, " > 0) {\n",
@@ -2930,7 +2930,7 @@ tfl_fig_forest_analyses <- function(data = "ADTTE", param = "OS", pop = "FASFL",
     do.call(rbind, lapply(subgroups, function(s) one(
       paste(id, s, sep = "_"), paste("Hazard ratio by", s),
       # (a blank or missing subgroup value is no subgroup)
-      paste0("cards::ard_strata(\n  dplyr::filter(data, !is.na(", s, "), ", s, " != \"\"),\n  .strata = ", s,
+      paste0("cards::ard_strata(\n  dplyr::filter(data, !is.na(", s, ")),\n  .strata = ", s,
              ",\n  .f = ~ ", reg(".x", "  "), "\n)")))))
   rownames(an) <- NULL
   list(analysis_data = adata, analyses = an)

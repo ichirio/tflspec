@@ -84,7 +84,7 @@
     i <- match(r, have)
     if (is.na(i)) .ard_stop(sprintf("%s reads %s, which spec/data.yml does not list.", id, r))
     .data_file_must_exist(r, ds[[i]]$path, ".")
-    assign(tolower(r), .ai_read_dataset(ds[[i]]$path), envir = env)
+    assign(tolower(r), .ai_read_adam(ds[[i]]$path), envir = env)
   }
   code <- as.character(code)
   # the PNG under the study's output path, as the RTF's
@@ -120,6 +120,25 @@
 }
 
 # A dataset file as a data frame: .xpt / .sas7bdat (haven), .rds, .parquet (arrow).
+# A figure's dataset as its program reads it: study$adam's, the blanks as
+# NA (blank_as_na(), the study helper: a character column's "" and a
+# factor's "" level)
+.ai_read_adam <- function(path) {
+  d <- .ai_read_dataset(path)
+  for (v in names(d)) {
+    x <- d[[v]]
+    if (is.character(x)) {
+      x[!is.na(x) & x == ""] <- NA
+    } else if (is.factor(x) && any(levels(x) == "")) {
+      x <- factor(as.character(x), levels = setdiff(levels(x), ""), ordered = is.ordered(x))
+    } else {
+      next
+    }
+    d[[v]] <- x
+  }
+  d
+}
+
 .ai_read_dataset <- function(path) {
   ext <- tolower(tools::file_ext(path))
   if (ext == "rds") return(readRDS(path))

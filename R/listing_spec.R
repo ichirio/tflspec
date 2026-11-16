@@ -20,7 +20,10 @@
 #' Writes `adsl <- haven::read_xpt("data/adam/adsl.xpt")` (the reader follows
 #' the file's extension: `.rds`, `.xpt`, `.sas7bdat`, `.csv`, `.parquet`, and `.rda` /
 #' `.RData` holding one dataset)
-#' into an object named after the dataset, and its derived columns.
+#' into an object named after the dataset, its derived columns, and
+#' `adsl <- blank_as_na(adsl)` (a blank text value is `NA`, as in the
+#' study's `study$adam`; `blank_as_na()` is a study helper,
+#' [tfl_helpers_code()]).
 #'
 #' @param datasets The data catalog: a data frame with `dataset`, `path`
 #'   and `derive` (`NAME = R expression`, `|` between them), as the
@@ -39,8 +42,10 @@ tfl_read_data_code <- function(datasets, dataset) {
   # (the study's setup file has read it, with its derive: tflspec.study_setup)
   if (isTRUE(getOption("tflspec.study_setup"))) return(character())
   obj <- .r_name(dataset)
+  # (the blanks as NA after the derive, as study$adam has them)
   .drop_attached_ns(c(sprintf("%s <- %s", obj, .reader(r$path[1L])),
-                      .derive_code(obj, r$derive[1L])))
+                      .derive_code(obj, r$derive[1L]),
+                      sprintf("%s <- blank_as_na(%s)", obj, obj)))
 }
 
 .r_sort <- function(sort) {

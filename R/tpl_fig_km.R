@@ -224,7 +224,7 @@
   # draw one with no name, and a row at risk with none), left out and said
   if (!is.null(a$by)) {
     f$stats <- c(list(list(step = "filter",
-      expr = sprintf("!is.na(%s) & %s != \"\"", a$by, a$by),
+      expr = sprintf("!is.na(%s)", a$by),
       label = sprintf("the subjects with an empty %s have no curve: left out, with a warning", a$by),
       warn = sprintf("%s: {n} subjects with an empty %s were left out", name, a$by))), f$stats)
   }
