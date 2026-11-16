@@ -41,7 +41,7 @@ ard_spec <- tfl_ard_spec(list(
     analysis_id = c("ARMN", "CONT", "CAT",
                     "ARMN", "BOR", "ORR", "DCR",
                     "ARMN", "TEAE",
-                    "GROUPN", "ANY", "REL", "G3", "SER", "DISC", "DTH"),
+                    "BIGN", "ANY", "REL", "G3", "SER", "DISC", "DTH"),
     label = c("Subjects", "Age, baseline sum of diameters", "Demographic categories",
               "Subjects", "Best overall response", "Objective response rate", "Disease control rate",
               "Subjects", "TEAEs by SOC and PT",

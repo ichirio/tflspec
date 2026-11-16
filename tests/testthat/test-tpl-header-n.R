@@ -102,17 +102,17 @@ test_that("lab_abnormal: header_n \"set\" is today's; \"tested\" counts the reco
   a <- list(levels = c("LOW", "HIGH"), where = "ONTRTFL == \"Y\"", param_order = NULL)
   x <- hn_expand("lab_abnormal", a)
   expect_identical(hn_expand("lab_abnormal", a, header_n = "set"), x)
-  expect_identical(hn_ids(x), c("GROUPN", "ABNORMAL"))
+  expect_identical(hn_ids(x), c("BIGN", "ABNORMAL"))
   expect_identical(x$ard$analyses[[1L]]$data, "adsl_sub")
   expect_identical(hn_texts(x)[[2L]], "{col}\n(N={n})")
-  # tested: a GROUPN on the distinct subjects of the records kept
+  # tested: a BIGN on the distinct subjects of the records kept
   y <- hn_expand("lab_abnormal", a, header_n = "tested")
   ids <- vapply(y$ard$analysis_data, function(d) d$id, "")
   expect_identical(ids, c("adsl_sub", "adlb_sub", "adlb_n", "adlb_tested", "adlb_cat"))
   d <- y$ard$analysis_data[[4L]]
   expect_identical(d$from, "adlb_sub")
   expect_identical(d$code, "dplyr::distinct(adlb_sub, USUBJID, TRT01A)")
-  expect_identical(hn_ids(y), c("GROUPN", "ABNORMAL"))
+  expect_identical(hn_ids(y), c("BIGN", "ABNORMAL"))
   expect_identical(y$ard$analyses[[1L]]$data, "adlb_tested")
   expect_identical(y$ard$analyses[[2L]], x$ard$analyses[[2L]])
   expect_identical(hn_texts(y), hn_texts(x))
@@ -168,7 +168,7 @@ hn_report <- function(d, name, args) {
   list(ard = as.data.frame(ard), header = hdr, plan = p)
 }
 hn_groupn <- function(ard) {
-  g <- ard[ard$analysis_id == "GROUPN" & ard$stat_name == "n", ]
+  g <- ard[ard$analysis_id == "BIGN" & ard$stat_name == "n", ]
   stats::setNames(as.numeric(unlist(g$stat)), unlist(g$group1_level %||% g$variable_level))
 }
 hn_skip <- function() {
@@ -204,7 +204,7 @@ test_that("lab_abnormal: the header N is the set's, or the records' subjects (\"
   # none
   n <- hn_report(d, "lab_abnormal", c(a, list(header_n = "none")))
   expect_false(any(grepl("N=", n$header, fixed = TRUE)))
-  expect_false("GROUPN" %in% n$ard$analysis_id)
+  expect_false("BIGN" %in% n$ard$analysis_id)
   # the cells are the same whatever the header
   cell <- function(r) {
     x <- r$ard[r$ard$analysis_id == "ABNORMAL", c("stat_name", "stat")]
@@ -217,10 +217,10 @@ test_that("lab_abnormal: the header N is the set's, or the records' subjects (\"
 
 # ---- orr ----
 
-test_that("orr: an explicit GROUPN on the analysis set; \"none\"; \"tested\" stops", {
+test_that("orr: an explicit BIGN on the analysis set; \"none\"; \"tested\" stops", {
   for (lay in c("rows", "cols")) {
     x <- hn_expand("orr", list(), stat_layout = lay)
-    expect_identical(hn_ids(x), c("BOR", "ORR", "GROUPN"), info = lay)
+    expect_identical(hn_ids(x), c("BOR", "ORR", "BIGN"), info = lay)
     g <- x$ard$analyses[[3L]]
     expect_identical(g$data, "adsl_sub", info = lay)
     expect_identical(g$variables, "TRT01P", info = lay)
@@ -236,14 +236,14 @@ test_that("orr: an explicit GROUPN on the analysis set; \"none\"; \"tested\" sto
   expect_identical(hn_texts(hn_expand("orr"))[[3L]], "(N={n})")
   expect_identical(hn_texts(hn_expand("orr", stat_layout = "cols"))[[1L]], "{col1} (N={n1})")
   expect_identical(hn_texts(hn_expand("orr", stat_layout = "cols", header_n = "none"))[[1L]], "{col1}")
-  # (the subset narrows the GROUPN's data, as the other analyses')
+  # (the subset narrows the BIGN's data, as the other analyses')
   s <- hn_expand("orr", subset = "SEX == \"F\"")
   expect_identical(s$ard$analyses[[3L]]$data, "adsl_sub")
   e <- s$ard$analysis_data[[1L]]
   expect_match(as.character(e$where), "SEX", fixed = TRUE)
 })
 
-test_that("orr: the GROUPN is the set's subjects, the header N what it was", {
+test_that("orr: the BIGN is the set's subjects, the header N what it was", {
   hn_skip()
   d <- file.path(withr::local_tempdir(), "study")
   dir.create(file.path(d, "adam"), recursive = TRUE)
@@ -265,10 +265,10 @@ test_that("orr: the GROUPN is the set's subjects, the header N what it was", {
     }
     n <- hn_report(d, "orr", c(a, list(stat_layout = lay, header_n = "none")))
     expect_false(any(grepl("N=", n$header, fixed = TRUE)), info = lay)
-    expect_false("GROUPN" %in% n$ard$analysis_id)
+    expect_false("BIGN" %in% n$ard$analysis_id)
     # (the cells as they were)
     cell <- function(z) {
-      x <- z$ard[z$ard$analysis_id != "GROUPN", c("analysis_id", "stat_name", "stat")]
+      x <- z$ard[z$ard$analysis_id != "BIGN", c("analysis_id", "stat_name", "stat")]
       rownames(x) <- NULL
       x
     }
@@ -280,12 +280,12 @@ test_that("orr: the GROUPN is the set's subjects, the header N what it was", {
 
 test_that("ae_overview: header_n \"set\" is today's, \"none\" drops the N; \"tested\" stops", {
   x <- hn_expand("ae_overview")
-  expect_identical(hn_ids(x)[1L], "GROUPN")
+  expect_identical(hn_ids(x)[1L], "BIGN")
   expect_identical(hn_expand("ae_overview", header_n = "set"), x)
   expect_identical(hn_expand("ae_overview", header_n = "denominator"), x)
   expect_identical(hn_texts(x)[[4L]], "(N={n})")
   n <- hn_expand("ae_overview", header_n = "none")
-  expect_false("GROUPN" %in% hn_ids(n))
+  expect_false("BIGN" %in% hn_ids(n))
   expect_identical(hn_ids(n), hn_ids(x)[-1L])
   expect_false(any(grepl("N=", hn_all(n), fixed = TRUE)))
   expect_identical(hn_texts(n), hn_texts(x)[-4L])
