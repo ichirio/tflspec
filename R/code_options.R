@@ -19,11 +19,12 @@
 #' * `tflspec.study_setup`: `TRUE` when the study's setup file sets the
 #'   study-wide options and reads the study's input data -- today the
 #'   rounding, `rtfreporter.rounding` and `cards.round_type`, the study's
-#'   code lists (`cl_<variable>`), and the data catalog's datasets read when
+#'   code lists by name (`study$codelists`) and its ADaM metadata
+#'   (`study$adam_meta`), and the data catalog's datasets read when
 #'   first used, in two environments: `study$adam_org` (as the file has
 #'   them, with the `derive`) and `study$adam` (blanks as `NA`, and the
-#'   code lists' levels unless study.yml's `settings: adam_levels` is
-#'   `none`), and one object per dataset (`adsl`) that is its
+#'   levels of the code lists adam_meta maps to their variables unless
+#'   study.yml's `settings: adam_levels` is `none`), and one object per dataset (`adsl`) that is its
 #'   `study$adam`'s: the programs always read `study$adam`,
 #'   written by [tfl_study_setup_code()].  The ARD setup
 #'   ([tfl_ard_code()]) and the report setup ([tfl_report_setup_code()])

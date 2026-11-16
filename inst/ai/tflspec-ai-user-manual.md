@@ -239,12 +239,15 @@ generate_rtfreport(tfl_report(o, content = plan, study = st), "T-1.rtf")
 **study.yml** — `study_id`, `title`; `settings:` the table and report
 study keys (`rounding`: `sas` / `r`; `program_dir`; `program` and
 `file`, each report's program and RTF file, `{output_id}.R` /
-`{output_id}.rtf`; `adam_levels`: `codelists`, the default, puts the
-study's code lists' levels on `study$adam`, `none` does not -- blanks are
-`NA` either way (the generated ARD, listing and figure programs always read
-`study$adam`; `study$adam_org` is the file as it is; test a blank with
-`is.na()`), a report's own levels and labels written as values still
-work, and naming a study code list (`cl_sex`) stops); `keys:` the ARD's (`id`: the subject key, `USUBJID`;
+`{output_id}.rtf`; `adam_levels`: `codelists`, the default, puts on
+`study$adam` the levels of the code lists the study's ADaM metadata maps to
+each dataset's variables (`spec/defaults.yml` `adam_meta:`, a define's
+tables: `variables` with each variable's code list OID, `codelists` a value
+a row; only the variables it maps, never a list by its name, never a
+value-level list), `none` does not -- blanks are `NA` either way (the
+generated ARD, listing and figure programs always read `study$adam`;
+`study$adam_org` is the file as it is; test a blank with `is.na()`), and a
+report's own levels and labels written as values still work); `keys:` the ARD's (`id`: the subject key, `USUBJID`;
 `output`: where the study ARD goes; `source`: R files of the study's own
 analysis functions).
 

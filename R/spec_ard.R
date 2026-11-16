@@ -142,7 +142,12 @@
   if (!is.null(rnd) && !"rounding" %in% ard$study$key) {
     ard$study <- rbind(ard$study, data.frame(key = "rounding", value = rnd, stringsAsFactors = FALSE))
   }
-  list(spec = .tfl_ard_spec(ard, blank_notes = FALSE), codelists = .report_codelists(study, tfl_read_outputs(study$dir, skip_bad = TRUE),
+  spec <- .tfl_ard_spec(ard, blank_notes = FALSE)
+  # (the study's ADaM metadata, for the datasets of its catalog: the levels
+  # study$adam has, which the program's own reads put on too, and its
+  # fingerprint counts)
+  spec$adam_meta <- .adam_meta_used(study)
+  list(spec = spec, codelists = .report_codelists(study, tfl_read_outputs(study$dir, skip_bad = TRUE),
                                b$table$codelists, output_id))
 }
 
@@ -214,7 +219,6 @@ tfl_report_codelists <- function(study, outputs = NULL, rows = NULL) {
     ids <- ids[ids %in% output_id]
   }
   made <- lapply(seq_along(outputs), function(i) {
-    .adam_levels_name_check(outputs[[i]], study)
     mine <- own[own$output_id == ids[i], , drop = FALSE]
     below <- tryCatch(.layers_below(outputs[[i]], study)$acc$codelists, error = function(e) {
       .ard_stop(sprintf("%s: %s", ids[i], conditionMessage(e)))

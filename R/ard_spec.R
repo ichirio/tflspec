@@ -1164,6 +1164,11 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
 #' (study.yml's `settings: adam_levels`, which [tfl_sheets_from_spec()] puts
 #' on the `study` sheet when it is `none`) counts: `none` gives another
 #' fingerprint than `codelists`, the default, which leaves it as it was.
+#' Under `codelists`, the study's ADaM metadata (`spec$adam_meta`, which a
+#' YAML study's ARD definition carries: [tfl_read_study_spec()]'s
+#' `adam_meta` for the study's datasets) counts too, for the datasets the
+#' output reads: each variable it maps and the codes it puts on it, in
+#' order.  A study whose adam_meta maps none of them keeps its fingerprints.
 #'
 #' @param spec An [tfl_ard_spec()].
 #' @param output_id The output.
@@ -1204,6 +1209,8 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
                  utils::capture.output(print(as.list(dss[setdiff(names(dss), "level")]))),
                  utils::capture.output(print(as.list(st))),
                  if (identical(al, "none")) "adam_levels: none",
+                 # (adam_meta: the levels study$adam puts on the datasets read)
+                 if (!identical(al, "none")) .adam_meta_hash_lines(spec$adam_meta, dss$dataset),
                  if (length(src)) paste(src, src_md5),
                  # the code lists, only when there are some: a study without
                  # keeps the fingerprints it had

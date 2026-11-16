@@ -4,7 +4,10 @@
 #' `blank_as_na()` (a character column's `""`, and a factor's, as `NA`: what
 #' `study$adam` holds), `set_levels()` (the code lists on a data: each listed column a factor of
 #' the codes in the list's order, as the ARD holds them, no labels; a value
-#' not listed stops the program), `reorder_by()` (a column in another's
+#' not listed stops the program), `adam_codes()` (the codes of one code list
+#' of the study's ADaM metadata, `study$adam_meta`, by its OID, in the list's
+#' order: what `set_levels(SEX = adam_codes("CL.SEX"))` puts on a dataset;
+#' a list the metadata does not have stops the program), `reorder_by()` (a column in another's
 #' order when the data has it: `PARAM` by `PARAMN`), `order_levels()` (the arm
 #' variables and the categories it names as factors, set in the data step
 #' before the ARD: each in its code list's order, else its numeric pair's

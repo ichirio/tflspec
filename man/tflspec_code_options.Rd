@@ -24,11 +24,12 @@ its prefix (\verb{cardx::}).
 \item \code{tflspec.study_setup}: \code{TRUE} when the study's setup file sets the
 study-wide options and reads the study's input data -- today the
 rounding, \code{rtfreporter.rounding} and \code{cards.round_type}, the study's
-code lists (\verb{cl_<variable>}), and the data catalog's datasets read when
+code lists by name (\code{study$codelists}) and its ADaM metadata
+(\code{study$adam_meta}), and the data catalog's datasets read when
 first used, in two environments: \code{study$adam_org} (as the file has
 them, with the \code{derive}) and \code{study$adam} (blanks as \code{NA}, and the
-code lists' levels unless study.yml's \code{settings: adam_levels} is
-\code{none}), and one object per dataset (\code{adsl}) that is its
+levels of the code lists adam_meta maps to their variables unless
+study.yml's \code{settings: adam_levels} is \code{none}), and one object per dataset (\code{adsl}) that is its
 \code{study$adam}'s: the programs always read \code{study$adam},
 written by \code{\link[=tfl_study_setup_code]{tfl_study_setup_code()}}.  The ARD setup
 (\code{\link[=tfl_ard_code]{tfl_ard_code()}}) and the report setup (\code{\link[=tfl_report_setup_code]{tfl_report_setup_code()}})

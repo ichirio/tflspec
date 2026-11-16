@@ -96,14 +96,14 @@ test_that("without the option, or FALSE, the code is as it was", {
 
 # ---- the study's input data (#782 step 2) -----------------------------------
 
-ssc_yaml_study <- function(data_lines) {
+ssc_yaml_study <- function(data_lines, defaults = "content: []") {
   d <- tempfile("ssc")
   dir.create(d)
   file.copy(system.file("extdata", "spec-yaml", package = "tflspec"), d, recursive = TRUE)
   sp <- file.path(d, "spec-yaml")
   writeLines(data_lines, file.path(sp, "data.yml"))
-  # (a study with no code lists and no ADaM metadata; a test gives its own)
-  writeLines("content: []", file.path(sp, "defaults.yml"))
+  # (no code lists and no ADaM metadata, unless a test gives its own)
+  writeLines(defaults, file.path(sp, "defaults.yml"))
   tfl_read_study_spec(sp)
 }
 ssc_data_yaml <- c("datasets:",
@@ -134,15 +134,25 @@ ssc_has <- function(code, lines) {
   grepl(paste(lines, collapse = "\n"), paste(code, collapse = "\n"), fixed = TRUE)
 }
 
-# the lines of a study with no code lists, the adam_org lines given
+# the lines of a study with no code lists and no adam_meta, the adam_org lines given
 ssc_no_lists <- function(...) {
   c("# ADaM levels: codelists", "",
+    "study <- list(adam_org = new.env(), adam = new.env())", "",
+    "# the study's code lists, by name (spec/defaults.yml codelists:)",
+    "study$codelists <- list()", "",
+    "# the study's ADaM metadata: each variable's code list, and the code lists",
+    "# (spec/defaults.yml adam_meta:)",
+    "study$adam_meta <- list(",
+    "  variables = tibble::tribble(~dataset, ~variable, ~codelist),",
+    "  codelists = tibble::tribble(~codelist, ~value)",
+    ")", "",
     "# the study's input data, read when first used: study$adam_org (the ADaM as read,",
-    "# with the catalog's derive), study$adam (blanks as NA; the study has no code lists)",
-    "study <- list(adam_org = new.env(), adam = new.env())", c(...),
+    "# with the catalog's derive), study$adam (blanks as NA; adam_meta maps no variable of",
+    "# its datasets to a code list)",
+    c(...),
     "delayedAssign(\"adsl\", blank_as_na(study$adam_org$adsl), assign.env = study$adam)",
     "delayedAssign(\"adae\", blank_as_na(study$adam_org$adae), assign.env = study$adam)",
-    "message(\"The study has no code lists: study$adam is study$adam_org with blanks as NA.\")",
+    "message(\"adam_meta maps no variable: study$adam is study$adam_org with blanks as NA.\")",
     "",
     "# (the objects the ARD, listing and figure programs read: study$adam's)",
     "delayedAssign(\"adsl\", study$adam$adsl)",
@@ -241,34 +251,79 @@ test_that("tflspec's own runs read the files themselves, the option or not", {
 
 # ---- study$adam_org and study$adam ------------------------------------------
 
-ssc_lists_study <- function() {
-  st <- ssc_yaml_study(c("datasets:",
-                         "  - dataset: ADSL", "    path: adsl.rds",
-                         "  - dataset: ADAE", "    path: adae.rds",
-                         "    derive: AEDUR = AENDY - ASTDY + 1"))
-  st$codelists <- list(SEX = c(F = "Female", M = "Male"), RACE = c("WHITE", "ASIAN"))
-  st
+# the study's code lists by name, and its ADaM metadata: ADSL's SEX and RACE,
+# ADAE's AESEV (not ADAE's SEX: a copy gets levels only when it is mapped);
+# ADVS is not in the catalog, so its rows are not written
+ssc_meta <- c(
+  "codelists:",
+  "  SEX: [{value: F, label: Female}, {value: M, label: Male}]",
+  "  RACE: [WHITE, ASIAN]",
+  "adam_meta:",
+  "  variables:",
+  "    - {dataset: ADSL, variable: SEX, codelist: CL.SEX}",
+  "    - {dataset: ADSL, variable: RACE, codelist: CL.RACE}",
+  "    - {dataset: ADAE, variable: AESEV, codelist: CL.AESEV}",
+  "    - {dataset: ADVS, variable: VSTESTCD, codelist: CL.VS}",
+  "  codelists:",
+  "    - {codelist: CL.SEX, name: Sex, value: M, decode: Male, order: 2}",
+  "    - {codelist: CL.SEX, name: Sex, value: F, decode: Female, order: 1}",
+  "    - {codelist: CL.RACE, value: WHITE}",
+  "    - {codelist: CL.RACE, value: ASIAN}",
+  "    - {codelist: CL.AESEV, value: MILD, order: 1}",
+  "    - {codelist: CL.AESEV, value: SEVERE, order: 2}",
+  "    - {codelist: CL.VS, value: SYSBP}")
+ssc_lists_study <- function(defaults = ssc_meta) {
+  ssc_yaml_study(c("datasets:",
+                   "  - dataset: ADSL", "    path: adsl.rds",
+                   "  - dataset: ADAE", "    path: adae.rds",
+                   "    derive: AEDUR = AENDY - ASTDY + 1"), defaults)
+}
+# the setup's code run in an environment of its own, with the helpers
+ssc_eval <- function(code, path_adam = NULL) {
+  env <- new.env(parent = globalenv())
+  env$path_adam <- path_adam
+  eval(parse(text = tfl_helpers_code()), env)
+  suppressMessages(eval(parse(text = code), envir = env))
+  env
 }
 
-test_that("the setup writes the study's code lists and both environments", {
+test_that("the setup writes study$codelists, study$adam_meta and both environments", {
   code <- tfl_study_setup_code(ssc_lists_study())
-  expect_identical(code[1:6], c(
+  expect_identical(code[1:9], c(
     "# ADaM levels: codelists", "",
-    "# the study's code lists (spec/defaults.yml codelists:)",
-    "cl_sex <- c(F = \"Female\", M = \"Male\")",
-    "cl_race <- c(\"WHITE\", \"ASIAN\")", ""))
-  expect_true("study <- list(adam_org = new.env(), adam = new.env())" %in% code)
+    "study <- list(adam_org = new.env(), adam = new.env())", "",
+    "# the study's code lists, by name (spec/defaults.yml codelists:)",
+    "study$codelists <- list(",
+    "  SEX = c(F = \"Female\", M = \"Male\"),",
+    "  RACE = c(\"WHITE\", \"ASIAN\")",
+    ")"))
+  expect_true(ssc_has(code, c(
+    "study$adam_meta <- list(",
+    "  variables = tibble::tribble(",
+    "    ~dataset, ~variable, ~codelist,",
+    "    \"ADSL\",   \"SEX\",     \"CL.SEX\",",
+    "    \"ADSL\",   \"RACE\",    \"CL.RACE\",",
+    "    \"ADAE\",   \"AESEV\",   \"CL.AESEV\"",
+    "  ),",
+    "  codelists = tibble::tribble(",
+    "    ~codelist,  ~name, ~value,   ~decode,  ~order,",
+    "    \"CL.SEX\",   \"Sex\", \"M\",      \"Male\",   2L,")))
+  # (the catalog's datasets only: no ADVS row, no CL.VS)
+  expect_false(any(grepl("ADVS|CL.VS", code)))
   expect_true("delayedAssign(\"adsl\", readRDS(\"adsl.rds\"), assign.env = study$adam_org)" %in% code)
   expect_true(ssc_has(code, ssc_wrapped(
     "adae", "readRDS(\"adae.rds\") |> dplyr::mutate(AEDUR = AENDY - ASTDY + 1)", "study$adam_org")))
-  # every dataset's adam line passes all the lists
-  # (blanks as NA first, then the lists)
-  for (ds in c("adsl", "adae")) {
-    expect_true(ssc_has(code, c(
-      "delayedAssign(", sprintf("  \"%s\",", ds), sprintf("  study$adam_org$%s |>", ds),
-      "    blank_as_na() |>", "    set_levels(SEX = cl_sex, RACE = cl_race),",
-      "  assign.env = study$adam", ")")), info = ds)
-  }
+  # each dataset's adam line: blanks as NA, then the lists adam_meta maps in it
+  expect_true(ssc_has(code, c(
+    "delayedAssign(", "  \"adsl\",", "  study$adam_org$adsl |>", "    blank_as_na() |>",
+    "    set_levels(SEX = adam_codes(\"CL.SEX\"), RACE = adam_codes(\"CL.RACE\")),",
+    "  assign.env = study$adam", ")")))
+  expect_true(ssc_has(code, c(
+    "delayedAssign(", "  \"adae\",", "  study$adam_org$adae |>", "    blank_as_na() |>",
+    "    set_levels(AESEV = adam_codes(\"CL.AESEV\")),",
+    "  assign.env = study$adam", ")")))
+  # no cl_* object of the study
+  expect_false(any(grepl("^cl_", code)))
   expect_true(all(nchar(code) <= 100L))
   # the objects the programs read: study$adam's
   expect_identical(utils::tail(code, 3L), c(
@@ -276,17 +331,49 @@ test_that("the setup writes the study's code lists and both environments", {
     "delayedAssign(\"adsl\", study$adam$adsl)",
     "delayedAssign(\"adae\", study$adam$adae)"))
   expect_false(any(grepl("message(", code, fixed = TRUE)))
-  expect_no_error(parse(text = code))
+  # the lists, as the study has them
+  env <- ssc_eval(code)
+  expect_identical(env$study$codelists, list(SEX = c(F = "Female", M = "Male"), RACE = c("WHITE", "ASIAN")))
+  m <- env$study$adam_meta
+  expect_identical(m$variables$variable, c("SEX", "RACE", "AESEV"))
+  expect_identical(m$codelists$order, c(2L, 1L, NA, NA, 1L, 2L))
+  expect_identical(env$adam_codes("CL.SEX"), c("F", "M"))
+  expect_identical(env$adam_codes("CL.RACE"), c("WHITE", "ASIAN"))
+  expect_error(env$adam_codes("CL.NONE"), "no code list CL.NONE")
 })
 
-test_that("the setup of a study with no code lists makes study$adam study$adam_org", {
-  code <- tfl_study_setup_code(ssc_yaml_study(ssc_data_yaml))
-  expect_false(any(grepl("^cl_", code)))
+test_that("the setup of a study with no adam_meta makes study$adam study$adam_org with blanks NA", {
+  code <- tfl_study_setup_code(ssc_yaml_study(ssc_data_yaml, "codelists: {SEX: [F, M]}"))
   expect_false(any(grepl("set_levels", code, fixed = TRUE)))
+  expect_true("study$codelists <- list(" %in% code)
+  expect_true("  variables = tibble::tribble(~dataset, ~variable, ~codelist)," %in% code)
   expect_true("delayedAssign(\"adsl\", blank_as_na(study$adam_org$adsl), assign.env = study$adam)" %in% code)
-  expect_true(paste0("message(\"The study has no code lists: study$adam is study$adam_org ",
+  expect_true(paste0("message(\"adam_meta maps no variable: study$adam is study$adam_org ",
                      "with blanks as NA.\")") %in% code)
   expect_false("study$adam <- study$adam_org" %in% code)
+  env <- ssc_eval(code)
+  expect_identical(env$study$codelists, list(SEX = c("F", "M")))
+  expect_identical(nrow(env$study$adam_meta$variables), 0L)
+})
+
+test_that("a list is put on a column adam_meta maps, never by its name", {
+  # SEX has a study list of its name, but adam_meta maps only RACE
+  st <- ssc_lists_study(c(
+    "codelists: {SEX: [F, M]}",
+    "adam_meta:",
+    "  variables: [{dataset: ADSL, variable: RACE, codelist: CL.RACE}]",
+    "  codelists: [{codelist: CL.RACE, value: WHITE}, {codelist: CL.RACE, value: ASIAN}]"))
+  code <- tfl_study_setup_code(st)
+  expect_true(any(grepl("    set_levels(RACE = adam_codes(\"CL.RACE\")),", code, fixed = TRUE)))
+  expect_false(any(grepl("SEX = adam_codes", code, fixed = TRUE)))
+  # ADAE: none mapped, blanks as NA only
+  expect_true("delayedAssign(\"adae\", blank_as_na(study$adam_org$adae), assign.env = study$adam)" %in% code)
+  # value-level lists are never put on
+  st <- ssc_lists_study(c(
+    "adam_meta:",
+    "  value_level: [{dataset: ADSL, variable: SEX, where: 'X == 1', codelist: CL.SEX}]",
+    "  codelists: [{codelist: CL.SEX, value: F}]"))
+  expect_false(any(grepl("set_levels", tfl_study_setup_code(st), fixed = TRUE)))
 })
 
 test_that("the setup's code reads each dataset when first used", {
@@ -295,17 +382,16 @@ test_that("the setup's code reads each dataset when first used", {
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   st <- ssc_yaml_study(c("datasets:",
                          "  - dataset: ADSL", "    path: data/adam/adsl.rds",
-                         "  - dataset: ADAE", "    path: data/adam/adae.rds"))
-  st$codelists <- list(SEX = c(F = "Female", M = "Male"))
+                         "  - dataset: ADAE", "    path: data/adam/adae.rds"),
+                       c("adam_meta:",
+                         "  variables: [{dataset: ADSL, variable: SEX, codelist: CL.SEX}]",
+                         "  codelists: [{codelist: CL.SEX, value: F}, {codelist: CL.SEX, value: M}]"))
   old <- options(tflspec.paths = c(path_adam = "data/adam"))
   on.exit(options(old), add = TRUE)
   code <- tfl_study_setup_code(st)
   options(old)
-  env <- new.env(parent = globalenv())
-  env$path_adam <- d
-  eval(parse(text = tfl_helpers_code()), env)
   # the files are not there when the setup runs: nothing is read yet
-  expect_no_error(eval(parse(text = code), envir = env))
+  expect_no_error(env <- ssc_eval(code, d))
   expect_identical(sort(ls(env$study$adam_org)), c("adae", "adsl"))
   expect_identical(sort(ls(env$study$adam)), c("adae", "adsl"))
   saveRDS(data.frame(USUBJID = c("S1", "S2", "S3"), SEX = c("M", "F", "M"),
@@ -322,7 +408,7 @@ test_that("the setup's code reads each dataset when first used", {
   expect_error(suppressWarnings(env$adae))
 })
 
-test_that("study$adam has the blanks as NA, study$adam_org as read (with and without lists)", {
+test_that("study$adam has the blanks as NA, study$adam_org as read (with and without levels)", {
   d <- tempfile("ssc")
   dir.create(d)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -331,16 +417,16 @@ test_that("study$adam has the blanks as NA, study$adam_org as read (with and wit
                      GRP = factor(c("a", "", "b"), levels = c("b", "", "a")),
                      stringsAsFactors = FALSE)
   saveRDS(adsl, file.path(d, "adsl.rds"))
+  meta <- c("adam_meta:",
+            "  variables: [{dataset: ADSL, variable: SEX, codelist: CL.SEX}]",
+            "  codelists: [{codelist: CL.SEX, value: F}, {codelist: CL.SEX, value: M}]")
   for (lists in c(TRUE, FALSE)) {
-    st <- ssc_yaml_study(c("datasets:", "  - dataset: ADSL", "    path: data/adam/adsl.rds"))
-    if (lists) st$codelists <- list(SEX = c("F", "M"))
+    st <- ssc_yaml_study(c("datasets:", "  - dataset: ADSL", "    path: data/adam/adsl.rds"),
+                         if (lists) meta else "content: []")
     old <- options(tflspec.paths = c(path_adam = "data/adam"))
     code <- tfl_study_setup_code(st)
     options(old)
-    env <- new.env(parent = globalenv())
-    env$path_adam <- d
-    eval(parse(text = tfl_helpers_code()), env)
-    suppressMessages(eval(parse(text = code), envir = env))
+    env <- ssc_eval(code, d)
     a <- env$study$adam$adsl
     expect_identical(a$RACE, c(NA, "ASIAN", "WHITE"))
     expect_identical(as.character(a$SEX), c("M", NA, "F"))
@@ -373,6 +459,22 @@ test_that("blank_as_na() makes a blank of a character column or a factor NA, lea
   expect_identical(env$blank_as_na(y), y)
 })
 
+test_that("adam_codes(): one list's codes by order, then rank, then as the table has them", {
+  env <- new.env(parent = globalenv())
+  eval(parse(text = tfl_helpers_code()), env)
+  meta <- list(codelists = data.frame(codelist = c("A", "A", "A", "B"), value = c("x", "y", "z", "q"),
+                                      order = c(NA, 2L, 1L, NA), stringsAsFactors = FALSE))
+  expect_identical(env$adam_codes("A", meta), c("z", "y", "x"))
+  meta$codelists$order <- NULL
+  meta$codelists$rank <- c(3, 1, 2, NA)
+  expect_identical(env$adam_codes("A", meta), c("y", "z", "x"))
+  # (the study's: study$adam_meta, as the setup writes it)
+  env$study <- list(adam_meta = meta)
+  expect_identical(env$adam_codes("B"), "q")
+  # the same order as tflspec's own reads use
+  expect_identical(.adam_codes(meta, "A"), env$adam_codes("A", meta))
+})
+
 # ---- settings: adam_levels (codelists | none) --------------------------------
 
 ssc_levels_study <- function(value = NULL) {
@@ -385,16 +487,17 @@ test_that("adam_levels: the setup says it first; codelists is the default", {
   code <- tfl_study_setup_code(ssc_levels_study())
   expect_identical(code[1L], "# ADaM levels: codelists")
   expect_identical(tfl_study_setup_code(ssc_levels_study("codelists")), code)
-  expect_true("cl_sex <- c(F = \"Female\", M = \"Male\")" %in% code)
-  expect_true(any(grepl("set_levels(SEX = cl_sex, RACE = cl_race)", code, fixed = TRUE)))
+  expect_true(any(grepl("set_levels(SEX = adam_codes(\"CL.SEX\")", code, fixed = TRUE)))
 })
 
-test_that("adam_levels: none -- no code lists, study$adam is blank_as_na() only", {
+test_that("adam_levels: none -- the lists are written, study$adam is blank_as_na() only", {
   code <- tfl_study_setup_code(ssc_levels_study("none"))
   expect_identical(code[1:2], c("# ADaM levels: none", ""))
-  expect_false(any(grepl("^cl_", code)))
   expect_false(any(grepl("set_levels", code, fixed = TRUE)))
   expect_false(any(grepl("message(", code, fixed = TRUE)))
+  # (the study's lists and metadata all the same: an explicit reference works)
+  expect_true("study$codelists <- list(" %in% code)
+  expect_true("study$adam_meta <- list(" %in% code)
   expect_true("delayedAssign(\"adsl\", blank_as_na(study$adam_org$adsl), assign.env = study$adam)" %in% code)
   expect_true("delayedAssign(\"adsl\", readRDS(\"adsl.rds\"), assign.env = study$adam_org)" %in% code)
   expect_true(any(grepl("adam_levels: none", code[-1L], fixed = TRUE)))
@@ -421,24 +524,20 @@ test_that("adam_levels: none -- the blanks are NA in study$adam all the same", {
   adsl <- data.frame(USUBJID = c("S1", "S2", "S3"), SEX = c("M", "", "F"),
                      RACE = c("", "ASIAN", "WHITE"), stringsAsFactors = FALSE)
   saveRDS(adsl, file.path(d, "adsl.rds"))
-  st <- ssc_yaml_study(c("datasets:", "  - dataset: ADSL", "    path: data/adam/adsl.rds"))
-  st$codelists <- list(SEX = c("F", "M"))
+  st <- ssc_yaml_study(c("datasets:", "  - dataset: ADSL", "    path: data/adam/adsl.rds"), ssc_meta)
   st$study$settings$adam_levels <- "none"
   old <- options(tflspec.paths = c(path_adam = "data/adam"))
   code <- tfl_study_setup_code(st)
   options(old)
-  env <- new.env(parent = globalenv())
-  env$path_adam <- d
-  eval(parse(text = tfl_helpers_code()), env)
-  eval(parse(text = code), envir = env)
+  env <- ssc_eval(code, d)
   a <- env$study$adam$adsl
   expect_identical(a$SEX, c("M", NA, "F"))
   expect_identical(a$RACE, c(NA, "ASIAN", "WHITE"))
-  expect_false(exists("cl_sex", envir = env, inherits = FALSE))
   expect_identical(env$study$adam_org$adsl, adsl)
+  expect_identical(env$study$codelists$SEX, c(F = "Female", M = "Male"))
 })
 
-test_that("adam_levels is part of the ARD's fingerprint", {
+test_that("adam_levels and adam_meta are part of the ARD's fingerprint", {
   sp <- ssc_ard_spec()
   with_key <- function(v) {
     x <- sp
@@ -461,9 +560,31 @@ test_that("adam_levels is part of the ARD's fingerprint", {
   expect_identical(ard_key(ssc_levels_study()), character())
   expect_identical(ard_key(ssc_levels_study("codelists")), character())
   expect_identical(ard_key(ssc_levels_study("none")), "none")
+  # adam_meta: the variables of the datasets read and their codes count
+  ds <- ssc_lists_study()
+  meta <- ds$adam_meta
+  x <- sp
+  x$adam_meta <- .adam_meta_used(ds)
+  expect_false(identical(tfl_ard_spec_hash(x, "T"), h))
+  # a code in another order: another fingerprint
+  y <- x
+  y$adam_meta$codelists$order[y$adam_meta$codelists$codelist == "CL.SEX"] <- c(1L, 2L)
+  expect_false(identical(tfl_ard_spec_hash(y, "T"), tfl_ard_spec_hash(x, "T")))
+  # a dataset the output does not read: not counted (the analysis reads ADSL)
+  z <- x
+  z$adam_meta$codelists$value[z$adam_meta$codelists$value == "SEVERE"] <- "VERY SEVERE"
+  expect_identical(tfl_ard_spec_hash(z, "T"), tfl_ard_spec_hash(x, "T"))
+  # under none, adam_meta does not count
+  n1 <- with_key("none")
+  n1$adam_meta <- x$adam_meta
+  expect_identical(tfl_ard_spec_hash(n1, "T"), tfl_ard_spec_hash(with_key("none"), "T"))
+  # the study's ARD definition carries it under codelists only
+  expect_null(.adam_meta_used(ssc_levels_study("none")))
+  expect_identical(.adam_meta_used(ssc_levels_study())$variables$variable, c("SEX", "RACE", "AESEV"))
+  expect_identical(meta$variables$variable, c("SEX", "RACE", "AESEV", "VSTESTCD"))
 })
 
-test_that("adam_levels: none -- a report's own levels work, a study code list by name stops", {
+test_that("adam_levels: none -- a report's own levels work, and so does a study list by name", {
   st <- ssc_levels_study("none")
   item <- function(...) tfl_item("table_plan", list(cols = "TRT01A"))
   # levels written as values, and the report's own list: fine
@@ -478,14 +599,14 @@ test_that("adam_levels: none -- a report's own levels work, a study code list by
                                       derive = list(SEXF = "factor(SEX, levels = cl_sex)"))),
                      content = list(item()))
   expect_no_error(tfl_resolve_output(mine, st))
-  # the study's list by name
+  # the study's list by name (study$codelists$SEX): no error, and the setup
+  # writes study$codelists under none too
   named <- tfl_output("T-3", "table", common = list(population = "SAF"),
                       data = list(list(id = "adsl_saf", from = "ADSL",
-                                       derive = list(SEXF = "factor(SEX, levels = cl_sex)"))),
+                                       derive = list(SEXF = "factor(SEX, levels = names(study$codelists$SEX))"))),
                       content = list(item()))
-  msg <- "T-3: adam_levels: none -- the study code list SEX (cl_sex) is not read"
-  expect_error(tfl_resolve_output(named, st), msg, fixed = TRUE)
-  expect_error(tfl_report_codelists(st, outputs = list(`T-3` = named)), msg, fixed = TRUE)
-  # under codelists it is read
-  expect_no_error(tfl_resolve_output(named, ssc_levels_study("codelists")))
+  expect_no_error(tfl_resolve_output(named, st))
+  expect_no_error(tfl_report_codelists(st, outputs = list(`T-3` = named)))
+  env <- ssc_eval(tfl_study_setup_code(st))
+  expect_identical(names(env$study$codelists$SEX), c("F", "M"))
 })

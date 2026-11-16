@@ -128,3 +128,131 @@
   })
   out[lengths(out) > 0L]
 }
+
+# ---- adam_meta in the programs ------------------------------------------------
+
+# The variables adam_meta maps to a code list of values in `dataset` (its
+# name in any case), in adam_meta's order: `dataset`, `variable`, `codelist`.  A
+# dictionary's list (external:) holds no values, so it puts no levels.
+.adam_meta_vars <- function(meta, dataset) {
+  v <- meta$variables
+  none <- data.frame(dataset = character(), variable = character(), codelist = character(),
+                     stringsAsFactors = FALSE)
+  if (is.null(v) || !nrow(v) || !length(dataset)) return(none)
+  keep <- toupper(v$dataset) %in% toupper(dataset) & !is.na(v$codelist) &
+    v$codelist %in% meta$codelists$codelist
+  if (!any(keep)) return(none)
+  data.frame(dataset = v$dataset[keep], variable = v$variable[keep], codelist = v$codelist[keep],
+             stringsAsFactors = FALSE)
+}
+
+# The step that puts adam_meta's levels on `dataset`:
+# set_levels(SEX = adam_codes("CL.SEX"), ...) (a call to lay out); NULL when
+# adam_meta maps none of its variables
+.adam_meta_step <- function(meta, dataset) {
+  v <- .adam_meta_vars(meta, dataset)
+  if (!nrow(v)) return(NULL)
+  .cl("set_levels", stats::setNames(as.list(sprintf("adam_codes(%s)", .q(v$codelist))), v$variable))
+}
+
+# adam_meta narrowed to `datasets`: their variables with a code list of
+# values, and those code lists' rows (a define's tables, as they are)
+.adam_meta_narrow <- function(meta, datasets) {
+  v <- meta$variables
+  keep <- toupper(v$dataset) %in% toupper(datasets) & !is.na(v$codelist) &
+    v$codelist %in% meta$codelists$codelist
+  cl <- meta$codelists
+  list(variables = v[keep, , drop = FALSE],
+       codelists = cl[cl$codelist %in% v$codelist[keep], , drop = FALSE])
+}
+
+# The ADaM metadata a program writes, `study$adam_meta <- list(...)`: the
+# variables of `datasets` with a code list (dataset, variable, codelist) and
+# those code lists (codelist, value, and name, decode, order and rank when
+# some row gives them), each a tibble::tribble(), a row a line
+.adam_meta_lines <- function(meta, datasets) {
+  m <- .adam_meta_narrow(meta, datasets)
+  cl_cols <- c("codelist", "name", "value", "decode", "order", "rank")
+  cl_cols <- cl_cols[cl_cols %in% c("codelist", "value") |
+                       vapply(cl_cols, function(cn) any(!is.na(m$codelists[[cn]])), NA)]
+  tv <- .tribble_lines(m$variables[c("dataset", "variable", "codelist")])
+  tc <- .tribble_lines(m$codelists[cl_cols])
+  ind <- function(x) paste0("  ", x)
+  tv[1L] <- paste("variables =", tv[1L])
+  tc[1L] <- paste("codelists =", tc[1L])
+  tv[length(tv)] <- paste0(tv[length(tv)], ",")
+  c("study$adam_meta <- list(", ind(tv), ind(tc), ")")
+}
+
+# A data frame as tibble::tribble(), a row a line, the columns lined up:
+# text in quotes, a whole number with its L, a missing value NA
+.tribble_lines <- function(d) {
+  head <- paste0("~", names(d))
+  if (!nrow(d)) return(sprintf("tibble::tribble(%s)", paste(head, collapse = ", ")))
+  cells <- lapply(d, function(v) {
+    out <- if (is.character(v)) .q(v) else if (is.integer(v)) paste0(v, "L") else as.character(v)
+    out[is.na(v)] <- "NA"
+    out
+  })
+  m <- rbind(head, do.call(cbind, cells))
+  w <- apply(m, 2L, function(x) max(nchar(x)))
+  k <- ncol(m)
+  rows <- vapply(seq_len(nrow(m)), function(i) {
+    cell <- m[i, ]
+    cell[-k] <- sprintf("%-*s", w[-k] + 1L, paste0(cell[-k], ","))
+    sub(" +$", "", paste(cell, collapse = " "))
+  }, "")
+  last <- length(rows)
+  rows[-last] <- paste0(rows[-last], ",")
+  c("tibble::tribble(", paste0("  ", rows), ")")
+}
+
+# The study's code lists as the setup writes them, `study$codelists <-
+# list(SEX = c(F = "Female", M = "Male"), ...)`, by name, a list a line
+.study_codelists_lines <- function(codelists) {
+  if (!length(codelists)) return("study$codelists <- list()")
+  nm <- .r_arg_name(names(codelists))
+  body <- vapply(seq_along(codelists), function(i) {
+    cl <- codelists[[i]]
+    vals <- as.list(.q(unname(cl)))
+    if (!is.null(names(cl))) names(vals) <- names(cl)
+    gsub("\n", "\n  ", paste(nm[i], "=", .lay(.cl("c", vals), lead = nchar(nm[i]) + 5L)), fixed = TRUE)
+  }, "")
+  strsplit(paste0("study$codelists <- list(\n  ", paste(body, collapse = ",\n  "), "\n)"),
+           "\n", fixed = TRUE)[[1L]]
+}
+
+# The study's adam_meta for its ARD definition (.ard_spec_of_study()): the
+# variables of its datasets (data.yml) with a code list of values, and those
+# lists; NULL under adam_levels: none, or when it maps none
+.adam_meta_used <- function(study) {
+  if (!inherits(study, "tfl_study_spec") || identical(.study_adam_levels(study), "none")) return(NULL)
+  meta <- study$adam_meta
+  if (is.null(meta)) return(NULL)
+  m <- .adam_meta_narrow(meta, .study_catalog(study)$dataset)
+  if (!nrow(m$variables)) return(NULL)
+  m
+}
+
+# What adam_meta gives an ARD's fingerprint: each variable of `datasets` it
+# maps and the codes it puts on it, in order (none: nothing, so a study
+# without adam_meta keeps its fingerprints)
+.adam_meta_hash_lines <- function(meta, datasets) {
+  if (is.null(meta)) return(character())
+  v <- .adam_meta_vars(meta, datasets)
+  if (!nrow(v)) return(character())
+  c("adam_meta:", vapply(seq_len(nrow(v)), function(i) {
+    paste0(toupper(v$dataset[i]), ".", v$variable[i], " ", v$codelist[i], ": ",
+           paste(.adam_codes(meta, v$codelist[i]), collapse = " | "))
+  }, ""))
+}
+
+# The codes of one code list of adam_meta in order: adam_codes(), the study
+# helper, done here (by `order`, then `rank`, then as the table has them)
+.adam_codes <- function(meta, codelist) {
+  cl <- meta$codelists
+  rows <- cl[!is.na(cl$codelist) & cl$codelist == codelist, , drop = FALSE]
+  n <- nrow(rows)
+  col <- function(cn) if (cn %in% names(rows)) rows[[cn]] else rep(NA, n)
+  as.character(rows$value[order(col("order"), col("rank"), seq_len(n))])
+}
