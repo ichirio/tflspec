@@ -811,7 +811,10 @@
 .expr_cl <- function(e) {
   if (!is.call(e)) return(.expr_text(e))
   fn <- paste(deparse(e[[1L]]), collapse = "")
-  if (!grepl("^([A-Za-z.][A-Za-z0-9._]*::)?[A-Za-z.][A-Za-z0-9._]*$", fn)) {
+  # (R's own syntax -- if / else, for, while, function -- is not a call to
+  # lay out: `if (a) b else c`, never `if(a, b, c)`)
+  if (!grepl("^([A-Za-z.][A-Za-z0-9._]*::)?[A-Za-z.][A-Za-z0-9._]*$", fn) ||
+      fn %in% c("if", "for", "while", "repeat", "function")) {
     return(.expr_text(e))
   }
   args <- as.list(e)[-1L]

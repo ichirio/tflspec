@@ -267,3 +267,154 @@ test_that("a condition row's key that is not one of the item's params stops, nam
   expect_identical(got$analysis_id, c("MINE", NA))
   expect_null(.item_cond_rows(cs, "T", "B", "tox_dir"))
 })
+
+# ---- the planner's path (tflplanner#704) -------------------------------------
+# The report as the app keeps it (`template:` and its arguments), read from
+# its file; the code SPEC tfl_template_to_spec() makes of it; the study's
+# sheets of that (tfl_sheets_from_spec()); the ARD definition read from the
+# sheets, its program and its ARD.  (The arguments are written in their step
+# blocks here; the flat `args:` is read by tfl_template_resolve() too.)
+
+e2e_planner_reports <- function() {
+  list(
+    demog = c("id: T-11", "kind: table", "label: Demographics", "template:", "  name: tflspec_v1/demog",
+              "  analysis:", "    by: TRT01A", "    continuous: [AGE]", "    categorical: [SEX, RACE]",
+              "    analysis_ids: {AGE: AGE_STATS}"),
+    ae = c("id: T-12", "kind: table", "label: Adverse events", "template:", "  name: tflspec_v1/ae_soc_pt",
+           "  analysis:", "    by: TRT01A", "    min_pct: 5"),
+    # (the category left at its default, AVALCAT1)
+    orr = c("id: T-13", "kind: table", "label: Response",
+            "data:", "  - id: adsl_sub", "    population: ITT",
+            "template:", "  name: tflspec_v1/orr_subgroup", "  data:", "    subgroup_vars: [SEX]",
+            "  analysis:", "    by: TRT01A", "    conf_level: 0.9",
+            "    conditions:", "      - {subgroup: SEX, subgroup_lvl: F, where: !r SEX == \"F\"}"),
+    lab = c("id: T-14", "kind: table", "label: Lab shift", "template:", "  name: tflspec_v1/lab_tox_shift",
+            "  analysis:", "    by: TRT01A", "    formats: {n: 0, p: xx.xx%}",
+            "    conditions:", "      - {tox_dir: High, param: Alanine Aminotransferase (U/L)}",
+            "      - {tox_dir: Low, param: Hemoglobin (g/L)}"),
+    km = c("id: F-11", "kind: figure", "label: Kaplan-Meier", "data:", "  - id: adsl_sub", "    population: ITT",
+           "template:", "  name: tflspec_v1/km_simple", "  data:", "    time_unit: days",
+           "  analysis:", "    by: TRT01A"),
+    forest = c("id: F-12", "kind: figure", "label: Forest", "data:", "  - id: adsl_sub", "    population: ITT",
+               "template:", "  name: tflspec_v1/forest_hr", "  data:", "    subgroup_vars: [SEX]", "    ref: Control",
+               "  analysis:", "    by: TRT01A", "    comparison: Drug X",
+               "    conditions:", "      - {subgroup: SEX, subgroup_lvl: F, where: !r SEX == \"F\"}"))
+}
+
+# One report through the planner's path in the study `d`: its code SPEC, the
+# sheets (and their warnings), the ARD program and, with `run`, the ARD
+e2e_planner <- function(lines, d, run = TRUE) {
+  f <- file.path(d, "spec", "outputs", paste0(sub("^id: ", "", lines[1L]), ".yml"))
+  writeLines(lines, f)
+  on.exit(unlink(f))
+  st <- tfl_read_study_spec(d)
+  spec <- tfl_template_to_spec(tfl_read_output(f), st)
+  warns <- character()
+  sh <- withCallingHandlers(tfl_sheets_from_spec(st, stats::setNames(list(spec), spec$id)),
+                            warning = function(w) {
+                              warns <<- c(warns, conditionMessage(w))
+                              invokeRestart("muffleWarning")
+                            })
+  code <- suppressWarnings(tfl_ard_code(tfl_ard_spec(sh$ard), output_id = spec$id, save = FALSE, dir = d))
+  ard <- NULL
+  if (run) {
+    env <- new.env(parent = globalenv())
+    old <- setwd(d)
+    on.exit(setwd(old), add = TRUE)
+    suppressMessages(eval(parse(text = code, keep.source = FALSE), envir = env))
+    ard <- env$ard
+  }
+  list(spec = spec, sheets = sh, warnings = warns, code = code, ard = ard)
+}
+
+test_that("planner: a series report becomes its code SPEC, the sheets keep its conditions and ids, no warning", {
+  skip_e2e()
+  d <- file.path(tempdir(), "tpl-e2e-planner")
+  unlink(d, recursive = TRUE)
+  on.exit(unlink(d, recursive = TRUE))
+  tplfig_study(d, c("adsl", "adae", "adrs", "adtte", "adlb"), id = "E2E-4")
+  reps <- e2e_planner_reports()
+
+  # demog: analysis_ids name the analyses on the analyses sheet; nothing lost
+  dm <- e2e_planner(reps$demog, d, run = FALSE)
+  expect_null(dm$spec$template)
+  expect_identical(dm$warnings, character())
+  an <- dm$sheets$ard$analyses
+  expect_identical(an$analysis_id[an$output_id == "T-11"], c("BIGN", "AGE_STATS", "SEX", "RACE"))
+
+  # ORR, Lab, forest: the condition rows on the conditions sheet, no
+  # "cannot hold" warning
+  for (k in c("orr", "lab", "forest")) {
+    r <- e2e_planner(reps[[k]], d, run = FALSE)
+    expect_identical(r$warnings, character(), info = k)
+    cs <- r$sheets$ard$conditions
+    expect_gt(sum(cs$output_id == r$spec$id), 1L)
+  }
+  lab <- e2e_planner(reps$lab, d, run = FALSE)
+  cs <- lab$sheets$ard$conditions
+  expect_identical(cs$param[cs$output_id == "T-14"], c("Alanine Aminotransferase (U/L)", "Hemoglobin (g/L)"))
+  # the derive's if / else as R in the program
+  expect_true(any(grepl("worst = if (tox_dir == \"Low\") ATOXGRL else ATOXGRH", lab$code, fixed = TRUE)))
+  expect_silent(parse(text = lab$code, keep.source = FALSE))
+})
+
+test_that("planner: the ARD of each series report from its sheets, the ids as decided", {
+  skip_e2e()
+  skip_if_not_installed("purrr")
+  skip_if_not_installed("survival")
+  skip_if_not_installed("ggsurvfit")
+  d <- file.path(tempdir(), "tpl-e2e-planner-run")
+  unlink(d, recursive = TRUE)
+  on.exit(unlink(d, recursive = TRUE))
+  tplfig_study(d, c("adsl", "adae", "adrs", "adtte", "adlb"), id = "E2E-5")
+  reps <- e2e_planner_reports()
+
+  dm <- e2e_planner(reps$demog, d)
+  expect_identical(unique(dm$ard$analysis_id), c("BIGN", "AGE_STATS", "SEX", "RACE"))
+
+  # AE: the analysis_per column names the analyses a level
+  ae <- e2e_planner(reps$ae, d)
+  an <- ae$sheets$ard$analyses
+  expect_identical(an$analysis_per[an$output_id == "T-12" & an$analysis_id == "AE"], "level")
+  expect_identical(unique(ae$ard$analysis_id), c("BIGN", "AE_ANY", "AE_L1", "AE_L2"))
+
+  # ORR with the default category: AVALCAT1 is in the data
+  orr <- e2e_planner(reps$orr, d)
+  expect_identical(unique(orr$ard$analysis_id), c("BIGN", "ORR"))
+  expect_identical(e2e_levels(orr$ard, "ORR", "group1_level"), c("ALL", "SEX"))
+  expect_true(any(orr$ard$stat_name[orr$ard$analysis_id == "ORR"] == "estimate"))
+  expect_true(any(grepl("conf.level = 0.9", orr$code, fixed = TRUE)))
+
+  lab <- e2e_planner(reps$lab, d)
+  expect_identical(unique(lab$ard$analysis_id), c("BIGN", "ALT_HIGH", "HGB_LOW"))
+
+  # forest: the reference arm's relevel in the program; HR a condition row
+  fo <- e2e_planner(reps$forest, d)
+  expect_true(any(grepl("intersect(\"Control\", TRT01A)", fo$code, fixed = TRUE)))
+  expect_identical(unique(fo$ard$analysis_id), c("BIGN", "HR"))
+  expect_identical(e2e_levels(fo$ard, "HR", "group1_level"), c("ALL", "SEX"))
+
+  # KM: BIGN; the time unit's derive kept on the analysis_data sheet (the
+  # ARD reads adsl_sub only, so its program has no adtte_sub)
+  km <- e2e_planner(reps$km, d)
+  expect_identical(unique(km$ard$analysis_id), "BIGN")
+  ad <- km$sheets$ard$analysis_data
+  der <- ad$derive[ad$output_id == "F-11" & ad$data_id == "adtte_sub"]
+  expect_identical(der, "AVAL = AVAL / c(days = 1, months = 30.4375)[[\"days\"]]")
+})
+
+test_that("a step's if / else is laid out as R, not as a call", {
+  s <- paste0("dplyr::mutate(worst = if (\"High\" == \"Low\") ATOXGRL else ATOXGRH, ",
+              "base = if (\"High\" == \"Low\") BTOXGRL else BTOXGRH, tox_dir = \"High\")")
+  code <- .lay(.step_cl(s))
+  expect_false(grepl("if(", code, fixed = TRUE))
+  e <- str2lang(code)
+  expect_identical(e[[2L]], quote(if ("High" == "Low") ATOXGRL else ATOXGRH))
+})
+
+test_that("the sample ADRS has AVALCAT1 (orr_subgroup's default category): CR / PR a response", {
+  a <- tflspec::adrs
+  expect_true("AVALCAT1" %in% names(a))
+  expect_identical(a$AVALCAT1 == "Response", a$AVALC %in% c("CR", "PR"))
+  expect_setequal(unique(a$AVALCAT1), c("Response", "Non-response"))
+})
