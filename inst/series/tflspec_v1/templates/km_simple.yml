@@ -1,0 +1,102 @@
+# tflspec_v1/templates/km_simple.yml
+template: km_simple
+label: KM curves
+figure: km_curves
+params:
+  by:
+    type: column
+    input: pick
+    choices: vars(adsl_sub)
+    required: true
+    step: analysis
+    tier: required
+    description: The group variable; one curve a group.
+  time_unit:
+    type: enum[days|months]
+    input: pick
+    choices: fixed
+    default: !series time_unit
+    step: data
+    tier: usual
+    description: The unit of the time axis; months divides the days by days_per_month.
+  days_per_month:
+    type: number
+    input: text
+    default: !series days_per_month
+    step: data
+    tier: other
+    description: The days in a month, for time_unit months.
+  time:
+    type: column
+    input: pick
+    choices: vars(adtte_sub)
+    default: !series time
+    step: analysis
+    tier: other
+    description: The column of the time to event.
+  censor:
+    type: column
+    input: pick
+    choices: vars(adtte_sub)
+    default: !series censor
+    step: analysis
+    tier: other
+    description: The censoring column (1 censored, 0 event).
+  formats:
+    type: map<string,number|string>
+    input: table
+    choices: stats
+    free: true
+    default: !series formats
+    step: analysis
+    tier: other
+    description: The decimals (or the format) of the legend N.
+  x_label:
+    type: string
+    input: text
+    default: "Time ({time_unit})"
+    step: content
+    tier: usual
+    description: The label of the x axis.
+  y_label:
+    type: string
+    input: text
+    default: Survival probability
+    step: content
+    tier: usual
+    description: The label of the y axis.
+  legend:
+    type: enum[bottom|right|top|none]
+    input: pick
+    choices: fixed
+    default: bottom
+    step: content
+    tier: other
+    description: Where the legend goes; none for no legend.
+extends: !series extends
+style: !series style
+data:
+  - id: adsl_sub
+    from: ADSL
+    population: !series population_efficacy
+  - id: adtte_sub
+    from: ADTTE
+    subjects_in: adsl_sub
+    add: ["{by}"]
+    where: !r PARAMCD == "OS"
+    derive: !r "{time} = {time} / {days_per_month}"
+analysis:
+  - id: BIGN
+    label: Subjects per group
+    method: categorical
+    data: adsl_sub
+    variables: ["{by}"]
+    formats: "{formats}"
+  - id: km_fit
+    type: model
+    method: survfit
+    data: adtte_sub
+    args: !r ggsurvfit::Surv_CNSR({time}, {censor}) ~ {by}
+page:
+  titles: ~
+  footnotes: ~
