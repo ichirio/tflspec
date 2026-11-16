@@ -113,7 +113,7 @@ test_that("AE: the template SPEC and the code SPEC give the same ARD", {
   r <- twin_build("T-14-3-1", d)
   expect_identical(unique(r$ard$C$analysis_id), c("BIGN", "AE_ANY", "AE_L1", "AE_L2"))
   expect_identical(twin_ard(r$ard$T), twin_ard(r$ard$C))
-  # (the template has no content: block; T's content is the report's own,
-  # the code SPEC's cards, so its RTF is C's too)
+  # (T has no content cards of its own: the template's content, its
+  # defaults the code SPEC's cards, and max_rows 22, gives C's RTF)
   expect_identical(twin_rtf(r$rtf$T, "T-14-3-1T"), twin_rtf(r$rtf$C, "T-14-3-1C"))
 })
