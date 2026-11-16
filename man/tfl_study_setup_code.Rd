@@ -13,7 +13,8 @@ table / report spec of the sheets (its \code{study} sheet's \code{rounding}, its
 }
 \value{
 A character vector, one element per line; \code{character()} when the
-study says no rounding and has no dataset.
+study says no rounding and has no dataset.  With a dataset, the first
+line says the study's \code{adam_levels}.
 }
 \description{
 A study's setup file (tflplanner's \code{programs/study_setup.R}) is sourced by
@@ -30,13 +31,14 @@ dataset of its data catalog (\code{spec/data.yml}, or the \code{datasets} sheet)
 ADSL first, the others in the catalog's order, as the file has it
 (\code{adsl}: \code{readRDS(file.path(path_adam, "adsl.rds"))}, with
 \verb{|> dplyr::mutate(...)} for a dataset that has a \code{derive}); and
-\code{study$adam}, the same datasets with the study's code lists' levels
-(\code{set_levels()}: each listed column a factor of its list's codes in
-its order; the values as read).  The study's code lists are those of
-\code{spec/defaults.yml} (\verb{codelists:}), written first as \code{cl_<variable>}
+\code{study$adam}, the same datasets with blanks as \code{NA} (\code{blank_as_na()}:
+a \code{""} of a character column or of a factor) and then the study's code
+lists' levels (\code{set_levels()}: each listed column a factor of its list's
+codes in its order; the values as read).  The study's code lists are those of
+\code{spec/defaults.yml} (\verb{codelists:}), written first as \verb{cl_<variable>}
 objects, as the ARD program writes a report's.  A study with no code
-list has no \verb{cl_*} objects, and \code{study$adam} is \code{study$adam_org} (the
-same environment; a message says so when the file is sourced).  A spec
+list has no \verb{cl_*} objects, and \code{study$adam} is \code{study$adam_org} with
+blanks as \code{NA} (a message says so when the file is sourced).  A spec
 of the sheets has no study-wide code list (a row of its \code{codelists}
 sheet is a report's), so it is written this way.  The reader follows
 the file's extension and the folder variables of option
@@ -45,6 +47,18 @@ objects the ARD, listing and figure programs use now (\code{adsl}) the
 datasets of \code{study$adam_org}; they go when those programs read
 \code{study$adam}.
 }
+
+study.yml's \code{settings: adam_levels} says whether \code{study$adam} gets the
+study's code lists' levels: \code{codelists} (the default, also when the key
+is not there) as above, or \code{none}: no \verb{cl_*} objects and \code{study$adam} is
+\code{study$adam_org} with blanks as \code{NA} only.  \code{study$adam} always has its
+blanks as \code{NA}, and \code{study$adam_org} is always the dataset as the file
+has it.  The setup's first line says the setting (\verb{# ADaM levels: codelists}), and it is part of each ARD's fingerprint
+(\code{\link[=tfl_ard_spec_hash]{tfl_ard_spec_hash()}}), so changing it marks the ARD outdated.  Under
+\code{none} a report's own levels and labels written as values still work; a
+report that names a study code list (its object, \code{cl_sex}) stops, with
+"adam_levels: none -- the study code list SEX (cl_sex) is not read".  A
+spec of the sheets says it on its \code{study} sheet (key \code{adam_levels}).
 
 With option \code{tflspec.study_setup} set to \code{TRUE} (\link{tflspec_code_options})
 the ARD, listing and figure programs do not write them again: they start
