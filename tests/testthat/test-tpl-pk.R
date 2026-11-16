@@ -38,7 +38,7 @@ test_that("pk_conc expands to a listing with its summary laid under it", {
   ad <- x$ard$analysis_data
   expect_identical(vapply(ad, `[[`, "", "id"), c("adsl_sub", "adpc_sub", "adpc_summ"))
   expect_match(unclass(ad[[2L]]$derive), "ATPT = reorder_by(ATPT, ATPTN)", fixed = TRUE)
-  expect_match(unclass(ad[[2L]]$derive), "AVAL = ifelse(BLQFL == \"Y\", -Inf, AVAL)", fixed = TRUE)
+  expect_match(unclass(ad[[2L]]$derive), "AVAL = ifelse((BLQFL == \"Y\") %in% TRUE, -Inf, AVAL)", fixed = TRUE)
   expect_match(unclass(ad[[3L]]$where), "!is.na(AVAL)", fixed = TRUE)
   expect_identical(x$ard$analyses[[1L]]$by, c("PARAM", "TRT01A", "ATPT"))
   # the page name: the groups' values, a line each
