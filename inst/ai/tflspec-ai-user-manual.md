@@ -1009,6 +1009,8 @@ back): rename the value or choose another separator.
 `tfl_fig_data_name`
 `tfl_r`
 
+**Figure content functions (a template's `figure:`):** `tfl_figure_fn` `km_curves` `forest_hr`
+
 **Figure style:** `tfl_fig_style` `tfl_fig_style_template`
 `tfl_read_fig_style` `tfl_fig_setup_code` `tfl_fig_palettes` `tfl_time_unit_days`
 `tfl_check_fig`
