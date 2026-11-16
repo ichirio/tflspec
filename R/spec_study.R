@@ -217,6 +217,8 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   # a series template (`<series>/<template>`): its code SPEC, resolved as
   # any report from there
   output <- .series_as_code(output, study)
+  # (adam_levels: none -- a study code list named stops)
+  .adam_levels_name_check(output, study)
   # (a template with an `extends` in its set: the style its `style`
   # parameter names, resolved first)
   lb <- .tpl_layers_below(output, study)

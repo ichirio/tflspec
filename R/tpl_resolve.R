@@ -18,8 +18,8 @@
 #' A report's template with its values filled in
 #'
 #' Reads the report's template (`template: name: <series>/<template>`), puts
-#' the report's arguments (`template: analysis:`, `content:`, ... or
-#' directly under `template:`) over the template's defaults, resolves the
+#' the report's arguments (`template: args:`, the step sections
+#' `template: analysis:`, `content:`, ... or directly under `template:`) over the template's defaults, resolves the
 #' series' and the study's values (`!series`, `!study`, `!fixed`), fills in
 #' the `"{name}"` spots of the template's `data:` rows, analysis items,
 #' content and page, and merges the report's own `data:` rows into the
@@ -172,13 +172,13 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
 }
 
 # The report's arguments: `template:` without `name`, its step sections
-# (data, analysis, content, page) read as one map
+# (data, analysis, content, page) and a flat `args:` read as one map
 .tr_given <- function(t, names_ok, template, who) {
   t$name <- NULL
   out <- list()
   for (k in names(t)) {
     v <- t[[k]]
-    if (k %in% c("data", "analysis", "content", "page") && !k %in% names_ok &&
+    if (k %in% c("args", "data", "analysis", "content", "page") && !k %in% names_ok &&
         is.list(v) && !is.null(names(v))) {
       for (p in names(v)) out[p] <- list(v[[p]])
     } else {

@@ -1221,7 +1221,10 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
 #' `"missing"`).  An ARD built from a definition whose fingerprint differs
 #' from the one now is outdated.  A column blank in every analysis row of
 #' the output does not count, so a column added to the definition later
-#' leaves the fingerprints as they were.
+#' leaves the fingerprints as they were.  The study key `adam_levels`
+#' (study.yml's `settings: adam_levels`, which [tfl_sheets_from_spec()] puts
+#' on the `study` sheet when it is `none`) counts: `none` gives another
+#' fingerprint than `codelists`, the default, which leaves it as it was.
 #'
 #' @param spec An [tfl_ard_spec()].
 #' @param output_id The output.
@@ -1251,11 +1254,17 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
                              c(a$population_id, ad$population_id), , drop = FALSE]
   dss <- spec$datasets[spec$datasets$dataset %in%
                          c(a$dataset, pops$dataset, ad$from), , drop = FALSE]
+  # (adam_levels: its own line under none; codelists, the default, none --
+  # a study that does not say it keeps its fingerprints)
+  st <- spec$study
+  if (is.data.frame(st) && "key" %in% names(st)) st <- st[!st$key %in% "adam_levels", , drop = FALSE]
+  al <- .adam_levels_check(.study_value(spec, "adam_levels", NA), "study key adam_levels")
   txt <- paste(c(utils::capture.output(print(as.list(a[order(a$analysis_id), ]))),
                  if (nrow(ad)) utils::capture.output(print(as.list(ad))),
                  utils::capture.output(print(as.list(pops))),
                  utils::capture.output(print(as.list(dss[setdiff(names(dss), "level")]))),
-                 utils::capture.output(print(as.list(spec$study))),
+                 utils::capture.output(print(as.list(st))),
+                 if (identical(al, "none")) "adam_levels: none",
                  if (length(src)) paste(src, src_md5),
                  # the code lists, only when there are some: a study without
                  # keeps the fingerprints it had

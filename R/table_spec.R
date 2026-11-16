@@ -244,7 +244,10 @@
                              output_path = NULL, program_dir = NULL,
                              # the name of the default page configuration
                              # (the default page rows' set; YAML settings.style)
-                             style = NULL)
+                             style = NULL,
+                             # study$adam: the study's code lists' levels or
+                             # not (YAML settings.adam_levels)
+                             adam_levels = c("codelists", "none"))
 
 # What a report's own row replaces a default row by.  `tables` has one row
 # per report, so its key is the report itself.
