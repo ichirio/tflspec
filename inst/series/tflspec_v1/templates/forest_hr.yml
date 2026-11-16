@@ -20,13 +20,13 @@ params:
     tier: usual
     description: The reference arm; empty for the first in the code list.
   comparison:
-    type: level
+    type: string
     input: pick
     choices: levels(by)
     default: ~
-    step: content
+    step: analysis
     tier: usual
-    description: The arm shown against the reference; empty for the first arm with an interval.
+    description: The arm compared against the reference
   conditions:
     type: rows<subgroup,subgroup_lvl,where>
     input: table
@@ -35,14 +35,15 @@ params:
     step: analysis
     tier: usual
     description: The subgroup rows, one a subgroup level, after the ALL row.
-  overall_row:
-    type: logical
+  subgroup_vars:
+    type: list<column>
     input: pick
-    choices: fixed
-    default: !series overall_row
-    step: analysis
-    tier: other
-    description: The ALL row, overall, before the subgroup rows.
+    choices: vars(adsl_sub)
+    ordered: true
+    default: []
+    step: data
+    tier: usual
+    description: The subject-level variables the subgroup conditions read, joined from adsl_sub.
   time:
     type: column
     input: pick
@@ -77,7 +78,7 @@ data:
   - id: adtte_sub
     from: ADTTE
     subjects_in: adsl_sub
-    add: ["{by}"]
+    add: ["{by}", "{subgroup_vars}"]
     where: !r PARAMCD == "OS"
     derive: !r '{by} = stats::relevel(factor({by}), ref = "{ref}")'
 analysis:

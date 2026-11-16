@@ -84,7 +84,7 @@ data:
     subjects_in: adsl_sub
     add: ["{by}"]
     where: !r PARAMCD == "OS"
-    derive: !r "{time} = {time} / {days_per_month}"
+    derive: !r '{time} = AVAL / c(days = 1, months = {days_per_month})[["{time_unit}"]]'
 analysis:
   - id: BIGN
     label: Subjects per group
