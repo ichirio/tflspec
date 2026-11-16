@@ -98,7 +98,7 @@ test_that("the percentages' denominator is BIGN and the items say how analysis i
   expect_identical(cmp$description, "The arm compared against the reference")
   expect_match(ts[["km_simple.yml"]]$data[[2]]$derive,
                "[[\"{time_unit}\"]]", fixed = TRUE)
-  expect_false(grepl("days_per_month", ts[["km_simple.yml"]]$data[[2]]$derive))
+  expect_match(ts[["km_simple.yml"]]$data[[2]]$derive, "months = {days_per_month}", fixed = TRUE)
   expect_equal(ts[["ae_soc_pt.yml"]]$params$min_pct$default, 0)
   expect_identical(ts[["orr_subgroup.yml"]]$data[[1]]$population,
                    "population_efficacy")
