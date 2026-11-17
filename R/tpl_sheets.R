@@ -200,8 +200,8 @@ tfl_read_template_sheets <- function(path) {
   if (length(gone)) {
     warning(sprintf("%s: template arguments the templates sheet cannot hold are not kept: %s",
                     id, paste(gone, collapse = ", ")), call. = FALSE)
-    note(id, "template", NA, NA, paste0("template arguments the templates sheet cannot hold (no report ",
-                                        "file to take them from): ", paste(gone, collapse = ", ")))
+    note(id, "template", NA, NA, paste0("template arguments the templates sheet cannot hold (written ",
+                                        "from the sheets alone, no `base`): ", paste(gone, collapse = ", ")))
   }
   tpl
 }

@@ -103,6 +103,18 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
   rows <- list()
   add <- function(sheet, r) { if (length(r)) rows[[sheet]] <<- c(rows[[sheet]], list(r)) }
   cell <- function(v) .sheet_cell(v)
+  # a row's key no cell holds (a map, `formats: {mean: 1}`; a call): noted,
+  # the YAML keeps it (tfl_yaml_from_sheets() says it when it writes from
+  # the sheets alone)
+  map_keys <- function(a, id, sheet) {
+    for (k in setdiff(names(a), "id")) {
+      v <- a[[k]]
+      if ((is.list(v) || inherits(v, "tfl_call")) && length(v) && !inherits(v, c("tfl_r", "tfl_unset")) &&
+          is.na(cell(v))) {
+        note(id, paste0(sheet, ".", a$id %||% "", ".", k), .nc_map_reason)
+      }
+    }
+  }
 
   # -- the table sheets: the bridge, scope by scope --------------------------
   table_rows <- function(items, id) {
@@ -400,7 +412,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       # (its condition rows: the conditions sheet's, analysis_id blank)
       cond_rows <- c(cond_rows, enc$cond)
       # (its maps are not on the sheets: named, for tfl_yaml_from_sheets() to
-      # take them from the report's file it writes over)
+      # say when it writes from the sheets alone; with `base` the merge keeps them)
       for (m in enc$maps) tmap_rows[[length(tmap_rows) + 1L]] <- list(output_id = id, param = m)
       if (length(enc$lost)) {
         warning(sprintf("%s: template arguments the templates sheet cannot hold are not kept: %s",
@@ -429,6 +441,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     # the report's ARD analyses and analysis data, whatever its kind
     for (a in o$ard$analysis_data %||% list()) {
       a <- .entry_pop_inject(a, .out_population(o), .pop_from(s$data$populations, .out_population(o)))
+      map_keys(a, id, "analysis_data")
       m <- lapply(a, cell); m$data_id <- m$id; m$id <- NULL
       if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
       adata[[length(adata) + 1L]] <- c(list(output_id = id), m)
@@ -448,6 +461,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       a$conditions <- NULL
       a$ards <- NULL
       if (is.list(a$levels) && !is.null(names(a$levels))) a$levels <- .levels_cell(a$levels)
+      map_keys(a, id, "analyses")
       m <- lapply(a, cell); m$analysis_id <- m$id; m$id <- NULL
       if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
       if (!is.null(a$ref)) note(id, paste0("analyses.", a$id), "a reference to another report's analysis (ref) has no sheet")
@@ -877,3 +891,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
   }
   out
 }
+
+# the reason noted for a row's key no cell holds (tfl_sheets_from_spec()),
+# which tfl_yaml_from_sheets() says when it writes from the sheets alone
+.nc_map_reason <- "a map: no cell holds it; the YAML keeps it"

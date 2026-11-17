@@ -18,7 +18,8 @@ tfl_yaml_from_sheets(
   to,
   content_fn = NULL,
   overwrite = FALSE,
-  figures = c("design", "items")
+  figures = c("design", "items"),
+  base = NULL
 )
 }
 \arguments{
@@ -51,11 +52,24 @@ setup code), \code{ard} (the ARD sheets), \code{listing} (\code{listings},
 \code{listing_cols}), \code{figures} (a figure's design list, by id), \code{study}
 (study.yml's fields), \code{templates}, \code{template_rows} and \code{template_maps}
 (the template reports: \code{\link[=tfl_sheets_from_yaml]{tfl_sheets_from_yaml()}}; a template report's
-map arguments, which the sheets do not hold, are taken from its file
-already in \code{to}, else named in a warning and a note), \code{not_converted} (\code{\link[=tfl_sheets_from_yaml]{tfl_sheets_from_yaml()}}'s notes
+map arguments, which the sheets do not hold, are kept by \code{base}'s
+merge, else named in a warning and a note), \code{not_converted} (\code{\link[=tfl_sheets_from_yaml]{tfl_sheets_from_yaml()}}'s notes
 on what the sheets could not hold: listed in \verb{_not_converted.yml} too,
 with one message saying how many).  What the app holds, or what the
 workbooks read as.}
+
+\item{base}{The study's YAML spec as it was when the sheets were
+written out (a study folder, as \code{to}; kept by whoever wrote them, the
+app or a script).  Given, each file in \code{to} takes only what the sheets
+changed against it: a cell edited or deleted is applied (a deleted
+cell takes the key away), what the sheets cannot hold (a map's keys,
+items with no rows, a page key with no column) stays as the file in
+\code{to} has it, and a file the sheets do not change is left as it is.  A
+value the sheets changed that the file in \code{to} has changed too since
+\code{base}, to something else, takes the sheets' value, said in a warning
+naming the file and key (\code{\link[=tfl_spec_merge3]{tfl_spec_merge3()}}): edit one side at a time.
+\code{NULL} (the default): the files are written from the sheets alone, and
+what they cannot hold is lost, said in warnings and erb{_not_converted.yml}.}
 }
 \value{
 Invisibly, a list: \code{to}, \code{files} (paths written), \code{not_converted}

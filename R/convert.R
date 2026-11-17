@@ -34,12 +34,7 @@
 #'   [tfl_item()] for a table (`output_id = NA` for the defaults).  `NULL`:
 #'   the package's own bridge from the sheets to the layers
 #'   (`.plan_content_from_sheets()`) when it is there, else none.
-#' @param overwrite Write over files already in `to`?  When `to` has a
-#'   YAML spec, a report's file takes only what the sheets change: what the
-#'   sheets make of the spec as it is is the baseline, a cell changed or
-#'   deleted against it is applied, and what the sheets cannot hold stays as
-#'   the file has it; a report the sheets do not change keeps its file as it
-#'   is.  (The study's files are written from the sheets.)
+#' @param overwrite Write over files already in `to`?
 #' @param figures How a figure is written: `"design"` (default) its
 #'   designer's pieces as the content's items, as the figure designer reads
 #'   them; `"items"` its content of function calls, plot by plot
@@ -75,14 +70,26 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
 #'   `listing_cols`), `figures` (a figure's design list, by id), `study`
 #'   (study.yml's fields), `templates`, `template_rows` and `template_maps`
 #'   (the template reports: [tfl_sheets_from_yaml()]; a template report's
-#'   map arguments, which the sheets do not hold, are taken from its file
-#'   already in `to`, else named in a warning and a note), `not_converted` ([tfl_sheets_from_yaml()]'s notes
+#'   map arguments, which the sheets do not hold, are kept by `base`'s
+#'   merge, else named in a warning and a note), `not_converted` ([tfl_sheets_from_yaml()]'s notes
 #'   on what the sheets could not hold: listed in `_not_converted.yml` too,
 #'   with one message saying how many).  What the app holds, or what the
 #'   workbooks read as.
+#' @param base The study's YAML spec as it was when the sheets were
+#'   written out (a study folder, as `to`; kept by whoever wrote them, the
+#'   app or a script).  Given, each file in `to` takes only what the sheets
+#'   changed against it: a cell edited or deleted is applied (a deleted
+#'   cell takes the key away), what the sheets cannot hold (a map's keys,
+#'   items with no rows, a page key with no column) stays as the file in
+#'   `to` has it, and a file the sheets do not change is left as it is.  A
+#'   value the sheets changed that the file in `to` has changed too since
+#'   `base`, to something else, takes the sheets' value, said in a warning
+#'   naming the file and key ([tfl_spec_merge3()]): edit one side at a time.
+#'   `NULL` (the default): the files are written from the sheets alone, and
+#'   what they cannot hold is lost, said in warnings and `_not_converted.yml`.
 #' @export
 tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALSE,
-                                 figures = c("design", "items")) {
+                                 figures = c("design", "items"), base = NULL) {
   figures <- match.arg(figures)
   # a cell's line breaks as the YAML's (Excel keeps a cell's as CRLF): every
   # sheet's text, before the bridge reads it (a header's "{col}\r\n(N={n})")
@@ -136,11 +143,11 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       }
     }
   }
-  # a folder with a YAML spec: a report file takes only what the sheets
-  # change, against the baseline of what they make of the spec as it is
-  # (R/sheets_merge.R); before anything is written over
-  base <- .conv_base(to, content_fn, figures)
-  if (!is.null(base)) on.exit(unlink(base, recursive = TRUE), add = TRUE)
+  # `base` (the spec the sheets were written from): each file takes only
+  # what the sheets change onto the spec in `to` (R/sheets_merge.R); made
+  # before anything is written over
+  mg <- if (!is.null(base)) .conv_merge_state(base, to, content_fn, figures)
+  if (!is.null(mg)) on.exit(unlink(mg$was, recursive = TRUE), add = TRUE)
   nc <- .nc_new()
   note <- function(output, sheet, row, column, reason, value = NA) {
     nc$rows[[length(nc$rows) + 1L]] <<- data.frame(
@@ -154,10 +161,15 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   files <- character()
   put <- function(rel, x) {
     f <- file.path(to, rel)
-    dir.create(dirname(f), recursive = TRUE, showWarnings = FALSE)
-    writeLines(yaml::as.yaml(x, indent.mapping.sequence = TRUE, handlers = .yaml_out_handlers()),
-               f, useBytes = TRUE)
     files <<- c(files, f)
+    # (with `base`: the sheets' changes onto the file; none, the file as it is)
+    if (!is.null(mg) && !identical(rel, "spec/_not_converted.yml")) {
+      orig <- if (file.exists(file.path(base, rel))) tryCatch(.conv_read_yaml(file.path(base, rel)), error = function(e) NULL)
+      x <- .conv_merge_file(x, rel, mg, .conv_write_yaml, .conv_read_yaml, orig)
+      if (is.null(x)) return(invisible())
+    }
+    dir.create(dirname(f), recursive = TRUE, showWarnings = FALSE)
+    .conv_write_yaml(x, f)
   }
 
   # study.yml: the meta, the ARD's study keys, the setup code, and the
@@ -380,8 +392,9 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     }
     f <- file.path(to, "spec", "outputs", paste0(id, ".yml"))
     files <- c(files, f)
-    if (!is.null(base)) {
-      out <- .conv_merge_output(out, f, file.path(base, "spec", "outputs", paste0(id, ".yml")))
+    if (!is.null(mg)) {
+      out <- .conv_merge_file(out, file.path("spec", "outputs", paste0(id, ".yml")), mg,
+                              tfl_write_output, .conv_read_one(id), mg$base_outputs[[id]])
       # (the sheets change nothing of it: the file as it is)
       if (is.null(out)) next
     }
@@ -401,10 +414,25 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   sh_nc <- sheets$not_converted
   if (is.data.frame(sh_nc) && nrow(sh_nc) && all(c("output", "part", "reason") %in% names(sh_nc))) {
     for (i in seq_len(nrow(sh_nc))) note(sh_nc$output[i], sh_nc$part[i], NA, NA, sh_nc$reason[i])
+    # (a row's key no cell holds -- a map -- is lost when the files are
+    # written from the sheets alone: said; with `base` the merge keeps it)
+    lost <- sh_nc[sh_nc$reason %in% .nc_map_reason, , drop = FALSE]
+    if (is.null(mg) && nrow(lost)) {
+      for (o in unique(lost$output)) {
+        warning(sprintf("%s: keys the sheets cannot hold are not kept: %s", o,
+                        paste(lost$part[lost$output %in% o], collapse = ", ")), call. = FALSE)
+      }
+    }
     message(sprintf(paste0("tfl_yaml_from_sheets(): %d part%s of the spec the sheets could not hold %s ",
                            "listed in spec/_not_converted.yml."),
                     nrow(sh_nc), if (nrow(sh_nc) == 1L) "" else "s",
                     if (nrow(sh_nc) == 1L) "is" else "are"))
+  }
+  if (!is.null(mg) && length(mg$conflicts)) {
+    warning(paste0("tfl_yaml_from_sheets(): changed both in the YAML (since `base`) and on the sheets; ",
+                   "the sheets' value is taken:
+", paste0("  ", mg$conflicts, collapse = "
+")), call. = FALSE)
   }
   nc_df <- .nc_frame(nc)
   put("spec/_not_converted.yml", list(not_converted = lapply(seq_len(nrow(nc_df)), function(i) as.list(nc_df[i, ]))))
