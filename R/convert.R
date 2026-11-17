@@ -361,7 +361,8 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     tr <- sheets$templates
     if (is.data.frame(tr) && id %in% tr$output_id) {
       # (the items the other sheets would make of an empty report are not its own)
-      out$template <- .tpl_sheets_decode(tr, sheets$template_rows)[[id]]$template
+      # (its condition rows: the conditions sheet's with a blank analysis_id)
+      out$template <- .tpl_sheets_decode(tr, sheets$template_rows, ard$conditions)[[id]]$template
       out$content <- list()
       out$data <- NULL
     }

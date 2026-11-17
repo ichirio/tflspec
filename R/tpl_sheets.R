@@ -14,6 +14,12 @@
 #'     `output_id`, `param` (`continuous`, `categorical`, `hierarchy` ...),
 #'     `value` (`AGE`) and `label` (its heading, for `labels`).}
 #' }
+#' A template's condition rows (its `conditions`: a row a condition) are
+#' rows of a third sheet, `conditions` (the ARD definition's: `output_id`,
+#' `analysis_id`, `row`, then a column a key), with `analysis_id` blank --
+#' the report's template's rows, not an analysis's.  An argument that is a
+#' map (`formats`, `analysis_ids`) has no place on the sheets: it stays in
+#' the report's YAML file.
 #'
 #' @param path The workbook.
 #' @return A list of reports, by id: each `id`, `kind`, `label`,
@@ -35,11 +41,14 @@ tfl_read_template_sheets <- function(path) {
   }
   t <- rd("templates")
   rows <- if ("template_rows" %in% sh) rd("template_rows") else NULL
-  .tpl_sheets_decode(t, rows)
+  conds <- if ("conditions" %in% sh) rd("conditions") else NULL
+  .tpl_sheets_decode(t, rows, conds)
 }
 
-# The two sheets (as data frames of text) as the reports' template SPECs
-.tpl_sheets_decode <- function(t, rows) {
+# The sheets (as data frames of text) as the reports' template SPECs: the
+# templates sheet `t`, the template_rows `rows`, and the conditions sheet
+# `conds` (a template's condition rows: its analysis_id blank)
+.tpl_sheets_decode <- function(t, rows, conds = NULL) {
   fn <- "tfl_read_template_sheets()"
   val <- function(x) if (is.null(x) || is.na(x) || !nzchar(trimws(x))) NULL else trimws(x)
   out <- list()
@@ -80,6 +89,8 @@ tfl_read_template_sheets <- function(path) {
         args$labels <- c(args$labels, stats::setNames(lab, k$value[!is.na(k$label) & nzchar(k$label)]))
       }
     }
+    cd <- .tpl_cond_rows_in(conds, id)
+    if (length(cd)) args$conditions <- cd
     out[[id]] <- list(id = id, kind = val(t$kind[i]) %||% "table", label = val(t$label[i]),
                       common = if (!is.null(pop)) list(population = pop), extends = NULL,
                       template = list(name = val(t$template[i]), args = args))
@@ -92,16 +103,22 @@ tfl_read_template_sheets <- function(path) {
 # value are the sheet's own columns; other arguments of one value are in the
 # `args` cell (`name = value; name = value`); a list of values is a row a
 # value on `template_rows`, the heading of a value (`labels`) in its row's
-# `label`.  Returns the `templates` row, the `template_rows` rows, and the
-# names of the arguments the sheets do not give back as they were (a map, a
-# list of maps, a value with `;`), found by reading the rows back.
+# `label`.  The template's condition rows (`conditions`, a list of maps or a
+# data frame: a row a condition) are rows of the ARD's conditions sheet,
+# their analysis_id blank.  An argument that is a map (`formats`,
+# `analysis_ids`) is not on the sheets: it stays in the report's YAML file,
+# and is not named.  Returns the `templates` row, the `template_rows` rows,
+# the `conditions` rows, and the names of the arguments the sheets do not
+# give back as they were (a list of maps other than the conditions, a value
+# with `;`), found by reading the rows back.
 .tpl_sheets_encode <- function(id, kind, label, spec, population = NULL) {
   args <- spec$args
   one <- function(v) is.atomic(v) && length(v) == 1L && !is.na(v) && nzchar(as.character(v))
   cols <- list()
   cells <- character()
   prm <- list()
-  for (nm in setdiff(names(args), "labels")) {
+  cond <- if (.tpl_is_cond_rows(args$conditions)) .item_rows_out(args$conditions, id, NA_character_)
+  for (nm in setdiff(names(args), c("labels", if (length(cond)) "conditions"))) {
     v <- args[[nm]]
     if (is.list(v) && is.null(names(v)) && length(v) &&
         all(vapply(v, function(e) is.atomic(e) && length(e) == 1L && !is.na(e), NA))) v <- unlist(v)
@@ -154,13 +171,60 @@ tfl_read_template_sheets <- function(path) {
                                     value = vapply(rws, `[[`, "", "value"),
                                     label = vapply(rws, function(r) f(r$label), ""),
                                     stringsAsFactors = FALSE)
-  back <- .tpl_sheets_decode(t1, r1)[[id]]$template$args
+  c1 <- if (length(cond)) .rows_df(cond, .ard_spec_sheets$conditions)
+  back <- .tpl_sheets_decode(t1, r1, c1)[[id]]$template$args
   norm <- function(v) if (is.null(v)) NULL else {
     u <- unlist(v)
     list(names = names(u), value = as.character(u))
   }
-  lost <- names(args)[!vapply(names(args), function(nm) identical(norm(args[[nm]]), norm(back[[nm]])), NA)]
-  list(row = row, rows = rws, lost = lost)
+  same <- function(nm) {
+    if (identical(nm, "conditions")) return(identical(.tpl_cond_norm(args[[nm]]), .tpl_cond_norm(back[[nm]])))
+    identical(norm(args[[nm]]), norm(back[[nm]]))
+  }
+  # (a map stays in the report's YAML file: not lost)
+  is_map <- function(v) !is.null(names(v)) && !inherits(v, "tfl_r") && !is.data.frame(v)
+  kept <- names(args)[vapply(args, is_map, NA)]
+  lost <- setdiff(names(args)[!vapply(names(args), same, NA)], setdiff(kept, "labels"))
+  list(row = row, rows = rws, cond = cond, lost = lost)
+}
+
+# A template's `conditions` written as rows: a data frame, or a list of
+# maps (a row a condition)
+.tpl_is_cond_rows <- function(v) {
+  is.data.frame(v) ||
+    (is.list(v) && is.null(names(v)) && length(v) > 0L &&
+       all(vapply(v, function(e) is.list(e) && !is.null(names(e)), NA)))
+}
+
+# A template's condition rows from the conditions sheet `cs`: the report's
+# rows with a blank analysis_id, in `row` order, each a map of its cells
+# (a blank cell no key; row_analysis_id the row's analysis_id, `where` an R
+# condition, as an item's rows read); NULL for none
+.tpl_cond_rows_in <- function(cs, output_id) {
+  if (!is.data.frame(cs) || !nrow(cs)) return(NULL)
+  blank <- function(v) is.na(v) | !nzchar(trimws(as.character(v)))
+  d <- cs[cs$output_id %in% output_id & blank(cs$analysis_id), , drop = FALSE]
+  if (!nrow(d)) return(NULL)
+  d <- d[order(suppressWarnings(as.integer(d$row))), , drop = FALSE]
+  keys <- setdiff(names(d), c(.ard_spec_sheets$conditions, "note"))
+  d <- d[, keys, drop = FALSE]
+  names(d)[names(d) == "row_analysis_id"] <- "analysis_id"
+  .cond_rows_yaml(d)
+}
+
+# Condition rows in one form to compare: a row its cells as text, by key
+# (the order of a row's keys says nothing); none for no rows
+.tpl_cond_norm <- function(v) {
+  if (is.data.frame(v)) {
+    v <- lapply(seq_len(nrow(v)), function(k) lapply(v, function(x) x[[k]]))
+  }
+  if (!length(v)) return(NULL)
+  lapply(v, function(r) {
+    u <- unlist(r)
+    u <- u[!is.na(u)]
+    u <- u[order(names(u))]
+    list(names = names(u), value = as.character(u))
+  })
 }
 
 #' Write a report's template SPEC as its YAML file

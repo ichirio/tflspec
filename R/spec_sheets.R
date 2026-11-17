@@ -28,8 +28,11 @@
 #' @param dir The study folder (or its `spec/`).
 #' @param templates What a report written as a template SPEC becomes.
 #'   `"sheet"` (the default): one row of the `templates` sheet (and its
-#'   `template_rows`), by the template's name and arguments, as
-#'   [tfl_read_template_sheets()] reads them; the report's page parts,
+#'   `template_rows`, and its `conditions` as rows of the ARD's
+#'   `conditions` sheet with `analysis_id` blank), by the template's name
+#'   and arguments, as [tfl_read_template_sheets()] reads them; an argument
+#'   that is a map (`formats`) is not on the sheets and stays in the
+#'   report's YAML file; the report's page parts,
 #'   codelists and report row are the other sheets' as for any report. Nothing is expanded; a
 #'   report is written out as its items only by [tfl_template_to_spec()],
 #'   called on purpose.  `"expand"`: the report is expanded first
@@ -392,6 +395,8 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       enc <- .tpl_sheets_encode(id, o$kind, .na_scalar(o$label), tpl, .out_population(o))
       trows[[length(trows) + 1L]] <- enc$row
       tparam_rows <- c(tparam_rows, enc$rows)
+      # (its condition rows: the conditions sheet's, analysis_id blank)
+      cond_rows <- c(cond_rows, enc$cond)
       if (length(enc$lost)) {
         warning(sprintf("%s: template arguments the templates sheet cannot hold are not kept: %s",
                         id, paste(enc$lost, collapse = ", ")), call. = FALSE)
