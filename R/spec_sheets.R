@@ -46,8 +46,9 @@
 #'   `ard` (the ARD sheets), `listing` (`listings`, `listing_cols`),
 #'   `figures` (a figure's design list, by id), `study` (study.yml's
 #'   fields), `templates` and `template_rows` (the template reports; with
-#'   `templates = "expand"` both are empty), `not_converted` (what the
-#'   sheets cannot hold).
+#'   `templates = "expand"` both are empty), `template_maps` (`output_id`,
+#'   `param`: a template report's arguments that are maps, which the sheets
+#'   do not hold), `not_converted` (what the sheets cannot hold).
 #' @examples
 #' d <- system.file("extdata", "spec-yaml", package = "tflspec")
 #' sh <- tfl_sheets_from_yaml(d)
@@ -94,6 +95,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
   }
   trows <- list()
   tparam_rows <- list()
+  tmap_rows <- list()
   bridge <- .bridge_fn(".plan_sheets_from_content")
   nc <- list()
   note <- function(output, part, reason) nc[[length(nc) + 1L]] <<- data.frame(
@@ -397,6 +399,9 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       tparam_rows <- c(tparam_rows, enc$rows)
       # (its condition rows: the conditions sheet's, analysis_id blank)
       cond_rows <- c(cond_rows, enc$cond)
+      # (its maps are not on the sheets: named, for tfl_yaml_from_sheets() to
+      # take them from the report's file it writes over)
+      for (m in enc$maps) tmap_rows[[length(tmap_rows) + 1L]] <- list(output_id = id, param = m)
       if (length(enc$lost)) {
         warning(sprintf("%s: template arguments the templates sheet cannot hold are not kept: %s",
                         id, paste(enc$lost, collapse = ", ")), call. = FALSE)
@@ -655,6 +660,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
        templates = .rows_df(trows, c("output_id", "kind", "label", "population", "template", "by",
                                      "where", "args")),
        template_rows = .rows_df(tparam_rows, c("output_id", "param", "value", "label")),
+       template_maps = .rows_df(tmap_rows, c("output_id", "param")),
        not_converted = if (length(nc)) do.call(rbind, nc) else
          data.frame(output = character(), part = character(), reason = character(), stringsAsFactors = FALSE))
 }
