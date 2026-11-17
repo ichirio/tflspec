@@ -1,8 +1,8 @@
 # A template report's nested arguments on the sheets: its `conditions` (a
 # list of maps) are rows of the ARD's conditions sheet with a blank
 # analysis_id, read back as the same rows; a map (`formats`, `analysis_ids`)
-# is not on the sheets -- it stays in the report's YAML file, and nothing is
-# said of it
+# is not on the sheets -- it stays in the report's YAML file: back to YAML,
+# taken from the report's file written over, else said
 
 tn_study <- function() tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
 
@@ -37,11 +37,14 @@ tn_orr <- function() {
                  list(subgroup = "AGEGR1", subgroup_lvl = "<65", where = tfl_r("AGEGR1 == \"<65\""))))))
 }
 
-# the sheets back to YAML, and the reports read from it
-tn_round_trip <- function(sh) {
-  to <- tempfile("tn-yaml")
-  dir.create(to)
-  on.exit(unlink(to, recursive = TRUE), add = TRUE)
+# the sheets back to YAML (into `to`, a new folder when NULL), and the
+# reports read from it
+tn_round_trip <- function(sh, to = NULL) {
+  if (is.null(to)) {
+    to <- tempfile("tn-yaml")
+    dir.create(to)
+    on.exit(unlink(to, recursive = TRUE), add = TRUE)
+  }
   suppressMessages(tfl_yaml_from_sheets(sh, to, overwrite = TRUE))
   tfl_read_outputs(to)
 }
@@ -73,7 +76,7 @@ test_that("lab_tox_shift: its conditions come back the same, its formats are not
   s <- tn_study()
   o <- tn_lab()
   expect_no_warning(sh <- suppressMessages(tfl_sheets_from_spec(s, list(`T-14` = o, `T-8` = tn_code()))))
-  b <- tn_round_trip(sh)[["T-14"]]
+  expect_warning(b <- tn_round_trip(sh)[["T-14"]], "formats", fixed = TRUE)
   expect_identical(b$template$name, o$template$name)
   a0 <- tn_drop(o$template$args, "formats")
   a1 <- b$template$args
@@ -95,14 +98,15 @@ test_that("orr_subgroup: its conditions (with an R where) come back the same, an
   expect_identical(tn_resolve(b, s), tn_resolve(o, s))
 })
 
-test_that("demog: its maps are not on the sheets and not said; the other arguments come back", {
+test_that("demog: its maps are not on the sheets and not said there; the other arguments come back", {
   s <- tn_study()
   o <- tn_demog()
   expect_no_warning(sh <- suppressMessages(tfl_sheets_from_spec(s, list(`T-11` = o))))
   expect_false(any(sh$not_converted$part == "template"))
   expect_false(any(grepl("AGE_STATS", unlist(sh$templates))))
   expect_false(any(sh$template_rows$param %in% c("analysis_ids", "formats")))
-  b <- tn_round_trip(sh)[["T-11"]]
+  expect_identical(sh$template_maps$param[sh$template_maps$output_id == "T-11"], c("analysis_ids", "formats"))
+  expect_warning(b <- tn_round_trip(sh)[["T-11"]], "analysis_ids", fixed = TRUE)
   a0 <- tn_drop(o$template$args, c("analysis_ids", "formats"))
   expect_identical(b$template$args[names(a0)], a0)
 })
@@ -139,4 +143,29 @@ test_that("a condition row the sheet cannot say as it was is still said", {
   o <- tn_orr()
   o$template$args$conditions[[1L]]$subgroup_lvl <- c("F", "M")
   expect_warning(suppressMessages(tfl_sheets_from_spec(s, list(`T-13` = o))), "conditions", fixed = TRUE)
+})
+
+test_that("demog back to YAML over its own file: the maps come from the file, all arguments the same", {
+  s <- tn_study()
+  to <- tempfile("tn-yaml")
+  dir.create(file.path(to, "spec", "outputs"), recursive = TRUE)
+  on.exit(unlink(to, recursive = TRUE), add = TRUE)
+  tfl_write_output(tn_demog(), file.path(to, "spec", "outputs", "T-11.yml"))
+  o <- tfl_read_outputs(to)[["T-11"]]
+  sh <- suppressMessages(tfl_sheets_from_spec(s, list(`T-11` = o)))
+  expect_no_warning(b <- tn_round_trip(sh, to)[["T-11"]])
+  expect_identical(b$template, o$template)
+  expect_identical(tn_resolve(b, s), tn_resolve(o, s))
+})
+
+test_that("demog back to YAML into an empty folder: the maps lost are named, in a warning and a note", {
+  s <- tn_study()
+  sh <- suppressMessages(tfl_sheets_from_spec(s, list(`T-11` = tn_demog())))
+  to <- tempfile("tn-yaml")
+  dir.create(to)
+  on.exit(unlink(to, recursive = TRUE), add = TRUE)
+  expect_warning(r <- suppressMessages(tfl_yaml_from_sheets(sh, to, overwrite = TRUE)),
+                 "analysis_ids, formats", fixed = TRUE)
+  nc <- r$not_converted
+  expect_true(any(grepl("analysis_ids", nc$reason) & nc$output %in% "T-11"))
 })
