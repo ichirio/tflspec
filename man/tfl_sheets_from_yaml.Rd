@@ -36,8 +36,9 @@ A list: \code{table} (the table and report sheets, with \code{study}),
 \code{ard} (the ARD sheets), \code{listing} (\code{listings}, \code{listing_cols}),
 \code{figures} (a figure's design list, by id), \code{study} (study.yml's
 fields), \code{templates} and \code{template_rows} (the template reports; with
-\code{templates = "expand"} both are empty), \code{not_converted} (what the
-sheets cannot hold).
+\code{templates = "expand"} both are empty), \code{template_maps} (\code{output_id},
+\code{param}: a template report's arguments that are maps, which the sheets
+do not hold), \code{not_converted} (what the sheets cannot hold).
 }
 \description{
 \code{tfl_sheets_from_yaml()} reads a study's YAML spec and gives the sheets

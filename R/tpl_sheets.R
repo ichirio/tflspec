@@ -181,11 +181,39 @@ tfl_read_template_sheets <- function(path) {
     if (identical(nm, "conditions")) return(identical(.tpl_cond_norm(args[[nm]]), .tpl_cond_norm(back[[nm]])))
     identical(norm(args[[nm]]), norm(back[[nm]]))
   }
-  # (a map stays in the report's YAML file: not lost)
-  is_map <- function(v) !is.null(names(v)) && !inherits(v, "tfl_r") && !is.data.frame(v)
-  kept <- names(args)[vapply(args, is_map, NA)]
-  lost <- setdiff(names(args)[!vapply(names(args), same, NA)], setdiff(kept, "labels"))
-  list(row = row, rows = rws, cond = cond, lost = lost)
+  # (a map stays in the report's YAML file: not lost, but named as `maps`)
+  maps <- setdiff(names(args)[vapply(args, .tpl_is_map_arg, NA)], "labels")
+  lost <- setdiff(names(args)[!vapply(names(args), same, NA)], maps)
+  list(row = row, rows = rws, cond = cond, lost = lost, maps = maps)
+}
+
+# A template argument that is a map (`formats`, `analysis_ids`): the sheets
+# do not hold it
+.tpl_is_map_arg <- function(v) !is.null(names(v)) && !inherits(v, "tfl_r") && !is.data.frame(v)
+
+# A template report's template read back from the sheets, with its map
+# arguments (`maps`: the ones the sheets said they do not hold) taken from
+# the report's file already at `f` when that is the same template's, in
+# that file's order; a map the file does not give back is named in a
+# warning and a note (`note`, tfl_yaml_from_sheets()'s)
+.tpl_maps_back <- function(tpl, f, maps, id, note) {
+  old <- if (file.exists(f)) tryCatch(tfl_read_output(f), error = function(e) NULL)
+  ot <- if (inherits(old, "tfl_output")) tryCatch(.tpl_spec_of(old), error = function(e) NULL)
+  if (!is.null(ot) && identical(ot$name, tpl$name)) {
+    a <- tpl$args %||% list()
+    for (nm in setdiff(names(ot$args), c(names(a), "labels"))) {
+      if (.tpl_is_map_arg(ot$args[[nm]])) a[nm] <- list(ot$args[[nm]])
+    }
+    tpl$args <- a[c(intersect(names(ot$args), names(a)), setdiff(names(a), names(ot$args)))]
+  }
+  gone <- setdiff(maps, names(tpl$args))
+  if (length(gone)) {
+    warning(sprintf("%s: template arguments the templates sheet cannot hold are not kept: %s",
+                    id, paste(gone, collapse = ", ")), call. = FALSE)
+    note(id, "template", NA, NA, paste0("template arguments the templates sheet cannot hold (no report ",
+                                        "file to take them from): ", paste(gone, collapse = ", ")))
+  }
+  tpl
 }
 
 # A template's `conditions` written as rows: a data frame, or a list of

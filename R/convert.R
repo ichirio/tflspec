@@ -68,8 +68,10 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
 #'   `planner` (tflplanner's `_tflplanner` sheet: the report list and the
 #'   setup code), `ard` (the ARD sheets), `listing` (`listings`,
 #'   `listing_cols`), `figures` (a figure's design list, by id), `study`
-#'   (study.yml's fields), `templates` and `template_rows` (the template
-#'   reports: [tfl_sheets_from_yaml()]), `not_converted` ([tfl_sheets_from_yaml()]'s notes
+#'   (study.yml's fields), `templates`, `template_rows` and `template_maps`
+#'   (the template reports: [tfl_sheets_from_yaml()]; a template report's
+#'   map arguments, which the sheets do not hold, are taken from its file
+#'   already in `to`, else named in a warning and a note), `not_converted` ([tfl_sheets_from_yaml()]'s notes
 #'   on what the sheets could not hold: listed in `_not_converted.yml` too,
 #'   with one message saying how many).  What the app holds, or what the
 #'   workbooks read as.
@@ -365,6 +367,12 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       out$template <- .tpl_sheets_decode(tr, sheets$template_rows, ard$conditions)[[id]]$template
       out$content <- list()
       out$data <- NULL
+      # (its maps, which the sheets do not hold: the report's file being
+      # written over gives them back, else they are said)
+      tm <- sheets$template_maps
+      maps <- if (is.data.frame(tm) && nrow(tm)) tm$param[tm$output_id %in% id] else character()
+      out$template <- .tpl_maps_back(out$template, file.path(to, "spec", "outputs", paste0(id, ".yml")),
+                                     maps, id, note)
     }
     f <- file.path(to, "spec", "outputs", paste0(id, ".yml"))
     tfl_write_output(out, f)
