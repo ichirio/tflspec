@@ -62,7 +62,7 @@
 #'   takes its template's); the default for a report with `template`, else
 #'   `"defaults"`.
 #' @param data What the report reads, its step 1: a list of definitions
-#'   (`id`, `from`, `subjects`, `where` ..., one dataset each; in a YAML file
+#'   (`id`, `from`, `subjects_in`, `where` ..., one dataset each; in a YAML file
 #'   the report's flat `data:` list) in the report's built data; or, for a
 #'   figure (and a listing or a records table that still has the map), a
 #'   list (`source` -- `"ard"`, `"code"` or `"dataset"` -- and `object`,
@@ -441,13 +441,13 @@ tfl_read_output <- function(path) {
 .out_population <- function(o) .na_scalar(o$common$population)
 
 # The report's subjects definition (`from: ADSL`, or from the dataset its
-# analysis set is defined on: data.yml `populations:`; no `subjects`, no code)
+# analysis set is defined on: data.yml `populations:`; no `subjects_in`, no code)
 # has no `population` of its own: the report's `common: population` is its
 # set.  Written out in the sheets (the ARD's definition); a definition that
 # names its own set (a denominator of another set) keeps it.  A definition of
-# a record-level dataset takes its subjects from `subjects:`, not from here
+# a record-level dataset takes its subjects from `subjects_in:`, not from here
 .entry_is_subjects <- function(a, from = "ADSL") {
-  is.list(a) && is.null(a$subjects) && is.null(a$code) &&
+  is.list(a) && is.null(a$subjects_in) && is.null(a$code) &&
     toupper(as.character(a$from %||% "")) %in% from
 }
 # The datasets a subjects definition reads: ADSL, and the dataset of the

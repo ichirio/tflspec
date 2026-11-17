@@ -79,7 +79,7 @@ An analysis that reads one of its report's analysis data (`data`, see
 [The ARD spec](ard-spec.html)) is written with that data's conditions:
 the `where` of each row it is made from, joined into one WhereClause on
 the ADaM dataset, and the population of the data it starts from. What a
-WhereClause cannot say -- `subjects`, `derive`, `code` ... -- is listed
+WhereClause cannot say -- `subjects_in`, `derive`, `code` ... -- is listed
 by `tfl_ars_unmapped()`, as above.
 
 ```{r}

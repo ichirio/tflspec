@@ -78,7 +78,7 @@
         a <- ad[[match(id, ad_ids)]]
         coded <- coded || !is.null(a[["code"]])
         chk_pop(sprintf("ard.analysis_data %s population", id), .ai_scalar_text(a[["population"]]))
-        has_pop <- has_pop || !is.null(a[["population"]]) || !is.null(a[["subjects"]])
+        has_pop <- has_pop || !is.null(a[["population"]]) || !is.null(a[["subjects_in"]])
         kept <- kept || says_par(a[["where"]]) || says_par(a[["code"]])
         have <- c(have, .ai_derived_names(a[["derive"]]), unlist(a[["add"]]))
         id <- .ai_scalar_text(a[["from"]]) %||% NA_character_

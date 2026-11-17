@@ -43,7 +43,7 @@ conv_study <- function(dir) {
     '{"study": {"key": ["id", "output"], "value": ["USUBJID", "output/ard/ard.rds"]},',
     ' "datasets": {"dataset": ["ADSL"], "level": ["ADaM"], "path": ["data/adam/adsl.rds"], "derive": [null]},',
     ' "populations": {"population_id": ["SAF"], "dataset": ["ADSL"], "where": ["SAFFL == \\"Y\\""], "derive": [null], "label": ["Safety Analysis Set"]},',
-    ' "analysis_data": {"output_id": ["T-1"], "data_id": ["adsl_saf"], "label": [null], "from": ["ADSL"], "population_id": ["SAF"], "subjects": [null], "where": [null], "add": [null], "derive": [null], "keep": [null], "distinct": [null], "code": [null]},',
+    ' "analysis_data": {"output_id": ["T-1"], "data_id": ["adsl_saf"], "label": [null], "from": ["ADSL"], "population_id": ["SAF"], "subjects_in": [null], "where": [null], "add": [null], "derive": [null], "keep": [null], "distinct": [null], "code": [null]},',
     ' "analyses": {"output_id": ["T-1", "T-1"], "analysis_id": ["GROUPN", "AGE"], "parent": [null, null], "label": [null, null],',
     '   "method": ["categorical", "continuous"], "data": ["adsl_saf", "adsl_saf"], "dataset": [null, null], "population_id": [null, null],',
     '   "where": [null, null], "by": [null, "ARM"], "strata": [null, null], "variables": ["ARM", "AGE"], "statistics": [null, "N | mean | sd"],',

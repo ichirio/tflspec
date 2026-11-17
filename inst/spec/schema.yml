@@ -971,7 +971,7 @@ rtf_footer:
       records a condition keeps, columns of the population added, columns derived,
       one row per set of values. In that order. An analysis names one in `data`, or
       as its `denominator`. In a YAML report these rows are its `data:` list (a
-      definition''s `id` is the `data_id`); a subjects row (from ADSL, no `subjects`)
+      definition''s `id` is the `data_id`); a subjects row (from ADSL, no `subjects_in`)
       with no population takes the report''s `common: population`.'
     columns:
       - column: data_id
@@ -990,7 +990,7 @@ rtf_footer:
         description: 'Keeps the subjects of this population; blank: no restriction
           here (made from an analysis data: that one''s population).'
         example: SAF
-      - column: subjects
+      - column: subjects_in
         description: 'Keeps the subjects of an analysis data above (a report''s own
           subjects: the safety set in phase 1 ...): the numerator kept to the denominator''s
           subjects. Instead of population_id; blank: no restriction here.'
@@ -1001,7 +1001,7 @@ rtf_footer:
         example: TRTEMFL == "Y"
       - column: add
         description: 'Columns of the population''s data (its dataset, ADSL) -- or
-          of the data of `subjects` -- added by the subject key, | between them; a
+          of the data of `subjects_in` -- added by the subject key, | between them; a
           column of the same name is replaced. Needs a population or subjects, here
           or above; blank: none.'
         example: TRT01A | AGEGR1
