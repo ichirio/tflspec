@@ -971,7 +971,7 @@ rtf_footer:
       records a condition keeps, columns of the population added, columns derived,
       one row per set of values. In that order. An analysis names one in `data`, or
       as its `denominator`. In a YAML report these rows are its `data:` list (a
-      definition''s `id` is the `data_id`); a subjects row (from ADSL, no `subjects`)
+      definition''s `id` is the `data_id`); a subjects row (from ADSL, no `subjects_in`)
       with no population takes the report''s `common: population`.'
     columns:
       - column: data_id
@@ -990,7 +990,7 @@ rtf_footer:
         description: 'Keeps the subjects of this population; blank: no restriction
           here (made from an analysis data: that one''s population).'
         example: SAF
-      - column: subjects
+      - column: subjects_in
         description: 'Keeps the subjects of an analysis data above (a report''s own
           subjects: the safety set in phase 1 ...): the numerator kept to the denominator''s
           subjects. Instead of population_id; blank: no restriction here.'
@@ -1001,7 +1001,7 @@ rtf_footer:
         example: TRTEMFL == "Y"
       - column: add
         description: 'Columns of the population''s data (its dataset, ADSL) -- or
-          of the data of `subjects` -- added by the subject key, | between them; a
+          of the data of `subjects_in` -- added by the subject key, | between them; a
           column of the same name is replaced. Needs a population or subjects, here
           or above; blank: none.'
         example: TRT01A | AGEGR1
@@ -1025,6 +1025,12 @@ rtf_footer:
           data above are in reach. With it, the columns but from are left blank;
           blank: the columns make the data.'
         example: dplyr::filter(adae, USUBJID %in% adsl_sub$USUBJID, AETOXGR >= 3)
+      - column: then
+        description: 'R piped onto the end of the data, after the other columns''
+          work (and the code lists'' levels), as written: the data is its first
+          argument; a pipe of several steps is fine, and it may do anything R does.
+          Not together with code (code makes the whole data); blank: nothing added.'
+        example: dplyr::slice_max(ATOXGRH, n = 1, with_ties = FALSE, by = USUBJID)
   - sheet: analyses
     description: 'ARD: one analysis a row; each becomes one cards / cardx call in
       the ARD program, its result tagged with output_id, analysis_id and population_id.'
@@ -1147,6 +1153,74 @@ rtf_footer:
         description: 'For CDISC ARS: SPECIFIED IN PROTOCOL / SPECIFIED IN SAP / DATA
           DRIVEN / REQUESTED BY REGULATORY AGENCY; blank: SPECIFIED IN SAP.'
         example: SPECIFIED IN SAP
+      - column: type
+        description: 'A template item: ard (bound into the report''s ARD), model (its
+          call kept under its own name, not in the ARD) or value; blank: ard.'
+        example: model
+      - column: params
+        description: 'A template item: the params its condition rows give (the
+          conditions sheet''s columns for it), | between them; blank: none.'
+        example: tox_dir | param
+      - column: derive
+        description: 'A template item: columns made on its data before the call,
+          `name = R expression`, | between them; a param''s "{p}" the row''s value;
+          blank: none.'
+        example: tox_dir = "{tox_dir}"
+      - column: levels
+        description: 'A template item: the levels of a variable, `VAR = R vector`, |
+          between them; blank: as the data has them.'
+        example: PARAM = "{param}"
+      - column: missing_row
+        description: 'A template item: TRUE counts each variable''s missing values
+          as a row of their own (missing_label); blank: not counted.'
+        example: 'TRUE'
+      - column: missing_label
+        description: 'The label of the missing row; blank: Missing.'
+        example: Not reported
+      - column: analysis_per
+        description: 'A template item: how its analyses are named; level (a depth
+          an analysis, <id>_ANY, <id>_L1, ...) or columns | between them (a condition
+          row an analysis, its id their values: ALT_HIGH); blank: the analysis_id.'
+        example: PARAMCD | tox_dir
+  - sheet: conditions
+    description: 'ARD: a template item''s condition rows, one row a run of the
+      item (in row order), keyed by output_id and analysis_id. After row, a column
+      a param, the items'' params together: a cell is blank where the item has no
+      such param (the item''s params are its analyses row''s `params`). In the
+      ARD program, a tribble of the rows and a function of one row.'
+    columns:
+      - column: analysis_id
+        description: The item (its analyses row) the row is a run of.
+        example: SHIFT
+      - column: row
+        description: The row's place among the item's rows, 1, 2, ...
+        example: '1'
+      - column: row_analysis_id
+        description: 'The row''s own analysis id; blank: the item''s analysis_per
+          rule (or its analysis_id).'
+        example: ALT_HIGH
+      - column: where
+        description: 'A where param: an R condition on the item''s data choosing
+          the row''s records; blank: every record.'
+        example: SEX == "F"
+  - sheet: ards
+    description: 'ARD: a template item''s several calls (ards:), one row a call in
+      row order, keyed by output_id and analysis_id; after row, the call''s keys
+      (by, variables, ...) as columns over the item''s own. Every call is the item''s
+      analysis_id, bound into its ARD.'
+    columns:
+      - column: analysis_id
+        description: The item (its analyses row) the call is one of.
+        example: SHIFT
+      - column: row
+        description: The call's place among the item's calls, 1, 2, ...
+        example: '1'
+      - column: by
+        description: 'The call''s by, | between them; blank: the item''s.'
+        example: TRT01A | PARAM | tox_dir | base
+      - column: variables
+        description: 'The call''s variables, | between them; blank: the item''s.'
+        example: worst
   - sheet: tables
     description: 'Table: one row a report. Its roles (table_plan()) and the table-wide
       options; a verb written in code afterwards wins.'

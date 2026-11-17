@@ -12,7 +12,7 @@ dr_table <- c(
   "common:", "  population: SAF", "  treatment: TRT01A", "  population_label: Safety set",
   "data:",
   "  - id: adsl_sub", "    from: ADSL", "    where: !r SEX == \"F\"",
-  "  - id: adae_sub", "    from: ADAE", "    subjects: adsl_sub", "    where: !r TRTEMFL == \"Y\"",
+  "  - id: adae_sub", "    from: ADAE", "    subjects_in: adsl_sub", "    where: !r TRTEMFL == \"Y\"",
   "ard:", "  analyses:",
   "    - {id: AE, method: hierarchical, data: adae_sub, by: [TRT01A], variables: [AEBODSYS, AEDECOD]}",
   "content:", "  - table_plan: {cols: TRT01A, rows: {group1: AEBODSYS}}")
@@ -75,7 +75,7 @@ test_that("an unknown common: key stops, naming the keys; a value is one text", 
 test_that("a listing with a data: list prints its last definition; written back it is the list", {
   f <- dr_write(c("id: L-1", "kind: listing", "common: {population: SAF}",
                   "data:", "  - {id: adsl_sub, from: ADSL}",
-                  "  - {id: adae_sub, from: ADAE, subjects: adsl_sub, where: !r AESER == \"Y\"}",
+                  "  - {id: adae_sub, from: ADAE, subjects_in: adsl_sub, where: !r AESER == \"Y\"}",
                   "content: []"))
   on.exit(unlink(f))
   o <- tfl_read_output(f)
@@ -101,7 +101,7 @@ test_that("the subjects definition takes the report's analysis set; a definition
     "id: T-1", "kind: table", "common: {population: SAF}",
     "data:", "  - {id: adsl_sub, from: ADSL}",
     "  - {id: adsl_den, from: ADSL, population: ITT}",
-    "  - {id: adae_sub, from: ADAE, subjects: adsl_sub}", "content: []")))
+    "  - {id: adae_sub, from: ADAE, subjects_in: adsl_sub}", "content: []")))
   a <- o$ard$analysis_data
   expect_null(tflspec:::.entry_pop_inject(a[[3L]], "SAF")$population)
   expect_identical(tflspec:::.entry_pop_inject(a[[1L]], "SAF")$population, "SAF")
@@ -128,7 +128,7 @@ test_that("the subjects definition of the population's own dataset (not only ADS
   rep <- function(id, pop, from) {
     writeLines(c(paste0("id: ", id), "kind: table", "common:", paste0("  population: ", pop),
                  "data:", paste0("  - {id: sub, from: ", from, "}"),
-                 "  - {id: ae, from: ADAE, subjects: sub}", "content: []"),
+                 "  - {id: ae, from: ADAE, subjects_in: sub}", "content: []"),
                file.path(d, "outputs", paste0(id, ".yml")))
   }
   rep("T-1", "SAF", "ADSL")

@@ -27,7 +27,7 @@ test_that("the program orders the arms of every dataset it reads", {
   by_arm <- exact_spec(list(method = "categorical", dataset = "ADSL",
                             population_id = "SAF", by = "ARM", variables = "SEX"))
   code <- paste(tfl_ard_code(by_arm, part = "body"), collapse = "\n")
-  expect_match(code, "adsl <- readRDS(\"adam/ADSL.rds\") |> order_levels(\"SEX\")", fixed = TRUE)
+  expect_match(code, "adsl <- readRDS(\"adam/ADSL.rds\") |>\n  blank_as_na() |>\n  order_levels(\"SEX\")", fixed = TRUE)
   no_arm <- exact_spec(list(method = "categorical", dataset = "ADSL",
                             population_id = "SAF", by = "SEX", variables = "AGEGR1"))
   code2 <- paste(tfl_ard_code(no_arm, part = "body"), collapse = "\n")

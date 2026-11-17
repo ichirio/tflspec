@@ -1,6 +1,6 @@
 # Canon 1.38: every ARD analysis that takes a denominator passes it
 # explicitly, and the default is the report's ADSL population (adsl_<pop>,
-# the object GROUPN counts).  summary, disposition and ae_overview; the
+# the object BIGN counts).  summary, disposition and ae_overview; the
 # Missing row of summary and disposition.  Fictional data only.
 
 ad_pops <- list(list(id = "SAF", label = "Safety Analysis Set"))
@@ -19,17 +19,17 @@ ad_sets <- function(x) vapply(x$ard$analysis_data, `[[`, "", "id")
 test_that("summary (data ADSL), disposition and ae_overview carry denominator = adsl_sub", {
   s <- ad_expand("summary", categorical = "SEX", missing_row = FALSE)
   expect_identical(ad_an(s, "CAT")$denominator, "adsl_sub")
-  expect_identical(ad_an(s, "CAT")$denominator, ad_an(s, "GROUPN")$data)
+  expect_identical(ad_an(s, "CAT")$denominator, ad_an(s, "BIGN")$data)
   d <- ad_expand("disposition")
   expect_identical(ad_an(d, "DISP")$denominator, "adsl_sub")
   ae <- ad_expand("ae_overview")
   fl <- Filter(function(a) identical(a$method, "subjects"), ae$ard$analyses)
   expect_length(fl, 6L)
   for (a in fl) expect_identical(a$denominator, "adsl_sub", info = a$id)
-  expect_identical(ad_an(ae, "GROUPN")$data, "adsl_sub")
+  expect_identical(ad_an(ae, "BIGN")$data, "adsl_sub")
   # header_n "denominator" with no denominator is still "set"
   h <- ad_expand("ae_overview", header_n = "denominator")
-  expect_identical(ad_an(h, "GROUPN")$data, "adsl_sub")
+  expect_identical(ad_an(h, "BIGN")$data, "adsl_sub")
 })
 
 test_that("summary on records keeps the records set as the denominator", {

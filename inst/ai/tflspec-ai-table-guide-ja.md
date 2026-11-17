@@ -108,7 +108,7 @@ r                                   # シート・シェルのシート・依頼
 `ai/templates.md`）、そしてエージェント用のファイル:
 `ai/AGENTS.md`（エージェントへの指示: 何を読むか、どう質問するか、下書きに何を入れるか）、
 `AGENTS.md` と `.github/copilot-instructions.md`（試験フォルダの直下と `ai/` の中の両方。短い文: `ai/AGENTS.md` を読む。エージェントが従うのは `ai/AGENTS.md` です）、
-`run.R`、`ai/decisions.md`、`ai/agent_prompt.md`（エージェントへの 1 つのメッセージ）。TOC の図は 1 図 1 依頼（`figure-1.md` …）で、そのシェルと、
+`run.R`、`ai/decisions.md`、`ai/agent_prompt.md`（エージェントへの 1 つのメッセージ）。`ars = TRUE` なら ARS のガイド `ai/ars/`（単純なデータサブセットと複合のデータサブセットの実例、架空の reporting event、チェックは `tfl_check_ars()`）も書き、CDISC ARS の reporting event を頼まれたエージェントが使います。TOC の図は 1 図 1 依頼（`figure-1.md` …）で、そのシェルと、
 下書きする図の帳票が入ります。1 つずつ実行する場合:
 `tfl_ai_study_init()`、`tfl_ai_adam_summary()`、`tfl_ai_read_shell()`、
 `tfl_ai_write_requests()`。

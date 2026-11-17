@@ -175,6 +175,11 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   if (!is.null(ard$study) && nrow(ard$study)) {
     keys <- stats::setNames(as.list(ard$study$value), ard$study$key)
     keys <- keys[!vapply(keys, is.na, NA)]
+    # (adam_levels is a setting: the ARD's study sheet only carries it)
+    if (!is.null(keys$adam_levels) && is.null(study$settings$adam_levels)) {
+      study$settings$adam_levels <- keys$adam_levels
+    }
+    keys$adam_levels <- NULL
     if (length(keys)) study$keys <- keys
   }
   if (!is.null(plan)) {
@@ -466,6 +471,20 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   n <- suppressWarnings(as.numeric(v))
   if (!is.na(n) && grepl("^-?[0-9.]+$", v)) return(if (n == round(n) && !grepl("[.]", v)) as.integer(n) else n)
   v
+}
+
+# An item's condition rows (a data frame, .item_cond_rows()) as YAML's list
+# of maps: a blank cell no key, `where` an R condition (!r)
+.cond_rows_yaml <- function(cd) {
+  lapply(seq_len(nrow(cd)), function(k) {
+    m <- list()
+    for (p in names(cd)) {
+      v <- cd[[p]][k]
+      if (is.na(v) || !nzchar(trimws(v))) next
+      m[[p]] <- if (p == "where") tfl_r(v) else v
+    }
+    m
+  })
 }
 
 # the rows of a sheet as a list of maps (column -> value), NA cells left out
@@ -815,13 +834,13 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     content <- items$content
     if (!is.null(items$template)) extra$template <- items$template
     if (!is.null(y$ggplot2_version)) extra$ggplot2_version <- y$ggplot2_version
-    if (by_items) for (k in c("plot", "plots", "compose")) if (!is.null(y[[k]])) extra[[k]] <- y[[k]]
+    if (by_items) for (k in c("plot", "plots", "compose", "figure")) if (!is.null(y[[k]])) extra[[k]] <- y[[k]]
   } else if (kind == "figure" && !is.null(fig)) {
     data <- list(source = "code")
     if (!is.null(y$data)) data$steps <- y$data
     if (!is.null(y$stats)) data$stats <- y$stats
     content <- lapply(y$layers %||% list(), function(l) tfl_item(l$layer %||% "layer", l[setdiff(names(l), "layer")]))
-    for (k in c("template", "ggplot2_version", "plot", "plots", "compose")) if (!is.null(y[[k]])) extra[[k]] <- y[[k]]
+    for (k in c("template", "ggplot2_version", "plot", "plots", "compose", "figure")) if (!is.null(y[[k]])) extra[[k]] <- y[[k]]
     note(id, "figure", id, NA, "a figure's layers are content items `layer: {fields}` as before; plot/plots/compose kept beside them")
   } else if (kind == "listing" && !is.null(lf)) {
     lr <- lf$listings[!is.na(lf$listings$output_id) & lf$listings$output_id == id, , drop = FALSE]
@@ -942,7 +961,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     }
     ad <- ard$analysis_data
     if (!is.null(ad$output_id)) ad <- ad[!is.na(ad$output_id) & ad$output_id == id, , drop = FALSE]
-    if (nrow(ad)) ard_part$analysis_data <- .conv_rows(ad, note, id, "analysis_data", r_cols = c("where", "derive", "code"),
+    if (nrow(ad)) ard_part$analysis_data <- .conv_rows(ad, note, id, "analysis_data", r_cols = c("where", "derive", "code", "then"),
                                                     list_cols = c("add", "keep", "distinct"), rename = c(data_id = "id", population_id = "population"))
     # (the report's subjects definition has no set of its own: `common: population`)
     if (!is.null(ard_part$analysis_data)) {
@@ -951,13 +970,26 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     }
     an <- ard$analyses[!is.na(ard$analyses$output_id) & ard$analyses$output_id == id, , drop = FALSE]
     if (nrow(an)) {
-      ard_part$analyses <- .conv_rows(an, note, id, "analyses", r_cols = c("where", "args", "post", "code"),
-                                      list_cols = c("by", "strata", "variables", "statistics", "formats"),
+      ard_part$analyses <- .conv_rows(an, note, id, "analyses", r_cols = c("where", "args", "post", "code", "derive"),
+                                      list_cols = c("by", "strata", "variables", "statistics", "formats", "params"),
                                       rename = c(analysis_id = "id", population_id = "population"))
       # a denominator of numbers: a number, or a map by the by's values
       ard_part$analyses <- lapply(ard_part$analyses, function(m) {
         if (!is.null(m$denominator)) m$denominator <- .den_yaml(m$denominator)
         if (inherits(m$by, "tfl_unset")) m$by <- list()
+        # an item's levels a map; its condition rows and calls from their sheets
+        if (is.character(m$levels)) m$levels <- .levels_map(m$levels)
+        cd <- .item_cond_rows(ard$conditions, id, m$id, as.character(unlist(m$params)))
+        if (!is.null(cd)) m$conditions <- .cond_rows_yaml(cd)
+        ar <- .item_ards_rows(ard$ards, id, m$id)
+        if (!is.null(ar)) {
+          m$ards <- lapply(ar, function(e) {
+            for (k in intersect(c("by", "strata", "variables", "statistics"), names(e))) {
+              e[[k]] <- as.list(.split_bar(e[[k]]))
+            }
+            e
+          })
+        }
         m
       })
     }

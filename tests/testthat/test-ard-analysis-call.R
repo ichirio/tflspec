@@ -16,7 +16,7 @@ ac_spec <- function() {
                      list(dataset = "ADAE", path = "adam/adae.rds")),
     populations = ac_df(list(population_id = "SAF", dataset = "ADSL", where = "SAFFL == \"Y\"")),
     analyses = ac_df(
-      list(output_id = "DM", analysis_id = "GROUPN", method = "categorical",
+      list(output_id = "DM", analysis_id = "BIGN", method = "categorical",
            population_id = "SAF", variables = "TRT01A"),
       list(output_id = "DM", analysis_id = "AGE", method = "continuous",
            population_id = "SAF", by = "TRT01A", variables = "AGE",

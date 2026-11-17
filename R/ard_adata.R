@@ -4,12 +4,14 @@
 #
 #  A row makes one data, under its `data_id` -- the object's name in the ARD
 #  program too: from a dataset or an analysis data above it, the subjects of
-#  a population (or of an analysis data above: `subjects`, the subjects a
+#  a population (or of an analysis data above: `subjects_in`, the subjects a
 #  report's own analysis set kept), the records a condition keeps, columns
 #  of the population's (or that data's) added by the subject key, columns
 #  derived (the code lists made factors of them too), the columns kept, and
 #  one row for each set of values of some columns (a denominator per
-#  subject and phase).  In that order.  Or, when the columns cannot say it,
+#  subject and phase).  In that order; then `then`, R piped onto the end of
+#  the data (several steps in one pipe; anything R does).  Or, when the
+#  columns cannot say it,
 #  `code`: R that makes the data itself (the program's objects in reach:
 #  the datasets, pop_<population>, the analysis data above), the other
 #  columns but `from` left blank.  An analysis names one in `data` (instead of `dataset` /
@@ -68,19 +70,19 @@
     i <- match(d, ad$data_id)
     p <- ad$population_id[i]
     if (!is.na(p)) return(p)
-    s <- ad$subjects[i] %||% NA
+    s <- ad$subjects_in[i] %||% NA
     if (!is.na(s) && !s %in% c(seen, d)) return(.adata_pop(ad, s, c(seen, d)))
   }
   NA_character_
 }
 
-# The analysis data whose subjects an analysis data keeps (`subjects`; the
+# The analysis data whose subjects an analysis data keeps (`subjects_in`; the
 # nearest one, from the data itself up the rows it is made from), or NULL
 # when none: the report's analysis set as it counts them, a subset applied
 .adata_subjects_of <- function(ad, id) {
   if (is.null(ad) || length(id) != 1L || is.na(id)) return(NULL)
   for (d in rev(.adata_chain(ad, id))) {
-    s <- ad$subjects[match(d, ad$data_id)] %||% NA
+    s <- ad$subjects_in[match(d, ad$data_id)] %||% NA
     if (!is.na(s)) return(s)
   }
   NULL
@@ -91,7 +93,7 @@
 .adata_add_from <- function(ad, id) {
   for (d in rev(.adata_chain(ad, id))) {
     i <- match(d, ad$data_id)
-    if (!is.na(ad$subjects[i] %||% NA)) return(ad$subjects[i])
+    if (!is.na(ad$subjects_in[i] %||% NA)) return(ad$subjects_in[i])
     if (!is.na(ad$population_id[i])) return(paste0("pop_", .r_name(ad$population_id[i])))
   }
   NA_character_
@@ -114,7 +116,7 @@
   while (length(new <- setdiff(unique(unlist(lapply(ids, function(id)
     .adata_chain(ad, id)))), all))) {
     all <- c(all, new)
-    ids <- intersect(c(stats::na.omit(ad$subjects[match(new, ad$data_id)]),
+    ids <- intersect(c(stats::na.omit(ad$subjects_in[match(new, ad$data_id)]),
                        .adata_code_reads(ad, new)), ad$data_id)
   }
   ad$data_id[ad$data_id %in% all]
@@ -123,13 +125,50 @@
 # The analysis data the code of the rows `ids` reads by name (a data made
 # by `code` may read another of its report's: a template's subset set)
 .adata_code_reads <- function(ad, ids) {
-  code <- ad$code[match(ids, ad$data_id)] %||% NA
+  code <- c(ad$code[match(ids, ad$data_id)] %||% NA,
+            ad$then[match(ids, ad$data_id)] %||% NA)
   code <- code[!is.na(code)]
   if (!length(code)) return(character())
   unique(unlist(lapply(code, function(x) {
     intersect(tryCatch(all.names(parse(text = x, keep.source = FALSE)),
                        error = function(e) character()), ad$data_id)
   })))
+}
+
+# The pieces of a `then` (R text): its steps at the top-level `|>`s, each
+# one a step of the data's pipe (the text itself when it does not split)
+.then_steps <- function(x) {
+  if (is.null(x) || !length(x) || is.na(x) || !nzchar(trimws(x))) return(character())
+  ch <- strsplit(x, "", fixed = TRUE)[[1L]]
+  n <- length(ch)
+  depth <- 0L
+  quote <- ""
+  cut <- integer()
+  i <- 1L
+  while (i <= n) {
+    c <- ch[i]
+    if (nzchar(quote)) {
+      if (c == "\\") i <- i + 1L else if (c == quote) quote <- ""
+    } else if (c %in% c("\"", "'", "`")) {
+      quote <- c
+    } else if (c == "#") {
+      # a comment: to the end of its line
+      while (i < n && ch[i + 1L] != "\n") i <- i + 1L
+    } else if (c %in% c("(", "[", "{")) {
+      depth <- depth + 1L
+    } else if (c %in% c(")", "]", "}")) {
+      depth <- max(0L, depth - 1L)
+    } else if (c == "|" && depth == 0L && i < n && ch[i + 1L] == ">") {
+      cut <- c(cut, i)
+      i <- i + 1L
+    }
+    i <- i + 1L
+  }
+  from <- c(1L, cut + 2L)
+  to <- c(cut - 1L, n)
+  out <- trimws(vapply(seq_along(from), function(k)
+    if (to[k] >= from[k]) paste(ch[from[k]:to[k]], collapse = "") else "", ""))
+  out[nzchar(out)]
 }
 
 # The problems of the sheet and of the analyses' `data`, as rows
@@ -209,16 +248,22 @@
           tag(i), sQuote(piece, FALSE)))
       }
     }
-    s <- ad$subjects[i]
+    # `then`: R, piped onto the end of the data
+    thn <- ad$then[i] %||% NA
+    if (!is.na(thn) && is.null(tryCatch(parse(text = thn, keep.source = FALSE),
+                                        error = function(e) NULL))) {
+      add_d(i, "then", sprintf("%s: `then` does not read as R", tag(i)))
+    }
+    s <- ad$subjects_in[i]
     if (!is.na(s)) {
       if (!s %in% above) {
-        add_d(i, "subjects", sprintf(
-          "%s: `subjects` %s is not an analysis data above it in the report", tag(i), s))
+        add_d(i, "subjects_in", sprintf(
+          "%s: `subjects_in` %s is not an analysis data above it in the report", tag(i), s))
       }
       if (!is.na(p)) {
-        add_d(i, "subjects", sprintf(paste(
+        add_d(i, "subjects_in", sprintf(paste(
           "%s: the subjects are a population's (`population_id`) or an",
-          "analysis data's (`subjects`); not both"), tag(i)))
+          "analysis data's (`subjects_in`); not both"), tag(i)))
       }
     }
     code <- ad$code[i] %||% NA
@@ -229,7 +274,7 @@
       # (`population_id` with `code`: the set's subjects are made first,
       # in reach as <dataset>_sub; the other columns are for a data the
       # columns make)
-      also <- c("subjects", "where", "add", "derive", "keep", "distinct")
+      also <- c("subjects_in", "where", "add", "derive", "keep", "distinct", "then")
       also <- also[vapply(also, function(cn) !is.na(ad[[cn]][i] %||% NA), NA)]
       if (length(also)) {
         add_d(i, "code", sprintf(paste(
@@ -242,7 +287,7 @@
     if (length(.split_bar(ad$add[i])) && is.na(.adata_add_from(ad_o, id))) {
       add_d(i, "add", sprintf(paste(
         "%s: `add` takes columns from the population's data or the data of",
-        "`subjects`, and it has neither (here or above)"), tag(i)))
+        "`subjects_in`, and it has neither (here or above)"), tag(i)))
     }
     for (cn in c("where")) {
       v <- ad[[cn]][i]
@@ -331,12 +376,13 @@
     pop_ds <- if (!is.na(pid)) x$populations$dataset[
       x$populations$population_id == pid][1L]
     # the subjects an analysis data above kept (a report's own analysis set)
-    if (!is.na(r$subjects)) pop <- r$subjects
+    if (!is.na(r$subjects_in)) pop <- r$subjects_in
     whr <- if (!is.na(r$where)) r$where
     flt <- if (!is.null(whr)) sprintf("dplyr::filter(%s)", whr)
     add <- .split_bar(r$add)
     keep <- .split_bar(r$keep)
     dis <- .split_bar(r$distinct)
+    thn <- .then_steps(r$then %||% NA)
     # the subject-level columns it takes: those asked for (`add`), and the
     # groups the analyses' denominators count by (their by, strata)
     # (not the columns the population's derive makes: a record's TRTA,
@@ -358,7 +404,7 @@
       base <- src
       steps0 <- flt
       kind <- "made"
-    } else if (!from_data && is.na(r$subjects) && identical(r$from, pop_ds)) {
+    } else if (!from_data && is.na(r$subjects_in) && identical(r$from, pop_ds)) {
       # the population itself (its dataset): its subjects, the condition
       base <- pop
       steps0 <- flt
@@ -384,7 +430,7 @@
       made = if (id %in% dens) "the denominator." else sprintf("made from %s.", src))
     out <- c(out, .adata_comment(id, what, lbl))
     # what follows the rows: the columns added, derived, the columns kept,
-    # one row per ..., its code lists
+    # one row per ..., its code lists; then the row's own R (`then`)
     steps <- c(steps0, .derive_steps(r$derive),
                # the columns kept: the subject, those the analyses read on
                # it (their by, strata, variables), and the ones asked for
@@ -396,7 +442,9 @@
                # the same rows as the data it is made from: the same levels --
                # but a dataset read as it is has none yet
                if (length(c(steps0, .split_bar(r$derive), dis, add)) ||
-                   (is.null(pop) && !from_data)) lv)
+                   (is.null(pop) && !from_data)) lv,
+               # the R the row adds after its keys, as written (a step each)
+               thn)
     out <- c(out, .make_code(id, base, steps))
   }
   out

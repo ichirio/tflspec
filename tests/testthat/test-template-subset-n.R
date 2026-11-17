@@ -136,7 +136,7 @@ test_that("pk_conc with subset builds; BLQ is printed for a BLQ record only; one
   }
   e <- tfl_template_expand("pk_conc", list(population = "SAF", blq = "BLQFL == \"Y\""))
   expect_identical(as.character(e$ard$analysis_data[[2L]]$derive),
-                   "ATPT = reorder_by(ATPT, ATPTN) | AVAL = ifelse(BLQFL == \"Y\", -Inf, AVAL)")
+                   "ATPT = reorder_by(ATPT, ATPTN) | AVAL = ifelse((BLQFL == \"Y\") %in% TRUE, -Inf, AVAL)")
 })
 
 test_that("ae_max_grade keeps an arm that where leaves no record, with its N and a zero count of 0", {
