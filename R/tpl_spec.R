@@ -330,8 +330,7 @@
 }
 
 # The template expanded for a report: its arguments with the study's
-# defaults and the report's code lists (`codelists`: the layers' and its
-# own).  `lb`: the layers below the report (.tpl_layers_below()).  A
+# defaults and the report's own code lists (`codelists`).  `lb`: the layers below the report (.tpl_layers_below()).  A
 # template with an `extends` in its set reads its references in the
 # content step's range (none under `{content: none}`) and folds the study's
 # stub over that range; one not yet migrated over the layers' content.

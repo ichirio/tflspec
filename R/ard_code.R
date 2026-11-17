@@ -1071,6 +1071,7 @@
   code <- .levels_put(c(if (length(levels)) c(
       "# ---- code lists: each value in its order ----",
       .codelists_lines(levels), ""), code), levels)
+  code <- .adam_narrow_put(code, x$adam_meta, names(levels))
   .data_tidy(.ard_sub_names(code, x, character(), character()))
 }
 
@@ -1369,7 +1370,8 @@
       .cl("bind_items", as.list(bind))
     if (several) {
       seg <- seq.int(seg_from, length(code))
-      renamed <- .ard_sub_names(.levels_where_read(code[seg], lv, first_an = seg_an - seg_from + 1L),
+      renamed <- .ard_sub_names(.levels_where_read(code[seg], lv, first_an = seg_an - seg_from + 1L,
+                                                    meta = x$adam_meta),
                                 x, auto_ds, auto_note)
       dnames[[o]] <- .data_names_renamed(dn, attr(renamed, "renamed"), x)
       code <- c(code[seq_len(seg_from - 1L)], renamed)
@@ -1399,7 +1401,8 @@
     attr(code, "data_names") <- do.call(rbind, unname(dnames))
     return(code)
   }
-  out <- .ard_sub_names(.levels_where_read(.pop_identity(.pop_as_adata(code, ad$data_id)), lv1),
+  out <- .ard_sub_names(.levels_where_read(.pop_identity(.pop_as_adata(code, ad$data_id)), lv1,
+                                            meta = x$adam_meta),
                         x, one_ds, one_note)
   out <- structure(.data_tidy(out), renamed = attr(out, "renamed"))
   attr(out, "data_names") <- .data_names_renamed(one_dn, attr(out, "renamed"), x)
@@ -1490,8 +1493,8 @@
 # the levels are the same, a data's made again from its own records:
 # set_levels(SEX = cl_sex, ...).
 .levels_where_read <- function(code, levels,
-                               first_an = match("# ---- analyses ----", code)) {
-  if (!length(levels)) return(code)
+                               first_an = match("# ---- analyses ----", code), meta = NULL) {
+  if (!length(levels)) return(.adam_narrow_put(code, meta, first_an = first_an))
   pipe_lv <- paste0(" |>\n  ", .levels_step)
   flat_lv <- paste0(" |> ", .levels_step)
   def <- grepl("^[A-Za-z.][A-Za-z0-9._]* <- ", code)
@@ -1521,7 +1524,7 @@
       code[k] <- .make_code(nm, src, trimws(l[2L]))
     }
   }
-  .levels_put(code, levels)
+  .adam_narrow_put(.levels_put(code, levels), meta, names(levels), first_an)
 }
 
 # `name <- data |> call(...) |> steps`: the data piped into the call that
@@ -1580,7 +1583,7 @@
   lv <- attr(x, "levels")[[r$output_id]]
   node <- .analysis_node(r, keys, subj, has, den, data = data,
                          population = pop_name, fmt_fun = fmt_fun,
-                         codelists = .adam_listed(lv, x$adam_meta))
+                         codelists = .adam_listed(lv, x$adam_meta, .analysis_ds(x, r)))
   # overall: the same call without its by too, bound under it -- cards'
   # overall rows, no group, which a table reads as its Total column
   if (isTRUE(.ard_yes(r$overall %||% NA)) && !is.na(r$by) &&
@@ -1590,7 +1593,7 @@
     total <- TRUE
     node <- .cl("dplyr::bind_rows", list(.piped(node, data), .piped(.analysis_node(
       r0, keys, subj, has, den, data = data, population = pop_name,
-      fmt_fun = fmt_fun, codelists = .adam_listed(lv, x$adam_meta)), data)))
+      fmt_fun = fmt_fun, codelists = .adam_listed(lv, x$adam_meta, .analysis_ds(x, r))), data)))
   } else {
     total <- FALSE
   }
@@ -1895,7 +1898,7 @@
   lv <- attr(x, "levels")[[r$output_id]]
   node <- .analysis_node(r, keys, subj, has, den, data = data,
                          population = pop_name, fmt_fun = fmt_fun,
-                         codelists = .adam_listed(lv, x$adam_meta))
+                         codelists = .adam_listed(lv, x$adam_meta, .analysis_ds(x, r)))
   overall <- isTRUE(.ard_yes(r$overall %||% NA)) && !is.na(r$by) &&
     !call_fn %in% c("(code)", "(subjects)")
   keep <- if (!kind %in% c("continuous", "categorical", "missing") &&

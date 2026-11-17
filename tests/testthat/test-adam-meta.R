@@ -168,6 +168,10 @@ test_that("the ARD program's own read puts adam_meta's levels on, after its stud
   wd <- setwd(d)
   on.exit(setwd(wd), add = TRUE)
   eval(parse(text = tfl_helpers_code()), env)
+  # (the setup sets the study's rounding options: put back after)
+  keep <- options(rtfreporter.rounding = getOption("rtfreporter.rounding"),
+                  cards.round_type = getOption("cards.round_type"))
+  on.exit(options(keep), add = TRUE)
   suppressMessages(eval(parse(text = c(setup, prog)), env))
   setwd(wd)
   keep <- setdiff(names(ard), "fmt_fun")
@@ -215,4 +219,116 @@ test_that("a listing's own read and tflspec's own reads put the same levels on",
   b <- .ai_read_adam(file.path(d, "adam", "adsl.xpt"), "ADSL", tfl_read_study_spec(amt_run_study("none")))
   expect_true(is.character(b$SEX))
   expect_true(is.character(.ai_read_adam(file.path(d, "adam", "adsl.xpt"))$SEX))
+})
+
+# ---- a filter narrows adam_meta's levels, as a report's own list (Q3) -------
+
+test_that("a data whose filter keeps one level of an adam_meta column has that level only", {
+  skip_on_cran()
+  d <- amt_run_study()
+  writeLines(c("id: T-AN", "kind: table", "common: {population: SAF}", "extends: none",
+               "data:", "  - {id: adsl_f, from: ADSL, population: SAF, where: !r SEX == \"F\"}",
+               "ard:", "  analyses:", "    - id: A1", "      method: categorical",
+               "      data: adsl_f", "      by: [ARM]", "      variables: [SEX]",
+               "content:", "  - table_plan: {cols: ARM}"),
+             file.path(d, "spec", "outputs", "T-AN.yml"))
+  st <- tfl_read_study_spec(d)
+  code <- tfl_ard_code(st, "T-AN", save = FALSE)
+  expect_true(any(grepl('set_levels(SEX = intersect(adam_codes("CL.SEX"), c("F")))', code, fixed = TRUE)))
+  ard <- suppressMessages(tfl_build_ard(st, dir = d, output_id = "T-AN", save = FALSE))
+  # (no zero row of M or U: the filter left them out)
+  expect_identical(amt_sex(ard), "F")
+  # the setup and the program: the same
+  old <- options(tflspec.study_setup = TRUE)
+  setup <- tfl_study_setup_code(st)
+  prog <- tfl_ard_code(st, "T-AN", save = FALSE)
+  options(old)
+  env <- new.env(parent = globalenv())
+  wd <- setwd(d)
+  on.exit(setwd(wd), add = TRUE)
+  eval(parse(text = tfl_helpers_code()), env)
+  # (the setup sets the study's rounding options: put back after)
+  keep <- options(rtfreporter.rounding = getOption("rtfreporter.rounding"),
+                  cards.round_type = getOption("cards.round_type"))
+  on.exit(options(keep), add = TRUE)
+  suppressMessages(eval(parse(text = c(setup, prog)), env))
+  setwd(wd)
+  keep <- setdiff(names(ard), "fmt_fun")
+  expect_identical(as.data.frame(env$ard)[keep], as.data.frame(ard)[keep])
+  # a report's own list of the column: its step narrows it, not adam_meta's
+  own <- readLines(file.path(d, "spec", "outputs", "T-AN.yml"))
+  writeLines(c(own, "codelists:", "  SEX: [{value: F, label: Female}, {value: M, label: Male}]"),
+             file.path(d, "spec", "outputs", "T-AN.yml"))
+  code <- tfl_ard_code(tfl_read_study_spec(d), "T-AN", save = FALSE)
+  expect_false(any(grepl("intersect(adam_codes", code, fixed = TRUE)))
+  expect_true(any(grepl('cl_sex[c("F")]', code, fixed = TRUE)))
+})
+
+test_that("adam_meta's columns count as listed for the analysis's dataset and ADSL", {
+  meta <- list(variables = data.frame(dataset = c("ADSL", "ADAE"), variable = c("SEX", "AESEV"),
+                                      codelist = c("CL.SEX", "CL.AESEV"), stringsAsFactors = FALSE))
+  expect_named(.adam_listed(list(), meta), c("SEX", "AESEV"))
+  expect_named(.adam_listed(list(), meta, "ADSL"), "SEX")
+  expect_named(.adam_listed(list(), meta, "ADAE"), c("SEX", "AESEV"))
+  expect_named(.adam_listed(list(ARM = "A"), meta, "ADLB"), c("ARM", "SEX"))
+})
+
+# ---- tfl_check_spec(): a study list named like a column adam_meta does not map
+
+test_that("tfl_check_spec() warns of a study code list named like an ADaM column adam_meta does not map", {
+  skip_on_cran()
+  d <- amt_run_study()
+  f <- file.path(d, "spec", "defaults.yml")
+  cat("codelists:", "  SEX: [{value: F, label: Female}, {value: M, label: Male}]",
+      "  RACE: [{value: WHITE, label: White}]", "  MYLIST: [{value: A}]", "",
+      sep = "\n", file = f, append = TRUE)
+  p <- suppressMessages(tfl_check_spec(d))
+  w <- p[p$part %in% "study", , drop = FALSE]
+  # (SEX is mapped; MYLIST names no column; RACE is ADSL's and not mapped)
+  expect_identical(w$item, "codelists: RACE")
+  expect_identical(w$level, "warning")
+  expect_true(is.na(w$output_id))
+  expect_match(w$message, "named like the column ADSL.RACE, which adam_meta does not map", fixed = TRUE)
+  # under adam_levels: none, nothing
+  st <- yaml::read_yaml(file.path(d, "study.yml"))
+  st$settings$adam_levels <- "none"
+  yaml::write_yaml(st, file.path(d, "study.yml"))
+  p <- suppressMessages(tfl_check_spec(d))
+  expect_identical(sum(p$part %in% "study"), 0L)
+})
+
+# ---- references to the study's code lists in content -----------------------
+
+test_that("study$codelists references: left out when the study has not the list, put in for a run", {
+  item <- function(args) tfl_item("plan_labels", args)
+  ct <- list(item(list(SEX = tfl_r('c(SEX = "Sex", study$codelists$SEX)'),
+                       RACE = tfl_r("study$codelists$RACE"), AGE = "Age")))
+  p <- .study_refs_prune(ct, "SEX")
+  expect_identical(names(p[[1L]]$args), c("SEX", "AGE"))
+  expect_identical(p[[1L]]$args$SEX, ct[[1L]]$args$SEX)
+  p0 <- .study_refs_prune(ct, character())
+  expect_identical(as.character(unclass(p0[[1L]]$args$SEX)), 'c(SEX = "Sex")')
+  e <- .study_refs_eval(ct, list(SEX = c(F = "Female", M = "Male")))
+  expect_identical(e[[1L]]$args$SEX, c(SEX = "Sex", F = "Female", M = "Male"))
+  expect_false("RACE" %in% names(e[[1L]]$args))
+  expect_identical(e[[1L]]$args$AGE, "Age")
+})
+
+test_that("demog's value_labels: the study's lists by name, for the columns the report shows", {
+  r <- list(id = "T-DM", kind = "table", common = list(population = "SAF"),
+            template = list(name = "tflspec_v1/demog",
+                            analysis = list(by = list("TRT01A"), categorical = list("SEX", "AGEGR1")),
+                            content = list(labels = list(SEX = "Sex, n (%)"))))
+  o <- tfl_template_resolve(r)
+  lab <- Filter(function(it) identical(it$fn, "plan_labels"), o$content)
+  expect_length(lab, 1L)
+  a <- lab[[1L]]$args
+  expect_identical(names(a), c("SEX", "AGEGR1"))
+  expect_identical(as.character(unclass(a$SEX)), 'c(SEX = "Sex, n (%)", study$codelists$SEX)')
+  expect_identical(as.character(unclass(a$AGEGR1)), "study$codelists$AGEGR1")
+  # a report's own map wins; an empty one: no value labels
+  r$template$content$value_labels <- list()
+  o <- tfl_template_resolve(r)
+  lab <- Filter(function(it) identical(it$fn, "plan_labels"), o$content)
+  expect_identical(lab[[1L]]$args, list(SEX = "Sex, n (%)"))
 })

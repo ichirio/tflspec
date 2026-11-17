@@ -56,8 +56,9 @@
     "## The study's code lists",
     "",
     if (length(cls)) {
-      c("The study keeps these lists, by name (spec/defaults.yml codelists:). A report does not",
-        "get them through extends:; a draft writes its own `codelists:` for a variable it lists:",
+      c("The study keeps these lists, by name (spec/defaults.yml codelists:). No layer gives a",
+        "report a list (a pattern holds none); a draft names one where it uses it",
+        "(`!r study$codelists$SEX`), or writes its own `codelists:` for a variable it lists:",
         "", paste0("- ", cls))
     } else "None.")
 }

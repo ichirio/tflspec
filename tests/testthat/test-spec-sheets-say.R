@@ -135,25 +135,14 @@ test_that("a study with none of them has no such note", {
   expect_false(any(x$sh$not_converted$part %in% c("options", "styles", "style")))
 })
 
-# -- item 4: code lists of the defaults and of patterns ------------------------------
+# -- item 4: the study's code lists -------------------------------------------------
 
-# the sample study with its report's code list moved to the defaults (and a
-# pattern with a list of its own)
+# the sample study (its report keeps its own TRT01A list; the study's lists,
+# defaults.yml's, reach no report and no pattern holds one)
 rts_cl_study <- function(env = parent.frame()) {
   d <- withr::local_tempdir(.local_envir = env)
   file.copy(list.files(system.file("extdata", "spec-yaml", package = "tflspec"), full.names = TRUE),
             d, recursive = TRUE)
-  f <- file.path(d, "outputs", "T-14-1-1.yml")
-  l <- readLines(f)
-  i <- grep("^codelists:", l)
-  j <- i + 1L
-  while (grepl("^ ", l[j])) j <- j + 1L
-  # (the report's TRT01A list moved to a pattern it extends; the study's own
-  # lists, defaults.yml's, reach no report)
-  l[l == "extends: [defaults]"] <- "extends: [patterns/p, defaults]"
-  writeLines(l[-(i:(j - 1L))], f)
-  dir.create(file.path(d, "patterns"))
-  writeLines(c(l[i:(j - 1L)], "  SEX: [F, M]"), file.path(d, "patterns", "p.yml"))
   writeLines(c("datasets:", "  - dataset: ADSL", "    level: ADaM", "    path: adam/adsl.xpt",
                "populations:", "  - id: SAF", "    dataset: ADSL", '    where: !r SAFFL == "Y"',
                "    label: Safety Population"), file.path(d, "data.yml"))
@@ -161,22 +150,20 @@ rts_cl_study <- function(env = parent.frame()) {
   d
 }
 
-test_that("the study's and a pattern's code lists are named in the notes, and reach the file", {
+test_that("the study's code lists and ADaM metadata are named in the notes, and reach the file", {
   d <- rts_cl_study()
   x <- rts_trip(d)
   nc <- x$sh$not_converted
   n <- nc[nc$part == "codelists", ]
-  expect_identical(nrow(n), 2L)
+  expect_identical(nrow(n), 1L)
   expect_match(n$reason[is.na(n$output)], "defaults.yml: SEX, AGEGR1", fixed = TRUE)
-  expect_match(n$reason[n$output %in% "@p"], "patterns/p.yml: TRT01A, SEX", fixed = TRUE)
-  # (and the study's ADaM metadata)
   expect_identical(sum(nc$part == "adam_meta"), 1L)
   written <- x$nc[vapply(x$nc, function(e) identical(e$sheet, "codelists"), NA)]
-  expect_length(written, 2L)
+  expect_length(written, 1L)
   expect_true(any(grepl("[0-9]+ parts?", x$msgs)))
 })
 
-test_that("a program differs when an analysis reads the variable a pattern's list is for", {
+test_that("a report's own code list makes the round trip: its program is the same", {
   skip_if_not_installed("cards")
   d <- rts_cl_study()
   x <- rts_trip(d)
@@ -184,13 +171,10 @@ test_that("a program differs when an analysis reads the variable a pattern's lis
     paste(tfl_ard_code(tfl_read_study_spec(dir), output_id = "T-14-1-1", save = FALSE), collapse = "\n")
   }
   before <- ard(d)
-  after <- ard(x$to)
-  # the list sets TRT01A's values, order and labels in the ARD's data ...
   expect_match(before, "set_levels(TRT01A = cl_trt01a", fixed = TRUE)
   expect_match(before, "Drug X 200 mg", fixed = TRUE)
-  # ... and the study written from the sheets has not got it
-  expect_false(grepl("set_levels(TRT01A", after, fixed = TRUE))
-  expect_false(grepl("Drug X 200 mg", after, fixed = TRUE))
+  expect_match(ard(x$to), "set_levels(TRT01A = cl_trt01a", fixed = TRUE)
+  expect_match(ard(x$to), "Drug X 200 mg", fixed = TRUE)
 })
 
 # -- item 5: what stopped the whole conversion ---------------------------------------

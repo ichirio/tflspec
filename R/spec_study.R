@@ -29,8 +29,13 @@
 #'
 #' * `codelists:` the study's code lists for display, by name (`SEX: [{value:
 #'   F, label: Female}, ...]`; the lists of value-level metadata too).  A
-#'   report or a template refers to one by its name (`study$codelists$SEX`);
-#'   none reaches a report through `extends:`.
+#'   report or a template refers to one by its name, in R (a content
+#'   argument `!r study$codelists$SEX`; the `tflspec_v1/demog` template's
+#'   `value_labels` default names `SEX`, `RACE`, `ETHNIC` and `AGEGR1` so); a
+#'   reference to a list the study has not got is left out when the report is
+#'   resolved.  No list reaches a report through `extends:`: a report's code
+#'   lists are its own (`codelists:` in its file), and a pattern's
+#'   `codelists:` stops the read.
 #' * `adam_meta:` the ADaM metadata in the shape [tfl_read_define()] gives
 #'   (until a define is read): each part a list of rows, `variables: [{dataset:
 #'   ADSL, variable: SEX, codelist: CL.SEX}, ...]` (the code list's OID) and
@@ -81,6 +86,13 @@ tfl_read_study_spec <- function(dir) {
       if (!is.null(y$page)) {
         stop("tfl_read_study_spec(): ", basename(f), " `page:` moved to a page configuration ",
              "(styles:): the page comes from the report's configuration, not from a pattern.",
+             call. = FALSE)
+      }
+      # (a code list is the study's or a report's own: no layer passes one on)
+      if (!is.null(y$codelists)) {
+        stop("tfl_read_study_spec(): ", basename(f), " `codelists:`: a pattern holds no code ",
+             "list. A code list is the study's (spec/defaults.yml `codelists:`, which a report ",
+             "or template names, study$codelists$<name>) or a report's own (its `codelists:`).",
              call. = FALSE)
       }
       .layer_from_list(y, paste0("pattern:", tools::file_path_sans_ext(basename(f))))
@@ -142,14 +154,16 @@ tfl_read_study_spec <- function(dir) {
 }
 
 # a defaults or pattern file as a layer: content items marked `from`, the
-# rest (data, codelists, page) as plain lists with calls resolved
+# rest (data, page) as plain lists with calls resolved.  A layer has no code
+# lists (`codelists` is always empty): the study's are study$codelists, by
+# name, and a report's are its own.
 .layer_from_list <- function(y, from) {
   if (is.null(y)) y <- list()
   items <- if (inherits(y$content, "tfl_r")) y$content else {
     its <- lapply(y$content %||% list(), .item_from_list)
     lapply(its, function(it) { it$from <- from; it })
   }
-  list(data = .calls_in(y$data %||% list()), codelists = y$codelists %||% list(),
+  list(data = .calls_in(y$data %||% list()), codelists = list(),
        content = items, page = .calls_in(y$page %||% list()))
 }
 
@@ -320,12 +334,15 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
     if (isTRUE(provenance)) acc$content <- prov
   }
   output$data <- if (length(acc$data)) acc$data else output$data
-  # (a layer's code list -- the study's defaults, a pattern -- is the
-  # report's only for a variable its ARD reads, as set_levels() takes it;
-  # the report's own lists stay)
+  # (the report's own code lists: no layer gives one)
   output$codelists <- .codelists_read(acc$codelists, own$codelists, output)
   if (!is.null(tpl$x$codelists)) output$codelists <- .tpl_add_codelists(acc$codelists, tpl$x$codelists)
   output$content <- .any_label_default(acc$content, output, study)
+  # the study's code lists the content names (study$codelists$SEX): one the
+  # study has not got is taken out; the lists go with the report, for the
+  # package's runners, which have no setup to make `study`
+  output$content <- .study_refs_prune(output$content, names(study$codelists))
+  attr(output, "study_codelists") <- study$codelists %||% list()
   output$content <- .listing_rows_default(output$content, output$kind, provenance)
   # the study's rounding: the setup's option, so the program leaves it out
   attr(output, "study_rounding") <- .study_rounding(study)
@@ -463,9 +480,9 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 # ---- extends: what a report lays under it, step by step ---------------------
 
 # The steps a report is made in (canon 1.32), which `extends` may name one
-# by one; and the step each part of a layer goes with (a layer's code lists
-# with its data: Q3 of PLAN-5B; `ard` lays nothing yet, defaults.yml has
-# no `ard:`)
+# by one; and the step each part of a layer goes with (`codelists` is
+# always empty in a layer; `ard` lays nothing yet, defaults.yml has no
+# `ard:`)
 .extends_steps <- c("data", "ard", "content", "page")
 .extends_part_step <- c(data = "data", codelists = "data", content = "content", page = "page")
 
@@ -1105,30 +1122,8 @@ tfl_styles <- function(study) {
     stringsAsFactors = FALSE)
 }
 
-# The code lists a resolved report keeps: its own first, in its order, then
-# of its layers' those of the variables its ARD reads (a table with
-# analyses: their variables, by and strata, and the names their code and
-# arguments use).  A listing (no ARD) keeps its own only; a report with no
-# analyses (a figure, a table of its own code) keeps them all.
+# The code lists a resolved report keeps: its own, in its order (a layer
+# gives none: the study's lists are study$codelists, named where used)
 .codelists_read <- function(all, own, output) {
-  if (!length(all)) return(all)
-  all <- all[c(intersect(names(own), names(all)), setdiff(names(all), names(own)))]
-  if (identical(output$kind, "listing")) return(all[intersect(names(own), names(all))])
-  if (!identical(output$kind, "table")) return(all)
-  an <- output$ard$analyses
-  if (!length(an) || !is.list(an)) return(all)
-  txt <- function(v) {
-    v <- unlist(lapply(v, function(x) if (inherits(x, "tfl_r")) unclass(x) else x))
-    as.character(v[!is.na(v)])
-  }
-  vars <- unlist(lapply(an, function(a) {
-    if (!is.list(a)) return(NULL)
-    cols <- unlist(lapply(txt(c(a$variables, a$by, a$strata)), .split_bar))
-    code <- txt(c(a$args, a$code, a$post))
-    syms <- unlist(lapply(code, function(s) tryCatch(all.names(parse(text = s)),
-                                                     error = function(e) NULL)))
-    c(cols, syms)
-  }))
-  keep <- names(all) %in% c(names(own), vars)
-  all[keep]
+  all[intersect(names(own), names(all))]
 }

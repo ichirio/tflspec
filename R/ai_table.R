@@ -520,8 +520,7 @@
         next
       }
       # (shift: `levels` / `worst` against the data's values, when the kit has
-      # them; the code lists are the report's own and its layers', which
-      # need the study)
+      # them; the code lists are the report's own)
       if (is.null(st) && !is.null(context$study_dir)) {
         st <- tryCatch(tfl_read_study_spec(context$study_dir), error = function(e) NULL)
       }

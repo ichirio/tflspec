@@ -230,12 +230,60 @@
 # A report's code lists with the columns adam_meta maps (in any dataset)
 # as listed too: their levels are study$adam's, kept (a zero row counts),
 # not dropped as an unlisted category's are (.unlisted_vars())
-.adam_listed <- function(levels, meta) {
+.adam_listed <- function(levels, meta, datasets = NULL) {
   v <- meta$variables
   if (is.null(v) || !nrow(v)) return(levels)
+  # (the analysis's dataset, and ADSL, whose columns a data adds)
+  if (length(datasets)) v <- v[toupper(v$dataset) %in% toupper(c(datasets, "ADSL")), , drop = FALSE]
   extra <- setdiff(unique(v$variable[!is.na(v$codelist)]), names(levels))
   if (!length(extra)) return(levels)
   c(levels, stats::setNames(rep(list(character()), length(extra)), extra))
+}
+
+# The dataset an analysis row reads: its `dataset`, else the one its
+# analysis data is first made from; NULL when neither says
+.analysis_ds <- function(x, r) {
+  ds <- r$dataset %||% NA_character_
+  if (!is.na(ds)) return(ds)
+  d <- .data_col(r)
+  if (is.na(d)) return(NULL)
+  ds <- .adata_dataset(.adata_of(.adata_sheet(x), r$output_id), d)
+  if (is.na(ds)) NULL else ds
+}
+
+# The data a program defines (before its analyses, `first_an`), each with
+# the levels of an adam_meta column its own filter narrows put on again,
+# as a report's code list is (Q3: a subgroup's data has no zero row for the
+# levels its filter leaves out): set_levels(SEX = intersect(
+# adam_codes("CL.SEX"), c("F"))).  `listed`: the report's own lists'
+# variables, which their step narrows.  A variable mapped to two code lists
+# (two datasets) is narrowed by the first.
+.adam_narrow_put <- function(code, meta, listed = character(), first_an = NA_integer_) {
+  v <- meta$variables
+  if (is.null(v) || !nrow(v) || !length(code)) return(code)
+  v <- v[!is.na(v$codelist) & v$codelist %in% meta$codelists$codelist &
+           !v$variable %in% listed, , drop = FALSE]
+  v <- v[!duplicated(v$variable), , drop = FALSE]
+  if (!nrow(v)) return(code)
+  end <- if (is.na(first_an)) length(code) else first_an - 1L
+  def <- grepl("^[A-Za-z.][A-Za-z0-9._]* <- ", code) & seq_along(code) <= end
+  for (k in which(def)) {
+    # (its own filters: the data it is made from has its levels already)
+    conds <- .def_conditions(code[k], 1L)
+    if (!length(conds)) next
+    nc <- .narrow_conditions(conds, v$variable)
+    args <- list()
+    for (i in seq_len(nrow(v))) {
+      var <- v$variable[i]
+      e <- .narrow_expr(.adam_codes(meta, v$codelist[i]), sprintf("adam_codes(%s)", .q(v$codelist[i])),
+                        nc$include[[var]], nc$exclude[[var]])
+      if (!is.null(e)) args[[var]] <- e
+    }
+    if (!length(args)) next
+    step <- gsub("\n", "\n  ", .lay(.cl("set_levels", args), lead = 2L), fixed = TRUE)
+    code[k] <- paste0(code[k], " |>\n  ", step)
+  }
+  code
 }
 
 # A data frame as tibble::tribble(), a row a line, the columns lined up:
@@ -309,4 +357,51 @@
   n <- nrow(rows)
   col <- function(cn) if (cn %in% names(rows)) rows[[cn]] else rep(NA, n)
   as.character(rows$value[order(col("order"), col("rank"), seq_len(n))])
+}
+
+# The study's code lists named like an ADaM column that adam_meta does not
+# map, in any dataset (tfl_check_spec()'s study rows): a list's name is not
+# a mapping, so study$adam has no levels of that column.  The columns are
+# those of the datasets of data.yml whose files can be read (the header
+# only for .xpt), and adam_meta's variables.  None under adam_levels: none.
+# A list each: list(list = <name>, message = <text>).
+.study_list_unmapped <- function(study) {
+  lists <- names(study$codelists %||% list())
+  if (!length(lists) || identical(.study_adam_levels(study), "none")) return(list())
+  meta <- study$adam_meta
+  mapped <- toupper(meta$variables$variable[!is.na(meta$variables$codelist)])
+  cols <- list()
+  dir <- study$dir %||% "."
+  for (e in study$data$datasets %||% list()) {
+    ds <- as.character(e$dataset %||% NA)[1L]
+    p <- as.character(e$path %||% NA)[1L]
+    if (is.na(ds) || is.na(p)) next
+    if (!grepl("^([A-Za-z]:)?[/\\\\]", p)) p <- file.path(dir, p)
+    nm <- tryCatch({
+      if (!file.exists(p)) {
+        NULL
+      } else if (grepl("[.]xpt$", p, ignore.case = TRUE) && requireNamespace("haven", quietly = TRUE)) {
+        names(haven::read_xpt(p, n_max = 0L))
+      } else if (grepl("[.]rds$", p, ignore.case = TRUE)) {
+        names(readRDS(p))
+      }
+    }, error = function(err) NULL)
+    for (v in nm) cols[[toupper(v)]] <- c(cols[[toupper(v)]], toupper(ds))
+  }
+  for (i in seq_len(nrow(meta$variables %||% data.frame()))) {
+    v <- toupper(meta$variables$variable[i])
+    cols[[v]] <- unique(c(cols[[v]], toupper(meta$variables$dataset[i])))
+  }
+  out <- list()
+  for (l in lists) {
+    u <- toupper(l)
+    if (is.null(cols[[u]]) || u %in% mapped) next
+    where <- paste0(unique(cols[[u]]), ".", l, collapse = ", ")
+    out[[length(out) + 1L]] <- list(list = l, message = sprintf(paste0(
+      "code list %s is named like the column %s, which adam_meta does not map: study$adam ",
+      "has no levels of it from the list (its name is not a mapping). Map it in ",
+      "spec/defaults.yml adam_meta: variables: (a code list of its values), or name the list ",
+      "otherwise."), l, where))
+  }
+  out
 }

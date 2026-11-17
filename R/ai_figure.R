@@ -52,9 +52,8 @@
                  assumption_rows = rows), class = "tfl_ai_answer")
 }
 
-# The figure's code lists as its resolved path has them: its own over the
-# ones of the layers it extends (tfl_report_codelists(), for this report
-# only: the sheets' rows hold its own)
+# The figure's code lists as its resolved path has them: its own
+# (tfl_report_codelists(), for this report only)
 .ai_fig_codelists <- function(st, id, rows) {
   tfl_report_codelists(st, outputs = tfl_read_outputs(".", skip_bad = TRUE)[id], rows = rows)
 }

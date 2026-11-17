@@ -43,8 +43,13 @@ message.
 two things kept apart:
 \itemize{
 \item \verb{codelists:} the study's code lists for display, by name (\verb{SEX: [\{value: F, label: Female\}, ...]}; the lists of value-level metadata too).  A
-report or a template refers to one by its name (\code{study$codelists$SEX});
-none reaches a report through \verb{extends:}.
+report or a template refers to one by its name, in R (a content
+argument \verb{!r study$codelists$SEX}; the \code{tflspec_v1/demog} template's
+\code{value_labels} default names \code{SEX}, \code{RACE}, \code{ETHNIC} and \code{AGEGR1} so); a
+reference to a list the study has not got is left out when the report is
+resolved.  No list reaches a report through \verb{extends:}: a report's code
+lists are its own (\verb{codelists:} in its file), and a pattern's
+\verb{codelists:} stops the read.
 \item \verb{adam_meta:} the ADaM metadata in the shape \code{\link[=tfl_read_define]{tfl_read_define()}} gives
 (until a define is read): each part a list of rows, \verb{variables: [\{dataset: ADSL, variable: SEX, codelist: CL.SEX\}, ...]} (the code list's OID) and
 \verb{codelists: [\{codelist: CL.SEX, name: Sex, value: F, decode: Female, order: 1\}, ...]} (a value a row); \verb{datasets:}, \verb{external:} and

@@ -151,21 +151,19 @@
                                b$table$codelists, output_id))
 }
 
-#' A report's code lists, with the ones its layers give
+#' A report's code lists
 #'
 #' `tfl_report_codelists()` gives the code lists the ARD program of each
-#' report is written with.  A report's code lists can come from the layers
-#' it extends -- the study's `defaults.yml`, a pattern -- as well as from its
-#' own file ([tfl_resolve_output()] puts them together for the RTF); the
-#' sheets ([tfl_sheets_from_yaml()]) hold a report's own only, so that they
-#' stay the round trip back to the YAML.  This is the sheets' `codelists`
-#' rows with the layers' lists added, report by report.
+#' report is written with: the report's own (`codelists:` in its file, a
+#' template's own lists among them), as the sheets' `codelists` rows hold
+#' them, the reports in the TOC's order.  No layer gives a report a list:
+#' the study's code lists (`spec/defaults.yml` `codelists:`) are
+#' `study$codelists`, which a report or a template names where it uses one
+#' (`study$codelists$SEX`), and the levels of the ADaM columns come from the
+#' study's ADaM metadata (`adam_meta:`, `study$adam`); a pattern holds no
+#' list.
 #'
-#' For each report and variable there is one list: the report's own when
-#' it has one (a template's own lists among them, as the sheets hold them),
-#' else the one of the layers it extends (a pattern's over the defaults').
-#' A report that extends nothing (`extends: none`) has only its own.  The
-#' ARD holds each row's `value` (the code); its `label` is applied by the
+#' The ARD holds each row's `value` (the code); its `label` is applied by the
 #' report's table plan (`plan_labels`), and by a figure's legend.
 #'
 #' @param study The study's spec, as [tfl_read_study_spec()] reads it.
@@ -174,9 +172,9 @@
 #'   files, read as [tfl_sheets_from_yaml()] reads them.
 #' @param rows The reports' own code list rows (the sheets' `codelists`,
 #'   a template's lists among them), when the caller has them: the sheets are
-#'   then not made again.  The result keeps the columns of `rows` (a layer's
-#'   rows have `NA` there), and a row of a report not in `outputs` stays.
-#'   `NULL` (default): made from `outputs`.
+#'   then not made again.  The result keeps the columns of `rows`, and a row
+#'   of a report not in `outputs` stays.  `NULL` (default): made from
+#'   `outputs`.
 #' @return A data frame of the sheets' `codelists` rows (`output_id`,
 #'   `variable`, `value`, `label`, `order`, `under`), the reports in the
 #'   TOC's order; every row has its report (no `NA` `output_id`), and zero
@@ -218,33 +216,11 @@ tfl_report_codelists <- function(study, outputs = NULL, rows = NULL) {
     outputs <- outputs[ids %in% output_id]
     ids <- ids[ids %in% output_id]
   }
-  made <- lapply(seq_along(outputs), function(i) {
-    mine <- own[own$output_id == ids[i], , drop = FALSE]
-    below <- tryCatch(.layers_below(outputs[[i]], study)$acc$codelists, error = function(e) {
-      .ard_stop(sprintf("%s: %s", ids[i], conditionMessage(e)))
-    })
-    below <- .codelists_norm(below)
-    # (a listing takes no layer's list, as tfl_resolve_output() gives it)
-    if (identical(outputs[[i]]$kind, "listing")) below <- list()
-    below <- below[setdiff(names(below), mine$variable)]
-    rbind(mine, .codelist_rows_of(ids[i], below, names(own)))
-  })
+  # (each report's own rows; no layer gives a list)
+  made <- lapply(seq_along(outputs), function(i) own[own$output_id == ids[i], , drop = FALSE])
   # (a report of the rows that is not among the outputs: kept, last)
   rest <- own[!own$output_id %in% ids_all & (is.null(output_id) | own$output_id %in% output_id), , drop = FALSE]
   out <- do.call(rbind, c(list(own[0L, , drop = FALSE]), made, list(rest)))
   rownames(out) <- NULL
   out
-}
-
-# Code lists (a variable's entries: value, label, under) as the sheets'
-# rows of one report
-.codelist_rows_of <- function(id, lists, cols) {
-  rows <- list()
-  for (v in names(lists)) for (i in seq_along(lists[[v]])) {
-    e <- lists[[v]][[i]]
-    rows[[length(rows) + 1L]] <- list(
-      output_id = id, variable = v, value = .sheet_cell(e$value), label = .sheet_cell(e$label),
-      order = as.character(i), under = .sheet_cell(e$under))
-  }
-  .rows_df(rows, cols)
 }

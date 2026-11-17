@@ -135,6 +135,11 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   kind <- report$kind %||% tpl$kind %||% "table"
 
   content <- .tr_fill(tpl$content %||% list(), env)
+  # (the template's headings and its value labels, references to the
+  # study's lists, as one plan_labels(); a list of a column no analysis reads
+  # left out)
+  cols <- unique(as.character(unlist(lapply(items, function(a) c(a$variables, a$by)))))
+  content <- .tr_labels_join(content, cols)
   if (is.list(report$content)) content <- c(content, report$content)
   page <- .tr_fill(tpl$page %||% list(), env)
   for (k in names(report$page)) page[k] <- list(report$page[[k]])
