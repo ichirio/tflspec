@@ -108,6 +108,18 @@ test_that("tflspec_listing: by divides the listing, by page or by block", {
   expect_identical(lstb_item(b, "plan_paginate_rows"), list(max_rows = 30L))
 })
 
+test_that("a one-value argument is one value of its type, an enum's one of its values", {
+  # (a list would stop in rtfreporter naming plan_paginate_rows(heading = );
+  # an enum's other value would leave the by steps out without a word)
+  expect_error(lstb_resolve(by = "TRT01A", by_heading = c("a", "b")),
+               "tflspec_listing's by_heading is one value (string); the report gives 2.", fixed = TRUE)
+  expect_error(lstb_resolve(by = "TRT01A", by_break = "pages"),
+               "tflspec_listing's by_break is one of page, block; the report gives \"pages\".", fixed = TRUE)
+  expect_error(lstb_resolve(max_rows = list(10, 20)), "max_rows is one value (number)", fixed = TRUE)
+  expect_identical(lstb_fns(lstb_resolve(by = "TRT01A", by_break = "block"))[2:3],
+                   c("plan_hide", "plan_row_group"))
+})
+
 test_that("tflspec_listing on ADAE: a severe TEAE listing with ADSL's AGE and SEX, in the sort order", {
   lstb_skip()
   d <- lstb_study(file.path(tempdir(), "lstb-sev"))
