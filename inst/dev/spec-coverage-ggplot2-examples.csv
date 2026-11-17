@@ -23,7 +23,7 @@
 "ggplot2","facet_grid","axes","yes","facet_grid","","facet",3,1
 "ggplot2","facet_grid","axis.labels","yes","facet_grid","","facet",3,1
 "ggplot2","facet_grid","cols","yes","as_labeller; benchplot; facet_grid; get_strip_labels; label_bquote; labellers","","facet",3,10
-"ggplot2","facet_grid","labeller","partial","as_labeller; label_bquote; labellers","3 of 5 uses: as R: alpha^.(vs) (facet_grid(vs ~ ., labeller = label_bquote(alpha^.(vs))))","facet",3,5
+"ggplot2","facet_grid","labeller","yes","as_labeller; label_bquote; labellers","","facet",3,5
 "ggplot2","facet_grid","rows","yes","as_labeller; facet_grid; geom_ribbon; get_strip_labels; label_bquote; scale_linetype","","facet",3,10
 "ggplot2","facet_grid","scales","yes","facet_grid","","facet",3,2
 "ggplot2","facet_grid","space","yes","facet_grid","","facet",3,1
@@ -47,7 +47,7 @@
 "ggplot2","geom_bar","stat","yes","scale_gradient","","geom",3,1
 "ggplot2","geom_bar","width","yes","coord_radial","","geom",3,1
 "ggplot2","geom_bin_2d","","yes","geom_bin_2d","","geom",1,1
-"ggplot2","geom_bin_2d","bins","partial","geom_bin_2d","1 of 2 uses: as R: list(x = 30, y = 10) (geom_bin_2d(bins = list(x = 30, y = 10)))","geom",1,2
+"ggplot2","geom_bin_2d","bins","yes","geom_bin_2d","","geom",1,2
 "ggplot2","geom_bin_2d","binwidth","yes","geom_bin_2d","","geom",1,1
 "ggplot2","geom_blank","","yes","annotation_custom","","geom",1,1
 "ggplot2","geom_boxplot","","yes","Coord; coord_flip; geom_boxplot","","geom",3,6

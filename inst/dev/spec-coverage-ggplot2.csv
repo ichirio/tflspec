@@ -550,8 +550,8 @@
 "ggplot2","geom_bin_2d","na.rm","yes","schema.yml: geom_bin_2d; gg_args.csv","","geom",1
 "ggplot2","geom_bin_2d","show.legend","yes","schema.yml: geom_bin_2d; gg_args.csv","","geom",1
 "ggplot2","geom_bin_2d","inherit.aes","yes","schema.yml: geom_bin_2d; gg_args.csv","","geom",1
-"ggplot2","geom_bin_2d","binwidth","yes","schema.yml: geom_bin_2d; gg_args.csv","","geom",1
-"ggplot2","geom_bin_2d","bins","yes","schema.yml: geom_bin_2d; gg_args.csv","","geom",1
+"ggplot2","geom_bin_2d","binwidth","yes","schema.yml: geom_bin_2d","","geom",1
+"ggplot2","geom_bin_2d","bins","yes","schema.yml: geom_bin_2d","","geom",1
 "ggplot2","geom_bin_2d","breaks","yes","schema.yml: geom_bin_2d; gg_args.csv","","geom",1
 "ggplot2","geom_bin_2d","drop","yes","schema.yml: geom_bin_2d; gg_args.csv","","geom",1
 "ggplot2","geom_bin_2d","boundary","yes","schema.yml: geom_bin_2d; gg_args.csv","","geom",1
@@ -618,8 +618,8 @@
 "ggplot2","geom_hex","na.rm","yes","schema.yml: geom_hex; gg_args.csv","","geom",1
 "ggplot2","geom_hex","show.legend","yes","schema.yml: geom_hex; gg_args.csv","","geom",1
 "ggplot2","geom_hex","inherit.aes","yes","schema.yml: geom_hex; gg_args.csv","","geom",1
-"ggplot2","geom_hex","binwidth","yes","schema.yml: geom_hex; gg_args.csv","","geom",1
-"ggplot2","geom_hex","bins","yes","schema.yml: geom_hex; gg_args.csv","","geom",1
+"ggplot2","geom_hex","binwidth","yes","schema.yml: geom_hex","","geom",1
+"ggplot2","geom_hex","bins","yes","schema.yml: geom_hex","","geom",1
 "ggplot2","geom_step(stat = ""ecdf"")","n","yes","schema.yml: geom_step; gg_args.csv","the stat's parameter on the geom","geom_stat",3
 "ggplot2","geom_step(stat = ""ecdf"")","pad","yes","schema.yml: geom_step; gg_args.csv","the stat's parameter on the geom","geom_stat",3
 "ggplot2","geom_pointrange(stat = ""summary"")","fun.data","yes","schema.yml: geom_pointrange; gg_args.csv","the stat's parameter on the geom","geom_stat",3
@@ -891,8 +891,8 @@
 "ggplot2","stat_bin_2d","data","yes","schema.yml: stat_bin_2d; gg_args.csv","","stat",1
 "ggplot2","stat_bin_2d","geom","yes","schema.yml: stat_bin_2d; gg_args.csv","","stat",1
 "ggplot2","stat_bin_2d","position","yes","schema.yml: stat_bin_2d; gg_args.csv","","stat",1
-"ggplot2","stat_bin_2d","binwidth","yes","schema.yml: stat_bin_2d; gg_args.csv","","stat",1
-"ggplot2","stat_bin_2d","bins","yes","schema.yml: stat_bin_2d; gg_args.csv","","stat",1
+"ggplot2","stat_bin_2d","binwidth","yes","schema.yml: stat_bin_2d","","stat",1
+"ggplot2","stat_bin_2d","bins","yes","schema.yml: stat_bin_2d","","stat",1
 "ggplot2","stat_bin_2d","breaks","yes","schema.yml: stat_bin_2d; gg_args.csv","","stat",1
 "ggplot2","stat_bin_2d","drop","yes","schema.yml: stat_bin_2d; gg_args.csv","","stat",1
 "ggplot2","stat_bin_2d","boundary","yes","schema.yml: stat_bin_2d; gg_args.csv","","stat",1
@@ -908,8 +908,8 @@
 "ggplot2","stat_bin_hex","data","yes","schema.yml: stat_bin_hex; gg_args.csv","","stat",1
 "ggplot2","stat_bin_hex","geom","yes","schema.yml: stat_bin_hex; gg_args.csv","","stat",1
 "ggplot2","stat_bin_hex","position","yes","schema.yml: stat_bin_hex; gg_args.csv","","stat",1
-"ggplot2","stat_bin_hex","binwidth","yes","schema.yml: stat_bin_hex; gg_args.csv","","stat",1
-"ggplot2","stat_bin_hex","bins","yes","schema.yml: stat_bin_hex; gg_args.csv","","stat",1
+"ggplot2","stat_bin_hex","binwidth","yes","schema.yml: stat_bin_hex","","stat",1
+"ggplot2","stat_bin_hex","bins","yes","schema.yml: stat_bin_hex","","stat",1
 "ggplot2","stat_bin_hex","na.rm","yes","schema.yml: stat_bin_hex; gg_args.csv","","stat",1
 "ggplot2","stat_bin_hex","show.legend","yes","schema.yml: stat_bin_hex; gg_args.csv","","stat",1
 "ggplot2","stat_bin_hex","inherit.aes","yes","schema.yml: stat_bin_hex; gg_args.csv","","stat",1
@@ -990,8 +990,8 @@
 "ggplot2","stat_summary_2d","data","yes","schema.yml: stat_summary_2d; gg_args.csv","","stat",1
 "ggplot2","stat_summary_2d","geom","yes","schema.yml: stat_summary_2d; gg_args.csv","","stat",1
 "ggplot2","stat_summary_2d","position","yes","schema.yml: stat_summary_2d; gg_args.csv","","stat",1
-"ggplot2","stat_summary_2d","binwidth","yes","schema.yml: stat_summary_2d; gg_args.csv","","stat",1
-"ggplot2","stat_summary_2d","bins","yes","schema.yml: stat_summary_2d; gg_args.csv","","stat",1
+"ggplot2","stat_summary_2d","binwidth","yes","schema.yml: stat_summary_2d","","stat",1
+"ggplot2","stat_summary_2d","bins","yes","schema.yml: stat_summary_2d","","stat",1
 "ggplot2","stat_summary_2d","breaks","yes","schema.yml: stat_summary_2d; gg_args.csv","","stat",1
 "ggplot2","stat_summary_2d","drop","yes","schema.yml: stat_summary_2d; gg_args.csv","","stat",1
 "ggplot2","stat_summary_2d","fun","yes","schema.yml: stat_summary_2d; gg_args.csv","","stat",1
@@ -1009,8 +1009,8 @@
 "ggplot2","stat_summary_hex","data","yes","schema.yml: stat_summary_hex; gg_args.csv","","stat",1
 "ggplot2","stat_summary_hex","geom","yes","schema.yml: stat_summary_hex; gg_args.csv","","stat",1
 "ggplot2","stat_summary_hex","position","yes","schema.yml: stat_summary_hex; gg_args.csv","","stat",1
-"ggplot2","stat_summary_hex","binwidth","yes","schema.yml: stat_summary_hex; gg_args.csv","","stat",1
-"ggplot2","stat_summary_hex","bins","yes","schema.yml: stat_summary_hex; gg_args.csv","","stat",1
+"ggplot2","stat_summary_hex","binwidth","yes","schema.yml: stat_summary_hex","","stat",1
+"ggplot2","stat_summary_hex","bins","yes","schema.yml: stat_summary_hex","","stat",1
 "ggplot2","stat_summary_hex","drop","yes","schema.yml: stat_summary_hex; gg_args.csv","","stat",1
 "ggplot2","stat_summary_hex","fun","yes","schema.yml: stat_summary_hex; gg_args.csv","","stat",1
 "ggplot2","stat_summary_hex","fun.args","yes","schema.yml: stat_summary_hex; gg_args.csv","","stat",1

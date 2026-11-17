@@ -207,6 +207,11 @@ tfl_plot <- function(name, items = list(), from = "own") {
     if (v$fn %in% .fig_plotmath_fns && identical(names(v$args), "expr") && .fig_is_plotmath(v$args$expr)) {
       return(call(v$fn, str2lang(v$args$expr)))
     }
+    # rows of a data by name: subset(km, censored), the condition bare
+    if (identical(v$fn, "subset")) {
+      rows <- .fig_data_rows_lang(v)
+      if (!is.null(rows)) return(rows)
+    }
     ty <- .fig_arg_types(v$fn, v$args %||% list())
     a <- lapply(stats::setNames(names(v$args %||% list()), names(v$args %||% list())),
                 function(k) .fig_value_lang(v$args[[k]], k, type = ty[[k]]))
@@ -247,8 +252,9 @@ tfl_plot <- function(name, items = list(), from = "own") {
     inner <- if (length(d) == 1L) d[[1L]] else as.call(c(list(as.name("c")), d))
     return(call("as.Date", inner))
   }
-  # an argument R takes as a list (fun.args = list(mult = 1.96))
-  if (arg %in% .fig_list_args && is.list(v)) {
+  # an argument R takes as a list (fun.args = list(mult = 1.96)); a 2-d
+  # bin's one an axis by name (bins = list(x = 30, y = 10))
+  if ((arg %in% .fig_list_args || (arg %in% .fig_xy_args && !is.null(names(v)))) && is.list(v)) {
     el <- lapply(seq_along(v), function(i) {
       k <- names(v)[i] %||% ""
       .fig_value_lang(v[[i]], k, type = .fig_list_arg_type(arg, k))
@@ -324,6 +330,10 @@ tfl_plot <- function(name, items = list(), from = "own") {
 # written list(...) and read back from it
 .fig_list_args <- c("fun.args", "method.args", "args", "dparams", "override.aes",
                     "x_scales", "y_scales", "stats_label")
+
+# the arguments of a 2-d bin that take one value an axis by name, written
+# list(x = 30, y = 10) (a named vector would be taken by position)
+.fig_xy_args <- c("bins", "binwidth")
 
 # the type of a name in such a list, where it is code: a glm's family by
 # its function's name, written bare (method.args = list(family =
@@ -526,6 +536,19 @@ tfl_plot <- function(name, items = list(), from = "own") {
         .fig_aes_text(e) %||% tfl_r(.fig_deparse_r(e))
       })
       return(out)
+    }
+    # a layer's rows of a data by name (km[km$censored, ], subset(km,
+    # censored), dplyr::filter(km, censored)): {fn: subset, args: {x: km,
+    # subset: censored}}
+    if (arg %in% objects && .fig_type_takes_call(type, "subset")) {
+      rows <- .fig_data_rows_value(x)
+      if (!is.null(rows)) return(rows)
+    }
+    # a 2-d bin's one an axis, bins = list(x = 30, y = 10): a map
+    if (identical(f, "list") && arg %in% .fig_xy_args && .fig_type_has(type, "map") && length(a) &&
+        all(nzchar(names(a) %||% rep("", length(a)))) && !anyDuplicated(names(a)) &&
+        all(vapply(a, function(e) is.numeric(e) && length(e) == 1L, NA))) {
+      return(lapply(a, identity))
     }
     if (identical(f, "list") && arg %in% .fig_list_args && length(a) &&
         all(nzchar(names(a) %||% rep("", length(a))))) {

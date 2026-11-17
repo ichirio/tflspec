@@ -194,30 +194,9 @@
   # (magrittr's `. %>% filter(...)`: a function of the plot's data, its dot)
   if (identical(.fig_deparse(v[[1L]]), "%>%") && identical(v[[2L]], as.name("."))) pd <- "."
   if (!nzchar(pd)) return(NULL)
-  v <- .fig_prog_unpipe(v)
-  f <- .fig_deparse(v[[1L]])
-  is_pd <- function(x) identical(x, as.name(pd))
-  cond <- NULL
-  if (identical(f, "[") && length(v) == 4L && is_pd(v[[2L]]) && identical(v[[4L]], quote(expr = ))) {
-    # (pd$censored: the column, censored)
-    strip <- function(x) {
-      if (is.call(x) && identical(x[[1L]], as.name("$")) && is_pd(x[[2L]])) return(x[[3L]])
-      if (is.call(x)) for (i in seq_along(x)[-1L]) if (!is.null(x[[i]])) x[[i]] <- strip(x[[i]])
-      x
-    }
-    cond <- strip(v[[3L]])
-    # (another of pd's names left: not only its columns)
-    if (pd %in% all.names(cond)) return(NULL)
-  } else if (f %in% c("subset", "base::subset") && length(v) == 3L && is_pd(v[[2L]]) &&
-             (is.null(names(v)) || names(v)[3L] %in% c("", "subset"))) {
-    cond <- v[[3L]]
-  } else if (f %in% c("filter", "dplyr::filter") && length(v) >= 3L && is_pd(v[[2L]])) {
-    a <- as.list(v)[-(1:2)]
-    if (!is.null(names(a)) && any(nzchar(names(a)))) return(NULL)
-    cond <- Reduce(function(x, y) call("&", x, y), a)
-  }
-  if (is.null(cond)) return(NULL)
-  call("~", call("subset", as.name(".x"), cond))
+  r <- .fig_data_rows(.fig_prog_unpipe(v), pd)
+  if (is.null(r)) return(NULL)
+  call("~", call("subset", as.name(".x"), r$cond))
 }
 
 # A term that is several terms or none, as ggplot2 adds it: a list of

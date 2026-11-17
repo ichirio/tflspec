@@ -1785,6 +1785,68 @@ What is left: a condition of the data (`if (nrow(d) > 10)`), a figure
 per value of a loop (several figures from one program), a plot function
 that calls itself or builds its terms by `Reduce()`.
 
+### Round 19 (2026-11-17): a layer's rows of a data by name, 2-d bins by axis, label_bquote()
+
+What the clinical figures' measure had left were its two last partial
+uses, both a layer's data that is rows of a data by its name (`km[km$censored, ]`
+for a KM plot's censor marks, `sw[sw$ongoing, ]` for a swimmer's arrows):
+read one call at a time, outside a program, the data is not the plot's,
+so round 9's formula `~ subset(.x, censored)` does not fit, and the value
+stayed R.  ggplot2's own examples had two more of the same kind of gap
+(a 2-d bin's `bins = list(x = 30, y = 10)`, `label_bquote(alpha^.(vs))`).
+
+| Measure | Before | After |
+|---|---:|---:|
+| **Clinical figures, 62 (weighted)** | **99.7%** (uses 1150 / 2 / 0) | **100.0%** (1152 / 0 / 0) |
+| geom (clinical) | 99.1% | 100.0% |
+| **ggplot2's own examples** | **98.5%** (1230 / 39 / 3) | **98.6%** (1234 / 35 / 3) |
+| facet (examples) | 96.0% | 97.9% |
+| geom (examples) | 98.8% | 98.9% |
+| arguments (3409) and aesthetics (826) | 100.0% | 100.0% |
+| programs (23) | 100.0% | 100.0% |
+
+(R 4.3.3, ggplot2 4.0.4; the "before" is this branch with `next` merged,
+before the round's commit.)
+
+Round 19 (`R/fig_layer_data.R`):
+
+- **A layer's rows of a data by its name**: `data: {fn: subset, args:
+  {x: km, subset: censored}}`, written `subset(km, censored)`, a new
+  alternative of a layer's `data` (`call<data.frame, subset>`, 26 cards
+  and the `layer` kind).  Read from `subset(km, censored)`,
+  `km[km$censored, ]` (`km$` taken off the columns) and
+  `dplyr::filter(km, censored, time > 0)` (the conditions joined by `&`).
+  The rows drawn are the same: a row whose condition is NA is not drawn
+  either way.  A condition must be TRUE / FALSE as written (a comparison,
+  `&`, `!`, `is.na()`, `%in%`, `grepl()` ... or a column); rows by number
+  or order (`km[1:3, ]`, `km[order(km$time), ]`), an object of the program
+  (`km[keep, ]`) and `filter()`'s own arguments (`.by`) stay R.  The check
+  says an error for another argument, a name that is no name, or a
+  condition that does not parse.  The programs' reader shares the same
+  reading (`.fig_data_rows()`); it no longer takes rows by order for a
+  condition (`pd[order(pd$x), ]` was `~ subset(.x, order(x))`).
+- **A 2-d bin's one value an axis**: `bins` / `binwidth` of
+  `geom_bin_2d()`, `geom_hex()`, `stat_bin_2d()`, `stat_bin_hex()`,
+  `stat_summary_2d()`, `stat_summary_hex()` take `{x: 30, y: 10}`, written
+  `list(x = 30, y = 10)` (a named vector would be taken by position), and
+  `[30, 10]`.  A 1-d bin is not by axis (`geom_histogram(bins = list(x =
+  30))` stays R).
+- **`label_bquote()`'s `rows` / `cols` / `default`** are a plotmath
+  expression written bare (`math|tilde`): `{fn: label_bquote, args: {rows:
+  "alpha^.(vs)"}}` is `label_bquote(rows = alpha^.(vs))`, and `cols:
+  '.(am) ~ "transmission"'` a formula.  Before, `!r`.
+
+**Code generated from an existing SPEC does not change.**  Code read from
+R does: `geom_point(data = km[km$censored, ])` is now written
+`geom_point(data = subset(km, censored))` (`test-fig-legacy.R`'s case
+updated).
+
+What is left in ggplot2's own examples: values of the example's objects
+(`breaks = price_bins`, `data = tidy(ci)`, `lineend = df2$lineend`), grobs
+and rasters (`grid::circleGrob()`), today's date (`Sys.Date() - 30`),
+`guide_axis_stack()`'s guides by position, `stat_manual()`'s quoted
+expression and an `expand_limits()` of a data frame.
+
 ### The extension packages (ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale, patchwork)
 
 The same measure, the same file (`package` says which), over the

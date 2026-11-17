@@ -78,9 +78,12 @@ test_that("a stat's variable by ..count.. or stat() is after_stat() of the value
                    "geom_density(mapping = aes(y = after_stat(density)))")
   # a column of the data: as it is
   expect_identical(lg_code("geom_point(aes(y = count))"), "geom_point(mapping = aes(y = count))")
-  # an empty argument in a value (a subset) is left alone
+  # an empty argument in a value (rows by their order) is left alone
+  expect_identical(lg_code("geom_point(data = km[order(km$time), ], aes(y = ..count..))"),
+                   "geom_point(data = km[order(km$time), ], mapping = aes(y = after_stat(count)))")
+  # (rows of a data by a condition: subset(), round 19)
   expect_identical(lg_code("geom_point(data = km[km$censored, ], aes(y = ..count..))"),
-                   "geom_point(data = km[km$censored, ], mapping = aes(y = after_stat(count)))")
+                   "geom_point(data = subset(km, censored), mapping = aes(y = after_stat(count)))")
 })
 
 test_that("aes_string() of texts is aes()", {

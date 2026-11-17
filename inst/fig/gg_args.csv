@@ -1,6 +1,6 @@
 kind,arg,type,en,ja,help,only
 layer,mapping,"map<string, column|r>",Mapping,マッピング,"Aesthetic = column: {x: AVISITN, y: AVAL, colour: TRTA}; !r for an expression."
-layer,data,"object|tilde|lambda|call<data.frame>|r",Data,データ,"The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored) (the censored times of a KM plot), or as a function of it written out, function(d) subset(d, AVAL > ANRHI); or a small table of constants, {fn: data.frame, args: {y: [-30, 20], what: [PR, PD]}} (reference lines with a legend)."
+layer,data,"object|tilde|lambda|call<data.frame, subset>|r",Data,データ,"The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored) (the censored times of a KM plot), or as a function of it written out, function(d) subset(d, AVAL > ANRHI); or a small table of constants, {fn: data.frame, args: {y: [-30, 20], what: [PR, PD]}} (reference lines with a legend); or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}, written subset(km, censored)."
 layer,x,number|string|list<number|string|date>|r,X,x,"A fixed x (annotate(), a reference line); a mapped one goes in mapping.  On a date axis a date, 2025-01-31 (written as.Date(""2025-01-31""))."
 layer,y,number|string|list<number|string|date>|r,Y,y,
 layer,xmin,number|string|list<number|string|date>|r,X from,x の始まり,

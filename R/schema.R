@@ -120,7 +120,10 @@
 #' `alpha()` for a colour; grDevices' palettes, `hcl.colors()` ...,
 #' `RColorBrewer::brewer.pal()` and viridisLite's `viridis()` ..., for a
 #' scale's colours; `data.frame()` of constants for a layer's `data`
-#' (reference lines with a legend), its columns of one length; a glm's
+#' (reference lines with a legend), its columns of one length, and
+#' `subset()` for a layer's rows of a data by its name, `{fn: subset, args:
+#' {x: km, subset: censored}}` written `subset(km, censored)` (read from
+#' `km[km$censored, ]` and `dplyr::filter(km, censored)` too); a glm's
 #' family in `method.args`, `{family: binomial}` written bare or
 #' `{fn: binomial, args: {link: probit}}`), `list<T>` (a sequence), `vec<K, V>` (a map that is a
 #' named vector in R), `map<K, V>` (a map that is a named list),
@@ -520,6 +523,9 @@ tfl_schema_check <- function(item) {
         p <- .schema_check_data_frame(v$args %||% list())
         if (length(p)) return(p)
       }
+      # a layer's rows of a data by name, subset(km, censored): the data's
+      # name and the condition, R's text that parses
+      if (identical(v$fn, "subset")) return(.schema_check_data_rows(v))
       # a plotmath title, expression(AUC[0-24]): its one argument, an
       # expression R parses
       if (v$fn %in% .fig_plotmath_fns) {

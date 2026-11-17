@@ -102,7 +102,9 @@ a value are typed where they fit: \code{seq()} for breaks,
 \code{alpha()} for a colour; grDevices' palettes, \code{hcl.colors()} ...,
 \code{RColorBrewer::brewer.pal()} and viridisLite's \code{viridis()} ..., for a
 scale's colours; \code{data.frame()} of constants for a layer's \code{data}
-(reference lines with a legend), its columns of one length; a glm's
+(reference lines with a legend), its columns of one length, and
+\code{subset()} for a layer's rows of a data by its name, \code{{fn: subset, args: {x: km, subset: censored}}} written \code{subset(km, censored)} (read from
+\code{km[km$censored, ]} and \code{dplyr::filter(km, censored)} too); a glm's
 family in \code{method.args}, \code{{family: binomial}} written bare or
 \code{{fn: binomial, args: {link: probit}}}), \verb{list<T>} (a sequence), \verb{vec<K, V>} (a map that is a
 named vector in R), \verb{map<K, V>} (a map that is a named list),
