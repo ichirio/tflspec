@@ -135,7 +135,8 @@ test_that("only the variables a report's analyses read; the study's program a pa
   for (o in c("T", "U")) {
     one <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE,
                                           output_id = o, codelists = cl))
-    expect_equal(one, ard[ard$output_id == o, ], ignore_attr = TRUE)
+    # (the study ARD's columns in bind_items()' order: a one-item report's as made)
+    expect_equal(one, ard[ard$output_id == o, names(one)], ignore_attr = TRUE)
   }
   # no code lists: the study's program reads the data once, as before
   plain <- tfl_ard_code(sp, save = FALSE)
@@ -261,6 +262,7 @@ test_that("the study's program: an analysis data that is its population under a 
   expect_identical(sx, c("M", "F"))
   for (o in c("T", "U")) {
     one <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, output_id = o, codelists = cl))
-    expect_equal(one, ard[ard$output_id == o, ], ignore_attr = TRUE)
+    # (the study ARD's columns in bind_items()' order: a one-item report's as made)
+    expect_equal(one, ard[ard$output_id == o, names(one)], ignore_attr = TRUE)
   }
 })

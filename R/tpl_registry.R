@@ -561,7 +561,7 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
 
 # A template's items with the report's subjects (`subset`): the analysis
 # set's ADSL data keeps them (its `where`), and a records data of the set
-# takes its subjects from it (`subjects`: the three stages); a figure's
+# takes its subjects from it (`subjects_in`: the three stages); a figure's
 # semi join of the set's ADSL; a listing's records of the ADSL subjects it keeps (no
 # analysis set: all of ADSL narrowed)
 .tpl_subset <- function(out, subset, population = NULL) {
@@ -584,7 +584,7 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
             ids <- c(ids, sid)
           }
           e$population <- NULL
-          e$subjects <- sid
+          e$subjects_in <- sid
         }
       }
       res <- c(res, list(e))
@@ -1301,7 +1301,7 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
   # the any-record row: its label, when it is shown
   overall <- if (isTRUE(a[["any_row"]])) a[["any_row_label"]]
   set <- .tpl_set_id(a)
-  d <- list(id = set, from = a[["data"]], subjects = subj,
+  d <- list(id = set, from = a[["data"]], subjects_in = subj,
             where = if (!is.null(a$where)) tfl_r(a$where))
   nn <- function(x) Filter(Negate(is.null), x)
   # "data": the percentages' denominator is the records' subjects -- the
@@ -1550,7 +1550,7 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
   # value: its grades join that row, as rows or as columns
   maxes[[1L]]$code <- sprintf("dplyr::mutate(%s, %s = \"%s\")", maxes[[1L]]$code, h[1L],
                               a$overall)
-  d <- list(id = set, from = a$data, subjects = subj,
+  d <- list(id = set, from = a$data, subjects_in = subj,
             where = if (!is.null(a$where)) tfl_r(a$where))
   an <- function(id, data, vars, over = FALSE) Filter(Negate(is.null), list(
     id = id, method = "hierarchical", data = data, by = a$by, variables = vars,
@@ -1844,7 +1844,7 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
   # each page's N ("tested"): the arm's subjects for the page's parameter,
   # from the same records as the table (the Total row's, or the set's own)
   page_n <- paged && identical(hn, "tested")
-  # the set's N ("set"): GROUPN counts the arm in the analysis set's ADSL
+  # the set's N ("set"): BIGN counts the arm in the analysis set's ADSL
   # (the subset's subjects when there is one), as the other templates do
   set_n <- identical(hn, "set")
   # (with a `subset` the set's ADSL data is there: made here when `worst` is
@@ -1855,7 +1855,7 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
       list(list(id = subj, from = "ADSL", population = a$population)),
       list(Filter(Negate(is.null), list(
         id = set, from = a$data,
-        subjects = if (!worst) subj,
+        subjects_in = if (!worst) subj,
         code = if (worst) tfl_r(.tpl_shift_code(a, subj)),
         where = if (!worst && !is.null(a$where)) tfl_r(a$where)))),
       # (the Total row: every subject once more, under the baseline's Total)
@@ -1876,7 +1876,7 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
         denominator = if (total) den))),
       if (page_n) list(list(id = paste0(a$analysis_id, "_N"), method = "categorical",
                             data = den, by = a$param, variables = a$by)),
-      if (set_n) list(list(id = "GROUPN", method = "categorical", data = gsubj,
+      if (set_n) list(list(id = "BIGN", method = "categorical", data = gsubj,
                            variables = a$by, purpose = "PRIMARY OUTCOME MEASURE"))))
   # the columns: the ARD's order (the code list applied when it is made),
   # or `by_levels` when the report says them
@@ -2367,7 +2367,7 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
   chg <- .tpl_noun_id(a, "chg")
   sets <- list(
     list(id = subj, from = "ADSL", population = pop),
-    nn(list(id = set, from = a$data, subjects = subj,
+    nn(list(id = set, from = a$data, subjects_in = subj,
             where = if (length(where)) tfl_r(.tpl_and_all(where)),
             derive = if (length(ord)) tfl_r(paste(ord, collapse = " | ")))),
     # the change: the records that have one (no baseline visit's, so its
@@ -2381,7 +2381,7 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
   # 1.42): the report's, else the study's PARAMCD code list's
   ptext <- if (length(a$param_labels)) unlist(a$param_labels) else .tpl_code_labels(ctx$codelists[["PARAMCD"]])
   analyses <- c(
-    list(list(id = "GROUPN", method = "categorical", data = subj, variables = a$by,
+    list(list(id = "BIGN", method = "categorical", data = subj, variables = a$by,
               purpose = "PRIMARY OUTCOME MEASURE")),
     if (isTRUE(a$baseline)) list(an("BASELINE", set, "BASE")),
     # (the change of a visit with no change records -- the baseline, whose
@@ -2696,7 +2696,7 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
       analysis_data = list(
         list(id = subj, from = "ADSL", population = a$population),
         list(id = rec,
-             from = a$data, subjects = subj,
+             from = a$data, subjects_in = subj,
              where = tfl_r(.tpl_and(sprintf("PARAMCD == \"%s\"", a$param), a$where))),
         list(id = set, from = rec, code = tfl_r(code))),
       analyses = c(
@@ -2707,7 +2707,7 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
         # the header N: the arm's subjects in the analysis set, counted apart
         # (not left to the best response and the rate agreeing on it)
         if (!identical(hn, "none")) list(list(
-          id = "GROUPN", method = "categorical", data = subj, variables = a$by,
+          id = "BIGN", method = "categorical", data = subj, variables = a$by,
           purpose = "PRIMARY OUTCOME MEASURE"))))
     # (the arms' order: an order given, else the code list's -- the program
     # puts it on the data, and on the survfit / CI analysis too, relevel_ard();
@@ -2726,7 +2726,8 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
         cells = stats::setNames(list("{n} ({estimate:.1f%})", "[{conf.low:.1f%}, {conf.high:.1f%}]"),
                                 c("n (%)", ci_lab))), ctx, others = "n (%)", header = FALSE, levels = TRUE))
       fn <- vapply(blk, `[[`, "", "fn")
-      blk[[match("plan_cells", fn)]]$args$categorical <- "{n} ({p:.1f%})"
+      blk[[match("plan_cells", fn)]]$args$categorical <- list(tfl_r("n == 0 ~ \"0\""), "{n} ({p:.1f%})")
+      blk[[match("plan_cells", fn)]]$args$na <- "-"
       # (the rate's row: its block's heading says it, its level is no label;
       # the arm's N over its two columns, rtfreporter#709)
       content <- c(blk, list(levels_item, labels_item,
@@ -2854,13 +2855,13 @@ tpl_orr <- function(ard, population = "ITT", ..., codelists = NULL) {
       analysis_data = c(
         list(list(id = subj, from = "ADSL", population = pop)),
         extra,
-        list(Filter(Negate(is.null), list(id = set, from = a$data, subjects = subj,
+        list(Filter(Negate(is.null), list(id = set, from = a$data, subjects_in = subj,
                                           where = if (!is.null(a$where)) tfl_r(a$where)))),
         if (!is.null(rec)) list(rec)),
       analyses = c(
         # (the header N: the set's subjects, or the data the percentages are of)
         if (!identical(hn, "none")) list(list(
-          id = "GROUPN", method = "categorical",
+          id = "BIGN", method = "categorical",
           data = if (identical(hn, "denominator")) den else subj,
           variables = a$by, purpose = "PRIMARY OUTCOME MEASURE")),
         lapply(a$flags, flag)))

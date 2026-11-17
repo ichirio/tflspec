@@ -30,14 +30,15 @@ test_that("an analysis in each level of its groups: group2 / group2_level, the d
   sp <- grp_spec(r)
   code <- tfl_ard_code(sp, output_id = "T", save = FALSE)
   txt <- paste(code, collapse = "\n")
-  # the conditions as a list, the loop over them, the analysis's own code inside
-  expect_match(txt, "groups_ard_a <- list(", fixed = TRUE)
-  expect_match(txt, "\"Age Group\" = list(", fixed = TRUE)
-  expect_match(txt, "\"<65 years\" = \"AGE < 65\"", fixed = TRUE)
-  # (the whole group's level, no name: "NA" in the list, an empty level in the ARD)
-  expect_match(txt, "\"NA\" = \"TRUE\"", fixed = TRUE)
-  expect_match(txt, "rlang::parse_expr(groups_ard_a[[group]][[level]])", fixed = TRUE)
-  expect_match(txt, "group2 = group,", fixed = TRUE)
+  # the conditions as a table, a function of one row, pmap() over them
+  expect_match(txt, "ard_a_conditions <- tribble(", fixed = TRUE)
+  expect_match(txt, "\"Age Group\", \"<65 years\", \"AGE < 65\",", fixed = TRUE)
+  # (the whole group's level, no name: "" in the table)
+  expect_match(txt, "\"All\", \"\", \"TRUE\",", fixed = TRUE)
+  expect_match(txt, "ard_a_one <- function(group, level, where) {", fixed = TRUE)
+  expect_match(txt, "rlang::parse_expr(where)", fixed = TRUE)
+  expect_match(txt, "group2 = group, group2_level = list(level)", fixed = TRUE)
+  expect_match(txt, "purrr::pmap(ard_a_conditions, ard_a_one)", fixed = TRUE)
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, output_id = "T", save = FALSE))
   g2 <- as.character(unlist(ard$group2))
   expect_identical(unique(g2), c("All", "Age Group"))
@@ -70,7 +71,7 @@ test_that("groups: an unknown group, a level without its group, and strata stop"
   sp <- tfl_ard_spec(exact_spec(list(method = "categorical", population_id = "SAF",
                                      variables = "SEX")))
   expect_identical(nrow(sp$groups), 0L)
-  expect_false(any(grepl("groups_", tfl_ard_code(sp, output_id = "T", save = FALSE), fixed = TRUE)))
+  expect_false(any(grepl("_conditions", tfl_ard_code(sp, output_id = "T", save = FALSE), fixed = TRUE)))
 })
 
 test_that("data.yml `groups:` <-> the groups sheet", {

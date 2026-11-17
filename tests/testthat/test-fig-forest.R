@@ -13,7 +13,7 @@ test_that("tfl_fig_forest_analyses() gives the rows of the figure's own ARD defi
   expect_true(all(an$analyses$method == "custom"))
   # the model under a name, the event written as the KM figures write it
   # (the subjects the model leaves out are counted in a warning first)
-  expect_match(an$analyses$code[1], "n_no_arm <- sum((is.na(data$TRT01P) | data$TRT01P == \"\"))",
+  expect_match(an$analyses$code[1], "n_no_arm <- sum(is.na(data$TRT01P))",
                fixed = TRUE)
   expect_match(an$analyses$code[1], "n_no_time <- ", fixed = TRUE)
   expect_true(endsWith(an$analyses$code[1], paste0(
@@ -21,7 +21,7 @@ test_that("tfl_fig_forest_analyses() gives the rows of the figure's own ARD defi
 ",
     "cardx::ard_regression(cox, exponentiate = TRUE)")))
   # (a blank or missing subgroup value is no subgroup)
-  expect_match(an$analyses$code[2], "  dplyr::filter(data, !is.na(SEX), SEX != \"\"),
+  expect_match(an$analyses$code[2], "  dplyr::filter(data, !is.na(SEX)),
   .strata = SEX,
   .f = ~ cardx::ard_regression(",
                fixed = TRUE)
@@ -117,4 +117,14 @@ test_that("text_column: its columns, a panel at the right; not with one below", 
   d <- tfl_fig_template("forest_hr")
   d$layers <- c(d$layers, list(list(layer = "n_table", data = "est", x = "y", group = "TRT01P")))
   expect_error(tfl_fig_design_code(d, "F1", save = FALSE), "below it or at its right, not both")
+})
+
+test_that("the forest analyses code and the KM template code never compare data with a blank", {
+  # (study$adam holds a blank as NA: is.na() is the only form that is not warned about)
+  an <- tfl_fig_forest_analyses("ADTTE", "OS", "FASFL", "TRT01P", c("SEX", "AGEGR1"))$analyses
+  km <- tfl_template_expand("km_survival", list(by = "TRT01A"))
+  code <- c(an$code, .fig_steps_code(km$data$steps)$code,
+            vapply(km$data$steps, function(s) as.character(s$expr %||% ""), ""))
+  expect_false(any(grepl("(==|!=) *\"\"", code)))
+  expect_true(any(grepl("is.na(", code, fixed = TRUE)))
 })

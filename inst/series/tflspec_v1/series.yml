@@ -1,0 +1,28 @@
+# tflspec_v1/series.yml: the series's one common file.  A template reads a
+# value here only where it writes `!series <key>`; a study's
+# `series_settings.tflspec_v1` block is read first.
+name: tflspec_v1
+label: tflspec templates
+released: 2026-11-17
+needs: tflspec (>= 0.x)
+fixes: []
+values:
+  extends: [defaults]
+  style: tfl_standard
+  style_listing: tfl_small
+  population_safety: SAF
+  population_efficacy: FAS
+  formats: {N: 0, mean: 2, sd: 3, median: 1, min: 0, max: 0, p: "xx.x%", "AGE:mean": 1, "AGE:sd": 2}
+  total: false
+  total_label: Total
+  missing_label: Missing
+  sd_missing: "-"
+  any_row_label: "Subjects with at least one event"
+  empty_text: "No records were reported."
+  count_cell: "{n} ({p:.1f%})"
+  max_rows: 30
+  conf_level: 0.95
+  time: AVAL
+  censor: CNSR
+  time_unit: months
+  days_per_month: 30.4375

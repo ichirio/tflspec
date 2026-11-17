@@ -1,7 +1,8 @@
 #' The functions a study's generated programs call
 #'
 #' The R code of the functions the programs tflspec writes call:
-#' `set_levels()` (the code lists on a data: each listed column a factor of
+#' `blank_as_na()` (a character column's `""`, and a factor's, as `NA`: what
+#' `study$adam` holds), `set_levels()` (the code lists on a data: each listed column a factor of
 #' the codes in the list's order, as the ARD holds them, no labels; a value
 #' not listed stops the program), `reorder_by()` (a column in another's
 #' order when the data has it: `PARAM` by `PARAMN`), `order_levels()` (the arm
@@ -15,7 +16,9 @@
 #' and number of ADSL, the records' values kept and a value ADSL lacks
 #' last; a value with two numbers there is an error), `order_arms()` (the arm
 #' variables alone: `order_levels()` with no categories), `tag_ard()` (the report, analysis and
-#' analysis set in front of an analysis's ARD), `fmt_ard()` and
+#' analysis set in front of an analysis's ARD), `bind_items()` (a report's items into one
+#' ARD: no row lost, the columns in order, a statistic twice in one item an error, the
+#' same statistic in two items a warning), `fmt_ard()` and
 #' `fmt_pvalue()` (formats after a call), `keep_stats()` (only the
 #' statistics asked for), `ard_hierarchical_or_none()` (nested counts,
 #' and the ARD of no records: the overall row 0), `complete_hierarchy()` (a

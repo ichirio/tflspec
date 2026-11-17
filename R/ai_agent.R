@@ -16,6 +16,18 @@
 #    tfl_ai_run()        collect, build, status, questions
 # ============================================================================
 
+# The ARS guide for the agent (tfl_ai_prepare(ars = TRUE)): the kit's
+# inst/ai/ars/ copied to ai/ars/, written again at each call.  The paths written.
+.ai_ars_guide <- function(dir) {
+  src <- list.files(system.file("ai", "ars", package = "tflspec"), full.names = TRUE)
+  to <- file.path(dir, "ai", "ars", basename(src))
+  dir.create(file.path(dir, "ai", "ars"), recursive = TRUE, showWarnings = FALSE)
+  for (i in seq_along(src)) {
+    .ai_write_text(readLines(src[i], warn = FALSE, encoding = "UTF-8"), to[i])
+  }
+  to
+}
+
 # The agent's files of a study folder: the instructions, run.R, and the
 # questions / decisions files (never written over: the person's answers
 # and decisions are in them).  `adam`, `book`: where the ADaM and the TOC /
@@ -64,6 +76,12 @@
       "\n- the ADaM in {{adam}}, only to settle what `ai/adam_summary.md` does not (a ",
       "value as the data write it, a variable): never in the editor, and print only ",
       "what settles it (a variable's values, counts), not subjects' records;"),
+    if (file.exists(file.path(dir, "ai", "ars", "README.md"))) paste0(
+      "\n- the ARS guide `ai/ars/README.md` and its example ",
+      "`ai/ars/example-reporting-event.json`, only when the person asks for a CDISC ARS ",
+      "reporting event: follow it (a compound subset's every sub-clause with its ",
+      "`subClauseId` or condition, `level` and `order`) and check what you write with ",
+      "`tfl_check_ars()` until it gives no rows;"),
     if (length(docs)) paste0(
       "\n- the documents the person gave, for what a request leaves unclear: ",
       paste(sprintf("`%s`%s", docs, ifelse(

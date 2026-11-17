@@ -2,7 +2,7 @@
 # What every report starts from, in the same shape as a report file; a
 # report's own file says only what differs (extends: [defaults]).
 content:
-  - plan_cells: {categorical: "{n:.0f} ({p:.1f%})"}
+  - plan_cells: {categorical: [!r "n == 0 ~ '0'", "{n:.0f} ({p:.1f%})"], na: "-"}
   - plan_col_header:
       lines:
         - {row_label: "", .values: "{col}"}

@@ -1,0 +1,146 @@
+# tflspec_v1/templates/ae_soc_pt.yml
+template: ae_soc_pt
+label: Adverse events by SOC and PT
+params:
+  by:
+    type: list<column>
+    input: pick
+    choices: vars(adsl_sub)
+    required: true
+    step: analysis
+    tier: required
+    description: The column variable(s); the groups across.
+  hierarchy:
+    type: list<column>
+    input: pick
+    choices: vars(adae_sub)
+    ordered: true
+    default: [AEBODSYS, AEDECOD]
+    step: analysis
+    tier: usual
+    description: The levels of the rows, outer first.
+  any_row:
+    type: logical
+    input: pick
+    choices: fixed
+    default: true
+    step: analysis
+    tier: usual
+    description: A first row of the subjects with any event.
+  denominator:
+    type: string
+    input: pick
+    choices: report_data
+    default: adsl_sub
+    step: analysis
+    tier: usual
+    description: The data row whose subjects are the group Ns (BIGN) and the
+      percentages' denominator; both come from the one BIGN item.
+  total:
+    type: logical
+    input: pick
+    choices: fixed
+    default: !series total
+    step: analysis
+    tier: usual
+    description: A Total column from the overall rows.
+  min_pct:
+    type: number
+    input: text
+    default: 0
+    step: analysis
+    tier: other
+    description: Keep only the rows with at least this percentage; 0 keeps every row.
+  min_pct_in:
+    type: enum[any|all|overall]
+    input: pick
+    choices: fixed
+    default: any
+    step: analysis
+    tier: other
+    description: Where min_pct must be reached; any group, all groups or the overall column.
+  formats:
+    type: map<string,number|string>
+    input: table
+    choices: stats
+    free: true
+    default: !series formats
+    step: analysis
+    tier: usual
+    description: The decimals (or the format) of each statistic.
+  overall_label:
+    type: string
+    input: text
+    default: Any TEAE
+    step: content
+    tier: usual
+    description: The label of the first row, the subjects with any event (any_row).
+  sort:
+    type: list<string>
+    input: text
+    ordered: true
+    default: [.overall, group1, .depth, -n, label]
+    step: content
+    tier: other
+    description: The sort keys of the rows, first key first; a leading - sorts
+      descending (-n, the most frequent first).
+  heading:
+    type: string
+    input: text
+    default: "System Organ Class\n   Preferred Term"
+    step: content
+    tier: usual
+    description: The heading of the row-label column.
+  max_rows:
+    type: number
+    input: text
+    default: !series max_rows
+    step: content
+    tier: other
+    description: The most rows a page holds.
+extends: !series extends
+style: !series style
+data:
+  - id: adsl_sub
+    from: ADSL
+    population: !series population_safety
+  - id: adae_sub
+    from: ADAE
+    subjects_in: adsl_sub
+    add: ["{by}"]
+    where: !r TRTEMFL == "Y"
+analysis:
+  - id: BIGN
+    label: Subjects per group
+    method: categorical
+    data: "{denominator}"
+    variables: ["{by}"]
+    formats: "{formats}"
+  - id: AE
+    analyses: {per: level}      # AE_ANY, AE_L1, AE_L2
+    label: Adverse events by SOC and PT
+    method: hierarchical
+    data: adae_sub
+    by: ["{by}"]
+    overall: "{total}"
+    variables: "{hierarchy}"
+    denominator: BIGN
+    args: !r over_variables = {any_row}
+    post: !r keep_min_pct({min_pct}, "{min_pct_in}")
+    formats: "{formats}"
+# (the rows: the outer level the group, the inner the label -- the default
+# hierarchy's AEBODSYS and AEDECOD)
+content:
+  - normalize_ard: {hierarchy: "{hierarchy}", overall: "{overall_label}"}
+  - table_plan: {cols: "{by}", rows: {group1: AEBODSYS}, label: {label: AEDECOD}}
+  - plan_sort: {keys: "{sort}"}
+  - plan_col_header:
+      header:
+        - {line: "1", cols: row_label}
+        - {line: "1", cols: .values, span: each, text: "{col}\n(N={n})\nn (%)"}
+        - {line: "2", cols: row_label, text: "{heading}"}
+        - {line: "2", cols: .values}
+  - plan_paginate_rows: {max_rows: "{max_rows}", split: group_force}
+page:
+  titles: ~
+  footnotes: ~

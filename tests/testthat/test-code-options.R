@@ -69,7 +69,7 @@ test_that("an ARD program with the setup's folders and packages: the same ARD", 
   # tflspec it does not need
   expect_true("library(dplyr)" %in% code)
   expect_false("library(tflspec)" %in% code)
-  expect_true(any(grepl("bind_rows(", code, fixed = TRUE)))
+  expect_true(any(grepl("bind_items(", code, fixed = TRUE)))
   expect_false(any(grepl("dplyr::", calls, fixed = TRUE)))
   # with save: the study ARD through its folder's variable
   full <- tfl_ard_code(sp)
@@ -97,5 +97,6 @@ test_that("a listing's data is read through the folder's variable too", {
                        tflspec.attached = "dplyr")
   cat <- data.frame(dataset = "ADAE", path = "data/adam/adae.rds")
   expect_identical(tfl_read_data_code(cat, "ADAE"),
-                   "adae <- readRDS(file.path(path_adam, \"adae.rds\"))")
+                   c("adae <- readRDS(file.path(path_adam, \"adae.rds\"))",
+                     "adae <- blank_as_na(adae)"))
 })

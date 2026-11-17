@@ -47,7 +47,8 @@ test_that("a report over the defaults: maps by key, items by function, order kep
   expect_identical(from[!fns %in% c("plan_blanks", "plan_stub", "plan_col_header", "plan_style")], rep("own", 6L))
   # plan_cells merges by key: the defaults' categorical cell stays beside the report's continuous
   cells <- out$content[[which(fns == "plan_cells")]]$args
-  expect_identical(cells$categorical, "{n:.0f} ({p:.1f%})")
+  # (the zero guard, then the template)
+  expect_identical(vapply(cells$categorical, as.character, ""), c("n == 0 ~ '0'", "{n:.0f} ({p:.1f%})"))
   expect_identical(names(cells$continuous)[1L], "n")
   # page: the configuration's header lines (tfl_standard), the report's titles and tokens join
   expect_identical(out$page$header[["1"]]$right, "{STATUS}")

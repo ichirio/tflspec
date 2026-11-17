@@ -136,10 +136,10 @@ test_that("pk_conc with subset builds; BLQ is printed for a BLQ record only; one
   }
   e <- tfl_template_expand("pk_conc", list(population = "SAF", blq = "BLQFL == \"Y\""))
   expect_identical(as.character(e$ard$analysis_data[[2L]]$derive),
-                   "ATPT = reorder_by(ATPT, ATPTN) | AVAL = ifelse(BLQFL == \"Y\", -Inf, AVAL)")
+                   "ATPT = reorder_by(ATPT, ATPTN) | AVAL = ifelse((BLQFL == \"Y\") %in% TRUE, -Inf, AVAL)")
 })
 
-test_that("ae_max_grade keeps an arm that where leaves no record, with its N and 0 (0.0)", {
+test_that("ae_max_grade keeps an arm that where leaves no record, with its N and a zero count of 0", {
   sn_skip()
   s <- sn_study(withr::local_tempdir())
   w <- "TRTEMFL == \"Y\" & TRT01A == \"Drug X\""
@@ -150,7 +150,8 @@ test_that("ae_max_grade keeps an arm that where leaves no record, with its N and
     keep <- s$adsl$SAFFL == "Y" & (is.null(sub) | s$adsl$PART == "Part 1")
     n <- table(s$adsl$TRT01A[keep])
     expect_identical(sn_n(x, names(n)), as.integer(n))
-    expect_match(x, "0 \\(0\\.0\\)")
+    expect_match(x, "[^0-9.]0\\\\cell")
+    expect_no_match(x, "0 \\(0\\.0\\)")
   }
 })
 

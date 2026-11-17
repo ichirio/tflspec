@@ -106,8 +106,27 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
   }
   kinds <- vapply(outs, function(o) o$kind %||% "table", "")
 
+  # what the user wrote and a study's R fields hold: a test for a blank text,
+  # where study$adam has NA (a template's own rows are not the user's: left out)
+  blank_note <- function(output_id, msg) {
+    at <- regmatches(msg, regexec("^(.*?) / ([^:]+): (.*)$", msg, perl = TRUE))[[1L]]
+    add(output_id = output_id, part = "ard", item = paste(at[2L], "/", at[3L]), level = "note",
+        message = at[4L])
+  }
+  if (is.null(output_id)) {
+    dd <- study$data %||% list()
+    for (m in c(.blank_entry_notes(dd$populations, c("where", "derive")),
+                .blank_entry_notes(dd$records, "where"),
+                .blank_entry_notes(dd$datasets, "derive", function(e) as.character(e$dataset %||% NA)[1L]))) {
+      blank_note(NA_character_, m)
+    }
+  }
   for (id in setdiff(ids, bad)) {
     o <- outs[[id]]
+    for (m in c(.blank_entry_notes(o$ard$analysis_data, c("where", "derive", "code", "then")),
+                .blank_entry_notes(o$ard$analyses, c("where", "post", "code")))) {
+      blank_note(id, m)
+    }
     # its ARD definition, written as its program: the definition's problems
     # are errors; what the installed packages do not know, notes; a program
     # that cannot be written otherwise, a warning
@@ -167,6 +186,15 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
     # the report as written: what stops the build far from its cause
     rows[[length(rows) + 1L]] <- .check_static_rows(o, id)
     if (inherits(ro$content, "tfl_r")) next
+    # a figure's content key (`figure: {name, args}`): its name is one of the
+    # table's (.fig_content_table()), its program is written
+    if (identical(ro$kind, "figure") && !is.null(ro$figure)) {
+      r <- tryCatch(suppressMessages(suppressWarnings(tfl_content_code(ro))), error = function(e) e)
+      if (inherits(r, "error")) {
+        add(output_id = id, part = "figure", item = "figure", level = "error", message = one(r))
+      }
+      next
+    }
     if (identical(ro$kind, "figure") && !.fig_new_content(ro$content)) {
       bad_design <- function(e) {
         data.frame(part = "", field = "", problem = conditionMessage(e), stringsAsFactors = FALSE)

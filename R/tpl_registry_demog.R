@@ -357,13 +357,13 @@
   }
   if (!adsl) {
     set <- .tpl_set_id(a)
-    sets <- c(sets, list(nn(list(id = set, from = a[["data"]], subjects = subj,
+    sets <- c(sets, list(nn(list(id = set, from = a[["data"]], subjects_in = subj,
                                  where = if (!is.null(a$where)) tfl_r(a$where)))))
   }
   # the categorical variables' percentages' denominator, passed explicitly
   # (canon 1.38).  Fixed in the demog family and disposition (canon 1.31):
   # the analysis set -- the report's ADSL after its population and filters,
-  # the set GROUPN counts, the column headings' N.  summary's parameter:
+  # the set BIGN counts, the column headings' N.  summary's parameter:
   # NULL the analysis set (with records `data`, the records kept), or another.
   cat_den <- subj
   if (!isTRUE(.tpl_get(tn, "template")$params$denominator$fixed_value)) {
@@ -432,7 +432,7 @@
     if (length(parts)) paste(parts, collapse = " | ")
   }
   analyses <- c(
-    list(nn(list(id = "GROUPN", label = "Subjects per group", method = "categorical", data = grp_set,
+    list(nn(list(id = "BIGN", label = "Subjects per group", method = "categorical", data = grp_set,
                  variables = a$by, purpose = "PRIMARY OUTCOME MEASURE"))),
     if (length(cont)) list(nn(list(
       id = "CONT", label = "Continuous", method = "continuous", data = set,
@@ -527,7 +527,7 @@
              RACE = "Race, n (%)", ETHNIC = "Ethnicity, n (%)",
              COUNTRY = "Country of participation, n (%)"),
   cells = list(`Mean (SD)` = "{mean} ({sd})", `Median (min, max)` = "{median} ({min}, {max})"),
-  count_cell = "{n} ({p})",
+  count_cell = list(tfl_r("n == 0 ~ \"0\""), "{n} ({p})"),
   categorical_levels = list(
     RACE = c("AMERICAN INDIAN OR ALASKA NATIVE", "ASIAN", "BLACK OR AFRICAN AMERICAN",
              "NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER", "WHITE", "MULTIPLE", "OTHER",

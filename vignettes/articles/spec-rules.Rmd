@@ -1,0 +1,410 @@
+---
+title: "Writing a SPEC: data lines, analyses, study data and figures"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+knitr::opts_template$set(code = list(comment = "", class.output = "r"))
+options(knitr.kable.NA = "")
+```
+
+This article gathers the rules for writing a report SPEC in four parts:
+the data lines, the analysis items, the study's data and figures. Each
+rule comes with a short YAML example and the R code tflspec writes from
+it. The data is the package's fictional example data (`adsl`, `adae`,
+`adlb`, `adtte`).
+
+## A study to work in
+
+The examples run in one small study. `tfl_ai_study_init()` writes its
+`study.yml` (the datasets and the populations) and
+`spec/defaults.yml`.
+
+```{r, message = FALSE}
+library(tflspec)
+
+study <- file.path(tempdir(), "rules-study")
+dir.create(file.path(study, "adam"), recursive = TRUE, showWarnings = FALSE)
+for (x in c("adsl", "adae", "adlb", "adtte")) {
+  saveRDS(get(x), file.path(study, "adam", paste0(x, ".rds")))
+}
+invisible(tfl_ai_study_init(study, adam = "adam", study_id = "RULES-1"))
+outputs <- file.path(study, "spec", "outputs")
+```
+
+Most examples name a template of the `tflspec_v1` series. One helper
+does the same steps for each report. It fills the template in
+(`tfl_template_resolve()`), saves the report in the study, and returns
+the ARD program (`tfl_ard_code()`) and the ARD it makes
+(`tfl_build_ard()`). A second helper prints one section of a program.
+
+```{r}
+ard_program <- function(file) {
+  out <- tfl_template_resolve(file, study = file.path(study, "study.yml"))
+  tfl_write_output(out, file.path(outputs, basename(file)))
+  st <- tfl_read_study_spec(study)
+  list(spec = out,
+       code = tfl_ard_code(st, output_id = out$id, save = FALSE, part = "body"),
+       ard = tfl_build_ard(st, dir = study, output_id = out$id, save = FALSE))
+}
+
+# the lines of one "# ---- <name> ----" section of a program
+section <- function(code, name) {
+  code <- unlist(strsplit(code, "\n", fixed = TRUE))
+  heads <- grep("^# ---- ", code)
+  from <- grep(paste0("^# ---- ", name, " ----"), code)
+  to <- c(heads[heads > from], length(code) + 1L)[[1L]] - 1L
+  code[from:to]
+}
+```
+
+## 1. Data lines
+
+A report's `data:` is a list of data lines. Each line makes one named
+data set in the ARD program (`adsl_sub`, `adlb_sub` ...). Its keys run in
+a fixed order: `from`, the subjects (`population` or `subjects`), the
+records `where` keeps, the columns `add` brings from the subjects' data,
+`derive`, `keep` and `distinct`.
+
+### `then:` is R at the end of the line
+
+`then:` is R that is piped onto the end of the line's data. It runs after
+all the other keys (and after the code lists' levels). It is written as
+it stands. The data is its first argument, and it may be a pipe of
+several steps.
+
+A line with `code:` cannot have `then:`. `code:` makes the whole data
+itself, so there is no end to pipe onto.
+
+### A report line with `code:` replaces the template's line
+
+A report on a template may write a data line with the id of one of the
+template's lines. The two are then put together:
+
+- A report line **without** `code:` is merged key by key. The report's
+  keys replace the template's keys of the same name. The template's
+  other keys stay.
+- A report line **with** `code:` replaces the template's line whole.
+  None of the template's keys stay. Give the line its `from` too.
+
+Here a demographics report keeps the template's analyses but makes the
+subjects' data with its own R:
+
+```{cat, engine.opts = list(file = file.path(tempdir(), "T-1.yml"), lang = "yaml")}
+id: T-1
+kind: table
+label: Demographics, adult subjects
+data:
+  - id: adsl_sub
+    from: ADSL
+    code: !r 'adsl |> dplyr::filter(SAFFL == "Y", AGE >= 18)'
+template:
+  name: tflspec_v1/demog
+  analysis:
+    by: TRT01A
+    continuous: [AGE]
+    categorical: [SEX, RACE]
+    analysis_ids: {AGE: AGE_STATS}
+```
+
+```{r, message = FALSE, opts.label = "code"}
+dm <- ard_program(file.path(tempdir(), "T-1.yml"))
+cat(section(dm$code, "data"), sep = "\n")
+```
+
+The template's line had `population: SAF`. The report's line replaced
+it, so the program has only the report's R.
+
+### The Lab template's `record_where`
+
+The `tflspec_v1/lab_tox_shift` template counts each subject's worst
+record of a lab test. It does not compute the worst record. It keeps the
+records its param `record_where` keeps, in the `adlb_sub` line's
+`where`. The default is `AVISIT == "WORST POST-BASELINE"`: the ADaM's own
+worst record.
+
+For an ADaM with no worst record, set `record_where` to the records to
+choose from, and pick the worst one with `then:` on the template's
+`adlb_sub` line. The report line has no `code:`, so it is merged key by
+key: the template's `from`, `subjects` and `add` stay.
+
+```{cat, engine.opts = list(file = file.path(tempdir(), "T-4.yml"), lang = "yaml")}
+id: T-4
+kind: table
+label: Shift in toxicity grade, baseline to worst
+data:
+  - id: adlb_sub
+    then: !r 'dplyr::slice_max(dplyr::coalesce(ATOXGRH, ATOXGRL), n = 1, with_ties = FALSE, by = c(USUBJID, PARAMCD))'
+template:
+  name: tflspec_v1/lab_tox_shift
+  data:
+    record_where: !r AVISIT != "WORST POST-BASELINE" & is.na(ABLFL)
+  analysis:
+    by: TRT01A
+    conditions:
+      - {tox_dir: High, param: Alanine Aminotransferase (U/L)}
+      - {tox_dir: Low, param: Hemoglobin (g/L)}
+```
+
+```{r, message = FALSE, opts.label = "code"}
+lab <- ard_program(file.path(tempdir(), "T-4.yml"))
+cat(section(lab$code, "data"), sep = "\n")
+```
+
+The `filter()` comes from `record_where`; the `slice_max()` is the
+`then:`, last. The grades are in `ATOXGRH` for an upper limit test and in
+`ATOXGRL` for a lower limit test, so `dplyr::coalesce()` takes the one
+the test has. (`is.na(ABLFL)` and not `ABLFL != "Y"`: the programs read
+blanks as `NA`. See part 3.)
+
+## 2. Analysis items
+
+### `analyses: {per, ids}`
+
+A template's analysis item is one block of the SPEC. Its `analyses:` key
+says how many analyses it makes, and their ids (`analysis_id`):
+
+| `analyses:` | the analyses | their ids |
+|---|---|---|
+| no `per` | one | the item's `id` |
+| `per: variable` | one a variable | the variable's name, or its entry in `ids` |
+| `per: level` | one a depth of a hierarchy | `<id>_ANY`, `<id>_L1`, `<id>_L2` ... |
+| `per: [columns]` | one a condition row | the columns' values joined by `_`, upper case |
+
+`ids` gives an analysis its own id. In the demographics template it is
+the param `analysis_ids` (above, `{AGE: AGE_STATS}`):
+
+```{r, echo = FALSE, comment = ""}
+tpl <- function(name) {
+  readLines(system.file("series", "tflspec_v1", "templates", paste0(name, ".yml"),
+                        package = "tflspec"))
+}
+x <- tpl("demog")
+cat(x[grep("id: CONT", x, fixed = TRUE) + 0:1], sep = "\n")
+```
+
+```{r}
+unique(dm$ard$analysis_id)
+```
+
+The adverse event template counts by depth. `AE_ANY` is any event,
+`AE_L1` the body systems, `AE_L2` the preferred terms:
+
+```{r, echo = FALSE, comment = ""}
+x <- tpl("ae_soc_pt")
+cat(x[grep("id: AE$", x) + 0:1], sep = "\n")
+```
+
+```{cat, engine.opts = list(file = file.path(tempdir(), "T-2.yml"), lang = "yaml")}
+id: T-2
+kind: table
+label: Treatment-emergent adverse events
+template:
+  name: tflspec_v1/ae_soc_pt
+  analysis:
+    by: TRT01A
+```
+
+```{r, message = FALSE, opts.label = "code"}
+ae <- ard_program(file.path(tempdir(), "T-2.yml"))
+code <- section(ae$code, "analyses")
+cat(code[grep("^# AE: each depth", code):length(code)], sep = "\n")
+```
+
+```{r}
+unique(ae$ard$analysis_id)
+```
+
+The Lab template makes one analysis a condition row: a test and a
+direction. Its id is `<PARAMCD>_<TOX_DIR>`, from the data's own
+`PARAMCD` and the row's `tox_dir`:
+
+```{r, echo = FALSE, comment = ""}
+x <- tpl("lab_tox_shift")
+cat(x[grep("id: SHIFT", x, fixed = TRUE) + 0:1], sep = "\n")
+```
+
+```{r}
+unique(lab$ard$analysis_id)
+```
+
+A condition row may give its own `analysis_id`. That id is then used
+instead.
+
+### BIGN
+
+Each report has one `BIGN` analysis: the subjects of each column. It is
+the column header's N, and the denominator of the percentages. The
+templates write it first, on the data their `denominator` param names
+(`adsl_sub` by default):
+
+```{r, echo = FALSE, comment = ""}
+x <- tpl("ae_soc_pt")
+i <- grep("id: BIGN", x, fixed = TRUE)
+cat(x[i:(i + 5L)], sep = "\n")
+```
+
+The other items say `denominator: BIGN`. In the program that is BIGN's
+data, so the percentages and the header N count the same subjects:
+
+```{r, opts.label = "code"}
+code <- section(ae$code, "analyses")
+cat(code[2:7], grep("denominator", code, value = TRUE), sep = "\n")
+```
+
+```{r}
+bign <- ae$ard[ae$ard$analysis_id == "BIGN" & ae$ard$stat_name == "n", ]
+data.frame(arm = unlist(bign$variable_level), N = unlist(bign$stat))
+```
+
+## 3. Study data: `study$adam` and `study$adam_org`
+
+The study's setup file is sourced by every program.
+`tfl_study_setup_code()` writes it. It reads each dataset in two
+versions, each when it is first used:
+
+- `study$adam_org`: the dataset as the file has it.
+- `study$adam`: the same dataset with blanks as `NA` (`blank_as_na()`),
+  then the study's code lists' levels (`set_levels()`).
+
+The generated ARD, listing and figure programs always read `study$adam`.
+`study$adam_org` is there for a program a person writes on the data as
+the file has it. A program run without the setup file reads the files
+itself, in the same way (blanks as `NA`, then the levels). Here is the
+Lab report's program from part 1:
+
+```{r, opts.label = "code"}
+cat(section(lab$code, "input data"), sep = "\n")
+```
+
+Here the study has one code list, for `SEX`, in `spec/defaults.yml`:
+
+```{r}
+cat("codelists:",
+    "  SEX:",
+    "    - {value: F, label: Female}",
+    "    - {value: M, label: Male}",
+    file = file.path(study, "spec", "defaults.yml"), sep = "\n", append = TRUE)
+```
+
+```{r, opts.label = "code"}
+setup <- tfl_study_setup_code(tfl_read_study_spec(study))
+cat(setup, sep = "\n")
+```
+
+The setup's functions come from the study's helpers
+(`tfl_helpers_code()`). Run both, and compare the two versions of ADLB:
+
+```{r}
+env <- new.env()
+old <- setwd(study)
+eval(parse(text = tfl_helpers_code()), env)
+eval(parse(text = setup), env)
+lb_org <- env$study$adam_org$adlb   # (read here, when first used)
+lb <- env$study$adam$adlb
+sl <- env$study$adam$adsl
+setwd(old)
+
+table(lb_org$ABLFL, useNA = "ifany")   # as read: "" and "Y"
+table(lb$ABLFL, useNA = "ifany")       # blanks as NA
+levels(sl$SEX)                         # the code list's levels
+```
+
+So a condition on a blank is written `is.na(ABLFL)`, not `ABLFL == ""`.
+
+### `adam_levels: codelists | none`
+
+`study.yml`'s `settings: adam_levels` says whether `study$adam` gets the
+study's code lists' levels:
+
+- `codelists` (the default, also when the key is not there): blanks as
+  `NA`, then the code lists' levels.
+- `none`: blanks as `NA` only. No `cl_*` objects are written.
+
+```{r, opts.label = "code"}
+y <- file.path(study, "study.yml")
+writeLines(sub("^settings:$", "settings:\n  adam_levels: none", readLines(y)), y)
+cat(tfl_study_setup_code(tfl_read_study_spec(study)), sep = "\n")
+```
+
+The setting is part of each ARD's fingerprint, so changing it marks the
+ARD outdated. Under `none`, a report's own levels and labels still work.
+A report that names a study code list (`cl_sex`) stops with a message.
+
+## 4. Figures: `figure: {name, args}`
+
+A figure report may name its content as a figure content function. The
+code SPEC key is `figure:`, with the function's `name` and its `args`.
+There are two functions:
+
+- `km_curves`: Kaplan-Meier curves. Its `args` are the model's `by`,
+  `time` and `censor`, then the function's params (`time_unit`,
+  `x_label`, `y_label`, `legend`).
+- `forest_hr`: a forest plot of hazard ratios. It reads the ARD's `HR`
+  analysis. Its `args` are its params (`comparison`, `favours` ...).
+
+A report with `figure:` has no `content:`. An unknown name, or a missing
+model argument, stops with a message.
+
+```{cat, engine.opts = list(file = file.path(outputs, "F-1.yml"), lang = "yaml")}
+id: F-1
+kind: figure
+label: Overall survival
+data:
+  - id: adsl_sub
+    from: ADSL
+    population: ITT
+  - id: adtte_sub
+    from: ADTTE
+    subjects: adsl_sub
+    add: [TRT01A]
+    where: !r PARAMCD == "OS"
+    derive: !r AVAL = AVAL / 30.4375
+ard:
+  analyses:
+    - {id: BIGN, method: categorical, data: adsl_sub, variables: [TRT01A]}
+figure:
+  name: km_curves
+  args:
+    by: TRT01A
+    time: AVAL
+    censor: CNSR
+    time_unit: months
+    legend: bottom
+```
+
+`tfl_content_code()` writes the call:
+
+```{r, opts.label = "code"}
+km <- tfl_read_output(file.path(outputs, "F-1.yml"))
+cat(tfl_content_code(km), sep = "\n")
+```
+
+A forest plot needs only its params:
+
+```yaml
+figure:
+  name: forest_hr
+  args:
+    comparison: Drug X
+```
+
+`tfl_template_to_spec()` writes this key for the series templates
+`tflspec_v1/km_simple` and `tflspec_v1/forest_hr`. `tfl_figure_fn()`
+returns the function of a name.
+
+The functions can also be called directly. Here is the call above on the
+example data. The legend shows each arm's N from BIGN:
+
+```{r, fig.width = 7, fig.height = 4.5, message = FALSE}
+adsl_sub <- adsl[adsl$ITTFL == "Y", ]
+adtte_sub <- merge(adtte[adtte$PARAMCD == "OS", setdiff(names(adtte), "TRT01A")],
+                   adsl_sub[, c("USUBJID", "TRT01A")], by = "USUBJID")
+adtte_sub$AVAL <- adtte_sub$AVAL / 30.4375
+
+ard <- cards::ard_tabulate(adsl_sub, variables = TRT01A)
+ard$analysis_id <- "BIGN"
+
+km_fit <- ggsurvfit::survfit2(ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ TRT01A, data = adtte_sub)
+km_curves(km_fit, ard = ard, params = list(time_unit = "months", legend = "bottom"))
+```

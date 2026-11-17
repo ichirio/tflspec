@@ -277,7 +277,7 @@ test_that("header_n and col_header: the arm heading text, {n} dropped with none;
   expect_identical(b1_item(w, "plan_col_header")[[1L]]$args$header[[2L]]$text, "{col}")
   # the percentages are over the analysis set the headings' N counts (canon 1.31): no `denominator`
   y <- tfl_template_expand("demog", b1_args())
-  expect_identical(Filter(function(a) identical(a$id, "GROUPN"), y$ard$analyses)[[1L]]$data, "adsl_sub")
+  expect_identical(Filter(function(a) identical(a$id, "BIGN"), y$ard$analyses)[[1L]]$data, "adsl_sub")
   expect_identical(Filter(function(a) identical(a$id, "CAT"), y$ard$analyses)[[1L]]$denominator, "adsl_sub")
   expect_error(tfl_template_expand("demog", b1_args(header_n = "tested")), "header_n")
   for (n in c("demog", "stf_t02_demog")) {
@@ -329,7 +329,7 @@ test_that("the study standard reaches demog through its references; other verbs 
   expect_setequal(tp$study, c("population", "count_cell", "col_header", "stub_name", "stub_before", "blanks",
                               "blanks_first", "blanks_last", "blanks_counted", "border_header"))
   expect_identical(tp$args$blanks, "between_groups")
-  expect_identical(tp$args$count_cell, "{n:.0f} ({p:.1f%})")
+  expect_identical(vapply(tp$args$count_cell, as.character, ""), c("n == 0 ~ '0'", "{n:.0f} ({p:.1f%})"))
   expect_identical(tp$args$stub_name, "row_label")
   expect_identical(tp$args$col_header[[2L]]$row_label, "Characteristic")
   fns <- vapply(r$content, `[[`, "", "fn")

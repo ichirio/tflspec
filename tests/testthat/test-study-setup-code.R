@@ -122,24 +122,52 @@ ssc_sheets <- function(rounding = NULL) {
                           variables = "SEX")))
 }
 
+# a long delayedAssign() as the setup writes it: an argument a line
+ssc_wrapped <- function(name, expr, env) {
+  c("delayedAssign(", sprintf("  \"%s\",", name), paste0("  ", expr, ","),
+    paste0("  assign.env = ", env), ")")
+}
+# the lines one after another in the code
+ssc_has <- function(code, lines) {
+  grepl(paste(lines, collapse = "\n"), paste(code, collapse = "\n"), fixed = TRUE)
+}
+
+# the lines of a study with no code lists, the adam_org lines given
+ssc_no_lists <- function(...) {
+  c("# ADaM levels: codelists", "",
+    "# the study's input data, read when first used: study$adam_org (the ADaM as read,",
+    "# with the catalog's derive), study$adam (blanks as NA; the study has no code lists)",
+    "study <- list(adam_org = new.env(), adam = new.env())", c(...),
+    "delayedAssign(\"adsl\", blank_as_na(study$adam_org$adsl), assign.env = study$adam)",
+    "delayedAssign(\"adae\", blank_as_na(study$adam_org$adae), assign.env = study$adam)",
+    "message(\"The study has no code lists: study$adam is study$adam_org with blanks as NA.\")",
+    "",
+    "# (the objects the ARD, listing and figure programs read: study$adam's)",
+    "delayedAssign(\"adsl\", study$adam$adsl)",
+    "delayedAssign(\"adae\", study$adam$adae)")
+}
+
 test_that("tfl_study_setup_code() reads the study's datasets: the YAML study", {
   st <- ssc_yaml_study(ssc_data_yaml)
   code <- tfl_study_setup_code(st)
-  expect_identical(code[1L], "# the study's input data (every ARD, listing and figure program uses them)")
-  expect_identical(code[-1L], c(
-    "adsl <- haven::read_xpt(\"data/adam/adsl.xpt\")",
-    "adae <- readRDS(\"data/adam/adae.rds\") |> dplyr::mutate(AEDUR = AENDY - ASTDY + 1)"))
+  expect_identical(code, ssc_no_lists(
+    ssc_wrapped("adsl", "haven::read_xpt(\"data/adam/adsl.xpt\")", "study$adam_org"),
+    ssc_wrapped("adae", "readRDS(\"data/adam/adae.rds\") |> dplyr::mutate(AEDUR = AENDY - ASTDY + 1)",
+                "study$adam_org")))
+  expect_true(all(nchar(code) <= 100L))
   # the rounding first, as it was
   st$study$settings$rounding <- "sas"
   both <- tfl_study_setup_code(st)
-  expect_identical(both[1:2], tfl_study_setup_code(ssc_study("sas"))[1:2])
-  expect_identical(both[3L], "")
-  expect_identical(both[-(1:3)], code)
+  # (the setting's line first, then the rounding)
+  expect_identical(both[1:2], code[1:2])
+  expect_identical(both[3:4], tfl_study_setup_code(ssc_study("sas"))[1:2])
+  expect_identical(both[5L], "")
+  expect_identical(both[-(1:5)], code[-(1:2)])
   # the folder variables of tflspec.paths
   old <- options(tflspec.paths = c(path_adam = "data/adam"))
   on.exit(options(old), add = TRUE)
-  expect_true("adsl <- haven::read_xpt(file.path(path_adam, \"adsl.xpt\"))" %in%
-                tfl_study_setup_code(st))
+  expect_true(ssc_has(tfl_study_setup_code(st), ssc_wrapped(
+    "adsl", "haven::read_xpt(file.path(path_adam, \"adsl.xpt\"))", "study$adam_org")))
   options(old)
   # no dataset, no rounding: nothing
   expect_identical(tfl_study_setup_code(ssc_study()), character())
@@ -147,10 +175,11 @@ test_that("tfl_study_setup_code() reads the study's datasets: the YAML study", {
 
 test_that("tfl_study_setup_code() reads the study's datasets: the sheets", {
   code <- tfl_study_setup_code(ssc_sheets())
-  expect_identical(code[-1L], c(
-    "adsl <- readRDS(\"adsl.rds\")",
-    "adae <- readRDS(\"adae.rds\") |> dplyr::mutate(AEDUR = AENDY - ASTDY + 1)"))
-  expect_identical(tfl_study_setup_code(ssc_sheets("r"))[-(1:3)], code)
+  expect_identical(code, ssc_no_lists(
+    "delayedAssign(\"adsl\", readRDS(\"adsl.rds\"), assign.env = study$adam_org)",
+    ssc_wrapped("adae", "readRDS(\"adae.rds\") |> dplyr::mutate(AEDUR = AENDY - ASTDY + 1)",
+                "study$adam_org")))
+  expect_identical(tfl_study_setup_code(ssc_sheets("r"))[-(3:5)], code)
   sp <- tfl_table_spec(
     tables = data.frame(output_id = "T1", cols = "TRT01A", stringsAsFactors = FALSE),
     study = data.frame(key = "id", value = "USUBJID", stringsAsFactors = FALSE))
@@ -206,4 +235,258 @@ test_that("tflspec's own runs read the files themselves, the option or not", {
   ard <- suppressMessages(tfl_build_ard(x, dir = d, save = FALSE))
   expect_true(nrow(ard) > 0L)
   expect_true(isTRUE(getOption("tflspec.study_setup")))
+})
+
+# ---- study$adam_org and study$adam ------------------------------------------
+
+ssc_lists_study <- function() {
+  st <- ssc_yaml_study(c("datasets:",
+                         "  - dataset: ADSL", "    path: adsl.rds",
+                         "  - dataset: ADAE", "    path: adae.rds",
+                         "    derive: AEDUR = AENDY - ASTDY + 1"))
+  st$defaults$codelists <- list(
+    SEX = list(list(value = "F", label = "Female"), list(value = "M", label = "Male")),
+    RACE = c("WHITE", "ASIAN"))
+  st
+}
+
+test_that("the setup writes the study's code lists and both environments", {
+  code <- tfl_study_setup_code(ssc_lists_study())
+  expect_identical(code[1:6], c(
+    "# ADaM levels: codelists", "",
+    "# the study's code lists (spec/defaults.yml codelists:)",
+    "cl_sex <- c(F = \"Female\", M = \"Male\")",
+    "cl_race <- c(\"WHITE\", \"ASIAN\")", ""))
+  expect_true("study <- list(adam_org = new.env(), adam = new.env())" %in% code)
+  expect_true("delayedAssign(\"adsl\", readRDS(\"adsl.rds\"), assign.env = study$adam_org)" %in% code)
+  expect_true(ssc_has(code, ssc_wrapped(
+    "adae", "readRDS(\"adae.rds\") |> dplyr::mutate(AEDUR = AENDY - ASTDY + 1)", "study$adam_org")))
+  # every dataset's adam line passes all the lists
+  # (blanks as NA first, then the lists)
+  for (ds in c("adsl", "adae")) {
+    expect_true(ssc_has(code, c(
+      "delayedAssign(", sprintf("  \"%s\",", ds), sprintf("  study$adam_org$%s |>", ds),
+      "    blank_as_na() |>", "    set_levels(SEX = cl_sex, RACE = cl_race),",
+      "  assign.env = study$adam", ")")), info = ds)
+  }
+  expect_true(all(nchar(code) <= 100L))
+  # the objects the programs read: study$adam's
+  expect_identical(utils::tail(code, 3L), c(
+    "# (the objects the ARD, listing and figure programs read: study$adam's)",
+    "delayedAssign(\"adsl\", study$adam$adsl)",
+    "delayedAssign(\"adae\", study$adam$adae)"))
+  expect_false(any(grepl("message(", code, fixed = TRUE)))
+  expect_no_error(parse(text = code))
+})
+
+test_that("the setup of a study with no code lists makes study$adam study$adam_org", {
+  code <- tfl_study_setup_code(ssc_yaml_study(ssc_data_yaml))
+  expect_false(any(grepl("^cl_", code)))
+  expect_false(any(grepl("set_levels", code, fixed = TRUE)))
+  expect_true("delayedAssign(\"adsl\", blank_as_na(study$adam_org$adsl), assign.env = study$adam)" %in% code)
+  expect_true(paste0("message(\"The study has no code lists: study$adam is study$adam_org ",
+                     "with blanks as NA.\")") %in% code)
+  expect_false("study$adam <- study$adam_org" %in% code)
+})
+
+test_that("the setup's code reads each dataset when first used", {
+  d <- tempfile("ssc")
+  dir.create(d)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  st <- ssc_yaml_study(c("datasets:",
+                         "  - dataset: ADSL", "    path: data/adam/adsl.rds",
+                         "  - dataset: ADAE", "    path: data/adam/adae.rds"))
+  st$defaults$codelists <- list(SEX = list(list(value = "F", label = "Female"),
+                                           list(value = "M", label = "Male")))
+  old <- options(tflspec.paths = c(path_adam = "data/adam"))
+  on.exit(options(old), add = TRUE)
+  code <- tfl_study_setup_code(st)
+  options(old)
+  env <- new.env(parent = globalenv())
+  env$path_adam <- d
+  eval(parse(text = tfl_helpers_code()), env)
+  # the files are not there when the setup runs: nothing is read yet
+  expect_no_error(eval(parse(text = code), envir = env))
+  expect_identical(sort(ls(env$study$adam_org)), c("adae", "adsl"))
+  expect_identical(sort(ls(env$study$adam)), c("adae", "adsl"))
+  saveRDS(data.frame(USUBJID = c("S1", "S2", "S3"), SEX = c("M", "F", "M"),
+                     stringsAsFactors = FALSE), file.path(d, "adsl.rds"))
+  expect_identical(class(env$study$adam$adsl$SEX), "factor")
+  expect_identical(levels(env$study$adam$adsl$SEX), c("F", "M"))
+  expect_identical(as.character(env$study$adam$adsl$SEX), c("M", "F", "M"))
+  expect_identical(class(env$study$adam_org$adsl$SEX), "character")
+  # (the object the programs read is study$adam's: the code list's factor)
+  expect_identical(env$adsl, env$study$adam$adsl)
+  expect_identical(levels(env$adsl$SEX), c("F", "M"))
+  # adae has no file: it stops only when it is used
+  expect_error(suppressWarnings(env$study$adam_org$adae))
+  expect_error(suppressWarnings(env$adae))
+})
+
+test_that("study$adam has the blanks as NA, study$adam_org as read (with and without lists)", {
+  d <- tempfile("ssc")
+  dir.create(d)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  adsl <- data.frame(USUBJID = c("S1", "S2", "S3"), SEX = c("M", "", "F"),
+                     RACE = c("", "ASIAN", "WHITE"), AGE = c(30, NA, 40),
+                     GRP = factor(c("a", "", "b"), levels = c("b", "", "a")),
+                     stringsAsFactors = FALSE)
+  saveRDS(adsl, file.path(d, "adsl.rds"))
+  for (lists in c(TRUE, FALSE)) {
+    st <- ssc_yaml_study(c("datasets:", "  - dataset: ADSL", "    path: data/adam/adsl.rds"))
+    if (lists) st$defaults$codelists <- list(SEX = c("F", "M"))
+    old <- options(tflspec.paths = c(path_adam = "data/adam"))
+    code <- tfl_study_setup_code(st)
+    options(old)
+    env <- new.env(parent = globalenv())
+    env$path_adam <- d
+    eval(parse(text = tfl_helpers_code()), env)
+    suppressMessages(eval(parse(text = code), envir = env))
+    a <- env$study$adam$adsl
+    expect_identical(a$RACE, c(NA, "ASIAN", "WHITE"))
+    expect_identical(as.character(a$SEX), c("M", NA, "F"))
+    expect_identical(class(a$SEX), if (lists) "factor" else "character")
+    expect_identical(a$AGE, adsl$AGE)
+    expect_identical(levels(a$GRP), c("b", "a"))
+    expect_identical(as.character(a$GRP), c("a", NA, "b"))
+    # as read
+    expect_identical(env$study$adam_org$adsl, adsl)
+    # the object the programs read: study$adam's, the blanks NA
+    expect_identical(env$adsl, a)
+  }
+})
+
+test_that("blank_as_na() makes a blank of a character column or a factor NA, leaves the rest", {
+  env <- new.env(parent = globalenv())
+  eval(parse(text = tfl_helpers_code()), env)
+  x <- data.frame(a = c("x", "", NA), n = c(1, 2, 3), l = c(TRUE, FALSE, NA),
+                  f = factor(c("u", "", "v")), o = factor(c("lo", "", "hi"),
+                                                          levels = c("", "lo", "hi"), ordered = TRUE),
+                  s = c(" ", "y", ""), stringsAsFactors = FALSE)
+  y <- env$blank_as_na(x)
+  expect_identical(y$a, c("x", NA, NA))
+  expect_identical(y$s, c(" ", "y", NA))
+  expect_identical(y[c("n", "l")], x[c("n", "l")])
+  expect_identical(levels(y$f), c("u", "v"))
+  expect_identical(as.character(y$f), c("u", NA, "v"))
+  expect_identical(levels(y$o), c("lo", "hi"))
+  expect_true(is.ordered(y$o))
+  expect_identical(env$blank_as_na(y), y)
+})
+
+# ---- settings: adam_levels (codelists | none) --------------------------------
+
+ssc_levels_study <- function(value = NULL) {
+  st <- ssc_lists_study()
+  st$study$settings$adam_levels <- value
+  st
+}
+
+test_that("adam_levels: the setup says it first; codelists is the default", {
+  code <- tfl_study_setup_code(ssc_levels_study())
+  expect_identical(code[1L], "# ADaM levels: codelists")
+  expect_identical(tfl_study_setup_code(ssc_levels_study("codelists")), code)
+  expect_true("cl_sex <- c(F = \"Female\", M = \"Male\")" %in% code)
+  expect_true(any(grepl("set_levels(SEX = cl_sex, RACE = cl_race)", code, fixed = TRUE)))
+})
+
+test_that("adam_levels: none -- no code lists, study$adam is blank_as_na() only", {
+  code <- tfl_study_setup_code(ssc_levels_study("none"))
+  expect_identical(code[1:2], c("# ADaM levels: none", ""))
+  expect_false(any(grepl("^cl_", code)))
+  expect_false(any(grepl("set_levels", code, fixed = TRUE)))
+  expect_false(any(grepl("message(", code, fixed = TRUE)))
+  expect_true("delayedAssign(\"adsl\", blank_as_na(study$adam_org$adsl), assign.env = study$adam)" %in% code)
+  expect_true("delayedAssign(\"adsl\", readRDS(\"adsl.rds\"), assign.env = study$adam_org)" %in% code)
+  expect_true(any(grepl("adam_levels: none", code[-1L], fixed = TRUE)))
+  expect_no_error(parse(text = code))
+  # with the rounding: the setting, then the rounding, then the data
+  st <- ssc_levels_study("none")
+  st$study$settings$rounding <- "sas"
+  both <- tfl_study_setup_code(st)
+  expect_identical(both[1:2], c("# ADaM levels: none", ""))
+  expect_match(both[3L], "^# the study's rounding")
+  # the sheets: the study sheet's key
+  sp <- ssc_sheets()
+  sp$study <- rbind(sp$study, data.frame(key = "adam_levels", value = "none"))
+  expect_identical(tfl_study_setup_code(sp)[1L], "# ADaM levels: none")
+  # another value stops
+  expect_error(tfl_study_setup_code(ssc_levels_study("define")),
+               "adam_levels is codelists or none; got \"define\"")
+})
+
+test_that("adam_levels: none -- the blanks are NA in study$adam all the same", {
+  d <- tempfile("ssc")
+  dir.create(d)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  adsl <- data.frame(USUBJID = c("S1", "S2", "S3"), SEX = c("M", "", "F"),
+                     RACE = c("", "ASIAN", "WHITE"), stringsAsFactors = FALSE)
+  saveRDS(adsl, file.path(d, "adsl.rds"))
+  st <- ssc_yaml_study(c("datasets:", "  - dataset: ADSL", "    path: data/adam/adsl.rds"))
+  st$defaults$codelists <- list(SEX = c("F", "M"))
+  st$study$settings$adam_levels <- "none"
+  old <- options(tflspec.paths = c(path_adam = "data/adam"))
+  code <- tfl_study_setup_code(st)
+  options(old)
+  env <- new.env(parent = globalenv())
+  env$path_adam <- d
+  eval(parse(text = tfl_helpers_code()), env)
+  eval(parse(text = code), envir = env)
+  a <- env$study$adam$adsl
+  expect_identical(a$SEX, c("M", NA, "F"))
+  expect_identical(a$RACE, c(NA, "ASIAN", "WHITE"))
+  expect_false(exists("cl_sex", envir = env, inherits = FALSE))
+  expect_identical(env$study$adam_org$adsl, adsl)
+})
+
+test_that("adam_levels is part of the ARD's fingerprint", {
+  sp <- ssc_ard_spec()
+  with_key <- function(v) {
+    x <- sp
+    x$study <- rbind(x$study, data.frame(key = "adam_levels", value = v))
+    x
+  }
+  h <- tfl_ard_spec_hash(sp, "T")
+  # codelists, the default, leaves it as it was; none changes it
+  expect_identical(tfl_ard_spec_hash(with_key("codelists"), "T"), h)
+  expect_false(identical(tfl_ard_spec_hash(with_key("none"), "T"), h))
+  expect_error(tfl_ard_spec_hash(with_key("x"), "T"), "codelists or none")
+  # the ARD's study sheet of a YAML study says none, and only none
+  o <- tfl_output("T-9", "table", common = list(population = "SAF"),
+                  content = list(tfl_item("table_plan", list(cols = "TRT01A"))))
+  outs <- list(`T-9` = o)
+  ard_key <- function(st) {
+    s <- tfl_sheets_from_spec(st, outs)$ard$study
+    s$value[s$key %in% "adam_levels"]
+  }
+  expect_identical(ard_key(ssc_levels_study()), character())
+  expect_identical(ard_key(ssc_levels_study("codelists")), character())
+  expect_identical(ard_key(ssc_levels_study("none")), "none")
+})
+
+test_that("adam_levels: none -- a report's own levels work, a study code list by name stops", {
+  st <- ssc_levels_study("none")
+  item <- function(...) tfl_item("table_plan", list(cols = "TRT01A"))
+  # levels written as values, and the report's own list: fine
+  own <- tfl_output("T-1", "table", common = list(population = "SAF"),
+                    data = list(list(id = "adsl_saf", from = "ADSL",
+                                     derive = list(SEXF = "factor(SEX, levels = c(\"F\", \"M\"))"))),
+                    content = list(item()))
+  expect_no_error(tfl_resolve_output(own, st))
+  mine <- tfl_output("T-2", "table", common = list(population = "SAF"),
+                     codelists = list(SEX = c("F", "M")),
+                     data = list(list(id = "adsl_saf", from = "ADSL",
+                                      derive = list(SEXF = "factor(SEX, levels = cl_sex)"))),
+                     content = list(item()))
+  expect_no_error(tfl_resolve_output(mine, st))
+  # the study's list by name
+  named <- tfl_output("T-3", "table", common = list(population = "SAF"),
+                      data = list(list(id = "adsl_saf", from = "ADSL",
+                                       derive = list(SEXF = "factor(SEX, levels = cl_sex)"))),
+                      content = list(item()))
+  msg <- "T-3: adam_levels: none -- the study code list SEX (cl_sex) is not read"
+  expect_error(tfl_resolve_output(named, st), msg, fixed = TRUE)
+  expect_error(tfl_report_codelists(st, outputs = list(`T-3` = named)), msg, fixed = TRUE)
+  # under codelists it is read
+  expect_no_error(tfl_resolve_output(named, ssc_levels_study("codelists")))
 })

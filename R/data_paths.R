@@ -169,10 +169,7 @@
       if (!is.na(pop)) sprintf(", analysis set %s%s", pop,
                                if (is.na(pop_where)) "" else sprintf(" [%s]", pop_where)),
       if (length(where)) sprintf(", where %s", paste(where, collapse = " & ")),
-      "). The analysis set and the `where` leave no record; compare them with the data.",
-      if (any(grepl("is.na(", where, fixed = TRUE)))
-        paste0(" A dataset read from a transport file holds \"\" for no value, so is.na()",
-               " finds none of them: use == \"\" or != \"Y\"."))
+      "). The analysis set and the `where` leave no record; compare them with the data.")
   }
   out
 }

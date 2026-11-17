@@ -48,13 +48,71 @@
   objects = c("output_id", "object_id", "code", "label"),
   # condition-defined groups (the ARS's grouping factors): a row a level
   groups = c("group_id", "label", "level", "where"),
-  analysis_data = c("output_id", "data_id", "from", "population_id", "subjects",
-                    "where", "add", "derive", "keep", "distinct", "code"),
+  analysis_data = c("output_id", "data_id", "from", "population_id", "subjects_in",
+                    "where", "add", "derive", "keep", "distinct", "code", "then"),
   analyses = c("output_id", "analysis_id", "parent", "label", "method",
                "data", "dataset", "records",
                "population_id", "where", "by", "overall", "strata", "groups", "variables",
                "optional", "statistics", "denominator", "formats", "args", "post",
-               "code", "purpose", "reason"))
+               "code", "purpose", "reason",
+               # a template's item: its type, the params its condition rows
+               # give, its own columns and how its analyses are named
+               "type", "params", "derive", "levels", "missing_row", "missing_label",
+               "analysis_per"),
+  # an item's condition rows (an item with params): a row a run, in `row`
+  # order; then a column a param, the items' params together (a cell blank
+  # where an item has no such param), and row_analysis_id, a row's own id
+  conditions = c("output_id", "analysis_id", "row"),
+  # an item's several calls (ards:): a row a call, its keys (by, variables,
+  # ...) as columns; each call is the item's analysis_id
+  ards = c("output_id", "analysis_id", "row"))
+
+# The sheets whose columns are not fixed: their keys first, then a column a
+# param (conditions) or a key of a call (ards)
+.ard_open_sheets <- c("conditions", "ards")
+
+# An item's condition rows from the conditions sheet `cs`: a data frame of
+# its params in row order (a param a row does not give NA), and
+# analysis_id when a row gives its own (row_analysis_id); NULL for none.
+# A key with a value that is not one of the item's params stops.
+.item_cond_rows <- function(cs, output_id, analysis_id, params) {
+  if (!is.data.frame(cs) || !nrow(cs)) return(NULL)
+  d <- cs[cs$output_id %in% output_id & cs$analysis_id %in% analysis_id, , drop = FALSE]
+  if (!nrow(d)) return(NULL)
+  d <- d[order(suppressWarnings(as.integer(d$row))), , drop = FALSE]
+  given <- function(v) !is.na(v) & nzchar(trimws(as.character(v)))
+  keys <- setdiff(names(d), c(.ard_spec_sheets$conditions, "row_analysis_id", "note"))
+  used <- keys[vapply(keys, function(k) any(given(d[[k]])), NA)]
+  bad <- setdiff(used, params)
+  if (length(bad)) {
+    stop(sprintf("conditions of %s (report %s): %s %s not one of its params (%s).",
+                 analysis_id, output_id, paste(bad, collapse = ", "),
+                 if (length(bad) > 1L) "are" else "is",
+                 if (length(params)) paste(params, collapse = ", ") else "none"),
+         call. = FALSE)
+  }
+  out <- data.frame(row.names = seq_len(nrow(d)))
+  for (p in params) {
+    out[[p]] <- if (p %in% names(d)) as.character(d[[p]]) else rep(NA_character_, nrow(d))
+  }
+  own <- d$row_analysis_id
+  if (!is.null(own) && any(given(own))) out$analysis_id <- as.character(own)
+  out
+}
+
+# An item's calls from the ards sheet: a list, a call a list of its cells
+# (by, variables, ...: text as on the sheet), in row order; NULL for none
+.item_ards_rows <- function(as, output_id, analysis_id) {
+  if (!is.data.frame(as) || !nrow(as)) return(NULL)
+  d <- as[as$output_id %in% output_id & as$analysis_id %in% analysis_id, , drop = FALSE]
+  if (!nrow(d)) return(NULL)
+  d <- d[order(suppressWarnings(as.integer(d$row))), , drop = FALSE]
+  keys <- setdiff(names(d), c(.ard_spec_sheets$ards, "note"))
+  lapply(seq_len(nrow(d)), function(k) {
+    v <- vapply(keys, function(c) as.character(d[[c]][k]), "")
+    as.list(v[!is.na(v) & nzchar(trimws(v))])
+  })
+}
 
 .split_bar <- function(x) {
   if (is.null(x) || is.na(x) || !nzchar(x)) return(character())
@@ -178,6 +236,8 @@
   cols <- .ard_spec_sheets[[sheet]]
   d <- as.data.frame(d, stringsAsFactors = FALSE)
   if (identical(sheet, "analysis_data")) .adata_label_check(d)
+  # (a conditions or ards sheet: its params' or keys' columns after its own)
+  if (sheet %in% .ard_open_sheets) cols <- c(cols, setdiff(names(d), c(cols, "note")))
   out <- lapply(cols, function(c) {
     v <- if (c %in% names(d)) as.character(d[[c]]) else
       rep(NA_character_, nrow(d))
@@ -246,6 +306,7 @@ tfl_read_ard_spec <- function(path, check = TRUE, statistics = NULL,
     d <- if (s %in% sheets) .xlsx_text(path, s) else
       data.frame(matrix(character(), 0, length(cols),
                         dimnames = list(NULL, cols)))
+    if (s %in% .ard_open_sheets) cols <- c(cols, setdiff(names(d), c(cols, "note")))
     bad <- setdiff(names(d), c(cols, "note"))
     if (length(bad)) {
       stop("Sheet `", s, "` has columns it does not read: ",
@@ -333,6 +394,13 @@ tfl_read_ard_spec <- function(path, check = TRUE, statistics = NULL,
 #' in one place.
 #' @export
 tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
+  .tfl_ard_spec(x, statistics, methods)
+}
+
+# (`blank_notes`: the notes about a blank text test, in what a person wrote;
+# off for a definition a study's files and templates make, where tfl_check_spec()
+# says them about the report's own rows)
+.tfl_ard_spec <- function(x, statistics = NULL, methods = NULL, blank_notes = TRUE) {
   old <- .set_catalogs(statistics, methods)
   on.exit(options(old), add = TRUE)
   x <- .ard_spec_shaped(x)
@@ -353,7 +421,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   }
   # an argument the installed function does not have: said now, with the
   # version, rather than by the program when it runs
-  w <- .ard_args_unknown(x)
+  w <- c(.ard_args_unknown(x), if (blank_notes) .blank_text_notes(x))
   if (length(w)) warning(paste(w, collapse = "\n  "), call. = FALSE)
   x
 }
@@ -1172,7 +1240,10 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
 #' `"missing"`).  An ARD built from a definition whose fingerprint differs
 #' from the one now is outdated.  A column blank in every analysis row of
 #' the output does not count, so a column added to the definition later
-#' leaves the fingerprints as they were.
+#' leaves the fingerprints as they were.  The study key `adam_levels`
+#' (study.yml's `settings: adam_levels`, which [tfl_sheets_from_spec()] puts
+#' on the `study` sheet when it is `none`) counts: `none` gives another
+#' fingerprint than `codelists`, the default, which leaves it as it was.
 #'
 #' @param spec An [tfl_ard_spec()].
 #' @param output_id The output.
@@ -1195,18 +1266,24 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
   }, "")
   ad <- .adata_of(.adata_sheet(spec), output_id)
   ad <- ad[ad$data_id %in% .adata_used(ad, a), , drop = FALSE]
-  # a column added since (subjects, keep) blank in every row does not count
-  later <- c("subjects", "keep", "code")
+  # a column added since (subjects_in, keep) blank in every row does not count
+  later <- c("subjects_in", "keep", "code", "then")
   ad <- ad[setdiff(names(ad), later[vapply(later, function(cn) all(is.na(ad[[cn]])), NA)])]
   pops <- spec$populations[spec$populations$population_id %in%
                              c(a$population_id, ad$population_id), , drop = FALSE]
   dss <- spec$datasets[spec$datasets$dataset %in%
                          c(a$dataset, pops$dataset, ad$from), , drop = FALSE]
+  # (adam_levels: its own line under none; codelists, the default, none --
+  # a study that does not say it keeps its fingerprints)
+  st <- spec$study
+  if (is.data.frame(st) && "key" %in% names(st)) st <- st[!st$key %in% "adam_levels", , drop = FALSE]
+  al <- .adam_levels_check(.study_value(spec, "adam_levels", NA), "study key adam_levels")
   txt <- paste(c(utils::capture.output(print(as.list(a[order(a$analysis_id), ]))),
                  if (nrow(ad)) utils::capture.output(print(as.list(ad))),
                  utils::capture.output(print(as.list(pops))),
                  utils::capture.output(print(as.list(dss[setdiff(names(dss), "level")]))),
-                 utils::capture.output(print(as.list(spec$study))),
+                 utils::capture.output(print(as.list(st))),
+                 if (identical(al, "none")) "adam_levels: none",
                  if (length(src)) paste(src, src_md5),
                  # the code lists, only when there are some: a study without
                  # keeps the fingerprints it had
@@ -1382,6 +1459,75 @@ tfl_ard_as_custom <- function(spec, output_id, analysis_id) {
   fmt <- if (!length(fmt)) NA_character_ else
     paste(ifelse(is.na(fmt), names(fmt), paste0(names(fmt), "=", fmt)), collapse = " | ")
   list(code = body, formats = fmt, method = "custom")
+}
+
+# In study$adam a blank is NA (blank_as_na()), so a test for a blank text
+# (`X == ""`, `X != ""`, `nzchar(X)`) in an R field of the definition finds
+# nothing there: one note a place, `<id> / <field>: <text>: in study$adam a
+# blank is NA -- write is.na(X)` (`!is.na(X)` for `!= ""` and `nzchar(X)`).
+# The fields: populations where / derive, records where, datasets derive,
+# analysis data where / derive / code / then, analyses where / post / code.
+.blank_text_notes <- function(x) {
+  id <- function(d) {
+    if (!is.null(d$data_id)) paste(d$output_id, d$data_id, sep = " / ") else if (!is.null(d$analysis_id))
+      paste(d$output_id, d$analysis_id, sep = " / ") else if (!is.null(d$record_id)) d$record_id else
+      if (!is.null(d$population_id)) d$population_id else d$dataset
+  }
+  sheets <- list(
+    list(x$populations, c("where", "derive")), list(x$records, "where"),
+    list(x$datasets, "derive"), list(.adata_sheet(x), c("where", "derive", "code", "then")),
+    list(x$analyses, c("where", "post", "code")))
+  out <- character()
+  for (s in sheets) {
+    d <- s[[1L]]
+    if (!is.data.frame(d) || !nrow(d)) next
+    tag <- id(d)
+    for (f in intersect(s[[2L]], names(d))) {
+      for (i in which(!is.na(d[[f]]))) {
+        for (m in .blank_text_found(d[[f]][i])) {
+          out <- c(out, sprintf("%s / %s: %s: in study$adam a blank is NA -- write %s",
+                                tag[i], f, m[[1L]], m[[2L]]))
+        }
+      }
+    }
+  }
+  unique(out)
+}
+
+# The notes for the entries of a YAML study's own files (a list of lists: a
+# report's analysis data or analyses, the study's populations ...), as one
+# line each: `<id> / <field>: <text>: in study$adam ...`; `tag`: each entry's
+# place, `fields`: the R fields
+.blank_entry_notes <- function(entries, fields, tag = function(e) as.character(e$id %||% NA)[1L]) {
+  out <- character()
+  for (e in entries) {
+    for (f in intersect(fields, names(e))) {
+      v <- e[[f]]
+      if (!is.character(v) || length(v) != 1L || is.na(v)) next
+      for (m in .blank_text_found(v)) {
+        out <- c(out, sprintf("%s / %s: %s: in study$adam a blank is NA -- write %s",
+                              tag(e), f, m[[1L]], m[[2L]]))
+      }
+    }
+  }
+  out
+}
+
+# The tests for a blank text in an R text: a list of c(the text, what to write)
+.blank_text_found <- function(txt) {
+  col <- "([A-Za-z.][A-Za-z0-9._$]*(?:\\([^()]*\\))?)"
+  q <- "(?:\"\"|'')"
+  found <- function(pat, fun) {
+    hits <- regmatches(txt, gregexpr(pat, txt, perl = TRUE))[[1L]]
+    lapply(hits, function(h) c(h, fun(regmatches(h, regexec(pat, h, perl = TRUE))[[1L]])))
+  }
+  isna <- function(v, neg) paste0(if (neg) "!" else "", "is.na(", v, ")")
+  c(found(paste0(col, "\\s*(==|!=)\\s*", q),
+          function(g) isna(g[2L], g[3L] == "!=")),
+    found(paste0(q, "\\s*(==|!=)\\s*", col),
+          function(g) isna(g[3L], g[2L] == "!=")),
+    found("(!?)\\s*nzchar\\(\\s*([^()]*?)\\s*\\)",
+          function(g) isna(g[3L], g[2L] != "!")))
 }
 
 # An analysis's condition runs on its data after the code lists are put on

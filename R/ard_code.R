@@ -239,7 +239,8 @@
 .ard_helper_names <- c("set_levels", "tag_ard", "fmt_pvalue", "fmt_ard",
                        "keep_stats", "save_ard", "fmt_default", "tfl_stats",
                        "complete_hierarchy", "relevel_ard", "drop_empty_groups", "keep_min_pct",
-                       "ard_hierarchical_or_none", "order_arms", "order_levels")
+                       "ard_hierarchical_or_none", "order_arms", "order_levels", "bind_items",
+                       "blank_as_na", "missing_level")
 
 # the packages an ARD program attaches (its setup's library() calls), and
 # those R attaches itself: their functions without `pkg::`
@@ -758,6 +759,10 @@
       return(paste0(to, .lay(.cl(s1$fn, c(list(src), s1$args)), lead = nchar(to))))
     }
     s <- steps[[1L]]
+    # (a step that is not a plain call, f(...): piped as it is)
+    if (!grepl("^[A-Za-z.][A-Za-z0-9._:]*\\(.*\\)$", s)) {
+      return(sprintf("%s <- %s |> %s", obj, src, s))
+    }
     inner <- sub("^[^(]*\\((.*)\\)$", "\\1", s)
     fn <- sub("\\(.*$", "", s)
     return(sprintf("%s <- %s(%s%s)", obj, fn, src, if (nzchar(inner)) paste0(", ", inner) else ""))
@@ -810,7 +815,10 @@
 .expr_cl <- function(e) {
   if (!is.call(e)) return(.expr_text(e))
   fn <- paste(deparse(e[[1L]]), collapse = "")
-  if (!grepl("^([A-Za-z.][A-Za-z0-9._]*::)?[A-Za-z.][A-Za-z0-9._]*$", fn)) {
+  # (R's own syntax -- if / else, for, while, function -- is not a call to
+  # lay out: `if (a) b else c`, never `if(a, b, c)`)
+  if (!grepl("^([A-Za-z.][A-Za-z0-9._]*::)?[A-Za-z.][A-Za-z0-9._]*$", fn) ||
+      fn %in% c("if", "for", "while", "repeat", "function")) {
     return(.expr_text(e))
   }
   args <- as.list(e)[-1L]
@@ -958,6 +966,10 @@
   sprintf("order_levels(%s)", paste(args, collapse = ", "))
 }
 
+# A program's own read of a dataset (no study setup file): the blanks as
+# NA, as study$adam has them (blank_as_na(), a study helper)
+.blank_read_step <- "blank_as_na()"
+
 # The datasets and populations analyses `a` (and analysis data `nad`)
 # read: their lines, with set_levels() when there are code lists
 .ard_data_lines <- function(x, a, nad, levels = NULL) {
@@ -989,14 +1001,19 @@
     # data, after its filter)
     steps <- c(.order_levels_step(cats, if (has_adsl && toupper(ds) != "ADSL") "adsl"))
     if (isTRUE(getOption("tflspec.study_setup"))) {
-      # the study's setup file has read it, with its derive: the object's own
-      # steps, and no line when none is left
+      # the study's setup file has read it, with its derive: the object is
+      # study$adam's (blanks NA, the study's code lists' levels: a column
+      # with one is a factor already, which order_levels() leaves as it is,
+      # and the report's code lists are set again after each filter); the
+      # object's own steps, and no line when none is left
       if (length(steps)) code <- c(code, .make_code(obj, obj, steps))
       next
     }
+    # (the program's own read is study$adam's: the derive, then the blanks
+    # as NA)
     code <- c(code, .make_code(obj, .reader(r$path[1L]), c(
       if (length(d)) sprintf("dplyr::mutate(%s)", paste(d, collapse = ", ")),
-      steps)))
+      .blank_read_step, steps)))
   }
   pop_code <- character()
   for (pid in pops) {
@@ -1079,6 +1096,9 @@
 # arguments after output_id (`args`, a named list of R), and a comment above.
 .ard_body_lines <- function(x, a, levels = NULL, save = NULL) {
   subj <- .study_value(x, "id", "USUBJID")
+  # (an item's condition rows and calls, from their sheets; an item's
+  # `where` that is one of its params: each condition's own)
+  a <- .item_bign(.item_param_where(.item_attach(x, a)))
   # an analysis on an analysis data is of its population: the data is its
   # own report's (analysis_data is by report); the named data each report
   # reads (and its denominator), with the rows they are made from
@@ -1179,7 +1199,12 @@
     reads <- lapply(stats::setNames(named[[o]], named[[o]]), function(d) {
       on <- !is.na(dcol[rows]) & dcol[rows] == d
       den <- !is.na(rd$denominator) & rd$denominator == d
-      unique(c(unlist(lapply(c(rd$by[on], rd$strata[on], rd$variables[on]), .split_bar)),
+      # (a template item: not the columns it makes, but the ones its calls,
+      # conditions and derive read)
+      own <- lapply(which(on), function(i) .item_reads(rd[i, ]))
+      made <- unlist(lapply(own, attr, "made"))
+      unique(c(setdiff(unlist(lapply(c(rd$by[on], rd$strata[on], rd$variables[on]), .split_bar)), made),
+               unlist(own),
                unlist(lapply(rd$by[den], .split_bar))))
     })
     # the subject-level columns each data takes from its subjects' data:
@@ -1283,30 +1308,59 @@
                                paste0("ard_", gsub("[^a-z0-9]+", "_",
                                                    tolower(a$analysis_id[top])))),
                              sep = "_")[-seq_along(c(taken, fun_names))]
-    avoid <- c(taken, ard_names, "ard", "ards", "report_id", if (length(lv)) .cl_name(names(lv)),
+    avoid <- c(taken, ard_names, paste0(ard_names, "_conditions"), paste0(ard_names, "_one"),
+               "ard", "ards", "report_id", if (length(lv)) .cl_name(names(lv)),
                .ard_helper_names)
     for (j in seq_along(top)) {
       i <- top[j]
       r <- a[i, ]
       kids <- which(!is.na(par) & par == r$analysis_id &
                       a$output_id == r$output_id)
-      lines <- if (length(kids)) {
+      cond <- .item_conditions(r)
+      dname <- data_name[[as.character(i)]]
+      pre <- character()
+      # an item's own columns (derive, levels): its data made under a name of
+      # its own (in each condition's function, there)
+      if (is.null(cond) && length(.item_steps(r))) {
+        nm <- make.unique(c(avoid, paste0(ard_names[j], "_data")), sep = "_")[length(avoid) + 1L]
+        avoid <- c(avoid, nm)
+        pre <- .make_code(nm, dname, .item_steps(r))
+        dname <- nm
+      }
+      lines <- if (.item_type(r) == "model") {
+        # a model: its call under its own name, not an ARD's
+        mn <- make.unique(c(avoid, make.names(tolower(r$analysis_id))), sep = "_")[length(avoid) + 1L]
+        avoid <- c(avoid, mn)
+        .ard_model_lines(r, dname, mn)
+      } else if (!is.null(cond)) {
+        # condition rows: the analysis once in each (purrr::pmap); a param
+        # in the call's arguments or its post steps the function's argument
+        rp <- r
+        for (k in intersect(c("args", "post"), names(rp))) {
+          if (!is.na(rp[[k]])) rp[[k]] <- .item_param_refs(rp[[k]], .item_params(r))
+        }
+        .ard_cond_lines(r, cond, .ard_item_calls(xo, rp, keys, subj, "data", "ard", avoid),
+                        dname, ard_names[j])
+      } else if (length(kids)) {
         .ard_wrapper_lines(xo, r, a[kids, , drop = FALSE], keys, subj,
-                           data_name[[as.character(i)]], ard_names[j])
+                           dname, ard_names[j])
       } else if (length(.split_bar(r$groups %||% NA))) {
         # condition-defined groups: the analysis once in each level
         .ard_groups_lines(xo, r, .ard_analysis_lines(xo, r, keys, subj, "data", "ard",
                                                      avoid),
-                          data_name[[as.character(i)]], ard_names[j])
+                          dname, ard_names[j])
       } else {
-        .ard_analysis_lines(xo, r, keys, subj, data_name[[as.character(i)]],
-                            ard_names[j], avoid)
+        .ard_item_calls(xo, r, keys, subj, dname,
+                        ard_names[j], avoid)
       }
-      code <- c(code, if (j > 1L || several) "", lines)
+      code <- c(code, if (j > 1L || several) "", pre, lines,
+                .item_per_level_lines(r, ard_names[j]))
     }
-    # (one analysis: its ARD as it is)
-    bound <- if (length(ard_names) == 1L) ard_names else
-      .cl("dplyr::bind_rows", as.list(ard_names))
+    # (one analysis: its ARD as it is; a model or a value is not an ARD's)
+    is_ard <- vapply(top, function(i) .item_type(a[i, ]) == "ard", TRUE)
+    bind <- ard_names[is_ard]
+    bound <- if (length(bind) == 1L) bind else
+      .cl("bind_items", as.list(bind))
     if (several) {
       seg <- seq.int(seg_from, length(code))
       renamed <- .ard_sub_names(.levels_where_read(code[seg], lv, first_an = seg_an - seg_from + 1L),
@@ -1327,11 +1381,12 @@
           list("report_id"), save$args)))))
     } else .pipe_code("ard", bound))
   }
-  # dplyr::bind_rows(), not cards::bind_ard(): bind_ard() does not count
-  # output_id / analysis_id as part of a row's key, so the same statistic in
-  # two outputs (AGE's mean in two analysis sets) would stop it, or, with the
-  # same value, lose one output's rows.  The class card is kept by tag_ard().
-  if (several) code <- c(code, "", "ard <- dplyr::bind_rows(ards)")
+  # bind_items(), not cards::bind_ard(): bind_ard() does not count output_id
+  # / analysis_id as part of a row's key, so the same statistic in two
+  # outputs (AGE's mean in two analysis sets) would stop it, or, with the
+  # same value, lose one output's rows.  bind_items() keeps them in the key,
+  # stops on a statistic twice in one item and warns across items.
+  if (several) code <- c(code, "", "ard <- bind_items(ards)")
   # (one report's program: an analysis set that is only its adsl_<set> is
   # made once, under that name; the study's keeps pop_* for every report)
   if (several) {
@@ -1892,38 +1947,318 @@
   gd <- x$groups
   ids <- .split_bar(r$groups)
   defs <- lapply(ids, function(g) gd[gd$group_id == g, , drop = FALSE])
-  list_name <- paste0("groups_", name)
-  lvl <- function(d) {
+  tab_name <- paste0(name, "_conditions")
+  fun_name <- paste0(name, "_one")
+  glabel <- function(d) if (!is.na(d$label[1L])) d$label[1L] else d$group_id[1L]
+  # a row of the table: group, level, where (a level of no name, the whole
+  # group's "All", is "" here; a blank condition is TRUE)
+  rows <- unlist(lapply(defs, function(d) {
     vapply(seq_len(nrow(d)), function(k) {
       w <- d$where[k]
-      # (a level of no name -- the whole group, "All" -- is "NA" here, as R
-      # names no list element "", and prints as an empty level)
-      lv <- if (is.na(d$level[k]) || !nzchar(d$level[k])) "NA" else d$level[k]
-      sprintf("    %s = %s", .q(lv),
-              .q(if (is.na(w) || !nzchar(trimws(w))) "TRUE" else w))
+      lv <- if (is.na(d$level[k])) "" else d$level[k]
+      f <- c(.q(glabel(d)), .q(lv), .q(if (is.na(w) || !nzchar(trimws(w))) "TRUE" else w))
+      one <- paste0("  ", paste(f, collapse = ", "), ",")
+      # (a row too long for a line: a field a line, a tribble's row is not
+      # bound to one)
+      if (nchar(one) > 100L) paste0("  ", f, ",", collapse = "\n") else one
     }, "")
-  }
-  glabel <- function(d) if (!is.na(d$label[1L])) d$label[1L] else d$group_id[1L]
-  head <- c(sprintf("# %s: in each level of %s (group2 / group2_level)", r$analysis_id,
-                    paste(ids, collapse = ", ")),
-            sprintf("%s <- list(", list_name),
-            unlist(lapply(seq_along(defs), function(k) {
-              d <- defs[[k]]
-              body <- lvl(d)
-              body[-length(body)] <- paste0(body[-length(body)], ",")
-              c(sprintf("  %s = list(", .q(glabel(d))), body,
-                if (k < length(defs)) "  )," else "  )")
-            })),
-            ")")
+  }))
+  rows[length(rows)] <- sub(",$", "", rows[length(rows)])
   inner <- unlist(strsplit(inner, "\n", fixed = TRUE))
-  c(head,
-    sprintf("%s <- dplyr::bind_rows(unlist(lapply(names(%s), function(group) {", name, list_name),
-    sprintf("  lapply(names(%s[[group]]), function(level) {", list_name),
-    sprintf("    data <- dplyr::filter(%s, !!rlang::parse_expr(%s[[group]][[level]]))",
-            data, list_name),
-    paste0("    ", inner),
-    "    dplyr::mutate(ard, group2 = group,",
-    "                  group2_level = list(if (identical(level, \"NA\")) \"\" else level))",
-    "  })",
-    "}), recursive = FALSE))")
+  c(sprintf("# %s: in each level of %s (group2 / group2_level)", r$analysis_id,
+            paste(ids, collapse = ", ")),
+    sprintf("%s <- dplyr::tribble(", tab_name),
+    "  ~group, ~level, ~where,",
+    rows,
+    ")",
+    sprintf("%s <- function(group, level, where) {", fun_name),
+    sprintf("  data <- dplyr::filter(%s, !!rlang::parse_expr(where))", data),
+    paste0("  ", inner),
+    "  dplyr::mutate(ard, group2 = group, group2_level = list(level))",
+    "}",
+    sprintf("%s <- purrr::pmap(%s, %s) |>", name, tab_name, fun_name),
+    "  dplyr::bind_rows()")
+}
+
+# ---- a template's analysis item: its own keys ----
+# (the columns tfl_template_resolve() fills: params, conditions, derive,
+# levels, type; a sheet without them reads as before)
+
+# A cell of an item's column, or NA when the sheet has none
+.item_cell <- function(r, col) {
+  v <- r[[col]]
+  if (is.null(v) || is.list(v) || !length(v) || is.na(v[1L]) ||
+      !nzchar(trimws(v[1L]))) return(NA_character_)
+  as.character(v[1L])
+}
+
+# An item's type: "ard" (the default), "model" or "value"; only an ARD is
+# bound into the report's (bind_items())
+.item_type <- function(r) {
+  t <- .item_cell(r, "type")
+  if (is.na(t)) "ard" else t
+}
+
+# The item's params: its condition rows' columns
+.item_params <- function(r) .split_bar(.item_cell(r, "params"))
+
+# An item's condition rows: a data frame of its params, or NULL
+.item_conditions <- function(r) {
+  cd <- r$conditions
+  if (is.null(cd) || !is.list(cd)) return(NULL)
+  cd <- cd[[1L]]
+  if (is.null(cd) || !NROW(cd)) return(NULL)
+  as.data.frame(cd, stringsAsFactors = FALSE)
+}
+
+# levels: `VAR = c("a", "b") | ...`, each a factor() of the variable.  A
+# param's value there is the function's argument (.env$p): a column of the
+# same name (tox_dir, made by the derive) is not it
+.item_levels <- function(r, params = character()) {
+  lv <- .split_bar(.item_cell(r, "levels"))
+  vapply(lv, function(l) {
+    v <- trimws(sub("=.*$", "", l))
+    rhs <- trimws(sub("^[^=]*=", "", l))
+    for (p in params) {
+      rhs <- gsub(paste0("\"{", p, "}\""), paste0(".env$", p), rhs, fixed = TRUE)
+      rhs <- gsub(paste0("{", p, "}"), paste0(".env$", p), rhs, fixed = TRUE)
+    }
+    sprintf("%s = factor(%s, levels = %s)", v, v, rhs)
+  }, "", USE.NAMES = FALSE)
+}
+
+# missing_row: each variable's missing values a row of their own
+# (missing_level(), missing_label or "Missing")
+.item_missing <- function(r) {
+  if (!isTRUE(.ard_yes(.item_cell(r, "missing_row")))) return(character())
+  lab <- .item_cell(r, "missing_label")
+  if (is.na(lab)) lab <- "Missing"
+  v <- .split_bar(r$variables %||% NA)
+  sprintf("%s = missing_level(%s, %s)", v, v, .q(lab))
+}
+
+# analyses: {per: level} (a hierarchical item): each depth an analysis of
+# its own, <id>_ANY, <id>_L1, <id>_L2 ...; the by counts are BIGN's, not
+# the item's (one BIGN a report)
+.item_per_level_lines <- function(r, name) {
+  per <- .item_cell(r, "analysis_per")
+  if (is.na(per) || !grepl("^level(:|$)", per)) return(character())
+  v <- .split_bar(r$variables %||% NA)
+  id <- r$analysis_id
+  arms <- .split_bar(r$by %||% NA)
+  # (`level:ANY,L1,L2`: the ids themselves, the any row's first; else the
+  # item's id and _ANY, _L1, _L2 ...)
+  own <- trimws(strsplit(sub("^level:?", "", per), ",", fixed = TRUE)[[1L]])
+  ids <- if (length(own) == length(v) + 1L) own else
+    c(paste0(id, "_ANY"), paste0(id, "_L", seq_along(v)))
+  cases <- c(sprintf("variable == \"..ard_hierarchical_overall..\" ~ %s", .q(ids[1L])),
+             sprintf("variable == %s ~ %s", .q(v), .q(ids[-1L])),
+             ".default = analysis_id")
+  c(sprintf("# %s: each depth an analysis (%s); the by counts are BIGN's", id,
+            paste(ids, collapse = ", ")),
+    sprintf("%s <- %s |>", name, name),
+    if (length(arms)) sprintf("  dplyr::filter(!variable %%in%% %s) |>", .c_str(arms)),
+    "  dplyr::mutate(analysis_id = dplyr::case_when(",
+    paste0("    ", cases, c(rep(",", length(cases) - 1L), "))")))
+}
+
+# analyses: {per: [cols]} (a condition row an analysis): the row's id, its
+# analysis_id when the conditions give one, else the columns' values in its
+# data joined by "_" (Lab: PARAMCD, tox_dir -> ALT_HIGH)
+.item_row_id_lines <- function(r, cond) {
+  per <- .split_bar(.item_cell(r, "analysis_per"))
+  per <- setdiff(per[!grepl("^level:", per)], "level")
+  own <- "analysis_id" %in% names(cond)
+  if (!length(per) && !own) return(character())
+  rule <- if (length(per)) {
+    sprintf("toupper(paste(%s, sep = \"_\"))",
+            paste(sprintf("unique(data$%s)", per), collapse = ", "))
+  } else .q(r$analysis_id)
+  if (own) rule <- sprintf("if (nzchar(analysis_id)) analysis_id else %s", rule)
+  sprintf("  ard <- dplyr::mutate(ard, analysis_id = %s)", rule)
+}
+
+# An item's condition rows and its calls from the sheets (conditions,
+# ards): list columns `conditions` (a data frame of its params) and `ards`
+# (a list of calls, each a list of cells), unless the rows hold them already
+.item_attach <- function(x, a) {
+  if (!nrow(a)) return(a)
+  if (is.null(a$conditions) && is.data.frame(x$conditions) && nrow(x$conditions)) {
+    a$conditions <- I(lapply(seq_len(nrow(a)), function(i)
+      .item_cond_rows(x$conditions, a$output_id[i], a$analysis_id[i], .item_params(a[i, ]))))
+  }
+  if (is.null(a$ards) && is.data.frame(x$ards) && nrow(x$ards)) {
+    a$ards <- I(lapply(seq_len(nrow(a)), function(i)
+      .item_ards_rows(x$ards, a$output_id[i], a$analysis_id[i])))
+  }
+  a
+}
+
+# The columns of its data a template item reads beyond its by, strata and
+# variables: its calls' (ards:), its conditions' `where`, its row_where and
+# its derive's; not its params, not the columns its derive makes (those:
+# attribute "made")
+.item_reads <- function(r) {
+  p <- .item_params(r)
+  der <- .split_bar(.item_cell(r, "derive"))
+  made <- trimws(sub("=.*$", "", der))
+  ar <- .item_ards(r)
+  cols <- unlist(lapply(ar, function(e) unlist(lapply(e[intersect(c("by", "strata", "variables"), names(e))], .split_bar))))
+  cd <- .item_conditions(r)
+  ex <- c(if (!is.null(cd) && "where" %in% names(cd)) as.character(unlist(cd$where)),
+          .item_cell(r, "row_where"), sub("^[^=]*=", "", der))
+  cols <- c(cols, unlist(lapply(ex[!is.na(ex)], .expr_cols)))
+  # (a column the derive remakes from itself is read too)
+  made <- setdiff(made, unlist(lapply(sub("^[^=]*=", "", der), .expr_cols)))
+  structure(setdiff(unique(as.character(cols)), c(p, made, "")), made = as.character(made))
+}
+
+# The names an R expression reads as columns (its symbols, not a function's
+# name, a package's, an argument's or the name after `$`)
+.expr_cols <- function(txt) {
+  pd <- tryCatch(utils::getParseData(parse(text = txt, keep.source = TRUE)),
+                 error = function(e) NULL)
+  if (is.null(pd) || !nrow(pd)) return(character())
+  pd <- pd[pd$terminal, , drop = FALSE]
+  pd <- pd[order(pd$line1, pd$col1), , drop = FALSE]
+  after <- c("", utils::head(pd$token, -1L))
+  unique(pd$text[pd$token == "SYMBOL" & !after %in% c("'$'", "'@'")])
+}
+
+# An item's calls (ards:): a list, each a list of its cells; NULL for none
+.item_ards <- function(r) {
+  ar <- r$ards
+  if (is.null(ar) || !is.list(ar)) return(NULL)
+  ar <- ar[[1L]]
+  if (is.null(ar) || !length(ar)) return(NULL)
+  lapply(ar, function(e) lapply(e, .sheet_cell))
+}
+
+# An item's call, or its calls (ards:): each the item with the call's keys
+# over its own, under a name of its own, bound into the item's (one
+# analysis_id); in a condition row's function, into its `ard`
+.ard_item_calls <- function(x, r, keys, subj, data, name, avoid) {
+  ar <- .item_ards(r)
+  if (is.null(ar)) return(.ard_analysis_lines(x, r, keys, subj, data, name, avoid))
+  nm <- paste0(name, "_", seq_along(ar))
+  out <- character()
+  for (k in seq_along(ar)) {
+    rk <- r
+    for (key in names(ar[[k]])) rk[[key]] <- ar[[k]][[key]]
+    out <- c(out, .ard_analysis_lines(x, rk, keys, subj, data, nm[k], avoid))
+  }
+  c(out, sprintf("# %s: its %d calls, one analysis", r$analysis_id, length(ar)),
+    sprintf("%s <- bind_items(%s)", name, paste(nm, collapse = ", ")))
+}
+
+# A model item (type: model): its call under its own name, not bound into
+# the ARD; the call's `data` the item's data
+.ard_model_lines <- function(r, data, name) {
+  args <- .item_cell(r, "args")
+  args <- if (is.na(args)) character() else trimws(args)
+  if (!length(args) || !grepl("\\bdata\\s*=", args)) {
+    args <- paste(c(args, paste0("data = ", data)), collapse = ", ")
+  } else {
+    args <- gsub("\\bdata\\s*=\\s*data\\b", paste0("data = ", data), args)
+  }
+  c(sprintf("# %s: a model, kept as %s (not in the ARD)", r$analysis_id, name),
+    sprintf("%s <- %s(%s)", name, r$method, args))
+}
+
+# `"{p}"` and `{p}` of an item's param p: the one-row function's argument p
+.item_param_refs <- function(x, params) {
+  for (p in params) {
+    x <- gsub(paste0("\"{", p, "}\""), p, x, fixed = TRUE)
+    x <- gsub(paste0("{", p, "}"), p, x, fixed = TRUE)
+  }
+  x
+}
+
+# The steps an item's own columns make: dplyr::mutate() of its derive and
+# its levels
+.item_steps <- function(r, params = character()) {
+  d <- c(.item_param_refs(.split_bar(.item_cell(r, "derive")), params),
+         .item_levels(r, params), .item_missing(r))
+  if (!length(d)) return(character())
+  sprintf("dplyr::mutate(%s)", paste(d, collapse = ", "))
+}
+
+# An item's `where` that reads its params: not the item's data's condition
+# but each condition row's (.ard_cond_lines()).  `{where}`, the where
+# param itself, goes; another (PARAM == "{param}") is kept as `row_where`.
+.item_param_where <- function(a) {
+  if (is.null(a$params) || is.null(a$where)) return(a)
+  if (is.null(a$row_where)) a$row_where <- rep(NA_character_, nrow(a))
+  for (i in seq_len(nrow(a))) {
+    w <- trimws(a$where[i])
+    p <- .item_params(a[i, ])
+    if (is.na(w) || !length(p)) next
+    if (grepl("^[{][A-Za-z0-9_.]+[}]$", w) && gsub("[{}]", "", w) %in% p) {
+      a$where[i] <- NA_character_
+    } else if (any(vapply(p, function(q) grepl(paste0("{", q, "}"), w, fixed = TRUE), TRUE))) {
+      a$row_where[i] <- w
+      a$where[i] <- NA_character_
+    }
+  }
+  a
+}
+
+# BIGN with no variable (a template's `by` left empty): the analysis set's
+# N, total_n
+.item_bign <- function(a) {
+  if (is.null(a$analysis_id) || is.null(a$method)) return(a)
+  v <- a$variables %||% rep(NA_character_, nrow(a))
+  hit <- a$analysis_id %in% "BIGN" & vapply(v, function(x) !length(.split_bar(x)), TRUE)
+  a$method[hit] <- "total_n"
+  a
+}
+
+# An item with condition rows: a tribble of them, a function of one row
+# (its params) making the item's data and its ARD, and purrr::pmap().  A
+# `where` param is the row's condition (blank: TRUE); the item's derive
+# reads the params as the function's arguments.
+.ard_cond_lines <- function(r, cond, inner, data, name) {
+  p <- .item_params(r)
+  if (!length(p)) p <- names(cond)
+  # (an analysis_id column: the row's own id, else the per rule's)
+  if ("analysis_id" %in% names(cond)) {
+    cond$analysis_id[is.na(cond$analysis_id)] <- ""
+    p <- c(p, "analysis_id")
+  }
+  tab <- paste0(name, "_conditions")
+  fun <- paste0(name, "_one")
+  rows <- vapply(seq_len(nrow(cond)), function(k) {
+    f <- vapply(p, function(q) {
+      v <- if (q %in% names(cond)) as.character(unlist(cond[[q]][k])) else NA_character_
+      blank <- !length(v) || is.na(v[1L]) || !nzchar(trimws(v[1L]))
+      # (a where the R condition itself, quote()d; blank: every record)
+      if (q == "where") return(if (blank) "quote(TRUE)" else sprintf("quote(%s)", trimws(v[1L])))
+      .q(if (blank) "" else v[1L])
+    }, "")
+    one <- paste0("  ", paste(f, collapse = ", "), ",")
+    if (nchar(one) > 100L) paste0("  ", f, ",", collapse = "\n") else one
+  }, "")
+  rows[length(rows)] <- sub(",$", "", rows[length(rows)])
+  rw <- .item_cell(r, "row_where")
+  steps <- c(if ("where" %in% p) "dplyr::filter(!!where)",
+             if (!is.na(rw)) sprintf("dplyr::filter(%s)", .item_param_refs(rw, p)),
+             .item_steps(r, p))
+  make <- if (length(steps)) {
+    c(sprintf("  data <- %s |>", data),
+      paste0("    ", steps, c(rep(" |>", length(steps) - 1L), "")))
+  } else sprintf("  data <- %s", data)
+  inner <- unlist(strsplit(inner, "\n", fixed = TRUE))
+  c(sprintf("# %s: in each condition row (%s)", r$analysis_id, paste(p, collapse = ", ")),
+    sprintf("%s <- dplyr::tribble(", tab),
+    paste0("  ", paste0("~", p, collapse = ", "), ","),
+    rows,
+    ")",
+    sprintf("%s <- function(%s) {", fun, paste(p, collapse = ", ")),
+    make,
+    paste0("  ", inner),
+    .item_row_id_lines(r, cond),
+    "  ard",
+    "}",
+    sprintf("%s <- purrr::pmap(%s, %s) |>", name, tab, fun),
+    "  dplyr::bind_rows()")
 }

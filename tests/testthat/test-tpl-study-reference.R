@@ -78,9 +78,10 @@ test_that("a reference to a verb's argument reads spec/defaults.yml only", {
     tfl_param("cell", NULL, type = "text", study = "plan_cells.categorical"))))
   on.exit(rm("sr_verb", envir = .tpl_registry))
   s <- sr_study()
-  expect_identical(.tpl_study_read("plan_cells.categorical", NULL, s), "{n:.0f} ({p:.1f%})")
-  expect_identical(attr(sr_resolve("sr_verb", list(), s), "template")$args$cell,
-                   "{n:.0f} ({p:.1f%})")
+  zero_cell <- c("n == 0 ~ '0'", "{n:.0f} ({p:.1f%})")
+  expect_identical(vapply(.tpl_study_read("plan_cells.categorical", NULL, s), as.character, ""), zero_cell)
+  expect_identical(vapply(attr(sr_resolve("sr_verb", list(), s), "template")$args$cell, as.character, ""),
+                   zero_cell)
   # a named-dots argument's own name as the last part
   s2 <- sr_study(defaults = c("content:", "  - plan_cells:", "      continuous:",
                               "        n: \"{N:.0f}\""))

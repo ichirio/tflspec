@@ -44,9 +44,41 @@ test_that("a report file reads: tags, nested calls, content items", {
   expect_identical(out$content[[4L]]$args$continuous$sd, 2L)    # plan_digits: by statistic
   # data and page
   expect_identical(out$ard$analysis_data[[1L]]$id, "adsl_sub")
-  expect_identical(out$ard$analyses[[2L]]$statistic$AGE[[2L]], "mean")
+  expect_identical(out$ard$analyses[[2L]]$statistics[[2L]], "mean")
   expect_identical(out$page$titles[["1"]]$center, "Table 14.1.1")
   expect_identical(out$codelists$TRT01A[[2L]]$label, "Control 100 mg")
+})
+
+test_that("a key the reader does not know warns, naming the close one", {
+  f <- tempfile(fileext = ".yml")
+  on.exit(unlink(f))
+  writeLines(c(
+    "id: T-1", "kind: table",
+    "data:",
+    "  - id: adsl_sub", "    from: ADSL", "    wher: !r SAFFL == \"Y\"",
+    "ard:",
+    "  analyses:",
+    "    - id: AGE",
+    "      method: continuous",
+    "      data: adsl_sub",
+    "      variables: [AGE]",
+    "      statistic: [N, mean]",
+    "      zzzzzz: 1",
+    "      args: !r foo = 1"), f)
+  w <- character()
+  out <- withCallingHandlers(tfl_read_output(f), warning = function(e) {
+    w <<- c(w, conditionMessage(e))
+    invokeRestart("muffleWarning")
+  })
+  expect_identical(w, c(
+    "T-1 / AGE: statistic: is not a key; did you mean statistics:?",
+    "T-1 / AGE: zzzzzz: is not a key (not read)",
+    "T-1 / adsl_sub: wher: is not a key; did you mean where:?"))
+  expect_s3_class(out, "tfl_output")
+  # the package's report files have none
+  for (g in list.files(yml_fixture("outputs"), full.names = TRUE)) {
+    expect_no_warning(tfl_read_output(g))
+  }
 })
 
 test_that("the defaults file reads with the same reader's pieces: a nested call", {

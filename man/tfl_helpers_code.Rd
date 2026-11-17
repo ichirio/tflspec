@@ -11,7 +11,8 @@ The code, one element per line.
 }
 \description{
 The R code of the functions the programs tflspec writes call:
-\code{set_levels()} (the code lists on a data: each listed column a factor of
+\code{blank_as_na()} (a character column's \code{""}, and a factor's, as \code{NA}: what
+\code{study$adam} holds), \code{set_levels()} (the code lists on a data: each listed column a factor of
 the codes in the list's order, as the ARD holds them, no labels; a value
 not listed stops the program), \code{reorder_by()} (a column in another's
 order when the data has it: \code{PARAM} by \code{PARAMN}), \code{order_levels()} (the arm
@@ -24,7 +25,9 @@ records data's arm, which has no number of its own, by the matching arm
 and number of ADSL, the records' values kept and a value ADSL lacks
 last; a value with two numbers there is an error), \code{order_arms()} (the arm
 variables alone: \code{order_levels()} with no categories), \code{tag_ard()} (the report, analysis and
-analysis set in front of an analysis's ARD), \code{fmt_ard()} and
+analysis set in front of an analysis's ARD), \code{bind_items()} (a report's items into one
+ARD: no row lost, the columns in order, a statistic twice in one item an error, the
+same statistic in two items a warning), \code{fmt_ard()} and
 \code{fmt_pvalue()} (formats after a call), \code{keep_stats()} (only the
 statistics asked for), \code{ard_hierarchical_or_none()} (nested counts,
 and the ARD of no records: the overall row 0), \code{complete_hierarchy()} (a

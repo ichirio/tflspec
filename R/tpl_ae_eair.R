@@ -60,7 +60,7 @@
   sets <- c(list(
     list(id = subj, from = "ADSL", population = pop),
     Filter(Negate(is.null), list(
-      id = set, from = a$data, subjects = subj,
+      id = set, from = a$data, subjects_in = subj,
       where = if (!is.null(a$where)) tfl_r(a$where), derive = tfl_r(paste("DAY =", a$start))))),
     lapply(levels, function(l) risk(l[[1L]], l[[2L]])))
   # the rate of a level, the innermost term as the variable (the shape of a
@@ -76,7 +76,7 @@
          purpose = "PRIMARY OUTCOME MEASURE")
   }
   analyses <- list(
-    list(id = "GROUPN", method = "categorical", data = subj, variables = a$by,
+    list(id = "BIGN", method = "categorical", data = subj, variables = a$by,
          purpose = "PRIMARY OUTCOME MEASURE"),
     rate("EAIR", levels[[1L]]), rate("EAIR_SOC", levels[[2L]]),
     rate("EAIR_PT", levels[[3L]]))

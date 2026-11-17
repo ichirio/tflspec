@@ -70,8 +70,8 @@ test_that("the subjects with an empty group: left out, with a warning, in the pr
   df <- adtte[adtte$PARAMCD == "OS", ]
   df$TRT01A <- as.character(df$TRT01A)
   expect_identical(sum(is.na(df$TRT01A)), 2L)
-  # (an XPT's empty value: "")
-  df$TRT01A[which(!is.na(df$TRT01A))[1L]] <- ""
+  # (a blank is NA in study$adam)
+  df$TRT01A[which(!is.na(df$TRT01A))[1L]] <- NA
   for (nm in c("km_survival", "km_cumulative")) {
     expect_warning(p <- tfl_tpl(df, nm, by = TRT01A),
                    sprintf("%s: 3 subjects with an empty TRT01A were left out", nm), fixed = TRUE)
@@ -79,14 +79,14 @@ test_that("the subjects with an empty group: left out, with a warning, in the pr
     expect_setequal(unique(as.character(p$data$strata)), c("Drug X", "Control"))
   }
   # none empty: no warning
-  ok <- df[!is.na(df$TRT01A) & df$TRT01A != "", ]
+  ok <- df[!is.na(df$TRT01A), ]
   expect_no_warning(tfl_tpl(ok, "km_survival", by = TRT01A))
   # the program (B): the filter with its comment, and the warning
   x <- tfl_template_expand("km_survival", list(by = "TRT01A"))
   code <- paste(.fig_steps_code(x$data$steps)$code, collapse = "\n")
   expect_match(code, "# the subjects with an empty TRT01A have no curve: left out, with a warning",
                fixed = TRUE)
-  expect_match(code, "filter(!is.na(TRT01A) & TRT01A != \"\")", fixed = TRUE)
+  expect_match(code, "filter(!is.na(TRT01A))", fixed = TRUE)
   expect_match(code, paste0("warning(\"km_survival: \", n_before - nrow(df), ",
                             "\" subjects with an empty TRT01A were left out\", call. = FALSE)"),
                fixed = TRUE)

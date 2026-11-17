@@ -69,7 +69,7 @@ takes its template's); the default for a report with \code{template}, else
 \code{"defaults"}.}
 
 \item{data}{What the report reads, its step 1: a list of definitions
-(\code{id}, \code{from}, \code{subjects}, \code{where} ..., one dataset each; in a YAML file
+(\code{id}, \code{from}, \code{subjects_in}, \code{where} ..., one dataset each; in a YAML file
 the report's flat \verb{data:} list) in the report's built data; or, for a
 figure (and a listing or a records table that still has the map), a
 list (\code{source} -- \code{"ard"}, \code{"code"} or \code{"dataset"} -- and \code{object},
@@ -92,9 +92,11 @@ is the template's items (\code{\link[=tfl_templates]{tfl_templates()}}) with \co
 \code{\link[=tfl_template_to_spec]{tfl_template_to_spec()}}); \code{NULL} none.}
 
 \item{style}{The study's page configuration the report picks (\code{"compact"}:
-a style set of \code{defaults.yml}'s \verb{styles:}, its look -- page and table
-details; \code{\link[=tfl_styles]{tfl_styles()}} lists them); \code{NULL}: the study's
-\code{settings.style}, else \code{standard}.}
+a style set of \code{defaults.yml}'s \verb{styles:}, or a built-in one such as
+\code{"tfl_small"}; \code{\link[=tfl_styles]{tfl_styles()}} lists them); \code{NULL}: the template's set
+value, else the study's \code{settings.style}, else \code{tfl_standard}.}
+
+\item{population}{Removed: \code{population} -> \code{common: population}.}
 }
 \value{
 \code{tfl_r()}: a string of class \code{tfl_r}; \code{tfl_unset()}: an object
@@ -109,7 +111,7 @@ report is made of:
 \itemize{
 \item \code{tfl_r()}: a string of R code, written as the \code{!r} tag (\verb{where: !r "p > 0.5"}); kept as it is and put into the program unquoted.  A
 condition in a language-neutral subset (column names, numbers,
-strings, \verb{== != < <= > >=}, \verb{& | !}, \verb{\%in\% c(...)}, erb{is.na()},
+strings, \verb{== != < <= > >=}, \verb{& | !}, \verb{\%in\% c(...)}, \code{is.na()},
 parentheses) is written, and read, without the tag in a slot that
 takes only R (\code{plan_filter(where)}): a Python reader can parse it
 without R.  \code{!r} stays for the rest of R (\code{between()}), and is still
