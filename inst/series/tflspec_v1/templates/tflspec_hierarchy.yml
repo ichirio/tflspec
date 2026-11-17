@@ -1,0 +1,207 @@
+# tflspec_v1/templates/tflspec_hierarchy.yml
+# Purpose: To count the records of a dataset in a hierarchy, outer level
+# first (SOC -> PT, a protocol deviation category -> term, a medication
+# class -> name ...), and show each level's number of subjects and
+# percentage for each group.  Not AE-specific: the dataset (from), the
+# levels (hierarchy) and the analysis set (population) are arguments; the
+# records kept (TRTEMFL == "Y", a serious event ...) are the report's
+# `data:` row rec_sub (a `where:` there), never an argument.  The same
+# processing definition as ae_soc_pt, written for any dataset (canon 1.25:
+# one definition plus its own full set of defaults, no link to ae_soc_pt).
+# Its content, in the order the rows are made: normalize_ard, table_plan,
+# plan_sort, plan_cells, plan_total, plan_col_header, plan_empty,
+# plan_paginate_rows.  The names hierarchy_rows, hierarchy_label,
+# hierarchy_sort and hierarchy_heading are made from the arguments
+# hierarchy, sort_column, total, empty_text and heading when the template is
+# resolved (hierarchy_total, hierarchy_empty: the card's arguments, or no card).
+template: tflspec_hierarchy
+label: Records by hierarchy
+params:
+  population:
+    type: string
+    input: pick
+    choices: populations
+    default: !series population_safety
+    step: data
+    tier: usual
+    description: The analysis set adsl_sub keeps (data.yml's populations).
+  from:
+    type: string
+    input: pick
+    choices: study_data
+    required: true
+    step: data
+    tier: required
+    description: The dataset of the records (the data row rec_sub's from), e.g. ADAE.
+  by:
+    type: list<column>
+    input: pick
+    choices: vars(adsl_sub)
+    required: true
+    step: analysis
+    tier: required
+    description: The column variable(s); the groups across.
+  hierarchy:
+    type: list<column>
+    input: pick
+    choices: vars(rec_sub)
+    ordered: true
+    required: true
+    step: analysis
+    tier: required
+    description: The levels of the rows, outer first.
+  any_row:
+    type: logical
+    input: pick
+    choices: fixed
+    default: true
+    step: analysis
+    tier: usual
+    description: A first row of the subjects with at least one record.
+  total:
+    type: logical
+    input: pick
+    choices: fixed
+    default: !series total
+    step: analysis
+    tier: usual
+    description: A Total column from the overall rows.
+  denominator:
+    type: string
+    input: pick
+    choices: report_data
+    default: adsl_sub
+    step: analysis
+    tier: usual
+    description: The data row whose subjects are the group Ns (BIGN) and the
+      percentages' denominator; both come from the one BIGN item.
+  min_pct:
+    type: number
+    input: text
+    default: 0
+    step: analysis
+    tier: other
+    description: Keep only the rows with at least this percentage; 0 keeps every row.
+  min_pct_in:
+    type: enum[any|all|total]
+    input: pick
+    choices: fixed
+    default: any
+    step: analysis
+    tier: other
+    description: Where min_pct must be reached; any group, all groups or the Total column.
+  analysis_ids:
+    type: map<string,string>
+    input: table
+    choices: fixed
+    default: ~
+    step: analysis
+    tier: other
+    description: An analysis id for a depth, keyed by its own - ANY (the any
+      row), L1, L2, ... one for each level; empty for ANY, L1, L2, ...
+  formats:
+    type: map<string,number|string>
+    input: table
+    choices: stats
+    free: true
+    default: !series formats
+    step: analysis
+    tier: usual
+    description: The decimals (or the format) of each statistic.
+  any_row_label:
+    type: string
+    input: text
+    default: !series any_row_label
+    step: content
+    tier: usual
+    description: The label of the first row, the subjects with at least one record (any_row).
+  heading:
+    type: list<string>
+    input: text
+    ordered: true
+    default: ~
+    step: content
+    tier: usual
+    description: The heading of the row-label column, one text a level (a line
+      each); empty for none.
+  sort_column:
+    type: string
+    input: pick
+    choices: levels(by)
+    default: ~
+    step: content
+    tier: other
+    description: The group (column) whose count orders the rows, the most
+      frequent first; empty for the total of all columns.  A finer order is a
+      plan_sort card after this one.
+  count_cell:
+    type: string
+    input: text
+    default: ~
+    step: content
+    tier: usual
+    description: The cell template of a count; empty for the study's, the
+      plan_cells of its defaults.yml (an n (%) template has no default of its
+      own, canon 2026-11-16).
+  empty_text:
+    type: string
+    input: text
+    default: !series empty_text
+    step: content
+    tier: other
+    description: The sentence shown when no record is left (plan_empty); empty
+      for none.
+  max_rows:
+    type: number
+    input: text
+    default: !series max_rows
+    step: content
+    tier: other
+    description: The most rows a page holds.
+extends: !series extends
+style: !series style
+data:
+  - id: adsl_sub
+    from: ADSL
+    population: "{population}"
+  - id: rec_sub
+    from: "{from}"
+    subjects_in: adsl_sub
+    add: ["{by}"]
+    where: ~
+analysis:
+  - id: BIGN
+    label: Subjects per group
+    method: categorical
+    data: "{denominator}"
+    variables: ["{by}"]
+    formats: "{formats}"
+  - id: HIER
+    analyses: {per: level, id_prefix: "", ids: "{analysis_ids}"}   # ANY, L1, L2, ...
+    label: Subjects by level of the hierarchy
+    method: hierarchical
+    data: rec_sub
+    by: ["{by}"]
+    overall: "{total}"
+    variables: "{hierarchy}"
+    denominator: BIGN
+    args: !r over_variables = {any_row}
+    post: !r keep_min_pct({min_pct}, "{min_pct_in}")
+    formats: "{formats}"
+content:
+  - normalize_ard: {hierarchy: "{hierarchy}", overall: "{any_row_label}"}
+  - table_plan: {cols: "{by}", rows: "{hierarchy_rows}", label: {label: "{hierarchy_label}"}}
+  - plan_sort: {keys: "{hierarchy_sort}"}
+  - plan_cells: {categorical: "{count_cell}"}
+  - plan_total: "{hierarchy_total}"
+  - plan_col_header:
+      header:
+        - {line: "1", cols: row_label}
+        - {line: "1", cols: .values, span: each, text: "{col}\n(N={n})\nn (%)"}
+        - {line: "2", cols: row_label, text: "{hierarchy_heading}"}
+        - {line: "2", cols: .values}
+  - plan_empty: "{hierarchy_empty}"
+  - plan_paginate_rows: {max_rows: "{max_rows}", split: group_force}
+page:
+  titles: ~
+  footnotes: ~

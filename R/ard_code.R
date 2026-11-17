@@ -2041,15 +2041,21 @@
 # its own, <id>_ANY, <id>_L1, <id>_L2 ...; the by counts are BIGN's, not
 # the item's (one BIGN a report)
 .item_per_level_lines <- function(r, name) {
-  if (!identical(.item_cell(r, "analysis_per"), "level")) return(character())
+  per <- .item_cell(r, "analysis_per")
+  if (is.na(per) || !grepl("^level(:|$)", per)) return(character())
   v <- .split_bar(r$variables %||% NA)
   id <- r$analysis_id
   arms <- .split_bar(r$by %||% NA)
-  cases <- c(sprintf("variable == \"..ard_hierarchical_overall..\" ~ %s", .q(paste0(id, "_ANY"))),
-             sprintf("variable == %s ~ %s", .q(v), .q(paste0(id, "_L", seq_along(v)))),
+  # (`level:ANY,L1,L2`: the ids themselves, the any row's first; else the
+  # item's id and _ANY, _L1, _L2 ...)
+  own <- trimws(strsplit(sub("^level:?", "", per), ",", fixed = TRUE)[[1L]])
+  ids <- if (length(own) == length(v) + 1L) own else
+    c(paste0(id, "_ANY"), paste0(id, "_L", seq_along(v)))
+  cases <- c(sprintf("variable == \"..ard_hierarchical_overall..\" ~ %s", .q(ids[1L])),
+             sprintf("variable == %s ~ %s", .q(v), .q(ids[-1L])),
              ".default = analysis_id")
   c(sprintf("# %s: each depth an analysis (%s); the by counts are BIGN's", id,
-            paste(c(paste0(id, "_ANY"), paste0(id, "_L", seq_along(v))), collapse = ", ")),
+            paste(ids, collapse = ", ")),
     sprintf("%s <- %s |>", name, name),
     if (length(arms)) sprintf("  dplyr::filter(!variable %%in%% %s) |>", .c_str(arms)),
     "  dplyr::mutate(analysis_id = dplyr::case_when(",
@@ -2061,7 +2067,7 @@
 # data joined by "_" (Lab: PARAMCD, tox_dir -> ALT_HIGH)
 .item_row_id_lines <- function(r, cond) {
   per <- .split_bar(.item_cell(r, "analysis_per"))
-  per <- setdiff(per, "level")
+  per <- setdiff(per[!grepl("^level:", per)], "level")
   own <- "analysis_id" %in% names(cond)
   if (!length(per) && !own) return(character())
   rule <- if (length(per)) {

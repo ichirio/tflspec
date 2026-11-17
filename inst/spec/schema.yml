@@ -1180,7 +1180,8 @@ rtf_footer:
       - column: analysis_per
         description: 'A template item: how its analyses are named; level (a depth
           an analysis, <id>_ANY, <id>_L1, ...) or columns | between them (a condition
-          row an analysis, its id their values: ALT_HIGH); blank: the analysis_id.'
+          row an analysis, its id their values: ALT_HIGH); level:ANY,L1,L2 (the
+          depths'' ids themselves, the any row''s first); blank: the analysis_id.'
         example: PARAMCD | tox_dir
   - sheet: conditions
     description: 'ARD: a template item''s condition rows, one row a run of the

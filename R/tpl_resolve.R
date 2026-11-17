@@ -31,7 +31,9 @@
 #' variable` one a variable (its id the variable's entry in `ids`, else the
 #' variable's name); `per: level` or `per: [columns]` one row whose
 #' `analysis_per` tells the generator how to name the analyses; no `per`
-#' one analysis, the item's id.  An item's `conditions:` is a data frame,
+#' one analysis, the item's id.  `per: level` with an `id_prefix` (may be
+#' empty) names the depths `<prefix>_ANY`, `<prefix>_L1`, ... (no prefix: `ANY`,
+#' `L1`, ...), each replaced by its entry in `ids`.  An item's `conditions:` is a data frame,
 #' one row a run, its columns the item's `params` (and `analysis_id`, a
 #' row's own id, when a row gives one): the template's rows first, then the
 #' report's (`"{conditions}"`).
@@ -93,6 +95,9 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
          " (required: the report gives no value and the template no default).", call. = FALSE)
   }
 
+  args_env <- env
+  env <- .tr_hier_env(env)
+
   # data: rows -- the template's, the report's merged in by id key by key
   # (a report row with `code:` makes the whole data: it replaces the
   # template's row of its id), then filled in
@@ -143,9 +148,43 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   y <- y[!vapply(y, is.null, NA)]
   out <- .output_from_list(y)
   attr(out, "template") <- template
-  attr(out, "args") <- env
+  attr(out, "args") <- args_env
   attr(out, "origins") <- origins
   out
+}
+
+# A template with a `hierarchy` argument (the levels of its rows, outer
+# first) gets six more names to write its content with; they are not
+# arguments (no card, not in attr "args"):
+#   hierarchy_empty  plan_empty's arguments when `empty_text` is not empty
+#   hierarchy_total  plan_total's arguments when `total` is on, else nothing
+#   hierarchy_heading  the argument `heading` (one text a level) as one text,
+#                    a line a level (nothing when it is not given)
+#   hierarchy_rows   the outer levels as the row keys group1, group2, ...
+#                    (nothing for one level)
+#   hierarchy_label  the innermost level, the label column
+#   hierarchy_sort   plan_sort's keys: the overall row, the outer level by
+#                    its own count (nothing above it for one level), the
+#                    levels' own rows before those under them, then the most
+#                    frequent first, the label last; the count is the one
+#                    column `sort_column`'s, or all columns' total
+.tr_hier_env <- function(env) {
+  h <- as.character(unlist(env[["hierarchy"]]))
+  n <- length(h)
+  if (!n) return(env)
+  col <- as.character(unlist(env[["sort_column"]]))
+  col <- if (length(col) && nzchar(col[1L])) paste0("[", col[1L], "]") else ""
+  env["hierarchy_rows"] <- list(if (n > 1L) stats::setNames(as.list(h[-n]), paste0("group", seq_len(n - 1L))))
+  env["hierarchy_label"] <- list(h[n])
+  env["hierarchy_total"] <- list(if (isTRUE(env[["total"]])) list(position = "last"))
+  et <- as.character(unlist(env[["empty_text"]]))
+  env["hierarchy_empty"] <- list(if (length(et) && nzchar(et[1L])) list(text = et[1L]))
+  hd <- as.character(unlist(env[["heading"]]))
+  env["hierarchy_heading"] <- list(if (length(hd)) paste(hd, collapse = "\n"))
+  env["hierarchy_sort"] <- list(c(".overall",
+                                  if (n > 1L) c(paste0("-n@group1", col), "group1"),
+                                  ".depth", paste0("-n", col), "label"))
+  env
 }
 
 # the study as a list: a list as given, study.yml, or a folder that holds it
@@ -208,6 +247,18 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   if (!length(per)) return(list(f))
   if (!identical(per, "variable")) {
     f$analysis_per <- paste(per, collapse = "|")
+    # per: level with id_prefix: ids are <prefix>_ANY, <prefix>_L1, ...
+    # (no prefix: ANY, L1, ...), each one replaced by its entry in `ids`;
+    # written `level:<the ids, the any row's first>`
+    if (identical(per, "level") && !is.null(an$id_prefix)) {
+      pre <- as.character(unlist(an$id_prefix))
+      pre <- if (length(pre) && nzchar(pre[1L])) paste0(pre[1L], "_") else ""
+      d <- c("ANY", paste0("L", seq_along(f$variables)))
+      ids <- an$ids
+      new <- vapply(d, function(k)
+        if (is.list(ids) && !is.null(ids[[k]])) as.character(ids[[k]]) else paste0(pre, k), "")
+      f$analysis_per <- paste0("level:", paste(new, collapse = ","))
+    }
     return(list(f))
   }
   ids <- an$ids
