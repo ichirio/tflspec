@@ -139,13 +139,27 @@ test_that("every param is an argument definition with closed words", {
   }
 })
 
+test_that("every \"{x}\" in a derive: entry names a param or an earlier derived name", {
+  skip_if(!nzchar(series_dir()), "the series folder is not installed")
+  for (nm in names(series_templates())) {
+    t <- series_templates()[[nm]]
+    known <- names(t$params)
+    for (k in names(t$derive)) {
+      bad <- setdiff(series_spots(t$derive[[k]]), known)
+      expect_true(length(bad) == 0L, info = paste(nm, k, paste(bad, collapse = " ")))
+      expect_false(k %in% names(t$params), info = paste(nm, k))
+      known <- c(known, k)
+    }
+  }
+})
+
 test_that("every \"{x}\" in data and analysis names a param or a condition column", {
   skip_if(!nzchar(series_dir()), "the series folder is not installed")
   known <- c("conditions", "where", "subgroup", "subgroup_lvl", "tox_dir",
              "graded_params", "worst", "base")
   for (nm in names(series_templates())) {
     t <- series_templates()[[nm]]
-    ok <- c(names(t$params), known)
+    ok <- c(names(t$params), names(t$derive), known)
     expect_true(all(series_spots(t$data) %in% ok), info = paste(nm, "data"))
     for (a in t$analysis) {
       ok_a <- c(ok, unlist(a$params))

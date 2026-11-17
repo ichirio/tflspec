@@ -10,10 +10,10 @@
 # one definition plus its own full set of defaults, no link to ae_soc_pt).
 # Its content, in the order the rows are made: normalize_ard, table_plan,
 # plan_sort, plan_cells, plan_total, plan_col_header, plan_empty,
-# plan_paginate_rows.  The names hierarchy_rows, hierarchy_label,
-# hierarchy_sort and hierarchy_heading are made from the arguments
-# hierarchy, sort_column, total, empty_text and heading when the template is
-# resolved (hierarchy_total, hierarchy_empty: the card's arguments, or no card).
+# plan_paginate_rows.  Its derive: names (not arguments) are worked out from
+# the arguments when the template is resolved; plan_total and plan_empty are
+# left out when their derived arguments are nothing (total off, empty_text
+# empty).
 template: tflspec_hierarchy
 label: Records by hierarchy
 params:
@@ -160,6 +160,25 @@ params:
     description: The most rows a page holds.
 extends: !series extends
 style: !series style
+derive:
+  # the outer levels, the row keys group1, group2, ... (nothing for one level)
+  hierarchy_outer: {but_last: "{hierarchy}"}
+  hierarchy_rows: {keys: "{hierarchy_outer}", prefix: group}
+  # the innermost level, the label column
+  hierarchy_label: {last: "{hierarchy}"}
+  # plan_total's and plan_empty's arguments, or nothing (no card)
+  hierarchy_total: {if: "{total}", then: {position: last}}
+  hierarchy_empty: {if: "{empty_text}", then: {text: "{empty_text}"}}
+  # the heading, a line a level
+  hierarchy_heading: {join: "{heading}", sep: "\n"}
+  # plan_sort's keys: the overall row, the outer level by its own count (not
+  # for one level), the levels' own rows before those under them, then the
+  # most frequent first, the label last; the count is the column
+  # sort_column's, or all columns' total
+  hierarchy_count: {if: "{sort_column}", then: "[{sort_column}]", else: ""}
+  hierarchy_outer_sort: {if: "{hierarchy_outer}", then: ["-n@group1{hierarchy_count}", group1]}
+  hierarchy_sort:
+    value: [.overall, "{hierarchy_outer_sort}", .depth, "-n{hierarchy_count}", label]
 data:
   - id: adsl_sub
     from: ADSL

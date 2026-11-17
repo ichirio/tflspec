@@ -33,14 +33,36 @@ data, and replaces the template's row of its id.  The result is a plain
 code SPEC, as \code{\link[=tfl_read_output]{tfl_read_output()}} reads one.
 }
 \details{
-An analysis item's \verb{analyses:} (\code{per}, \code{ids}) says its analyses: \verb{per: variable} one a variable (its id the variable's entry in \code{ids}, else the
-variable's name); \verb{per: level} or \verb{per: [columns]} one row whose
+An analysis item's \verb{analyses:} (\code{per}, \code{ids}) says its analyses: \code{per: variable} one a variable (its id the variable's entry in \code{ids}, else the
+variable's name); \code{per: level} or \verb{per: [columns]} one row whose
 \code{analysis_per} tells the generator how to name the analyses; no \code{per}
-one analysis, the item's id.  \verb{per: level} with an \code{id_prefix} (may be
+one analysis, the item's id.  \code{per: level} with an \code{id_prefix} (may be
 empty) names the depths \verb{<prefix>_ANY}, \verb{<prefix>_L1}, ... (no prefix: \code{ANY},
-\code{L1}, ...), each replaced by its entry in \code{ids}.  An item's \verb{conditions:} is a data frame, one row a run, its
-columns the item's \code{params} (and \code{analysis_id}, a row's own id, when a row gives one): the template's rows first, then the
+\code{L1}, ...), each replaced by its entry in \code{ids}.  An item's \verb{conditions:} is a data frame,
+one row a run, its columns the item's \code{params} (and \code{analysis_id}, a
+row's own id, when a row gives one): the template's rows first, then the
 report's (\code{"{conditions}"}).
+
+A template's \verb{derive:} map gives names of its own, each one operation on
+the arguments' values, worked out in the order written once the
+arguments are known; the template's \verb{data:}, \verb{analysis:}, \verb{content:},
+\verb{page:} and later \verb{derive:} entries use them as \code{"{name}"}, as an
+argument.  A derived name is not an argument: it has no card, is not in
+the result's \code{"args"}, a report cannot give it and it cannot be a param's
+name.  The operations (one a name; another key stops):
+\describe{
+\item{\code{value: x}}{\code{x} as it is filled in.}
+\item{\verb{if: x, then: a, else: b}}{\code{a} when \code{x} is something (not
+nothing, \code{FALSE}, \code{""} or empty), else \code{b} (default nothing).}
+\item{\code{last: x}}{the last element of the list \code{x}.}
+\item{\code{but_last: x}}{all but the last (nothing for fewer than two).}
+\item{\verb{join: x, sep: s}}{the elements as one text, \code{s} between them
+(default \code{", "}).}
+\item{\verb{keys: x, prefix: p}}{a map \verb{p1: x1, p2: x2, ...}.}
+}
+Each gives nothing for an empty \code{x}.  A value that is nothing drops its
+key, its list element, and an item whose map is left empty; so a content
+item written \code{plan_total: "{total_args}"} with \verb{total_args: \{if: "\{total\}", then: \{position: last\}\}} is left out when \code{total} is off.
 }
 \seealso{
 \code{\link[=tfl_arg_defs]{tfl_arg_defs()}}, \code{\link[=tfl_series_dir]{tfl_series_dir()}}
