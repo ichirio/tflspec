@@ -167,7 +167,13 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   # a figure's analyses read the report's data rows as their analysis data
   kind <- report$kind %||% tpl$kind %||% "table"
 
-  content <- .tr_fill(tpl$content %||% list(), env)
+  # (labels and value_labels are one plan_labels: a later plan_labels
+  # replaces an entry of the same name whole, a heading would be lost)
+  cenv <- env
+  if ("value_labels" %in% names(env)) {
+    cenv["labels"] <- list(.tr_merge_labels(env$labels, env$value_labels, template))
+  }
+  content <- .tr_fill(tpl$content %||% list(), cenv)
   if (is.list(report$content)) content <- c(content, report$content)
   page <- .tr_fill(tpl$page %||% list(), env)
   for (k in names(report$page)) page[k] <- list(report$page[[k]])
@@ -355,6 +361,27 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
 #   per: [cols]     one row, analysis_per the columns |-joined (an id a value);
 #                   ids after them as ids:VALUE=ID,...
 #   no per          one analysis, the item's id
+# labels ({variable: heading}) and value_labels ({variable: {code: text}}) as
+# one map for plan_labels(): a variable in both keeps its heading, written
+# under its own name in front of its values (the heading a value_labels entry
+# gives itself under that name wins)
+.tr_merge_labels <- function(labels, value_labels, template) {
+  if (is.null(value_labels)) return(labels)
+  out <- as.list(labels)
+  for (v in names(value_labels)) {
+    vl <- value_labels[[v]]
+    if (!is.list(vl) || is.null(names(vl)) || !all(nzchar(names(vl)))) {
+      stop("template ", template, ": value_labels: ", v, " is a map ({code: text}).", call. = FALSE)
+    }
+    head <- out[[v]]
+    if (is.character(head) && length(head) == 1L && !v %in% names(vl)) {
+      vl <- c(stats::setNames(list(head), v), vl)
+    }
+    out[[v]] <- vl
+  }
+  if (length(out)) out else NULL
+}
+
 .tr_item <- function(it, env, template) {
   shadow <- as.character(unlist(it$params))
   cond <- it$conditions

@@ -99,6 +99,26 @@ params:
     step: content
     tier: usual
     description: The row label of each variable; empty for the variable's label.
+  value_labels:
+    type: map<column,map<string,string>>
+    input: table
+    choices: vars(adsl_sub)
+    default: ~
+    step: content
+    tier: other
+    description: "The label of each value of a variable, code to text ({SEX:
+      {F: Female}}); empty for the code list's labels.  It goes with labels
+      in one plan_labels, a variable's heading kept."
+  nest:
+    type: map<column,map<column,string>>
+    input: table
+    choices: vars(adsl_sub)
+    default: ~
+    step: content
+    tier: other
+    description: "A variable's rows under one level of another, {nested variable:
+      {parent variable: level}}.  Write the level as the table shows it (the
+      code list's label, not the code).  Empty for no nesting."
   cells:
     type: map<string,string>
     input: table
@@ -120,6 +140,15 @@ params:
     description: The cell template of a categorical count; empty for the
       study's, the plan_cells of its defaults.yml (an n (%) template has no
       default of its own, canon 2026-11-16).
+  col_header:
+    type: list<map<string,string>>
+    input: table
+    default: ~
+    step: content
+    tier: other
+    description: "The column header lines, each a map of cell texts ({row_label:
+      '', .values: '{col}'}); empty for the study's, the plan_col_header of its
+      defaults.yml (the arm name line and the (N={n}) line there)."
   max_rows:
     type: number
     input: text
@@ -167,9 +196,11 @@ analysis:
 content:
   - table_plan: {cols: "{by}", rows: {group: variable}}
   - plan_labels: "{labels}"
+  - plan_nest: "{nest}"
   - plan_cells:
       continuous: "{cells}"
       categorical: "{count_cell}"
+  - plan_col_header: {lines: "{col_header}"}
   - plan_paginate_rows: {max_rows: "{max_rows}", split: group_safe}
 page:
   titles: ~
