@@ -14,8 +14,11 @@ tfl_sheets_from_spec(study, outputs, templates = c("sheet", "expand"))
 
 \item{templates}{What a report written as a template SPEC becomes.
 \code{"sheet"} (the default): one row of the \code{templates} sheet (and its
-\code{template_rows}), by the template's name and arguments, as
-\code{\link[=tfl_read_template_sheets]{tfl_read_template_sheets()}} reads them; the report's page parts,
+\code{template_rows}, and its \code{conditions} as rows of the ARD's
+\code{conditions} sheet with \code{analysis_id} blank), by the template's name
+and arguments, as \code{\link[=tfl_read_template_sheets]{tfl_read_template_sheets()}} reads them; an argument
+that is a map (\code{formats}) is not on the sheets and stays in the
+report's YAML file; the report's page parts,
 codelists and report row are the other sheets' as for any report. Nothing is expanded; a
 report is written out as its items only by \code{\link[=tfl_template_to_spec]{tfl_template_to_spec()}},
 called on purpose.  \code{"expand"}: the report is expanded first
