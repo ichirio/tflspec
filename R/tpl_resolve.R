@@ -14,6 +14,8 @@
 # Inside an item with `params:`, a "{p}" of one of those params is the
 # item's (the generator's one-row function's argument): left as written.
 # The item's `conditions:` rows are the template's values, filled in.
+# The template's `derive:` names (one operation each, in order) are filled
+# in the same way; they are not arguments (.tr_derive()).
 
 #' A report's template with its values filled in
 #'
@@ -37,6 +39,28 @@
 #' one row a run, its columns the item's `params` (and `analysis_id`, a
 #' row's own id, when a row gives one): the template's rows first, then the
 #' report's (`"{conditions}"`).
+#'
+#' A template's `derive:` map gives names of its own, each one operation on
+#' the arguments' values, worked out in the order written once the
+#' arguments are known; the template's `data:`, `analysis:`, `content:`,
+#' `page:` and later `derive:` entries use them as `"{name}"`, as an
+#' argument.  A derived name is not an argument: it has no card, is not in
+#' the result's `"args"`, a report cannot give it and it cannot be a param's
+#' name.  The operations (one a name; another key stops):
+#' \describe{
+#'   \item{`value: x`}{`x` as it is filled in.}
+#'   \item{`if: x, then: a, else: b`}{`a` when `x` is something (not
+#'     nothing, `FALSE`, `""` or empty), else `b` (default nothing).}
+#'   \item{`last: x`}{the last element of the list `x`.}
+#'   \item{`but_last: x`}{all but the last (nothing for fewer than two).}
+#'   \item{`join: x, sep: s`}{the elements as one text, `s` between them
+#'     (default `", "`).}
+#'   \item{`keys: x, prefix: p`}{a map `p1: x1, p2: x2, ...`.}
+#' }
+#' Each gives nothing for an empty `x`.  A value that is nothing drops its
+#' key, its list element, and an item whose map is left empty; so a content
+#' item written `plan_total: "{total_args}"` with `total_args: {if:
+#' "{total}", then: {position: last}}` is left out when `total` is off.
 #'
 #' @param report A report SPEC (a list, as read) or its file.
 #' @param template A template, `"<series>/<template>"`; default the report's
@@ -96,7 +120,7 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   }
 
   args_env <- env
-  env <- .tr_hier_env(env)
+  env <- .tr_derive(tpl$derive, env, defs$name, template)
 
   # data: rows -- the template's, the report's merged in by id key by key
   # (a report row with `code:` makes the whole data: it replaces the
@@ -153,38 +177,64 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   out
 }
 
-# A template with a `hierarchy` argument (the levels of its rows, outer
-# first) gets six more names to write its content with; they are not
-# arguments (no card, not in attr "args"):
-#   hierarchy_empty  plan_empty's arguments when `empty_text` is not empty
-#   hierarchy_total  plan_total's arguments when `total` is on, else nothing
-#   hierarchy_heading  the argument `heading` (one text a level) as one text,
-#                    a line a level (nothing when it is not given)
-#   hierarchy_rows   the outer levels as the row keys group1, group2, ...
-#                    (nothing for one level)
-#   hierarchy_label  the innermost level, the label column
-#   hierarchy_sort   plan_sort's keys: the overall row, the outer level by
-#                    its own count (nothing above it for one level), the
-#                    levels' own rows before those under them, then the most
-#                    frequent first, the label last; the count is the one
-#                    column `sort_column`'s, or all columns' total
-.tr_hier_env <- function(env) {
-  h <- as.character(unlist(env[["hierarchy"]]))
-  n <- length(h)
-  if (!n) return(env)
-  col <- as.character(unlist(env[["sort_column"]]))
-  col <- if (length(col) && nzchar(col[1L])) paste0("[", col[1L], "]") else ""
-  env["hierarchy_rows"] <- list(if (n > 1L) stats::setNames(as.list(h[-n]), paste0("group", seq_len(n - 1L))))
-  env["hierarchy_label"] <- list(h[n])
-  env["hierarchy_total"] <- list(if (isTRUE(env[["total"]])) list(position = "last"))
-  et <- as.character(unlist(env[["empty_text"]]))
-  env["hierarchy_empty"] <- list(if (length(et) && nzchar(et[1L])) list(text = et[1L]))
-  hd <- as.character(unlist(env[["heading"]]))
-  env["hierarchy_heading"] <- list(if (length(hd)) paste(hd, collapse = "\n"))
-  env["hierarchy_sort"] <- list(c(".overall",
-                                  if (n > 1L) c(paste0("-n@group1", col), "group1"),
-                                  ".depth", paste0("-n", col), "label"))
+# The template's derive: names, in order, each one operation of
+# .tr_derive_ops on filled values (its options .tr_derive_opts); added to
+# `env` after the arguments, so later entries and the template's sections
+# read them as "{name}".  Nothing (NULL) stays a name whose value is nothing.
+.tr_derive_ops <- list(value = character(), "if" = c("then", "else"), last = character(),
+                       but_last = character(), join = "sep", keys = "prefix")
+
+.tr_derive <- function(derive, env, params, template) {
+  if (is.null(derive)) return(env)
+  where <- sprintf("template %s: derive:", template)
+  if (!is.list(derive) || is.null(names(derive)) || !all(nzchar(names(derive)))) {
+    stop(where, " is a map, a name to one operation.", call. = FALSE)
+  }
+  for (nm in names(derive)) {
+    if (nm %in% params) {
+      stop(where, " ", nm, " is an argument's name; a derived value takes a name of its own.",
+           call. = FALSE)
+    }
+    env[nm] <- list(.tr_derive_one(derive[[nm]], env, paste0(where, " ", nm)))
+  }
   env
+}
+
+.tr_derive_one <- function(d, env, where) {
+  ops <- names(.tr_derive_ops)
+  op <- if (is.list(d) && !is.null(names(d))) intersect(names(d), ops) else character()
+  if (length(op) != 1L) {
+    stop(where, ": write one operation, {op: value}; the operations are ",
+         paste(ops, collapse = ", "), ".", call. = FALSE)
+  }
+  bad <- setdiff(names(d), c(op, .tr_derive_ops[[op]]))
+  if (length(bad)) {
+    ok <- .tr_derive_ops[[op]]
+    stop(where, ": ", op, " takes no ", paste(bad, collapse = ", "),
+         if (length(ok)) paste0(" (its options: ", paste(ok, collapse = ", "), ")"), ".", call. = FALSE)
+  }
+  x <- .tr_fill(d[[op]], env)
+  n <- length(x)
+  switch(op,
+    value = x,
+    "if" = .tr_fill(if (.tr_is_something(x)) d$then else d[["else"]], env),
+    last = if (n) x[[n]],
+    but_last = if (n > 1L) x[-n],
+    join = if (n) paste(as.character(unlist(x)), collapse = .tr_option(d$sep, ", ")),
+    keys = if (n) stats::setNames(as.list(x), paste0(.tr_option(d$prefix, ""), seq_len(n))))
+}
+
+# an operation's option as one text (its default when not given)
+.tr_option <- function(v, default) {
+  if (is.null(v)) default else as.character(unlist(v))[1L]
+}
+
+# `if:`'s test: something, not nothing, FALSE / NA, "" or an empty list
+.tr_is_something <- function(x) {
+  if (is.null(x) || inherits(x, "tfl_unset") || !length(x)) return(FALSE)
+  if (is.logical(x)) return(isTRUE(all(x)))
+  if (is.character(x) && length(x) == 1L) return(!is.na(x) && nzchar(x))
+  TRUE
 }
 
 # the study as a list: a list as given, study.yml, or a folder that holds it
