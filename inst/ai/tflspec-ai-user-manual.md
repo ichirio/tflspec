@@ -277,6 +277,7 @@ sections follow this order.
 | `content` | the report, a list of items, each one call: `- plan_cells: {categorical: '{n} ({p:.1f%})'}`.  A table's items are rtfreporter's `normalize_ard()`, `table_plan()` and `plan_*()` verbs; a listing's `plan_listing()` (its columns `listing_col()` calls); a figure's the calls of its plot -- `ggplot`, `geom_*`, `scale_*`, `labs`, `theme` ..., and `tfl_image` last (§7.1).  Or `content: !r ...`, the report's own R |
 | `page` | the document: `titles`, `footnotes`, `header`, `footer` (maps by line number: `'1': {center: Table 14.1.1}`), `tokens`, and rtfreporter's calls by name (`rtf_page: {orientation: landscape}`, `rtf_tables: {auto_section: true}`, `rtf_document: {watermark: DRAFT}`); where a table's page names print is better said in its content, `plan_paginate_group: {heading_at: section}` -- a page's `rtf_tables: {auto_section: }` given wins |
 | `template` | a template SPEC, `{name: km_survival, args: {...}}` (`tfl_templates()`; a catalog alias runs its template as itself, `{name: stf_t14_ae_soc_pt}`, and a report keeps the name it was written with -- `tfl_templates(source = "FDA STF IG v2")` / `"PhUSE CSS"` / `"CDISC ARS"` lists a collection's every item with its alias and template; FDA STF Figures 1, 4, 13: `km_cumulative`, its data stage in `data:` steps, samples in `extdata/report-definitions/`); a figure designer's preset is a name (`km_simple` ...), the designer's `plot`, `plots`, `compose` its old form (§7) |
+| `figure` | a figure report's content as one function of tflspec, `{name: forest_hr, args: {comparison: Drug X}}` -- `name` one of `km_curves`, `forest_hr` (`tfl_figure_fn()`), `args` the function's `params` (and, for `km_curves`, the model's `by`, `time`, `censor`); `tfl_content_code(report)` writes the call, `ard` its ARD.  A figure with `figure:` has no `content:`.  `tfl_template_to_spec()` writes it for a series figure template |
 
 **An item's keys are the function's arguments** (§A.2's tables say which
 sheet column is which verb's argument: `pages_max_rows` is
@@ -620,7 +621,12 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   `ai/decisions.md` and `ai/agent_prompt.md` (its one message: one
   request then a menu, or a batch of all, by `ai: run`; `c`, a number or `a`
   answers the menu) and `ai/progress.md` (the work queue: every request
-  `todo`; the agent updates its row).  The agent **asks in its chat** what
+  `todo`; the agent updates its row); with `ars = TRUE`, also the ARS guide
+  `ai/ars/` (`README.md`: what each object carries, a simple and a compound
+  data subset worked -- each sub-clause of a `compoundExpression` with its
+  `subClauseId`, `level` and `order` -- and `tfl_check_ars()` as the check;
+  `example-reporting-event.json`, a fictional reporting event that passes
+  it), for an agent asked for a CDISC ARS reporting event.  The agent **asks in its chat** what
   defines each report and is not settled (the analysis set, a parameter, the
   treatment variable, a denominator; three rounds at most for one item,
   then marked to confirm), keeps the answers in `ai/decisions.md`

@@ -28,7 +28,7 @@ ars_spec <- function(analyses, purpose = "SECONDARY OUTCOME MEASURE") {
 }
 
 dm_ae <- function(...) ars_spec(ars_df(
-  list(output_id = "DM", analysis_id = "GROUPN", method = "categorical",
+  list(output_id = "DM", analysis_id = "BIGN", method = "categorical",
        population_id = "SAF", variables = "TRT01A"),
   list(output_id = "DM", analysis_id = "AGE", method = "continuous",
        population_id = "SAF", by = "TRT01A", variables = "AGE"),
@@ -87,7 +87,7 @@ test_that("the specs become the CDISC model, laid out as CDISC's example", {
   expect_identical(vapply(sex$referencedAnalysisOperations, `[[`, "",
                           "analysisId"),
                    c("An_DM_CAT_SEX", "An_DM_CAT_SEX_NONMISS"))
-  expect_identical(an_of(ars, "An_DM_GROUPN")$methodId, "Mth_total_n")
+  expect_identical(an_of(ars, "An_DM_BIGN")$methodId, "Mth_total_n")
   # a continuous variable is the analysis variable
   expect_identical(an_of(ars, "An_DM_AGE")$variable, "AGE")
   # a test has no result per group
@@ -109,7 +109,7 @@ test_that("the specs become the CDISC model, laid out as CDISC's example", {
   # the AE output had no subject count: one is added, first, and said
   expect_identical(ars$analyses[[which(vapply(ars$analyses, `[[`, "", "id") ==
                                          "An_AE_TEAE_ANY") - 1L]]$id,
-                   "An_AE_GROUPN_TRTA")
+                   "An_AE_BIGN")
   un <- tfl_ars_unmapped(ars)
   expect_true(any(un$item == "denominator" & un$where == "AE"))
   # the percentage operation names its numerator and denominator
@@ -122,7 +122,7 @@ test_that("the specs become the CDISC model, laid out as CDISC's example", {
   # the list of contents: output -> its analyses
   lc <- ars$mainListOfContents$contentsList$listItems
   expect_identical(lc[[1L]]$outputId, "DM")
-  expect_identical(lc[[1L]]$sublist$listItems[[1L]]$analysisId, "An_DM_GROUPN")
+  expect_identical(lc[[1L]]$sublist$listItems[[1L]]$analysisId, "An_DM_BIGN")
   # and nothing is wrong with it
   expect_identical(nrow(tfl_check_ars(ars, schema = FALSE)), 0L)
 })
@@ -216,11 +216,11 @@ test_that("purpose and reason are columns of the ARD spec workbook", {
 })
 
 test_that("an added subject count never takes an id the output has", {
-  # an output whose GROUPN is a categorical without a grouping and whose
+  # an output whose BIGN is a categorical without a grouping and whose
   # other analysis has no `by`: its percentage needs the count without a
   # grouping, which tfl_ars() adds
   sp <- ars_spec(ars_df(
-    list(output_id = "T-1", analysis_id = "GROUPN", method = "categorical",
+    list(output_id = "T-1", analysis_id = "BIGN", method = "categorical",
          population_id = "SAF", variables = "TRT01A",
          denominator = "population"),
     list(output_id = "T-1", analysis_id = "KM", method = "custom",
@@ -228,13 +228,13 @@ test_that("an added subject count never takes an id the output has", {
   ars <- tfl_ars(sp)
   ids <- vapply(ars$analyses, `[[`, "", "id")
   expect_false(anyDuplicated(ids) > 0L)
-  expect_true("An_T-1_GROUPN_ALL" %in% ids)
+  expect_true("An_T-1_BIGN_2" %in% ids)
   expect_identical(nrow(tfl_check_ars(ars, schema = FALSE)), 0L)
   # and reading it back leaves the added count out
   f <- withr::local_tempfile(fileext = ".json")
   tfl_write_ars_json(ars, f)
   back <- tfl_ars_to_specs(tfl_read_ars_json(f))$ard$analyses
-  expect_identical(back$analysis_id, c("GROUPN", "KM"))
+  expect_identical(back$analysis_id, c("BIGN", "KM"))
 })
 
 test_that("a blank purpose is named once, not again by the schema", {
@@ -359,7 +359,7 @@ test_that("an output printing another's analyses refers to them (references, #29
 
 test_that("an analysis with overall is also one over all subjects, without the grouping (#212)", {
   ars <- tfl_ars(ars_spec(ars_df(
-    list(output_id = "DM", analysis_id = "GROUPN", method = "categorical",
+    list(output_id = "DM", analysis_id = "BIGN", method = "categorical",
          population_id = "SAF", variables = "TRT01A"),
     list(output_id = "DM", analysis_id = "CAT", method = "categorical",
          population_id = "SAF", by = "TRT01A", variables = "SEX",
@@ -386,7 +386,7 @@ test_that("an analysis with overall is also one over all subjects, without the g
 
 den_spec <- function(den = NA_character_, var = "RACE") {
   ars_spec(ars_df(
-    list(output_id = "DM", analysis_id = "GROUPN", method = "categorical",
+    list(output_id = "DM", analysis_id = "BIGN", method = "categorical",
          population_id = "SAF", variables = "TRT01A"),
     list(output_id = "DM", analysis_id = "CAT", method = "categorical",
          population_id = "SAF", by = "TRT01A", variables = var,
@@ -417,7 +417,7 @@ test_that("the default denominator: the percentage divides by the subjects with 
 
   ars <- tfl_ars(den_spec())
   d <- den_op(ars, "An_DM_CAT")
-  # the denominator is the count of subjects with a value, not the GROUPN
+  # the denominator is the count of subjects with a value, not the BIGN
   expect_identical(d$den_an, "An_DM_CAT_NONMISS")
   expect_identical(d$den_op, "Mth_missing_1_N_nonmiss")
   nm <- an_of(ars, "An_DM_CAT_NONMISS")
@@ -434,20 +434,20 @@ test_that("the default denominator: the percentage divides by the subjects with 
   f <- withr::local_tempfile(fileext = ".json")
   tfl_write_ars_json(ars, f)
   back <- tfl_ars_to_specs(tfl_read_ars_json(f))$ard$analyses
-  expect_identical(back$analysis_id, c("GROUPN", "CAT"))
+  expect_identical(back$analysis_id, c("BIGN", "CAT"))
   expect_true(is.na(back$denominator[back$analysis_id == "CAT"]))
 })
 
 test_that("an explicit analysis set denominator is still the subject count", {
   ars <- tfl_ars(den_spec("population"))
   d <- den_op(ars, "An_DM_CAT")
-  expect_identical(d$den_an, "An_DM_GROUPN")
+  expect_identical(d$den_an, "An_DM_BIGN")
   expect_identical(d$den_op, "Mth_total_n_1_N")
   expect_false(any(grepl("NONMISS", vapply(ars$analyses, `[[`, "", "id"))))
   # a denominator the ARD program makes is still the subject count, said
   ars <- tfl_ars(den_spec("row"))
   d <- den_op(ars, "An_DM_CAT")
-  expect_identical(d$den_an, "An_DM_GROUPN")
+  expect_identical(d$den_an, "An_DM_BIGN")
   expect_true(any(tfl_ars_unmapped(ars)$item == "denominator"))
 })
 
@@ -468,19 +468,19 @@ tpl_ars <- function(template, args = list()) {
   list(spec = sp, ars = tfl_ars(sp))
 }
 
-test_that("demog: the denominator is the fixed adsl_sub, so GROUPN and nothing said", {
+test_that("demog: the denominator is the fixed adsl_sub, so BIGN and nothing said", {
   x <- tpl_ars("demog")
   expect_identical(x$spec$analyses$denominator[x$spec$analyses$analysis_id == "CAT"],
                    "adsl_sub")
   ids <- vapply(x$ars$analyses, `[[`, "", "id")
   expect_false(any(grepl("NONMISS", ids)))
   for (id in grep("^An_T-DD_CAT_", ids, value = TRUE)) {
-    expect_identical(den_op(x$ars, id)$den_an, "An_T-DD_GROUPN")
+    expect_identical(den_op(x$ars, id)$den_an, "An_T-DD_BIGN")
   }
   expect_false(any(tfl_ars_unmapped(x$ars)$item == "denominator"))
 })
 
-test_that("summary on ADSL: the explicit adsl_sub denominator is GROUPN (after #774)", {
+test_that("summary on ADSL: the explicit adsl_sub denominator is BIGN (after #774)", {
   skip_if_not_installed("haven")
   x <- tpl_ars("summary", list(data = "ADSL"))
   cat_row <- x$spec$analyses[x$spec$analyses$analysis_id == "CAT", ]
@@ -490,14 +490,14 @@ test_that("summary on ADSL: the explicit adsl_sub denominator is GROUPN (after #
   ids <- vapply(x$ars$analyses, `[[`, "", "id")
   expect_false(any(grepl("NONMISS", ids)))
   for (id in grep("^An_T-DD_CAT_", ids, value = TRUE)) {
-    expect_identical(den_op(x$ars, id)$den_an, "An_T-DD_GROUPN")
+    expect_identical(den_op(x$ars, id)$den_an, "An_T-DD_BIGN")
   }
   expect_false(any(tfl_ars_unmapped(x$ars)$item == "denominator"))
 })
 
 test_that("a denominator in args is not cards' own", {
   sp <- ars_spec(ars_df(
-    list(output_id = "DM", analysis_id = "GROUPN", method = "categorical",
+    list(output_id = "DM", analysis_id = "BIGN", method = "categorical",
          population_id = "SAF", variables = "TRT01A"),
     list(output_id = "DM", analysis_id = "CAT", method = "categorical",
          population_id = "SAF", by = "TRT01A", variables = "RACE",

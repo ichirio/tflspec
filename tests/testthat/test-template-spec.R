@@ -54,7 +54,7 @@ test_that("resolved: the template's items between the study's layers and the rep
   # a named-dots verb: the template's key and the study's beside it
   pc <- ro$content[[match("plan_cells", fns)]]
   expect_true(all(c("continuous", "categorical") %in% names(pc$args)))
-  expect_identical(vapply(ro$ard$analyses, `[[`, "", "id"), c("GROUPN", "CONT", "CAT"))
+  expect_identical(vapply(ro$ard$analyses, `[[`, "", "id"), c("BIGN", "CONT", "CAT"))
   expect_identical(ro$data$source, "ard")
   # the report's own ard: entry replaces the template's of the same id
   own_ard <- list(analyses = list(list(id = "CAT", method = "categorical", data = "adsl_saf",
@@ -132,7 +132,7 @@ test_that("templates = \"expand\": the sheets (and the study's ARD program) take
   s <- ts_study()
   sh <- suppressMessages(tfl_sheets_from_spec(s, list(`T-9` = ts_output()), templates = "expand"))
   a <- sh$ard$analyses
-  expect_identical(a$analysis_id[a$output_id %in% "T-9"], c("GROUPN", "CONT", "CAT"))
+  expect_identical(a$analysis_id[a$output_id %in% "T-9"], c("BIGN", "CONT", "CAT"))
   expect_equal(nrow(sh$templates), 0L)
 })
 

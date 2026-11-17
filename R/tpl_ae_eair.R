@@ -77,7 +77,7 @@
          purpose = "PRIMARY OUTCOME MEASURE")
   }
   analyses <- list(
-    list(id = "GROUPN", method = "categorical", data = subj, variables = a$by,
+    list(id = "BIGN", method = "categorical", data = subj, variables = a$by,
          purpose = "PRIMARY OUTCOME MEASURE"),
     rate("EAIR", levels[[1L]]), rate("EAIR_SOC", levels[[2L]]),
     rate("EAIR_PT", levels[[3L]]))

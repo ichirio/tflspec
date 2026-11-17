@@ -834,13 +834,13 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     content <- items$content
     if (!is.null(items$template)) extra$template <- items$template
     if (!is.null(y$ggplot2_version)) extra$ggplot2_version <- y$ggplot2_version
-    if (by_items) for (k in c("plot", "plots", "compose")) if (!is.null(y[[k]])) extra[[k]] <- y[[k]]
+    if (by_items) for (k in c("plot", "plots", "compose", "figure")) if (!is.null(y[[k]])) extra[[k]] <- y[[k]]
   } else if (kind == "figure" && !is.null(fig)) {
     data <- list(source = "code")
     if (!is.null(y$data)) data$steps <- y$data
     if (!is.null(y$stats)) data$stats <- y$stats
     content <- lapply(y$layers %||% list(), function(l) tfl_item(l$layer %||% "layer", l[setdiff(names(l), "layer")]))
-    for (k in c("template", "ggplot2_version", "plot", "plots", "compose")) if (!is.null(y[[k]])) extra[[k]] <- y[[k]]
+    for (k in c("template", "ggplot2_version", "plot", "plots", "compose", "figure")) if (!is.null(y[[k]])) extra[[k]] <- y[[k]]
     note(id, "figure", id, NA, "a figure's layers are content items `layer: {fields}` as before; plot/plots/compose kept beside them")
   } else if (kind == "listing" && !is.null(lf)) {
     lr <- lf$listings[!is.na(lf$listings$output_id) & lf$listings$output_id == id, , drop = FALSE]

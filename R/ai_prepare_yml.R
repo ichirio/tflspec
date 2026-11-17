@@ -9,7 +9,7 @@
                       "adam", "adam_spec", "define", "docs",
                       "study_id", "title", "size", "language", "workbook", "max_chars",
                       "unit", "templates", "area", "datasets", "max_levels",
-                      "agent_reads", "agent_max_reads")
+                      "agent_reads", "agent_max_reads", "ars")
 # paths (inside the study: from its folder)
 .ai_prepare_paths <- c("toc", "shells", "adam", "adam_spec", "define", "docs")
 # the ones that are a list in the file, whatever their length
@@ -153,7 +153,7 @@
 #'   (absolute);
 #' * `toc_sheet`, `sheets`, `toc_cols`, `sheet_roles`, `study_id`, `title`,
 #'   `size`, `language`, `workbook`, `max_chars`, `unit`, `templates`,
-#'   `area`, `datasets`, `max_levels`, `agent_reads`, `agent_max_reads`: the
+#'   `area`, `datasets`, `max_levels`, `agent_reads`, `agent_max_reads`, `ars`: the
 #'   values; a list (`sheets`, `shells`, `docs`, `datasets`, `agent_reads`) is
 #'   a YAML list, `toc_cols` and `sheet_roles` a YAML map.
 #'

@@ -174,6 +174,14 @@
 #'   which the person adopts into the study's `spec/outputs/`
 #'   ([tfl_ai_adopt()]); `FALSE`, the folder is not made here (a study of
 #'   the form before is moved with [tfl_ai_migrate()]).
+#' @param ars `TRUE` to write the ARS guide too, for an agent asked for a
+#'   CDISC ARS reporting event beside its drafts: `ai/ars/README.md` (what
+#'   each object carries; a simple data subset, and a compound one -- a
+#'   `compoundExpression` whose `whereClauses` each carry `subClauseId`,
+#'   `level` and `order` -- worked; [tfl_check_ars()] as the check) and
+#'   `ai/ars/example-reporting-event.json` (a fictional reporting event
+#'   that passes [tfl_check_ars()]); `ai/AGENTS.md` names them.  Written
+#'   again at each call.  `FALSE` (default): no `ai/ars/` folder.
 #' @param numbers The person's check of the report numbers each shell sheet
 #'   writes (see the result's `numbers`), over the rule (a number written
 #'   in the sheet or its name, and a TOC item's, is a report of the sheet's
@@ -271,7 +279,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                            sheet_roles = NULL, unit = c("sheet", "toc"), area = TRUE,
                            numbers = NULL, agent_reads = character(),
                            docs = NULL, agent_max_reads = 3L,
-                           define = NULL, adam_spec = NULL) {
+                           define = NULL, adam_spec = NULL, ars = FALSE) {
   if (missing(toc)) {
     return(.ai_prepare_repeat(dir, match.call(), parent.frame(), "tfl_ai_prepare()"))
   }
@@ -313,6 +321,9 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                       paste(sprintf("'%s'", docs[!file.exists(docs)]), collapse = ", ")))
   }
   if (identical(workbook, "text") && "workbook" %in% agent_reads) workbook <- "file"
+  if (!is.logical(ars) || length(ars) != 1L || is.na(ars)) {
+    .ard_stop("tfl_ai_prepare(ars = ): TRUE (the ARS guide in ai/ars/) or FALSE.")
+  }
   dry <- isTRUE(dry_run)
   # a study with a spec/data.yml already: its paths against the ADaM given
   # (#515); data.yml itself is never changed here
@@ -455,6 +466,14 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
         refs <- placed$refs
         docs_from <- placed$from
         files <- c(files, placed$files)
+      }
+      # the ARS guide, when asked: before the instructions, which name it
+      if (isTRUE(ars)) files <- c(files, .ai_ars_guide(dir))
+      ag <- file.path(ai, "AGENTS.md")
+      if (isTRUE(ars) && file.exists(ag) && !(overwrite && !isTRUE(add)) &&
+          !any(grepl("ars/README.md", readLines(ag, warn = FALSE), fixed = TRUE))) {
+        message("ai/ars/ written; ai/AGENTS.md is kept as it was: ",
+                "tfl_ai_refresh_agents() names the ARS guide in it.")
       }
       # (the inputs, kept for tfl_ai_refresh_agents())
       .ai_agent_inputs_write(dir, templates = templates, adam = adam_at, book = book_at,

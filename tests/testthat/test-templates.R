@@ -29,7 +29,7 @@ test_that("tfl_template_expand(): the items, marked as the template's", {
                    c("table_plan", "plan_cells", "plan_labels", "plan_paginate_rows"))
   expect_true(all(vapply(x$content, `[[`, "", "from") == "template:demog"))
   expect_identical(x$ard$analysis_data[[1L]]$id, "adsl_sub")
-  expect_identical(vapply(x$ard$analyses, `[[`, "", "id"), c("GROUPN", "CONT", "CAT"))
+  expect_identical(vapply(x$ard$analyses, `[[`, "", "id"), c("BIGN", "CONT", "CAT"))
   # (`stack` is gone from demog: the plain unknown-parameter error)
   expect_error(tfl_template_expand("demog", dmv(stack = TRUE)), "no parameter 'stack'")
   # the code lists are the ARD's (applied when it is made): no plan_levels()
@@ -161,7 +161,7 @@ test_that("demog: Mean (SD) keeps the mean when a group has one subject; sd_miss
 test_that("summary: categorical variables too; disposition on the same body (batch 2)", {
   x <- tfl_template_expand("summary", list(population = "SAF", by = "TRT01A",
                                            categorical = c("AGEGR1", "SEX")))
-  expect_identical(vapply(x$ard$analyses, `[[`, "", "id"), c("GROUPN", "CAT"))
+  expect_identical(vapply(x$ard$analyses, `[[`, "", "id"), c("BIGN", "CAT"))
   expect_identical(x$ard$analyses[[2L]]$statistics, c("n", "p"))
   # (the percentages over the analysis set, passed explicitly: canon 1.38)
   expect_identical(x$ard$analyses[[2L]]$denominator, "adsl_sub")
