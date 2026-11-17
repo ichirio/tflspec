@@ -35,7 +35,8 @@ tfl_ai_prepare(
   docs = NULL,
   agent_max_reads = 3L,
   define = NULL,
-  adam_spec = NULL
+  adam_spec = NULL,
+  ars = FALSE
 )
 }
 \arguments{
@@ -179,6 +180,15 @@ workbook (Pinnacle 21 layout), for the ADaM summary
 decodes, and the digits and display formats, value level too (a
 parameter's AVAL), go into \code{ai/adam_summary.md} as the study's.
 \code{NULL} (default): the data alone.}
+
+\item{ars}{\code{TRUE} to write the ARS guide too, for an agent asked for a
+CDISC ARS reporting event beside its drafts: \code{ai/ars/README.md} (what
+each object carries; a simple data subset, and a compound one -- a
+\code{compoundExpression} whose \code{whereClauses} each carry \code{subClauseId},
+\code{level} and \code{order} -- worked; \code{\link[=tfl_check_ars]{tfl_check_ars()}} as the check) and
+\code{ai/ars/example-reporting-event.json} (a fictional reporting event
+that passes \code{\link[=tfl_check_ars]{tfl_check_ars()}}); \code{ai/AGENTS.md} names them.  Written
+again at each call.  \code{FALSE} (default): no \verb{ai/ars/} folder.}
 }
 \value{
 A \code{tfl_ai_prepared}: a list with \code{requests} (one row a request:

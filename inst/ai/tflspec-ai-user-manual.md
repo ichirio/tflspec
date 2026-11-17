@@ -621,7 +621,12 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   `ai/decisions.md` and `ai/agent_prompt.md` (its one message: one
   request then a menu, or a batch of all, by `ai: run`; `c`, a number or `a`
   answers the menu) and `ai/progress.md` (the work queue: every request
-  `todo`; the agent updates its row).  The agent **asks in its chat** what
+  `todo`; the agent updates its row); with `ars = TRUE`, also the ARS guide
+  `ai/ars/` (`README.md`: what each object carries, a simple and a compound
+  data subset worked -- each sub-clause of a `compoundExpression` with its
+  `subClauseId`, `level` and `order` -- and `tfl_check_ars()` as the check;
+  `example-reporting-event.json`, a fictional reporting event that passes
+  it), for an agent asked for a CDISC ARS reporting event.  The agent **asks in its chat** what
   defines each report and is not settled (the analysis set, a parameter, the
   treatment variable, a denominator; three rounds at most for one item,
   then marked to confirm), keeps the answers in `ai/decisions.md`
