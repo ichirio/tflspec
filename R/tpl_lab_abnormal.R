@@ -70,7 +70,7 @@
   sets <- Filter(Negate(is.null), c(list(
     list(id = subj, from = "ADSL", population = pop),
     Filter(Negate(is.null), list(
-      id = set, from = a$data, subjects = subj,
+      id = set, from = a$data, subjects_in = subj,
       where = if (length(where)) tfl_r(.tpl_and_all(where)),
       # every parameter analysed a level (in its order): its rows even with
       # no subject in a category (0/N)

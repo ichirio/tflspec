@@ -225,7 +225,7 @@ step after the pages are made -- is one more verb piped after the plan.
 ## Where next
 
 - [The ARD spec](ard-spec.html): datasets, populations, a report's
-  analysis data (`subjects`, `keep`, `code`), its code lists, the
+  analysis data (`subjects_in`, `keep`, `code`), its code lists, the
   analyses.
 - [The table spec](table-spec.html): the table sheets, numbers or the
   ARD's text, the decimals written once, a report's code lists and the

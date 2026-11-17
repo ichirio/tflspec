@@ -109,12 +109,6 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   }
   rows <- lapply(rows, function(r) {
     r <- .tr_fill(r, env)
-    # (the templates' subjects_in: the code SPEC's subjects, until it is
-    # renamed there)
-    if (!is.null(r$subjects_in)) {
-      r$subjects <- r$subjects_in
-      r$subjects_in <- NULL
-    }
     r[!vapply(r, function(v) inherits(v, "tfl_unset"), NA)]
   })
   rows <- lapply(rows, .derive_map_in)

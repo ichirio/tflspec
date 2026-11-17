@@ -172,7 +172,7 @@ test_that("a report's own subjects, the columns kept, factors of derived columns
   ad <- ad_df(
     output_id = "T1",
     data_id = c("adsl_old", "adae_old"), from = c("ADSL", "ADAE"),
-    population_id = c("SAF", NA), subjects = c(NA, "adsl_old"),
+    population_id = c("SAF", NA), subjects_in = c(NA, "adsl_old"),
     where = c("AGE >= 65", "TRTEMFL == \"Y\""), add = c(NA, "TRT01A"),
     derive = c("OLD = ifelse(AGE >= 75, \"75+\", \"65-74\")", NA),
     keep = c(NA, "TRT01A | AEBODSYS | AEDECOD"))
@@ -221,12 +221,12 @@ test_that("a report's own subjects, the columns kept, factors of derived columns
   # checks
   d <- ad; d$population_id[2L] <- "SAF"
   expect_error(ad_spec(d, an), "not both", fixed = TRUE)
-  d <- ad; d$subjects[2L] <- "adae_old"
+  d <- ad; d$subjects_in[2L] <- "adae_old"
   expect_error(ad_spec(d, an), "is not an analysis data above it", fixed = TRUE)
   # ARS: the subjects' own condition has no place
   x$analyses$purpose <- "PRIMARY OUTCOME MEASURE"
   un <- tfl_ars_unmapped(tfl_ars(x))
-  expect_true("analysis_data$subjects" %in% un$item)
+  expect_true("analysis_data$subjects_in" %in% un$item)
 
   skip_if_not_installed("cards")
   dir <- withr_tempdir()
@@ -309,10 +309,10 @@ test_that("an analysis data is a report's: the same name, another meaning elsewh
 test_that("a report's analysis data name only its own rows; a blank output_id is an error", {
   ad <- ad_df(output_id = c("T1", "T2"), data_id = c("adsl_sub", "adae_teae"),
               from = c("ADSL", "ADAE"), population_id = c("SAF", NA),
-              subjects = c(NA, "adsl_sub"), where = c(NA, "TRTEMFL == \"Y\""))
+              subjects_in = c(NA, "adsl_sub"), where = c(NA, "TRTEMFL == \"Y\""))
   an <- ad_df(output_id = "T2", analysis_id = "AE", method = "cards::ard_tabulate",
               data = "adae_teae", variables = "AEDECOD")
-  expect_error(ad_spec(ad, an), "`subjects` adsl_sub is not an analysis data above it in the report",
+  expect_error(ad_spec(ad, an), "`subjects_in` adsl_sub is not an analysis data above it in the report",
                fixed = TRUE)
   # an analysis reads another report's data
   ad2 <- ad_df(output_id = "T1", data_id = "adsl_sub", from = "ADSL", population_id = "SAF")

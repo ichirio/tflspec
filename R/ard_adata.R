@@ -4,7 +4,7 @@
 #
 #  A row makes one data, under its `data_id` -- the object's name in the ARD
 #  program too: from a dataset or an analysis data above it, the subjects of
-#  a population (or of an analysis data above: `subjects`, the subjects a
+#  a population (or of an analysis data above: `subjects_in`, the subjects a
 #  report's own analysis set kept), the records a condition keeps, columns
 #  of the population's (or that data's) added by the subject key, columns
 #  derived (the code lists made factors of them too), the columns kept, and
@@ -70,19 +70,19 @@
     i <- match(d, ad$data_id)
     p <- ad$population_id[i]
     if (!is.na(p)) return(p)
-    s <- ad$subjects[i] %||% NA
+    s <- ad$subjects_in[i] %||% NA
     if (!is.na(s) && !s %in% c(seen, d)) return(.adata_pop(ad, s, c(seen, d)))
   }
   NA_character_
 }
 
-# The analysis data whose subjects an analysis data keeps (`subjects`; the
+# The analysis data whose subjects an analysis data keeps (`subjects_in`; the
 # nearest one, from the data itself up the rows it is made from), or NULL
 # when none: the report's analysis set as it counts them, a subset applied
 .adata_subjects_of <- function(ad, id) {
   if (is.null(ad) || length(id) != 1L || is.na(id)) return(NULL)
   for (d in rev(.adata_chain(ad, id))) {
-    s <- ad$subjects[match(d, ad$data_id)] %||% NA
+    s <- ad$subjects_in[match(d, ad$data_id)] %||% NA
     if (!is.na(s)) return(s)
   }
   NULL
@@ -93,7 +93,7 @@
 .adata_add_from <- function(ad, id) {
   for (d in rev(.adata_chain(ad, id))) {
     i <- match(d, ad$data_id)
-    if (!is.na(ad$subjects[i] %||% NA)) return(ad$subjects[i])
+    if (!is.na(ad$subjects_in[i] %||% NA)) return(ad$subjects_in[i])
     if (!is.na(ad$population_id[i])) return(paste0("pop_", .r_name(ad$population_id[i])))
   }
   NA_character_
@@ -116,7 +116,7 @@
   while (length(new <- setdiff(unique(unlist(lapply(ids, function(id)
     .adata_chain(ad, id)))), all))) {
     all <- c(all, new)
-    ids <- intersect(c(stats::na.omit(ad$subjects[match(new, ad$data_id)]),
+    ids <- intersect(c(stats::na.omit(ad$subjects_in[match(new, ad$data_id)]),
                        .adata_code_reads(ad, new)), ad$data_id)
   }
   ad$data_id[ad$data_id %in% all]
@@ -254,16 +254,16 @@
                                         error = function(e) NULL))) {
       add_d(i, "then", sprintf("%s: `then` does not read as R", tag(i)))
     }
-    s <- ad$subjects[i]
+    s <- ad$subjects_in[i]
     if (!is.na(s)) {
       if (!s %in% above) {
-        add_d(i, "subjects", sprintf(
-          "%s: `subjects` %s is not an analysis data above it in the report", tag(i), s))
+        add_d(i, "subjects_in", sprintf(
+          "%s: `subjects_in` %s is not an analysis data above it in the report", tag(i), s))
       }
       if (!is.na(p)) {
-        add_d(i, "subjects", sprintf(paste(
+        add_d(i, "subjects_in", sprintf(paste(
           "%s: the subjects are a population's (`population_id`) or an",
-          "analysis data's (`subjects`); not both"), tag(i)))
+          "analysis data's (`subjects_in`); not both"), tag(i)))
       }
     }
     code <- ad$code[i] %||% NA
@@ -274,7 +274,7 @@
       # (`population_id` with `code`: the set's subjects are made first,
       # in reach as <dataset>_sub; the other columns are for a data the
       # columns make)
-      also <- c("subjects", "where", "add", "derive", "keep", "distinct", "then")
+      also <- c("subjects_in", "where", "add", "derive", "keep", "distinct", "then")
       also <- also[vapply(also, function(cn) !is.na(ad[[cn]][i] %||% NA), NA)]
       if (length(also)) {
         add_d(i, "code", sprintf(paste(
@@ -287,7 +287,7 @@
     if (length(.split_bar(ad$add[i])) && is.na(.adata_add_from(ad_o, id))) {
       add_d(i, "add", sprintf(paste(
         "%s: `add` takes columns from the population's data or the data of",
-        "`subjects`, and it has neither (here or above)"), tag(i)))
+        "`subjects_in`, and it has neither (here or above)"), tag(i)))
     }
     for (cn in c("where")) {
       v <- ad[[cn]][i]
@@ -376,7 +376,7 @@
     pop_ds <- if (!is.na(pid)) x$populations$dataset[
       x$populations$population_id == pid][1L]
     # the subjects an analysis data above kept (a report's own analysis set)
-    if (!is.na(r$subjects)) pop <- r$subjects
+    if (!is.na(r$subjects_in)) pop <- r$subjects_in
     whr <- if (!is.na(r$where)) r$where
     flt <- if (!is.null(whr)) sprintf("dplyr::filter(%s)", whr)
     add <- .split_bar(r$add)
@@ -404,7 +404,7 @@
       base <- src
       steps0 <- flt
       kind <- "made"
-    } else if (!from_data && is.na(r$subjects) && identical(r$from, pop_ds)) {
+    } else if (!from_data && is.na(r$subjects_in) && identical(r$from, pop_ds)) {
       # the population itself (its dataset): its subjects, the condition
       base <- pop
       steps0 <- flt

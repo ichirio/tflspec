@@ -102,7 +102,7 @@ test_that("a denominator's by column the subjects' data lacks (AESEV): the recor
     ard = list(
       analysis_data = list(
         list(id = "adsl_saf", from = "ADSL", population = "SAF"),
-        list(id = "adae_saf", from = "ADAE", subjects = "adsl_saf",
+        list(id = "adae_saf", from = "ADAE", subjects_in = "adsl_saf",
              where = tfl_r("TRTEMFL == \"Y\""))),
       analyses = list(
         list(id = "BIGN", method = "categorical", data = "adsl_saf", variables = "TRT01A"),

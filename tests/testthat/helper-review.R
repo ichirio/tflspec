@@ -29,7 +29,7 @@
       data_id = c("adsl_saf", "adsl_saf", "adae_saf"),
       from = c("ADSL", "ADSL", "ADAE"),
       population_id = c("SAF", "SAF", NA),
-      subjects = c(NA, NA, "adsl_saf"),
+      subjects_in = c(NA, NA, "adsl_saf"),
       where = c(NA, NA, 'TRTEMFL == "Y"')),
     analyses = df(
       output_id = c("T-1", "T-1", "T-1", "T-2", "T-2"),

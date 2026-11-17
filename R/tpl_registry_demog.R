@@ -357,7 +357,7 @@
   }
   if (!adsl) {
     set <- .tpl_set_id(a)
-    sets <- c(sets, list(nn(list(id = set, from = a[["data"]], subjects = subj,
+    sets <- c(sets, list(nn(list(id = set, from = a[["data"]], subjects_in = subj,
                                  where = if (!is.null(a$where)) tfl_r(a$where)))))
   }
   # the categorical variables' percentages' denominator, passed explicitly
