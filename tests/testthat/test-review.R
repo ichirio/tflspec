@@ -246,6 +246,32 @@ test_that("A01: columns an analysis data adds are the population's data's, not i
   expect_true(any(r$rule == "A01" & grepl("NOPE", r$message, fixed = TRUE)))
 })
 
+test_that("A01: the columns of an analysis data's arrange are checked (#851)", {
+  s <- .rv_study()
+  a01 <- function(s, pat) {
+    r <- .rv_review(s)
+    any(r$rule == "A01" & r$field == "arrange" & grepl(pat, r$message, fixed = TRUE))
+  }
+  s$ard$analysis_data$arrange <- NA_character_
+  # X, -X and desc(X) of a column the data has: nothing found
+  s$ard$analysis_data$arrange[2] <- "USUBJID|-AGE|desc(SEX)"
+  s$ard$analysis_data$add[2] <- "SEX"
+  expect_false(a01(s, "USUBJID"))
+  expect_false(a01(s, "SEX"))
+  # a column made by this row's derive is there for arrange
+  s$ard$analysis_data$derive[2] <- "AGEX = AGE + 1"
+  s$ard$analysis_data$arrange[2] <- "-AGEX"
+  expect_false(a01(s, "AGEX"))
+  # a column the data has not got, plain, descending or desc()
+  for (e in c("NOPE", "-NOPE", "desc(NOPE)")) {
+    s$ard$analysis_data$arrange[2] <- e
+    expect_true(a01(s, "NOPE"))
+  }
+  # a malformed element is reported as it stands
+  s$ard$analysis_data$arrange[2] <- "USUBJID|+AGE"
+  expect_true(a01(s, "+AGE"))
+})
+
 test_that("a figure with analyses of its own is not reviewed as a table (#293 P6)", {
   s <- .rv_study()
   # T-2's analyses as a figure's own ARD: no table rules for it
