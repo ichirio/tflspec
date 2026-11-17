@@ -11,10 +11,71 @@
 # treatment palette, the theme's terms (pp_theme_lines()), the km censor
 # mark, the common ADaM subgroup labels (.forest_sub_labels()).
 
-# The registry: the name a template's `figure:` gives -> its function.
-# A later figure adds its entry here.
+# The registry, one table: the name a template's `figure:` gives -> its
+# function, and what a report's program calls it with (tfl_content_code()
+# writes that call).  A later figure adds its entry here.
+#   fn      the exported function's name
+#   model   the model object the function's first argument takes: its name in
+#           the program and the call that makes it, with the template's
+#           arguments in {braces} (NULL: the function takes the ARD only)
+#   params  the template's arguments that go into the function's `params`
+.fig_content_table <- function() {
+  list(
+    km_curves = list(
+      fn = "km_curves",
+      model = list(
+        arg = "km_fit",
+        call = paste0("ggsurvfit::survfit2(ggsurvfit::Surv_CNSR({time}, {censor}) ~ {by}, ",
+                      "data = adtte_sub)")),
+      params = c("time_unit", "x_label", "y_label", "legend")),
+    forest_hr = list(
+      fn = "forest_hr",
+      model = NULL,
+      params = c("comparison", "subgroup_labels", "favours", "x_breaks", "size_by_n",
+                 "bold_headings", "n_by_arm")))
+}
+
+# The names a figure content's model call reads ({by}, {time}, {censor})
+.fig_model_args <- function(e) {
+  if (is.null(e$model)) return(character())
+  m <- regmatches(e$model$call, gregexpr("[{][A-Za-z_.]+[}]", e$model$call))[[1L]]
+  unique(gsub("[{}]", "", m))
+}
+
+# A figure report's content key, `figure: {name, args}`: the content
+# function's name (a name of the table) and its arguments -- the model's
+# ({by}, {time}, {censor}) then the function's `params`.  A report that has
+# it as a list has it as written; a report resolved from a series template
+# (`figure:` a name, the template's arguments in its `args` attribute) gets
+# it from the arguments.  NULL for a report with neither.
+.fig_content_key <- function(output) {
+  fig <- output$figure
+  if (is.null(fig)) return(NULL)
+  tb <- .fig_content_table()
+  if (is.list(fig)) {
+    name <- fig$name
+    args <- fig$args %||% list()
+  } else {
+    name <- fig
+    args <- NULL
+  }
+  if (!is.character(name) || length(name) != 1L || is.na(name) || !name %in% names(tb)) {
+    stop(sprintf("%s: the figure `%s` is not a figure content; one of %s.", output$id %||% "report",
+                 paste(format(name), collapse = " "), paste(names(tb), collapse = ", ")), call. = FALSE)
+  }
+  if (is.null(args)) {
+    given <- attr(output, "args") %||% list()
+    keep <- c(.fig_model_args(tb[[name]]), tb[[name]]$params)
+    args <- Filter(Negate(is.null), given[intersect(keep, names(given))])
+  }
+  list(name = name, args = args)
+}
+
+# The registry's functions by name
 .fig_content_fns <- function() {
-  list(km_curves = km_curves, forest_hr = forest_hr)
+  tb <- .fig_content_table()
+  stats::setNames(lapply(tb, function(e) get(e$fn, envir = asNamespace("tflspec"), mode = "function")),
+                  names(tb))
 }
 
 #' The figure content function a template names

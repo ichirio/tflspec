@@ -20,12 +20,12 @@ dd_expand <- function(name = "demog", ...) {
 dd_an <- function(x, id) Filter(function(a) identical(a$id, id), x$ard$analyses)[[1L]]
 dd_set <- function(x, id) Filter(function(d) identical(d$id, id), x$ard$analysis_data)[[1L]]
 
-test_that("demog family: the % denominator is the analysis data GROUPN counts", {
+test_that("demog family: the % denominator is the analysis data BIGN counts", {
   for (tpl in c("demog", "stf_t02_demog")) {
     x <- dd_expand(tpl)
     cat <- dd_an(x, "CAT")
     expect_identical(cat$denominator, "adsl_sub", info = tpl)
-    expect_identical(dd_an(x, "GROUPN")$data, cat$denominator, info = tpl)
+    expect_identical(dd_an(x, "BIGN")$data, cat$denominator, info = tpl)
     expect_identical(dd_an(x, "CONT")$data, cat$denominator, info = tpl)
     # the categorical analysis reads the same set with a Missing level made on it
     expect_identical(cat$data, "adsl_miss", info = tpl)
@@ -39,7 +39,7 @@ test_that("demog family: the report's filter narrows the set the denominator nam
   x <- dd_expand("demog", subset = "SEX == \"F\"")
   expect_identical(dd_an(x, "CAT")$denominator, "adsl_sub")
   expect_match(as.character(dd_set(x, "adsl_sub")$where), "SEX", fixed = TRUE)
-  expect_identical(dd_an(x, "GROUPN")$data, "adsl_sub")
+  expect_identical(dd_an(x, "BIGN")$data, "adsl_sub")
 })
 
 test_that("demog family: denominator is no parameter; summary and disposition keep it, the set by default", {
@@ -90,12 +90,12 @@ test_that("demog: % over the analysis set, a Missing row for the variable that h
   expect_true(any(grepl("Missing.*3 \\(3\\.8\\)", txt)))
   # SEX has no missing value: one Missing row, RACE's
   expect_identical(sum(grepl("Missing", txt)), 1L)
-  # (the Age n row: Drug X 80, Control 78 -- the set GROUPN counts)
+  # (the Age n row: Drug X 80, Control 78 -- the set BIGN counts)
   expect_true(any(grepl("n8078$", txt)))
   code <- paste(suppressMessages(tfl_ard_code(tfl_read_study_spec(d), output_id = "T-DD")),
                 collapse = "\n")
   expect_match(code, "denominator = adsl_sub", fixed = TRUE)
-  expect_match(code, "ard_groupn <- adsl_sub |>", fixed = TRUE)
+  expect_match(code, "ard_bign <- adsl_sub |>", fixed = TRUE)
 })
 
 test_that("demog: the report's filter makes the denominator that subset", {
@@ -146,7 +146,7 @@ test_that("missing_row: TRUE (default) is the Missing step; FALSE and !unset tur
     expect_identical(cat$data, "adsl_sub")
     # (the percentages stay over the analysis set)
     expect_identical(cat$denominator, "adsl_sub")
-    expect_identical(dd_an(off, "GROUPN")$data, "adsl_sub")
+    expect_identical(dd_an(off, "BIGN")$data, "adsl_sub")
   }
   a <- tfl_tpl_args("demog")
   expect_identical(a$effective[a$param == "missing_row"], "TRUE")

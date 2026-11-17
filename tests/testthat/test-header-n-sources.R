@@ -145,9 +145,9 @@ test_that("the check itself: two tabulations of one arm over different subjects 
   hn_skip()
   adsl <- tflspec::adsl
   everyone <- cards::ard_tabulate(adsl, variables = TRT01A)
-  everyone$analysis_id <- "GROUPN_ALL"
+  everyone$analysis_id <- "BIGN_ALL"
   women <- cards::ard_tabulate(adsl[adsl$SEX == "F", ], variables = TRT01A)
-  women$analysis_id <- "GROUPN_F"
+  women$analysis_id <- "BIGN_F"
   body <- cards::ard_summary(adsl, by = TRT01A, variables = AGE,
                              statistic = ~ cards::continuous_summary_fns("mean"))
   ard <- dplyr::bind_rows(everyone, women, body)

@@ -193,6 +193,15 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
     # the report as written: what stops the build far from its cause
     rows[[length(rows) + 1L]] <- .check_static_rows(o, id)
     if (inherits(ro$content, "tfl_r")) next
+    # a figure's content key (`figure: {name, args}`): its name is one of the
+    # table's (.fig_content_table()), its program is written
+    if (identical(ro$kind, "figure") && !is.null(ro$figure)) {
+      r <- tryCatch(suppressMessages(suppressWarnings(tfl_content_code(ro))), error = function(e) e)
+      if (inherits(r, "error")) {
+        add(output_id = id, part = "figure", item = "figure", level = "error", message = one(r))
+      }
+      next
+    }
     if (identical(ro$kind, "figure") && !.fig_new_content(ro$content)) {
       bad_design <- function(e) {
         data.frame(part = "", field = "", problem = conditionMessage(e), stringsAsFactors = FALSE)

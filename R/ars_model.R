@@ -114,6 +114,11 @@
   one(e, 1L, 1L)
 }
 
+# The description of the BIGN tfl_ars() adds to an output that has none (its
+# percentages' denominator): tfl_ars_to_specs() leaves such an analysis out.
+.ars_added_bign <- paste("Subjects per group, added by tflspec as the",
+                         "denominator of the output's percentages.")
+
 # A WhereClause's condition / compoundExpression, for a class that carries
 # them at its top (AnalysisSet, DataSubset, Group).
 .ars_cond_fields <- function(w) w[intersect(names(w), c("condition",
@@ -456,7 +461,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
       paste0("(", w, ")", collapse = " & ")
     an$population_id[i] <- .adata_pop(ad_o, dcol[i])
     an$dataset[i] <- .adata_dataset(ad_o, dcol[i])
-    for (cn in c("subjects", "add", "derive", "distinct", "code", "then")) {
+    for (cn in c("subjects_in", "add", "derive", "arrange", "distinct", "code", "then")) {
       for (j in which(!is.na(rows[[cn]]))) {
         miss(tag, paste0("analysis_data$", cn), sprintf(
           "%s: `%s` -- ARS reads the ADaM as it is, by a WhereClause",
@@ -588,7 +593,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
               collapse = ", ", sep = "")))
     }
     # (a denominator that is the analysis data of the analysis's own set --
-    # an analysis_data row with that population, what GROUPN counts -- is the
+    # an analysis_data row with that population, what BIGN counts -- is the
     # analysis set's subject count: nothing to say)
     ad_o <- .adata_of(ad, out)
     den_set <- !is.na(r$denominator %||% NA) && r$denominator %in% ad_o$data_id &&
@@ -731,13 +736,13 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
       b <- list(id = id, op = mzn$op[["N_nonmiss"]])
     } else if (is.null(b)) {
       r <- p$r
-      r$analysis_id <- "GROUPN"
+      r$analysis_id <- "BIGN"
       mz <- method("total_n", character(), tag = p$out)
       gv <- vapply(p$by, grouping, "", ds = p$ds, out = p$out)
-      # An_<output>_GROUPN_<by> (_ALL without a grouping), never an id the
-      # output already has
-      id <- paste(c("An", p$out, "GROUPN",
-                    if (length(p$by)) p$by else "ALL"), collapse = "_")
+      # An_<output>_BIGN (canon: the output's one BIGN, the column headings'
+      # N and the percentages' denominator); _2, _3 ... for another
+      # grouping, never an id the output already has
+      id <- paste("An", p$out, "BIGN", sep = "_")
       taken <- vapply(analyses, function(z) z$model$id, "")
       if (id %in% taken) {
         k <- 2L
@@ -748,6 +753,10 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
                          "Number of subjects", p$ds, subj, mz, gv,
                          pur = p$pur, rea = p$rea, role = "groupn",
                          m = "total_n")
+      # (said in the analysis, so that reading the ARS back leaves it out
+      # and keeps an output's own BIGN)
+      k <- length(analyses)
+      analyses[[k]]$model$description <- .ars_added_bign
       # the count comes first in its output
       k <- length(analyses)
       first <- match(p$out, vapply(analyses, `[[`, "", "output"))

@@ -227,9 +227,9 @@ it to these rules (every agent of tflspec#512 tripped on them):
 ## The fields, exactly
 
 `data` (a table's or listing's flat list of definitions), one item each: `id`, `label`, `from` (a dataset of
-`spec/data.yml`, or an analysis data above it), `population`, `subjects`,
+`spec/data.yml`, or an analysis data above it), `population`, `subjects_in`,
 `where`, `add`, `derive`, `keep`, `distinct`, `code` -- no other key.
-`population` and `subjects` are one or the other; with `code`, only `id`,
+`population` and `subjects_in` are one or the other; with `code`, only `id`,
 `label`, `from` and `population`.
 
 `ard.analyses`, one item each: `id`, `method`, then **either** `data`

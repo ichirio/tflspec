@@ -62,7 +62,7 @@
 #'   takes its template's); the default for a report with `template`, else
 #'   `"defaults"`.
 #' @param data What the report reads, its step 1: a list of definitions
-#'   (`id`, `from`, `subjects`, `where` ..., one dataset each; in a YAML file
+#'   (`id`, `from`, `subjects_in`, `where` ..., one dataset each; in a YAML file
 #'   the report's flat `data:` list) in the report's built data; or, for a
 #'   figure (and a listing or a records table that still has the map), a
 #'   list (`source` -- `"ard"`, `"code"` or `"dataset"` -- and `object`,
@@ -370,6 +370,7 @@ tfl_read_output <- function(path) {
   # (the old places, each with a line saying where it moved)
   if (!is.null(y$population)) stop(who, ": ", .common_old_line, call. = FALSE)
   common <- .common_in(y$common, who)
+  .yaml_keys_check(y)
   y <- .data_list_in(y, who)
   # the ARD's analyses are the report's ard: section (2026-10-15), not data:'s
   old <- intersect(c("analysis_data", "analyses"), names(y$data))
@@ -437,17 +438,65 @@ tfl_read_output <- function(path) {
   out
 }
 
+# The keys a report's maps are read for, a list a kind: an ard: map, an
+# ARD analysis item (the analyses sheet's columns, `id` for analysis_id,
+# and what a YAML item has besides) and a data: line (the analysis_data
+# sheet's, `id` for data_id).  The values of args, codelists and content
+# cards are free and not listed.
+.yaml_known_keys <- list(
+  ard = c("analyses", "objects", "data", "analysis_data"),
+  analysis = c("id", setdiff(.ard_spec_sheets$analyses, c("output_id", "analysis_id")),
+               "population", "conditions", "ards", "analysis_ids", "ref", "note"),
+  data = c("id", setdiff(.ard_spec_sheets$analysis_data, c("output_id", "data_id")),
+           "population", "subjects_in", "arrange", "note")
+)
+
+# A key a report's map has that the reader does not know: a warning, with
+# the closest known key when it is close (2 edits or fewer, or one is the
+# start of the other), else "(not read)"
+.yaml_keys_check <- function(y) {
+  out <- as.character(y$id %||% "?")
+  say <- function(where, keys, kind) {
+    known <- .yaml_known_keys[[kind]]
+    for (k in setdiff(keys[nzchar(keys)], known)) {
+      d <- drop(utils::adist(k, known))
+      near <- which(d <= 2L | startsWith(known, k) | startsWith(k, known))
+      hint <- if (length(near)) {
+        sprintf("; did you mean %s:?", known[near[which.min(d[near])]])
+      } else {
+        " (not read)"
+      }
+      warning(sprintf("%s: %s: is not a key%s", where, k, hint), call. = FALSE)
+    }
+  }
+  named <- function(x) is.list(x) && !is.null(names(x))
+  ard <- y[["ard"]]
+  if (named(ard)) {
+    say(out, names(ard), "ard")
+    for (a in if (is.list(ard$analyses) && is.null(names(ard$analyses))) ard$analyses) {
+      if (named(a)) say(paste(out, a$id %||% "?", sep = " / "), names(a), "analysis")
+    }
+  }
+  d <- y[["data"]]
+  if (is.list(d) && is.null(names(d))) {
+    for (r in d) {
+      if (named(r)) say(paste(out, r$id %||% "?", sep = " / "), names(r), "data")
+    }
+  }
+  invisible()
+}
+
 # The report's analysis set (NA when it has none)
 .out_population <- function(o) .na_scalar(o$common$population)
 
 # The report's subjects definition (`from: ADSL`, or from the dataset its
-# analysis set is defined on: data.yml `populations:`; no `subjects`, no code)
+# analysis set is defined on: data.yml `populations:`; no `subjects_in`, no code)
 # has no `population` of its own: the report's `common: population` is its
 # set.  Written out in the sheets (the ARD's definition); a definition that
 # names its own set (a denominator of another set) keeps it.  A definition of
-# a record-level dataset takes its subjects from `subjects:`, not from here
+# a record-level dataset takes its subjects from `subjects_in:`, not from here
 .entry_is_subjects <- function(a, from = "ADSL") {
-  is.list(a) && is.null(a$subjects) && is.null(a$code) &&
+  is.list(a) && is.null(a$subjects_in) && is.null(a$code) &&
     toupper(as.character(a$from %||% "")) %in% from
 }
 # The datasets a subjects definition reads: ADSL, and the dataset of the
@@ -772,7 +821,7 @@ tfl_write_output <- function(x, path) {
 # a sequence): written as a sequence even when it holds one name, as the
 # reader read it (`by: [TRT01A]` read is "TRT01A", written `- TRT01A`)
 .seq_keys <- list(
-  analysis_data = c("add", "keep", "distinct"),
+  analysis_data = c("add", "arrange", "keep", "distinct"),
   analyses = c("by", "strata", "variables", "statistics", "formats"),
   listing_col = "vars")
 

@@ -91,7 +91,7 @@ test_that("the layouts' parameters: what a report changes, the look too (summary
   expect_error(tfl_template_expand("demog", c(list(population = "SAF", stack = TRUE), tt_dm_args)),
                "no parameter 'stack'")
   dm <- tfl_template_expand("demog", c(list(population = "SAF"), tt_dm_args))
-  expect_identical(vapply(dm$ard$analyses, `[[`, "", "id"), c("GROUPN", "CONT", "CAT"))
+  expect_identical(vapply(dm$ard$analyses, `[[`, "", "id"), c("BIGN", "CONT", "CAT"))
   expect_match(tfl_templates()$label[tfl_templates()$name == "demog"], "Demographics", fixed = TRUE)
   # demog's variables are as written: none is optional (no any_of default)
   expect_null(dm$ard$analyses[[2L]]$optional)

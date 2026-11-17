@@ -36,7 +36,7 @@ df <- function(...) data.frame(..., stringsAsFactors = FALSE)
 | `study` | key | `id` (the subject key), `output` (where the ARD goes), `source` (R files of the study's own functions) |
 | `datasets` | dataset | `dataset`, `level`, `path` (relative to the study folder), `derive` (columns made on reading) |
 | `populations` | analysis set | `population_id`, `dataset`, `where`, `derive` |
-| `analysis_data` | named data of a report | `output_id`, `data_id`, `label`, `from`, `population_id`, `subjects`, `where`, `add`, `derive`, `keep`, `distinct`, `code` |
+| `analysis_data` | named data of a report | `output_id`, `data_id`, `label`, `from`, `population_id`, `subjects_in`, `where`, `add`, `derive`, `keep`, `distinct`, `code` |
 | `analyses` | analysis | `output_id`, `analysis_id`, `method`, `data` or `dataset` + `population_id`, `where`, `by`, `strata`, `variables`, `statistics`, `denominator`, `formats`, `args`, `code`, `parent`, `post`, ... |
 
 Every column is described on its header cell's comment in the workbook,
@@ -82,7 +82,7 @@ When several analyses read the same data -- treatment-emergent events of
 the safety set, say -- the sheet `analysis_data` names it once.
 
 **An analysis data is a report's**: `output_id` says whose, and it is
-required. A row's `from` and `subjects` name only its own report's rows
+required. A row's `from` and `subjects_in` name only its own report's rows
 above it, and an analysis reads only its own report's data. So the same
 `data_id` may mean something else in another report -- the safety set of
 a Phase I table and of a Phase II one -- and a data two reports use is
@@ -92,7 +92,7 @@ Each row makes one data, in this order:
 
 1. `from` a dataset or an analysis data above it;
 2. kept to the subjects of a population (`population_id`) **or** of an
-   analysis data above (`subjects`: the numerator kept to the
+   analysis data above (`subjects_in`: the numerator kept to the
    denominator's subjects);
 3. the records `where` keeps;
 4. columns of the population's data added by the subject key (`add`);
@@ -110,7 +110,7 @@ adata <- df(
   label = c("Safety set", "TEAEs of the safety set", "Serious TEAEs"),
   from = c("ADSL", "ADAE", "adae_teae"),
   population_id = c("SAF", NA, NA),
-  subjects = c(NA, "adsl_saf", NA),
+  subjects_in = c(NA, "adsl_saf", NA),
   where = c(NA, 'TRTEMFL == "Y"', 'AESER == "Y"'),
   keep = c(NA, "AEBODSYS | AEDECOD | AESER | TRT01A", NA))
 
@@ -143,7 +143,7 @@ adata2$output_id <- "T-14-3-2"     # its own copy of the two data
 adata2 <- rbind(adata2, df(
   output_id = "T-14-3-2",
   data_id = "adae_first", label = "First TEAE of each subject and term",
-  from = "adae_teae", population_id = NA, subjects = NA, where = NA,
+  from = "adae_teae", population_id = NA, subjects_in = NA, where = NA,
   keep = NA))
 adata2$code <- c(NA, NA, paste(
   "adae_teae <- adae_teae[order(adae_teae$USUBJID, adae_teae$AEDECOD), ]",

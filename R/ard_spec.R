@@ -48,8 +48,8 @@
   objects = c("output_id", "object_id", "code", "label"),
   # condition-defined groups (the ARS's grouping factors): a row a level
   groups = c("group_id", "label", "level", "where"),
-  analysis_data = c("output_id", "data_id", "label", "from", "population_id", "subjects",
-                    "where", "add", "derive", "keep", "distinct", "code", "then"),
+  analysis_data = c("output_id", "data_id", "label", "from", "population_id", "subjects_in",
+                    "where", "add", "derive", "arrange", "keep", "distinct", "code", "then"),
   analyses = c("output_id", "analysis_id", "parent", "label", "method",
                "data", "dataset", "records",
                "population_id", "where", "by", "overall", "strata", "groups", "variables",
@@ -1252,8 +1252,8 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
   }, "")
   ad <- .adata_of(.adata_sheet(spec), output_id)
   ad <- ad[ad$data_id %in% .adata_used(ad, a), , drop = FALSE]
-  # a column added since (subjects, keep) blank in every row does not count
-  later <- c("subjects", "keep", "code", "then")
+  # a column added since (subjects_in, keep) blank in every row does not count
+  later <- c("subjects_in", "arrange", "keep", "code", "then")
   ad <- ad[setdiff(names(ad), later[vapply(later, function(cn) all(is.na(ad[[cn]])), NA)])]
   pops <- spec$populations[spec$populations$population_id %in%
                              c(a$population_id, ad$population_id), , drop = FALSE]

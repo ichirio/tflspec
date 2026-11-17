@@ -81,8 +81,8 @@ test_that("summary family: a number, numbers by arm, an analysis data's id", {
     z <- d2_expand(tpl, denominator = "adsl_part")
     expect_identical(d2_ids(z), d2_ids(d2_expand(tpl)), info = tpl)
     expect_identical(d2_an(z, cat)$denominator, "adsl_part", info = tpl)
-    # the header N is the study standard's: the same GROUPN
-    expect_identical(d2_an(x, "GROUPN"), d2_an(d2_expand(tpl), "GROUPN"), info = tpl)
+    # the header N is the study standard's: the same BIGN
+    expect_identical(d2_an(x, "BIGN"), d2_an(d2_expand(tpl), "BIGN"), info = tpl)
   }
 })
 
@@ -151,9 +151,9 @@ test_that("ae_overview: the default is the analysis set; each form goes to every
   expect_identical(d2_expand("ae_overview", denominator = "20"), one)
   v <- d2_expand("ae_overview", denominator = c("Drug X" = 10, Control = 8))
   expect_true(all(vapply(d2_flag_dens(v), identical, NA, c("Drug X" = 10L, Control = 8L))))
-  # (the header N is the same GROUPN on the set)
-  expect_identical(d2_an(one, "GROUPN"), d2_an(x, "GROUPN"))
-  expect_identical(d2_an(v, "GROUPN"), d2_an(x, "GROUPN"))
+  # (the header N is the same BIGN on the set)
+  expect_identical(d2_an(one, "BIGN"), d2_an(x, "BIGN"))
+  expect_identical(d2_an(v, "BIGN"), d2_an(x, "BIGN"))
   # another analysis set, narrowed by subset
   i <- d2_expand("ae_overview", denominator = "adsl_itt", subset = "SEX == \"F\"")
   expect_identical(d2_ids(i)[1:3], c("adsl_sub", "adsl_den", "adae_sub"))
@@ -173,7 +173,7 @@ test_that("ae_overview: the default is the analysis set; each form goes to every
 })
 
 test_that("ae_overview: header_n \"denominator\" counts the arms' N from the data of the percentages", {
-  gn <- function(...) d2_an(d2_expand("ae_overview", ...), "GROUPN")$data
+  gn <- function(...) d2_an(d2_expand("ae_overview", ...), "BIGN")$data
   # (header_n \"set\", the default: the analysis set whatever the denominator is)
   for (v in list(NULL, 20, c("Drug X" = 10, Control = 8), "adsl_itt", "data")) {
     expect_identical(gn(denominator = v), "adsl_sub")
@@ -186,7 +186,7 @@ test_that("ae_overview: header_n \"denominator\" counts the arms' N from the dat
   expect_identical(gn(denominator = "data", header_n = "denominator"), "adae_den")
   # "none": no N, the denominator as it is
   n <- d2_expand("ae_overview", denominator = "data", header_n = "none")
-  expect_false("GROUPN" %in% vapply(n$ard$analyses, function(a) a$id, ""))
+  expect_false("BIGN" %in% vapply(n$ard$analyses, function(a) a$id, ""))
   expect_true(all(vapply(d2_flag_dens(d2_expand("ae_overview", denominator = 20, header_n = "none")),
                          identical, NA, 20L)))
   # a number has no data to count from
@@ -434,7 +434,7 @@ test_that("summary, demog on ADSL: n (%) of each denominator, the header's N not
       info <- paste(tpl, nm)
       for (arm in h$arms) {
         # (the header's N: the set's, whatever the denominator)
-        expect_equal(d2_cells(r$ard, "TRT01A", arm, "", analysis = "GROUPN")[["n"]], h$set[[arm]],
+        expect_equal(d2_cells(r$ard, "TRT01A", arm, "", analysis = "BIGN")[["n"]], h$set[[arm]],
                      info = paste(info, arm))
         for (v in c("F", "M")) {
           c1 <- d2_cells(r$ard, "SEX", v, arm)
@@ -495,7 +495,7 @@ test_that("summary on records: n of the records over each denominator", {
                                    if (!is.null(f$den)) list(denominator = f$den)),
                    own = if (nm == "own") d2_own)
     for (arm in h$arms) {
-      expect_equal(d2_cells(r$ard, "TRT01A", arm, "", analysis = "GROUPN")[["n"]], h$set[[arm]],
+      expect_equal(d2_cells(r$ard, "TRT01A", arm, "", analysis = "BIGN")[["n"]], h$set[[arm]],
                    info = paste(nm, arm))
       for (v in c("MILD", "MODERATE", "SEVERE")) {
         c1 <- d2_cells(r$ard, "AESEV", v, arm)
@@ -563,7 +563,7 @@ test_that("ae_overview: n (%) of each denominator, and the header's N", {
     # (the header's N is the percentages' N)
     for (arm in h$arms) {
       expect_equal(d2_cells(r$ard, "ANY", "TRUE", arm)[["N"]],
-                   d2_cells(r$ard, "TRT01A", arm, "", analysis = "GROUPN")[["n"]],
+                   d2_cells(r$ard, "TRT01A", arm, "", analysis = "BIGN")[["n"]],
                    info = paste(nm, arm))
     }
   }

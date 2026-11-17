@@ -28,8 +28,11 @@
 #' @param dir The study folder (or its `spec/`).
 #' @param templates What a report written as a template SPEC becomes.
 #'   `"sheet"` (the default): one row of the `templates` sheet (and its
-#'   `template_rows`), by the template's name and arguments, as
-#'   [tfl_read_template_sheets()] reads them; the report's page parts,
+#'   `template_rows`, and its `conditions` as rows of the ARD's
+#'   `conditions` sheet with `analysis_id` blank), by the template's name
+#'   and arguments, as [tfl_read_template_sheets()] reads them; an argument
+#'   that is a map (`formats`) is not on the sheets and stays in the
+#'   report's YAML file; the report's page parts,
 #'   codelists and report row are the other sheets' as for any report. Nothing is expanded; a
 #'   report is written out as its items only by [tfl_template_to_spec()],
 #'   called on purpose.  `"expand"`: the report is expanded first
@@ -43,8 +46,9 @@
 #'   `ard` (the ARD sheets), `listing` (`listings`, `listing_cols`),
 #'   `figures` (a figure's design list, by id), `study` (study.yml's
 #'   fields), `templates` and `template_rows` (the template reports; with
-#'   `templates = "expand"` both are empty), `not_converted` (what the
-#'   sheets cannot hold).
+#'   `templates = "expand"` both are empty), `template_maps` (`output_id`,
+#'   `param`: a template report's arguments that are maps, which the sheets
+#'   do not hold), `not_converted` (what the sheets cannot hold).
 #' @examples
 #' d <- system.file("extdata", "spec-yaml", package = "tflspec")
 #' sh <- tfl_sheets_from_yaml(d)
@@ -91,6 +95,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
   }
   trows <- list()
   tparam_rows <- list()
+  tmap_rows <- list()
   bridge <- .bridge_fn(".plan_sheets_from_content")
   nc <- list()
   note <- function(output, part, reason) nc[[length(nc) + 1L]] <<- data.frame(
@@ -392,6 +397,11 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       enc <- .tpl_sheets_encode(id, o$kind, .na_scalar(o$label), tpl, .out_population(o))
       trows[[length(trows) + 1L]] <- enc$row
       tparam_rows <- c(tparam_rows, enc$rows)
+      # (its condition rows: the conditions sheet's, analysis_id blank)
+      cond_rows <- c(cond_rows, enc$cond)
+      # (its maps are not on the sheets: named, for tfl_yaml_from_sheets() to
+      # take them from the report's file it writes over)
+      for (m in enc$maps) tmap_rows[[length(tmap_rows) + 1L]] <- list(output_id = id, param = m)
       if (length(enc$lost)) {
         warning(sprintf("%s: template arguments the templates sheet cannot hold are not kept: %s",
                         id, paste(enc$lost, collapse = ", ")), call. = FALSE)
@@ -492,12 +502,12 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       # a figure of items (R/fig_content.R): its data and items as they are,
       # the design list's `content` (read back by .conv_output(), #689)
       fd <- list(template = o$template, data = o$data$steps, content = .items_to_list(o$content))
-      for (k in c("ggplot2_version", "plot", "plots", "compose")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]
+      for (k in c("ggplot2_version", "plot", "plots", "compose", "figure")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]
       figures[[id]] <- fd
       # what the design list has no place for is said, by the report
       lost <- c(setdiff(names(o$data), c("steps", "code", "datasets", "ard", "source")),
                 if (!is.null(o$data$source) && !identical(o$data$source, "code")) "source")
-      lost <- c(lost, setdiff(names(o), c(.output_fields, "template", "ggplot2_version", "plot", "plots", "compose")))
+      lost <- c(lost, setdiff(names(o), c(.output_fields, "template", "ggplot2_version", "plot", "plots", "compose", "figure")))
       if (length(lost)) {
         note(id, "figure", paste0("a figure of items: ", paste(unique(lost), collapse = ", "),
                                    " is not kept (the design list has no place for it)"))
@@ -508,6 +518,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       if (code_content) oc$content <- list()
       fd <- .fig_design_of_output(oc)
       if (!is.null(o$template)) fd$template <- o$template
+      if (!is.null(o$figure)) fd$figure <- o$figure
       # a figure that is its own code and nothing of the designer's has no
       # design
       if (!(code_content && identical(names(fd), "layers"))) figures[[id]] <- fd
@@ -642,6 +653,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
        templates = .rows_df(trows, c("output_id", "kind", "label", "population", "template", "by",
                                      "where", "args")),
        template_rows = .rows_df(tparam_rows, c("output_id", "param", "value", "label")),
+       template_maps = .rows_df(tmap_rows, c("output_id", "param")),
        not_converted = if (length(nc)) do.call(rbind, nc) else
          data.frame(output = character(), part = character(), reason = character(), stringsAsFactors = FALSE))
 }

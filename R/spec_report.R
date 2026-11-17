@@ -367,6 +367,23 @@
   })
 }
 
+# The report's analysis set: `common: population`, else (a report built from a
+# template has none) the one set its subjects data entries name; NA for none
+# or for several
+.out_population_or_data <- function(output) {
+  pop <- .out_population(output)
+  if (!is.na(pop)) return(pop)
+  # (a resolved report has them as its ARD's analysis_data, a file's as `data:`)
+  d <- c(if (is.list(output$data)) output$data, if (is.list(output$ard$analysis_data)) output$ard$analysis_data)
+  if (!length(d)) return(NA_character_)
+  v <- unlist(lapply(d, function(a) {
+    if (.entry_is_subjects(a) && is.character(a$population) && length(a$population) == 1L &&
+          !is.na(a$population) && nzchar(a$population)) a$population
+  }))
+  v <- unique(v)
+  if (length(v) == 1L) v else NA_character_
+}
+
 # a function's arguments as page: says them: a map, unset ones gone
 # The report's own values for the bands' tokens besides its id and label:
 # its title (`label:`) and its analysis set's label (data.yml's), so that
@@ -377,7 +394,7 @@
   lab <- output$label
   if (is.character(lab) && length(lab) == 1L && !is.na(lab) && nzchar(lab)) own$OUTPUT_TITLE <- lab
   # (`common: population_label` is the text when there is no set, and wins when there is one)
-  pop <- .out_population(output)
+  pop <- .out_population_or_data(output)
   if (is.character(pop) && length(pop) == 1L && !is.na(pop) && nzchar(pop)) {
     def <- Filter(function(p) identical(p$id, pop), study$data$populations %||% list())
     pl <- if (length(def)) def[[1L]]$label

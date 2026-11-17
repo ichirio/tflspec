@@ -971,7 +971,7 @@ rtf_footer:
       records a condition keeps, columns of the population added, columns derived,
       one row per set of values. In that order. An analysis names one in `data`, or
       as its `denominator`. In a YAML report these rows are its `data:` list (a
-      definition''s `id` is the `data_id`); a subjects row (from ADSL, no `subjects`)
+      definition''s `id` is the `data_id`); a subjects row (from ADSL, no `subjects_in`)
       with no population takes the report''s `common: population`.'
     columns:
       - column: data_id
@@ -990,7 +990,7 @@ rtf_footer:
         description: 'Keeps the subjects of this population; blank: no restriction
           here (made from an analysis data: that one''s population).'
         example: SAF
-      - column: subjects
+      - column: subjects_in
         description: 'Keeps the subjects of an analysis data above (a report''s own
           subjects: the safety set in phase 1 ...): the numerator kept to the denominator''s
           subjects. Instead of population_id; blank: no restriction here.'
@@ -1001,7 +1001,7 @@ rtf_footer:
         example: TRTEMFL == "Y"
       - column: add
         description: 'Columns of the population''s data (its dataset, ADSL) -- or
-          of the data of `subjects` -- added by the subject key, | between them; a
+          of the data of `subjects_in` -- added by the subject key, | between them; a
           column of the same name is replaced. Needs a population or subjects, here
           or above; blank: none.'
         example: TRT01A | AGEGR1
@@ -1009,6 +1009,11 @@ rtf_footer:
         description: 'New columns, NAME = R expression, | between them (transform());
           a column the code lists list becomes a factor in their order; blank: none.'
         example: PHASE = APHASE
+      - column: arrange
+        description: 'The rows'' order, | between the columns, after derive (and before
+          keep and distinct, which keeps the first row in it): a column, -column for
+          descending (dplyr::arrange()); blank: the data''s order.'
+        example: USUBJID | -ASTDT
       - column: keep
         description: 'The columns kept, | between them (the subject key always); with
           derive, what transmute() does; blank: every column.'
@@ -1180,7 +1185,8 @@ rtf_footer:
       - column: analysis_per
         description: 'A template item: how its analyses are named; level (a depth
           an analysis, <id>_ANY, <id>_L1, ...) or columns | between them (a condition
-          row an analysis, its id their values: ALT_HIGH); blank: the analysis_id.'
+          row an analysis, its id their values: ALT_HIGH); level:ANY,L1,L2 (the
+          depths'' ids themselves, the any row''s first); blank: the analysis_id.'
         example: PARAMCD | tox_dir
   - sheet: conditions
     description: 'ARD: a template item''s condition rows, one row a run of the

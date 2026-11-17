@@ -250,3 +250,89 @@ test_that("a flat args: under template: is read as the step sections are", {
   rep$template$args$nonesuch <- 1
   expect_error(tfl_template_resolve(rep, study = tr_study()), "has no argument nonesuch")
 })
+
+test_that("tflspec_summary: demog's arguments give demog's code SPEC; the analysis set is a param", {
+  dm <- tr_reports()$demog
+  sm <- dm
+  sm$template$name <- "tflspec_v1/tflspec_summary"
+  a <- tfl_template_resolve(dm, study = tr_study())
+  b <- tfl_template_resolve(sm, study = tr_study())
+  for (k in c("id", "kind", "label", "extends", "style", "data", "ard", "content", "page")) {
+    expect_identical(b[[k]], a[[k]], info = k)
+  }
+  expect_identical(attr(b, "template"), "tflspec_v1/tflspec_summary")
+  expect_identical(attr(b, "args")[names(attr(a, "args"))], attr(a, "args"))
+  # the analysis set: a param, its default the series' population_safety
+  expect_identical(attr(b, "args")$population, "SAF")
+  expect_identical(attr(b, "origins")[["population"]], "series")
+  row_pop <- function(out) {
+    d <- out$ard$analysis_data
+    d[[match("adsl_sub", vapply(d, function(r) r$id, ""))]]$population
+  }
+  expect_identical(row_pop(b), "SAF")
+  sm$template$data <- list(population = "FAS")
+  b2 <- tfl_template_resolve(sm, study = tr_study())
+  expect_identical(row_pop(b2), "FAS")
+  expect_identical(attr(b2, "origins")[["population"]], "report")
+  # demog has no such argument
+  dm$template$data <- list(population = "FAS")
+  expect_error(tfl_template_resolve(dm, study = tr_study()), "has no argument population")
+  # the template's own label when the report gives none
+  sm$label <- NULL
+  expect_identical(tfl_template_resolve(sm, study = tr_study())$label, "Summary")
+})
+
+test_that("tflspec_summary: nest, value_labels and col_header are optional steps", {
+  sm <- tr_reports()$demog
+  sm$template$name <- "tflspec_v1/tflspec_summary"
+  fns <- function(o) vapply(o$content, function(it) it$fn, "")
+  item <- function(o, fn) o$content[[match(fn, fns(o))]]$args
+  # none given: no step (the content as it was before the params)
+  b <- tfl_template_resolve(sm, study = tr_study())
+  expect_identical(fns(b), c("table_plan", "plan_cells", "plan_paginate_rows"))
+  for (p in c("nest", "value_labels", "col_header")) {
+    expect_null(attr(b, "args")[[p]], info = p)
+  }
+  # nest: {nested variable: {parent variable: level}}, as the step's map
+  sm$template$content <- list(nest = list(ETHNIC = list(RACE = "ASIAN")))
+  n <- tfl_template_resolve(sm, study = tr_study())
+  expect_identical(item(n, "plan_nest"), list(ETHNIC = list(RACE = "ASIAN")))
+  expect_identical(fns(n), c("table_plan", "plan_nest", "plan_cells", "plan_paginate_rows"))
+  # col_header: the lines
+  ln <- list(list(row_label = "", .values = "{col}"), list(row_label = "Item", .values = "(N={n})"))
+  sm$template$content <- list(col_header = ln)
+  h <- tfl_template_resolve(sm, study = tr_study())
+  expect_identical(item(h, "plan_col_header"), list(lines = ln))
+  expect_identical(fns(h), c("table_plan", "plan_cells", "plan_col_header", "plan_paginate_rows"))
+})
+
+test_that("tflspec_summary: labels and value_labels are one plan_labels, a heading kept", {
+  sm <- tr_reports()$demog
+  sm$template$name <- "tflspec_v1/tflspec_summary"
+  fns <- function(o) vapply(o$content, function(it) it$fn, "")
+  lab <- function(o) o$content[[match("plan_labels", fns(o))]]$args
+  # value_labels alone
+  sm$template$content <- list(value_labels = list(SEX = list(F = "Female", M = "Male")))
+  b <- tfl_template_resolve(sm, study = tr_study())
+  expect_identical(sum(fns(b) == "plan_labels"), 1L)
+  expect_identical(lab(b), list(SEX = list(F = "Female", M = "Male")))
+  # both, a variable in each: one entry, its heading first, then its values;
+  # a variable only in labels is a heading, only in value_labels its values
+  sm$template$content <- list(
+    labels = list(SEX = "Sex, n (%)", RACE = "Race"),
+    value_labels = list(SEX = list(F = "Female", M = "Male"), AGEGR1 = list(`<65` = "Under 65")))
+  b <- tfl_template_resolve(sm, study = tr_study())
+  expect_identical(sum(fns(b) == "plan_labels"), 1L)
+  expect_identical(lab(b), list(SEX = list(SEX = "Sex, n (%)", F = "Female", M = "Male"),
+                                RACE = "Race", AGEGR1 = list(`<65` = "Under 65")))
+  # the heading a value_labels entry gives under the variable's own name wins
+  sm$template$content$value_labels$SEX <- list(SEX = "Sex", F = "Female")
+  expect_identical(lab(tfl_template_resolve(sm, study = tr_study()))$SEX,
+                   list(SEX = "Sex", F = "Female"))
+  # labels alone, as before
+  sm$template$content <- list(labels = list(SEX = "Sex, n (%)"))
+  expect_identical(lab(tfl_template_resolve(sm, study = tr_study())), list(SEX = "Sex, n (%)"))
+  # a value_labels entry is a map of codes
+  sm$template$content <- list(value_labels = list(SEX = "Female"))
+  expect_error(tfl_template_resolve(sm, study = tr_study()), "value_labels: SEX is a map")
+})

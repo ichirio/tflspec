@@ -198,7 +198,7 @@
   in_ai <- grepl("(^|/)ai/", f)
   in_ai && (b %in% c("AGENTS.md", "agent_prompt.md", "templates.md") ||
               grepl("^instructions-.*[.]md$", b) ||
-              grepl("(^|/)ai/(requests|repairs)/[^/]+[.]md$", f) ||
+              grepl("(^|/)ai/(requests|repairs|ars)/[^/]+[.]md$", f) ||
               grepl("(^|/)ai/[.]github/", f))
 }
 

@@ -68,7 +68,7 @@
   # the listing's records (a BLQ one -Inf: it prints `blq_label`) and the
   # summary's (the values)
   rec <- function(id, label, where, derive) Filter(Negate(is.null), list(
-    id = id, label = label, from = a$data, subjects = subj,
+    id = id, label = label, from = a$data, subjects_in = subj,
     where = if (length(where)) tfl_r(.tpl_and_all(where)),
     derive = if (length(derive)) tfl_r(paste(derive, collapse = " | "))))
   sets <- list(

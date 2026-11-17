@@ -61,18 +61,18 @@ params:
   y_label:
     type: string
     input: text
-    default: Survival probability
+    default: Survival Probability
     step: content
     tier: usual
     description: The label of the y axis.
   legend:
-    type: enum[bottom|right|top|none]
+    type: enum[inside|bottom|none]
     input: pick
     choices: fixed
     default: bottom
     step: content
     tier: other
-    description: Where the legend goes; none for no legend.
+    description: Where the legend goes (inside at the top right, bottom); none for no legend.
 extends: !series extends
 style: !series style
 data:

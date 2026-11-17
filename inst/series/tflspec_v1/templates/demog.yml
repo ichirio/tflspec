@@ -166,7 +166,6 @@ analysis:
 content:
   - table_plan: {cols: "{by}", rows: {group: variable}}
   - plan_labels: "{labels}"
-  - plan_labels: "{value_labels}"
   - plan_cells:
       continuous: "{cells}"
       categorical: "{count_cell}"

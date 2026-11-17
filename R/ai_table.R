@@ -615,7 +615,7 @@
     id <- .ai_scalar_text(a[["id"]])
     if (is.null(id)) add(w, "has no id") else ad_ids <- c(ad_ids, id)
     chk_pop(paste(w, "population"), .ai_scalar_text(a[["population"]]))
-    has_pop <- has_pop || !is.null(a[["population"]]) || !is.null(a[["subjects"]])
+    has_pop <- has_pop || !is.null(a[["population"]]) || !is.null(a[["subjects_in"]])
     ad_par[[tolower(id %||% paste0("data", j))]] <- says_par(a[["where"]]) || says_par(a[["code"]]) ||
       isTRUE(ad_par[[tolower(.ai_scalar_text(a[["from"]]) %||% "")]])
     from <- toupper(.ai_scalar_text(a[["from"]]) %||% "")

@@ -1610,7 +1610,13 @@ tfl_content_run <- function(output, data) {
 #'   normalization).  A figure's template (`km_survival`): its data steps
 #'   written out, then `content <- tfl_tpl(<data>, "<name>", ...)` and the
 #'   report's own items `+`-ed after it; `"items"` (or a report that
-#'   replaces one of the template's layers) writes its design.
+#'   replaces one of the template's layers) writes its design.  A figure
+#'   of a series template (`<series>/<template>`, resolved by
+#'   [tfl_template_resolve()]) whose template names its content in `figure:`
+#'   (`km_curves`, `forest_hr`): `content <- tflspec::km_curves(km_fit =
+#'   km_fit, ard = ard, params = list(...))` -- the function [tfl_figure_fn()]
+#'   finds, with the report's resolved arguments, one a line (the model
+#'   `km_fit` written before it).
 #' @param study The study ([tfl_read_study_spec()]) or its folder; for a listing
 #'   of records (`data: {source: dataset}`) the code starts with its data
 #'   part, as [tfl_listing_code()] `part = "data"` writes it (the dataset
@@ -1641,7 +1647,10 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
   # SPEC's (resolved), its data steps and the template's call (the A use)
   if (identical(output$kind, "figure")) {
     tp <- attr(output, "template")
-    if (!is.null(tp) && identical(match.arg(template), "call")) {
+    # (a series template's: its `figure:` content function's call)
+    series <- .content_fig_series_code(output)
+    if (!is.null(series) && identical(match.arg(template), "call")) return(series)
+    if (is.list(tp) && identical(match.arg(template), "call")) {
       if (isTRUE(tp$ok)) return(.content_fig_tpl_code(output))
       message(sprintf(paste0("%s: the template's call cannot say this report's own data or ",
                              "a layer of the template it replaces; its design is written."),

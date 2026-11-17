@@ -287,17 +287,17 @@ test_that("shift: header_n = 'none' shows no N; page_by = FALSE shows the set's 
   pg <- suppressMessages(rtfreporter::plan_apply(sn_report(d, list(header_n = "none")), "pages"))
   expect_identical(names(pg), c("Parameter: ALT", "Parameter: AST"))
   expect_identical(sn_hdr1(pg[[1L]]), c("", "Drug X", "Control"))
-  # the N's analysis is there only when it is shown: the set's GROUPN (default,
+  # the N's analysis is there only when it is shown: the set's BIGN (default,
   # with or without page_by), or the tested subjects' (only with page_by)
   x <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "V", params = "ALT"))
-  expect_identical(vapply(x$ard$analyses, `[[`, "", "id"), c("SHIFT", "GROUPN"))
+  expect_identical(vapply(x$ard$analyses, `[[`, "", "id"), c("SHIFT", "BIGN"))
   expect_identical(x$ard$analyses[[2L]]$data, "adsl_sub")
   y <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "V", params = "ALT",
                                              header_n = "none"))
   expect_length(y$ard$analyses, 1L)
   z <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "V", params = "ALT",
                                              page_by = FALSE))
-  expect_identical(vapply(z$ard$analyses, `[[`, "", "id"), c("SHIFT", "GROUPN"))
+  expect_identical(vapply(z$ard$analyses, `[[`, "", "id"), c("SHIFT", "BIGN"))
   t1 <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "V", params = "ALT",
                                               header_n = "tested"))
   expect_identical(vapply(t1$ard$analyses, `[[`, "", "id"), c("SHIFT", "SHIFT_N"))
@@ -676,8 +676,8 @@ test_that("shift: the defaults -- a missing baseline is out, % of the tested, he
   expect_equal(sd_stat(x$ard, "HIGH", "HIGH", "n"), 3)
   expect_identical(x$table[["Drug X____HIGH"]][x$table$BNRIND == "NORMAL"], "2 (9.5)")
   expect_identical(x$table[["Drug X____LOW"]][x$table$BNRIND == "Total"], "1 (4.8)")
-  # the header N is the analysis set's, counted apart from the %: GROUPN
-  g <- x$ard[x$ard$analysis_id == "GROUPN" & x$ard$stat_name == "n", ]
+  # the header N is the analysis set's, counted apart from the %: BIGN
+  g <- x$ard[x$ard$analysis_id == "BIGN" & x$ard$stat_name == "n", ]
   expect_equal(as.numeric(unlist(g$stat)), 25)
   # missing_label = "Missing" (opt-in): a Missing row, in the Total and the denominator
   m <- sd_report(d, list(missing_label = "Missing"))
