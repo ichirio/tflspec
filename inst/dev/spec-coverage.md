@@ -1110,6 +1110,12 @@ Percentage: yes counts 1, partial 0.5.
 | 2026-11-15 before | 54.7% (333 / 39 / 272 of 644) | 61.1% (333 / 39 / 205 of 577) | 42 / 7 / 65 |
 | 2026-11-15 after  | 59.5% (333 / 100 / 211 of 644) | 66.4% (333 / 100 / 144 of 577) | 42 / 18 / 54 |
 | 2026-11-16 before / after | 59.5% (333 / 100 / 211 of 644) | 66.4% (333 / 100 / 144 of 577) | 42 / 18 / 54 |
+| 2026-11-17 before / after | 59.5% (333 / 100 / 211 of 644) | 66.4% (333 / 100 / 144 of 577) | 42 / 18 / 54 |
+
+(2026-11-17: rtfreporter@next 27cb3e4 (its changes since 8e2d5a3 are the
+header N read with relabelled column values, validation records, tests
+and the README: no new exported argument) and tflspec@next bbd0d57
+merged.  The run went to cards / cardx; the table is unchanged.)
 
 (2026-11-16: rtfreporter@next 8e2d5a3 (its changes since bb25b9c are the
 0.9.0 freeze's Word checks, validation records for `normalize_ard(combine
