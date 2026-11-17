@@ -181,3 +181,57 @@ test_that("tflspec_summary: a report's filter on adsl_sub reaches BIGN (header N
   expect_equal(num(p$stat), rep(1, nrow(p)))
   expect_false(any(txt(sx$variable_level) == "M" & sx$stat_name == "n" & num(sx$stat) > 0))
 })
+
+test_that("tflspec_dm (a report template on tflspec_summary): DM's arguments give demog's ARD", {
+  twin_skip()
+  d <- twin_study(file.path(tempdir(), "twin-dm-base"),
+                  system.file("extdata", "spec-yaml", "defaults.yml", package = "tflspec"),
+                  style = FALSE)
+  on.exit(unlink(d, recursive = TRUE))
+  out <- file.path(d, "spec", "outputs")
+  x <- readLines(twin_fx("T-14-1-1T.yml"))
+  y <- sub("^id: T-14-1-1T$", "id: T-14-1-1D", x)
+  y <- sub("^  name: tflspec_v1/demog$", "  name: tflspec_v1/tflspec_dm", y)
+  expect_identical(sum(y != x), 2L)
+  ids <- c(demog = "T-14-1-1T", dm = "T-14-1-1D")
+  writeLines(x, file.path(out, "T-14-1-1T.yml"))
+  writeLines(y, file.path(out, "T-14-1-1D.yml"))
+  st <- tfl_read_study_spec(d)
+  for (id in ids) {
+    f <- file.path(out, paste0(id, ".yml"))
+    tfl_write_output(tfl_template_to_spec(tfl_read_output(f), st), f)
+  }
+  st <- tfl_read_study_spec(d)
+  ard <- lapply(ids, function(id)
+    suppressMessages(tfl_build_ard(st, dir = d, output_id = id, save = FALSE)))
+  expect_identical(twin_ard(ard$dm), twin_ard(ard$demog))
+})
+
+test_that("disposition: tflspec_summary with the report's values and tflspec_disposition give the same ARD", {
+  twin_skip()
+  d <- twin_study(file.path(tempdir(), "twin-disp"),
+                  system.file("extdata", "spec-yaml", "defaults.yml", package = "tflspec"),
+                  style = FALSE)
+  on.exit(unlink(d, recursive = TRUE))
+  out <- file.path(d, "spec", "outputs")
+  ids <- c(summary = "T-14-1-2A", nest = "T-14-1-2B")
+  files <- c(summary = "disp-summary.yml", nest = "disp-nest.yml")
+  for (k in names(ids)) {
+    file.copy(test_path("fixtures", "summary", files[[k]]), file.path(out, paste0(ids[[k]], ".yml")))
+  }
+  st <- tfl_read_study_spec(d)
+  for (id in ids) {
+    f <- file.path(out, paste0(id, ".yml"))
+    tfl_write_output(tfl_template_to_spec(tfl_read_output(f), st), f)
+  }
+  st <- tfl_read_study_spec(d)
+  ard <- lapply(ids, function(id)
+    suppressMessages(tfl_build_ard(st, dir = d, output_id = id, save = FALSE)))
+  expect_identical(unique(ard$nest$analysis_id),
+                   c("BIGN", "EOTSTT", "DCTREAS", "EOSSTT", "DCSREAS"))
+  expect_identical(twin_ard(ard$nest), twin_ard(ard$summary))
+  # the enrolled subjects: 160, both arms (TRT01P)
+  big <- as.data.frame(ard$nest)
+  big <- big[big$analysis_id == "BIGN" & big$stat_name == "n", ]
+  expect_equal(sum(vapply(big$stat, function(e) as.numeric(unlist(e))[1L], 0)), 160)
+})

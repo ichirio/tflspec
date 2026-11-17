@@ -19,7 +19,8 @@ tfl_template_resolve(report, template = NULL, study = NULL)
 A \code{tfl_output} (the report as a code SPEC).  Its attribute
 \code{"args"} holds the template's arguments as used, and \code{"origins"} where
 each came from (\code{"report"}, \code{"template"}, \code{"series"}, \code{"study"},
-\code{"fixed"}).
+\code{"fixed"}); \code{"set_by"} the template that set each (\code{"report"}, the
+template, or the template its \code{base:} names: a prototype).
 }
 \description{
 Reads the report's template (\verb{template: name: <series>/<template>}), puts

@@ -44,7 +44,8 @@
 #' @return A `tfl_output` (the report as a code SPEC).  Its attribute
 #'   `"args"` holds the template's arguments as used, and `"origins"` where
 #'   each came from (`"report"`, `"template"`, `"series"`, `"study"`,
-#'   `"fixed"`).
+#'   `"fixed"`); `"set_by"` the template that set each (`"report"`, the
+#'   template, or the template its `base:` names: a prototype).
 #' @seealso [tfl_arg_defs()], [tfl_series_dir()]
 #' @export
 tfl_template_resolve <- function(report, template = NULL, study = NULL) {
@@ -59,7 +60,8 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   if (is.null(template)) stop(who, ": the report names no template (template: name:).", call. = FALSE)
   tf <- .template_file(template)
   series <- tfl_series_read(sub("/.*$", "", template), dir = dirname(dirname(dirname(tf))))
-  tpl <- .series_resolve(.series_read_yaml(tf), series, study, template)
+  raw <- .tpl_base_merge(.series_read_yaml(tf), template, .series_read_yaml)
+  tpl <- .series_resolve(raw, series, study, template)
   torig <- attr(tpl, "origins")
   report <- .series_resolve(report, series, study, template, origin = "report")
   defs <- tfl_arg_defs(template = template)
@@ -151,6 +153,10 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   attr(out, "template") <- template
   attr(out, "args") <- env
   attr(out, "origins") <- origins
+  # (prototype, R/tpl_base.R) the template whose file set each value: the
+  # report's, else the report template's or its base's
+  set_by <- attr(raw, "set_by") %||% stats::setNames(rep(template, length(origins)), names(origins))
+  attr(out, "set_by") <- ifelse(origins == "report", "report", set_by[names(origins)])
   out
 }
 

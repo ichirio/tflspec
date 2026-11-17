@@ -188,6 +188,7 @@
   row$free <- as.logical(free)
   row$ordered <- as.logical(ordered)
   row$columns <- I(list(d$columns))
+  row$suggest <- I(list(if (is.null(d$suggest)) NULL else as.character(unlist(d$suggest))))
   row$fixed_rows <- I(list(NULL))
   row$tier <- tier
   row$description <- as.character(d$description %||% d$help %||% "")
@@ -361,7 +362,8 @@
 
 .template_read <- function(template) {
   f <- .template_file(template)
-  y <- yaml::read_yaml(f, handlers = .arg_yaml_handlers())
+  read <- function(x) yaml::read_yaml(x, handlers = .arg_yaml_handlers())
+  y <- .tpl_base_merge(read(f), template, read)
   attr(y, "file") <- f
   y
 }
@@ -410,6 +412,9 @@
 #'       `params:`); in a list, an unnamed `"params"` marks where the item's
 #'       params go (an item's conditions: `"params"`, `where`, an optional
 #'       `analysis_id`).}
+#'     \item{suggest}{(a list column) a template's suggestion candidates: the
+#'       typical columns the screen offers when the data has them; never a
+#'       default (canon 1.12).}
 #'     \item{fixed_rows}{(a list column) a template's table param: the rows
 #'       the template writes with fixed values next to its `"{name}"` (the
 #'       ALL row of forest_hr's conditions), a data frame whose attribute

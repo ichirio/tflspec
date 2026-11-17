@@ -1,0 +1,16 @@
+# tflspec_v1/templates/tflspec_disposition.yml
+# PROTOTYPE (canon 2026-11-17 d399dac, 8b37892): a report template on the
+# base tflspec_summary; it writes only what it changes (R/tpl_base.R).
+# The analysis set is the enrolled subjects (ENRL), a reason row only for
+# subjects who have one (no Missing row).  The ADSL columns are used as
+# they are: no data shaping is needed for this table.
+template: tflspec_disposition
+base: tflspec_summary
+label: Subject Disposition
+params:
+  population:
+    default: ENRL
+  missing_row:
+    default: false
+  categorical:
+    suggest: [EOTSTT, DCTREAS, EOSSTT, DCSREAS]

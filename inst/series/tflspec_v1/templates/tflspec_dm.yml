@@ -1,0 +1,16 @@
+# tflspec_v1/templates/tflspec_dm.yml
+# PROTOTYPE (canon 2026-11-17 d399dac, 8b37892): a report template that
+# names its base template (tflspec_summary, same series) and writes only
+# what it changes; everything else -- params, data, analysis, content,
+# page -- is the base's (R/tpl_base.R).  The user decides later whether
+# this form stays.  The variables stay without defaults (canon 1.12,
+# 0235ecc): `suggest:` lists typical ones the screen may offer when the
+# data has them.
+template: tflspec_dm
+base: tflspec_summary
+label: Demographics
+params:
+  continuous:
+    suggest: [AGE, HEIGHTBL, WEIGHTBL, BMIBL]
+  categorical:
+    suggest: [AGEGR1, SEX, RACE, ETHNIC]

@@ -14,10 +14,13 @@ series_read <- function(f) {
   yaml::read_yaml(f, handlers = series_tag_handlers())
 }
 
-series_templates <- function() {
+series_templates <- function(base = FALSE) {
   fs <- list.files(file.path(series_dir(), "templates"), "[.]yml$",
                    full.names = TRUE)
-  stats::setNames(lapply(fs, series_read), basename(fs))
+  ts <- stats::setNames(lapply(fs, series_read), basename(fs))
+  # (a report template on a base, the prototype: what it writes is checked
+  # in test-template-base.R)
+  if (base) ts else Filter(function(t) is.null(t$base), ts)
 }
 
 # Every "{x}" name in a value: the name before a ":" or the closing brace
@@ -48,6 +51,7 @@ test_that("every template has its keys, a BIGN item and ids on its items", {
   skip_if(!nzchar(series_dir()), "the series folder is not installed")
   ts <- series_templates()
   expect_length(ts, 8L)
+  expect_length(series_templates(base = TRUE), 10L)
   for (nm in names(ts)) {
     t <- ts[[nm]]
     for (k in c("template", "label", "params", "data", "analysis")) {

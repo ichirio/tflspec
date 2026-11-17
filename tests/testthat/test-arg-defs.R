@@ -1,5 +1,5 @@
 cols <- c("name", "label_key", "step", "input", "type", "required", "default",
-          "default_kind", "choices", "values", "free", "ordered", "columns", "fixed_rows", "tier",
+          "default_kind", "choices", "values", "free", "ordered", "columns", "suggest", "fixed_rows", "tier",
           "description")
 
 test_that("tfl_arg_defs() takes fn or template, one of them", {

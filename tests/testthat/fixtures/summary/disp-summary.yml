@@ -1,0 +1,13 @@
+# Disposition with option 1: tflspec_summary only, the report sets what
+# disposition needs (fictional data: tflspec's adsl)
+id: T-14-1-2A
+kind: table
+label: Subject Disposition
+template:
+  name: tflspec_v1/tflspec_summary
+  data:
+    population: ENRL
+  analysis:
+    by: [TRT01P]
+    categorical: [EOTSTT, DCTREAS, EOSSTT, DCSREAS]
+    missing_row: false
