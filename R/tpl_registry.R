@@ -584,7 +584,7 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
             ids <- c(ids, sid)
           }
           e$population <- NULL
-          e$subjects <- sid
+          e$subjects_in <- sid
         }
       }
       res <- c(res, list(e))
