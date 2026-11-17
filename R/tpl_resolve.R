@@ -50,12 +50,18 @@
 #' \describe{
 #'   \item{`value: x`}{`x` as it is filled in.}
 #'   \item{`if: x, then: a, else: b`}{`a` when `x` is something (not
-#'     nothing, `FALSE`, `""` or empty), else `b` (default nothing).}
+#'     nothing, `FALSE`, `""` or empty), else `b` (default nothing).  With
+#'     `is: v`, when `x` is the value `v`.}
 #'   \item{`last: x`}{the last element of the list `x`.}
 #'   \item{`but_last: x`}{all but the last (nothing for fewer than two).}
 #'   \item{`join: x, sep: s`}{the elements as one text, `s` between them
 #'     (default `", "`).}
 #'   \item{`keys: x, prefix: p`}{a map `p1: x1, p2: x2, ...`.}
+#'   \item{`each: x, to: t`}{a list, `t` filled in once an element of `x`:
+#'     a row of a table (a map) gives its columns as names inside `t` (a
+#'     column the row leaves out is nothing), any other element is
+#'     `"{item}"`.  A row's column (or `item`) named as an argument or a
+#'     derived name stops: a name inside `t` means one thing.}
 #' }
 #' Each gives nothing for an empty `x`.  A value that is nothing drops its
 #' key, its list element, and an item whose map is left empty; so a content
@@ -110,6 +116,7 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
     }
     if (inherits(val, "tfl_unset")) val <- NULL
     if (!is.null(val)) attr(val, "fixed") <- attr(val, "origin") <- attr(val, "origins") <- NULL
+    .tr_one_value(val, defs$type[[i]], defs$values[[i]], p, o, template, who)
     if (is.null(val) && isTRUE(defs$required[[i]])) missing <- c(missing, p)
     env[p] <- list(val)
     origins[[p]] <- o
@@ -187,8 +194,8 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
 # .tr_derive_ops on filled values (its options .tr_derive_opts); added to
 # `env` after the arguments, so later entries and the template's sections
 # read them as "{name}".  Nothing (NULL) stays a name whose value is nothing.
-.tr_derive_ops <- list(value = character(), "if" = c("then", "else"), last = character(),
-                       but_last = character(), join = "sep", keys = "prefix")
+.tr_derive_ops <- list(value = character(), "if" = c("then", "else", "is"), last = character(),
+                       but_last = character(), join = "sep", keys = "prefix", each = "to")
 
 .tr_derive <- function(derive, env, params, template) {
   if (is.null(derive)) return(env)
@@ -223,11 +230,51 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   n <- length(x)
   switch(op,
     value = x,
-    "if" = .tr_fill(if (.tr_is_something(x)) d$then else d[["else"]], env),
+    "if" = .tr_fill(if (.tr_derive_test(x, d)) d$then else d[["else"]], env),
     last = if (n) x[[n]],
     but_last = if (n > 1L) x[-n],
     join = if (n) paste(as.character(unlist(x)), collapse = .tr_option(d$sep, ", ")),
-    keys = if (n) stats::setNames(as.list(x), paste0(.tr_option(d$prefix, ""), seq_len(n))))
+    keys = if (n) stats::setNames(as.list(x), paste0(.tr_option(d$prefix, ""), seq_len(n))),
+    each = if (n) .tr_derive_each(x, d$to, env, where))
+}
+
+# `if:`'s test: with `is:`, x is that one value; else x is something
+.tr_derive_test <- function(x, d) {
+  if (is.null(d$is)) return(.tr_is_something(x))
+  v <- as.character(unlist(x))
+  length(v) == 1L && identical(v, as.character(unlist(d$is))[1L])
+}
+
+# `each:` -- `to` filled in once an element: a row (a map) lends its
+# columns, another element is "{item}"; none may be a name already known
+.tr_derive_each <- function(x, to, env, where) {
+  out <- lapply(x, function(e) {
+    own <- if (is.list(e) && !is.null(names(e))) e else list(item = e)
+    clash <- intersect(names(own), names(env))
+    if (length(clash)) {
+      stop(where, ": each: ", paste(clash, collapse = ", "),
+           " is an argument's or a derived name; a row's column takes a name of its own.",
+           call. = FALSE)
+    }
+    # a column the row leaves out is nothing
+    cols <- setdiff(.tr_spots(to), names(env))
+    own[setdiff(cols, names(own))] <- list(NULL)
+    .tr_fill(to, c(env, own))
+  })
+  out <- out[!vapply(out, is.null, NA)]
+  # (one text each: a vector of them, as a list of names is written)
+  if (length(out) && all(vapply(out, function(v) is.character(v) && length(v) == 1L, NA))) {
+    return(unlist(out))
+  }
+  out
+}
+
+# the "{name}" names of a value (its text, at any depth)
+.tr_spots <- function(x) {
+  s <- unlist(x, use.names = FALSE)
+  s <- as.character(s[vapply(s, is.character, NA)])
+  m <- unlist(regmatches(s, gregexpr(.tr_ref_re, s, perl = TRUE)), use.names = FALSE)
+  unique(sub(paste0("^", .tr_ref_re, "$"), "\\1", m, perl = TRUE))
 }
 
 # an operation's option as one text (its default when not given)
@@ -258,6 +305,29 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
 .tr_origin <- function(origins, prefix) {
   hit <- origins[names(origins) == prefix | startsWith(names(origins), paste0(prefix, "."))]
   if (length(hit)) hit[[1L]] else "template"
+}
+
+# An argument of a one-value type (string, number, logical, column, level,
+# enum[...]) is one value, and an enum's one of its values: by the declared
+# type, before the template's derive: and steps use it (a list there would
+# stop later in a call's argument, or an enum's other value leave its
+# steps out without a word).  Rules between arguments are not here.
+.tr_one_value <- function(val, type, values, p, origin, template, who) {
+  if (is.null(val) || is.na(type)) return(invisible())
+  one <- type %in% c("string", "number", "logical", "column", "level") ||
+    startsWith(type, "enum[")
+  if (!one) return(invisible())
+  from <- if (identical(origin, "report")) "the report" else origin
+  if (length(val) != 1L || (is.list(val) && !inherits(val, "tfl_r"))) {
+    stop(who, ": ", template, "'s ", p, " is one value (", type, "); ", from, " gives ",
+         length(val), ".", call. = FALSE)
+  }
+  if (length(values) && !inherits(val, "tfl_r") && !as.character(val) %in% values) {
+    stop(who, ": ", template, "'s ", p, " is one of ", paste(values, collapse = ", "),
+         "; ", from, " gives ", encodeString(as.character(val), quote = "\""), ".",
+         call. = FALSE)
+  }
+  invisible()
 }
 
 # The report's arguments: `template:` without `name`, its step sections
@@ -412,9 +482,14 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
       w <- .tr_whole(x, env, shadow)
       return(if (w$hit) w$value else .tr_text(x, env, shadow))
     }
-    return(unlist(lapply(x, function(e) {
+    parts <- lapply(x, function(e) {
       w <- .tr_whole(e, env, shadow)
-      if (w$hit) unlist(w$value) else .tr_text(e, env, shadow)
+      if (w$hit) w$value else .tr_text(e, env, shadow)
+    })
+    # (a whole value that is a list, listing_col calls, stays a list)
+    if (!any(vapply(parts, is.list, NA))) return(unlist(parts))
+    return(do.call(c, lapply(parts, function(v) {
+      if (is.null(v)) NULL else if (is.list(v) && is.null(names(v))) v else as.list(v)
     })))
   }
   if (!is.list(x)) return(x)

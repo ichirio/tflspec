@@ -1009,6 +1009,11 @@ rtf_footer:
         description: 'New columns, NAME = R expression, | between them (transform());
           a column the code lists list becomes a factor in their order; blank: none.'
         example: PHASE = APHASE
+      - column: arrange
+        description: 'The rows'' order, | between the columns, after derive (and before
+          keep and distinct, which keeps the first row in it): a column, -column for
+          descending (dplyr::arrange()); blank: the data''s order.'
+        example: USUBJID | -ASTDT
       - column: keep
         description: 'The columns kept, | between them (the subject key always); with
           derive, what transmute() does; blank: every column.'

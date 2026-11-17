@@ -53,12 +53,18 @@ name.  The operations (one a name; another key stops):
 \describe{
 \item{\code{value: x}}{\code{x} as it is filled in.}
 \item{\verb{if: x, then: a, else: b}}{\code{a} when \code{x} is something (not
-nothing, \code{FALSE}, \code{""} or empty), else \code{b} (default nothing).}
+nothing, \code{FALSE}, \code{""} or empty), else \code{b} (default nothing).  With
+\code{is: v}, when \code{x} is the value \code{v}.}
 \item{\code{last: x}}{the last element of the list \code{x}.}
 \item{\code{but_last: x}}{all but the last (nothing for fewer than two).}
 \item{\verb{join: x, sep: s}}{the elements as one text, \code{s} between them
 (default \code{", "}).}
 \item{\verb{keys: x, prefix: p}}{a map \verb{p1: x1, p2: x2, ...}.}
+\item{\verb{each: x, to: t}}{a list, \code{t} filled in once an element of \code{x}:
+a row of a table (a map) gives its columns as names inside \code{t} (a
+column the row leaves out is nothing), any other element is
+\code{"{item}"}.  A row's column (or \code{item}) named as an argument or a
+derived name stops: a name inside \code{t} means one thing.}
 }
 Each gives nothing for an empty \code{x}.  A value that is nothing drops its
 key, its list element, and an item whose map is left empty; so a content

@@ -82,3 +82,37 @@ test_that("derived names are not arguments: no card, not in args, a report canno
   expect_true("plan_total" %in% fns(tfl_template_resolve(rep(total = TRUE))))
   expect_false("plan_total" %in% fns(tfl_template_resolve(rep(total = FALSE))))
 })
+
+test_that("derive: if with is compares one value", {
+  env <- list(brk = "page", by = c("TRT01A", "AESEV"))
+  e <- derive_run(list(
+    p = list("if" = "{brk}", is = "page", then = "{by}"),
+    b = list("if" = "{brk}", is = "block", then = "{by}", "else" = "none"),
+    m = list("if" = "{by}", is = "TRT01A", then = "one")), env)
+  expect_identical(e$p, c("TRT01A", "AESEV"))
+  expect_identical(e$b, "none")
+  expect_null(e$m)
+})
+
+test_that("derive: each fills to once an element; a row's own name may not shadow one", {
+  env <- list(columns = list(list(vars = "USUBJID", width = 14), list(vars = c("AEBODSYS", "AEDECOD"),
+                                                                    label = "SOC/PT")),
+              by = c("TRT01A", "AESEV"), none = NULL)
+  e <- derive_run(list(
+    cols = list(each = "{columns}", to = list(fn = "listing_col", args = list(
+      vars = "{vars}", label = "{label}", width = "{width}"))),
+    names = list(each = "{by}", to = "by_{item}"),
+    nothing = list(each = "{none}", to = "x")), env)
+  expect_identical(e$cols, list(
+    list(fn = "listing_col", args = list(vars = "USUBJID", width = 14)),
+    list(fn = "listing_col", args = list(vars = c("AEBODSYS", "AEDECOD"), label = "SOC/PT"))))
+  expect_identical(e$names, c("by_TRT01A", "by_AESEV"))
+  expect_null(e$nothing)
+  # a row column named as an argument or a derived name stops
+  expect_error(derive_run(list(x = list(each = "{rows}", to = "{by}")),
+                          list(rows = list(list(by = "A")), by = "B")),
+               "each: by is an argument's or a derived name")
+  expect_error(derive_run(list(item = list(value = "x"), y = list(each = "{by}", to = "{item}")),
+                          list(by = "A")),
+               "each: item is an argument's or a derived name")
+})

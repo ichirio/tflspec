@@ -47,11 +47,18 @@ test_that("every file in the tflspec_v1 series folder parses", {
 test_that("every template has its keys, a BIGN item and ids on its items", {
   skip_if(!nzchar(series_dir()), "the series folder is not installed")
   ts <- series_templates()
-  expect_length(ts, 9L)
+  expect_length(ts, 10L)
+  # (a listing counts nothing: tflspec_listing has no analysis step)
+  no_analysis <- "tflspec_listing.yml"
   for (nm in names(ts)) {
     t <- ts[[nm]]
-    for (k in c("template", "label", "params", "data", "analysis")) {
+    keys <- c("template", "label", "params", "data", if (!nm %in% no_analysis) "analysis")
+    for (k in keys) {
       expect_false(is.null(t[[k]]), info = paste(nm, k))
+    }
+    if (nm %in% no_analysis) {
+      expect_null(t$analysis, info = nm)
+      next
     }
     ids <- vapply(t$analysis, function(a) {
       if (is.null(a$id)) NA_character_ else a$id
@@ -90,6 +97,12 @@ test_that("the percentages' denominator is BIGN and the items say how analysis i
   expect_null(ls$from$required)
   expect_null(ls$columns$required)
   expect_identical(ls$columns$tier, "other")
+  tl <- ts[["tflspec_listing.yml"]]
+  expect_true(isTRUE(tl$params$from$required))
+  expect_true(isTRUE(tl$params$columns$required))
+  expect_identical(tl$params$columns$type, "rows<vars,label,width,collapse_repeats>")
+  expect_identical(tl$params$by_break$default, "page")
+  expect_identical(tl$style, "style_listing")
   cmp <- ts[["forest_hr.yml"]]$params$comparison
   expect_identical(cmp$type, "string")
   expect_identical(cmp$input, "pick")
@@ -145,7 +158,12 @@ test_that("every \"{x}\" in a derive: entry names a param or an earlier derived 
     t <- series_templates()[[nm]]
     known <- names(t$params)
     for (k in names(t$derive)) {
-      bad <- setdiff(series_spots(t$derive[[k]]), known)
+      # (an each:'s `to` reads its rows' columns and {item}; "{{" is a brace)
+      e <- t$derive[[k]]
+      if (!is.null(e$each)) e$to <- NULL
+      e <- rapply(e, function(s) gsub("\\{\\{[^{}]*\\}\\}", "", s), classes = "character",
+                  how = "replace")
+      bad <- setdiff(series_spots(e), known)
       expect_true(length(bad) == 0L, info = paste(nm, k, paste(bad, collapse = " ")))
       expect_false(k %in% names(t$params), info = paste(nm, k))
       known <- c(known, k)
