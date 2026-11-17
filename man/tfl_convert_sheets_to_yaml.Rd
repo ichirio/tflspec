@@ -31,7 +31,12 @@ tfl_yaml_from_sheets(
 the package's own bridge from the sheets to the layers
 (\code{.plan_content_from_sheets()}) when it is there, else none.}
 
-\item{overwrite}{Write over files already in \code{to}?}
+\item{overwrite}{Write over files already in \code{to}?  When \code{to} has a
+YAML spec, a report's file takes only what the sheets change: what the
+sheets make of the spec as it is is the baseline, a cell changed or
+deleted against it is applied, and what the sheets cannot hold stays as
+the file has it; a report the sheets do not change keeps its file as it
+is.  (The study's files are written from the sheets.)}
 
 \item{figures}{How a figure is written: \code{"design"} (default) its
 designer's pieces as the content's items, as the figure designer reads

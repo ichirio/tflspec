@@ -34,7 +34,12 @@
 #'   [tfl_item()] for a table (`output_id = NA` for the defaults).  `NULL`:
 #'   the package's own bridge from the sheets to the layers
 #'   (`.plan_content_from_sheets()`) when it is there, else none.
-#' @param overwrite Write over files already in `to`?
+#' @param overwrite Write over files already in `to`?  When `to` has a
+#'   YAML spec, a report's file takes only what the sheets change: what the
+#'   sheets make of the spec as it is is the baseline, a cell changed or
+#'   deleted against it is applied, and what the sheets cannot hold stays as
+#'   the file has it; a report the sheets do not change keeps its file as it
+#'   is.  (The study's files are written from the sheets.)
 #' @param figures How a figure is written: `"design"` (default) its
 #'   designer's pieces as the content's items, as the figure designer reads
 #'   them; `"items"` its content of function calls, plot by plot
@@ -131,6 +136,11 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       }
     }
   }
+  # a folder with a YAML spec: a report file takes only what the sheets
+  # change, against the baseline of what they make of the spec as it is
+  # (R/sheets_merge.R); before anything is written over
+  base <- .conv_base(to, content_fn, figures)
+  if (!is.null(base)) on.exit(unlink(base, recursive = TRUE), add = TRUE)
   nc <- .nc_new()
   note <- function(output, sheet, row, column, reason, value = NA) {
     nc$rows[[length(nc$rows) + 1L]] <<- data.frame(
@@ -367,16 +377,21 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       out$template <- .tpl_sheets_decode(tr, sheets$template_rows, ard$conditions)[[id]]$template
       out$content <- list()
       out$data <- NULL
-      # (its maps, which the sheets do not hold: the report's file being
-      # written over gives them back, else they are said)
-      tm <- sheets$template_maps
-      maps <- if (is.data.frame(tm) && nrow(tm)) tm$param[tm$output_id %in% id] else character()
-      out$template <- .tpl_maps_back(out$template, file.path(to, "spec", "outputs", paste0(id, ".yml")),
-                                     maps, id, note)
     }
     f <- file.path(to, "spec", "outputs", paste0(id, ".yml"))
-    tfl_write_output(out, f)
     files <- c(files, f)
+    if (!is.null(base)) {
+      out <- .conv_merge_output(out, f, file.path(base, "spec", "outputs", paste0(id, ".yml")))
+      # (the sheets change nothing of it: the file as it is)
+      if (is.null(out)) next
+    }
+    # a template report's maps, which the sheets do not hold: the YAML's
+    # (the merge), else said
+    tm <- sheets$template_maps
+    if (is.list(out$template) && is.data.frame(tm) && nrow(tm)) {
+      .tpl_maps_said(out$template, tm$param[tm$output_id %in% id], id, note)
+    }
+    tfl_write_output(out, f)
   }
   put("spec/toc.yml", list(outputs = toc))
 

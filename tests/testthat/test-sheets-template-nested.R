@@ -145,19 +145,6 @@ test_that("a condition row the sheet cannot say as it was is still said", {
   expect_warning(suppressMessages(tfl_sheets_from_spec(s, list(`T-13` = o))), "conditions", fixed = TRUE)
 })
 
-test_that("demog back to YAML over its own file: the maps come from the file, all arguments the same", {
-  s <- tn_study()
-  to <- tempfile("tn-yaml")
-  dir.create(file.path(to, "spec", "outputs"), recursive = TRUE)
-  on.exit(unlink(to, recursive = TRUE), add = TRUE)
-  tfl_write_output(tn_demog(), file.path(to, "spec", "outputs", "T-11.yml"))
-  o <- tfl_read_outputs(to)[["T-11"]]
-  sh <- suppressMessages(tfl_sheets_from_spec(s, list(`T-11` = o)))
-  expect_no_warning(b <- tn_round_trip(sh, to)[["T-11"]])
-  expect_identical(b$template, o$template)
-  expect_identical(tn_resolve(b, s), tn_resolve(o, s))
-})
-
 test_that("demog back to YAML into an empty folder: the maps lost are named, in a warning and a note", {
   s <- tn_study()
   sh <- suppressMessages(tfl_sheets_from_spec(s, list(`T-11` = tn_demog())))

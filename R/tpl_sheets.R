@@ -191,21 +191,11 @@ tfl_read_template_sheets <- function(path) {
 # do not hold it
 .tpl_is_map_arg <- function(v) !is.null(names(v)) && !inherits(v, "tfl_r") && !is.data.frame(v)
 
-# A template report's template read back from the sheets, with its map
-# arguments (`maps`: the ones the sheets said they do not hold) taken from
-# the report's file already at `f` when that is the same template's, in
-# that file's order; a map the file does not give back is named in a
-# warning and a note (`note`, tfl_yaml_from_sheets()'s)
-.tpl_maps_back <- function(tpl, f, maps, id, note) {
-  old <- if (file.exists(f)) tryCatch(tfl_read_output(f), error = function(e) NULL)
-  ot <- if (inherits(old, "tfl_output")) tryCatch(.tpl_spec_of(old), error = function(e) NULL)
-  if (!is.null(ot) && identical(ot$name, tpl$name)) {
-    a <- tpl$args %||% list()
-    for (nm in setdiff(names(ot$args), c(names(a), "labels"))) {
-      if (.tpl_is_map_arg(ot$args[[nm]])) a[nm] <- list(ot$args[[nm]])
-    }
-    tpl$args <- a[c(intersect(names(ot$args), names(a)), setdiff(names(a), names(ot$args)))]
-  }
+# A template report's template as it is written (`tpl`): its map arguments
+# the sheets said they do not hold (`maps`) that it has not got (no YAML
+# to take them from) are named in a warning and a note (`note`,
+# tfl_yaml_from_sheets()'s)
+.tpl_maps_said <- function(tpl, maps, id, note) {
   gone <- setdiff(maps, names(tpl$args))
   if (length(gone)) {
     warning(sprintf("%s: template arguments the templates sheet cannot hold are not kept: %s",
