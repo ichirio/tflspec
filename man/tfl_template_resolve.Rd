@@ -38,7 +38,10 @@ variable's name); \code{per: level} or \verb{per: [columns]} one row whose
 \code{analysis_per} tells the generator how to name the analyses; no \code{per}
 one analysis, the item's id.  \code{per: level} with an \code{id_prefix} (may be
 empty) names the depths \verb{<prefix>_ANY}, \verb{<prefix>_L1}, ... (no prefix: \code{ANY},
-\code{L1}, ...), each replaced by its entry in \code{ids}.  An item's \verb{conditions:} is a data frame,
+\code{L1}, ...), each replaced by its entry in \code{ids}.  \verb{per: [columns]} makes an
+analysis a value of the columns (joined by \verb{_}: \code{ALT}, \code{ALT_HIGH}), on an
+item with condition rows or without (each call's rows by their own value);
+its \code{ids} give some values an id of their own (\code{{ALT: ALT_SHIFT}}).  An item's \verb{conditions:} is a data frame,
 one row a run, its columns the item's \code{params} (and \code{analysis_id}, a
 row's own id, when a row gives one): the template's rows first, then the
 report's (\code{"{conditions}"}).

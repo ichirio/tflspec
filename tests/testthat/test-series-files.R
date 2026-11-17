@@ -47,7 +47,7 @@ test_that("every file in the tflspec_v1 series folder parses", {
 test_that("every template has its keys, a BIGN item and ids on its items", {
   skip_if(!nzchar(series_dir()), "the series folder is not installed")
   ts <- series_templates()
-  expect_length(ts, 10L)
+  expect_length(ts, 11L)
   # (a listing counts nothing: tflspec_listing has no analysis step)
   no_analysis <- "tflspec_listing.yml"
   for (nm in names(ts)) {
@@ -71,7 +71,7 @@ test_that("every template has its keys, a BIGN item and ids on its items", {
 test_that("the percentages' denominator is BIGN and the items say how analysis ids are made", {
   skip_if(!nzchar(series_dir()), "the series folder is not installed")
   ts <- series_templates()
-  for (nm in c("demog", "ae_soc_pt", "lab_tox_shift")) {
+  for (nm in c("demog", "ae_soc_pt", "lab_tox_shift", "tflspec_shift")) {
     a <- ts[[paste0(nm, ".yml")]]$analysis
     ids <- vapply(a, function(x) x$id, character(1))
     den <- unlist(lapply(a, function(x) x$denominator))
@@ -89,6 +89,11 @@ test_that("the percentages' denominator is BIGN and the items say how analysis i
     expect_identical(t$params$subgroup_vars$type, "list<column>", info = f)
   }
   expect_identical(shift$analyses$per, c("PARAMCD", "tox_dir"))
+  tsh <- ts[["tflspec_shift.yml"]]
+  expect_true(isTRUE(tsh$params$by$required))
+  expect_identical(tsh$params$from$default, "ADLB")
+  expect_null(tsh$params$count_cell$default)
+  expect_identical(tsh$analysis[[2]]$analyses$per, "{param_var}")
   expect_null(shift$analysis_id)
   ts_ae <- ts[["ae_soc_pt.yml"]]$analysis[[2]]
   expect_identical(ts_ae$analyses$per, "level")
