@@ -12,6 +12,7 @@ values:
   style_listing: tfl_small
   population_safety: SAF
   population_efficacy: FAS
+  population_enrolled: ENRL
   formats: {N: 0, mean: 2, sd: 3, median: 1, min: 0, max: 0, p: "xx.x%", "AGE:mean": 1, "AGE:sd": 2}
   total: false
   total_label: Total
