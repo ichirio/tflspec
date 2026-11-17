@@ -248,6 +248,14 @@
           tag(i), sQuote(piece, FALSE)))
       }
     }
+    # `arrange`: each element a column, -column (descending) or desc(column)
+    for (piece in .split_bar(ad$arrange[i] %||% NA)) {
+      if (!grepl(.arrange_re, piece)) {
+        add_d(i, "arrange", sprintf(
+          "%s: `arrange` element %s is not a column, -column or desc(column)",
+          tag(i), sQuote(piece, FALSE)))
+      }
+    }
     # `then`: R, piped onto the end of the data
     thn <- ad$then[i] %||% NA
     if (!is.na(thn) && is.null(tryCatch(parse(text = thn, keep.source = FALSE),
@@ -274,7 +282,7 @@
       # (`population_id` with `code`: the set's subjects are made first,
       # in reach as <dataset>_sub; the other columns are for a data the
       # columns make)
-      also <- c("subjects_in", "where", "add", "derive", "keep", "distinct", "then")
+      also <- c("subjects_in", "where", "add", "derive", "arrange", "keep", "distinct", "then")
       also <- also[vapply(also, function(cn) !is.na(ad[[cn]][i] %||% NA), NA)]
       if (length(also)) {
         add_d(i, "code", sprintf(paste(
@@ -382,6 +390,7 @@
     add <- .split_bar(r$add)
     keep <- .split_bar(r$keep)
     dis <- .split_bar(r$distinct)
+    arr <- .split_bar(r$arrange %||% NA)
     thn <- .then_steps(r$then %||% NA)
     # the subject-level columns it takes: those asked for (`add`), and the
     # groups the analyses' denominators count by (their by, strata)
@@ -432,6 +441,10 @@
     # what follows the rows: the columns added, derived, the columns kept,
     # one row per ..., its code lists; then the row's own R (`then`)
     steps <- c(steps0, .derive_steps(r$derive),
+               # the rows' order, after the columns are made (distinct
+               # keeps the first row in it)
+               if (length(arr)) sprintf("dplyr::arrange(%s)",
+                                        paste(.arrange_terms(arr), collapse = ", ")),
                # the columns kept: the subject, those the analyses read on
                # it (their by, strata, variables), and the ones asked for
                if (length(keep)) sprintf("dplyr::select(%s)",
@@ -448,4 +461,13 @@
     out <- c(out, .make_code(id, base, steps))
   }
   out
+}
+
+# An `arrange` element: a column, -column (descending) or desc(column)
+.arrange_re <- "^(-?[A-Za-z.][A-Za-z0-9._]*|desc[(][A-Za-z.][A-Za-z0-9._]*[)])$"
+
+# `arrange` elements as dplyr::arrange()'s terms: -X as dplyr::desc(X)
+.arrange_terms <- function(x) {
+  x <- sub("^desc[(](.*)[)]$", "-\\1", trimws(x))
+  ifelse(startsWith(x, "-"), sprintf("dplyr::desc(%s)", substring(x, 2L)), x)
 }
