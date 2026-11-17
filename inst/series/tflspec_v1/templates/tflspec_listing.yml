@@ -12,7 +12,9 @@
 # plan_hide, plan_row_group (by_break block), plan_empty, plan_paginate_rows
 # (a page a `by` value with by_break page).  Its derive: names (not
 # arguments) are worked out from the arguments when the template is
-# resolved; a step whose derived arguments are nothing is left out.
+# resolved; a step whose derived arguments are nothing is left out.  Its
+# check: items stop the rules between arguments (a block needs one `by`
+# variable, by_heading is for pages, by_break and by_heading need `by`).
 template: tflspec_listing
 label: Listing of records
 params:
@@ -130,6 +132,9 @@ derive:
   by_page: {if: "{by_break}", is: page, then: "{by_names}"}
   by_block: {if: "{by_break}", is: block, then: "{by_names}"}
   by_text: {join: "{by}"}
+  # for check: (more than one `by` variable; by_break / by_heading set by the report)
+  by_many: {but_last: "{by}"}
+  by_set: {given: [by_break, by_heading]}
   by_title: {if: "{by_heading}", then: "{by_heading}", else: "{by_text}: {{value}}"}
   row_group: {if: "{by_block}", then: {mode: value, group_col: "{by_block}"}}
   hide: {if: "{by_names}", then: {cols: "{by_names}"}}
@@ -138,6 +143,13 @@ derive:
     if: "{by_page}"
     then: {max_rows: "{max_rows}", page_by: "{by_page}", heading: "{by_title}", heading_at: title}
     else: {max_rows: "{max_rows}"}
+check:
+  - fail: {if: "{by_block}", then: "{by_many}"}
+    message: "by_break: block needs exactly one `by` variable; got {by_text}."
+  - fail: {if: "{by_heading}", then: "{by_block}"}
+    message: "by_heading is not used with by_break: block (a block has no page name)."
+  - fail: {if: "{by}", else: "{by_set}"}
+    message: "by_break and by_heading need `by`."
 data:
   - id: adsl_sub
     from: ADSL

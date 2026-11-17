@@ -68,10 +68,23 @@ a row of a table (a map) gives its columns as names inside \code{t} (a
 column the row leaves out is nothing), any other element is
 \code{"{item}"}.  A row's column (or \code{item}) named as an argument or a
 derived name stops: a name inside \code{t} means one thing.}
+\item{\verb{given: [name, ...]}}{\code{TRUE} when the report itself set any of
+these arguments (a default, a series' or a study's value does not
+count), else nothing.  A name that is not a param of the template
+stops.}
 }
 Each gives nothing for an empty \code{x}.  A value that is nothing drops its
 key, its list element, and an item whose map is left empty; so a content
 item written \code{plan_total: "{total_args}"} with \verb{total_args: \{if: "\{total\}", then: \{position: last\}\}} is left out when \code{total} is off.
+
+A template's \verb{check:} list states rules between its arguments.  Each
+item has two keys: \verb{fail:} (one \verb{derive:} operation, as above) and
+\verb{message:} (text, \code{"{name}"} filled in).  The items are worked out in
+order once \verb{derive:} is; when an item's \code{fail} is something (the \verb{if:}
+rule), resolving stops with \verb{<template>: <message>}.  An unknown key, a
+missing \code{fail} or \code{message}, or a \verb{check:} that is not a list stops too.
+An operation inside \code{then}/\code{else} is not worked out: derive a name for it
+and write \code{"{name}"}.
 }
 \seealso{
 \code{\link[=tfl_arg_defs]{tfl_arg_defs()}}, \code{\link[=tfl_series_dir]{tfl_series_dir()}}
