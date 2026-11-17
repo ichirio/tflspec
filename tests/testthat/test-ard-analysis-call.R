@@ -58,7 +58,7 @@ test_that("every analysis comes back as the call the program writes", {
     pid <- r$population_id
     pop <- if (!is.na(pid)) paste0("pop_", tflspec:::.r_name(pid)) else "NULL"
     den <- tflspec:::.den_code(r$denominator, x, if (!is.na(pid)) pop, subj, population = pop)
-    fmt <- c(if (!is.na(k)) tflspec:::.parse_formats(keys$formats[k]), tflspec:::.parse_formats(r$formats))
+    fmt <- c(if (!is.na(k)) tfl_parse_formats(keys$formats[k]), tfl_parse_formats(r$formats))
     fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
     fmt_fun <- tflspec:::.call_fmt_fun(r, keys, given, fmt)
     node <- tflspec:::.analysis_node(r, keys, subj, has, den, data = "data", population = pop, fmt_fun = fmt_fun)

@@ -263,8 +263,8 @@ test_that("a format times a number: a rate per 1,000 (cards::label_round(scale =
   expect_identical(.fmt_r("xx*100"), "cards::label_round(0, scale = 100)")
   expect_identical(.fmt_r("xx.x%"), "cards::label_round(1, scale = 100)")
   expect_identical(.fmt_r("xx.xx"), "2L")
-  expect_true(all(.fmt_ok(c("xx.x*1000", "xx*100", "xx.xx*365"))))
-  expect_false(any(.fmt_ok(c("xx.x*", "xx.x*0", "xx.x%*100", "*1000", "xx.x*1e3"))))
+  expect_true(all(tfl_fmt_ok(c("xx.x*1000", "xx*100", "xx.xx*365"))))
+  expect_false(any(tfl_fmt_ok(c("xx.x*", "xx.x*0", "xx.x%*100", "*1000", "xx.x*1e3"))))
   # the check says the format
   expect_error(fmt_spec(list(list(analysis_id = "A", method = "continuous",
                                  variables = "AGE", formats = "mean=xx.x*"))),

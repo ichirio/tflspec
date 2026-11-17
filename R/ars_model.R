@@ -332,7 +332,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
   }
   levels_of <- function(out, var) {
     l <- var_row(out, var, "levels")
-    if (is.na(l)) character() else .split_bar(l)
+    if (is.na(l)) character() else tfl_split_bar(l)
   }
   label_of <- function(out, var) {
     l <- var_row(out, var, "label")
@@ -503,7 +503,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
                                                pop = r$population_id,
                                                grp = grp)
     ids[nrow(ids) + 1L, ] <<- list(r$output_id, r$analysis_id, id, m, role,
-                                   v, paste(.split_bar(r$by), collapse = "|"))
+                                   v, paste(tfl_split_bar(r$by), collapse = "|"))
     id
   }
 
@@ -541,9 +541,9 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
       next
     }
     # strata are groupings too: the analysis is repeated within them
-    by <- c(.split_bar(r$by), .split_bar(r$strata))
-    vars <- .split_bar(r$variables)
-    stats <- .split_bar(r$statistics)
+    by <- c(tfl_split_bar(r$by), tfl_split_bar(r$strata))
+    vars <- tfl_split_bar(r$variables)
+    stats <- tfl_split_bar(r$statistics)
     pur <- if (!is.na(r$purpose)) toupper(trimws(r$purpose)) else
       purpose %||% NA_character_
     rea <- if (!is.na(r$reason)) toupper(trimws(r$reason)) else
@@ -638,7 +638,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
     own_den <- shape == "count" && is.na(r$denominator %||% NA) &&
       m %in% c("categorical", "dichotomous", "max") &&
       !(length(by) == 0L && length(vars) == 1L &&
-        vars %in% unlist(lapply(a$by[a$output_id %in% out], .split_bar))) &&
+        vars %in% unlist(lapply(a$by[a$output_id %in% out], tfl_split_bar))) &&
       !"denominator" %in% tryCatch(.args_given(r$args),
                                    error = function(e) character())
     mz <- method(m, stats, opt, code, tag,
@@ -663,7 +663,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
     } else if (m == "total_n" || (m == "categorical" && !length(by) &&
                length(vars) == 1L &&
                vars %in% unlist(lapply(a$by[a$output_id %in% out],
-                                       .split_bar)))) {
+                                       tfl_split_bar)))) {
       # the output's subject count by group -- the subjects per group, which
       # clinical reporting calls big N -- the denominator of its percentages
       mz <- method("total_n", if (m == "total_n") stats else character(),
@@ -950,14 +950,14 @@ print.tfl_ars <- function(x, ...) {
 # `name <- cards::as_cards_fn(function(...) ..., stat_names = c("a", "b"))`.
 .ars_own_functions <- function(x, dir = ".") {
   out <- list(file = list(), stat_names = list())
-  src <- .split_bar(.study_value(x, "source", NA))
+  src <- tfl_split_bar(.study_value(x, "source", NA))
   if (!length(src)) return(out)
   info <- tfl_ard_function_info(file.path(dir, src))
   info <- info[!is.na(info$name), , drop = FALSE]
   for (i in seq_len(nrow(info))) {
     out$file[[info$name[i]]] <- src[match(info$file[i], file.path(dir, src))]
     if (nzchar(info$stat_names[i])) {
-      out$stat_names[[info$name[i]]] <- .split_bar(info$stat_names[i])
+      out$stat_names[[info$name[i]]] <- tfl_split_bar(info$stat_names[i])
     }
   }
   out

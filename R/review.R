@@ -338,7 +338,7 @@ summary.tfl_review <- function(object, ...) {
   x <- lapply(names(.ard_spec_sheets), function(s) {
     d <- ard[[s]]
     if (is.null(d)) d <- data.frame()
-    .normalize_ard_sheet(d, s)
+    tfl_normalize_ard_sheet(d, s)
   })
   names(x) <- names(.ard_spec_sheets)
   structure(x, class = "tfl_ard_spec")
@@ -382,7 +382,7 @@ summary.tfl_review <- function(object, ...) {
 
 # the names a `derive` makes (`TRTA = TRT01A | AGEGR = ...`)
 .derive_names <- function(x) {
-  d <- unlist(lapply(x, .split_bar))
+  d <- unlist(lapply(x, tfl_split_bar))
   d <- d[grepl("^[A-Za-z.][A-Za-z0-9._]*\\s*=[^=]", d)]
   trimws(sub("=.*$", "", d))
 }
@@ -404,7 +404,7 @@ summary.tfl_review <- function(object, ...) {
     pop <- .adata_pop(ad, dcol)
     wh <- c(rows$where, a$where[i])
     extra <- c(.derive_names(rows$derive),
-               unlist(lapply(rows$add, .split_bar)), pop_derive(pop))
+               unlist(lapply(rows$add, tfl_split_bar)), pop_derive(pop))
   } else {
     ds <- a$dataset[i]
     pop <- a$population_id[i]
@@ -423,7 +423,7 @@ summary.tfl_review <- function(object, ...) {
 
 # the plain names of a `|` list (a name, not a tidyselect call)
 .bar_names <- function(x) {
-  v <- .split_bar(x)
+  v <- tfl_split_bar(x)
   v[grepl("^[A-Za-z.][A-Za-z0-9._]*$", v)]
 }
 
@@ -464,7 +464,7 @@ summary.tfl_review <- function(object, ...) {
   for (i in which(!is.na(a$statistics))) {
     kind <- .method_kind(a$method[i], keys)
     if (is.na(kind) || !kind %in% c("categorical", "missing")) next
-    bad <- setdiff(.split_bar(a$statistics[i]), st$statistic[st$kind == kind])
+    bad <- setdiff(tfl_split_bar(a$statistics[i]), st$statistic[st$kind == kind])
     if (length(bad)) {
       out[[length(out) + 1L]] <- .rv("A08", a$output_id[i], "analyses",
                                      a$analysis_id[i], "statistics",
@@ -531,7 +531,7 @@ summary.tfl_review <- function(object, ...) {
 
 # the keys a `cols` / `rows` role list names (`group1 = AEBODSYS`)
 .role_keys <- function(x) {
-  k <- trimws(sub("^.*=", "", .split_bar(x)))
+  k <- trimws(sub("^.*=", "", tfl_split_bar(x)))
   setdiff(k[nzchar(k)], c("variable", "label", "variable_level", "context",
                           "stat_name"))
 }
@@ -579,7 +579,7 @@ summary.tfl_review <- function(object, ...) {
     groups <- unique(c(unlist(lapply(a$by, .bar_names)),
                        unlist(lapply(a$strata %||% NA, .bar_names))))
     analysed <- unique(unlist(lapply(a$variables, .bar_names)))
-    asked <- unique(unlist(lapply(a$statistics, .split_bar)))
+    asked <- unique(unlist(lapply(a$statistics, tfl_split_bar)))
     # T01: a column / row key no analysis groups by or analyses
     if (!opaque && nrow(tb)) {
       for (role in c("cols", "rows")) {
@@ -621,7 +621,7 @@ summary.tfl_review <- function(object, ...) {
         own <- kind_stats(vk)
         # what the variable's analyses ask for by name is theirs
         mine <- if (is.na(v) || v %in% c("continuous", "categorical", "missing")) asked else
-          unlist(lapply(a$statistics[analyses_of(v)], .split_bar))
+          unlist(lapply(a$statistics[analyses_of(v)], tfl_split_bar))
         other <- setdiff(unlist(lapply(setdiff(c("continuous", "categorical",
                                                  "missing"), vk), kind_stats)),
                          c(own, result_stats, mine))
@@ -833,7 +833,7 @@ summary.tfl_review <- function(object, ...) {
     pop <- .adata_pop(ado, ad$data_id[i])
     above <- rows[-nrow(rows), , drop = FALSE]
     avail <- c(cols$name, .derive_names(above$derive),
-               unlist(lapply(above$add, .split_bar)),
+               unlist(lapply(above$add, tfl_split_bar)),
                .derive_names(pops$derive[pops$population_id %in% pop]),
                .derive_names(x$datasets$derive[toupper(x$datasets$dataset) %in% toupper(ds)]))
     # `add` brings columns of the population's data (ADSL), by the subject
@@ -850,7 +850,7 @@ summary.tfl_review <- function(object, ...) {
                 args = c(ad$data_id[i], v, ds)))
       }
     }
-    miss <- .where_missing(ad$where[i], c(avail, unlist(lapply(ad$add[i], .split_bar))))
+    miss <- .where_missing(ad$where[i], c(avail, unlist(lapply(ad$add[i], tfl_split_bar))))
     if (length(miss)) {
       add(.rv("A02", o, "analysis_data", ad$data_id[i], "where",
               args = c(ad$where[i], ds, paste("no column", paste(miss, collapse = ", ")))))
@@ -1044,7 +1044,7 @@ summary.tfl_review <- function(object, ...) {
     }
     cols <- .facts_cols(facts, ds)
     if (is.null(cols)) next
-    miss <- setdiff(sub("^-", "", .split_bar(l$sort[i])), cols$name)
+    miss <- setdiff(sub("^-", "", tfl_split_bar(l$sort[i])), cols$name)
     if (length(miss)) {
       add(.rv("L02", o, "listings", "", "sort",
               args = c(o, paste(miss, collapse = ", "), ds),

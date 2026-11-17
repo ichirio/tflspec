@@ -178,7 +178,7 @@ test_that("a catalog of one's own is used for the call, then let go", {
                           method = "continuous", variables = "AGE",
                           statistics = "N | trimmed", dataset = "ADSL"))
   x <- lapply(stats::setNames(names(x), names(x)),
-              function(n) .normalize_ard_sheet(x[[n]], n))
+              function(n) tfl_normalize_ard_sheet(x[[n]], n))
   expect_error(tfl_ard_spec(x), "no continuous statistic trimmed")
 
   st <- tfl_ard_statistics()

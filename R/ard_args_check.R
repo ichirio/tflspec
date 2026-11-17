@@ -160,7 +160,7 @@
       call = is.call(e) && is.null(v),
       expression = is.call(e) || is.logical(v),
       sort = made || is_call_of(e, "list") || is_call_of(e, "~") ||
-        (is.character(v) && length(v) == 1L && v %in% .split_bar(choices)))
+        (is.character(v) && length(v) == 1L && v %in% tfl_split_bar(choices)))
     if (ok) return(NULL)
     want <- switch(shape,
       selectors = "a list (list(mean = 1L)) or a formula (AGE ~ list(mean = 1L))",
@@ -188,7 +188,7 @@
     }
   }
   if (identical(kind, "choice") && nzchar(choices %||% "")) {
-    ch <- .split_bar(choices)
+    ch <- tfl_split_bar(choices)
     # a number among the choices as a number (car::Anova(type = 3))
     if (!(is.character(v) || is.numeric(v)) || !all(as.character(v) %in% ch)) {
       return(sprintf("is one of %s; got %s",

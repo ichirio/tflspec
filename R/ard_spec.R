@@ -114,7 +114,22 @@
   })
 }
 
-.split_bar <- function(x) {
+#' Split a spec cell at its bars
+#'
+#' The pieces of a cell that holds a list, as the spec sheets write one:
+#' `"AGE | SEX"` is `c("AGE", "SEX")`.  A `|` inside parentheses, brackets,
+#' braces or quotes does not split, and nor does R's `||`, so a `derive` such
+#' as `ifelse(is.na(X) | X != "Y", 1, 0)` is one piece.  Pieces are trimmed;
+#' the same cell is split once (the result is remembered).
+#'
+#' @param x One cell: a string, or `NA` / `NULL` / `""` for none.
+#' @return A character vector, empty for a cell with no piece.
+#' @examples
+#' tfl_split_bar("AGE | SEX")
+#' tfl_split_bar('ifelse(is.na(X) | X != "Y", 1, 0) | AGEGR')
+#' tfl_split_bar(NA)
+#' @export
+tfl_split_bar <- function(x) {
   if (is.null(x) || is.na(x) || !nzchar(x)) return(character())
   # the same cells come back many times in a review of many reports
   hit <- .split_bar_memo[[x]]
@@ -214,7 +229,27 @@
   "data"
 }
 
-.normalize_ard_sheet <- function(d, sheet) {
+#' Put one sheet of an ARD spec in shape
+#'
+#' Gives the sheet its columns, in order (missing ones as `NA`, others
+#' dropped), as text with the cells trimmed and the empty ones `NA`, and
+#' without a row that is empty throughout.  The open sheets (`conditions`
+#' and `ards`) keep their other columns after the standard ones, except a
+#' `note` column.
+#'
+#' @param d A data frame (or a list that converts to one) read from the sheet.
+#' @param sheet The sheet, a name of the sheets of an ARD spec: `"study"`,
+#'   `"datasets"`, `"populations"`, `"records"`, `"objects"`, `"groups"`,
+#'   `"analysis_data"`, `"analyses"`, `"conditions"` or `"ards"`.
+#' @return A data frame of character columns.
+#' @examples
+#' d <- data.frame(key = c(" source ", NA), value = c("adsl", NA), x = 1:2)
+#' tfl_normalize_ard_sheet(d, "study")
+#' @export
+tfl_normalize_ard_sheet <- function(d, sheet) {
+  if (!is.character(sheet) || length(sheet) != 1L || !sheet %in% names(.ard_spec_sheets)) {
+    stop("`sheet` must be one of: ", paste(names(.ard_spec_sheets), collapse = ", "), call. = FALSE)
+  }
   cols <- .ard_spec_sheets[[sheet]]
   d <- as.data.frame(d, stringsAsFactors = FALSE)
   # (a conditions or ards sheet: its params' or keys' columns after its own)
@@ -262,7 +297,7 @@ tfl_write_ard_spec <- function(spec, path, statistics = NULL, methods = NULL,
 # the sheets of an ARD definition, in shape
 .ard_spec_normalized <- function(spec) {
   stats::setNames(lapply(names(.ard_spec_sheets), function(s)
-    .normalize_ard_sheet(spec[[s]], s)), names(.ard_spec_sheets))
+    tfl_normalize_ard_sheet(spec[[s]], s)), names(.ard_spec_sheets))
 }
 
 #' Read and check an ARD definition workbook
@@ -389,7 +424,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   own <- !m %in% tfl_ard_methods()$method &
     !grepl("^[A-Za-z.][A-Za-z0-9.]*::[A-Za-z._][A-Za-z0-9._]*$", m) &
     grepl("^[A-Za-z.][A-Za-z0-9._]*$", m)
-  if (any(own) && !length(.split_bar(.study_value(x, "source", NA)))) {
+  if (any(own) && !length(tfl_split_bar(.study_value(x, "source", NA)))) {
     warning(sprintf(paste(
       "method(s) %s: not a keyword of tfl_ard_methods(), so read as your",
       "own function(s) -- which the study key `source` should load"),
@@ -581,10 +616,10 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
       a$output_id[i], a$analysis_id[i], den[i]))
   }
   for (i in which(vapply(num, function(n) !is.null(names(n)), NA))) {
-    if (length(.split_bar(a$by[i])) != 1L) add(i, "denominator", sprintf(
+    if (length(tfl_split_bar(a$by[i])) != 1L) add(i, "denominator", sprintf(
       "%s / %s: a denominator by value (%s) needs one by variable; the analysis has %s",
       a$output_id[i], a$analysis_id[i], den[i],
-      if (is.na(a$by[i])) "none" else paste(.split_bar(a$by[i]), collapse = ", ")))
+      if (is.na(a$by[i])) "none" else paste(tfl_split_bar(a$by[i]), collapse = ", ")))
   }
   ds_a <- which(!is.na(a$dataset) & !a$dataset %in% x$datasets$dataset)
   pops <- x$populations
@@ -606,15 +641,15 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   st <- tfl_ard_statistics()
   for (i in seq_len(nrow(a))) {
     k <- .method_key(a$method[i], keys)
-    s <- .split_bar(a$statistics[i])
+    s <- tfl_split_bar(a$statistics[i])
     if (!is.na(k) && keys$kind[k] == "continuous") {
       bad <- setdiff(s, st$statistic[st$kind == "continuous"])
       if (length(bad)) add(i, "statistics", sprintf(
         "%s / %s: no continuous statistic %s (see tfl_ard_statistics())",
         a$output_id[i], a$analysis_id[i], paste(bad, collapse = ", ")))
     }
-    f <- .parse_formats(a$formats[i])
-    bad <- names(f)[is.na(f) | !.fmt_ok(f)]
+    f <- tfl_parse_formats(a$formats[i])
+    bad <- names(f)[is.na(f) | !tfl_fmt_ok(f)]
     if (length(bad)) add(i, "formats", sprintf(
       "%s / %s: formats are statistic=format, the format xx.x, xx.x%%, xx.x*1000, a number of decimals or pvalue (%s)",
       a$output_id[i], a$analysis_id[i], paste(bad, collapse = ", ")))
@@ -690,13 +725,13 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
                                tag(p), a$method[p], length(kids)))
     }
     if (identical(wm[p], "cards::ard_pairwise") &&
-        length(.split_bar(a$variables[p])) != 1L) {
+        length(tfl_split_bar(a$variables[p])) != 1L) {
       add(p, "variables", sprintf(
         "%s: ard_pairwise() compares the pairs of ONE column's levels: `variables`",
         tag(p)))
     }
     if (identical(wm[p], "cards::ard_stack")) {
-      v <- unlist(lapply(kids, function(k) .split_bar(a$variables[k])))
+      v <- unlist(lapply(kids, function(k) tfl_split_bar(a$variables[k])))
       if (anyDuplicated(v)) {
         add(p, "variables", sprintf(paste(
           "%s: %s is analysed by two of the analyses inside it, whose rows",
@@ -736,9 +771,9 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
     if (identical(wm[p], "cards::ard_stack") && !is.null(a$overall)) {
       a$overall[i] <- a$overall[p]
     }
-    grp <- c(.split_bar(a$by[p]),
+    grp <- c(tfl_split_bar(a$by[p]),
              if (!identical(wm[p], "cards::ard_stack"))
-               c(.split_bar(a$strata[p]), .split_bar(a$by[i])))
+               c(tfl_split_bar(a$strata[p]), tfl_split_bar(a$by[i])))
     a$by[i] <- if (length(grp)) paste(unique(grp), collapse = " | ") else NA
     drop[p] <- TRUE
   }
@@ -881,7 +916,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 # and the names their own R (args, code, post) uses
 .ard_read_vars <- function(a) {
   cols <- unlist(lapply(c("by", "strata", "variables"), function(cn)
-    unlist(lapply(a[[cn]], .split_bar))))
+    unlist(lapply(a[[cn]], tfl_split_bar))))
   r <- unlist(lapply(c("args", "code", "post"), function(cn) a[[cn]]))
   r <- r[!is.na(r) & nzchar(r)]
   syms <- unlist(lapply(r, function(txt) tryCatch(all.names(parse(text = txt)),
@@ -914,7 +949,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 
 # `NAME = expr | NAME = expr` as a transform() call on `obj`
 .derive_code <- function(obj, derive) {
-  d <- .split_bar(derive)
+  d <- tfl_split_bar(derive)
   if (!length(d)) return(NULL)
   sprintf("%s <- transform(%s, %s)", obj, obj, paste(d, collapse = ", "))
 }
@@ -977,19 +1012,57 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 }
 
 # the kinds of statistic a method's analysis may ask for
-.stat_kinds <- function(kind) {
+#' The kind of statistic a method's analysis asks for
+#'
+#' Maps the `kind` of a method ([tfl_ard_methods()]) to the `kind` column of
+#' the statistics catalog ([tfl_ard_statistics()]) its statistics are taken
+#' from.
+#'
+#' @param kind One of `"continuous"`, `"categorical"`, `"missing"`; anything
+#'   else (including `NULL` and `NA`) is a method that gives its own results.
+#' @return A string: `"continuous"`, `"categorical"`, `"missing"` or
+#'   `"result"`.
+#' @examples
+#' tfl_stat_kinds("continuous")
+#' tfl_stat_kinds(NULL)
+#' @export
+tfl_stat_kinds <- function(kind) {
   switch(kind %||% "",
          continuous = "continuous", categorical = "categorical",
          missing = "missing", "result")
 }
 
-.fmt_ok <- function(f) {
+#' Is a format string one the ARD code can use?
+#'
+#' Checks the formats of the `formats` column of an ARD spec: `xx`, `xx.x`,
+#' `xx.x%`, a number times a scale (`xx.x*1000`, a rate per 1,000), a
+#' plain number of decimals (`1`) and `pvalue`.
+#'
+#' @param f A character vector of formats (the right-hand sides of
+#'   [tfl_parse_formats()]).
+#' @return A logical vector the length of `f`.
+#' @examples
+#' tfl_fmt_ok(c("xx.x", "xx.x*1000", "xx.x*0", "pvalue"))
+#' @export
+tfl_fmt_ok <- function(f) {
   grepl("^(x+(\\.x+)?(%|[*][1-9][0-9]*)?|[0-9]+|pvalue)$", f)
 }
 
-# `mean=xx.x | AGE:sd=xx.xx` as a named vector
-.parse_formats <- function(x) {
-  p <- .split_bar(x)
+#' The formats of a `formats` cell, by statistic
+#'
+#' Reads a `formats` cell of an ARD spec, `mean=xx.x | AGE:sd=xx.xx`, as a
+#' named vector: the statistic (with its variable in front when it has one)
+#' is the name and the format the value.  A piece without `=` has `NA` for
+#' its format.
+#'
+#' @param x One cell: a string, or `NA` / `NULL` / `""` for none.
+#' @return A named character vector, empty for a cell with no piece.
+#' @examples
+#' tfl_parse_formats("mean=xx.x | AGE:sd=xx.xx")
+#' tfl_fmt_ok(tfl_parse_formats("mean=xx.x | sd"))
+#' @export
+tfl_parse_formats <- function(x) {
+  p <- tfl_split_bar(x)
   if (!length(p)) return(character())
   k <- trimws(sub("=.*$", "", p))
   v <- trimws(sub("^[^=]*=", "", p))
@@ -1146,7 +1219,7 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   if (part == "setup") {
     # the statistics the analyses use (as the whole program's setup): a
     # setup written again on every save keeps up with them
-    return(.drop_attached_ns(.ard_common_lines(unlist(lapply(a$statistics, .split_bar)), x)))
+    return(.drop_attached_ns(.ard_common_lines(unlist(lapply(a$statistics, tfl_split_bar)), x)))
   }
   # each report's code lists, of the variables its analyses read
   lv <- .codelist_levels_by(codelists, a)
@@ -1186,7 +1259,7 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
     "",
     # (with the functions the program calls: a study keeps them in a file
     # of its own, tfl_helpers_code())
-    .ard_common_lines(unlist(lapply(a$statistics, .split_bar)), x,
+    .ard_common_lines(unlist(lapply(a$statistics, tfl_split_bar)), x,
                       helpers = tfl_helpers_code()),
     .ard_body_lines(x, a, lv))
   if (save) {
@@ -1240,7 +1313,7 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
 .ard_output_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
   a <- spec$analyses[spec$analyses$output_id %in% output_id, , drop = FALSE]
   a <- a[vapply(a, function(v) !all(is.na(v)), NA)]
-  src <- .split_bar(.study_value(spec, "source", NA))
+  src <- tfl_split_bar(.study_value(spec, "source", NA))
   src_md5 <- vapply(src, function(f) {
     p <- file.path(dir, f)
     if (file.exists(p)) unname(tools::md5sum(p)) else "missing"
@@ -1355,7 +1428,7 @@ tfl_build_ard <- function(spec, dir = ".", output_id = NULL, save = TRUE,
   for (i in which(vapply(a$optional, function(x) isTRUE(.ard_yes(x)), NA))) {
     d <- e[[a$data[i] %||% NA_character_]] %||% e[[tolower(a$dataset[i] %||% "")]]
     if (!is.data.frame(d)) next
-    gone <- setdiff(.split_bar(a$variables[i]), names(d))
+    gone <- setdiff(tfl_split_bar(a$variables[i]), names(d))
     if (length(gone)) {
       message(sprintf("%s / %s: %s not in the data; left out (a template's default).",
                       a$output_id[i], a$analysis_id[i], paste(gone, collapse = ", ")))
@@ -1435,7 +1508,7 @@ tfl_ard_as_custom <- function(spec, output_id, analysis_id) {
   den <- .den_code(r$denominator, x, pop, subj, population = "population", by = r$by)
   body <- .analysis_body(r, keys, subj, has, den)
   k <- .method_key(r$method, keys)
-  fmt <- c(if (!is.na(k)) .parse_formats(keys$formats[k]), .parse_formats(r$formats))
+  fmt <- c(if (!is.na(k)) tfl_parse_formats(keys$formats[k]), tfl_parse_formats(r$formats))
   fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
   fmt <- if (!length(fmt)) NA_character_ else
     paste(ifelse(is.na(fmt), names(fmt), paste0(names(fmt), "=", fmt)), collapse = " | ")
@@ -1572,7 +1645,7 @@ tfl_ard_as_custom <- function(spec, output_id, analysis_id) {
 
 # the sheet, in shape (none: no rows)
 .objects_sheet <- function(x) {
-  .normalize_ard_sheet(x$objects %||% data.frame(), "objects")
+  tfl_normalize_ard_sheet(x$objects %||% data.frame(), "objects")
 }
 
 # A report's named values, the study's (blank output_id) first: the rows
@@ -1693,7 +1766,7 @@ tfl_ard_data_names <- function(spec, output_id = NULL, codelists = NULL) {
 
 # the sheet, in shape (none: no rows)
 .records_sheet <- function(x) {
-  .normalize_ard_sheet(x$records %||% data.frame(), "records")
+  tfl_normalize_ard_sheet(x$records %||% data.frame(), "records")
 }
 
 # Two conditions, both: each in parentheses when it has an `|` at its top
@@ -1797,7 +1870,7 @@ tfl_ard_data_names <- function(spec, output_id = NULL, codelists = NULL) {
     if (!is.na(a$by[i]) || !is.na(par[i]) || identical(a$method[i], "custom")) next
     cols <- trimws(strsplit(tables$cols[k], "[,|]")[[1L]])
     cols <- cols[nzchar(cols)]
-    v <- .split_bar(a$variables[i])
+    v <- tfl_split_bar(a$variables[i])
     if (length(v) && all(v %in% cols)) next
     # (the study's N: no by)
     if (grepl("total_n", a$method[i], fixed = TRUE)) next
@@ -1830,7 +1903,7 @@ tfl_ard_data_names <- function(spec, output_id = NULL, codelists = NULL) {
   }
   known <- unique(stats::na.omit(if (is.null(gd)) character() else gd$group_id))
   for (i in seq_len(nrow(a))) {
-    g <- .split_bar(a$groups[i] %||% NA)
+    g <- tfl_split_bar(a$groups[i] %||% NA)
     if (!length(g)) next
     bad <- setdiff(g, known)
     if (length(bad)) {
@@ -1838,7 +1911,7 @@ tfl_ard_data_names <- function(spec, output_id = NULL, codelists = NULL) {
                      a$output_id[i], a$analysis_id[i], paste(bad, collapse = ", "),
                      if (length(known)) paste0("; it has ", paste(known, collapse = ", ")) else ""))
     }
-    if (!is.na(a$strata[i]) || length(.split_bar(a$by[i])) > 1L) {
+    if (!is.na(a$strata[i]) || length(tfl_split_bar(a$by[i])) > 1L) {
       add(i, sprintf(paste("%s / %s: `groups` take group2 / group2_level, which `strata` or a",
                            "`by` of two variables take too: give one of them"),
                      a$output_id[i], a$analysis_id[i]))

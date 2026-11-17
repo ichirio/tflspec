@@ -106,8 +106,8 @@
   }
   analyses <- lapply(seq_len(nrow(an)), function(i) {
     list(id = an$analysis_id[i], method = cell("method", i) %||% "",
-         by = .split_bar(cell("by", i)), strata = .split_bar(cell("strata", i)),
-         variables = .split_bar(cell("variables", i)), parent = cell("parent", i))
+         by = tfl_split_bar(cell("by", i)), strata = tfl_split_bar(cell("strata", i)),
+         variables = tfl_split_bar(cell("variables", i)), parent = cell("parent", i))
   })
   cl <- sp$codelists
   if (!is.null(cl) && nrow(cl)) {

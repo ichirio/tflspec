@@ -30,7 +30,7 @@
   # fingerprint and check asks for it as a study opens)
   hit <- .adata_memo$sheet
   if (!is.null(hit) && identical(hit$raw, d)) return(hit$out)
-  out <- .normalize_ard_sheet(d, "analysis_data")
+  out <- tfl_normalize_ard_sheet(d, "analysis_data")
   .adata_memo$sheet <- list(raw = d, out = out)
   out
 }
@@ -237,7 +237,7 @@
     }
     # each derive piece `name = expression`, as R reads it (a `|` of R's own
     # inside parentheses is not a separator)
-    for (piece in .split_bar(ad$derive[i] %||% NA)) {
+    for (piece in tfl_split_bar(ad$derive[i] %||% NA)) {
       ok <- !is.null(tryCatch(parse(text = sprintf("list(%s)", piece), keep.source = FALSE),
                               error = function(e) NULL)) &&
         grepl("^[A-Za-z.][A-Za-z0-9._]* *=[^=]", piece)
@@ -284,7 +284,7 @@
       }
       next
     }
-    if (length(.split_bar(ad$add[i])) && is.na(.adata_add_from(ad_o, id))) {
+    if (length(tfl_split_bar(ad$add[i])) && is.na(.adata_add_from(ad_o, id))) {
       add_d(i, "add", sprintf(paste(
         "%s: `add` takes columns from the population's data or the data of",
         "`subjects_in`, and it has neither (here or above)"), tag(i)))
@@ -379,9 +379,9 @@
     if (!is.na(r$subjects_in)) pop <- r$subjects_in
     whr <- if (!is.na(r$where)) r$where
     flt <- if (!is.null(whr)) sprintf("dplyr::filter(%s)", whr)
-    add <- .split_bar(r$add)
-    keep <- .split_bar(r$keep)
-    dis <- .split_bar(r$distinct)
+    add <- tfl_split_bar(r$add)
+    keep <- tfl_split_bar(r$keep)
+    dis <- tfl_split_bar(r$distinct)
     thn <- .then_steps(r$then %||% NA)
     # the subject-level columns it takes: those asked for (`add`), and the
     # groups the analyses' denominators count by (their by, strata)
@@ -441,7 +441,7 @@
                                         paste(dis, collapse = ", ")),
                # the same rows as the data it is made from: the same levels --
                # but a dataset read as it is has none yet
-               if (length(c(steps0, .split_bar(r$derive), dis, add)) ||
+               if (length(c(steps0, tfl_split_bar(r$derive), dis, add)) ||
                    (is.null(pop) && !from_data)) lv,
                # the R the row adds after its keys, as written (a step each)
                thn)

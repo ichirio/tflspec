@@ -156,7 +156,7 @@ test_that("CDISC's own example reads as specs, and what has no place is said", {
   # its summary's n is cards' N; Q1 / Q3 are p25 / p75
   age <- a[a$analysis_id == "An03_01_Age_Summ_ByTrt", ]
   expect_true(is.na(age$statistics) ||
-                all(.split_bar(age$statistics) %in%
+                all(tfl_split_bar(age$statistics) %in%
                       tfl_ard_statistics("continuous")$statistic))
   # an ANOVA has no tflspec keyword: not a row, and said
   expect_false("An03_01_Age_Comp_ByTrt" %in% a$analysis_id)

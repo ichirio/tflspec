@@ -200,7 +200,7 @@ tfl_study_setup_code <- function(study) {
     .lay(.cl("delayedAssign", list(.q(name), expr, assign.env = env)))
   }
   org <- vapply(seq_len(nrow(ds)), function(i) {
-    d <- .split_bar(ds$derive[i])
+    d <- tfl_split_bar(ds$derive[i])
     code <- .make_code(".x", .reader(ds$path[i]),
                        if (length(d)) sprintf("dplyr::mutate(%s)", paste(d, collapse = ", ")))
     delayed(nm[i], sub("^[.]x <- ", "", code), "study$adam_org")

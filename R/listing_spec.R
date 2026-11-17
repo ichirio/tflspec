@@ -49,7 +49,7 @@ tfl_read_data_code <- function(datasets, dataset) {
 }
 
 .r_sort <- function(sort) {
-  s <- .split_bar(sort)
+  s <- tfl_split_bar(sort)
   if (!length(s)) return(NULL)
   keys <- vapply(s, function(k) {
     if (startsWith(k, "-")) sprintf("dplyr::desc(%s)", substring(k, 2L)) else k
@@ -228,7 +228,7 @@ tfl_listing_spec <- function(listings = NULL, listing_cols = NULL,
       add_l(i, "where", sprintf("%s: `where` is not R code: %s", who(r$output_id),
                             r$where))
     }
-    bad <- .split_bar(r$sort)
+    bad <- tfl_split_bar(r$sort)
     bad <- bad[!grepl("^-?[.A-Za-z][.A-Za-z0-9_]*$", bad)]
     if (length(bad)) {
       add_l(i, "sort", sprintf("%s: `sort` takes variable names (- for descending): %s",
@@ -263,7 +263,7 @@ tfl_listing_spec <- function(listings = NULL, listing_cols = NULL,
     r <- cl[i, ]
     at <- sprintf("%s, column %d", who(r$output_id),
                   sum(cl$output_id[seq_len(i)] %in% r$output_id))
-    if (!length(.split_bar(r$vars))) add_c(i, "vars", sprintf("%s: no `vars`", at))
+    if (!length(tfl_split_bar(r$vars))) add_c(i, "vars", sprintf("%s: no `vars`", at))
     if (!is.na(r$width) &&
         (is.na(suppressWarnings(as.numeric(r$width))) ||
          as.numeric(r$width) <= 0)) {
@@ -473,7 +473,7 @@ tfl_listing_code <- function(spec, output_id = NULL, datasets = NULL,
   }
   col_code <- vapply(seq_len(nrow(cols)), function(i) {
     c <- cols[i, ]
-    v <- .split_bar(c$vars)
+    v <- tfl_split_bar(c$vars)
     vv <- if (length(v) == 1L) encodeString(v, quote = "\"") else
       sprintf("c(%s)", paste(encodeString(v, quote = "\""), collapse = ", "))
     a <- c(vv,
@@ -487,8 +487,8 @@ tfl_listing_code <- function(spec, output_id = NULL, datasets = NULL,
   }, "")
   type <- if (is.na(l$type)) type else l$type
   # the code lists of the columns it shows or sorts by
-  shown <- unique(c(unlist(lapply(cols$vars, .split_bar)),
-                    sub("^-", "", .split_bar(l$sort))))
+  shown <- unique(c(unlist(lapply(cols$vars, tfl_split_bar)),
+                    sub("^-", "", tfl_split_bar(l$sort))))
   lv <- .codelist_levels(codelists, l$output_id, shown)
   # the records its condition keeps, its code lists, its order -- in one
   # statement; a rework (code of its own) before the order
@@ -606,7 +606,7 @@ tfl_listing <- function(data, spec, output_id = NULL, type = "multiline") {
     keep <- eval(str2lang(l$where), data, parent.frame())
     data <- data[!is.na(keep) & keep, , drop = FALSE]
   }
-  s <- .split_bar(l$sort)
+  s <- tfl_split_bar(l$sort)
   if (length(s)) {
     keys <- lapply(s, function(k) {
       desc <- startsWith(k, "-")
@@ -623,7 +623,7 @@ tfl_listing <- function(data, spec, output_id = NULL, type = "multiline") {
     if (inherits(v, c("Date", "POSIXt"))) format(v) else v)
   lcols <- lapply(seq_len(nrow(cols)), function(i) {
     c <- cols[i, ]
-    a <- list(.split_bar(c$vars))
+    a <- list(tfl_split_bar(c$vars))
     if (!is.na(c$width)) a$width <- as.numeric(c$width)
     if (!is.na(c$label)) a$label <- .listing_label(c$label)
     if (!is.na(c$sep)) a$sep <- .listing_label(.ard_spec_unquote(c$sep))

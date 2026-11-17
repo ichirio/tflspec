@@ -722,7 +722,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
 
 # The levels cell as the map it was: a text or several as text, else !r
 .levels_map <- function(x) {
-  parts <- .split_bar(x)
+  parts <- tfl_split_bar(x)
   if (!length(parts)) return(NULL)
   out <- list()
   for (p in parts) {

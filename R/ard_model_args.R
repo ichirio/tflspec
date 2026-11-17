@@ -335,7 +335,7 @@ tfl_ard_model_args <- function(method, package = "base") {
 # A link written as glm.nb() takes it: a name (log) or text ("log"), one of
 # the choices; a call (power(1/3)) is the program's
 .model_link_problem <- function(e, choices, shown) {
-  ch <- .split_bar(choices)
+  ch <- tfl_split_bar(choices)
   v <- if (is.name(e)) as.character(e) else .literal_value(e)
   if (is.call(e) && is.null(v)) return(NULL)
   if (is.character(v) && length(v) == 1L && v %in% ch) return(NULL)

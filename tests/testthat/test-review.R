@@ -217,14 +217,14 @@ test_that("a figure's dataset the catalog has but the facts do not is not missin
 })
 
 test_that("the memos give what the work gives", {
-  expect_identical(.split_bar("AGE | SEX "), c("AGE", "SEX"))
-  expect_identical(.split_bar("AGE | SEX "), c("AGE", "SEX"))
+  expect_identical(tfl_split_bar("AGE | SEX "), c("AGE", "SEX"))
+  expect_identical(tfl_split_bar("AGE | SEX "), c("AGE", "SEX"))
   # R's own | inside parentheses or quotes, and ||, are not separators
-  expect_identical(.split_bar('A = ifelse(is.na(X) | X != "Y", 1, 0) | B = paste("a|b") | C = X || Y'),
+  expect_identical(tfl_split_bar('A = ifelse(is.na(X) | X != "Y", 1, 0) | B = paste("a|b") | C = X || Y'),
                    c('A = ifelse(is.na(X) | X != "Y", 1, 0)', 'B = paste("a|b")', "C = X || Y"))
-  expect_identical(.split_bar(""), character())
-  expect_identical(.split_bar("  "), character())
-  expect_identical(.split_bar(NA), character())
+  expect_identical(tfl_split_bar(""), character())
+  expect_identical(tfl_split_bar("  "), character())
+  expect_identical(tfl_split_bar(NA), character())
   expect_identical(.fig_style_builtin(), .fig_style_builtin_make())
   # the user's style still over tflspec's own
   b <- .fig_style_builtin_make()

@@ -1867,7 +1867,7 @@ tfl_normalize_code <- function(spec, ard_spec = NULL, output_id = NULL,
     an <- an[!is.na(an$output_id) & an$output_id %in% id &
                an$method %in% c("hierarchical", "cards::ard_stack_hierarchical",
                                 "cards::ard_stack_hierarchical_count"), , drop = FALSE]
-    if (nrow(an)) hier <- .split_bar(an$variables[1L])
+    if (nrow(an)) hier <- tfl_split_bar(an$variables[1L])
     # no label of the table's own: its records' "any" row (over_variables)
     if (nrow(an) && is.null(lab) && !is.na(an$records[1L] %||% NA) &&
         grepl("over_variables\\s*=\\s*TRUE", an$args[1L] %||% "")) {

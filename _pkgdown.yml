@@ -114,6 +114,16 @@ reference:
       - tfl_ard_as_custom
       - tfl_ard_function_template
       - tfl_ard_function_info
+  - subtitle: Cells and sheets of an ARD spec
+    desc: >
+      The helpers that read what the sheets hold: a cell of bars, a formats
+      cell, a format, a method's kind of statistic, a sheet put in shape.
+    contents:
+      - tfl_split_bar
+      - tfl_parse_formats
+      - tfl_fmt_ok
+      - tfl_stat_kinds
+      - tfl_normalize_ard_sheet
   - title: The functions the programs call
     desc: >
       The code of the functions the generated programs call as they run (the

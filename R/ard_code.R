@@ -260,7 +260,7 @@
 # (those `used` of the company standards) and each statistic's format.
 # Values only: what the programs call is cards', dplyr's and tflspec's.
 .ard_common_lines <- function(used, x = NULL, helpers = NULL) {
-  src <- .split_bar(.study_value(x, "source", NA))
+  src <- tfl_split_bar(.study_value(x, "source", NA))
   libs <- if (isTRUE(getOption("tflspec.plain_ns"))) "cards" else
     setdiff(.ard_pkgs, getOption("tflspec.user_attached"))
   # (the study's setup file sets it when option tflspec.study_setup is TRUE)
@@ -353,7 +353,7 @@
 # again.  NULL when the call cannot say them: a format of a variable the
 # call's `variables` do not name (or name as R, not by name).
 .fmt_fun_arg <- function(fmt, vars) {
-  if (anyNA(fmt) || !all(.fmt_ok(fmt))) return(NULL)
+  if (anyNA(fmt) || !all(tfl_fmt_ok(fmt))) return(NULL)
   own <- grepl(":", names(fmt), fixed = TRUE)
   plain <- fmt[!own]
   spec <- fmt[own]
@@ -400,9 +400,9 @@
   if (!.takes_fmt_fun(fn) || any(c("fmt_fun", "fmt_fn") %in% given) ||
       !is.na(r$post)) return(NULL)
   vars <- if (identical(fn, "(subjects)")) {
-    if (length(.split_bar(r$variables))) .split_bar(r$variables)[1L] else
+    if (length(tfl_split_bar(r$variables))) tfl_split_bar(r$variables)[1L] else
       make.names(r$analysis_id)
-  } else if (fn %in% .fmt_fun_every) character() else .split_bar(r$variables)
+  } else if (fn %in% .fmt_fun_every) character() else tfl_split_bar(r$variables)
   .fmt_fun_arg(fmt, vars)
 }
 
@@ -468,7 +468,7 @@
 # ---- the analyses --------------------------------------------------------
 
 .vars <- function(x) {
-  v <- .split_bar(x)
+  v <- tfl_split_bar(x)
   if (!length(v)) return(NULL)
   if (length(v) == 1L) v else sprintf("c(%s)", paste(v, collapse = ", "))
 }
@@ -491,7 +491,7 @@
   num <- .den_numbers(den)
   if (!is.null(num)) {
     if (is.null(names(num))) return(sprintf("%dL", num))
-    b <- .split_bar(by)
+    b <- tfl_split_bar(by)
     if (length(b) != 1L) return(NULL)
     return(sprintf("data.frame(%s = rep(%s, %s), %s = seq_len(%dL))",
                    b, .lay(.c_str(names(num)), width = Inf), .lay(.cl("c", as.list(sprintf("%dL", num))), width = Inf),
@@ -568,7 +568,7 @@
                                 error = function(e) character()) ||
     (!is.na(k) && grepl("denominator", keys$defaults[k], fixed = TRUE))
   if (!den) return(character())
-  unique(unlist(lapply(c(r$by, r$strata %||% NA), .split_bar)))
+  unique(unlist(lapply(c(r$by, r$strata %||% NA), tfl_split_bar)))
 }
 
 # The target subjects: records joined to their subjects' data `pop`, one
@@ -594,7 +594,7 @@
 }
 
 .stat_arg <- function(method, stats) {
-  s <- .split_bar(stats)
+  s <- tfl_split_bar(stats)
   if (!length(s)) return(NULL)
   switch(method,
     continuous = {
@@ -635,7 +635,7 @@
   vars <- .vars(r$variables)
   # optional: the variables the data has, of these (a template's default)
   if (!is.null(vars) && isTRUE(.ard_yes(r$optional %||% NA))) {
-    vars <- sprintf("cards::any_of(%s)", .lay(.c_str(.split_bar(r$variables)), width = Inf))
+    vars <- sprintf("cards::any_of(%s)", .lay(.c_str(tfl_split_bar(r$variables)), width = Inf))
   }
   strata <- .vars(r$strata)
   user <- as.list(vapply(.split_args(r$args), own_r, ""))
@@ -644,7 +644,7 @@
   st <- if (!has("statistic")) .stat_arg(if (identical(fn, "(subjects)"))
     "categorical" else kind, stats)
   if (identical(fn, "(subjects)")) {
-    flag <- if (length(.split_bar(r$variables))) .split_bar(r$variables)[1L] else
+    flag <- if (length(tfl_split_bar(r$variables))) tfl_split_bar(r$variables)[1L] else
       make.names(r$analysis_id)
     return(.cl("cards::ard_tabulate_value", c(
       if (!is.null(by)) list(by = by),
@@ -703,7 +703,7 @@
 # The row's variables with no code list (`codelists`: the list of its
 # report, named by variable), the arms apart
 .unlisted_vars <- function(r, codelists = NULL) {
-  v <- unique(.split_bar(r$variables))
+  v <- unique(tfl_split_bar(r$variables))
   setdiff(v[!grepl("^(TRT|ARM|ACTARM)", v)], names(codelists))
 }
 
@@ -891,7 +891,7 @@
     e <- tryCatch(str2lang(s), error = function(err) NULL)
     if (!is.call(e) || !identical(e[[1L]], quote(complete_hierarchy))) return(s)
     given <- as.list(e)[-1L]
-    vars <- .split_bar(r$variables)
+    vars <- tfl_split_bar(r$variables)
     args <- lapply(given, function(g) paste(deparse(g, width.cutoff = 500L), collapse = " "))
     nm_given <- names(given) %||% rep("", length(given))
     # (the first argument without a name is `variables`)
@@ -931,7 +931,7 @@
 # again: the columns it derives, and the values its rows no longer have that
 # the lists do not list (a population's: not the screen failures' arm)
 .derive_steps <- function(derive, levels = NULL) {
-  d <- .split_bar(derive)
+  d <- tfl_split_bar(derive)
   c(if (length(d)) sprintf("dplyr::mutate(%s)", paste(d, collapse = ", ")),
     if (length(levels)) .levels_step)
 }
@@ -954,7 +954,7 @@
     k <- .method_key(m, keys)
     if (is.na(k)) "" else keys$kind[k]
   }, "")
-  v <- unique(unlist(lapply(a$variables[kind == "categorical"], .split_bar)))
+  v <- unique(unlist(lapply(a$variables[kind == "categorical"], tfl_split_bar)))
   # (not the arms: order_levels() finds them by their names)
   setdiff(v[!grepl("^(TRT|ARM|ACTARM)", v)], names(levels))
 }
@@ -996,7 +996,7 @@
   for (ds in used_ds) {
     r <- x$datasets[x$datasets$dataset == ds, ]
     obj <- .r_name(ds)
-    d <- .split_bar(r$derive[1L])
+    d <- tfl_split_bar(r$derive[1L])
     # (no code lists here: they go on each analysis set and each analysis
     # data, after its filter)
     steps <- c(.order_levels_step(cats, if (has_adsl && toupper(ds) != "ADSL") "adsl"))
@@ -1203,9 +1203,9 @@
       # conditions and derive read)
       own <- lapply(which(on), function(i) .item_reads(rd[i, ]))
       made <- unlist(lapply(own, attr, "made"))
-      unique(c(setdiff(unlist(lapply(c(rd$by[on], rd$strata[on], rd$variables[on]), .split_bar)), made),
+      unique(c(setdiff(unlist(lapply(c(rd$by[on], rd$strata[on], rd$variables[on]), tfl_split_bar)), made),
                unlist(own),
-               unlist(lapply(rd$by[den], .split_bar))))
+               unlist(lapply(rd$by[den], tfl_split_bar))))
     })
     # the subject-level columns each data takes from its subjects' data:
     # the groups its analyses' denominators count by (by, strata)
@@ -1344,7 +1344,7 @@
       } else if (length(kids)) {
         .ard_wrapper_lines(xo, r, a[kids, , drop = FALSE], keys, subj,
                            dname, ard_names[j])
-      } else if (length(.split_bar(r$groups %||% NA))) {
+      } else if (length(tfl_split_bar(r$groups %||% NA))) {
         # condition-defined groups: the analysis once in each level
         .ard_groups_lines(xo, r, .ard_analysis_lines(xo, r, keys, subj, "data", "ard",
                                                      avoid),
@@ -1565,8 +1565,8 @@
   kind <- if (is.na(k)) "" else keys$kind[k]
   call_fn <- if (is.na(k)) r$method else keys$call[k]
   den <- .den_code(r$denominator, x, pop, subj, population = pop_name, by = r$by)
-  fmt <- c(if (!is.na(k)) .parse_formats(keys$formats[k]),
-           .parse_formats(r$formats))
+  fmt <- c(if (!is.na(k)) tfl_parse_formats(keys$formats[k]),
+           tfl_parse_formats(r$formats))
   fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
   # the formats in the call (fmt_fun), when the function takes them and
   # nothing changes the ARD after it; else after it (fmt_ard())
@@ -1589,7 +1589,7 @@
   }
   keep <- if (!kind %in% c("continuous", "categorical", "missing") &&
               !identical(call_fn, "(subjects)"))
-    .split_bar(r$statistics)
+    tfl_split_bar(r$statistics)
   ps <- .post_fmt_split(.post_steps(x, r))
   steps <- c(ps$before,
              if (length(keep)) list(.cl("keep_stats", list(.cl("c", .q(keep))))),
@@ -1601,7 +1601,7 @@
   if (total) comment <- c(comment, "# (and the Total column: the same call without `by`)")
   if (identical(call_fn, "(subjects)")) {
     # a subject-level flag: has the subject any record of the data?
-    flag <- if (length(.split_bar(r$variables))) .split_bar(r$variables)[1L] else
+    flag <- if (length(tfl_split_bar(r$variables))) tfl_split_bar(r$variables)[1L] else
       make.names(r$analysis_id)
     # (the subjects of the analysis set as the report's data keeps them --
     # its subset applied --, not the whole set)
@@ -1770,17 +1770,17 @@
   for (j in seq_len(nrow(kids))) {
     kr <- kids[j, ]
     k <- .method_key(kr$method, keys)
-    f <- c(if (!is.na(k)) .parse_formats(keys$formats[k]),
-           .parse_formats(kr$formats))
+    f <- c(if (!is.na(k)) tfl_parse_formats(keys$formats[k]),
+           tfl_parse_formats(kr$formats))
     if (stack && any(!grepl(":", names(f), fixed = TRUE))) {
       plain <- !grepl(":", names(f), fixed = TRUE)
-      vv <- .split_bar(kr$variables)
+      vv <- tfl_split_bar(kr$variables)
       f <- c(f[!plain], unlist(lapply(vv, function(v)
         stats::setNames(f[plain], paste0(v, ":", names(f)[plain])))))
     }
     fmt <- c(fmt, f)
   }
-  fmt <- c(.parse_formats(r$formats), fmt)
+  fmt <- c(tfl_parse_formats(r$formats), fmt)
   fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
   given_of <- function(kr) c(.args_given(kr$args), if (!is.na(kr$strata)) "strata",
                              if (!is.na(kr$denominator)) "denominator")
@@ -1794,7 +1794,7 @@
     # in a stack, a variable's own formats go to its analysis's call (the
     # rest, the stack's own rows, after it)
     if (stack) f <- f[!grepl(":", names(f), fixed = TRUE) |
-                        sub(":.*$", "", names(f)) %in% .split_bar(kr$variables)]
+                        sub(":.*$", "", names(f)) %in% tfl_split_bar(kr$variables)]
     .call_fmt_fun(kr, keys, given_of(kr), f)
   })
   in_call <- length(fmt_funs) > 0L && !any(vapply(fmt_funs, is.null, NA))
@@ -1830,7 +1830,7 @@
   # too: all after it, as in the calls.
   skip <- if (in_call && stack) {
     if (".missing" %in% .args_given(r$args)) character() else
-      unique(unlist(lapply(kids$variables, .split_bar)))
+      unique(unlist(lapply(kids$variables, tfl_split_bar)))
   }
   post_fmt <- if (length(skip)) fmt[!grepl(":", names(fmt), fixed = TRUE) |
                                       !sub(":.*$", "", names(fmt)) %in% skip] else fmt
@@ -1838,13 +1838,13 @@
     k <- .method_key(kids$method[1L], keys)
     kind <- if (is.na(k)) "" else keys$kind[k]
     if (!kind %in% c("continuous", "categorical", "missing"))
-      .split_bar(kids$statistics[1L])
+      tfl_split_bar(kids$statistics[1L])
   }
   tag <- if (stack) {
     # each analysis's variables (an analysis's id once)
     an <- lapply(split(seq_len(nrow(kids)), factor(kids$analysis_id,
                                                    unique(kids$analysis_id))),
-                 function(j) unlist(lapply(kids$variables[j], .split_bar)))
+                 function(j) unlist(lapply(kids$variables[j], tfl_split_bar)))
     .tag_step(r$analysis_id, pid, an)
   } else .tag_step(kids$analysis_id[1L], pid)
   ps <- .post_fmt_split(.post_steps(x, r))
@@ -1881,8 +1881,8 @@
   kind <- if (is.na(k)) "" else keys$kind[k]
   call_fn <- if (is.na(k)) r$method else keys$call[k]
   den <- .den_code(r$denominator, x, pop, subj, population = pop_name, by = r$by)
-  fmt <- c(if (!is.na(k)) .parse_formats(keys$formats[k]),
-           .parse_formats(r$formats))
+  fmt <- c(if (!is.na(k)) tfl_parse_formats(keys$formats[k]),
+           tfl_parse_formats(r$formats))
   fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
   fmt_fun <- .call_fmt_fun(r, keys, given, fmt)
   lv <- attr(x, "levels")[[r$output_id]]
@@ -1892,7 +1892,7 @@
     !call_fn %in% c("(code)", "(subjects)")
   keep <- if (!kind %in% c("continuous", "categorical", "missing") &&
               !identical(call_fn, "(subjects)"))
-    .split_bar(r$statistics)
+    tfl_split_bar(r$statistics)
   ps <- .post_fmt_split(.post_steps(x, r))
   steps <- c(ps$before,
              if (length(keep)) list(.cl("keep_stats", list(.cl("c", .q(keep))))),
@@ -1945,7 +1945,7 @@
 # hand: the analysis's own code inside, its data `data` and its ARD `ard`.
 .ard_groups_lines <- function(x, r, inner, data, name) {
   gd <- x$groups
-  ids <- .split_bar(r$groups)
+  ids <- tfl_split_bar(r$groups)
   defs <- lapply(ids, function(g) gd[gd$group_id == g, , drop = FALSE])
   tab_name <- paste0(name, "_conditions")
   fun_name <- paste0(name, "_one")
@@ -2000,7 +2000,7 @@
 }
 
 # The item's params: its condition rows' columns
-.item_params <- function(r) .split_bar(.item_cell(r, "params"))
+.item_params <- function(r) tfl_split_bar(.item_cell(r, "params"))
 
 # An item's condition rows: a data frame of its params, or NULL
 .item_conditions <- function(r) {
@@ -2015,7 +2015,7 @@
 # param's value there is the function's argument (.env$p): a column of the
 # same name (tox_dir, made by the derive) is not it
 .item_levels <- function(r, params = character()) {
-  lv <- .split_bar(.item_cell(r, "levels"))
+  lv <- tfl_split_bar(.item_cell(r, "levels"))
   vapply(lv, function(l) {
     v <- trimws(sub("=.*$", "", l))
     rhs <- trimws(sub("^[^=]*=", "", l))
@@ -2033,7 +2033,7 @@
   if (!isTRUE(.ard_yes(.item_cell(r, "missing_row")))) return(character())
   lab <- .item_cell(r, "missing_label")
   if (is.na(lab)) lab <- "Missing"
-  v <- .split_bar(r$variables %||% NA)
+  v <- tfl_split_bar(r$variables %||% NA)
   sprintf("%s = missing_level(%s, %s)", v, v, .q(lab))
 }
 
@@ -2042,9 +2042,9 @@
 # the item's (one BIGN a report)
 .item_per_level_lines <- function(r, name) {
   if (!identical(.item_cell(r, "analysis_per"), "level")) return(character())
-  v <- .split_bar(r$variables %||% NA)
+  v <- tfl_split_bar(r$variables %||% NA)
   id <- r$analysis_id
-  arms <- .split_bar(r$by %||% NA)
+  arms <- tfl_split_bar(r$by %||% NA)
   cases <- c(sprintf("variable == \"..ard_hierarchical_overall..\" ~ %s", .q(paste0(id, "_ANY"))),
              sprintf("variable == %s ~ %s", .q(v), .q(paste0(id, "_L", seq_along(v)))),
              ".default = analysis_id")
@@ -2060,7 +2060,7 @@
 # analysis_id when the conditions give one, else the columns' values in its
 # data joined by "_" (Lab: PARAMCD, tox_dir -> ALT_HIGH)
 .item_row_id_lines <- function(r, cond) {
-  per <- .split_bar(.item_cell(r, "analysis_per"))
+  per <- tfl_split_bar(.item_cell(r, "analysis_per"))
   per <- setdiff(per, "level")
   own <- "analysis_id" %in% names(cond)
   if (!length(per) && !own) return(character())
@@ -2094,10 +2094,10 @@
 # attribute "made")
 .item_reads <- function(r) {
   p <- .item_params(r)
-  der <- .split_bar(.item_cell(r, "derive"))
+  der <- tfl_split_bar(.item_cell(r, "derive"))
   made <- trimws(sub("=.*$", "", der))
   ar <- .item_ards(r)
-  cols <- unlist(lapply(ar, function(e) unlist(lapply(e[intersect(c("by", "strata", "variables"), names(e))], .split_bar))))
+  cols <- unlist(lapply(ar, function(e) unlist(lapply(e[intersect(c("by", "strata", "variables"), names(e))], tfl_split_bar))))
   cd <- .item_conditions(r)
   ex <- c(if (!is.null(cd) && "where" %in% names(cd)) as.character(unlist(cd$where)),
           .item_cell(r, "row_where"), sub("^[^=]*=", "", der))
@@ -2171,7 +2171,7 @@
 # The steps an item's own columns make: dplyr::mutate() of its derive and
 # its levels
 .item_steps <- function(r, params = character()) {
-  d <- c(.item_param_refs(.split_bar(.item_cell(r, "derive")), params),
+  d <- c(.item_param_refs(tfl_split_bar(.item_cell(r, "derive")), params),
          .item_levels(r, params), .item_missing(r))
   if (!length(d)) return(character())
   sprintf("dplyr::mutate(%s)", paste(d, collapse = ", "))
@@ -2202,7 +2202,7 @@
 .item_bign <- function(a) {
   if (is.null(a$analysis_id) || is.null(a$method)) return(a)
   v <- a$variables %||% rep(NA_character_, nrow(a))
-  hit <- a$analysis_id %in% "BIGN" & vapply(v, function(x) !length(.split_bar(x)), TRUE)
+  hit <- a$analysis_id %in% "BIGN" & vapply(v, function(x) !length(tfl_split_bar(x)), TRUE)
   a$method[hit] <- "total_n"
   a
 }

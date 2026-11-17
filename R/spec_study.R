@@ -989,7 +989,7 @@ tfl_write_study_part <- function(study, part = c("defaults", "patterns", "data",
                  grepl("over_variables\\s*=\\s*TRUE", paste(as.character(e$args %||% ""), collapse = " ")),
                output$ard$analyses %||% list())
   if (!length(an)) return(items)
-  rec <- .normalize_ard_sheet(.rows_df(lapply(study$data$records %||% list(), function(e) {
+  rec <- tfl_normalize_ard_sheet(.rows_df(lapply(study$data$records %||% list(), function(e) {
     m <- lapply(e, .sheet_cell); m$record_id <- m$id; m$id <- NULL; m
   }), .ard_spec_sheets$records), "records")
   lab <- .records_any_label(rec, an[[1L]]$records)
@@ -1095,7 +1095,7 @@ tfl_styles <- function(study) {
   }
   vars <- unlist(lapply(an, function(a) {
     if (!is.list(a)) return(NULL)
-    cols <- unlist(lapply(txt(c(a$variables, a$by, a$strata)), .split_bar))
+    cols <- unlist(lapply(txt(c(a$variables, a$by, a$strata)), tfl_split_bar))
     code <- txt(c(a$args, a$code, a$post))
     syms <- unlist(lapply(code, function(s) tryCatch(all.names(parse(text = s)),
                                                      error = function(e) NULL)))

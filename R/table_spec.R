@@ -1331,7 +1331,7 @@ print.tfl_table_spec <- function(x, ...) {
   if (!is.na(t$cols)) out$cols <- .ard_spec_split(t$cols)
   # row keys the table also shows as variables (table_plan(show_keys = ))
   if ("show_keys" %in% names(t) && !is.na(t$show_keys) && nzchar(trimws(t$show_keys))) {
-    out$show_keys <- .split_bar(t$show_keys)
+    out$show_keys <- tfl_split_bar(t$show_keys)
   }
   if (!is.na(t$rows)) out$rows <- .ard_spec_refs(t$rows)
   if (!is.na(t$label)) {
@@ -1372,7 +1372,7 @@ print.tfl_table_spec <- function(x, ...) {
 # takes it, list(n = "N", orr_ci = c("n", "estimate", "conf.low"))
 .ard_spec_stat_groups <- function(x, col = "stat_groups", what = "statistic",
                                   example = "n = N | orr_ci = n, estimate, conf.low, conf.high") {
-  parts <- .split_bar(x)
+  parts <- tfl_split_bar(x)
   bad <- parts[!grepl("^[^=]+=.+$", parts)]
   if (length(bad)) {
     .ard_stop(sprintf(paste0(
@@ -1695,7 +1695,7 @@ print.tfl_table_spec <- function(x, ...) {
   t <- sp$tables
   if (!nrow(t) || !"compare" %in% names(t) || is.na(t$compare[1L]) ||
       !nzchar(trimws(t$compare[1L]))) return(character(0))
-  .split_bar(t$compare[1L])
+  tfl_split_bar(t$compare[1L])
 }
 
 # plan_compare() from the sheets: each column's templates are the `cells`

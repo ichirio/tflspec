@@ -25,7 +25,7 @@ test_that("each catalogued model argument is one of the installed function's", {
   # a choice's default is one of its choices
   ch <- d[d$kind == "choice" & nzchar(d$default), ]
   for (i in seq_len(nrow(ch))) {
-    expect_true(ch$default[i] %in% .split_bar(ch$choices[i]),
+    expect_true(ch$default[i] %in% tfl_split_bar(ch$choices[i]),
                 info = paste(ch$fn[i], ch$arg[i]))
   }
 })

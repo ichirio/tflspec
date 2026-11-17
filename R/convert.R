@@ -986,7 +986,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
         if (!is.null(ar)) {
           m$ards <- lapply(ar, function(e) {
             for (k in intersect(c("by", "strata", "variables", "statistics"), names(e))) {
-              e[[k]] <- as.list(.split_bar(e[[k]]))
+              e[[k]] <- as.list(tfl_split_bar(e[[k]]))
             }
             e
           })
@@ -1067,7 +1067,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     an <- an[!is.na(an$output_id) & an$output_id == id &
                an$method %in% c("hierarchical", "cards::ard_stack_hierarchical",
                                 "cards::ard_stack_hierarchical_count"), , drop = FALSE]
-    if (nrow(an)) out$hierarchy <- .split_bar(an$variables[1L])
+    if (nrow(an)) out$hierarchy <- tfl_split_bar(an$variables[1L])
   }
   # no ARD definition to say it (an ARD made elsewhere): a table whose rows
   # are groups and whose label is a variable is a hierarchy -- its groups,
