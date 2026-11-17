@@ -250,3 +250,34 @@ test_that("a flat args: under template: is read as the step sections are", {
   rep$template$args$nonesuch <- 1
   expect_error(tfl_template_resolve(rep, study = tr_study()), "has no argument nonesuch")
 })
+
+test_that("tflspec_summary: demog's arguments give demog's code SPEC; the analysis set is a param", {
+  dm <- tr_reports()$demog
+  sm <- dm
+  sm$template$name <- "tflspec_v1/tflspec_summary"
+  a <- tfl_template_resolve(dm, study = tr_study())
+  b <- tfl_template_resolve(sm, study = tr_study())
+  for (k in c("id", "kind", "label", "extends", "style", "data", "ard", "content", "page")) {
+    expect_identical(b[[k]], a[[k]], info = k)
+  }
+  expect_identical(attr(b, "template"), "tflspec_v1/tflspec_summary")
+  expect_identical(attr(b, "args")[names(attr(a, "args"))], attr(a, "args"))
+  # the analysis set: a param, its default the series' population_safety
+  expect_identical(attr(b, "args")$population, "SAF")
+  expect_identical(attr(b, "origins")[["population"]], "series")
+  row_pop <- function(out) {
+    d <- out$ard$analysis_data
+    d[[match("adsl_sub", vapply(d, function(r) r$id, ""))]]$population
+  }
+  expect_identical(row_pop(b), "SAF")
+  sm$template$data <- list(population = "FAS")
+  b2 <- tfl_template_resolve(sm, study = tr_study())
+  expect_identical(row_pop(b2), "FAS")
+  expect_identical(attr(b2, "origins")[["population"]], "report")
+  # demog has no such argument
+  dm$template$data <- list(population = "FAS")
+  expect_error(tfl_template_resolve(dm, study = tr_study()), "has no argument population")
+  # the template's own label when the report gives none
+  sm$label <- NULL
+  expect_identical(tfl_template_resolve(sm, study = tr_study())$label, "Summary")
+})
