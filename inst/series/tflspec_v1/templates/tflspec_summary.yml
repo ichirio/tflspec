@@ -203,6 +203,5 @@ content:
   - plan_col_header: {lines: "{col_header}"}
   - plan_paginate_rows: {max_rows: "{max_rows}", split: group_safe}
 page:
-  titles:
-    "1": {center: "<{OUTPUT_POPULATION}>"}
+  titles: ~
   footnotes: ~

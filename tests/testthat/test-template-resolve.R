@@ -257,7 +257,7 @@ test_that("tflspec_summary: demog's arguments give demog's code SPEC; the analys
   sm$template$name <- "tflspec_v1/tflspec_summary"
   a <- tfl_template_resolve(dm, study = tr_study())
   b <- tfl_template_resolve(sm, study = tr_study())
-  for (k in c("id", "kind", "label", "extends", "style", "data", "ard", "content")) {
+  for (k in c("id", "kind", "label", "extends", "style", "data", "ard", "content", "page")) {
     expect_identical(b[[k]], a[[k]], info = k)
   }
   expect_identical(attr(b, "template"), "tflspec_v1/tflspec_summary")
@@ -282,7 +282,7 @@ test_that("tflspec_summary: demog's arguments give demog's code SPEC; the analys
   expect_identical(tfl_template_resolve(sm, study = tr_study())$label, "Summary")
 })
 
-test_that("tflspec_summary: nest, value_labels and col_header are optional steps; the titles print the analysis set", {
+test_that("tflspec_summary: nest, value_labels and col_header are optional steps", {
   sm <- tr_reports()$demog
   sm$template$name <- "tflspec_v1/tflspec_summary"
   fns <- function(o) vapply(o$content, function(it) it$fn, "")
@@ -293,13 +293,6 @@ test_that("tflspec_summary: nest, value_labels and col_header are optional steps
   for (p in c("nest", "value_labels", "col_header")) {
     expect_null(attr(b, "args")[[p]], info = p)
   }
-  # the titles: one line, the analysis set
-  expect_identical(b$page$titles, list(`1` = list(center = "<{OUTPUT_POPULATION}>")))
-  # the report's own titles replace it
-  sm$page <- list(titles = list(`1` = list(center = "Table 14.1.1")))
-  expect_identical(tfl_template_resolve(sm, study = tr_study())$page$titles,
-                   list(`1` = list(center = "Table 14.1.1")))
-  sm$page <- NULL
   # nest: {nested variable: {parent variable: level}}, as the step's map
   sm$template$content <- list(nest = list(ETHNIC = list(RACE = "ASIAN")))
   n <- tfl_template_resolve(sm, study = tr_study())
