@@ -47,7 +47,7 @@ test_that("every file in the tflspec_v1 series folder parses", {
 test_that("every template has its keys, a BIGN item and ids on its items", {
   skip_if(!nzchar(series_dir()), "the series folder is not installed")
   ts <- series_templates()
-  expect_length(ts, 8L)
+  expect_length(ts, 9L)
   for (nm in names(ts)) {
     t <- ts[[nm]]
     for (k in c("template", "label", "params", "data", "analysis")) {

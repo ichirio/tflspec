@@ -36,7 +36,9 @@ code SPEC, as \code{\link[=tfl_read_output]{tfl_read_output()}} reads one.
 An analysis item's \verb{analyses:} (\code{per}, \code{ids}) says its analyses: \verb{per: variable} one a variable (its id the variable's entry in \code{ids}, else the
 variable's name); \verb{per: level} or \verb{per: [columns]} one row whose
 \code{analysis_per} tells the generator how to name the analyses; no \code{per}
-one analysis, the item's id.  An item's \verb{conditions:} is a data frame, one row a run, its
+one analysis, the item's id.  \verb{per: level} with an \code{id_prefix} (may be
+empty) names the depths \verb{<prefix>_ANY}, \verb{<prefix>_L1}, ... (no prefix: \code{ANY},
+\code{L1}, ...), each replaced by its entry in \code{ids}.  An item's \verb{conditions:} is a data frame, one row a run, its
 columns the item's \code{params} (and \code{analysis_id}, a row's own id, when a row gives one): the template's rows first, then the
 report's (\code{"{conditions}"}).
 }
