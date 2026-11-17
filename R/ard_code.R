@@ -2168,11 +2168,11 @@
   x
 }
 
-# The steps an item's own columns make: dplyr::mutate() of its derive and
-# its levels
+# The steps an item's own columns make: dplyr::mutate() of its derive,
+# its levels and (a stratified Wilson row) its stratum as a factor
 .item_steps <- function(r, params = character()) {
   d <- c(.item_param_refs(.split_bar(.item_cell(r, "derive")), params),
-         .item_levels(r, params), .item_missing(r))
+         .item_levels(r, params), .item_missing(r), .item_strat_factor(r))
   if (!length(d)) return(character())
   sprintf("dplyr::mutate(%s)", paste(d, collapse = ", "))
 }

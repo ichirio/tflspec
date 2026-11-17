@@ -402,7 +402,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   }
   # an argument the installed function does not have: said now, with the
   # version, rather than by the program when it runs
-  w <- c(.ard_args_unknown(x), if (blank_notes) .blank_text_notes(x))
+  w <- c(.ard_args_unknown(x), .strat_ci_problems(x), if (blank_notes) .blank_text_notes(x))
   if (length(w)) warning(paste(w, collapse = "\n  "), call. = FALSE)
   x
 }
@@ -1185,6 +1185,7 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   # each report's code lists, of the variables its analyses read
   lv <- .codelist_levels_by(codelists, a)
   .check_where_labels(a, lv)
+  .check_strat_weights(a, lv)
   # (what complete_hierarchy() in `post` is written with: the lists and
   # their `under`)
   attr(x, "levels") <- lv

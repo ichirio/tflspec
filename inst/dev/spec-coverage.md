@@ -303,6 +303,16 @@ row of a logistic or count model with no `response_type =
 "dichotomous"`, whose estimates are log odds.  Both gave wrong numbers with
 no warning.
 
+2026-11-17 (the same scope; cards 0.9.0, cardx 0.3.4, still the CRAN
+versions): **100.0% before and after (565 yes / 0 partial)**, with a
+correction.  `ard_categorical_ci(strata =, weights =, max.iterations =)`
+were counted yes, but a stratified Wilson row could not give numbers from
+an ADaM stratum: cardx needs the stratum as a factor, ADaM's columns are
+text, and cardx kept the error in the ARD, so the cells came out empty
+unless a code list made the column a factor.  The run makes the generated
+code give the stratum as a factor and adds checks of the settings that
+fail or are dropped (see "Added 2026-11-17").
+
 (2026-11-14 before: this branch before the run (tflspec@next 6fa6b81
 merged; a tflspec built from it) measured by this run's script on the
 wider scope -- the 20 tidy_plus_plus() arguments could be written as R in
@@ -375,6 +385,47 @@ function, but the catalog did not describe it and its value was not
 judged: partial.  2026-10-31 before: the same, with
 `update_ard_fmt_fun()` in the `post` scope -- written as R in `post`, its
 names checked, its values not judged.)
+
+### Added 2026-11-17
+
+* **A stratified Wilson CI of a proportion works through a SPEC** (a
+  response rate over the randomisation strata: `method = proportion_ci`
+  with `args: method = "strat_wilson"` or `"strat_wilsoncc"` and a column
+  in `strata`; new `R/ard_strat_ci.R`).  cardx 0.3.4's
+  `proportion_ci_strat_wilson()` stops on a stratum that is not a factor
+  ("The `strata` argument must be class <factor>"), and cardx keeps that
+  error in the ARD.  ADaM's stratum columns (STRAT1R, AGEGR1 ...) are text,
+  so the cells came out empty.  The generated code now makes the row's own
+  data first:
+
+  ```r
+  ard_a_data <- mutate(adsl_sub, AGEGR1 = as.factor(AGEGR1))
+  ard_a <- ard_a_data |>
+    cardx::ard_categorical_ci(by = TRT01A, variables = SEX,
+                              strata = AGEGR1, method = "strat_wilson") |> ...
+  ```
+
+  `as.factor()` keeps a factor (a code list's, with its order) as it is.
+  On cards' ADSL the row gives 61.6% (52.1%, 72.0%) for the placebo arm's
+  women, the same as cardx called by hand on a factor.
+* **The stratum's settings that fail or are dropped are warnings** when
+  the definition is read (`.strat_ci_problems()`):
+  * `strata` with any other method, the default `"waldcc"` included:
+    cardx passes the name on unevaluated and the analysis fails ("object
+    'AGEGR1' not found");
+  * `weights` / `max.iterations` with any other method: dropped with no
+    warning;
+  * a stratified method with no stratum, or with two columns (cardx stops:
+    "must be length 1"); the warning says to make one column with
+    `interaction()` in the row's `derive`.
+* **The weights' count is judged by the stratum's code list** when the code
+  is written (`.check_strat_weights()`, a warning).  cardx recycles weights
+  of the wrong length: R's warning is kept in the ARD and the limits are
+  wrong.  On cards' ADSL, two weights for three age groups gave a lower
+  limit of 77.6% for a proportion of 61.6%.
+* The catalog's hints of `strata`, `weights` and `max.iterations` say so:
+  one stratum column, made a factor; the weights in the order of the
+  stratum's levels (its code list's, or sorted); dropped by other methods.
 
 ### Added 2026-11-16
 
@@ -995,6 +1046,11 @@ Every argument in scope is described and its value judged (since
    back to `parameters`' Wald p-values with a message.  Write `tidy_fun =
    broom.helpers::tidy_parameters` for Wald p-values on purpose; LR
    p-values need a change in cardx or broom.
+9. (since 2026-11-17) The stratified Wilson weights' count is judged only
+   when the stratum has a code list (its values are known when the code is
+   written); a stratum with no code list is judged by cardx when the
+   program runs, which keeps R's recycling warning in the ARD.
+
 
 ## rtfreporter (table SPEC)
 
