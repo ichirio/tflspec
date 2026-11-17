@@ -116,6 +116,7 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
     }
     if (inherits(val, "tfl_unset")) val <- NULL
     if (!is.null(val)) attr(val, "fixed") <- attr(val, "origin") <- attr(val, "origins") <- NULL
+    .tr_one_value(val, defs$type[[i]], defs$values[[i]], p, o, template, who)
     if (is.null(val) && isTRUE(defs$required[[i]])) missing <- c(missing, p)
     env[p] <- list(val)
     origins[[p]] <- o
@@ -298,6 +299,29 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
 .tr_origin <- function(origins, prefix) {
   hit <- origins[names(origins) == prefix | startsWith(names(origins), paste0(prefix, "."))]
   if (length(hit)) hit[[1L]] else "template"
+}
+
+# An argument of a one-value type (string, number, logical, column, level,
+# enum[...]) is one value, and an enum's one of its values: by the declared
+# type, before the template's derive: and steps use it (a list there would
+# stop later in a call's argument, or an enum's other value leave its
+# steps out without a word).  Rules between arguments are not here.
+.tr_one_value <- function(val, type, values, p, origin, template, who) {
+  if (is.null(val) || is.na(type)) return(invisible())
+  one <- type %in% c("string", "number", "logical", "column", "level") ||
+    startsWith(type, "enum[")
+  if (!one) return(invisible())
+  from <- if (identical(origin, "report")) "the report" else origin
+  if (length(val) != 1L || (is.list(val) && !inherits(val, "tfl_r"))) {
+    stop(who, ": ", template, "'s ", p, " is one value (", type, "); ", from, " gives ",
+         length(val), ".", call. = FALSE)
+  }
+  if (length(values) && !inherits(val, "tfl_r") && !as.character(val) %in% values) {
+    stop(who, ": ", template, "'s ", p, " is one of ", paste(values, collapse = ", "),
+         "; ", from, " gives ", encodeString(as.character(val), quote = "\""), ".",
+         call. = FALSE)
+  }
+  invisible()
 }
 
 # The report's arguments: `template:` without `name`, its step sections
