@@ -104,6 +104,13 @@ test_that("DM: the template SPEC and the code SPEC give the same ARD and the sam
   expect_identical(unique(r$ard$C$analysis_id), c("BIGN", "AGE", "AGEGR1", "SEX", "RACE", "ECOGBL"))
   expect_identical(twin_ard(r$ard$T), twin_ard(r$ard$C))
   expect_identical(twin_rtf(r$rtf$T, "T-14-1-1T"), twin_rtf(r$rtf$C, "T-14-1-1C"))
+  # the column headers carry each arm's N: the arm labels from the code
+  # list (Drug X -> "Drug X 200 mg") are matched to BIGN's values
+  for (p in r$rtf) {
+    x <- paste(readLines(p, warn = FALSE), collapse = "\n")
+    expect_match(x, "N=[0-9]+")
+    expect_false(grepl("N=NA", x, fixed = TRUE))
+  }
 })
 
 test_that("AE: the template SPEC and the code SPEC give the same ARD", {
