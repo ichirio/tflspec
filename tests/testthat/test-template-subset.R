@@ -169,9 +169,9 @@ test_that("in a study: demog and ae_soc_pt of Part 1's subjects; N and counts th
              a$stat_name == "n", ]
     stats::setNames(unlist(r$stat), as.character(unlist(r$variable_level)))
   }
-  expect_identical(as.integer(n_of(ard, "T-9-1", "GROUPN")[c("Drug X", "Control")]),
+  expect_identical(as.integer(n_of(ard, "T-9-1", "BIGN")[c("Drug X", "Control")]),
                    as.integer(table(p1$TRT01A)[c("Drug X", "Control")]))
-  expect_identical(as.integer(n_of(ard, "T-9-3", "GROUPN")[c("Drug X", "Control")]),
+  expect_identical(as.integer(n_of(ard, "T-9-3", "BIGN")[c("Drug X", "Control")]),
                    as.integer(table(saf$TRT01A)[c("Drug X", "Control")]))
   # the AE table: Part 1's subjects with a TEAE, over Part 1's N
   te <- adae[adae$TRTEMFL == "Y" & adae$USUBJID %in% p1$USUBJID, ]

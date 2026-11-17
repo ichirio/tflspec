@@ -1,5 +1,5 @@
 cols <- c("name", "label_key", "step", "input", "type", "required", "default",
-          "default_kind", "choices", "values", "free", "ordered", "columns", "tier",
+          "default_kind", "choices", "values", "free", "ordered", "columns", "fixed_rows", "tier",
           "description")
 
 test_that("tfl_arg_defs() takes fn or template, one of them", {
@@ -11,12 +11,16 @@ test_that("the data row's and the analysis item's keys are defined", {
   d <- tfl_arg_defs(fn = "data")
   expect_identical(names(d), cols)
   expect_true(all(c("id", "from", "population", "subjects_in", "add", "where", "derive",
-                    "keep", "distinct", "arrange", "then", "code", "when") %in% d$name))
+                    "keep", "distinct", "arrange", "then", "code") %in% d$name))
+
+  expect_false("when" %in% d$name)
   expect_true(all(d$step == "data"))
   expect_identical(d$input[d$name == "where"], "condition")
   a <- tfl_arg_defs(fn = "analysis")
   expect_true(all(c("id", "type", "method", "data", "params", "conditions", "derive",
-                    "levels", "ards", "analysis_ids", "when") %in% a$name))
+                    "levels", "ards", "analysis_ids") %in% a$name))
+
+  expect_false("when" %in% a$name)
   cc <- a$columns[[which(a$name == "conditions")]]
   expect_identical(cc[[1L]], "params")
   expect_identical(cc$where$input, "condition")
@@ -43,12 +47,10 @@ test_that("generic defs name another argument with from_args(), a plain vars() i
   ch <- function(x, n) x$choices[[which(x$name == n)]]
   expect_identical(ch(d, "where"), "vars(from_args(from))")
   expect_identical(ch(d, "add"), "vars(from_args(subjects_in))")
-  expect_identical(ch(d, "when"), "from_args(params)")
   expect_identical(ch(d, "subjects_in"), c("report_data", "fixed"))
   expect_identical(d$values[[which(d$name == "subjects_in")]], "none")
   a <- tfl_arg_defs(fn = "analysis")
   expect_identical(ch(a, "variables"), "vars(from_args(data))")
-  expect_identical(ch(a, "when"), "from_args(params)")
   expect_silent(.arg_check_choices("vars(from_args(from))", "x"))
   expect_error(.arg_check_choices("vars(report_data(from))", "x"), "vars\\(\\) takes")
 })
@@ -72,10 +74,10 @@ test_that("the paginate functions are the page step, other stages stay content",
   expect_true(all(tfl_arg_defs(fn = "plan_blanks")$step == "content"))
 })
 
-test_that("an r argument is a text box, a condition only for where / when", {
+test_that("an r argument is a text box, a condition only for where", {
   expect_identical(.arg_input_for_type("r", "code"), "text")
   expect_identical(.arg_input_for_type("r", "where"), "condition")
-  expect_identical(.arg_input_for_type("r", "when"), "condition")
+  expect_identical(.arg_input_for_type("r", "when"), "text")
   expect_identical(.arg_input_for_type("r"), "text")
 })
 
@@ -148,6 +150,17 @@ test_that("a choice source outside the 14 words stops", {
                    c("from_args(continuous, categorical)", "report_data"))
 })
 
-test_that("tfl_template_resolve() is named for the screen, not written yet", {
-  expect_error(tfl_template_resolve(list()), "not written yet")
+test_that("fixed_rows: the rows a template writes next to a table param's \"{name}\"", {
+  body <- list(analysis = list(list(id = "HR", conditions = list(
+    list(subgroup = "ALL", subgroup_lvl = "ALL", where = tfl_r("TRUE")), "{conditions}"))))
+  fr <- tflspec:::.arg_fixed_rows(body, "conditions")
+  expect_identical(fr$subgroup, "ALL")
+  expect_identical(fr$where, "TRUE")
+  expect_identical(attr(fr, "position"), "before")
+  expect_null(tflspec:::.arg_fixed_rows(body, "by"))
+  d <- tfl_arg_defs(template = "tflspec_v1/forest_hr")
+  fx <- d$fixed_rows[[which(d$name == "conditions")]]
+  expect_identical(fx$subgroup, "ALL")
+  expect_null(d$fixed_rows[[which(d$name == "by")]])
+  expect_null(tfl_arg_defs(fn = "analysis")$fixed_rows[[1L]])
 })

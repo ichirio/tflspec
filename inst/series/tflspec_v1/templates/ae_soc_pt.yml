@@ -68,6 +68,36 @@ params:
     step: analysis
     tier: usual
     description: The decimals (or the format) of each statistic.
+  overall_label:
+    type: string
+    input: text
+    default: Any TEAE
+    step: content
+    tier: usual
+    description: The label of the first row, the subjects with any event (any_row).
+  sort:
+    type: list<string>
+    input: text
+    ordered: true
+    default: [.overall, group1, .depth, -n, label]
+    step: content
+    tier: other
+    description: The sort keys of the rows, first key first; a leading - sorts
+      descending (-n, the most frequent first).
+  heading:
+    type: string
+    input: text
+    default: "System Organ Class\n   Preferred Term"
+    step: content
+    tier: usual
+    description: The heading of the row-label column.
+  max_rows:
+    type: number
+    input: text
+    default: !series max_rows
+    step: content
+    tier: other
+    description: The most rows a page holds.
 extends: !series extends
 style: !series style
 data:
@@ -98,6 +128,19 @@ analysis:
     args: !r over_variables = {any_row}
     post: !r keep_min_pct({min_pct}, "{min_pct_in}")
     formats: "{formats}"
+# (the rows: the outer level the group, the inner the label -- the default
+# hierarchy's AEBODSYS and AEDECOD)
+content:
+  - normalize_ard: {hierarchy: "{hierarchy}", overall: "{overall_label}"}
+  - table_plan: {cols: "{by}", rows: {group1: AEBODSYS}, label: {label: AEDECOD}}
+  - plan_sort: {keys: "{sort}"}
+  - plan_col_header:
+      header:
+        - {line: "1", cols: row_label}
+        - {line: "1", cols: .values, span: each, text: "{col}\n(N={n})\nn (%)"}
+        - {line: "2", cols: row_label, text: "{heading}"}
+        - {line: "2", cols: .values}
+  - plan_paginate_rows: {max_rows: "{max_rows}", split: group_force}
 page:
   titles: ~
   footnotes: ~

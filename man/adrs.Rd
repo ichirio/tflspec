@@ -12,6 +12,7 @@
 \item{AVISIT, AVISITN, ADT, ADY}{visit (\verb{WEEK 6}, ...; \code{OVERALL} for
 BOR), date, study day}
 \item{AVALC, AVAL}{response (CR, PR, SD, PD, NE) and its code 1-5}
+\item{AVALCAT1}{\code{Response} (CR or PR) or \code{Non-response}}
 \item{ANL01FL}{analysis flag}
 }
 }

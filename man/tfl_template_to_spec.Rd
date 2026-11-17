@@ -23,7 +23,9 @@ parameters that take them, as \code{\link[=tfl_resolve_output]{tfl_resolve_outpu
 merged with the report's own \verb{ard:}, \verb{data:} and \verb{content:}, and the
 \verb{template:} taken out.  Each item the template made keeps the mark
 \code{from = "template:<name>"}.  The report is then a code SPEC: later
-changes of the template do not reach it.
+changes of the template do not reach it.  A series template
+(\verb{<series>/<template>}) is written out by \code{\link[=tfl_template_resolve]{tfl_template_resolve()}}, with
+the study's \code{study.yml} values.
 }
 \examples{
 d <- system.file("extdata", "spec-yaml", package = "tflspec")

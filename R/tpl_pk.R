@@ -61,13 +61,14 @@
   tm <- a$time
   q <- function(x) sprintf("\"%s\"", gsub("\"", "\\\"", x, fixed = TRUE))
   order <- if (length(a$time_order)) sprintf("%s = reorder_by(%s, %s)", tm, tm, a$time_order)
-  # a BLQ record is -Inf in the listing's value (its cell prints blq_label);
+  # a BLQ record is -Inf in the listing's value (its cell prints blq_label;
+  # the test is TRUE only: a blank flag is NA in study$adam);
   # a missing value or an absent time point is empty
-  blq_value <- sprintf("%s = ifelse(%s, -Inf, %s)", a$value, a$blq, a$value)
+  blq_value <- sprintf("%s = ifelse((%s) %%in%% TRUE, -Inf, %s)", a$value, a$blq, a$value)
   # the listing's records (a BLQ one -Inf: it prints `blq_label`) and the
   # summary's (the values)
   rec <- function(id, label, where, derive) Filter(Negate(is.null), list(
-    id = id, label = label, from = a$data, subjects = subj,
+    id = id, label = label, from = a$data, subjects_in = subj,
     where = if (length(where)) tfl_r(.tpl_and_all(where)),
     derive = if (length(derive)) tfl_r(paste(derive, collapse = " | "))))
   sets <- list(

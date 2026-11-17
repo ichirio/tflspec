@@ -69,7 +69,7 @@ takes its template's); the default for a report with \code{template}, else
 \code{"defaults"}.}
 
 \item{data}{What the report reads, its step 1: a list of definitions
-(\code{id}, \code{from}, \code{subjects}, \code{where} ..., one dataset each; in a YAML file
+(\code{id}, \code{from}, \code{subjects_in}, \code{where} ..., one dataset each; in a YAML file
 the report's flat \verb{data:} list) in the report's built data; or, for a
 figure (and a listing or a records table that still has the map), a
 list (\code{source} -- \code{"ard"}, \code{"code"} or \code{"dataset"} -- and \code{object},

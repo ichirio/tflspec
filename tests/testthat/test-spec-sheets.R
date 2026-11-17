@@ -37,7 +37,7 @@ test_that("the sheets of the fixture study come back: the report list, the page 
   expect_false(any(is.na(sh$table$header$output_id)))
   expect_identical(sh$table$tokens$value[sh$table$tokens$name == "COMPANY"], "Sample Pharma")
   expect_identical(sh$table$titles$center, c("Table 14.1.1", "Demographic Characteristics"))
-  expect_identical(sh$ard$analyses$analysis_id, c("GROUPN", "CONT", "CAT"))
+  expect_identical(sh$ard$analyses$analysis_id, c("BIGN", "CONT", "CAT"))
   expect_identical(sh$ard$analyses$variables[3L], "AGEGR1 | SEX | RACE | ECOGBL")
   expect_identical(sh$ard$analysis_data$data_id, "adsl_sub")
   expect_identical(sh$ard$analysis_data$population_id, "SAF")

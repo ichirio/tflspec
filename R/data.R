@@ -110,7 +110,10 @@
 #' Six laboratory parameters of the simulated study XYZ-ONC-01 (see
 #' [adsl]) on day 1 of each cycle (cycle 1 is the baseline): ALT, AST,
 #' bilirubin, haemoglobin, neutrophils, platelets, with normal ranges and
-#' CTCAE grades for shift tables.
+#' CTCAE grades for shift tables.  Each subject's worst post-baseline record
+#' of a parameter is a row of its own as well, `AVISIT`
+#' `"WORST POST-BASELINE"` (`AVISITN` 99): a copy of the record with the
+#' highest grade (the earliest of equal grades), `ONTRTFL` blank.
 #'
 #' @format `adlb`: a data frame, one row per subject, parameter and visit,
 #'   with the subject keys (as in [adex]) and
@@ -122,6 +125,10 @@
 #'     \item{ANRLO, ANRHI, ANRIND, BNRIND}{normal range and indicator (and at
 #'       baseline)}
 #'     \item{ATOXGR, BTOXGR}{CTCAE grade (and at baseline)}
+#'     \item{ATOXGRL, ATOXGRH, BTOXGRL, BTOXGRH}{the grade in each direction,
+#'       low and high (and at baseline), fictional: ALT, AST and bilirubin
+#'       graded high, haemoglobin, neutrophils and platelets low, `NA` in the
+#'       other direction}
 #'     \item{ABLFL, ONTRTFL}{baseline and on-treatment record flags}
 #'   }
 #' @inherit adsl source
@@ -157,6 +164,7 @@
 #'     \item{AVISIT, AVISITN, ADT, ADY}{visit (`WEEK 6`, ...; `OVERALL` for
 #'       BOR), date, study day}
 #'     \item{AVALC, AVAL}{response (CR, PR, SD, PD, NE) and its code 1-5}
+#'     \item{AVALCAT1}{`Response` (CR or PR) or `Non-response`}
 #'     \item{ANL01FL}{analysis flag}
 #'   }
 #' @inherit adsl source

@@ -105,7 +105,7 @@
   type <- as.character(type %||% "string")
   if (identical(type, "logical") || startsWith(type, "enum[")) return("pick")
   if (grepl("^(list<)?(column|level)>?$", type)) return("pick")
-  if (identical(type, "r")) return(if (name %in% c("where", "when")) "condition" else "text")
+  if (identical(type, "r")) return(if (identical(name, "where")) "condition" else "text")
   if (grepl("^(rows|map|vec)<", type)) return("table")
   "text"
 }
@@ -188,6 +188,7 @@
   row$free <- as.logical(free)
   row$ordered <- as.logical(ordered)
   row$columns <- I(list(d$columns))
+  row$fixed_rows <- I(list(NULL))
   row$tier <- tier
   row$description <- as.character(d$description %||% d$help %||% "")
   row
@@ -233,9 +234,7 @@
     then = list(type = "r", input = "text",
                 description = "R after the keys above, on the row's data."),
     code = list(type = "r", input = "text", tier = "other",
-                description = "R for a row the keys cannot say."),
-    when = list(type = "string", input = "pick", choices = "from_args(params)", tier = "other",
-                description = "A template's row only when this argument has a value or is true.")
+                description = "R for a row the keys cannot say.")
   )
 }
 
@@ -290,14 +289,49 @@
                 tier = "other",
                 description = "Several calls of the method, one analysis_id (no id of their own)."),
     post = list(type = "r", input = "text", tier = "other", description = "R on the item's result."),
-    when = list(type = "string", input = "pick", choices = "from_args(params)", tier = "other",
-                description = "A template's item only when this argument has a value or is true."),
     code = list(type = "r", input = "text", tier = "other",
                 description = "R for an item the keys cannot say.")
   )
 }
 
 # ---- a template's params: ---------------------------------------------------
+
+# The rows a template writes with fixed values in the same list as a table
+# param's "{name}" (forest_hr's conditions: the ALL row): a data frame, its
+# attribute "position" each row's place, "before" or "after" "{name}"; NULL
+# when there are none.
+.arg_fixed_rows <- function(body, name) {
+  spot <- paste0("{", name, "}")
+  found <- NULL
+  walk <- function(x) {
+    if (!is.null(found) || !is.list(x)) return(invisible())
+    if (is.null(names(x))) {
+      at <- which(vapply(x, function(e) identical(e, spot), TRUE))
+      if (length(at)) {
+        is_map <- vapply(x, function(e) is.list(e) && !is.null(names(e)), TRUE)
+        idx <- setdiff(which(is_map), at[1L])
+        if (length(idx)) {
+          found <<- list(rows = x[idx], pos = ifelse(idx < at[1L], "before", "after"))
+        }
+        return(invisible())
+      }
+    }
+    for (e in x) walk(e)
+  }
+  walk(body)
+  if (is.null(found)) return(NULL)
+  cell <- function(v) {
+    if (is.null(v)) return(NA_character_)
+    if (inherits(v, "tfl_r")) return(as.character(unclass(v)))
+    if (inherits(v, "tfl_tagged")) return(as.character(unlist(v$value))[1L])
+    paste(as.character(unlist(v)), collapse = ", ")
+  }
+  cols <- unique(unlist(lapply(found$rows, names)))
+  df <- as.data.frame(stats::setNames(lapply(cols, function(cn)
+    vapply(found$rows, function(r) cell(r[[cn]]), "")), cols), stringsAsFactors = FALSE)
+  attr(df, "position") <- found$pos
+  df
+}
 
 # The template file of "<series>/<template>": the first series folder that has
 # it (the option tflspec.series_dir, tflplanner's home standards/series/, the
@@ -376,6 +410,11 @@
 #'       `params:`); in a list, an unnamed `"params"` marks where the item's
 #'       params go (an item's conditions: `"params"`, `where`, an optional
 #'       `analysis_id`).}
+#'     \item{fixed_rows}{(a list column) a template's table param: the rows
+#'       the template writes with fixed values next to its `"{name}"` (the
+#'       ALL row of forest_hr's conditions), a data frame whose attribute
+#'       `"position"` gives each row's place, `"before"` or `"after"` the
+#'       report's rows; `NULL` otherwise.}
 #'     \item{tier}{`required`, `usual` or `other` (shown folded).}
 #'     \item{description}{one line.}
 #'   }
@@ -397,8 +436,11 @@ tfl_arg_defs <- function(fn = NULL, template = NULL) {
       stop(sprintf("template %s: params: is a map of argument definitions.", template),
            call. = FALSE)
     }
-    return(.arg_table(defs, "analysis", paste0("template.", sub("/", ".", template, fixed = TRUE), "."),
-                      sprintf("template %s", template)))
+    out <- .arg_table(defs, "analysis", paste0("template.", sub("/", ".", template, fixed = TRUE), "."),
+                      sprintf("template %s", template))
+    y$params <- NULL
+    for (i in seq_len(nrow(out))) out$fixed_rows[i] <- list(.arg_fixed_rows(y, out$name[i]))
+    return(out)
   }
   fn <- as.character(fn)[1L]
   if (identical(fn, "data")) {
@@ -415,27 +457,4 @@ tfl_arg_defs <- function(fn = NULL, template = NULL) {
   args <- .arg_schema_fill(fn, ent$args %||% list())
   step <- if (fn %in% .arg_page_fns) "page" else .arg_step_for_stage(ent$stage)
   .arg_table(args, step, paste0(.schema_fn_name(fn), "."), fn)
-}
-
-#' A report's template with its values filled in
-#'
-#' Reads the report's template, puts the report's arguments over the
-#' template's defaults, resolves the series' and the study's values, fills in
-#' the `"{name}"` spots of the template's `data:` rows and analysis items, and
-#' merges the report's own `data:` rows by id.  The result is a plain code
-#' SPEC (what the code SPEC's cards show and what the generator reads), and
-#' each value carries where it came from (`report`, `template`, `study`,
-#' `series`, `fixed`).
-#'
-#' Not written yet: the name is fixed so that the screen can be written
-#' against it.
-#'
-#' @param report A report SPEC (a list, as read) or its file.
-#' @param template A template, `"<series>/<template>"`; default the report's
-#'   `template: name:`.
-#' @param study The study (its `study.yml` settings and `series_settings:`).
-#' @return The report as a code SPEC: `data:` and `analysis:` lists.
-#' @export
-tfl_template_resolve <- function(report, template = NULL, study = NULL) {
-  stop("tfl_template_resolve(): not written yet (package C).", call. = FALSE)
 }

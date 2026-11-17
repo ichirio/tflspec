@@ -99,7 +99,7 @@ test_that("the former km_simple / km_risk_table / km_ci: km_survival with argume
                          "toString(sort(unique(df$PARAMCD))),\n",
                          "       \"); keep one in the data steps (a param step)\", call. = FALSE)\n}")),
       list(step = "filter",
-           expr = "!is.na(TRT01A) & TRT01A != \"\"",
+           expr = "!is.na(TRT01A)",
            label = "the subjects with an empty TRT01A have no curve: left out, with a warning",
            warn = "km_survival: {n} subjects with an empty TRT01A were left out"),
       list(step = "filter",

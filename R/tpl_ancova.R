@@ -48,10 +48,10 @@
   ard <- list(
     analysis_data = list(
       list(id = subj, from = "ADSL", population = pop),
-      list(id = set, from = a$data, subjects = subj,
+      list(id = set, from = a$data, subjects_in = subj,
            where = tfl_r(.tpl_and_all(where)))),
     analyses = list(
-      list(id = "GROUPN", method = "categorical", data = subj, variables = a$by,
+      list(id = "BIGN", method = "categorical", data = subj, variables = a$by,
            purpose = "PRIMARY OUTCOME MEASURE"),
       an("LSMEAN", "emmeans", "LSMEAN", "variable_level"),
       # the differences against the reference arm: put first, each pair is

@@ -101,13 +101,12 @@ test_that("ref: the reference arm is put first by a relevel; comparison only sho
   # comparison does not reorder the arms (the data step is the blank arm made missing only)
   y <- tfl_template_expand("forest_hr", list(param = "OS", population = "ITT", group = "TRT01P",
                                              comparison = "Drug X"))
-  expect_false(grepl("factor(", unclass(y$ard$analysis_data[[1L]]$derive), fixed = TRUE))
+  expect_null(y$ard$analysis_data[[1L]]$derive)
   expect_error(tfl_template_expand("forest_hr", list(param = "OS", population = "ITT",
                                                      ref = "Drug X", comparison = "Drug X")),
                "`comparison` is the reference arm")
-  # (no ref: only the blank arm made missing)
-  expect_identical(as.vector(unclass(tfl_template_expand("forest_hr", list(param = "OS", population = "ITT"))$ard$analysis_data[[1L]]$derive)),
-                   "TRT01A = replace(TRT01A, !is.na(TRT01A) & as.character(TRT01A) == \"\", NA)")
+  # (no ref: no derive step; a blank arm is NA already)
+  expect_null(tfl_template_expand("forest_hr", list(param = "OS", population = "ITT"))$ard$analysis_data[[1L]]$derive)
   skip_on_cran()
   fr_skip()
   skip_if_not_installed("haven")
@@ -242,7 +241,8 @@ fr_hr <- function(ref = NULL) {
                                                subgroups = "SEX"),
                                           if (!is.null(ref)) list(ref = ref)))
   d <- fr_data()
-  for (e in strsplit(as.character(unclass(x$ard$analysis_data[[1L]]$derive)), " | ", fixed = TRUE)[[1L]]) {
+  der <- x$ard$analysis_data[[1L]]$derive
+  if (!is.null(der)) for (e in strsplit(as.character(unclass(der)), " | ", fixed = TRUE)[[1L]]) {
     d <- eval(parse(text = sprintf("dplyr::mutate(d, %s)", e)))
   }
   ard <- suppressWarnings(eval(parse(text = x$ard$analyses[[1L]]$code), list(data = d)))

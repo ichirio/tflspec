@@ -32,6 +32,8 @@ navbar:
           href: articles/table-spec.html
         - text: "Reports: headers, footers, titles, footnotes and tokens"
           href: articles/reports.html
+        - text: "Writing a SPEC: data lines, analyses, study data and figures"
+          href: articles/spec-rules.html
         - text: -------
         - text: "Listings, figures and ARS"
         - text: "Listings"
@@ -56,6 +58,7 @@ articles:
       - articles/ard-spec
       - articles/table-spec
       - articles/reports
+      - articles/spec-rules
   - title: Listings, figures and ARS
     navbar: Listings, figures and ARS
     contents:

@@ -28,8 +28,11 @@
 #' @param dir The study folder (or its `spec/`).
 #' @param templates What a report written as a template SPEC becomes.
 #'   `"sheet"` (the default): one row of the `templates` sheet (and its
-#'   `template_rows`), by the template's name and arguments, as
-#'   [tfl_read_template_sheets()] reads them; the report's page parts,
+#'   `template_rows`, and its `conditions` as rows of the ARD's
+#'   `conditions` sheet with `analysis_id` blank), by the template's name
+#'   and arguments, as [tfl_read_template_sheets()] reads them; an argument
+#'   that is a map (`formats`) is not on the sheets and stays in the
+#'   report's YAML file; the report's page parts,
 #'   codelists and report row are the other sheets' as for any report. Nothing is expanded; a
 #'   report is written out as its items only by [tfl_template_to_spec()],
 #'   called on purpose.  `"expand"`: the report is expanded first
@@ -43,8 +46,9 @@
 #'   `ard` (the ARD sheets), `listing` (`listings`, `listing_cols`),
 #'   `figures` (a figure's design list, by id), `study` (study.yml's
 #'   fields), `templates` and `template_rows` (the template reports; with
-#'   `templates = "expand"` both are empty), `not_converted` (what the
-#'   sheets cannot hold).
+#'   `templates = "expand"` both are empty), `template_maps` (`output_id`,
+#'   `param`: a template report's arguments that are maps, which the sheets
+#'   do not hold), `not_converted` (what the sheets cannot hold).
 #' @examples
 #' d <- system.file("extdata", "spec-yaml", package = "tflspec")
 #' sh <- tfl_sheets_from_yaml(d)
@@ -91,6 +95,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
   }
   trows <- list()
   tparam_rows <- list()
+  tmap_rows <- list()
   bridge <- .bridge_fn(".plan_sheets_from_content")
   nc <- list()
   note <- function(output, part, reason) nc[[length(nc) + 1L]] <<- data.frame(
@@ -287,6 +292,12 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
   ard <- list()
   keys <- s$study$keys %||% list()
   ard$study <- data.frame(key = names(keys), value = vapply(keys, cell, ""), stringsAsFactors = FALSE)
+  # (settings: adam_levels: none on the ARD's study sheet: the ARD's
+  # fingerprint, tfl_ard_spec_hash(), counts it)
+  if (identical(.study_adam_levels(s), "none")) {
+    ard$study <- rbind(ard$study[!ard$study$key %in% "adam_levels", , drop = FALSE],
+                       data.frame(key = "adam_levels", value = "none", stringsAsFactors = FALSE))
+  }
   ard$datasets <- .rows_df(lapply(s$data$datasets %||% list(), function(e) lapply(e, cell)), .ard_spec_sheets$datasets)
   ard$populations <- .rows_df(lapply(s$data$populations %||% list(), function(e) {
     m <- lapply(e, cell); if (!is.null(m$id)) { m$population_id <- m$id; m$id <- NULL }; m
@@ -307,7 +318,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
            where = cell(l$where))
     })
   }), recursive = FALSE), .ard_spec_sheets$groups)
-  adata <- list(); analyses <- list()
+  adata <- list(); analyses <- list(); cond_rows <- list(); ards_rows <- list()
   listings <- list(); listing_cols <- list(); fig_rows <- list()
   figures <- list()
   toc_index <- stats::setNames(s$toc$outputs %||% list(), vapply(s$toc$outputs %||% list(), function(e) e$id %||% "", ""))
@@ -386,6 +397,11 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       enc <- .tpl_sheets_encode(id, o$kind, .na_scalar(o$label), tpl, .out_population(o))
       trows[[length(trows) + 1L]] <- enc$row
       tparam_rows <- c(tparam_rows, enc$rows)
+      # (its condition rows: the conditions sheet's, analysis_id blank)
+      cond_rows <- c(cond_rows, enc$cond)
+      # (its maps are not on the sheets: named, for tfl_yaml_from_sheets() to
+      # take them from the report's file it writes over)
+      for (m in enc$maps) tmap_rows[[length(tmap_rows) + 1L]] <- list(output_id = id, param = m)
       if (length(enc$lost)) {
         warning(sprintf("%s: template arguments the templates sheet cannot hold are not kept: %s",
                         id, paste(enc$lost, collapse = ", ")), call. = FALSE)
@@ -425,6 +441,13 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       if (!is.null(a$denominator)) a$denominator <- .den_cell(a$denominator)
       # (`by: []`: no columns, said so)
       if ("by" %in% names(a) && !length(a$by)) a$by <- tfl_unset()
+      # an item's condition rows and its calls: rows of their own sheets
+      # (a row's own analysis_id as row_analysis_id); its levels a cell
+      cond_rows <- c(cond_rows, .item_rows_out(a$conditions, id, a$id, cell))
+      ards_rows <- c(ards_rows, .item_rows_out(a$ards, id, a$id, cell))
+      a$conditions <- NULL
+      a$ards <- NULL
+      if (is.list(a$levels) && !is.null(names(a$levels))) a$levels <- .levels_cell(a$levels)
       m <- lapply(a, cell); m$analysis_id <- m$id; m$id <- NULL
       if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
       if (!is.null(a$ref)) note(id, paste0("analyses.", a$id), "a reference to another report's analysis (ref) has no sheet")
@@ -479,12 +502,12 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       # a figure of items (R/fig_content.R): its data and items as they are,
       # the design list's `content` (read back by .conv_output(), #689)
       fd <- list(template = o$template, data = o$data$steps, content = .items_to_list(o$content))
-      for (k in c("ggplot2_version", "plot", "plots", "compose")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]
+      for (k in c("ggplot2_version", "plot", "plots", "compose", "figure")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]
       figures[[id]] <- fd
       # what the design list has no place for is said, by the report
       lost <- c(setdiff(names(o$data), c("steps", "code", "datasets", "ard", "source")),
                 if (!is.null(o$data$source) && !identical(o$data$source, "code")) "source")
-      lost <- c(lost, setdiff(names(o), c(.output_fields, "template", "ggplot2_version", "plot", "plots", "compose")))
+      lost <- c(lost, setdiff(names(o), c(.output_fields, "template", "ggplot2_version", "plot", "plots", "compose", "figure")))
       if (length(lost)) {
         note(id, "figure", paste0("a figure of items: ", paste(unique(lost), collapse = ", "),
                                    " is not kept (the design list has no place for it)"))
@@ -495,6 +518,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       if (code_content) oc$content <- list()
       fd <- .fig_design_of_output(oc)
       if (!is.null(o$template)) fd$template <- o$template
+      if (!is.null(o$figure)) fd$figure <- o$figure
       # a figure that is its own code and nothing of the designer's has no
       # design
       if (!(code_content && identical(names(fd), "layers"))) figures[[id]] <- fd
@@ -546,6 +570,8 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
   ard$objects <- .rows_df(objs, .ard_spec_sheets$objects)
   ard$analysis_data <- .rows_df(adata, c("output_id", .ard_spec_sheets$analysis_data))
   ard$analyses <- .rows_df(analyses, .ard_spec_sheets$analyses)
+  ard$conditions <- .rows_df(cond_rows, .ard_spec_sheets$conditions)
+  ard$ards <- .rows_df(ards_rows, .ard_spec_sheets$ards)
 
   # the table and report sheets as data frames (the study sheet from study.yml's settings)
   table <- list()
@@ -634,6 +660,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
        templates = .rows_df(trows, c("output_id", "kind", "label", "population", "template", "by",
                                      "where", "args")),
        template_rows = .rows_df(tparam_rows, c("output_id", "param", "value", "label")),
+       template_maps = .rows_df(tmap_rows, c("output_id", "param")),
        not_converted = if (length(nc)) do.call(rbind, nc) else
          data.frame(output = character(), part = character(), reason = character(), stringsAsFactors = FALSE))
 }
@@ -667,6 +694,56 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
   }
   if (is.logical(v)) v <- ifelse(v, "TRUE", "FALSE")
   paste(as.character(v), collapse = " | ")
+}
+
+# An item's rows (its conditions: a data frame or a list of maps; its
+# ards: a list of maps) as sheet rows: output_id, analysis_id, row, then
+# the row's cells (`cell`); a row's own analysis_id as row_analysis_id
+.item_rows_out <- function(rows, output_id, analysis_id, cell = .sheet_cell) {
+  if (is.null(rows) || !length(rows)) return(list())
+  if (is.data.frame(rows)) {
+    rows <- lapply(seq_len(nrow(rows)), function(k) lapply(rows, function(v) {
+      e <- v[[k]]
+      if (is.list(v) && !inherits(e, "tfl_r")) unlist(e) else e
+    }))
+  }
+  if (!is.list(rows) || !is.null(names(rows))) return(list())
+  lapply(seq_along(rows), function(k) {
+    m <- lapply(rows[[k]], cell)
+    if (!is.null(m$analysis_id)) { m$row_analysis_id <- m$analysis_id; m$analysis_id <- NULL }
+    c(list(output_id = output_id, analysis_id = analysis_id, row = as.character(k)), m)
+  })
+}
+
+# An item's levels (a map: a variable, its levels) as a cell, `VAR = expr |
+# ...`: a text "a" (or several, c("a", "b")) as R, an !r as written
+.levels_cell <- function(lv) {
+  rhs <- vapply(lv, function(v) {
+    if (inherits(v, "tfl_r")) return(as.character(unclass(v)))
+    v <- as.character(unlist(v))
+    paste(deparse(if (length(v) == 1L) v[[1L]] else v), collapse = "")
+  }, "")
+  paste(sprintf("%s = %s", names(lv), rhs), collapse = " | ")
+}
+
+# The levels cell as the map it was: a text or several as text, else !r
+.levels_map <- function(x) {
+  parts <- .split_bar(x)
+  if (!length(parts)) return(NULL)
+  out <- list()
+  for (p in parts) {
+    v <- trimws(sub("=.*$", "", p))
+    rhs <- trimws(sub("^[^=]*=", "", p))
+    e <- tryCatch(str2lang(rhs), error = function(e) NULL)
+    val <- if (is.character(e) && length(e) == 1L) {
+      e
+    } else if (is.call(e) && identical(e[[1L]], as.name("c")) &&
+               all(vapply(as.list(e)[-1L], is.character, NA))) {
+      as.list(vapply(as.list(e)[-1L], identity, ""))
+    } else tfl_r(rhs)
+    out[v] <- list(val)
+  }
+  out
 }
 
 # rows (named lists of cells) as a data frame of text with the columns

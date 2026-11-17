@@ -98,10 +98,12 @@ params:
   count_cell:
     type: string
     input: text
-    default: !series count_cell
+    default: ~
     step: content
     tier: usual
-    description: The cell template of a categorical count.
+    description: The cell template of a categorical count; empty for the
+      study's, the plan_cells of its defaults.yml (an n (%) template has no
+      default of its own, canon 2026-11-16).
   max_rows:
     type: number
     input: text
@@ -140,7 +142,8 @@ analysis:
     by: ["{by}"]
     overall: "{total}"
     variables: "{categorical}"
-    statistics: [n, p]
+    # (N, the analysis's own denominator, stays in the ARD: canon 2026-11-16)
+    statistics: [n, N, p]
     denominator: BIGN
     missing_row: "{missing_row}"
     missing_label: "{missing_label}"

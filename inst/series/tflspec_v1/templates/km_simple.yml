@@ -61,18 +61,18 @@ params:
   y_label:
     type: string
     input: text
-    default: Survival probability
+    default: Survival Probability
     step: content
     tier: usual
     description: The label of the y axis.
   legend:
-    type: enum[bottom|right|top|none]
+    type: enum[inside|bottom|none]
     input: pick
     choices: fixed
     default: bottom
     step: content
     tier: other
-    description: Where the legend goes; none for no legend.
+    description: Where the legend goes (inside at the top right, bottom); none for no legend.
 extends: !series extends
 style: !series style
 data:
@@ -92,11 +92,6 @@ analysis:
     data: adsl_sub
     variables: ["{by}"]
     formats: "{formats}"
-  - id: km_fit
-    type: model
-    method: survfit
-    data: adtte_sub
-    args: !r ggsurvfit::Surv_CNSR({time}, {censor}) ~ {by}
 page:
   titles: ~
   footnotes: ~

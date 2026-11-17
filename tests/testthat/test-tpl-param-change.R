@@ -48,7 +48,7 @@ test_that("expanded: the records kept, the visits in their order, the change's o
   expect_identical(as.character(d[[3L]]$where), "!is.na(CHG)")
   expect_identical(as.character(d[[3L]]$derive), "AVISIT = droplevels(AVISIT)")
   an <- x$ard$analyses
-  expect_identical(vapply(an, `[[`, "", "id"), c("GROUPN", "VALUE", "CHANGE"))
+  expect_identical(vapply(an, `[[`, "", "id"), c("BIGN", "VALUE", "CHANGE"))
   # (the parameter by its code, PARAMCD, user 11-11: no PARAM x PARAMCD
   # crossing, so the value keeps an arm's 0 at a visit; its text, PARAM, is
   # the table's, outside the ARD, canon 1.42)
