@@ -150,6 +150,13 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   # data: rows -- the template's, the report's merged in by id key by key
   # (a report row with `code:` makes the whole data: it replaces the
   # template's row of its id), then filled in
+  # (a figure's data written as its steps, `data: {source, steps}` as a
+  # code SPEC writes it, is filled in as it is; a report's rows have no
+  # place in it)
+  if (is.list(tpl$data) && !is.null(names(tpl$data)) && length(report$data)) {
+    stop(who, ": ", template, "'s data are its steps (data: steps:); a report adds no data rows to them.",
+         call. = FALSE)
+  }
   rows <- tpl$data %||% list()
   for (r in report$data %||% list()) {
     k <- match(r$id %||% NA_character_, vapply(rows, function(e) e$id %||% NA_character_, ""))
