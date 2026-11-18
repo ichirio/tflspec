@@ -155,7 +155,7 @@ test_that("template labels: the YAML path and the code SPEC (the planner's path)
   a <- twin_labels_call(code_spec)
   b <- twin_labels_call(from_sheets)
   expect_identical(b, a)
-  expect_match(b, "plan_labels(AGE = \"Age (years)\"", fixed = TRUE)
+  expect_match(b, "plan_labels\\( ?AGE = \"Age \\(years\\)\"")
   expect_false(grepl("variable = ", b, fixed = TRUE))
 })
 
