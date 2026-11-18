@@ -1,0 +1,377 @@
+---
+title: "Series base templates: tflspec_summary and tflspec_hierarchy"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+knitr::opts_template$set(code = list(comment = "", class.output = "r"))
+options(knitr.kable.NA = "")
+```
+
+A report does not have to be written from nothing. It can name a
+**series base template** and write only what differs. This article shows
+what such a template is, the two base templates of the `tflspec_v1`
+series, `tflspec_summary` and `tflspec_hierarchy`, and the series values
+a study can change. A last section is for the people who write
+templates. The data is the package's fictional example data (`adsl`,
+`adae`).
+
+## What a series base template is
+
+A series is a folder of templates with a version in its name. tflspec
+comes with one, `tflspec_v1`. Each template is one YAML file under
+`inst/series/tflspec_v1/templates/`.
+
+A base template holds two things:
+
+- **the processing definition**: the data rows, the analysis items, and
+  the content (the rtfreporter plan) of one kind of table;
+- **a full set of defaults**: a value for each argument that does not
+  have to come from the report.
+
+A report names the template under `template:` and gives its arguments
+under `args:`:
+
+```yaml
+template:
+  name: tflspec_v1/tflspec_summary
+  args:
+    by: [TRT01A]
+    continuous: [AGE]
+```
+
+The template fills its `"{name}"` spots with these values. Where the
+report gives no value, the template's default applies. The result is an
+ordinary report SPEC.
+
+A report changes the table in two ways:
+
+- **by an argument**: `args:` gives a value in place of the default;
+- **by an appended card**: the report's own `content:` lists plan items
+  (cards) that come after the template's. When the template already has
+  a card of the same verb, the two become one. The last one wins, and
+  only the arguments the report writes change; the template's other
+  arguments stay. (A few verbs that stack, such as `plan_filter`, add a
+  card instead.)
+
+The arguments of a template, with their defaults, are listed by
+`tfl_arg_defs()`:
+
+```{r, message = FALSE}
+library(tflspec)
+
+defs <- tfl_arg_defs(template = "tflspec_v1/tflspec_summary")
+defs[, c("name", "step", "required")]
+```
+
+## A study to work in
+
+The examples run in one small study. `tfl_ai_study_init()` writes its
+`study.yml`, `spec/data.yml` (the datasets and the analysis sets) and
+`spec/defaults.yml`.
+
+```{r, message = FALSE}
+study <- file.path(tempdir(), "series-study")
+dir.create(file.path(study, "adam"), recursive = TRUE, showWarnings = FALSE)
+for (x in c("adsl", "adae")) {
+  saveRDS(get(x), file.path(study, "adam", paste0(x, ".rds")))
+}
+invisible(tfl_ai_study_init(study, adam = "adam", study_id = "SERIES-1"))
+outputs <- file.path(study, "spec", "outputs")
+```
+
+One helper does the same steps for each report. It fills the template in
+(`tfl_template_resolve()`), saves the report in the study, and returns
+the report, its ARD program (`tfl_ard_code()`), its ARD
+(`tfl_build_ard()`) and its table program (`tfl_content_code()`).
+
+```{r}
+run_report <- function(file) {
+  out <- tfl_template_resolve(file, study = file.path(study, "study.yml"))
+  tfl_write_output(out, file.path(outputs, basename(file)))
+  st <- tfl_read_study_spec(study)
+  out <- tfl_read_output(file.path(outputs, basename(file)))
+  list(spec = out, study = st,
+       ard_code = tfl_ard_code(st, output_id = out$id, save = FALSE, part = "body"),
+       ard = suppressMessages(tfl_build_ard(st, dir = study, output_id = out$id, save = FALSE)),
+       table_code = tfl_content_code(out, study = st))
+}
+```
+
+## `tflspec_summary`
+
+### What it is for
+
+`tflspec_summary` makes a summary table of one row per subject: the
+descriptive statistics of continuous variables and the counts of
+categorical variables, one column a group. Demographics and baseline
+characteristics are the usual uses. It reads the ADSL-like data of one
+analysis set.
+
+### Its arguments
+
+- `by` is required: the column variable(s), the groups across.
+- `continuous` and `categorical`: the variables, in the order of the
+  rows. Give at least one of them. Neither has a default: the template
+  holds no set of variables of its own.
+- `population`: the analysis set. Its default is
+  `!series population_safety`, the series value (`SAF`, see below).
+- `total`, `missing_row`, `formats`, `cells`, `count_cell`, `labels`,
+  `max_rows` ... change the look of the table.
+
+The page header prints the analysis set's label through the token
+`{OUTPUT_POPULATION}`. A template report has no `common: population`, so
+the label comes from the set its `adsl_sub` row keeps (its label in
+`spec/data.yml`).
+
+Three params change the content:
+
+- `value_labels`: the label of each value of a variable, code to text
+  (`{SEX: {F: Female, M: Male}}`). Empty: the code list's labels.
+- `nest`: a variable's rows under one level of another,
+  `{nested variable: {parent variable: level}}`. Write the level as the
+  table shows it.
+- `col_header`: the column header lines, each a map of cell texts.
+  Empty (the default): the study's defaults apply, the column header of
+  its `spec/defaults.yml`.
+
+### Example: a demographics table
+
+```{cat, engine.opts = list(file = file.path(tempdir(), "T-DM.yml"), lang = "yaml")}
+id: T-DM
+kind: table
+label: Demographic characteristics
+template:
+  name: tflspec_v1/tflspec_summary
+  args:
+    by: [TRT01A]
+    continuous: [AGE]
+    categorical: [SEX, RACE]
+    labels: {AGE: "Age (years)", SEX: Sex, RACE: Race}
+    value_labels: {SEX: {F: Female, M: Male}}
+```
+
+```{r}
+dm <- run_report(file.path(tempdir(), "T-DM.yml"))
+```
+
+The data rows and the analyses of the ARD program:
+
+```{r, opts.label = "code"}
+cat(dm$ard_code, sep = "\n")
+```
+
+The analyses it makes, one a variable, and `BIGN` (the subjects of each
+column):
+
+```{r}
+unique(dm$ard$analysis_id)
+```
+
+The table program:
+
+```{r, opts.label = "code"}
+cat(dm$table_code, sep = "\n")
+```
+
+The analysis set is `SAF`, so `{OUTPUT_POPULATION}` prints its label:
+
+```{r}
+tfl_report_tokens(dm$spec, study = dm$study)[["OUTPUT_POPULATION"]]
+```
+
+The report program puts the token in the page header, on its own line:
+
+```{r, opts.label = "code"}
+cat(tfl_report_code(dm$spec, content = "plan", study = dm$study), sep = "\n")
+```
+
+### Example: an appended card
+
+The template pages the table at `max_rows` rows, and says how a page
+splits (`split: group_safe`). Here the report appends a
+`plan_paginate_rows` card that writes only `max_rows`:
+
+```{cat, engine.opts = list(file = file.path(tempdir(), "T-DM2.yml"), lang = "yaml")}
+id: T-DM2
+kind: table
+label: Demographic characteristics, shorter pages
+template:
+  name: tflspec_v1/tflspec_summary
+  args:
+    by: [TRT01A]
+    continuous: [AGE]
+    categorical: [SEX, RACE]
+content:
+  - plan_paginate_rows: {max_rows: 20}
+```
+
+The two cards become one. The report's `max_rows` wins; the template's
+`split` stays:
+
+```{r, opts.label = "code"}
+dm2 <- run_report(file.path(tempdir(), "T-DM2.yml"))
+cat(tail(dm2$table_code, 1), sep = "\n")
+```
+
+For a single value such as `max_rows`, the argument is the simpler way.
+A card is for what the template has no argument for.
+
+## `tflspec_hierarchy`
+
+### What it is for
+
+`tflspec_hierarchy` counts the records of a dataset in a hierarchy,
+outer level first: a system organ class, then a preferred term; a
+medication class, then a name. Each row has the number and percentage of
+subjects of each group. It is not tied to one dataset.
+
+### Its arguments
+
+- `from` is required: the dataset of the records (`ADAE`).
+- `hierarchy` is required: the levels of the rows, outer first.
+- `by` is required: the column variable(s).
+- `any_row` (default `true`): a first row of the subjects with at least
+  one record. `any_row_label` is its text.
+- `sort_column`: the group whose count orders the rows, the most
+  frequent first. Empty (the default): the total of all columns. For a
+  finer order, append a `plan_sort` card.
+- `min_pct`: keep only the rows with at least this percentage (`0` keeps
+  every row). `min_pct_in` says where it must be reached: `any` group,
+  `all` groups, or the `total` column (this needs `total: true`).
+- `empty_text`: the sentence printed when no record is left. Empty: no
+  sentence.
+
+The records to count are not an argument. They are the report's own
+`where:` on the template's `rec_sub` data row.
+
+The analyses are one a depth: `ANY` (the any row), `L1` (the outer
+level), `L2` (the next level), and so on. `analysis_ids` renames them,
+keyed by depth (`{ANY: AEANY, L2: AEPT}`).
+
+### Example: TEAEs by SOC and PT
+
+```{cat, engine.opts = list(file = file.path(tempdir(), "T-AE.yml"), lang = "yaml")}
+id: T-AE
+kind: table
+label: Treatment-emergent adverse events by SOC and PT
+data:
+  - id: rec_sub
+    where: !r TRTEMFL == "Y"
+template:
+  name: tflspec_v1/tflspec_hierarchy
+  args:
+    from: ADAE
+    by: [TRT01A]
+    hierarchy: [AEBODSYS, AEDECOD]
+```
+
+```{r}
+ae <- run_report(file.path(tempdir(), "T-AE.yml"))
+```
+
+The data rows: the report's `where:` is on `rec_sub`, merged into the
+template's row.
+
+```{r, opts.label = "code"}
+cat(ae$ard_code, sep = "\n")
+```
+
+```{r}
+unique(ae$ard$analysis_id)
+```
+
+The table program. Its `plan_sort` comes from `sort_column` (empty: the
+total of all columns):
+
+```{r, opts.label = "code"}
+cat(ae$table_code, sep = "\n")
+```
+
+## Series values
+
+Some defaults are not written in the template. They are written
+`!series K`, and read from the series's common file,
+`series.yml`, under `values:`:
+
+```{r, echo = FALSE, comment = ""}
+cat(readLines(system.file("series", "tflspec_v1", "series.yml", package = "tflspec")),
+    sep = "\n")
+```
+
+A study changes them in its `study.yml`, under `series_settings:`. The
+study's value is read first; a key the study does not write keeps the
+series's value:
+
+```yaml
+series_settings:
+  tflspec_v1:
+    population_safety: SAF
+    max_rows: 25
+    any_row_label: "Subjects with at least one TEAE"
+```
+
+`tfl_series_settings()` shows a study's values of a series, and
+`tfl_series_settings_set()` writes them.
+
+```{r}
+tfl_series_settings_set(study, "tflspec_v1",
+                        list(any_row_label = "Subjects with at least one TEAE"))
+tfl_series_settings(study, "tflspec_v1")$any_row_label
+```
+
+The AE report now prints the study's text in its first row, with no
+change to the report:
+
+```{r}
+ae2 <- run_report(file.path(tempdir(), "T-AE.yml"))
+na <- Filter(function(i) i$fn == "normalize_ard", ae2$spec$content)
+na[[1]]$args$overall
+```
+
+## For template authors: `derive:`
+
+A template may need a value that is worked out from its arguments: the
+last level of a hierarchy, or a card's arguments only when a flag is on.
+The template's `derive:` map gives such values names of their own. Each
+name is one operation. The names are worked out in the order written,
+once the arguments are known, and the template's sections use them as
+`"{name}"`.
+
+The operations:
+
+| Operation | Gives |
+|---|---|
+| `value: x` | `x` as it is filled in |
+| `if: x, then: a, else: b` | `a` when `x` is something (not empty, `false` or `""`), else `b` (default nothing) |
+| `last: x` | the last element of the list `x` |
+| `but_last: x` | all but the last (nothing for fewer than two) |
+| `join: x, sep: s` | the elements as one text, `s` between them (default `", "`) |
+| `keys: x, prefix: p` | a map `p1: x1, p2: x2, ...` |
+
+Each gives nothing for an empty `x`. A value that is nothing drops its
+key. A content item left with no arguments is dropped, so a step goes
+away when its arguments derive to nothing.
+
+A derived name is not an argument. A report cannot give it, it is not
+in `tfl_arg_defs()`, and it cannot take a param's name.
+
+Here is the `derive:` of `tflspec_hierarchy`:
+
+```{r, echo = FALSE, comment = ""}
+x <- readLines(system.file("series", "tflspec_v1", "templates", "tflspec_hierarchy.yml",
+                           package = "tflspec"))
+from <- grep("^derive:", x)
+to <- grep("^data:", x) - 1L
+cat(x[from:to], sep = "\n")
+```
+
+`hierarchy_total` is a map only when `total` is on, so with `total:
+false` the template's `plan_total: "{hierarchy_total}"` is left out.
+`hierarchy_empty` does the same for `plan_empty` when `empty_text` is
+empty. The TEAE table above has no Total column, so it has no
+`plan_total`:
+
+```{r}
+vapply(ae$spec$content, function(i) i$fn, "")
+```

@@ -241,6 +241,8 @@ derive:
       Median: "{{median}}"
       Min, Max: "{{min}}, {{max}}"
 check:
+  # (rtfreporter#1109: plan_total(direction = cols) cannot fold two column
+  # keys; drop this check when it is fixed)
   - fail: {if: "{layout}", is: cols, then: "{total}"}
     message: "total needs layout: rows (the Total column is read for the innermost
       column key, the value and the change under layout: cols)."

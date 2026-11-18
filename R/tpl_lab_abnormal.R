@@ -49,21 +49,21 @@
   where <- c(a$where, if (length(a$params)) sprintf("PARAMCD %%in%% %s", q(a$params)),
              if (isTRUE(a$baseline_normal)) sprintf("%s == \"%s\"", a$baseline, a$baseline_value))
   keys <- paste(c("USUBJID", a$by, "PARAM"), collapse = ", ")
-  per <- function(suffix, label, ..., from = set) Filter(Negate(is.null), list(
-    id = .tpl_noun_id(a, sub("^_", "", suffix)), label = label, from = from, ...))
+  per <- function(suffix, ..., from = set) Filter(Negate(is.null), list(
+    id = .tpl_noun_id(a, sub("^_", "", suffix)), from = from, ...))
   # each subject once in a category of a parameter; cumulative: in every
   # level up to their worst
   # (code over two lines: the program lays it out a call a line)
   cats <- if (cum) list(
-    per("_worst", "Each subject's worst level of each parameter.", code = sprintf(
+    per("_worst", code = sprintf(
       "dplyr::summarise(dplyr::filter(%s, %s %%in%% %s),\n  worst = max(match(%s, %s)), .by = c(%s))",
       set, ct, q(lv), ct, q(lv), keys)),
-    per("_cat", "Each subject in every level up to their worst.", from = .tpl_noun_id(a, "worst"),
+    per("_cat", from = .tpl_noun_id(a, "worst"),
         code = sprintf(paste0(
           "dplyr::filter(dplyr::cross_join(%s, data.frame(%s = factor(%s, levels = %s))),",
           "\n  as.integer(%s) <= worst)"), .tpl_noun_id(a, "worst"), ct, q(lv), q(lv), ct))
   ) else list(
-    per("_cat", "Each subject once in each category.",
+    per("_cat",
         where = if (length(lv)) tfl_r(sprintf("%s %%in%% %s", ct, q(lv))),
         derive = if (length(lv)) tfl_r(sprintf("%s = factor(%s, levels = %s)", ct, ct, q(lv))),
         distinct = paste(c("USUBJID", a$by, "PARAM", ct), collapse = " | ")))
@@ -78,10 +78,10 @@
         sprintf("PARAM = reorder_by(PARAM, %s)", a$param_order) else
           "PARAM = factor(PARAM)"))),
     # the N
-    per("_n", "The subjects with a value of each parameter.",
+    per("_n",
         code = sprintf("dplyr::distinct(%s, %s)", set, keys)),
     # the header N ("tested"): the arm's subjects with a record kept
-    if (identical(hn, "tested")) per("_tested", "The subjects with a record kept.",
+    if (identical(hn, "tested")) per("_tested",
         code = sprintf("dplyr::distinct(%s, %s)", set,
                        paste(c("USUBJID", a$by), collapse = ", ")))), cats))
   analyses <- list(

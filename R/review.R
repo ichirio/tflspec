@@ -850,6 +850,16 @@ summary.tfl_review <- function(object, ...) {
                 args = c(ad$data_id[i], v, ds)))
       }
     }
+    # `arrange` runs after derive and before keep: its columns are those so far;
+    # an element that is not X, -X or desc(X) is reported as it stands
+    have_arr <- c(avail, .derive_names(ad$derive[i]), .split_bar(ad$add[i]))
+    for (piece in .split_bar(ad$arrange[i] %||% NA)) {
+      v <- if (grepl(.arrange_re, piece)) sub("^(-|desc[(])([^)]*)[)]?$", "\\2", piece) else piece
+      if (!v %in% have_arr) {
+        add(.rv("A01", o, "analysis_data", ad$data_id[i], "arrange",
+                args = c(ad$data_id[i], v, ds)))
+      }
+    }
     miss <- .where_missing(ad$where[i], c(avail, unlist(lapply(ad$add[i], .split_bar))))
     if (length(miss)) {
       add(.rv("A02", o, "analysis_data", ad$data_id[i], "where",
