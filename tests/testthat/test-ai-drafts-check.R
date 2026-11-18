@@ -53,7 +53,7 @@ test_that("an analysis data made by code may name its population: the set's subj
   d <- dc_study(withr::local_tempdir())
   o <- tfl_read_output(dc_draft(d, "T-14-3-1"))
   o$ard$analysis_data <- list(list(
-    id = "ae_first", label = "each subject's first AE", from = "ADAE", population = "SAF",
+    id = "ae_first", from = "ADAE", population = "SAF",
     code = tfl_r("dplyr::slice_head(dplyr::group_by(dplyr::filter(adae, USUBJID %in% adsl_sub$USUBJID, TRTEMFL == \"Y\"), USUBJID), n = 1)")))
   o$ard$analyses <- list(list(id = "AE1", method = "categorical", data = "ae_first", by = list("TRT01A"),
                               variables = list("AESEV"), denominator = "column"))
@@ -81,7 +81,7 @@ test_that("the set a code reads as <dataset>_sub stays an object when another da
   # code's adsl_sub keeps the set an object of its own
   o$ard$analysis_data <- list(
     list(id = "adsl_saf", from = "ADSL", population = "SAF", derive = tfl_r("TRTA = TRT01A"), keep = list("TRTA")),
-    list(id = "ae_first", label = "each subject's first AE", from = "ADAE", population = "SAF",
+    list(id = "ae_first", from = "ADAE", population = "SAF",
          code = tfl_r("dplyr::slice_head(dplyr::group_by(dplyr::filter(adae, USUBJID %in% adsl_sub$USUBJID, TRTEMFL == \"Y\"), USUBJID), n = 1)")))
   o$ard$analyses <- list(
     list(id = "N", method = "categorical", data = "adsl_saf", by = list(), variables = list("TRTA"), statistics = list("n")),

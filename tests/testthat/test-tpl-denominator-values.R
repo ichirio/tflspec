@@ -356,7 +356,7 @@ test_that("ae_soc_pt, ae_pt_freq: n, N and % of each denominator, and the header
   s <- dv_study(withr::local_tempdir())
   h <- dv_by_hand(s)
   own <- list(analysis_data = list(list(
-    id = "adsl_female", label = "Safety set, women", from = "ADSL", population = "SAF",
+    id = "adsl_female", from = "ADSL", population = "SAF",
     where = tfl_r("SEX == \"F\""))))
   # women of the safety set: Drug X 1, 2, 4; Control 7, 9, 10, 11
   fem <- c("Drug X" = 3L, Control = 4L)
