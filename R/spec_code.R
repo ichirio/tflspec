@@ -259,20 +259,16 @@
   # spec file does not (the study's lists are their one source); a column
   # the plan makes keeps its labels either way
   vl <- .ard_spec_value_labels(sp, ard_spec, derived = derived)
-  # the variables' headings under `variable` (they never meet a variable's
-  # value labels, SEX = c(F = )); a key column's label under its own key
-  keycols <- unique(as.character(unlist(roles[c("cols", "rows")], use.names = FALSE)))
-  lbv <- lb[!names(lb) %in% keycols]
-  lbk <- lb[names(lb) %in% keycols]
-  # a key column that has value labels too: its own label joins them (one
-  # entry a variable, the label the sheets give winning)
-  for (k in intersect(names(lbk), names(vl))) {
-    vl[[k]] <- c(vl[[k]][names(vl[[k]]) != k], stats::setNames(unname(lbk[[k]]), k))
-    lbk <- lbk[names(lbk) != k]
+  # a variable's heading is one entry under its own name, as rtfreporter's
+  # plan_labels(AGE = "Age (years)") reads it; one that has value labels too
+  # joins them (SEX = c(SEX = "Sex", F = "Female"), one entry a variable, the
+  # label the sheets give winning)
+  for (k in intersect(names(lb), names(vl))) {
+    vl[[k]] <- c(vl[[k]][names(vl[[k]]) != k], stats::setNames(unname(lb[[k]]), k))
+    lb <- lb[names(lb) != k]
   }
   if (length(lb) || length(vl)) {
-    # (a list: one heading is a map in the file too, its variable named)
-    do.call(add, c(list("plan_labels"), if (length(lbv)) list(variable = as.list(lbv)), as.list(lbk), vl))
+    do.call(add, c(list("plan_labels"), as.list(lb), vl))
   }
   ne <- .ard_spec_nest(sp)
   if (length(ne)) do.call(add, c(list("plan_nest"), ne))
