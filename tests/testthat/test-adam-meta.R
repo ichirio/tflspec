@@ -169,9 +169,9 @@ test_that("the ARD program's own read puts adam_meta's levels on, after its stud
   on.exit(setwd(wd), add = TRUE)
   eval(parse(text = tfl_helpers_code()), env)
   # (the setup sets the study's rounding options: put back after)
-  keep <- options(rtfreporter.rounding = getOption("rtfreporter.rounding"),
+  opt_keep <- options(rtfreporter.rounding = getOption("rtfreporter.rounding"),
                   cards.round_type = getOption("cards.round_type"))
-  on.exit(options(keep), add = TRUE)
+  on.exit(options(opt_keep), add = TRUE)
   suppressMessages(eval(parse(text = c(setup, prog)), env))
   setwd(wd)
   keep <- setdiff(names(ard), "fmt_fun")
@@ -248,9 +248,9 @@ test_that("a data whose filter keeps one level of an adam_meta column has that l
   on.exit(setwd(wd), add = TRUE)
   eval(parse(text = tfl_helpers_code()), env)
   # (the setup sets the study's rounding options: put back after)
-  keep <- options(rtfreporter.rounding = getOption("rtfreporter.rounding"),
+  opt_keep <- options(rtfreporter.rounding = getOption("rtfreporter.rounding"),
                   cards.round_type = getOption("cards.round_type"))
-  on.exit(options(keep), add = TRUE)
+  on.exit(options(opt_keep), add = TRUE)
   suppressMessages(eval(parse(text = c(setup, prog)), env))
   setwd(wd)
   keep <- setdiff(names(ard), "fmt_fun")
