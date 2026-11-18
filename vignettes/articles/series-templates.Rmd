@@ -288,6 +288,70 @@ total of all columns):
 cat(ae$table_code, sep = "\n")
 ```
 
+## `tflspec_listing_summary`
+
+### What it is for
+
+`tflspec_listing_summary` lists one value a subject and column, the
+values of one variable across (the time points, the PK parameters, the
+visits), and under the same columns their summary statistics (n,
+Mean (SD), Median, Min, Max): one table, a page a group (and analyte).
+The listing is a table of values, not a free listing of columns; a
+listing of other columns with a summary is two reports, a
+`tflspec_listing` and a summary, printed one after the other.
+
+### Its arguments
+
+- `from`, `by` and `across` are required: the dataset of the records,
+  the groups (a page each; the summary is by them too) and the variable
+  whose values are the columns, in the order of the study's code list.
+- `param_var`: a variable of the records that divides the pages and the
+  analyses too, such as the analyte. Empty (the default): one analysis,
+  `SUMM`; else one a value (`DRUGX`), renamed by `analysis_ids`.
+- `value` (default `AVAL`): the value in a cell and the one summarised.
+- `subject`, `subject_vars`: a subject's row label
+  (`"{USUBJID}/{AGE}/{SEX}"` with `subject_vars: [AGE, SEX]`).
+- `cell`, `na_text`: the listing's cell and the text for no value.
+- `cells`, `summary_label`, `sd_missing`: the summary's rows, as in
+  `tflspec_summary`.
+- `across_heading`, `page_heading`, `split_at`, `max_rows`: the look.
+
+The records kept (the analyte, the visits, `ANL01FL`) are the report's
+own `where:` on the template's `rec_sub` data row.
+
+### Digits
+
+The summary's digits are the ARD's: `formats` (the series' by default),
+the same in every column. A parameter whose digits differ has its own
+map in `formats`, keyed by its PARAMCD, when PARAMCD is `across` or
+`param_var`. A format may be decimals (`2`) or significant digits
+(`4s`). `tfl_formats()` shows how the ARD takes the map:
+
+```{r}
+tfl_formats(list(N = 0, mean = 2, sd = 3, AUCLST = list(mean = "4s", sd = 1)))
+```
+
+### Example: PK parameters by subject
+
+```yaml
+id: T-PK
+kind: table
+label: PK parameters by subject
+data:
+  - id: rec_sub
+    where: !r ANL01FL == "Y"
+template:
+  name: tflspec_v1/tflspec_listing_summary
+  args:
+    from: ADPP
+    by: [TRT01A]
+    param_var: PARCAT1
+    across: PARAMCD
+    across_heading: PK Parameter
+    formats: {N: 0, mean: 2, sd: 3, median: 2, min: 2, max: 2,
+              AUCLST: {mean: 4s, sd: 4s}}
+```
+
 ## Series values
 
 Some defaults are not written in the template. They are written

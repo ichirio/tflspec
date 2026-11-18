@@ -635,7 +635,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
     f <- .parse_formats(a$formats[i])
     bad <- names(f)[is.na(f) | !.fmt_ok(f)]
     if (length(bad)) add(i, "formats", sprintf(
-      "%s / %s: formats are statistic=format, the format xx.x, xx.x%%, xx.x*1000, a number of decimals or pvalue (%s)",
+      "%s / %s: formats are statistic=format, the format xx.x, xx.x%%, xx.x*1000, a number of decimals, significant digits (4s) or pvalue (%s)",
       a$output_id[i], a$analysis_id[i], paste(bad, collapse = ", ")))
   }
   cust <- which(a$method %in% "custom" & is.na(a$code))
@@ -1002,8 +1002,10 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
          missing = "missing", "result")
 }
 
+# a format: xx.x, xx.x%, xx.x*1000, a number of decimals, a number of
+# significant digits (4s) or pvalue
 .fmt_ok <- function(f) {
-  grepl("^(x+(\\.x+)?(%|[*][1-9][0-9]*)?|[0-9]+|pvalue)$", f)
+  grepl("^(x+(\\.x+)?(%|[*][1-9][0-9]*)?|[0-9]+|[1-9][0-9]*s|pvalue)$", f)
 }
 
 # `mean=xx.x | AGE:sd=xx.xx` as a named vector
@@ -1073,8 +1075,13 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #' `fmt_fun = everything() ~ modifyList(fmt_default, list(mean = 2L))`, a
 #' variable's own (`BMIBL:sd=3`) with its own list.  An integer is
 #' that many decimals, `xx.x%` is `label_round(1, scale = 100)`,
-#' `xx.x*1000` is `label_round(1, scale = 1000)` and
+#' `xx.x*1000` is `label_round(1, scale = 1000)`, `4s` (significant
+#' digits) is `function(x) rtfreporter::fmt_signif(x, 4L)` and
 #' `pvalue` the program's `fmt_pvalue()` (`<0.001` or 3 decimals);
+#' a parameter's own (`AUC:mean=2`: the analysis's `by` has PARAMCD and AUC
+#' is not one of its variables) is set after the format step,
+#' `cards::update_ard_fmt_fun(filter = )` on that parameter's rows (see
+#' [tfl_formats()]);
 #' `cards::apply_fmt_fun()` then fills `stat_fmt`.  What takes no `fmt_fun`
 #' gets the same formats after the call, from `fmt_ard()`: cardx's tests, CIs
 #' and models, `cards::ard_stack_hierarchical()`, a study's own function,

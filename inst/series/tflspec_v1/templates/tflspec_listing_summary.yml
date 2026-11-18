@@ -1,0 +1,308 @@
+# tflspec_v1/templates/tflspec_listing_summary.yml
+# Purpose: To list one value of each record, one row a subject and the
+# values of one variable across (the time points, the PK parameters, the
+# visits), with their summary statistics (N, Mean (SD), Median, Min, Max)
+# under the same columns: one table, a page for each group (and analyte).
+# The dataset (from), the variable across (across), the value, the groups
+# (by), the analyte or parameter that divides the pages (param_var) and the
+# analysis set (population, default the series' safety set) are arguments;
+# the records kept (the analyte, the visits, ANL01FL ...) are the report's
+# `data:` row rec_sub (a `where:` there), never an argument.
+# The columns' order and the columns with no record come from the study's
+# code lists (study$adam's levels), not from an argument; a study with no
+# code list for `across` gets them in the order of the text.
+# The listing is a table of values, one variable's value a column: it is
+# not a plan_listing (rtfreporter's plan_append does not take one).  A
+# listing of free columns with a summary is two reports, tflspec_listing
+# and a summary one, printed one after the other.
+# Digits: the series' `formats`, the ARD's stat_fmt (canon 2026-11-16); the
+# summary's cells are tokens without digits ({mean}).  A parameter's own
+# digits (across PARAMCD: CMAX and AUC differ) are its exception in
+# `formats`, keyed by the PARAMCD (`{mean: 1, AUCLST: {mean: 2}}`), and a
+# format may be significant digits (`4s`); never a plan_digits card after
+# the template (canon 2026-11-11: the ARD's formats are not formatted
+# again).  The listing's cell is `cell`.
+# No BIGN: the column headings are the values of `across`, not the groups' N.
+# Fixed by its purpose: the listing above and its summary below (the part
+# "summary" of plan_append: a summary card appended by a report replaces
+# the part whole), the blank line between them, the row-label column
+# (row_label, before the values), a page for each by (and param_var) value
+# (the page's name the last title line), method continuous.
+# Its content, in order: rework (the listing reads rec_sub's records),
+# table_plan, plan_cells, plan_append, plan_stub, plan_blanks,
+# plan_col_header, plan_paginate_rows, plan_columns, plan_paginate_cols.
+# Its derive: names (not arguments) are worked out from the arguments when
+# the template is resolved; a step whose derived value is nothing is left
+# out.
+template: tflspec_listing_summary
+label: Listing of values by subject with their summary
+params:
+  population:
+    type: string
+    input: pick
+    choices: populations
+    default: !series population_safety
+    step: data
+    tier: usual
+    description: The analysis set adsl_sub keeps (data.yml's populations).
+  from:
+    type: string
+    input: pick
+    choices: study_data
+    required: true
+    step: data
+    tier: required
+    description: The dataset of the records (the data row rec_sub's from),
+      e.g. ADPC, ADPP, ADVS.
+  subject_vars:
+    type: list<column>
+    input: pick
+    choices: vars(adsl_sub)
+    ordered: true
+    default: []
+    step: data
+    tier: usual
+    description: ADSL variables added to each record (the data row rec_sub's
+      add), for the subject's row label (AGE, SEX); empty for none.
+  by:
+    type: list<column>
+    input: pick
+    choices: vars(adsl_sub)
+    required: true
+    step: analysis
+    tier: required
+    description: The groups (an arm), a page each; the summary is by them
+      too.  For one page, a variable with one value.
+  param_var:
+    type: column
+    input: pick
+    choices: vars(rec_sub)
+    default: ~
+    step: analysis
+    tier: usual
+    description: A variable of the records that divides the pages and the
+      analyses too (the analyte, the parameter); empty for none.
+  across:
+    type: column
+    input: pick
+    choices: vars(rec_sub)
+    required: true
+    step: analysis
+    tier: required
+    description: The variable whose values are the columns (the time point,
+      the PK parameter, the visit), in the order of the study's code list.
+  value:
+    type: column
+    input: pick
+    choices: vars(rec_sub)
+    default: AVAL
+    step: analysis
+    tier: usual
+    description: The value in a cell, and the one the summary is of.
+  statistics:
+    type: list<string>
+    input: pick
+    choices: stats
+    ordered: true
+    default: [N, mean, sd, median, min, max]
+    step: analysis
+    tier: other
+    description: The statistics the ARD computes (every one the cells name).
+  analysis_ids:
+    type: map<string,string>
+    input: table
+    choices: fixed
+    default: ~
+    step: analysis
+    tier: other
+    description: An analysis id for a value of param_var, keyed by the value;
+      empty for the value itself (SUMM with no param_var).
+  formats:
+    type: map<string,number|string>
+    input: table
+    choices: stats
+    free: true
+    default: !series formats
+    step: analysis
+    tier: usual
+    description: "The format of each summary statistic, decimals (1) or
+      significant digits (4s), the same in every column; a parameter's own,
+      keyed by its PARAMCD, for the parameters that differ ({AUCLST: {mean:
+      2}}, when PARAMCD is across or param_var)."
+  cell:
+    type: string
+    input: text
+    default: "{value}"
+    step: content
+    tier: usual
+    description: A subject's value in the listing ({value} the value).
+  na_text:
+    type: string
+    input: text
+    default: ""
+    step: content
+    tier: other
+    description: What the listing prints for no value.
+  subject:
+    type: string
+    input: text
+    default: "{USUBJID}"
+    step: content
+    tier: usual
+    description: A subject's row label ({<variable>}, e.g. {USUBJID}/{AGE}/{SEX}
+      with subject_vars AGE and SEX).
+  subject_heading:
+    type: string
+    input: text
+    default: Subject ID
+    step: content
+    tier: usual
+    description: The heading of the subjects' column.
+  across_heading:
+    type: string
+    input: text
+    default: ~
+    step: content
+    tier: usual
+    description: The heading over the columns (e.g. Time Relative to Dose);
+      empty for one heading line.
+  summary_label:
+    type: string
+    input: text
+    default: Summary Statistics
+    step: content
+    tier: usual
+    description: The summary's heading row.
+  cells:
+    type: map<string,string>
+    input: table
+    ordered: true
+    default:
+      n: "{N}"
+      Mean (SD): "{mean} ({sd})"
+      Median: "{median}"
+      Min, Max: "{min}, {max}"
+    step: content
+    tier: usual
+    description: The summary's rows, label to cell template, in order (tokens
+      without digits; the digits are formats').  When it is not written,
+      Mean (SD) gets sd_missing for a column with one value.
+  sd_missing:
+    type: string
+    input: text
+    default: !series sd_missing
+    step: content
+    tier: other
+    description: What stands for the SD when it cannot be worked out (one
+      value); empty for the mean alone.
+  page_heading:
+    type: string
+    input: text
+    default: ~
+    step: content
+    tier: usual
+    description: A page's name, the last title line ({<variable>} the values
+      of param_var and the groups); empty for their values, a line each.
+  decimal_align:
+    type: logical
+    input: pick
+    choices: fixed
+    default: true
+    step: content
+    tier: other
+    description: The values aligned on the decimal point.
+  split_at:
+    type: string
+    input: text
+    default: ~
+    step: content
+    tier: other
+    description: The value of `across` that starts a second block of columns;
+      empty for one block.
+  max_rows:
+    type: number
+    input: text
+    default: !series max_rows
+    step: content
+    tier: other
+    description: The most rows a page holds.
+extends: !series extends
+style: !series style_listing
+derive:
+  # the analyte (if any) and the groups: a page each
+  ls_pages: {value: ["{param_var}", "{by}"]}
+  # the column headings: the heading over the values (one line without it)
+  ls_header:
+    if: "{across_heading}"
+    then:
+      lines:
+        - {row_label: "", .values: "{across_heading}"}
+        - {row_label: "{subject_heading}", .values: "{{col}}"}
+      span: [{.values: one}, {.values: each}]
+    else:
+      lines: [{row_label: "{subject_heading}", .values: "{{col}}"}]
+  # a page's name: page_heading, else a token a page column, a line each
+  # ("{PARAMCD}\n{TRT01A}"; ls_rb is a closing brace)
+  ls_rb: {value: "}}"}
+  ls_tokens: {each: "{ls_pages}", to: "{{{item}{ls_rb}"}
+  ls_tokens_text: {join: "{ls_tokens}", sep: "\n"}
+  ls_title: {if: "{page_heading}", then: "{page_heading}", else: "{ls_tokens_text}"}
+  ls_columns: {if: "{decimal_align}", then: {decimal: .values}}
+  ls_split: {if: "{split_at}", then: {at: "{split_at}", order: down}}
+  # cells: a report's own are used as written; the default adds the SD's
+  # stand-in (a column with one value has no SD)
+  ls_cells_own: {given: [cells]}
+  ls_sd_alone: {if: "{sd_missing}", is: "", then: "{{mean}}"}
+  ls_sd_guard: {if: "{sd_missing}", then: "{{mean}} ({sd_missing})", else: "{ls_sd_alone}"}
+  ls_cells:
+    if: "{ls_cells_own}"
+    then: "{cells}"
+    else:
+      n: "{{N}}"
+      Mean (SD): ["{{mean}} ({{sd}})", "{ls_sd_guard}"]
+      Median: "{{median}}"
+      Min, Max: "{{min}}, {{max}}"
+data:
+  - id: adsl_sub
+    from: ADSL
+    population: "{population}"
+  - id: rec_sub
+    from: "{from}"
+    subjects_in: adsl_sub
+    add: ["{by}", "{subject_vars}"]
+    where: ~
+analysis:
+  - id: SUMM
+    analyses: {per: ["{param_var}"], ids: "{analysis_ids}"}   # DRUGX, ...
+    label: Values summarised by column
+    method: continuous
+    data: rec_sub
+    where: !r '!is.na({value})'
+    by: ["{by}", "{param_var}", "{across}"]
+    variables: ["{value}"]
+    statistics: "{statistics}"
+    formats: "{formats}"
+    # (a column with no value makes no row: its summary cells are empty)
+    post: !r drop_empty_groups()
+content:
+  # (the listing reads the records of rec_sub; the summary part the ARD)
+  - rework: {source: dataset, data: rec_sub}
+  - table_plan: {cols: "{across}", rows: {subject: !r '~ "{subject}"'}, value: "{value}"}
+  - plan_cells: {default: "{cell}", na: "{na_text}"}
+  - plan_append:
+      name: summary
+      data: {source: ard}
+      content:
+        - normalize_ard: {}
+        - table_plan: {cols: "{across}", rows: {block: !r '~ "{summary_label}"'}}
+        - plan_cells: {continuous: "{ls_cells}"}
+  - plan_stub: {name: row_label, before: true}
+  - plan_blanks: {first: true, last: true, where: between_parts}
+  - plan_col_header: "{ls_header}"
+  - plan_paginate_rows: {page_by: "{ls_pages}", max_rows: "{max_rows}", heading: "{ls_title}",
+                         heading_at: title}
+  - plan_columns: "{ls_columns}"
+  - plan_paginate_cols: "{ls_split}"
+page:
+  titles: ~
+  footnotes: ~

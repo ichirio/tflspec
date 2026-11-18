@@ -268,7 +268,7 @@ test_that("a format times a number: a rate per 1,000 (cards::label_round(scale =
   # the check says the format
   expect_error(fmt_spec(list(list(analysis_id = "A", method = "continuous",
                                  variables = "AGE", formats = "mean=xx.x*"))),
-               "xx.x*1000, a number of decimals or pvalue (mean)", fixed = TRUE)
+               "xx.x*1000, a number of decimals, significant digits (4s) or pvalue (mean)", fixed = TRUE)
   skip_on_cran()
   skip_if_not_installed("cardx")
   adam <- exact_data()

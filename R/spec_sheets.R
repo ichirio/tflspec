@@ -448,6 +448,9 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       a$conditions <- NULL
       a$ards <- NULL
       if (is.list(a$levels) && !is.null(names(a$levels))) a$levels <- .levels_cell(a$levels)
+      # formats, a map (a name's own a map of its own): the sheet's text,
+      # checked once (tfl_formats())
+      if (is.list(a$formats) && !is.null(names(a$formats))) a$formats <- tfl_formats(a$formats)
       m <- lapply(a, cell); m$analysis_id <- m$id; m$id <- NULL
       if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
       if (!is.null(a$ref)) note(id, paste0("analyses.", a$id), "a reference to another report's analysis (ref) has no sheet")

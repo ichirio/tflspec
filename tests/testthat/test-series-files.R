@@ -47,9 +47,11 @@ test_that("every file in the tflspec_v1 series folder parses", {
 test_that("every template has its keys, a BIGN item and ids on its items", {
   skip_if(!nzchar(series_dir()), "the series folder is not installed")
   ts <- series_templates()
-  expect_length(ts, 11L)
-  # (a listing counts nothing: tflspec_listing has no analysis step)
+  expect_length(ts, 12L)
+  # (a listing counts nothing: tflspec_listing has no analysis step;
+  # tflspec_listing_summary's column headings have no N: no BIGN)
   no_analysis <- "tflspec_listing.yml"
+  no_bign <- "tflspec_listing_summary.yml"
   for (nm in names(ts)) {
     t <- ts[[nm]]
     keys <- c("template", "label", "params", "data", if (!nm %in% no_analysis) "analysis")
@@ -64,7 +66,7 @@ test_that("every template has its keys, a BIGN item and ids on its items", {
       if (is.null(a$id)) NA_character_ else a$id
     }, character(1))
     expect_false(anyNA(ids), info = nm)
-    expect_true("BIGN" %in% ids, info = nm)
+    expect_identical("BIGN" %in% ids, !nm %in% no_bign, info = nm)
   }
 })
 
