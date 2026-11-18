@@ -261,14 +261,16 @@
   vl <- .ard_spec_value_labels(sp, ard_spec, derived = derived)
   # a variable's heading is one entry under its own name, as rtfreporter's
   # plan_labels(AGE = "Age (years)") reads it; one that has value labels too
-  # joins them (SEX = c(SEX = "Sex", F = "Female"), one entry a variable, the
-  # label the sheets give winning)
+  # joins them, the heading first (SEX = c(SEX = "Sex", F = "Female"), one
+  # entry a variable, the label the sheets give winning); the variables keep
+  # the labels' order, as a YAML spec writes them
   for (k in intersect(names(lb), names(vl))) {
-    vl[[k]] <- c(vl[[k]][names(vl[[k]]) != k], stats::setNames(unname(lb[[k]]), k))
-    lb <- lb[names(lb) != k]
+    vl[[k]] <- c(stats::setNames(unname(lb[[k]]), k), vl[[k]][names(vl[[k]]) != k])
   }
-  if (length(lb) || length(vl)) {
-    do.call(add, c(list("plan_labels"), as.list(lb), vl))
+  out <- as.list(lb)
+  for (k in names(vl)) out[[k]] <- vl[[k]]
+  if (length(out)) {
+    do.call(add, c(list("plan_labels"), out))
   }
   ne <- .ard_spec_nest(sp)
   if (length(ne)) do.call(add, c(list("plan_nest"), ne))
