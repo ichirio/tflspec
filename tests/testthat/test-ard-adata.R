@@ -365,6 +365,43 @@ test_that("asked twice, the fingerprint, the analysis data sheet and the code li
   expect_error(.codelist_levels(bad, "T1"), "output_id")
 })
 
+test_that("a data is made from, population, subjects_in, where, derive, keep, distinct, in that order", {
+  ad <- ad_df(
+    output_id = "T1", data_id = c("adsl_sub", "adae_x"), from = c("ADSL", "ADAE"),
+    population_id = c("SAF", NA), subjects_in = c(NA, "adsl_sub"),
+    where = c(NA, "TRTEMFL == \"Y\""),
+    derive = c(NA, "SERF = AESER == \"Y\""),
+    keep = c(NA, "AEDECOD | SERF"), distinct = c(NA, "USUBJID | SERF"))
+  an <- ad_df(output_id = "T1", analysis_id = "AE", method = "cards::ard_tabulate",
+              data = "adae_x", variables = "SERF")
+  code <- tfl_ard_code(ad_spec(ad, an), output_id = "T1", save = FALSE, part = "body")
+  i <- grep("^adae_x <-", code)
+  expect_length(i, 1L)
+  txt <- strsplit(code[i], "
+", fixed = TRUE)[[1L]]
+  pos <- function(p) grep(p, txt, fixed = TRUE)[1L]
+  # the derived column is made before the columns are kept, and kept
+  keep_at <- grep("select(USUBJID", txt, fixed = TRUE)
+  expect_length(keep_at, 1L)
+  expect_true(pos("filter(") < pos("mutate("))
+  expect_true(pos("mutate(") < keep_at)
+  expect_true(keep_at < pos("distinct("))
+  expect_match(txt[keep_at], "SERF", fixed = TRUE)
+})
+
+test_that("an analysis_data sheet with a filled label column stops, an empty one is dropped", {
+  ad <- ad_rows()
+  ad$label <- c("Safety set", NA, NA, NA)
+  expect_error(ad_spec(ad, an_rows()),
+               "T1: data row `adsl_sub`: `label` is no longer a column of the analysis_data sheet",
+               fixed = TRUE)
+  ad$label <- c("", NA, " ", NA)
+  x <- ad_spec(ad, an_rows())
+  expect_false("label" %in% names(x$analysis_data))
+  expect_identical(names(.adata_sheet(x)), .ard_spec_sheets$analysis_data)
+  expect_false("label" %in% .ard_spec_sheets$analysis_data)
+})
+
 test_that("then: R piped onto the end of a data after its keys; read as R; not with code", {
   d <- ad_rows()
   d$then <- c(NA, NA, "dplyr::arrange(USUBJID) |> dplyr::slice_head(n = 1, by = USUBJID)", NA)

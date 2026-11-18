@@ -67,15 +67,15 @@
   blq_value <- sprintf("%s = ifelse((%s) %%in%% TRUE, -Inf, %s)", a$value, a$blq, a$value)
   # the listing's records (a BLQ one -Inf: it prints `blq_label`) and the
   # summary's (the values)
-  rec <- function(id, label, where, derive) Filter(Negate(is.null), list(
-    id = id, label = label, from = a$data, subjects_in = subj,
+  rec <- function(id, where, derive) Filter(Negate(is.null), list(
+    id = id, from = a$data, subjects_in = subj,
     where = if (length(where)) tfl_r(.tpl_and_all(where)),
     derive = if (length(derive)) tfl_r(paste(derive, collapse = " | "))))
   sets <- list(
     list(id = subj, from = "ADSL", population = pop),
-    rec(set, "The subjects' concentrations.", a$where,
+    rec(set, a$where,
         c(order, if (length(a$blq)) blq_value)),
-    rec(.tpl_noun_id(a, "summ"), "The concentrations summarised.",
+    rec(.tpl_noun_id(a, "summ"),
         c(a$where, sprintf("!is.na(%s)", a$value)), order))
   analyses <- list(list(id = "CONC", method = "continuous", data = .tpl_noun_id(a, "summ"),
                         by = c(a$by, tm), variables = a$value,
