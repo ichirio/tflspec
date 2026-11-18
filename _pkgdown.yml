@@ -34,6 +34,8 @@ navbar:
           href: articles/reports.html
         - text: "Writing a SPEC: data lines, analyses, study data and figures"
           href: articles/spec-rules.html
+        - text: "Series base templates"
+          href: articles/series-templates.html
         - text: -------
         - text: "Listings, figures and ARS"
         - text: "Listings"
@@ -59,6 +61,7 @@ articles:
       - articles/table-spec
       - articles/reports
       - articles/spec-rules
+      - articles/series-templates
   - title: Listings, figures and ARS
     navbar: Listings, figures and ARS
     contents:

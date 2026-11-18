@@ -1,0 +1,171 @@
+# tflspec_v1/templates/tflspec_listing.yml
+# Purpose: To list the records of one dataset, one row a record, in the
+# columns and the order given (ADSL variables can be added to the records).
+# Not AE-specific: the dataset (from), the columns, the records' order (sort)
+# and the analysis set (population) are arguments; the records kept (a
+# serious event, a severe one ...) are the report's `data:` row lst_sub (a
+# `where:` there), never an argument.  A listing has no analysis step (no
+# BIGN, canon 2026-11-15: an output that counts nothing passes its data on)
+# and applies no labels (canon 2026-11-12: a listing prints the data's values).
+# Fixed by its purpose: one plan_listing of type multiline.  Its content, in
+# order: plan_listing (the columns, then a hidden column a `by` variable),
+# plan_hide, plan_row_group (by_break block), plan_empty, plan_paginate_rows
+# (a page a `by` value with by_break page).  Its derive: names (not
+# arguments) are worked out from the arguments when the template is
+# resolved; a step whose derived arguments are nothing is left out.  Its
+# check: items stop the rules between arguments (a block needs one `by`
+# variable, by_heading is for pages, by_break and by_heading need `by`).
+template: tflspec_listing
+label: Listing of records
+params:
+  population:
+    type: string
+    input: pick
+    choices: populations
+    default: !series population_safety
+    step: data
+    tier: usual
+    description: The analysis set adsl_sub keeps (data.yml's populations).
+  from:
+    type: string
+    input: pick
+    choices: study_data
+    required: true
+    step: data
+    tier: required
+    description: The dataset of the records (the data row lst_sub's from), e.g. ADAE.
+  subject_vars:
+    type: list<column>
+    input: pick
+    choices: vars(adsl_sub)
+    ordered: true
+    default: []
+    step: data
+    tier: usual
+    description: ADSL variables added to each record (the data row lst_sub's add); empty for none.
+  sort:
+    type: list<column>
+    input: pick
+    choices: vars(lst_sub)
+    ordered: true
+    default: ~
+    step: data
+    tier: usual
+    description: The records' order, a minus for descending (the data row lst_sub's
+      arrange, after the by variables); empty for the data's order.
+  columns:
+    type: rows<vars,label,width,collapse_repeats>
+    input: table
+    columns:
+      vars: {type: list<column>, input: pick, choices: vars(lst_sub), ordered: true,
+             required: true, description: The variables of the column, stacked in the cell.}
+      label: {type: string, input: text, description: The column's heading; empty for the variables' names.}
+      width: {type: number, input: text, description: The most characters a line of the column holds.}
+      collapse_repeats: {type: logical, input: pick, description: A value printed once while it repeats (a subject's id).}
+    required: true
+    step: content
+    tier: required
+    description: The printed columns, left to right, one row a column (listing_col).
+  by:
+    type: list<column>
+    input: pick
+    choices: vars(lst_sub)
+    ordered: true
+    default: ~
+    step: content
+    tier: usual
+    description: The variables that divide the listing (by_break); the records are
+      ordered by them first. Empty for one listing.
+  by_break:
+    type: enum[page|block]
+    input: pick
+    choices: fixed
+    default: page
+    step: content
+    tier: other
+    description: How by divides it - page, a page each value (named by by_heading);
+      block, a value's records kept together on a page where they fit.
+  by_heading:
+    type: string
+    input: text
+    default: ~
+    step: content
+    tier: other
+    description: "With by_break page, the page's name, the last title line ({value}
+      the page's value); empty for <the by variables>: {value}."
+  empty_text:
+    type: string
+    input: text
+    default: !series empty_text
+    step: content
+    tier: other
+    description: The sentence shown when no record is left (plan_empty); empty for none.
+  max_rows:
+    type: number
+    input: text
+    default: !series max_rows
+    step: content
+    tier: other
+    description: The most rows a page holds.
+  formats:
+    type: map<string,number|string>
+    input: table
+    choices: stats
+    free: true
+    default: !series formats
+    step: analysis
+    tier: other
+    description: The decimals (or the format) of each statistic (a listing counts
+      nothing; kept as every template has it).
+extends: !series extends
+style: !series style_listing
+derive:
+  # the printed columns, one listing_col a row of `columns`
+  listing_cols:
+    each: "{columns}"
+    to: {fn: listing_col, args: {vars: "{vars}", label: "{label}", width: "{width}",
+                                 collapse_repeats: "{collapse_repeats}"}}
+  # a hidden column a by variable (by_<variable>), the one the pages and
+  # blocks are cut on
+  by_cols: {each: "{by}", to: {fn: listing_col, args: {vars: ["{item}"], name: "by_{item}"}}}
+  by_names: {each: "{by}", to: "by_{item}"}
+  by_page: {if: "{by_break}", is: page, then: "{by_names}"}
+  by_block: {if: "{by_break}", is: block, then: "{by_names}"}
+  by_text: {join: "{by}"}
+  # for check: (more than one `by` variable; by_break / by_heading set by the report)
+  by_many: {but_last: "{by}"}
+  by_set: {given: [by_break, by_heading]}
+  by_title: {if: "{by_heading}", then: "{by_heading}", else: "{by_text}: {{value}}"}
+  row_group: {if: "{by_block}", then: {mode: value, group_col: "{by_block}"}}
+  hide: {if: "{by_names}", then: {cols: "{by_names}"}}
+  empty: {if: "{empty_text}", then: {text: "{empty_text}"}}
+  paginate:
+    if: "{by_page}"
+    then: {max_rows: "{max_rows}", page_by: "{by_page}", heading: "{by_title}", heading_at: title}
+    else: {max_rows: "{max_rows}"}
+check:
+  - fail: {if: "{by_block}", then: "{by_many}"}
+    message: "by_break: block needs exactly one `by` variable; got {by_text}."
+  - fail: {if: "{by_heading}", then: "{by_block}"}
+    message: "by_heading is not used with by_break: block (a block has no page name)."
+  - fail: {if: "{by}", else: "{by_set}"}
+    message: "by_break and by_heading need `by`."
+data:
+  - id: adsl_sub
+    from: ADSL
+    population: "{population}"
+  - id: lst_sub
+    from: "{from}"
+    subjects_in: adsl_sub
+    add: "{subject_vars}"
+    where: ~
+    arrange: ["{by}", "{sort}"]
+content:
+  - plan_listing: {type: multiline, cols: ["{listing_cols}", "{by_cols}"]}
+  - plan_hide: "{hide}"
+  - plan_row_group: "{row_group}"
+  - plan_empty: "{empty}"
+  - plan_paginate_rows: "{paginate}"
+page:
+  titles: ~
+  footnotes: ~

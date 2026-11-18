@@ -104,6 +104,13 @@ test_that("DM: the template SPEC and the code SPEC give the same ARD and the sam
   expect_identical(unique(r$ard$C$analysis_id), c("BIGN", "AGE", "AGEGR1", "SEX", "RACE", "ECOGBL"))
   expect_identical(twin_ard(r$ard$T), twin_ard(r$ard$C))
   expect_identical(twin_rtf(r$rtf$T, "T-14-1-1T"), twin_rtf(r$rtf$C, "T-14-1-1C"))
+  # the column headers carry each arm's N: the arm labels from the code
+  # list (Drug X -> "Drug X 200 mg") are matched to BIGN's values
+  for (p in r$rtf) {
+    x <- paste(readLines(p, warn = FALSE), collapse = "\n")
+    expect_match(x, "N=[0-9]+")
+    expect_false(grepl("N=NA", x, fixed = TRUE))
+  }
 })
 
 test_that("AE: the template SPEC and the code SPEC give the same ARD", {
@@ -180,4 +187,51 @@ test_that("tflspec_summary: a report's filter on adsl_sub reaches BIGN (header N
   p <- sx[sx$stat_name == "p" & txt(sx$variable_level) == "F", ]
   expect_equal(num(p$stat), rep(1, nrow(p)))
   expect_false(any(txt(sx$variable_level) == "M" & sx$stat_name == "n" & num(sx$stat) > 0))
+})
+
+test_that("tflspec_summary: nest moves rows, the header has the arms and N, labels and value_labels both print", {
+  twin_skip()
+  d <- twin_study(file.path(tempdir(), "twin-sumparams"),
+                  system.file("extdata", "spec-yaml", "defaults.yml", package = "tflspec"),
+                  style = FALSE)
+  on.exit(unlink(d, recursive = TRUE))
+  mk <- function(id, content) {
+    f <- file.path(d, "spec", "outputs", paste0(id, ".yml"))
+    writeLines(c(paste0("id: ", id), "kind: table", "label: Summary",
+                 "common: {population: SAF, treatment: TRT01A}",
+                 "template:", "  name: tflspec_v1/tflspec_summary",
+                 "  analysis:", "    by: [TRT01A]", "    categorical: [SEX, RACE, ETHNIC]",
+                 "    missing_row: false", "  content:", content), f)
+    st <- tfl_read_study_spec(d)
+    tfl_write_output(tfl_template_to_spec(tfl_read_output(f), st), f)
+    st <- tfl_read_study_spec(d)
+    suppressMessages(tfl_build_ard(st, dir = d, output_id = id, save = FALSE))
+    readLines(tfl_run_output(id, dir = d), warn = FALSE)
+  }
+  has <- function(x, s) grep(s, x, fixed = TRUE)
+  a <- mk("T-SUM-A", "    max_rows: 30")
+  b <- mk("T-SUM-B", c("    nest: {ETHNIC: {RACE: ASIAN}}",
+                       "    labels: {SEX: \"Sex, n (%)\"}",
+                       "    value_labels: {SEX: {F: Female, M: Male}}"))
+  # (the study's defaults give the header: the arm line and the (N=n) line)
+  for (x in list(a, b)) {
+    expect_length(has(x, "Characteristic"), 1L)
+    expect_true(length(has(x, "(N=80)")) == 1L && length(has(x, "(N=78)")) == 1L)
+    expect_true(has(x, "Characteristic") == has(x, "(N=80)"))
+    expect_true(has(x, "Drug X") == has(x, "Characteristic") - 1L)
+  }
+  # without nest the ETHNIC block follows RACE's; with it the rows sit under ASIAN
+  rows <- function(x, s) min(has(x, s))
+  expect_true(rows(a, "BLACK OR AFRICAN AMERICAN") == rows(a, "ASIAN") + 1L)
+  expect_true(rows(a, "HISPANIC OR LATINO") > rows(a, "WHITE"))
+  expect_true(rows(b, "HISPANIC OR LATINO") == rows(b, "ASIAN") + 1L)
+  expect_true(rows(b, "BLACK OR AFRICAN AMERICAN") > max(has(b, "NOT HISPANIC OR LATINO")))
+  expect_true(rows(b, "WHITE") > rows(b, "BLACK OR AFRICAN AMERICAN"))
+  expect_length(has(a, "ETHNIC"), 1L)
+  expect_length(has(b, "ETHNIC"), 0L)
+  # labels and value_labels in one plan_labels: the heading and the values both print
+  expect_length(has(b, "Sex, n (%)"), 1L)
+  expect_length(has(b, "Female"), 1L)
+  expect_length(has(b, "Male"), 1L)
+  expect_length(has(a, "Female"), 0L)
 })

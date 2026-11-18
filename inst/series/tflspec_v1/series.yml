@@ -17,6 +17,8 @@ values:
   total_label: Total
   missing_label: Missing
   sd_missing: "-"
+  any_row_label: "Subjects with at least one event"
+  empty_text: "No records were reported."
   count_cell: "{n} ({p:.1f%})"
   max_rows: 30
   conf_level: 0.95

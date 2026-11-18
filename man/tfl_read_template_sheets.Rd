@@ -24,6 +24,12 @@ arguments of one value, \verb{name = value; name = value}.}
 \code{output_id}, \code{param} (\code{continuous}, \code{categorical}, \code{hierarchy} ...),
 \code{value} (\code{AGE}) and \code{label} (its heading, for \code{labels}).}
 }
+A template's condition rows (its \code{conditions}: a row a condition) are
+rows of a third sheet, \code{conditions} (the ARD definition's: \code{output_id},
+\code{analysis_id}, \code{row}, then a column a key), with \code{analysis_id} blank --
+the report's template's rows, not an analysis's.  An argument that is a
+map (\code{formats}, \code{analysis_ids}) has no place on the sheets: it stays in
+the report's YAML file.
 }
 \examples{
 f <- system.file("extdata", "template-spec", "templates.xlsx", package = "tflspec")
