@@ -100,14 +100,15 @@ params:
     tier: usual
     description: The row label of each variable; empty for the variable's label.
   value_labels:
-    type: map<column,map<string,string>>
+    type: map<column,r>
     input: table
     choices: vars(adsl_sub)
     default: ~
     step: content
     tier: other
     description: "The label of each value of a variable, code to text ({SEX:
-      {F: Female}}); empty for the code list's labels.  It goes with labels
+      {F: Female}}) or a study list (!r study$codelists$SEX); empty for the
+      code list's labels.  It goes with labels
       in one plan_labels, a variable's heading kept."
   nest:
     type: map<column,map<column,string>>
