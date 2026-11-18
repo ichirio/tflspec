@@ -15,7 +15,8 @@
 # item's (the generator's one-row function's argument): left as written.
 # The item's `conditions:` rows are the template's values, filled in.
 # The template's `derive:` names (one operation each, in order) are filled
-# in the same way; they are not arguments (.tr_derive()).
+# in the same way; they are not arguments (.tr_derive()).  Its `check:`
+# items (fail: one operation, message:) stop the rules between arguments.
 
 #' A report's template with its values filled in
 #'
@@ -62,11 +63,24 @@
 #'     column the row leaves out is nothing), any other element is
 #'     `"{item}"`.  A row's column (or `item`) named as an argument or a
 #'     derived name stops: a name inside `t` means one thing.}
+#'   \item{`given: [name, ...]`}{`TRUE` when the report itself set any of
+#'     these arguments (a default, a series' or a study's value does not
+#'     count), else nothing.  A name that is not a param of the template
+#'     stops.}
 #' }
 #' Each gives nothing for an empty `x`.  A value that is nothing drops its
 #' key, its list element, and an item whose map is left empty; so a content
 #' item written `plan_total: "{total_args}"` with `total_args: {if:
 #' "{total}", then: {position: last}}` is left out when `total` is off.
+#'
+#' A template's `check:` list states rules between its arguments.  Each
+#' item has two keys: `fail:` (one `derive:` operation, as above) and
+#' `message:` (text, `"{name}"` filled in).  The items are worked out in
+#' order once `derive:` is; when an item's `fail` is something (the `if:`
+#' rule), resolving stops with `<template>: <message>`.  An unknown key, a
+#' missing `fail` or `message`, or a `check:` that is not a list stops too.
+#' An operation inside `then`/`else` is not worked out: derive a name for it
+#' and write `"{name}"`.
 #'
 #' @param report A report SPEC (a list, as read) or its file.
 #' @param template A template, `"<series>/<template>"`; default the report's
@@ -127,7 +141,8 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   }
 
   args_env <- env
-  env <- .tr_derive(tpl$derive, env, defs$name, template)
+  env <- .tr_derive(tpl$derive, env, defs$name, template, origins)
+  .tr_check(tpl$check, env, defs$name, origins, template, who)
 
   # data: rows -- the template's, the report's merged in by id key by key
   # (a report row with `code:` makes the whole data: it replaces the
@@ -195,9 +210,10 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
 # `env` after the arguments, so later entries and the template's sections
 # read them as "{name}".  Nothing (NULL) stays a name whose value is nothing.
 .tr_derive_ops <- list(value = character(), "if" = c("then", "else", "is"), last = character(),
-                       but_last = character(), join = "sep", keys = "prefix", each = "to")
+                       but_last = character(), join = "sep", keys = "prefix", each = "to",
+                       given = character())
 
-.tr_derive <- function(derive, env, params, template) {
+.tr_derive <- function(derive, env, params, template, origins = character()) {
   if (is.null(derive)) return(env)
   where <- sprintf("template %s: derive:", template)
   if (!is.list(derive) || is.null(names(derive)) || !all(nzchar(names(derive)))) {
@@ -208,12 +224,44 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
       stop(where, " ", nm, " is an argument's name; a derived value takes a name of its own.",
            call. = FALSE)
     }
-    env[nm] <- list(.tr_derive_one(derive[[nm]], env, paste0(where, " ", nm)))
+    env[nm] <- list(.tr_derive_one(derive[[nm]], env, paste0(where, " ", nm), params, origins))
   }
   env
 }
 
-.tr_derive_one <- function(d, env, where) {
+# The template's check: list, in order, after derive: -- each item
+# {fail: <one derive operation>, message: text}; a fail value that is
+# something stops with the filled message.
+.tr_check <- function(check, env, params, origins, template, who) {
+  if (is.null(check)) return(invisible(NULL))
+  where <- sprintf("template %s: check:", template)
+  ok <- is.list(check) && is.null(names(check))
+  if (!ok) stop(where, " is a list of items, each {fail: <operation>, message: text}.", call. = FALSE)
+  for (i in seq_along(check)) {
+    it <- check[[i]]
+    at <- paste0(where, " item ", i)
+    if (!is.list(it) || is.null(names(it))) {
+      stop(at, " is a map with fail: and message:.", call. = FALSE)
+    }
+    bad <- setdiff(names(it), c("fail", "message"))
+    if (length(bad)) {
+      stop(at, ": ", paste(bad, collapse = ", "), " is not a key of a check item (its keys: fail, message).",
+           call. = FALSE)
+    }
+    miss <- setdiff(c("fail", "message"), names(it))
+    if (length(miss)) stop(at, " needs ", paste(miss, collapse = ", "), ".", call. = FALSE)
+    if (!is.character(it$message) || length(it$message) != 1L) {
+      stop(at, ": message is one text.", call. = FALSE)
+    }
+    x <- .tr_derive_one(it$fail, env, paste0(at, " fail"), params, origins)
+    if (.tr_is_something(x)) {
+      stop(who, ": ", template, ": ", .tr_fill(it$message, env), call. = FALSE)
+    }
+  }
+  invisible(NULL)
+}
+
+.tr_derive_one <- function(d, env, where, params = names(env), origins = character()) {
   ops <- names(.tr_derive_ops)
   op <- if (is.list(d) && !is.null(names(d))) intersect(names(d), ops) else character()
   if (length(op) != 1L) {
@@ -226,6 +274,7 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
     stop(where, ": ", op, " takes no ", paste(bad, collapse = ", "),
          if (length(ok)) paste0(" (its options: ", paste(ok, collapse = ", "), ")"), ".", call. = FALSE)
   }
+  if (op == "given") return(.tr_derive_given(d$given, params, origins, where))
   x <- .tr_fill(d[[op]], env)
   n <- length(x)
   switch(op,
@@ -236,6 +285,19 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
     join = if (n) paste(as.character(unlist(x)), collapse = .tr_option(d$sep, ", ")),
     keys = if (n) stats::setNames(as.list(x), paste0(.tr_option(d$prefix, ""), seq_len(n))),
     each = if (n) .tr_derive_each(x, d$to, env, where))
+}
+
+# `given:` -- TRUE when the report itself set any of the named arguments
+# (origin "report"), else nothing
+.tr_derive_given <- function(x, params, origins, where) {
+  nm <- as.character(unlist(x))
+  if (!length(nm) || anyNA(nm)) stop(where, ": given takes argument names.", call. = FALSE)
+  unknown <- setdiff(nm, params)
+  if (length(unknown)) {
+    stop(where, ": given: ", paste(unknown, collapse = ", "), " is not a param of the template.",
+         call. = FALSE)
+  }
+  if (any(origins[nm] %in% "report")) TRUE
 }
 
 # `if:`'s test: with `is:`, x is that one value; else x is something
