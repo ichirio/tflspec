@@ -38,7 +38,10 @@ variable's name); \code{per: level} or \verb{per: [columns]} one row whose
 \code{analysis_per} tells the generator how to name the analyses; no \code{per}
 one analysis, the item's id.  \code{per: level} with an \code{id_prefix} (may be
 empty) names the depths \verb{<prefix>_ANY}, \verb{<prefix>_L1}, ... (no prefix: \code{ANY},
-\code{L1}, ...), each replaced by its entry in \code{ids}.  An item's \verb{conditions:} is a data frame,
+\code{L1}, ...), each replaced by its entry in \code{ids}.  \verb{per: [columns]} makes an
+analysis a value of the columns (joined by \verb{_}: \code{ALT}, \code{ALT_HIGH}), on an
+item with condition rows or without (each call's rows by their own value);
+its \code{ids} give some values an id of their own (\code{{ALT: ALT_SHIFT}}).  An item's \verb{conditions:} is a data frame,
 one row a run, its columns the item's \code{params} (and \code{analysis_id}, a
 row's own id, when a row gives one): the template's rows first, then the
 report's (\code{"{conditions}"}).
@@ -53,16 +56,35 @@ name.  The operations (one a name; another key stops):
 \describe{
 \item{\code{value: x}}{\code{x} as it is filled in.}
 \item{\verb{if: x, then: a, else: b}}{\code{a} when \code{x} is something (not
-nothing, \code{FALSE}, \code{""} or empty), else \code{b} (default nothing).}
+nothing, \code{FALSE}, \code{""} or empty), else \code{b} (default nothing).  With
+\code{is: v}, when \code{x} is the value \code{v}.}
 \item{\code{last: x}}{the last element of the list \code{x}.}
 \item{\code{but_last: x}}{all but the last (nothing for fewer than two).}
 \item{\verb{join: x, sep: s}}{the elements as one text, \code{s} between them
 (default \code{", "}).}
 \item{\verb{keys: x, prefix: p}}{a map \verb{p1: x1, p2: x2, ...}.}
+\item{\verb{each: x, to: t}}{a list, \code{t} filled in once an element of \code{x}:
+a row of a table (a map) gives its columns as names inside \code{t} (a
+column the row leaves out is nothing), any other element is
+\code{"{item}"}.  A row's column (or \code{item}) named as an argument or a
+derived name stops: a name inside \code{t} means one thing.}
+\item{\verb{given: [name, ...]}}{\code{TRUE} when the report itself set any of
+these arguments (a default, a series' or a study's value does not
+count), else nothing.  A name that is not a param of the template
+stops.}
 }
 Each gives nothing for an empty \code{x}.  A value that is nothing drops its
 key, its list element, and an item whose map is left empty; so a content
 item written \code{plan_total: "{total_args}"} with \verb{total_args: \{if: "\{total\}", then: \{position: last\}\}} is left out when \code{total} is off.
+
+A template's \verb{check:} list states rules between its arguments.  Each
+item has two keys: \verb{fail:} (one \verb{derive:} operation, as above) and
+\verb{message:} (text, \code{"{name}"} filled in).  The items are worked out in
+order once \verb{derive:} is; when an item's \code{fail} is something (the \verb{if:}
+rule), resolving stops with \verb{<template>: <message>}.  An unknown key, a
+missing \code{fail} or \code{message}, or a \verb{check:} that is not a list stops too.
+An operation inside \code{then}/\code{else} is not worked out: derive a name for it
+and write \code{"{name}"}.
 }
 \seealso{
 \code{\link[=tfl_arg_defs]{tfl_arg_defs()}}, \code{\link[=tfl_series_dir]{tfl_series_dir()}}

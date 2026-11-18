@@ -49,7 +49,7 @@
   # condition-defined groups (the ARS's grouping factors): a row a level
   groups = c("group_id", "label", "level", "where"),
   analysis_data = c("output_id", "data_id", "from", "population_id", "subjects_in",
-                    "where", "add", "derive", "keep", "distinct", "code", "then"),
+                    "where", "add", "derive", "arrange", "keep", "distinct", "code", "then"),
   analyses = c("output_id", "analysis_id", "parent", "label", "method",
                "data", "dataset", "records",
                "population_id", "where", "by", "overall", "strata", "groups", "variables",
@@ -1267,7 +1267,7 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
   ad <- .adata_of(.adata_sheet(spec), output_id)
   ad <- ad[ad$data_id %in% .adata_used(ad, a), , drop = FALSE]
   # a column added since (subjects_in, keep) blank in every row does not count
-  later <- c("subjects_in", "keep", "code", "then")
+  later <- c("subjects_in", "arrange", "keep", "code", "then")
   ad <- ad[setdiff(names(ad), later[vapply(later, function(cn) all(is.na(ad[[cn]])), NA)])]
   pops <- spec$populations[spec$populations$population_id %in%
                              c(a$population_id, ad$population_id), , drop = FALSE]
@@ -1802,8 +1802,10 @@ tfl_ard_data_names <- function(spec, output_id = NULL, codelists = NULL) {
 # groups' N), a `custom` one, one inside another (its parent's by), the
 # study's N (total_n), one whose method takes no by (its arms in a model),
 # and `by: []` -- no columns, said so ("(none)").
-# `tables`: the table sheets' `tables` (output_id, cols).
-.by_needed_problems <- function(a, tables) {
+# `tables`: the table sheets' `tables` (output_id, cols); `ards` the ards
+# sheet: an item whose calls say their own `by` (a shift table's cells,
+# Total row ...) is not one either.
+.by_needed_problems <- function(a, tables, ards = NULL) {
   out <- .spec_problems_empty()
   if (is.null(a) || !nrow(a) || is.null(tables) || !nrow(tables) || is.null(tables$cols)) {
     return(out)
@@ -1814,6 +1816,7 @@ tfl_ard_data_names <- function(spec, output_id = NULL, codelists = NULL) {
     k <- match(a$output_id[i], tables$output_id)
     if (is.na(k) || is.na(tables$cols[k]) || !nzchar(trimws(tables$cols[k]))) next
     if (!is.na(a$by[i]) || !is.na(par[i]) || identical(a$method[i], "custom")) next
+    if (.item_calls_by(a, ards, i)) next
     cols <- trimws(strsplit(tables$cols[k], "[,|]")[[1L]])
     cols <- cols[nzchar(cols)]
     v <- .split_bar(a$variables[i])
@@ -1832,6 +1835,16 @@ tfl_ard_data_names <- function(spec, output_id = NULL, codelists = NULL) {
       "analyses", a$output_id[i], a$analysis_id[i], "by")
   }
   do.call(rbind, pr)
+}
+
+# Has item i calls (ards:) of its own that say a `by`?  Its rows' list
+# column `ards`, or the ards sheet's rows of its output and id
+.item_calls_by <- function(a, ards, i) {
+  own <- if (!is.null(a$ards) && is.list(a$ards)) a$ards[[i]]
+  if (length(own)) return(any(vapply(own, function(e) length(e$by) > 0L, NA)))
+  if (!is.data.frame(ards) || !nrow(ards) || is.null(ards$by)) return(FALSE)
+  hit <- ards$output_id %in% a$output_id[i] & ards$analysis_id %in% a$analysis_id[i]
+  any(!is.na(ards$by[hit]) & nzchar(trimws(as.character(ards$by[hit]))))
 }
 
 # The groups sheet and the analyses that name its groups: a level names its

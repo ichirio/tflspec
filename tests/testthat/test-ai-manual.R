@@ -63,6 +63,9 @@ test_that("every tflspec function the manual names exists", {
                             # the built-in page configurations' names, not functions
                             "tfl_standard", "tfl_small"))
   named <- named[!startsWith(named, "tfl_plan_")]
+  # (the series' templates, tflspec_v1/tflspec_shift: names, not functions)
+  tpl <- list.files(system.file("series", "tflspec_v1", "templates", package = "tflspec"), "[.]yml$")
+  named <- setdiff(named, sub("[.]yml$", "", tpl))
   expect_identical(setdiff(named, getNamespaceExports("tflspec")), character(0))
 })
 

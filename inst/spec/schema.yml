@@ -1006,6 +1006,11 @@ rtf_footer:
         description: 'New columns, NAME = R expression, | between them (transform());
           a column the code lists list becomes a factor in their order; blank: none.'
         example: PHASE = APHASE
+      - column: arrange
+        description: 'The rows'' order, | between the columns, after derive (and before
+          keep and distinct, which keeps the first row in it): a column, -column for
+          descending (dplyr::arrange()); blank: the data''s order.'
+        example: USUBJID | -ASTDT
       - column: keep
         description: 'The columns kept, | between them (the subject key always), after
           derive (a derived column may be named); blank: every column.'
@@ -1177,8 +1182,10 @@ rtf_footer:
       - column: analysis_per
         description: 'A template item: how its analyses are named; level (a depth
           an analysis, <id>_ANY, <id>_L1, ...) or columns | between them (a condition
-          row an analysis, its id their values: ALT_HIGH); level:ANY,L1,L2 (the
-          depths'' ids themselves, the any row''s first); blank: the analysis_id.'
+          row an analysis, its id their values: ALT_HIGH; with no condition rows,
+          each call''s rows by their values: ALT), then ids:ALT=ALT_SHIFT,... (the
+          ids given for some values); level:ANY,L1,L2 (the depths'' ids themselves,
+          the any row''s first); blank: the analysis_id.'
         example: PARAMCD | tox_dir
   - sheet: conditions
     description: 'ARD: a template item''s condition rows, one row a run of the
