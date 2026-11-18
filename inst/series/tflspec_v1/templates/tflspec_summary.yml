@@ -124,7 +124,7 @@ params:
     input: table
     ordered: true
     default:
-      n: "{N}"
+      "n": "{N}"
       Mean (SD): "{mean} ({sd})"
       Median: "{median}"
       Min, Max: "{min}, {max}"
