@@ -42,14 +42,18 @@ test_that("every file in the tflspec_v1 series folder parses", {
   expect_true(is.list(s$values))
   expect_null(s$values$header_n)
   expect_null(s$values$overall_row)
+  expect_identical(s$values$population_pk, "PK")
+  expect_identical(s$values$formats_pk$mean, "4s")
 })
 
 test_that("every template has its keys, a BIGN item and ids on its items", {
   skip_if(!nzchar(series_dir()), "the series folder is not installed")
   ts <- series_templates()
-  expect_length(ts, 11L)
-  # (a listing counts nothing: tflspec_listing has no analysis step)
+  expect_length(ts, 12L)
+  # (a listing counts nothing: tflspec_listing has no analysis step;
+  # tflspec_pk_conc's column headings are time points: no BIGN)
   no_analysis <- "tflspec_listing.yml"
+  no_bign <- "tflspec_pk_conc.yml"
   for (nm in names(ts)) {
     t <- ts[[nm]]
     keys <- c("template", "label", "params", "data", if (!nm %in% no_analysis) "analysis")
@@ -64,7 +68,7 @@ test_that("every template has its keys, a BIGN item and ids on its items", {
       if (is.null(a$id)) NA_character_ else a$id
     }, character(1))
     expect_false(anyNA(ids), info = nm)
-    expect_true("BIGN" %in% ids, info = nm)
+    expect_identical("BIGN" %in% ids, !nm %in% no_bign, info = nm)
   }
 })
 
@@ -108,6 +112,13 @@ test_that("the percentages' denominator is BIGN and the items say how analysis i
   expect_identical(tl$params$columns$type, "rows<vars,label,width,collapse_repeats>")
   expect_identical(tl$params$by_break$default, "page")
   expect_identical(tl$style, "style_listing")
+  pk <- ts[["tflspec_pk_conc.yml"]]
+  expect_true(isTRUE(pk$params$by$required))
+  expect_identical(pk$params$population$default, "population_pk")
+  expect_identical(pk$params$formats$default, "formats_pk")
+  expect_identical(pk$params$formats$step, "content")
+  expect_identical(pk$style, "style_listing")
+  expect_identical(pk$analysis[[1]]$analyses$per, "{param_var}")
   cmp <- ts[["forest_hr.yml"]]$params$comparison
   expect_identical(cmp$type, "string")
   expect_identical(cmp$input, "pick")

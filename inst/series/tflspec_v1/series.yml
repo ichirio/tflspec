@@ -12,7 +12,10 @@ values:
   style_listing: tfl_small
   population_safety: SAF
   population_efficacy: FAS
+  population_pk: PK
   formats: {N: 0, mean: 2, sd: 3, median: 1, min: 0, max: 0, p: "xx.x%", "AGE:mean": 1, "AGE:sd": 2}
+  # (tflspec_pk_conc: significant digits, its plan_digits)
+  formats_pk: {N: 0, mean: 4s, sd: 5s, se: 5s, cv: 1, median: 4s, min: 3s, max: 3s}
   total: false
   total_label: Total
   missing_label: Missing
