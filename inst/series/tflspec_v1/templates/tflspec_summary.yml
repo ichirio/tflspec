@@ -143,6 +143,15 @@ params:
   col_header:
     type: list<map<string,string>>
     input: table
+    columns:
+      row_label:
+        type: string
+        input: text
+        description: The text over the row labels' column.
+      .values:
+        type: string
+        input: text
+        description: "The text over each value column ({col} the column's value)."
     default: ~
     step: content
     tier: other
