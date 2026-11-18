@@ -102,7 +102,10 @@ via_verbs <- list(
                    spacer_rel_width = "plan_listing(spacer_rel_width)",
                    layout = "plan_listing(layout)", wrap = "plan_listing(wrap)",
                    align = "plan_listing(align)", record = "plan_listing(record)",
-                   blank_row = "plan_blanks(where = \"records\" / \"none\")"),
+                   blank_row = "plan_blanks(where = \"records\" / \"none\")",
+                   blank_row_first = "plan_blanks(first)"),
+  set_blank_rows = c(data = "the table plan_apply() builds", blank_rows = "plan_blanks(where)",
+                     blank_row_first = "plan_blanks(first)", blank_row_end = "plan_blanks(last)"),
   stub_cols = c(data = "the table plan_apply() builds", vars = "plan_stub(vars)",
                 label = "plan_stub(name)", indent = "plan_stub(indent)",
                 group_summary = "plan_stub(group_summary)"),
@@ -214,7 +217,8 @@ for (fn in ns) {
         add(fn, a, "no", "", "page: does not pass it on")
       }
     } else if (!is.null(e)) {
-      where <- if (fn %in% c("rtf_border", "rtf_border_line", "rtf_col_header", "listing_col", "cell_rows", "rtf_watermark"))
+      where <- if (fn %in% c("rtf_border", "rtf_border_line", "rtf_col_header", "listing_col", "cell_rows", "rtf_watermark",
+                        "blank_rows_by_change", "blank_rows_by_rule"))
         paste0("{fn: ", fn, "} value") else paste0("content: ", fn)
       if (a %in% data_args) add(fn, a, "yes", "the pipe", "")
       else if (a == "..." && !is.null(e$dots)) add(fn, a, "yes", where, "schema dots grammar")

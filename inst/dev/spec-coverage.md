@@ -313,6 +313,11 @@ unless a code list made the column a factor.  The run makes the generated
 code give the stratum as a factor and adds checks of the settings that
 fail or are dropped (see "Added 2026-11-17").
 
+2026-11-18 (the same scope; cards 0.9.0, cardx 0.3.4, broom.helpers
+1.23.0, emmeans 2.0.4, still the CRAN versions): **100.0% before and after
+(565 yes / 0 partial)**.  Nothing in area A was left to add, so the run
+went to rtfreporter (area C, below).
+
 (2026-11-14 before: this branch before the run (tflspec@next 6fa6b81
 merged; a tflspec built from it) measured by this run's script on the
 wider scope -- the 20 tidy_plus_plus() arguments could be written as R in
@@ -1111,6 +1116,18 @@ Percentage: yes counts 1, partial 0.5.
 | 2026-11-15 after  | 59.5% (333 / 100 / 211 of 644) | 66.4% (333 / 100 / 144 of 577) | 42 / 18 / 54 |
 | 2026-11-16 before / after | 59.5% (333 / 100 / 211 of 644) | 66.4% (333 / 100 / 144 of 577) | 42 / 18 / 54 |
 | 2026-11-17 before / after | 59.5% (333 / 100 / 211 of 644) | 66.4% (333 / 100 / 144 of 577) | 42 / 18 / 54 |
+| 2026-11-18 before | 59.5% (333 / 100 / 211 of 644) | 66.4% (333 / 100 / 144 of 577) | 42 / 18 / 54 |
+| 2026-11-18 after  | 60.9% (340 / 105 / 199 of 644) | 68.0% (340 / 105 / 132 of 577) | 44 / 19 / 51 |
+
+(2026-11-18: rtfreporter@next 6da4572 (its changes since 27cb3e4 are
+`plan_empty()` on a listing of no records, articles and validation
+records: no new exported argument) and tflspec@next 6c5d6d9 merged.  The
+gain: the blank-row rules `blank_rows_by_change()` (4 arguments) and
+`blank_rows_by_rule()` (3) are schema values of `plan_blanks(where = )`
+(no to yes), and the measure now counts `listing_spec(blank_row_first)`
+and `set_blank_rows(data, blank_rows, blank_row_first, blank_row_end)` as
+said by `plan_blanks()` (no to partial; checked: `plan_blanks(first =
+FALSE)` takes away a listing's blank row at the top of the page).)
 
 (2026-11-17: rtfreporter@next 27cb3e4 (its changes since 8e2d5a3 are the
 header N read with relabelled column values, validation records, tests
@@ -1297,6 +1314,20 @@ and the measure's corrections: `rtf_tables(style = )` is said by
 `plan_style()`'s `rtf_table_style()` fields (partial), `read_gt` is
 deprecated, the validation kit a helper.)
 
+### Added 2026-11-18
+
+* **Blank rows by a rule**: `plan_blanks(where = )` takes rtfreporter's
+  `blank_rows_by_change()` -- a blank row at each change of a column's
+  value, each SOC of an AE table, each parameter of a lab table:
+  `{fn: blank_rows_by_change, args: {cols: AEBODSYS}}` -- and
+  `blank_rows_by_rule()` -- before or after each row whose text matches:
+  `{fn: blank_rows_by_rule, args: {col: row_label, pattern: "^Any", where:
+  after}}` -- or a list of them.  The schema checks each rule's arguments
+  (`group_by`: value / indent / filled / auto; `where`: before / after); the
+  code calls rtfreporter's function as written.  The sheets have no column
+  for a rule: converted to the sheets, the item goes whole to
+  `content_more` and is listed as not converted.
+
 ### Added 2026-11-02
 
 * A running band's text colour: `page.rtf_header.color` /
@@ -1321,9 +1352,11 @@ deprecated, the validation kit a helper.)
 ### Where the gaps are
 
 Most "no" rows are rtfreporter's lower-level table API -- `as_rtftable()`,
-the `fmt_*()`, `col_*()`, `set_blank_rows()`, `*_col_widths()` and
-`listing_wrap()` helpers -- which the plan verbs already stand for: a SPEC
-says the plan, not these calls.  (Since 2026-11-14 / 2026-11-15 the
+the `fmt_*()`, `col_*()`, `*_col_widths()` and `listing_wrap()`
+helpers -- which the plan verbs already stand for: a SPEC says the plan,
+not these calls.  (Since 2026-11-18 the blank-row rules are values of
+`plan_blanks(where = )`, and `set_blank_rows()` counts as said by
+`plan_blanks()`.)  (Since 2026-11-14 / 2026-11-15 the
 arguments `plan_apply()` passes on from a verb -- `widen_ard()`'s,
 `rtftable()`'s, `listing_spec()`'s, `stub_cols()`'s, the `style_*()` /
 `set_*()` / `paginate_cols()` generics' -- count as partial.)  The gaps that a SPEC
