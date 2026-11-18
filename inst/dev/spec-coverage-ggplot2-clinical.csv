@@ -1,5 +1,5 @@
 "package","function","argument","covered","where","note","group","weight","uses"
-"ggplot2","coord_cartesian","clip","yes","km","","coord",3,1
+"ggplot2","coord_cartesian","clip","yes","km; forest_favours","","coord",3,2
 "ggplot2","coord_cartesian","expand","yes","cdf_geom; profile","","coord",3,2
 "ggplot2","coord_cartesian","xlim","yes","km; cdf_geom; km_axis","","coord",3,3
 "ggplot2","coord_cartesian","ylim","yes","km_axis; profile","","coord",3,2
@@ -43,11 +43,12 @@
 "ggplot2","geom_boxplot","varwidth","yes","labvisit","","geom",3,1
 "ggplot2","geom_boxplot","width","yes","box","","geom",3,1
 "ggplot2","geom_col","colour","yes","waterfall; pie; old_waterfall","","geom",3,3
+"ggplot2","geom_col","fill","yes","swimmer_key","","geom",3,1
 "ggplot2","geom_col","linewidth","yes","waterfall; old_waterfall","","geom",3,2
-"ggplot2","geom_col","mapping","yes","swimmer","","geom",3,1
-"ggplot2","geom_col","orientation","yes","swimmer","","geom",3,1
+"ggplot2","geom_col","mapping","yes","swimmer; swimmer_key","","geom",3,2
+"ggplot2","geom_col","orientation","yes","swimmer; swimmer_key","","geom",3,2
 "ggplot2","geom_col","position","yes","bar; stack","","geom",3,2
-"ggplot2","geom_col","width","yes","waterfall; swimmer; bar; butterfly; pie; old_waterfall; prog_waterfall","","geom",3,7
+"ggplot2","geom_col","width","yes","waterfall; swimmer; bar; butterfly; pie; old_waterfall; prog_waterfall; swimmer_key","","geom",3,8
 "ggplot2","geom_density","adjust","yes","density; hist_density","","geom",2,2
 "ggplot2","geom_density","alpha","yes","density","","geom",2,1
 "ggplot2","geom_density","bounds","yes","density; hist_density","","geom",2,2
@@ -102,11 +103,13 @@
 "ggplot2","geom_point","show.legend","yes","km; km_axis","","geom",3,2
 "ggplot2","geom_point","size","yes","km; spider; swimmer; box; scatter; edish; lab_range; km_axis; pk_ind; calendar; profile; old_forest; prog_forest","","geom",3,13
 "ggplot2","geom_pointrange","","yes","forest_math","","geom",3,1
+"ggplot2","geom_pointrange","colour","yes","forest_favours","","geom",3,1
 "ggplot2","geom_pointrange","fatten","yes","mean_geom","","geom",3,1
 "ggplot2","geom_pointrange","fun.args","yes","mean_geom","","geom",3,1
 "ggplot2","geom_pointrange","fun.data","yes","mean_geom","","geom",3,1
+"ggplot2","geom_pointrange","mapping","yes","forest_favours","","geom",3,1
 "ggplot2","geom_pointrange","position","yes","mean_geom","","geom",3,1
-"ggplot2","geom_pointrange","shape","yes","forest_log2","","geom",3,1
+"ggplot2","geom_pointrange","shape","yes","forest_log2; forest_favours","","geom",3,2
 "ggplot2","geom_pointrange","stat","yes","mean_geom","","geom",3,1
 "ggplot2","geom_ribbon","alpha","yes","km","","geom",3,1
 "ggplot2","geom_ribbon","colour","yes","km; spider_ref","","geom",3,2
@@ -117,9 +120,9 @@
 "ggplot2","geom_ribbon","stat","yes","km","","geom",3,1
 "ggplot2","geom_rug","alpha","yes","density","","geom",1,1
 "ggplot2","geom_rug","sides","yes","density","","geom",1,1
-"ggplot2","geom_segment","arrow","yes","swimmer","","geom",3,1
-"ggplot2","geom_segment","data","yes","swimmer","","geom",3,1
-"ggplot2","geom_segment","mapping","yes","swimmer","","geom",3,1
+"ggplot2","geom_segment","arrow","yes","swimmer; swimmer_key","","geom",3,2
+"ggplot2","geom_segment","data","yes","swimmer; swimmer_key","","geom",3,2
+"ggplot2","geom_segment","mapping","yes","swimmer; swimmer_key","","geom",3,2
 "ggplot2","geom_smooth","colour","yes","bland; dose_prop; bubble; er_logit","","geom",2,4
 "ggplot2","geom_smooth","fill","yes","er_logit","","geom",2,1
 "ggplot2","geom_smooth","formula","yes","scatter; bland; dose_prop; bubble; er_logit","","geom",2,5
@@ -151,11 +154,12 @@
 "ggplot2","geom_violin","position","yes","box","","geom",2,1
 "ggplot2","geom_violin","scale","yes","box","","geom",2,1
 "ggplot2","geom_violin","trim","yes","box","","geom",2,1
-"ggplot2","geom_vline","colour","yes","forest; cdf; cdf_pad; old_cdf","","geom",3,4
-"ggplot2","geom_vline","linetype","yes","forest; edish; cdf; forest_log2; dates; forest_math; old_forest; prog_forest","","geom",3,8
+"ggplot2","geom_vline","colour","yes","forest; cdf; cdf_pad; old_cdf; forest_favours","","geom",3,5
+"ggplot2","geom_vline","linetype","yes","forest; edish; cdf; forest_log2; dates; forest_math; old_forest; prog_forest; forest_favours","","geom",3,9
 "ggplot2","geom_vline","linewidth","yes","old_forest; old_cdf","","geom",3,2
-"ggplot2","geom_vline","xintercept","yes","forest; edish; cdf; forest_log2; dates; forest_math; cdf_pad; old_forest; old_cdf; prog_forest","","geom",3,10
+"ggplot2","geom_vline","xintercept","yes","forest; edish; cdf; forest_log2; dates; forest_math; cdf_pad; old_forest; old_cdf; prog_forest; forest_favours","","geom",3,11
 "ggplot2","guides","colour","yes","mean_boot; bubble; old_km; old_mean","","guide",3,4
+"ggplot2","guides","custom","yes","swimmer_key","","guide",3,1
 "ggplot2","guides","fill","yes","stack; heat; ae_pct; heat_steps; fill; heat_text; old_box; old_heat","","guide",3,8
 "ggplot2","guides","size","yes","bubble","","guide",3,1
 "ggplot2","guides","x","yes","forest","","guide",3,1
@@ -177,6 +181,11 @@
 "ggplot2","annotate","yend","yes","cdf_pad; prog_cdf","","labs",3,2
 "ggplot2","annotate","ymax","yes","edish","","labs",3,1
 "ggplot2","annotate","ymin","yes","edish","","labs",3,1
+"ggplot2","annotation_custom","grob","yes","forest_favours","","labs",1,3
+"ggplot2","annotation_custom","xmax","yes","forest_favours","","labs",1,1
+"ggplot2","annotation_custom","xmin","yes","forest_favours","","labs",1,1
+"ggplot2","annotation_custom","ymax","yes","forest_favours","","labs",1,1
+"ggplot2","annotation_custom","ymin","yes","forest_favours","","labs",1,1
 "ggplot2","annotation_logticks","sides","yes","edish; pk_log","","labs",2,2
 "ggplot2","labs","caption","yes","km","","labs",3,1
 "ggplot2","labs","colour","yes","mean; scatter; edish; mean_sd; km_axis; pk_log; pct_signed; mean_text; old_mean","","labs",3,9
@@ -185,8 +194,8 @@
 "ggplot2","labs","shape","yes","mean; edish; pk_log","","labs",3,3
 "ggplot2","labs","tag","yes","labvisit; lab_panels","","labs",3,2
 "ggplot2","labs","title","yes","km; dose_prop","","labs",3,2
-"ggplot2","labs","x","yes","km; forest; waterfall; swimmer; box; mean; bar; stack; scatter; edish; heat; cdf; labvisit; mean_sd; forest_log2; dates; ae_pct; lab_range; mean_boot; heat_steps; km_axis; pk_log; pk_ind; pct_signed; forest_math; butterfly; qq; bland; fill; mean_text; hist_density; cdf_pad; dose_prop; lab_panels; dot; calendar; bubble; heat_text; profile; area; er_logit; spider_ref; old_km; old_forest; old_mean; old_pct; old_cdf; old_box; old_heat; old_waterfall; prog_mean; prog_forest; prog_waterfall; prog_cdf","","labs",3,54
-"ggplot2","labs","y","yes","km; forest; waterfall; swimmer; box; mean; bar; stack; scatter; edish; heat; cdf; labvisit; mean_sd; forest_log2; dates; ae_pct; lab_range; mean_boot; heat_steps; km_axis; pk_log; pk_ind; pct_signed; forest_math; butterfly; qq; bland; fill; mean_text; hist_density; cdf_pad; lab_panels; dot; calendar; bubble; heat_text; profile; area; er_logit; spider_ref; old_km; old_forest; old_mean; old_pct; old_cdf; old_box; old_heat; old_waterfall; prog_mean; prog_forest; prog_waterfall; prog_cdf","","labs",3,53
+"ggplot2","labs","x","yes","km; forest; waterfall; swimmer; box; mean; bar; stack; scatter; edish; heat; cdf; labvisit; mean_sd; forest_log2; dates; ae_pct; lab_range; mean_boot; heat_steps; km_axis; pk_log; pk_ind; pct_signed; forest_math; butterfly; qq; bland; fill; mean_text; hist_density; cdf_pad; dose_prop; lab_panels; dot; calendar; bubble; heat_text; profile; area; er_logit; spider_ref; old_km; old_forest; old_mean; old_pct; old_cdf; old_box; old_heat; old_waterfall; prog_mean; prog_forest; prog_waterfall; prog_cdf; forest_favours; swimmer_key","","labs",3,56
+"ggplot2","labs","y","yes","km; forest; waterfall; swimmer; box; mean; bar; stack; scatter; edish; heat; cdf; labvisit; mean_sd; forest_log2; dates; ae_pct; lab_range; mean_boot; heat_steps; km_axis; pk_log; pk_ind; pct_signed; forest_math; butterfly; qq; bland; fill; mean_text; hist_density; cdf_pad; lab_panels; dot; calendar; bubble; heat_text; profile; area; er_logit; spider_ref; old_km; old_forest; old_mean; old_pct; old_cdf; old_box; old_heat; old_waterfall; prog_mean; prog_forest; prog_waterfall; prog_cdf; forest_favours; swimmer_key","","labs",3,55
 "ggplot2","xlab","label","yes","mean_geom; density; hist_fd","","labs",1,3
 "ggplot2","ylab","label","yes","mean_geom; cdf_geom; ribbon","","labs",1,3
 "ggplot2","position_dodge","width","yes","pd","","position",3,1
@@ -267,7 +276,7 @@
 "ggplot2","scale_x_discrete","guide","yes","heat; dot","","scale",3,2
 "ggplot2","scale_x_discrete","labels","yes","bar; labvisit; mean_boot; dot","","scale",3,4
 "ggplot2","scale_x_discrete","position","yes","heat; heat_steps; heat_text","","scale",3,3
-"ggplot2","scale_x_log10","","yes","scatter; old_forest","","scale",3,2
+"ggplot2","scale_x_log10","","yes","scatter; old_forest; forest_favours","","scale",3,3
 "ggplot2","scale_x_log10","breaks","yes","forest; edish; dose_prop; prog_forest","","scale",3,4
 "ggplot2","scale_x_log10","labels","yes","forest; edish; prog_forest","","scale",3,3
 "ggplot2","scale_x_log10","limits","yes","forest; edish; prog_forest","","scale",3,3
@@ -371,7 +380,7 @@
 "ggplot2","theme","panel.spacing.x","yes","lab_panels","","theme",3,1
 "ggplot2","theme","panel.spacing.y","yes","forest","","theme",3,1
 "ggplot2","theme","plot.caption","yes","km","","theme",3,1
-"ggplot2","theme","plot.margin","yes","ae_pct","","theme",3,1
+"ggplot2","theme","plot.margin","yes","ae_pct; forest_favours","","theme",3,2
 "ggplot2","theme","plot.tag.position","yes","lab_panels","","theme",3,1
 "ggplot2","theme","plot.title.position","yes","km","","theme",3,1
 "ggplot2","theme","strip.background","yes","forest; bar; lab_panels","","theme",3,3
@@ -380,11 +389,11 @@
 "ggplot2","theme","strip.text.y","yes","labvisit","","theme",3,1
 "ggplot2","theme","strip.text.y.left","yes","forest; profile","","theme",3,2
 "ggplot2","theme","text","yes","mean","","theme",3,1
-"ggplot2","theme_bw","","yes","swimmer; mean; bar; scatter; edish; cdf; labvisit; dates; lab_range; mean_boot; pk_log; pk_ind; qq; mean_text; hist_density; ellipse; cdf_pad; dose_prop; lab_panels; area; er_logit; spider_ref; old_km; old_mean; old_cdf","","theme",3,25
+"ggplot2","theme_bw","","yes","swimmer; mean; bar; scatter; edish; cdf; labvisit; dates; lab_range; mean_boot; pk_log; pk_ind; qq; mean_text; hist_density; ellipse; cdf_pad; dose_prop; lab_panels; area; er_logit; spider_ref; old_km; old_mean; old_cdf; swimmer_key","","theme",3,26
 "ggplot2","theme_bw","base_size","yes","km; profile; study_theme","","theme",3,3
 "ggplot2","theme_classic","","yes","box; density; ae_pct; km_axis; forest_math; bland; fill; old_forest; old_box; old_waterfall; prog_waterfall","","theme",3,11
 "ggplot2","theme_classic","base_family","yes","dot","","theme",3,1
-"ggplot2","theme_classic","base_size","yes","forest; dot","","theme",3,2
+"ggplot2","theme_classic","base_size","yes","forest; dot; forest_favours","","theme",3,3
 "ggplot2","theme_light","","yes","spider; bubble","","theme",1,2
 "ggplot2","theme_minimal","","yes","stack; heat; pct_signed; butterfly; calendar; heat_text; old_pct; old_heat","","theme",2,8
 "ggplot2","theme_minimal","base_size","yes","waterfall; heat_steps","","theme",2,2

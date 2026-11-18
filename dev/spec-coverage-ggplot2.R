@@ -285,6 +285,43 @@ if (requireNamespace("scales", quietly = TRUE)) {
   }
 }
 
+# grid's grobs a figure draws as a value (2026-11-18): annotation_custom()'s
+# and guide_custom()'s `grob` -- a forest plot's "Favours drug" under the
+# axis (textGrob, gpar 2), a box or a key drawn by hand (1).  Each argument
+# written in annotation_custom(grob = ), gpar()'s in a textGrob's `gp`:
+# yes typed by its kind (inst/fig/gg_args.csv's `grob` rows), partial
+# accepted untyped, no when the check does not know it.
+grob_scope <- c(textGrob = 2, gpar = 2, rectGrob = 1, roundrectGrob = 1, circleGrob = 1,
+                linesGrob = 1, polylineGrob = 1, segmentsGrob = 1, pointsGrob = 1,
+                polygonGrob = 1, nullGrob = 1)
+grob_status <- function(fn, arg) {
+  call_args <- list()
+  if (nzchar(arg)) call_args[[arg]] <- tfl_r("NULL")
+  inner <- structure(list(fn = paste0("grid::", fn), package = NULL, args = call_args), class = "tfl_call")
+  if (identical(fn, "gpar")) {
+    inner <- structure(list(fn = "grid::textGrob", package = NULL, args = list(gp = inner)), class = "tfl_call")
+  }
+  p <- tryCatch(tfl_schema_check(tfl_item("annotation_custom", list(grob = inner))), error = function(e) {
+    data.frame(arg = arg, message = conditionMessage(e), level = "error")
+  })
+  unknown <- grepl("no argument|no function|neither the schema|is an? (string|list|map)", p$message)
+  if (any(unknown)) return(list(status = "no", where = "", note = p$message[unknown][1L]))
+  ent <- tryCatch(tfl_schema(paste0("grid::", fn)), error = function(e) NULL)
+  typed <- !is.null(ent) && (!nzchar(arg) || !is.null(ent$args[[arg]]$label))
+  list(status = if (typed) "yes" else "partial",
+       where = if (is.null(ent)) "not checked" else "formals; gg_args.csv: grob",
+       note = if (identical(fn, "gpar")) "in textGrob(gp = )" else "in annotation_custom(grob = )")
+}
+for (key in names(grob_scope)) {
+  a <- if (identical(key, "gpar")) {
+    c("col", "fill", "alpha", "lty", "lwd", "lex", "lineend", "linejoin", "linemitre",
+      "fontsize", "cex", "fontfamily", "fontface", "font", "lineheight")
+  } else
+    setdiff(names(formals(getExportedValue("grid", key))), c("...", "name", "vp"))
+  if (!length(a)) a <- ""
+  for (x in a) add("grid", key, x, grob_scope[[key]], grob_status(key, x), package = "grid")
+}
+
 # ---- a layer's aesthetics ----
 # One row a layer's aesthetic (geom_errorbar's xmin): yes when the check
 # judges a mapping's names (an unknown aesthetic warns) and the card marks
@@ -353,7 +390,8 @@ pct <- function(d) {
 is_aes <- startsWith(cov$argument, "aes: ")
 aes_cov <- cov[is_aes, , drop = FALSE]
 sc <- cov[cov$package == "scales", , drop = FALSE]
-ext <- cov[!cov$package %in% c("ggplot2", "scales") & !is_aes, , drop = FALSE]
+gr <- cov[cov$package == "grid", , drop = FALSE]
+ext <- cov[!cov$package %in% c("ggplot2", "scales", "grid") & !is_aes, , drop = FALSE]
 cov_all <- cov
 cov <- cov[cov$package == "ggplot2" & !is_aes, , drop = FALSE]
 main <- cov[cov$group != "stat", , drop = FALSE]
@@ -385,6 +423,11 @@ if (nrow(sc)) {
   cat(sprintf("scales' helpers: %.1f%%\n", pct(sc)))
   cat("arguments:", nrow(sc), " yes:", sum(sc$covered == "yes"), " partial:",
       sum(sc$covered == "partial"), " no:", sum(sc$covered == "no"), "\n")
+}
+if (nrow(gr)) {
+  cat(sprintf("grid's grobs: %.1f%%\n", pct(gr)))
+  cat("arguments:", nrow(gr), " yes:", sum(gr$covered == "yes"), " partial:",
+      sum(gr$covered == "partial"), " no:", sum(gr$covered == "no"), "\n")
 }
 cov <- cov_all
 

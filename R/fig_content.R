@@ -215,6 +215,14 @@ tfl_plot <- function(name, items = list(), from = "own") {
     ty <- .fig_arg_types(v$fn, v$args %||% list())
     a <- lapply(stats::setNames(names(v$args %||% list()), names(v$args %||% list())),
                 function(k) .fig_value_lang(v$args[[k]], k, type = ty[[k]]))
+    # a card's positional `...` (guide_axis_stack()'s guides after its
+    # first) by position, where it stood
+    key <- .fig_positional_key(v$fn)
+    if (!is.null(key) && is.list(v$args[[key]]) && !is.object(v$args[[key]])) {
+      i <- match(key, names(a))
+      pos <- lapply(unname(v$args[[key]]), .fig_value_lang, arg = key)
+      a <- c(a[seq_len(i - 1L)], pos, a[-seq_len(i)])
+    }
     # unit(0.5, "cm"), rel(1.2): their leading arguments by position, as
     # they are written
     lead <- .fig_by_position[[v$fn]]
@@ -309,7 +317,8 @@ tfl_plot <- function(name, items = list(), from = "own") {
                          "scales::rescale" = "x", "scales::label_math" = "expr",
                          "scales::math_format" = "expr", "scales::trans_breaks" = c("trans", "inv"),
                          "scales::trans_format" = c("trans", "format"),
-                         expression = "expr", quote = "expr", bquote = "expr")
+                         expression = "expr", quote = "expr", bquote = "expr",
+                         "grid::textGrob" = "label")
 
 # a plotmath title, written as R writes it (expression(AUC[0-24]),
 # quote(log[10](AUC)), bquote(...)): {fn: expression, args: {expr:
@@ -597,19 +606,38 @@ tfl_plot <- function(name, items = list(), from = "own") {
     # arguments named by its formals, an argument that is no constant as R
     # in it
     # (scales' percent_format() bare, the package attached: scales::)
-    fq <- .fig_scales_name(f)
+    fq <- .fig_grid_name(.fig_scales_name(f))
     if (.fig_reads_as_call(f) || .fig_type_takes_call(type, fq)) {
       named <- .fig_name_args(x, .fig_find_value_fun(fq))
-      a <- as.list(named)[-1L]
+      a <- .fig_positional_dots(as.list(named)[-1L], fq)
       if (all(nzchar(names(a) %||% rep("", length(a))))) {
         ty <- .fig_arg_types(fq, lapply(a, function(e) if (is.character(e)) e))
-        vals <- lapply(stats::setNames(names(a), names(a)),
-                       function(k) .fig_lang_value(a[[k]], k, type = ty[[k]]))
+        vals <- lapply(stats::setNames(names(a), names(a)), function(k) {
+          if (!inherits(a[[k]], "fig_positional")) return(.fig_lang_value(a[[k]], k, type = ty[[k]]))
+          # (the positional `...`, each by the type of the sequence's element)
+          el <- if (identical(ty[[k]]$kind, "list")) ty[[k]]$args[[1L]]
+          lapply(unclass(a[[k]]), .fig_lang_value, arg = k, type = el)
+        })
         return(tfl_call(fq, vals))
       }
     }
   }
   tfl_r(.fig_deparse_r(x))
+}
+
+# A call's arguments as read, its card's positional `...` (the guides
+# guide_axis_stack() stacks after its first) gathered under the card's
+# key, in their order; as they are for a card of no positional `...`, or
+# when the key is given by name too
+.fig_positional_dots <- function(a, fn) {
+  key <- .fig_positional_key(fn)
+  nm <- names(a) %||% rep("", length(a))
+  if (is.null(key) || all(nzchar(nm)) || key %in% nm) return(a)
+  i <- which(!nzchar(nm))[1L]
+  pos <- stats::setNames(list(structure(unname(a[!nzchar(nm)]), class = "fig_positional")), key)
+  before <- a[seq_len(i - 1L)]
+  after <- a[-seq_len(i)]
+  c(before, pos, after[nzchar(names(after) %||% character())])
 }
 
 # an element of c(): a negative number (-30) as the number, any other as it is
@@ -626,6 +654,12 @@ tfl_plot <- function(name, items = list(), from = "own") {
       !f %in% getNamespaceExports("scales")) return(f)
   if (requireNamespace("ggplot2", quietly = TRUE) && f %in% getNamespaceExports("ggplot2")) return(f)
   paste0("scales::", f)
+}
+
+# a grob of grid called bare (textGrob(), grid attached) by its pkg::name,
+# as the code writes it: grid::textGrob(); any other as it is
+.fig_grid_name <- function(f) {
+  if (f %in% .schema_grid_fns) paste0("grid::", f) else f
 }
 
 # whether a call in an argument is read as {fn:, args:}: the constructors

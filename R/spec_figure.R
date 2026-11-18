@@ -481,6 +481,7 @@
 # element lists as elements, its panel sizes as a facet's)
 .schema_ext_kind <- function(nm, pkg) {
   if (identical(pkg, "scales")) return(.schema_scales_kind(nm))
+  if (identical(pkg, "grid")) return(if (nm %in% .schema_grid_fns) "grob" else NA_character_)
   if (!pkg %in% .schema_ext_pkgs) return(NA_character_)
   if (identical(pkg, "ggsurvfit") && startsWith(nm, "add_")) return("ggsurvfit_layer")
   if (identical(pkg, "patchwork") &&
@@ -497,6 +498,20 @@
   if (nm %in% .schema_gg_helpers) return(NA_character_)
   .schema_gg_kind(nm)
 }
+
+# grid's grobs a figure draws as a value (annotation_custom()'s and
+# guide_custom()'s `grob`, patchwork's wrap_elements()): kind `grob`, their
+# arguments typed by inst/fig/gg_args.csv, written grid::textGrob(...) --
+# a forest plot's "Favours drug" under the axis, a swimmer plot's legend
+# drawn by hand; gpar() their graphical parameters
+.schema_grid_fns <- c("textGrob", "rectGrob", "roundrectGrob", "circleGrob", "linesGrob",
+                      "polylineGrob", "segmentsGrob", "pointsGrob", "polygonGrob", "nullGrob",
+                      "gpar")
+
+# gpar()'s parameters (it takes them by `...`)
+.schema_gpar_args <- c("col", "fill", "alpha", "lty", "lwd", "lex", "lineend", "linejoin",
+                       "linemitre", "fontsize", "cex", "fontfamily", "fontface", "font",
+                       "lineheight")
 
 # The arguments a function takes by name: its formals, and a scale's
 # `...` -- the arguments of the constructor it passes them on to
@@ -515,6 +530,7 @@
     if (length(to) == 1L) return(.schema_gg_takes(to, pkg))
   }
   if ("..." %in% fa && startsWith(nm, "scale_")) fa <- c(fa, .schema_scale_dots(nm, f))
+  if (identical(pkg, "grid") && identical(nm, "gpar")) fa <- c(fa, .schema_gpar_args)
   if ("..." %in% fa && identical(pkg, "scales") && .schema_scales_number(nm)) {
     fa <- c(fa, names(formals(scales::label_number)))
   }

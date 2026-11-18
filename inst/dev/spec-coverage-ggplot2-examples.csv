@@ -218,11 +218,11 @@
 "ggplot2","geom_violin","","yes","geom_violin","","geom",2,2
 "ggplot2","geom_vline","xintercept","yes","geom_abline","","geom",3,2
 "ggplot2","guides","colour","partial","Guide; get_guide_data","1 of 2 uses: as R: guide_describe(""bottom"") (guides(colour = guide_describe(""bottom"")))","guide",3,2
-"ggplot2","guides","custom","partial","guide_custom","3 of 3 uses: as R: grid::circleGrob() (guides(custom = guide_custom(circle, title = ""My circle"")))","guide",3,3
+"ggplot2","guides","custom","yes","guide_custom","","guide",3,3
 "ggplot2","guides","fill","yes","guide_colourbar","","guide",3,9
 "ggplot2","guides","size","yes","guide_bins; guide_colourbar","","guide",3,4
 "ggplot2","guides","theta","yes","guide_axis_theta","","guide",3,1
-"ggplot2","guides","x","partial","guide_axis; guide_axis_logticks; guide_axis_stack","1 of 7 uses: as R: guide_axis_stack(""axis"", guide_axis(cap = ""both"")) (guides(x = guide_axis_stack(""axis"", guide_axis(cap = ""both""))))","guide",3,7
+"ggplot2","guides","x","yes","guide_axis; guide_axis_logticks; guide_axis_stack","","guide",3,7
 "ggplot2","guides","y","yes","guide_axis_logticks","","guide",3,2
 "ggplot2","guides","y.sec","yes","guide_axis","","guide",3,1
 "ggplot2","annotate","alpha","yes","aes_position; annotate","","labs",3,2
@@ -241,7 +241,7 @@
 "ggplot2","annotate","yend","yes","annotate","","labs",3,1
 "ggplot2","annotate","ymax","yes","aes_position; annotate","","labs",3,3
 "ggplot2","annotate","ymin","yes","aes_position; annotate","","labs",3,3
-"ggplot2","annotation_custom","grob","partial","annotation_custom","2 of 2 uses: as R: grid::roundrectGrob() (annotation_custom(grob = grid::roundrectGrob(), xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf))","labs",1,2
+"ggplot2","annotation_custom","grob","partial","annotation_custom","1 of 2 uses: as R: g (annotation_custom(grob = g, xmin = 1, xmax = 10, ymin = 8, ymax = 10))","labs",1,2
 "ggplot2","annotation_custom","xmax","yes","annotation_custom","","labs",1,2
 "ggplot2","annotation_custom","xmin","yes","annotation_custom","","labs",1,2
 "ggplot2","annotation_custom","ymax","yes","annotation_custom","","labs",1,2

@@ -106,7 +106,11 @@ scale's colours; \code{data.frame()} of constants for a layer's \code{data}
 \code{subset()} for a layer's rows of a data by its name, \code{{fn: subset, args: {x: km, subset: censored}}} written \code{subset(km, censored)} (read from
 \code{km[km$censored, ]} and \code{dplyr::filter(km, censored)} too); a glm's
 family in \code{method.args}, \code{{family: binomial}} written bare or
-\code{{fn: binomial, args: {link: probit}}}), \verb{list<T>} (a sequence), \verb{vec<K, V>} (a map that is a
+\code{{fn: binomial, args: {link: probit}}}; grid's grobs for
+\code{annotation_custom()}'s and \code{guide_custom()}'s \code{grob} -- \code{textGrob()},
+\code{rectGrob()}, \code{roundrectGrob()}, \code{circleGrob()}, \code{linesGrob()},
+\code{segmentsGrob()}, \code{pointsGrob()}, \code{polygonGrob()} ... and \code{gpar()}, of
+the kind \code{grob}, their arguments typed: \code{{fn: grid::textGrob, args: {label: Favours drug, x: 0.25, gp: {fn: grid::gpar, args: {fontsize: 9}}}}} written \code{grid::textGrob("Favours drug", x = 0.25, gp = grid::gpar(fontsize = 9))}), \verb{list<T>} (a sequence), \verb{vec<K, V>} (a map that is a
 named vector in R), \verb{map<K, V>} (a map that is a named list),
 \verb{rows<f1, f2, ...>} (a sequence of maps that is a data frame) and \code{T|U}
 (either).

@@ -125,7 +125,14 @@
 #' {x: km, subset: censored}}` written `subset(km, censored)` (read from
 #' `km[km$censored, ]` and `dplyr::filter(km, censored)` too); a glm's
 #' family in `method.args`, `{family: binomial}` written bare or
-#' `{fn: binomial, args: {link: probit}}`), `list<T>` (a sequence), `vec<K, V>` (a map that is a
+#' `{fn: binomial, args: {link: probit}}`; grid's grobs for
+#' `annotation_custom()`'s and `guide_custom()`'s `grob` -- `textGrob()`,
+#' `rectGrob()`, `roundrectGrob()`, `circleGrob()`, `linesGrob()`,
+#' `segmentsGrob()`, `pointsGrob()`, `polygonGrob()` ... and `gpar()`, of
+#' the kind `grob`, their arguments typed: `{fn: grid::textGrob, args:
+#' {label: Favours drug, x: 0.25, gp: {fn: grid::gpar, args: {fontsize:
+#' 9}}}}` written `grid::textGrob("Favours drug", x = 0.25, gp =
+#' grid::gpar(fontsize = 9))`), `list<T>` (a sequence), `vec<K, V>` (a map that is a
 #' named vector in R), `map<K, V>` (a map that is a named list),
 #' `rows<f1, f2, ...>` (a sequence of maps that is a data frame) and `T|U`
 #' (either).
@@ -473,6 +480,10 @@ tfl_schema_check <- function(item) {
     } else if (!is.null(dots) && identical(dots$style, "positional") && identical(a, dots$key)) {
       msg <- .schema_fits(v, .schema_type(dots$type), a)
       if (!is.null(msg)) bad(a, msg)
+      # (a figure's calls inside them: guide_axis_stack()'s guides)
+      if (is.null(msg) && !is.null(ent$figure)) {
+        for (p in .schema_check_calls_in(v, figure = TRUE)) bad(a, p$message, p$level)
+      }
     } else if (!is.null(.schema_removed[[fn]][[a]])) {
       bad(a, sprintf("%s(%s = ) was removed in rtfreporter 0.9.0: %s", fn, a,
                      .schema_removed[[fn]][[a]]))

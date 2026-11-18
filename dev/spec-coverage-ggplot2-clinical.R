@@ -884,3 +884,31 @@ fig_prog_cdf <- ggplot(cd, aes(x = CHG, colour = TRTA, linetype = TRTA)) +
   scale_y_continuous(labels = pct_lab) +
   labs(x = "Change from baseline", y = "Cumulative percent of patients") +
   study_theme
+
+# grid's grobs (2026-11-18): a forest plot's "Favours" under the axis,
+# texts outside the panel (clip off); a swimmer plot's key of the arrow
+# drawn by hand
+fig_forest_favours <- ggplot(fo, aes(x = hr, y = level)) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = "grey40") +
+  geom_pointrange(aes(xmin = lcl, xmax = ucl), shape = 15, colour = "#08519C") +
+  annotation_custom(grid::textGrob("<- Favours drug", x = 0.45, y = -0.12, just = "right",
+                                   gp = grid::gpar(fontsize = 8, fontface = "italic"))) +
+  annotation_custom(grid::textGrob("Favours placebo ->", x = 0.55, y = -0.12, just = "left",
+                                   gp = grid::gpar(fontsize = 8, fontface = "italic"))) +
+  annotation_custom(grid::roundrectGrob(gp = grid::gpar(fill = NA, col = "grey60", lwd = 0.8)),
+                    xmin = log10(1.5), xmax = log10(2.2), ymin = 0.6, ymax = 2.4) +
+  scale_x_log10() +
+  coord_cartesian(clip = "off") +
+  labs(x = "Hazard ratio (95% CI)", y = NULL) +
+  theme_classic(base_size = 10) +
+  theme(plot.margin = margin(5, 5, 25, 5))
+fig_swimmer_key <- ggplot(sw, aes(y = reorder(USUBJID, dur))) +
+  geom_col(aes(x = dur), width = 0.6, fill = "grey70", orientation = "y") +
+  geom_segment(data = sw[sw$ongoing, ], aes(x = dur, xend = dur + 2, yend = USUBJID),
+               arrow = arrow(length = unit(0.15, "cm"), type = "closed")) +
+  guides(custom = guide_custom(grid::segmentsGrob(x0 = 0.1, y0 = 0.5, x1 = 0.9, y1 = 0.5,
+                                                  arrow = arrow(length = unit(0.15, "cm"), type = "closed"),
+                                                  gp = grid::gpar(lwd = 1.5)),
+                               title = "Ongoing", width = unit(1, "cm"), height = unit(0.5, "cm"))) +
+  labs(x = "Months on treatment", y = "Subject") +
+  theme_bw()

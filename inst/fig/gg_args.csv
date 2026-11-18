@@ -656,3 +656,43 @@ scales,inverse,function|lambda|r,Inverse,逆関数,,
 scales,domain,list<number>,Domain,定義域,,
 scales,breaks,"function|lambda|call<breaks_*, extended_breaks, pretty_breaks, log_breaks>|r",Breaks,目盛り,,
 scales,minor_breaks,"function|lambda|call<minor_breaks_*, regular_minor_breaks>|r",Minor breaks,補助目盛り,,
+grob,label,"string|list<string>|call<expression, quote, bquote>|r",Text,文字,"The text drawn: ""Favours drug"" (a line break as \n); a plotmath one as {fn: expression, args: {expr: ...}}.",grid::textGrob
+grob,x,"number|list<number>|call<unit>|r",X,x,"Where across the drawing area, 0 to 1 (its default units, npc); or {fn: unit, args: {x: 2, units: mm}}.",
+grob,y,"number|list<number>|call<unit>|r",Y,y,"Where up the drawing area, 0 to 1; or a unit.",
+grob,x0,"number|list<number>|call<unit>|r",X from,x の始まり,,grid::segmentsGrob
+grob,y0,"number|list<number>|call<unit>|r",Y from,y の始まり,,grid::segmentsGrob
+grob,x1,"number|list<number>|call<unit>|r",X to,x の終わり,,grid::segmentsGrob
+grob,y1,"number|list<number>|call<unit>|r",Y to,y の終わり,,grid::segmentsGrob
+grob,width,"number|call<unit>|r",Width,幅,"0 to 1 of the drawing area, or a unit.",
+grob,height,"number|call<unit>|r",Height,高さ,"0 to 1 of the drawing area, or a unit.",
+grob,r,"number|call<unit>|r",Radius,半径,"A circle's radius; a rounded rectangle's corners, {fn: unit, args: {x: 0.1, units: snpc}}.",
+grob,just,"enum[left|right|centre|center|top|bottom]|list<string|number>|r",Justification,位置合わせ,"left, right, centre, top, bottom, or two: [left, bottom].",
+grob,hjust,number|r,Horizontal justification,横の位置合わせ,"0 left, 0.5 centre, 1 right (over just).",
+grob,vjust,number|r,Vertical justification,縦の位置合わせ,"0 bottom, 0.5 centre, 1 top (over just).",
+grob,rot,number,Angle,角度,Degrees anticlockwise.,grid::textGrob
+grob,check.overlap,logical,Drop overlapping texts,重なる文字を省く,,grid::textGrob
+grob,default.units,enum[npc|native|cm|mm|inches|points|bigpts|picas|lines|char|snpc],Units of the numbers,数値の単位,"npc: 0 to 1 of the drawing area (the default); native: the panel's data coordinates where a viewport has them.",
+grob,pch,number|string,Point shape,点の形,"0-25 as ggplot2's shape, or a character.",grid::pointsGrob
+grob,size,call<unit>|r,Point size,点の大きさ,"{fn: unit, args: {x: 1, units: char}}.",grid::pointsGrob
+grob,arrow,call<arrow>|r,Arrow,矢印,"{fn: arrow, args: {length: {fn: unit, args: {x: 2, units: mm}}, type: closed}}.",
+grob,id,list<number>|r,Line or shape of each point,点の所属,,
+grob,id.lengths,list<number>|r,Points of each line or shape,線・形ごとの点の数,,
+grob,rule,enum[winding|evenodd],Fill rule,塗りつぶし規則,,grid::polygonGrob
+grob,name,string,Name,名前,The grob's name (grid's editing by name).,
+grob,gp,call<gpar>|r,Graphical parameters,描画の設定,"Colour, font and line of the grob: {fn: grid::gpar, args: {fontsize: 9, col: grey30}}.",
+grob,vp,r,Viewport,ビューポート,A grid viewport (R).,
+grob,col,"string|list<string>|call<alpha>|r",Colour,色,"Lines' and texts' colour; NA none.",grid::gpar
+grob,fill,"string|list<string>|call<alpha>|r",Fill,塗り,"NA none.",grid::gpar
+grob,alpha,number,Transparency,透明度,0 (clear) to 1 (solid).,grid::gpar
+grob,lty,string|number,Line type,線種,"solid, dashed, dotted, dotdash, longdash, twodash, or 0-6.",grid::gpar
+grob,lwd,number,Line width,線の太さ,In points (ggplot2's linewidth 0.5 is about lwd 1.4).,grid::gpar
+grob,lex,number,Line width multiplier,線の太さの倍率,,grid::gpar
+grob,lineend,enum[round|butt|square],Line end,線の端,,grid::gpar
+grob,linejoin,enum[round|mitre|bevel],Line join,線の接合,,grid::gpar
+grob,linemitre,number,Mitre limit,マイター制限,,grid::gpar
+grob,fontsize,number,Font size,文字の大きさ,In points.,grid::gpar
+grob,cex,number,Text size multiplier,文字の倍率,,grid::gpar
+grob,fontfamily,string,Font family,フォント,,grid::gpar
+grob,fontface,"enum[plain|bold|italic|bold.italic|oblique]|number",Font face,書体,"plain, bold, italic, bold.italic; or 1-4.",grid::gpar
+grob,font,number,Font face (number),書体（番号）,1 plain 2 bold 3 italic 4 bold italic.,grid::gpar
+grob,lineheight,number,Line height,行の高さ,,grid::gpar

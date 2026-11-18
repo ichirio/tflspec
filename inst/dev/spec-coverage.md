@@ -1847,6 +1847,81 @@ and rasters (`grid::circleGrob()`), today's date (`Sys.Date() - 30`),
 `guide_axis_stack()`'s guides by position, `stat_manual()`'s quoted
 expression and an `expand_limits()` of a data frame.
 
+### Round 20 (2026-11-18): grid's grobs, guide_axis_stack()'s guides by position
+
+The measures were at their ceiling but for what ggplot2 draws that is not
+ggplot2's own: a grob of grid.  A forest plot's "<- Favours drug" and
+"Favours placebo ->" under the axis are most often written
+`annotation_custom(grid::textGrob(...))` with `coord_cartesian(clip =
+"off")`, a box round a figure's statistics `grid::roundrectGrob()`, a
+swimmer plot's key of the ongoing arrow `guide_custom(grid::segmentsGrob(...))`.
+`annotation_custom()`'s and `guide_custom()`'s `grob` was `r` only: the
+SPEC had `!r grid::textGrob("Favours drug", ...)`, untyped and unchecked
+(a typed call was an error).  Two clinical figures that write them are
+added to the clinical measure (`fig_forest_favours`, `fig_swimmer_key`:
+64 figures), and grid's grobs are measured apart (as scales' helpers are),
+each argument written in `annotation_custom(grob = )`, gpar()'s in a
+textGrob's `gp`.
+
+| Measure | Before | After |
+|---|---:|---:|
+| **Clinical figures, 64 (weighted)** | **99.7%** (uses 1178 / 4 / 0) | **100.0%** (1182 / 0 / 0) |
+| guide (clinical) | 90.0% | 100.0% |
+| labs and annotation_*() (clinical) | 99.1% | 100.0% |
+| **ggplot2's own examples** | **98.6%** (1234 / 35 / 3) | **98.8%** (1239 / 30 / 3) |
+| guide (examples) | 89.7% | 96.9% |
+| labs and annotation_*() (examples) | 98.3% | 98.8% |
+| **grid's grobs (11 functions, 81 arguments; new)** | **0.0%** (81 no) | **100.0%** (81 yes) |
+| arguments (3409) and aesthetics (826) | 100.0% | 100.0% |
+| programs (23) | 100.0% | 100.0% |
+
+(R 4.6.2, ggplot2 4.0.4; the "before" is this branch with `next` merged,
+before the round's change, measured with the new figures and rows.
+Weights of grid's grobs: textGrob() and gpar() 2, the others 1.)
+
+Round 20:
+
+- **grid's grobs as a typed value** (`R/spec_figure.R`, kind `grob`):
+  `textGrob()`, `rectGrob()`, `roundrectGrob()`, `circleGrob()`,
+  `linesGrob()`, `polylineGrob()`, `segmentsGrob()`, `pointsGrob()`,
+  `polygonGrob()`, `nullGrob()` and `gpar()` are entries by `grid::fn`
+  (`tfl_schema("grid::textGrob")`), their arguments typed in
+  `inst/fig/gg_args.csv` (40 rows: `label`, `x` / `y` as a number or a
+  unit, `just`, `hjust`, `rot`, `default.units`, `gp` a `gpar()`, `arrow`,
+  `pch`, `size`, `r`; gpar()'s `col`, `fill`, `alpha`, `lty`, `lwd`,
+  `fontsize`, `fontface`, `fontfamily`, `lineheight` ...).
+  `annotation_custom()`'s and `guide_custom()`'s `grob` take `call<textGrob,
+  rectGrob, ...>|r`: `{fn: grid::textGrob, args: {label: Favours drug, x:
+  0.25, gp: {fn: grid::gpar, args: {fontsize: 9}}}}`, written
+  `grid::textGrob("Favours drug", x = 0.25, gp = grid::gpar(fontsize = 9))`
+  (the label by position; `grid::` always, so the code needs no
+  `library(grid)`).  Read from `grid::textGrob(...)` and from `textGrob(...)`
+  bare (grid attached).  The check says a grob's or gpar()'s unknown
+  argument (`gpar(colr = )` warns), a value of the wrong type
+  (`textGrob(rot = "up")`, `gpar(fontface = "heavy")` errors) and a
+  function grid has not.  Another function's grob (`ggplotGrob(p)`, a
+  table's) and a grob by its object's name stay R.
+- **guide_axis_stack()'s guides after the first, by position**:
+  `guide_axis_stack("axis", guide_axis(cap = "both"))` reads as `{first:
+  axis, guides: [axis, {fn: guide_axis, args: {cap: both}}]}` (the card's
+  positional `...`, key `guides`), and is written back by position; the
+  guides' calls are checked (`guide_axis(capp = )` warns).  Before, the
+  whole guide was R.  A card's positional `...` inside a value (not only
+  an item's, `xlim(0, 52)`) is read and written so generally
+  (`.fig_positional_dots()`).
+
+**Code generated from an existing SPEC does not change.**  Code read from
+R keeps its text: `annotation_custom(grid::textGrob("Favours drug"))` is
+written `annotation_custom(grob = grid::textGrob("Favours drug"))`, as any
+argument read by position is named; `textGrob()` bare is written
+`grid::textGrob()`.
+
+What is left in ggplot2's own examples: values of the example's objects
+(`breaks = price_bins`, `data = tidy(ci)`, `annotation_custom(grob = g)`,
+`lineend = df2$lineend`), a raster, today's date (`Sys.Date() - 30`),
+`stat_manual()`'s quoted expression and an `expand_limits()` of a data
+frame.
+
 ### The extension packages (ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale, patchwork)
 
 The same measure, the same file (`package` says which), over the

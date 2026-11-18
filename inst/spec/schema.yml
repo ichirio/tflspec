@@ -4172,6 +4172,7 @@ guide_axis_stack:
   label: {en: Stacked axes, ja: 重ねた軸}
   description: "Two axis guides on one side (first, then the others)."
   visible: [first, spacing]
+  dots: {style: positional, key: guides, type: "list<string|call<guide_axis, guide_axis_logticks, guide_axis_theta, guide_none>>|r", description: "The axes stacked after the first, outwards: [axis, {fn: guide_axis_logticks}] (written guide_axis_stack(\"axis\", \"axis\", guide_axis_logticks()), by position)."}
 
 
 # -- round 3 of the figure SPEC coverage: the rest of ggplot2's functions of a plot --
@@ -4343,7 +4344,7 @@ annotation_custom:
   description: "A grid grob (a table, a logo, a text block) drawn in a box of the data's coordinates (-Inf / Inf: the whole panel)."
   visible: [grob, xmin, xmax, ymin, ymax]
   args:
-    grob: {type: r, label: {en: Grob, ja: グロブ}, description: "!r grid::textGrob(\"Favours drug\") or a ggplotGrob()."}
+    grob: {type: "call<textGrob, rectGrob, roundrectGrob, circleGrob, linesGrob, polylineGrob, segmentsGrob, pointsGrob, polygonGrob, nullGrob>|r", label: {en: Grob, ja: グロブ}, description: "One of grid's grobs, {fn: grid::textGrob, args: {label: Favours drug, x: 0.25, gp: {fn: grid::gpar, args: {fontsize: 9}}}} (written grid::textGrob(\"Favours drug\", x = 0.25, gp = grid::gpar(fontsize = 9))): textGrob, rectGrob, roundrectGrob, circleGrob, linesGrob, polylineGrob, segmentsGrob, pointsGrob, polygonGrob, nullGrob; or !r for another (a table's grob, a ggplotGrob())."}
     xmin: {type: number|r, label: {en: Left, ja: 左}}
     xmax: {type: number|r, label: {en: Right, ja: 右}}
     ymin: {type: number|r, label: {en: Bottom, ja: 下}}
@@ -5074,7 +5075,7 @@ guide_custom:
   description: "A legend of a grob of its own (a key to the marks of a swimmer plot drawn by hand)."
   visible: [grob, title, width, height]
   args:
-    grob: {type: r, label: {en: Grob, ja: グロブ}}
+    grob: {type: "call<textGrob, rectGrob, roundrectGrob, circleGrob, linesGrob, polylineGrob, segmentsGrob, pointsGrob, polygonGrob, nullGrob>|r", label: {en: Grob, ja: グロブ}, description: "One of grid's grobs ({fn: grid::pointsGrob, args: {x: 0.5, y: 0.5, pch: 17}}), or !r for another."}
     width: {type: "call<unit>|r", label: {en: Width, ja: 幅}}
     height: {type: "call<unit>|r", label: {en: Height, ja: 高さ}}
     theme: {type: "call<theme>|r", label: {en: Theme, ja: テーマ}}
