@@ -1,0 +1,164 @@
+# tflspec_v1/templates/tflspec_event.yml
+# Purpose: To show, for each kind of event, the number and percentage of the
+# subjects with at least one record of that kind, for each group; one row a
+# kind (an AE overview: any TEAE, serious, leading to death ...).  Not
+# AE-specific: the dataset (from), the rows (events, each a condition) and
+# the analysis set (population) are arguments; the records kept (TRTEMFL ==
+# "Y" ...) are the report's `data:` row rec_sub (a `where:` there), never an
+# argument.  A row whose condition no record meets is shown as 0.  The rows
+# are the report's; the template has no default rows (canon 1.12; the
+# registry's ae_overview keeps its own, canon 1.25).
+# Each row is one run of the EVT item (its condition rows), the row's id its
+# analysis id: the records the row's `where` keeps, counted as subjects
+# with at least one (cards' hierarchical count, its overall row alone).
+# Its content, in the order the rows are made: table_plan, plan_cells,
+# plan_total, plan_col_header, plan_paginate_rows.  plan_total is left out
+# when total is off.
+template: tflspec_event
+label: Subjects with events of each kind
+params:
+  population:
+    type: string
+    input: pick
+    choices: populations
+    default: !series population_safety
+    step: data
+    tier: usual
+    description: The analysis set adsl_sub keeps (data.yml's populations).
+  from:
+    type: string
+    input: pick
+    choices: study_data
+    required: true
+    step: data
+    tier: required
+    description: The dataset of the records (the data row rec_sub's from), e.g. ADAE.
+  by:
+    type: list<column>
+    input: pick
+    choices: vars(adsl_sub)
+    required: true
+    step: analysis
+    tier: required
+    description: The column variable(s); the groups across.
+  events:
+    type: rows<id,label,where>
+    input: table
+    columns:
+      id: {type: string, input: text, required: true,
+           description: The row's analysis id (ANY, SER ...), one a row.}
+      label: {type: string, input: text, required: true, description: The row's text.}
+      where: {type: r, input: condition, choices: vars(rec_sub),
+              description: The records the row counts (R); empty for every record kept.}
+    required: true
+    step: analysis
+    tier: required
+    description: The rows, in the table's order, one a kind of event - its id
+      (the analysis id), its label and its condition; a subject with at least
+      one record that meets the condition is counted in the row.
+  total:
+    type: logical
+    input: pick
+    choices: fixed
+    default: !series total
+    step: analysis
+    tier: usual
+    description: A Total column from the overall rows.
+  denominator:
+    type: string
+    input: pick
+    choices: report_data
+    default: adsl_sub
+    step: analysis
+    tier: usual
+    description: The data row whose subjects are the group Ns (BIGN) and the
+      percentages' denominator; both come from the one BIGN item.
+  formats:
+    type: map<string,number|string>
+    input: table
+    choices: stats
+    free: true
+    default: !series formats
+    step: analysis
+    tier: usual
+    description: The decimals (or the format) of each statistic.
+  heading:
+    type: string
+    input: text
+    default: ~
+    step: content
+    tier: usual
+    description: The heading of the row-label column (such as Subjects with);
+      empty for none.
+  count_cell:
+    type: string
+    input: text
+    default: ~
+    step: content
+    tier: usual
+    description: The cell template of a count; empty for the study's, the
+      plan_cells of its defaults.yml (an n (%) template has no default of its
+      own, canon 2026-11-16).
+  max_rows:
+    type: number
+    input: text
+    default: !series max_rows
+    step: content
+    tier: other
+    description: The most rows a page holds.
+extends: !series extends
+style: !series style
+derive:
+  # the EVT item's condition rows: a row's id its analysis id
+  event_rows:
+    each: "{events}"
+    to: {analysis_id: "{id}", label: "{label}", where: "{where}"}
+  # plan_total's arguments, or nothing (no card)
+  event_total: {if: "{total}", then: {position: last}}
+data:
+  - id: adsl_sub
+    from: ADSL
+    population: "{population}"
+  - id: rec_sub
+    from: "{from}"
+    subjects_in: adsl_sub
+    add: ["{by}"]
+    where: ~
+analysis:
+  - id: BIGN
+    label: Subjects per group
+    method: categorical
+    data: "{denominator}"
+    variables: ["{by}"]
+    formats: "{formats}"
+  - id: EVT
+    label: Subjects with at least one record of each kind
+    method: hierarchical
+    data: rec_sub
+    params: [label, where]
+    conditions: "{event_rows}"
+    where: !r "{where}"
+    derive: !r any_event = "Y"
+    by: ["{by}"]
+    overall: "{total}"
+    variables: [any_event]
+    denominator: BIGN
+    args: !r over_variables = TRUE
+    # (the overall row alone, the subjects with any record of the row's;
+    # its variable the row's label)
+    post: !r dplyr::filter(variable == "..ard_hierarchical_overall..") | dplyr::mutate(variable = "{label}")
+    formats: "{formats}"
+content:
+  - table_plan: {cols: "{by}", rows: {group: variable}, label: .na}
+  - plan_cells: {categorical: "{count_cell}"}
+  - plan_total: "{event_total}"
+  - plan_col_header:
+      header:
+        - {line: "1", cols: group}
+        - {line: "1", cols: .values, span: each, text: "{col}\n(N={n})\nn (%)"}
+        - {line: "2", cols: group, text: "{heading}"}
+        - {line: "2", cols: .values}
+  - plan_paginate_rows: {max_rows: "{max_rows}"}
+page:
+  titles: ~
+  footnotes: ~

@@ -116,7 +116,7 @@ test_that("analyses per columns: a condition row's id from its data, or the row'
   txt <- paste(tfl_ard_code(sp, output_id = "T", save = FALSE), collapse = "\n")
   expect_match(txt, "function(sexv, analysis_id) {", fixed = TRUE)
   expect_match(txt, "\"F\", \"\",", fixed = TRUE)
-  expect_match(txt, paste0("analysis_id = if (nzchar(analysis_id)) analysis_id else ",
+  expect_match(txt, paste0("analysis_id = if (nzchar(.env$analysis_id)) .env$analysis_id else ",
                            "toupper(paste(unique(data$SEX), unique(data$TRTA), sep = \"_\"))"),
                fixed = TRUE)
 })

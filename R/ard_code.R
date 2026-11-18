@@ -2074,7 +2074,9 @@
     sprintf("toupper(paste(%s, sep = \"_\"))",
             paste(sprintf("unique(data$%s)", per), collapse = ", "))
   } else .q(r$analysis_id)
-  if (own) rule <- sprintf("if (nzchar(analysis_id)) analysis_id else %s", rule)
+  # (the function's argument, .env$: inside mutate() a bare analysis_id is
+  # the ARD's own column, one value a row)
+  if (own) rule <- sprintf("if (nzchar(.env$analysis_id)) .env$analysis_id else %s", rule)
   sprintf("  ard <- dplyr::mutate(ard, analysis_id = %s)", rule)
 }
 
