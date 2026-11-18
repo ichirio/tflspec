@@ -198,6 +198,29 @@ test_that("a template's groups:, labels, help, unset, passes_to and member_of", 
   expect_identical(fc$value$label_ja, "Keta")
 })
 
+test_that("a template's groups come from its series.yml, its own groups: replaces them", {
+  dir <- tempfile("series")
+  dir.create(file.path(dir, "test_v1", "templates"), recursive = TRUE)
+  on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+  old <- options(tflspec.series_dir = dir)
+  on.exit(options(old), add = TRUE)
+  writeLines(c("name: test_v1", "values: {}", "groups:",
+               "  - {id: data, label: {en: Data, ja: Deta}}",
+               "  - {id: vars, label: {en: Variables, ja: Hensu}}"),
+             file.path(dir, "test_v1", "series.yml"))
+  writeLines(c("template: a", "params:",
+               "  by: {type: list<column>, group: vars}",
+               "  population: {type: string, group: data}"),
+             file.path(dir, "test_v1", "templates", "a.yml"))
+  d <- tfl_arg_defs(template = "test_v1/a")
+  expect_identical(attr(d, "groups")$id, c("data", "vars"))
+  expect_identical(d$group, c("vars", "data"))
+  writeLines(c("template: b", "groups: [{id: own, label: Own}]", "params:",
+               "  by: {type: list<column>, group: vars}"),
+             file.path(dir, "test_v1", "templates", "b.yml"))
+  expect_error(tfl_arg_defs(template = "test_v1/b"), "group \"vars\" is not in groups: \\(own\\)")
+})
+
 test_that("enum values keep their simple form; a labels: map labels them", {
   d <- .arg_table(list(a = list(type = "enum[x|y]"),
                        b = list(type = "enum[x|y]", labels = list(x = list(en = "Ex", ja = "E")))),

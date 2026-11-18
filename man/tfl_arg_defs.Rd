@@ -19,7 +19,8 @@ A data frame, one row an argument in the definition's order (the
 card's order); a schema function with \code{...} (its \verb{dots:}) has a last
 row \code{...}, of the dots' type.  Its attribute \code{"groups"} is the card's
 groups in their order, a data frame \code{id}, \code{label_en}, \code{label_ja} from
-the function's or the template's \verb{groups:} list (entries \verb{\{id: , label: \{en: , ja: \}\}}); no rows when it writes none (one unnamed
+the function's \verb{groups:} list or, for a template, its series'
+\code{series.yml} (a template's own \verb{groups:} replaces it), entries \verb{\{id: , label: \{en: , ja: \}\}}; no rows when none is written (one unnamed
 group).  The columns:
 \describe{
 \item{name}{the argument.}

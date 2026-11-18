@@ -559,6 +559,14 @@
                paste(dirs, collapse = ", ")), call. = FALSE)
 }
 
+# The `groups:` of the series a template file belongs to (its folder's
+# series.yml, next to templates/); NULL when it writes none
+.arg_series_groups <- function(file) {
+  f <- file.path(dirname(dirname(file)), "series.yml")
+  if (!file.exists(f)) return(NULL)
+  yaml::read_yaml(f, handlers = .arg_yaml_handlers())[["groups"]]
+}
+
 .template_read <- function(template) {
   f <- .template_file(template)
   y <- yaml::read_yaml(f, handlers = .arg_yaml_handlers())
@@ -583,8 +591,9 @@
 #'   card's order); a schema function with `...` (its `dots:`) has a last
 #'   row `...`, of the dots' type.  Its attribute `"groups"` is the card's
 #'   groups in their order, a data frame `id`, `label_en`, `label_ja` from
-#'   the function's or the template's `groups:` list (entries `{id: ,
-#'   label: {en: , ja: }}`); no rows when it writes none (one unnamed
+#'   the function's `groups:` list or, for a template, its series'
+#'   `series.yml` (a template's own `groups:` replaces it), entries `{id: ,
+#'   label: {en: , ja: }}`; no rows when none is written (one unnamed
 #'   group).  The columns:
 #'   \describe{
 #'     \item{name}{the argument.}
@@ -676,7 +685,10 @@ tfl_arg_defs <- function(fn = NULL, template = NULL) {
       stop(sprintf("template %s: params: is a map of argument definitions.", template),
            call. = FALSE)
     }
-    out <- .arg_table(defs, "analysis", sprintf("template %s", template), y[["groups"]])
+    # the groups: the series' series.yml (one list for all its templates,
+    # canon db1bae9); a template's own groups: replaces it
+    groups <- y[["groups"]] %||% .arg_series_groups(attr(y, "file"))
+    out <- .arg_table(defs, "analysis", sprintf("template %s", template), groups)
     y$params <- NULL
     y[["groups"]] <- NULL
     for (i in seq_len(nrow(out))) out$fixed_rows[i] <- list(.arg_fixed_rows(y, out$name[i]))
