@@ -1351,7 +1351,7 @@
                           dname, ard_names[j])
       } else {
         .ard_item_calls(xo, r, keys, subj, dname,
-                        ard_names[j], avoid)
+                        ard_names[j], avoid, per_cols = TRUE)
       }
       code <- c(code, if (j > 1L || several) "", pre, lines,
                 .item_per_level_lines(r, ard_names[j]))
@@ -2041,15 +2041,21 @@
 # its own, <id>_ANY, <id>_L1, <id>_L2 ...; the by counts are BIGN's, not
 # the item's (one BIGN a report)
 .item_per_level_lines <- function(r, name) {
-  if (!identical(.item_cell(r, "analysis_per"), "level")) return(character())
+  per <- .item_cell(r, "analysis_per")
+  if (is.na(per) || !grepl("^level(:|$)", per)) return(character())
   v <- .split_bar(r$variables %||% NA)
   id <- r$analysis_id
   arms <- .split_bar(r$by %||% NA)
-  cases <- c(sprintf("variable == \"..ard_hierarchical_overall..\" ~ %s", .q(paste0(id, "_ANY"))),
-             sprintf("variable == %s ~ %s", .q(v), .q(paste0(id, "_L", seq_along(v)))),
+  # (`level:ANY,L1,L2`: the ids themselves, the any row's first; else the
+  # item's id and _ANY, _L1, _L2 ...)
+  own <- trimws(strsplit(sub("^level:?", "", per), ",", fixed = TRUE)[[1L]])
+  ids <- if (length(own) == length(v) + 1L) own else
+    c(paste0(id, "_ANY"), paste0(id, "_L", seq_along(v)))
+  cases <- c(sprintf("variable == \"..ard_hierarchical_overall..\" ~ %s", .q(ids[1L])),
+             sprintf("variable == %s ~ %s", .q(v), .q(ids[-1L])),
              ".default = analysis_id")
   c(sprintf("# %s: each depth an analysis (%s); the by counts are BIGN's", id,
-            paste(c(paste0(id, "_ANY"), paste0(id, "_L", seq_along(v))), collapse = ", ")),
+            paste(ids, collapse = ", ")),
     sprintf("%s <- %s |>", name, name),
     if (length(arms)) sprintf("  dplyr::filter(!variable %%in%% %s) |>", .c_str(arms)),
     "  dplyr::mutate(analysis_id = dplyr::case_when(",
@@ -2060,16 +2066,70 @@
 # analysis_id when the conditions give one, else the columns' values in its
 # data joined by "_" (Lab: PARAMCD, tox_dir -> ALT_HIGH)
 .item_row_id_lines <- function(r, cond) {
-  per <- .split_bar(.item_cell(r, "analysis_per"))
-  per <- setdiff(per, "level")
+  rule <- .item_per_rule(r)
+  per <- rule$cols
   own <- "analysis_id" %in% names(cond)
   if (!length(per) && !own) return(character())
   rule <- if (length(per)) {
-    sprintf("toupper(paste(%s, sep = \"_\"))",
-            paste(sprintf("unique(data$%s)", per), collapse = ", "))
+    .item_id_given(sprintf("toupper(paste(%s, sep = \"_\"))",
+                           paste(sprintf("unique(data$%s)", per), collapse = ", ")), rule$ids)
   } else .q(r$analysis_id)
   if (own) rule <- sprintf("if (nzchar(analysis_id)) analysis_id else %s", rule)
   sprintf("  ard <- dplyr::mutate(ard, analysis_id = %s)", rule)
+}
+
+# An item's analyses: {per: [cols], ids: {...}} as analysis_per keeps it:
+# the columns |-joined, and `ids:VALUE=ID,...` the ids given for some
+# values (not for per: level, whose ids are `level:...`)
+.item_per_rule <- function(r) {
+  per <- .split_bar(.item_cell(r, "analysis_per"))
+  per <- setdiff(per[!grepl("^level:", per)], "level")
+  ids <- per[startsWith(per, "ids:")]
+  per <- setdiff(per, ids)
+  given <- character()
+  if (length(ids)) {
+    kv <- trimws(strsplit(sub("^ids:", "", ids[1L]), ",", fixed = TRUE)[[1L]])
+    kv <- kv[grepl("=", kv, fixed = TRUE)]
+    given <- stats::setNames(trimws(sub("^[^=]*=", "", kv)), trimws(sub("=.*$", "", kv)))
+  }
+  list(cols = per, ids = given)
+}
+
+# The id rule `x` (R giving the id), the ids given for some values first
+.item_id_given <- function(x, ids) {
+  if (!length(ids)) return(x)
+  map <- sprintf("c(%s)", paste(sprintf("%s = %s", .q(names(ids)), .q(unname(ids))),
+                                collapse = ", "))
+  sprintf("dplyr::coalesce(unname(%s[%s]), %s)", map, x, x)
+}
+
+# analyses: {per: [cols]} on an item with no condition rows (a shift
+# table's <PARAMCD>, canon 2026-11-18 S4): each row of the call's ARD an
+# analysis, its id the row's value of the columns -- a `by` column's
+# group<j>_level, or the call's one variable's variable_level -- joined by
+# "_"; the ids given for some values (analysis_ids) first
+.item_per_cols_lines <- function(r, call, name) {
+  rule <- .item_per_rule(r)
+  if (!length(rule$cols)) return(character())
+  by <- .split_bar(call$by %||% NA)
+  v <- .split_bar(call$variables %||% NA)
+  at <- vapply(rule$cols, function(cn) {
+    j <- match(cn, by)
+    if (!is.na(j)) return(sprintf("as.character(unlist(group%d_level))", j))
+    if (identical(v, cn)) return("as.character(unlist(variable_level))")
+    NA_character_
+  }, "")
+  if (anyNA(at)) {
+    .ard_stop(sprintf(paste0("%s: analyses per %s, but a call of the item counts no %s ",
+                             "(in its by, or as its one variable)."),
+                      r$analysis_id, paste(rule$cols, collapse = ", "),
+                      paste(rule$cols[is.na(at)], collapse = ", ")))
+  }
+  id <- if (length(at) == 1L) sprintf("toupper(%s)", at) else
+    sprintf("toupper(paste(%s, sep = \"_\"))", paste(at, collapse = ", "))
+  c(sprintf("# %s: an analysis a value of %s", r$analysis_id, paste(rule$cols, collapse = ", ")),
+    sprintf("%s <- dplyr::mutate(%s, analysis_id = %s)", name, name,
+            .item_id_given(id, rule$ids)))
 }
 
 # An item's condition rows and its calls from the sheets (conditions,
@@ -2131,15 +2191,19 @@
 # An item's call, or its calls (ards:): each the item with the call's keys
 # over its own, under a name of its own, bound into the item's (one
 # analysis_id); in a condition row's function, into its `ard`
-.ard_item_calls <- function(x, r, keys, subj, data, name, avoid) {
+.ard_item_calls <- function(x, r, keys, subj, data, name, avoid, per_cols = FALSE) {
   ar <- .item_ards(r)
-  if (is.null(ar)) return(.ard_analysis_lines(x, r, keys, subj, data, name, avoid))
+  if (is.null(ar)) {
+    return(c(.ard_analysis_lines(x, r, keys, subj, data, name, avoid),
+             if (per_cols) .item_per_cols_lines(r, r, name)))
+  }
   nm <- paste0(name, "_", seq_along(ar))
   out <- character()
   for (k in seq_along(ar)) {
     rk <- r
     for (key in names(ar[[k]])) rk[[key]] <- ar[[k]][[key]]
-    out <- c(out, .ard_analysis_lines(x, rk, keys, subj, data, nm[k], avoid))
+    out <- c(out, .ard_analysis_lines(x, rk, keys, subj, data, nm[k], avoid),
+             if (per_cols) .item_per_cols_lines(r, rk, nm[k]))
   }
   c(out, sprintf("# %s: its %d calls, one analysis", r$analysis_id, length(ar)),
     sprintf("%s <- bind_items(%s)", name, paste(nm, collapse = ", ")))

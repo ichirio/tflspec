@@ -6,7 +6,7 @@
       # ---- data ----
       # adsl_sub: the subjects. population SAF (Safety Population)
       adsl_sub <- filter(adsl, SAFFL == "Y")
-      # adsl_miss: With a Missing level for a variable that has missing values.
+      # adsl_miss: made by its code, from adsl_sub.
       adsl_miss <- mutate(adsl_sub, across(any_of(c("AGEGR1", "SEX", "RACE", "ETHNIC")), function(x) {
         chr <- trimws(as.character(x))
         miss <- is.na(chr) | !nzchar(chr)
@@ -43,9 +43,7 @@
       # ---- data ----
       # adsl_sub: the subjects. population SAF (Safety Population)
       adsl_sub <- filter(adsl, SAFFL == "Y")
-      # adlb_sub: the records. ADLB of the subjects of adsl_sub, TRT01A from ADSL;
-      # after baseline with a baseline and a post-baseline category; one record a
-      # subject and parameter, the worst category.
+      # adlb_sub: made by its code, from ADLB.
       adlb_sub <- adlb |>
         select(-any_of("TRT01A")) |>
         inner_join(
@@ -56,10 +54,9 @@
         filter(!ABLFL %in% "Y", !ANRIND %in% c(NA, ""), !BNRIND %in% c(NA, ""), AVISIT == "CYCLE 2 DAY 1" & PARAMCD %in% c("ALT", "AST")) |>
         arrange(match(ANRIND, c("HIGH", "LOW", "NORMAL"))) |>
         distinct(USUBJID, PARAMCD, .keep_all = TRUE)
-      # adlb_total: With the Total row: every subject once more under the baseline's
-      # Total.
+      # adlb_total: made by its code, from ADLB.
       adlb_total <- bind_rows(adlb_sub, mutate(adlb_sub, BNRIND = "Total"))
-      # adlb_den: The subjects with a category after baseline, a parameter each.
+      # adlb_den: made by its code, from adlb_sub.
       adlb_den <- distinct(adlb_sub, USUBJID, TRT01A, PARAMCD)
 
 ---

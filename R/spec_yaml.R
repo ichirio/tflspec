@@ -576,6 +576,13 @@ tfl_read_output <- function(path) {
       stop(who, ": `data:` is a list of definitions (`id`, `from`, ...) or, for a listing, ",
            "a map of its records.", call. = FALSE)
     }
+    for (r in d) {
+      if (!is.null(r[["label"]])) {
+        stop(who, ": data row `", as.character(r[["id"]] %||% "?"), "`: `label:` is no longer a key ",
+             "of a data row (the id names it; write a YAML comment if you want a note).",
+             call. = FALSE)
+      }
+    }
     y[["data"]] <- y[["place_map"]]
     y[["place_map"]] <- NULL
     d <- lapply(d, .derive_map_in)
@@ -821,7 +828,7 @@ tfl_write_output <- function(x, path) {
 # a sequence): written as a sequence even when it holds one name, as the
 # reader read it (`by: [TRT01A]` read is "TRT01A", written `- TRT01A`)
 .seq_keys <- list(
-  analysis_data = c("add", "keep", "distinct"),
+  analysis_data = c("add", "arrange", "keep", "distinct"),
   analyses = c("by", "strata", "variables", "statistics", "formats"),
   listing_col = "vars")
 
