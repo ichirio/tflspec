@@ -252,7 +252,7 @@ test_that("A01: the columns of an analysis data's arrange are checked (#851)", {
     r <- .rv_review(s)
     any(r$rule == "A01" & r$field == "arrange" & grepl(pat, r$message, fixed = TRUE))
   }
-  s$ard$analysis_data$arrange <- NA_character_
+  s$ard$analysis_data[c("add", "derive", "arrange")] <- NA_character_
   # X, -X and desc(X) of a column the data has: nothing found
   s$ard$analysis_data$arrange[2] <- "USUBJID|-AGE|desc(SEX)"
   s$ard$analysis_data$add[2] <- "SEX"
