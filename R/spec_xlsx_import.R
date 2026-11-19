@@ -167,8 +167,11 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
       fun(if (nzchar(sc)) sc else NA_character_, part)
     }
   }
-  by_scope("analysis_data", function(id, part) .imp_rows_of(st, part, "analysis_data", scope_rel(id), c("ard", "analysis_data"), "id",
-                                                            r_cols = c("where", "derive", "code", "then"), list_cols = c("add", "arrange", "keep", "distinct"), get_file = get_file, set_file = set_file))
+  by_scope("analysis_data", function(id, part) {
+    .adata_label_check(part)
+    .imp_rows_of(st, part, "analysis_data", scope_rel(id), c("ard", "analysis_data"), "id",
+                                                            r_cols = c("where", "derive", "code", "then"), list_cols = c("add", "arrange", "keep", "distinct"), get_file = get_file, set_file = set_file)
+  })
   by_scope("analyses", function(id, part) .imp_rows_of(st, part, "analyses", scope_rel(id), c("ard", "analyses"), "id",
                                                         r_cols = c("where", "args", "post", "code"), list_cols = c("by", "strata", "variables", "statistics", "formats"), get_file = get_file, set_file = set_file))
   by_scope("listing_cols", function(id, part) {
