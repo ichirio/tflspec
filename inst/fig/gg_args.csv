@@ -11,7 +11,7 @@ layer,xend,number|string|list<number|string|date>|r,X end,x の終点,
 layer,yend,number|string|list<number|string|date>|r,Y end,y の終点,
 layer,stat,string|r,Statistic,統計変換,"What the layer draws from the data: identity, summary (mean +/- SE), ecdf, count, bin, ellipse ...; its parameters (fun.data, pad, level ...) follow."
 layer,geom,string,Geom,描画の種類,"A stat_*() layer's drawing: point, line, step, errorbar, pointrange, path ..."
-layer,position,call|string|r,Position,位置,"identity, dodge, jitter, stack, fill, nudge, or {fn: position_dodge, args: {width: 0.3}}."
+layer,position,call<position_*>|string|r,Position,位置,"identity, dodge, jitter, stack, fill, nudge, or {fn: position_dodge, args: {width: 0.3}}; an extension's too ({fn: position_nudge_repel, args: {x: 0.1}})."
 layer,na.rm,logical,Drop missing silently,欠測を黙って除く,
 layer,show.legend,"logical|vec<string, logical>|r",In the legend,凡例に出す,"TRUE, FALSE, or by aesthetic ({colour: true, fill: false})."
 layer,inherit.aes,logical,Use the plot's mapping,plot のマッピングを使う,
@@ -229,8 +229,8 @@ coord,rlim,list<number>|r,Radius range,半径の範囲,ggplot2 4.0 (coord_radial
 coord,r_axis_inside,logical|number|r,Radius axis inside,半径の軸を内側に,ggplot2 4.0.
 coord,rotate_angle,logical,Rotate the angle labels,角度のラベルを回転,ggplot2 4.0.
 facet,facets,r|list<column>|string,Variables,変数,"!r vars(PARAM), or [PARAM], or !r ~ PARAM."
-facet,rows,r|list<column>,Rows,行,!r vars(AVISIT)
-facet,cols,r|list<column>,Columns,列,!r vars(TRTA)
+facet,rows,r|call<vars>|list<column>|column,Rows,行,"!r vars(AVISIT), or the columns [AVISIT] (AVISIT)."
+facet,cols,r|call<vars>|list<column>|column,Columns,列,"!r vars(TRTA), or the columns [TRTA] (TRTA)."
 facet,nrow,integer,Rows,行の数,
 facet,ncol,integer,Columns,列の数,
 facet,scales,enum[fixed|free|free_x|free_y],Axes,軸,free_y: each panel its own y range.
@@ -422,8 +422,8 @@ position,padding,number,Padding,間隔,
 position,preserve,enum[total|single],Width kept,幅の基準,single: each bar keeps its own width when a group is missing.
 position,reverse,logical,Reverse,逆順,
 position,vjust,number,Vertical justification,縦の位置合わせ,
-position,x,number,X nudge,x のずらし,
-position,y,number,Y nudge,y のずらし,
+position,x,number|list<number>,X nudge,x のずらし,"One for all, or one a row of the data: [0.1, 0, -0.1]."
+position,y,number|list<number>,Y nudge,y のずらし,"One for all, or one a row of the data."
 position,seed,integer|r,Random seed,乱数の種,NA: a new one each time; fix it for a reproducible figure.
 position,jitter.width,number,Jitter width,横のばらし,
 position,jitter.height,number,Jitter height,縦のばらし,
@@ -460,17 +460,17 @@ labs,linetype,"string|call<expression, quote, bquote>|r",Line type legend title,
 labs,dictionary,"vec<string, string>|r",Labels by variable,変数ごとのラベル,"ggplot2 4.0: {AVAL: Value, TRTA: Treatment}: a variable's label wherever it is mapped."
 labs,alt_insight,string|r,Alt text insight,代替テキストの要点,
 plot,linetype_aes,logical,Linetype by group,群ごとの線種,"TRUE: the groups told apart by linetype too (a black-and-white print)."
-plot,theme,call|r,Theme,テーマ,"{fn: theme_ggsurvfit_KMunicate}; theme_ggsurvfit_default() by default."
+plot,theme,"call<theme, theme_*>|r",Theme,テーマ,"{fn: theme_ggsurvfit_KMunicate}; theme_ggsurvfit_default() by default."
 ggsurvfit_layer,risktable_stats,list<string>|string,Statistics,統計量,"n.risk, cum.event, cum.censor, n.event, n.censor, estimate, conf.low, conf.high, or a glue template: ""{n.risk} ({cum.event})""."
 ggsurvfit_layer,risktable_group,enum[auto|strata|risktable_stats],Grouped by,まとめ方,"strata: one block a group; risktable_stats: one block a statistic."
 ggsurvfit_layer,risktable_height,number,Height (share),高さ（割合）,"The table's share of the figure's height, e.g. 0.25."
 ggsurvfit_layer,stats_label,"list<string>|map<string, string>",Statistic labels,統計量のラベル,"[At risk, Events], or by statistic: {n.risk: At risk}."
 ggsurvfit_layer,combine_groups,logical,One row a statistic,群をまとめる,"TRUE: the groups summed, one row a statistic."
-ggsurvfit_layer,theme,call|r,Theme,テーマ,"The risk table's: {fn: theme_risktable_boxed}, or !r theme_risktable_default(axis.text.y.size = 9)."
+ggsurvfit_layer,theme,"call<theme, theme_*>|r",Theme,テーマ,"The risk table's: {fn: theme_risktable_boxed}, or {fn: theme_risktable_default, args: {axis.text.y.size: 9}}; a list of themes as !r."
 ggsurvfit_layer,size,number,Text size,文字の大きさ,"In mm, as ggplot2's size."
 ggsurvfit_layer,type,enum[ribbon|lines],Drawn as,描き方,"ribbon: a band; lines: a line each side."
-ggsurvfit_layer,y_value,number,At survival,生存率の位置,"A line across at this survival (0.5: the median), down to the time axis."
-ggsurvfit_layer,x_value,number,At time,時点,"A line up at this time, across to the axis."
+ggsurvfit_layer,y_value,number|r,At survival,生存率の位置,"A line across at this survival (0.5: the median), down to the time axis; !r NULL for none."
+ggsurvfit_layer,x_value,number|r,At time,時点,"A line up at this time, across to the axis; !r NULL for none."
 ggsurvfit_layer,location,enum[caption|annotation],Placed,置き場所,"caption: under the plot; annotation: on it (x and y given)."
 ggsurvfit_layer,caption,string,Text,文字,"A glue template, {p.value} the log-rank p-value: ""Log-rank {p.value}""."
 ggsurvfit_layer,prepend_p,logical,Prepend p =,p = を前に付ける,
@@ -510,7 +510,7 @@ facet,nest_line,call<element_line>|call|logical|r,Line under nested strips,入�
 facet,solo_line,logical,Line under a single strip too,単独のストリップにも線,
 facet,resect,call<unit>|r,Line shortened by,線を短くする長さ,"!r unit(1, ""mm"")."
 facet,render_empty,logical,Draw empty panels,空の面を描く,
-facet,strip,call|string|r,Strips,ストリップ,"{fn: strip_nested, args: {bleed: TRUE}}, {fn: strip_themed, args: {...}} or strip_vanilla."
+facet,strip,call<strip_*>|string|r,Strips,ストリップ,"{fn: strip_nested, args: {bleed: TRUE}}, {fn: strip_themed, args: {...}}, {fn: strip_split, args: {position: [left, left]}} or strip_vanilla."
 facet,bleed,logical,Strips merged across levels,ストリップをまたいでつなぐ,
 facet,trim_blank,logical,No blank panels at the end,末尾の空の面を除く,
 facet,respect,logical,Keep the aspect,縦横比を保つ,
@@ -556,13 +556,13 @@ compose,tag_levels,string|list<string>|r,Tags,タグ,"A, a, 1, i or I; [A, 1] fo
 compose,tag_prefix,string,Tag prefix,タグの前,
 compose,tag_suffix,string,Tag suffix,タグの後,
 compose,tag_sep,string,Tag separator,タグの区切り,
-compose,theme,call|r,Theme,テーマ,"Of the whole: {fn: theme, args: {plot.title: {fn: element_text, args: {size: 12}}}}."
-compose,panel,object,Plot (panel aligned),plot（パネルを揃える）,A plot or grob by its name.
-compose,plot,object,Plot (all of it aligned),plot（全体を揃える）,A plot or grob by its name.
-compose,full,object,Plot (the whole area),plot（全域）,A plot or grob by its name.
+compose,theme,"call<theme, theme_*>|r",Theme,テーマ,"Of the whole: {fn: theme, args: {plot.title: {fn: element_text, args: {size: 12}}}}."
+compose,panel,"object|call<textGrob, rectGrob, roundrectGrob, circleGrob, linesGrob, polylineGrob, segmentsGrob, pointsGrob, polygonGrob, nullGrob>|r",Plot (panel aligned),plot（パネルを揃える）,"A plot or grob by its name, or one of grid's grobs: {fn: grid::textGrob, args: {label: Note}}."
+compose,plot,"object|call<textGrob, rectGrob, roundrectGrob, circleGrob, linesGrob, polylineGrob, segmentsGrob, pointsGrob, polygonGrob, nullGrob>|r",Plot (all of it aligned),plot（全体を揃える）,"A plot or grob by its name, or one of grid's grobs."
+compose,full,"object|call<textGrob, rectGrob, roundrectGrob, circleGrob, linesGrob, polylineGrob, segmentsGrob, pointsGrob, polygonGrob, nullGrob>|r",Plot (the whole area),plot（全域）,"A plot or grob by its name, or one of grid's grobs (a background: {fn: grid::rectGrob, args: {gp: {fn: grid::gpar, args: {fill: grey95}}}})."
 compose,clip,logical,Clip,はみ出しを切る,
 compose,ignore_tag,logical,No tag,タグを付けない,
-compose,p,object,Inset plot,差し込む plot,A plot by its name.
+compose,p,"object|call<textGrob, rectGrob, roundrectGrob, circleGrob, linesGrob, polylineGrob, segmentsGrob, pointsGrob, polygonGrob, nullGrob>|r",Inset plot,差し込む plot,"A plot by its name, or one of grid's grobs."
 compose,left,number|call<unit>|r,Left,左,"0-1 of the area, or !r unit(1, ""cm"")."
 compose,bottom,number|call<unit>|r,Bottom,下,
 compose,right,number|call<unit>|r,Right,右,

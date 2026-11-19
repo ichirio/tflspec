@@ -2366,7 +2366,7 @@ geom_line:
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
     data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+    position: {type: "call<position_*>|string|r", label: {en: Position, ja: 位置}}
 
 geom_point:
   package: ggplot2
@@ -2379,7 +2379,7 @@ geom_point:
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
     data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+    position: {type: "call<position_*>|string|r", label: {en: Position, ja: 位置}}
 
 geom_errorbar:
   package: ggplot2
@@ -2393,7 +2393,7 @@ geom_errorbar:
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
     data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+    position: {type: "call<position_*>|string|r", label: {en: Position, ja: 位置}}
 
 geom_pointrange:
   package: ggplot2
@@ -2407,7 +2407,7 @@ geom_pointrange:
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
     data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+    position: {type: "call<position_*>|string|r", label: {en: Position, ja: 位置}}
 
 geom_col:
   package: ggplot2
@@ -2421,7 +2421,7 @@ geom_col:
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
     data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+    position: {type: "call<position_*>|string|r", label: {en: Position, ja: 位置}}
 
 geom_text:
   package: ggplot2
@@ -2434,7 +2434,7 @@ geom_text:
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
     data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+    position: {type: "call<position_*>|string|r", label: {en: Position, ja: 位置}}
 
 geom_label:
   package: ggplot2
@@ -2447,7 +2447,7 @@ geom_label:
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
     data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+    position: {type: "call<position_*>|string|r", label: {en: Position, ja: 位置}}
 
 geom_step:
   package: ggplot2
@@ -2523,7 +2523,7 @@ geom_boxplot:
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
     data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+    position: {type: "call<position_*>|string|r", label: {en: Position, ja: 位置}}
 
 geom_violin:
   package: ggplot2
@@ -2536,7 +2536,7 @@ geom_violin:
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
     data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+    position: {type: "call<position_*>|string|r", label: {en: Position, ja: 位置}}
 
 geom_histogram:
   package: ggplot2
@@ -5137,7 +5137,7 @@ facet_nested_wrap:
   label: {en: Nested panels (wrapped), ja: 入れ子の面（折り返し）}
   visible: [facets, ncol, scales]
   args:
-    facets: {type: r, label: {en: Variables (vars()), ja: 変数（vars()）}}
+    facets: {type: "r|call<vars>|list<column>|column", label: {en: Variables (vars()), ja: 変数（vars()）}, description: "!r vars(SOC, PT), or the columns [SOC, PT] (SOC)."}
     scales: {type: "enum[fixed|free|free_x|free_y]", label: {en: Axes, ja: 軸}}
 
 facetted_pos_scales:
@@ -5149,8 +5149,8 @@ facetted_pos_scales:
   description: "A different x or y scale for each panel: y = list(scale_y_continuous(...), ...)."
   visible: [x, "y"]
   args:
-    x: {type: r, label: {en: X scales, ja: x の軸}}
-    "y": {type: r, label: {en: Y scales, ja: y の軸}}
+    x: {type: "list<call<scale_x_*>|r>|r", label: {en: X scales, ja: x の軸}, description: "A scale a panel, in the panels' order, !r NULL for a panel of the plot's own: [!r NULL, {fn: scale_x_continuous, args: {trans: reverse}}] (written list(NULL, scale_x_continuous(trans = \"reverse\"))); or !r for scales by a condition (a formula)."}
+    "y": {type: "list<call<scale_y_*>|r>|r", label: {en: Y scales, ja: y の軸}, description: "A scale a panel, in the panels' order, !r NULL for a panel of the plot's own: [!r NULL, {fn: scale_y_continuous, args: {trans: reverse}}] (written list(NULL, scale_y_continuous(trans = \"reverse\"))); or !r for scales by a condition (a formula)."}
 
 element_markdown:
   package: ggtext
@@ -5171,6 +5171,8 @@ element_textbox_simple:
   label: {en: Markdown text box, ja: "Markdown の文字の箱"}
   description: "A title or caption that wraps inside a box: {fn: element_textbox_simple} as a theme setting's value."
   visible: [size, width, padding]
+  args:
+    r: {type: "call<unit>|r", label: {en: Rounded corners, ja: 角の丸み}, description: "{fn: unit, args: {x: 8, units: pt}}."}
 
 stat_stepribbon:
   package: ggsurvfit
@@ -5297,7 +5299,7 @@ elem_list_text:
   stage: finishing
   label: {en: Texts by strip, ja: ストリップごとの文字}
   description: "element_text()'s arguments, each a list a strip: {colour: [red, blue]}."
-  dots: {style: named, type: "string|number|logical|list<number|string|logical>|call|r", description: "element_text()'s arguments, a value a strip."}
+  dots: {style: named, type: "string|number|logical|list<number|string|logical>|list<call<margin, margin_auto, margin_part, unit>|r>|call|r", description: "element_text()'s arguments, a value a strip; margins a strip each, [!r NULL, {fn: margin, args: {t: 5}}] (written list(NULL, margin(t = 5)))."}
 
 elem_list_rect:
   package: ggh4x
@@ -5431,6 +5433,8 @@ free:
   label: {en: Not aligned, ja: 揃えない}
   description: "A plot left out of the alignment of the others (its long axis labels)."
   visible: [type, side]
+  args:
+    x: {type: "object|r", label: {en: Plot (by name), ja: plot（名前）}, description: "The plot left out of the alignment, by its name."}
 
 tfl_image:
   package: tflspec

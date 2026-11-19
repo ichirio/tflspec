@@ -11,6 +11,13 @@
 # (dev/spec-coverage-ggplot2-clinical.R: the clinical figures), its
 # figures `fig_<name> <- ...` the pages.
 #
+#   Rscript dev/spec-coverage-ggplot2-examples.R out.csv --ext
+#
+# With --ext the calls are the extension packages' (dev/spec-coverage-
+# ggplot2.R's `ext_scope`: ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale,
+# patchwork) in their own help pages' examples, the packages attached; the
+# csv's `package` says whose (inst/dev/spec-coverage-ggplot2-ext-examples.csv).
+#
 # Run with the tflspec to measure installed; a few minutes (every example
 # drawn twice, then once a call).  The examples are read from the
 # installed ggplot2's help (tools::Rd_db()), not copied.
@@ -70,9 +77,18 @@ r_in <- function(v) {
   NULL
 }
 
-# the scope and its weights: dev/spec-coverage-ggplot2.R's `scope`
+# the scope and its weights: dev/spec-coverage-ggplot2.R's `scope` (and
+# `ext_scope`, the extension packages', with --ext: their own examples)
 for (e in parse(file.path("dev", "spec-coverage-ggplot2.R"))) {
-  if (is.call(e) && identical(e[[1L]], as.name("<-")) && identical(e[[2L]], as.name("scope"))) eval(e)
+  if (is.call(e) && identical(e[[1L]], as.name("<-")) &&
+      as.character(e[[2L]])[1L] %in% c("scope", "ext_scope")) eval(e)
+}
+ext <- identical(commandArgs(TRUE)[2L], "--ext")
+if (ext) {
+  # the extensions' examples: each package's functions of a plot, the
+  # package the group (a function by `pkg::fn` or bare, attached)
+  scope <- ext_scope
+  for (pk in names(ext_scope)) suppressPackageStartupMessages(library(pk, character.only = TRUE))
 }
 scope <- scope[names(scope) != "geom_stat"]
 weight_of <- unlist(unname(scope))
@@ -82,8 +98,16 @@ scope_fn <- function(f) {
   a <- alias_of(f)
   if (a %in% names(weight_of)) a else NA_character_
 }
+# a call's function name, `pkg::fn` as fn when pkg is the scope's
+call_name <- function(e) {
+  h <- e[[1L]]
+  if (is.name(h)) return(as.character(h))
+  if (is.call(h) && identical(h[[1L]], as.name("::")) &&
+      as.character(h[[2L]]) %in% c("ggplot2", names(ext_scope))) return(as.character(h[[3L]]))
+  NA_character_
+}
 
-is_scoped <- function(e) is.call(e) && is.name(e[[1L]]) && !is.na(scope_fn(as.character(e[[1L]])))
+is_scoped <- function(e) is.call(e) && !is.na(f <- call_name(e)) && !is.na(scope_fn(f))
 is_missing <- function(x) identical(x, quote(expr = ))
 # the places of the scope's calls in an expression (not inside one: a
 # call's arguments are read with it), none inside a function's definition
@@ -118,6 +142,14 @@ run <- function(e, env) {
 # what a plot draws: its built data and layout, theme, labels, scales' labels
 drawn <- function(v) {
   if (inherits(v, "failed") || !inherits(v, "ggplot")) return(v)
+  # patchwork: each plot's, the layout and the annotation
+  # (patchwork's own split of a patchwork: an internal function, a dev script)
+  if (inherits(v, "patchwork")) {
+    return(tryCatch({
+      pt <- utils::getFromNamespace("get_patches", "patchwork")(v)
+      list(plots = lapply(pt$plots, drawn), layout = pt$layout, annotation = pt$annotation)
+    }, error = failed))
+  }
   tryCatch({
     set.seed(1L)
     b <- quiet(ggplot_build(v))
@@ -131,15 +163,22 @@ drawn <- function(v) {
 same <- function(a, b) isTRUE(all.equal(a, b, check.environment = FALSE))
 
 old_theme <- theme_get()
-figures <- commandArgs(TRUE)[2L]
+figures <- if (ext) NA_character_ else commandArgs(TRUE)[2L]
 # the pages: the help pages' examples, or a file's figures (one page)
-pages <- if (is.na(figures)) {
-  rd <- tools::Rd_db("ggplot2")
-  lapply(stats::setNames(nm = names(rd)), function(page) {
+rd_pages <- function(pkg) {
+  rd <- tools::Rd_db(pkg)
+  pg <- lapply(stats::setNames(nm = names(rd)), function(page) {
     f <- tempfile(fileext = ".R")
     tools::Rd2ex(rd[[page]], f, commentDontrun = TRUE, commentDonttest = TRUE)
     if (file.exists(f)) tryCatch(parse(f), error = function(e) NULL)
   })
+  if (ext) names(pg) <- paste0(pkg, "::", names(pg))
+  pg
+}
+pages <- if (ext) {
+  unlist(lapply(names(ext_scope), rd_pages), recursive = FALSE)
+} else if (is.na(figures)) {
+  rd_pages("ggplot2")
 } else {
   stats::setNames(list(parse(figures)), basename(figures))
 }
@@ -172,7 +211,7 @@ for (page in names(pages)) {
     }
     for (p in ps) {
       t <- get_at(e, p)
-      fn <- scope_fn(as.character(t[[1L]]))
+      fn <- scope_fn(call_name(t))
       it <- tryCatch(lang_item(prog_subst(t, consts)), error = failed)
       base <- list(fn = fn, page = page_of(page, e), code = dep(t))
       if (inherits(it, "failed") || identical(it$fn, ".r")) {
@@ -221,7 +260,7 @@ key <- paste(u$fn, u$arg, sep = "\r")
 rows <- lapply(split(seq_len(nrow(u)), key), function(i) {
   s <- mean(u$score[i])
   bad <- i[u$score[i] < 1]
-  data.frame(package = "ggplot2", `function` = u$fn[i[1L]], argument = u$arg[i[1L]],
+  data.frame(package = if (ext) group_of[[u$fn[i[1L]]]] else "ggplot2", `function` = u$fn[i[1L]], argument = u$arg[i[1L]],
              covered = if (s == 1) "yes" else if (s == 0) "no" else "partial",
              where = paste(unique(u$page[i]), collapse = "; "),
              note = if (length(bad)) sprintf("%d of %d uses: %s (%s)", length(bad), length(i),
@@ -238,8 +277,9 @@ pct <- function(d) {
   round(100 * sum(f$score * f$weight) / sum(f$weight), 1)
 }
 main <- cov[cov$group != "stat", , drop = FALSE]
-cat(sprintf("ggplot2's examples written by a SPEC (geoms, scales, coords, themes, facets, guides, labs, positions): %.1f%%\n",
-            pct(main)))
+if (ext) main <- cov
+cat(sprintf("%s examples written by a SPEC (geoms, scales, coords, themes, facets, guides, labs, positions): %.1f%%\n",
+            if (ext) "The extensions'" else "ggplot2's", pct(main)))
 cat(sprintf("stat_*(): %.1f%%\n", pct(cov[cov$group == "stat", , drop = FALSE])))
 for (g in names(scope)) cat(sprintf("  %-9s %5.1f%%\n", g, pct(cov[cov$group == g, , drop = FALSE])))
 cat("functions:", length(unique(cov$`function`)), " arguments:", nrow(cov), " yes:", sum(cov$covered == "yes"),

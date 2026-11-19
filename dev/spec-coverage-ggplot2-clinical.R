@@ -912,3 +912,107 @@ fig_swimmer_key <- ggplot(sw, aes(y = reorder(USUBJID, dur))) +
                                title = "Ongoing", width = unit(1, "cm"), height = unit(0.5, "cm"))) +
   labs(x = "Months on treatment", y = "Subject") +
   theme_bw()
+
+# round 21 (2026-11-19): a volcano plot of AE risk, an ROC curve, a 100% bar of best
+# response, an AE time course with a week axis, change from baseline +/- 95% CI
+# dodged, a histogram of percent by arm, a lab shift plot on log axes
+# volcano plot of AE risk
+vol <- data.frame(pt = paste("PT", 1:30), rd = stats::rnorm(30, 0, 3),
+                  p = stats::runif(30, 0.0005, 1), n = stats::rpois(30, 20))
+vol$sig <- vol$p < 0.05
+fig_volcano <- ggplot(vol, aes(x = rd, y = -log10(p))) +
+  geom_point(aes(size = n, fill = sig), shape = 21, alpha = 0.7) +
+  geom_hline(yintercept = -log10(0.05), linetype = 2) +
+  geom_vline(xintercept = 0, colour = "grey60") +
+  geom_text(data = subset(vol, sig), aes(label = pt), vjust = -1, size = 2.5, check_overlap = TRUE) +
+  scale_fill_manual(values = c(`TRUE` = "firebrick", `FALSE` = "grey80"), guide = "none") +
+  scale_size_area(max_size = 8, name = "Events") +
+  scale_x_continuous(name = "Risk difference (%)", limits = c(-10, 10), oob = scales::oob_squish) +
+  ylab(expression(-log[10](p))) +
+  theme_minimal(base_size = 9) +
+  theme(legend.position = "bottom", panel.grid.minor = element_blank())
+
+# ROC curve
+roc <- data.frame(fpr = c(0, sort(stats::runif(20)), 1))
+roc$tpr <- pmin(1, sqrt(roc$fpr) + 0.05)
+roc$tpr[1] <- 0
+fig_roc <- ggplot(roc, aes(fpr, tpr)) +
+  geom_step(direction = "vh", colour = "navy", linewidth = 0.8) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", colour = "grey50") +
+  annotate("label", x = 0.75, y = 0.25, label = "AUC = 0.81", label.size = 0.2) +
+  scale_x_continuous("1 - Specificity", limits = c(0, 1), expand = c(0, 0)) +
+  scale_y_continuous("Sensitivity", limits = c(0, 1), expand = c(0, 0)) +
+  coord_equal() +
+  theme_classic()
+
+# 100% stacked bar of best overall response with labels
+bor <- expand.grid(TRTA = factor(arm, levels = arm), resp = c("CR", "PR", "SD", "PD", "NE"))
+bor$n <- stats::rpois(nrow(bor), 12) + 1
+bor$resp <- factor(bor$resp, levels = c("NE", "PD", "SD", "PR", "CR"))
+fig_bor <- ggplot(bor, aes(x = TRTA, y = n, fill = resp)) +
+  geom_col(position = "fill", width = 0.6, colour = "white") +
+  geom_text(aes(label = n), position = position_fill(vjust = 0.5), size = 3, colour = "white") +
+  scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, 0.05))) +
+  scale_fill_brewer(palette = "RdYlBu", direction = -1, name = "Best response") +
+  guides(fill = guide_legend(reverse = TRUE, nrow = 1)) +
+  labs(x = NULL, y = "Patients (%)") +
+  theme_bw() +
+  theme(legend.position = "top", axis.ticks.x = element_blank())
+
+# AE time course with a secondary axis in weeks
+evt <- data.frame(USUBJID = rep(sprintf("S%02d", 1:12), each = 2),
+                  start = stats::runif(24, 0, 150))
+evt$end <- evt$start + stats::rexp(24, 1 / 20)
+evt$sev <- sample(c("MILD", "MODERATE", "SEVERE"), 24, TRUE)
+fig_event <- ggplot(evt, aes(y = reorder(USUBJID, start))) +
+  geom_segment(aes(x = start, xend = end, yend = reorder(USUBJID, start), colour = sev),
+               linewidth = 2, lineend = "round") +
+  geom_point(aes(x = start), shape = "|", size = 3) +
+  scale_x_continuous("Study day", breaks = seq(0, 200, 28),
+                     sec.axis = sec_axis(~ . / 7, name = "Week", breaks = seq(0, 28, 4))) +
+  scale_colour_manual(values = c(MILD = "#FDD49E", MODERATE = "#FC8D59", SEVERE = "#B30000"),
+                      breaks = c("MILD", "MODERATE", "SEVERE"), name = "Severity") +
+  labs(y = "Subject") +
+  theme_light() +
+  theme(panel.grid.major.y = element_blank(), legend.position = "bottom")
+
+# change from baseline by visit, mean +/- 95% CI dodged, with n under the axis
+cfb <- expand.grid(USUBJID = 1:20, AVISITN = c(0, 2, 4, 8, 12), TRTA = arm)
+cfb$CHG <- stats::rnorm(nrow(cfb), -cfb$AVISITN / 4, 3)
+pd <- position_dodge(width = 0.6)
+fig_cfb_ci <- ggplot(cfb, aes(x = factor(AVISITN), y = CHG, colour = TRTA, group = TRTA)) +
+  stat_summary(fun = mean, geom = "line", position = pd) +
+  stat_summary(fun.data = mean_se, fun.args = list(mult = 1.96), geom = "errorbar",
+               width = 0.3, position = pd) +
+  stat_summary(fun = mean, geom = "point", aes(shape = TRTA), size = 2.5, position = pd) +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  scale_x_discrete(labels = c(`0` = "BL", `2` = "W2", `4` = "W4", `8` = "W8", `12` = "W12")) +
+  scale_colour_viridis_d(end = 0.8, option = "D") +
+  labs(x = "Visit", y = "Mean change from baseline (95% CI)", colour = "Treatment", shape = "Treatment") +
+  theme_bw() +
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+# histogram of percent by arm
+fig_hist_pct <- ggplot(cfb, aes(x = CHG, fill = TRTA)) +
+  geom_histogram(aes(y = after_stat(count / sum(count))), binwidth = 1, boundary = 0,
+                 position = "identity", alpha = 0.4) +
+  scale_y_continuous(labels = scales::label_percent()) +
+  facet_wrap(vars(TRTA), ncol = 1, strip.position = "right") +
+  theme_bw() +
+  theme(legend.position = "none", strip.text.y = element_text(angle = 0))
+
+# lab shift: baseline vs post-baseline maximum, log scales, ULN lines
+shf <- data.frame(base = stats::rlnorm(80, 3, 0.5), post = stats::rlnorm(80, 3.2, 0.6),
+                  TRTA = rep(arm, length.out = 80))
+fig_shift <- ggplot(shf, aes(base, post)) +
+  geom_point(aes(colour = TRTA), alpha = 0.6) +
+  geom_abline(linetype = "dashed") +
+  geom_hline(yintercept = 40, colour = "red", linetype = "longdash") +
+  geom_vline(xintercept = 40, colour = "red", linetype = "longdash") +
+  scale_x_log10(limits = c(5, 200), breaks = c(5, 10, 20, 40, 100, 200)) +
+  scale_y_log10(limits = c(5, 200), breaks = c(5, 10, 20, 40, 100, 200)) +
+  annotation_logticks(sides = "bl") +
+  coord_fixed() +
+  labs(x = "Baseline ALT (U/L)", y = "Maximum post-baseline ALT (U/L)", colour = NULL) +
+  theme_bw() +
+  theme(legend.position = c(0.15, 0.85))

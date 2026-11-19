@@ -1922,6 +1922,104 @@ What is left in ggplot2's own examples: values of the example's objects
 `stat_manual()`'s quoted expression and an `expand_limits()` of a data
 frame.
 
+### Round 21 (2026-11-19): the extension packages' own examples, through a SPEC and back
+
+The extensions were measured by their arguments only (351, 100%): whether
+a SPEC can name each and the check types it.  Read the other way -- what
+the extensions' users write, read as a SPEC, checked, written back and
+drawn the same -- they were not.  `dev/spec-coverage-ggplot2-examples.R
+out.csv --ext` now does that with the examples of the help pages of
+ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale and patchwork (read from the
+installed packages, not copied; a patchwork compared plot by plot, with its
+layout and annotation): 170 calls of a function in `ext_scope`
+(`inst/dev/spec-coverage-ggplot2-ext-examples.csv`).  Seven more clinical
+figures are added to the clinical measure (a volcano plot of AE risk, an
+ROC curve, a 100% bar of best response with counts, an AE time course
+with a week axis by `sec_axis()`, change from baseline +/- 95% CI dodged,
+a histogram of percent by arm, a lab shift plot on log axes): 71 figures,
+all read, checked and drawn the same before this round's change too.
+
+| Measure | Before | After |
+|---|---:|---:|
+| **The extensions' own examples (new)** | **78.5%** (uses 233 / 19 / 47 of 299) | **95.7%** (uses 312 / 11 / 12 of 335) |
+| ggsurvfit | 97.3% | 100.0% |
+| ggrepel | 95.0% | 100.0% |
+| ggh4x | 33.9% | 94.5% |
+| ggtext | 96.4% | 100.0% |
+| patchwork | 76.4% | 87.7% |
+| **Clinical figures, 71 (weighted; 64 before)** | **100.0%** (uses 1318) | **100.0%** (1318 / 0 / 0) |
+| ggplot2's own examples | 98.8% | 98.8% |
+| arguments (3409), aesthetics (826), the extensions (351), scales' helpers (138), grid's grobs (81) | 100.0% | 100.0% |
+
+(R 4.3.3, ggplot2 4.0.4, ggsurvfit 1.2.1, ggrepel 0.9.8, ggh4x 0.3.1,
+ggtext 0.2.0, ggnewscale 0.5.2, patchwork 1.3.2.  More uses after: a call
+read as R whole before is read now, each of its arguments a use.
+ggnewscale's examples call none of its functions in a way the measure
+judges.)
+
+Round 21:
+
+- **ggh4x's facets by their bare names** (`facet_grid2()`,
+  `facet_wrap2()`, `facet_nested()`, `facet_nested_wrap()`, the package
+  attached): before, a call of an extension's function bare could not have
+  its positional arguments named (`.fig_find_fun()` looked in ggplot2,
+  ggsurvfit, patchwork and scales only) and was R whole; now ggh4x's,
+  ggrepel's, ggtext's and ggnewscale's are found too.  Their variables
+  read as ggplot2's facets' are: `facet_grid2(cyl ~ drv)` as `{rows: cyl,
+  cols: drv}`, `facet_nested_wrap(vars(cyl, drv))` as `{facets: [cyl,
+  drv]}` (`.fig_facet_base()`), written back `vars(...)` as facet_grid()'s.
+  A one-sided formula is the columns' variables, as ggplot2 takes it:
+  `facet_grid(~ cyl)` and `facet_nested(~ vs + cyl)` read as `{cols: ...}`
+  (before: `rows: !r ~cyl`).  facet_nested_wrap()'s `facets` and the facet
+  kind's `rows` / `cols` take `call<vars>|list<column>|column` as
+  facet_grid()'s card does.
+- **An extension's call inside a value is typed**: a layer's `position`
+  takes `call<position_*>` (ggrepel's `position_nudge_repel(x = ...)`;
+  before any call, so a call of another function passed the check; nine
+  geom cards and the layer kind), its nudge `x` / `y` a number or one a
+  row; `ggsurvfit(theme = )`, `add_risktable(theme = )` and patchwork's
+  `theme` take `call<theme, theme_*>` (`{fn: theme_risktable_boxed}`; a
+  list of themes stays R); a facet's `strip` `call<strip_*>`
+  (`strip_nested()`, `strip_split()`); patchwork's `wrap_elements(panel =,
+  plot =, full =)` and `inset_element(p =)` a plot by name or one of
+  grid's grobs (`{fn: grid::textGrob, args: {label: ...}}`), `free(x =)`
+  a plot by name; ggtext's `element_textbox_simple(r = )` a `unit()`;
+  ggsurvfit's `add_quantile(y_value =, x_value =)` `!r NULL` for no line.
+  An argument whose type has `object` among its alternatives names an
+  object (`.fig_objects_of()`; before only of type `object` alone).
+- **A value each of calls, NULL where none**: `facetted_pos_scales(y =
+  list(NULL, scale_y_continuous(transform = "reverse")))` reads as `y:
+  [!r NULL, {fn: scale_y_continuous, args: {transform: reverse}}]` and is
+  written `list(...)` (c() would drop the NULL and shift the panels); the
+  calls are checked (`scale_x_log10()` in `y` is an error, an unknown
+  argument warns).  ggh4x's `elem_list_text(margin = list(NULL, margin(t =
+  5)))` the same.  The type `list<call<...>|r>` says it
+  (`.fig_type_call_seq()`); scales by a condition (`cyl == 4 ~
+  scale_y_log10()`) stay R.
+
+- Fix: facet_grid()'s `rows` / `cols` given as R (`rows: !r vars(SEX)`)
+  were written `vars(\`vars(SEX)\`)` (R's text taken for a column's
+  name); they are written as they are.
+
+**Code generated from an existing SPEC changes in one case**: a
+facet_grid() whose `rows` or `cols` is `!r ...` (the fix above; the code
+written before did not draw).  A layer's `position` given as a call of a
+function that is no position is an error of the check now (it passed
+before).  Code read from R:
+ggh4x's facets are written `ggh4x::facet_grid2(rows = vars(cyl), cols =
+vars(drv))` (by the package's name, as an extension's function always is),
+and `facet_grid(~ cyl)` is written `facet_grid(cols = vars(cyl))`.
+
+What is left in the extensions' examples: `wrap_plots()` read as a term
+(a program's arrangement is read by `tfl_fig_content_from_r()`, which
+takes the plots by the program's names; a term alone has none),
+`wrap_plots(A = p1, B = p2, design = )` (plots by a design's letters),
+`plot_layout(design = c(area(...), ...))`, a base graphics formula in
+`wrap_elements(full = ~ plot(...))`, a plot built in place
+(`wrap_elements(panel = p1 + ggtitle(...))`), `tag_levels = list(c("&",
+"%"), "1")`, scales by a condition, and a facet's quoted text among
+names (`vars(cyl, "year", year)`).
+
 ### The extension packages (ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale, patchwork)
 
 The same measure, the same file (`package` says which), over the

@@ -117,10 +117,13 @@ tfl_plot <- function(name, items = list(), from = "own") {
 .fig_object_args <- c("data", "fit")
 
 # the arguments of `fn` that name an object of the figure's data: the
-# schema's of type `object` (ggsurvfit's x), and data / fit
+# schema's of type `object` (ggsurvfit's x) or one of its alternatives
+# (patchwork's wrap_elements(panel = ): a plot by name or a grob), and
+# data / fit
 .fig_objects_of <- function(fn) {
   ent <- tfl_schema(fn)
-  own <- names(Filter(function(a) identical(a$type, "object"), ent$args %||% list()))
+  own <- names(Filter(function(a) is.character(a$type) && length(a$type) == 1L &&
+                        grepl("(^|[|])object([|]|$)", a$type), ent$args %||% list()))
   unique(c(.fig_object_args, own))
 }
 
@@ -191,6 +194,29 @@ tfl_plot <- function(name, items = list(), from = "own") {
 
 .fig_type_has <- function(ty, kind) {
   !is.null(ty) && any(vapply(.fig_type_alts(ty), function(t) identical(t$kind, kind), NA))
+}
+
+# the element type of a type's sequence of calls (list<call<scale_*>|r>:
+# a value each, a panel's scale or a strip's margin, NULL where none), or
+# NULL when the type has none -- a sequence whose element takes nothing
+# but a call and R; it is written list(...), as c() would drop the NULLs
+.fig_type_call_seq <- function(ty) {
+  if (is.null(ty)) return(NULL)
+  for (t in .fig_type_alts(ty)) {
+    if (!identical(t$kind, "list") || !length(t$args)) next
+    el <- t$args[[1L]]
+    kinds <- vapply(.fig_type_alts(el), function(e) e$kind %||% "", "")
+    if ("call" %in% kinds && all(kinds %in% c("call", "r"))) return(el)
+  }
+  NULL
+}
+
+# whether a sequence of a SPEC is one of calls (and !r NULL), unnamed
+.fig_is_call_seq <- function(v) {
+  is.list(v) && !is.object(v) && length(v) && is.null(names(v)) &&
+    any(vapply(v, inherits, NA, "tfl_call")) &&
+    all(vapply(v, function(e) inherits(e, "tfl_call") ||
+                 (inherits(e, "tfl_r") && identical(as.character(unclass(e)), "NULL")), NA))
 }
 
 # A value of an item as the R it stands for (a language object); `type`,
@@ -268,6 +294,11 @@ tfl_plot <- function(name, items = list(), from = "own") {
       .fig_value_lang(v[[i]], k, type = .fig_list_arg_type(arg, k))
     })
     names(el) <- names(v)
+    return(as.call(c(list(as.name("list")), el)))
+  }
+  # a value each (a panel's scale, a strip's margin): list(NULL, scale_y_continuous(...))
+  if (.fig_is_call_seq(v) && !is.null(el_ty <- .fig_type_call_seq(type))) {
+    el <- lapply(v, .fig_value_lang, arg = arg, type = el_ty)
     return(as.call(c(list(as.name("list")), el)))
   }
   if (is.list(v)) {
@@ -385,9 +416,12 @@ tfl_plot <- function(name, items = list(), from = "own") {
   args <- lapply(stats::setNames(names(a), names(a)), function(k) .fig_value_lang(a[[k]], k, obj, ty[[k]]))
   # facet_grid()'s rows and cols by their columns: vars(SEX), as ggplot2
   # takes them together (not "SEX")
-  if (identical(it$fn, "facet_grid")) {
+  fb <- .fig_facet_base(it$fn)
+  if (identical(fb, "facet_grid")) {
     for (k in intersect(c("rows", "cols"), names(a))) {
       v <- a[[k]]
+      # (R as it is: rows = !r vars(SEX))
+      if (inherits(v, c("tfl_r", "tfl_call"))) next
       if (is.character(v) || (is.list(v) && !is.object(v) && all(vapply(v, is.character, NA)))) {
         args[[k]] <- as.call(c(list(as.name("vars")), lapply(unlist(v), as.name)))
       }
@@ -396,7 +430,7 @@ tfl_plot <- function(name, items = list(), from = "own") {
   # facet_wrap()'s facets: a column that is not syntactic (`A b`) in vars(),
   # as facet_grid() takes it (ggplot2 parses a string: "A b" fails); the
   # syntactic ones are written as they are
-  if (identical(it$fn, "facet_wrap") && !is.null(a$facets) && !inherits(a$facets, c("tfl_r", "tfl_call"))) {
+  if (identical(fb, "facet_wrap") && !is.null(a$facets) && !inherits(a$facets, c("tfl_r", "tfl_call"))) {
     v <- a$facets
     if (is.null(names(v)) && (is.character(v) || (is.list(v) && all(vapply(v, is.character, NA))))) {
       w <- .fig_facet_vars(unlist(v))
@@ -570,6 +604,14 @@ tfl_plot <- function(name, items = list(), from = "own") {
       }
       if (all(vapply(vals, r_ok, NA))) return(vals)
     }
+    # a value each of calls, NULL where none (facetted_pos_scales(y =
+    # list(NULL, scale_y_reverse())), elem_list_text(margin = list(NULL,
+    # margin(t = 5)))): the sequence, each a call of the element's type
+    if (identical(f, "list") && length(a) && is.null(names(a)) &&
+        !is.null(el_ty <- .fig_type_call_seq(type))) {
+      vals <- lapply(a, .fig_lang_value, arg = arg, type = el_ty)
+      if (.fig_is_call_seq(vals)) return(vals)
+    }
     # a negative number, a vector of constants (a negative number among
     # them: limits = c(-100, 100), yintercept = c(-30, 20))
     if (identical(f, "-") && length(a) == 1L && is.numeric(a[[1L]])) return(-a[[1L]])
@@ -740,8 +782,21 @@ tfl_plot <- function(name, items = list(), from = "own") {
   obj <- .fig_objects_of(f)
   ty <- .fig_arg_types(f, lapply(a, function(e) if (is.character(e)) e))
   args <- lapply(stats::setNames(nm, nm), function(k) .fig_lang_value(a[[k]], k, obj, ty[[k]]))
-  if (f %in% c("facet_wrap", "facet_grid")) args <- .fig_facet_args(f, a, args)
+  fb <- .fig_facet_base(f)
+  if (!is.na(fb)) args <- .fig_facet_args(fb, a, args)
   tfl_item(f, args)
+}
+
+# the facet a facet function takes its variables as: ggplot2's facet_wrap()
+# and facet_grid(), and ggh4x's of their kind (facet_wrap2(),
+# facet_nested_wrap(); facet_grid2(), facet_nested()), bare or ggh4x::;
+# NA for any other
+.fig_facet_base <- function(f) {
+  nm <- sub("^ggh4x::", "", f)
+  if (!identical(nm, f) && nm %in% c("facet_wrap", "facet_grid")) return(NA_character_)
+  if (nm %in% c("facet_wrap", "facet_wrap2", "facet_nested_wrap")) return("facet_wrap")
+  if (nm %in% c("facet_grid", "facet_grid2", "facet_nested")) return("facet_grid")
+  NA_character_
 }
 
 # A facet's variables as its columns, the SPEC's form (facets: PARAMCD,
@@ -783,6 +838,14 @@ tfl_plot <- function(name, items = list(), from = "own") {
     return(args)
   }
   if (identical(f, "facet_grid")) {
+    # (~ A + B: the columns' variables, as ggplot2 takes a one-sided formula)
+    if (one_sided(a$rows) && is.null(a$cols)) {
+      cc <- cols_of(a$rows[[2L]])
+      if (!length(cc)) return(args)
+      out <- args[setdiff(names(args), "rows")]
+      i <- match("rows", names(args))
+      return(c(out[seq_len(i - 1L)], list(cols = as_cols(cc)), out[seq_along(out) >= i]))
+    }
     if (two_sided(a$rows) && is.null(a$cols)) {
       r <- cols_of(a$rows[[2L]])
       cc <- cols_of(a$rows[[3L]])
@@ -806,7 +869,10 @@ tfl_plot <- function(name, items = list(), from = "own") {
                     error = function(e) NULL))
   }
   if (!is.null(env) && exists(f, envir = env, mode = "function")) return(get(f, envir = env, mode = "function"))
-  for (pkg in c("ggplot2", "ggsurvfit", "patchwork", "scales")) {
+  # (an extension's function bare, the package attached: ggh4x's
+  # facet_grid2(), ggrepel's geom_text_repel())
+  for (pkg in c("ggplot2", "ggsurvfit", "patchwork", "scales", "ggh4x", "ggrepel", "ggtext",
+                "ggnewscale")) {
     # (an export of the package or one it passes on: ggplot2's unit(), grid's)
     if (requireNamespace(pkg, quietly = TRUE) &&
         (exists(f, envir = asNamespace(pkg), inherits = FALSE) || f %in% getNamespaceExports(pkg))) {

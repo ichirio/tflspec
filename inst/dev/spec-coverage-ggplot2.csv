@@ -3644,7 +3644,7 @@
 "ggtext","element_textbox_simple","maxwidth","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
 "ggtext","element_textbox_simple","minheight","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
 "ggtext","element_textbox_simple","maxheight","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
-"ggtext","element_textbox_simple","r","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","r","yes","schema.yml: element_textbox_simple","","ggtext",2
 "ggtext","element_textbox_simple","orientation","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
 "ggtext","element_textbox_simple","color","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
 "ggtext","element_textbox_simple","box.color","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
