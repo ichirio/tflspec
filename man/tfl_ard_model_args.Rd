@@ -54,6 +54,20 @@ so are \code{corstr = "exch"}, no \code{id} or \code{id = USUBJID} (text: one cl
 for the whole data) of geeglm() and \code{method = "logit"} of polr().
 \code{formula} and \code{data} are cardx's to give.
 
+Since 2026-11-19 nlme's models are catalogued too, for a regression row
+that writes the model in \code{x}: \code{x = nlme::gls(AVAL ~ TRT01P * AVISIT, data = data, correlation = corSymm(form = ~ AVISITN | USUBJID), weights = varIdent(form = ~ 1 | AVISIT))} (repeated measures with an unstructured
+covariance, as SAS PROC MIXED's REPEATED fits them) and \code{x = nlme::lme(..., random = ~ 1 | USUBJID)}.  Neither takes \verb{formula =}, so a
+row that names them in \code{method} is told to write the model in \code{x} (cardx
+would stop).  \code{correlation} is judged as an nlme corStruct with the
+subject after \code{|}; for \code{corSymm()}, \code{corAR1()} and \code{corARMA()} a visit
+number before it -- \code{form = ~ 1 | USUBJID} takes the visits from the
+records' order, so a subject's missed visit pairs each later visit with
+the wrong one, with no warning.  \code{weights} is a varFunc, lme()'s \code{random}
+a formula with the subject after \code{|}.  broom.helpers cannot read these
+models' variables, so cardx gives their coefficients by term and stops on
+\code{add_pairwise_contrasts = TRUE}: the row says so, and LS means are
+mmrm's.
+
 A regression row's pairwise contrasts (\code{add_pairwise_contrasts = TRUE})
 are emmeans': \code{emmeans_args = list(...)} goes to \code{emmeans::emmeans()}
 through broom.helpers' \code{tidy_plus_plus()}, so \code{tfl_ard_model_args("emmeans", "emmeans")} lists its arguments too -- \code{weights = "proportional"} (the LS
@@ -87,4 +101,5 @@ if (requireNamespace("emmeans", quietly = TRUE)) {
 if (requireNamespace("geepack", quietly = TRUE)) {
   tfl_ard_model_args("geeglm", "geepack")
 }
+tfl_ard_model_args("gls", "nlme")
 }

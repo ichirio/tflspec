@@ -94,3 +94,17 @@ emmeans::emmeans,non.nuisance,,text,"The factors kept in the grid, all others nu
 emmeans::emmeans,cov.keep,,keep,"Covariates kept with all their values rather than reduced, by name in quotes (c(""VISITNUM"")), or a number: a covariate with that many distinct values or fewer is kept as a factor (emmeans' default: 2).",
 emmeans::emmeans,tran,,tran,"The transformation of the response the model was fitted on, when emmeans cannot see it (the response made log beforehand): ""log"" (type = ""response"" then gives ratios), ""logit"", ""sqrt"" ...; or make.tran(...). A name emmeans does not know is taken as no transformation.",logit | probit | cauchit | cloglog | identity | log | sqrt | 1/mu^2 | inverse | reciprocal | log10 | log2 | log1p | asin.sqrt | asinh.sqrt | atanh | exp
 emmeans::emmeans,nesting,,nesting,"Factors nested in others, in quotes: ""SITEID %in% COUNTRY"" (several separated by commas), or list(SITEID = ""COUNTRY""); NULL: none.",
+nlme::gls,model,,twosided,"The model, a two-sided formula: AVAL ~ TRT01P * AVISIT + BASE * AVISIT (gls() has no formula =, so the model is written in a regression row's x = nlme::gls(...)).",
+nlme::gls,correlation,NULL,corstruct,"The within-subject correlation, an nlme corStruct: corSymm(form = ~ AVISITN | USUBJID) (unstructured, SAS PROC MIXED's TYPE=UN with varIdent), corCompSymm(form = ~ 1 | USUBJID), corAR1(form = ~ AVISITN | USUBJID). The subject after |; for corSymm / corAR1 / corARMA the visit number (1, 2, 3 ...) before it, not ~ 1 (records' order: a missed visit pairs the later visits wrongly).",
+nlme::gls,weights,NULL,varfunc,"The variance by visit, an nlme varFunc: varIdent(form = ~ 1 | AVISIT) (a variance a visit). Not lm()'s weights: a one-sided formula ~ X makes the variance proportional to X (varFixed), the inverse of lm(weights = X).",
+nlme::gls,method,REML,choice,"How the model is fitted: REML (default, SAS PROC MIXED's) or ML (to compare models with different fixed effects).",REML | ML
+nlme::gls,control,list(),list,"The fitting's settings, glsControl(): list(maxIter = 200, opt = ""optim"").",
+nlme::gls,verbose,FALSE,logical,Whether the fitting's iterations are printed.,
+nlme::lme,fixed,,twosided,"The fixed effects, a two-sided formula: AVAL ~ TRT01P * AVISIT (lme() has no formula =, so the model is written in a regression row's x = nlme::lme(...)).",
+nlme::lme,random,,random,"The random effects with the subject after |: ~ 1 | USUBJID (a random intercept), ~ AVISITN | USUBJID (intercept and slope), or a list / pdMat (pdDiag(~ AVISITN)). Without | lme() stops.",
+nlme::lme,correlation,NULL,corstruct,"The within-subject correlation of the residuals, an nlme corStruct: corAR1(form = ~ AVISITN | USUBJID). For corSymm / corAR1 / corARMA the visit number (1, 2, 3 ...) before |, not ~ 1 (records' order: a missed visit pairs the later visits wrongly).",
+nlme::lme,weights,NULL,varfunc,"The variance by visit, an nlme varFunc: varIdent(form = ~ 1 | AVISIT). A one-sided formula ~ X makes the variance proportional to X (varFixed), the inverse of lm(weights = X).",
+nlme::lme,method,REML,choice,"How the model is fitted: REML (default) or ML.",REML | ML
+nlme::lme,control,list(),list,"The fitting's settings, lmeControl(): list(maxIter = 200, opt = ""optim"").",
+nlme::lme,contrasts,NULL,list,"The contrasts of the factors: list(TRT01P = ""contr.sum"").",
+nlme::lme,keep.data,TRUE,logical,Whether the fit keeps its data (emmeans and the tidier read it: leave TRUE).,

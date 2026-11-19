@@ -146,6 +146,23 @@
 #' for the whole data) of geeglm() and `method = "logit"` of polr().
 #' `formula` and `data` are cardx's to give.
 #'
+#' Since 2026-11-19 nlme's models are catalogued too, for a regression row
+#' that writes the model in `x`: `x = nlme::gls(AVAL ~ TRT01P * AVISIT,
+#' data = data, correlation = corSymm(form = ~ AVISITN | USUBJID), weights =
+#' varIdent(form = ~ 1 | AVISIT))` (repeated measures with an unstructured
+#' covariance, as SAS PROC MIXED's REPEATED fits them) and `x =
+#' nlme::lme(..., random = ~ 1 | USUBJID)`.  Neither takes `formula =`, so a
+#' row that names them in `method` is told to write the model in `x` (cardx
+#' would stop).  `correlation` is judged as an nlme corStruct with the
+#' subject after `|`; for `corSymm()`, `corAR1()` and `corARMA()` a visit
+#' number before it -- `form = ~ 1 | USUBJID` takes the visits from the
+#' records' order, so a subject's missed visit pairs each later visit with
+#' the wrong one, with no warning.  `weights` is a varFunc, lme()'s `random`
+#' a formula with the subject after `|`.  broom.helpers cannot read these
+#' models' variables, so cardx gives their coefficients by term and stops on
+#' `add_pairwise_contrasts = TRUE`: the row says so, and LS means are
+#' mmrm's.
+#'
 #' A regression row's pairwise contrasts (`add_pairwise_contrasts = TRUE`)
 #' are emmeans': `emmeans_args = list(...)` goes to `emmeans::emmeans()`
 #' through broom.helpers' `tidy_plus_plus()`, so `tfl_ard_model_args("emmeans",
@@ -189,6 +206,7 @@
 #' if (requireNamespace("geepack", quietly = TRUE)) {
 #'   tfl_ard_model_args("geeglm", "geepack")
 #' }
+#' tfl_ard_model_args("gls", "nlme")
 #' @export
 tfl_ard_model_args <- function(method, package = "base") {
   key <- .model_key(method, package)
@@ -250,6 +268,11 @@ tfl_ard_model_args <- function(method, package = "base") {
   fm <- .ard_formals(call)
   out <- character()
   ma <- given[["method.args"]]
+  # (since 2026-11-19: a model whose formula is not `formula =` -- nlme's
+  # gls() / lme() -- named in `method`)
+  if ("method.args" %in% names(fm) && !is.null(given[["method"]])) {
+    out <- c(out, .model_formula_problem(tag, fn, .row_model_key(call, given, fm)))
+  }
   if ("method.args" %in% names(fm) && is.call(ma) &&
       identical(ma[[1L]], as.name("list"))) {
     key <- .row_model_key(call, given, fm)
@@ -280,9 +303,19 @@ tfl_ard_model_args <- function(method, package = "base") {
       (key %in% c(names(.model_dots_to), names(.model_dots_names)) ||
          !is.null(.model_catalog(key)))
     if (known) {
+      xa <- as.list(x)[-1L]
+      # (since 2026-11-19: the model written first without its name --
+      # gls(AVAL ~ ..., ), lme(AVAL ~ ..., ) -- is its formula argument's)
+      fa <- .model_formula_arg[key]
+      xn <- names(xa) %||% rep("", length(xa))
+      if (!is.na(fa) && length(xa) && !nzchar(xn[1L]) && !fa %in% xn) {
+        xn[1L] <- fa
+        names(xa) <- xn
+      }
       out <- c(out, .model_call_problems(
-        tag, key, as.list(x)[-1L], sprintf("%s(x = %s())", fn, sub("^.*::", "", key)),
-        cardx_sets = FALSE))
+        tag, key, xa, sprintf("%s(x = %s())", fn, sub("^.*::", "", key)),
+        cardx_sets = FALSE),
+        if (startsWith(fn, "ard_regression")) .nlme_tidy_problem(tag, fn, key, given))
     }
   }
   out
@@ -436,6 +469,10 @@ tfl_ard_model_args <- function(method, package = "base") {
                    fn, shown))
   }
   if (identical(kind, "covariance")) return(.model_covariance_problem(e, shown))
+  # (nlme's shapes, since 2026-11-19: R/ard_nlme_args.R)
+  if (kind %in% c("twosided", "corstruct", "varfunc", "random")) {
+    return(.nlme_value_problem(kind, e, shown))
+  }
   # (emmeans' own shapes, since 2026-11-14: R/ard_emmeans_args.R)
   if (identical(kind, "reducer")) return(.emmeans_reducer_problem(e, shown))
   if (identical(kind, "keep")) return(.emmeans_keep_problem(e, shown))

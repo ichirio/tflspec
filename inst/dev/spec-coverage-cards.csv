@@ -643,6 +643,24 @@
 "MASS","polr","model","no","method: regression / lsmeans / nested_models (method = ""polr""); args: method.args or x = MASS::polr(...)","[by design] a part of the fitted object","cardx model arguments",2
 "MASS","polr","method","yes","method: regression / lsmeans / nested_models (method = ""polr""); args: method.args or x = MASS::polr(...)","inst/ard/model_args.csv: choice; its name and value judged","cardx model arguments",2
 "MASS","polr","control","yes","method: regression / lsmeans / nested_models (method = ""polr""); args: method.args or x = MASS::polr(...)","inst/ard/model_args.csv: list; its name and value judged","cardx model arguments",2
+"nlme","gls","model","yes","method: regression; args: x = nlme::gls(...) (gls() has no formula =)","inst/ard/model_args.csv: twosided; its name and value judged","cardx model arguments",1
+"nlme","gls","correlation","yes","method: regression; args: x = nlme::gls(...) (gls() has no formula =)","inst/ard/model_args.csv: corstruct; its name and value judged","cardx model arguments",1
+"nlme","gls","weights","yes","method: regression; args: x = nlme::gls(...) (gls() has no formula =)","inst/ard/model_args.csv: varfunc; its name and value judged","cardx model arguments",1
+"nlme","gls","subset","no","method: regression; args: x = nlme::gls(...) (gls() has no formula =)","[by design] the population's and the analysis's where","cardx model arguments",1
+"nlme","gls","method","yes","method: regression; args: x = nlme::gls(...) (gls() has no formula =)","inst/ard/model_args.csv: choice; its name and value judged","cardx model arguments",1
+"nlme","gls","na.action","no","method: regression; args: x = nlme::gls(...) (gls() has no formula =)","[by design] the analysis data's missing values are the derivation's","cardx model arguments",1
+"nlme","gls","control","yes","method: regression; args: x = nlme::gls(...) (gls() has no formula =)","inst/ard/model_args.csv: list; its name and value judged","cardx model arguments",1
+"nlme","gls","verbose","yes","method: regression; args: x = nlme::gls(...) (gls() has no formula =)","inst/ard/model_args.csv: logical; its name and value judged","cardx model arguments",1
+"nlme","lme","fixed","yes","method: regression; args: x = nlme::lme(...) (lme() has no formula =)","inst/ard/model_args.csv: twosided; its name and value judged","cardx model arguments",1
+"nlme","lme","random","yes","method: regression; args: x = nlme::lme(...) (lme() has no formula =)","inst/ard/model_args.csv: random; its name and value judged","cardx model arguments",1
+"nlme","lme","correlation","yes","method: regression; args: x = nlme::lme(...) (lme() has no formula =)","inst/ard/model_args.csv: corstruct; its name and value judged","cardx model arguments",1
+"nlme","lme","weights","yes","method: regression; args: x = nlme::lme(...) (lme() has no formula =)","inst/ard/model_args.csv: varfunc; its name and value judged","cardx model arguments",1
+"nlme","lme","subset","no","method: regression; args: x = nlme::lme(...) (lme() has no formula =)","[by design] the population's and the analysis's where","cardx model arguments",1
+"nlme","lme","method","yes","method: regression; args: x = nlme::lme(...) (lme() has no formula =)","inst/ard/model_args.csv: choice; its name and value judged","cardx model arguments",1
+"nlme","lme","na.action","no","method: regression; args: x = nlme::lme(...) (lme() has no formula =)","[by design] the analysis data's missing values are the derivation's","cardx model arguments",1
+"nlme","lme","control","yes","method: regression; args: x = nlme::lme(...) (lme() has no formula =)","inst/ard/model_args.csv: list; its name and value judged","cardx model arguments",1
+"nlme","lme","contrasts","yes","method: regression; args: x = nlme::lme(...) (lme() has no formula =)","inst/ard/model_args.csv: list; its name and value judged","cardx model arguments",1
+"nlme","lme","keep.data","yes","method: regression; args: x = nlme::lme(...) (lme() has no formula =)","inst/ard/model_args.csv: logical; its name and value judged","cardx model arguments",1
 "emmeans","emmeans","object","no","method: regression / regression_basic; args: emmeans_args = list(...), add_pairwise_contrasts = TRUE","[by design] tidy_plus_plus()'s own (the model)","emmeans arguments (emmeans_args)",2
 "emmeans","emmeans","specs","no","method: regression / regression_basic; args: emmeans_args = list(...), add_pairwise_contrasts = TRUE","[by design] tidy_plus_plus()'s own (the term compared)","emmeans arguments (emmeans_args)",2
 "emmeans","emmeans","by","yes","method: regression / regression_basic; args: emmeans_args = list(...), add_pairwise_contrasts = TRUE","inst/ard/model_args.csv: text; its name and value judged","emmeans arguments (emmeans_args)",2

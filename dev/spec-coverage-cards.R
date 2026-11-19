@@ -245,14 +245,24 @@ model_fns <- list(
   # and a proportional odds model of an ordinal scale; geeglm()'s `...` go
   # to glm.control() and geese.control(), polr()'s to optim(control =))
   `geepack::geeglm` = c("geepack::geeglm", "stats::glm.control"),
-  `MASS::polr` = "MASS::polr")
+  `MASS::polr` = "MASS::polr",
+  # (since 2026-11-19: nlme's repeated measures model with an unstructured
+  # covariance (corSymm() and varIdent()) and its mixed model; written in
+  # ard_regression(x = ): neither takes `formula =`)
+  `nlme::gls` = "nlme::gls",
+  `nlme::lme` = "nlme:::lme.formula")
 # (weight 2: a negative binomial model is the rate model of recurrent
 # events -- exacerbations, relapses -- in some studies; a GEE model the
 # repeated binary response's (responders by visit) and a proportional odds
 # model an ordinal scale's (mRS, an ordinal clinical status scale) in some
-# efficacy tables; weight 1: survreg() is rarely a clinical table's model)
+# efficacy tables; weight 1: survreg() is rarely a clinical table's model.
+# Since 2026-11-19, weight 1: gls() -- repeated measures as SAS PROC MIXED's
+# REPEATED fits them -- and lme()'s random effects: through cardx only a
+# coefficient table by term (broom.helpers cannot read their variables),
+# so a study's LS means go through mmrm)
 model_weight <- c(`MASS::glm.nb` = 2, `survival::survreg` = 1,
-                  `geepack::geeglm` = 2, `MASS::polr` = 2)
+                  `geepack::geeglm` = 2, `MASS::polr` = 2,
+                  `nlme::gls` = 1, `nlme::lme` = 1)
 model_by_design <- c(
   subset = "the population's and the analysis's where",
   na.action = "the analysis data's missing values are the derivation's",
@@ -279,7 +289,8 @@ mcat <- utils::read.csv("inst/ard/model_args.csv", stringsAsFactors = FALSE,
                         na.strings = "")
 has_model_check <- exists(".model_args_problems", ns)
 model_judged <- c("logical", "number", "choice", "text", "variable", "family", "list",
-                  "link", "vector", "covariance", "reducer", "keep", "tran", "nesting")
+                  "link", "vector", "covariance", "reducer", "keep", "tran", "nesting",
+                  "twosided", "corstruct", "varfunc", "random")
 for (key in names(model_fns)) {
   fs <- lapply(model_fns[[key]], mfun)
   if (any(vapply(fs, is.null, NA))) next
@@ -290,6 +301,8 @@ for (key in names(model_fns)) {
   args <- union(args, get0(".model_dots_names", ns, ifnotfound = list())[[key]])
   # (the arguments a method keyword writes them for)
   via <- switch(key,
+    `nlme::gls` = "method: regression; args: x = nlme::gls(...) (gls() has no formula =)",
+    `nlme::lme` = "method: regression; args: x = nlme::lme(...) (lme() has no formula =)",
     `survival::survfit` = "method: km / km_diff; args: method.args = list(...) or x = survival::survfit(...)",
     `mmrm::mmrm` = "method: lsmeans / lsmeans_diff (method = \"mmrm\", package = \"mmrm\"); args: method.args",
     sprintf("method: regression / lsmeans / nested_models (method = \"%s\"); args: method.args or x = %s(...)",
@@ -303,12 +316,18 @@ for (key in names(model_fns)) {
   # R, their names not checked)
   checked <- has_model_check &&
     (!key %in% names(model_weight) ||
-       key %in% c(names(get0(".model_dots_to", ns, ifnotfound = list())),
-                  names(get0(".model_dots_names", ns, ifnotfound = list()))) &&
+       (key %in% c(names(get0(".model_dots_to", ns, ifnotfound = list())),
+                   names(get0(".model_dots_names", ns, ifnotfound = list()))) ||
+          # (since 2026-11-19: a model with no `...`, nlme's, is judged
+          # once the catalog describes it)
+          !"..." %in% unlist(lapply(fs, function(f) names(formals(f))))) &&
        any(mcat$fn == key))
+  # (nlme's `model` is the formula, `method` REML / ML and `control` its
+  # glsControl() / lmeControl() list: not the by-design names of the others)
+  own_meaning <- if (startsWith(key, "nlme::")) c("model", "method", "control") else character()
   for (a in args) {
     r <- mcat[mcat$fn == key & mcat$arg == a, , drop = FALSE]
-    if (a %in% names(model_by_design) && !nrow(r)) {
+    if (a %in% names(model_by_design) && !a %in% own_meaning && !nrow(r)) {
       add("cardx model arguments", key, a, "no", via,
           paste0("[by design] ", model_by_design[[a]]))
     } else if (!checked) {

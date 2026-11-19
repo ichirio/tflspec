@@ -318,6 +318,31 @@ fail or are dropped (see "Added 2026-11-17").
 (565 yes / 0 partial)**.  Nothing in area A was left to add, so the run
 went to rtfreporter (area C, below).
 
+2026-11-19 (wider scope; cards 0.9.0, cardx 0.3.4, broom.helpers 1.23.0,
+still the CRAN versions; nlme 3.1): nlme's two models a regression row
+writes in `x` -- `nlme::gls()` (repeated measures with an unstructured
+covariance, as SAS PROC MIXED's REPEATED fits them) and `nlme::lme()` (a
+random intercept or slope) -- are 14 more arguments of 2 functions, weight
+1 each (by design left out: `subset`, `na.action`).
+
+| Scope (2026-11-19, wider) | 2026-11-19 before | 2026-11-19 after |
+|---|---:|---:|
+| **cards / cardx, weighted** | **99.5%** (565 yes / 14 partial) | **100.0%** (579 / 0) |
+| cards ard_*() | 100.0% | 100.0% |
+| cardx ard_*() | 100.0% | 100.0% |
+| cards post helpers | 100.0% | 100.0% |
+| cards code helpers | 100.0% | 100.0% |
+| cardx CI helpers | 100.0% | 100.0% |
+| cardx model arguments | 95.8% (78 / 14) | 100.0% (92 / 0) |
+| emmeans arguments in emmeans_args | 100.0% | 100.0% |
+| weight-3 functions only | 100.0% | 100.0% |
+
+(2026-11-19 before: this branch before the run (tflspec@next b748d5a
+merged) measured by this run's script -- a gls() / lme() call in `x`
+reached the model, but its arguments were neither described nor their
+names checked: partial.  On the 2026-11-18 scope the run starts and ends
+at 100.0%.)
+
 (2026-11-14 before: this branch before the run (tflspec@next 6fa6b81
 merged; a tflspec built from it) measured by this run's script on the
 wider scope -- the 20 tidy_plus_plus() arguments could be written as R in
@@ -390,6 +415,39 @@ function, but the catalog did not describe it and its value was not
 judged: partial.  2026-10-31 before: the same, with
 `update_ard_fmt_fun()` in the `post` scope -- written as R in `post`, its
 names checked, its values not judged.)
+
+### Added 2026-11-19
+
+* **nlme's models in a regression row's `x`** (new `R/ard_nlme_args.R`,
+  catalogue rows in `inst/ard/model_args.csv`): `x = nlme::gls(AVAL ~
+  TRTA * AVISIT, data = data, correlation = corSymm(form = ~ AVISITN |
+  USUBJID), weights = varIdent(form = ~ 1 | AVISIT))` and `x =
+  nlme::lme(..., random = ~ 1 | USUBJID)`.  Their arguments are described
+  (`tfl_ard_model_args("gls", "nlme")`) and judged by four new kinds:
+  `twosided` (the model), `corstruct`, `varfunc` and `random`.  A name
+  gls() / lme() do not have (`corelation =`) is said; the program would
+  stop on it.
+* **A silent error is caught: `corSymm(form = ~ 1 | USUBJID)`** (and
+  `corAR1()` / `corARMA()` the same way).  With `~ 1`, nlme takes the visit
+  from the order of the records, so after a subject's missed visit each
+  later visit is paired with the wrong one, with no warning.  Seen with nlme
+  3.1: one missed visit in a third of the subjects moved a treatment
+  estimate from -0.71 (`~ VIS | ID`) to -0.59 (`~ 1 | ID`).  The check asks
+  for the visit number (`~ AVISITN | USUBJID`).  Also said: the visit's
+  text (`~ AVISIT | USUBJID`: nlme stops), a correlation with no subject
+  after `|` or no `form` (the whole data one subject's series), and
+  lme()'s `random` without the subject (lme() stops).
+* **`method = "gls"` / `"lme"` is told to use `x`**: cardx fits
+  `method(formula = , data = )`, and these models take `model =` /
+  `fixed =`, so the program would stop.
+* **The table such a row gives is said**: broom.helpers 1.23.0 cannot read
+  gls()'s or lme()'s variables (their `model.frame()` fails), so cardx
+  gives the coefficients by term (`TRTAXanomeline High Dose`), with no
+  reference row, and stops on `add_pairwise_contrasts = TRUE`.  Every gls()
+  / lme() regression row gets a warning that points to mmrm for LS means;
+  `add_pairwise_contrasts = TRUE` gets a second one.  That is why both
+  models are weight 1: a coefficient table, not a study's LS means.  On
+  cards' ADLB the row's estimates are gls()'s own.
 
 ### Added 2026-11-17
 
@@ -1024,13 +1082,13 @@ Every argument in scope is described and its value judged (since
    argument, not the generic's -- are not described).
 5. (since 2026-11-06) A model's argument is checked for the five model
    functions catalogued (survfit, coxph, glm, lm, mmrm); another model
-   (`survival::survreg()`, `MASS::glm.nb()`, `nlme::gls()`, a study's own)
+   (`survival::survreg()`, `MASS::glm.nb()`, a study's own)
    takes its names as written.  (Since 2026-11-07 also `MASS::glm.nb()`
    and `survival::survreg()`, and `mmrm(covariance =, weights =)` are
-   judged; since 2026-11-12 also `geepack::geeglm()` and `MASS::polr()`.)
-   Left: `nlme::gls()` (its formula is `model =`, which cardx does not
-   give: not offered) and `nlme::lme()` (its formula is `fixed =`, which
-   cardx's `formula =` does not reach either) and a study's own model
+   judged; since 2026-11-12 also `geepack::geeglm()` and `MASS::polr()`;
+   since 2026-11-19 `nlme::gls()` and `nlme::lme()` written in a
+   regression row's `x` -- cardx cannot fit them from `method`, and a row
+   that tries is told so.)  Left: a study's own model
    (since 2026-11-13 `cov_struct(group =, heterogeneous =)` and its names
    are judged).  A list made by the program
    (`method.args = my_args`) is the program's.
@@ -1055,6 +1113,11 @@ Every argument in scope is described and its value judged (since
    when the stratum has a code list (its values are known when the code is
    written); a stratum with no code list is judged by cardx when the
    program runs, which keeps R's recycling warning in the ARD.
+10. (since 2026-11-19) gls() / lme() through cardx give a coefficient table
+   by term, because broom.helpers cannot read their variables.  LS means
+   and pairwise contrasts of such a model need a change in broom.helpers
+   (reading a gls / lme model's frame) or cardx first; until then the row
+   says so and points to mmrm.
 
 
 ## rtfreporter (table SPEC)
@@ -1118,6 +1181,14 @@ Percentage: yes counts 1, partial 0.5.
 | 2026-11-17 before / after | 59.5% (333 / 100 / 211 of 644) | 66.4% (333 / 100 / 144 of 577) | 42 / 18 / 54 |
 | 2026-11-18 before | 59.5% (333 / 100 / 211 of 644) | 66.4% (333 / 100 / 144 of 577) | 42 / 18 / 54 |
 | 2026-11-18 after  | 60.9% (340 / 105 / 199 of 644) | 68.0% (340 / 105 / 132 of 577) | 44 / 19 / 51 |
+| 2026-11-19 before / after | 60.9% (340 / 105 / 199 of 644) | 68.0% (340 / 105 / 132 of 577) | 44 / 19 / 51 |
+
+(2026-11-19: rtfreporter@next 7273762 (its change since 6da4572 is the
+assembling article -- PDF conversion, bookmarks, an FDA check: no change
+in `R/` or `NAMESPACE`) and tflspec@next b748d5a merged.  The run went to
+cards / cardx; the table is unchanged.  The SPEC-relevant gaps left
+(`stub_cols(layout =, label_span =)`, which `plan_stub()` does not take;
+`rtf_section(page =)`) need a change in rtfreporter first.)
 
 (2026-11-18: rtfreporter@next 6da4572 (its changes since 27cb3e4 are
 `plan_empty()` on a listing of no records, articles and validation
