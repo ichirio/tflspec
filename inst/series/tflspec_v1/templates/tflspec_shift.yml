@@ -1,0 +1,256 @@
+# tflspec_v1/templates/tflspec_shift.yml
+# Purpose: To count the subjects by a category at baseline (the rows) and
+# the same category after it (the columns, under each group), a page a
+# parameter: a shift table, such as the normal range indicator at baseline
+# (BNRIND) by the worst one after it (ANRIND).  One pair of variables
+# (baseline, post); the toxicity grades' low and high directions in one
+# table stay lab_tox_shift's.  Not lab-specific: the dataset (from), the
+# pair, the parameter variable and the analysis set (population) are
+# arguments; the records kept are the report's `data:` row rec_sub (a
+# `where:` there), never an argument, and so is the record a subject has
+# for a parameter: the template computes no worst record (canon
+# 2026-11-16).  An ADaM with no such record picks it with the row's
+# `then:`, for example a study's rule "a subject with both Low and High
+# after baseline counts as High" (the order worst first, one record a
+# subject and parameter):
+#   data:
+#     - id: rec_sub
+#       where: !r PARAMCD %in% c("ALT", "HGB") & !ABLFL %in% "Y"
+#       then: !r 'dplyr::arrange(match(ANRIND, c("HIGH", "LOW", "NORMAL"))) |>
+#         dplyr::distinct(USUBJID, PARAMCD, .keep_all = TRUE)'
+# The categories' order and their rows with no subject come from the
+# study's code lists (study$adam's levels), not from an argument.
+# There is no Total column across the groups in this version: it needs a
+# count without the group variable that the ARD does not make yet; a
+# report that needs it adds an analysis item.  A page a parameter is
+# fixed (a page holds its few rows: no max_rows); a report that wants one
+# page appends a plan_paginate card.
+# Fixed by its purpose: the ARD (the cells, and the Total row, the Total
+# column and their corner when asked for: the calls of one item), a page a
+# parameter (plan_paginate_group), BIGN's N in the group headings.  Its
+# content, in order: table_plan, plan_labels, plan_cells, plan_total,
+# plan_col_header, plan_paginate_group.  Its derive:
+# names (not arguments) are worked out from the arguments when the
+# template is resolved; a call or a step whose derived value is nothing is
+# left out.
+template: tflspec_shift
+label: Shift from baseline
+params:
+  population:
+    type: string
+    input: pick
+    choices: populations
+    default: !series population_safety
+    step: data
+    tier: usual
+    description: The analysis set adsl_sub keeps (data.yml's populations).
+  from:
+    type: string
+    input: pick
+    choices: study_data
+    default: ADLB
+    step: data
+    tier: usual
+    description: The dataset of the records (the data row rec_sub's from).
+  by:
+    type: list<column>
+    input: pick
+    choices: vars(adsl_sub)
+    required: true
+    step: analysis
+    tier: required
+    description: The column variable(s); the groups across.
+  baseline:
+    type: column
+    input: pick
+    choices: vars(rec_sub)
+    default: BNRIND
+    step: analysis
+    tier: usual
+    description: The category at baseline, the rows.
+  post:
+    type: column
+    input: pick
+    choices: vars(rec_sub)
+    default: ANRIND
+    step: analysis
+    tier: usual
+    description: The category after baseline, the columns under each group.
+  param_var:
+    type: column
+    input: pick
+    choices: vars(rec_sub)
+    default: PARAMCD
+    step: analysis
+    tier: usual
+    description: The parameter, a page and an analysis each.
+  missing_row:
+    type: logical
+    input: pick
+    choices: fixed
+    default: true
+    step: analysis
+    tier: usual
+    description: A row for the subjects with no category at baseline.
+  missing_label:
+    type: string
+    input: text
+    default: !series missing_label
+    step: analysis
+    tier: other
+    description: The label of the missing row.
+  baseline_total:
+    type: logical
+    input: pick
+    choices: fixed
+    default: true
+    step: analysis
+    tier: usual
+    description: A Total row, the subjects of all the categories at baseline.
+  post_total:
+    type: logical
+    input: pick
+    choices: fixed
+    default: false
+    step: analysis
+    tier: usual
+    description: A Total column under each group, the subjects of all the
+      categories after baseline.
+  denominator:
+    type: string
+    input: pick
+    choices: report_data
+    default: adsl_sub
+    step: analysis
+    tier: usual
+    description: The data row whose subjects are the group Ns (BIGN) and the
+      percentages' denominator; both come from the one BIGN item.
+  analysis_ids:
+    type: map<string,string>
+    input: table
+    choices: fixed
+    default: ~
+    step: analysis
+    tier: other
+    description: An analysis id for a parameter, keyed by its value (ALT);
+      empty for the parameter's value.
+  formats:
+    type: map<string,number|string>
+    input: table
+    choices: stats
+    free: true
+    default: !series formats
+    step: analysis
+    tier: usual
+    description: The decimals (or the format) of each statistic.
+  value_labels:
+    type: map<column,map<string,string>>
+    input: table
+    choices: vars(rec_sub)
+    default: ~
+    step: content
+    tier: other
+    description: The printed text of the values, a variable's codes to their
+      text (PARAMCD, the categories); empty for the codes.
+  heading:
+    type: string
+    input: text
+    default: Baseline
+    step: content
+    tier: usual
+    description: The heading of the row-label column.
+  post_header:
+    type: string
+    input: text
+    default: "{col}"
+    step: content
+    tier: usual
+    description: The heading over each category after baseline ({col} the category).
+  baseline_total_label:
+    type: string
+    input: text
+    default: !series total_label
+    step: content
+    tier: usual
+    description: The label of the Total row (and of the Total column).
+  count_cell:
+    type: string
+    input: text
+    default: ~
+    step: content
+    tier: usual
+    description: The cell template of a count; empty for the study's, the
+      plan_cells of its defaults.yml (an n (%) template has no default of its
+      own, canon 2026-11-16).
+  page_heading:
+    type: string
+    input: text
+    default: "Parameter: {value}"
+    step: content
+    tier: usual
+    description: The heading of a parameter's page ({value} the parameter).
+extends: !series extends
+style: !series style
+derive:
+  # the calls besides the cells: the Total row (the categories after
+  # baseline by the parameter), the Total column (the categories at
+  # baseline by the parameter) and, with both, their corner; nothing when off
+  shift_rows_call: {if: "{baseline_total}", then: {by: ["{by}", "{param_var}"], variables: ["{post}"]}}
+  shift_cols_call: {if: "{post_total}", then: {by: ["{by}", "{param_var}"], variables: ["{baseline}"]}}
+  shift_both: {if: "{baseline_total}", then: "{post_total}"}
+  shift_corner: {if: "{shift_both}", then: {by: ["{by}"], variables: ["{param_var}"]}}
+  # plan_total's arguments: rows, cols or both; nothing (no card) for none
+  shift_dir_on: {if: "{post_total}", then: both, else: rows}
+  shift_dir_off: {if: "{post_total}", then: cols}
+  shift_dir: {if: "{baseline_total}", then: "{shift_dir_on}", else: "{shift_dir_off}"}
+  shift_total: {if: "{shift_dir}", then: {direction: "{shift_dir}", label: "{baseline_total_label}", position: last}}
+data:
+  - id: adsl_sub
+    from: ADSL
+    population: "{population}"
+  - id: rec_sub
+    from: "{from}"
+    subjects_in: adsl_sub
+    add: ["{by}"]
+    where: ~
+analysis:
+  - id: BIGN
+    label: Subjects per group
+    method: categorical
+    data: "{denominator}"
+    variables: ["{by}"]
+    formats: "{formats}"
+  - id: SHIFT
+    analyses: {per: ["{param_var}"], ids: "{analysis_ids}"}   # ALT, HGB, ...
+    label: Category at baseline by category after baseline
+    method: categorical
+    data: rec_sub
+    # (the item's variable: the rows, the one missing_row reads; each call
+    # below says its own by and variables)
+    variables: ["{baseline}"]
+    # (N, the analysis's own denominator, stays in the ARD: canon 2026-11-16)
+    statistics: [n, N, p]
+    denominator: BIGN
+    missing_row: "{missing_row}"
+    missing_label: "{missing_label}"
+    formats: "{formats}"
+    ards:
+      - {by: ["{by}", "{param_var}", "{post}"], variables: ["{baseline}"]}   # cells
+      - "{shift_rows_call}"     # Total row
+      - "{shift_cols_call}"     # Total column
+      - "{shift_corner}"        # corner
+content:
+  - table_plan: {cols: ["{by}", "{post}"], rows: {param: "{param_var}"}}
+  - plan_labels: "{value_labels}"
+  - plan_cells: {categorical: "{count_cell}"}
+  - plan_total: "{shift_total}"
+  - plan_col_header:
+      header:
+        - {line: "1", cols: row_label}
+        - {line: "1", cols: .values, span: "{by}", text: "{col1} (N={n})"}
+        - {line: "2", cols: row_label, text: "{heading}"}
+        - {line: "2", cols: .values, span: each, text: "{post_header}"}
+  - plan_paginate_group: {col: param, keep: false, heading: "{page_heading}", heading_at: title}
+page:
+  titles: ~
+  footnotes: ~

@@ -136,7 +136,7 @@ plan_stat_groups:
   stage: mapping
   tier: other
   description: Columns made of groups of statistics.
-  dots: {style: named, type: "list<stat>", description: "A group's name and its statistics.", example: {n: N, orr_ci: [n, estimate, conf.low, conf.high]}}
+  dots: {style: named, type: "list<stat>", description: "A group's name and its statistics.", example: {"n": N, orr_ci: [n, estimate, conf.low, conf.high]}}
   args:
     .variables: {label: "Variables split", help: "The variables whose statistics are split into the groups. Blank: every variable. e.g. c(\"AGE\", \"BMI\")", type: "list<column>"}
     .others: {label: "Group of the other variables", help: "The group the other variables' statistics go to whole. Blank: none. e.g. \"Summary\"", type: string}
@@ -979,9 +979,6 @@ rtf_footer:
           a lower-case letter first, then letters, digits, _ or . -- not a dataset''s
           or another data''s (<dataset>_sub, _sub2 ... are the program''s own).'
         example: adae_teae
-      - column: label
-        description: 'A name a person reads; blank: none.'
-        example: Treatment-emergent AEs
       - column: from
         description: 'What it is made from: a dataset, or an analysis data of a row
           above.'
@@ -1015,8 +1012,8 @@ rtf_footer:
           descending (dplyr::arrange()); blank: the data''s order.'
         example: USUBJID | -ASTDT
       - column: keep
-        description: 'The columns kept, | between them (the subject key always); with
-          derive, what transmute() does; blank: every column.'
+        description: 'The columns kept, | between them (the subject key always), after
+          derive (a derived column may be named); blank: every column.'
         example: TRT01A | AEBODSYS | AEDECOD
       - column: distinct
         description: 'One row for each set of values of these columns, | between them
@@ -1185,8 +1182,10 @@ rtf_footer:
       - column: analysis_per
         description: 'A template item: how its analyses are named; level (a depth
           an analysis, <id>_ANY, <id>_L1, ...) or columns | between them (a condition
-          row an analysis, its id their values: ALT_HIGH); level:ANY,L1,L2 (the
-          depths'' ids themselves, the any row''s first); blank: the analysis_id.'
+          row an analysis, its id their values: ALT_HIGH; with no condition rows,
+          each call''s rows by their values: ALT), then ids:ALT=ALT_SHIFT,... (the
+          ids given for some values); level:ANY,L1,L2 (the depths'' ids themselves,
+          the any row''s first); blank: the analysis_id.'
         example: PARAMCD | tox_dir
   - sheet: conditions
     description: 'ARD: a template item''s condition rows, one row a run of the

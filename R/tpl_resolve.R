@@ -36,7 +36,10 @@
 #' `analysis_per` tells the generator how to name the analyses; no `per`
 #' one analysis, the item's id.  `per: level` with an `id_prefix` (may be
 #' empty) names the depths `<prefix>_ANY`, `<prefix>_L1`, ... (no prefix: `ANY`,
-#' `L1`, ...), each replaced by its entry in `ids`.  An item's `conditions:` is a data frame,
+#' `L1`, ...), each replaced by its entry in `ids`.  `per: [columns]` makes an
+#' analysis a value of the columns (joined by `_`: `ALT`, `ALT_HIGH`), on an
+#' item with condition rows or without (each call's rows by their own value);
+#' its `ids` give some values an id of their own (`{ALT: ALT_SHIFT}`).  An item's `conditions:` is a data frame,
 #' one row a run, its columns the item's `params` (and `analysis_id`, a
 #' row's own id, when a row gives one): the template's rows first, then the
 #' report's (`"{conditions}"`).
@@ -417,7 +420,8 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
 # One analysis item as its analyses (canon fc7bd00).  `analyses: {per, ids}`:
 #   per: variable   an analysis a variable, its id ids[var] else the variable
 #   per: level      one row, analysis_per "level" (the generator's ids a level)
-#   per: [cols]     one row, analysis_per the columns |-joined (an id a value)
+#   per: [cols]     one row, analysis_per the columns |-joined (an id a value);
+#                   ids after them as ids:VALUE=ID,...
 #   no per          one analysis, the item's id
 # labels ({variable: heading}) and value_labels ({variable: {code: text}}) as
 # one map for plan_labels(): a variable in both keeps its heading, written
@@ -467,6 +471,12 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
       new <- vapply(d, function(k)
         if (is.list(ids) && !is.null(ids[[k]])) as.character(ids[[k]]) else paste0(pre, k), "")
       f$analysis_per <- paste0("level:", paste(new, collapse = ","))
+    } else if (!identical(per, "level") && is.list(an$ids) && length(an$ids)) {
+      # per: [cols] with ids: the ids given for some values, after the
+      # columns as `ids:VALUE=ID,...` (the rest take the values)
+      ids <- vapply(an$ids, function(v) as.character(unlist(v))[1L], "")
+      f$analysis_per <- paste(c(per, paste0("ids:", paste(names(ids), ids, sep = "=",
+                                                         collapse = ","))), collapse = "|")
     }
     return(list(f))
   }

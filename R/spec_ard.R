@@ -132,7 +132,8 @@
     }
   }
   # a table's analyses have its columns' by
-  p <- .by_needed_problems(.normalize_ard_sheet(ard$analyses, "analyses"), b$table$tables)
+  p <- .by_needed_problems(.normalize_ard_sheet(ard$analyses, "analyses"), b$table$tables,
+                            ards = ard$ards)
   if (nrow(p)) {
     .spec_stop(paste(c("The ARD definition is not valid:", p$message), collapse = "\n  "),
                p, "tflspec_ard_spec_error")

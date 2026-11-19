@@ -26,8 +26,6 @@ ard_spec <- tfl_ard_spec(list(
   analysis_data = df(
     output_id = c("T-14-2-1", "T-14-3-1", "T-14-3-2", "T-14-3-2"),
     data_id = c("adrs_bor", "adae_teae", "adsl_saf", "adae_saf"),
-    label = c("Best confirmed overall response, ITT", "TEAEs of the safety set",
-              "Safety set", NA),
     from = c("ADRS", "ADAE", "ADSL", "ADAE"),
     population_id = c("ITT", "SAF", "SAF", NA),
     subjects_in = c(NA, NA, NA, "adsl_saf"),

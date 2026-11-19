@@ -16,7 +16,6 @@ The table template \code{ae_pt_freq}, layout \code{hierarchical}. Its program is
    \code{data} \tab other \tab call \tab ADAE \tab  \tab the dataset of records \cr
    \code{where} \tab other \tab call \tab TRTEMFL == "Y" \tab  \tab the records kept (R) \cr
    \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_sub \cr
-   \code{data_label} \tab other \tab call \tab Treatment-emergent AEs of the safety set \tab  \tab the analysis data's label \cr
    \code{analysis_id} \tab other \tab call \tab TEAE_PT \tab  \tab the analysis's id \cr
    \code{analysis_label} \tab other \tab call \tab TEAE by PT \tab  \tab the analysis's label \cr
    \code{overall} \tab other \tab call \tab Any TEAE \tab  \tab the any-record row's label; NULL: none \cr

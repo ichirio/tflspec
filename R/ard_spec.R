@@ -48,7 +48,7 @@
   objects = c("output_id", "object_id", "code", "label"),
   # condition-defined groups (the ARS's grouping factors): a row a level
   groups = c("group_id", "label", "level", "where"),
-  analysis_data = c("output_id", "data_id", "label", "from", "population_id", "subjects_in",
+  analysis_data = c("output_id", "data_id", "from", "population_id", "subjects_in",
                     "where", "add", "derive", "arrange", "keep", "distinct", "code", "then"),
   analyses = c("output_id", "analysis_id", "parent", "label", "method",
                "data", "dataset", "records",
@@ -214,9 +214,28 @@
   "data"
 }
 
+.data_label_gone <- paste0("`label` is no longer a column of the analysis_data sheet ",
+                           "(the data_id names it); delete the column.")
+
+# An analysis_data row has no label (its data_id names it): a `label` column
+# that is empty is dropped (the sheet has no such column), a value in it stops
+.adata_label_check <- function(d) {
+  if (!"label" %in% names(d)) return(invisible())
+  v <- trimws(as.character(d[["label"]]))
+  hit <- which(!is.na(v) & nzchar(v))
+  if (!length(hit)) return(invisible())
+  i <- hit[1L]
+  id <- if ("data_id" %in% names(d)) as.character(d[["data_id"]][i]) else
+    if ("id" %in% names(d)) as.character(d[["id"]][i]) else NA_character_
+  rep_id <- if ("output_id" %in% names(d)) as.character(d[["output_id"]][i]) else NA_character_
+  stop(if (!is.na(rep_id)) paste0(rep_id, ": "), "data row `", id, "`: ",
+       .data_label_gone, call. = FALSE)
+}
+
 .normalize_ard_sheet <- function(d, sheet) {
   cols <- .ard_spec_sheets[[sheet]]
   d <- as.data.frame(d, stringsAsFactors = FALSE)
+  if (identical(sheet, "analysis_data")) .adata_label_check(d)
   # (a conditions or ards sheet: its params' or keys' columns after its own)
   if (sheet %in% .ard_open_sheets) cols <- c(cols, setdiff(names(d), c(cols, "note")))
   out <- lapply(cols, function(c) {
@@ -1783,8 +1802,10 @@ tfl_ard_data_names <- function(spec, output_id = NULL, codelists = NULL) {
 # groups' N), a `custom` one, one inside another (its parent's by), the
 # study's N (total_n), one whose method takes no by (its arms in a model),
 # and `by: []` -- no columns, said so ("(none)").
-# `tables`: the table sheets' `tables` (output_id, cols).
-.by_needed_problems <- function(a, tables) {
+# `tables`: the table sheets' `tables` (output_id, cols); `ards` the ards
+# sheet: an item whose calls say their own `by` (a shift table's cells,
+# Total row ...) is not one either.
+.by_needed_problems <- function(a, tables, ards = NULL) {
   out <- .spec_problems_empty()
   if (is.null(a) || !nrow(a) || is.null(tables) || !nrow(tables) || is.null(tables$cols)) {
     return(out)
@@ -1795,6 +1816,7 @@ tfl_ard_data_names <- function(spec, output_id = NULL, codelists = NULL) {
     k <- match(a$output_id[i], tables$output_id)
     if (is.na(k) || is.na(tables$cols[k]) || !nzchar(trimws(tables$cols[k]))) next
     if (!is.na(a$by[i]) || !is.na(par[i]) || identical(a$method[i], "custom")) next
+    if (.item_calls_by(a, ards, i)) next
     cols <- trimws(strsplit(tables$cols[k], "[,|]")[[1L]])
     cols <- cols[nzchar(cols)]
     v <- .split_bar(a$variables[i])
@@ -1813,6 +1835,16 @@ tfl_ard_data_names <- function(spec, output_id = NULL, codelists = NULL) {
       "analyses", a$output_id[i], a$analysis_id[i], "by")
   }
   do.call(rbind, pr)
+}
+
+# Has item i calls (ards:) of its own that say a `by`?  Its rows' list
+# column `ards`, or the ards sheet's rows of its output and id
+.item_calls_by <- function(a, ards, i) {
+  own <- if (!is.null(a$ards) && is.list(a$ards)) a$ards[[i]]
+  if (length(own)) return(any(vapply(own, function(e) length(e$by) > 0L, NA)))
+  if (!is.data.frame(ards) || !nrow(ards) || is.null(ards$by)) return(FALSE)
+  hit <- ards$output_id %in% a$output_id[i] & ards$analysis_id %in% a$analysis_id[i]
+  any(!is.na(ards$by[hit]) & nzchar(trimws(as.character(ards$by[hit]))))
 }
 
 # The groups sheet and the analyses that name its groups: a level names its
