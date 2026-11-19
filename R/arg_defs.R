@@ -142,9 +142,10 @@
   args
 }
 
+# (the enum's own brackets only: `enum[TRUE|FALSE]|logical` is TRUE, FALSE)
 .arg_enum_values <- function(type) {
   if (!startsWith(type %||% "", "enum[")) return(NULL)
-  strsplit(sub("^enum\\[(.*)\\]$", "\\1", type), "|", fixed = TRUE)[[1L]]
+  strsplit(sub("^enum\\[([^]]*)\\].*$", "\\1", type), "|", fixed = TRUE)[[1L]]
 }
 
 # One row of the table from one definition (a list as written in the schema
