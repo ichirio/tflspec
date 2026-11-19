@@ -1738,8 +1738,8 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
 # "data"), the one writer both paths share (R/spec_parts.R)
 .content_listing_data <- function(output, study) {
   if (is.character(study) && length(study) == 1L) study <- tfl_read_study_spec(study)
-  spec <- .ard_spec_of_study(study, output_id = output$id)$spec
-  .records_code(output, output$data, "data", spec)
+  s <- .ard_spec_of_study(study, output_id = output$id)
+  .records_code(output, output$data, "data", s$spec, s$codelists)
 }
 
 # A listing's labels as the sheets write them (.listing_label(): a
