@@ -59,53 +59,58 @@ table_plan:
   package: rtfreporter
   rank: 20
   stage: mapping
+  label: {en: "Table structure", ja: "Table の構造"}
   tier: required
   description: The roles -- what goes across, what goes down, which column carries the row text.
   args:
-    cols: {label: "Columns", type: "list<column>", description: The key(s) that go across.}
-    rows: {label: "Row layers", type: "vec<string, column>|map<string, column|guard>|list<column>", description: "The keys that go down, named as the table calls them; a constant heading as `!r '~\"Worst grade\"'`."}
-    label: {label: "Row text column", type: "vec<string, column>|map<string, column|guard>|list<column>|logical", description: "The column the row text comes from; false for none."}
-    stat: {label: "Statistic columns", type: "vec<string, column>", description: The columns that hold the statistic name and value.}
-    show_keys: {label: "Keys shown", type: "list<column>", description: Row keys also shown as variables.}
-    value: {label: "Value column", type: "column", description: "A records table: the column whose values the cells show (one row a record, the key's values across)."}
+    cols: {label: {en: "Columns", ja: "列"}, type: "list<column>", description: The key(s) that go across.}
+    rows: {label: {en: "Row layers", ja: "行"}, type: "vec<string, column>|map<string, column|guard>|list<column>", description: "The keys that go down, named as the table calls them; a constant heading as `!r '~\"Worst grade\"'`."}
+    label: {label: {en: "Row text column", ja: "行の文字の列"}, type: "vec<string, column>|map<string, column|guard>|list<column>|logical", description: "The column the row text comes from; false for none."}
+    stat: {label: {en: "Statistic columns", ja: "統計量の列"}, type: "vec<string, column>", description: The columns that hold the statistic name and value.}
+    show_keys: {label: {en: "Keys shown", ja: "見せるキー"}, type: "list<column>", description: Row keys also shown as variables.}
+    value: {label: {en: "Value column", ja: "値の列"}, type: "column", description: "A records table: the column whose values the cells show (one row a record, the key's values across)."}
 
 plan_sort:
   package: rtfreporter
   rank: 120
   stage: finishing
+  label: {en: "Row order", ja: "行の並び順"}
   tier: usual
   description: The row order, key by key.
   dots: {style: positional, key: keys, type: "list<string>|logical", description: "The keys to sort by, most important first; a minus for descending; false for the data's order.", example: [".overall", "-n@SOC", "SOC", ".depth", "-n", "PT"]}
   args:
-    stat: {label: "Statistic counted", type: stat, description: The statistic a key sorts by.}
-    keep: {label: "Print the sort columns", help: "FALSE: the columns the order is read from (the sort keys) are not printed, with no plan_hide() for them. Blank (TRUE): they are printed as they are. e.g. FALSE", type: logical}
-    keys: {label: "Order"}
+    stat: {label: {en: "Statistic counted", ja: "数える統計量"}, type: stat, description: The statistic a key sorts by.}
+    keep: {label: {en: "Print the sort columns", ja: "並べ替えの列を印刷"}, help: "FALSE: the columns the order is read from (the sort keys) are not printed, with no plan_hide() for them. Blank (TRUE): they are printed as they are. e.g. FALSE", type: logical, default: true}
+    keys: {label: {en: "Order", ja: "並び順"}}
 
 plan_digits:
   package: rtfreporter
   rank: 110
   stage: finishing
+  label: {en: "Decimals and rounding", ja: "桁と丸め"}
   tier: usual
   description: The digits of each statistic, as a house rule.
   dots: {style: named, type: "number|string|vec<stat, number|string>|map<string, number|string|vec<stat, number|string>>", description: "By variable, kind (continuous / categorical) or `default`: one number for every statistic, or one a statistic; \"3s\" for three significant digits. By a row key's value (a lab table's parameter): the key, then each value's digits -- one number, or one a statistic (`PARAM: {\"Alanine Aminotransferase (U/L)\": 1, \"Bilirubin (umol/L)\": {mean: 2, sd: 3}}`); on the `param_change` template the key is `PARAM`, the parameter's label (the name `ai/adam_summary.md` lists), as the table prints it, not `PARAMCD`, which matches nothing there; a value no row has is ignored.", example: {continuous: {mean: 1, sd: 2}, AGE: 0, PARAM: {"Alanine Aminotransferase (U/L)": 1, "Bilirubin (umol/L)": {mean: 2, sd: 3}}}}
   args:
-    rounding: {label: "Rounding", type: "enum[sas|r|iec60559]", description: The tie-breaking family.}
-    .rows: {label: "Decimals by row", type: "vec<string, integer|string>", description: "The digits of a statistic row (a table with stats = rows), by its label."}
+    rounding: {label: {en: "Rounding", ja: "丸め方 (rounding)"}, type: "enum[sas|r|iec60559]", description: The tie-breaking family.}
+    .rows: {label: {en: "Decimals by row", ja: "行ごとの桁"}, type: "vec<string, integer|string>", description: "The digits of a statistic row (a table with stats = rows), by its label."}
 
 plan_levels:
   package: rtfreporter
   rank: 80
   stage: finishing
+  label: {en: "Level order", ja: "値の順"}
   tier: usual
   description: The order (and the subset) of a variable's values.
   dots: {style: named, map: true, type: "vec<string, string>|list<string>", description: "A variable's values in their order; a map (value: text) names their text too."}
   args:
-    .drop_empty: {label: "Hide empty values", type: "list<column>", description: Variables whose levels with no data are left out.}
+    .drop_empty: {label: {en: "Hide empty values", ja: "データに無い値を隠す"}, type: "list<column>", description: Variables whose levels with no data are left out.}
 
 plan_labels:
   package: rtfreporter
   rank: 90
   stage: finishing
+  label: {en: "Display names", ja: "表示名"}
   tier: usual
   description: The printed text of variables and values.
   dots: {style: named, map: true, type: "string|vec<string, string>", description: "A variable's label, or its values' labels."}
@@ -114,268 +119,287 @@ plan_nest:
   package: rtfreporter
   rank: 100
   stage: finishing
+  label: {en: "Rows under another value", ja: "別の値の下の行"}
   tier: other
   description: Rows that belong under one level of another variable.
   dots: {style: named, type: "vec<string, string>", description: "The level of another variable a variable's rows go under: {RACE: Asian}."}
   args:
-    ...: {label: "Rows under a level"}
+    ...: {label: {en: "Rows under a level", ja: "値の下に入れる行"}}
 
 plan_total:
   package: rtfreporter
   rank: 50
   stage: mapping
+  label: {en: "Total column", ja: "Total 列"}
   tier: other
   description: A Total column from the ARD's overall rows.
   args:
-    label: {label: "Heading", help: "The heading of the Total column. Its cells are the ARD's overall rows (the analyses run over all subjects, not split by the column key). Blank: \"Total\". e.g. \"All Subjects\"", type: string}
-    position: {label: "Place", help: "Where the Total column goes among the column key's values: \"last\" or \"first\". Blank: last. e.g. \"first\"", type: "enum[last|first]"}
+    label: {label: {en: "Heading", ja: "見出し"}, help: "The heading of the Total column. Its cells are the ARD's overall rows (the analyses run over all subjects, not split by the column key). Blank: \"Total\". e.g. \"All Subjects\"", type: string}
+    position: {label: {en: "Place", ja: "位置"}, help: "Where the Total column goes among the column key's values: \"last\" or \"first\". Blank: last. e.g. \"first\"", type: "enum[last|first]"}
 
 plan_stat_groups:
   package: rtfreporter
   rank: 40
   stage: mapping
+  label: {en: "Groups of statistics", ja: "統計量のグループ"}
   tier: other
   description: Columns made of groups of statistics.
   dots: {style: named, type: "list<stat>", description: "A group's name and its statistics.", example: {n: N, orr_ci: [n, estimate, conf.low, conf.high]}}
   args:
-    .variables: {label: "Variables split", help: "The variables whose statistics are split into the groups. Blank: every variable. e.g. c(\"AGE\", \"BMI\")", type: "list<column>"}
-    .others: {label: "Group of the other variables", help: "The group the other variables' statistics go to whole. Blank: none. e.g. \"Summary\"", type: string}
-    ...: {label: "Group and its statistics"}
+    .variables: {label: {en: "Variables split", ja: "分ける変数"}, help: "The variables whose statistics are split into the groups. Blank: every variable. e.g. c(\"AGE\", \"BMI\")", type: "list<column>"}
+    .others: {label: {en: "Group of the other variables", ja: "ほかの変数のグループ"}, help: "The group the other variables' statistics go to whole. Blank: none. e.g. \"Summary\"", type: string}
+    ...: {label: {en: "Group and its statistics", ja: "グループとその統計量"}}
 
 plan_cells:
   package: rtfreporter
   rank: 30
   stage: mapping
+  label: {en: "Statistics in the cells", ja: "セルに入れる統計量"}
   tier: required
   description: How the statistics become cell text.
   dots: {style: named, type: "template|map<string, template|list<guard|template>>|call<cell_rows>|list<guard|template>", description: "By variable, context, kind (continuous / categorical), stat group or `default`: one template, one a printed row (named by its label), cell_rows() for a cell of several lines, or guards (`!r \"n == 0 ~ '0'\"`) before the template, for the kind or for one of its rows.", example: {categorical: "{n:.0f} ({p:.1f%})", continuous: {"Mean (SD)": "{mean:.1f} ({sd:.2f})"}}}
   args:
-    stats: {label: "Statistics as", help: "How the statistics are laid out: \"cells\" one template a cell (n (%) in one cell), \"rows\" each statistic a row of its own. Blank: cells. e.g. \"rows\"", type: "enum[cells|rows]"}
-    value: {label: "Values used", help: "Which value a template's {x} reads: the number (stat), which the template formats, or the ARD's formatted text (stat_fmt). Blank: stat. e.g. \"stat_fmt\"", type: string}
-    na: {label: "Text for missing", help: "The text of a cell no template could fill (a statistic the ARD does not have). Blank: empty. e.g. \"-\"", type: string}
-    notes: {label: "Notes of unused statistics", help: "FALSE: no note of the ARD's statistics that no template uses. Blank (TRUE): such statistics are listed when the table is made. e.g. FALSE", type: logical}
-    default: {label: "Every cell"}
-    continuous: {label: "Continuous variables"}
-    categorical: {label: "Categorical variables"}
+    stats: {label: {en: "Statistics as", ja: "統計量の並べ方"}, help: "How the statistics are laid out: \"cells\" one template a cell (n (%) in one cell), \"rows\" each statistic a row of its own. Blank: cells. e.g. \"rows\"", type: "enum[cells|rows]"}
+    value: {label: {en: "Values used", ja: "使う値"}, help: "Which value a template's {x} reads: the number (stat), which the template formats, or the ARD's formatted text (stat_fmt). Blank: stat. e.g. \"stat_fmt\"", type: string}
+    na: {label: {en: "Text for missing", ja: "欠測の文字"}, help: "The text of a cell no template could fill (a statistic the ARD does not have). Blank: empty. e.g. \"-\"", type: string}
+    notes: {label: {en: "Notes of unused statistics", ja: "使わない統計量の知らせ"}, help: "FALSE: no note of the ARD's statistics that no template uses. Blank (TRUE): such statistics are listed when the table is made. e.g. FALSE", type: logical}
+    default: {label: {en: "Every cell", ja: "すべてのセル"}}
+    continuous: {label: {en: "Continuous variables", ja: "連続変数"}}
+    categorical: {label: {en: "Categorical variables", ja: "カテゴリ変数"}}
 
 plan_filter:
   package: rtfreporter
   rank: 70
   stage: mapping
+  label: {en: "Row filter", ja: "行のフィルター"}
   tier: other
   description: The rows kept by a condition on the ARD's statistics.
   dots: {style: positional, key: where, type: "list<r>|r", description: "The conditions, R over a record's statistics and keys.", example: "!r p >= 0.05"}
   args:
-    any: {main: true, label: "In any column", help: "TRUE: a row stays when any column's statistics meet the condition (PTs of 5% or more in any arm); FALSE: when every column's do. Blank: TRUE. e.g. FALSE", type: logical}
-    parents: {main: true, label: "Parent rows", help: "\"keep\": a parent row (a SOC) stays exactly when one of its children does; \"drop\": it is judged by its own counts. Blank: keep. e.g. \"drop\"", type: "enum[keep|drop]"}
-    by: {label: "Rows judged together", help: "The row key whose rows are judged together by the condition (with the keys outside it): a SOC kept or dropped as a whole. Blank: each row by itself. e.g. AEBODSYS", type: column}
-    where: {label: "Condition"}
+    any: {main: true, label: {en: "In any column", ja: "いずれかの列で"}, help: "TRUE: a row stays when any column's statistics meet the condition (PTs of 5% or more in any arm); FALSE: when every column's do. Blank: TRUE. e.g. FALSE", type: logical}
+    parents: {main: true, label: {en: "Parent rows", ja: "親の行"}, help: "\"keep\": a parent row (a SOC) stays exactly when one of its children does; \"drop\": it is judged by its own counts. Blank: keep. e.g. \"drop\"", type: "enum[keep|drop]"}
+    by: {label: {en: "Rows judged together", ja: "まとめて判定する行のキー"}, help: "The row key whose rows are judged together by the condition (with the keys outside it): a SOC kept or dropped as a whole. Blank: each row by itself. e.g. AEBODSYS", type: column, input: pick, choices: columns}
+    where: {label: {en: "Condition", ja: "条件"}}
 
 plan_compare:
   package: rtfreporter
   rank: 60
   stage: mapping
+  label: {en: "Comparison columns", ja: "比較列"}
   tier: other
   description: Columns from the comparison records (tests, differences).
   dots: {style: named, type: "template|vec<string, template>|call<cell_rows>|list<guard|template>", description: "A comparison column's name and its template."}
   args:
-    by: {label: "By group", help: "The column that splits the comparison records (tests, differences) into columns, one a level (each arm against placebo). Blank: one comparison a variable. e.g. \"COMPARISON\"", type: column}
-    position: {label: "Place", help: "Where the comparison columns go: after the column key's values (\"last\") or before them (\"first\"). Blank: last. e.g. \"first\"", type: "enum[last|first]"}
-    ...: {label: "Columns"}
+    by: {label: {en: "By group", ja: "群ごとに"}, help: "The column that splits the comparison records (tests, differences) into columns, one a level (each arm against placebo). Blank: one comparison a variable. e.g. \"COMPARISON\"", type: column}
+    position: {label: {en: "Place", ja: "位置"}, help: "Where the comparison columns go: after the column key's values (\"last\") or before them (\"first\"). Blank: last. e.g. \"first\"", type: "enum[last|first]"}
+    ...: {label: {en: "Columns", ja: "列"}}
 
 plan_stub:
   package: rtfreporter
   rank: 140
   stage: finishing
+  label: {en: "Row label column", ja: "行ラベルの列"}
   tier: usual
   args:
-    vars: {label: "Variables", help: "The row keys folded into the one row label column, outermost first. Blank: worked out from the table's row layers, which is usually right. e.g. c(\"AEBODSYS\", \"AEDECOD\")", type: "list<column>"}
-    name: {main: true, label: "Column name", help: "The name of the one row label column the row keys are folded into. Blank: row_label. e.g. \"stub\"", type: string}
-    indent: {main: true, label: "Indent", help: "The spaces a level of the folded rows is indented by. Blank: 4. e.g. 2", type: integer}
-    group_summary: {label: "Group summary rows", help: "Which rows are a group's own summary, printed on the group's heading row: \"empty\" a blank leaf, \"parent\" a leaf equal to its parent. Blank: both; \"none\" turns it off. e.g. \"empty\"", type: "enum[empty|parent]"}
-    before: {main: true, label: "Before the rows", help: "TRUE: the rows are folded before the pages and groups are made, which plan_cell_style() needs to see the rows as printed; a page or group key folded away is then not found. Blank (FALSE): folded last. e.g. TRUE", type: logical}
-    heading: {label: "Heading", help: "The row label column's header text when it is not its name; \"\" leaves it blank (a column header line naming the column still sets it). Blank: the name. e.g. \"\"", type: string}
+    vars: {label: {en: "Variables", ja: "変数"}, help: "The row keys folded into the one row label column, outermost first. Blank: worked out from the table's row layers, which is usually right. e.g. c(\"AEBODSYS\", \"AEDECOD\")", type: "list<column>"}
+    name: {main: true, label: {en: "Column name", ja: "列の名前"}, help: "The name of the one row label column the row keys are folded into. Blank: row_label. e.g. \"stub\"", type: string}
+    indent: {main: true, label: {en: "Indent", ja: "字下げ"}, help: "The spaces a level of the folded rows is indented by. Blank: 4. e.g. 2", type: integer}
+    group_summary: {label: {en: "Group summary rows", ja: "群の要約行"}, help: "Which rows are a group's own summary, printed on the group's heading row: \"empty\" a blank leaf, \"parent\" a leaf equal to its parent. Blank: both; \"none\" turns it off. e.g. \"empty\"", type: "enum[empty|parent]"}
+    before: {main: true, label: {en: "Before the rows", ja: "行の前に"}, help: "TRUE: the rows are folded before the pages and groups are made, which plan_cell_style() needs to see the rows as printed; a page or group key folded away is then not found. Blank (FALSE): folded last. e.g. TRUE", type: logical, default: false}
+    heading: {label: {en: "Heading", ja: "見出し"}, help: "The row label column's header text when it is not its name; \"\" leaves it blank (a column header line naming the column still sets it). Blank: the name. e.g. \"\"", type: string}
 
 plan_paginate_group:
   package: rtfreporter
   rank: 170
   stage: finishing
+  label: {en: "A page per group", ja: "群ごとに 1 ページ"}
   tier: other
   args:
-    col: {main: true, label: "Column", help: "The column whose value starts a new page, a page a value however long. Blank: the outermost row key. e.g. \"PARAM\"", type: column}
-    keep: {main: true, label: "Keep the column", help: "FALSE: the page column is not printed (each page's name says its value). Blank (TRUE): it is printed. e.g. FALSE", type: logical}
-    heading: {main: true, label: "Heading", help: "Each page's name as a template, {value} the page's value and {n} its subjects. Blank: the value. e.g. Parameter: {value}", type: string}
-    heading_at: {label: "Where the heading prints", help: "Where a page's name (its heading) prints: \"section\" the section header, \"title\" under the titles, \"none\" nowhere. Blank: the report's. e.g. \"title\"", type: "enum[section|title|none]"}
+    col: {main: true, label: {en: "Column", ja: "列"}, help: "The column whose value starts a new page, a page a value however long. Blank: the outermost row key. e.g. \"PARAM\"", type: column}
+    keep: {main: true, label: {en: "Keep the column", ja: "列を残す"}, help: "FALSE: the page column is not printed (each page's name says its value). Blank (TRUE): it is printed. e.g. FALSE", type: logical, default: true}
+    heading: {main: true, label: {en: "Heading", ja: "見出し"}, help: "Each page's name as a template, {value} the page's value and {n} its subjects. Blank: the value. e.g. Parameter: {value}", type: string}
+    heading_at: {label: {en: "Where the heading prints", ja: "見出しを出す場所"}, help: "Where a page's name (its heading) prints: \"section\" the section header, \"title\" under the titles, \"none\" nowhere. Blank: the report's. e.g. \"title\"", type: "enum[section|title|none]"}
 
 plan_row_group:
   package: rtfreporter
   rank: 190
   stage: finishing
+  label: {en: "Row groups", ja: "行のグループ"}
   tier: other
   args:
-    mode: {main: true, label: "Group boundary", help: "How a group's first row is found: \"value\" each run of equal values, \"indent\" a row whose cell is not indented, \"filled\" a row whose cell is not empty, \"auto\". e.g. \"value\"", type: "enum[auto|indent|value|filled]"}
-    collapse: {main: true, label: "A repeat printed once", help: "A repeated value printed once and then blank: TRUE in every row key, or in the columns named. e.g. TRUE", type: "list<integer>|list<column>|logical"}
-    group_col: {label: "Group column", help: "The column whose runs of the same value are the groups, for a table already built (not from an ARD; an ARD table's groups are its outermost row key). e.g. \"V1\"", type: column}
+    mode: {main: true, label: {en: "Group boundary", ja: "グループの区切り"}, help: "How a group's first row is found: \"value\" each run of equal values, \"indent\" a row whose cell is not indented, \"filled\" a row whose cell is not empty, \"auto\". e.g. \"value\"", type: "enum[auto|indent|value|filled]"}
+    collapse: {main: true, label: {en: "A repeat printed once", ja: "繰り返しを 1 回だけ表示"}, help: "A repeated value printed once and then blank: TRUE in every row key, or in the columns named. e.g. TRUE", type: "list<integer>|list<column>|logical"}
+    group_col: {label: {en: "Group column", ja: "グループの列"}, help: "The column whose runs of the same value are the groups, for a table already built (not from an ARD; an ARD table's groups are its outermost row key). e.g. \"V1\"", type: column, input: pick, choices: columns}
 
 plan_append:
   package: rtfreporter
   rank: 145
   stage: mapping
+  label: {en: "A part under the table", ja: "Table の下に足す部分"}
   tier: other
   description: Another table's rows under this one's -- its own data and items (a listing above, its summary below).
   args:
-    name: {type: string, description: "The part's name; part2, part3, ... by default."}
-    absent: {type: "enum[error|skip]", description: "A page group the part has no rows for: an error, or the page without the part."}
-    data: {description: "Where the part's rows come from: source: ard, or source: dataset with its dataset."}
-    content: {description: "The part's own table items: table_plan and the verbs that make its rows."}
+    name: {label: {en: "Part name", ja: "部の名前"}, type: string, description: "The part's name; part2, part3, ... by default."}
+    absent: {label: {en: "Page without the part", ja: "部の無いページ"}, type: "enum[error|skip]", description: "A page group the part has no rows for: an error, or the page without the part."}
+    data: {label: {en: "Part's data", ja: "部のデータ"}, description: "Where the part's rows come from: source: ard, or source: dataset with its dataset."}
+    content: {label: {en: "Part's items", ja: "部の項目"}, description: "The part's own table items: table_plan and the verbs that make its rows."}
 
 plan_blanks:
   package: rtfreporter
   rank: 150
   stage: finishing
+  label: {en: "Blank rows", ja: "空行"}
   tier: usual
   args:
-    where: {main: true, label: "Where", help: "Where blank rows go: \"between_groups\" between the outermost row groups, \"between_parts\" between a table's appended parts, \"records\" after each record of a listing, \"none\" none, or as R (the rows' numbers, 0 before the first). e.g. \"between_groups\"", type: "enum[between_groups|between_parts|records|none]|list<integer>|r"}
-    first: {main: true, label: "Before the first", help: "TRUE: a blank row at the top of every page. Blank: none. e.g. TRUE", type: logical}
-    last: {main: true, label: "After the last", help: "TRUE: a blank row at the bottom of every page. Blank: none. e.g. TRUE", type: logical}
-    counted: {label: "Count blank rows", help: "TRUE: the blank rows count toward a page's rows (plan_paginate_rows()' most rows a page), so a page never overflows. Blank: only the table's rows are counted. e.g. TRUE", type: logical}
+    where: {main: true, label: {en: "Where", ja: "置き場"}, help: "Where blank rows go: \"between_groups\" between the outermost row groups, \"between_parts\" between a table's appended parts, \"records\" after each record of a listing, \"none\" none, or as R (the rows' numbers, 0 before the first). e.g. \"between_groups\"", type: "enum[between_groups|between_parts|records|none]|list<integer>|r"}
+    first: {main: true, label: {en: "Before the first", ja: "最初の前"}, help: "TRUE: a blank row at the top of every page. Blank: none. e.g. TRUE", type: logical}
+    last: {main: true, label: {en: "After the last", ja: "最後の後"}, help: "TRUE: a blank row at the bottom of every page. Blank: none. e.g. TRUE", type: logical}
+    counted: {label: {en: "Count blank rows", ja: "空行も数える"}, help: "TRUE: the blank rows count toward a page's rows (plan_paginate_rows()' most rows a page), so a page never overflows. Blank: only the table's rows are counted. e.g. TRUE", type: logical}
 
 plan_paginate_rows:
   package: rtfreporter
   rank: 160
   stage: finishing
+  label: {en: "Page breaks by rows", ja: "行でページ分割"}
   tier: usual
   args:
-    max_rows: {main: true, label: "Most rows a page", help: "The most rows a page holds (blank rows too when they are counted: plan_blanks()). Blank: no limit. e.g. 45", type: integer}
-    split: {main: true, label: "Split rule", help: "What a page break may cut: \"group_safe\" whole groups to a page (a group that does not fit starts the next), \"group_force\" every most rows a page, a group cut with a continued label, \"rows\" before the rows given in break before rows. e.g. \"group_force\"", type: "enum[none|rows|group_safe|group_force|by_value]"}
-    break_before: {label: "Break before rows", help: "The row numbers a page starts at, for the split rule \"rows\". Used for breaks by hand. e.g. c(20, 40): pages 1-19, 20-39, 40-", type: "list<integer>"}
-    min_group_rows: {label: "Fewest rows of a group on a page", help: "The fewest rows of a group a page may end with: a group with fewer moves whole to the next page, so its heading is not left alone at the foot. Blank: 2; 0 turns it off. e.g. 3", type: integer}
-    cont_label: {label: "Continued label", help: "The text after a group's heading on the pages it continues onto. Blank: \" (Cont.)\". e.g. \" (continued)\"", type: string}
-    page_by: {main: true, label: "Page by", help: "The columns whose value starts a new page first, each page named after it; the most rows a page applies within each. e.g. \"PARAM\"", type: "list<column>"}
-    heading: {label: "Heading", help: "With page by one column: each page's name as a template, {value} the page's value and {n} its subjects. e.g. Treatment: {value} (N={n})", type: string}
-    heading_at: {label: "Where the heading prints", help: "Where a page's name (its heading) prints: \"section\" the section header, \"title\" under the titles, \"none\" nowhere. Blank: the report's. e.g. \"title\"", type: "enum[section|title|none]"}
-    na_label: {label: "Blank value's text", help: "With page by: the text a blank or missing page value prints as, in the page's heading ({value}) and its name. Blank: nothing, so \"Severity: {value}\" prints \"Severity: \". e.g. \"(Missing)\"", type: string}
+    max_rows: {main: true, label: {en: "Most rows a page", ja: "1 ページの最大行数"}, help: "The most rows a page holds (blank rows too when they are counted: plan_blanks()). Blank: no limit. e.g. 45", type: integer}
+    split: {main: true, label: {en: "Split rule", ja: "分割の規則"}, help: "What a page break may cut: \"group_safe\" whole groups to a page (a group that does not fit starts the next), \"group_force\" every most rows a page, a group cut with a continued label, \"rows\" before the rows given in break before rows. e.g. \"group_force\"", type: "enum[none|rows|group_safe|group_force|by_value]"}
+    break_before: {label: {en: "Break before rows", ja: "この行の前で改ページ"}, help: "The row numbers a page starts at, for the split rule \"rows\". Used for breaks by hand. e.g. c(20, 40): pages 1-19, 20-39, 40-", type: "list<integer>"}
+    min_group_rows: {label: {en: "Fewest rows of a group on a page", ja: "1 ページに残すグループの最少行数"}, help: "The fewest rows of a group a page may end with: a group with fewer moves whole to the next page, so its heading is not left alone at the foot. Blank: 2; 0 turns it off. e.g. 3", type: integer}
+    cont_label: {label: {en: "Continued label", ja: "続きのマーク"}, help: "The text after a group's heading on the pages it continues onto. Blank: \" (Cont.)\". e.g. \" (continued)\"", type: string}
+    page_by: {main: true, label: {en: "Page by", ja: "ページを分ける変数"}, help: "The columns whose value starts a new page first, each page named after it; the most rows a page applies within each. e.g. \"PARAM\"", type: "list<column>"}
+    heading: {label: {en: "Heading", ja: "見出し"}, help: "With page by one column: each page's name as a template, {value} the page's value and {n} its subjects. e.g. Treatment: {value} (N={n})", type: string}
+    heading_at: {label: {en: "Where the heading prints", ja: "見出しを出す場所"}, help: "Where a page's name (its heading) prints: \"section\" the section header, \"title\" under the titles, \"none\" nowhere. Blank: the report's. e.g. \"title\"", type: "enum[section|title|none]"}
+    na_label: {label: {en: "Blank value's text", ja: "空欄の値の文字"}, help: "With page by: the text a blank or missing page value prints as, in the page's heading ({value}) and its name. Blank: nothing, so \"Severity: {value}\" prints \"Severity: \". e.g. \"(Missing)\"", type: string}
 
 plan_paginate_cols:
   package: rtfreporter
   rank: 180
   stage: finishing
+  label: {en: "Column pages", ja: "列のページ分割"}
   tier: other
   args:
-    at: {main: true, label: "Break before columns", help: "The columns a new column page starts before. One of these, cut by or columns a page is given. e.g. \"Drug Y\"", type: "list<integer>|list<column>"}
-    cut_by: {main: true, label: "Cut by", help: "The column blocks as a list, or a separator in the columns' names (a block a key value). e.g. \"____\"", type: string}
-    every: {main: true, label: "Columns a page", help: "A new column page every this many columns (the columns on every page not counted). e.g. 3", type: integer}
-    keep: {main: true, label: "Columns on every page", help: "The columns every column page repeats. Blank: the row heading columns. e.g. \"row_label\"", type: "list<integer>|list<column>"}
-    fit: {main: true, label: "Fit to the page", help: "TRUE: every page's columns on page 1's scale, filling the width; FALSE: each column keeps its width. e.g. FALSE", type: logical}
-    allow_span_break: {main: true, label: "A spanning header may break", help: "FALSE: a page is not cut inside a spanning header's cell. Blank: TRUE. e.g. FALSE", type: logical}
-    order: {main: true, label: "Order of the pages", help: "The order the pages come out in: \"across\" a row's column pages one after another, \"down\" all the rows' pages of a block first. Blank: across. e.g. \"down\"", type: "enum[across|down]|list<enum[group|rows|cols]>"}
-    col_header: {label: "Header of the column pages", help: "What each column page's header becomes, as R. Used when the pages need a header other than the table's own. Blank: the table's header, cut with its columns."}
+    at: {main: true, label: {en: "Break before columns", ja: "この列の前で分ける"}, help: "The columns a new column page starts before. One of these, cut by or columns a page is given. e.g. \"Drug Y\"", type: "list<integer>|list<column>"}
+    cut_by: {main: true, label: {en: "Cut by", ja: "分ける単位"}, help: "The column blocks as a list, or a separator in the columns' names (a block a key value). e.g. \"____\"", type: string}
+    every: {main: true, label: {en: "Columns a page", ja: "1 ページの列数"}, help: "A new column page every this many columns (the columns on every page not counted). e.g. 3", type: integer}
+    keep: {main: true, label: {en: "Columns on every page", ja: "どのページにも出す列"}, help: "The columns every column page repeats. Blank: the row heading columns. e.g. \"row_label\"", type: "list<integer>|list<column>"}
+    fit: {main: true, label: {en: "Fit to the page", ja: "ページに合わせる"}, help: "TRUE: every page's columns on page 1's scale, filling the width; FALSE: each column keeps its width. e.g. FALSE", type: logical}
+    allow_span_break: {main: true, label: {en: "A spanning header may break", ja: "またがる見出しを途中で切ってよい"}, help: "FALSE: a page is not cut inside a spanning header's cell. Blank: TRUE. e.g. FALSE", type: logical}
+    order: {main: true, label: {en: "Order of the pages", ja: "ページの順"}, help: "The order the pages come out in: \"across\" a row's column pages one after another, \"down\" all the rows' pages of a block first. Blank: across. e.g. \"down\"", type: "enum[across|down]|list<enum[group|rows|cols]>"}
+    col_header: {label: {en: "Header of the column pages", ja: "列ページの列見出し"}, help: "What each column page's header becomes, as R. Used when the pages need a header other than the table's own. Blank: the table's header, cut with its columns."}
 
 plan_style:
   package: rtfreporter
   rank: 220
   stage: finishing
+  label: {en: "Table style", ja: "Table のスタイル"}
   tier: usual
   args:
-    table_width_pct: {label: "Table width (%)", help: "The table's width as a percent (0-100) of the page's writable width. e.g. 80", type: number}
-    table_width_pct_of_writable: {label: "Table width (% of the writable width)", help: "The table's width as a fraction (0-1) of the page's writable width (as table_width_pct, by 0-1). e.g. 0.8", type: number}
-    table_width_twips: {label: "Table width (twips)", help: "The table's width in twips (1/1440 inch); it wins over the widths in percent. Blank: the page's writable width. e.g. 12960", type: integer}
-    row_height_twips: {label: "Row height (twips)", help: "The height of the body's rows in twips (1/1440 inch). Blank: from the font size. e.g. 240", type: integer}
-    border_header: {label: "Header borders", help: "The rules of the column header's rows, one kind of row's (with border_spanning ... border_last_row: a style of one's own in place of Borders). e.g. \"bottom\"", type: "call<rtf_border>"}
-    border_spanning: {label: "Spanning header borders", help: "The rules under a spanning header's cells (the header over several columns). e.g. \"bottom\"", type: "call<rtf_border>"}
-    border_body: {label: "Body borders", help: "The rules of the body's rows. Blank: none between them. e.g. \"none\"", type: "call<rtf_border>"}
-    border_first_row: {label: "First row's border", help: "The rule over the table's first row (the top of the table). e.g. \"top\"", type: "call<rtf_border>"}
-    border_last_row: {label: "Last row's border", help: "The rule under the table's last row (the foot of the table). e.g. \"bottom\"", type: "call<rtf_border>"}
-    border_group: {label: "Row group's border", help: "The rule under the last row of each row group. Blank: none. e.g. \"bottom\"", type: "call<rtf_border>"}
-    align_count_pct: {main: true, label: "Align n (%)", type: "logical", help: "TRUE: the n and the (%) of a count cell line up from row to row. e.g. TRUE"}
-    border: {main: true, label: "Borders", type: "string|call<rtf_border>", help: "The table's borders: \"tfl\" (rules over and under the header and under the last row) or \"none\"; another style as a border ({fn: rtf_border, args: {all: true, inside_h: true}}). Blank: tfl. e.g. \"none\""}
-    font_size_half_points: {main: true, label: "Font size (half points)", type: "integer", help: "The table's font size in half points (18 = 9 pt). Blank: the document's. e.g. 16"}
-    font: {label: "Font", help: "The table's font. Blank: the document's font. e.g. \"Arial\"", type: "string|vec<string, string>"}
-    row_height_exact: {label: "Exact row height", help: "TRUE: the rows' height is exact (a longer text is cut); FALSE: it is the least height (a row grows). e.g. TRUE", type: "logical"}
-    header_row_height_twips: {label: "Header row height (twips)", help: "The height of the column header's rows in twips. Blank: as the body's. e.g. 300", type: "integer"}
-    blank_row_height_twips: {label: "Blank row height (twips)", help: "The height of the blank rows in twips: lower ones make a table shorter. Blank: as the body's. e.g. 120", type: "integer"}
-    cell_padding_left_twips: {label: "Cell padding, left (twips)", help: "The space between a cell's left border and its text, in twips. Blank: 0. e.g. 60", type: "integer"}
-    cell_padding_right_twips: {label: "Cell padding, right (twips)", help: "The space between a cell's text and its right border, in twips. Blank: 0. e.g. 60", type: "integer"}
-    cell_padding_top_twips: {label: "Cell padding, top (twips)", help: "The space between a cell's top border and its text, in twips. Blank: the document's (0). e.g. 20", type: "integer"}
-    cell_padding_bottom_twips: {label: "Cell padding, bottom (twips)", help: "The space between a cell's text and its bottom border, in twips. Blank: the document's (0). e.g. 20", type: "integer"}
-    cell_valign: {label: "Vertical alignment", help: "Where a cell's text sits from top to bottom: \"bottom\", \"top\" or \"center\". Blank: bottom. e.g. \"top\"", type: "enum[bottom|top|center]"}
-    table_align: {label: "Table alignment", help: "Where the table sits on the page: \"left\", \"center\" or \"right\". Blank: left. e.g. \"center\"", type: "enum[left|center|right]"}
-    markup: {label: "Markup in the text", help: "The marks in the cells' text turned into print: \"script\" ^{...} superscript and _{...} subscript, \"relational\" >= and <= as signs, \"all\", \"none\". Blank: the document's (script). e.g. \"all\"", type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
-    blank_row_normalize: {label: "Blank rows as one", help: "How blank rows are tidied: \"detect\" an empty row printed as one blank row, \"collapse\" several in a row made one. Blank: both. e.g. \"detect\"", type: "enum[detect|collapse|none]|list<enum[detect|collapse]>"}
-    header_align: {label: "Header alignment", help: "The column header's alignment: \"left\", \"center\" or \"right\". Blank: center. e.g. \"left\"", type: "enum[left|center|right]"}
-    header_bold: {label: "Header bold", help: "TRUE: the whole column header in bold. e.g. TRUE", type: "logical"}
-    header_italic: {label: "Header italic", help: "TRUE: the whole column header in italics. e.g. TRUE", type: "logical"}
-    align: {label: "Alignment", help: "The body's alignment: \"left\", \"center\" or \"right\" (one column's: Cell styles). e.g. \"center\"", type: "enum[left|center|right]"}
-    bold: {label: "Bold", help: "TRUE: the whole body in bold (some cells only: Cell styles). e.g. TRUE", type: "logical"}
-    italic: {label: "Italic", help: "TRUE: the whole body in italics (some cells only: Cell styles). e.g. TRUE", type: "logical"}
-    underline: {label: "Underline", help: "TRUE: the whole body underlined (some cells only: Cell styles). e.g. TRUE", type: "logical"}
+    table_width_pct: {label: {en: "Table width (%)", ja: "Table の幅（%）"}, help: "The table's width as a percent (0-100) of the page's writable width. e.g. 80", type: number}
+    table_width_pct_of_writable: {label: {en: "Table width (% of the writable width)", ja: "Table の幅（本文の幅に対する %）"}, help: "The table's width as a fraction (0-1) of the page's writable width (as table_width_pct, by 0-1). e.g. 0.8", type: number}
+    table_width_twips: {label: {en: "Table width (twips)", ja: "Table の幅（twip）"}, help: "The table's width in twips (1/1440 inch); it wins over the widths in percent. Blank: the page's writable width. e.g. 12960", type: integer}
+    row_height_twips: {label: {en: "Row height (twips)", ja: "行の高さ（twip）"}, help: "The height of the body's rows in twips (1/1440 inch). Blank: from the font size. e.g. 240", type: integer}
+    border_header: {label: {en: "Header borders", ja: "見出しの罫線"}, help: "The rules of the column header's rows, one kind of row's (with border_spanning ... border_last_row: a style of one's own in place of Borders). e.g. \"bottom\"", type: "call<rtf_border>"}
+    border_spanning: {label: {en: "Spanning header borders", ja: "結合見出しの罫線"}, help: "The rules under a spanning header's cells (the header over several columns). e.g. \"bottom\"", type: "call<rtf_border>"}
+    border_body: {label: {en: "Body borders", ja: "本体の罫線"}, help: "The rules of the body's rows. Blank: none between them. e.g. \"none\"", type: "call<rtf_border>"}
+    border_first_row: {label: {en: "First row's border", ja: "最初の行の罫線"}, help: "The rule over the table's first row (the top of the table). e.g. \"top\"", type: "call<rtf_border>"}
+    border_last_row: {label: {en: "Last row's border", ja: "最後の行の罫線"}, help: "The rule under the table's last row (the foot of the table). e.g. \"bottom\"", type: "call<rtf_border>"}
+    border_group: {label: {en: "Row group's border", ja: "行グループの罫線"}, help: "The rule under the last row of each row group. Blank: none. e.g. \"bottom\"", type: "call<rtf_border>"}
+    align_count_pct: {main: true, label: {en: "Align n (%)", ja: "n (%) を揃える"}, type: "logical", help: "TRUE: the n and the (%) of a count cell line up from row to row. e.g. TRUE"}
+    border: {main: true, label: {en: "Borders", ja: "罫線"}, type: "string|call<rtf_border>", help: "The table's borders: \"tfl\" (rules over and under the header and under the last row) or \"none\"; another style as a border ({fn: rtf_border, args: {all: true, inside_h: true}}). Blank: tfl. e.g. \"none\""}
+    font_size_half_points: {main: true, label: {en: "Font size (half points)", ja: "文字の大きさ（半ポイント）"}, type: "integer", help: "The table's font size in half points (18 = 9 pt). Blank: the document's. e.g. 16"}
+    font: {label: {en: "Font", ja: "フォント"}, help: "The table's font. Blank: the document's font. e.g. \"Arial\"", type: "string|vec<string, string>"}
+    row_height_exact: {label: {en: "Exact row height", ja: "行の高さを固定"}, help: "TRUE: the rows' height is exact (a longer text is cut); FALSE: it is the least height (a row grows). e.g. TRUE", type: "logical"}
+    header_row_height_twips: {label: {en: "Header row height (twips)", ja: "見出し行の高さ（twip）"}, help: "The height of the column header's rows in twips. Blank: as the body's. e.g. 300", type: "integer"}
+    blank_row_height_twips: {label: {en: "Blank row height (twips)", ja: "空行の高さ（twip）"}, help: "The height of the blank rows in twips: lower ones make a table shorter. Blank: as the body's. e.g. 120", type: "integer"}
+    cell_padding_left_twips: {label: {en: "Cell padding, left (twips)", ja: "セルの余白・左 (twips)"}, help: "The space between a cell's left border and its text, in twips. Blank: 0. e.g. 60", type: "integer"}
+    cell_padding_right_twips: {label: {en: "Cell padding, right (twips)", ja: "セルの余白・右 (twips)"}, help: "The space between a cell's text and its right border, in twips. Blank: 0. e.g. 60", type: "integer"}
+    cell_padding_top_twips: {label: {en: "Cell padding, top (twips)", ja: "セルの余白・上 (twips)"}, help: "The space between a cell's top border and its text, in twips. Blank: the document's (0). e.g. 20", type: "integer"}
+    cell_padding_bottom_twips: {label: {en: "Cell padding, bottom (twips)", ja: "セルの余白・下 (twips)"}, help: "The space between a cell's text and its bottom border, in twips. Blank: the document's (0). e.g. 20", type: "integer"}
+    cell_valign: {label: {en: "Vertical alignment", ja: "縦の揃え"}, help: "Where a cell's text sits from top to bottom: \"bottom\", \"top\" or \"center\". Blank: bottom. e.g. \"top\"", type: "enum[bottom|top|center]"}
+    table_align: {label: {en: "Table alignment", ja: "Table の配置"}, help: "Where the table sits on the page: \"left\", \"center\" or \"right\". Blank: left. e.g. \"center\"", type: "enum[left|center|right]"}
+    markup: {label: {en: "Markup in the text", ja: "文字の書式記法"}, help: "The marks in the cells' text turned into print: \"script\" ^{...} superscript and _{...} subscript, \"relational\" >= and <= as signs, \"all\", \"none\". Blank: the document's (script). e.g. \"all\"", type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
+    blank_row_normalize: {label: {en: "Blank rows as one", ja: "空行をまとめる"}, help: "How blank rows are tidied: \"detect\" an empty row printed as one blank row, \"collapse\" several in a row made one. Blank: both. e.g. \"detect\"", type: "enum[detect|collapse|none]|list<enum[detect|collapse]>"}
+    header_align: {label: {en: "Header alignment", ja: "見出しの揃え"}, help: "The column header's alignment: \"left\", \"center\" or \"right\". Blank: center. e.g. \"left\"", type: "enum[left|center|right]"}
+    header_bold: {label: {en: "Header bold", ja: "見出しを太字"}, help: "TRUE: the whole column header in bold. e.g. TRUE", type: "logical"}
+    header_italic: {label: {en: "Header italic", ja: "見出しを斜体"}, help: "TRUE: the whole column header in italics. e.g. TRUE", type: "logical"}
+    align: {label: {en: "Alignment", ja: "揃え"}, help: "The body's alignment: \"left\", \"center\" or \"right\" (one column's: Cell styles). e.g. \"center\"", type: "enum[left|center|right]"}
+    bold: {label: {en: "Bold", ja: "太字"}, help: "TRUE: the whole body in bold (some cells only: Cell styles). e.g. TRUE", type: "logical"}
+    italic: {label: {en: "Italic", ja: "斜体"}, help: "TRUE: the whole body in italics (some cells only: Cell styles). e.g. TRUE", type: "logical"}
+    underline: {label: {en: "Underline", ja: "下線"}, help: "TRUE: the whole body underlined (some cells only: Cell styles). e.g. TRUE", type: "logical"}
 
 plan_cell_style:
   package: rtfreporter
   rank: 230
   stage: finishing
+  label: {en: "Cell styles", ja: "セルのスタイル"}
   tier: other
   args:
-    cols: {main: true, label: "Columns styled", help: "The columns styled, by name (.values every value column). Blank: every column. e.g. .values", type: "list<column>"}
-    header: {main: true, label: "The column header", help: "TRUE: the column header is styled (not the body). e.g. TRUE", type: logical}
-    where: {main: true, label: "Rows styled", type: formula, description: "The rows it applies to, R over the table's columns: `!r \"p > 0.5\"`."}
-    indent_twips: {label: "Indent (twips)", help: "The left indent of the chosen cells' text in twips (not the header's). e.g. 240", type: integer}
-    border: {label: "Borders", help: "The chosen cells' borders, as R (rtf_border()). e.g. rtf_border(bottom = \"single\")", type: "call<rtf_border>"}
-    bold: {main: true, label: "Bold", type: "enum[TRUE|FALSE]|logical", help: "TRUE: the chosen cells in bold; FALSE: not. Blank: as they are. e.g. TRUE"}
-    italic: {main: true, label: "Italic", type: "enum[TRUE|FALSE]|logical", help: "TRUE: the chosen cells in italics; FALSE: not. Blank: as they are. e.g. TRUE"}
-    align: {main: true, label: "Alignment", type: "enum[left|center|right]", help: "The chosen cells' alignment: \"left\", \"center\" or \"right\". e.g. \"left\""}
-    color: {main: true, label: "Text colour", type: "colour|r|map<column, r>", help: "The chosen cells' text colour. e.g. \"#CC0000\""}
-    background: {main: true, label: "Background colour", type: "colour|r|map<column, r>", help: "The chosen cells' background colour. e.g. \"#F2F2F2\""}
-    underline: {label: "Underline", type: "enum[TRUE|FALSE]|logical", help: "The chosen cells underlined: TRUE / FALSE, or a condition as R. e.g. TRUE"}
+    cols: {main: true, label: {en: "Columns styled", ja: "書式を付ける列"}, help: "The columns styled, by name (.values every value column). Blank: every column. e.g. .values", type: "list<column>"}
+    header: {main: true, label: {en: "The column header", ja: "列見出し"}, help: "TRUE: the column header is styled (not the body). e.g. TRUE", type: logical}
+    where: {main: true, label: {en: "Rows styled", ja: "書式を付ける行（条件）"}, type: formula, description: "The rows it applies to, R over the table's columns: `!r \"p > 0.5\"`."}
+    indent_twips: {label: {en: "Indent (twips)", ja: "字下げ（twips）"}, help: "The left indent of the chosen cells' text in twips (not the header's). e.g. 240", type: integer}
+    border: {label: {en: "Borders", ja: "罫線"}, help: "The chosen cells' borders, as R (rtf_border()). e.g. rtf_border(bottom = \"single\")", type: "call<rtf_border>", input: r}
+    bold: {main: true, label: {en: "Bold", ja: "太字"}, type: "enum[TRUE|FALSE]|logical", help: "TRUE: the chosen cells in bold; FALSE: not. Blank: as they are. e.g. TRUE"}
+    italic: {main: true, label: {en: "Italic", ja: "斜体"}, type: "enum[TRUE|FALSE]|logical", help: "TRUE: the chosen cells in italics; FALSE: not. Blank: as they are. e.g. TRUE"}
+    align: {main: true, label: {en: "Alignment", ja: "揃え"}, type: "enum[left|center|right]", help: "The chosen cells' alignment: \"left\", \"center\" or \"right\". e.g. \"left\""}
+    color: {main: true, label: {en: "Text colour", ja: "文字の色"}, type: "colour|r|map<column, r>", help: "The chosen cells' text colour. e.g. \"#CC0000\""}
+    background: {main: true, label: {en: "Background colour", ja: "背景の色"}, type: "colour|r|map<column, r>", help: "The chosen cells' background colour. e.g. \"#F2F2F2\""}
+    underline: {label: {en: "Underline", ja: "下線"}, type: "enum[TRUE|FALSE]|logical", help: "The chosen cells underlined: TRUE / FALSE, or a condition as R. e.g. TRUE"}
 
 plan_hide:
   package: rtfreporter
   rank: 200
   stage: finishing
+  label: {en: "Hidden columns", ja: "隠す列"}
   tier: other
   description: Columns kept in the data but not printed.
   dots: {style: positional, key: cols, type: "list<column>"}
   args:
-    cols: {main: true, label: "Hidden columns", type: "list<column>", help: "The columns not printed, by name: a key a page break or an order reads stays in the data. e.g. TRT01AN"}
+    cols: {main: true, label: {en: "Hidden columns", ja: "隠す列"}, type: "list<column>", help: "The columns not printed, by name: a key a page break or an order reads stays in the data. e.g. TRT01AN"}
 
 plan_empty:
   package: rtfreporter
   rank: 75
   stage: mapping
+  label: {en: "Empty table", ja: "該当なしの表"}
   tier: other
   description: A table of no events -- one row saying so, and a footnote, only when the table has no row or its overall row is 0.
   args:
-    text: {type: string, description: "The row's text; blank: \"No subjects met the criteria.\"."}
-    when: {type: "enum[auto|no_rows|overall_zero]", description: "When the table counts as empty: no row (no_rows), its overall row 0 (overall_zero), or either (auto, the default)."}
-    position: {type: "enum[last|first|replace]", description: "Where the row goes: after the rows (last: the overall row's 0 stays), first, or alone (replace)."}
-    footnote: {type: string, description: "A footnote added only when the table is empty."}
+    text: {label: {en: "Row text", ja: "行の文字"}, type: string, description: "The row's text; blank: \"No subjects met the criteria.\"."}
+    when: {label: {en: "When the table is empty", ja: "空とみなす時"}, type: "enum[auto|no_rows|overall_zero]", default: auto, description: "When the table counts as empty: no row (no_rows), its overall row 0 (overall_zero), or either (auto, the default)."}
+    position: {label: {en: "Place", ja: "位置"}, type: "enum[last|first|replace]", default: last, description: "Where the row goes: after the rows (last: the overall row's 0 stays), first, or alone (replace)."}
+    footnote: {label: {en: "Footnote", ja: "脚注"}, type: string, description: "A footnote added only when the table is empty."}
 
 plan_col_header:
   package: rtfreporter
   rank: 130
   stage: finishing
+  label: {en: "Column header", ja: "列見出し"}
   tier: usual
   args:
-    header: {label: "Header lines", type: "rows<line, cols, span, text, align, bold, italic, border_top, border_bottom>|call<rtf_col_header>", print: unnamed, description: "The header: its cells, one a row (`line`, `cols`, `span`, `text`), or an rtf_col_header() call."}
-    lines: {label: "Header lines, a row at a time", type: "list<vec<string, string>>", description: "The header a row at a time: each row a map, a cell's name the columns it sits on."}
-    values: {label: "Values of the tokens", help: "What the header's tokens take: TRUE (list(n = TRUE)) reads each column's N from the ARD; numbers named by column give them by hand. e.g. list(n = TRUE)", type: "map<string, logical|vec<string, number>>"}
-    col_header_align: {label: "Alignment", help: "The column header's alignment: \"left\", \"center\" or \"right\". Blank: center. e.g. \"left\"", type: string}
-    header_sep: {label: "Header separator", help: "The text a plain table's column names are cut at into spanning header rows. e.g. \"____\"", type: "string"}
-    span: {label: "Cells over columns", help: "How a cell of the header lines over several columns is made: \"each\" a cell a column, \"one\" one cell over them all, or a key's name (a cell a value of that key: a spanner). Blank: each. e.g. \"one\"", type: "string|r"}
+    header: {label: {en: "Header lines", ja: "見出しの行"}, type: "rows<line, cols, span, text, align, bold, italic, border_top, border_bottom>|call<rtf_col_header>", print: unnamed, description: "The header: its cells, one a row (`line`, `cols`, `span`, `text`), or an rtf_col_header() call."}
+    lines: {label: {en: "Header lines, a row at a time", ja: "見出しの行（1 行ずつ）"}, type: "list<vec<string, string>>", description: "The header a row at a time: each row a map, a cell's name the columns it sits on."}
+    values: {label: {en: "Values of the tokens", ja: "トークンの値"}, help: "What the header's tokens take: TRUE (list(n = TRUE)) reads each column's N from the ARD; numbers named by column give them by hand. e.g. list(n = TRUE)", type: "map<string, logical|vec<string, number>>"}
+    col_header_align: {label: {en: "Alignment", ja: "揃え"}, help: "The column header's alignment: \"left\", \"center\" or \"right\". Blank: center. e.g. \"left\"", type: string}
+    header_sep: {label: {en: "Header separator", ja: "見出しの区切り"}, help: "The text a plain table's column names are cut at into spanning header rows. e.g. \"____\"", type: "string"}
+    span: {label: {en: "Cells over columns", ja: "複数列にまたがるセル"}, help: "How a cell of the header lines over several columns is made: \"each\" a cell a column, \"one\" one cell over them all, or a key's name (a cell a value of that key: a spanner). Blank: each. e.g. \"one\"", type: "string|r"}
 
 plan_columns:
   package: rtfreporter
   rank: 210
   stage: finishing
+  label: {en: "Column widths and alignment", ja: "列の幅と揃え"}
   tier: usual
   args:
-    widths: {main: true, label: "Widths", help: "The columns' relative widths, by column (.values every value column). e.g. row_label 5, .values 2", type: "vec<column, number>|list<number>"}
-    decimal: {main: true, label: "Decimal alignment", help: "The columns whose numbers line up at the decimal point (.values every value column). e.g. .values", type: "list<column>"}
-    row_title: {main: true, label: "Row title", help: "The row heading columns: left aligned (the others centred) and repeated on every column page. Blank: the first column. e.g. row_label", type: "list<column>|list<integer>"}
-    auto_width: {main: true, label: "Automatic width", help: "TRUE: each column sized to its content. e.g. TRUE", type: logical}
-    sep: {label: "Separator", help: "The text that joins several column keys in the value columns' names; the spanning header is cut at it. Blank: \"____\" (Placebo____F). Changed only when a value has \"____\" in it. e.g. \"__\"", type: string}
-    cell_format: {label: "Cell formats", help: "A function that formats the cells' text, or a list of them one a column, as R. e.g. function(x) toupper(x)"}
-    column_widths_twips: {label: "Column widths (twips)", help: "Each column's width in twips (1/1440 inch), as R; it replaces the widths above. e.g. c(3000, 1500, 1500)", type: "list<integer>"}
+    widths: {main: true, label: {en: "Widths", ja: "幅"}, help: "The columns' relative widths, by column (.values every value column). e.g. row_label 5, .values 2", type: "vec<column, number>|list<number>", input: table, columns: {column: {type: column, input: pick, choices: columns}, width: {type: number, input: text}}}
+    decimal: {main: true, label: {en: "Decimal alignment", ja: "小数点揃え"}, help: "The columns whose numbers line up at the decimal point (.values every value column). e.g. .values", type: "list<column>"}
+    row_title: {main: true, label: {en: "Row title", ja: "行の見出し"}, help: "The row heading columns: left aligned (the others centred) and repeated on every column page. Blank: the first column. e.g. row_label", type: "list<column>|list<integer>"}
+    auto_width: {main: true, label: {en: "Automatic width", ja: "自動の幅"}, help: "TRUE: each column sized to its content. e.g. TRUE", type: logical}
+    sep: {label: {en: "Separator", ja: "区切り"}, help: "The text that joins several column keys in the value columns' names; the spanning header is cut at it. Blank: \"____\" (Placebo____F). Changed only when a value has \"____\" in it. e.g. \"__\"", type: string}
+    cell_format: {label: {en: "Cell formats", ja: "セルの書式"}, help: "A function that formats the cells' text, or a list of them one a column, as R. e.g. function(x) toupper(x)"}
+    column_widths_twips: {label: {en: "Column widths (twips)", ja: "列の幅（twip）"}, help: "Each column's width in twips (1/1440 inch), as R; it replaces the widths above. e.g. c(3000, 1500, 1500)", type: "list<integer>", input: text}
 
 plan_listing:
   package: rtfreporter
@@ -412,24 +436,27 @@ plan_titles:
   package: rtfreporter
   rank: 240
   stage: finishing
+  label: {en: "Titles", ja: "タイトル"}
   tier: other
   dots: {style: positional, key: titles, type: "list<string>"}
   args:
-    pages: {type: "list<string>"}
+    pages: {label: {en: "Pages", ja: "ページ"}, type: "list<string>", input: text}
 
 plan_footnotes:
   package: rtfreporter
   rank: 250
   stage: finishing
+  label: {en: "Footnotes", ja: "脚注"}
   tier: other
   dots: {style: positional, key: footnotes, type: "list<string>"}
   args:
-    pages: {type: "list<string>"}
+    pages: {label: {en: "Pages", ja: "ページ"}, type: "list<string>", input: text}
 
 plan_after:
   package: rtfreporter
   rank: 260
   stage: finishing
+  label: {en: "R after the table", ja: "表の後の R"}
   tier: other
   dots: {style: positional, key: steps, type: "list<r>"}
 
@@ -456,18 +483,19 @@ normalize_ard:
   package: rtfreporter
   rank: 10
   stage: mapping
+  label: {en: "Normalize the ARD", ja: "ARD の正規化"}
   tier: required
   description: The ARD flattened -- groups and hierarchy as key columns -- before the plan.
   args:
-    keys: {label: "Keys", help: "The group variables made into columns of their own (TRT01A, SEX ...). Blank: every group of the ARD, which is what a table usually needs. e.g. TRT01A", type: "list<column>"}
-    hierarchy: {label: "Hierarchy", help: "The nested row keys, outermost first: each level's own summary rows become its rows (a SOC's row over its PTs). Blank: step 1's hierarchical analysis's, which is usually right; another may not match the ARD. e.g. AEBODSYS, AEDECOD", type: "list<column>"}
-    overall: {main: true, label: "Overall row", help: "The text of the row a hierarchical analysis makes over all its terms (the subjects with any event), put on the first hierarchy column. Blank: that row is left as it is. e.g. Any TEAE", type: string}
-    drop_contexts: {label: "Contexts dropped", help: "The kinds of ARD rows (context) left out before the table. Blank: the attributes rows and the total_n row, which no cell prints (the total N is still kept for a header). e.g. attributes", type: "list<string>"}
-    drop_key_variables: {label: "Drop the key variables", help: "The rows that count a group variable itself (the subjects per arm): TRUE takes them out; blank (FALSE) keeps them out of the body for a header's (N=n). Usually left blank. e.g. TRUE", type: logical}
-    stack: {main: true, label: "Stacked analyses", help: "Stacks parallel subgroup analyses (ALL, SEX, AGEGR1 ...) as one pair of keys, subgroup and subgroup_level, for a subgroup table. e.g. subgroup = ALL, SEX, AGEGR1", type: "map<string, list<column>|string>"}
-    stack_sep: {label: "Stack separator", help: "The text between a crossed layer's names and values (\" / \": AGEGR1 / SEX). e.g. \" x \"", type: string}
-    stack_nest: {label: "Nest the stack", help: "TRUE: a crossed layer's outer value goes to subgroup_outer (Age Group by Sex, 65-80, F as three levels). e.g. TRUE", type: logical}
-    combine: {label: "Combined variables", help: "Reads two or more ARD variables as one key column under a new name, e.g. a lab shift table's Low and High grades. e.g. worst_gr = ATOXGRL, ATOXGRH", type: "map<string, list<column>>"}
+    keys: {label: {en: "Keys", ja: "キー"}, help: "The group variables made into columns of their own (TRT01A, SEX ...). Blank: every group of the ARD, which is what a table usually needs. e.g. TRT01A", type: "list<column>"}
+    hierarchy: {label: {en: "Hierarchy", ja: "階層"}, help: "The nested row keys, outermost first: each level's own summary rows become its rows (a SOC's row over its PTs). Blank: step 1's hierarchical analysis's, which is usually right; another may not match the ARD. e.g. AEBODSYS, AEDECOD", type: "list<column>"}
+    overall: {main: true, label: {en: "Overall row", ja: "全体の行"}, help: "The text of the row a hierarchical analysis makes over all its terms (the subjects with any event), put on the first hierarchy column. Blank: that row is left as it is. e.g. Any TEAE", type: string}
+    drop_contexts: {label: {en: "Contexts dropped", ja: "除く context"}, help: "The kinds of ARD rows (context) left out before the table. Blank: the attributes rows and the total_n row, which no cell prints (the total N is still kept for a header). e.g. attributes", type: "list<string>", input: text}
+    drop_key_variables: {label: {en: "Drop the key variables", ja: "キー変数の行を除く"}, help: "The rows that count a group variable itself (the subjects per arm): TRUE takes them out; blank (FALSE) keeps them out of the body for a header's (N=n). Usually left blank. e.g. TRUE", type: logical}
+    stack: {main: true, label: {en: "Stacked analyses", ja: "スタック (stack)"}, help: "Stacks parallel subgroup analyses (ALL, SEX, AGEGR1 ...) as one pair of keys, subgroup and subgroup_level, for a subgroup table. e.g. subgroup = ALL, SEX, AGEGR1", type: "map<string, list<column>|string>", input: table}
+    stack_sep: {label: {en: "Stack separator", ja: "スタックの区切り"}, help: "The text between a crossed layer's names and values (\" / \": AGEGR1 / SEX). e.g. \" x \"", type: string}
+    stack_nest: {label: {en: "Nest the stack", ja: "スタックを入れ子に"}, help: "TRUE: a crossed layer's outer value goes to subgroup_outer (Age Group by Sex, 65-80, F as three levels). e.g. TRUE", type: logical}
+    combine: {label: {en: "Combined variables", ja: "まとめる変数"}, help: "Reads two or more ARD variables as one key column under a new name, e.g. a lab shift table's Low and High grades. e.g. worst_gr = ATOXGRL, ATOXGRH", type: "map<string, list<column>>", input: table}
 
 rtf_col_header:
   package: rtfreporter
@@ -3366,7 +3394,7 @@ tfl_ard_number:
     label: {type: string, label: {en: "Text ({value})", ja: "文字（{value}）"}}
     digits: {type: number, label: {en: Digits, ja: 桁}}
     x: {type: "number|string", label: {en: X, ja: x}}
-    "y": {type: "number|string", label: {en: Y, ja: y}}
+    "y": {type: "number|string", label: {en: "Y", ja: "y"}}
     hjust: {type: number, label: {en: Horizontal justification, ja: 横の位置合わせ}}
     vjust: {type: number, label: {en: Vertical justification, ja: 縦の位置合わせ}}
     size: {type: number, label: {en: Text size, ja: 文字の大きさ}}
@@ -3457,10 +3485,10 @@ scale_x_continuous:
   label: {en: X axis, ja: x 軸}
   visible: [limits, breaks, labels]
   groups:
-    - {label: {en: Range and breaks, ja: 範囲と刻み}, args: [limits, breaks]}
+    - {id: range, label: {en: Range and breaks, ja: 範囲と刻み}}
   args:
-    limits: {type: "list<number>|r", label: {en: Range, ja: 範囲}}
-    breaks: {type: "list<number>|call<seq, breaks_*, extended_breaks, pretty_breaks>|r", label: {en: Breaks, ja: 目盛り}}
+    limits: {type: "list<number>|r", group: range, label: {en: Range, ja: 範囲}}
+    breaks: {type: "list<number>|call<seq, breaks_*, extended_breaks, pretty_breaks>|r", group: range, label: {en: Breaks, ja: 目盛り}}
     labels: {type: "list<string>|call<label_*, *_format>|r", label: {en: Tick labels, ja: 目盛りのラベル}}
     expand: {type: "call<expansion, expand_scale, waiver>|list<number>|r", label: {en: Expansion, ja: 余白}}
 
@@ -3472,10 +3500,10 @@ scale_y_continuous:
   label: {en: Y axis, ja: y 軸}
   visible: [limits, breaks, labels]
   groups:
-    - {label: {en: Range and breaks, ja: 範囲と刻み}, args: [limits, breaks]}
+    - {id: range, label: {en: Range and breaks, ja: 範囲と刻み}}
   args:
-    limits: {type: "list<number>|r", label: {en: Range, ja: 範囲}}
-    breaks: {type: "list<number>|call<seq, breaks_*, extended_breaks, pretty_breaks>|r", label: {en: Breaks, ja: 目盛り}}
+    limits: {type: "list<number>|r", group: range, label: {en: Range, ja: 範囲}}
+    breaks: {type: "list<number>|call<seq, breaks_*, extended_breaks, pretty_breaks>|r", group: range, label: {en: Breaks, ja: 目盛り}}
     labels: {type: "list<string>|call<label_*, *_format>|r", label: {en: Tick labels, ja: 目盛りのラベル}}
     expand: {type: "call<expansion, expand_scale, waiver>|list<number>|r", label: {en: Expansion, ja: 余白}}
 
