@@ -234,8 +234,11 @@ test_that("enum values keep their simple form; a labels: map labels them", {
 test_that("the schema's plain and en / ja labels both read", {
   d <- tfl_arg_defs(fn = "plan_total")
   expect_identical(d$label_en[d$name == "label"], "Heading")
-  expect_true(is.na(d$label_ja[d$name == "label"]))
+  expect_false(is.na(d$label_ja[d$name == "label"]))
   expect_match(d$help_en[d$name == "label"], "Total column")
+  p <- .arg_table(list(a = list(label = "Plain")), "content", "f")
+  expect_identical(p$label_en, "Plain")
+  expect_true(is.na(p$label_ja))
   k <- tfl_arg_defs(fn = "ggsurvfit")
   expect_identical(k$label_en[k$name == "x"], "Fit")
   expect_false(is.na(k$label_ja[k$name == "x"]))
