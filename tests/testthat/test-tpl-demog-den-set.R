@@ -95,7 +95,7 @@ test_that("demog: % over the analysis set, a Missing row for the variable that h
   code <- paste(suppressMessages(tfl_ard_code(tfl_read_study_spec(d), output_id = "T-DD")),
                 collapse = "\n")
   expect_match(code, "denominator = adsl_sub", fixed = TRUE)
-  expect_match(code, "ard_bign <- adsl_sub |>", fixed = TRUE)
+  expect_match(code, ".ard_bign <- adsl_sub |>", fixed = TRUE)
 })
 
 test_that("demog: the report's filter makes the denominator that subset", {

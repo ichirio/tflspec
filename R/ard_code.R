@@ -1088,7 +1088,7 @@
 # ---- the program ---------------------------------------------------------
 
 # The analyses `a`: their data, their analysis sets, one statement each
-# (`ard_<id> <- call |> format |> tag_ard()`), bound into `ard`.  `levels`:
+# (`.ard_<id> <- call |> format |> tag_ard()`), bound into `ard`.  `levels`:
 # each report's code lists (.codelist_levels_by()).  One report's program
 # starts with `output_id <- "..."`; the study's has a part a report, each
 # report's ARD into `ards`.
@@ -1301,11 +1301,11 @@
                           code[length(code)] != "# ---- data ----") "", made)
     }
     if (!several) code <- c(code, "", "# ---- analyses ----")
-    # each analysis's ARD under a name of its own: ard_<id>
+    # each analysis's ARD under a name of its own: .ard_<id>
     top <- rows[is.na(par[rows])]
     fun_names <- .ard_fun_names()
     ard_names <- make.unique(c(taken, fun_names,
-                               paste0("ard_", gsub("[^a-z0-9]+", "_",
+                               paste0(".ard_", gsub("[^a-z0-9]+", "_",
                                                    tolower(a$analysis_id[top])))),
                              sep = "_")[-seq_along(c(taken, fun_names))]
     avoid <- c(taken, ard_names, paste0(ard_names, "_conditions"), paste0(ard_names, "_one"),
@@ -1552,7 +1552,7 @@
   paste0(data, " |>\n  ", gsub("\n", "\n  ", .lay(node, lead = 4L), fixed = TRUE))
 }
 
-# One analysis: `ard_<id> <- call |> ... |> tag_ard(...)`, its label a
+# One analysis: `.ard_<id> <- call |> ... |> tag_ard(...)`, its label a
 # comment above it
 .ard_analysis_lines <- function(x, r, keys, subj, data, name, avoid) {
   pid <- r$population_id
@@ -2197,7 +2197,7 @@
     return(c(.ard_analysis_lines(x, r, keys, subj, data, name, avoid),
              if (per_cols) .item_per_cols_lines(r, r, name)))
   }
-  nm <- paste0(name, "_", seq_along(ar))
+  nm <- paste0(if (identical(name, "ard")) ".ard" else name, "_", seq_along(ar))
   out <- character()
   for (k in seq_along(ar)) {
     rk <- r
