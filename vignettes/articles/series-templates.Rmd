@@ -1,5 +1,5 @@
 ---
-title: "Series base templates: tflspec_summary and tflspec_hierarchy"
+title: "Series base templates: tflspec_summary, tflspec_hierarchy and tflspec_event"
 ---
 
 ```{r, include = FALSE}
@@ -10,8 +10,8 @@ options(knitr.kable.NA = "")
 
 A report does not have to be written from nothing. It can name a
 **series base template** and write only what differs. This article shows
-what such a template is, the two base templates of the `tflspec_v1`
-series, `tflspec_summary` and `tflspec_hierarchy`, and the series values
+what such a template is, three base templates of the `tflspec_v1`
+series, `tflspec_summary`, `tflspec_hierarchy` and `tflspec_event`, and the series values
 a study can change. A last section is for the people who write
 templates. The data is the package's fictional example data (`adsl`,
 `adae`).
@@ -286,6 +286,61 @@ total of all columns):
 
 ```{r, opts.label = "code"}
 cat(ae$table_code, sep = "\n")
+```
+
+## `tflspec_event`
+
+### What it is for
+
+`tflspec_event` shows, for each kind of event, the number and
+percentage of subjects with at least one record of that kind: an
+overview of adverse events (any TEAE, serious, leading to death), of
+protocol deviations, of medications. One row is one kind. A row that no
+record meets is still printed, with 0.
+
+### Its arguments
+
+- `from` is required: the dataset of the records (`ADAE`).
+- `by` is required: the column variable(s).
+- `events` is required: the rows, in the table's order. Each row has an
+  `id` (its analysis id), a `label` (its text) and a `where` (R: the
+  records it counts; empty for every record). There is no default list.
+- `total`: a Total column.
+- `heading`: the heading of the row-label column (`Subjects with`).
+
+As in `tflspec_hierarchy`, the records to count are the report's own
+`where:` on the `rec_sub` data row, and the percentages are of `BIGN`.
+
+### Example: an overview of TEAEs
+
+```{cat, engine.opts = list(file = file.path(tempdir(), "T-AEOV.yml"), lang = "yaml")}
+id: T-AEOV
+kind: table
+label: Overview of treatment-emergent adverse events
+data:
+  - id: rec_sub
+    where: !r TRTEMFL == "Y"
+template:
+  name: tflspec_v1/tflspec_event
+  args:
+    from: ADAE
+    by: [TRT01A]
+    heading: Subjects with
+    events:
+      - {id: ANY, label: Any TEAE}
+      - {id: SER, label: Any serious TEAE, where: !r AESER == "Y"}
+      - {id: DTH, label: Any TEAE leading to death, where: !r AEOUT == "FATAL"}
+```
+
+```{r}
+ov <- run_report(file.path(tempdir(), "T-AEOV.yml"))
+unique(ov$ard$analysis_id)
+```
+
+The analysis is one item, run once in each row (its conditions):
+
+```{r, opts.label = "code"}
+cat(ov$ard_code, sep = "\n")
 ```
 
 ## Series values

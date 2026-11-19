@@ -51,7 +51,7 @@ test_that("every file in the tflspec_v1 series folder parses", {
 test_that("every template has its keys, a BIGN item and ids on its items", {
   skip_if(!nzchar(series_dir()), "the series folder is not installed")
   ts <- series_templates()
-  expect_length(ts, 11L)
+  expect_length(ts, 12L)
   # (a listing counts nothing: tflspec_listing has no analysis step)
   no_analysis <- "tflspec_listing.yml"
   for (nm in names(ts)) {
@@ -112,6 +112,11 @@ test_that("the percentages' denominator is BIGN and the items say how analysis i
   expect_identical(tl$params$columns$type, "rows<vars,label,width,collapse_repeats>")
   expect_identical(tl$params$by_break$default, "page")
   expect_identical(tl$style, "style_listing")
+  te <- ts[["tflspec_event.yml"]]
+  expect_true(isTRUE(te$params$events$required))
+  expect_null(te$params$events$default)
+  expect_identical(te$params$events$type, "rows<id,label,where>")
+  expect_null(te$params$analysis_ids)
   cmp <- ts[["forest_hr.yml"]]$params$comparison
   expect_identical(cmp$type, "string")
   expect_identical(cmp$input, "pick")
