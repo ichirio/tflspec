@@ -1,0 +1,322 @@
+# tflspec_v1/templates/tflspec_pk_conc.yml
+# Purpose: To list the concentrations of each subject, one row a subject and
+# the time points across, with their summary statistics (N, Mean, SD, SE,
+# CV(%), Median, Min, Max) under the same columns: one table, a page an
+# analyte and group.  The dataset (from, default ADPC), the time point, the
+# value, the analyte variable, the groups (by) and the analysis set
+# (population, default the series' PK set) are arguments; the records kept
+# (the analyte, the time points, ANL01FL ...) are the report's `data:` row
+# pc_sub (a `where:` there), never an argument.
+# The time points' order and the columns with no sample come from the
+# study's code lists (study$adam's levels), not from an argument; a study
+# with no code list for the time point gets them in the order of the text.
+# Below the limit of quantification (BLQ): with `blq` (an R condition on a
+# record, e.g. BLQFL == "Y") the listing prints blq_label for those records
+# (the data row makes pk_value, -Inf for them; AVAL is not changed).  The
+# summary reads the ADaM's values as they are (a record with a value); a
+# study's rule (BLQ before the dose is 0, after it missing ...) goes on the
+# report's pc_sub row as `derive:` or `then:`, for example
+#   data:
+#     - id: pc_sub
+#       then: !r 'dplyr::mutate(AVAL = dplyr::if_else(BLQFL %in% "Y",
+#         dplyr::if_else(ATPTN <= 0, 0, NA_real_), AVAL))'
+# Digits: an exception to "every template has formats: !series formats"
+# (canon 2026-11-16): the summary's digits are significant digits (4s),
+# which the series' decimals cannot say, so `formats` defaults to the
+# series' formats_pk and goes by the content path (plan_digits in the
+# summary part, canon 2026-11-12 "the content when the ARD cannot"); the
+# cells are tokens without digits ({mean}).  The listing's cell has its own
+# digits (cell, {value:.3s}).
+# No BIGN: the column headings are the time points, not the groups' N.
+# Fixed by its purpose: the listing above and its summary below (the part
+# "summary" of plan_append: a summary card appended by a report replaces
+# the part whole), the blank line between them, the row-label column
+# (row_label, before the time points), a page an analyte and group
+# (param_var, by; a page's name the last title line), method continuous.
+# Its content, in order: rework (the listing reads pc_sub's records),
+# table_plan, plan_cells, plan_append, plan_stub, plan_blanks,
+# plan_col_header, plan_paginate_rows, plan_columns, plan_paginate_cols.
+# Its derive: names (not arguments) are worked out from the arguments when
+# the template is resolved; a step whose derived value is nothing is left
+# out.  Its check: stops blq_label without blq.
+template: tflspec_pk_conc
+label: PK concentrations by subject with their summary
+params:
+  population:
+    type: string
+    input: pick
+    choices: populations
+    default: !series population_pk
+    step: data
+    tier: usual
+    description: The analysis set adsl_sub keeps (data.yml's populations).
+  from:
+    type: string
+    input: pick
+    choices: study_data
+    default: ADPC
+    step: data
+    tier: usual
+    description: The dataset of the concentrations (the data row pc_sub's from).
+  subject_vars:
+    type: list<column>
+    input: pick
+    choices: vars(adsl_sub)
+    ordered: true
+    default: []
+    step: data
+    tier: usual
+    description: ADSL variables added to each record (the data row pc_sub's add),
+      for the subject's row label (AGE, SEX); empty for none.
+  blq:
+    type: r
+    input: condition
+    choices: vars(pc_sub)
+    default: ~
+    step: data
+    tier: usual
+    description: The records below the limit of quantification (R, e.g. BLQFL ==
+      "Y"); the listing prints blq_label for them. Empty for none. The summary
+      reads the values as they are.
+  by:
+    type: list<column>
+    input: pick
+    choices: vars(adsl_sub)
+    required: true
+    step: analysis
+    tier: required
+    description: The groups, a page each (an arm); the summary is by them too.
+  param_var:
+    type: column
+    input: pick
+    choices: vars(pc_sub)
+    default: PARAMCD
+    step: analysis
+    tier: usual
+    description: The analyte, a page and an analysis each.
+  time:
+    type: column
+    input: pick
+    choices: vars(pc_sub)
+    default: ATPT
+    step: analysis
+    tier: usual
+    description: The time point, the columns (in the order of the study's code list).
+  value:
+    type: column
+    input: pick
+    choices: vars(pc_sub)
+    default: AVAL
+    step: analysis
+    tier: usual
+    description: The concentration.
+  statistics:
+    type: list<string>
+    input: pick
+    choices: stats
+    ordered: true
+    default: [N, mean, sd, se, cv, median, min, max]
+    step: analysis
+    tier: other
+    description: The statistics the ARD computes (every one the cells name).
+  analysis_ids:
+    type: map<string,string>
+    input: table
+    choices: fixed
+    default: ~
+    step: analysis
+    tier: other
+    description: An analysis id for an analyte, keyed by its value (DRUGX);
+      empty for the analyte's value.
+  formats:
+    type: map<string,number|string>
+    input: table
+    choices: stats
+    free: true
+    default: !series formats_pk
+    step: content
+    tier: usual
+    description: The digits of each summary statistic, decimals (1) or
+      significant digits (4s); the summary's plan_digits.
+  cell:
+    type: string
+    input: text
+    default: "{value:.3s}"
+    step: content
+    tier: usual
+    description: A subject's concentration in the listing ({value} the value;
+      3 significant digits).
+  blq_label:
+    type: string
+    input: text
+    default: BLQ
+    step: content
+    tier: other
+    description: What the listing prints for a BLQ record (with blq).
+  na_text:
+    type: string
+    input: text
+    default: ""
+    step: content
+    tier: other
+    description: What the listing prints for no value (a missing value, no sample).
+  subject:
+    type: string
+    input: text
+    default: "{USUBJID}"
+    step: content
+    tier: usual
+    description: A subject's row label ({<variable>}, e.g. {USUBJID}/{AGE}/{SEX}
+      with subject_vars AGE and SEX).
+  subject_heading:
+    type: string
+    input: text
+    default: Subject ID
+    step: content
+    tier: usual
+    description: The heading of the subjects' column.
+  time_heading:
+    type: string
+    input: text
+    default: Time Relative to Dose
+    step: content
+    tier: usual
+    description: The heading over the time points; empty for one heading line.
+  summary_label:
+    type: string
+    input: text
+    default: Summary Statistics
+    step: content
+    tier: usual
+    description: The summary's heading row.
+  cells:
+    type: map<string,string>
+    input: table
+    ordered: true
+    default:
+      N: "{N}"
+      Mean: "{mean}"
+      SD: "{sd}"
+      SE: "{se}"
+      CV(%): "{cv}"
+      Median: "{median}"
+      Min: "{min}"
+      Max: "{max}"
+    step: content
+    tier: usual
+    description: The summary's rows, label to cell template, in order (tokens
+      without digits; the digits are formats').
+  page_heading:
+    type: string
+    input: text
+    default: ~
+    step: content
+    tier: usual
+    description: A page's name, the last title line ({<variable>} the analyte's
+      and the groups' values); empty for their values, a line each.
+  decimal_align:
+    type: logical
+    input: pick
+    choices: fixed
+    default: true
+    step: content
+    tier: other
+    description: The values aligned on the decimal point.
+  split_at:
+    type: string
+    input: text
+    default: ~
+    step: content
+    tier: other
+    description: The time point that starts a second block of columns; empty
+      for one block.
+  max_rows:
+    type: number
+    input: text
+    default: !series max_rows
+    step: content
+    tier: other
+    description: The most rows a page holds.
+extends: !series extends
+style: !series style_listing
+derive:
+  # the analyte and the groups: a page each
+  pk_pages: {value: ["{param_var}", "{by}"]}
+  # with blq: the listing's value pk_value, -Inf for a BLQ record (the data
+  # row's derive), its cell blq_label
+  pk_blq_derive:
+    if: "{blq}"
+    then: {pk_value: !r 'dplyr::if_else(({blq}) %in% TRUE, -Inf, {value})'}
+  pk_shown: {if: "{blq}", then: pk_value, else: "{value}"}
+  pk_cells:
+    if: "{blq}"
+    then: {default: [!r 'value == -Inf ~ "{blq_label}"', "{cell}"], na: "{na_text}"}
+    else: {default: "{cell}", na: "{na_text}"}
+  # the column headings: the time headings under time_heading (one line
+  # without it)
+  pk_header:
+    if: "{time_heading}"
+    then:
+      lines:
+        - {row_label: "", .values: "{time_heading}"}
+        - {row_label: "{subject_heading}", .values: "{{col}}"}
+      span: [{.values: one}, {.values: each}]
+    else:
+      lines: [{row_label: "{subject_heading}", .values: "{{col}}"}]
+  # a page's name: page_heading, else a token a page column, a line each
+  # ("{PARAMCD}\n{TRT01A}"; pk_rb is a closing brace)
+  pk_rb: {value: "}}"}
+  pk_tokens: {each: "{pk_pages}", to: "{{{item}{pk_rb}"}
+  pk_tokens_text: {join: "{pk_tokens}", sep: "\n"}
+  pk_title: {if: "{page_heading}", then: "{page_heading}", else: "{pk_tokens_text}"}
+  pk_columns: {if: "{decimal_align}", then: {decimal: .values}}
+  pk_split: {if: "{split_at}", then: {at: "{split_at}", order: down}}
+  pk_label_set: {given: [blq_label]}
+check:
+  - fail: {if: "{blq}", else: "{pk_label_set}"}
+    message: "blq_label needs blq (the condition of a BLQ record)."
+data:
+  - id: adsl_sub
+    from: ADSL
+    population: "{population}"
+  - id: pc_sub
+    from: "{from}"
+    subjects_in: adsl_sub
+    add: ["{by}", "{subject_vars}"]
+    where: ~
+    derive: "{pk_blq_derive}"
+analysis:
+  - id: CONC
+    analyses: {per: ["{param_var}"], ids: "{analysis_ids}"}   # DRUGX, ...
+    label: Concentrations summarised by time point
+    method: continuous
+    data: pc_sub
+    where: !r '!is.na({value})'
+    by: ["{by}", "{param_var}", "{time}"]
+    variables: ["{value}"]
+    statistics: "{statistics}"
+    # (a time point with no value makes no row: its summary cells are empty)
+    post: !r drop_empty_groups()
+content:
+  # (the listing reads the records of pc_sub; the summary part the ARD)
+  - rework: {source: dataset, data: pc_sub}
+  - table_plan: {cols: "{time}", rows: {subject: !r '~ "{subject}"'}, value: "{pk_shown}"}
+  - plan_cells: "{pk_cells}"
+  - plan_append:
+      name: summary
+      data: {source: ard}
+      content:
+        - normalize_ard: {}
+        - table_plan: {cols: "{time}", rows: {block: !r '~ "{summary_label}"'}}
+        - plan_cells: {continuous: "{cells}"}
+        - plan_digits: {continuous: "{formats}"}
+  - plan_stub: {name: row_label, before: true}
+  - plan_blanks: {first: true, last: true, where: between_parts}
+  - plan_col_header: "{pk_header}"
+  - plan_paginate_rows: {page_by: "{pk_pages}", max_rows: "{max_rows}", heading: "{pk_title}",
+                         heading_at: title}
+  - plan_columns: "{pk_columns}"
+  - plan_paginate_cols: "{pk_split}"
+page:
+  titles: ~
+  footnotes: ~
