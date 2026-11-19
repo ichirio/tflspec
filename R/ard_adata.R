@@ -334,11 +334,10 @@
 
 # The comment above a built dataset (DATA-PART 6, N11): what it is -- the
 # subjects, the records, the denominator -- and where each step takes its
-# input from, then the definition's own label.  Lines of at most 80 columns.
-.adata_comment <- function(id, what = NULL, label = NA) {
-  txt <- paste(c(paste0(id, ":"), what,
-                 if (!is.na(label) && nzchar(trimws(label))) trimws(label)),
-               collapse = " ")
+# input from (a definition has no label: its id names it).  Lines of at most
+# 80 columns.
+.adata_comment <- function(id, what = NULL) {
+  txt <- paste(c(paste0(id, ":"), what), collapse = " ")
   paste0("# ", strwrap(txt, width = 78L, simplify = TRUE))
 }
 
@@ -354,14 +353,13 @@
   lv <- if (length(levels)) .levels_step
   for (id in ids) {
     r <- ad[match(id, ad$data_id), ]
-    lbl <- r$label %||% NA
     # written as R: its value is the data.  What comes before its last
     # expression stays as it is, the last is the data (.code_as_program()); R
     # that assigns a name the program has runs in local()
     if (!is.na(r$code %||% NA)) {
-      # what it is, as the definition says, above it (a reviewer maps the SAP
-      # to the code by it)
-      if (!is.na(lbl) && nzchar(trimws(lbl))) out <- c(out, .adata_comment(id, NULL, lbl))
+      # what it is, from its keys, above it
+      out <- c(out, .adata_comment(id, if (!is.na(r$from %||% NA))
+        sprintf("made by its code, from %s.", r$from) else "made by its code."))
       code <- trimws(r$code)
       # (made from another analysis data, which has the code lists on
       # already: none after it -- a level its code adds, demog's Missing,
@@ -437,7 +435,7 @@
                         pop, if (length(take)) sprintf(", %s from ADSL", paste(take, collapse = ", ")) else "",
                         if (!is.null(whr)) "; where" else ""),
       made = if (id %in% dens) "the denominator." else sprintf("made from %s.", src))
-    out <- c(out, .adata_comment(id, what, lbl))
+    out <- c(out, .adata_comment(id, what))
     # what follows the rows: the columns added, derived, the columns kept,
     # one row per ..., its code lists; then the row's own R (`then`)
     steps <- c(steps0, .derive_steps(r$derive),
