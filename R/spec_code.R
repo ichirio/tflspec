@@ -1610,10 +1610,10 @@ tfl_content_run <- function(output, data) {
 #'   replaces one of the template's layers) writes its design.  A figure
 #'   of a series template (`<series>/<template>`, resolved by
 #'   [tfl_template_resolve()]) whose template names its content in `figure:`
-#'   (`km_curves`, `forest_hr`): `content <- tflspec::km_curves(km_fit =
-#'   km_fit, ard = ard, params = list(...))` -- the function [tfl_figure_fn()]
-#'   finds, with the report's resolved arguments, one a line (the model
-#'   `km_fit` written before it).
+#'   (`fig_km`, `forest_hr`): `content <- tflspec::fig_km(km_fit = km_fit,
+#'   ard = ard, legend = "bottom", ...)` (`forest_hr(ard = ard, params =
+#'   list(...))`) -- the function [tfl_figure_fn()] finds, with the report's
+#'   resolved arguments, one a line (the model `km_fit` written before it).
 #' @param study The study ([tfl_read_study_spec()]) or its folder; for a listing
 #'   of records (`data: {source: dataset}`) the code starts with its data
 #'   part, as [tfl_listing_code()] `part = "data"` writes it (the dataset

@@ -1,5 +1,5 @@
-# The YAML spec as the sheets tflplanner's screens still work on (stage 1's
-# adapter): the inverse of the one-time conversion.  The report list and
+# The YAML spec as the sheets tflplanner's screens still work on (the first
+# phase's adapter): the inverse of the one-time conversion.  The report list and
 # the page parts come back as the report sheets and the `_tflplanner`
 # sheet, a report's `content:` as the table sheets through the bridge
 # (`.plan_sheets_from_content()`), the data as the ARD sheets, a listing's

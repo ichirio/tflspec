@@ -53,5 +53,5 @@ forest_hr(hr, list(favours = c("Favours Drug X", "Favours Control")))
 \dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=tfl_figure_fn]{tfl_figure_fn()}}, \code{\link[=km_curves]{km_curves()}}
+\code{\link[=tfl_figure_fn]{tfl_figure_fn()}}, \code{\link[=fig_km]{fig_km()}}
 }

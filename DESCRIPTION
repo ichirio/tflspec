@@ -53,6 +53,7 @@ Suggests:
     ggtext,
     haven,
     jsonvalidate,
+    km.ci,
     magrittr,
     mmrm (>= 0.3.18),
     officer,

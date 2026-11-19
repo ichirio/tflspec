@@ -337,8 +337,8 @@ A figure report may name its content as a figure content function. The
 code SPEC key is `figure:`, with the function's `name` and its `args`.
 There are two functions:
 
-- `km_curves`: Kaplan-Meier curves. Its `args` are the model's `by`,
-  `time` and `censor`, then the function's params (`time_unit`,
+- `fig_km`: the Kaplan-Meier figure. Its `args` are the model's `by`,
+  `time` and `censor`, then the function's own arguments (`time_unit`,
   `x_label`, `y_label`, `legend`).
 - `forest_hr`: a forest plot of hazard ratios. It reads the ARD's `HR`
   analysis. Its `args` are its params (`comparison`, `favours` ...).
@@ -364,7 +364,7 @@ ard:
   analyses:
     - {id: BIGN, method: categorical, data: adsl_sub, variables: [TRT01A]}
 figure:
-  name: km_curves
+  name: fig_km
   args:
     by: TRT01A
     time: AVAL
@@ -406,5 +406,5 @@ ard <- cards::ard_tabulate(adsl_sub, variables = TRT01A)
 ard$analysis_id <- "BIGN"
 
 km_fit <- ggsurvfit::survfit2(ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ TRT01A, data = adtte_sub)
-km_curves(km_fit, ard = ard, params = list(time_unit = "months", legend = "bottom"))
+fig_km(km_fit, ard = ard, time_unit = "months", legend = "bottom")
 ```

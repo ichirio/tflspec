@@ -329,7 +329,7 @@ reference:
       what the template's analysis makes (a model, the ARD).
     contents:
       - tfl_figure_fn
-      - km_curves
+      - fig_km
       - forest_hr
   - subtitle: Figure style
     desc: Every look-and-feel value of a study's figures, in one place.

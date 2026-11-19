@@ -10,18 +10,18 @@ tfl_figure_fn(name)
 \item{name}{The name a template gives in \verb{figure:}.}
 }
 \value{
-The function: \code{\link[=km_curves]{km_curves()}} or \code{\link[=forest_hr]{forest_hr()}}.
+The function: \code{\link[=fig_km]{fig_km()}} or \code{\link[=forest_hr]{forest_hr()}}.
 }
 \description{
 A figure template in code-SPEC form names its content -- the ggplot
 drawn from what its analysis step makes -- in its \verb{figure:} key:
-\code{km_simple} names \code{km_curves}, \code{forest_hr} names \code{forest_hr}.  This
+\code{km_simple} names \code{fig_km}, \code{forest_hr} names \code{forest_hr}.  This
 returns the R function of that name, as \code{tfl_definition()} returns a
 definition.
 }
 \examples{
-tfl_figure_fn("km_curves")
+tfl_figure_fn("fig_km")
 }
 \seealso{
-\code{\link[=km_curves]{km_curves()}}, \code{\link[=forest_hr]{forest_hr()}}
+\code{\link[=fig_km]{fig_km()}}, \code{\link[=forest_hr]{forest_hr()}}
 }
