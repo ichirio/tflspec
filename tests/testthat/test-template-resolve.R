@@ -256,6 +256,9 @@ test_that("tflspec_summary: demog's arguments give demog's code SPEC; the analys
   sm <- dm
   sm$template$name <- "tflspec_v1/tflspec_summary"
   a <- tfl_template_resolve(dm, study = tr_study())
+  # (demog's value_labels default, the study lists by name, given to the
+  # summary, whose value_labels has no default)
+  sm$template$content <- list(value_labels = attr(a, "args")$value_labels)
   b <- tfl_template_resolve(sm, study = tr_study())
   for (k in c("id", "kind", "label", "extends", "style", "data", "ard", "content", "page")) {
     expect_identical(b[[k]], a[[k]], info = k)

@@ -37,7 +37,7 @@ content:
   - plan_labels: {AGE: "Age (years)", AGEGR1: "Age group, n (%)", SEX: "Sex, n (%)", RACE: "Race, n (%)", ECOGBL: "Baseline ECOG, n (%)"}
   - plan_cells:
       continuous:
-        n: "{N}"
+        "n": "{N}"
         Mean (SD): "{mean} ({sd})"
         Median: "{median}"
         Min, Max: "{min}, {max}"

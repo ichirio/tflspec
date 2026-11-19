@@ -1467,6 +1467,9 @@ tfl_content_run <- function(output, data) {
                              "yet; tables, listings and figures, for now."), output$kind))
   }
   for (it in output$content) .schema_need_version(it)
+  # the study's code lists the content names (`!r study$codelists$SEX`): their
+  # values, as the program's setup has them
+  output$content <- .study_refs_eval(output$content, attr(output, "study_codelists"))
   # a template's `widths = "auto"` with no code list for the arms: the ARD's
   output$content <- .tpl_auto_widths(output, data)
   # the code lists' labels: the ARD holds the codes, so the plan has them
