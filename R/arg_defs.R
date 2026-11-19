@@ -85,8 +85,11 @@
   function(x) structure(list(value = x), class = "tfl_tagged", tag = tag)
 }
 
+# (YAML 1.1's implicit booleans, n, y, yes, no, on, off, stay text as
+# .yaml_handlers() keeps them: a cells key `n:` is the statistic n)
 .arg_yaml_handlers <- function() {
-  stats::setNames(lapply(.arg_tags, .arg_tagged), .arg_tags)
+  c(stats::setNames(lapply(.arg_tags, .arg_tagged), .arg_tags),
+    .yaml_handlers()[c("bool#yes", "bool#no")])
 }
 
 .arg_default_kind <- function(x) {

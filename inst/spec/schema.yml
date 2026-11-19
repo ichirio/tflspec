@@ -136,7 +136,7 @@ plan_stat_groups:
   stage: mapping
   tier: other
   description: Columns made of groups of statistics.
-  dots: {style: named, type: "list<stat>", description: "A group's name and its statistics.", example: {n: N, orr_ci: [n, estimate, conf.low, conf.high]}}
+  dots: {style: named, type: "list<stat>", description: "A group's name and its statistics.", example: {"n": N, orr_ci: [n, estimate, conf.low, conf.high]}}
   args:
     .variables: {label: "Variables split", help: "The variables whose statistics are split into the groups. Blank: every variable. e.g. c(\"AGE\", \"BMI\")", type: "list<column>"}
     .others: {label: "Group of the other variables", help: "The group the other variables' statistics go to whole. Blank: none. e.g. \"Summary\"", type: string}
