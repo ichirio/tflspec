@@ -42,6 +42,10 @@ test_that("every file in the tflspec_v1 series folder parses", {
   expect_true(is.list(s$values))
   expect_null(s$values$header_n)
   expect_null(s$values$overall_row)
+  # each description is one text, of a key of values:
+  expect_true(length(s$descriptions) > 0L)
+  expect_identical(setdiff(names(s$descriptions), names(s$values)), character())
+  expect_true(all(vapply(s$descriptions, is.character, logical(1))))
 })
 
 test_that("every template has its keys, a BIGN item and ids on its items", {
