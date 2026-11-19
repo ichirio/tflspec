@@ -83,18 +83,10 @@ test_that("a pattern's `page:` stops: the page is the page configuration's, not 
   expect_error(tfl_read_study_spec(d), "pp.yml `page:` moved to a page configuration")
 })
 
-test_that("a pattern with code lists only: the sheets work, and its lists stay in YAML, said (#662)", {
+test_that("a pattern with code lists stops: no layer gives a report a list", {
   skip_on_cran()
   d <- pnp_study(pattern = pnp_pat)
-  # (the stated limit: the lists have no sheet, so a study written from the
-  # sheets into a new folder has not got them; the note says so, and the
-  # output is not asserted identical there)
-  rt <- pnp_check(d, same = FALSE)
-  expect_identical(rt$sheets$table$report$output_id[!is.na(rt$sheets$table$report$output_id)], c("T-A", "@pp"))
-  n <- pnp_notes(rt$sheets)
-  expect_identical(n$output, "@pp")
-  expect_match(n$reason, "stay in YAML")
-  expect_identical(nrow(rt$sheets$table$codelists), 0L)
+  expect_error(tfl_read_study_spec(d), "a pattern holds no code list", fixed = TRUE)
 })
 
 test_that("the defaults' code lists are said to stay in YAML (#662)", {
