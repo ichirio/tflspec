@@ -1,0 +1,303 @@
+# tflspec_v1/templates/tflspec_by_visit.yml
+# Purpose: To summarise a BDS dataset (ADLB, ADVS, ADEG, ...) by parameter
+# and visit: the statistics of the value and of the change from baseline
+# in each group, a page a parameter.  Not lab-specific: the dataset (from,
+# no default), the value and change variables, the parameter and visit
+# variables and the analysis set (population) are arguments; the records
+# kept are the report's `data:` row rec_sub (a `where:` there), never an
+# argument, for example the analysed visits and the baseline:
+#   data:
+#     - id: rec_sub
+#       where: !r PARAMCD %in% c("ALT", "HGB") & (ONTRTFL == "Y" | ABLFL == "Y")
+# The baseline is a visit like the others (its records kept by rec_sub's
+# where, its place first in the visit code list): its value cells are the
+# baseline's statistics, its change cells empty (the change item reads the
+# records whose change is not missing and keeps no group with none, so the
+# ARD has no N = 0 change rows).  The visits' and parameters' order and
+# text come from the study's code lists, not from an argument.
+# The decimals are `formats`, by statistic, for every parameter; a
+# parameter with decimals of its own is a plan_digits card the report
+# appends, by its code:
+#   content:
+#     - plan_digits: {PARAMCD: {GLUC: {mean: 2, sd: 3, median: 2, min: 1, max: 1}}}
+# A page a parameter is fixed (a new page at each parameter, its rows cut
+# at max_rows with a visit's rows kept whole); a report that wants one page
+# appends a plan_paginate card.
+# Fixed by its purpose: the ARD (BIGN; VALUE, the value of every record;
+# CHANGE, the change of the records that have one; each by the groups,
+# the parameter and the visit, plus a call by the parameter and the visit
+# alone for the Total column when total is on), an analysis a parameter
+# (its id the parameter's code, VALUE and CHANGE alike), a page a
+# parameter (plan_paginate_rows' page_by), BIGN's N in the group headings.  Its
+# content, in order: table_plan, plan_labels, plan_sort (layout: rows),
+# plan_total (total), plan_cells, plan_col_header, plan_paginate_rows,
+# plan_hide (the parameter is in the page's heading).  Its derive: names
+# (not arguments) are worked out from the arguments when the template is
+# resolved; a call or a step whose derived value is nothing is left out.
+template: tflspec_by_visit
+label: Value and change from baseline by visit
+params:
+  population:
+    type: string
+    input: pick
+    choices: populations
+    default: !series population_safety
+    step: data
+    tier: usual
+    description: The analysis set adsl_sub keeps (data.yml's populations).
+  from:
+    type: string
+    input: pick
+    choices: study_data
+    required: true
+    step: data
+    tier: required
+    description: The BDS dataset of the records (the data row rec_sub's from),
+      e.g. ADLB, ADVS or ADEG.
+  by:
+    type: list<column>
+    input: pick
+    choices: vars(adsl_sub)
+    required: true
+    step: analysis
+    tier: required
+    description: The column variable(s); the groups across.
+  value:
+    type: column
+    input: pick
+    choices: vars(rec_sub)
+    default: AVAL
+    step: analysis
+    tier: usual
+    description: The value variable, summarised for every record.
+  change:
+    type: column
+    input: pick
+    choices: vars(rec_sub)
+    default: CHG
+    step: analysis
+    tier: usual
+    description: The change from baseline variable (PCHG for the percent
+      change), summarised for the records that have one.
+  param_var:
+    type: column
+    input: pick
+    choices: vars(rec_sub)
+    default: PARAMCD
+    step: analysis
+    tier: usual
+    description: The parameter, a page and an analysis each.
+  visit_var:
+    type: column
+    input: pick
+    choices: vars(rec_sub)
+    default: AVISIT
+    step: analysis
+    tier: usual
+    description: The visit, a block of rows each, in the order of its code list.
+  total:
+    type: logical
+    input: pick
+    choices: fixed
+    default: !series total
+    step: analysis
+    tier: usual
+    description: A Total column, the records of all the groups (with the
+      rows layout; the value and change columns of the cols layout take none).
+  denominator:
+    type: string
+    input: pick
+    choices: report_data
+    default: adsl_sub
+    step: analysis
+    tier: usual
+    description: The data row whose subjects are the group Ns (BIGN) of the
+      column headings.
+  analysis_ids:
+    type: map<string,string>
+    input: table
+    choices: fixed
+    default: ~
+    step: analysis
+    tier: other
+    description: An analysis id for a parameter, keyed by its value (ALT);
+      empty for the parameter's value.
+  formats:
+    type: map<string,number|string>
+    input: table
+    choices: stats
+    free: true
+    default: !series formats
+    step: analysis
+    tier: usual
+    description: The decimals (or the format) of each statistic, every
+      parameter alike; a parameter's own is an appended plan_digits card.
+  layout:
+    type: enum[cols|rows]
+    input: pick
+    choices: fixed
+    default: cols
+    step: content
+    tier: usual
+    description: cols puts the value and the change side by side under each
+      group; rows puts the change's rows under the value's in each visit.
+  value_label:
+    type: string
+    input: text
+    default: Value
+    step: content
+    tier: usual
+    description: The heading of the value's statistics.
+  change_label:
+    type: string
+    input: text
+    default: Change from Baseline
+    step: content
+    tier: usual
+    description: The heading of the change's statistics.
+  cells:
+    type: map<string,string>
+    input: table
+    ordered: true
+    default:
+      n: "{N}"
+      Mean (SD): "{mean} ({sd})"
+      Median: "{median}"
+      Min, Max: "{min}, {max}"
+    step: content
+    tier: usual
+    description: The rows of a value or a change, label to cell template, in order.
+  sd_missing:
+    type: string
+    input: text
+    default: !series sd_missing
+    step: content
+    tier: other
+    description: What prints in place of the SD when a visit has no SD (one
+      record) in the Mean (SD) row of the default cells; empty for the mean
+      alone.  Cells the report gives are its own.
+  heading:
+    type: list<string>
+    input: text
+    default: [Visit, "  Statistic"]
+    step: content
+    tier: usual
+    description: The heading of the row-label column, a line each.
+  page_heading:
+    type: string
+    input: text
+    default: "Parameter: {value}"
+    step: content
+    tier: usual
+    description: The heading of a parameter's page ({value} the parameter).
+  max_rows:
+    type: number
+    input: text
+    default: !series max_rows
+    step: content
+    tier: other
+    description: The most rows a page holds; a visit's rows are not split.
+extends: !series extends
+style: !series style
+derive:
+  # the Total column's call, by the parameter and the visit alone, and its
+  # plan_total; nothing when off (layout: rows only, check: below)
+  by_visit_total: {if: "{total}", then: {by: ["{param_var}", "{visit_var}"]}}
+  by_visit_total_col: {if: "{total}", then: {label: !series total_label, position: last}}
+  # the layout: the value and the change across (cols) or down (rows)
+  by_visit_cols: {if: "{layout}", is: rows, then: ["{by}"], else: ["{by}", variable]}
+  by_visit_rows:
+    if: "{layout}"
+    is: rows
+    then: {param: "{param_var}", visit: "{visit_var}", item: variable}
+    else: {param: "{param_var}", visit: "{visit_var}"}
+  # (rows: a visit's value, then its change, as the row keys' order)
+  by_visit_sort: {if: "{layout}", is: rows, then: {keys: [param, visit, item]}}
+  by_visit_heading: {join: "{heading}", sep: "\n"}
+  by_visit_header:
+    if: "{layout}"
+    is: rows
+    then:
+      - {line: "1", cols: row_label, text: "{by_visit_heading}"}
+      - {line: "1", cols: .values, span: each, text: "{{col}} (N={{n}})"}
+    else:
+      - {line: "1", cols: row_label}
+      - {line: "1", cols: .values, span: "{by}", text: "{{col1}} (N={{n}})"}
+      - {line: "2", cols: row_label, text: "{by_visit_heading}"}
+      - {line: "2", cols: .values, span: each, text: "{{col}}"}
+  # ("{{x}}" is a cell's or a heading's own {x}, not a name here)
+  # the cells: the report's own as given; else the default cells (as the
+  # cells param's default) with the Mean (SD) row's fallback when a visit
+  # has no SD, the mean and sd_missing (the mean alone for "")
+  by_visit_cells_own: {given: [cells]}
+  by_visit_sd_alone: {if: "{sd_missing}", is: "", then: "{{mean}}"}
+  by_visit_sd_guard: {if: "{sd_missing}", then: "{{mean}} ({sd_missing})", else: "{by_visit_sd_alone}"}
+  by_visit_cells:
+    if: "{by_visit_cells_own}"
+    then: "{cells}"
+    else:
+      n: "{{N}}"
+      Mean (SD): ["{{mean}} ({{sd}})", "{by_visit_sd_guard}"]
+      Median: "{{median}}"
+      Min, Max: "{{min}}, {{max}}"
+check:
+  # (rtfreporter#1109: plan_total(direction = cols) cannot fold two column
+  # keys; drop this check when it is fixed)
+  - fail: {if: "{layout}", is: cols, then: "{total}"}
+    message: "total needs layout: rows (the Total column is read for the innermost
+      column key, the value and the change under layout: cols)."
+data:
+  - id: adsl_sub
+    from: ADSL
+    population: "{population}"
+  - id: rec_sub
+    from: "{from}"
+    subjects_in: adsl_sub
+    add: ["{by}"]
+    where: ~
+analysis:
+  - id: BIGN
+    label: Subjects per group
+    method: categorical
+    data: "{denominator}"
+    variables: ["{by}"]
+    formats: "{formats}"
+  - id: VALUE
+    analyses: {per: ["{param_var}"], ids: "{analysis_ids}"}   # ALT, HGB, ...
+    label: Value by visit
+    method: continuous
+    data: rec_sub
+    variables: ["{value}"]
+    statistics: [N, mean, sd, median, min, max]
+    formats: "{formats}"
+    ards:
+      - {by: ["{by}", "{param_var}", "{visit_var}"]}   # the groups
+      - "{by_visit_total}"                             # Total column
+  - id: CHANGE
+    analyses: {per: ["{param_var}"], ids: "{analysis_ids}"}   # ALT, HGB, ...
+    label: Change from baseline by visit
+    method: continuous
+    data: rec_sub
+    # (the records with a change: none at baseline, whose change cells stay
+    # empty; no group with no record is kept, no N = 0 rows)
+    where: !r '!is.na({change})'
+    variables: ["{change}"]
+    statistics: [N, mean, sd, median, min, max]
+    post: !r drop_empty_groups()
+    formats: "{formats}"
+    ards:
+      - {by: ["{by}", "{param_var}", "{visit_var}"]}   # the groups
+      - "{by_visit_total}"                             # Total column
+content:
+  - table_plan: {cols: "{by_visit_cols}", rows: "{by_visit_rows}"}
+  - plan_labels: {variable: {"{value}": "{value_label}", "{change}": "{change_label}"}}
+  - plan_sort: "{by_visit_sort}"
+  - plan_total: "{by_visit_total_col}"
+  - plan_cells: {continuous: "{by_visit_cells}"}
+  - plan_col_header: {header: "{by_visit_header}"}
+  - plan_paginate_rows: {page_by: param, max_rows: "{max_rows}", split: group_safe,
+                         heading: "{page_heading}", heading_at: title}
+  - plan_hide: {cols: [param]}
+page:
+  titles: ~
+  footnotes: ~

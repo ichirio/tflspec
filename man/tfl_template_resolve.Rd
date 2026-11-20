@@ -27,7 +27,8 @@ the report's arguments (\verb{template: args:}, the step sections
 \verb{template: analysis:}, \verb{content:}, ... or directly under \verb{template:}) over the template's defaults, resolves the
 series' and the study's values (\code{!series}, \code{!study}, \code{!fixed}), fills in
 the \code{"{name}"} spots of the template's \verb{data:} rows, analysis items,
-content and page, and merges the report's own \verb{data:} rows into the
+content and page (a map key that is a whole \code{"{name}"} too: that
+name's one text), and merges the report's own \verb{data:} rows into the
 template's by id, key by key; a report row with \verb{code:} makes the whole
 data, and replaces the template's row of its id.  The result is a plain
 code SPEC, as \code{\link[=tfl_read_output]{tfl_read_output()}} reads one.

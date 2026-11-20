@@ -11,6 +11,7 @@
 #                   spliced into a list; NULL drops the key)
 #   "... {name} ..." inside text or R: the value as text
 #   "{{" / "}}"     a brace
+#   a map key "{name}"  the param's one text (plan_labels' {"{value}": ...})
 # Inside an item with `params:`, a "{p}" of one of those params is the
 # item's (the generator's one-row function's argument): left as written.
 # The item's `conditions:` rows are the template's values, filled in.
@@ -25,7 +26,8 @@
 #' `template: analysis:`, `content:`, ... or directly under `template:`) over the template's defaults, resolves the
 #' series' and the study's values (`!series`, `!study`, `!fixed`), fills in
 #' the `"{name}"` spots of the template's `data:` rows, analysis items,
-#' content and page, and merges the report's own `data:` rows into the
+#' content and page (a map key that is a whole `"{name}"` too: that
+#' name's one text), and merges the report's own `data:` rows into the
 #' template's by id, key by key; a report row with `code:` makes the whole
 #' data, and replaces the template's row of its id.  The result is a plain
 #' code SPEC, as [tfl_read_output()] reads one.
@@ -558,6 +560,18 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   list(hit = TRUE, value = env[[nm]])
 }
 
+# a map key "{name}" filled in: the name's value, one text; a name not
+# known (or shadowed) stays as written
+.tr_key <- function(k, env, shadow) {
+  w <- .tr_whole(k, env, shadow)
+  if (!w$hit) return(k)
+  v <- w$value
+  if (!is.character(v) || length(v) != 1L || is.na(v) || !nzchar(v)) {
+    stop("a map key ", k, " is one text; its value is not.", call. = FALSE)
+  }
+  v
+}
+
 # a value with its "{name}" spots filled in
 .tr_fill <- function(x, env, shadow = character()) {
   if (is.null(x) || inherits(x, "tfl_unset")) return(x)
@@ -585,6 +599,10 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
       if (is.null(v)) out[[k]] <- NULL else out[[k]] <- v
     }
     if (!length(out) && length(x)) return(NULL)
+    # (a key that is a whole "{name}" is that name's one text: a map keyed
+    # by an argument's value, plan_labels' {"{value}": "{value_label}"})
+    keys <- grepl(paste0("^", .tr_ref_re, "$"), names(out), perl = TRUE)
+    if (any(keys)) names(out)[keys] <- vapply(names(out)[keys], .tr_key, "", env = env, shadow = shadow)
     return(out)
   }
   out <- list()

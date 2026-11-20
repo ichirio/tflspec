@@ -51,7 +51,7 @@ test_that("every file in the tflspec_v1 series folder parses", {
 test_that("every template has its keys, a BIGN item and ids on its items", {
   skip_if(!nzchar(series_dir()), "the series folder is not installed")
   ts <- series_templates()
-  expect_length(ts, 11L)
+  expect_length(ts, 12L)
   # (a listing counts nothing: tflspec_listing has no analysis step)
   no_analysis <- "tflspec_listing.yml"
   for (nm in names(ts)) {
@@ -99,6 +99,12 @@ test_that("the percentages' denominator is BIGN and the items say how analysis i
   expect_null(tsh$params$count_cell$default)
   expect_identical(tsh$analysis[[2]]$analyses$per, "{param_var}")
   expect_null(shift$analysis_id)
+  tbv <- ts[["tflspec_by_visit.yml"]]
+  expect_true(isTRUE(tbv$params$from$required))
+  expect_null(tbv$params$from$default)
+  expect_identical(tbv$params$max_rows$default, "max_rows")
+  expect_identical(vapply(tbv$analysis[2:3], function(a) a$analyses$per, ""),
+                   c("{param_var}", "{param_var}"))
   ts_ae <- ts[["ae_soc_pt.yml"]]$analysis[[2]]
   expect_identical(ts_ae$analyses$per, "level")
   expect_null(ts[["orr_subgroup.yml"]]$analysis[[2]]$analyses)
