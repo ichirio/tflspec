@@ -1,9 +1,12 @@
 # A listing's records -- a listing's, or a table of records' (#861's pk_conc)
 # -- take the report's code lists on every column that has one, not only the
 # columns the listing shows: a table of records makes its columns across of
-# them, in the list's order.  Package fictional data (adsl, adlb); the
+# them, in the list's order.  A study's order is its ADaM metadata's
+# (defaults.yml `adam_meta:`, put on as the data is read, #857); the
+# report's list wins over it.  Package fictional data (adsl, adlb); the
 # expected orders are the lists written here.
 
+# `defaults`: lines added to defaults.yml
 ll_study <- function(defaults = NULL) {
   skip_if_not_installed("haven")
   d <- file.path(tempfile("ll"), "study")
@@ -13,7 +16,7 @@ ll_study <- function(defaults = NULL) {
                      file.path(d, "adam", paste0(x, ".xpt")))
   }
   suppressMessages(tfl_ai_study_init(d, adam = "adam", study_id = "LL-1"))
-  if (length(defaults)) cat(c("codelists:", paste0("  ", defaults), ""), sep = "\n",
+  if (length(defaults)) cat(c(defaults, ""), sep = "\n",
                             file = file.path(d, "spec", "defaults.yml"), append = TRUE)
   d
 }
@@ -26,6 +29,13 @@ ll_visits <- function() {
 }
 ll_list <- function(v) {
   paste0("AVISIT: [", paste0("{value: \"", v, "\"}", collapse = ", "), "]")
+}
+# the study's ADaM metadata: ADLB's AVISIT in the order `v`
+ll_adam_meta <- function(v) {
+  c("adam_meta:", "  variables:",
+    "    - {dataset: ADLB, variable: AVISIT, codelist: CL.AVISIT}",
+    "  codelists:",
+    sprintf("    - {codelist: CL.AVISIT, name: Visit, value: \"%s\", order: %d}", v, seq_along(v)))
 }
 
 # a table of ALT's records, its visits across
@@ -95,15 +105,20 @@ test_that("a table of records: the report's code list orders its columns across"
   expect_identical(intersect(names(t), v), v)
 })
 
-test_that("a table of records: the study's code list (defaults.yml) orders it too; none, as before", {
+test_that("a table of records: the study's ADaM metadata orders it, the report's list wins; none, as read", {
   skip_on_cran()
   skip_if_not_installed("cards")
   v <- ll_visits()
-  d <- ll_study(defaults = ll_list(v))
+  # the study's display lists (defaults.yml codelists:) are lists by name and
+  # reach no report (#857); its ADaM metadata orders the records
+  d <- ll_study(defaults = c(ll_adam_meta(v), "codelists:", paste0("  ", ll_list(rev(v)))))
   on.exit(unlink(dirname(d), recursive = TRUE), add = TRUE)
   ll_report(d, "T-LS")
   expect_identical(levels(ll_records(d, "T-LS")$recs$AVISIT), v)
-  # a study without a list of it: the records' visits as read
+  # the report's own list over the study's
+  ll_report(d, "T-LR", ll_list(rev(v)))
+  expect_identical(levels(ll_records(d, "T-LR")$recs$AVISIT), rev(v))
+  # a study without either: the records' visits as read
   d2 <- ll_study()
   on.exit(unlink(dirname(d2), recursive = TRUE), add = TRUE)
   ll_report(d2, "T-LN")
