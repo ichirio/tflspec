@@ -13,19 +13,26 @@
 #    tfl_arg_defs(template = "tflspec_v1/demog") a template's params:
 # ============================================================================
 
-# the 4 input forms: pick (choose from a list; one or several follows the
+# the 5 input forms: pick (choose from a list; one or several follows the
 # type: list<...> = several, logical = a switch), text (type it; a number type
 # is a number box), condition (write a condition, the columns as candidates),
-# table (fill a table)
-.arg_input_forms <- c("pick", "text", "condition", "table")
+# table (fill a table), r (an R expression: the one form with a "write in R"
+# field; canon 17dfbb8)
+.arg_input_forms <- c("pick", "text", "condition", "table", "r")
 
-# the closed list of choice sources (14 words, canon 11-14).  An entry writes
-# one with what it depends on in brackets ("vars(adsl_sub)", "levels(SEX)",
-# "from_args(continuous, categorical)"); several separated by ", " give the
-# list's groups in that order ("report_data, study_data").
+# the closed list of choice sources (15 words, canon 11-14 and the
+# figure_style word of 2026-11-18).  An entry writes one with what it
+# depends on in brackets ("vars(adsl_sub)", "levels(SEX)",
+# "from_args(continuous, categorical)", "figure_style(palette)"); several
+# separated by ", " give the list's groups in that order
+# ("report_data, study_data").
 .arg_choice_sources <- c("vars", "levels", "codelist", "populations", "report_data",
                          "study_data", "ard", "columns", "study_info", "tokens",
-                         "stats", "fixed", "styles", "from_args")
+                         "stats", "fixed", "styles", "from_args", "figure_style")
+
+# what figure_style(<kind>) lists: the study's figure style's colours in
+# their order, or its marker shapes
+.arg_figure_style_kinds <- c("palette", "marker")
 
 # the words that let a pick take a value not in the list (`free`) unless the
 # definition says otherwise
@@ -33,7 +40,13 @@
 
 .arg_steps <- c("data", "analysis", "content", "page")
 .arg_default_kinds <- c("value", "study", "series", "unset", "fixed")
-.arg_tiers <- c("required", "usual", "other")
+# required: must be given; key: shown even at its default; usual and other:
+# folded
+.arg_tiers <- c("required", "key", "usual", "other")
+# what "(none)" (`!unset`) does, tfl_param()'s words (canon 1.17-1.20):
+# omit (the argument is left out), step_off (its step is not made), stop
+# (the body needs a value: "(none)" is not offered)
+.arg_unset_words <- c("omit", "step_off", "stop")
 
 # the YAML tags a template's values may carry, kept as written (the value is
 # resolved for a study later: tfl_template_resolve())
@@ -70,6 +83,15 @@
     stop(sprintf("%s: vars() takes a data row id or from_args(<arg>), not %s.", where,
                  paste(encodeString(inner, quote = "\""), collapse = ", ")), call. = FALSE)
   }
+  # figure_style(<kind>): the kind one of palette, marker
+  fs <- entries[words == "figure_style"]
+  fs_kind <- sub("^figure_style[(]\\s*(.*?)\\s*[)]$", "\\1", fs, perl = TRUE)
+  fs_bad <- fs[!grepl("^figure_style[(].*[)]$", fs) | !fs_kind %in% .arg_figure_style_kinds]
+  if (length(fs_bad)) {
+    stop(sprintf("%s: %s: write figure_style(<kind>), the kind one of %s.", where,
+                 paste(encodeString(fs_bad, quote = "\""), collapse = ", "),
+                 paste(.arg_figure_style_kinds, collapse = ", ")), call. = FALSE)
+  }
   if (length(bad)) {
     stop(sprintf("%s: unknown choice source %s; the sources are %s.", where,
                  paste(encodeString(bad, quote = "\""), collapse = ", "),
@@ -85,8 +107,11 @@
   function(x) structure(list(value = x), class = "tfl_tagged", tag = tag)
 }
 
+# (YAML 1.1's implicit booleans, n, y, yes, no, on, off, stay text as
+# .yaml_handlers() keeps them: a cells key `n:` is the statistic n)
 .arg_yaml_handlers <- function() {
-  stats::setNames(lapply(.arg_tags, .arg_tagged), .arg_tags)
+  c(stats::setNames(lapply(.arg_tags, .arg_tagged), .arg_tags),
+    .yaml_handlers()[c("bool#yes", "bool#no")])
 }
 
 .arg_default_kind <- function(x) {
@@ -105,7 +130,9 @@
   type <- as.character(type %||% "string")
   if (identical(type, "logical") || startsWith(type, "enum[")) return("pick")
   if (grepl("^(list<)?(column|level)>?$", type)) return("pick")
-  if (identical(type, "r")) return(if (identical(name, "where")) "condition" else "text")
+  if (type %in% c("r", "formula", "guard")) {
+    return(if (identical(name, "where")) "condition" else "r")
+  }
   if (grepl("^(rows|map|vec)<", type)) return("table")
   "text"
 }
@@ -142,15 +169,142 @@
   args
 }
 
+# (the enum's own brackets only: `enum[TRUE|FALSE]|logical` is TRUE, FALSE)
 .arg_enum_values <- function(type) {
   if (!startsWith(type %||% "", "enum[")) return(NULL)
-  strsplit(sub("^enum\\[(.*)\\]$", "\\1", type), "|", fixed = TRUE)[[1L]]
+  strsplit(sub("^enum\\[([^]]*)\\].*$", "\\1", type), "|", fixed = TRUE)[[1L]]
+}
+
+# A label or a help as written: `{en: , ja: }` or a plain text (English, ja
+# NA).  Returns c(en, ja).
+.arg_en_ja <- function(x, where, what) {
+  na <- c(en = NA_character_, ja = NA_character_)
+  if (is.null(x)) return(na)
+  if (is.list(x) && !is.null(names(x))) {
+    bad <- setdiff(names(x), c("en", "ja"))
+    ok <- !length(bad) && all(vapply(x, function(v) is.null(v) || (is.character(v) && length(v) == 1L), NA))
+    if (ok) {
+      return(c(en = as.character(x$en %||% NA_character_), ja = as.character(x$ja %||% NA_character_)))
+    }
+  } else if (is.character(x) && length(x) == 1L) {
+    return(c(en = x, ja = NA_character_))
+  }
+  stop(sprintf("%s: %s is a text or {en: , ja: }.", where, what), call. = FALSE)
+}
+
+# A definition's fixed values with their labels: the values written as
+# plain values or as `{value: , label: {en, ja}}`, else an enum type's; a
+# `labels:` map (value: label) labels them too.  list(values, labels): the
+# values a character vector (NULL for none), the labels a data frame
+# (value, label_en, label_ja) or NULL when no value has one.
+.arg_values <- function(d, type, where) {
+  # ([[ ]]: a `$` would read `labels` for a missing `label`)
+  raw <- d[["values"]]
+  if (is.null(raw)) {
+    vals <- .arg_enum_values(type)
+    lab <- vector("list", length(vals))
+  } else {
+    raw <- if (is.list(raw) && !is.null(names(raw)) && "value" %in% names(raw)) list(raw) else as.list(raw)
+    vals <- vapply(raw, function(v) {
+      if (is.list(v)) v <- v[["value"]]
+      if (is.null(v) || length(v) != 1L || is.list(v)) {
+        stop(sprintf("%s: values: an entry is a value or {value: , label: }.", where), call. = FALSE)
+      }
+      as.character(v)
+    }, "")
+    lab <- lapply(raw, function(v) if (is.list(v)) v[["label"]])
+  }
+  if (!length(vals)) return(list(values = NULL, labels = NULL))
+  extra <- d[["labels"]]
+  if (!is.null(extra) && (!is.list(extra) || is.null(names(extra)))) {
+    stop(sprintf("%s: labels: is a map, a value or a column to its label.", where), call. = FALSE)
+  }
+  ens <- lapply(seq_along(vals), function(i) {
+    .arg_en_ja(extra[[vals[i]]] %||% lab[[i]], where, sprintf("the label of value %s", vals[i]))
+  })
+  en <- vapply(ens, `[[`, "", "en")
+  ja <- vapply(ens, `[[`, "", "ja")
+  labels <- if (any(!is.na(en) | !is.na(ja))) {
+    data.frame(value = vals, label_en = en, label_ja = ja, stringsAsFactors = FALSE)
+  }
+  # (plain values stay as written)
+  list(values = if (is.atomic(d[["values"]]) && !is.null(d[["values"]])) d[["values"]] else vals,
+       labels = labels)
+}
+
+# A table's columns as written, each named column's definition given its
+# label_en / label_ja / help_en / help_ja (from its own `label:` / `help:`,
+# or the argument's `labels:` map); "params" and other entries kept.
+.arg_columns <- function(cols, labels, where) {
+  if (!is.list(cols) || is.null(names(cols))) return(cols)
+  for (k in names(cols)[nzchar(names(cols))]) {
+    cd <- cols[[k]]
+    if (!is.list(cd)) next
+    w <- sprintf("%s: column `%s`", where, k)
+    l <- .arg_en_ja(labels[[k]] %||% cd[["label"]], w, "label")
+    h <- .arg_en_ja(cd[["help"]], w, "help")
+    cd$label_en <- l[["en"]]
+    cd$label_ja <- l[["ja"]]
+    cd$help_en <- if (is.na(h[["en"]])) as.character(cd[["description"]] %||% NA_character_) else h[["en"]]
+    cd$help_ja <- h[["ja"]]
+    cols[[k]] <- cd
+  }
+  cols
+}
+
+# A passes_to as written (`passes_to:`, or `maps_to:` in a template, the
+# same thing): where the value goes, "<fn>.<arg>" or "<fn>.<arg>.<name>"
+# (the study keys' grammar), one or a list.  character() for none.
+.arg_passes_re <- "^[A-Za-z][A-Za-z0-9_]*[.][.]?[A-Za-z_][A-Za-z0-9_]*([.][A-Za-z0-9_]+)?$"
+.arg_passes_to <- function(d, where) {
+  if (!is.null(d[["passes_to"]]) && !is.null(d[["maps_to"]])) {
+    stop(sprintf("%s: passes_to: and maps_to: say the same; write passes_to: only.", where),
+         call. = FALSE)
+  }
+  x <- d[["passes_to"]] %||% d[["maps_to"]]
+  if (is.null(x)) return(character())
+  ok <- (is.character(x) || (is.list(x) && all(vapply(x, function(v) is.character(v) && length(v) == 1L, NA)))) &&
+    length(x) > 0L
+  x <- if (ok) as.character(unlist(x)) else character()
+  if (!ok || anyNA(x) || !all(grepl(.arg_passes_re, x))) {
+    stop(sprintf(paste0("%s: passes_to: is \"<fn>.<arg>\" or \"<fn>.<arg>.<name>\" ",
+                        "(\"plan_blanks.where\"), one or a list."), where), call. = FALSE)
+  }
+  x
+}
+
+# A `groups:` list (a function's or a template's): one entry `{id, label}`
+# a group, in the card's order.  A data frame (id, label_en, label_ja); no
+# rows when there is none.
+.arg_groups <- function(groups, where) {
+  empty <- data.frame(id = character(), label_en = character(), label_ja = character(),
+                      stringsAsFactors = FALSE)
+  if (is.null(groups) || !length(groups)) return(empty)
+  if (!is.list(groups) || !is.null(names(groups))) {
+    stop(sprintf("%s: groups: is a list of {id: , label: {en: , ja: }}.", where), call. = FALSE)
+  }
+  rows <- lapply(groups, function(g) {
+    id <- if (is.list(g)) g[["id"]]
+    if (!is.character(id) || length(id) != 1L || !grepl("^[A-Za-z][A-Za-z0-9_]*$", id)) {
+      stop(sprintf("%s: groups: each entry is {id: , label: }, the id a name (letters, digits, _).",
+                   where), call. = FALSE)
+    }
+    l <- .arg_en_ja(g[["label"]], sprintf("%s: group `%s`", where, id), "label")
+    data.frame(id = id, label_en = l[["en"]], label_ja = l[["ja"]], stringsAsFactors = FALSE)
+  })
+  out <- do.call(rbind, rows)
+  if (anyDuplicated(out$id)) {
+    stop(sprintf("%s: groups: the id %s is given twice.", where,
+                 encodeString(out$id[anyDuplicated(out$id)], quote = "\"")), call. = FALSE)
+  }
+  out
 }
 
 # One row of the table from one definition (a list as written in the schema
 # or a template's params:).
-.arg_row <- function(name, d, step, label_prefix, where) {
+.arg_row <- function(name, d, step, where) {
   if (!is.list(d)) d <- list(default = d)
+  where_arg <- sprintf("%s: argument `%s`", where, name)
   type <- as.character(d$type %||% "string")
   input <- as.character(d$input %||% .arg_input_for_type(type, name))
   if (!input %in% .arg_input_forms) {
@@ -165,9 +319,10 @@
          call. = FALSE)
   }
   choices <- d$choices
-  values <- d$values %||% .arg_enum_values(type)
+  vl <- .arg_values(d, type, where_arg)
+  values <- vl$values
   if (is.null(choices) && length(values)) choices <- "fixed"
-  .arg_check_choices(choices, sprintf("%s: argument `%s`", where, name))
+  .arg_check_choices(choices, where_arg)
   words <- sub("[(].*$", "", .arg_choice_words(choices))
   free <- d$free %||% (if (input == "pick" && length(words)) any(words %in% .arg_free_sources) else NA)
   ordered <- d$ordered %||% (if (input == "pick" && startsWith(type, "list<")) FALSE else NA)
@@ -175,32 +330,81 @@
   default <- if (has_default) d$default else NULL
   required <- isTRUE(d$required) || (identical(d$tier, "required") && !has_default)
   tier <- as.character(d$tier %||% (if (required) "required" else "usual"))
+  if (length(tier) != 1L || !tier %in% .arg_tiers) {
+    stop(sprintf("%s: tier %s is not one of %s.", where_arg,
+                 encodeString(paste(tier, collapse = ", "), quote = "\""),
+                 paste(.arg_tiers, collapse = ", ")), call. = FALSE)
+  }
+  unset <- as.character(d[["unset"]] %||% (if (required) "stop" else "omit"))
+  if (length(unset) != 1L || !unset %in% .arg_unset_words) {
+    stop(sprintf("%s: unset %s is not one of %s.", where_arg,
+                 encodeString(paste(unset, collapse = ", "), quote = "\""),
+                 paste(.arg_unset_words, collapse = ", ")), call. = FALSE)
+  }
+  group <- d[["group"]] %||% NA_character_
+  if (!(is.character(group) && length(group) == 1L)) {
+    stop(sprintf("%s: group is one group's id.", where_arg), call. = FALSE)
+  }
+  member_of <- d[["member_of"]] %||% NA_character_
+  if (!(is.character(member_of) && length(member_of) == 1L)) {
+    stop(sprintf("%s: member_of is the name of one argument (a list).", where_arg), call. = FALSE)
+  }
+  label <- .arg_en_ja(d[["label"]], where_arg, "label")
+  help <- .arg_en_ja(d[["help"]], where_arg, "help")
+  description <- as.character(d[["description"]] %||% help[["en"]])
+  if (!length(description) || is.na(description)) description <- ""
   row <- data.frame(name = name, stringsAsFactors = FALSE)
-  row$label_key <- as.character(d$label_key %||% paste0(label_prefix, name))
+  row$label_en <- label[["en"]]
+  row$label_ja <- label[["ja"]]
+  row$help_en <- if (is.na(help[["en"]]) && nzchar(description)) description else help[["en"]]
+  row$help_ja <- help[["ja"]]
   row$step <- st
+  row$group <- group
   row$input <- input
   row$type <- type
   row$required <- required
   row$default <- I(list(default))
   row$default_kind <- if (has_default) .arg_default_kind(default) else NA_character_
+  row$unset <- unset
   row$choices <- I(list(.arg_choice_words(choices)))
   row$values <- I(list(values))
+  row$value_labels <- I(list(vl$labels))
   row$free <- as.logical(free)
   row$ordered <- as.logical(ordered)
-  row$columns <- I(list(d$columns))
+  row$columns <- I(list(.arg_columns(d[["columns"]], d[["labels"]], where_arg)))
   row$fixed_rows <- I(list(NULL))
   row$tier <- tier
-  row$description <- as.character(d$description %||% d$help %||% "")
+  row$passes_to <- I(list(.arg_passes_to(d, where_arg)))
+  row$member_of <- member_of
+  row$description <- description
   row
 }
 
-.arg_table <- function(defs, step, label_prefix, where) {
+# The table of a definition list (`defs`, by argument) and its `groups:`
+# (attr "groups": id, label_en, label_ja, in the card's order).  An
+# argument's group must be one of them; a member_of one of the arguments.
+.arg_table <- function(defs, step, where, groups = NULL) {
+  g <- .arg_groups(groups, where)
   if (!length(defs)) {
-    return(.arg_row("x", list(), step, label_prefix, where)[0L, , drop = FALSE])
+    out <- .arg_row("x", list(), step, where)[0L, , drop = FALSE]
+  } else {
+    rows <- Map(function(n, d) .arg_row(n, d, step, where), names(defs), defs)
+    out <- do.call(rbind, rows)
+    rownames(out) <- NULL
   }
-  rows <- Map(function(n, d) .arg_row(n, d, step, label_prefix, where), names(defs), defs)
-  out <- do.call(rbind, rows)
-  rownames(out) <- NULL
+  bad <- !is.na(out$group) & !out$group %in% g$id
+  if (any(bad)) {
+    stop(sprintf("%s: argument `%s`: group %s is not in groups: (%s).", where, out$name[bad][1L],
+                 encodeString(out$group[bad][1L], quote = "\""),
+                 if (nrow(g)) paste(g$id, collapse = ", ") else "none written"), call. = FALSE)
+  }
+  bad <- !is.na(out$member_of) & (!out$member_of %in% out$name | out$member_of == out$name)
+  if (any(bad)) {
+    stop(sprintf("%s: argument `%s`: member_of %s is not another argument of the card.", where,
+                 out$name[bad][1L], encodeString(out$member_of[bad][1L], quote = "\"")),
+         call. = FALSE)
+  }
+  attr(out, "groups") <- g
   out
 }
 
@@ -231,9 +435,9 @@
                     description = "One row a set of these columns."),
     arrange = list(type = "list<column>", input = "pick", choices = "vars(from_args(from))", ordered = TRUE,
                    description = "The row order (a minus for descending)."),
-    then = list(type = "r", input = "text",
+    then = list(type = "r", input = "r",
                 description = "R after the keys above, on the row's data."),
-    code = list(type = "r", input = "text", tier = "other",
+    code = list(type = "r", input = "r", tier = "other",
                 description = "R for a row the keys cannot say.")
   )
 }
@@ -280,7 +484,7 @@
     analysis_ids = list(type = "map<column,string>", input = "table", choices = "from_args(variables)",
                         tier = "other",
                         description = "A variable's analysis_id (default: the variable's name)."),
-    args = list(type = "r", input = "text", tier = "other",
+    args = list(type = "r", input = "r", tier = "other",
                 description = "The function's other arguments, as R."),
     ards = list(type = "rows<map<string,list<column>>>", input = "table",
                 columns = list(by = list(type = "list<column>", input = "pick", choices = "vars(from_args(data))"),
@@ -288,8 +492,8 @@
                                                 choices = "vars(from_args(data))")),
                 tier = "other",
                 description = "Several calls of the method, one analysis_id (no id of their own)."),
-    post = list(type = "r", input = "text", tier = "other", description = "R on the item's result."),
-    code = list(type = "r", input = "text", tier = "other",
+    post = list(type = "r", input = "r", tier = "other", description = "R on the item's result."),
+    code = list(type = "r", input = "r", tier = "other",
                 description = "R for an item the keys cannot say.")
   )
 }
@@ -359,6 +563,14 @@
                paste(dirs, collapse = ", ")), call. = FALSE)
 }
 
+# The `groups:` of the series a template file belongs to (its folder's
+# series.yml, next to templates/); NULL when it writes none
+.arg_series_groups <- function(file) {
+  f <- file.path(dirname(dirname(file)), "series.yml")
+  if (!file.exists(f)) return(NULL)
+  yaml::read_yaml(f, handlers = .arg_yaml_handlers())[["groups"]]
+}
+
 .template_read <- function(template) {
   f <- .template_file(template)
   y <- yaml::read_yaml(f, handlers = .arg_yaml_handlers())
@@ -380,12 +592,26 @@
 #'   Its file is found in the series folders: the option `tflspec.series_dir`,
 #'   tflplanner's home `standards/series/`, the series tflspec ships.
 #' @return A data frame, one row an argument in the definition's order (the
-#'   card's order):
+#'   card's order); a schema function with `...` (its `dots:`) has a last
+#'   row `...`, of the dots' type.  Its attribute `"groups"` is the card's
+#'   groups in their order, a data frame `id`, `label_en`, `label_ja` from
+#'   the function's `groups:` list or, for a template, its series'
+#'   `series.yml` (a template's own `groups:` replaces it), entries `{id: ,
+#'   label: {en: , ja: }}`; no rows when none is written (one unnamed
+#'   group).  The columns:
 #'   \describe{
 #'     \item{name}{the argument.}
-#'     \item{label_key}{the key of its label in the screen's text (en / ja).}
-#'     \item{step}{`data`, `analysis`, `content` or `page`: the card's group.}
-#'     \item{input}{`pick`, `text`, `condition` or `table`.}
+#'     \item{label_en, label_ja}{its label, from `label: {en: , ja: }`; a
+#'       plain `label:` is English (`label_ja` `NA`); `NA` when there is none.}
+#'     \item{help_en, help_ja}{its help, from `help: {en: , ja: }` or a
+#'       plain `help:` (English), else the description.}
+#'     \item{step}{`data`, `analysis`, `content` or `page`: the card's part.}
+#'     \item{group}{the id of its group (one of the attribute `"groups"`),
+#'       from `group:`; groups divide a step.  `NA`: the unnamed group.}
+#'     \item{input}{`pick`, `text`, `condition`, `table` or `r` (an R
+#'       expression, the one form whose field can be written in R; the
+#'       default for a type `r`, `formula` or `guard`, `condition` for a
+#'       `where`).}
 #'     \item{type}{the data type, in the schema's notation: `logical`,
 #'       `number`, `string`, `r`, `column`, `level`, `list<...>` (several),
 #'       `enum[a|b]`, `map<...>`, `vec<...>`, `rows<...>` (a table),
@@ -397,27 +623,54 @@
 #'       It is resolved for a study by [tfl_template_resolve()].}
 #'     \item{default_kind}{`value`, `study`, `series`, `unset` or `fixed`;
 #'       `NA` when there is no default.}
+#'     \item{unset}{what "(none)" (`!unset`) does, from `unset:` (the words
+#'       of [tfl_param()]): `omit` (the argument is left out), `step_off`
+#'       (its step is not made) or `stop` (it needs a value: "(none)" is not
+#'       offered); by default `stop` for a required argument, else `omit`.}
 #'     \item{choices}{(a list column) the sources of the choices, in order:
 #'       the closed words `vars(<data>)`, `levels(<var>)`, `codelist(<name>)`,
 #'       `populations`, `report_data`, `study_data`, `ard`, `columns(<object>)`,
 #'       `study_info`, `tokens`, `stats`, `fixed`, `styles`,
-#'       `from_args(<arg>, ...)`.  Another word stops.}
-#'     \item{values}{(a list column) the fixed values (`fixed`, an `enum`).}
+#'       `from_args(<arg>, ...)`, `figure_style(<palette|marker>)` (the
+#'       study's figure style's colours in their order, or its marker
+#'       shapes).  Another word stops.}
+#'     \item{values}{(a list column) the fixed values (`fixed`, an `enum`).
+#'       `values:` writes each as a value or `{value: , label: {en: , ja: }}`.}
+#'     \item{value_labels}{(a list column) the values' labels, a data frame
+#'       `value`, `label_en`, `label_ja` (from the values' `label:` or the
+#'       argument's `labels:` map, value: label); `NULL` when none has one.}
 #'     \item{free}{a pick that also takes a value not in the list.}
 #'     \item{ordered}{a pick of several whose order matters.}
 #'     \item{columns}{(a list column) a table's columns, defined the same way;
 #'       `"params"` for a template's conditions table (its columns are the item's
 #'       `params:`); in a list, an unnamed `"params"` marks where the item's
 #'       params go (an item's conditions: `"params"`, `where`, an optional
-#'       `analysis_id`).}
+#'       `analysis_id`).  A named column's definition also has `label_en`,
+#'       `label_ja`, `help_en`, `help_ja`, from its own `label:` / `help:`
+#'       or the argument's `labels:` map (column: label).  A `map<K, V>`'s
+#'       two columns are written `columns: {key: {label: }, value: {label: }}`.}
 #'     \item{fixed_rows}{(a list column) a template's table param: the rows
 #'       the template writes with fixed values next to its `"{name}"` (the
 #'       ALL row of forest_hr's conditions), a data frame whose attribute
 #'       `"position"` gives each row's place, `"before"` or `"after"` the
 #'       report's rows; `NULL` otherwise.}
-#'     \item{tier}{`required`, `usual` or `other` (shown folded).}
+#'     \item{tier}{`required` (must be given), `key` (shown even at its
+#'       default), `usual` or `other` (both shown folded).  A schema
+#'       function's argument in its `visible:` list or marked `main: true` is
+#'       `key`.}
+#'     \item{passes_to}{(a list column) where the value goes, as written in
+#'       `passes_to:` (a template's `maps_to:` is the same):
+#'       `"<fn>.<arg>"` or `"<fn>.<arg>.<name>"`, the study keys' grammar,
+#'       one or several; empty for none.}
+#'     \item{member_of}{the list argument it is a member of (written
+#'       `member_of:`, after its parent); `NA` otherwise.}
 #'     \item{description}{one line.}
 #'   }
+#'
+#'   A definition stops, saying what to write, for an unknown `tier` or
+#'   `unset` word, a `group` not in `groups:`, a `member_of` that is not
+#'   another argument, a malformed `passes_to`, a label or help that is
+#'   neither a text nor `{en: , ja: }`, and a choice word outside the 15.
 #' @seealso [tfl_schema()] (the schema's functions), [tfl_template_resolve()]
 #'   (a report's template with its values filled in, and where each came from).
 #' @examples
@@ -436,25 +689,55 @@ tfl_arg_defs <- function(fn = NULL, template = NULL) {
       stop(sprintf("template %s: params: is a map of argument definitions.", template),
            call. = FALSE)
     }
-    out <- .arg_table(defs, "analysis", paste0("template.", sub("/", ".", template, fixed = TRUE), "."),
-                      sprintf("template %s", template))
+    # the groups: the series' series.yml (one list for all its templates,
+    # canon db1bae9); a template's own groups: replaces it
+    groups <- y[["groups"]] %||% .arg_series_groups(attr(y, "file"))
+    out <- .arg_table(defs, "analysis", sprintf("template %s", template), groups)
     y$params <- NULL
+    y[["groups"]] <- NULL
     for (i in seq_len(nrow(out))) out$fixed_rows[i] <- list(.arg_fixed_rows(y, out$name[i]))
     return(out)
   }
   fn <- as.character(fn)[1L]
   if (identical(fn, "data")) {
-    return(.arg_table(.data_row_arg_defs(), "data", "data.", "data row"))
+    return(.arg_table(.data_row_arg_defs(), "data", "data row"))
   }
   if (identical(fn, "analysis")) {
-    return(.arg_table(.analysis_item_arg_defs(), "analysis", "analysis.", "analysis item"))
+    return(.arg_table(.analysis_item_arg_defs(), "analysis", "analysis item"))
   }
   ent <- tfl_schema(fn)
   if (is.null(ent)) {
     stop(sprintf("tfl_arg_defs(): %s is not a function of the schema.",
                  encodeString(fn, quote = "\"")), call. = FALSE)
   }
-  args <- .arg_schema_fill(fn, ent$args %||% list())
+  args <- .arg_schema_key(.arg_schema_dots(.arg_schema_fill(fn, ent$args %||% list()), ent$dots),
+                          ent$visible)
   step <- if (fn %in% .arg_page_fns) "page" else .arg_step_for_stage(ent$stage)
-  .arg_table(args, step, paste0(.schema_fn_name(fn), "."), fn)
+  .arg_table(args, step, fn, ent[["groups"]])
+}
+
+# A schema function's `...` (its `dots:`): one row, last, with the dots'
+# type and description; an args entry `...` (its label) adds to it.  No
+# dots: an args entry `...` stays as written.
+.arg_schema_dots <- function(args, dots) {
+  if (!is.list(dots)) return(args)
+  d <- list(type = dots$type %||% "string", description = dots$description %||% "")
+  own <- args[["..."]]
+  if (is.list(own)) for (k in names(own)) d[k] <- list(own[[k]])
+  args[["..."]] <- NULL
+  args[["..."]] <- d
+  args
+}
+
+# A schema function's tier `key` (shown even at its default), from the
+# function's `visible:` list and its arguments' `main: true`; a written
+# tier and a required argument keep theirs.
+.arg_schema_key <- function(args, visible) {
+  visible <- as.character(unlist(visible))
+  for (n in names(args)) {
+    d <- args[[n]]
+    if (!is.list(d) || !is.null(d$tier) || isTRUE(d$required)) next
+    if (n %in% visible || isTRUE(d$main)) args[[n]]$tier <- "key"
+  }
+  args
 }

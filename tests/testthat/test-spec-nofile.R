@@ -37,10 +37,10 @@ test_that("a study with spec/codelists.yml is read: the file is not, and says so
     invokeRestart("muffleMessage")
   })
   expect_length(grep("spec/codelists.yml is not read", msgs, fixed = TRUE), 1L)
-  expect_match(msgs, "a code list is a report's or a layer's", fixed = TRUE)
+  expect_match(msgs, "a code list is the study's or a report's", fixed = TRUE)
   expect_match(msgs, "`codelists:` in spec/defaults.yml or the report's file", fixed = TRUE)
-  expect_null(s$codelists)
-  expect_false("codelists" %in% names(s))
+  # (the study's own lists are defaults.yml's)
+  expect_identical(names(s$codelists), c("SEX", "AGEGR1"))
   # no file, no message
   expect_silent(tfl_read_study_spec(nf_study(file = FALSE)))
 })

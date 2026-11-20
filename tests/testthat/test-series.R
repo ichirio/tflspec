@@ -96,6 +96,21 @@ test_that("tfl_series_read() reads series.yml", {
   expect_error(tfl_series_read("copy_v1", dir = root), "series \"copy_v1\"")
 })
 
+test_that("tfl_series_read() reads the values' descriptions", {
+  root <- series_test_root()
+  on.exit(unlink(root, recursive = TRUE), add = TRUE)
+  series_test_make(root)
+  # none: an empty named character vector
+  s <- tfl_series_read("demo_v1", dir = root)
+  expect_identical(s$descriptions, stats::setNames(character(), character()))
+  f <- file.path(root, "demo_v1", "series.yml")
+  writeLines(c(readLines(f), "descriptions:", "  max_rows: The most rows a page holds."), f)
+  s <- tfl_series_read("demo_v1", dir = root)
+  expect_identical(s$descriptions, c(max_rows = "The most rows a page holds."))
+  writeLines(c(readLines(f), "  style: [a, b]"), f)
+  expect_error(tfl_series_read("demo_v1", dir = root), "descriptions: is a map")
+})
+
 test_that(".series_resolve() replaces the tags and records the origins", {
   root <- series_test_root()
   on.exit(unlink(root, recursive = TRUE), add = TRUE)

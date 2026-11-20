@@ -30,4 +30,9 @@ leaves the fingerprints as they were.  The study key \code{adam_levels}
 (study.yml's \code{settings: adam_levels}, which \code{\link[=tfl_sheets_from_spec]{tfl_sheets_from_spec()}} puts
 on the \code{study} sheet when it is \code{none}) counts: \code{none} gives another
 fingerprint than \code{codelists}, the default, which leaves it as it was.
+Under \code{codelists}, the study's ADaM metadata (\code{spec$adam_meta}, which a
+YAML study's ARD definition carries: \code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}'s
+\code{adam_meta} for the study's datasets) counts too, for the datasets the
+output reads: each variable it maps and the codes it puts on it, in
+order.  A study whose adam_meta maps none of them keeps its fingerprints.
 }

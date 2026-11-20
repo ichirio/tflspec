@@ -42,15 +42,20 @@ test_that("every file in the tflspec_v1 series folder parses", {
   expect_true(is.list(s$values))
   expect_null(s$values$header_n)
   expect_null(s$values$overall_row)
+  # each description is one text, of a key of values:
+  expect_true(length(s$descriptions) > 0L)
+  expect_identical(setdiff(names(s$descriptions), names(s$values)), character())
+  expect_true(all(vapply(s$descriptions, is.character, logical(1))))
 })
 
 test_that("every template has its keys, a BIGN item and ids on its items", {
   skip_if(!nzchar(series_dir()), "the series folder is not installed")
   ts <- series_templates()
   expect_length(ts, 12L)
-  # (a listing counts nothing: tflspec_listing has no analysis step;
+  # (a listing counts nothing: tflspec_listing has no analysis step; nor
+  # does km_cards, its figure drawn from the data's steps;
   # tflspec_listing_summary's column headings have no N: no BIGN)
-  no_analysis <- "tflspec_listing.yml"
+  no_analysis <- c("tflspec_listing.yml", "km_cards.yml")
   no_bign <- "tflspec_listing_summary.yml"
   for (nm in names(ts)) {
     t <- ts[[nm]]
