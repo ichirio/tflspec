@@ -20,8 +20,9 @@ above only.}
 }
 \value{
 A data frame, one row a problem: \code{output_id} (\code{NA} for the
-study's ARD definition as a whole), \code{part} (\code{"file"}, \code{"ard"},
-\code{"content"}, \code{"program"}, \code{"figure"}, \code{"build"}), \code{item} (the file, the
+study's ARD definition as a whole and the study's own rows), \code{part}
+(\code{"file"}, \code{"study"}, \code{"ard"}, \code{"content"}, \code{"program"}, \code{"figure"},
+\code{"build"}), \code{item} (the file, the
 analysis, the function and argument, or the figure's part and
 field), \code{level} (\code{"error"}, \code{"warning"}, \code{"note"}, \code{"check"}) and
 \code{message}.  Its attributes: \code{versions}, a data frame of the key

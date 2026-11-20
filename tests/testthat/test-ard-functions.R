@@ -210,7 +210,7 @@ test_that("items are bound with bind_items(); a study program ends with bind_ite
   sp$analyses <- rbind(sp$analyses, two)
   # (a report of two items: its items in one call)
   rep_code <- tfl_ard_code(sp, output_id = "T", save = FALSE)
-  expect_true(any(grepl("bind_items(ard_a, ard_b)", rep_code, fixed = TRUE)))
+  expect_true(any(grepl("bind_items(.ard_a, .ard_b)", rep_code, fixed = TRUE)))
   expect_false(any(grepl("bind_rows(ard_", rep_code, fixed = TRUE)))
   # (a study of two reports: its reports' ARDs in one, a list)
   two$output_id <- "T2"
