@@ -169,9 +169,10 @@
   args
 }
 
+# (the enum's own brackets only: `enum[TRUE|FALSE]|logical` is TRUE, FALSE)
 .arg_enum_values <- function(type) {
   if (!startsWith(type %||% "", "enum[")) return(NULL)
-  strsplit(sub("^enum\\[(.*)\\]$", "\\1", type), "|", fixed = TRUE)[[1L]]
+  strsplit(sub("^enum\\[([^]]*)\\].*$", "\\1", type), "|", fixed = TRUE)[[1L]]
 }
 
 # A label or a help as written: `{en: , ja: }` or a plain text (English, ja
