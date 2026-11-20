@@ -48,7 +48,7 @@ test_that("derive and levels without conditions: the item's data under a name of
     list(derive = "AGEGR = ifelse(AGE < 65, \"<65\", \">=65\")",
          levels = "AGEGR = c(\">=65\", \"<65\")"))
   txt <- paste(tfl_ard_code(sp, output_id = "T", save = FALSE), collapse = "\n")
-  expect_match(txt, "ard_a_data <- mutate(", fixed = TRUE)
+  expect_match(txt, ".ard_a_data <- mutate(", fixed = TRUE)
   expect_match(txt, "AGEGR = factor(AGEGR, levels = c(\">=65\", \"<65\"))", fixed = TRUE)
 })
 
@@ -65,7 +65,7 @@ test_that("type: a model or a value is not bound into the report's ARD; BIGN wit
   sp$analyses$type <- c(NA, NA, "model")
   txt <- paste(tfl_ard_code(sp, output_id = "T", save = FALSE), collapse = "\n")
   expect_match(txt, "ard_total_n", fixed = TRUE)
-  expect_match(txt, "bind_items(ard_a, ard_bign)", fixed = TRUE)
+  expect_match(txt, "bind_items(.ard_a, .ard_bign)", fixed = TRUE)
 })
 
 test_that("missing_row: each variable's missing values a level of their own (missing_level())", {
@@ -141,7 +141,7 @@ test_that("ards: an item's several calls, one analysis_id, bound in the item (an
     list(method = "categorical", population_id = "SAF", by = "TRTA", variables = "SEX"),
     list(ards = list(calls)))
   txt <- paste(tfl_ard_code(sp, output_id = "T", save = FALSE), collapse = "\n")
-  expect_match(txt, "ard_a <- bind_items(ard_a_1, ard_a_2)", fixed = TRUE)
+  expect_match(txt, ".ard_a <- bind_items(.ard_a_1, .ard_a_2)", fixed = TRUE)
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, output_id = "T", save = FALSE))
   expect_identical(unique(ard$analysis_id), "A")
   expect_setequal(unique(ard$variable), c("SEX", "RACE"))
@@ -152,7 +152,7 @@ test_that("ards: an item's several calls, one analysis_id, bound in the item (an
     list(params = "sexv", conditions = list(cond), where = "SEX == \"{sexv}\"",
          ards = list(calls)))
   txt2 <- paste(tfl_ard_code(sp2, output_id = "T", save = FALSE), collapse = "\n")
-  expect_match(txt2, "  ard <- bind_items(ard_1, ard_2)", fixed = TRUE)
+  expect_match(txt2, "  ard <- bind_items(.ard_1, .ard_2)", fixed = TRUE)
   ard2 <- suppressMessages(tfl_build_ard(sp2, dir = dir, output_id = "T", save = FALSE))
   saf <- adam$ADSL[adam$ADSL$SAFFL == "Y", ]
   n_race <- ard2[ard2$variable == "RACE" & ard2$stat_name == "n", ]
@@ -174,6 +174,6 @@ test_that("type: model: the call kept under its own name, its data the item's, n
   expect_match(txt, "# FIT: a model, kept as fit (not in the ARD)", fixed = TRUE)
   # (stats:: is left off, as the program writes an attached package's calls)
   expect_match(txt, "fit <- (stats::)?lm\\(AGE ~ SEX, data = ")
-  expect_false(grepl("bind_items(ard_a, fit", txt, fixed = TRUE))
+  expect_false(grepl("bind_items(.ard_a, fit", txt, fixed = TRUE))
   expect_false(grepl("tag_ard(report_id, \"FIT\"", txt, fixed = TRUE))
 })
