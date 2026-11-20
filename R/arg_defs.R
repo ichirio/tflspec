@@ -247,9 +247,28 @@
     cd$label_ja <- l[["ja"]]
     cd$help_en <- if (is.na(h[["en"]])) as.character(cd[["description"]] %||% NA_character_) else h[["en"]]
     cd$help_ja <- h[["ja"]]
+    # a map's value that is itself a map has its own key / value columns
+    if (is.list(cd[["columns"]])) cd$columns <- .arg_columns(cd[["columns"]], NULL, w)
     cols[[k]] <- cd
   }
   cols
+}
+
+# A table's new_row as written: the values a row the user adds starts
+# with, by column; each a named column of `cols`.  NULL for none.
+.arg_new_row <- function(nr, cols, where) {
+  if (is.null(nr)) return(NULL)
+  if (!is.list(nr) || is.null(names(nr)) || !all(nzchar(names(nr)))) {
+    stop(sprintf("%s: new_row is a map, column: value.", where), call. = FALSE)
+  }
+  known <- if (is.list(cols)) names(cols)[nzchar(names(cols))] else character()
+  bad <- setdiff(names(nr), known)
+  if (length(bad)) {
+    stop(sprintf("%s: new_row column `%s` is not one of the table's columns (%s).", where, bad[1L],
+                 if (length(known)) paste(known, collapse = ", ") else "none written"),
+         call. = FALSE)
+  }
+  nr
 }
 
 # A passes_to as written (`passes_to:`, or `maps_to:` in a template, the
@@ -372,6 +391,7 @@
   row$free <- as.logical(free)
   row$ordered <- as.logical(ordered)
   row$columns <- I(list(.arg_columns(d[["columns"]], d[["labels"]], where_arg)))
+  row$new_row <- I(list(.arg_new_row(d[["new_row"]], d[["columns"]], where_arg)))
   row$fixed_rows <- I(list(NULL))
   row$tier <- tier
   row$passes_to <- I(list(.arg_passes_to(d, where_arg)))
@@ -648,7 +668,11 @@
 #'       `analysis_id`).  A named column's definition also has `label_en`,
 #'       `label_ja`, `help_en`, `help_ja`, from its own `label:` / `help:`
 #'       or the argument's `labels:` map (column: label).  A `map<K, V>`'s
-#'       two columns are written `columns: {key: {label: }, value: {label: }}`.}
+#'       two columns are written `columns: {key: {label: }, value: {label: }}`;
+#'       a value that is itself a map has its own `columns:` (the same form).}
+#'     \item{new_row}{(a list column) a table's values for a row the user
+#'       adds, by column (`new_row: {key: subgroup}`); `NULL` when none.  Each
+#'       name must be one of the argument's `columns:`.}
 #'     \item{fixed_rows}{(a list column) a template's table param: the rows
 #'       the template writes with fixed values next to its `"{name}"` (the
 #'       ALL row of forest_hr's conditions), a data frame whose attribute
