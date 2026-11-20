@@ -87,7 +87,7 @@ test_that("demog: an analysis a variable, its id the variable's name", {
   expect_identical(an[[1L]]$variables, "TRT01A")
   # the series' formats; the study's max_rows over the series's
   expect_identical(an[[2L]]$formats$mean, 2L)
-  expect_identical(attr(out, "origins")[["max_rows"]], "study")
+  expect_identical(attr(out, "origins")[["max_rows"]], "study_series")
   expect_identical(attr(out, "origins")[["by"]], "report")
   expect_identical(attr(out, "args")$max_rows, 25L)
 })

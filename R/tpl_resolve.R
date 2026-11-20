@@ -92,9 +92,13 @@
 #'   `series_settings:`), the file, or the study folder; `NULL` for none.
 #' @return A `tfl_output` (the report as a code SPEC).  Its attribute
 #'   `"args"` holds the template's arguments as used, and `"origins"` where
-#'   each came from (`"report"`, `"template"`, `"series"`, `"study"`,
-#'   `"fixed"`).
-#' @seealso [tfl_arg_defs()], [tfl_series_dir()]
+#'   each came from: `"report"`, `"template"` (the template's own default),
+#'   `"series"` (`!series`, the series' `values:`), `"study_series"`
+#'   (`!series`, the study's `series_settings:`), `"study_settings"`
+#'   (`!study`, the study's `settings:`), `"fallback"` (`!study`, the study
+#'   has no value: the argument is left unset) or `"fixed"` (`!fixed`).
+#' @seealso [tfl_arg_defs()], [tfl_series_dir()], [tfl_template_values()]
+#'   (the arguments' record without a whole report)
 #' @export
 tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   who <- "tfl_template_resolve()"
@@ -114,32 +118,11 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   defs <- tfl_arg_defs(template = template)
 
   given <- .tr_given(report$template, defs$name, template, who)
-  env <- list()
-  origins <- character()
-  missing <- character()
-  for (i in seq_len(nrow(defs))) {
-    p <- defs$name[[i]]
-    def <- tpl$params[[p]]$default
-    if (p %in% names(given)) {
-      if (isTRUE(attr(def, "fixed"))) {
-        stop(who, ": ", template, "'s ", p, " is fixed (!fixed); a report cannot change it.",
-             call. = FALSE)
-      }
-      val <- given[[p]]
-      o <- "report"
-    } else {
-      val <- def
-      o <- .tr_origin(torig, paste0("params.", p, ".default"))
-    }
-    if (inherits(val, "tfl_unset")) val <- NULL
-    if (!is.null(val)) attr(val, "fixed") <- attr(val, "origin") <- attr(val, "origins") <- NULL
-    .tr_one_value(val, defs$type[[i]], defs$values[[i]], p, o, template, who)
-    if (is.null(val) && isTRUE(defs$required[[i]])) missing <- c(missing, p)
-    env[p] <- list(val)
-    origins[[p]] <- o
-  }
-  if (length(missing)) {
-    stop(who, ": ", template, " needs ", paste(missing, collapse = ", "),
+  a <- .tr_args(tpl, torig, given, defs, template, who)
+  env <- a$env
+  origins <- a$origins
+  if (length(a$missing)) {
+    stop(who, ": ", template, " needs ", paste(a$missing, collapse = ", "),
          " (required: the report gives no value and the template no default).", call. = FALSE)
   }
 
@@ -147,25 +130,7 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   env <- .tr_derive(tpl$derive, env, defs$name, template, origins)
   .tr_check(tpl$check, env, defs$name, origins, template, who)
 
-  # data: rows -- the template's, the report's merged in by id key by key
-  # (a report row with `code:` makes the whole data: it replaces the
-  # template's row of its id), then filled in
-  rows <- tpl$data %||% list()
-  for (r in report$data %||% list()) {
-    k <- match(r$id %||% NA_character_, vapply(rows, function(e) e$id %||% NA_character_, ""))
-    if (is.na(k)) {
-      rows <- c(rows, list(r))
-    } else if (!is.null(r$code) && !inherits(r$code, "tfl_unset")) {
-      rows[[k]] <- r
-    } else {
-      for (key in names(r)) rows[[k]][key] <- list(r[[key]])
-    }
-  }
-  rows <- lapply(rows, function(r) {
-    r <- .tr_fill(r, env)
-    r[!vapply(r, function(v) inherits(v, "tfl_unset"), NA)]
-  })
-  rows <- lapply(rows, .derive_map_in)
+  rows <- .tr_data_rows(tpl$data, report$data, env)
 
   items <- list()
   for (it in tpl$analysis %||% list()) {
@@ -206,6 +171,63 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   attr(out, "args") <- args_env
   attr(out, "origins") <- origins
   out
+}
+
+# The template's arguments as used (`given`: the report's values, by name):
+# each param the report's value, else its default as resolved (`tpl`, with
+# its "origins" `torig`).  Returns `env` (the values; an unset one NULL),
+# `origins` (.series_origins, by param), `unset` (TRUE for a value that is
+# !unset) and `missing` (the required params with no value).
+.tr_args <- function(tpl, torig, given, defs, template, who) {
+  env <- list()
+  origins <- character()
+  unset <- logical()
+  missing <- character()
+  for (i in seq_len(nrow(defs))) {
+    p <- defs$name[[i]]
+    def <- tpl$params[[p]]$default
+    if (p %in% names(given)) {
+      if (isTRUE(attr(def, "fixed"))) {
+        stop(who, ": ", template, "'s ", p, " is fixed (!fixed); a report cannot change it.",
+             call. = FALSE)
+      }
+      val <- given[[p]]
+      o <- "report"
+    } else {
+      val <- def
+      o <- .tr_origin(torig, paste0("params.", p, ".default"))
+    }
+    unset[[p]] <- inherits(val, "tfl_unset")
+    if (unset[[p]]) val <- NULL
+    if (!is.null(val)) attr(val, "fixed") <- attr(val, "origin") <- attr(val, "origins") <- NULL
+    .tr_one_value(val, defs$type[[i]], defs$values[[i]], p, o, template, who)
+    if (is.null(val) && isTRUE(defs$required[[i]])) missing <- c(missing, p)
+    env[p] <- list(val)
+    origins[[p]] <- o
+  }
+  list(env = env, origins = origins, unset = unset, missing = missing)
+}
+
+# The data: rows -- the template's, the report's merged in by id key by key
+# (a report row with `code:` makes the whole data: it replaces the
+# template's row of its id), then filled in from `env`
+.tr_data_rows <- function(rows, report_rows, env) {
+  rows <- rows %||% list()
+  for (r in report_rows %||% list()) {
+    k <- match(r$id %||% NA_character_, vapply(rows, function(e) e$id %||% NA_character_, ""))
+    if (is.na(k)) {
+      rows <- c(rows, list(r))
+    } else if (!is.null(r$code) && !inherits(r$code, "tfl_unset")) {
+      rows[[k]] <- r
+    } else {
+      for (key in names(r)) rows[[k]][key] <- list(r[[key]])
+    }
+  }
+  rows <- lapply(rows, function(r) {
+    r <- .tr_fill(r, env)
+    r[!vapply(r, function(v) inherits(v, "tfl_unset"), NA)]
+  })
+  lapply(rows, .derive_map_in)
 }
 
 # The template's derive: names, in order, each one operation of

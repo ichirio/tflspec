@@ -273,6 +273,7 @@ reference:
     contents:
       - tfl_series_dir
       - tfl_pin_series
+      - tfl_template_values
   - title: Template SPEC, a template's help
     desc: >
       A template's parameters by tier (required, usual, other): the value

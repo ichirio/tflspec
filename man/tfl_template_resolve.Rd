@@ -18,8 +18,11 @@ tfl_template_resolve(report, template = NULL, study = NULL)
 \value{
 A \code{tfl_output} (the report as a code SPEC).  Its attribute
 \code{"args"} holds the template's arguments as used, and \code{"origins"} where
-each came from (\code{"report"}, \code{"template"}, \code{"series"}, \code{"study"},
-\code{"fixed"}).
+each came from: \code{"report"}, \code{"template"} (the template's own default),
+\code{"series"} (\code{!series}, the series' \verb{values:}), \code{"study_series"}
+(\code{!series}, the study's \verb{series_settings:}), \code{"study_settings"}
+(\code{!study}, the study's \verb{settings:}), \code{"fallback"} (\code{!study}, the study
+has no value: the argument is left unset) or \code{"fixed"} (\code{!fixed}).
 }
 \description{
 Reads the report's template (\verb{template: name: <series>/<template>}), puts
@@ -87,5 +90,6 @@ An operation inside \code{then}/\code{else} is not worked out: derive a name for
 and write \code{"{name}"}.
 }
 \seealso{
-\code{\link[=tfl_arg_defs]{tfl_arg_defs()}}, \code{\link[=tfl_series_dir]{tfl_series_dir()}}
+\code{\link[=tfl_arg_defs]{tfl_arg_defs()}}, \code{\link[=tfl_series_dir]{tfl_series_dir()}}, \code{\link[=tfl_template_values]{tfl_template_values()}}
+(the arguments' record without a whole report)
 }
