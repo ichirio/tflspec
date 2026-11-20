@@ -43,7 +43,7 @@ test_that("tfl_template_to_spec() writes figure: {name, args} for a series figur
   tplfig_study(d, c("adsl", "adtte"), id = "FK-1")
   km <- fk_spec(fk_lines()$km, d)
   expect_null(km$template)
-  expect_identical(km$figure$name, "km_curves")
+  expect_identical(km$figure$name, "fig_km")
   # the model's arguments, then the function's params
   expect_setequal(names(km$figure$args)[1:3], c("by", "time", "censor"))
   expect_identical(km$figure$args$by, "TRT01A")
@@ -115,8 +115,8 @@ test_that("a code SPEC's figure program runs to a ggplot", {
 test_that("an unknown figure name, a missing model argument, and figure: with content: stop", {
   o <- tfl_output("F-9", "figure")
   o$figure <- list(name = "waterfall", args = list())
-  expect_error(tfl_content_code(o), "km_curves, forest_hr")
-  o$figure <- list(name = "km_curves", args = list(by = "TRT01A"))
+  expect_error(tfl_content_code(o), "fig_km, forest_hr")
+  o$figure <- list(name = "fig_km", args = list(by = "TRT01A"))
   expect_error(tfl_content_code(o), "needs time, censor")
   o$figure <- list(name = "forest_hr", args = list())
   o$content <- list(tfl_item("ggplot", list()))

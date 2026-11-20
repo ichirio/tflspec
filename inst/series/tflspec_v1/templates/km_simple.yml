@@ -1,7 +1,7 @@
 # tflspec_v1/templates/km_simple.yml
 template: km_simple
 label: KM curves
-figure: km_curves
+figure: fig_km
 params:
   by:
     type: column

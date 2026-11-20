@@ -2266,6 +2266,689 @@ rtf_footer:
           say, as YAML (a map: name, rel_width, layout ...); blank: none.'
         example: '{rel_width: 2}'
 
+# ---- figure template functions: one call, the whole figure ---------------------
+#
+# fig_<kind>() (canon 3583a6d) makes a whole figure from a fit and the ARD.
+# Its entry is the one definition of its arguments (a test keeps the
+# function's formals and defaults the same).  The keys an argument writes,
+# beyond `type` and `label`:
+#   group      the id of its group; `groups:` (the function's) gives the
+#              groups' order and headings
+#   tier       required / key (shown even at its default) / other (folded)
+#   input      pick / text / table (the form a card shows)
+#   passes_to  where the value goes, "<fn>.<arg>" (none: tflspec's own code)
+#   member_of  for an entry of a list argument (censor_options ...): that
+#              list; the entry's key is "<list>.<name>"
+#   figure_style  the figure style key a NULL default takes
+#              (tfl_fig_style(): "km.censor_shape" is the km row of
+#              censor_shape, "colors.treatment" the treatment palette)
+
+fig_km:
+  package: tflspec
+  stage: mapping
+  label: {en: Kaplan-Meier figure, ja: KM の図}
+  description: "The whole Kaplan-Meier figure of a survfit2() fit: curves, number at risk table, legend, annotations and theme, built once."
+  groups:
+    - {id: data, label: {en: Data, ja: データ}}
+    - {id: y_axis, label: {en: Y axis, ja: 縦軸}}
+    - {id: x_axis, label: {en: X axis, ja: 横軸}}
+    - {id: curves, label: {en: Curve colours and lines, ja: 曲線の色と形}}
+    - {id: censor, label: {en: Censor marks, ja: 打ち切りの印}}
+    - {id: ci, label: {en: Confidence interval, ja: 信頼区間}}
+    - {id: median, label: {en: Median, ja: 中央値}}
+    - {id: risktable, label: {en: Number at risk table, ja: リスク集合の表}}
+    - {id: legend, label: {en: Legend, ja: 凡例}}
+    - {id: annotation, label: {en: Annotations, ja: 注記}}
+    - {id: overall, label: {en: Overall, ja: 全体}}
+  args:
+    km_fit:
+      type: object
+      group: data
+      tier: required
+      required: true
+      passes_to: ggsurvfit.x
+      label: {en: Fit, ja: 当てはめ}
+      help: {en: "The survfit2() fit (the template makes it from by, time and censor).", ja: "survfit2() の当てはめ（テンプレートが by・time・censor から作る）。"}
+    ard:
+      type: object
+      group: data
+      tier: other
+      default: ~
+      label: {en: ARD, ja: ARD}
+      help: {en: "The ARD: BIGN (the legend's N), HR (the hazard ratio), LOGRANK (a stratified p-value).", ja: "ARD。BIGN（凡例の N）、HR（ハザード比）、LOGRANK（層別の p 値）。"}
+    time_unit:
+      type: "enum[days|weeks|months|years]"
+      input: pick
+      group: data
+      tier: key
+      default: days
+      label: {en: Time unit, ja: 時間の単位}
+      help: {en: "The x axis title's {time_unit}; the time is in this unit already.", ja: "横軸の見出しの {time_unit}。時間はすでにこの単位。"}
+    group_labels:
+      type: "map<string, string>|list<string>"
+      input: table
+      group: data
+      tier: other
+      default: ~
+      passes_to: scale_colour_manual.labels
+      label: {en: Group labels, ja: 群の表示名}
+      help: {en: "A group's name in the legend, by its value; blank: the value.", ja: "凡例での群の名前（群の値ごと）。空なら値のまま。"}
+    type:
+      type: "enum[survival|risk|cumhaz|cloglog]"
+      input: pick
+      group: y_axis
+      tier: key
+      default: survival
+      passes_to: ggsurvfit.type
+      label: {en: Y axis type, ja: 縦軸の種類}
+      help: {en: "survival (S(t)), risk (1 - S(t)), cumhaz (cumulative hazard) or cloglog (log(-log S(t))).", ja: "survival（生存割合）・risk（累積発現割合）・cumhaz（累積ハザード）・cloglog（log(−log S(t))）。"}
+    y_label:
+      type: string
+      input: text
+      group: y_axis
+      tier: key
+      default: ~
+      passes_to: labs.y
+      label: {en: Y axis title, ja: 縦軸の見出し}
+      help: {en: "Blank: the type's (Survival Probability ...).", ja: "空なら縦軸の種類に合わせる。"}
+    y_percent:
+      type: logical
+      input: pick
+      group: y_axis
+      tier: other
+      default: false
+      passes_to: scale_y_continuous.labels
+      label: {en: Y axis in %, ja: 縦軸を % で}
+    y_limits:
+      type: "list<number>"
+      input: text
+      group: y_axis
+      tier: other
+      default: [0, 1]
+      passes_to: coord_cartesian.ylim
+      label: {en: Y axis range, ja: 縦軸の範囲}
+      help: {en: "Two numbers; cumhaz and cloglog take the data's unless given.", ja: "2 つの数。cumhaz と cloglog は書かなければデータに合わせる。"}
+    y_breaks:
+      type: "number|list<number>"
+      input: text
+      group: y_axis
+      tier: other
+      default: ~
+      figure_style: km.y_by
+      passes_to: scale_y_continuous.breaks
+      label: {en: Y axis ticks, ja: 縦軸の目盛り}
+      help: {en: "One number: the interval; several: the positions.", ja: "数 1 つなら間隔、数の列なら目盛りの位置。"}
+    x_label:
+      type: string
+      input: text
+      group: x_axis
+      tier: key
+      default: "Time ({time_unit})"
+      passes_to: labs.x
+      label: {en: X axis title, ja: 横軸の見出し}
+    x_max:
+      type: number
+      input: text
+      group: x_axis
+      tier: key
+      default: ~
+      passes_to: coord_cartesian.xlim
+      label: {en: X axis end, ja: 横軸の右端}
+      help: {en: "Blank: the last time.", ja: "空なら最後の時間。"}
+    x_breaks:
+      type: "number|list<number>"
+      input: text
+      group: x_axis
+      tier: key
+      default: ~
+      passes_to: scale_x_continuous.breaks
+      label: {en: X axis ticks, ja: 横軸の目盛り}
+      help: {en: "One number: the interval; several: the positions.  The number at risk table's times too.", ja: "数 1 つなら間隔、数の列なら目盛りの位置。リスク集合の表の時点にもなる。"}
+    colours:
+      type: "list<string>|map<string, string>"
+      input: pick
+      choices: figure_style(palette)
+      free: true
+      ordered: true
+      group: curves
+      tier: other
+      default: ~
+      figure_style: colors.treatment
+      passes_to: [scale_colour_manual.values, scale_fill_manual.values]
+      label: {en: Curve colours, ja: 曲線の色}
+      help: {en: "In the groups' order, or by the group's value.", ja: "群の順、または群の値ごと。"}
+    linetypes:
+      type: "list<string>|map<string, string>"
+      input: pick
+      values: [solid, dashed, dotted, dotdash, longdash, twodash]
+      free: true
+      ordered: true
+      group: curves
+      tier: other
+      default: ~
+      figure_style: treatment_linetypes
+      passes_to: [ggsurvfit.linetype_aes, scale_linetype_manual.values]
+      label: {en: Line types, ja: 線の種類}
+    curve_options:
+      type: "map<string, number>"
+      group: curves
+      tier: other
+      default: {}
+      label: {en: Curve options, ja: 曲線の設定}
+    curve_options.linewidth:
+      type: number
+      input: text
+      group: curves
+      tier: other
+      member_of: curve_options
+      default: ~
+      figure_style: km.line_width
+      passes_to: ggsurvfit.linewidth
+      label: {en: Line width, ja: 線の太さ}
+    censor_mark:
+      type: logical
+      input: pick
+      group: censor
+      tier: key
+      default: true
+      label: {en: Censor marks, ja: 打ち切りの印}
+    censor_options:
+      type: "map<string, number|string|logical>"
+      group: censor
+      tier: other
+      default: {}
+      label: {en: Censor mark options, ja: 打ち切りの印の設定}
+    censor_options.shape:
+      type: "string|number"
+      input: pick
+      choices: figure_style(marker)
+      free: true
+      group: censor
+      tier: other
+      member_of: censor_options
+      default: ~
+      figure_style: km.censor_shape
+      passes_to: add_censor_mark.shape
+      label: {en: Censor mark shape, ja: 打ち切りの印の形}
+    censor_options.size:
+      type: number
+      input: text
+      group: censor
+      tier: other
+      member_of: censor_options
+      default: ~
+      figure_style: km.censor_size
+      passes_to: add_censor_mark.size
+      label: {en: Censor mark size, ja: 打ち切りの印の大きさ}
+    censor_options.stroke:
+      type: number
+      input: text
+      group: censor
+      tier: other
+      member_of: censor_options
+      default: ~
+      figure_style: km.censor_stroke
+      passes_to: add_censor_mark.stroke
+      label: {en: Censor mark stroke, ja: 打ち切りの印の線の太さ}
+    censor_options.legend:
+      type: logical
+      input: pick
+      group: censor
+      tier: other
+      member_of: censor_options
+      default: false
+      passes_to: scale_shape_manual.values
+      label: {en: Censor mark in the legend, ja: 凡例で打ち切りの印を説明}
+    censor_options.legend_label:
+      type: string
+      input: text
+      group: censor
+      tier: other
+      member_of: censor_options
+      default: Censored
+      passes_to: scale_shape_manual.values
+      label: {en: Censor mark's legend text, ja: 凡例の打ち切りの印の文字}
+    ci:
+      type: "enum[none|ribbon|lines]"
+      input: pick
+      group: ci
+      tier: key
+      default: none
+      passes_to: add_confidence_interval.type
+      label: {en: Confidence interval, ja: 信頼区間}
+      help: {en: "none, ribbon (a band) or lines; the fit's level and transformation.", ja: "none・ribbon（帯）・lines（線）。水準と変換は当てはめのもの。"}
+    ci_options:
+      type: "map<string, number|string|list<number>>"
+      group: ci
+      tier: other
+      default: {}
+      label: {en: Confidence interval options, ja: 信頼区間の設定}
+    ci_options.alpha:
+      type: number
+      input: text
+      group: ci
+      tier: other
+      member_of: ci_options
+      default: 0.2
+      passes_to: add_confidence_interval.alpha
+      label: {en: Band transparency, ja: 帯の透明度}
+    ci_options.band:
+      type: "enum[none|hall-wellner|epband|loghall|logep]"
+      input: pick
+      group: ci
+      tier: other
+      member_of: ci_options
+      default: none
+      label: {en: Simultaneous confidence band, ja: 同時信頼帯}
+      help: {en: "Hall-Wellner or equal precision (and their log forms), from km.ci::km.ci() (install km.ci); the fit's level must be 0.90, 0.95 or 0.99.", ja: "Hall-Wellner または equal precision（とその log 形）。km.ci::km.ci() で計算（km.ci が要る）。当てはめの信頼係数は 0.90・0.95・0.99 のどれか。"}
+    ci_options.band_times:
+      type: "list<number>"
+      input: text
+      group: ci
+      tier: other
+      member_of: ci_options
+      default: ~
+      label: {en: Band time window, ja: 同時信頼帯の時間の範囲}
+    median_line:
+      type: "enum[none|h|hv]"
+      input: pick
+      group: median
+      tier: key
+      default: none
+      passes_to: add_quantile.y_value
+      label: {en: Median line, ja: 中央値の線}
+      help: {en: "none, h (a line at 50%) or hv (and down to each median).", ja: "none・h（50% の横線）・hv（横線と各群の中央値への縦線）。"}
+    median_options:
+      type: "map<string, number|string>"
+      group: median
+      tier: other
+      default: {}
+      label: {en: Median line options, ja: 中央値の線の設定}
+    median_options.linetype:
+      type: string
+      input: pick
+      values: [solid, dashed, dotted, dotdash, longdash, twodash]
+      free: true
+      group: median
+      tier: other
+      member_of: median_options
+      default: ~
+      figure_style: km.median_linetype
+      passes_to: add_quantile.linetype
+      label: {en: Median line type, ja: 中央値の線の種類}
+    median_options.colour:
+      type: string
+      input: pick
+      choices: figure_style(palette)
+      free: true
+      group: median
+      tier: other
+      member_of: median_options
+      default: ~
+      figure_style: km.median_colour
+      passes_to: add_quantile.colour
+      label: {en: Median line colour, ja: 中央値の線の色}
+    median_options.linewidth:
+      type: number
+      input: text
+      group: median
+      tier: other
+      member_of: median_options
+      default: ~
+      figure_style: km.median_line_width
+      passes_to: add_quantile.linewidth
+      label: {en: Median line width, ja: 中央値の線の太さ}
+    risktable:
+      type: logical
+      input: pick
+      group: risktable
+      tier: key
+      default: false
+      label: {en: Number at risk table, ja: リスク集合の表}
+    risktable_stats:
+      type: "list<string>"
+      input: pick
+      values: [n.risk, cum.event, cum.censor, n.event, n.censor]
+      free: true
+      ordered: true
+      group: risktable
+      tier: other
+      default: n.risk
+      passes_to: add_risktable.risktable_stats
+      label: {en: Rows of the table, ja: 表の行}
+      help: {en: "ggsurvfit's statistics, or a glue of them: \"{n.risk} ({cum.event})\".", ja: "ggsurvfit の統計量、または組み合わせ \"{n.risk} ({cum.event})\"。"}
+    risktable_times:
+      type: "list<number>"
+      input: text
+      group: risktable
+      tier: other
+      default: ~
+      passes_to: add_risktable.times
+      label: {en: Times of the table, ja: 表の時点}
+      help: {en: "Blank: the x axis ticks.", ja: "空なら横軸の目盛り。"}
+    risktable_options:
+      type: "map<string, number|string|logical>"
+      group: risktable
+      tier: other
+      default: {}
+      label: {en: Number at risk table options, ja: リスク集合の表の設定}
+    risktable_options.title:
+      type: "string|list<string>"
+      input: text
+      group: risktable
+      tier: other
+      member_of: risktable_options
+      default: ~
+      figure_style: km.risk_title
+      passes_to: add_risktable.stats_label
+      label: {en: Table title, ja: 表の見出し}
+    risktable_options.height:
+      type: number
+      input: text
+      group: risktable
+      tier: other
+      member_of: risktable_options
+      default: ~
+      figure_style: km.risk_height
+      passes_to: add_risktable.risktable_height
+      label: {en: Table height, ja: 表の高さ}
+    risktable_options.size:
+      type: number
+      input: text
+      group: risktable
+      tier: other
+      member_of: risktable_options
+      default: ~
+      figure_style: km.text_size
+      passes_to: add_risktable.size
+      label: {en: Table text size, ja: 表の文字の大きさ}
+    risktable_options.group:
+      type: "enum[auto|strata|risktable_stats]"
+      input: pick
+      group: risktable
+      tier: other
+      member_of: risktable_options
+      default: auto
+      passes_to: add_risktable.risktable_group
+      label: {en: Table blocks, ja: 表の分け方}
+    risktable_options.symbol:
+      type: logical
+      input: pick
+      group: risktable
+      tier: other
+      member_of: risktable_options
+      default: false
+      label: {en: Curve-coloured symbols for the groups, ja: 群の名前を曲線の色の印で}
+    legend:
+      type: "enum[inside|bottom|right|none]"
+      input: pick
+      group: legend
+      tier: key
+      default: inside
+      label: {en: Legend position, ja: 凡例の位置}
+    legend_n:
+      type: logical
+      input: pick
+      group: legend
+      tier: other
+      default: true
+      label: {en: N in the legend, ja: 凡例に N}
+    legend_median:
+      type: logical
+      input: pick
+      group: legend
+      tier: key
+      default: false
+      label: {en: "Median (CI) in the legend", ja: 凡例に中央値（信頼区間）}
+    legend_options:
+      type: "map<string, number|string|logical|map<string, map<string, string>>>"
+      group: legend
+      tier: other
+      default: {}
+      label: {en: Legend options, ja: 凡例の設定}
+    legend_options.title:
+      type: string
+      input: text
+      group: legend
+      tier: other
+      member_of: legend_options
+      default: ~
+      passes_to: add_legend_title.title
+      label: {en: Legend title, ja: 凡例の見出し}
+    legend_options.corner:
+      type: "enum[top_right|top_left|bottom_left|bottom_right]"
+      input: pick
+      group: legend
+      tier: other
+      member_of: legend_options
+      default: ~
+      label: {en: Corner of an inside legend, ja: 図の中の凡例の隅}
+      help: {en: "Blank: top right for survival, else top left.", ja: "空なら survival は右上、ほかは左上。"}
+    legend_options.median_text:
+      type: string
+      input: text
+      group: legend
+      tier: other
+      member_of: legend_options
+      default: "{arm}: {median} ({lcl}, {ucl})"
+      label: {en: Median text, ja: 中央値の書き方}
+    legend_options.median_digits:
+      type: integer
+      input: text
+      group: legend
+      tier: other
+      member_of: legend_options
+      default: 1
+      label: {en: Median decimals, ja: 中央値の小数の桁}
+    legend_options.style:
+      type: "enum[data|combined]"
+      input: pick
+      group: legend
+      tier: other
+      member_of: legend_options
+      default: data
+      label: {en: Legend style, ja: 凡例の形}
+      help: {en: "data: ggplot2's legend of the curves; combined: every item (curves, censor mark) in one grid.", ja: "data は曲線に連動する普通の凡例、combined は全ての項目（曲線・打ち切りの印）を 1 つの格子に並べる凡例。"}
+    legend_options.ncol:
+      type: integer
+      input: text
+      group: legend
+      tier: other
+      member_of: legend_options
+      default: ~
+      label: {en: Combined legend columns, ja: まとめた凡例の列の数}
+    legend_options.nrow:
+      type: integer
+      input: text
+      group: legend
+      tier: other
+      member_of: legend_options
+      default: ~
+      label: {en: Combined legend rows, ja: まとめた凡例の行の数}
+    legend_options.border:
+      type: logical
+      input: pick
+      group: legend
+      tier: other
+      member_of: legend_options
+      default: false
+      label: {en: Combined legend border, ja: まとめた凡例の枠線}
+    legend_options.item_labels:
+      type: "map<string, map<string, string>>"
+      input: table
+      group: legend
+      tier: other
+      member_of: legend_options
+      default: ~
+      label: {en: Combined legend texts, ja: まとめた凡例の文字}
+      help: {en: "By aesthetic, then value: colour: {Drug X: Drug X 10 mg}, shape: {Censored: Censored subject}.", ja: "見た目の種類ごと、値ごと。colour: {Drug X: Drug X 10 mg}、shape: {Censored: 打ち切り}。"}
+    legend_options.rel_size:
+      type: number
+      input: text
+      group: legend
+      tier: other
+      member_of: legend_options
+      default: ~
+      label: {en: Combined legend size, ja: まとめた凡例の大きさ}
+      help: {en: "Its height below (its width beside) for the figure's 1; blank: 0.07 a row below, 0.3 beside.", ja: "図を 1 とした高さ（下）または幅（右）。空なら下は 1 行 0.07、右は 0.3。"}
+    pvalue:
+      type: "enum[none|logrank|ard]"
+      input: pick
+      group: annotation
+      tier: key
+      default: none
+      passes_to: annotate.label
+      label: {en: P-value, ja: p 値}
+      help: {en: "logrank: the fit's unstratified test; ard: the ARD's LOGRANK row (a stratified test).", ja: "logrank は当てはめの層別しない検定、ard は ARD の LOGRANK の行（層別の検定）。"}
+    hr:
+      type: logical
+      input: pick
+      group: annotation
+      tier: key
+      default: false
+      passes_to: annotate.label
+      label: {en: Hazard ratio, ja: ハザード比}
+      help: {en: "The ARD's HR rows, a line an arm compared.", ja: "ARD の HR の行。比べる群ごとに 1 行。"}
+    landmark_times:
+      type: "list<number>"
+      input: text
+      group: annotation
+      tier: other
+      default: ~
+      passes_to: add_quantile.x_value
+      label: {en: Landmark times, ja: 時点の線}
+    summary_table:
+      type: "enum[none|top_right|top_left|bottom_left|bottom_right|below|right]"
+      input: pick
+      group: annotation
+      tier: other
+      default: none
+      label: {en: Summary table, ja: 要約の表}
+      help: {en: "Each group's N, events, censored and median (95% CI): in a corner of the curves, or below or right of the figure.", ja: "群ごとの N・イベント数・打ち切り数・中央値 (95% CI)。曲線の図の隅か、図の下・右。"}
+    annotation_options:
+      type: "map<string, number|string|list<string>>"
+      group: annotation
+      tier: other
+      default: {}
+      label: {en: Annotation options, ja: 注記の設定}
+    annotation_options.position:
+      type: "enum[top_right|top_left|bottom_left|bottom_right]"
+      input: pick
+      group: annotation
+      tier: other
+      member_of: annotation_options
+      default: ~
+      passes_to: [annotate.x, annotate.y]
+      label: {en: Annotation corner, ja: 注記の隅}
+      help: {en: "Blank: bottom left for survival, else top left (bottom right when an inside legend is there).", ja: "空なら survival は左下、ほかは左上（図の中の凡例と重なる時は右下）。"}
+    annotation_options.pvalue_caption:
+      type: string
+      input: text
+      group: annotation
+      tier: other
+      member_of: annotation_options
+      default: "Log-rank {p.value}"
+      label: {en: P-value text, ja: p 値の書き方}
+    annotation_options.p_digits:
+      type: integer
+      input: text
+      group: annotation
+      tier: other
+      member_of: annotation_options
+      default: 3
+      label: {en: P-value decimals, ja: p 値の小数の桁}
+    annotation_options.hr_text:
+      type: string
+      input: text
+      group: annotation
+      tier: other
+      member_of: annotation_options
+      default: "HR (95% CI): {hr} ({lcl}, {ucl})"
+      label: {en: HR text, ja: HR の書き方}
+    annotation_options.hr_digits:
+      type: integer
+      input: text
+      group: annotation
+      tier: other
+      member_of: annotation_options
+      default: 2
+      label: {en: HR decimals, ja: HR の小数の桁}
+    annotation_options.size:
+      type: number
+      input: text
+      group: annotation
+      tier: other
+      member_of: annotation_options
+      default: ~
+      passes_to: annotate.size
+      label: {en: Annotation text size (pt), ja: 注記の文字の大きさ（pt）}
+    annotation_options.summary_stats:
+      type: "list<enum[n|events|censored|median]>"
+      input: pick
+      ordered: true
+      group: annotation
+      tier: other
+      member_of: annotation_options
+      default: ["n", events, censored, median]
+      label: {en: Summary table columns, ja: 要約の表の列}
+    annotation_options.summary_digits:
+      type: integer
+      input: text
+      group: annotation
+      tier: other
+      member_of: annotation_options
+      default: 1
+      label: {en: Summary table median decimals, ja: 要約の表の中央値の小数の桁}
+    theme_options:
+      type: "map<string, number|string>"
+      group: overall
+      tier: other
+      default: {}
+      label: {en: Theme, ja: テーマ}
+    theme_options.theme:
+      type: "enum[boxed|L_axis|minimal|classic]"
+      input: pick
+      group: overall
+      tier: other
+      member_of: theme_options
+      default: ~
+      figure_style: km.theme
+      label: {en: Theme, ja: テーマ}
+    theme_options.base_size:
+      type: number
+      input: text
+      group: overall
+      tier: other
+      member_of: theme_options
+      default: ~
+      figure_style: km.base_size
+      passes_to: theme_minimal.base_size
+      label: {en: Base font size, ja: 文字の基本の大きさ}
+    theme_options.axis_title_size:
+      type: number
+      input: text
+      group: overall
+      tier: other
+      member_of: theme_options
+      default: ~
+      label: {en: Axis title size (pt), ja: 軸の見出しの文字の大きさ（pt）}
+    theme_options.axis_text_size:
+      type: number
+      input: text
+      group: overall
+      tier: other
+      member_of: theme_options
+      default: ~
+      label: {en: Tick label size (pt), ja: 目盛りの文字の大きさ（pt）}
+    theme_options.legend_text_size:
+      type: number
+      input: text
+      group: overall
+      tier: other
+      member_of: theme_options
+      default: ~
+      label: {en: Legend text size (pt), ja: 凡例の文字の大きさ（pt）}
+
 # ---- figures: the functions a figure's content calls -------------------------
 # A figure report's `content:` is its plots' items (R/fig_content.R): the
 # function that makes a plot first, then its layers and its settings, then

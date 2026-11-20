@@ -170,10 +170,21 @@
 #'   figures' own symbols (`censor`, `assessment`).
 #'
 #' @param path A workbook.
+#' @param study A study: what [tfl_read_study_spec()] returns, or its
+#'   folder.  Given, `tfl_fig_style()` returns that study's figure style
+#'   (`defaults.yml`'s `figure_style:`, tflspec's built-in one for a sheet
+#'   it does not give) instead of the session's.
 #' @return `tfl_fig_style()` and `tfl_read_fig_style()`: a list of three data frames;
 #'   `tfl_fig_style_template()`: `path`, invisibly.
+#' @examples
+#' s <- tfl_fig_style(system.file("extdata", "spec-yaml", package = "tflspec"))
+#' head(s$colors)
 #' @export
-tfl_fig_style <- function() {
+tfl_fig_style <- function(study = NULL) {
+  if (!is.null(study)) {
+    if (is.character(study)) study <- tfl_read_study_spec(study)
+    return(.fig_style_study(study$figure_style))
+  }
   s <- getOption("tflspec.fig_style")
   if (is.null(s)) return(.fig_style_builtin())
   b <- .fig_style_builtin()

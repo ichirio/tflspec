@@ -228,11 +228,12 @@
 
 # A figure report resolved from a series template (tfl_template_resolve():
 # its `template` attribute is the template's name, `<series>/<template>`)
-# whose template names its content in `figure:` (km_curves, forest_hr): the
+# whose template names its content in `figure:` (fig_km, forest_hr): the
 # program calls that function (.fig_content_table(), tfl_figure_fn()) with
 # the report's resolved arguments -- the model object when the function
 # takes one (km_fit, made from the data the program's data part made), the
-# ARD (`ard`) and the appearance `params` -- into `content`.  NULL when the
+# ARD (`ard`) and the appearance arguments, the function's own (fig_km(type
+# = )) or its `params` list (forest_hr()) -- into `content`.  NULL when the
 # report is not one.
 .content_fig_series_code <- function(output, name = "content") {
   if (is.null(output$figure)) return(NULL)
@@ -262,15 +263,17 @@
     model <- .fig_series_model_lines(e$model$arg, call)
   }
   given <- Filter(Negate(is.null), args[intersect(e$params, names(args))])
-  params <- if (length(given)) {
+  given_code <- paste0(names(given), " = ", vapply(given, .fig_arg_code, ""))
+  params <- if (length(given) && !isTRUE(e$direct)) {
     c("  params = list(",
-      paste0("    ", names(given), " = ", vapply(given, .fig_arg_code, ""),
-             c(rep(",", length(given) - 1L), "")),
+      paste0("    ", given_code, c(rep(",", length(given) - 1L), "")),
       "  )")
   }
   fn <- paste0("tflspec::", e$fn)
   call_args <- c(if (!is.null(e$model)) paste0("  ", e$model$arg, " = ", e$model$arg),
-                 "  ard = ard")
+                 "  ard = ard",
+                 # (the function's own arguments: one a line, as the others)
+                 if (length(given) && isTRUE(e$direct)) paste0("  ", given_code))
   # (a comma after each argument but the last)
   n_comma <- length(call_args) - if (length(params)) 0L else 1L
   call_args <- paste0(call_args, c(rep(",", n_comma), rep("", length(call_args) - n_comma)))

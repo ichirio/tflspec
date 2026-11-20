@@ -7,8 +7,8 @@
 # column, a ggplot2 piece) and `page:` (the rtfreporter document).  Every
 # item's keys are the function's arguments, so a reader can check them.
 #
-# Stage 0 (shared with S1): the R objects and a reader / writer of one
-# report file.  `extends` is read, not resolved yet (stage 1).
+# Phase 0 (shared with S1): the R objects and a reader / writer of one
+# report file.  `extends` is read, not resolved yet (the next phase).
 
 #' R objects of the YAML spec
 #'
