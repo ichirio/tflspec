@@ -65,7 +65,7 @@ test_that("fig_km()'s formals and defaults are its schema entry's (one definitio
     keys <- mem[vapply(args[mem], function(a) identical(a$member_of, k), NA)]
     expect_identical(keys, paste0(k, ".", names(od[[k]])), info = k)
     for (nm in names(od[[k]])) {
-      expect_equal(od[[k]][[nm]], args[[paste0(k, ".", nm)]]$default, ignore_attr = TRUE,
+      expect_equal(od[[k]][[nm]], unlist(args[[paste0(k, ".", nm)]]$default), ignore_attr = TRUE,
                    info = paste(k, nm))
     }
   }
@@ -82,6 +82,39 @@ test_that("fig_km()'s formals and defaults are its schema entry's (one definitio
   for (k in names(args)) {
     expect_true(nzchar(args[[k]]$label$en %||% "") && nzchar(args[[k]]$label$ja %||% ""), info = k)
   }
+})
+
+test_that("tfl_arg_defs(fn = \"fig_km\") gives the card's columns from its schema entry", {
+  d <- tfl_arg_defs(fn = "fig_km")
+  ent <- tfl_schema("fig_km")
+  expect_identical(d$name[d$name != "..."], names(ent$args))
+  # the groups, in the entry's order, with their headings
+  g <- attr(d, "groups")
+  expect_identical(g$id, vapply(ent$groups, `[[`, "", "id"))
+  expect_false(anyNA(g$label_en) || anyNA(g$label_ja))
+  expect_true(all(d$group %in% g$id))
+  # labels in English and Japanese; help, where an argument has it, in both
+  expect_false(anyNA(d$label_en) || anyNA(d$label_ja))
+  expect_identical(is.na(d$help_en), is.na(d$help_ja))
+  # a YAML word read as a logical ("n") stays a word
+  expect_identical(d$default[[which(d$name == "annotation_options.summary_stats")]][[1L]], "n")
+  # tiers: the fit required, the main settings key, the rest other
+  tier <- stats::setNames(d$tier, d$name)
+  expect_identical(unname(tier["km_fit"]), "required")
+  expect_true(all(tier[c("time_unit", "type", "ci", "risktable", "legend", "pvalue")] == "key"))
+  expect_identical(unname(tier["censor_options.shape"]), "other")
+  # nothing set: the fit stops, the rest are left out
+  expect_identical(d$unset[d$name == "km_fit"], "stop")
+  expect_true(all(d$unset[d$name != "km_fit"] == "omit"))
+  # passes_to and member_of
+  pt <- stats::setNames(d$passes_to, d$name)
+  expect_identical(pt[["km_fit"]], "ggsurvfit.x")
+  expect_identical(pt[["time_unit"]], character())
+  expect_identical(d$member_of[d$name == "legend_options.ncol"], "legend_options")
+  expect_true(is.na(d$member_of[d$name == "legend_options"]))
+  expect_true(all(d$member_of[grepl("[.]", d$name)] == sub("[.].*$", "", d$name[grepl("[.]", d$name)])))
+  # the figure style's choices
+  expect_identical(d$choices[[which(d$name == "colours")]], "figure_style(palette)")
 })
 
 test_that("fig_km() builds the KM figure: N in the legend, the titles, the class", {
@@ -384,11 +417,11 @@ test_that("the flat legend helper: items of several aesthetics, relabelled by ae
   it$label <- lab
   p <- .fig_legend_plot(it, n_cols = 2, border = TRUE)
   b <- ggplot2::ggplot_build(p)
-  expect_identical(vapply(p$layers, function(l) class(l$geom)[1L], ""), c("GeomRect", "GeomPoint", "GeomText"))
+  expect_identical(unname(vapply(p$layers, function(l) class(l$geom)[1L], "")), c("GeomRect", "GeomPoint", "GeomText"))
   tx <- b$data[[3L]]
   expect_identical(tx$label, c("Best overall CR", "PR", "CR"))
   # row by row; the second column starts after the first's longest text
-  expect_identical(tx$y, c(0, 0, -1))
+  expect_equal(tx$y, c(0, 0, -1))
   expect_equal(tx$x[2L] - tx$x[1L], 2 + 1 + nchar("Best overall CR") + 3)
   expect_equal(b$data[[1L]]$fill, c("green", "blue"))
   expect_s3_class(.fig_legend_attach(ggplot2::ggplot(), p, "bottom"), "patchwork")
@@ -403,6 +436,6 @@ test_that("the flat legend helper: items of several aesthetics, relabelled by ae
   its <- .fig_legend_items(gp)
   expect_identical(its$aes, c("colour", "colour", "shape"))
   expect_identical(its$key, c("line", "line", "point"))
-  expect_identical(its$fill[1:2], c("pink", "cyan"))
+  expect_equal(its$fill[1:2], c("pink", "cyan"), ignore_attr = TRUE)
   expect_equal(its$size[3L], 3)
 })

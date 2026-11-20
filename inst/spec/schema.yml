@@ -2889,7 +2889,7 @@ fig_km:
       group: annotation
       tier: other
       member_of: annotation_options
-      default: [n, events, censored, median]
+      default: ["n", events, censored, median]
       label: {en: Summary table columns, ja: 要約の表の列}
     annotation_options.summary_digits:
       type: integer
