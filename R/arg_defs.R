@@ -336,10 +336,11 @@
   df
 }
 
-# The template file of "<series>/<template>": the first series folder that has
-# it (the option tflspec.series_dir, tflplanner's home standards/series/, the
-# package's own series).
-.template_file <- function(template) {
+# The template file of "<series>/<template>": with `study_dir`, the study's
+# copy (spec/series/<series>/templates/<template>.yml) and nothing else; else
+# the first series folder that has it (the option tflspec.series_dir,
+# tflplanner's home standards/series/, the package's own series).
+.template_file <- function(template, study_dir = NULL) {
   if (!is.character(template) || length(template) != 1L || !grepl("^[^/]+/[^/]+$", template)) {
     stop(sprintf("template %s: write <series>/<template>, e.g. \"tflspec_v1/demog\".",
                  encodeString(as.character(template)[1L], quote = "\"")), call. = FALSE)
@@ -349,9 +350,13 @@
     stop(sprintf("series %s: a series name is lower case letters, digits and _, starting with a letter.",
                  encodeString(parts[1L], quote = "\"")), call. = FALSE)
   }
-  dirs <- c(getOption("tflspec.series_dir"),
-            file.path(tools::R_user_dir("tflplanner", "data"), "standards", "series"),
-            system.file("series", package = "tflspec"))
+  if (!is.null(study_dir)) {
+    f <- file.path(.study_series_root(study_dir), parts[1L], "templates", paste0(parts[2L], ".yml"))
+    if (file.exists(f)) return(f)
+    stop(sprintf("template %s is not copied into the study (no %s): %s.", template, f,
+                 .study_copy_hint(study_dir, template)), call. = FALSE)
+  }
+  dirs <- .series_search_dirs()
   dirs <- dirs[nzchar(dirs)]
   for (d in dirs) {
     f <- file.path(d, parts[1L], "templates", paste0(parts[2L], ".yml"))
@@ -362,8 +367,8 @@
                paste(dirs, collapse = ", ")), call. = FALSE)
 }
 
-.template_read <- function(template) {
-  f <- .template_file(template)
+.template_read <- function(template, study_dir = NULL) {
+  f <- .template_file(template, study_dir)
   y <- yaml::read_yaml(f, handlers = .arg_yaml_handlers())
   attr(y, "file") <- f
   y
@@ -382,6 +387,9 @@
 #' @param template A template, `"<series>/<template>"` (`"tflspec_v1/demog"`).
 #'   Its file is found in the series folders: the option `tflspec.series_dir`,
 #'   tflplanner's home `standards/series/`, the series tflspec ships.
+#' @param study_dir A study folder: the template is read from the study's
+#'   copy ([tfl_copy_templates()]) instead, a template of the study's own
+#'   (copied with `as`) too.  `NULL` (default) for the series folders.
 #' @return A data frame, one row an argument in the definition's order (the
 #'   card's order):
 #'   \describe{
@@ -428,12 +436,12 @@
 #' d[, c("name", "input", "type", "tier")]
 #' head(tfl_arg_defs(fn = "plan_cells")[, c("name", "input", "type")])
 #' @export
-tfl_arg_defs <- function(fn = NULL, template = NULL) {
+tfl_arg_defs <- function(fn = NULL, template = NULL, study_dir = NULL) {
   if (is.null(fn) == is.null(template)) {
     stop("tfl_arg_defs(): give `fn` or `template`, one of them.", call. = FALSE)
   }
   if (!is.null(template)) {
-    y <- .template_read(template)
+    y <- .template_read(template, study_dir)
     defs <- y$params %||% list()
     if (!is.list(defs) || (length(defs) && is.null(names(defs)))) {
       stop(sprintf("template %s: params: is a map of argument definitions.", template),

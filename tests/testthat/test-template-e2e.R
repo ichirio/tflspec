@@ -14,8 +14,7 @@ e2e_rd <- function(text) {
   .series_read_yaml(f)
 }
 
-e2e_settings <- list(settings = list(rounding = "sas"),
-                     series_settings = list(tflspec_v1 = list(style = "standard")))
+e2e_settings <- list(settings = list(rounding = "sas"))
 
 e2e_reports <- function() {
   list(
@@ -345,6 +344,7 @@ e2e_planner <- function(lines, d, run = TRUE) {
   f <- file.path(d, "spec", "outputs", paste0(sub("^id: ", "", lines[1L]), ".yml"))
   writeLines(lines, f)
   on.exit(unlink(f))
+  invisible(tfl_copy_templates(d))
   st <- tfl_read_study_spec(d)
   spec <- tfl_template_to_spec(tfl_read_output(f), st)
   warns <- character()
@@ -519,6 +519,7 @@ test_that("a series report resolves as a code SPEC first: no lookup in the old r
     lines <- reps[[k]]
     f <- file.path(d, "spec", "outputs", paste0(sub("^id: ", "", lines[1L]), ".yml"))
     writeLines(lines, f)
+    invisible(tfl_copy_templates(d))
     st <- tfl_read_study_spec(d)
     o <- tfl_read_output(f)
     ro <- tfl_resolve_output(o, st)
