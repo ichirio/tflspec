@@ -550,8 +550,8 @@
 "ggplot2","geom_bin_2d","na.rm","yes","schema.yml: geom_bin_2d; gg_args.csv","","geom",1
 "ggplot2","geom_bin_2d","show.legend","yes","schema.yml: geom_bin_2d; gg_args.csv","","geom",1
 "ggplot2","geom_bin_2d","inherit.aes","yes","schema.yml: geom_bin_2d; gg_args.csv","","geom",1
-"ggplot2","geom_bin_2d","binwidth","yes","schema.yml: geom_bin_2d; gg_args.csv","","geom",1
-"ggplot2","geom_bin_2d","bins","yes","schema.yml: geom_bin_2d; gg_args.csv","","geom",1
+"ggplot2","geom_bin_2d","binwidth","yes","schema.yml: geom_bin_2d","","geom",1
+"ggplot2","geom_bin_2d","bins","yes","schema.yml: geom_bin_2d","","geom",1
 "ggplot2","geom_bin_2d","breaks","yes","schema.yml: geom_bin_2d; gg_args.csv","","geom",1
 "ggplot2","geom_bin_2d","drop","yes","schema.yml: geom_bin_2d; gg_args.csv","","geom",1
 "ggplot2","geom_bin_2d","boundary","yes","schema.yml: geom_bin_2d; gg_args.csv","","geom",1
@@ -618,8 +618,8 @@
 "ggplot2","geom_hex","na.rm","yes","schema.yml: geom_hex; gg_args.csv","","geom",1
 "ggplot2","geom_hex","show.legend","yes","schema.yml: geom_hex; gg_args.csv","","geom",1
 "ggplot2","geom_hex","inherit.aes","yes","schema.yml: geom_hex; gg_args.csv","","geom",1
-"ggplot2","geom_hex","binwidth","yes","schema.yml: geom_hex; gg_args.csv","","geom",1
-"ggplot2","geom_hex","bins","yes","schema.yml: geom_hex; gg_args.csv","","geom",1
+"ggplot2","geom_hex","binwidth","yes","schema.yml: geom_hex","","geom",1
+"ggplot2","geom_hex","bins","yes","schema.yml: geom_hex","","geom",1
 "ggplot2","geom_step(stat = ""ecdf"")","n","yes","schema.yml: geom_step; gg_args.csv","the stat's parameter on the geom","geom_stat",3
 "ggplot2","geom_step(stat = ""ecdf"")","pad","yes","schema.yml: geom_step; gg_args.csv","the stat's parameter on the geom","geom_stat",3
 "ggplot2","geom_pointrange(stat = ""summary"")","fun.data","yes","schema.yml: geom_pointrange; gg_args.csv","the stat's parameter on the geom","geom_stat",3
@@ -891,8 +891,8 @@
 "ggplot2","stat_bin_2d","data","yes","schema.yml: stat_bin_2d; gg_args.csv","","stat",1
 "ggplot2","stat_bin_2d","geom","yes","schema.yml: stat_bin_2d; gg_args.csv","","stat",1
 "ggplot2","stat_bin_2d","position","yes","schema.yml: stat_bin_2d; gg_args.csv","","stat",1
-"ggplot2","stat_bin_2d","binwidth","yes","schema.yml: stat_bin_2d; gg_args.csv","","stat",1
-"ggplot2","stat_bin_2d","bins","yes","schema.yml: stat_bin_2d; gg_args.csv","","stat",1
+"ggplot2","stat_bin_2d","binwidth","yes","schema.yml: stat_bin_2d","","stat",1
+"ggplot2","stat_bin_2d","bins","yes","schema.yml: stat_bin_2d","","stat",1
 "ggplot2","stat_bin_2d","breaks","yes","schema.yml: stat_bin_2d; gg_args.csv","","stat",1
 "ggplot2","stat_bin_2d","drop","yes","schema.yml: stat_bin_2d; gg_args.csv","","stat",1
 "ggplot2","stat_bin_2d","boundary","yes","schema.yml: stat_bin_2d; gg_args.csv","","stat",1
@@ -908,8 +908,8 @@
 "ggplot2","stat_bin_hex","data","yes","schema.yml: stat_bin_hex; gg_args.csv","","stat",1
 "ggplot2","stat_bin_hex","geom","yes","schema.yml: stat_bin_hex; gg_args.csv","","stat",1
 "ggplot2","stat_bin_hex","position","yes","schema.yml: stat_bin_hex; gg_args.csv","","stat",1
-"ggplot2","stat_bin_hex","binwidth","yes","schema.yml: stat_bin_hex; gg_args.csv","","stat",1
-"ggplot2","stat_bin_hex","bins","yes","schema.yml: stat_bin_hex; gg_args.csv","","stat",1
+"ggplot2","stat_bin_hex","binwidth","yes","schema.yml: stat_bin_hex","","stat",1
+"ggplot2","stat_bin_hex","bins","yes","schema.yml: stat_bin_hex","","stat",1
 "ggplot2","stat_bin_hex","na.rm","yes","schema.yml: stat_bin_hex; gg_args.csv","","stat",1
 "ggplot2","stat_bin_hex","show.legend","yes","schema.yml: stat_bin_hex; gg_args.csv","","stat",1
 "ggplot2","stat_bin_hex","inherit.aes","yes","schema.yml: stat_bin_hex; gg_args.csv","","stat",1
@@ -990,8 +990,8 @@
 "ggplot2","stat_summary_2d","data","yes","schema.yml: stat_summary_2d; gg_args.csv","","stat",1
 "ggplot2","stat_summary_2d","geom","yes","schema.yml: stat_summary_2d; gg_args.csv","","stat",1
 "ggplot2","stat_summary_2d","position","yes","schema.yml: stat_summary_2d; gg_args.csv","","stat",1
-"ggplot2","stat_summary_2d","binwidth","yes","schema.yml: stat_summary_2d; gg_args.csv","","stat",1
-"ggplot2","stat_summary_2d","bins","yes","schema.yml: stat_summary_2d; gg_args.csv","","stat",1
+"ggplot2","stat_summary_2d","binwidth","yes","schema.yml: stat_summary_2d","","stat",1
+"ggplot2","stat_summary_2d","bins","yes","schema.yml: stat_summary_2d","","stat",1
 "ggplot2","stat_summary_2d","breaks","yes","schema.yml: stat_summary_2d; gg_args.csv","","stat",1
 "ggplot2","stat_summary_2d","drop","yes","schema.yml: stat_summary_2d; gg_args.csv","","stat",1
 "ggplot2","stat_summary_2d","fun","yes","schema.yml: stat_summary_2d; gg_args.csv","","stat",1
@@ -1009,8 +1009,8 @@
 "ggplot2","stat_summary_hex","data","yes","schema.yml: stat_summary_hex; gg_args.csv","","stat",1
 "ggplot2","stat_summary_hex","geom","yes","schema.yml: stat_summary_hex; gg_args.csv","","stat",1
 "ggplot2","stat_summary_hex","position","yes","schema.yml: stat_summary_hex; gg_args.csv","","stat",1
-"ggplot2","stat_summary_hex","binwidth","yes","schema.yml: stat_summary_hex; gg_args.csv","","stat",1
-"ggplot2","stat_summary_hex","bins","yes","schema.yml: stat_summary_hex; gg_args.csv","","stat",1
+"ggplot2","stat_summary_hex","binwidth","yes","schema.yml: stat_summary_hex","","stat",1
+"ggplot2","stat_summary_hex","bins","yes","schema.yml: stat_summary_hex","","stat",1
 "ggplot2","stat_summary_hex","drop","yes","schema.yml: stat_summary_hex; gg_args.csv","","stat",1
 "ggplot2","stat_summary_hex","fun","yes","schema.yml: stat_summary_hex; gg_args.csv","","stat",1
 "ggplot2","stat_summary_hex","fun.args","yes","schema.yml: stat_summary_hex; gg_args.csv","","stat",1
@@ -1111,7 +1111,7 @@
 "ggplot2","scale_x_discrete","breaks","yes","schema.yml: scale_x_discrete; gg_args.csv","","scale",3
 "ggplot2","scale_x_discrete","minor_breaks","yes","schema.yml: scale_x_discrete; gg_args.csv","","scale",3
 "ggplot2","scale_x_discrete","labels","yes","schema.yml: scale_x_discrete; gg_args.csv","","scale",3
-"ggplot2","scale_x_discrete","limits","yes","schema.yml: scale_x_discrete; gg_args.csv","","scale",3
+"ggplot2","scale_x_discrete","limits","yes","schema.yml: scale_x_discrete","","scale",3
 "ggplot2","scale_x_discrete","na.translate","yes","schema.yml: scale_x_discrete; gg_args.csv","","scale",3
 "ggplot2","scale_x_discrete","na.value","yes","schema.yml: scale_x_discrete; gg_args.csv","","scale",3
 "ggplot2","scale_x_discrete","drop","yes","schema.yml: scale_x_discrete; gg_args.csv","","scale",3
@@ -1127,7 +1127,7 @@
 "ggplot2","scale_y_discrete","breaks","yes","schema.yml: scale_y_discrete; gg_args.csv","","scale",3
 "ggplot2","scale_y_discrete","minor_breaks","yes","schema.yml: scale_y_discrete; gg_args.csv","","scale",3
 "ggplot2","scale_y_discrete","labels","yes","schema.yml: scale_y_discrete; gg_args.csv","","scale",3
-"ggplot2","scale_y_discrete","limits","yes","schema.yml: scale_y_discrete; gg_args.csv","","scale",3
+"ggplot2","scale_y_discrete","limits","yes","schema.yml: scale_y_discrete","","scale",3
 "ggplot2","scale_y_discrete","na.translate","yes","schema.yml: scale_y_discrete; gg_args.csv","","scale",3
 "ggplot2","scale_y_discrete","na.value","yes","schema.yml: scale_y_discrete; gg_args.csv","","scale",3
 "ggplot2","scale_y_discrete","drop","yes","schema.yml: scale_y_discrete; gg_args.csv","","scale",3
@@ -1172,7 +1172,7 @@
 "ggplot2","scale_colour_manual","name","yes","schema.yml: scale_colour_manual; gg_args.csv","","scale",3
 "ggplot2","scale_colour_manual","minor_breaks","yes","schema.yml: scale_colour_manual; gg_args.csv","","scale",3
 "ggplot2","scale_colour_manual","labels","yes","schema.yml: scale_colour_manual; gg_args.csv","","scale",3
-"ggplot2","scale_colour_manual","limits","yes","schema.yml: scale_colour_manual; gg_args.csv","","scale",3
+"ggplot2","scale_colour_manual","limits","yes","schema.yml: scale_colour_manual","","scale",3
 "ggplot2","scale_colour_manual","expand","yes","schema.yml: scale_colour_manual; gg_args.csv","","scale",3
 "ggplot2","scale_colour_manual","na.translate","yes","schema.yml: scale_colour_manual; gg_args.csv","","scale",3
 "ggplot2","scale_colour_manual","drop","yes","schema.yml: scale_colour_manual; gg_args.csv","","scale",3
@@ -1187,7 +1187,7 @@
 "ggplot2","scale_fill_manual","name","yes","schema.yml: scale_fill_manual; gg_args.csv","","scale",3
 "ggplot2","scale_fill_manual","minor_breaks","yes","schema.yml: scale_fill_manual; gg_args.csv","","scale",3
 "ggplot2","scale_fill_manual","labels","yes","schema.yml: scale_fill_manual; gg_args.csv","","scale",3
-"ggplot2","scale_fill_manual","limits","yes","schema.yml: scale_fill_manual; gg_args.csv","","scale",3
+"ggplot2","scale_fill_manual","limits","yes","schema.yml: scale_fill_manual","","scale",3
 "ggplot2","scale_fill_manual","expand","yes","schema.yml: scale_fill_manual; gg_args.csv","","scale",3
 "ggplot2","scale_fill_manual","na.translate","yes","schema.yml: scale_fill_manual; gg_args.csv","","scale",3
 "ggplot2","scale_fill_manual","drop","yes","schema.yml: scale_fill_manual; gg_args.csv","","scale",3
@@ -1202,7 +1202,7 @@
 "ggplot2","scale_shape_manual","name","yes","schema.yml: scale_shape_manual; gg_args.csv","","scale",3
 "ggplot2","scale_shape_manual","minor_breaks","yes","schema.yml: scale_shape_manual; gg_args.csv","","scale",3
 "ggplot2","scale_shape_manual","labels","yes","schema.yml: scale_shape_manual; gg_args.csv","","scale",3
-"ggplot2","scale_shape_manual","limits","yes","schema.yml: scale_shape_manual; gg_args.csv","","scale",3
+"ggplot2","scale_shape_manual","limits","yes","schema.yml: scale_shape_manual","","scale",3
 "ggplot2","scale_shape_manual","expand","yes","schema.yml: scale_shape_manual; gg_args.csv","","scale",3
 "ggplot2","scale_shape_manual","na.translate","yes","schema.yml: scale_shape_manual; gg_args.csv","","scale",3
 "ggplot2","scale_shape_manual","drop","yes","schema.yml: scale_shape_manual; gg_args.csv","","scale",3
@@ -1217,7 +1217,7 @@
 "ggplot2","scale_linetype_manual","name","yes","schema.yml: scale_linetype_manual; gg_args.csv","","scale",3
 "ggplot2","scale_linetype_manual","minor_breaks","yes","schema.yml: scale_linetype_manual; gg_args.csv","","scale",3
 "ggplot2","scale_linetype_manual","labels","yes","schema.yml: scale_linetype_manual; gg_args.csv","","scale",3
-"ggplot2","scale_linetype_manual","limits","yes","schema.yml: scale_linetype_manual; gg_args.csv","","scale",3
+"ggplot2","scale_linetype_manual","limits","yes","schema.yml: scale_linetype_manual","","scale",3
 "ggplot2","scale_linetype_manual","expand","yes","schema.yml: scale_linetype_manual; gg_args.csv","","scale",3
 "ggplot2","scale_linetype_manual","na.translate","yes","schema.yml: scale_linetype_manual; gg_args.csv","","scale",3
 "ggplot2","scale_linetype_manual","drop","yes","schema.yml: scale_linetype_manual; gg_args.csv","","scale",3
@@ -1277,7 +1277,7 @@
 "ggplot2","scale_colour_brewer","breaks","yes","schema.yml: scale_colour_brewer; gg_args.csv","","scale",2
 "ggplot2","scale_colour_brewer","minor_breaks","yes","schema.yml: scale_colour_brewer; gg_args.csv","","scale",2
 "ggplot2","scale_colour_brewer","labels","yes","schema.yml: scale_colour_brewer; gg_args.csv","","scale",2
-"ggplot2","scale_colour_brewer","limits","yes","schema.yml: scale_colour_brewer; gg_args.csv","","scale",2
+"ggplot2","scale_colour_brewer","limits","yes","schema.yml: scale_colour_brewer","","scale",2
 "ggplot2","scale_colour_brewer","expand","yes","schema.yml: scale_colour_brewer; gg_args.csv","","scale",2
 "ggplot2","scale_colour_brewer","na.translate","yes","schema.yml: scale_colour_brewer; gg_args.csv","","scale",2
 "ggplot2","scale_colour_brewer","na.value","yes","schema.yml: scale_colour_brewer; gg_args.csv","","scale",2
@@ -1293,7 +1293,7 @@
 "ggplot2","scale_fill_brewer","breaks","yes","schema.yml: scale_fill_brewer; gg_args.csv","","scale",2
 "ggplot2","scale_fill_brewer","minor_breaks","yes","schema.yml: scale_fill_brewer; gg_args.csv","","scale",2
 "ggplot2","scale_fill_brewer","labels","yes","schema.yml: scale_fill_brewer; gg_args.csv","","scale",2
-"ggplot2","scale_fill_brewer","limits","yes","schema.yml: scale_fill_brewer; gg_args.csv","","scale",2
+"ggplot2","scale_fill_brewer","limits","yes","schema.yml: scale_fill_brewer","","scale",2
 "ggplot2","scale_fill_brewer","expand","yes","schema.yml: scale_fill_brewer; gg_args.csv","","scale",2
 "ggplot2","scale_fill_brewer","na.translate","yes","schema.yml: scale_fill_brewer; gg_args.csv","","scale",2
 "ggplot2","scale_fill_brewer","na.value","yes","schema.yml: scale_fill_brewer; gg_args.csv","","scale",2
@@ -1531,7 +1531,7 @@
 "ggplot2","scale_colour_viridis_d","breaks","yes","schema.yml: scale_colour_viridis_d; gg_args.csv","","scale",1
 "ggplot2","scale_colour_viridis_d","minor_breaks","yes","schema.yml: scale_colour_viridis_d; gg_args.csv","","scale",1
 "ggplot2","scale_colour_viridis_d","labels","yes","schema.yml: scale_colour_viridis_d; gg_args.csv","","scale",1
-"ggplot2","scale_colour_viridis_d","limits","yes","schema.yml: scale_colour_viridis_d; gg_args.csv","","scale",1
+"ggplot2","scale_colour_viridis_d","limits","yes","schema.yml: scale_colour_viridis_d","","scale",1
 "ggplot2","scale_colour_viridis_d","expand","yes","schema.yml: scale_colour_viridis_d; gg_args.csv","","scale",1
 "ggplot2","scale_colour_viridis_d","na.translate","yes","schema.yml: scale_colour_viridis_d; gg_args.csv","","scale",1
 "ggplot2","scale_colour_viridis_d","na.value","yes","schema.yml: scale_colour_viridis_d; gg_args.csv","","scale",1
@@ -1550,7 +1550,7 @@
 "ggplot2","scale_fill_viridis_d","breaks","yes","schema.yml: scale_fill_viridis_d; gg_args.csv","","scale",1
 "ggplot2","scale_fill_viridis_d","minor_breaks","yes","schema.yml: scale_fill_viridis_d; gg_args.csv","","scale",1
 "ggplot2","scale_fill_viridis_d","labels","yes","schema.yml: scale_fill_viridis_d; gg_args.csv","","scale",1
-"ggplot2","scale_fill_viridis_d","limits","yes","schema.yml: scale_fill_viridis_d; gg_args.csv","","scale",1
+"ggplot2","scale_fill_viridis_d","limits","yes","schema.yml: scale_fill_viridis_d","","scale",1
 "ggplot2","scale_fill_viridis_d","expand","yes","schema.yml: scale_fill_viridis_d; gg_args.csv","","scale",1
 "ggplot2","scale_fill_viridis_d","na.translate","yes","schema.yml: scale_fill_viridis_d; gg_args.csv","","scale",1
 "ggplot2","scale_fill_viridis_d","na.value","yes","schema.yml: scale_fill_viridis_d; gg_args.csv","","scale",1
@@ -1613,7 +1613,7 @@
 "ggplot2","scale_colour_grey","breaks","yes","schema.yml: scale_colour_grey; gg_args.csv","","scale",1
 "ggplot2","scale_colour_grey","minor_breaks","yes","schema.yml: scale_colour_grey; gg_args.csv","","scale",1
 "ggplot2","scale_colour_grey","labels","yes","schema.yml: scale_colour_grey; gg_args.csv","","scale",1
-"ggplot2","scale_colour_grey","limits","yes","schema.yml: scale_colour_grey; gg_args.csv","","scale",1
+"ggplot2","scale_colour_grey","limits","yes","schema.yml: scale_colour_grey","","scale",1
 "ggplot2","scale_colour_grey","expand","yes","schema.yml: scale_colour_grey; gg_args.csv","","scale",1
 "ggplot2","scale_colour_grey","na.translate","yes","schema.yml: scale_colour_grey; gg_args.csv","","scale",1
 "ggplot2","scale_colour_grey","drop","yes","schema.yml: scale_colour_grey; gg_args.csv","","scale",1
@@ -1629,7 +1629,7 @@
 "ggplot2","scale_fill_grey","breaks","yes","schema.yml: scale_fill_grey; gg_args.csv","","scale",1
 "ggplot2","scale_fill_grey","minor_breaks","yes","schema.yml: scale_fill_grey; gg_args.csv","","scale",1
 "ggplot2","scale_fill_grey","labels","yes","schema.yml: scale_fill_grey; gg_args.csv","","scale",1
-"ggplot2","scale_fill_grey","limits","yes","schema.yml: scale_fill_grey; gg_args.csv","","scale",1
+"ggplot2","scale_fill_grey","limits","yes","schema.yml: scale_fill_grey","","scale",1
 "ggplot2","scale_fill_grey","expand","yes","schema.yml: scale_fill_grey; gg_args.csv","","scale",1
 "ggplot2","scale_fill_grey","na.translate","yes","schema.yml: scale_fill_grey; gg_args.csv","","scale",1
 "ggplot2","scale_fill_grey","drop","yes","schema.yml: scale_fill_grey; gg_args.csv","","scale",1
@@ -1648,7 +1648,7 @@
 "ggplot2","scale_colour_hue","breaks","yes","schema.yml: scale_colour_hue; gg_args.csv","","scale",1
 "ggplot2","scale_colour_hue","minor_breaks","yes","schema.yml: scale_colour_hue; gg_args.csv","","scale",1
 "ggplot2","scale_colour_hue","labels","yes","schema.yml: scale_colour_hue; gg_args.csv","","scale",1
-"ggplot2","scale_colour_hue","limits","yes","schema.yml: scale_colour_hue; gg_args.csv","","scale",1
+"ggplot2","scale_colour_hue","limits","yes","schema.yml: scale_colour_hue","","scale",1
 "ggplot2","scale_colour_hue","expand","yes","schema.yml: scale_colour_hue; gg_args.csv","","scale",1
 "ggplot2","scale_colour_hue","na.translate","yes","schema.yml: scale_colour_hue; gg_args.csv","","scale",1
 "ggplot2","scale_colour_hue","drop","yes","schema.yml: scale_colour_hue; gg_args.csv","","scale",1
@@ -1667,7 +1667,7 @@
 "ggplot2","scale_fill_hue","breaks","yes","schema.yml: scale_fill_hue; gg_args.csv","","scale",1
 "ggplot2","scale_fill_hue","minor_breaks","yes","schema.yml: scale_fill_hue; gg_args.csv","","scale",1
 "ggplot2","scale_fill_hue","labels","yes","schema.yml: scale_fill_hue; gg_args.csv","","scale",1
-"ggplot2","scale_fill_hue","limits","yes","schema.yml: scale_fill_hue; gg_args.csv","","scale",1
+"ggplot2","scale_fill_hue","limits","yes","schema.yml: scale_fill_hue","","scale",1
 "ggplot2","scale_fill_hue","expand","yes","schema.yml: scale_fill_hue; gg_args.csv","","scale",1
 "ggplot2","scale_fill_hue","na.translate","yes","schema.yml: scale_fill_hue; gg_args.csv","","scale",1
 "ggplot2","scale_fill_hue","drop","yes","schema.yml: scale_fill_hue; gg_args.csv","","scale",1
@@ -1709,7 +1709,7 @@
 "ggplot2","scale_shape","breaks","yes","schema.yml: scale_shape; gg_args.csv","","scale",1
 "ggplot2","scale_shape","minor_breaks","yes","schema.yml: scale_shape; gg_args.csv","","scale",1
 "ggplot2","scale_shape","labels","yes","schema.yml: scale_shape; gg_args.csv","","scale",1
-"ggplot2","scale_shape","limits","yes","schema.yml: scale_shape; gg_args.csv","","scale",1
+"ggplot2","scale_shape","limits","yes","schema.yml: scale_shape","","scale",1
 "ggplot2","scale_shape","expand","yes","schema.yml: scale_shape; gg_args.csv","","scale",1
 "ggplot2","scale_shape","na.translate","yes","schema.yml: scale_shape; gg_args.csv","","scale",1
 "ggplot2","scale_shape","na.value","yes","schema.yml: scale_shape; gg_args.csv","","scale",1
@@ -1723,7 +1723,7 @@
 "ggplot2","scale_linetype","breaks","yes","schema.yml: scale_linetype; gg_args.csv","","scale",1
 "ggplot2","scale_linetype","minor_breaks","yes","schema.yml: scale_linetype; gg_args.csv","","scale",1
 "ggplot2","scale_linetype","labels","yes","schema.yml: scale_linetype; gg_args.csv","","scale",1
-"ggplot2","scale_linetype","limits","yes","schema.yml: scale_linetype; gg_args.csv","","scale",1
+"ggplot2","scale_linetype","limits","yes","schema.yml: scale_linetype","","scale",1
 "ggplot2","scale_linetype","expand","yes","schema.yml: scale_linetype; gg_args.csv","","scale",1
 "ggplot2","scale_linetype","na.translate","yes","schema.yml: scale_linetype; gg_args.csv","","scale",1
 "ggplot2","scale_linetype","na.value","yes","schema.yml: scale_linetype; gg_args.csv","","scale",1
@@ -1852,12 +1852,12 @@
 "ggplot2","scale_colour_discrete","palette","yes","schema.yml: scale_colour_discrete; gg_args.csv","","scale",1
 "ggplot2","scale_colour_discrete","aesthetics","yes","schema.yml: scale_colour_discrete; gg_args.csv","","scale",1
 "ggplot2","scale_colour_discrete","na.value","yes","schema.yml: scale_colour_discrete; gg_args.csv","","scale",1
-"ggplot2","scale_colour_discrete","type","yes","schema.yml: scale_colour_discrete; gg_args.csv","","scale",1
+"ggplot2","scale_colour_discrete","type","yes","schema.yml: scale_colour_discrete","","scale",1
 "ggplot2","scale_colour_discrete","name","yes","schema.yml: scale_colour_discrete; gg_args.csv","","scale",1
 "ggplot2","scale_colour_discrete","breaks","yes","schema.yml: scale_colour_discrete; gg_args.csv","","scale",1
 "ggplot2","scale_colour_discrete","minor_breaks","yes","schema.yml: scale_colour_discrete; gg_args.csv","","scale",1
 "ggplot2","scale_colour_discrete","labels","yes","schema.yml: scale_colour_discrete; gg_args.csv","","scale",1
-"ggplot2","scale_colour_discrete","limits","yes","schema.yml: scale_colour_discrete; gg_args.csv","","scale",1
+"ggplot2","scale_colour_discrete","limits","yes","schema.yml: scale_colour_discrete","","scale",1
 "ggplot2","scale_colour_discrete","expand","yes","schema.yml: scale_colour_discrete; gg_args.csv","","scale",1
 "ggplot2","scale_colour_discrete","na.translate","yes","schema.yml: scale_colour_discrete; gg_args.csv","","scale",1
 "ggplot2","scale_colour_discrete","drop","yes","schema.yml: scale_colour_discrete; gg_args.csv","","scale",1
@@ -1867,12 +1867,12 @@
 "ggplot2","scale_fill_discrete","palette","yes","schema.yml: scale_fill_discrete; gg_args.csv","","scale",1
 "ggplot2","scale_fill_discrete","aesthetics","yes","schema.yml: scale_fill_discrete; gg_args.csv","","scale",1
 "ggplot2","scale_fill_discrete","na.value","yes","schema.yml: scale_fill_discrete; gg_args.csv","","scale",1
-"ggplot2","scale_fill_discrete","type","yes","schema.yml: scale_fill_discrete; gg_args.csv","","scale",1
+"ggplot2","scale_fill_discrete","type","yes","schema.yml: scale_fill_discrete","","scale",1
 "ggplot2","scale_fill_discrete","name","yes","schema.yml: scale_fill_discrete; gg_args.csv","","scale",1
 "ggplot2","scale_fill_discrete","breaks","yes","schema.yml: scale_fill_discrete; gg_args.csv","","scale",1
 "ggplot2","scale_fill_discrete","minor_breaks","yes","schema.yml: scale_fill_discrete; gg_args.csv","","scale",1
 "ggplot2","scale_fill_discrete","labels","yes","schema.yml: scale_fill_discrete; gg_args.csv","","scale",1
-"ggplot2","scale_fill_discrete","limits","yes","schema.yml: scale_fill_discrete; gg_args.csv","","scale",1
+"ggplot2","scale_fill_discrete","limits","yes","schema.yml: scale_fill_discrete","","scale",1
 "ggplot2","scale_fill_discrete","expand","yes","schema.yml: scale_fill_discrete; gg_args.csv","","scale",1
 "ggplot2","scale_fill_discrete","na.translate","yes","schema.yml: scale_fill_discrete; gg_args.csv","","scale",1
 "ggplot2","scale_fill_discrete","drop","yes","schema.yml: scale_fill_discrete; gg_args.csv","","scale",1
@@ -1883,7 +1883,7 @@
 "ggplot2","scale_colour_continuous","aesthetics","yes","schema.yml: scale_colour_continuous; gg_args.csv","","scale",1
 "ggplot2","scale_colour_continuous","guide","yes","schema.yml: scale_colour_continuous; gg_args.csv","","scale",1
 "ggplot2","scale_colour_continuous","na.value","yes","schema.yml: scale_colour_continuous; gg_args.csv","","scale",1
-"ggplot2","scale_colour_continuous","type","yes","schema.yml: scale_colour_continuous; gg_args.csv","","scale",1
+"ggplot2","scale_colour_continuous","type","yes","schema.yml: scale_colour_continuous","","scale",1
 "ggplot2","scale_colour_continuous","name","yes","schema.yml: scale_colour_continuous; gg_args.csv","","scale",1
 "ggplot2","scale_colour_continuous","breaks","yes","schema.yml: scale_colour_continuous; gg_args.csv","","scale",1
 "ggplot2","scale_colour_continuous","minor_breaks","yes","schema.yml: scale_colour_continuous; gg_args.csv","","scale",1
@@ -1900,7 +1900,7 @@
 "ggplot2","scale_fill_continuous","aesthetics","yes","schema.yml: scale_fill_continuous; gg_args.csv","","scale",1
 "ggplot2","scale_fill_continuous","guide","yes","schema.yml: scale_fill_continuous; gg_args.csv","","scale",1
 "ggplot2","scale_fill_continuous","na.value","yes","schema.yml: scale_fill_continuous; gg_args.csv","","scale",1
-"ggplot2","scale_fill_continuous","type","yes","schema.yml: scale_fill_continuous; gg_args.csv","","scale",1
+"ggplot2","scale_fill_continuous","type","yes","schema.yml: scale_fill_continuous","","scale",1
 "ggplot2","scale_fill_continuous","name","yes","schema.yml: scale_fill_continuous; gg_args.csv","","scale",1
 "ggplot2","scale_fill_continuous","breaks","yes","schema.yml: scale_fill_continuous; gg_args.csv","","scale",1
 "ggplot2","scale_fill_continuous","minor_breaks","yes","schema.yml: scale_fill_continuous; gg_args.csv","","scale",1
@@ -3644,7 +3644,7 @@
 "ggtext","element_textbox_simple","maxwidth","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
 "ggtext","element_textbox_simple","minheight","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
 "ggtext","element_textbox_simple","maxheight","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
-"ggtext","element_textbox_simple","r","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","r","yes","schema.yml: element_textbox_simple","","ggtext",2
 "ggtext","element_textbox_simple","orientation","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
 "ggtext","element_textbox_simple","color","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
 "ggtext","element_textbox_simple","box.color","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
@@ -3759,6 +3759,225 @@
 "patchwork","area","r","yes","schema.yml: area; gg_args.csv","","patchwork",1
 "patchwork","free","type","yes","schema.yml: free; gg_args.csv","","patchwork",1
 "patchwork","free","side","yes","schema.yml: free; gg_args.csv","","patchwork",1
+"scales","label_percent","accuracy","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",3
+"scales","label_percent","scale","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",3
+"scales","label_percent","prefix","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",3
+"scales","label_percent","suffix","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",3
+"scales","label_percent","big.mark","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",3
+"scales","label_percent","decimal.mark","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",3
+"scales","label_percent","trim","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",3
+"scales","label_number","accuracy","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",3
+"scales","label_number","scale","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",3
+"scales","label_number","prefix","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",3
+"scales","label_number","suffix","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",3
+"scales","label_number","big.mark","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",3
+"scales","label_number","decimal.mark","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",3
+"scales","label_number","style_positive","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",3
+"scales","label_number","style_negative","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",3
+"scales","label_number","scale_cut","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",3
+"scales","label_number","trim","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",3
+"scales","breaks_width","width","yes","formals; gg_args.csv: scales","in scale_y_continuous(breaks = )","scales",3
+"scales","breaks_width","offset","yes","formals; gg_args.csv: scales","in scale_y_continuous(breaks = )","scales",3
+"scales","label_comma","accuracy","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",2
+"scales","label_comma","scale","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",2
+"scales","label_comma","prefix","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",2
+"scales","label_comma","suffix","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",2
+"scales","label_comma","big.mark","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",2
+"scales","label_comma","decimal.mark","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",2
+"scales","label_comma","trim","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",2
+"scales","label_comma","digits","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",2
+"scales","label_pvalue","accuracy","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",2
+"scales","label_pvalue","decimal.mark","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",2
+"scales","label_pvalue","prefix","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",2
+"scales","label_pvalue","add_p","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",2
+"scales","breaks_pretty","n","yes","formals; gg_args.csv: scales","in scale_y_continuous(breaks = )","scales",2
+"scales","breaks_log","n","yes","formals; gg_args.csv: scales","in scale_y_continuous(breaks = )","scales",2
+"scales","breaks_log","base","yes","formals; gg_args.csv: scales","in scale_y_continuous(breaks = )","scales",2
+"scales","label_log","base","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",2
+"scales","label_log","digits","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",2
+"scales","label_log","signed","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",2
+"scales","label_math","expr","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",2
+"scales","label_math","format","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",2
+"scales","math_format","expr","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",2
+"scales","math_format","format","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",2
+"scales","trans_breaks","trans","yes","formals; gg_args.csv: scales","in scale_y_continuous(breaks = )","scales",2
+"scales","trans_breaks","inv","yes","formals; gg_args.csv: scales","in scale_y_continuous(breaks = )","scales",2
+"scales","trans_breaks","n","yes","formals; gg_args.csv: scales","in scale_y_continuous(breaks = )","scales",2
+"scales","trans_format","trans","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",2
+"scales","trans_format","format","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",2
+"scales","transform_log","base","yes","formals; gg_args.csv: scales","in scale_y_continuous(transform = )","scales",2
+"scales","label_wrap","width","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",2
+"scales","label_date","format","yes","formals; gg_args.csv: scales","in scale_x_date(labels = )","scales",2
+"scales","label_date","tz","yes","formals; gg_args.csv: scales","in scale_x_date(labels = )","scales",2
+"scales","label_date","locale","yes","formals; gg_args.csv: scales","in scale_x_date(labels = )","scales",2
+"scales","breaks_extended","n","yes","formals; gg_args.csv: scales","in scale_y_continuous(breaks = )","scales",1
+"scales","label_date_short","format","yes","formals; gg_args.csv: scales","in scale_x_date(labels = )","scales",1
+"scales","label_date_short","sep","yes","formals; gg_args.csv: scales","in scale_x_date(labels = )","scales",1
+"scales","label_date_short","leading","yes","formals; gg_args.csv: scales","in scale_x_date(labels = )","scales",1
+"scales","label_date_short","tz","yes","formals; gg_args.csv: scales","in scale_x_date(labels = )","scales",1
+"scales","label_date_short","locale","yes","formals; gg_args.csv: scales","in scale_x_date(labels = )","scales",1
+"scales","label_scientific","digits","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_scientific","scale","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_scientific","prefix","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_scientific","suffix","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_scientific","decimal.mark","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_scientific","trim","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_dollar","accuracy","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_dollar","scale","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_dollar","prefix","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_dollar","suffix","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_dollar","big.mark","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_dollar","decimal.mark","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_dollar","trim","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_dollar","largest_with_cents","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_dollar","negative_parens","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_ordinal","prefix","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_ordinal","suffix","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_ordinal","big.mark","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_ordinal","rules","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_dictionary","dictionary","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_dictionary","nomatch","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_parse","","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_glue","pattern","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_glue","parse","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_timespan","unit","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","label_timespan","space","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","breaks_timespan","unit","yes","formals; gg_args.csv: scales","in scale_y_continuous(breaks = )","scales",1
+"scales","breaks_timespan","n","yes","formals; gg_args.csv: scales","in scale_y_continuous(breaks = )","scales",1
+"scales","minor_breaks_n","n","yes","formals; gg_args.csv: scales","in scale_y_continuous(minor_breaks = )","scales",1
+"scales","minor_breaks_width","width","yes","formals; gg_args.csv: scales","in scale_y_continuous(minor_breaks = )","scales",1
+"scales","minor_breaks_width","offset","yes","formals; gg_args.csv: scales","in scale_y_continuous(minor_breaks = )","scales",1
+"scales","minor_breaks_log","detail","yes","formals; gg_args.csv: scales","in scale_y_continuous(minor_breaks = )","scales",1
+"scales","minor_breaks_log","smallest","yes","formals; gg_args.csv: scales","in scale_y_continuous(minor_breaks = )","scales",1
+"scales","transform_pseudo_log","sigma","yes","formals; gg_args.csv: scales","in scale_y_continuous(transform = )","scales",1
+"scales","transform_pseudo_log","base","yes","formals; gg_args.csv: scales","in scale_y_continuous(transform = )","scales",1
+"scales","transform_exp","base","yes","formals; gg_args.csv: scales","in scale_y_continuous(transform = )","scales",1
+"scales","transform_boxcox","p","yes","formals; gg_args.csv: scales","in scale_y_continuous(transform = )","scales",1
+"scales","transform_boxcox","offset","yes","formals; gg_args.csv: scales","in scale_y_continuous(transform = )","scales",1
+"scales","transform_reverse","","yes","formals; gg_args.csv: scales","in scale_y_continuous(transform = )","scales",1
+"scales","transform_sqrt","","yes","formals; gg_args.csv: scales","in scale_y_continuous(transform = )","scales",1
+"scales","percent_format","accuracy","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","percent_format","scale","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","percent_format","prefix","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","percent_format","suffix","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","percent_format","big.mark","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","percent_format","decimal.mark","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","percent_format","trim","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","comma_format","accuracy","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","comma_format","scale","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","comma_format","prefix","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","comma_format","suffix","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","comma_format","big.mark","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","comma_format","decimal.mark","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","comma_format","trim","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","comma_format","digits","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","number_format","accuracy","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","number_format","scale","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","number_format","prefix","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","number_format","suffix","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","number_format","big.mark","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","number_format","decimal.mark","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","number_format","style_positive","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","number_format","style_negative","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","number_format","scale_cut","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","number_format","trim","yes","formals; gg_args.csv: scales","in scale_y_continuous(labels = )","scales",1
+"scales","pal_brewer","type","yes","formals; gg_args.csv: scales","in scale_colour_discrete(palette = )","scales",1
+"scales","pal_brewer","palette","yes","formals; gg_args.csv: scales","in scale_colour_discrete(palette = )","scales",1
+"scales","pal_brewer","direction","yes","formals; gg_args.csv: scales","in scale_colour_discrete(palette = )","scales",1
+"scales","pal_hue","h","yes","formals; gg_args.csv: scales","in scale_colour_discrete(palette = )","scales",1
+"scales","pal_hue","c","yes","formals; gg_args.csv: scales","in scale_colour_discrete(palette = )","scales",1
+"scales","pal_hue","l","yes","formals; gg_args.csv: scales","in scale_colour_discrete(palette = )","scales",1
+"scales","pal_hue","h.start","yes","formals; gg_args.csv: scales","in scale_colour_discrete(palette = )","scales",1
+"scales","pal_hue","direction","yes","formals; gg_args.csv: scales","in scale_colour_discrete(palette = )","scales",1
+"scales","pal_viridis","alpha","yes","formals; gg_args.csv: scales","in scale_colour_discrete(palette = )","scales",1
+"scales","pal_viridis","begin","yes","formals; gg_args.csv: scales","in scale_colour_discrete(palette = )","scales",1
+"scales","pal_viridis","end","yes","formals; gg_args.csv: scales","in scale_colour_discrete(palette = )","scales",1
+"scales","pal_viridis","direction","yes","formals; gg_args.csv: scales","in scale_colour_discrete(palette = )","scales",1
+"scales","pal_viridis","option","yes","formals; gg_args.csv: scales","in scale_colour_discrete(palette = )","scales",1
+"scales","rescale","x","yes","formals; gg_args.csv: scales","in scale_colour_gradientn(values = )","scales",1
+"scales","rescale","to","yes","formals; gg_args.csv: scales","in scale_colour_gradientn(values = )","scales",1
+"scales","rescale","from","yes","formals; gg_args.csv: scales","in scale_colour_gradientn(values = )","scales",1
+"grid","textGrob","label","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",2
+"grid","textGrob","x","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",2
+"grid","textGrob","y","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",2
+"grid","textGrob","just","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",2
+"grid","textGrob","hjust","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",2
+"grid","textGrob","vjust","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",2
+"grid","textGrob","rot","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",2
+"grid","textGrob","check.overlap","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",2
+"grid","textGrob","default.units","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",2
+"grid","textGrob","gp","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",2
+"grid","gpar","col","yes","formals; gg_args.csv: grob","in textGrob(gp = )","grid",2
+"grid","gpar","fill","yes","formals; gg_args.csv: grob","in textGrob(gp = )","grid",2
+"grid","gpar","alpha","yes","formals; gg_args.csv: grob","in textGrob(gp = )","grid",2
+"grid","gpar","lty","yes","formals; gg_args.csv: grob","in textGrob(gp = )","grid",2
+"grid","gpar","lwd","yes","formals; gg_args.csv: grob","in textGrob(gp = )","grid",2
+"grid","gpar","lex","yes","formals; gg_args.csv: grob","in textGrob(gp = )","grid",2
+"grid","gpar","lineend","yes","formals; gg_args.csv: grob","in textGrob(gp = )","grid",2
+"grid","gpar","linejoin","yes","formals; gg_args.csv: grob","in textGrob(gp = )","grid",2
+"grid","gpar","linemitre","yes","formals; gg_args.csv: grob","in textGrob(gp = )","grid",2
+"grid","gpar","fontsize","yes","formals; gg_args.csv: grob","in textGrob(gp = )","grid",2
+"grid","gpar","cex","yes","formals; gg_args.csv: grob","in textGrob(gp = )","grid",2
+"grid","gpar","fontfamily","yes","formals; gg_args.csv: grob","in textGrob(gp = )","grid",2
+"grid","gpar","fontface","yes","formals; gg_args.csv: grob","in textGrob(gp = )","grid",2
+"grid","gpar","font","yes","formals; gg_args.csv: grob","in textGrob(gp = )","grid",2
+"grid","gpar","lineheight","yes","formals; gg_args.csv: grob","in textGrob(gp = )","grid",2
+"grid","rectGrob","x","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","rectGrob","y","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","rectGrob","width","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","rectGrob","height","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","rectGrob","just","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","rectGrob","hjust","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","rectGrob","vjust","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","rectGrob","default.units","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","rectGrob","gp","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","roundrectGrob","x","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","roundrectGrob","y","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","roundrectGrob","width","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","roundrectGrob","height","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","roundrectGrob","default.units","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","roundrectGrob","r","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","roundrectGrob","just","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","roundrectGrob","gp","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","circleGrob","x","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","circleGrob","y","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","circleGrob","r","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","circleGrob","default.units","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","circleGrob","gp","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","linesGrob","x","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","linesGrob","y","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","linesGrob","default.units","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","linesGrob","arrow","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","linesGrob","gp","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","polylineGrob","x","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","polylineGrob","y","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","polylineGrob","id","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","polylineGrob","id.lengths","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","polylineGrob","default.units","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","polylineGrob","arrow","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","polylineGrob","gp","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","segmentsGrob","x0","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","segmentsGrob","y0","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","segmentsGrob","x1","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","segmentsGrob","y1","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","segmentsGrob","default.units","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","segmentsGrob","arrow","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","segmentsGrob","gp","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","pointsGrob","x","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","pointsGrob","y","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","pointsGrob","pch","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","pointsGrob","size","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","pointsGrob","default.units","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","pointsGrob","gp","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","polygonGrob","x","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","polygonGrob","y","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","polygonGrob","id","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","polygonGrob","id.lengths","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","polygonGrob","default.units","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","polygonGrob","gp","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","nullGrob","x","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","nullGrob","y","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
+"grid","nullGrob","default.units","yes","formals; gg_args.csv: grob","in annotation_custom(grob = )","grid",1
 "ggplot2","geom_line","aes: x","yes","schema.yml: geom_line aes","","geom",3
 "ggplot2","geom_line","aes: y","yes","schema.yml: geom_line aes","","geom",3
 "ggplot2","geom_line","aes: colour","yes","schema.yml: geom_line aes","","geom",3

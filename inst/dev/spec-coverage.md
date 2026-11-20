@@ -1011,6 +1011,1092 @@ a function written inline (`fun = function(x) ...`), `size` of line geoms
 (deprecated, a warning by design).  Next: the guides' examples (88.2%) and
 the facets' (92.4%: `facet_wrap(year ~ cyl)`, a labeller's function).
 
+### Round 9 (2026-11-07): the clinical figures, through a SPEC and back
+
+ggplot2's examples show its features, not what a clinical figure writes.
+A fourth measure does: `dev/spec-coverage-ggplot2-clinical.R` is the code a
+statistical programmer writes for the figures the weights name -- KM with
+its CI band and censor marks, forest (log axis, subgroup strips), waterfall,
+spider, swimmer, box / violin with jittered points, mean +/- SE over time
+(the stat_summary() form and the GUI's geom_*(stat = "summary") form),
+dodged and stacked bars, scatter with a smooth, eDISH, heat map, CDF
+(stat_ecdf() and geom_step(stat = "ecdf")), lab by visit, density, a mean
+with its CI ribbon and stat_summary_bin() / stat_ellipse(): 18 figures,
+153 calls, 382 uses of an argument (written for the measure, the data made
+up there).  It runs through the examples' measure, which takes a file of
+figures now (`Rscript dev/spec-coverage-ggplot2-examples.R out.csv
+dev/spec-coverage-ggplot2-clinical.R`); one row an argument:
+`spec-coverage-ggplot2-clinical.csv`.  The same statuses and weights.
+
+| Clinical figures | Before | After |
+|---|---:|---:|
+| **ggplot2: geoms, scales, coords, themes, facets, guides, labs, positions** | **96.5%** | **99.5%** |
+| geom_*() | 96.9% | 98.8% |
+| scale_*() | 94.3% | 100.0% |
+| coord_*() | 93.8% | 100.0% |
+| facets | 95.0% | 100.0% |
+| theme(), guides, labs | 100.0% | 100.0% |
+| **stat_*()** (shown apart) | **100.0%** | **100.0%** |
+| arguments yes / partial / no | 228 / 12 / 1 | 239 / 2 / 0 |
+| uses yes / partial / no | 367 / 12 / 3 | 380 / 2 / 0 |
+
+ggplot2's own examples (round 5's measure) after the round: **96.6% to
+96.7%** (uses 1186 / 83 / 3 to 1190 / 79 / 3; facets 92.4% to 93.3%).  The
+arguments' and the aesthetics' measures stay at 100% (3409 arguments, 826
+aesthetics; `spec-coverage-ggplot2.csv` rerun: the `where` of the cards
+that type `limits`, `type`, `data` and the reference lines' settings).
+
+Round 9:
+
+- A negative number in `c()` is a constant (R/fig_content.R): `limits =
+  c(-100, 100)`, `yintercept = c(-30, 20)`, `xlim = c(-25, 20)` read as
+  numbers (before: `!r`, the waterfall's, the CDF's, the heat map's).
+- A function of named ones, the type `function<f1, f2>`: one of those
+  functions by its name, written bare.  A discrete scale's `limits: rev`
+  (`scale_y_discrete(limits = rev)`, a forest plot's rows from the top;
+  18 cards: the position, manual, brewer, hue, grey, viridis_d, shape and
+  linetype scales); before, `rev` was R, and as text it was written
+  `"rev"`, a level.  The levels themselves are text as before.
+- A facet's labeller by its name: `labeller: label_both` (label_value,
+  label_both, label_context, label_parsed), written bare; so are
+  `labeller()`'s `.rows`, `.cols`, `.default` and a variable's labeller
+  (`labeller(PARAMCD = label_both)`: a card's named `...` takes the
+  card's `dots` type when the code is read and written).  **The generated
+  code changes**: `labeller = "label_both"` is written `labeller =
+  label_both` (the same strips).
+- `facet_wrap(year ~ cyl)`: both sides' columns (`facets: [year, cyl]`).
+- Reference lines (geom_hline / _vline / _abline) take a `linetype`,
+  `colour`, `linewidth`, `alpha` a line: `yintercept: [-30, 0, 20],
+  linetype: [dashed, solid, dashed]` (before: a warning).
+- `scale_colour_discrete()` / `scale_fill_discrete()`'s `type`: the
+  colours in order or a palette function (before typed as a brewer
+  palette's `seq|div|qual`: an error of the check);
+  `scale_*_continuous()`'s: `gradient`, `viridis` or a scale function.
+- A layer's `data` takes a part of the plot's data as a formula of `.x`:
+  `data: ~ subset(.x, censored)` (a KM plot's censor marks), written as
+  the formula (before: written as a name in backticks).
+
+What is left (partial): a layer's data subset as R of the figure's own
+objects (`km[km$censored, ]`; `~ subset(.x, censored)` is the typed
+form).  In ggplot2's examples: objects of the example (`values = cols`,
+`labeller = to_string`), grobs, `guide_axis_stack()`'s guides by position,
+`Sys.Date()`.
+
+### Round 10 (2026-11-07): functions written out, numbers written as arithmetic
+
+What a statistical programmer writes in place of a function's name: a
+summary's ends as functions (`fun.min = function(y) mean(y) - sd(y)`), a
+median and its quartiles as one (`fun.data = \(y) data.frame(...)`), a
+scale's labels (`labels = function(x) sprintf("%+.1f", x)`, `labels = ~
+paste("Week", .x)`), a bin width by a rule (Freedman-Diaconis), and a
+forest plot's log2 breaks as powers of 2 (`breaks = 2^(-2:2)`).  Three
+clinical figures that write them are added to the clinical measure
+(`fig_mean_sd`, `fig_forest_log2`, `fig_hist_fd`: 21 figures, 167 calls,
+415 uses); "before" is the measure of this round's figures with the
+tflspec before the round.
+
+| Clinical figures | Before | After |
+|---|---:|---:|
+| **ggplot2: geoms, scales, coords, themes, facets, guides, labs, positions** | **99.1%** | **99.5%** |
+| geom_*() | 98.1% | 98.8% |
+| scale_*() | 99.6% | 100.0% |
+| coord_*(), theme(), facets, guides, labs | 100.0% | 100.0% |
+| **stat_*()** (shown apart) | **98.1%** | **100.0%** |
+| arguments yes / partial / no | 242 / 9 / 0 | 249 / 2 / 0 |
+| uses yes / partial / no | 405 / 10 / 0 | 413 / 2 / 0 |
+
+ggplot2's own examples: **96.7% to 96.7%** (uses 1190 / 79 / 3 to 1195 /
+74 / 3; stat_*() 98.4% to 98.7%, scales 95.4% to 95.5%): `geom_function(fun
+= function(x) ...)`, `geom_histogram(binwidth = function(x) ...)`,
+`stat_summary_2d(fun = function(x) ...)`, `scale_x_continuous(breaks =
+c(-10^(4:0), 0, 10^(0:4)))` and `aes(nudge_y = c(-0.1, 0.1, ...))` are
+typed now.  The arguments' and the aesthetics' measures stay at 100%
+(3409 arguments, 826 aesthetics).
+
+Round 10:
+
+- A new type `lambda`: a function written out as its text
+  (`function(y) mean(y) - sd(y)`, `\(x) paste0(x, "%")`), checked to parse
+  as a function and written as the function; read from code as its text
+  (`\(x)` as `function(x)`; a body of several statements keeps its lines).
+  The arguments that take one (`inst/fig/gg_args.csv` and the cards):
+  `fun`, `fun.data`, `fun.min`, `fun.max` (stat_summary, stat_summary_bin
+  / _2d, stat_function, a geom with stat "summary"), `binwidth`, a scale's
+  `breaks`, `minor_breaks`, `labels`, `oob`, `rescaler`, sec_axis()'s
+  `transform`, ggsurvfit's `pvalue_fun`.  Before: `!r` only.
+- A formula `~ ...` (ggplot2's lambda) is typed for those too: `fun.data`,
+  `fun.min`, `fun.max`, `binwidth`, a scale's `breaks`, `minor_breaks` and
+  `labels` (before: `fun`, `rescaler` and `transform` only).
+- A function written out or a formula is code before text where the type
+  takes both (a scale's `labels: "~ paste('Week', .x)"` is the formula,
+  not the label "~ paste(...)").  **The generated code changes** for a
+  label text that parses as a formula or a function: it is written as
+  code.  No template or test of this repo writes one.
+- Numbers written as arithmetic of numbers, in `c()` and `:` too (`!r
+  2^(-2:2)`, `!r c(-10^(2:0), 0, 10^(0:2))`, `!r 0:4 * 12`), are a
+  `list<number>` (`.schema_r_numbers()`): a scale's `breaks` and `limits`,
+  `xlim` ...; the check judges them (before: R, untyped).  The SPEC keeps
+  them as written.
+
+What is left (partial), clinical: a layer's data subset as R of the
+figure's own objects (`km[km$censored, ]`; `~ subset(.x, censored)` is the
+typed form).  In ggplot2's examples: objects of the example (`values =
+cols`, `labeller = to_string`), grobs, `guide_axis_stack()`'s guides by
+position, `Sys.Date()`, scales' helpers given an expression
+(`scales::label_math(10^.x)`).
+
+### Round 11 (2026-11-08): calendar dates, a part of the data by a function, everyday idioms
+
+What the clinical figures above left out and a statistical programmer
+writes every day: a timeline by calendar date (a data cut-off line, its
+label, the visible range as dates), subjects by worst grade with the
+stat's own counts and percentages, lab values against the normal range
+(the strips by a lookup, the points above it by a function of the data),
+the mean change with a bootstrap CI and the legend's keys redrawn, a heat
+map in colour steps, a KM-like plot with a second axis in weeks.  Six
+figures added to the clinical measure (`fig_dates`, `fig_ae_pct`,
+`fig_lab_range`, `fig_mean_boot`, `fig_heat_steps`, `fig_km_axis`: 27
+figures, 219 calls, 549 uses); "before" is the measure of these figures
+with the tflspec before the round.  A probe of 100 more everyday calls
+(scales' helpers, guides, facets' labellers, themes, positions, stats)
+found the rest below.
+
+| Clinical figures | Before | After |
+|---|---:|---:|
+| **ggplot2: geoms, scales, coords, themes, facets, guides, labs, positions** | **99.4%** | **99.6%** |
+| geom_*() | 98.7% | 99.0% |
+| scale_*() | 99.9% | 99.9% |
+| theme() | 99.7% | 100.0% |
+| labs(), annotate() | 99.6% | 100.0% |
+| coord_*(), facets, guides | 100.0% | 100.0% |
+| **stat_*()** (shown apart) | **100.0%** | **100.0%** |
+| arguments yes / partial / no | 285 / 6 / 0 | 288 / 3 / 0 |
+| uses yes / partial / no | 542 / 6 / 1 | 546 / 3 / 0 |
+
+ggplot2's own examples (round 5's measure): **96.7% to 96.7%** (uses 1195 /
+74 / 3, unchanged: they write none of these).  The arguments' and the
+aesthetics' measures stay at 100% (3409 arguments, 826 aesthetics).
+
+Round 11:
+
+- A date on a date axis where a reference or a place is given: a
+  reference line's `xintercept` / `yintercept`, `annotate()`'s and a
+  layer's fixed `x`, `y`, `xmin`, `xmax`, `ymin`, `ymax`, `xend`, `yend`,
+  `coord_cartesian()`'s `xlim` / `ylim` take `2025-01-31` (`NA` an open
+  end), written `as.Date("2025-01-31")`, read back from it (before: `!r`).
+  **The generated code changes** for a text of the form `YYYY-MM-DD` given
+  as a layer's fixed `x` or `y` (a level of a discrete axis that looks
+  like a date): it is written as a date.  No template or test of this repo
+  writes one.
+- A layer's `data` takes a function of the plot's data written out,
+  `function(d) subset(d, AVAL > ANRHI)` (type `lambda`, as the formula `~
+  subset(.x, ...)` before), written as the function.
+- `legend.justification` (and `legend.key.justification`) by its sides'
+  names, `[right, top]`: before, an error of the check, though ggplot2
+  takes it.
+- A theme's margin as a `unit()` of four sides, `theme(plot.margin =
+  unit(c(1, 1, 1, 1), "cm"))` (`plot.margin`, `legend.margin`,
+  `legend.box.margin`, `margins`, an element's `margin` and `padding`):
+  before, an error of the check.
+- A mapping's expression may call `formatC()`, `prettyNum()`,
+  `scales::percent()` / `number()` / `comma()` / `pvalue()`, forcats'
+  `fct_rev()` / `fct_reorder()` / `fct_relevel()` / `fct_inorder()` /
+  `fct_infreq()` and `stringr::str_wrap()`, by `pkg::fn` or bare
+  (`label: scales::percent(pct, accuracy = 1)`, a forest plot's `y:
+  forcats::fct_rev(level)`); before, `!r`.
+- `scale_*_gradientn(values = scales::rescale(c(-1, 0, 1)))`: the colours'
+  places as a call (`{fn: scales::rescale, args: {x: [-1, 0, 1]}}`), its
+  numbers typed.
+
+What is left (partial), clinical: a layer's data subset as R of the
+figure's own objects (`km[km$censored, ]`; `~ subset(.x, censored)` and
+`function(d) subset(d, censored)` are the typed forms), a scale's labels
+built by R (`c("BL", paste0("W", ...))`).  `method.args = list(family =
+binomial)` reads as R; `{family: binomial}` (written `"binomial"`, which
+glm() takes) is the typed form.
+
+### Round 12 (2026-11-09): scales' helpers typed, the calls inside a value checked
+
+The three measures were at or near their ceiling.  They did not count
+what goes inside a value.  A scale's `labels`, `breaks` and `transform`
+are mostly made by scales' helpers (`label_percent(accuracy = 1)`,
+`breaks_width(4)`, a PK plot's log axis by `trans_breaks()` and
+`math_format(10^.x)`).  Their arguments had no type, and the check never
+looked inside a figure item's values at all: `theme(axis.text =
+element_text(sizee = 9))`, `sec_axis(nam = "Weeks")` and
+`scales::label_procent()` all passed without a word.  ggplot2 stops at
+the draw on the last.
+
+A fourth group joins the arguments' measure: 40 of scales' helpers (138
+arguments), each argument written inside the scale slot that takes the
+helper (`scale_y_continuous(labels = {fn: scales::label_percent, args:
+{accuracy: ...}})`).  **yes**: typed and labelled by the kind `scales` and
+judged by the check; **partial**: written and accepted, but untyped or
+not checked; **no**: an error of the check.  Weights: 3 for the percent
+and number labels and a break every n; 2 for p-values, log axes (PK
+concentrations, ratios), wrapped labels and dates; 1 the rest.
+
+| Measure | Before | After |
+|---|---:|---:|
+| **scales' helpers (new group, 138 arguments of 40 functions)** | **50.0%** (0 yes / 138 partial) | **100.0%** (138 / 0) |
+| ggplot2's arguments (3409) and aesthetics (826), the extensions (351) | 100% | 100% |
+| **ggplot2's own examples** (round 5's measure) | **96.7%** (uses 1195 / 74 / 3) | **97.6%** (1203 / 66 / 3) |
+| examples: scale_*() | 95.5% | 97.7% |
+| examples: stat_*() (shown apart) | 98.7% | 98.7% |
+| **Clinical figures, 31 (four new, below; weighted)** | **99.2%** (uses 599 / 6 / 0) | **99.3%** (599 / 6 / 0) |
+| clinical: scale_*() | 98.8% | 100.0% |
+| clinical: guides | 100.0% | 87.5% (see below) |
+| clinical: stat_*() (shown apart) | 100.0% | 100.0% |
+
+Four figures added to the clinical measure (31 figures, 248 calls, 605
+uses): `fig_pk_log` (mean concentration on a log axis, the LLOQ,
+`annotation_logticks()`, `trans_breaks()` / `trans_format()` /
+`math_format(10^.x)`), `fig_pk_ind` (each subject's profile, `breaks_log()`,
+`label_number(big.mark = ",")`, a second axis by `dup_axis(name =
+derive(), labels = label_log())`), `fig_pct_signed` (a signed percent
+change, `label_number(style_positive = "plus", suffix = "%")`,
+`label_wrap()`), `fig_forest_math` (an odds ratio on a log2 axis,
+`transform_log(base = 2)`, `label_log(base = 2)`).  "Before" is these 31
+figures with the tflspec before the round; round 11's 27 were 99.6%.
+
+The clinical guides go down because the check now looks inside
+`guides(fill = guide_legend(...))`.  `fig_stack` writes
+`guide_legend(title.position = "top")`, an argument ggplot2 deprecated in
+3.5.0 (it is now the guide's `theme = theme(legend.title.position =
+"top")`).  ggplot2 4.0.3 still draws it, so it is partial, not no; the
+check says what to write instead.
+
+Round 12:
+
+- **scales' helpers have entries of the kind `scales`.** `tfl_schema("scales::label_percent")` gives an entry built from its formals; the arguments are typed and labelled by 68 new `scales` rows of `inst/fig/gg_args.csv`:
+  - numbers: `accuracy`, `scale`, `prefix`, `suffix`, `big.mark`, `decimal.mark`, `trim`, `style_positive` (`none|plus|space`), `style_negative`, `scale_cut`
+  - breaks: `n`, `width`, `offset`, `base`, a time span's `unit`
+  - dates: `format`, `tz`, `locale`
+  - log axes: `trans`, `inv`, `expr`
+  - palettes: `palette`, `type`, `direction`, `option`, `begin` / `end`
+  - `rescale()`'s `x`, `to`, `from`
+
+  A label function's `...` take `label_number()`'s arguments (`label_percent(style_positive = "plus")`); other helpers pass `...` on to another package and take any name (`breaks_pretty(min.n = 3)` goes to `pretty()`).
+- **The calls inside a figure item's values are checked**, each by its own entry. An argument the function does not have is a warning (`element_text(sizee =)`, `sec_axis(nam =)`, `label_percent(acuracy =)`), a value of the wrong type is an error (`element_text(size = "big")`), and so is a `pkg::fn` of an installed package that has no such function (`scales::label_procent`). Before, only a table item's calls were checked.
+- **ggplot2's guide arguments of before 3.5.0** (`title.position`, `label.position`, `keywidth`, `barheight`, `title.hjust`, `frame.colour`, `ticks.colour` ...) warn with the `theme()` setting each is now, rather than "no argument".
+- **New type `math`**: a plotmath expression as its text, `expr: 10^.x`, written bare (`scales::label_math(10^.x)`). It is read back from the code as its text. `label_math()`, `math_format()`, `trans_breaks()` and `trans_format()` are written with their leading arguments by position, as people write them: `scales::trans_breaks("log10", function(x) 10^x)`.
+- **`derive()`** in `sec_axis()` / `dup_axis()`'s `name` (`{fn: derive}`); a scale's `sec.axis` takes a formula alone (`sec.axis: ~ . / 7`), as ggplot2 does. Before, both were `!r`.
+- **Fixes of the check** that the nested check brought out:
+  - `as_labeller(x =)`: a figure function's `x` is its argument, not the data.
+  - `scale_y_log10()`, `_sqrt()` and `_reverse()` take `scale_y_continuous()`'s `sec.axis` and `position`. Before, `sec.axis` warned.
+
+**The generated code changes** for no existing spec: the forms above were
+`!r` before (written as the R given), and a call already typed is written
+as before (`scales::breaks_width(width = 4)` keeps its name).  What can
+change is the check's report: a spec whose values hold a misspelt or
+mistyped argument of a nested call now gets a warning or an error.
+
+What is left (partial), clinical: a layer's data as a subset of the
+figure's own object (`km[km$censored, ]`), a scale's labels built by R
+(`c("BL", paste0("W", ...))`), the deprecated `guide_legend(title.position
+=)`.  Examples: objects of the example (`values = cols`, `labeller =
+to_string`), `Sys.Date() - 30`, grobs and rasters, `size` of line geoms
+(deprecated), `pal_viridis()(5)` (a palette called).
+
+### Round 13 (2026-11-10): titles in plotmath, labels by a function's name, a Q-Q plot's distribution
+
+The three measures were at their ceiling (arguments 100%, examples
+97.6%, clinical 99.3%).  This round adds nine everyday figures to the
+clinical measure and runs a probe of 50 one-line figures
+(about 110 calls: scales, facets, themes, guides, positions, stats).
+They found four real gaps:
+
+- a PK figure's titles in plotmath
+- a butterfly chart's labels by `abs`
+- a Q-Q plot's distribution, which tflspec typed as a text, although
+  ggplot2 needs a function
+- a Bland-Altman plot's lines at the data's mean +/- 1.96 SD, mapped
+
+| Measure | Before | After |
+|---|---:|---:|
+| **Clinical figures, 40 (nine new, below; weighted)** | **98.9%** (uses 747 / 17 / 0) | **99.4%** (757 / 7 / 0) |
+| clinical: scale_*() | 99.3% | 99.9% |
+| clinical: labs | 99.1% | 100.0% |
+| clinical: stat_*() (shown apart) | 97.6% | 100.0% |
+| ggplot2's own examples | 97.6% (1203 / 66 / 3) | 97.6% (unchanged) |
+| ggplot2's arguments (3409) and aesthetics (826), the extensions (351), scales' helpers (138) | 100% | 100% |
+
+The new figures in the clinical measure (40 figures, 311 calls, 764 uses):
+
+- `fig_butterfly`: AE incidence, one arm to each side, `labels = abs`, `coord_flip()`
+- `fig_qq`: a normal Q-Q plot, `stat_qq()` / `stat_qq_line(line.p =)`
+- `fig_bland`: a Bland-Altman plot, `aes(yintercept = mean(d) + 1.96 * sd(d))`
+- `fig_fill`: a 100% stacked bar, `position_fill(vjust =)`, `after_stat(count)`
+- `fig_mean_text`: the means as text, `geom_text(stat = "summary")`, `stat_summary_bin(breaks =)`
+- `fig_hist_density`: a histogram, its density and the normal curve, `facet_grid(margins = TRUE)`
+- `fig_ellipse`: `stat_ellipse(type =, level =, segments =)`, `stat_unique()`
+- `fig_cdf_pad`: `stat_ecdf(pad = FALSE)`, an arrow by `annotate("segment")`, `dup_axis()`
+- `fig_dose_prop`: dose proportionality, titles by `expression()` and `quote()`
+
+The probe of 50 one-line figures went from 95.4% of its uses typed (206 of
+216) to 98.1% (212 of 216).
+
+Round 13:
+
+- **A title in plotmath** reads as the call R writes. The expression is
+  kept as its text and written back bare:
+  - `labs(y = expression(AUC[0 - infinity] ~ (ng %.% h / mL)))` is
+    `y: {fn: expression, args: {expr: "AUC[0 - infinity] ~ (ng %.% h / mL)"}}`;
+    `quote()` and `bquote()` work the same way.
+  - This applies to `labs()` (each of its titles), `xlab()` / `ylab()` /
+    `ggtitle()`, a scale's `name`, a guide's `title` and `sec_axis()`'s
+    `name`.
+  - The check reads the expression: one that does not parse
+    (`AUC[0-24`), or a call with another argument, is an error.
+  - Before, all of these were `!r`.
+- **A scale's `labels` takes a function by its name**, written bare:
+  `abs` (a butterfly chart's counts), `toupper`, `tolower`, `format`, and
+  scales' `percent`, `comma`, `number`, `pvalue`, `scientific`, `dollar`.
+  - `labels: scales::percent` is written `scales::percent`; `labels: comma`
+    is written `scales::comma`, because the package is not attached.
+  - The type is `function<abs, toupper, ...>`, a set of names. A label
+    that is not one of those names (`labels: Placebo`) is still a label.
+  - The same applies to `sec_axis()`'s `labels`.
+- **`stat_qq()` / `stat_qq_line()`'s `distribution` is a function**,
+  given by its name and written bare (`qnorm`, `qt` with `dparams: {df:
+  5}`, `stats::qexp`), or a function written out.
+  - Before, it was typed as a text, so `distribution: qnorm` was written
+    `"qnorm"`, which ggplot2 cannot call (it stops at the draw).
+- **A mapping takes a summary of the data at its top**: `mean()`,
+  `median()`, `min()`, `max()`, `sum()`, `quantile()`.
+  - Inside an expression it also takes `sd()`, `var()`, `quantile()`,
+    `IQR()` and `mad()`.
+  - So a Bland-Altman plot's lines are typed:
+    `yintercept: mean(m2 - m1) + 1.96 * sd(m2 - m1)`.
+
+**The generated code changes** for one existing form: `distribution:
+qnorm` of `stat_qq()` / `stat_qq_line()` / `geom_qq()` / `geom_qq_line()`
+was written `distribution = "qnorm"`, which does not draw. It is now
+written `distribution = qnorm`. Two other forms were text before and are
+now written bare:
+
+- a scale's `labels:` given as exactly one of the names above
+- `oob: squish` (now `scales::squish`)
+
+A single label equal to one of those names would have been a one-label
+vector before. No template, snapshot or test of this repo writes any of
+these forms.
+
+What is left (partial), clinical: a layer's data as a subset of the
+figure's own object (`km[km$censored, ]`), a scale's labels built by R
+(`c("BL", paste0("W", ...))`), the deprecated `guide_legend(title.position
+=)`.  Probe: a reference line at a summary of an object (`yintercept =
+mean(d$y)`, the data's own object), labels by `paste("Visit", 1:6)`,
+`guide_legend(byrow =)` (deprecated since 3.5.0).
+
+### Round 14 (2026-11-11): what programmers build of constants
+
+The three measures were at their ceiling (arguments 100%, examples
+97.6%, clinical 99.4%).  This round adds ten everyday figures to the
+clinical measure and runs two probes of one-line figures (85 figures,
+151 calls).  They found that the gaps left are values built of
+constants in the figure's own code:
+
+- a scale's labels by `paste0()` / `sprintf()` (`labels = paste0("W", seq(0, 24, by = 4))`)
+- `xlim(c(0, 250))`, which was read as R as a whole call
+- reference lines with a legend, whose `data` is `data.frame(y = c(20, -30), what = c(...))`
+- a logistic fit's `method.args = list(family = binomial)`
+- colours by `RColorBrewer::brewer.pal()` or `viridisLite::viridis()`, and by `setNames(c(...), c(...))`
+- a CI band kept in its range, `aes(ymin = pmax(lower, 0))`, and a t-based CI, `aes(ymin = mean - qt(0.975, n - 1) * se)`
+
+| Measure | Before | After |
+|---|---:|---:|
+| **Clinical figures, 50 (ten new, below; weighted)** | **97.7%** (uses 947 / 13 / 1) | **99.4%** (955 / 6 / 0) |
+| clinical: geom_*() | 98.3% | 99.1% |
+| clinical: scale_*() | 95.4% | 99.8% |
+| clinical: stat_*() (shown apart) | 100.0% | 100.0% |
+| Probes, 85 one-line figures (not committed) | 94.7% of uses (249 / 13 / 1) | 99.2% (261 / 2 / 0) |
+| ggplot2's own examples | 97.6% (1203 / 66 / 3) | 97.6% (1204 / 65 / 3) |
+| ggplot2's arguments (3409) and aesthetics (826), the extensions (351), scales' helpers (138) | 100% | 100% |
+
+(The examples gain `labs(alt = paste("...", "..."))`: a text built of
+constants is a text where one goes.)
+
+The new figures in the clinical measure (50 figures, 391 calls, 961 uses):
+
+- `fig_pie`: best overall response as pies, `coord_polar(theta = "y", direction = -1)`, `theme_void()`
+- `fig_lab_panels`: lab values by parameter, `facet_wrap(strip.position = "left", labeller = labeller(PARAM = label_wrap_gen(20)))`, labels by `paste0()`, `labs(tag =)`, inward ticks
+- `fig_dot`: `geom_dotplot(binaxis = "y", stackdir = "center")` with the median as a crossbar
+- `fig_calendar`: first and last doses on a date axis, `date_breaks` / `date_labels` / `date_minor_breaks`
+- `fig_bubble`: exposure and response, `scale_size_area()`, `transform = "log10"`, `guide_legend(override.aes =)`
+- `fig_heat_text`: AE incidence as a heat map with its numbers, `scale_fill_distiller()`, `guide_colourbar(position = "bottom")`
+- `fig_profile`: subject profiles, `facet_grid(rows = vars(), switch = "y")`, the y axis on the right
+- `fig_area`: counts stacked in reverse, `coord_flip()`, `legend.title.position`, `aspect.ratio`
+- `fig_er_logit`: a logistic exposure-response fit, `method.args = list(family = binomial)`, `xlim(c(0, 250))`, `RColorBrewer::brewer.pal()`
+- `fig_spider_ref`: reference lines with a legend from `data.frame()`, a band by `pmax()`, colours by `setNames()`
+
+Round 14:
+
+- **Texts built of constants** are typed where texts go, as numbers
+  written as arithmetic are (round 10): `!r paste0("W", seq(0, 24, by =
+  4))`, `!r sprintf("Day %d", 1:10)`, `!r c("BL", paste("Week", c(4,
+  8)))` count as a `list<string>`, and one of length one
+  (`sprintf("N = %d", 120L)`) as a `string`.
+  - The functions are `c()`, `paste()`, `paste0()`, `sprintf()`,
+    `format()`, `formatC()`, `seq()`, `seq_len()`, `rep()`, `rev()`,
+    `toupper()`, `tolower()`, `trimws()`, `round()`, `:` and the
+    arithmetic, over constants, `LETTERS`, `letters`, `month.abb` and
+    `month.name` (`.schema_r_texts()`); a sequence of at most 10000.
+  - The SPEC keeps them as written.  The check evaluates them: one that
+    does not evaluate (`sprintf("Day %d", 1.5)`) is an error, as the
+    code would stop there.  A column or an object in it is R, as before.
+- **`xlim(c(0, 52))`** reads as `limits: [0, 52]`, written `xlim(0, 52)`.
+  An open end is written `NA` (`ylim(-5, NA)`), not `NA_real_`.
+- **A layer's `data` takes a table of constants**:
+  `{fn: data.frame, args: {y: [20, -30], what: [PD, PR]}}`, written
+  `data.frame(y = c(20, -30), what = c("PD", "PR"))`.  The check says
+  when its columns' lengths do not fit (`y 3, g 2`).  (In YAML, quote a
+  column named `y`, `n`, `yes` or `no`, or read the spec with tflspec's
+  reader, which keeps them as names.)
+- **A glm's family in `method.args`** is its function: `method.args =
+  list(family = binomial)` reads as `{family: binomial}` and is written
+  bare; a link is the family's call, `{family: {fn: binomial, args:
+  {link: probit}}}`.  The names are `binomial`, `gaussian`, `Gamma`,
+  `inverse.gaussian`, `poisson`, `quasibinomial`, `quasipoisson` and
+  `quasi`.
+- **Colours by a palette of RColorBrewer or viridisLite** (both come
+  with ggplot2): `values` / `colours` take `{fn: RColorBrewer::brewer.pal,
+  args: {n: 3, name: Dark2}}` and `viridisLite::viridis()` / `magma()` /
+  `inferno()` / `plasma()` / `cividis()` / `turbo()`, written
+  `RColorBrewer::brewer.pal(3, "Dark2")`.  A function the package does
+  not have is an error.
+- **`setNames(c("grey40", "red"), c("Placebo", "Drug"))`** reads as the
+  map `{Placebo: grey40, Drug: red}`, written `c(Placebo = "grey40", Drug =
+  "red")`.  Names from an object stay R.
+- **A mapping takes `pmax()`, `pmin()`, `cumsum()`, `qt()` and
+  `qnorm()` at its top and inside**: `ymin: pmax(lower, 0)`, `ymin: mean
+  - qt(0.975, n - 1) * se`.
+
+**The generated code changes** for one existing form: `method.args:
+{family: binomial}` (any of the names above) was written `family =
+"binomial"` and is now written `family = binomial`.  `glm()` takes both,
+so the fit is the same.  No template or snapshot of this repo writes it;
+one test (`test-fig-ggplot2.R`) was updated.
+
+What is left (partial), clinical: a layer's data as a subset of the
+figure's own object (`km[km$censored, ]`), colours named by an object
+(`setNames(cols, arm)`), the deprecated `guide_legend(title.position =)`.
+Probes: date breaks by `seq(as.Date(...), by = "1 week", ...)` (a date
+scale's `date_breaks: 1 week` is the typed form), the deprecated
+`guide_legend(byrow =)`.
+
+### Round 15 (2026-11-12): an older program's spellings, read as ggplot2 4.0 writes them
+
+The measures were at their ceiling, and the gaps left (round 14) were R
+of the figure's own objects.  What a statistical programmer brings into a
+SPEC most often is not a new figure but an old program: code written for
+ggplot2 before 3.4 / 3.5, which ggplot2 4.0 still draws (with a
+deprecation warning) but which tflspec read as written -- untyped, flagged,
+or a "no argument" warning of the check.  This round adds eight such
+figures to the clinical measure (`fig_old_km`, `fig_old_forest`,
+`fig_old_mean`, `fig_old_pct`, `fig_old_cdf`, `fig_old_box`,
+`fig_old_heat`, `fig_old_waterfall`: the clinical figures as an older
+program writes them) and reads their spellings as ggplot2 4.0 writes them
+(`R/fig_legacy.R`), only where ggplot2 itself takes the old spelling as
+the new, so the figure draws the same.
+
+| Measure | Before | After |
+|---|---:|---:|
+| **Clinical figures, 58 (eight new, weighted)** | **97.9%** (uses 1051 / 26 / 3) | **99.6%** (1080 / 3 / 0) |
+| clinical: geom_*() | 96.9% | 99.1% |
+| clinical: scale_*() | 98.5% | 99.9% |
+| clinical: theme() | 99.4% | 100.0% |
+| clinical: guides | 87.5% | 100.0% |
+| clinical: stat_*() (shown apart) | 95.8% | 100.0% |
+| clinical, the 50 figures of round 14 alone (uses) | 955 / 6 / 0 | 958 / 3 / 0 |
+| ggplot2's own examples | 97.6% (1204 / 65 / 3) | 97.8% (1207 / 62 / 3) |
+| ggplot2's arguments (3409) and aesthetics (826), the extensions (351), scales' helpers (138) | 100% | 100% |
+
+(The round 14 figures gain `guide_colourbar(title.position = "top")` of
+three heat maps; the examples `geom_hline(size =)` and
+`geom_segment(size =)`.)
+
+Round 15, read from code (`tfl_args_from_r()`, a figure's terms):
+
+- **A line's `size` is its `linewidth`** in the layers whose geom renames
+  it (ggplot2's `rename_size`, and `size` no aesthetic of its own):
+  `geom_line()`, `geom_step()`, `geom_hline()` / `_vline()`,
+  `geom_errorbar()`, `geom_tile()`, `geom_ribbon()`, `stat_ecdf()`,
+  `stat_summary(geom = "line")` ...; `element_line()` and
+  `element_rect()`'s `size`.  Not a point's or a text's size, not
+  `geom_boxplot()`'s (an aesthetic too), not a bar's (ggplot2 4.0 drops
+  it), not when `linewidth` is given or mapped.  The check's warning for
+  a SPEC that writes it says so: "geom_line(size = ) is the line's width:
+  linewidth since ggplot2 3.4.0" (before: "geom_line has no argument
+  `size`").
+- **`stat_summary(fun.y =, fun.ymin =, fun.ymax =)`** (and
+  `stat_summary_bin()`) are `fun`, `fun.min`, `fun.max`.
+- **A stat's variable by `..count..` or `stat(count)`** is `after_stat()`
+  of the whole value, as ggplot2 evaluates it: `aes(y = ..count.. /
+  sum(..count..))` is `after_stat(count/sum(count))`.
+- **`aes_string(x = "AVISITN", y = "AVAL")`** is `aes(x = AVISITN, y =
+  AVAL)` when every value is a text that is R.
+- **`geom_errorbarh(height =)`** is `geom_errorbar(width =, orientation =
+  "y")`, what ggplot2 4.0's `geom_errorbarh()` calls (a forest plot's bars);
+  `tfl_args_from_r("geom_errorbarh", ...)` keeps the function asked for.
+- **A guide's arguments of before 3.5.0 are its `theme`**, as ggplot2
+  sets them: `guide_legend(title.position = "top", keywidth = 2,
+  label.hjust = 0.5)` is `guide_legend(theme = theme(legend.title.position
+  = "top", legend.key.width = unit(2, "lines"), legend.text =
+  element_text(hjust = 0.5)))`; `title.hjust` / `title.theme`,
+  `label.position`, `byrow`, `keyheight`, `barwidth` / `barheight` (in
+  `default.unit`), `label = FALSE`, `frame.*`, `ticks.*`, `axis.*`.  A
+  setting the guide's `theme` has wins; `ticks = FALSE` / `axis = FALSE`
+  (which ggplot2 4.0 does not set) and an object where a number goes are
+  left as written, with the check's warning.
+- **`guides(fill = FALSE)`, a scale's `guide = FALSE`** are `"none"`.
+- **`theme(legend.position = c(0.8, 0.2))`** is `legend.position =
+  "inside", legend.position.inside = c(0.8, 0.2)`;
+  **`legend.title.align` / `legend.text.align`** the element's `hjust`
+  (`legend.title = element_text(hjust = 0.5)`, added to an
+  `element_text()` given).
+- **`expand_scale()`** is `expansion()`.
+
+The SPEC is read in the new form, so the generated code is written in it;
+**no code generated from an existing SPEC changes** (the writer is
+untouched, and a SPEC holding an old spelling is written as before, with
+the check's warning).
+
+What is left (partial), clinical: a layer's data as a subset of the
+figure's own object (`km[km$censored, ]`; `~ subset(.x, censored)` is the
+typed form), colours named by an object (`setNames(cols, arm)`).
+
+### Round 16 (2026-11-13): a program's own objects, a whole program read
+
+What round 15 left was R of the figure's own objects (`position = pd`,
+`values = cols`, `theme(axis.text.x = no_x)`), and a statistical
+programmer's figure is a program, not one call: the objects it makes once
+and uses in several calls, the plot built in steps, several plots
+arranged by patchwork, `ggsave()`'s size.  `tfl_args_from_r()` read one
+call, so each of those objects stayed `!r`.  The new
+`tfl_fig_content_from_r()` (`R/fig_program.R`) reads the program into a
+figure report's content and its data part; the two measures read a call
+with its page's objects of constants made before it, as it does.  Four
+new clinical figures, written as a program writes them (`fig_prog_mean`,
+`fig_prog_forest`, `fig_prog_waterfall`, `fig_prog_cdf`: one dodge for
+three layers, the arms' colours by `setNames(..., arm)`, the visits'
+breaks and labels, a study theme `theme_bw() + theme(...)` added by name,
+the ratio axis' breaks, an `element_blank()` and an `arrow()` made once).
+
+| Measure | Before | After |
+|---|---:|---:|
+| **Clinical figures, 62 (four new, weighted)** | **99.0%** (uses 1129 / 23 / 0) | **99.7%** (1150 / 2 / 0) |
+| clinical: geom_*() | 98.7% | 99.1% |
+| clinical: scale_*() | 98.6% | 100.0% |
+| clinical: theme() | 99.9% | 100.0% |
+| clinical: labs | 99.6% | 100.0% |
+| clinical: stat_*() (shown apart) | 99.9% | 100.0% |
+| clinical, the 58 figures of round 15 alone (uses) | 1080 / 3 / 0 | 1081 / 2 / 0 |
+| **ggplot2's own examples** | **97.8%** (1207 / 62 / 3) | **98.5%** (1230 / 39 / 3) |
+| examples: theme() | 97.0% | 100.0% |
+| examples: facets | 93.3% | 96.0% |
+| examples: scale_*() | 97.7% | 98.2% |
+| ggplot2's arguments (3409) and aesthetics (826), the extensions (351), scales' helpers (138) | 100% | 100% (rerun, unchanged) |
+
+(The round 15 figure gaining: `fig_km`'s `scale_colour_manual(values =
+setNames(c(...), arm))`, `arm` an object of constants of the page.  The
+examples: `red_text` / `red_line` of `theme()` and `theme_sub_axis_bottom()`,
+`dodge` of `geom_col()` / `geom_errorbar()`, `cols` of
+`scale_colour_manual()`, `to_string` of the labellers, `q10` of
+`geom_quantile()`, `my_arrow` of a guide's theme.)
+
+Round 16:
+
+- **`tfl_fig_content_from_r(code)`**: a ggplot2 program (text, lines or
+  an `.R` file) as `list(data = list(source = "code", steps), content)`.
+  - An object of constants is read in place of its name: `pd <-
+    position_dodge(0.3)` then `geom_line(position = pd)` is `position:
+    {fn: position_dodge, args: {width: 0.3}}`; `cols <- c(Placebo =
+    "grey40", ...)` the map of colours; `my_theme <- theme_bw() +
+    theme(...)` then `+ my_theme` its terms.  A value of constants is built
+    of constants, the program's other objects of constants, and ggplot2's,
+    scales', grid's, patchwork's, RColorBrewer's, viridisLite's and the
+    extensions' exports and base R's value builders (`c()`, `setNames()`,
+    `seq()`, `paste0()`, `range()`, `unit()`, arithmetic ...); `aes()`,
+    `vars()`, a formula and a function written out (its body of
+    constants) are too.  Not `ggplot()`, `Sys.Date()`, `nrow()` or any
+    function of the data.
+  - A name inside `aes()` / `vars()` / `after_stat()` is a column, never
+    replaced; an object's part (`cols[1:2]`, `df$colour`) stays R.  An
+    object whose name is left somewhere stays in the data part.
+  - The plot: a `+` chain from `ggplot()` / `ggsurvfit()` / `ggcuminc()`,
+    bare or assigned, and `p <- p + ...`; the plot printed or saved last
+    is the figure.  `theme_set(theme_bw())` before it is its first term.
+  - Plots arranged by patchwork (`p_km / p_risk`, `p1 | p2`, `p1 + p2`,
+    `wrap_plots(p1, p2, ncol = 1)`, `+ plot_layout()`, `+
+    plot_annotation()`, `& theme()`) are named plots (`p_km` is `km`) and
+    `wrap_plots`.
+  - `ggsave()`'s width / height (in its `units`, as inches), `dpi`, the
+    file and its format are the `tfl_image` item.
+  - Every other line is the data part, one code step in the program's
+    order; `library()` and `print()` are left out.
+  - The attributes `objects` (the names read in place) and `problems`
+    (`tfl_schema_check()` of each item, with its position).
+- **Numbers by base R's functions of numbers** count as numbers where a
+  list of numbers goes (`.schema_r_numbers()`): `seq(0.05, 0.95, by =
+  0.05)`, `range(c(0.25, 4))`, `rev()`, `sort()`, `min()` / `max()`,
+  `log10()` ..., `rep()`; before only arithmetic, `c()` and `:`.  The
+  SPEC keeps them as written; no generated code changes.
+- `dev/spec-coverage-ggplot2-examples.R` reads a call with its page's
+  objects of constants made before it.
+
+**No code generated from an existing SPEC changes**: the writer is
+untouched.  Code read through `tfl_fig_content_from_r()` writes the
+objects' values in place (`position = position_dodge(width = 0.3)` in
+each layer), so it draws the same.
+
+What is left (partial), clinical: a layer's data as a subset of the
+figure's own object (`km[km$censored, ]`, `sw[sw$ongoing, ]`; typed as
+`~ subset(.x, censored)`).  Examples: objects of the data
+(`states_map$long`, `tidy(ci)`, `df2$lineend`), `Sys.Date() - 30`,
+grobs and rasters, a labeller in plotmath (`alpha^.(vs)`),
+`position_rank()` / `guide_describe()` (not ggplot2 4.0.3 exports).
+
+### Round 17 (2026-11-15): a tidyverse program, read whole and drawn again
+
+Round 16 read a program; it did not read the way most programs are
+written now: the data piped into `ggplot()`.  `adlb %>% filter(PARAMCD
+== "ALT") %>% ggplot(aes(...)) + ...` was "no plot: no ggplot() in the
+code", and so was a `ggsurvfit()` with its fit piped in.  A fifth
+measure, `dev/spec-coverage-ggplot2-program-measure.R`, takes 19 clinical
+programs written in the tidyverse's way for it
+(`dev/spec-coverage-ggplot2-programs.R`, made-up ADaM-like data: lab
+profiles, mean +/- SE, waterfall, KM by ggsurvfit and as a data frame,
+forest, CDF, heat map, swimmer, histogram, box plot, two plots by
+patchwork), reads each with `tfl_fig_content_from_r()`, writes the
+content back as the figure's code (what a figure report generates), runs
+that code on the same data and compares the figure with the program's
+own: the layers' data, the axes' labels, the plot's labels and its
+complete theme.  One row a program (`inst/dev/spec-coverage-ggplot2-programs.csv`);
+a program counts 1 when it reads, runs and draws the same with no value
+of R and no problem of the check, 0.5 when it draws the same with values
+of R or warnings, 0 otherwise.
+
+| Programs measure (19 programs) | Before | After |
+|---|---:|---:|
+| **score** | **23.7%** | **100.0%** |
+| read by tfl_fig_content_from_r() | 9 | 19 |
+| the code written back runs | 8 | 19 |
+| draws the same | 8 | 19 |
+| items' values typed / R | 94 / 11 | 241 / 0 |
+| problems of the check (errors) | 2 | 0 |
+
+The other measures were rerun with ggplot2 4.0.4 and came out unchanged:
+the clinical figures 99.7% (uses 1150 / 2 / 0), ggplot2's own examples
+98.5% (1230 / 39 / 3), the arguments (3409), aesthetics (826),
+extensions (351) and scales' helpers (138) 100%.
+
+Round 17 (`R/fig_program.R`):
+
+- **The data piped into the plot** (`%>%`, the native `|>`, magrittr's
+  `.` as `ggplot(data = ., ...)`), or computed in `ggplot()`'s own
+  `data` (`ggplot(data = fst %>% mutate(...))`, `adlb[adlb$PARAMCD ==
+  "ALT", ]`), is an object of the data part, `plot_data` (`p_data` for a
+  plot `p`; a name the program uses is not taken), and the item names it.
+  `ggsurvfit()`'s fit piped in is `plot_fit`.
+- **A layer's data that is a part of the plot's** is its formula, `~
+  subset(.x, censored)`: `km[km$censored, ]`, `subset(km, censored)`,
+  `km %>% filter(censored, time > 0)` (`censored & time > 0`),
+  `dplyr::filter(km, censored)` and magrittr's function `. %>%
+  filter(censored)`.  Any other data computed in a layer is an object of
+  the data part (`alt_geom_point <- adlb %>% filter(AVAL > 40)`).  This
+  closes round 16's last clinical partial in a program (the clinical
+  measure reads one call, so it still counts `km[km$censored, ]` there).
+- **Terms as ggplot2 adds them**: a list of terms (`+ list(labs(...),
+  theme_bw())`, or an object of them, `ref_lines <-
+  list(geom_hline(...), geom_vline(...))`), `+ NULL`, `{ }`, `if (flag)
+  term [else term]`, and a step `if (show_ci) { p <- p + geom_ribbon(...)
+  }`, when the flag is a constant of the program: the branch it takes,
+  the flag read in place.  A condition of the data stays R.
+- **`theme_update()`** after `theme_set()` (or alone, on ggplot2's
+  default theme) is the plot's theme with those settings.
+- **`ggplot2::` before a call** is dropped (the figure's code attaches
+  ggplot2); before, `ggplot2::aes()` was an error of the check
+  ("an !r expression").
+- `R/fig_content.R`: a list of a function's arguments (`x_scales`,
+  `method.args` ...) whose values include numbers or texts built of
+  constants (`list(breaks = seq(0, 60, by = 12))`) is a map still, the
+  number R the check judges; before, the whole list was R.
+
+**No code generated from an existing SPEC changes**: the writer is
+untouched.  What changes is how a program is read.
+
+What is left: a condition of the data (`if (nrow(d) > 10)`), plots made
+in a function or a loop, `%+%`, `last_plot()`.
+
+### Round 18 (2026-11-16): a plot made by a function of the program, `%+%`, `last_plot()`
+
+Round 17 left plots made in a function.  A programmer who draws the same
+figure for several parameters writes the plot once, as a function of the
+program, and calls it (`lab_mean(adlb, "ALT") / lab_mean(adlb, "AST")`):
+that program was "no plot: no ggplot() in the code".  Four programs join
+the programs measure (`dev/spec-coverage-ggplot2-programs.R`): a plot
+function called twice and stacked by patchwork, its data summarised inside
+it and a default built of another argument; a function given its columns
+by name (`.data[[yvar]]`, `!!sym(colvar)`); one given a column bare (`{{ y
+}}`) and a layer's settings (`...`); a plot drawn again on other data
+(`p_alt %+% ast`) and finished on `last_plot()`.
+
+| Programs measure | Before | After |
+|---|---:|---:|
+| **score (23 programs)** | **82.6%** | **100.0%** |
+| read by tfl_fig_content_from_r() | 20 | 23 |
+| the code written back runs | 19 | 23 |
+| draws the same | 19 | 23 |
+| items' values typed / R | 248 / 0 | 289 / 0 |
+
+The 19 programs of round 17 are unchanged (100%).  The arguments',
+aesthetics', ggplot2's examples' and clinical figures' measures read one
+call, which this round does not change (rerun below).
+
+Round 18 (`R/fig_program_fn.R`, `R/fig_program.R`):
+
+- **A plot function of the program** (`f <- function(...) { ... ggplot()
+  ... }`): each call, bare, assigned, in `print()`, `ggsave(plot =)` or a
+  patchwork arrangement, is read as the lines the function runs, its
+  arguments (or its defaults, built of the others) in place of its
+  formals; the expression it returns (`return()`, `invisible()`,
+  `print()`, its last line) is the plot.  Its local objects are named for
+  the call by its first text argument (`d` of `lab_mean(adlb, "ALT")` is
+  `d_alt`, a line of the data part), so two calls keep their data apart
+  and the plots are named `lab_mean_alt`, `lab_mean_ast`.
+- **Columns named by an argument** inside `aes()` / `vars()`:
+  `.data[[yvar]]`, `!!sym(yvar)` (`rlang::sym`, `ensym`, `as.name`) with
+  `yvar = "CHG"`, and `{{ y }}` with `y = AVAL` given bare, are the
+  column (`y: CHG`); a bare name there stays a column, never the argument.
+  `...` is the arguments given at the call (`geom_boxplot(...)` with
+  `width = 0.5`).
+- A call inside a loop (`for`, `lapply()`, `purrr::map()` ...) is not
+  read: it stays in the data part, and so does the function's definition
+  (kept only while something there calls it).
+- **`p %+% ast`** is `p`'s terms with `ast` as `ggplot()`'s data
+  (`p %+% geom_point()`, a term, as `+`); **`last_plot()`** is the plot
+  made last.
+
+**No code generated from an existing SPEC changes**: the writer is
+untouched.  What changes is how a program is read.
+
+What is left: a condition of the data (`if (nrow(d) > 10)`), a figure
+per value of a loop (several figures from one program), a plot function
+that calls itself or builds its terms by `Reduce()`.
+
+### Round 19 (2026-11-17): a layer's rows of a data by name, 2-d bins by axis, label_bquote()
+
+What the clinical figures' measure had left were its two last partial
+uses, both a layer's data that is rows of a data by its name (`km[km$censored, ]`
+for a KM plot's censor marks, `sw[sw$ongoing, ]` for a swimmer's arrows):
+read one call at a time, outside a program, the data is not the plot's,
+so round 9's formula `~ subset(.x, censored)` does not fit, and the value
+stayed R.  ggplot2's own examples had two more of the same kind of gap
+(a 2-d bin's `bins = list(x = 30, y = 10)`, `label_bquote(alpha^.(vs))`).
+
+| Measure | Before | After |
+|---|---:|---:|
+| **Clinical figures, 62 (weighted)** | **99.7%** (uses 1150 / 2 / 0) | **100.0%** (1152 / 0 / 0) |
+| geom (clinical) | 99.1% | 100.0% |
+| **ggplot2's own examples** | **98.5%** (1230 / 39 / 3) | **98.6%** (1234 / 35 / 3) |
+| facet (examples) | 96.0% | 97.9% |
+| geom (examples) | 98.8% | 98.9% |
+| arguments (3409) and aesthetics (826) | 100.0% | 100.0% |
+| programs (23) | 100.0% | 100.0% |
+
+(R 4.3.3, ggplot2 4.0.4; the "before" is this branch with `next` merged,
+before the round's commit.)
+
+Round 19 (`R/fig_layer_data.R`):
+
+- **A layer's rows of a data by its name**: `data: {fn: subset, args:
+  {x: km, subset: censored}}`, written `subset(km, censored)`, a new
+  alternative of a layer's `data` (`call<data.frame, subset>`, 26 cards
+  and the `layer` kind).  Read from `subset(km, censored)`,
+  `km[km$censored, ]` (`km$` taken off the columns) and
+  `dplyr::filter(km, censored, time > 0)` (the conditions joined by `&`).
+  The rows drawn are the same: a row whose condition is NA is not drawn
+  either way.  A condition must be TRUE / FALSE as written (a comparison,
+  `&`, `!`, `is.na()`, `%in%`, `grepl()` ... or a column); rows by number
+  or order (`km[1:3, ]`, `km[order(km$time), ]`), an object of the program
+  (`km[keep, ]`) and `filter()`'s own arguments (`.by`) stay R.  The check
+  says an error for another argument, a name that is no name, or a
+  condition that does not parse.  The programs' reader shares the same
+  reading (`.fig_data_rows()`); it no longer takes rows by order for a
+  condition (`pd[order(pd$x), ]` was `~ subset(.x, order(x))`).
+- **A 2-d bin's one value an axis**: `bins` / `binwidth` of
+  `geom_bin_2d()`, `geom_hex()`, `stat_bin_2d()`, `stat_bin_hex()`,
+  `stat_summary_2d()`, `stat_summary_hex()` take `{x: 30, y: 10}`, written
+  `list(x = 30, y = 10)` (a named vector would be taken by position), and
+  `[30, 10]`.  A 1-d bin is not by axis (`geom_histogram(bins = list(x =
+  30))` stays R).
+- **`label_bquote()`'s `rows` / `cols` / `default`** are a plotmath
+  expression written bare (`math|tilde`): `{fn: label_bquote, args: {rows:
+  "alpha^.(vs)"}}` is `label_bquote(rows = alpha^.(vs))`, and `cols:
+  '.(am) ~ "transmission"'` a formula.  Before, `!r`.
+
+**Code generated from an existing SPEC does not change.**  Code read from
+R does: `geom_point(data = km[km$censored, ])` is now written
+`geom_point(data = subset(km, censored))` (`test-fig-legacy.R`'s case
+updated).
+
+What is left in ggplot2's own examples: values of the example's objects
+(`breaks = price_bins`, `data = tidy(ci)`, `lineend = df2$lineend`), grobs
+and rasters (`grid::circleGrob()`), today's date (`Sys.Date() - 30`),
+`guide_axis_stack()`'s guides by position, `stat_manual()`'s quoted
+expression and an `expand_limits()` of a data frame.
+
+### Round 20 (2026-11-18): grid's grobs, guide_axis_stack()'s guides by position
+
+The measures were at their ceiling but for what ggplot2 draws that is not
+ggplot2's own: a grob of grid.  A forest plot's "<- Favours drug" and
+"Favours placebo ->" under the axis are most often written
+`annotation_custom(grid::textGrob(...))` with `coord_cartesian(clip =
+"off")`, a box round a figure's statistics `grid::roundrectGrob()`, a
+swimmer plot's key of the ongoing arrow `guide_custom(grid::segmentsGrob(...))`.
+`annotation_custom()`'s and `guide_custom()`'s `grob` was `r` only: the
+SPEC had `!r grid::textGrob("Favours drug", ...)`, untyped and unchecked
+(a typed call was an error).  Two clinical figures that write them are
+added to the clinical measure (`fig_forest_favours`, `fig_swimmer_key`:
+64 figures), and grid's grobs are measured apart (as scales' helpers are),
+each argument written in `annotation_custom(grob = )`, gpar()'s in a
+textGrob's `gp`.
+
+| Measure | Before | After |
+|---|---:|---:|
+| **Clinical figures, 64 (weighted)** | **99.7%** (uses 1178 / 4 / 0) | **100.0%** (1182 / 0 / 0) |
+| guide (clinical) | 90.0% | 100.0% |
+| labs and annotation_*() (clinical) | 99.1% | 100.0% |
+| **ggplot2's own examples** | **98.6%** (1234 / 35 / 3) | **98.8%** (1239 / 30 / 3) |
+| guide (examples) | 89.7% | 96.9% |
+| labs and annotation_*() (examples) | 98.3% | 98.8% |
+| **grid's grobs (11 functions, 81 arguments; new)** | **0.0%** (81 no) | **100.0%** (81 yes) |
+| arguments (3409) and aesthetics (826) | 100.0% | 100.0% |
+| programs (23) | 100.0% | 100.0% |
+
+(R 4.6.2, ggplot2 4.0.4; the "before" is this branch with `next` merged,
+before the round's change, measured with the new figures and rows.
+Weights of grid's grobs: textGrob() and gpar() 2, the others 1.)
+
+Round 20:
+
+- **grid's grobs as a typed value** (`R/spec_figure.R`, kind `grob`):
+  `textGrob()`, `rectGrob()`, `roundrectGrob()`, `circleGrob()`,
+  `linesGrob()`, `polylineGrob()`, `segmentsGrob()`, `pointsGrob()`,
+  `polygonGrob()`, `nullGrob()` and `gpar()` are entries by `grid::fn`
+  (`tfl_schema("grid::textGrob")`), their arguments typed in
+  `inst/fig/gg_args.csv` (40 rows: `label`, `x` / `y` as a number or a
+  unit, `just`, `hjust`, `rot`, `default.units`, `gp` a `gpar()`, `arrow`,
+  `pch`, `size`, `r`; gpar()'s `col`, `fill`, `alpha`, `lty`, `lwd`,
+  `fontsize`, `fontface`, `fontfamily`, `lineheight` ...).
+  `annotation_custom()`'s and `guide_custom()`'s `grob` take `call<textGrob,
+  rectGrob, ...>|r`: `{fn: grid::textGrob, args: {label: Favours drug, x:
+  0.25, gp: {fn: grid::gpar, args: {fontsize: 9}}}}`, written
+  `grid::textGrob("Favours drug", x = 0.25, gp = grid::gpar(fontsize = 9))`
+  (the label by position; `grid::` always, so the code needs no
+  `library(grid)`).  Read from `grid::textGrob(...)` and from `textGrob(...)`
+  bare (grid attached).  The check says a grob's or gpar()'s unknown
+  argument (`gpar(colr = )` warns), a value of the wrong type
+  (`textGrob(rot = "up")`, `gpar(fontface = "heavy")` errors) and a
+  function grid has not.  Another function's grob (`ggplotGrob(p)`, a
+  table's) and a grob by its object's name stay R.
+- **guide_axis_stack()'s guides after the first, by position**:
+  `guide_axis_stack("axis", guide_axis(cap = "both"))` reads as `{first:
+  axis, guides: [axis, {fn: guide_axis, args: {cap: both}}]}` (the card's
+  positional `...`, key `guides`), and is written back by position; the
+  guides' calls are checked (`guide_axis(capp = )` warns).  Before, the
+  whole guide was R.  A card's positional `...` inside a value (not only
+  an item's, `xlim(0, 52)`) is read and written so generally
+  (`.fig_positional_dots()`).
+
+**Code generated from an existing SPEC does not change.**  Code read from
+R keeps its text: `annotation_custom(grid::textGrob("Favours drug"))` is
+written `annotation_custom(grob = grid::textGrob("Favours drug"))`, as any
+argument read by position is named; `textGrob()` bare is written
+`grid::textGrob()`.
+
+What is left in ggplot2's own examples: values of the example's objects
+(`breaks = price_bins`, `data = tidy(ci)`, `annotation_custom(grob = g)`,
+`lineend = df2$lineend`), a raster, today's date (`Sys.Date() - 30`),
+`stat_manual()`'s quoted expression and an `expand_limits()` of a data
+frame.
+
+### Round 21 (2026-11-19): the extension packages' own examples, through a SPEC and back
+
+The extensions were measured by their arguments only (351, 100%): whether
+a SPEC can name each and the check types it.  Read the other way -- what
+the extensions' users write, read as a SPEC, checked, written back and
+drawn the same -- they were not.  `dev/spec-coverage-ggplot2-examples.R
+out.csv --ext` now does that with the examples of the help pages of
+ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale and patchwork (read from the
+installed packages, not copied; a patchwork compared plot by plot, with its
+layout and annotation): 170 calls of a function in `ext_scope`
+(`inst/dev/spec-coverage-ggplot2-ext-examples.csv`).  Seven more clinical
+figures are added to the clinical measure (a volcano plot of AE risk, an
+ROC curve, a 100% bar of best response with counts, an AE time course
+with a week axis by `sec_axis()`, change from baseline +/- 95% CI dodged,
+a histogram of percent by arm, a lab shift plot on log axes): 71 figures,
+all read, checked and drawn the same before this round's change too.
+
+| Measure | Before | After |
+|---|---:|---:|
+| **The extensions' own examples (new)** | **78.5%** (uses 233 / 19 / 47 of 299) | **95.7%** (uses 312 / 11 / 12 of 335) |
+| ggsurvfit | 97.3% | 100.0% |
+| ggrepel | 95.0% | 100.0% |
+| ggh4x | 33.9% | 94.5% |
+| ggtext | 96.4% | 100.0% |
+| patchwork | 76.4% | 87.7% |
+| **Clinical figures, 71 (weighted; 64 before)** | **100.0%** (uses 1318) | **100.0%** (1318 / 0 / 0) |
+| ggplot2's own examples | 98.8% | 98.8% |
+| arguments (3409), aesthetics (826), the extensions (351), scales' helpers (138), grid's grobs (81) | 100.0% | 100.0% |
+
+(R 4.3.3, ggplot2 4.0.4, ggsurvfit 1.2.1, ggrepel 0.9.8, ggh4x 0.3.1,
+ggtext 0.2.0, ggnewscale 0.5.2, patchwork 1.3.2.  More uses after: a call
+read as R whole before is read now, each of its arguments a use.
+ggnewscale's examples call none of its functions in a way the measure
+judges.)
+
+Round 21:
+
+- **ggh4x's facets by their bare names** (`facet_grid2()`,
+  `facet_wrap2()`, `facet_nested()`, `facet_nested_wrap()`, the package
+  attached): before, a call of an extension's function bare could not have
+  its positional arguments named (`.fig_find_fun()` looked in ggplot2,
+  ggsurvfit, patchwork and scales only) and was R whole; now ggh4x's,
+  ggrepel's, ggtext's and ggnewscale's are found too.  Their variables
+  read as ggplot2's facets' are: `facet_grid2(cyl ~ drv)` as `{rows: cyl,
+  cols: drv}`, `facet_nested_wrap(vars(cyl, drv))` as `{facets: [cyl,
+  drv]}` (`.fig_facet_base()`), written back `vars(...)` as facet_grid()'s.
+  A one-sided formula is the columns' variables, as ggplot2 takes it:
+  `facet_grid(~ cyl)` and `facet_nested(~ vs + cyl)` read as `{cols: ...}`
+  (before: `rows: !r ~cyl`).  facet_nested_wrap()'s `facets` and the facet
+  kind's `rows` / `cols` take `call<vars>|list<column>|column` as
+  facet_grid()'s card does.
+- **An extension's call inside a value is typed**: a layer's `position`
+  takes `call<position_*>` (ggrepel's `position_nudge_repel(x = ...)`;
+  before any call, so a call of another function passed the check; nine
+  geom cards and the layer kind), its nudge `x` / `y` a number or one a
+  row; `ggsurvfit(theme = )`, `add_risktable(theme = )` and patchwork's
+  `theme` take `call<theme, theme_*>` (`{fn: theme_risktable_boxed}`; a
+  list of themes stays R); a facet's `strip` `call<strip_*>`
+  (`strip_nested()`, `strip_split()`); patchwork's `wrap_elements(panel =,
+  plot =, full =)` and `inset_element(p =)` a plot by name or one of
+  grid's grobs (`{fn: grid::textGrob, args: {label: ...}}`), `free(x =)`
+  a plot by name; ggtext's `element_textbox_simple(r = )` a `unit()`;
+  ggsurvfit's `add_quantile(y_value =, x_value =)` `!r NULL` for no line.
+  An argument whose type has `object` among its alternatives names an
+  object (`.fig_objects_of()`; before only of type `object` alone).
+- **A value each of calls, NULL where none**: `facetted_pos_scales(y =
+  list(NULL, scale_y_continuous(transform = "reverse")))` reads as `y:
+  [!r NULL, {fn: scale_y_continuous, args: {transform: reverse}}]` and is
+  written `list(...)` (c() would drop the NULL and shift the panels); the
+  calls are checked (`scale_x_log10()` in `y` is an error, an unknown
+  argument warns).  ggh4x's `elem_list_text(margin = list(NULL, margin(t =
+  5)))` the same.  The type `list<call<...>|r>` says it
+  (`.fig_type_call_seq()`); scales by a condition (`cyl == 4 ~
+  scale_y_log10()`) stay R.
+
+- Fix: facet_grid()'s `rows` / `cols` given as R (`rows: !r vars(SEX)`)
+  were written `vars(\`vars(SEX)\`)` (R's text taken for a column's
+  name); they are written as they are.
+
+**Code generated from an existing SPEC changes in one case**: a
+facet_grid() whose `rows` or `cols` is `!r ...` (the fix above; the code
+written before did not draw).  A layer's `position` given as a call of a
+function that is no position is an error of the check now (it passed
+before).  Code read from R:
+ggh4x's facets are written `ggh4x::facet_grid2(rows = vars(cyl), cols =
+vars(drv))` (by the package's name, as an extension's function always is),
+and `facet_grid(~ cyl)` is written `facet_grid(cols = vars(cyl))`.
+
+What is left in the extensions' examples: `wrap_plots()` read as a term
+(a program's arrangement is read by `tfl_fig_content_from_r()`, which
+takes the plots by the program's names; a term alone has none),
+`wrap_plots(A = p1, B = p2, design = )` (plots by a design's letters),
+`plot_layout(design = c(area(...), ...))`, a base graphics formula in
+`wrap_elements(full = ~ plot(...))`, a plot built in place
+(`wrap_elements(panel = p1 + ggtitle(...))`), `tag_levels = list(c("&",
+"%"), "1")`, scales by a condition, and a facet's quoted text among
+names (`vars(cyl, "year", year)`).
+
+### Round 22 (2026-11-20): patchwork's arrangement as written, a strip's elements one a strip
+
+Round 21 left patchwork at 87.7% of its own examples: `wrap_plots()`
+read as a term was R whole, plots by a design's letters were "no
+argument", a design of `area()`s and a level's own tags were R.  This
+round reads them.
+
+| Measure | Before | After |
+|---|---:|---:|
+| **The extensions' own examples (weighted)** | **96.0%** (uses 315 / 14 / 6 of 335) | **98.2%** (333 / 5 / 1 of 339) |
+| patchwork | 87.7% | 95.9% |
+| ggh4x | 95.6% | 96.2% |
+| ggsurvfit / ggrepel / ggtext | 100.0% | 100.0% |
+| ggplot2's own examples | 98.8% (1240 / 29 / 3) | 98.8% (1241 / 28 / 3) |
+| Clinical figures, 71 (weighted) | 100.0% (1318) | 100.0% (1318 / 0 / 0) |
+| arguments (3409), aesthetics (826), the extensions (351), scales' helpers (138), grid's grobs (81) | 100.0% | 100.0% |
+
+(R 4.3.3, ggplot2 4.0.4, ggsurvfit 1.2.1, ggrepel 0.9.8, ggh4x 0.3.1,
+ggtext 0.2.0, ggnewscale 0.5.2, patchwork 1.3.2; before = this branch
+before the round's change, measured the same day.  More uses after: a
+call read as R whole before is read now, each of its arguments a use.)
+
+Round 22:
+
+- **`wrap_plots()` as a term**: its plots by name, unnamed
+  (`wrap_plots(p1, p2, ncol = 1)` is `{plots: [p1, p2], ncol: 1}`), one
+  list of plots by its name (`wrap_plots(plot_list)`), written out
+  (`wrap_plots(list(p1, p2))`), or picked of a list by place
+  (`built[[2]]`); written back by position, as patchwork's users write
+  them.  Before, the call was R whole.
+- **Plots by a design's letters**: `wrap_plots(A = p1, B = p2, design =
+  "AB")` reads as `plots: {A: p1, B: p2}` (before: "wrap_plots has no
+  argument `A`"); the content writes `wrap_plots(A = p_km, B = p_risk,
+  design = ...)`, and `tfl_fig_content_from_r()` reads a program's
+  arrangement of that form.  The card's `plots` takes
+  `list<string>|map<string, string>|string`.
+- **A design of areas**: `plot_layout(design = c(area(1, 1), area(1, 3,
+  3)))` reads as a sequence of typed `area()` calls (`design:
+  string|list<call<area>>|r`), checked (another function is an error) and
+  written `c(area(t = 1, l = 1), ...)`, as patchwork joins them.  A
+  sequence of calls whose element takes no NULL is written `c()`; one
+  that does (facetted_pos_scales' scales) stays `list()`.
+- **A level's own tags**: `plot_annotation(tag_levels = list(c("&", "%"),
+  "1"))` reads as `[['&', '%'], '1']` (`tag_levels:
+  string|list<string|list<string>>|r`).  A sequence with a sequence in it
+  is now written `list(...)`; before, c() made it one sequence
+  (`c(c("&", "%"), "1")`, three levels instead of two).
+- **A strip's elements one a strip**: ggh4x's `strip_themed(background_x =
+  list(element_blank(), element_rect(fill = "dodgerblue")))` reads as a
+  sequence of typed element calls, written `list(...)`; and
+  `elem_list_rect()` / `elem_list_text()` are typed calls now (before
+  they were R: the type was any `call`).  `text_x` / `text_y` take
+  `call<elem_list_text, element_text, element_blank>|list<...>`,
+  `background_x` / `_y` the rect's.
+- **A base graphics plot in `wrap_elements()`**: `wrap_elements(full = ~
+  plot(x, y))` is a formula (`tilde`) of the `panel` / `plot` / `full`
+  types.
+- **Texts picked of letters**: `letters[1:4]`, `LETTERS[c(1, 3)]` are
+  texts of constants (the check judges them).
+
+**Code generated from an existing SPEC changes in one case**: a sequence
+with a sequence in it (only `tag_levels` takes one) is written `list()`
+where it was flattened by `c()` (the code before did not do what the SPEC
+said).  A strip's `text_x` / `background_x` given as a call of a function
+that is no element is an error of the check now (it passed before).
+
+What is left in the extensions' examples: a plot built in place
+(`wrap_elements(panel = p1 + ggtitle(...))`,
+`wrap_plots(ggsurvfit_build(p), ...)`), scales chosen by a condition
+(`facetted_pos_scales(y = list(Species == "virginica" ~ ...))`), and a
+facet's quoted text among names (`vars(cyl, "year", year)`).  In
+ggplot2's own: values that are a data's column (`df$colour`,
+`states_map$long`), dates relative to today (`Sys.Date() - 30`), a
+function defined in the example (`labeller = as_labeller(appender)`,
+`connection = zigzag`), a quoted expression (`stat_manual(args =
+list(expr = quote(...)))`).
+
 ### The extension packages (ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale, patchwork)
 
 The same measure, the same file (`package` says which), over the

@@ -1,0 +1,112 @@
+"package","function","argument","covered","where","note","group","weight","uses"
+"ggh4x","elem_list_rect","linetype","yes","ggh4x::distribute_args","","ggh4x",1,1
+"ggh4x","elem_list_rect","nonsense_argument","yes","ggh4x::distribute_args","","ggh4x",1,1
+"ggh4x","elem_list_text","family","yes","ggh4x::distribute_args","","ggh4x",1,1
+"ggh4x","elem_list_text","margin","yes","ggh4x::distribute_args","","ggh4x",1,1
+"ggh4x","facet_grid2","axes","yes","ggh4x::facet_grid2","","ggh4x",2,3
+"ggh4x","facet_grid2","cols","yes","ggh4x::facet_grid2; ggh4x::strip_split","","ggh4x",2,5
+"ggh4x","facet_grid2","independent","yes","ggh4x::facet_grid2","","ggh4x",2,1
+"ggh4x","facet_grid2","remove_labels","yes","ggh4x::facet_grid2","","ggh4x",2,1
+"ggh4x","facet_grid2","rows","partial","ggh4x::facet_grid2; ggh4x::strip_split; ggh4x::strip_tag; ggh4x::strip_vanilla","3 of 11 uses: as R: vars(cyl, ""year"", year) (facet_grid2(vars(cyl, ""year"", year), strip = strip_split(c(""bottom"", ""left"", ""left""))))","ggh4x",2,11
+"ggh4x","facet_grid2","scales","yes","ggh4x::facet_grid2","","ggh4x",2,1
+"ggh4x","facet_grid2","strip","yes","ggh4x::strip_split; ggh4x::strip_tag; ggh4x::strip_vanilla","","ggh4x",2,7
+"ggh4x","facet_nested","cols","yes","ggh4x::facet_nested","","ggh4x",2,2
+"ggh4x","facet_nested","nest_line","yes","ggh4x::facet_nested","","ggh4x",2,1
+"ggh4x","facet_nested_wrap","facets","yes","ggh4x::facet_nested_wrap; ggh4x::strip_nested","","ggh4x",2,3
+"ggh4x","facet_nested_wrap","nest_line","yes","ggh4x::facet_nested_wrap","","ggh4x",2,1
+"ggh4x","facet_wrap2","axes","yes","ggh4x::facet_wrap2","","ggh4x",2,4
+"ggh4x","facet_wrap2","facets","yes","ggh4x::facet_wrap2; ggh4x::strip_nested; ggh4x::strip_split; ggh4x::strip_tag; ggh4x::strip_themed","","ggh4x",2,14
+"ggh4x","facet_wrap2","remove_labels","yes","ggh4x::facet_wrap2","","ggh4x",2,2
+"ggh4x","facet_wrap2","strip","yes","ggh4x::strip_nested; ggh4x::strip_split; ggh4x::strip_tag; ggh4x::strip_themed","","ggh4x",2,10
+"ggh4x","facetted_pos_scales","y","partial","ggh4x::facetted_pos_scales","1 of 2 uses: as R: list(Species == ""virginica"" ~ scale_y_continuous(breaks = c(6, 7)), Species == ""versicolor"" ~ scale_y_reverse()) (facetted_pos_scales(y = list(Species == ""virginica"" ~ scale_y_continuous(breaks = c(6, 7)), Species == ""versicolor"" ~ scale_y_reverse())))","ggh4x",2,2
+"ggh4x","force_panelsizes","cols","yes","ggh4x::force_panelsizes","","ggh4x",2,1
+"ggh4x","force_panelsizes","rows","yes","ggh4x::force_panelsizes","","ggh4x",2,1
+"ggrepel","geom_label_repel","","yes","ggrepel::geom_text_repel","","ggrepel",2,1
+"ggrepel","geom_text_repel","","yes","ggrepel::geom_text_repel","","ggrepel",3,1
+"ggrepel","geom_text_repel","mapping","yes","ggrepel::position_nudge_repel","","ggrepel",3,5
+"ggrepel","geom_text_repel","min.segment.length","yes","ggrepel::position_nudge_repel","","ggrepel",3,4
+"ggrepel","geom_text_repel","nudge_x","yes","ggrepel::position_nudge_repel","","ggrepel",3,2
+"ggrepel","geom_text_repel","nudge_y","yes","ggrepel::position_nudge_repel","","ggrepel",3,2
+"ggrepel","geom_text_repel","position","yes","ggrepel::position_nudge_repel","","ggrepel",3,2
+"ggsurvfit","add_censor_mark","","yes","ggsurvfit::add_censor_mark; ggsurvfit::add_risktable; ggsurvfit::ggsurvfit","","ggsurvfit",3,3
+"ggsurvfit","add_confidence_interval","","yes","ggsurvfit::Surv_CNSR; ggsurvfit::add_censor_mark; ggsurvfit::add_confidence_interval; ggsurvfit::add_risktable; ggsurvfit::add_risktable_strata_symbol; ggsurvfit::ggsurvfit; ggsurvfit::ggsurvfit_align_plots; ggsurvfit::scale_ggsurvfit; ggsurvfit::survfit2_p","","ggsurvfit",3,10
+"ggsurvfit","add_confidence_interval","type","yes","ggsurvfit::add_confidence_interval","","ggsurvfit",3,1
+"ggsurvfit","add_legend_title","","yes","ggsurvfit::add_legend_title","","ggsurvfit",2,1
+"ggsurvfit","add_pvalue","caption","yes","ggsurvfit::add_pvalue","","ggsurvfit",3,1
+"ggsurvfit","add_pvalue","location","yes","ggsurvfit::add_pvalue","","ggsurvfit",3,1
+"ggsurvfit","add_pvalue","size","yes","ggsurvfit::add_pvalue","","ggsurvfit",3,1
+"ggsurvfit","add_quantile","","yes","ggsurvfit::ggsurvfit","","ggsurvfit",2,1
+"ggsurvfit","add_quantile","linetype","yes","ggsurvfit::add_quantile","","ggsurvfit",2,4
+"ggsurvfit","add_quantile","x_value","yes","ggsurvfit::add_quantile","","ggsurvfit",2,1
+"ggsurvfit","add_quantile","y_value","yes","ggsurvfit::add_quantile","","ggsurvfit",2,2
+"ggsurvfit","add_risktable","","yes","ggsurvfit::add_risktable; ggsurvfit::ggsurvfit; ggsurvfit::ggsurvfit_build; ggsurvfit::ggsurvfit_options; ggsurvfit::survfit2_p","","ggsurvfit",3,7
+"ggsurvfit","add_risktable","combine_groups","yes","ggsurvfit::add_risktable","","ggsurvfit",3,1
+"ggsurvfit","add_risktable","risktable_group","yes","ggsurvfit::add_risktable_strata_symbol","","ggsurvfit",3,1
+"ggsurvfit","add_risktable","risktable_height","yes","ggsurvfit::theme_risktable","","ggsurvfit",3,1
+"ggsurvfit","add_risktable","risktable_stats","yes","ggsurvfit::add_risktable","","ggsurvfit",3,3
+"ggsurvfit","add_risktable","size","yes","ggsurvfit::theme_risktable","","ggsurvfit",3,1
+"ggsurvfit","add_risktable","stats_label","yes","ggsurvfit::add_risktable","","ggsurvfit",3,1
+"ggsurvfit","add_risktable","theme","yes","ggsurvfit::theme_risktable","","ggsurvfit",3,4
+"ggsurvfit","add_risktable_strata_symbol","","yes","ggsurvfit::add_risktable_strata_symbol","","ggsurvfit",2,1
+"ggsurvfit","add_risktable_strata_symbol","size","yes","ggsurvfit::add_risktable_strata_symbol","","ggsurvfit",2,1
+"ggsurvfit","add_risktable_strata_symbol","symbol","yes","ggsurvfit::add_risktable_strata_symbol","","ggsurvfit",2,1
+"ggsurvfit","ggcuminc","","yes","ggsurvfit::grid.draw_ggsurvfit","","ggsurvfit",2,1
+"ggsurvfit","ggcuminc","outcome","yes","ggsurvfit::ggsurvfit_options","","ggsurvfit",2,2
+"ggsurvfit","ggsurvfit","","yes","ggsurvfit::Surv_CNSR; ggsurvfit::add_censor_mark; ggsurvfit::add_confidence_interval; ggsurvfit::add_legend_title; ggsurvfit::add_pvalue; ggsurvfit::add_quantile; ggsurvfit::add_risktable; ggsurvfit::ggsurvfit; ggsurvfit::ggsurvfit_align_plots; ggsurvfit::ggsurvfit_build; ggsurvfit::grid.draw_ggsurvfit; ggsurvfit::survfit2_p; ggsurvfit::theme_risktable","","ggsurvfit",3,19
+"ggsurvfit","ggsurvfit","linetype_aes","yes","ggsurvfit::ggsurvfit","","ggsurvfit",3,1
+"ggsurvfit","ggsurvfit","linewidth","yes","ggsurvfit::add_risktable_strata_symbol; ggsurvfit::scale_ggsurvfit","","ggsurvfit",3,2
+"ggsurvfit","ggsurvfit","theme","yes","ggsurvfit::theme_ggsurvfit","","ggsurvfit",3,1
+"ggsurvfit","ggsurvfit","type","yes","ggsurvfit::ggsurvfit","","ggsurvfit",3,1
+"ggsurvfit","scale_ggsurvfit","","yes","ggsurvfit::add_censor_mark; ggsurvfit::add_confidence_interval; ggsurvfit::add_legend_title; ggsurvfit::add_pvalue; ggsurvfit::add_quantile; ggsurvfit::add_risktable; ggsurvfit::add_risktable_strata_symbol; ggsurvfit::ggsurvfit; ggsurvfit::ggsurvfit_align_plots; ggsurvfit::ggsurvfit_options; ggsurvfit::scale_ggsurvfit; ggsurvfit::survfit2_p; ggsurvfit::theme_ggsurvfit; ggsurvfit::theme_risktable","","ggsurvfit",3,21
+"ggsurvfit","scale_ggsurvfit","x_scales","yes","ggsurvfit::ggsurvfit; ggsurvfit::scale_ggsurvfit","","ggsurvfit",3,2
+"ggtext","element_textbox_simple","fill","yes","ggtext::element_textbox","","ggtext",2,3
+"ggtext","element_textbox_simple","hjust","yes","ggtext::element_textbox","","ggtext",2,1
+"ggtext","element_textbox_simple","linetype","yes","ggtext::element_textbox","","ggtext",2,1
+"ggtext","element_textbox_simple","margin","yes","ggtext::element_textbox","","ggtext",2,3
+"ggtext","element_textbox_simple","maxwidth","yes","ggtext::element_textbox","","ggtext",2,1
+"ggtext","element_textbox_simple","minwidth","yes","ggtext::element_textbox","","ggtext",2,1
+"ggtext","element_textbox_simple","orientation","yes","ggtext::element_textbox","","ggtext",2,1
+"ggtext","element_textbox_simple","padding","yes","ggtext::element_textbox","","ggtext",2,3
+"ggtext","element_textbox_simple","r","yes","ggtext::element_textbox","","ggtext",2,1
+"ggtext","element_textbox_simple","size","yes","ggtext::element_textbox","","ggtext",2,1
+"ggtext","element_textbox_simple","width","yes","ggtext::element_textbox","","ggtext",2,1
+"ggtext","geom_richtext","","yes","ggtext::geom_richtext","","ggtext",2,1
+"ggtext","geom_richtext","fill","yes","ggtext::geom_richtext","","ggtext",2,1
+"ggtext","geom_richtext","key_glyph","yes","ggtext::draw_key_richtext","","ggtext",2,1
+"ggtext","geom_richtext","label.color","yes","ggtext::geom_richtext","","ggtext",2,1
+"ggtext","geom_richtext","label.padding","yes","ggtext::geom_richtext","","ggtext",2,1
+"ggtext","geom_richtext","mapping","yes","ggtext::draw_key_richtext","","ggtext",2,1
+"ggtext","geom_textbox","width","yes","ggtext::geom_textbox","","ggtext",1,1
+"patchwork","area","b","yes","patchwork::area; patchwork::plot_layout","","patchwork",1,6
+"patchwork","area","l","yes","patchwork::area; patchwork::plot_layout","","patchwork",1,8
+"patchwork","area","r","yes","patchwork::area; patchwork::plot_layout","","patchwork",1,3
+"patchwork","area","t","yes","patchwork::area; patchwork::plot_layout","","patchwork",1,8
+"patchwork","free","side","yes","patchwork::free","","patchwork",1,2
+"patchwork","free","type","yes","patchwork::free","","patchwork",1,2
+"patchwork","free","x","yes","patchwork::free","","patchwork",1,5
+"patchwork","guide_area","","yes","patchwork::guide_area","","patchwork",1,1
+"patchwork","inset_element","align_to","yes","patchwork::inset_element","","patchwork",1,2
+"patchwork","inset_element","bottom","yes","patchwork::inset_element","","patchwork",1,7
+"patchwork","inset_element","ignore_tag","yes","patchwork::inset_element","","patchwork",1,1
+"patchwork","inset_element","left","yes","patchwork::inset_element","","patchwork",1,7
+"patchwork","inset_element","p","yes","patchwork::inset_element","","patchwork",1,7
+"patchwork","inset_element","right","yes","patchwork::inset_element","","patchwork",1,7
+"patchwork","inset_element","top","yes","patchwork::inset_element","","patchwork",1,7
+"patchwork","plot_annotation","caption","yes","patchwork::plot_annotation","","patchwork",3,2
+"patchwork","plot_annotation","tag_levels","yes","patchwork::inset_element; patchwork::plot_annotation","","patchwork",3,5
+"patchwork","plot_annotation","theme","yes","patchwork::plot_annotation","","patchwork",3,1
+"patchwork","plot_annotation","title","yes","patchwork::plot_annotation","","patchwork",3,2
+"patchwork","plot_layout","byrow","yes","patchwork::plot_layout","","patchwork",3,1
+"patchwork","plot_layout","design","yes","patchwork::area; patchwork::plot_layout","","patchwork",3,2
+"patchwork","plot_layout","guides","yes","patchwork::free; patchwork::guide_area; patchwork::plot_layout","","patchwork",3,5
+"patchwork","plot_layout","ncol","yes","patchwork::guide_area; patchwork::plot_arithmetic; patchwork::plot_layout","","patchwork",3,7
+"patchwork","plot_layout","tag_level","yes","patchwork::plot_annotation","","patchwork",3,2
+"patchwork","plot_layout","widths","yes","patchwork::plot_layout","","patchwork",3,2
+"patchwork","plot_spacer","","yes","patchwork::free; patchwork::plot_spacer","","patchwork",2,3
+"patchwork","wrap_elements","full","yes","patchwork::wrap_elements","","patchwork",2,3
+"patchwork","wrap_elements","panel","partial","patchwork::wrap_elements","1 of 5 uses: as R: p1 + ggtitle(""Look at me shrink"") (wrap_elements(panel = p1 + ggtitle(""Look at me shrink"")))","patchwork",2,5
+"patchwork","wrap_plots","","no","ggsurvfit::ggsurvfit_build","1 of 1 uses: read as R, the whole call (patchwork::wrap_plots(ggsurvfit_build(p), ggsurvfit_build(p), ncol = 2))","patchwork",3,1
+"patchwork","wrap_plots","design","yes","patchwork::wrap_plots","","patchwork",3,2
+"patchwork","wrap_plots","heights","yes","ggsurvfit::ggsurvfit_align_plots; ggsurvfit::ggsurvfit_build","","patchwork",3,2
+"patchwork","wrap_plots","ncol","yes","ggsurvfit::ggsurvfit_align_plots; ggsurvfit::ggsurvfit_build","","patchwork",3,2
+"patchwork","wrap_plots","plots","yes","ggsurvfit::ggsurvfit_align_plots; ggsurvfit::ggsurvfit_build; patchwork::wrap_plots","","patchwork",3,6
