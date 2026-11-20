@@ -495,7 +495,7 @@
         "  - scale_colour_tfl: {palette: treatment}   # the company standard's colours",
         "  - labs: {x: Visit, 'y': Mean (SE)}",
         "  - theme_tfl: {}                            # the company standard's theme",
-        "  - tfl_image: {dpi: 300}                    # the image: always the last item",
+        "  - tfl_image: {dpi: 300}                    # its render settings (size, dpi): always last",
         "page:",
         "  titles:",
         "    '1': {center: Figure 14.2.1}"),

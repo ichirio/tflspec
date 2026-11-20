@@ -734,17 +734,10 @@ rtf_tables:
 
 rtf_figures:
   package: rtfreporter
-  description: A figure in the document, its size in twips (an inch is 1440), or fit (the page's body).
+  description: "A figure's place in the document, as tables and figures share it (page_break, space_before). Its size, alignment and drawing are its own: the content's last item, tfl_image (width_twips, height_twips, align, render_width, render_height, render_dpi, png_device written here stop the program)."
   args:
-    width_twips: {type: "integer|enum[fit]"}
-    height_twips: {type: "integer|enum[fit]"}
-    align: {type: "enum[left|center|right]"}
     page_break: {type: logical, description: "FALSE: on under the content before it in the document, on the page that one ends on."}
     space_before: {type: integer, description: "With page_break false, empty lines between the content before and this one."}
-    render_width: {type: number, description: "A plot object drawn this wide, in inches (rtfplot()'s); blank: rtfplot()'s default."}
-    render_height: {type: number, description: "A plot object drawn this high, in inches."}
-    render_dpi: {type: number, description: "A plot object drawn at this resolution."}
-    png_device: {type: "enum[auto|ragg|png]", description: "The PNG device a plot object is drawn with: auto (ragg when installed), ragg, png."}
 
 rtf_titles:
   package: rtfreporter
@@ -1921,13 +1914,13 @@ rtf_footer:
         example: (continued)
       - column: figure_width_in
         description: 'A figure report: the figure''s width on the page -- a number
-          of inches, or fit (the page''s body); drawn and placed so (rtf_figures(width_twips
-          = )). Blank: the figure''s own size, as rtfreporter places it (tfl_fig_page_size()).'
+          of inches, or fit (the page''s body); drawn and placed so; in the YAML spec the figure
+          content''s tfl_image: width_in. Blank: the figure''s own size, as rtfreporter places it (tfl_fig_page_size()).'
         example: fit
       - column: figure_height_in
         description: 'A figure report: the figure''s height on the page -- a number
           of inches, or fit (the page''s body less its title and footnote lines);
-          drawn and placed so. Blank: the figure''s own size (tfl_fig_page_size()).'
+          drawn and placed so; in the YAML spec the figure content''s tfl_image: height_in. Blank: the figure''s own size (tfl_fig_page_size()).'
         example: '5'
       - column: ard_source
         description: 'Where the report''s ARD comes from: blank (a figure: none),
@@ -5367,11 +5360,13 @@ tfl_image:
   rank: 900
   stage: output
   label: {en: Image, ja: 画像}
-  description: "The image the figure is written as -- its size on the page, resolution, format and file; always the content's last item."
-  visible: [width_in, height_in, dpi, format, file]
+  description: "How the figure is drawn and placed (its render settings) -- its size on the page, alignment, resolution, PNG device, and the format and file of a saved copy; always the content's last item. A setting it does not give is the study's (study.yml settings: figure: <setting>, `!study figure.<setting>`), else the built-in one (the figure's own size, 300 dpi, centred). The page keeps only what tables and figures share."
+  visible: [width_in, height_in, align, dpi, format, file]
   args:
-    width_in: {type: "number|enum[fit]", label: {en: Width (in), ja: 幅（インチ）}}
-    height_in: {type: "number|enum[fit]", label: {en: Height (in), ja: 高さ（インチ）}}
-    dpi: {type: integer, label: {en: Resolution (dpi), ja: 解像度（dpi）}}
+    width_in: {type: "number|enum[fit]", label: {en: Width (in), ja: 幅（インチ）}, description: "Its width on the page in inches, or fit (the page's body); drawn at this size. Blank: the study's settings: figure: width_in, else the figure's own."}
+    height_in: {type: "number|enum[fit]", label: {en: Height (in), ja: 高さ（インチ）}, description: "Its height on the page in inches, or fit (the page's body less its title and footnote lines). Blank: the study's settings: figure: height_in, else the figure's own."}
+    align: {type: "enum[left|center|right]", label: {en: Alignment, ja: 配置}, description: "Where it sits across the page (rtf_figures(align = )). Blank: the study's settings: figure: align, else center."}
+    png_device: {type: "enum[auto|ragg|png]", label: {en: PNG device, ja: PNG デバイス}, description: "The PNG device it is drawn with: auto (ragg when installed), ragg, png. Blank: the study's settings: figure: png_device, else rtfreporter's (its option rtfreporter.png_device)."}
+    dpi: {type: integer, label: {en: Resolution (dpi), ja: 解像度（dpi）}, description: "Its resolution: pixels = inches x dpi; the size on the page does not change. Blank: the study's settings: figure: dpi, else 300."}
     format: {type: "enum[png|svg|pdf]", label: {en: Format, ja: 形式}}
     file: {type: string, label: {en: File, ja: ファイル}}

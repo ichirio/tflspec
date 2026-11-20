@@ -1115,6 +1115,103 @@ tfl_args_from_r <- function(fn, text) {
   output
 }
 
+# ---- the figure's render settings: tfl_image -------------------------------
+#
+# A figure content's last item, tfl_image, holds how the figure is drawn
+# and placed: its size on the page (width_in, height_in: inches, or fit),
+# its alignment, its resolution and PNG device, the format and file of a
+# saved copy (decided 2026-11-19, canon 3e2d421).  `page:` keeps only what
+# tables and figures share (titles, footnotes, page_break, space_before).
+# A setting the item does not give is the study's: study.yml `settings:
+# figure: <setting>` (`!study figure.<setting>`), else the built-in one
+# (the figure's own size, 300 dpi, centred).
+
+# the settings tfl_image takes
+.fig_image_keys <- c("width_in", "height_in", "align", "dpi", "png_device", "format", "file")
+
+# The figure-only settings that page.rtf_figures and a page.layout row once
+# held, and the tfl_image setting each is now
+.fig_page_moved <- c(width_twips = "width_in", height_twips = "height_in", align = "align",
+                     render_width = "width_in", render_height = "height_in",
+                     render_dpi = "dpi", png_device = "png_device", render_format = "format")
+.fig_layout_moved <- c(width_in = "width_in", height_in = "height_in")
+
+# What a page says that is now a figure content's tfl_image: one message a
+# key (none: character()).  `page` a report's page: (resolved or its own).
+.fig_page_moved_said <- function(page) {
+  if (!is.list(page)) return(character())
+  out <- character()
+  fa <- page$rtf_figures
+  if (is.list(fa) && !inherits(fa, "tfl_unset")) {
+    for (k in intersect(names(fa), names(.fig_page_moved))) {
+      out <- c(out, sprintf(paste0("page.rtf_figures.%s is a figure's own setting: it moved to the ",
+                                   "content's last item, tfl_image: {%s: ...} (the study's default: ",
+                                   "study.yml settings: figure: %s)."),
+                            k, .fig_page_moved[[k]], .fig_page_moved[[k]]))
+    }
+  }
+  for (row in if (is.list(page$layout)) page$layout else list()) {
+    if (!is.list(row)) next
+    for (k in intersect(names(row), names(.fig_layout_moved))) {
+      out <- c(out, sprintf(paste0("page.layout (object %s): %s is a figure's own setting: it moved to ",
+                                   "the object's content, its last item tfl_image: {%s: ...}."),
+                            as.character(row$object %||% "?")[1L], k, .fig_layout_moved[[k]]))
+    }
+  }
+  out
+}
+
+# Stops when a page says a figure's own setting (.fig_page_moved_said())
+.fig_page_moved_stop <- function(page, id = NULL) {
+  m <- .fig_page_moved_said(page)
+  if (length(m)) {
+    who <- if (length(id) == 1L && !is.na(id)) paste0(id, ": ") else ""
+    .ard_stop(paste0(who, paste(m, collapse = " ")))
+  }
+  invisible(TRUE)
+}
+
+# is an item tfl_image?
+.fig_is_image <- function(it) {
+  is.list(it) && !inherits(it, "tfl_plot") && identical(.schema_fn_name(it$fn %||% ""), "tfl_image")
+}
+
+# A figure content's tfl_image settings (its last item; any form of
+# content but R as a whole): a list, empty when there is none
+.fig_image_of <- function(content) {
+  if (inherits(content, "tfl_r") || !is.list(content) || !length(content)) return(list())
+  last <- content[[length(content)]]
+  if (!.fig_is_image(last)) return(list())
+  .page_args(last$args %||% list())
+}
+
+# The study's figure settings (study.yml settings: figure:), the ones
+# tfl_image takes
+.fig_image_study <- function(study) {
+  f <- if (inherits(study, "tfl_study_spec")) study$study$settings$figure
+  if (!is.list(f) || !length(f)) return(list())
+  .page_args(f[intersect(names(f), .fig_image_keys)])
+}
+
+# A figure content with the study's figure settings under its tfl_image's:
+# the item made (last) when the study gives one and the content has none.
+# R as a whole is left as it is.
+.fig_image_fill <- function(content, study) {
+  dflt <- .fig_image_study(study)
+  if (!length(dflt) || inherits(content, "tfl_r")) return(content)
+  content <- content %||% list()
+  n <- length(content)
+  if (n && .fig_is_image(content[[n]])) {
+    a <- content[[n]]$args %||% list()
+    for (k in setdiff(names(dflt), names(a))) a[[k]] <- dflt[[k]]
+    content[[n]]$args <- a
+  } else {
+    # (the study's: as its defaults' items are)
+    content[[n + 1L]] <- tfl_item("tfl_image", dflt, from = "defaults")
+  }
+  content
+}
+
 # The image saved, when its tfl_image names a file: at its size on the page
 # and its resolution, in its format (`{output_id}` filled)
 .fig_image_save <- function(output, img, name = "content") {
