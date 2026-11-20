@@ -4,23 +4,16 @@
 \alias{tfl_default_name}
 \title{The default name of a new object of a report}
 \usage{
-tfl_default_name(
-  output,
-  kind = c("data", "plot", "model", "value", "ard", "plan", "content", "doc"),
-  from = NULL,
-  method = NULL,
-  id = NULL
-)
+tfl_default_name(output, kind, from = NULL, id = NULL)
 }
 \arguments{
 \item{output}{A report (\code{\link[=tfl_read_output]{tfl_read_output()}}).}
 
-\item{kind}{\code{"data"}, \code{"plot"}, \code{"model"}, \code{"value"}, \code{"ard"},
-\code{"plan"}, \code{"content"} or \code{"doc"}.}
+\item{kind}{\code{"data"}, \code{"ard"}, \code{"plan"}, \code{"content"}, \code{"doc"}, or the
+kind of a new object (\code{"plot"}, \code{"model"}, \code{"value"}, \code{"object"};
+another: \code{obj}).}
 
 \item{from}{A data row's: what it is made from (\code{"ADSL"}, a data above).}
-
-\item{method}{A model's or a value's: its method (\code{"survfit"}).}
 
 \item{id}{An ARD item's: its id (the ARS analysis id).}
 }
@@ -29,19 +22,20 @@ The name, a string.
 }
 \description{
 The name a screen and the AI kit give an object a person adds to a
-report, so that both give the same: a data row \verb{<from, lower case>_sub}
-(\code{adsl_sub}), a plot \code{plot_1}, \code{plot_2} ..., a model item's id
-\verb{<method>_fit}, a value item's \verb{<method>_value}; \verb{_2}, \verb{_3} ... when the
-report has the name already (as the SPEC writes it or as the program
-does).  An ARD item's R name is the program's, from its \code{id}; a
-stage's result is \code{plan} (a table's or a listing's content),
-\code{content} (a figure's) and \code{doc} (the page).
+report, so that both give the same (OBJECTS.md B-9): a data row
+\verb{<dataset, lower case>_sub} (\code{adsl_sub}; \code{adsl_sub2}, \code{adsl_sub3} ...
+when the report has it), a new object \verb{<kind>_<n>} (\code{plot_1},
+\code{model_1}, \code{value_1}; a kind tflspec does not know, \verb{obj_<n>}), the
+first \verb{<n>} the report does not have.  An ARD item's is the program's,
+made from its \code{id}; a stage's result is \code{plan} (a table's or a
+listing's content), \code{content} (a figure's) and \code{doc} (the page).
 }
 \examples{
 out <- tfl_output("T-1", "table")
 tfl_default_name(out, "data", from = "ADSL")
 tfl_default_name(out, "plot")
-tfl_default_name(out, "model", method = "survival::survfit")
+tfl_default_name(out, "model")
+tfl_default_name(out, "something")
 }
 \seealso{
 \code{\link[=tfl_output_objects]{tfl_output_objects()}}

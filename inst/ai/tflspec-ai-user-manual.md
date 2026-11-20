@@ -453,8 +453,8 @@ content:
   it, a name given twice, or a dataset's or a function's name; an object
   made and not used is a note.  `tfl_output_objects(report)` lists a
   report's objects with their R names; `tfl_default_name(report, "plot")`
-  names a new one (`plot_1`; a data row `<from>_sub`, a model
-  `<method>_fit`).
+  names a new one (`plot_1`, `model_1`; a data row `<dataset>_sub`, then
+  `_sub2`).
 - `tfl_image: {width_in, height_in, dpi, format, file}` is the image:
   its size on the page (inches, or `fit` -- the page's body; left out: the
   page's `rtf_figures` size, else the figure's own 6.5 x 4.5 in) and its

@@ -17,16 +17,17 @@
 # ============================================================================
 
 # Each stage's block keys, in one place: the key that names a block (its
-# name; NULL: the stage's default name only) and the keys that name another
-# block as its input or an argument.  TODO (design B, OBJECTS.md b-2): an
-# analysis item's `name`, the page's `name` and `from` are new keys the
-# coordinator names; when they exist, add them here (name_key: analysis =
-# "name", page = "name"; refs: page = "from") and the list, the uses and
-# the rename follow.
+# name; NULL: the stage's default name only), the keys that name another
+# block as its input or an argument, and the key that names the stage's
+# result (NULL: the SPEC has none yet).  TODO (OBJECTS.md B-4, its own
+# PR): an analysis item's `from:` (refs) and a content block's `{name,
+# from, calls}` (name_key, refs, result_key) go here; the list, the uses
+# and the rename follow.  The page is no block (canon 7e56ab2).
 .obj_stage_keys <- list(
-  data = list(name_key = "id", refs = c("from", "subjects_in")),
-  analysis = list(name_key = NULL, refs = c("data", "denominator")),
-  page = list(name_key = NULL, refs = character())
+  data = list(name_key = "id", refs = c("from", "subjects_in"), result_key = NULL),
+  analysis = list(name_key = NULL, refs = c("data", "denominator"), result_key = NULL),
+  content = list(name_key = NULL, refs = character(), result_key = NULL),
+  page = list(name_key = NULL, refs = character(), result_key = NULL)
 )
 
 # the kinds of a report's objects a person names, and the stage results
@@ -224,7 +225,7 @@
       a_pos[i] <- length(rows)
     }
     if (any(types[top] == "ard")) {
-      row(NA_character_, NA_character_, "ard", "analysis", "ard", "analysis", TRUE, name_source = "default")
+      row(NA_character_, NA_character_, "ard", "analysis", "ard", "analysis", FALSE, name_source = "default")
     }
   }
   for (i in seq_along(an)) {
@@ -310,7 +311,7 @@
     }
     if (is.na(p$object)) {
       res <- if (inherits(ct, "tfl_r") || identical(p$kind, "figure")) "content" else "plan"
-      row(NA_character_, NA_character_, res, "content", res, "content", TRUE, name_source = "default")
+      row(NA_character_, NA_character_, res, "content", res, "content", FALSE, name_source = "default")
     }
   }
 
@@ -358,7 +359,8 @@
   # the data a listing prints (its last)
   wrapped <- any(uses$arg == "plots")
   last_data <- utils::tail(which(objects$kind == "data" & grepl("^data\\[", objects$where)), 1L)
-  objects$used <- !is.na(objects$used_by) | objects$name_source == "default" & objects$fixed |
+  result <- is.na(objects$spec_name) & objects$where %in% c("analysis", "content", "page")
+  objects$used <- !is.na(objects$used_by) | result | objects$name_source == "default" & objects$fixed |
     objects$kind == "ard" |
     (objects$kind == "plot" & (!wrapped | objects$code_name == "content")) |
     (identical(output$kind, "listing") & seq_len(nrow(objects)) %in% last_data)
@@ -586,8 +588,13 @@ tfl_output_rename <- function(output, old, new, study = NULL) {
                                "rename the item by its id (%s)."), who, old, ob$spec_name[a[1L]],
                         ob$spec_name[a[1L]]))
     }
+    s <- which(ob$code_name == old & is.na(ob$spec_name) & !ob$fixed &
+                 ob$where %in% c("analysis", "content"))
+    if (length(s)) {
+      return(.obj_rename_result(output, x, ob[s[1L], ], old, new, who))
+    }
     if (any(ob$code_name == old)) {
-      .ard_stop(sprintf("%s: %s cannot be renamed: it is a stage's result or the program's own.",
+      .ard_stop(sprintf("%s: %s cannot be renamed: it is the page's or the program's own.",
                         who, old))
     }
     .ard_stop(sprintf("%s: %s has no object %s to rename (its names: %s).", who, output$id, old,
@@ -703,35 +710,61 @@ tfl_output_rename <- function(output, old, new, study = NULL) {
   structure(output, r_uses = ru)
 }
 
+# A stage's result renamed (canon 356b2ae): the fields that name it follow
+# (a table's `data: {object:}`), the name is written to the stage's result
+# key -- which the SPEC does not have yet (.obj_stage_keys, B-4): until it
+# does, the rename stops, saying so
+.obj_rename_result <- function(output, x, r, old, new, who) {
+  key <- .obj_stage_keys[[r$stage]]$result_key
+  if (is.null(key)) {
+    .ard_stop(sprintf(paste0("%s: %s is the %s stage's result: its name can change, but the SPEC has ",
+                             "no key for it yet (OBJECTS.md B-4)."), who, old, r$stage))
+  }
+  if (!identical(make.names(new), new)) .ard_stop(sprintf("%s: %s is not an R name.", who, new))
+  others <- x$objects[x$objects$code_name != old, , drop = FALSE]
+  if (new %in% stats::na.omit(c(others$spec_name, others$code_name))) {
+    .ard_stop(sprintf("%s: %s already names an object of %s.", who, new, output$id))
+  }
+  if (r$stage == "analysis") output$ard[[key]] <- new else output[[key]] <- new
+  if (is.list(output$data) && identical(output$data$object, old)) output$data$object <- new
+  for (nm in names(output$contents)) {
+    if (identical(output$contents[[nm]]$data$object, old)) output$contents[[nm]]$data$object <- new
+  }
+  ru <- x$uses[x$uses$how == "r" & x$uses$name == old, setdiff(names(x$uses), "pos"), drop = FALSE]
+  rownames(ru) <- NULL
+  structure(output, r_uses = ru)
+}
+
 #' The default name of a new object of a report
 #'
 #' The name a screen and the AI kit give an object a person adds to a
-#' report, so that both give the same: a data row `<from, lower case>_sub`
-#' (`adsl_sub`), a plot `plot_1`, `plot_2` ..., a model item's id
-#' `<method>_fit`, a value item's `<method>_value`; `_2`, `_3` ... when the
-#' report has the name already (as the SPEC writes it or as the program
-#' does).  An ARD item's R name is the program's, from its `id`; a
-#' stage's result is `plan` (a table's or a listing's content),
-#' `content` (a figure's) and `doc` (the page).
+#' report, so that both give the same (OBJECTS.md B-9): a data row
+#' `<dataset, lower case>_sub` (`adsl_sub`; `adsl_sub2`, `adsl_sub3` ...
+#' when the report has it), a new object `<kind>_<n>` (`plot_1`,
+#' `model_1`, `value_1`; a kind tflspec does not know, `obj_<n>`), the
+#' first `<n>` the report does not have.  An ARD item's is the program's,
+#' made from its `id`; a stage's result is `plan` (a table's or a
+#' listing's content), `content` (a figure's) and `doc` (the page).
 #'
 #' @param output A report ([tfl_read_output()]).
-#' @param kind `"data"`, `"plot"`, `"model"`, `"value"`, `"ard"`,
-#'   `"plan"`, `"content"` or `"doc"`.
+#' @param kind `"data"`, `"ard"`, `"plan"`, `"content"`, `"doc"`, or the
+#'   kind of a new object (`"plot"`, `"model"`, `"value"`, `"object"`;
+#'   another: `obj`).
 #' @param from A data row's: what it is made from (`"ADSL"`, a data above).
-#' @param method A model's or a value's: its method (`"survfit"`).
 #' @param id An ARD item's: its id (the ARS analysis id).
 #' @return The name, a string.
 #' @examples
 #' out <- tfl_output("T-1", "table")
 #' tfl_default_name(out, "data", from = "ADSL")
 #' tfl_default_name(out, "plot")
-#' tfl_default_name(out, "model", method = "survival::survfit")
+#' tfl_default_name(out, "model")
+#' tfl_default_name(out, "something")
 #' @seealso [tfl_output_objects()]
 #' @export
-tfl_default_name <- function(output, kind = c("data", "plot", "model", "value", "ard", "plan",
-                                             "content", "doc"),
-                             from = NULL, method = NULL, id = NULL) {
-  kind <- match.arg(kind)
+tfl_default_name <- function(output, kind, from = NULL, id = NULL) {
+  if (!is.character(kind) || length(kind) != 1L || is.na(kind) || !nzchar(kind)) {
+    .ard_stop("tfl_default_name(): `kind` is one kind (\"data\", \"plot\", \"model\" ...).")
+  }
   one <- function(x, what) {
     if (!is.character(x) || length(x) != 1L || is.na(x) || !nzchar(x)) {
       .ard_stop(sprintf("tfl_default_name(): a %s's name needs `%s`, one text.", kind, what))
@@ -740,25 +773,20 @@ tfl_default_name <- function(output, kind = c("data", "plot", "model", "value", 
   }
   ob <- .obj_table(output)$objects
   have <- unique(stats::na.omit(c(ob$spec_name, ob$code_name)))
-  word <- function(x) gsub("^_+|_+$", "", gsub("[^a-z0-9]+", "_", tolower(sub("^.*::", "", x))))
-  first_free <- function(base) {
-    if (!base %in% have) return(base)
-    k <- 2L
-    while (paste0(base, "_", k) %in% have) k <- k + 1L
-    paste0(base, "_", k)
+  free <- function(base, first, sep = "") {
+    if (!is.null(first) && !first %in% have) return(first)
+    k <- if (is.null(first)) 1L else 2L
+    while (paste0(base, sep, k) %in% have) k <- k + 1L
+    paste0(base, sep, k)
   }
-  switch(kind,
-    data = first_free(paste0(word(one(from, "from")), "_sub")),
-    plot = {
-      k <- 1L
-      while (any(c(paste0("plot_", k), .fig_plot_name(paste0("plot_", k))) %in% have)) k <- k + 1L
-      paste0("plot_", k)
-    },
-    model = first_free(paste0(word(one(method, "method")), "_fit")),
-    value = first_free(paste0(word(one(method, "method")), "_value")),
-    # (the program's own name for the item, by its builder)
-    ard = .ard_item_names(one(id, "id"), have),
-    kind)
+  if (identical(kind, "data")) {
+    b <- paste0(gsub("^_+|_+$", "", gsub("[^a-z0-9]+", "_", tolower(one(from, "from")))), "_sub")
+    return(free(b, b))
+  }
+  # (the program's own name for the item, by its builder)
+  if (identical(kind, "ard")) return(.ard_item_names(one(id, "id"), have))
+  if (kind %in% c("plan", "content", "doc")) return(kind)
+  free(if (kind %in% c(.obj_kinds, "object")) kind else "obj", NULL, "_")
 }
 
 #' Check a report's names: the card rules
