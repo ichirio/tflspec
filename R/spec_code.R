@@ -1412,6 +1412,76 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   sp
 }
 
+# ---- BIGN: the column headings' N, apart from the table ---------------------
+# tflspec picks a report's rows by output_id and tells its analyses apart
+# by analysis_id; BIGN's rows (the subjects of each group, the headings'
+# N, canon 23a41ff) are not the table's.  The table is made from the other
+# rows, and BIGN's numbers go to rtfreporter apart, as
+# plan_col_header(values = list(n = )): rtfreporter reads neither
+# output_id nor analysis_id (the user's rule, 2026-11-21; rtfreporter#1103,
+# BIGN's rows among a shift table's made a page of their own).
+.bign_id <- "BIGN"
+
+# Does the report make a table from an ARD with a BIGN item?
+.bign_has <- function(output) {
+  if (!identical(output$kind, "table") || identical(output$data$source, "dataset")) return(FALSE)
+  an <- output$ard$analyses %||% list()
+  any(vapply(an, function(a) is.list(a) && .bign_id %in% c(a$id, a$analysis_id), NA))
+}
+
+# A header text's population token: {n}, {n1}, {n:Placebo}
+.bign_token_re <- "[{]n[0-9]*(:[^}]*)?[}]"
+
+# The content with `value` as the values of each plan_col_header() whose
+# text says {n} and that gives none; attr "used": whether one took it
+.bign_header_items <- function(content, value) {
+  used <- FALSE
+  out <- lapply(content, function(it) {
+    if (!identical(.schema_fn_name(it$fn), "plan_col_header") || !is.null(it$args$values)) return(it)
+    txt <- as.character(unlist(list(it$args$header, it$args$lines), use.names = FALSE))
+    if (!any(grepl(.bign_token_re, txt))) return(it)
+    it$args$values <- value
+    used <<- TRUE
+    it
+  })
+  attr(out, "used") <- used
+  out
+}
+
+# BIGN's n of each group (the by variable's values, as the table's column
+# keys), one unnamed number for a BIGN with no by; NULL when the ARD has
+# none
+.bign_n <- function(ard) {
+  if (!all(c("analysis_id", "stat_name", "stat") %in% names(ard))) return(NULL)
+  b <- ard[as.character(ard$analysis_id) %in% .bign_id &
+             as.character(ard$stat_name) %in% "n", , drop = FALSE]
+  if (!nrow(b)) return(NULL)
+  lv <- if ("variable_level" %in% names(b)) b$variable_level else rep(list(NULL), nrow(b))
+  nm <- vapply(lv, function(x) if (length(x) && !is.na(x[[1L]])) as.character(x[[1L]]) else "", "")
+  n <- stats::setNames(as.numeric(unlist(b$stat)), nm)
+  if (all(!nzchar(nm))) unname(n[1L]) else n[nzchar(nm)]
+}
+
+# The ARD without BIGN's rows
+.bign_drop <- function(ard) {
+  if (!"analysis_id" %in% names(ard)) return(ard)
+  ard[!as.character(ard$analysis_id) %in% .bign_id, , drop = FALSE]
+}
+
+# The same, as the program's lines on its ARD object `obj`: `bign_n` when
+# a heading reads it, then the ARD without BIGN's rows
+.bign_code <- function(obj, n = TRUE) {
+  c("# BIGN, the column headings' N: its numbers apart from the table's rows",
+    if (n) c(
+      sprintf("bign <- %s[%s$analysis_id %%in%% \"BIGN\" & %s$stat_name %%in%% \"n\", , drop = FALSE]",
+              obj, obj, obj),
+      "bign_n <- stats::setNames(as.numeric(unlist(bign$stat)),",
+      "  vapply(bign$variable_level, function(x) if (length(x)) as.character(x[[1L]]) else \"\", \"\"))",
+      "if (!any(nzchar(names(bign_n)))) bign_n <- unname(bign_n[1L])"),
+    sprintf("%s <- %s[!%s$analysis_id %%in%% \"BIGN\", , drop = FALSE]", obj, obj, obj),
+    "")
+}
+
 #' Make a report's content, from its spec file, without its code
 #'
 #' Runs what [tfl_content_code()] writes: the same items, in the same order,
@@ -1468,6 +1538,12 @@ tfl_content_run <- function(output, data) {
   }
   # plan_levels() the ARD already says: left out, as the program does
   if (identical(output$kind, "table")) output$content <- .levels_prune(output$content, output)
+  # BIGN's rows: the headings' N, not the table's (.bign_has())
+  if (.bign_has(output)) {
+    n <- .bign_n(data)
+    data <- .bign_drop(data)
+    if (!is.null(n)) output$content <- .bign_header_items(output$content, list(n = n))
+  }
   # a table of records (its data a dataset: a table_plan(value = ) with
   # its parts) has no ARD to normalize
   if (identical(output$data$source, "dataset")) output$content <- .content_drop_data_steps(output$content)
@@ -1692,6 +1768,15 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
     message(sprintf(paste0("%s: the template's call cannot say this report's own data, table ",
                            "roles or normalize_ard() arguments; its items are written."), output$id))
   }
+  # BIGN's rows: the headings' N, not the table's (.bign_has()); the
+  # lines that take them out go first, on the object the ARD is
+  bign <- .bign_has(output)
+  if (bign) {
+    output$content <- .bign_header_items(output$content, tfl_r("list(n = bign_n)"))
+    bign_n <- isTRUE(attr(output$content, "used"))
+    attr(output$content, "used") <- NULL
+  }
+  pre <- function(obj) if (bign) .bign_code(obj, n = bign_n)
   # the object the pipe starts from: the output's own name for it, else
   # the ARD when the content normalizes it, else the normalized data
   # the data's steps (`data.steps`, the Rework, the old process_code): R
@@ -1702,7 +1787,7 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
     # the Rework as it is written, the plan from `data`
     .content_rework_need_data(steps, "tfl_content_code()")
     sp <- .content_rework_split(output$content)
-    return(c(.drop_attached_ns(
+    return(c(pre(output$data$object %||% "ard"), .drop_attached_ns(
                .content_rework_normalize_code(sp$pre, output$data$object %||% "ard", pipe)),
              steps, "",
              .content_table_code(sp$rest, data = data %||% "data",
@@ -1720,7 +1805,8 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
                                    kind = output$kind)))
     }
     # the steps make the data: no normalize_ard() of the defaults after them
-    return(c(steps, "", .content_table_code(.content_drop_data_steps(output$content),
+    return(c(pre(output$data$object %||% "ard"), steps, "",
+             .content_table_code(.content_drop_data_steps(output$content),
                                             data = data %||% "data",
                                             plan = plan, pipe = pipe, kind = output$kind)))
   }
@@ -1732,7 +1818,7 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
   # a listing of records: its data part first, the sheets' writer's
   recs <- if (!is.null(study) && identical(output$kind, "listing") &&
               identical(output$data$source, "dataset")) .content_listing_data(output, study)
-  c(recs, if (length(recs)) "",
+  c(recs, if (length(recs)) "", pre(data),
     .content_table_code(output$content, data = data, plan = plan, pipe = pipe,
                         kind = output$kind))
 }
