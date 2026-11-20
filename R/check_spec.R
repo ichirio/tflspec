@@ -41,8 +41,9 @@
 #'   `"build"`.  A few seconds a report.  `FALSE` (default): the checks
 #'   above only.
 #' @return A data frame, one row a problem: `output_id` (`NA` for the
-#'   study's ARD definition as a whole), `part` (`"file"`, `"ard"`,
-#'   `"content"`, `"program"`, `"figure"`, `"build"`), `item` (the file, the
+#'   study's ARD definition as a whole and the study's own rows), `part`
+#'   (`"file"`, `"study"`, `"ard"`, `"content"`, `"program"`, `"figure"`,
+#'   `"build"`), `item` (the file, the
 #'   analysis, the function and argument, or the figure's part and
 #'   field), `level` (`"error"`, `"warning"`, `"note"`, `"check"`) and
 #'   `message`.  Its attributes: `versions`, a data frame of the key
@@ -119,6 +120,12 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
                 .blank_entry_notes(dd$records, "where"),
                 .blank_entry_notes(dd$datasets, "derive", function(e) as.character(e$dataset %||% NA)[1L]))) {
       blank_note(NA_character_, m)
+    }
+    # a study code list named like an ADaM column adam_meta does not map:
+    # study$adam has no levels of it (the name is not a mapping)
+    for (w in .study_list_unmapped(study)) {
+      add(output_id = NA_character_, part = "study", item = paste0("codelists: ", w$list),
+          level = "warning", message = w$message)
     }
   }
   for (id in setdiff(ids, bad)) {

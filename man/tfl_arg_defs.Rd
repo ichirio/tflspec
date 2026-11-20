@@ -16,12 +16,25 @@ tflplanner's home \verb{standards/series/}, the series tflspec ships.}
 }
 \value{
 A data frame, one row an argument in the definition's order (the
-card's order):
+card's order); a schema function with \code{...} (its \verb{dots:}) has a last
+row \code{...}, of the dots' type.  Its attribute \code{"groups"} is the card's
+groups in their order, a data frame \code{id}, \code{label_en}, \code{label_ja} from
+the function's \verb{groups:} list or, for a template, its series'
+\code{series.yml} (a template's own \verb{groups:} replaces it), entries \verb{\{id: , label: \{en: , ja: \}\}}; no rows when none is written (one unnamed
+group).  The columns:
 \describe{
 \item{name}{the argument.}
-\item{label_key}{the key of its label in the screen's text (en / ja).}
-\item{step}{\code{data}, \code{analysis}, \code{content} or \code{page}: the card's group.}
-\item{input}{\code{pick}, \code{text}, \code{condition} or \code{table}.}
+\item{label_en, label_ja}{its label, from \verb{label: \{en: , ja: \}}; a
+plain \verb{label:} is English (\code{label_ja} \code{NA}); \code{NA} when there is none.}
+\item{help_en, help_ja}{its help, from \verb{help: \{en: , ja: \}} or a
+plain \verb{help:} (English), else the description.}
+\item{step}{\code{data}, \code{analysis}, \code{content} or \code{page}: the card's part.}
+\item{group}{the id of its group (one of the attribute \code{"groups"}),
+from \verb{group:}; groups divide a step.  \code{NA}: the unnamed group.}
+\item{input}{\code{pick}, \code{text}, \code{condition}, \code{table} or \code{r} (an R
+expression, the one form whose field can be written in R; the
+default for a type \code{r}, \code{formula} or \code{guard}, \code{condition} for a
+\code{where}).}
 \item{type}{the data type, in the schema's notation: \code{logical},
 \code{number}, \code{string}, \code{r}, \code{column}, \code{level}, \verb{list<...>} (several),
 \code{enum[a|b]}, \verb{map<...>}, \verb{vec<...>}, \verb{rows<...>} (a table),
@@ -33,27 +46,54 @@ given.}
 It is resolved for a study by \code{\link[=tfl_template_resolve]{tfl_template_resolve()}}.}
 \item{default_kind}{\code{value}, \code{study}, \code{series}, \code{unset} or \code{fixed};
 \code{NA} when there is no default.}
+\item{unset}{what "(none)" (\code{!unset}) does, from \verb{unset:} (the words
+of \code{\link[=tfl_param]{tfl_param()}}): \code{omit} (the argument is left out), \code{step_off}
+(its step is not made) or \code{stop} (it needs a value: "(none)" is not
+offered); by default \code{stop} for a required argument, else \code{omit}.}
 \item{choices}{(a list column) the sources of the choices, in order:
 the closed words \verb{vars(<data>)}, \verb{levels(<var>)}, \verb{codelist(<name>)},
 \code{populations}, \code{report_data}, \code{study_data}, \code{ard}, \verb{columns(<object>)},
 \code{study_info}, \code{tokens}, \code{stats}, \code{fixed}, \code{styles},
-\verb{from_args(<arg>, ...)}.  Another word stops.}
-\item{values}{(a list column) the fixed values (\code{fixed}, an \code{enum}).}
+\verb{from_args(<arg>, ...)}, \verb{figure_style(<palette|marker>)} (the
+study's figure style's colours in their order, or its marker
+shapes).  Another word stops.}
+\item{values}{(a list column) the fixed values (\code{fixed}, an \code{enum}).
+\verb{values:} writes each as a value or \verb{\{value: , label: \{en: , ja: \}\}}.}
+\item{value_labels}{(a list column) the values' labels, a data frame
+\code{value}, \code{label_en}, \code{label_ja} (from the values' \verb{label:} or the
+argument's \verb{labels:} map, value: label); \code{NULL} when none has one.}
 \item{free}{a pick that also takes a value not in the list.}
 \item{ordered}{a pick of several whose order matters.}
 \item{columns}{(a list column) a table's columns, defined the same way;
 \code{"params"} for a template's conditions table (its columns are the item's
 \verb{params:}); in a list, an unnamed \code{"params"} marks where the item's
 params go (an item's conditions: \code{"params"}, \code{where}, an optional
-\code{analysis_id}).}
+\code{analysis_id}).  A named column's definition also has \code{label_en},
+\code{label_ja}, \code{help_en}, \code{help_ja}, from its own \verb{label:} / \verb{help:}
+or the argument's \verb{labels:} map (column: label).  A \verb{map<K, V>}'s
+two columns are written \verb{columns: \{key: \{label: \}, value: \{label: \}\}}.}
 \item{fixed_rows}{(a list column) a template's table param: the rows
 the template writes with fixed values next to its \code{"{name}"} (the
 ALL row of forest_hr's conditions), a data frame whose attribute
 \code{"position"} gives each row's place, \code{"before"} or \code{"after"} the
 report's rows; \code{NULL} otherwise.}
-\item{tier}{\code{required}, \code{usual} or \code{other} (shown folded).}
+\item{tier}{\code{required} (must be given), \code{key} (shown even at its
+default), \code{usual} or \code{other} (both shown folded).  A schema
+function's argument in its \verb{visible:} list or marked \code{main: true} is
+\code{key}.}
+\item{passes_to}{(a list column) where the value goes, as written in
+\verb{passes_to:} (a template's \verb{maps_to:} is the same):
+\code{"<fn>.<arg>"} or \code{"<fn>.<arg>.<name>"}, the study keys' grammar,
+one or several; empty for none.}
+\item{member_of}{the list argument it is a member of (written
+\verb{member_of:}, after its parent); \code{NA} otherwise.}
 \item{description}{one line.}
 }
+
+A definition stops, saying what to write, for an unknown \code{tier} or
+\code{unset} word, a \code{group} not in \verb{groups:}, a \code{member_of} that is not
+another argument, a malformed \code{passes_to}, a label or help that is
+neither a text nor \verb{\{en: , ja: \}}, and a choice word outside the 15.
 }
 \description{
 One definition of every argument, for the code SPEC's cards and the

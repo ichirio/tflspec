@@ -229,7 +229,7 @@ test_that("ORR, forest and Lab: condition rows through the sheets, the program r
   for (id in c("ALT_HIGH", "HGB_LOW")) {
     expect_setequal(unique(lab$ard$variable[lab$ard$analysis_id == id]), c("worst", "base", "tox_dir"))
   }
-  expect_identical(sum(grepl("<- bind_items(ard_1, ard_2, ard_3, ard_4)", lab$code, fixed = TRUE)), 1L)
+  expect_identical(sum(grepl("<- bind_items(.ard_1, .ard_2, .ard_3, .ard_4)", lab$code, fixed = TRUE)), 1L)
   e2e_check_bign(lab, saf)
   # the worst record (record_where): one record a subject, test and direction
   expect_true(any(grepl("filter(AVISIT == \"WORST POST-BASELINE\")", lab$code, fixed = TRUE)))

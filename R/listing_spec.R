@@ -23,16 +23,22 @@
 #' into an object named after the dataset, its derived columns, and
 #' `adsl <- blank_as_na(adsl)` (a blank text value is `NA`, as in the
 #' study's `study$adam`; `blank_as_na()` is a study helper,
-#' [tfl_helpers_code()]).
+#' [tfl_helpers_code()]); with `adam_meta`, then the levels of the code
+#' lists it maps to the dataset's variables, as `study$adam` has them:
+#' `adsl <- set_levels(adsl, SEX = adam_codes("CL.SEX"))` (the program
+#' writes `study$adam_meta` before it, [tfl_listing_code()]).
 #'
 #' @param datasets The data catalog: a data frame with `dataset`, `path`
 #'   and `derive` (`NAME = R expression`, `|` between them), as the
 #'   `datasets` sheet of an [tfl_ard_spec()].
 #' @param dataset The dataset to read.
+#' @param adam_meta The study's ADaM metadata whose levels the read puts on
+#'   (an ARD definition's `adam_meta`, which a YAML study's carries under
+#'   `settings: adam_levels: codelists`); `NULL` (default): none.
 #' @return The code, one element per line.  A dataset the catalog does not
 #'   have gives a `stop()` line, so the program says so when it runs.
 #' @export
-tfl_read_data_code <- function(datasets, dataset) {
+tfl_read_data_code <- function(datasets, dataset, adam_meta = NULL) {
   r <- datasets[!is.na(datasets$dataset) & datasets$dataset == dataset, ,
                 drop = FALSE]
   if (!nrow(r) || is.na(r$path[1L])) {
@@ -42,10 +48,15 @@ tfl_read_data_code <- function(datasets, dataset) {
   # (the study's setup file has read it, with its derive: tflspec.study_setup)
   if (isTRUE(getOption("tflspec.study_setup"))) return(character())
   obj <- .r_name(dataset)
-  # (the blanks as NA after the derive, as study$adam has them)
+  # (the blanks as NA after the derive, then adam_meta's levels, as
+  # study$adam has them)
+  lv <- .adam_meta_step(adam_meta, dataset)
   .drop_attached_ns(c(sprintf("%s <- %s", obj, .reader(r$path[1L])),
                       .derive_code(obj, r$derive[1L]),
-                      sprintf("%s <- blank_as_na(%s)", obj, obj)))
+                      sprintf("%s <- blank_as_na(%s)", obj, obj),
+                      if (!is.null(lv)) {
+                        paste(obj, "<-", .lay(.cl(lv$fn, c(list(obj), lv$args)), lead = nchar(obj) + 4L))
+                      }))
 }
 
 .r_sort <- function(sort) {
@@ -546,10 +557,13 @@ tfl_listing_code <- function(spec, output_id = NULL, datasets = NULL,
                                                  sub(" <-.*", "", made)])
     c(made, "", if (length(also)) paste0("# also: ", paste(also, collapse = ", "), " (data catalog)"))
   } else {
-    inputs <- c(tfl_read_data_code(datasets, l$dataset),
-                unlist(lapply(also, function(d) tfl_read_data_code(datasets, d))))
+    meta <- ard$adam_meta
+    inputs <- c(tfl_read_data_code(datasets, l$dataset, meta),
+                unlist(lapply(also, function(d) tfl_read_data_code(datasets, d, meta))))
+    ds_read <- c(l$dataset, also)
     also <- character()
-    c(if (length(inputs)) c("# ---- input data ----", inputs, ""), "# ---- data ----")
+    c(if (length(inputs)) c(.adam_meta_block(meta, ds_read), "# ---- input data ----", inputs, ""),
+      "# ---- data ----")
   }
   c(if (length(lv)) .codelists_head(lv),
     read,

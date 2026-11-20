@@ -1,6 +1,7 @@
 # Series: versioned folders of template SPECs (tflspec_v1, acme_v1, ...).
 #
-#   <series>/series.yml            name, label, released, needs, fixes, values
+#   <series>/series.yml            name, label, released, needs, fixes, values,
+#                                  descriptions (a value key's meaning, for a screen)
 #   <series>/templates/<name>.yml  the templates (`!series K` reads values:)
 #   <series>/styles/<name>.yml
 #
@@ -40,8 +41,10 @@
 #'
 #' A series is a versioned folder of template SPECs (`tflspec_v1`,
 #' `acme_v1`, ...): `series.yml` (`name`, `label`, `released`, `needs`,
-#' `fixes`, and the values its templates read with `!series K` under
-#' `values:`), `templates/<name>.yml` and `styles/<name>.yml`.  A report SPEC
+#' `fixes`, the values its templates read with `!series K` under `values:`,
+#' and, optionally, what each value means under `descriptions:` (a value's
+#' key and one line of English, for a screen that shows the values),
+#' `templates/<name>.yml` and `styles/<name>.yml`.  A report SPEC
 #' names a template as `template: name: tflspec_v1/demog`, and a study
 #' changes a series's values in `study.yml`:
 #'
@@ -64,16 +67,20 @@
 #'   the default search only.
 #' @return `tfl_series_dir()`: the folder of the series (stops if none has
 #'   it).  `tfl_series_read()`: a list of class `tfl_series` -- `name`,
-#'   `label`, `released`, `needs`, `fixes`, `values` (a named list), `path`
+#'   `label`, `released`, `needs`, `fixes`, `values` (a named list),
+#'   `descriptions` (a named character vector, a value's key to its meaning;
+#'   empty if the series has none), `path`
 #'   (the series's folder) and `file` (its `series.yml`).
 #' @seealso [tfl_pin_series()]
 #' @examples
 #' d <- tempfile("series")
 #' dir.create(file.path(d, "demo_v1"), recursive = TRUE)
-#' writeLines(c("name: demo_v1", "label: Demo", "values:", "  max_rows: 30"),
+#' writeLines(c("name: demo_v1", "label: Demo", "values:", "  max_rows: 30",
+#'              "descriptions:", "  max_rows: The most rows a page holds."),
 #'            file.path(d, "demo_v1", "series.yml"))
 #' tfl_series_dir("demo_v1", dir = d)
 #' tfl_series_read("demo_v1", dir = d)$values
+#' tfl_series_read("demo_v1", dir = d)$descriptions
 #' unlink(d, recursive = TRUE)
 #' @export
 tfl_series_dir <- function(series, dir = NULL) {
@@ -105,8 +112,17 @@ tfl_series_read <- function(series, dir = NULL) {
   if (!.series_is_map(values) && length(values)) {
     stop("tfl_series_read(): series \"", series, "\": values: is a map ({key: value}).", call. = FALSE)
   }
+  docs <- y$descriptions %||% list()
+  if (length(docs) && (!.series_is_map(docs) ||
+                       !all(vapply(docs, function(d) is.character(d) && length(d) == 1L && !is.na(d),
+                                   logical(1))))) {
+    stop("tfl_series_read(): series \"", series, "\": descriptions: is a map ({key: text}), ",
+         "one text a key of values:.", call. = FALSE)
+  }
+  docs <- if (length(docs)) unlist(docs) else stats::setNames(character(), character())
   structure(list(name = series, label = y$label, released = y$released, needs = y$needs,
                  fixes = y$fixes %||% list(), values = if (length(values)) values else list(),
+                 descriptions = docs,
                  path = path, file = normalizePath(file, winslash = "/", mustWork = TRUE)),
             class = "tfl_series")
 }
