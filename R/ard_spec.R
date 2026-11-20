@@ -421,7 +421,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   }
   # an argument the installed function does not have: said now, with the
   # version, rather than by the program when it runs
-  w <- c(.ard_args_unknown(x), if (blank_notes) .blank_text_notes(x))
+  w <- c(.ard_args_unknown(x), .strat_ci_problems(x), if (blank_notes) .blank_text_notes(x))
   if (length(w)) warning(paste(w, collapse = "\n  "), call. = FALSE)
   x
 }
@@ -505,6 +505,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
       "%s / %s: `args` does not read as R arguments (%s)", a$output_id[i],
       a$analysis_id[i], gsub("\\s+", " ", p)))
   }
+  pr <- c(pr, list(.ard_column_list_problems(a)))
   # one argument, one place: a column that gives an argument of the call
   # and `args` may not both give it (else one of them is dropped unseen)
   km <- tfl_ard_methods()
@@ -644,6 +645,39 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   p <- do.call(rbind, pr)
   rownames(p) <- NULL
   p
+}
+
+# A `by`, `variables` or `strata` cell lists its columns with `|`
+# (`PARAM | tox_dir | BTOXGRL`); each piece is written into the call as it
+# is.  A piece that is not one R expression -- columns between commas or
+# spaces, `TRTA, AESEV` -- would give the call `by = TRTA, AESEV`: AESEV
+# then reaches the next argument by its position (ard_tabulate()'s
+# `strata`) and the counts change with no error, or (`TRTA AESEV`) the
+# program does not parse.  A selector (`c(A, B)`, `starts_with("LB")`)
+# is one expression and passes.
+.ard_column_list_problems <- function(a) {
+  pr <- list(.spec_problems_empty())
+  one_expr <- function(p) !is.null(tryCatch(str2lang(p), error = function(e) NULL))
+  for (cn in intersect(c("by", "variables", "strata"), names(a))) {
+    for (i in which(!is.na(a[[cn]]) & nzchar(trimws(a[[cn]])))) {
+      pieces <- .split_bar(a[[cn]][i])
+      bad <- pieces[nzchar(pieces) & !vapply(pieces, one_expr, NA)]
+      if (!length(bad)) next
+      fix <- vapply(pieces, function(p) {
+        if (one_expr(p) || !nzchar(p)) return(p)
+        w <- strsplit(trimws(p), "[[:space:]]*,[[:space:]]*|[[:space:]]+")[[1L]]
+        paste(w[nzchar(w)], collapse = " | ")
+      }, "")
+      pr[[length(pr) + 1L]] <- .ard_problem(a, i, cn, sprintf(paste0(
+        "%s / %s: `%s` lists its columns with `|`: %s, not %s (written as it ",
+        "is, the call would pass the other columns to other arguments by ",
+        "their position, or not parse)"),
+        a$output_id[i], a$analysis_id[i], cn,
+        paste(fix[nzchar(fix)], collapse = " | "),
+        paste(sQuote(bad, FALSE), collapse = ", ")))
+    }
+  }
+  do.call(rbind, pr)
 }
 
 # `a`, or `b` when it is NA or empty
@@ -1170,6 +1204,7 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   # each report's code lists, of the variables its analyses read
   lv <- .codelist_levels_by(codelists, a)
   .check_where_labels(a, lv)
+  .check_strat_weights(a, lv)
   # (what complete_hierarchy() in `post` is written with: the lists and
   # their `under`)
   attr(x, "levels") <- lv

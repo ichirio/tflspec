@@ -30,8 +30,11 @@ in \code{method.args = list(...)} of the analysis row's \code{args}:
 \code{method.args = list(conf.type = "log-log")} (the Kaplan-Meier interval
 SAS's PROC LIFETEST gives), \code{method.args = list(ties = "breslow")} (a
 Cox model as SAS's PROC PHREG fits it), \code{method.args = list(family = binomial)} (a logistic model), \code{method.args = list(method = "Kenward-Roger")} (MMRM's degrees of freedom), \code{method.args = list(covariance = cov_struct("toep", visits = "AVISIT", subject = "USUBJID"))} (MMRM's covariance when the formula has none), \verb{method = "glm.nb", package = "MASS"} with \code{method.args = list(link = log)} (a
-negative binomial rate model: exacerbations, recurrent events) and
-\verb{method = "survreg", package = "survival"} with \code{method.args = list(dist = "lognormal")} (a parametric survival model).  The same arguments are
+negative binomial rate model: exacerbations, recurrent events),
+\verb{method = "survreg", package = "survival"} with \code{method.args = list(dist = "lognormal")} (a parametric survival model), \verb{method = "geeglm", package = "geepack"} with \code{method.args = list(family = binomial, id = factor(USUBJID), corstr = "exchangeable")} (a GEE model of a response
+over visits: its \code{id} is required, a factor or a number, and the data
+sorted by it) and \verb{method = "polr", package = "MASS"} with \code{method.args = list(Hess = TRUE)} (a
+proportional odds model of an ordinal scale).  The same arguments are
 the model's in a call written in \code{x}
 (\code{ard_survival_survfit_diff(x = survival::survfit(..., conf.type = "log-log"))}).
 }
@@ -39,14 +42,49 @@ the model's in a call written in \code{x}
 \code{tfl_ard_spec()} looks for each name in the installed model function
 (and where its \code{...} go: survfit()'s survfitKM(), glm()'s and glm.nb()'s
 glm.control(), survreg()'s survreg.control(),
-coxph()'s coxph.control(), mmrm()'s mmrm_control()) and judges the
+coxph()'s coxph.control(), mmrm()'s mmrm_control(), geeglm()'s
+glm.control() and geese.control(), polr()'s optim(control =)) and judges the
 values this catalog describes by their kind: \code{conf.type = "loglog"}
 would stop the program, \code{tise = "breslow"} too, and \code{wieghts = W} would
 be ignored by \code{lm()}; a covariance type mmrm does not have
 (\code{cov_struct("un", ...)}, \code{~ un(AVISIT | USUBJID)}), the visit
 column not in quotes, \code{weights = "WTS"} given to mmrm() (a vector, not a
-column name), \code{link = logit} of glm.nb() and \code{init.theta = 0} too.
+column name), \code{link = logit} of glm.nb() and \code{init.theta = 0} too, and
+so are \code{corstr = "exch"}, no \code{id} or \code{id = USUBJID} (text: one cluster
+for the whole data) of geeglm() and \code{method = "logit"} of polr().
 \code{formula} and \code{data} are cardx's to give.
+
+Since 2026-11-19 nlme's models are catalogued too, for a regression row
+that writes the model in \code{x}: \code{x = nlme::gls(AVAL ~ TRT01P * AVISIT, data = data, correlation = corSymm(form = ~ AVISITN | USUBJID), weights = varIdent(form = ~ 1 | AVISIT))} (repeated measures with an unstructured
+covariance, as SAS PROC MIXED's REPEATED fits them) and \code{x = nlme::lme(..., random = ~ 1 | USUBJID)}.  Neither takes \verb{formula =}, so a
+row that names them in \code{method} is told to write the model in \code{x} (cardx
+would stop).  \code{correlation} is judged as an nlme corStruct with the
+subject after \code{|}; for \code{corSymm()}, \code{corAR1()} and \code{corARMA()} a visit
+number before it -- \code{form = ~ 1 | USUBJID} takes the visits from the
+records' order, so a subject's missed visit pairs each later visit with
+the wrong one, with no warning.  \code{weights} is a varFunc, lme()'s \code{random}
+a formula with the subject after \code{|}.  broom.helpers cannot read these
+models' variables, so cardx gives their coefficients by term and stops on
+\code{add_pairwise_contrasts = TRUE}: the row says so, and LS means are
+mmrm's.
+
+A regression row's pairwise contrasts (\code{add_pairwise_contrasts = TRUE})
+are emmeans': \code{emmeans_args = list(...)} goes to \code{emmeans::emmeans()}
+through broom.helpers' \code{tidy_plus_plus()}, so \code{tfl_ard_model_args("emmeans", "emmeans")} lists its arguments too -- \code{weights = "proportional"} (the LS
+means SAS's OM option gives), \code{regrid = "response"} (differences of
+proportions from a logistic model), \code{at = list(BASE = 50)}.  emmeans()
+drops a name it does not know without a word, so \code{tfl_ard_spec()} says
+one (\verb{wieghts =}), as it says \code{object}, \code{specs}, \code{level} and \code{adjust},
+which \code{tidy_plus_plus()} writes itself or takes from \code{conf.level} and
+\code{contrasts_adjust}, and \code{emmeans_args} without the pairwise contrasts.
+An MMRM's \code{cov_struct()} has its \code{group} (a column in quotes: the
+covariance by arm) and \code{heterogeneous} judged too.  Since 2026-11-14 so
+are emmeans' \code{cov.reduce} (a function, TRUE / FALSE, a two-sided formula
+or a list of them: \code{"median"} in quotes stops emmeans), \code{cov.keep}
+(names or a number), \code{tran} (a name the installed emmeans knows:
+\code{"logg"} would be taken as no transformation, so \code{type = "response"}
+gives differences on the log scale instead of ratios) and \code{nesting}
+(\code{"SITEID \%in\% COUNTRY"} or a list).
 
 The catalog is \code{inst/ard/model_args.csv} (\code{fn}, \code{arg}, \code{default},
 \code{kind}, \code{hint}, \code{choices}); a company adds rows with
@@ -56,4 +94,12 @@ The catalog is \code{inst/ard/model_args.csv} (\code{fn}, \code{arg}, \code{defa
 tfl_ard_model_args("survfit", "survival")
 tfl_ard_model_args("glm")
 tfl_ard_model_args("glm.nb", "MASS")
+tfl_ard_model_args("polr", "MASS")
+if (requireNamespace("emmeans", quietly = TRUE)) {
+  tfl_ard_model_args("emmeans", "emmeans")
+}
+if (requireNamespace("geepack", quietly = TRUE)) {
+  tfl_ard_model_args("geeglm", "geepack")
+}
+tfl_ard_model_args("gls", "nlme")
 }
