@@ -35,7 +35,7 @@ test_that("one report: <dataset>_sub, the second of a dataset _sub2, each under 
     "adsl_sub2 <- filter(adsl, ITTFL == \"Y\")") %in% code))
   expect_true(any(startsWith(code, "# adae_sub: the records. ADAE of the subjects of adsl_sub")))
   txt <- paste(code, collapse = "\n")
-  expect_match(txt, "ard_age <- adsl_sub2 |>", fixed = TRUE)
+  expect_match(txt, ".ard_age <- adsl_sub2 |>", fixed = TRUE)
   expect_match(txt, "denominator = adsl_sub,", fixed = TRUE)
   expect_false(grepl("pop_", txt, fixed = TRUE))
 })
