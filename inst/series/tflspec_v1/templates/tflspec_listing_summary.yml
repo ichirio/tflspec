@@ -111,6 +111,7 @@ params:
   analysis_ids:
     type: map<string,string>
     input: table
+    columns: {key: {label: {en: "Value", ja: "値"}}, value: {label: {en: "Analysis ID", ja: "解析 ID"}}}
     choices: fixed
     default: ~
     step: analysis
@@ -120,6 +121,7 @@ params:
   formats:
     type: map<string,number|string>
     input: table
+    columns: {key: {label: {en: "Statistic", ja: "統計量"}}, value: {label: {en: "Format", ja: "書式"}}}
     choices: stats
     free: true
     default: !series formats
@@ -176,6 +178,7 @@ params:
   cells:
     type: map<string,string>
     input: table
+    columns: {key: {label: {en: "Statistic", ja: "統計量"}}, value: {label: {en: "Text", ja: "テキスト"}}}
     ordered: true
     default:
       n: "{N}"
