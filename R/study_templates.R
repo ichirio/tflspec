@@ -76,7 +76,7 @@
 .copied_write <- function(root, series, entries) {
   f <- .copied_path(root, series)
   dir.create(dirname(f), recursive = TRUE, showWarnings = FALSE)
-  body <- if (length(entries)) yaml::as.yaml(entries[order(names(entries))]) else "{}\n"
+  body <- if (length(entries)) yaml::as.yaml(entries[order(names(entries))], handlers = .yaml_out_handlers()) else "{}\n"
   con <- file(f, open = "wb")
   on.exit(close(con), add = TRUE)
   writeLines(c("# copied.yml: written by tflspec (tfl_copy_templates(), tfl_recopy_templates());",
@@ -461,7 +461,7 @@ tfl_series_values_set <- function(study_dir, series, values) {
 # NULL removes the key); the other lines as they are.
 .values_block_set <- function(lines, values) {
   as_lines <- function(k, v, ind) {
-    y <- yaml::as.yaml(stats::setNames(list(v), k))
+    y <- yaml::as.yaml(stats::setNames(list(v), k), handlers = .yaml_out_handlers())
     paste0(ind, strsplit(sub("\n$", "", y), "\n", fixed = TRUE)[[1L]])
   }
   at <- grep("^values:", lines)

@@ -996,7 +996,7 @@ back): rename the value or choose another separator.
 `tpl_shift` `tpl_lab_shift` `tpl_listing` `tpl_km_table` `tpl_param_change` `tpl_pk_conc` `tpl_lab_abnormal` `tpl_ae_eair` `tpl_ancova` `tpl_mean_se` `tpl_mean_ci` `tpl_waterfall` `tpl_forest_hr` `tpl_forest_layout` `tpl_orr` `tpl_stat_block` `tpl_ae_overview`
 `tfl_read_template_sheets` `tfl_write_template_yaml`
 
-**Template SPEC, series (versioned folders of templates; a study copies the series and the templates its reports use into `spec/series/<series>/` and reads only its copy):** `tfl_series_dir` `tfl_series_read` `tfl_copy_templates` `tfl_template_status` `tfl_template_diff` `tfl_recopy_templates` `tfl_series_values_set`
+**Template SPEC, series (versioned folders of templates; a study copies the series and the templates its reports use into `spec/series/<series>/` and reads only its copy):** `tfl_series_dir` `tfl_series_read` `tfl_copy_templates` `tfl_template_status` `tfl_template_diff` `tfl_recopy_templates` `tfl_series_values_set` `tfl_template_values`
 
 **AI-assisted drafting:** `tfl_ai_tasks` `tfl_ai_context` `tfl_ai_schema`
 `tfl_ai_prompt` `tfl_ai_parse` `tfl_ai_check` `tfl_ai_repair_prompt`
