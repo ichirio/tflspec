@@ -580,7 +580,9 @@ shells:
   `ard:`, as a table's.
 - Write `y` as `'y'` (quoted): YAML reads a bare y as true.
 
-The figure's titles and footnotes are its `page:`, as a table's.
+The figure's titles and footnotes are its `page:`, as a table's; its size,
+alignment and resolution are its `tfl_image` (never `page: rtf_figures:`),
+and only when the shell says them -- else the study's.
 
 ---
 

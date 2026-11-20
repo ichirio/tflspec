@@ -225,8 +225,8 @@ print.tfl_item <- function(x, ...) {
 #' `rtf_figures()` take it: `object` (its name), `page_break` (each after
 #' the first goes on under the one before unless `true`), `space_before`,
 #' `first_rows`, `cont_title` (a table's), `titles`, `footnotes` (the
-#' object's own, as `page: titles:` writes them), `width_in`, `height_in`
-#' (a figure's).  The report's `page: titles:` go above the first object,
+#' object's own, as `page: titles:` writes them); a figure's size and
+#' alignment are its content's `tfl_image`.  The report's `page: titles:` go above the first object,
 #' its `page: footnotes:` below the last.  [tfl_run_output()] makes the RTF;
 #' [tfl_output_contents()] builds the objects.
 #'

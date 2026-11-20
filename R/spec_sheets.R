@@ -828,11 +828,8 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
   if (length(page$rtf_document$font_lang)) pr$page$font_lang <- slots(page$rtf_document$font_lang)
   if (inherits(page$header, "tfl_unset")) pr$report$page_header <- "FALSE"
   if (inherits(page$footer, "tfl_unset")) pr$report$page_footer <- "FALSE"
-  for (a in c("width_twips", "height_twips")) {
-    v <- page$rtf_figures[[a]]
-    if (!is.null(v)) pr$report[[if (a == "width_twips") "figure_width_in" else "figure_height_in"]] <-
-      if (is.numeric(v)) format(v / 1440) else cell(v)
-  }
+  # (a figure's size is its content's tfl_image, not the page's: it goes
+  # with the figure's items)
   for (k in names(page$report)) pr$report[[k]] <- cell(page$report[[k]])
   # what no column says (the titles' row height, the bands' look, a second
   # font ...): kept as YAML in the page sheet's page_more, read back as it was
@@ -854,7 +851,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     m <- .page_map[[sh]]
     said <- c(said, ifelse(grepl(".", m, fixed = TRUE), m, paste(m, names(m), sep = ".")))
   }
-  said <- c(said, "rtf_document.font_lang", "rtf_figures.width_twips", "rtf_figures.height_twips")
+  said <- c(said, "rtf_document.font_lang")
   if (inherits(page$rtf_document$watermark, "tfl_call")) {
     said <- setdiff(said, "rtf_document.watermark")
   }

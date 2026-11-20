@@ -40,8 +40,8 @@ rows say each object's place, as \code{rtfreporter::rtf_tables()} /
 \code{rtf_figures()} take it: \code{object} (its name), \code{page_break} (each after
 the first goes on under the one before unless \code{true}), \code{space_before},
 \code{first_rows}, \code{cont_title} (a table's), \code{titles}, \code{footnotes} (the
-object's own, as \verb{page: titles:} writes them), \code{width_in}, \code{height_in}
-(a figure's).  The report's \verb{page: titles:} go above the first object,
+object's own, as \verb{page: titles:} writes them); a figure's size and
+alignment are its content's \code{tfl_image}.  The report's \verb{page: titles:} go above the first object,
 its \verb{page: footnotes:} below the last.  \code{\link[=tfl_run_output]{tfl_run_output()}} makes the RTF;
 \code{\link[=tfl_output_contents]{tfl_output_contents()}} builds the objects.
 
