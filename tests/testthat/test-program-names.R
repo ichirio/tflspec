@@ -1,7 +1,7 @@
 # A generated program's own variables are never a data's or an ARD's
 # column: ADaM columns upper case, ARD and spec columns lower case with
 # underscores, the program's names report_id, cl_<variable>, path_<folder>,
-# ard_<analysis id>, pop_<set>, fmt_default ...
+# .ard_<analysis id>, pop_<set>, fmt_default ...
 
 # the names R code assigns at its top level
 assigned_names <- function(code) {
