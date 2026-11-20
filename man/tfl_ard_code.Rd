@@ -95,8 +95,13 @@ default in \code{\link[=tfl_ard_statistics]{tfl_ard_statistics()}}) are in the c
 \code{fmt_fun = everything() ~ modifyList(fmt_default, list(mean = 2L))}, a
 variable's own (\code{BMIBL:sd=3}) with its own list.  An integer is
 that many decimals, \verb{xx.x\%} is \code{label_round(1, scale = 100)},
-\code{xx.x*1000} is \code{label_round(1, scale = 1000)} and
+\code{xx.x*1000} is \code{label_round(1, scale = 1000)}, \verb{4s} (significant
+digits) is \code{function(x) rtfreporter::fmt_signif(x, 4L)} and
 \code{pvalue} the program's \code{fmt_pvalue()} (\verb{<0.001} or 3 decimals);
+a parameter's own (\code{AUC:mean=2}: the analysis's \code{by} has PARAMCD and AUC
+is not one of its variables) is set after the format step,
+\code{cards::update_ard_fmt_fun(filter = )} on that parameter's rows (see
+\code{\link[=tfl_formats]{tfl_formats()}});
 \code{cards::apply_fmt_fun()} then fills \code{stat_fmt}.  What takes no \code{fmt_fun}
 gets the same formats after the call, from \code{fmt_ard()}: cardx's tests, CIs
 and models, \code{cards::ard_stack_hierarchical()}, a study's own function,
