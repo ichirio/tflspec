@@ -211,6 +211,13 @@ tfl_plot <- function(name, items = list(), from = "own") {
   NULL
 }
 
+# whether a type takes a sequence of sequences (list<string|list<string>>)
+.fig_type_nested_seq <- function(ty) {
+  !is.null(ty) && any(vapply(.fig_type_alts(ty), function(t) {
+    identical(t$kind, "list") && length(t$args) > 0L && .fig_type_has(t$args[[1L]], "list")
+  }, NA))
+}
+
 # whether a sequence of a SPEC is one of calls (and !r NULL), unnamed
 .fig_is_call_seq <- function(v) {
   is.list(v) && !is.object(v) && length(v) && is.null(names(v)) &&
@@ -296,14 +303,22 @@ tfl_plot <- function(name, items = list(), from = "own") {
     names(el) <- names(v)
     return(as.call(c(list(as.name("list")), el)))
   }
-  # a value each (a panel's scale, a strip's margin): list(NULL, scale_y_continuous(...))
+  # a value each (a panel's scale, a strip's margin): list(NULL, scale_y_continuous(...));
+  # areas of a design, which take no NULL, c(area(1, 1), area(1, 2)) as
+  # patchwork writes them
   if (.fig_is_call_seq(v) && !is.null(el_ty <- .fig_type_call_seq(type))) {
     el <- lapply(v, .fig_value_lang, arg = arg, type = el_ty)
-    return(as.call(c(list(as.name("list")), el)))
+    joiner <- if (.fig_type_has(el_ty, "r")) "list" else "c"
+    return(as.call(c(list(as.name(joiner)), el)))
   }
   if (is.list(v)) {
     el <- lapply(v, .fig_value_lang)
-    return(as.call(c(list(as.name("c")), el)))
+    # a sequence with a sequence in it (tag_levels: [[a, b], "1"]) is
+    # list(c("a", "b"), "1"): c() would make it one
+    nested <- any(vapply(v, function(e) {
+      (is.list(e) && !is.object(e)) || (is.atomic(e) && length(e) > 1L)
+    }, NA))
+    return(as.call(c(list(as.name(if (nested) "list" else "c")), el)))
   }
   # (a whole number read from YAML is an integer: written as R writes 16)
   if (is.integer(v)) v <- as.numeric(v)
@@ -436,6 +451,10 @@ tfl_plot <- function(name, items = list(), from = "own") {
       w <- .fig_facet_vars(unlist(v))
       if (!is.null(w)) args$facets <- w
     }
+  }
+  # wrap_plots()'s plots by name, before its other arguments
+  if (identical(.schema_fn_name(it$fn), "wrap_plots") && !is.null(pl <- .fig_wrap_plots_lang(a$plots))) {
+    args <- c(pl, args[names(args) != "plots"])
   }
   key <- .fig_positional_key(it$fn)
   if (!is.null(key) && key %in% names(a) && !inherits(a[[key]], c("tfl_r", "tfl_call"))) {
@@ -607,10 +626,20 @@ tfl_plot <- function(name, items = list(), from = "own") {
     # a value each of calls, NULL where none (facetted_pos_scales(y =
     # list(NULL, scale_y_reverse())), elem_list_text(margin = list(NULL,
     # margin(t = 5)))): the sequence, each a call of the element's type
-    if (identical(f, "list") && length(a) && is.null(names(a)) &&
+    # (areas of a design the same, c(area(1, 1), area(1, 3, 3)))
+    if (f %in% c("list", "c") && length(a) && is.null(names(a)) &&
         !is.null(el_ty <- .fig_type_call_seq(type))) {
       vals <- lapply(a, .fig_lang_value, arg = arg, type = el_ty)
       if (.fig_is_call_seq(vals)) return(vals)
+    }
+    # a sequence of sequences of constants (tag_levels = list(c("&", "%"),
+    # "1"): a level's own tags), where the type takes one
+    if (identical(f, "list") && length(a) && is.null(names(a)) && .fig_type_nested_seq(type)) {
+      vals <- lapply(a, .fig_lang_value)
+      if (all(vapply(vals, function(e) is.atomic(e) && length(e) >= 1L && is.null(names(e)), NA)) &&
+          any(lengths(vals) > 1L)) {
+        return(vals)
+      }
     }
     # a negative number, a vector of constants (a negative number among
     # them: limits = c(-100, 100), yintercept = c(-30, 20))
@@ -760,6 +789,17 @@ tfl_plot <- function(name, items = list(), from = "own") {
   for (i in which(!nzchar(nm))) {
     if (is.call(a[[i]]) && identical(.fig_deparse(a[[i]][[1L]]), "aes")) nm[i] <- "mapping"
   }
+  # patchwork's wrap_plots(p1, p2, ncol = 1): its plots by name, or by a
+  # design's letters (wrap_plots(A = p1, B = p2, design = "AB"))
+  plots <- NULL
+  if (identical(sub("^patchwork::", "", f), "wrap_plots")) {
+    wp <- .fig_wrap_plots_read(a, nm, fun)
+    if (!is.null(wp)) {
+      plots <- wp$plots
+      a <- wp$rest
+      nm <- names(a) %||% character()
+    }
+  }
   # a card's positional `...` (xlim(0, 52)): its key, when they are constants
   key <- .fig_positional_key(f)
   if (any(!nzchar(nm)) && !is.null(key) && !key %in% nm) {
@@ -784,7 +824,54 @@ tfl_plot <- function(name, items = list(), from = "own") {
   args <- lapply(stats::setNames(nm, nm), function(k) .fig_lang_value(a[[k]], k, obj, ty[[k]]))
   fb <- .fig_facet_base(f)
   if (!is.na(fb)) args <- .fig_facet_args(fb, a, args)
+  if (!is.null(plots)) args <- c(list(plots = plots), args)
   tfl_item(f, args)
+}
+
+# wrap_plots()'s plots as read: the unnamed arguments, each a plot by its
+# name (wrap_plots(p1, p2)), or one list of plots by its name
+# (wrap_plots(plots_list)) or written out (wrap_plots(list(p1, p2))); or the
+# named ones that are no argument of it, a design's letters (A = p1, B =
+# p2), as a map.  `plots` the names (a map for letters), `rest` the other
+# arguments; NULL when they are none of those
+.fig_wrap_plots_read <- function(a, nm, fun) {
+  own <- setdiff(names(formals(fun %||% function(...) NULL)), "...")
+  is_plot <- !nzchar(nm) | !nm %in% c(own, "plots")
+  if (!any(is_plot)) return(NULL)
+  p <- a[is_plot]
+  pn <- nm[is_plot]
+  if (any(nzchar(pn)) && !all(nzchar(pn))) return(NULL)
+  if (length(p) == 1L && !nzchar(pn) && is.call(p[[1L]]) && identical(p[[1L]][[1L]], as.name("list"))) {
+    p <- as.list(p[[1L]])[-1L]
+    if (!is.null(names(p)) && any(nzchar(names(p)))) return(NULL)
+    pn <- rep("", length(p))
+  }
+  if (!length(p) || !all(vapply(p, .fig_is_plot_ref, NA))) return(NULL)
+  txt <- vapply(p, .fig_deparse, "")
+  plots <- if (all(nzchar(pn))) as.list(stats::setNames(txt, pn)) else unname(txt)
+  list(plots = plots, rest = a[!is_plot])
+}
+
+# a plot by its name (p1), or picked of a list of plots by its place
+# (plots[[2]])
+.fig_is_plot_ref <- function(x) {
+  is.name(x) || (is.call(x) && identical(x[[1L]], as.name("[[")) && length(x) == 3L &&
+                   is.name(x[[2L]]) && is.numeric(x[[3L]]) && length(x[[3L]]) == 1L)
+}
+
+# a plot's reference as written: a name, or plots[[2]] as R writes it
+.fig_plot_ref_lang <- function(txt) {
+  if (grepl("^[A-Za-z.][A-Za-z0-9._]*\\[\\[[0-9]+\\]\\]$", txt)) str2lang(txt) else as.name(txt)
+}
+
+# wrap_plots()'s plots as written: each by its name, unnamed, or by its
+# design's letter (A = p1); `prefix` before each name (the content's p_)
+.fig_wrap_plots_lang <- function(plots, prefix = "") {
+  if (is.null(plots) || inherits(plots, c("tfl_r", "tfl_call"))) return(NULL)
+  if (is.list(plots) && !is.null(names(plots))) {
+    return(lapply(plots, function(v) .fig_plot_ref_lang(paste0(prefix, v))))
+  }
+  lapply(unname(unlist(plots)), function(v) .fig_plot_ref_lang(paste0(prefix, v)))
 }
 
 # the facet a facet function takes its variables as: ggplot2's facet_wrap()
@@ -995,7 +1082,14 @@ tfl_plot <- function(name, items = list(), from = "own") {
   w <- compose[fns == "wrap_plots"]
   first <- if (length(w)) {
     a <- w[[1L]]$args %||% list()
-    pl <- if (!is.null(a$plots)) paste0("p_", unlist(a$plots)) else syms
+    # (by a design's letter, A = p_km, as the content names them)
+    pl <- if (!is.null(a$plots)) {
+      w_pl <- .fig_wrap_plots_lang(a$plots, "p_")
+      vapply(seq_along(w_pl), function(i) {
+        k <- names(w_pl)[i] %||% ""
+        paste0(if (nzchar(k)) paste0(k, " = "), as.character(w_pl[[i]]))
+      }, "")
+    } else syms
     a$plots <- NULL
     rest <- if (length(a)) .fig_deparse(.fig_item_lang(tfl_item("f", a)))
     rest <- if (!is.null(rest)) sub("^f\\(", "", sub("\\)$", "", rest))

@@ -153,7 +153,7 @@
 "ggplot2","geom_point","mapping","yes","aes; aes_linetype_size_shape; annotation_borders; expand_limits; fortify-multcomp; geom_point; ggplot; ggtheme; guide_bins; guide_colourbar; position_jitter; position_stack; scale_alpha; scale_brewer; scale_gradient; scale_grey; scale_identity; scale_manual; scale_shape; scale_steps; scale_viridis","","geom",3,48
 "ggplot2","geom_point","na.rm","yes","annotation_logticks; guide_axis_logticks","","geom",3,3
 "ggplot2","geom_point","pch","yes","position_jitterdodge","","geom",3,1
-"ggplot2","geom_point","position","partial","Position; geom_ribbon; position_jitter; position_jitterdodge; position_stack","1 of 6 uses: as R: position_rank(width = 0.5) (geom_point(position = position_rank(width = 0.5)))","geom",3,6
+"ggplot2","geom_point","position","yes","Position; geom_ribbon; position_jitter; position_jitterdodge; position_stack","","geom",3,6
 "ggplot2","geom_point","shape","yes","aes_linetype_size_shape; geom_point; scale_manual","","geom",3,6
 "ggplot2","geom_point","size","yes","aes_linetype_size_shape; facet_grid; geom_point; geom_ribbon; ggplot; scale_identity; scale_manual; scale_shape","","geom",3,18
 "ggplot2","geom_point","stat","yes","geom_ribbon; stat_unique","","geom",3,2
@@ -330,7 +330,7 @@
 "ggplot2","scale_fill_identity","","yes","scale_identity","","scale",1,1
 "ggplot2","scale_fill_identity","breaks","partial","scale_identity","1 of 1 uses: as R: df$colour (scale_fill_identity(""trt"", labels = letters[1:4], breaks = df$colour, guide = ""legend""))","scale",1,1
 "ggplot2","scale_fill_identity","guide","yes","scale_identity","","scale",1,2
-"ggplot2","scale_fill_identity","labels","partial","scale_identity","1 of 1 uses: as R: letters[1:4] (scale_fill_identity(""trt"", labels = letters[1:4], breaks = df$colour, guide = ""legend""))","scale",1,1
+"ggplot2","scale_fill_identity","labels","yes","scale_identity","","scale",1,1
 "ggplot2","scale_fill_identity","name","yes","scale_identity","","scale",1,1
 "ggplot2","scale_fill_ordinal","guide","yes","geom_point","","scale",1,1
 "ggplot2","scale_fill_viridis_b","","yes","scale_viridis","","scale",1,1

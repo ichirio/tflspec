@@ -533,10 +533,10 @@ element,maxheight,call<unit>|r,Most height,最大の高さ,
 element,orientation,enum[upright|left-rotated|right-rotated|inverted],Orientation,向き,
 element,clip,enum[inherit|on|off],Clip,はみ出しの切り取り,
 element,bleed,logical,Strips merged across levels,ストリップをまたいでつなぐ,
-element,text_x,call|r,Strip text (x),ストリップの文字（x）,"Each strip's: {fn: elem_list_text, args: {colour: [red, blue]}}."
-element,text_y,call|r,Strip text (y),ストリップの文字（y）,
-element,background_x,call|r,Strip background (x),ストリップの背景（x）,"{fn: elem_list_rect, args: {fill: [grey90, white]}}."
-element,background_y,call|r,Strip background (y),ストリップの背景（y）,
+element,text_x,"call<elem_list_text, element_text, element_blank>|list<call<element_text, element_blank>|r>|r",Strip text (x),ストリップの文字（x）,"Each strip's: {fn: elem_list_text, args: {colour: [red, blue]}}; or an element a strip: [{fn: element_blank}, {fn: element_text, args: {colour: red}}], written list(...)."
+element,text_y,"call<elem_list_text, element_text, element_blank>|list<call<element_text, element_blank>|r>|r",Strip text (y),ストリップの文字（y）,
+element,background_x,"call<elem_list_rect, element_rect, element_blank>|list<call<element_rect, element_blank>|r>|r",Strip background (x),ストリップの背景（x）,"{fn: elem_list_rect, args: {fill: [grey90, white]}}; or an element a strip: [{fn: element_blank}, {fn: element_rect, args: {fill: grey90}}], written list(...)."
+element,background_y,"call<elem_list_rect, element_rect, element_blank>|list<call<element_rect, element_blank>|r>|r",Strip background (y),ストリップの背景（y）,
 element,by_layer_x,logical,By nesting layer (x),入れ子の層ごと（x）,TRUE: the lists go by layer of strips; FALSE: by strip.
 element,by_layer_y,logical,By nesting layer (y),入れ子の層ごと（y）,
 compose,ncol,integer,Columns,列の数,
@@ -546,20 +546,20 @@ compose,widths,list<number>|r,Widths,幅,"Relative: [3, 1]."
 compose,heights,list<number>|r,Heights,高さ,"Relative: [3, 1]."
 compose,guides,enum[keep|collect|auto],Legends,凡例,collect: one legend for the plots that share it.
 compose,tag_level,enum[keep|new],Tag level,タグの階層,
-compose,design,string|r,Design,配置図,"Letters a plot each, a line a row: ""AAB\nCCB""; or !r c(area(1, 1), area(1, 2))."
+compose,design,"string|list<call<area>>|r",Design,配置図,"Letters a plot each, a line a row: ""AAB\nCCB""; or the areas, [{fn: area, args: {t: 1, l: 1}}, {fn: area, args: {t: 1, l: 2, b: 2}}], written c(area(...), ...)."
 compose,axes,enum[keep|collect|collect_x|collect_y],Axes shared,軸をまとめる,collect: the axes the plots share drawn once.
 compose,axis_titles,enum[keep|collect|collect_x|collect_y],Axis titles shared,軸タイトルをまとめる,
 compose,title,string|r,Title,タイトル,
 compose,subtitle,string|r,Subtitle,サブタイトル,
 compose,caption,string|r,Caption,キャプション,
-compose,tag_levels,string|list<string>|r,Tags,タグ,"A, a, 1, i or I; [A, 1] for nested plots."
+compose,tag_levels,string|list<string|list<string>>|r,Tags,タグ,"A, a, 1, i or I; [A, 1] for nested plots; a level's own tags as a sequence: [['&', '%'], '1'], written list(c(""&"", ""%""), ""1"")."
 compose,tag_prefix,string,Tag prefix,タグの前,
 compose,tag_suffix,string,Tag suffix,タグの後,
 compose,tag_sep,string,Tag separator,タグの区切り,
 compose,theme,"call<theme, theme_*>|r",Theme,テーマ,"Of the whole: {fn: theme, args: {plot.title: {fn: element_text, args: {size: 12}}}}."
-compose,panel,"object|call<textGrob, rectGrob, roundrectGrob, circleGrob, linesGrob, polylineGrob, segmentsGrob, pointsGrob, polygonGrob, nullGrob>|r",Plot (panel aligned),plot（パネルを揃える）,"A plot or grob by its name, or one of grid's grobs: {fn: grid::textGrob, args: {label: Note}}."
-compose,plot,"object|call<textGrob, rectGrob, roundrectGrob, circleGrob, linesGrob, polylineGrob, segmentsGrob, pointsGrob, polygonGrob, nullGrob>|r",Plot (all of it aligned),plot（全体を揃える）,"A plot or grob by its name, or one of grid's grobs."
-compose,full,"object|call<textGrob, rectGrob, roundrectGrob, circleGrob, linesGrob, polylineGrob, segmentsGrob, pointsGrob, polygonGrob, nullGrob>|r",Plot (the whole area),plot（全域）,"A plot or grob by its name, or one of grid's grobs (a background: {fn: grid::rectGrob, args: {gp: {fn: grid::gpar, args: {fill: grey95}}}})."
+compose,panel,"object|tilde|call<textGrob, rectGrob, roundrectGrob, circleGrob, linesGrob, polylineGrob, segmentsGrob, pointsGrob, polygonGrob, nullGrob>|r",Plot (panel aligned),plot（パネルを揃える）,"A plot or grob by its name, one of grid's grobs ({fn: grid::textGrob, args: {label: Note}}), or a base graphics plot as a formula: ~ plot(x, y)."
+compose,plot,"object|tilde|call<textGrob, rectGrob, roundrectGrob, circleGrob, linesGrob, polylineGrob, segmentsGrob, pointsGrob, polygonGrob, nullGrob>|r",Plot (all of it aligned),plot（全体を揃える）,"A plot or grob by its name, or one of grid's grobs."
+compose,full,"object|tilde|call<textGrob, rectGrob, roundrectGrob, circleGrob, linesGrob, polylineGrob, segmentsGrob, pointsGrob, polygonGrob, nullGrob>|r",Plot (the whole area),plot（全域）,"A plot or grob by its name, or one of grid's grobs (a background: {fn: grid::rectGrob, args: {gp: {fn: grid::gpar, args: {fill: grey95}}}})."
 compose,clip,logical,Clip,はみ出しを切る,
 compose,ignore_tag,logical,No tag,タグを付けない,
 compose,p,"object|call<textGrob, rectGrob, roundrectGrob, circleGrob, linesGrob, polylineGrob, segmentsGrob, pointsGrob, polygonGrob, nullGrob>|r",Inset plot,差し込む plot,"A plot by its name, or one of grid's grobs."

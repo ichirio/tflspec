@@ -5387,7 +5387,7 @@ wrap_plots:
   label: {en: Arrangement, ja: 配置}
   visible: [plots, ncol, nrow, heights, widths, guides]
   args:
-    plots: {type: "list<string>", label: {en: Plots (by name), ja: plot（名前）}}
+    plots: {type: "list<string>|map<string, string>|string", label: {en: Plots (by name), ja: plot（名前）}, description: "The plots by name, in order ([km, risk], written wrap_plots(p_km, p_risk)); by a design's letters, {A: km, B: risk} with design: AAB (written A = p_km, B = p_risk); or one list of plots by its name."}
     ncol: {type: integer, label: {en: Columns, ja: 列の数}}
     nrow: {type: integer, label: {en: Rows, ja: 行の数}}
     heights: {type: "list<number>", label: {en: Heights, ja: 高さ}}

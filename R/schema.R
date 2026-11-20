@@ -771,7 +771,7 @@ tfl_schema_check <- function(item) {
 # c("BL", paste("Week", c(4, 8)))): its functions and names are of the
 # list below, its numbers of a sequence at most 10000; the expression, or
 # NULL for any other
-.schema_r_texts_fns <- c("c", "paste", "paste0", "sprintf", "format", "formatC", "seq",
+.schema_r_texts_fns <- c("c", "paste", "paste0", "sprintf", "format", "formatC", "seq", "[",
                          "seq_len", "rep", "rev", "toupper", "tolower", "trimws", "round",
                          ":", "+", "-", "*", "/", "^", "(")
 .schema_r_texts_names <- c("pi", "LETTERS", "letters", "month.abb", "month.name")

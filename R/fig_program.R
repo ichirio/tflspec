@@ -265,6 +265,14 @@
   if (identical(f, "wrap_plots")) {
     a <- as.list(e)[-1L]
     nm <- names(a) %||% rep("", length(a))
+    # (plots by a design's letter, A = p1: the named that are no argument of it)
+    own <- setdiff(names(formals(.fig_find_fun("wrap_plots") %||% function(...) NULL)), "...")
+    letters_named <- nzchar(nm) & !nm %in% c(own, "plots")
+    if (any(letters_named) && !any(!nzchar(nm))) {
+      p <- a[letters_named]
+      if (!all(vapply(p, function(x) is.name(x) && as.character(x) %in% names(plots), NA))) return(NULL)
+      return(vapply(p, as.character, ""))
+    }
     p <- a[!nzchar(nm) | nm == "plots"]
     p <- unlist(lapply(p, function(x) {
       if (is.call(x) && .fig_deparse(x[[1L]]) %in% c("list", "c")) as.list(x)[-1L] else list(x)
@@ -309,8 +317,11 @@
     a <- as.list(e)[-1L]
     nm <- names(a) %||% rep("", length(a))
     syms <- .fig_prog_compose_plots(e, names_of)
-    rest <- a[nzchar(nm) & nm != "plots"]
-    args <- c(list(plots = unname(names_of[syms])),
+    # (by a design's letter, A = p1: the plots a map)
+    pl <- if (!is.null(names(syms))) as.list(stats::setNames(unname(names_of[syms]), names(syms)))
+          else unname(names_of[syms])
+    rest <- a[nzchar(nm) & nm != "plots" & !nm %in% names(syms)]
+    args <- c(list(plots = pl),
               lapply(stats::setNames(names(rest), names(rest)),
                      function(k) .fig_lang_value(rest[[k]], k)), layout)
     return(c(list(tfl_item("wrap_plots", args)), extra))

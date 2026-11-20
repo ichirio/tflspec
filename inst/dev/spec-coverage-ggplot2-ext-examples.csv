@@ -7,15 +7,9 @@
 "ggh4x","facet_grid2","cols","yes","ggh4x::facet_grid2; ggh4x::strip_split","","ggh4x",2,5
 "ggh4x","facet_grid2","independent","yes","ggh4x::facet_grid2","","ggh4x",2,1
 "ggh4x","facet_grid2","remove_labels","yes","ggh4x::facet_grid2","","ggh4x",2,1
-"ggh4x","facet_grid2","rows","partial","ggh4x::facet_grid2; ggh4x::strip_split; ggh4x::strip_tag; ggh4x::strip_vanilla","3 of 11 uses: the code does not draw: At least one layer must contain all faceting variables: `vars(cyl,
-""year"", year)`
-✖ Plot is missing `vars(cyl, ""year"", year)`
-✖ Layer 1 is missing `vars(cyl, ""year"", year)`; as R: vars(cyl, ""year"", year) (facet_grid2(vars(cyl, ""year"", year), strip = strip_split(c(""bottom"", ""left"", ""left""))))","ggh4x",2,11
+"ggh4x","facet_grid2","rows","partial","ggh4x::facet_grid2; ggh4x::strip_split; ggh4x::strip_tag; ggh4x::strip_vanilla","3 of 11 uses: as R: vars(cyl, ""year"", year) (facet_grid2(vars(cyl, ""year"", year), strip = strip_split(c(""bottom"", ""left"", ""left""))))","ggh4x",2,11
 "ggh4x","facet_grid2","scales","yes","ggh4x::facet_grid2","","ggh4x",2,1
-"ggh4x","facet_grid2","strip","partial","ggh4x::strip_split; ggh4x::strip_tag; ggh4x::strip_vanilla","3 of 7 uses: the code does not draw: At least one layer must contain all faceting variables: `vars(cyl,
-""year"", year)`
-✖ Plot is missing `vars(cyl, ""year"", year)`
-✖ Layer 1 is missing `vars(cyl, ""year"", year)` (facet_grid2(vars(cyl, ""year"", year), strip = strip_split(c(""bottom"", ""left"", ""left""))))","ggh4x",2,7
+"ggh4x","facet_grid2","strip","yes","ggh4x::strip_split; ggh4x::strip_tag; ggh4x::strip_vanilla","","ggh4x",2,7
 "ggh4x","facet_nested","cols","yes","ggh4x::facet_nested","","ggh4x",2,2
 "ggh4x","facet_nested","nest_line","yes","ggh4x::facet_nested","","ggh4x",2,1
 "ggh4x","facet_nested_wrap","facets","yes","ggh4x::facet_nested_wrap; ggh4x::strip_nested","","ggh4x",2,3
@@ -23,7 +17,7 @@
 "ggh4x","facet_wrap2","axes","yes","ggh4x::facet_wrap2","","ggh4x",2,4
 "ggh4x","facet_wrap2","facets","yes","ggh4x::facet_wrap2; ggh4x::strip_nested; ggh4x::strip_split; ggh4x::strip_tag; ggh4x::strip_themed","","ggh4x",2,14
 "ggh4x","facet_wrap2","remove_labels","yes","ggh4x::facet_wrap2","","ggh4x",2,2
-"ggh4x","facet_wrap2","strip","partial","ggh4x::strip_nested; ggh4x::strip_split; ggh4x::strip_tag; ggh4x::strip_themed","3 of 10 uses: as R: list(element_blank(), element_rect(fill = ""dodgerblue"")) (facet_wrap2(vars(drv, year), strip = strip_themed(background_x = backgrounds, text_x = texts)))","ggh4x",2,10
+"ggh4x","facet_wrap2","strip","yes","ggh4x::strip_nested; ggh4x::strip_split; ggh4x::strip_tag; ggh4x::strip_themed","","ggh4x",2,10
 "ggh4x","facetted_pos_scales","y","partial","ggh4x::facetted_pos_scales","1 of 2 uses: as R: list(Species == ""virginica"" ~ scale_y_continuous(breaks = c(6, 7)), Species == ""versicolor"" ~ scale_y_reverse()) (facetted_pos_scales(y = list(Species == ""virginica"" ~ scale_y_continuous(breaks = c(6, 7)), Species == ""versicolor"" ~ scale_y_reverse())))","ggh4x",2,2
 "ggh4x","force_panelsizes","cols","yes","ggh4x::force_panelsizes","","ggh4x",2,1
 "ggh4x","force_panelsizes","rows","yes","ggh4x::force_panelsizes","","ggh4x",2,1
@@ -99,19 +93,20 @@
 "patchwork","inset_element","right","yes","patchwork::inset_element","","patchwork",1,7
 "patchwork","inset_element","top","yes","patchwork::inset_element","","patchwork",1,7
 "patchwork","plot_annotation","caption","yes","patchwork::plot_annotation","","patchwork",3,2
-"patchwork","plot_annotation","tag_levels","partial","patchwork::inset_element; patchwork::plot_annotation","1 of 5 uses: as R: list(c(""&"", ""%""), ""1"") (plot_annotation(tag_levels = list(c(""&"", ""%""), ""1"")))","patchwork",3,5
+"patchwork","plot_annotation","tag_levels","yes","patchwork::inset_element; patchwork::plot_annotation","","patchwork",3,5
 "patchwork","plot_annotation","theme","yes","patchwork::plot_annotation","","patchwork",3,1
 "patchwork","plot_annotation","title","yes","patchwork::plot_annotation","","patchwork",3,2
 "patchwork","plot_layout","byrow","yes","patchwork::plot_layout","","patchwork",3,1
-"patchwork","plot_layout","design","partial","patchwork::area; patchwork::plot_layout","2 of 2 uses: as R: c(area(1, 1), area(1, 3, 3), area(3, 1, 3, 2)) (plot_layout(design = layout))","patchwork",3,2
+"patchwork","plot_layout","design","yes","patchwork::area; patchwork::plot_layout","","patchwork",3,2
 "patchwork","plot_layout","guides","yes","patchwork::free; patchwork::guide_area; patchwork::plot_layout","","patchwork",3,5
 "patchwork","plot_layout","ncol","yes","patchwork::guide_area; patchwork::plot_arithmetic; patchwork::plot_layout","","patchwork",3,7
 "patchwork","plot_layout","tag_level","yes","patchwork::plot_annotation","","patchwork",3,2
 "patchwork","plot_layout","widths","yes","patchwork::plot_layout","","patchwork",3,2
 "patchwork","plot_spacer","","yes","patchwork::free; patchwork::plot_spacer","","patchwork",2,3
-"patchwork","wrap_elements","full","partial","patchwork::wrap_elements","1 of 3 uses: as R: ~plot(mtcars$mpg, mtcars$disp) (wrap_elements(full = ~plot(mtcars$mpg, mtcars$disp)))","patchwork",2,3
+"patchwork","wrap_elements","full","yes","patchwork::wrap_elements","","patchwork",2,3
 "patchwork","wrap_elements","panel","partial","patchwork::wrap_elements","1 of 5 uses: as R: p1 + ggtitle(""Look at me shrink"") (wrap_elements(panel = p1 + ggtitle(""Look at me shrink"")))","patchwork",2,5
-"patchwork","wrap_plots","","no","ggsurvfit::ggsurvfit_align_plots; ggsurvfit::ggsurvfit_build; patchwork::wrap_plots","6 of 6 uses: read as R, the whole call (patchwork::wrap_plots(lst_aligned_plots, ncol = 1, heights = c(0.9, 0.1)))","patchwork",3,6
-"patchwork","wrap_plots","A","partial","patchwork::wrap_plots","1 of 1 uses: wrap_plots has no argument `A` (it has: ncol, nrow, byrow, widths, heights, guides, tag_level, design, axes, axis_titles, plots); as R: p2 (wrap_plots(B = p1, A = p2, design = design))","patchwork",3,1
-"patchwork","wrap_plots","B","partial","patchwork::wrap_plots","1 of 1 uses: wrap_plots has no argument `B` (it has: ncol, nrow, byrow, widths, heights, guides, tag_level, design, axes, axis_titles, plots); as R: p1 (wrap_plots(B = p1, A = p2, design = design))","patchwork",3,1
-"patchwork","wrap_plots","design","yes","patchwork::wrap_plots","","patchwork",3,1
+"patchwork","wrap_plots","","no","ggsurvfit::ggsurvfit_build","1 of 1 uses: read as R, the whole call (patchwork::wrap_plots(ggsurvfit_build(p), ggsurvfit_build(p), ncol = 2))","patchwork",3,1
+"patchwork","wrap_plots","design","yes","patchwork::wrap_plots","","patchwork",3,2
+"patchwork","wrap_plots","heights","yes","ggsurvfit::ggsurvfit_align_plots; ggsurvfit::ggsurvfit_build","","patchwork",3,2
+"patchwork","wrap_plots","ncol","yes","ggsurvfit::ggsurvfit_align_plots; ggsurvfit::ggsurvfit_build","","patchwork",3,2
+"patchwork","wrap_plots","plots","yes","ggsurvfit::ggsurvfit_align_plots; ggsurvfit::ggsurvfit_build; patchwork::wrap_plots","","patchwork",3,6

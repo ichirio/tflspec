@@ -2020,6 +2020,83 @@ takes the plots by the program's names; a term alone has none),
 "%"), "1")`, scales by a condition, and a facet's quoted text among
 names (`vars(cyl, "year", year)`).
 
+### Round 22 (2026-11-20): patchwork's arrangement as written, a strip's elements one a strip
+
+Round 21 left patchwork at 87.7% of its own examples: `wrap_plots()`
+read as a term was R whole, plots by a design's letters were "no
+argument", a design of `area()`s and a level's own tags were R.  This
+round reads them.
+
+| Measure | Before | After |
+|---|---:|---:|
+| **The extensions' own examples (weighted)** | **96.0%** (uses 315 / 14 / 6 of 335) | **98.2%** (333 / 5 / 1 of 339) |
+| patchwork | 87.7% | 95.9% |
+| ggh4x | 95.6% | 96.2% |
+| ggsurvfit / ggrepel / ggtext | 100.0% | 100.0% |
+| ggplot2's own examples | 98.8% (1240 / 29 / 3) | 98.8% (1241 / 28 / 3) |
+| Clinical figures, 71 (weighted) | 100.0% (1318) | 100.0% (1318 / 0 / 0) |
+| arguments (3409), aesthetics (826), the extensions (351), scales' helpers (138), grid's grobs (81) | 100.0% | 100.0% |
+
+(R 4.3.3, ggplot2 4.0.4, ggsurvfit 1.2.1, ggrepel 0.9.8, ggh4x 0.3.1,
+ggtext 0.2.0, ggnewscale 0.5.2, patchwork 1.3.2; before = this branch
+before the round's change, measured the same day.  More uses after: a
+call read as R whole before is read now, each of its arguments a use.)
+
+Round 22:
+
+- **`wrap_plots()` as a term**: its plots by name, unnamed
+  (`wrap_plots(p1, p2, ncol = 1)` is `{plots: [p1, p2], ncol: 1}`), one
+  list of plots by its name (`wrap_plots(plot_list)`), written out
+  (`wrap_plots(list(p1, p2))`), or picked of a list by place
+  (`built[[2]]`); written back by position, as patchwork's users write
+  them.  Before, the call was R whole.
+- **Plots by a design's letters**: `wrap_plots(A = p1, B = p2, design =
+  "AB")` reads as `plots: {A: p1, B: p2}` (before: "wrap_plots has no
+  argument `A`"); the content writes `wrap_plots(A = p_km, B = p_risk,
+  design = ...)`, and `tfl_fig_content_from_r()` reads a program's
+  arrangement of that form.  The card's `plots` takes
+  `list<string>|map<string, string>|string`.
+- **A design of areas**: `plot_layout(design = c(area(1, 1), area(1, 3,
+  3)))` reads as a sequence of typed `area()` calls (`design:
+  string|list<call<area>>|r`), checked (another function is an error) and
+  written `c(area(t = 1, l = 1), ...)`, as patchwork joins them.  A
+  sequence of calls whose element takes no NULL is written `c()`; one
+  that does (facetted_pos_scales' scales) stays `list()`.
+- **A level's own tags**: `plot_annotation(tag_levels = list(c("&", "%"),
+  "1"))` reads as `[['&', '%'], '1']` (`tag_levels:
+  string|list<string|list<string>>|r`).  A sequence with a sequence in it
+  is now written `list(...)`; before, c() made it one sequence
+  (`c(c("&", "%"), "1")`, three levels instead of two).
+- **A strip's elements one a strip**: ggh4x's `strip_themed(background_x =
+  list(element_blank(), element_rect(fill = "dodgerblue")))` reads as a
+  sequence of typed element calls, written `list(...)`; and
+  `elem_list_rect()` / `elem_list_text()` are typed calls now (before
+  they were R: the type was any `call`).  `text_x` / `text_y` take
+  `call<elem_list_text, element_text, element_blank>|list<...>`,
+  `background_x` / `_y` the rect's.
+- **A base graphics plot in `wrap_elements()`**: `wrap_elements(full = ~
+  plot(x, y))` is a formula (`tilde`) of the `panel` / `plot` / `full`
+  types.
+- **Texts picked of letters**: `letters[1:4]`, `LETTERS[c(1, 3)]` are
+  texts of constants (the check judges them).
+
+**Code generated from an existing SPEC changes in one case**: a sequence
+with a sequence in it (only `tag_levels` takes one) is written `list()`
+where it was flattened by `c()` (the code before did not do what the SPEC
+said).  A strip's `text_x` / `background_x` given as a call of a function
+that is no element is an error of the check now (it passed before).
+
+What is left in the extensions' examples: a plot built in place
+(`wrap_elements(panel = p1 + ggtitle(...))`,
+`wrap_plots(ggsurvfit_build(p), ...)`), scales chosen by a condition
+(`facetted_pos_scales(y = list(Species == "virginica" ~ ...))`), and a
+facet's quoted text among names (`vars(cyl, "year", year)`).  In
+ggplot2's own: values that are a data's column (`df$colour`,
+`states_map$long`), dates relative to today (`Sys.Date() - 30`), a
+function defined in the example (`labeller = as_labeller(appender)`,
+`connection = zigzag`), a quoted expression (`stat_manual(args =
+list(expr = quote(...)))`).
+
 ### The extension packages (ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale, patchwork)
 
 The same measure, the same file (`package` says which), over the
