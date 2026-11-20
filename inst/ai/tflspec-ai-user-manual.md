@@ -446,10 +446,12 @@ content:
   `tfl_image` is the last item.  The code is each plot as `p_<name>`, then
   `content <- wrap_plots(p_km, p_risk, ...)`; one plot is `content`.  A
   `position_dodge()` said twice is written once as `pd`.
-- `tfl_image: {width_in, height_in, align, dpi, png_device, format, file}`
-  is the figure's render settings -- every setting that is a figure's own:
-  its size on the page (inches, or `fit` -- the page's body), where it sits
-  across the page (`align`), its resolution and PNG device.  A setting left
+- `tfl_image: {width_in, height_in, align, dpi, png_device, rtf_format,
+  format, file}` is the figure's render settings -- every setting that is a
+  figure's own: its size on the page (inches, or `fit` -- the page's body),
+  where it sits across the page (`align`), its resolution and PNG device,
+  the picture the RTF holds (`rtf_format`: `png`, the default, or `emf`, a
+  vector picture -- no `dpi` then; another value stops).  A setting left
   out is the study's (`study.yml` `settings: {figure: {width_in: fit, dpi:
   300}}`, read as `!study figure.<setting>`), else the built-in one (the
   figure's own 6.5 x 4.5 in, 300 dpi, centred).  The report draws the figure

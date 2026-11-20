@@ -152,8 +152,9 @@ tfl_time_unit_days()
 A figure report's content makes the figure object (a ggplot, or a
 patchwork of several); its last item, `tfl_image`, holds how that object
 is drawn and placed -- its render settings: `width_in` and `height_in`
-(inches, or `fit`, the page's body), `align`, `dpi`, `png_device`, and the
-`format` and `file` of a saved copy. A setting it leaves out is the
+(inches, or `fit`, the page's body), `align`, `dpi`, `png_device`, the
+picture the RTF holds (`rtf_format`: `png`, or `emf`, a vector picture),
+and the `format` and `file` of a saved copy. A setting it leaves out is the
 study's, `study.yml`'s `settings: figure:` (`!study figure.dpi`), else the
 built-in one (the figure's own size, 300 dpi, centred). The report's
 `page:` keeps only what tables and figures share -- the titles, the

@@ -1119,7 +1119,8 @@ tfl_args_from_r <- function(fn, text) {
 #
 # A figure content's last item, tfl_image, holds how the figure is drawn
 # and placed: its size on the page (width_in, height_in: inches, or fit),
-# its alignment, its resolution and PNG device, the format and file of a
+# its alignment, its resolution and PNG device, the picture the RTF holds
+# (rtf_format: png, or emf -- a vector picture), the format and file of a
 # saved copy (decided 2026-11-19, canon 3e2d421).  `page:` keeps only what
 # tables and figures share (titles, footnotes, page_break, space_before).
 # A setting the item does not give is the study's: study.yml `settings:
@@ -1127,13 +1128,32 @@ tfl_args_from_r <- function(fn, text) {
 # (the figure's own size, 300 dpi, centred).
 
 # the settings tfl_image takes
-.fig_image_keys <- c("width_in", "height_in", "align", "dpi", "png_device", "format", "file")
+.fig_image_keys <- c("width_in", "height_in", "align", "dpi", "png_device", "rtf_format",
+                     "format", "file")
+
+# the picture formats the RTF takes (rtfreporter's render_format)
+.fig_rtf_formats <- c("png", "emf")
+
+# A tfl_image's rtf_format: png (also when not said) or emf; any other
+# value stops, naming the ones it takes
+.fig_rtf_format <- function(img, id = NULL) {
+  v <- img$rtf_format
+  if (is.null(v)) return("png")
+  v <- tolower(as.character(v))
+  if (length(v) != 1L || is.na(v) || !v %in% .fig_rtf_formats) {
+    who <- if (length(id) == 1L && !is.na(id)) paste0(id, ": ") else ""
+    .ard_stop(sprintf("%stfl_image: rtf_format is %s, not %s.", who,
+                      paste(.fig_rtf_formats, collapse = " or "),
+                      paste(as.character(img$rtf_format), collapse = ", ")))
+  }
+  v
+}
 
 # The figure-only settings that page.rtf_figures and a page.layout row once
 # held, and the tfl_image setting each is now
 .fig_page_moved <- c(width_twips = "width_in", height_twips = "height_in", align = "align",
                      render_width = "width_in", render_height = "height_in",
-                     render_dpi = "dpi", png_device = "png_device", render_format = "format")
+                     render_dpi = "dpi", png_device = "png_device", render_format = "rtf_format")
 .fig_layout_moved <- c(width_in = "width_in", height_in = "height_in")
 
 # What a page says that is now a figure content's tfl_image: one message a

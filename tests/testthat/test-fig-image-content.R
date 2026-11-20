@@ -111,3 +111,20 @@ test_that("the report sheet's figure size converts into the content's tfl_image"
   o2 <- tfl_output("F-1", "figure", page = list(.image = list(width_in = 6)))
   expect_identical(tflspec:::.conv_fig_image(o2, note)$content[[1L]]$args, list(width_in = 6))
 })
+
+test_that("tfl_image: rtf_format emf is render_format; png and none write what they did; another stops", {
+  page <- list(rtf_page = list(orientation = "landscape"))
+  items <- function(img) tfl_output("F-1", "figure", page = page, content = fi_items(img))
+  plain <- fi_fig_call(items(list(width_in = 9.5, dpi = 150L)))
+  expect_identical(fi_fig_call(items(list(width_in = 9.5, dpi = 150L, rtf_format = "png"))), plain)
+  expect_false(grepl("render_format", plain, fixed = TRUE))
+  emf <- fi_fig_call(items(list(width_in = 9.5, dpi = 150L, png_device = "ragg", rtf_format = "emf")))
+  expect_identical(emf, paste0("rtf_figures(rtfplot(content, render_width = 9.5, render_height = 4.5, ",
+                               "render_format = \"emf\"))"))
+  # a figure of R / a template's call: rtf_figures()'s own
+  tp <- tfl_output("F-1", "figure", content = list(tfl_item("tfl_image", list(dpi = 200L, rtf_format = "emf"))))
+  expect_identical(fi_fig_call(tp), "rtf_figures(content, render_format = \"emf\")")
+  expect_identical(fi_fig_call(tfl_output("F-1", "figure")), "rtf_figures(content)")
+  expect_error(fi_fig_call(items(list(rtf_format = "svg"))), "rtf_format is png or emf, not svg", fixed = TRUE)
+  expect_false(nrow(tfl_schema_check(tfl_item("tfl_image", list(rtf_format = "jpeg")))) == 0L)
+})

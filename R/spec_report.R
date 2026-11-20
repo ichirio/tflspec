@@ -109,12 +109,17 @@
     # worked out from the page; blank, the figure's own size
     sz <- .fig_image_size(img, pg, length(tt) + length(fn))
     twips <- function(v) as.integer(round(v * 1440))
+    # the picture in the RTF: png (the default, said by nothing) or emf, a
+    # vector picture -- no resolution, no PNG device then
+    emf <- identical(.fig_rtf_format(img, id), "emf")
+    rf <- if (emf) "emf"
     if (.fig_new_content(output$content)) {
       # drawn at its size on the page, at its resolution: what the page
       # shows is the plot as drawn, never stretched into the box
       fig <- .spec_call("rtfplot", .spec_sym(content),
                         render_width = sz$width_in, render_height = sz$height_in,
-                        render_dpi = as.numeric(img$dpi %||% 300), png_device = img$png_device)
+                        render_dpi = if (!emf) as.numeric(img$dpi %||% 300),
+                        png_device = if (!emf) img$png_device, render_format = rf)
       st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_figures", doc, fig, align = img$align), flow(fa)))
     } else {
       # (a figure of the designer's pieces, a figure template's call, R:
@@ -122,8 +127,8 @@
       st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_figures", doc, .spec_sym(content),
         width_twips = if (sz$mode[["width"]] != "native") twips(sz$width_in),
         height_twips = if (sz$mode[["height"]] != "native") twips(sz$height_in),
-        align = img$align, render_dpi = if (!is.null(img$dpi)) as.numeric(img$dpi),
-        png_device = img$png_device), flow(fa)))
+        align = img$align, render_dpi = if (!emf && !is.null(img$dpi)) as.numeric(img$dpi),
+        png_device = if (!emf) img$png_device, render_format = rf), flow(fa)))
     }
   } else {
     ta <- args_of("rtf_tables")
@@ -190,7 +195,9 @@
       }
       steps[[k]] <- do.call(.spec_call, c(list("rtf_figures", doc, .spec_sym(sym),
         width_twips = num(img$width_in), height_twips = num(img$height_in),
-        align = img$align, titles = tb, footnotes = fb),
+        align = img$align,
+        render_format = if (identical(.fig_rtf_format(img, output$id), "emf")) "emf",
+        titles = tb, footnotes = fb),
         flow[intersect(c("page_break", "space_before"), names(flow))]))
     } else {
       steps[[k]] <- do.call(.spec_call, c(list("rtf_tables", doc, .spec_sym(sym)),
