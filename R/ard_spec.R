@@ -1078,7 +1078,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #' The R code that makes the study's ARD
 #'
 #' One cards / cardx call per analysis row, each result under a name of its
-#' own (`ard_<analysis_id>`) and tagged with its `output_id`, `analysis_id`
+#' own (`.ard_<analysis_id>`) and tagged with its `output_id`, `analysis_id`
 #' and `population_id` (`tag_ard()`), bound into one ARD and saved to the
 #' study key `output` (default `output/ard/ard.rds`).  The code runs from
 #' the study folder, and reads as a person writes it: the tidyverse layout
