@@ -209,13 +209,22 @@
   }
   tw <- as.numeric(unlist(o$band_times))
   if (length(tw) && length(tw) != 2L) stop("fig_km(): ci_options: band_times is two numbers.", call. = FALSE)
-  b <- km.ci::km.ci(km_fit, conf.level = level, tl = if (length(tw)) tw[1L] else NA,
-                    tu = if (length(tw)) tw[2L] else NA, method = band)
-  if (length(b$lower) != length(km_fit$surv)) {
-    stop("fig_km(): km.ci() gave a band of another length than the fit's.", call. = FALSE)
+  # km.ci() takes one curve whose first class is survfit (data.class()):
+  # a survfit2 is passed as a plain survfit, a stratified fit one stratum
+  # at a time
+  one <- function(f) {
+    class(f) <- "survfit"
+    b <- km.ci::km.ci(f, conf.level = level, tl = if (length(tw)) tw[1L] else NA,
+                      tu = if (length(tw)) tw[2L] else NA, method = band)
+    if (length(b$lower) != length(f$surv)) {
+      stop("fig_km(): km.ci() gave a band of another length than the fit's.", call. = FALSE)
+    }
+    list(lower = b$lower, upper = b$upper)
   }
-  km_fit$lower <- b$lower
-  km_fit$upper <- b$upper
+  parts <- if (is.null(km_fit$strata)) list(one(km_fit))
+           else lapply(seq_along(km_fit$strata), function(i) one(km_fit[i]))
+  km_fit$lower <- unlist(lapply(parts, `[[`, "lower"), use.names = FALSE)
+  km_fit$upper <- unlist(lapply(parts, `[[`, "upper"), use.names = FALSE)
   km_fit
 }
 
