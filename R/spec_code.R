@@ -1776,7 +1776,7 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
     bign_n <- isTRUE(attr(output$content, "used"))
     attr(output$content, "used") <- NULL
   }
-  pre <- function(obj) if (bign) .bign_code(obj, n = bign_n)
+  bign_pre <- function(obj) if (bign) .bign_code(obj, n = bign_n)
   # the object the pipe starts from: the output's own name for it, else
   # the ARD when the content normalizes it, else the normalized data
   # the data's steps (`data.steps`, the Rework, the old process_code): R
@@ -1787,7 +1787,7 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
     # the Rework as it is written, the plan from `data`
     .content_rework_need_data(steps, "tfl_content_code()")
     sp <- .content_rework_split(output$content)
-    return(c(pre(output$data$object %||% "ard"), .drop_attached_ns(
+    return(c(bign_pre(output$data$object %||% "ard"), .drop_attached_ns(
                .content_rework_normalize_code(sp$pre, output$data$object %||% "ard", pipe)),
              steps, "",
              .content_table_code(sp$rest, data = data %||% "data",
@@ -1805,7 +1805,7 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
                                    kind = output$kind)))
     }
     # the steps make the data: no normalize_ard() of the defaults after them
-    return(c(pre(output$data$object %||% "ard"), steps, "",
+    return(c(bign_pre(output$data$object %||% "ard"), steps, "",
              .content_table_code(.content_drop_data_steps(output$content),
                                             data = data %||% "data",
                                             plan = plan, pipe = pipe, kind = output$kind)))
@@ -1818,7 +1818,7 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
   # a listing of records: its data part first, the sheets' writer's
   recs <- if (!is.null(study) && identical(output$kind, "listing") &&
               identical(output$data$source, "dataset")) .content_listing_data(output, study)
-  c(recs, if (length(recs)) "", pre(data),
+  c(recs, if (length(recs)) "", bign_pre(data),
     .content_table_code(output$content, data = data, plan = plan, pipe = pipe,
                         kind = output$kind))
 }
