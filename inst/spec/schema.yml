@@ -144,7 +144,7 @@ plan_stat_groups:
   label: {en: "Groups of statistics", ja: "統計量のグループ"}
   tier: other
   description: Columns made of groups of statistics.
-  dots: {style: named, type: "list<stat>", description: "A group's name and its statistics.", example: {n: N, orr_ci: [n, estimate, conf.low, conf.high]}}
+  dots: {style: named, type: "list<stat>", description: "A group's name and its statistics.", example: {"n": N, orr_ci: [n, estimate, conf.low, conf.high]}}
   args:
     .variables: {label: {en: "Variables split", ja: "分ける変数"}, help: "The variables whose statistics are split into the groups. Blank: every variable. e.g. c(\"AGE\", \"BMI\")", type: "list<column>"}
     .others: {label: {en: "Group of the other variables", ja: "ほかの変数のグループ"}, help: "The group the other variables' statistics go to whole. Blank: none. e.g. \"Summary\"", type: string}
@@ -287,7 +287,7 @@ plan_paginate_cols:
     fit: {main: true, label: {en: "Fit to the page", ja: "ページに合わせる"}, help: "TRUE: every page's columns on page 1's scale, filling the width; FALSE: each column keeps its width. e.g. FALSE", type: logical}
     allow_span_break: {main: true, label: {en: "A spanning header may break", ja: "またがる見出しを途中で切ってよい"}, help: "FALSE: a page is not cut inside a spanning header's cell. Blank: TRUE. e.g. FALSE", type: logical}
     order: {main: true, label: {en: "Order of the pages", ja: "ページの順"}, help: "The order the pages come out in: \"across\" a row's column pages one after another, \"down\" all the rows' pages of a block first. Blank: across. e.g. \"down\"", type: "enum[across|down]|list<enum[group|rows|cols]>"}
-    col_header: {label: {en: "Header of the column pages", ja: "列ページの列見出し"}, help: "What each column page's header becomes, as R. Used when the pages need a header other than the table's own. Blank: the table's header, cut with its columns."}
+    col_header: {label: {en: "Header of the column pages", ja: "列ページの列見出し"}, help: "What each column page's header becomes, as R. Used when the pages need a header other than the table's own. Blank: the table's header, cut with its columns.", type: r, input: r}
 
 plan_style:
   package: rtfreporter
@@ -398,7 +398,7 @@ plan_columns:
     row_title: {main: true, label: {en: "Row title", ja: "行の見出し"}, help: "The row heading columns: left aligned (the others centred) and repeated on every column page. Blank: the first column. e.g. row_label", type: "list<column>|list<integer>"}
     auto_width: {main: true, label: {en: "Automatic width", ja: "自動の幅"}, help: "TRUE: each column sized to its content. e.g. TRUE", type: logical}
     sep: {label: {en: "Separator", ja: "区切り"}, help: "The text that joins several column keys in the value columns' names; the spanning header is cut at it. Blank: \"____\" (Placebo____F). Changed only when a value has \"____\" in it. e.g. \"__\"", type: string}
-    cell_format: {label: {en: "Cell formats", ja: "セルの書式"}, help: "A function that formats the cells' text, or a list of them one a column, as R. e.g. function(x) toupper(x)"}
+    cell_format: {label: {en: "Cell formats", ja: "セルの書式"}, help: "A function that formats the cells' text, or a list of them one a column, as R. e.g. function(x) toupper(x)", type: r, input: r}
     column_widths_twips: {label: {en: "Column widths (twips)", ja: "列の幅（twip）"}, help: "Each column's width in twips (1/1440 inch), as R; it replaces the widths above. e.g. c(3000, 1500, 1500)", type: "list<integer>", input: text}
 
 plan_listing:
