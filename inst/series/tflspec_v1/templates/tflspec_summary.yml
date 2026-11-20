@@ -117,7 +117,7 @@ params:
   nest:
     type: map<column,map<column,string>>
     input: table
-    columns: {key: {label: {en: "Nested variable", ja: "入れ子の変数"}}, value: {label: {en: "Parent", ja: "親"}, columns: {key: {label: {en: "Variable", ja: "変数"}}, value: {label: {en: "Value", ja: "値"}}}}}
+    columns: {key: {label: {en: "Nested variable", ja: "入れ子の変数"}}, value: {label: {en: "Under", ja: "親"}, columns: {key: {label: {en: "Parent variable", ja: "親の変数"}}, value: {label: {en: "Level", ja: "水準"}}}}}
     choices: vars(adsl_sub)
     default: ~
     step: content
@@ -152,10 +152,12 @@ params:
     input: table
     columns:
       row_label:
+        label: {en: "Row labels", ja: "行ラベル"}
         type: string
         input: text
         description: The text over the row labels' column.
       .values:
+        label: {en: "Value columns", ja: "値の列"}
         type: string
         input: text
         description: "The text over each value column ({col} the column's value)."

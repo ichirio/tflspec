@@ -3,15 +3,17 @@ labelled <- function(cd) {
     is.character(cd$label_ja) && !is.na(cd$label_ja)
 }
 
-test_that("every table argument has columns, a map its labelled key and value", {
+test_that("every table argument has labelled columns, a map its key and value", {
   check <- function(d, where) {
     for (i in which(d$input == "table")) {
       cols <- d$columns[[i]]
       info <- paste0(where, ": ", d$name[i])
       expect_false(is.null(cols), info = info)
-      if (identical(cols, "params") || !startsWith(d$type[i], "map<")) next
-      expect_setequal(names(cols), c("key", "value"))
-      for (k in names(cols)) expect_true(labelled(cols[[k]]), info = paste(info, k))
+      if (identical(cols, "params")) next
+      if (startsWith(d$type[i], "map<")) expect_setequal(names(cols), c("key", "value"))
+      for (k in names(cols)[nzchar(names(cols))]) {
+        if (is.list(cols[[k]])) expect_true(labelled(cols[[k]]), info = paste(info, k))
+      }
     }
   }
   for (fn in c("normalize_ard", "plan_columns")) check(tfl_arg_defs(fn = fn), fn)
@@ -42,6 +44,11 @@ test_that("a map whose value is a map has its own columns", {
   expect_identical(vl$value$columns$key$label_en, "Code")
   expect_identical(vl$value$columns$value$label_en, "Label")
   expect_true(labelled(vl$value$columns$key))
+  d <- tfl_arg_defs(template = "tflspec_v1/tflspec_summary")
+  nest <- d$columns[[which(d$name == "nest")]]
+  expect_identical(nest$key$label_en, "Nested variable")
+  expect_identical(nest$value$columns$key$label_en, "Parent variable")
+  expect_identical(nest$value$columns$value$label_en, "Level")
 })
 
 test_that("new_row names a column of the table, else it stops", {

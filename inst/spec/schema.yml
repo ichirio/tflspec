@@ -393,7 +393,7 @@ plan_columns:
   label: {en: "Column widths and alignment", ja: "列の幅と揃え"}
   tier: usual
   args:
-    widths: {main: true, label: {en: "Widths", ja: "幅"}, help: "The columns' relative widths, by column (.values every value column). e.g. row_label 5, .values 2", type: "vec<column, number>|list<number>", input: table, columns: {column: {type: column, input: pick, choices: columns}, width: {type: number, input: text}}}
+    widths: {main: true, label: {en: "Widths", ja: "幅"}, help: "The columns' relative widths, by column (.values every value column). e.g. row_label 5, .values 2", type: "vec<column, number>|list<number>", input: table, columns: {column: {label: {en: "Column", ja: "列"}, type: column, input: pick, choices: columns}, width: {label: {en: "Width", ja: "幅"}, type: number, input: text}}}
     decimal: {main: true, label: {en: "Decimal alignment", ja: "小数点揃え"}, help: "The columns whose numbers line up at the decimal point (.values every value column). e.g. .values", type: "list<column>"}
     row_title: {main: true, label: {en: "Row title", ja: "行の見出し"}, help: "The row heading columns: left aligned (the others centred) and repeated on every column page. Blank: the first column. e.g. row_label", type: "list<column>|list<integer>"}
     auto_width: {main: true, label: {en: "Automatic width", ja: "自動の幅"}, help: "TRUE: each column sized to its content. e.g. TRUE", type: logical}
