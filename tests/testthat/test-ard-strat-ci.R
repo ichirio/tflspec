@@ -27,7 +27,8 @@ test_that("a stratified Wilson row's stratum is made a factor, and its numbers a
   code <- tfl_ard_code(sp, save = FALSE)
   expect_true(any(grepl("mutate(adsl_sub, AGEGR1 = as.factor(AGEGR1))", code,
                         fixed = TRUE)))
-  expect_true(any(grepl("ard_a <- ard_a_data |>", code, fixed = TRUE)))
+  # (since tflspec#867 the program's ARD temporaries start with a dot)
+  expect_true(any(grepl(".ard_a <- .ard_a_data |>", code, fixed = TRUE)))
   expect_true(any(grepl("strata = AGEGR1,", code, fixed = TRUE)))
 
   adam <- exact_data()
