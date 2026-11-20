@@ -13,8 +13,10 @@ test_that("texts built of constants are typed where a list of texts goes", {
                    c("W0", "W4", "W8", "W12", "W16", "W20", "W24"))
   expect_identical(.schema_r_texts(tfl_r('sprintf("Day %d", 1:3)')), c("Day 1", "Day 2", "Day 3"))
   expect_identical(.schema_r_texts(tfl_r('c("BL", paste("Week", c(4, 8)))')), c("BL", "Week 4", "Week 8"))
-  expect_identical(.schema_r_texts(tfl_r("month.abb[1]")), NULL)
-  expect_identical(.schema_r_texts(tfl_r("toupper(letters[1:3])")), NULL)
+  # (picked of a constant by constants, since round 22; not by an object)
+  expect_identical(.schema_r_texts(tfl_r("month.abb[1]")), "Jan")
+  expect_identical(.schema_r_texts(tfl_r("toupper(letters[1:3])")), c("A", "B", "C"))
+  expect_null(.schema_r_texts(tfl_r("month.abb[visit]")))
   expect_identical(.schema_r_texts(tfl_r("toupper(month.abb)"))[1:2], c("JAN", "FEB"))
   # numbers alone, a column or an object, another function: not texts
   expect_null(.schema_r_texts(tfl_r("seq(0, 24, by = 4)")))
