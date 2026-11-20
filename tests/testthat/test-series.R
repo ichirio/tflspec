@@ -1,5 +1,5 @@
 # The series layer (R/series.R): series folders, the !series / !study /
-# !fixed / !unset tags, study.yml series_settings:, spec/series.lock.
+# !fixed / !unset tags.  A study's copies: test-study-template-copy.R.
 # Fictional data only.
 
 series_test_root <- function() {
@@ -96,18 +96,32 @@ test_that("tfl_series_read() reads series.yml", {
   expect_error(tfl_series_read("copy_v1", dir = root), "series \"copy_v1\"")
 })
 
+test_that("tfl_series_read() reads the values' descriptions", {
+  root <- series_test_root()
+  on.exit(unlink(root, recursive = TRUE), add = TRUE)
+  series_test_make(root)
+  # none: an empty named character vector
+  s <- tfl_series_read("demo_v1", dir = root)
+  expect_identical(s$descriptions, stats::setNames(character(), character()))
+  f <- file.path(root, "demo_v1", "series.yml")
+  writeLines(c(readLines(f), "descriptions:", "  max_rows: The most rows a page holds."), f)
+  s <- tfl_series_read("demo_v1", dir = root)
+  expect_identical(s$descriptions, c(max_rows = "The most rows a page holds."))
+  writeLines(c(readLines(f), "  style: [a, b]"), f)
+  expect_error(tfl_series_read("demo_v1", dir = root), "descriptions: is a map")
+})
+
 test_that(".series_resolve() replaces the tags and records the origins", {
   root <- series_test_root()
   on.exit(unlink(root, recursive = TRUE), add = TRUE)
   series_test_make(root, templates = list(demog = series_test_demog))
   s <- tfl_series_read("demo_v1", dir = root)
   x <- tflspec:::.series_read_yaml(file.path(s$path, "templates", "demog.yml"))
-  study <- list(settings = list(rounding = "sas", output = list(note = "Fictional study")),
-                series_settings = list(demo_v1 = list(style = "standard", total = TRUE)))
+  study <- list(settings = list(rounding = "sas", output = list(note = "Fictional study")))
   r <- tflspec:::.series_resolve(x, s, study = study, template = "demo_v1/demog")
-  expect_true(r$params$total)
+  expect_false(r$params$total)
   expect_identical(r$params$formats$mean, 2L)
-  expect_identical(r$style, "standard")
+  expect_identical(r$style, "tfl_standard")
   expect_identical(r$extends, "defaults")
   expect_identical(r$data[[1]]$population, "SAF")
   expect_identical(r$params$page_note, "Fictional study")
@@ -115,12 +129,12 @@ test_that(".series_resolve() replaces the tags and records the origins", {
   expect_identical(as.vector(r$params$denominator), "adsl_sub")
   expect_true(attr(r$params$denominator, "fixed"))
   o <- attr(r, "origins")
-  expect_identical(o[["params.total"]], "study_series")
+  expect_identical(o[["params.total"]], "series")
   expect_identical(o[["params.formats"]], "series")
   expect_identical(o[["params.denominator"]], "fixed")
   expect_identical(o[["params.page_note"]], "study_settings")
   expect_identical(o[["params.missing_row"]], "template")
-  expect_identical(o[["style"]], "study_series")
+  expect_identical(o[["style"]], "series")
   expect_identical(o[["data.1.population"]], "series")
   expect_identical(o[["data.1.from"]], "template")
   # a report's own values
@@ -174,17 +188,12 @@ test_that("!fixed keeps the value's type; tags in flow style and sequences", {
   expect_identical(o[["d.1"]], "series")
 })
 
-test_that("series_settings: an unknown key warns, naming the series and the key", {
-  root <- series_test_root()
-  on.exit(unlink(root, recursive = TRUE), add = TRUE)
-  series_test_make(root)
-  s <- tfl_series_read("demo_v1", dir = root)
-  study <- list(series_settings = list(demo_v1 = list(max_rows = 25L, colour = "red"),
-                                       other_v1 = list(colour = "blue")))
-  expect_warning(r <- tflspec:::.series_resolve(list(m = structure(list(key = "max_rows"), class = "tfl_series_ref")),
-                                                s, study = study),
-                 "series_settings: demo_v1: colour")
-  expect_identical(r$m, 25L)
+test_that("study.yml series_settings: stops, naming each series and the next step", {
+  study <- list(series_settings = list(demo_v1 = list(max_rows = 25L), other_v1 = list(a = 1L)))
+  expect_error(tflspec:::.series_settings_gone(study, "C:/st"),
+               "demo_v1: move these values into C:/st/spec/series/demo_v1/series.yml values:")
+  expect_error(tflspec:::.series_settings_gone(study), "other_v1: move these values into <study>")
+  expect_null(tflspec:::.series_settings_gone(list(settings = list(a = 1))))
 })
 
 test_that(".series_fmt_list() splits base and VAR:stat formats", {
@@ -199,66 +208,4 @@ test_that(".series_fmt_list() splits base and VAR:stat formats", {
   expect_identical(r$base, list(N = 0L, mean = 2L, sd = 2.5))
   expect_identical(r$vars, list(AGE = list(mean = 1L, sd = 2L), BMI = list(mean = 1L)))
   expect_identical(tflspec:::.series_fmt_list(NULL), list(base = list(), vars = list()))
-})
-
-test_that("tfl_pin_series() writes the lock; tfl_series_check_lock() warns on a change", {
-  root <- series_test_root()
-  on.exit(unlink(root, recursive = TRUE), add = TRUE)
-  lib <- file.path(root, "series")
-  dir.create(lib)
-  series_test_make(lib, "demo_v1", templates = list(demog = series_test_demog,
-                                                     ae_soc_pt = "template: ae_soc_pt",
-                                                     unused = "template: unused"))
-  series_test_make(lib, "acme_v1", templates = list(listing = "template: listing"))
-  old <- options(tflspec.series_dir = lib)
-  on.exit(options(old), add = TRUE)
-  study <- file.path(root, "STUDY-X")
-  dir.create(file.path(study, "spec", "outputs", "sub"), recursive = TRUE)
-  writeLines(c("id: T-1", "kind: table", "template:", "  name: demo_v1/demog",
-               "  analysis: {by: TRT01A}"), file.path(study, "spec", "outputs", "T-1.yml"))
-  writeLines(c("outputs:", "  - id: T-2", "    kind: table", "    template: {name: demo_v1/ae_soc_pt}",
-               "  - id: L-1", "    kind: listing", "    template: {name: acme_v1/listing}"),
-             file.path(study, "spec", "outputs", "sub", "T-2.yml"))
-  writeLines(c("id: F-1", "kind: figure", "contents:", "  km:",
-               "    template: {name: km_survival, args: {by: TRT01A}}"),
-             file.path(study, "spec", "outputs", "F-1.yml"))
-  f <- tfl_pin_series(study)
-  expect_identical(f, file.path(study, "spec", "series.lock"))
-  expect_true(grepl("^# ", readLines(f)[1]))
-  lock <- yaml::read_yaml(f)
-  expect_identical(names(lock), c("acme_v1", "demo_v1"))
-  expect_identical(sort(names(lock$demo_v1$templates)), c("ae_soc_pt", "demog"))
-  expect_identical(lock$demo_v1$series,
-                   unname(as.character(tools::md5sum(file.path(lib, "demo_v1", "series.yml")))))
-  expect_identical(lock$demo_v1$path, normalizePath(file.path(lib, "demo_v1"), winslash = "/"))
-  expect_identical(names(lock$acme_v1$templates), "listing")
-
-  chk <- expect_silent(tfl_series_check_lock(study))
-  expect_true(all(chk$status == "ok"))
-  expect_identical(nrow(chk), 5L)
-
-  cat("# changed\n", file = file.path(lib, "demo_v1", "templates", "demog.yml"), append = TRUE)
-  expect_warning(chk <- tfl_series_check_lock(study), "demog.yml changed")
-  expect_identical(chk$status[!is.na(chk$template) & chk$template == "demog"], "changed")
-  unlink(file.path(lib, "acme_v1", "templates", "listing.yml"))
-  expect_warning(expect_warning(tfl_series_check_lock(study), "listing.yml is missing"), "demog.yml changed")
-
-  # only the reports named
-  f2 <- tfl_pin_series(study, reports = "T-1.yml")
-  expect_identical(names(yaml::read_yaml(f2)), "demo_v1")
-  expect_error(tfl_pin_series(study, reports = "none.yml"), "no report file")
-  writeLines("template: listing", file.path(lib, "acme_v1", "templates", "listing.yml"))
-  writeLines(c("id: T-3", "kind: table", "template: {name: demo_v1/nope}"),
-             file.path(study, "spec", "outputs", "T-3.yml"))
-  expect_error(tfl_pin_series(study), "no template demo_v1/nope")
-})
-
-test_that("tfl_pin_series() with no series writes an empty lock", {
-  root <- series_test_root()
-  on.exit(unlink(root, recursive = TRUE), add = TRUE)
-  dir.create(file.path(root, "spec", "outputs"), recursive = TRUE)
-  f <- tfl_pin_series(root)
-  expect_length(yaml::read_yaml(f), 0L)
-  expect_identical(nrow(tfl_series_check_lock(root)), 0L)
-  expect_error(tfl_series_check_lock(file.path(root, "none")), "no ")
 })

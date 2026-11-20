@@ -14,10 +14,8 @@
 #'     `template:`).}
 #'   \item{`template`}{the template's own default (written in the
 #'     template, untagged; also `!unset` and no default).}
-#'   \item{`series`}{`!series <key>`: the series' value (`series.yml`
-#'     `values:`).}
-#'   \item{`study_series`}{`!series <key>`: the study's value of the series
-#'     (`study.yml` `series_settings:`).}
+#'   \item{`series`}{`!series <key>`: the value in the study's copy of
+#'     `series.yml` (`values:`; the source's with no study folder).}
 #'   \item{`study_settings`}{`!study <key>`: the study's setting
 #'     (`study.yml` `settings:`).}
 #'   \item{`fallback`}{`!study <key>` and the study has no value (or there
@@ -32,14 +30,19 @@
 #' A map argument whose default is `!series` is taken as the report writes
 #' it, not yet merged by name over the series' map.
 #'
+#' As [tfl_template_resolve()] does, a study given with its folder reads
+#' only its own copy of the series and the template
+#' (`<study>/spec/series/<series>/`, [tfl_copy_templates()]); a study given
+#' as a list (or none) reads the source folders.
+#'
 #' @param template A series template, `"<series>/<template>"`
 #'   (`"tflspec_v1/demog"`), or a report SPEC that names one (`template:
 #'   name:`): a list, as read, or its YAML file.  A template that is not a
 #'   series template (the registry's `"demog"`) stops.
-#' @param study The study: a [tfl_read_study_spec()] object, its
-#'   `study.yml` read as a list, the file or the study folder; `NULL` for
-#'   none (a `!series` reference then takes the series' value, a `!study`
-#'   one its fallback).
+#' @param study The study: a [tfl_read_study_spec()] object, the study
+#'   folder, its `study.yml` file, or `study.yml` read as a list; `NULL` for
+#'   none (a `!series` reference then takes the source series' value, a
+#'   `!study` one its fallback).
 #' @param args The report's arguments, a named list (flat, or by step
 #'   section as a report's `template:` writes them: `analysis:`,
 #'   `content:`, ...); may be empty.  With a report in `template`, they go
@@ -60,15 +63,14 @@
 #'   Its attribute `"data"` holds the template's `data:` rows (with a
 #'   report's rows merged in by id) with the arguments filled in, as
 #'   [tfl_template_resolve()] makes them.
-#' @seealso [tfl_template_resolve()], [tfl_arg_defs()]
+#' @seealso [tfl_template_resolve()], [tfl_arg_defs()], [tfl_copy_templates()]
 #' @examples
 #' v <- tfl_template_values("tflspec_v1/demog")
 #' v[, c("name", "source", "key")]
 #' v$value[[match("total", v$name)]]
 #' v <- tfl_template_values("tflspec_v1/demog",
-#'                          study = list(series_settings = list(tflspec_v1 = list(total = TRUE))),
-#'                          args = list(by = "TRT01A"))
-#' v[v$name %in% c("by", "total"), c("name", "source", "key")]
+#'                          args = list(by = "TRT01A", total = TRUE))
+#' v[v$name %in% c("by", "total", "max_rows"), c("name", "source", "key")]
 #' attr(v, "data")[[1]]$population
 #' @export
 tfl_template_values <- function(template, study = NULL, args = list()) {
@@ -93,13 +95,14 @@ tfl_template_values <- function(template, study = NULL, args = list()) {
   if (!is.null(args) && (!is.list(args) || (length(args) && is.null(names(args))))) {
     stop(who, ": `args` is a named list of the report's arguments.", call. = FALSE)
   }
-  if (inherits(study, "tfl_study_spec")) study <- study$study %||% list()
+  if (inherits(study, "tfl_study_spec")) study <- .tr_study_of(study)
   study <- .tr_study(study, who)
 
-  tf <- .template_file(template)
-  series <- tfl_series_read(sub("/.*$", "", template), dir = dirname(dirname(dirname(tf))))
+  study_dir <- attr(study, "study_dir")
+  tf <- .template_file(template, study_dir)
+  series <- .tr_series(template, tf, study_dir, who)
   tpl <- .series_resolve(.series_read_yaml(tf), series, study, template)
-  defs <- tfl_arg_defs(template = template)
+  defs <- tfl_arg_defs(template = template, study_dir = study_dir)
 
   given <- list()
   if (!is.null(report)) {

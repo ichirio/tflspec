@@ -189,7 +189,7 @@
 }
 
 # A fingerprint of a report as the widths are made from it: resolved over
-# its layers (a layer's code list counts), the widths of its plan_columns
+# its layers, the widths of its plan_columns
 # left out (so it is the same before and after they are written), as the
 # text its file would hold.  NULL when it cannot be resolved.
 .ai_widths_print <- function(o, st) {

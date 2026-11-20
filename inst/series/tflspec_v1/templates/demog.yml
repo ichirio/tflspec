@@ -83,6 +83,21 @@ params:
     step: content
     tier: usual
     description: The row label of each variable; empty for the variable's label.
+  value_labels:
+    type: map<column,r>
+    input: table
+    choices: vars(adsl_sub)
+    default:
+      SEX: !r study$codelists$SEX
+      RACE: !r study$codelists$RACE
+      ETHNIC: !r study$codelists$ETHNIC
+      AGEGR1: !r study$codelists$AGEGR1
+    step: content
+    tier: usual
+    description: The text of each categorical variable's values, by variable
+      (R; the study's code lists by name, study$codelists$<name>). A
+      variable the report does not show is left out, and so is a list the
+      study has not got.
   cells:
     type: map<string,string>
     input: table

@@ -12,17 +12,18 @@ tfl_template_resolve(report, template = NULL, study = NULL)
 \item{template}{A template, \code{"<series>/<template>"}; default the report's
 \verb{template: name:}.}
 
-\item{study}{The study: its \code{study.yml} read as a list (\verb{settings:},
-\verb{series_settings:}), the file, or the study folder; \code{NULL} for none.}
+\item{study}{The study: the study folder, its \code{study.yml} file, or
+\code{study.yml} read as a list (\verb{settings:}; with attribute \code{"study_dir"},
+the study folder, it reads that study's copies); \code{NULL} for none.}
 }
 \value{
 A \code{tfl_output} (the report as a code SPEC).  Its attribute
 \code{"args"} holds the template's arguments as used, and \code{"origins"} where
 each came from: \code{"report"}, \code{"template"} (the template's own default),
-\code{"series"} (\code{!series}, the series' \verb{values:}), \code{"study_series"}
-(\code{!series}, the study's \verb{series_settings:}), \code{"study_settings"}
-(\code{!study}, the study's \verb{settings:}), \code{"fallback"} (\code{!study}, the study
-has no value: the argument is left unset) or \code{"fixed"} (\code{!fixed}).
+\code{"series"} (\code{!series}, from the study's copy of \code{series.yml}),
+\code{"study_settings"} (\code{!study}, the study's erb{settings:}), \code{"fallback"}
+(\code{!study}, the study has no value: the argument is left unset) or
+\code{"fixed"} (\code{!fixed}).
 }
 \description{
 Reads the report's template (\verb{template: name: <series>/<template>}), puts
@@ -86,10 +87,18 @@ item has two keys: \verb{fail:} (one \verb{derive:} operation, as above) and
 order once \verb{derive:} is; when an item's \code{fail} is something (the \verb{if:}
 rule), resolving stops with \verb{<template>: <message>}.  An unknown key, a
 missing \code{fail} or \code{message}, or a \verb{check:} that is not a list stops too.
-An operation inside \code{then}/\code{else} is not worked out: derive a name for it
+An operation inside \code{then}/\verb{else} is not worked out: derive a name for it
 and write \code{"{name}"}.
+
+A study reads its own copy of the series and the template
+(\verb{<study>/spec/series/<series>/}, \code{\link[=tfl_copy_templates]{tfl_copy_templates()}}) and nothing
+else: a template it has not copied stops, with the call that copies it.
+Only a study given without its folder (\code{study.yml} read as a list, or
+\code{NULL}) reads the source folders (\code{\link[=tfl_series_dir]{tfl_series_dir()}}).  A \code{study.yml}
+with \verb{series_settings:} stops: a study's series values are in its copy
+of \code{series.yml} (\code{\link[=tfl_series_values_set]{tfl_series_values_set()}}).
 }
 \seealso{
-\code{\link[=tfl_arg_defs]{tfl_arg_defs()}}, \code{\link[=tfl_series_dir]{tfl_series_dir()}}, \code{\link[=tfl_template_values]{tfl_template_values()}}
-(the arguments' record without a whole report)
+\code{\link[=tfl_arg_defs]{tfl_arg_defs()}}, \code{\link[=tfl_copy_templates]{tfl_copy_templates()}}, \code{\link[=tfl_series_dir]{tfl_series_dir()}},
+\code{\link[=tfl_template_values]{tfl_template_values()}} (the arguments' record without a whole report)
 }

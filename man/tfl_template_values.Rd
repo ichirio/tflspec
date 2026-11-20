@@ -11,10 +11,10 @@ tfl_template_values(template, study = NULL, args = list())
 (\code{"tflspec_v1/demog"}), or a report SPEC that names one (\verb{template: name:}): a list, as read, or its YAML file.  A template that is not a
 series template (the registry's \code{"demog"}) stops.}
 
-\item{study}{The study: a \code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}} object, its
-\code{study.yml} read as a list, the file or the study folder; \code{NULL} for
-none (a \code{!series} reference then takes the series' value, a \code{!study}
-one its fallback).}
+\item{study}{The study: a \code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}} object, the study
+folder, its \code{study.yml} file, or \code{study.yml} read as a list; \code{NULL} for
+none (a \code{!series} reference then takes the source series' value, a
+\code{!study} one its fallback).}
 
 \item{args}{The report's arguments, a named list (flat, or by step
 section as a report's \verb{template:} writes them: \verb{analysis:},
@@ -55,10 +55,8 @@ The \code{source} words are the resolver's \code{"origins"}:
 \verb{template:}).}
 \item{\code{template}}{the template's own default (written in the
 template, untagged; also \code{!unset} and no default).}
-\item{\code{series}}{\verb{!series <key>}: the series' value (\code{series.yml}
-\verb{values:}).}
-\item{\code{study_series}}{\verb{!series <key>}: the study's value of the series
-(\code{study.yml} \verb{series_settings:}).}
+\item{\code{series}}{\verb{!series <key>}: the value in the study's copy of
+\code{series.yml} (\verb{values:}; the source's with no study folder).}
 \item{\code{study_settings}}{\verb{!study <key>}: the study's setting
 (\code{study.yml} \verb{settings:}).}
 \item{\code{fallback}}{\verb{!study <key>} and the study has no value (or there
@@ -72,17 +70,21 @@ A value that is \code{!unset} (the argument is left out of the call) is a
 
 A map argument whose default is \code{!series} is taken as the report writes
 it, not yet merged by name over the series' map.
+
+As \code{\link[=tfl_template_resolve]{tfl_template_resolve()}} does, a study given with its folder reads
+only its own copy of the series and the template
+(\verb{<study>/spec/series/<series>/}, \code{\link[=tfl_copy_templates]{tfl_copy_templates()}}); a study given
+as a list (or none) reads the source folders.
 }
 \examples{
 v <- tfl_template_values("tflspec_v1/demog")
 v[, c("name", "source", "key")]
 v$value[[match("total", v$name)]]
 v <- tfl_template_values("tflspec_v1/demog",
-                         study = list(series_settings = list(tflspec_v1 = list(total = TRUE))),
-                         args = list(by = "TRT01A"))
-v[v$name \%in\% c("by", "total"), c("name", "source", "key")]
+                         args = list(by = "TRT01A", total = TRUE))
+v[v$name \%in\% c("by", "total", "max_rows"), c("name", "source", "key")]
 attr(v, "data")[[1]]$population
 }
 \seealso{
-\code{\link[=tfl_template_resolve]{tfl_template_resolve()}}, \code{\link[=tfl_arg_defs]{tfl_arg_defs()}}
+\code{\link[=tfl_template_resolve]{tfl_template_resolve()}}, \code{\link[=tfl_arg_defs]{tfl_arg_defs()}}, \code{\link[=tfl_copy_templates]{tfl_copy_templates()}}
 }
