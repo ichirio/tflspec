@@ -6,7 +6,8 @@
 #' `tfl_series_list()` lists the series in the folders [tfl_series_dir()]
 #' looks in (the first folder that has a series's name wins).
 #' `tfl_series_settings()` gives a study's values of a series: the series's
-#' `values:` with the study's `series_settings:` over them.
+#' `values:` with the study's `series_settings:` over them (a series value
+#' written `!study K` is the study's `settings:` value, or its fallback).
 #' `tfl_series_settings_set()` writes a study's values of a series into its
 #' `study.yml` (`series_settings: <series>:`); the rest of the file is kept
 #' as it is.
@@ -66,6 +67,12 @@ tfl_series_settings <- function(study, series = NULL) {
   own <- study$series_settings[[series]] %||% list()
   out <- s$values
   origins <- stats::setNames(rep("series", length(out)), names(out))
+  # a series value that is the study's (!study): its value for this study
+  # (still the series's value: the study's series_settings: do not hold it)
+  for (k in names(out)) {
+    if (!inherits(out[[k]], "tfl_study_ref")) next
+    out[k] <- list(.series_study_ref_value(study, out[[k]])$value)
+  }
   for (k in intersect(names(own), names(out))) {
     out[k] <- list(own[[k]])
     origins[[k]] <- "study"

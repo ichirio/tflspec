@@ -51,6 +51,12 @@
 #'     max_rows: 25
 #' ```
 #'
+#' A value under `values:` may be the study's: `!study K` reads the study's
+#' `settings:` at `K`, and `!study {key: K, fallback: v}` gives `v` when the
+#' study has no `K` (`style_listing: !study {key: style, fallback:
+#' tfl_small}`: the study's style, else `tfl_small`).  A study's
+#' `series_settings:` value is read before it.
+#'
 #' `tfl_series_dir()` finds the folder of a series.  It looks in `dir`, then
 #' `getOption("tflspec.series_dir")`, then
 #' `file.path(tools::R_user_dir("tflplanner", "data"), "standards", "series")`,
@@ -94,7 +100,7 @@ tfl_series_read <- function(series, dir = NULL) {
   .series_check_name(series, "tfl_series_read()")
   path <- tfl_series_dir(series, dir = dir)
   file <- file.path(path, "series.yml")
-  y <- .yaml_read_file(file, handlers = .yaml_handlers())
+  y <- .yaml_read_file(file, handlers = c(.yaml_handlers(), .series_handlers()["study"]))
   if (is.null(y)) y <- list()
   if (!.series_is_map(y)) stop("tfl_series_read(): ", file, " is not a map.", call. = FALSE)
   if (!is.null(y$name) && !identical(y$name, series)) {
@@ -123,14 +129,36 @@ print.tfl_series <- function(x, ...) {
 
 # ---- tags -------------------------------------------------------------------
 
-# .yaml_handlers() and the series tags: !series K, !study K, !fixed v.
-# A tagged value is kept as a marker (a list, so that .yaml_seq() does not
-# fold it into a vector); .series_resolve() replaces it.
+# .yaml_handlers() and the series tags: !series K, !study K (or !study
+# {key: K, fallback: v}), !fixed v.  A tagged value is kept as a marker (a
+# list, so that .yaml_seq() does not fold it into a vector);
+# .series_resolve() replaces it.
 .series_handlers <- function() {
   c(.yaml_handlers(),
     list(series = function(x) structure(list(key = as.character(x)), class = "tfl_series_ref"),
-         study = function(x) structure(list(key = as.character(x)), class = "tfl_study_ref"),
+         study = .series_study_tag,
          fixed = function(x) structure(list(value = .series_fixed_value(x)), class = "tfl_fixed_ref")))
+}
+
+# A `!study` tag: `!study K`, or `!study {key: K, fallback: v}` (`v` when the
+# study's settings: have no K)
+.series_study_tag <- function(x) {
+  if (!is.list(x)) return(structure(list(key = as.character(x)), class = "tfl_study_ref"))
+  bad <- setdiff(names(x), c("key", "fallback"))
+  if (is.null(names(x)) || length(bad) || !is.character(x$key) || length(x$key) != 1L) {
+    stop("!study is !study K or !study {key: K, fallback: value}.", call. = FALSE)
+  }
+  out <- list(key = x$key)
+  if ("fallback" %in% names(x)) out["fallback"] <- list(x$fallback)
+  structure(out, class = "tfl_study_ref")
+}
+
+# The value of a `!study` ref for a study: list(value, study = TRUE when the
+# study's settings: gave it); its fallback (else tfl_unset()) when not
+.series_study_ref_value <- function(study, ref) {
+  v <- .series_study_value(study, ref$key)
+  if (!inherits(v, "tfl_unset")) return(list(value = v, study = TRUE))
+  list(value = if ("fallback" %in% names(ref)) ref$fallback else v, study = FALSE)
 }
 
 # The value of a `!fixed` tag.  The reader gives a tagged scalar as its
@@ -174,7 +202,12 @@ print.tfl_series <- function(x, ...) {
   note <- function(path, o) origins[[if (length(path)) paste(path, collapse = ".") else "."]] <<- o
   lookup <- function(key) {
     if (!is.null(own) && key %in% names(own)) return(list(value = own[[key]], origin = "study"))
-    if (key %in% names(series$values)) return(list(value = series$values[[key]], origin = "series"))
+    if (key %in% names(series$values)) {
+      v <- series$values[[key]]
+      if (!inherits(v, "tfl_study_ref")) return(list(value = v, origin = "series"))
+      hit <- .series_study_ref_value(study, v)
+      return(list(value = hit$value, origin = if (hit$study) "study" else "series"))
+    }
     stop(where, ": !series ", key, ": no value ", key, " in series ", sname,
          " (series.yml values:) or in study.yml series_settings: ", sname, ":.", call. = FALSE)
   }
@@ -185,9 +218,9 @@ print.tfl_series <- function(x, ...) {
       return(hit$value)
     }
     if (inherits(v, "tfl_study_ref")) {
-      val <- .series_study_value(study, v$key)
-      note(path, "study")
-      return(val)
+      hit <- .series_study_ref_value(study, v)
+      note(path, if (hit$study || !"fallback" %in% names(v)) "study" else o)
+      return(hit$value)
     }
     if (inherits(v, "tfl_fixed_ref")) {
       inner <- walk(v$value, path, "fixed")

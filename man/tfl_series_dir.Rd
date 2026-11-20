@@ -36,6 +36,11 @@ changes a series's values in \code{study.yml}:
     max_rows: 25
 }\if{html}{\out{</div>}}
 
+A value under \verb{values:} may be the study's: \verb{!study K} reads the study's
+\verb{settings:} at \code{K}, and \verb{!study \{key: K, fallback: v\}} gives \code{v} when the
+study has no \code{K} (\verb{style_listing: !study \{key: style, fallback: tfl_small\}}: the study's style, else \code{tfl_small}).  A study's
+\verb{series_settings:} value is read before it.
+
 \code{tfl_series_dir()} finds the folder of a series.  It looks in \code{dir}, then
 \code{getOption("tflspec.series_dir")}, then
 \code{file.path(tools::R_user_dir("tflplanner", "data"), "standards", "series")},

@@ -9,7 +9,8 @@ fixes: []
 values:
   extends: [defaults]
   style: tfl_standard
-  style_listing: tfl_small
+  # a listing's style: the study's settings.style, else tfl_small
+  style_listing: !study {key: style, fallback: tfl_small}
   population_safety: SAF
   population_efficacy: FAS
   formats: {N: 0, mean: 2, sd: 3, median: 1, min: 0, max: 0, p: "xx.x%", "AGE:mean": 1, "AGE:sd": 2}

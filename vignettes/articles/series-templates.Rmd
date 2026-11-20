@@ -299,6 +299,12 @@ cat(readLines(system.file("series", "tflspec_v1", "series.yml", package = "tflsp
     sep = "\n")
 ```
 
+A value may be the study's own: `style_listing`, the style of the
+listing templates, is `!study {key: style, fallback: tfl_small}`, the
+study's `settings.style`, and `tfl_small` only when the study has none.
+So the header and the footnotes the study's style gives reach the
+listings too.
+
 A study changes them in its `study.yml`, under `series_settings:`. The
 study's value is read first; a key the study does not write keeps the
 series's value:

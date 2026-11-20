@@ -37,7 +37,8 @@ the study's whole \verb{series_settings:} block as written.}
 \code{tfl_series_list()} lists the series in the folders \code{\link[=tfl_series_dir]{tfl_series_dir()}}
 looks in (the first folder that has a series's name wins).
 \code{tfl_series_settings()} gives a study's values of a series: the series's
-\verb{values:} with the study's \verb{series_settings:} over them.
+\verb{values:} with the study's \verb{series_settings:} over them (a series value
+written \verb{!study K} is the study's \verb{settings:} value, or its fallback).
 \code{tfl_series_settings_set()} writes a study's values of a series into its
 \code{study.yml} (\verb{series_settings: <series>:}); the rest of the file is kept
 as it is.
