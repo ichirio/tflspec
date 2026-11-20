@@ -1,7 +1,8 @@
 # tflspec_v1/series.yml: the series's one common file.  A template reads a
-# value here only where it writes `!series <key>`; a study's
-# `series_settings.tflspec_v1` block is read first.  descriptions: says what
-# each value means (one line of English a key, for a screen that shows them).
+# value here only where it writes `!series <key>`.  A study reads its own
+# copy (spec/series/tflspec_v1/series.yml, tfl_copy_templates()) and changes
+# a value there.  descriptions: says what each value means (one line of
+# English a key, for a screen that shows them).
 name: tflspec_v1
 label: tflspec templates
 released: 2026-11-17
