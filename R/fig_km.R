@@ -216,10 +216,16 @@
     class(f) <- "survfit"
     b <- km.ci::km.ci(f, conf.level = level, tl = if (length(tw)) tw[1L] else NA,
                       tu = if (length(tw)) tw[2L] else NA, method = band)
-    if (length(b$lower) != length(f$surv)) {
-      stop("fig_km(): km.ci() gave a band of another length than the fit's.", call. = FALSE)
+    # the band covers tl..tu only: km.ci() cuts the curve to those times;
+    # put it back on the fit's times, NA (no band) outside them
+    at <- match(b$time, f$time)
+    if (anyNA(at)) {
+      stop("fig_km(): km.ci() gave a band at times the fit has not got.", call. = FALSE)
     }
-    list(lower = b$lower, upper = b$upper)
+    lower <- upper <- rep(NA_real_, length(f$surv))
+    lower[at] <- b$lower
+    upper[at] <- b$upper
+    list(lower = lower, upper = upper)
   }
   parts <- if (is.null(km_fit$strata)) list(one(km_fit))
            else lapply(seq_along(km_fit$strata), function(i) one(km_fit[i]))
@@ -372,7 +378,8 @@
 #'   `km.ci::km.ci()` (a Suggests package: install it with
 #'   `install.packages("km.ci")`), at the fit's confidence level, which is
 #'   then one of 0.90, 0.95, 0.99 (km.ci's tables); `band_times`, the
-#'   band's time window, two numbers (`NULL`: km.ci's).  The legend's and
+#'   band's time window, two numbers (`NULL`: km.ci's, the first to the last
+#'   event time); outside it the curve has no band.  The legend's and
 #'   the summary table's medians keep the pointwise interval.
 #' @param median_options The median and landmark lines' look: `linetype`,
 #'   `colour`, `linewidth`.

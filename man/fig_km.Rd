@@ -141,7 +141,8 @@ precision), \code{"loghall"} or \code{"logep"} (their log forms), from
 \code{km.ci::km.ci()} (a Suggests package: install it with
 \code{install.packages("km.ci")}), at the fit's confidence level, which is
 then one of 0.90, 0.95, 0.99 (km.ci's tables); \code{band_times}, the
-band's time window, two numbers (\code{NULL}: km.ci's).  The legend's and
+band's time window, two numbers (\code{NULL}: km.ci's, the first to the last
+event time); outside it the curve has no band.  The legend's and
 the summary table's medians keep the pointwise interval.}
 
 \item{median_options}{The median and landmark lines' look: \code{linetype},
