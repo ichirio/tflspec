@@ -398,6 +398,25 @@ tfl_read_define <- function(path, lang = "en") {
              kind = character(), stringsAsFactors = FALSE)
 }
 
+.define_datasets_empty <- function() {
+  data.frame(dataset = character(), label = character(), class = character(),
+             subclass = character(), structure = character(), purpose = character(),
+             repeating = character(), reference = character(), keys = character(),
+             order = integer(), oid = character(), stringsAsFactors = FALSE)
+}
+
+.define_external_empty <- function() {
+  data.frame(codelist = character(), name = character(),
+             dictionary = character(), version = character(),
+             stringsAsFactors = FALSE)
+}
+
+.define_study_empty <- function() {
+  list(study_name = NA_character_, description = NA_character_,
+       protocol = NA_character_, define_version = NA_character_,
+       file_oid = NA_character_)
+}
+
 .define_new <- function(study, datasets, variables, codelists, external,
                         source, value_level = .define_vl_empty()) {
   structure(list(study = study, datasets = datasets, variables = variables,
@@ -672,15 +691,11 @@ tfl_read_define_spec <- function(path, map = NULL, profile = "p21") {
     stringsAsFactors = FALSE)
   rownames(codelists) <- NULL
   external <- if (is.null(ex)) {
-    data.frame(codelist = character(), name = character(),
-               dictionary = character(), version = character(),
-               stringsAsFactors = FALSE)
+    .define_external_empty()
   } else {
     ex[c("codelist", "name", "dictionary", "version")]
   }
-  study <- list(study_name = NA_character_, description = NA_character_,
-                protocol = NA_character_, define_version = NA_character_,
-                file_oid = NA_character_)
+  study <- .define_study_empty()
   out <- .define_new(study, datasets, variables, codelists, external,
                      source = list(file = path, kind = "define spec",
                                    version = NA_character_),

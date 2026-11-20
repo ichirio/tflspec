@@ -65,7 +65,7 @@ The code, one element per line.
 }
 \description{
 One cards / cardx call per analysis row, each result under a name of its
-own (\verb{ard_<analysis_id>}) and tagged with its \code{output_id}, \code{analysis_id}
+own (\verb{.ard_<analysis_id>}) and tagged with its \code{output_id}, \code{analysis_id}
 and \code{population_id} (\code{tag_ard()}), bound into one ARD and saved to the
 study key \code{output} (default \code{output/ard/ard.rds}).  The code runs from
 the study folder, and reads as a person writes it: the tidyverse layout

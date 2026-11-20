@@ -19,7 +19,9 @@ the default search only.}
 \value{
 \code{tfl_series_dir()}: the folder of the series (stops if none has
 it).  \code{tfl_series_read()}: a list of class \code{tfl_series} -- \code{name},
-\code{label}, \code{released}, \code{needs}, \code{fixes}, \code{values} (a named list), \code{path}
+\code{label}, \code{released}, \code{needs}, \code{fixes}, \code{values} (a named list),
+\code{descriptions} (a named character vector, a value's key to its meaning;
+empty if the series has none), \code{path}
 (the series's folder) and \code{file} (its \code{series.yml}).
 }
 \description{
@@ -45,10 +47,12 @@ then the series that come with tflspec (\code{system.file("series", package = "t
 \examples{
 d <- tempfile("series")
 dir.create(file.path(d, "demo_v1"), recursive = TRUE)
-writeLines(c("name: demo_v1", "label: Demo", "values:", "  max_rows: 30"),
+writeLines(c("name: demo_v1", "label: Demo", "values:", "  max_rows: 30",
+             "descriptions:", "  max_rows: The most rows a page holds."),
            file.path(d, "demo_v1", "series.yml"))
 tfl_series_dir("demo_v1", dir = d)
 tfl_series_read("demo_v1", dir = d)$values
+tfl_series_read("demo_v1", dir = d)$descriptions
 unlink(d, recursive = TRUE)
 }
 \seealso{
