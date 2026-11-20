@@ -21,7 +21,10 @@ row \code{...}, of the dots' type.  Its attribute \code{"groups"} is the card's
 groups in their order, a data frame \code{id}, \code{label_en}, \code{label_ja} from
 the function's \verb{groups:} list or, for a template, its series'
 \code{series.yml} (a template's own \verb{groups:} replaces it), entries \verb{\{id: , label: \{en: , ja: \}\}}; no rows when none is written (one unnamed
-group).  The columns:
+group).  For \code{fn}, its attribute \code{"fn"} is the function's one-row data
+frame of \code{\link[=tfl_fn_defs]{tfl_fn_defs()}} (its join, the argument the pipe fills, what
+it gives; \code{"data"} is the \code{data_row} row), \code{NULL} when it has none.
+The columns:
 \describe{
 \item{name}{the argument.}
 \item{label_en, label_ja}{its label, from \verb{label: \{en: , ja: \}}; a

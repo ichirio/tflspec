@@ -598,7 +598,10 @@
 #'   the function's `groups:` list or, for a template, its series'
 #'   `series.yml` (a template's own `groups:` replaces it), entries `{id: ,
 #'   label: {en: , ja: }}`; no rows when none is written (one unnamed
-#'   group).  The columns:
+#'   group).  For `fn`, its attribute `"fn"` is the function's one-row data
+#'   frame of [tfl_fn_defs()] (its join, the argument the pipe fills, what
+#'   it gives; `"data"` is the `data_row` row), `NULL` when it has none.
+#'   The columns:
 #'   \describe{
 #'     \item{name}{the argument.}
 #'     \item{label_en, label_ja}{its label, from `label: {en: , ja: }`; a
@@ -700,10 +703,14 @@ tfl_arg_defs <- function(fn = NULL, template = NULL) {
   }
   fn <- as.character(fn)[1L]
   if (identical(fn, "data")) {
-    return(.arg_table(.data_row_arg_defs(), "data", "data row"))
+    out <- .arg_table(.data_row_arg_defs(), "data", "data row")
+    attr(out, "fn") <- .fn_def_row(fn)
+    return(out)
   }
   if (identical(fn, "analysis")) {
-    return(.arg_table(.analysis_item_arg_defs(), "analysis", "analysis item"))
+    out <- .arg_table(.analysis_item_arg_defs(), "analysis", "analysis item")
+    attr(out, "fn") <- .fn_def_row(fn)
+    return(out)
   }
   ent <- tfl_schema(fn)
   if (is.null(ent)) {
@@ -713,7 +720,9 @@ tfl_arg_defs <- function(fn = NULL, template = NULL) {
   args <- .arg_schema_key(.arg_schema_dots(.arg_schema_fill(fn, ent$args %||% list()), ent$dots),
                           ent$visible)
   step <- if (fn %in% .arg_page_fns) "page" else .arg_step_for_stage(ent$stage)
-  .arg_table(args, step, fn, ent[["groups"]])
+  out <- .arg_table(args, step, fn, ent[["groups"]])
+  attr(out, "fn") <- .fn_def_row(fn)
+  out
 }
 
 # A schema function's `...` (its `dots:`): one row, last, with the dots'
