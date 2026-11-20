@@ -35,6 +35,21 @@ set_levels <- function(data, ...) {
   data
 }
 
+# The codes of one code list of the study's ADaM metadata (study$adam_meta,
+# the define's shape: its `codelists` table, a value a row, `codelist` the
+# list's OID), in the list's order -- by `order`, then `rank`, then as the
+# table has them -- for set_levels().  A list the metadata does not have
+# stops the program.
+#   set_levels(adsl, SEX = adam_codes("CL.SEX"))
+adam_codes <- function(codelist, meta = study$adam_meta) {
+  cl <- meta$codelists
+  rows <- cl[!is.na(cl$codelist) & cl$codelist == codelist, , drop = FALSE]
+  n <- nrow(rows)
+  if (!n) stop(sprintf("The ADaM metadata has no code list %s.", codelist), call. = FALSE)
+  col <- function(cn) if (cn %in% names(rows)) rows[[cn]] else rep(NA, n)
+  as.character(rows$value[order(col("order"), col("rank"), seq_len(n))])
+}
+
 # A blank is missing: every character column's "" becomes NA, and so does a
 # factor's (the "" level is dropped, the other levels and their order kept).
 # Other types stay.  study$adam is the ADaM as read with this done, so a
