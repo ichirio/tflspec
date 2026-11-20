@@ -226,7 +226,7 @@ test_that("an analysis with no dataset and no population still writes its code",
                              method = "custom", code = "cards::ard_total_n(adsl)")))
   code <- tfl_ard_code(x)
   expect_silent(parse(text = code))
-  expect_true(any(grepl("ard_a <- ard_total_n(adsl) |>", code, fixed = TRUE)))
+  expect_true(any(grepl(".ard_a <- ard_total_n(adsl) |>", code, fixed = TRUE)))
 })
 
 test_that("a keyword's function name is the keyword's analysis", {

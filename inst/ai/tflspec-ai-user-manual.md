@@ -854,7 +854,7 @@ columns are upper case (`USUBJID`, `TRT01A`), ARD and spec columns lower
 case with underscores (`output_id`, `analysis_id`, `stat_name`), and the
 program's names are
 `report_id` (the report's id, in the ARD and the report programs), `cl_<variable>` (a code
-list), `path_<folder>` (a folder of the study's setup), `ard_<analysis id>`
+list), `path_<folder>` (a folder of the study's setup), `.ard_<analysis id>`
 (an analysis's ARD), `<dataset>_sub` (the data the program makes: an
 analysis set's, `adsl_sub`, and an analysis's records, `adae_sub`; a
 report's second of a dataset `adsl_sub2`, each under a comment saying
