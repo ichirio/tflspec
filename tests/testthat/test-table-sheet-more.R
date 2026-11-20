@@ -324,25 +324,20 @@ test_that("an item the sheets refuse goes whole, the report's others stay", {
   expect_setequal(t689_items(r$to), t689_items(d))
 })
 
-test_that("two plan_labels items naming a heading twice: the second stays whole", {
+test_that("two plan_labels items naming a heading twice: the second's text wins, as in rtfreporter", {
   content <- c(t689_head, list(
-    tfl_item("plan_labels", list(variable = list(AVALC = "Best response", RESP = "Response rate"))),
-    tfl_item("plan_labels", list(RESP = ""))))
+    tfl_item("plan_labels", list(AVALC = "Best response", RESP = "Response rate")),
+    tfl_item("plan_labels", list(RESP = "Rate"))))
   d <- t689_study(content)
   r <- t689_trip(d)
   v <- r$sh$table$variables
-  # (the reader puts the two calls together: one item, RESP named twice with
-  # two texts; no cell holds both, so the first text is on the variables sheet
-  # and the second is the item's rest in content_more -- not the second's text
-  # over the first's)
-  expect_identical(v$label[v$output_id %in% "T-1" & v$variable %in% "RESP"], "Response rate")
-  tb <- r$sh$table$tables
-  expect_match(tb$content_more[tb$output_id %in% "T-1"], "RESP: ''", fixed = TRUE)
+  # (the reader puts the two calls together: one item, the later text for RESP)
+  expect_identical(v$label[v$output_id %in% "T-1" & v$variable %in% "RESP"], "Rate")
   back <- suppressMessages(tfl_read_outputs(r$to))[["T-1"]]
   labs <- Filter(function(it) identical(it$fn, "plan_labels"), back$content)
   expect_length(labs, 1L)
-  expect_identical(labs[[1L]]$args$RESP, "")
-  expect_identical(labs[[1L]]$args$variable$RESP, "Response rate")
+  expect_identical(labs[[1L]]$args$RESP, "Rate")
+  expect_identical(labs[[1L]]$args$AVALC, "Best response")
   expect_setequal(t689_items(r$to), t689_items(d))
   expect_identical(t689_code(r$to), t689_code(d))
   # two items naming different variables are still put on the sheets together

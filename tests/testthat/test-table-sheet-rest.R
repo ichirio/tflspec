@@ -214,16 +214,17 @@ trc_cases <- list(
     cells = function(sh) expect_identical(trc_col(sh, "style", "col_header_align"), "left"),
     rest = list(plan_col_header = "span")),
   labels_twice = list(
-    content = list(trc_head, tfl_item("plan_labels", list(
-      variable = list(AGE = "Age (years)", BMIBL = "BMI"), AGE = "Age at baseline"))),
+    content = list(trc_head, tfl_item("plan_labels", list(AGE = "Age (years)", BMIBL = "BMI")),
+                   tfl_item("plan_labels", list(AGE = "Age at baseline"))),
     cells = function(sh) {
-      expect_identical(trc_col(sh, "variables", "label", "variable"), c(AGE = "Age (years)", BMIBL = "BMI"))
+      # (a heading named twice: the later text is the one on the sheet)
+      expect_identical(trc_col(sh, "variables", "label", "variable"), c(AGE = "Age at baseline", BMIBL = "BMI"))
     },
-    rest = list(plan_labels = "AGE")),
+    rest = list()),
   labels_value_labels = list(
     keyed = TRUE,
     content = list(trc_head_keyed, tfl_item("plan_labels", list(
-      variable = list(AGE = "Age (years)", BMIBL = "BMI"), SEX = list(F = "Female", M = "Male")))),
+      AGE = "Age (years)", BMIBL = "BMI", SEX = list(F = "Female", M = "Male")))),
     cells = function(sh) {
       expect_identical(trc_col(sh, "variables", "label", "variable"), c(AGE = "Age (years)", BMIBL = "BMI"))
     },
@@ -308,7 +309,7 @@ test_that("a cell edited after writing takes effect", {
   v$label[v$output_id %in% "T-1" & v$variable %in% "BMIBL"] <- "Body mass index"
   sh$table$variables <- v
   r <- trc_trip(d, sh)
-  expect_identical(trc_args(r$to, "plan_labels")[[1L]]$variable$BMIBL, "Body mass index")
+  expect_identical(trc_args(r$to, "plan_labels")[[1L]]$BMIBL, "Body mass index")
   expect_identical(trc_args(r$to, "plan_labels")[[1L]]$AGE, "Age at baseline")
   expect_true(any(grepl("Body mass index", unlist(lapply(as.data.frame(trc_pages(r$to, ard)[[1L]]$data), as.character)), fixed = TRUE)))
   # a header cell and its span
@@ -407,11 +408,13 @@ test_that("two calls: the bridge gives the second's rest, and the reader puts th
   tb <- data.frame(output_id = "T-1", content_more = tflspec:::.sheet_more_out(rest, items = TRUE))
   sp2 <- tflspec:::.plan_content_more(tflspec:::.plan_content_items(sp), tb)
   lb <- Filter(function(it) identical(it$fn, "plan_labels"), sp2)
-  expect_length(lb, 1L)
-  expect_identical(names(lb[[1L]]$args), c("variable", "AGE"))
+  # (AGE is in both: the second item stays apart, as written)
+  expect_length(lb, 2L)
+  expect_identical(names(lb[[1L]]$args), c("AGE", "BMIBL", "SEX"))
+  expect_identical(lb[[2L]]$args, list(AGE = "Age at baseline"))
   # a name both have: separate, in order, the later one winning as written
   tb2 <- data.frame(output_id = "T-1", content_more = tflspec:::.sheet_more_out(
-    list(tfl_item("plan_labels", list(variable = list(AGE = "x")))), items = TRUE))
+    list(tfl_item("plan_labels", list(AGE = "x"))), items = TRUE))
   sp3 <- tflspec:::.plan_content_more(tflspec:::.plan_content_items(sp), tb2)
   expect_identical(sum(vapply(sp3, function(it) identical(it$fn, "plan_labels"), NA)), 2L)
   # `variable` is never split: a heading twice inside it sends the item whole
