@@ -63,7 +63,13 @@ content items against the schema and the installed rtfreporter
 (\code{\link[=tfl_schema_check]{tfl_schema_check()}}, the items of an appended part too; its code
 written, \code{\link[=tfl_content_code]{tfl_content_code()}}), and a figure's design against the
 installed ggplot2 and the version it is written for
-(\code{\link[=tfl_check_fig_design]{tfl_check_fig_design()}}).  The packages' installed versions come with
+(\code{\link[=tfl_check_fig_design]{tfl_check_fig_design()}}), and the names its fields give
+(\code{\link[=tfl_output_objects]{tfl_output_objects()}}): a field that names an object made below it,
+a figure's field that names an object nothing above its content makes
+(\code{wrap_plots}'s \code{plots}, \code{ggsurvfit}'s \code{x}, a \code{data} or a \code{fit}), and a
+name given twice in a report or that is a study dataset's or a
+function's are errors (\code{part} \code{"names"} for the last two); an object
+the report names and nothing uses is a note.  The packages' installed versions come with
 it, as an attribute.  A GUI's check button and the AI's run call it.
 }
 \examples{
