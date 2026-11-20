@@ -51,7 +51,7 @@ test_that("every file in the tflspec_v1 series folder parses", {
 test_that("every template has its keys, a BIGN item and ids on its items", {
   skip_if(!nzchar(series_dir()), "the series folder is not installed")
   ts <- series_templates()
-  expect_length(ts, 12L)
+  expect_length(ts, 13L)
   # (a listing counts nothing: tflspec_listing has no analysis step; nor
   # does km_cards, its figure drawn from the data's steps;
   # tflspec_listing_summary's column headings have no N: no BIGN)
