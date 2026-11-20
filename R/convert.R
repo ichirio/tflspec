@@ -676,7 +676,10 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
 .conv_style_set <- function(pg, note, name) {
   keep <- pg[intersect(names(pg), .page_config_keys)]
   for (k in setdiff(names(pg), .page_config_keys)) {
-    note(NA, "page", name, NA, sprintf("page.%s is not kept in a page configuration", k))
+    note(NA, "page", name, NA, if (identical(k, ".image")) {
+      paste0("a figure's size (figure_width_in / figure_height_in) is no page setting: ",
+             "the study's is study.yml settings: figure: width_in / height_in")
+    } else sprintf("page.%s is not kept in a page configuration", k))
   }
   if (length(keep)) list(page = .calls_out(keep)) else list()
 }
@@ -733,9 +736,10 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     return(page)
   }
   if (identical(sheet, "report") && col %in% c("figure_width_in", "figure_height_in")) {
+    # a figure's own size: its content's tfl_image (.conv_fig_image() moves
+    # it there once the content is made)
     n <- suppressWarnings(as.numeric(v))
-    arg <- if (col == "figure_width_in") "width_twips" else "height_twips"
-    page$rtf_figures[[arg]] <- if (is.na(n)) v else as.integer(round(n * 1440))
+    page$.image[[sub("^figure_", "", col)]] <- if (is.na(n)) v else n
     return(page)
   }
   m <- .page_map[[sheet]][col]
@@ -1037,6 +1041,33 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   if (!is.null(style)) out$style <- style
   for (k in names(extra)) out[[k]] <- extra[[k]]
   if (!is.null(tnote)) out$note <- tnote
+  .conv_fig_image(out, note)
+}
+
+# The report sheet's figure size (figure_width_in / figure_height_in, held
+# in the page as `.image` while the page is read) as the figure content's
+# tfl_image -- its last item, made when there is none; the item's own
+# settings win.  A content of R as a whole has no item: said.
+.conv_fig_image <- function(out, note) {
+  im <- out$page$.image
+  out$page$.image <- NULL
+  if (!length(im) || !identical(out$kind, "figure")) return(out)
+  if (inherits(out$content, "tfl_r")) {
+    note(out$id, "report", out$id, "figure_width_in",
+         "the figure's size is its content's tfl_image: a content of R has none (left out)",
+         paste(names(im), unlist(im), sep = "=", collapse = "; "))
+    return(out)
+  }
+  cn <- out$content %||% list()
+  n <- length(cn)
+  if (n && .fig_is_image(cn[[n]])) {
+    a <- cn[[n]]$args %||% list()
+    for (k in setdiff(names(im), names(a))) a[[k]] <- im[[k]]
+    cn[[n]]$args <- a
+  } else {
+    cn[[n + 1L]] <- tfl_item("tfl_image", im)
+  }
+  out$content <- cn
   out
 }
 

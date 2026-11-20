@@ -8,7 +8,9 @@
 #                                     rtf_document()'s page and style (an
 #                                     old rtf_default_format: its shared level)
 #   rtf_document                      font_table, watermark, program ...
-#   rtf_tables / rtf_figures          the content's own arguments
+#   rtf_tables / rtf_figures          the content's place (a figure's size,
+#                                     alignment, drawing: its content's
+#                                     tfl_image, R/fig_content.R)
 #   rtf_titles / rtf_footnotes        their font size ...
 #   header, footer, titles, footnotes the lines, by their number: each
 #                                     {left, center, right}
@@ -88,33 +90,45 @@
   # several objects (contents:): each its own call, the output's titles
   # above the first, its footnotes below the last
   if (!is.null(output$contents)) {
-    return(c(st, .page_contents_steps(output, pg, tokens, tt, fn, content, args_of)))
+    .fig_page_moved_stop(pg, id)
+    return(c(st, .page_contents_steps(output, pg, tokens, tt, fn, content, args_of, study)))
   }
   if (identical(kind, "figure")) {
+    # (the page keeps what tables and figures share -- page_break,
+    # space_before, under rtf_figures or, as the report sheet says them for
+    # both kinds, rtf_tables, the figure's own winning; a figure's own
+    # settings are its content's tfl_image, R/fig_content.R)
+    .fig_page_moved_stop(pg, id)
     fa <- args_of("rtf_figures")
-    # (the report sheet says page_break, space_before for both kinds: under
-    # rtf_tables; the figure's own win)
     ft <- args_of("rtf_tables")
     fa <- c(fa, ft[setdiff(intersect(c("page_break", "space_before"), names(ft)), names(fa))])
-    # a figure of items: its image is its tfl_image item (R/fig_content.R)
-    img <- if (.fig_new_content(output$content)) .fig_split_content(output$content)$image
+    # how it is drawn and placed: its content's tfl_image, the study's
+    # figure settings under it
+    img <- .fig_image_of(.fig_image_fill(output$content, study))
     # its size on the page: inches as twips, or the page's body (fit)
     # worked out from the page; blank, the figure's own size
     sz <- .fig_image_size(img, pg, length(tt) + length(fn))
     twips <- function(v) as.integer(round(v * 1440))
-    if (!is.null(img)) {
+    # the picture in the RTF: png (the default, said by nothing) or emf, a
+    # vector picture -- no resolution, no PNG device then
+    emf <- identical(.fig_rtf_format(img, id), "emf")
+    rf <- if (emf) "emf"
+    if (.fig_new_content(output$content)) {
       # drawn at its size on the page, at its resolution: what the page
       # shows is the plot as drawn, never stretched into the box
       fig <- .spec_call("rtfplot", .spec_sym(content),
                         render_width = sz$width_in, render_height = sz$height_in,
-                        render_dpi = as.numeric(img$dpi %||% 300), png_device = fa$png_device)
-      st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_figures", doc, fig, align = fa$align), flow(fa)))
+                        render_dpi = if (!emf) as.numeric(img$dpi %||% 300),
+                        png_device = if (!emf) img$png_device, render_format = rf)
+      st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_figures", doc, fig, align = img$align), flow(fa)))
     } else {
+      # (a figure of the designer's pieces, a figure template's call, R:
+      # placed at its size, drawn at its own)
       st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_figures", doc, .spec_sym(content),
         width_twips = if (sz$mode[["width"]] != "native") twips(sz$width_in),
         height_twips = if (sz$mode[["height"]] != "native") twips(sz$height_in),
-        align = fa$align, render_width = fa$render_width, render_height = fa$render_height,
-        render_dpi = fa$render_dpi, png_device = fa$png_device), flow(fa)))
+        align = img$align, render_dpi = if (!emf && !is.null(img$dpi)) as.numeric(img$dpi),
+        png_device = if (!emf) img$png_device, render_format = rf), flow(fa)))
     }
   } else {
     ta <- args_of("rtf_tables")
@@ -144,17 +158,17 @@
 # A report of several objects: an rtf_tables() / rtf_figures() call each,
 # in its layout's order, with the row's place (page_break -- each after the
 # first goes on under the one before unless it says TRUE --, space_before,
-# first_rows, cont_title; a figure's width_in / height_in) and titles /
-# footnotes: the output's titles above the first object (over the row's),
-# its footnotes below the last.  rtf_titles() / rtf_footnotes() are not
-# used: they would take every object's.  `content`: each object's name in
-# the program, named by the object (else the object's name).
-.page_contents_steps <- function(output, pg, tokens, tt, fn, content, args_of) {
+# first_rows, cont_title) and titles / footnotes: the output's titles above
+# the first object (over the row's), its footnotes below the last; a
+# figure's size and alignment its content's tfl_image (the study's figure
+# settings under it).  rtf_titles() / rtf_footnotes() are not used: they
+# would take every object's.  `content`: each object's name in the
+# program, named by the object (else the object's name).
+.page_contents_steps <- function(output, pg, tokens, tt, fn, content, args_of, study = NULL) {
   lay <- .contents_layout(output)
   nms <- names(lay)
   doc <- .spec_sym("doc")
   ta <- args_of("rtf_tables")
-  fa <- args_of("rtf_figures")
   twips <- function(v) as.integer(round(as.numeric(v) * 1440))
   steps <- list()
   for (k in seq_along(nms)) {
@@ -172,10 +186,18 @@
     tb <- if (length(titles)) list(titles)
     fb <- if (length(foot)) list(foot)
     if (identical(kind, "figure")) {
+      img <- .fig_image_of(.fig_image_fill(output$contents[[nm]]$content, study))
+      # (inches as twips; fit, rtfreporter's: the page's body)
+      num <- function(v) {
+        if (is.null(v)) return(NULL)
+        if (identical(tolower(as.character(v)), "fit")) return("fit")
+        if (!is.na(suppressWarnings(as.numeric(v)))) twips(v)
+      }
       steps[[k]] <- do.call(.spec_call, c(list("rtf_figures", doc, .spec_sym(sym),
-        width_twips = if (!is.null(row$width_in)) twips(row$width_in),
-        height_twips = if (!is.null(row$height_in)) twips(row$height_in),
-        align = fa$align, titles = tb, footnotes = fb),
+        width_twips = num(img$width_in), height_twips = num(img$height_in),
+        align = img$align,
+        render_format = if (identical(.fig_rtf_format(img, output$id), "emf")) "emf",
+        titles = tb, footnotes = fb),
         flow[intersect(c("page_break", "space_before"), names(flow))]))
     } else {
       steps[[k]] <- do.call(.spec_call, c(list("rtf_tables", doc, .spec_sym(sym)),
@@ -420,22 +442,13 @@
   Filter(function(v) !inherits(v, "tfl_unset") && !is.null(v), m)
 }
 
-# a figure's size as page: has it: twips back to inches, a word (fit) as is
-.page_twips_in <- function(v) {
-  if (is.null(v)) return(NULL)
-  n <- suppressWarnings(as.numeric(v))
-  if (is.na(n)) v else n / 1440
-}
-
 # A figure's size on the page (inches): its tfl_image's width_in /
-# height_in (a number, or fit: the page's body), else the page's
-# rtf_figures (twips), else the figure's own; `page` the report's page:
-# (resolved), `lines` its titles' and footnotes' lines
+# height_in (a number, or fit: the page's body), else the figure's own;
+# `page` the report's page: (resolved: its paper and margins), `lines` its
+# titles' and footnotes' lines
 .fig_image_size <- function(img, page, lines = 0L) {
-  fa <- .page_args(page$rtf_figures)
   pg <- c(.page_args(page$rtf_page), .page_style(page))
-  r <- list(figure_width_in = img$width_in %||% .page_twips_in(fa$width_twips),
-            figure_height_in = img$height_in %||% .page_twips_in(fa$height_twips))
+  r <- list(figure_width_in = img$width_in, figure_height_in = img$height_in)
   .fig_page_size(r, pg, lines)
 }
 

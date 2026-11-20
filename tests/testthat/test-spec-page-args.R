@@ -21,10 +21,11 @@ test_that("rtf_titles / rtf_footnotes: their style as the page says it", {
   }
 })
 
-test_that("rtf_figures: align as the page says it", {
-  code <- pa_code(list(rtf_figures = list(align = "left")), "figure")
+test_that("rtf_figures: align as the content's tfl_image says it (no more the page's)", {
+  code <- pa_code(list(), "figure", list(tfl_item("tfl_image", list(align = "left"))))
   expect_match(code, "rtf_figures\\([^|]*align = \"left\"")
   expect_false(grepl("align", pa_code(list(), "figure"), fixed = TRUE))
+  expect_error(pa_code(list(rtf_figures = list(align = "left")), "figure"), "tfl_image")
 })
 
 test_that("rtf_tables: a font size left on the page (a content of R code) is not written", {
