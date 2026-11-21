@@ -26,21 +26,21 @@
                      where = 'SAFFL == "Y"', derive = NA),
     analysis_data = df(
       output_id = c("T-1", "T-2", "T-2"),
-      data_id = c("adsl_saf", "adsl_saf", "adae_saf"),
+      data_id = c("adsl_sub", "adsl_sub", "adae_sub"),
       from = c("ADSL", "ADSL", "ADAE"),
       population_id = c("SAF", "SAF", NA),
-      subjects_in = c(NA, NA, "adsl_saf"),
+      subjects_in = c(NA, NA, "adsl_sub"),
       where = c(NA, NA, 'TRTEMFL == "Y"')),
     analyses = df(
       output_id = c("T-1", "T-1", "T-1", "T-2", "T-2"),
       analysis_id = c("BIGN", "AGE", "SEX", "BIGN", "TEAE"),
       method = c("categorical", "continuous", "categorical", "categorical",
                  "hierarchical"),
-      data = c("adsl_saf", "adsl_saf", "adsl_saf", "adsl_saf", "adae_saf"),
+      data = c("adsl_sub", "adsl_sub", "adsl_sub", "adsl_sub", "adae_sub"),
       by = c(NA, "TRT01A", "TRT01A", NA, "TRT01A"),
       variables = c("TRT01A", "AGE", "SEX", "TRT01A", "AEBODSYS | AEDECOD"),
       statistics = c(NA, "N | mean | sd", "n | p", NA, NA),
-      denominator = c(NA, NA, NA, NA, "adsl_saf")))
+      denominator = c(NA, NA, NA, NA, "adsl_sub")))
   spec <- list(
     tables = df(output_id = c("T-1", "T-2"), cols = "TRT01A",
                 rows = c("group = variable", "group1 = AEBODSYS | label = AEDECOD")),

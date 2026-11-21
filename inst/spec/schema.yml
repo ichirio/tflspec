@@ -508,7 +508,7 @@ cell_rows:
 
 # ---- the ARD's analyses: cards and cardx calls -------------------------------
 # One analysis of a spec's `ard.analyses` is one of these calls.  `data` is
-# the analysis data the spec names (`data: adsl_saf`), not an argument here.
+# the analysis data the spec names (`data: adsl_sub`), not an argument here.
 # A tidyselect argument (`variables`, `by`) is a column or a sequence of
 # them; `statistic`, `fmt_fun` and `stat_label` are maps by variable (the
 # list form cards takes), or `!r` for a selector formula
@@ -1019,7 +1019,7 @@ rtf_footer:
         description: 'Keeps the subjects of an analysis data above (a report''s own
           subjects: the safety set in phase 1 ...): the numerator kept to the denominator''s
           subjects. Instead of population_id; blank: no restriction here.'
-        example: adsl_saf_p1
+        example: adsl_sub
       - column: where
         description: 'An R condition on the records (the numerator''s filter); blank:
           every record.'
