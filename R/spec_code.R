@@ -1860,7 +1860,9 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
                            "roles or normalize_ard() arguments; its items are written."), output$id))
   }
   # BIGN's rows: the headings' N, not the table's (.bign_applies()); the
-  # lines that take them out go first, on the object the ARD is
+  # lines that take them out go just before the table, on the object it
+  # reads (after the data's steps: normalize_ard() keeps BIGN's rows), as
+  # tfl_table_code() writes them, so a program's data part never has them
   bign <- .bign_applies(output)
   if (bign) {
     output$content <- .bign_header_items(output$content, tfl_r("bign"))
@@ -1879,9 +1881,9 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
     # the Rework as it is written, the plan from `data`
     .content_rework_need_data(steps, "tfl_content_code()")
     sp <- .content_rework_split(output$content)
-    return(c(bign_pre(output$data$object %||% "ard"), .drop_attached_ns(
+    return(c(.drop_attached_ns(
                .content_rework_normalize_code(sp$pre, output$data$object %||% "ard", pipe)),
-             steps, "",
+             steps, "", bign_pre(data %||% "data"),
              .content_table_code(sp$rest, data = data %||% "data",
                                  plan = plan, pipe = pipe, kind = output$kind)))
   }
@@ -1897,7 +1899,7 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
                                    kind = output$kind)))
     }
     # the steps make the data: no normalize_ard() of the defaults after them
-    return(c(bign_pre(output$data$object %||% "ard"), steps, "",
+    return(c(steps, "", bign_pre(data %||% "data"),
              .content_table_code(.content_drop_data_steps(output$content),
                                             data = data %||% "data",
                                             plan = plan, pipe = pipe, kind = output$kind)))

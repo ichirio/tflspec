@@ -82,3 +82,16 @@ test_that("the content's code and the run take BIGN's n into the header", {
   expect_match(code[1L], "^# BIGN")
   expect_true(any(grepl("values = bign", code, fixed = TRUE)))
 })
+
+test_that("with data steps, the BIGN lines stand after them, just before the table, as the sheets' program writes them", {
+  o <- bs_out("{col} (N={n})")
+  o$data <- list(source = "ard", object = "ard",
+                 steps = list(tfl_r("data <- data[data$variable != \"RACE\", ]")))
+  o$content <- c(list(tfl_item("normalize_ard", list())), o$content)
+  code <- tfl_content_code(o)
+  i <- grep("^# BIGN", code)
+  expect_length(i, 1L)
+  expect_true(i > grep("RACE", code, fixed = TRUE))
+  expect_identical(code[i + 2L], "data <- tflspec::tfl_bign_drop(data)")
+  expect_true(startsWith(code[i + 4L], "plan <-") || startsWith(code[i + 3L], "plan <-"))
+})
