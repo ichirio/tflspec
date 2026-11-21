@@ -718,9 +718,15 @@ tfl_arg_defs <- function(fn = NULL, template = NULL) {
 
 # A schema function's `...` (its `dots:`): one row, last, with the dots'
 # type and description; an args entry `...` (its label) adds to it.  No
-# dots: an args entry `...` stays as written.
+# dots: an args entry `...` stays as written.  An args entry with no type
+# of its own names what the dots take (the positional dots' `key:`, a
+# named dots' name: plan_sort keys, plan_filter where, plan_cells
+# default): it takes the dots' type
 .arg_schema_dots <- function(args, dots) {
   if (!is.list(dots)) return(args)
+  for (n in setdiff(names(args), "...")) {
+    if (is.list(args[[n]]) && is.null(args[[n]]$type)) args[[n]]$type <- dots$type %||% "string"
+  }
   d <- list(type = dots$type %||% "string", description = dots$description %||% "")
   own <- args[["..."]]
   if (is.list(own)) for (k in names(own)) d[k] <- list(own[[k]])

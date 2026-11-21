@@ -173,3 +173,21 @@ test_that("fixed_rows: the rows a template writes next to a table param's \"{nam
   expect_null(d$fixed_rows[[which(d$name == "by")]])
   expect_null(tfl_arg_defs(fn = "analysis")$fixed_rows[[1L]])
 })
+
+test_that("every argument of the file's schema functions has a type (F1); a name the dots take, the dots' type", {
+  fns <- names(tflspec:::.schema_all(figure = FALSE))
+  # (plan_append's data and content: a data row and a part's items, typed with F1's rows on 11-23)
+  open <- c("plan_append.data", "plan_append.content")
+  miss <- unlist(lapply(fns, function(f) {
+    d <- tryCatch(tfl_arg_defs(fn = f), error = function(e) NULL)
+    if (is.null(d) || !nrow(d)) return(character())
+    t <- as.character(d$type)
+    n <- d$name[is.na(t) | !nzchar(t)]
+    if (length(n)) paste0(f, ".", n) else character()
+  }))
+  expect_identical(setdiff(miss, open), character())
+  d <- tfl_arg_defs(fn = "plan_filter")
+  expect_identical(d$type[d$name == "where"], d$type[d$name == "..."])
+  d <- tfl_arg_defs(fn = "plan_cells")
+  expect_identical(d$type[d$name == "default"], d$type[d$name == "..."])
+})
