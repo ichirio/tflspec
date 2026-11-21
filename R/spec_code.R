@@ -498,6 +498,9 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 # tfl_content_code() writes and tfl_content_run() runs: the one list both
 # read, so the two cannot differ.
 .content_table_pipeline <- function(content, kind = "table") {
+  # what rtfreporter cannot do yet stops here, for the run and the program
+  # alike (R/limits.R)
+  if (!identical(kind, "listing")) .content_limits(content)
   fns <- vapply(content, function(it) .schema_fn_name(it$fn), "")
   # a listing has no roles: its plan is table_plan(data) with none
   if (identical(kind, "listing") && !"table_plan" %in% fns) {

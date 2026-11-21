@@ -1,0 +1,28 @@
+# What rtfreporter cannot do yet: one row per rtfreporter issue.  The
+# content step reads this one table (R/limits.R, .content_limits()) and
+# stops a table whose content meets a row's `when`, so no template and no
+# report carries its own check for an rtfreporter limit.  A row's `when`
+# looks at the content's items only (no report or template names):
+#   item: <fn>                    the content has this item
+#   arg: <name>, is: [values]     ... and its argument is one of these
+#   arg: <name>, count: ">1"      ... and its argument has this many values
+#                                 (a "|" in a string separates values)
+#   all: [...], any: [...]        joined
+# `fixed_in`: the rtfreporter version that does it; from that version on
+# the row stops nothing (remove the row in the next tflspec version).
+# `instead`: how to write it today.
+limits:
+  - id: rtfreporter-1103
+    issue: ichirio/rtfreporter#1103
+    when:
+      all:
+        - {item: plan_total}
+        - {item: table_plan, arg: cols, count: ">1"}
+    message:
+      en: "rtfreporter cannot yet place the Total column by rule when the columns have two keys."
+      ja: "列のキーが 2 つの時、Total 列の位置を rtfreporter はまだ規則で決められません。"
+    instead:
+      en: "Use one column key, or give the column order with plan_levels()."
+      ja: "列のキーを 1 つにするか、plan_levels() で列の順を書いてください。"
+    fixed_in: 0.8.2.9100
+    added: 2026-11-22
