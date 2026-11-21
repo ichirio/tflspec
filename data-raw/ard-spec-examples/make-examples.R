@@ -510,7 +510,7 @@ pk_plan <- table_plan(pk_n, cols = "NOMTIME", rows = c(Analyte = "ANALYTE"),
   plan_levels(Statistic = pk_stats, NOMTIME = pk_times) |>
   plan_digits(rounding = "sas") |>
   plan_digits(.rows = pk_digits) |>
-  plan_row_group(collapse = TRUE) |>
+  plan_row_group(collapse = "Analyte") |>
   plan_blanks(where = "between_groups", first = TRUE, last = TRUE) |>
   plan_paginate_rows(max_rows = 20) |>
   pk_header() |>
