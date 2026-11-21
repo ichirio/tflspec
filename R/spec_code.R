@@ -484,7 +484,29 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
     # (.levels_prune()); not when the program's data part makes the data
     items <- c(nz, .levels_prune_sheets(items, sp, ard_spec, id))
   }
-  .content_table_code(items, data = data, plan = plan, pipe = pipe)
+  # BIGN's rows: the headings' N, not the table's -- the rule
+  # tfl_content_code() follows (.bign_has()), the analyses here the
+  # workbook's sheet
+  bv <- .bign_var_sheets(ard_spec, output_id %||% attr(sp, "output_id"))
+  if (is.null(bv)) return(.content_table_code(items, data = data, plan = plan, pipe = pipe))
+  items <- .bign_header_items(items, tfl_r("list(n = bign_n)"))
+  used <- isTRUE(attr(items, "used"))
+  attr(items, "used") <- NULL
+  c(.bign_code(data, n = used, labels = .bign_labels(items, bv)),
+    .content_table_code(items, data = data, plan = plan, pipe = pipe))
+}
+
+# BIGN's variable from a workbook's analyses sheet (the report's BIGN
+# row); NULL when the report has none
+.bign_var_sheets <- function(ard_spec, id) {
+  an <- ard_spec$analyses
+  if (is.null(an) || is.null(id) || !all(c("output_id", "analysis_id") %in% names(an))) return(NULL)
+  an <- an[!is.na(an$output_id) & an$output_id %in% id & an$analysis_id %in% .bign_id, , drop = FALSE]
+  if (!nrow(an)) return(NULL)
+  v <- c(if ("variables" %in% names(an)) .split_bar(an$variables[1L]),
+         if ("by" %in% names(an)) .split_bar(an$by[1L]))
+  v <- v[!is.na(v) & nzchar(v)]
+  if (length(v)) v[[1L]] else NA_character_
 }
 
 # A table's content -- its items, in order (tfl_item()) -- as the program:
@@ -1480,7 +1502,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 # so BIGN's n is named by them too.  A character vector code = label, or
 # the entry's R (tfl_r) as it is; NULL when there is none
 .bign_labels <- function(content, var) {
-  if (is.null(var)) return(NULL)
+  if (is.null(var) || is.na(var)) return(NULL)
   for (it in content) {
     if (!identical(.schema_fn_name(it$fn), "plan_labels")) next
     v <- it$args[[var]]

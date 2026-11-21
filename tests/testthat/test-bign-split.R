@@ -74,3 +74,15 @@ test_that("BIGN's n is named as the columns are: by the labels the content gives
   expect_identical(get("bign_n", env), c(`Drug A 10 mg` = 12, `Drug B` = 18))
   expect_null(tflspec:::.bign_labels(o$content, "SEX"))
 })
+
+test_that("a workbook's report: its BIGN row in the analyses sheet, the same rule", {
+  sp <- list(analyses = data.frame(output_id = c("T-1", "T-1", "T-2"),
+                                   analysis_id = c("BIGN", "S1", "S1"),
+                                   variables = c("ARM", "SEX", "SEX"),
+                                   stringsAsFactors = FALSE))
+  expect_identical(tflspec:::.bign_var_sheets(sp, "T-1"), "ARM")
+  expect_null(tflspec:::.bign_var_sheets(sp, "T-2"))
+  sp$analyses$variables[1L] <- ""
+  expect_identical(tflspec:::.bign_var_sheets(sp, "T-1"), NA_character_)
+  expect_null(tflspec:::.bign_labels(list(), NA_character_))
+})
