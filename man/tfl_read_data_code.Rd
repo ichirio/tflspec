@@ -4,7 +4,7 @@
 \alias{tfl_read_data_code}
 \title{The code that reads one dataset of a data catalog}
 \usage{
-tfl_read_data_code(datasets, dataset)
+tfl_read_data_code(datasets, dataset, adam_meta = NULL)
 }
 \arguments{
 \item{datasets}{The data catalog: a data frame with \code{dataset}, \code{path}
@@ -12,6 +12,10 @@ and \code{derive} (\verb{NAME = R expression}, \code{|} between them), as the
 \code{datasets} sheet of an \code{\link[=tfl_ard_spec]{tfl_ard_spec()}}.}
 
 \item{dataset}{The dataset to read.}
+
+\item{adam_meta}{The study's ADaM metadata whose levels the read puts on
+(an ARD definition's \code{adam_meta}, which a YAML study's carries under
+\code{settings: adam_levels: codelists}); \code{NULL} (default): none.}
 }
 \value{
 The code, one element per line.  A dataset the catalog does not
@@ -24,5 +28,8 @@ the file's extension: \code{.rds}, \code{.xpt}, \code{.sas7bdat}, \code{.csv}, \
 into an object named after the dataset, its derived columns, and
 \code{adsl <- blank_as_na(adsl)} (a blank text value is \code{NA}, as in the
 study's \code{study$adam}; \code{blank_as_na()} is a study helper,
-\code{\link[=tfl_helpers_code]{tfl_helpers_code()}}).
+\code{\link[=tfl_helpers_code]{tfl_helpers_code()}}); with \code{adam_meta}, then the levels of the code
+lists it maps to the dataset's variables, as \code{study$adam} has them:
+\code{adsl <- set_levels(adsl, SEX = adam_codes("CL.SEX"))} (the program
+writes \code{study$adam_meta} before it, \code{\link[=tfl_listing_code]{tfl_listing_code()}}).
 }

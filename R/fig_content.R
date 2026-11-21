@@ -91,8 +91,8 @@ tfl_plot <- function(name, items = list(), from = "own") {
     plots <- list(list(name = NULL, items = content[!tail]))
   }
   for (p in plots) {
-    if (!is.null(p$name) && (p$name %in% c(.fig_p_fns, .fig_compose_fns) ||
-                             exists(p$name, envir = asNamespace("ggplot2"), inherits = FALSE))) {
+    # (the report's one name check, R/object_list.R)
+    if (!is.null(p$name) && identical(.obj_name_problem(p$name, "plot"), "rule")) {
       .ard_stop(sprintf("A figure's plot is named `%s`, a function's name: name it otherwise.", p$name))
     }
     f <- if (length(p$items)) .schema_fn_name(p$items[[1L]]$fn %||% "") else ""
@@ -112,6 +112,10 @@ tfl_plot <- function(name, items = list(), from = "own") {
 }
 
 # ---- an item <-> its call --------------------------------------------------
+
+# A named plot's R name in the figure's code (km: p_km); the one builder
+# of it (tfl_output_objects() calls it too)
+.fig_plot_name <- function(name) paste0("p_", name)
 
 # the arguments that name an object of the figure's data (written bare)
 .fig_object_args <- c("data", "fit")
@@ -667,7 +671,7 @@ tfl_plot <- function(name, items = list(), from = "own") {
   ard <- any(vapply(output$data$steps %||% list(), function(s) identical(s$step, "ard_stats"), NA))
   k_ard <- 0L
   for (p in plots) {
-    target <- if (one) name else paste0("p_", p$name)
+    target <- if (one) name else .fig_plot_name(p$name)
     first <- p$items[[1L]]
     f1 <- .schema_fn_name(first$fn)
     lines <- character()
@@ -737,12 +741,12 @@ tfl_plot <- function(name, items = list(), from = "own") {
 # the plots into one: wrap_plots() when the content says it, else one
 # under the other; then the arrangement's other items, `+`-ed
 .fig_compose_lines <- function(name, plots, compose) {
-  syms <- paste0("p_", vapply(plots, `[[`, "", "name"))
+  syms <- .fig_plot_name(vapply(plots, `[[`, "", "name"))
   fns <- vapply(compose, function(it) .schema_fn_name(it$fn), "")
   w <- compose[fns == "wrap_plots"]
   first <- if (length(w)) {
     a <- w[[1L]]$args %||% list()
-    pl <- if (!is.null(a$plots)) paste0("p_", unlist(a$plots)) else syms
+    pl <- if (!is.null(a$plots)) .fig_plot_name(unlist(a$plots)) else syms
     a$plots <- NULL
     rest <- if (length(a)) .fig_deparse(.fig_item_lang(tfl_item("f", a)))
     rest <- if (!is.null(rest)) sub("^f\\(", "", sub("\\)$", "", rest))
