@@ -29,7 +29,13 @@
 #' ([tfl_schema_check()], the items of an appended part too; its code
 #' written, [tfl_content_code()]), and a figure's design against the
 #' installed ggplot2 and the version it is written for
-#' ([tfl_check_fig_design()]).  The packages' installed versions come with
+#' ([tfl_check_fig_design()]), and the names its fields give
+#' ([tfl_output_objects()]): a field that names an object made below it,
+#' a figure's field that names an object nothing above its content makes
+#' (`wrap_plots`'s `plots`, `ggsurvfit`'s `x`, a `data` or a `fit`), and a
+#' name given twice in a report or that is a study dataset's or a
+#' function's are errors (`part` `"names"` for the last two); an object
+#' the report names and nothing uses is a note.  The packages' installed versions come with
 #' it, as an attribute.  A GUI's check button and the AI's run call it.
 #'
 #' @param study A study read with [tfl_read_study_spec()], or its folder.
@@ -106,6 +112,8 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
                       paste(sQuote(miss), collapse = ", ")))
   }
   kinds <- vapply(outs, function(o) o$kind %||% "table", "")
+  # (the study's datasets: no object of a report takes one's name)
+  study_ds <- .obj_study_datasets(study)
 
   # what the user wrote and a study's R fields hold: a test for a blank text,
   # where study$adam has NA (a template's own rows are not the user's: left out)
@@ -192,6 +200,9 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
     }
     # the report as written: what stops the build far from its cause
     rows[[length(rows) + 1L]] <- .check_static_rows(o, id)
+    # the names its fields give: a figure's that nothing above makes, a
+    # table's named block (R/object_list.R)
+    rows[[length(rows) + 1L]] <- .check_object_rows(ro, id, study_ds)
     if (inherits(ro$content, "tfl_r")) next
     # a figure's content key (`figure: {name, args}`): its name is one of the
     # table's (.fig_content_table()), its program is written

@@ -16,7 +16,7 @@ test_that("the schema takes the top and bottom padding where it takes the left a
     expect_identical(nrow(tfl_schema_check(tfl_item(fn, pad))), 0L, info = fn)
     expect_true(all(names(pad) %in% names(tfl_schema(fn)$args)), info = fn)
   }
-  expect_identical(tfl_schema("plan_style")$args$cell_padding_top_twips$label,
+  expect_identical(tfl_schema("plan_style")$args$cell_padding_top_twips$label$en,
                    "Cell padding, top (twips)")
   skip_if_not_installed("rtfreporter")
   skip_if_not("cell_padding_top_twips" %in% names(formals(rtfreporter::plan_style)),

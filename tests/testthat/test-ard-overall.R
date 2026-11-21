@@ -31,7 +31,7 @@ test_that("overall binds the call without its by under it: cards' overall rows",
   # (and the unused levels of a category with no code list dropped, after it)
   blank <- paste0("mutate(\n      across(where(is.character), ~ na_if(.x, \"\")),\n",
                   "      across(any_of(\"SEX\") & where(is.factor), droplevels)\n    ) |>")
-  expect_match(txt, paste0("ard_sex <- bind_rows(\n  adsl_sub |>\n    ", blank, "\n    ard_tabulate(\n      by = ARM,"),
+  expect_match(txt, paste0(".ard_sex <- bind_rows(\n  adsl_sub |>\n    ", blank, "\n    ard_tabulate(\n      by = ARM,"),
                fixed = TRUE)
   expect_match(txt, paste0("),\n  adsl_sub |>\n    ", blank, "\n    ard_tabulate(\n      variables = SEX,"),
                fixed = TRUE)

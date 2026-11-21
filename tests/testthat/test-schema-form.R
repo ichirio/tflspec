@@ -9,7 +9,11 @@ test_that("the table and listing functions' arguments say their label; main ones
   for (fn in fns) {
     a <- s[[fn]]$args
     expect_true(length(a) > 0L, label = fn)
-    lab <- vapply(a, function(x) is.character(x$label) && length(x$label) == 1L && nzchar(x$label), NA)
+    # (a label is {en, ja}; the English one is there)
+    lab <- vapply(a, function(x) {
+      en <- if (is.list(x$label)) x$label$en else x$label
+      is.character(en) && length(en) == 1L && nzchar(en)
+    }, NA)
     expect_true(all(lab), label = paste(fn, paste(names(a)[!lab], collapse = ", ")))
   }
   expect_true(isTRUE(s$plan_columns$args$widths$main))
