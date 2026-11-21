@@ -43,9 +43,9 @@ conv_study <- function(dir) {
     '{"study": {"key": ["id", "output"], "value": ["USUBJID", "output/ard/ard.rds"]},',
     ' "datasets": {"dataset": ["ADSL"], "level": ["ADaM"], "path": ["data/adam/adsl.rds"], "derive": [null]},',
     ' "populations": {"population_id": ["SAF"], "dataset": ["ADSL"], "where": ["SAFFL == \\"Y\\""], "derive": [null], "label": ["Safety Analysis Set"]},',
-    ' "analysis_data": {"output_id": ["T-1"], "data_id": ["adsl_saf"], "from": ["ADSL"], "population_id": ["SAF"], "subjects_in": [null], "where": [null], "add": [null], "derive": [null], "keep": [null], "distinct": [null], "code": [null]},',
+    ' "analysis_data": {"output_id": ["T-1"], "data_id": ["adsl_sub"], "from": ["ADSL"], "population_id": ["SAF"], "subjects_in": [null], "where": [null], "add": [null], "derive": [null], "keep": [null], "distinct": [null], "code": [null]},',
     ' "analyses": {"output_id": ["T-1", "T-1"], "analysis_id": ["BIGN", "AGE"], "parent": [null, null], "label": [null, null],',
-    '   "method": ["categorical", "continuous"], "data": ["adsl_saf", "adsl_saf"], "dataset": [null, null], "population_id": [null, null],',
+    '   "method": ["categorical", "continuous"], "data": ["adsl_sub", "adsl_sub"], "dataset": [null, null], "population_id": [null, null],',
     '   "where": [null, null], "by": [null, "ARM"], "strata": [null, null], "variables": ["ARM", "AGE"], "statistics": [null, "N | mean | sd"],',
     '   "denominator": [null, null], "formats": [null, null], "args": [null, "conf.level = 0.9"], "post": [null, null], "code": [null, null],',
     '   "purpose": [null, null], "reason": [null, null]}}'), file.path(spec, "ard_definition.json"))
@@ -114,7 +114,7 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   expect_identical(t1$style, "Compact")
   expect_identical(t1$common$population, "SAF")
   expect_identical(t1$data$source, "ard")
-  expect_identical(t1$ard$analysis_data[[1L]]$id, "adsl_saf")
+  expect_identical(t1$ard$analysis_data[[1L]]$id, "adsl_sub")
   expect_identical(t1$ard$analyses[[2L]]$id, "AGE")
   expect_identical(t1$ard$analyses[[2L]]$statistics, c("N", "mean", "sd"))
   expect_s3_class(t1$ard$analyses[[2L]]$args, "tfl_r")

@@ -1214,7 +1214,7 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
   cannot say it; the definition keeps the code, the program is never edited.
 - In `args` and `code`, `data` is the analysis data and `population` the
   analysis set's subjects; the program writes them as the data's own names
-  (`adtte_ttde`, `adsl_sub`), and a `custom` analysis's last expression is
+  (`adtte_sub`, `adsl_sub`), and a `custom` analysis's last expression is
   its ARD (`local()` only when its code defines a function or assigns a
   name the program has).
 - A function that takes a **formula** (`cardx::ard_survival_survdiff`,

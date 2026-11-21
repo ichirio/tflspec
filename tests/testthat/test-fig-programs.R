@@ -131,7 +131,7 @@ test_that("a step after a named object changes it, in its pipe; code lists go on
     plot = list(colour_by = "TRT01A"),
     layers = list(list(layer = "point", data = "sm", x = "TRT01A", y = "mean")))
   code <- paste(tfl_fig_design_code(d, "F", setup = TRUE, codelists = cl), collapse = "\n")
-  expect_match(code, "df <- adsl |>\n  order_levels() |>\n  set_levels(TRT01A = cl_trt01a)", fixed = TRUE)
+  expect_match(code, "adsl_sub <- adsl |>\n  order_levels() |>\n  set_levels(TRT01A = cl_trt01a)", fixed = TRUE)
   expect_match(code, "mutate(se = sd / sqrt(n), lo = mean - se, hi = mean + se) |>\n  mutate(lo2 = lo * 2)",
                fixed = TRUE)
 })
@@ -203,10 +203,10 @@ test_that("a figure's data puts the arms in their number order first, a code lis
   d <- tfl_fig_template("km_ci", data = "ADTTE", param = "OS", group = "TRT01P")
   code <- tfl_fig_design_code(d, "F-9", setup = TRUE)
   # first step after the read, before the filter
-  expect_true(any(grepl("adtte_os <- adtte |>\n  order_levels() |>\n  filter(",
+  expect_true(any(grepl("adtte_sub <- adtte |>\n  order_levels() |>\n  filter(",
                         paste(code, collapse = "\n"), fixed = TRUE)))
   env <- lv_fig_data(code)
-  expect_identical(levels(env$adtte_os$TRT01P), c("Placebo", "Drug B", "Drug A"))
+  expect_identical(levels(env$adtte_sub$TRT01P), c("Placebo", "Drug B", "Drug A"))
   expect_identical(names(env$fit$strata), paste0("TRT01P=", c("Placebo", "Drug B", "Drug A")))
   # a script of its own has no study helpers: no order_levels() ...
   expect_false(any(grepl("order_levels", tfl_fig_design_code(d, "F-9"), fixed = TRUE)))
@@ -221,7 +221,7 @@ test_that("a figure's data puts the arms in their number order first, a code lis
   expect_lt(grep("order_levels()", code2, fixed = TRUE)[1],
             grep("set_levels(", code2, fixed = TRUE)[1])
   env2 <- lv_fig_data(code2)
-  expect_identical(levels(env2$df$TRT01P %||% env2$adtte_os$TRT01P), c("Drug A", "Drug B", "Placebo"))
+  expect_identical(levels(env2$adtte_sub$TRT01P), c("Drug A", "Drug B", "Placebo"))
 })
 
 test_that("a figure that joins ADSL orders a records data's arm by ADSL's", {
@@ -237,7 +237,7 @@ test_that("a figure that joins ADSL orders a records data's arm by ADSL's", {
   code <- tfl_fig_design_code(d, "F-9", setup = TRUE)
   expect_true(any(grepl("order_levels(from = adsl)", code, fixed = TRUE)))
   env <- lv_fig_data(code, adtte = adtte, adsl = adsl)
-  expect_identical(levels(env$df$TRT01P), c("Placebo", "Drug B", "Drug A"))
+  expect_identical(levels(env$adtte_sub$TRT01P), c("Placebo", "Drug B", "Drug A"))
 })
 
 test_that("the preview (tfl_content_run) and the program give the figure's arms the same order", {
@@ -331,7 +331,7 @@ test_that("a code list with labels: the data holds the codes, the legend shows t
   eval(parse(text = tfl_helpers_code()), env)
   eval(parse(text = code), env)
   arms <- c("Placebo", "Xanomeline Low Dose", "Xanomeline High Dose")
-  expect_identical(levels(env$advs_sysbp$TRTA), arms)
+  expect_identical(levels(env$advs_sub$TRTA), arms)
   sc <- ggplot2::ggplot_build(env$plot)$plot$scales$get_scales("colour")
   # (the sample's data has two of the three arms)
   expect_identical(sc$get_labels(arms[c(1, 3)]), c("Placebo", "High Dose"))
