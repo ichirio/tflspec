@@ -224,12 +224,13 @@
   cfg
 }
 
-# Whether a content's items say where a page's name prints (a
-# plan_paginate_rows / plan_paginate_group item with a `heading_at`)
+# Whether a content's items say where a page's name prints: an item with
+# a `heading_at` (the argument is the rule, not the functions that have
+# it: plan_paginate_rows and plan_paginate_group today)
 .content_heading_at <- function(content) {
   if (inherits(content, "tfl_r") || !is.list(content)) return(FALSE)
   any(vapply(content, function(it) {
-    is.list(it) && isTRUE(it$fn %in% c("plan_paginate_rows", "plan_paginate_group")) &&
+    is.list(it) && is.list(it$args) &&
       is.character(it$args$heading_at) && length(it$args$heading_at) == 1L
   }, NA))
 }
