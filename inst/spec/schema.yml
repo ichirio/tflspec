@@ -393,7 +393,7 @@ plan_columns:
   label: {en: "Column widths and alignment", ja: "列の幅と揃え"}
   tier: usual
   args:
-    widths: {main: true, label: {en: "Widths", ja: "幅"}, help: "The columns' relative widths, by column (.values every value column). e.g. row_label 5, .values 2", type: "vec<column, number>|list<number>", input: table, columns: {column: {type: column, input: pick, choices: columns}, width: {type: number, input: text}}}
+    widths: {main: true, label: {en: "Widths", ja: "幅"}, help: "The columns' relative widths, by column (.values every value column). e.g. row_label 5, .values 2", type: "vec<column, number>|list<number>", input: table, columns: {column: {label: {en: "Column", ja: "列"}, type: column, input: pick, choices: columns}, width: {label: {en: "Width", ja: "幅"}, type: number, input: text}}}
     decimal: {main: true, label: {en: "Decimal alignment", ja: "小数点揃え"}, help: "The columns whose numbers line up at the decimal point (.values every value column). e.g. .values", type: "list<column>"}
     row_title: {main: true, label: {en: "Row title", ja: "行の見出し"}, help: "The row heading columns: left aligned (the others centred) and repeated on every column page. Blank: the first column. e.g. row_label", type: "list<column>|list<integer>"}
     auto_width: {main: true, label: {en: "Automatic width", ja: "自動の幅"}, help: "TRUE: each column sized to its content. e.g. TRUE", type: logical}
@@ -492,10 +492,10 @@ normalize_ard:
     overall: {main: true, label: {en: "Overall row", ja: "全体の行"}, help: "The text of the row a hierarchical analysis makes over all its terms (the subjects with any event), put on the first hierarchy column. Blank: that row is left as it is. e.g. Any TEAE", type: string}
     drop_contexts: {label: {en: "Contexts dropped", ja: "除く context"}, help: "The kinds of ARD rows (context) left out before the table. Blank: the attributes rows and the total_n row, which no cell prints (the total N is still kept for a header). e.g. attributes", type: "list<string>", input: text}
     drop_key_variables: {label: {en: "Drop the key variables", ja: "キー変数の行を除く"}, help: "The rows that count a group variable itself (the subjects per arm): TRUE takes them out; blank (FALSE) keeps them out of the body for a header's (N=n). Usually left blank. e.g. TRUE", type: logical}
-    stack: {main: true, label: {en: "Stacked analyses", ja: "スタック (stack)"}, help: "Stacks parallel subgroup analyses (ALL, SEX, AGEGR1 ...) as one pair of keys, subgroup and subgroup_level, for a subgroup table. e.g. subgroup = ALL, SEX, AGEGR1", type: "map<string, list<column>|string>", input: table}
+    stack: {main: true, label: {en: "Stacked analyses", ja: "スタック (stack)"}, help: "Stacks parallel subgroup analyses (ALL, SEX, AGEGR1 ...) as one pair of keys, subgroup and subgroup_level, for a subgroup table. e.g. subgroup = ALL, SEX, AGEGR1", type: "map<string, list<column>|string>", input: table, columns: {key: {label: {en: "Name", ja: "名前"}}, value: {label: {en: "Layers", ja: "レイヤー"}}}, new_row: {key: subgroup}}
     stack_sep: {label: {en: "Stack separator", ja: "スタックの区切り"}, help: "The text between a crossed layer's names and values (\" / \": AGEGR1 / SEX). e.g. \" x \"", type: string}
     stack_nest: {label: {en: "Nest the stack", ja: "スタックを入れ子に"}, help: "TRUE: a crossed layer's outer value goes to subgroup_outer (Age Group by Sex, 65-80, F as three levels). e.g. TRUE", type: logical}
-    combine: {label: {en: "Combined variables", ja: "まとめる変数"}, help: "Reads two or more ARD variables as one key column under a new name, e.g. a lab shift table's Low and High grades. e.g. worst_gr = ATOXGRL, ATOXGRH", type: "map<string, list<column>>", input: table}
+    combine: {label: {en: "Combined variables", ja: "まとめる変数"}, help: "Reads two or more ARD variables as one key column under a new name, e.g. a lab shift table's Low and High grades. e.g. worst_gr = ATOXGRL, ATOXGRH", type: "map<string, list<column>>", input: table, columns: {key: {label: {en: "Name", ja: "名前"}}, value: {label: {en: "Variables", ja: "変数"}}}}
 
 rtf_col_header:
   package: rtfreporter

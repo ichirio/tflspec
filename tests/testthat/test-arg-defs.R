@@ -1,6 +1,6 @@
 cols <- c("name", "label_en", "label_ja", "help_en", "help_ja", "step", "group", "input", "type",
           "required", "default", "default_kind", "unset", "choices", "values", "value_labels",
-          "free", "ordered", "columns", "fixed_rows", "tier", "passes_to", "member_of",
+          "free", "ordered", "columns", "new_row", "fixed_rows", "tier", "passes_to", "member_of",
           "description")
 
 test_that("tfl_arg_defs() takes fn or template, one of them", {
