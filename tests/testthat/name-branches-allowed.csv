@@ -1,0 +1,31 @@
+file,pattern,count,remove_when
+ard_code.R,"identical(fn, """,7,"schema item or arg def (F1-F3, (c) 11-26)"
+ard_code.R,"fn %in% c(""",4,"schema item or arg def (F1-F3, (c) 11-26)"
+ard_own.R,"identical(fn, """,2,"schema item or arg def (F1-F3, (c) 11-26)"
+ard_own.R,"fn %in% c(""",1,"schema item or arg def (F1-F3, (c) 11-26)"
+ard_spec.R,"identical(fn, """,1,"schema item or arg def (F1-F3, (c) 11-26)"
+ard_spec.R,"startsWith(fn, """,2,"the step from arg defs (F3 11-24, (c) 11-26)"
+arg_defs.R,"identical(fn, """,4,"schema item or arg def (F1-F3, (c) 11-26)"
+arg_defs.R,"startsWith(fn, """,1,"the step from arg defs (F3 11-24, (c) 11-26)"
+arg_defs.R,tflspec_v1/,3,the series reader only ((c) 11-26)
+codelist_narrow.R,"fn %in% c(""",1,"schema item or arg def (F1-F3, (c) 11-26)"
+fig_content.R,"identical(fn, """,3,"schema item or arg def (F1-F3, (c) 11-26)"
+fig_content.R,"fn %in% c(""",1,"schema item or arg def (F1-F3, (c) 11-26)"
+fig_content.R,"startsWith(fn, """,1,"the step from arg defs (F3 11-24, (c) 11-26)"
+fig_content_fns.R,tflspec_v1/,1,the series reader only ((c) 11-26)
+neutral.R,"fn %in% c(""",1,"schema item or arg def (F1-F3, (c) 11-26)"
+object_list.R,"identical(fn, """,5,"schema item or arg def (F1-F3, (c) 11-26)"
+schema.R,"identical(fn, """,3,"schema item or arg def (F1-F3, (c) 11-26)"
+schema.R,"startsWith(fn, """,2,"the step from arg defs (F3 11-24, (c) 11-26)"
+series.R,tflspec_v1/,1,the series reader only ((c) 11-26)
+spec_code.R,"identical(fn, """,2,"schema item or arg def (F1-F3, (c) 11-26)"
+spec_code.R,"fn %in% c(""",2,"schema item or arg def (F1-F3, (c) 11-26)"
+spec_code.R,"switch(fn,",4,one table read from the schema ((c) 11-26)
+spec_figure.R,"identical(fn, """,1,"schema item or arg def (F1-F3, (c) 11-26)"
+spec_sheets.R,identical(template,1,"template definitions (F11, after 11-27)"
+spec_study.R,"startsWith(fn, """,1,"the step from arg defs (F3 11-24, (c) 11-26)"
+spec_study.R,tflspec_v1/,1,the series reader only ((c) 11-26)
+spec_yaml.R,"fn %in% c(""",1,"schema item or arg def (F1-F3, (c) 11-26)"
+tpl_fig_km.R,"fn %in% c(""",1,"schema item or arg def (F1-F3, (c) 11-26)"
+tpl_spec.R,"identical(fn, """,2,"schema item or arg def (F1-F3, (c) 11-26)"
+tpl_spec.R,"fn %in% c(""",1,"schema item or arg def (F1-F3, (c) 11-26)"
