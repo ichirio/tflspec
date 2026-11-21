@@ -223,4 +223,9 @@ test_that("the sheets' route writes the rtf_figures line the YAML spec's route w
   x <- both(tfl_output("F-4", "figure", content = list(tfl_item("km_curve", list()))))
   expect_identical(x$sheets, x$spec)
   expect_identical(x$spec, "rtf_figures(content, align = \"left\")")
+  # a figure of R: no items of its own, the standard's on both
+  st$figure_style <- list()
+  x <- both(tfl_output("F-5", "figure", content = tfl_r("ggplot2::ggplot()")))
+  expect_identical(x$sheets, x$spec)
+  expect_match(x$spec, "width_twips = 10512, height_twips = 6048", fixed = TRUE)
 })

@@ -446,8 +446,9 @@
 .fig_report_step <- function(content, fig, study, type, size_pg, lines, flow, id) {
   doc <- .spec_sym("doc")
   # how it is drawn and placed: its content's tfl_image, the study's figure
-  # style standard's for its type under it
-  img <- .fig_image_of(.fig_image_fill(fig, study, type))
+  # style standard's for its type under it; a content of R says none of its
+  # own (the sheets' route has no items of it), so the standard's alone
+  img <- .fig_image_of(.fig_image_fill(if (!inherits(fig, "tfl_r")) fig, study, type))
   # its size on the page: inches as twips, or the page's body (fit) worked
   # out from the page; blank, the figure's own size
   sz <- .fig_page_size(list(figure_width_in = img$width_in, figure_height_in = img$height_in),
