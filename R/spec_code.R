@@ -485,29 +485,15 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
     items <- c(nz, .levels_prune_sheets(items, sp, ard_spec, id))
   }
   # BIGN's rows: the headings' N, not the table's -- the rule
-  # tfl_content_code() follows (.bign_has()), the analyses here the
-  # workbook's sheet
-  bv <- .bign_var_sheets(ard_spec, output_id %||% attr(sp, "output_id"))
-  if (is.null(bv)) return(.content_table_code(items, data = data, plan = plan, pipe = pipe))
-  items <- .bign_header_items(items, tfl_r("list(n = bign_n)"))
+  # tfl_content_code() follows (.bign_applies()): a workbook's report and
+  # its spec file's write the same lines
+  items <- .bign_header_items(items, tfl_r("bign"))
   used <- isTRUE(attr(items, "used"))
   attr(items, "used") <- NULL
-  c(.bign_code(data, n = used, labels = .bign_labels(items, bv)),
+  c(.bign_code(data, n = used, labels = .bign_labels(items, .bign_var(items))),
     .content_table_code(items, data = data, plan = plan, pipe = pipe))
 }
 
-# BIGN's variable from a workbook's analyses sheet (the report's BIGN
-# row); NULL when the report has none
-.bign_var_sheets <- function(ard_spec, id) {
-  an <- ard_spec$analyses
-  if (is.null(an) || is.null(id) || !all(c("output_id", "analysis_id") %in% names(an))) return(NULL)
-  an <- an[!is.na(an$output_id) & an$output_id %in% id & an$analysis_id %in% .bign_id, , drop = FALSE]
-  if (!nrow(an)) return(NULL)
-  v <- c(if ("variables" %in% names(an)) .split_bar(an$variables[1L]),
-         if ("by" %in% names(an)) .split_bar(an$by[1L]))
-  v <- v[!is.na(v) & nzchar(v)]
-  if (length(v)) v[[1L]] else NA_character_
-}
 
 # A table's content -- its items, in order (tfl_item()) -- as the program:
 # `plan <- data |> table_plan(...) |> plan_*() ...`, the code lists of
@@ -1444,11 +1430,13 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 # BIGN's rows among a shift table's made a page of their own).
 .bign_id <- "BIGN"
 
-# Does the report make a table from an ARD with a BIGN item?
-.bign_has <- function(output) {
-  if (!identical(output$kind, "table") || identical(output$data$source, "dataset")) return(FALSE)
-  an <- output$ard$analyses %||% list()
-  any(vapply(an, function(a) is.list(a) && .bign_id %in% c(a$id, a$analysis_id), NA))
+# Does the BIGN rule apply to the report?  Every table made from an ARD
+# (not a table of records): the program splits BIGN's rows off whatever
+# the ARD holds, so the rule does not hang on how the spec was read (a
+# spec file, a workbook, a planner's copy) -- tfl_bign_values() and
+# tfl_bign_drop() find no BIGN row and change nothing
+.bign_applies <- function(output) {
+  identical(output$kind, "table") && !identical(output$data$source, "dataset")
 }
 
 # A header text's population token: {n}, {n1}, {n:Placebo}
@@ -1484,14 +1472,16 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   if (all(!nzchar(nm))) unname(n[1L]) else n[nzchar(nm)]
 }
 
-# BIGN's variable: the variable its item counts (the table's column
-# variable, TRT01A)
-.bign_var <- function(output) {
-  for (a in output$ard$analyses %||% list()) {
-    if (is.list(a) && .bign_id %in% c(a$id, a$analysis_id)) {
-      v <- unlist(c(a$variables, a$by))
-      if (length(v)) return(as.character(v[[1L]]))
-    }
+# BIGN's variable: the table's column variable (the first of
+# table_plan(cols = ), as the content says it), whose values name the
+# columns the header's N goes under; NULL when the content has none
+.bign_var <- function(content) {
+  for (it in content) {
+    if (!identical(.schema_fn_name(it$fn), "table_plan")) next
+    v <- as.character(unlist(it$args$cols, use.names = FALSE))
+    v <- trimws(unlist(strsplit(v, "|", fixed = TRUE)))
+    v <- v[nzchar(v)]
+    if (length(v)) return(v[[1L]])
   }
   NULL
 }
@@ -1518,7 +1508,8 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 
 # n named by the labels (a value with no label keeps its own)
 .bign_relabel <- function(n, labels) {
-  if (is.null(n) || is.null(names(n)) || !is.character(labels)) return(n)
+  labels <- unlist(labels)
+  if (is.null(n) || is.null(names(n)) || !is.character(labels) || is.null(names(labels))) return(n)
   hit <- names(n) %in% names(labels)
   names(n)[hit] <- unname(labels[names(n)[hit]])
   n
@@ -1530,25 +1521,57 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   ard[!as.character(ard$analysis_id) %in% .bign_id, , drop = FALSE]
 }
 
-# The same, as the program's lines on its ARD object `obj`: `bign_n` when
-# a heading reads it, then the ARD without BIGN's rows
+# The same, as the program's lines on its ARD object `obj`: `bign`, the
+# header's values, when a heading reads it, then the ARD without BIGN's
+# rows
 .bign_code <- function(obj, n = TRUE, labels = NULL) {
-  c("# BIGN, the column headings' N: its numbers apart from the table's rows",
-    if (n) c(
-      sprintf("bign <- %s[%s$analysis_id %%in%% \"BIGN\" & %s$stat_name %%in%% \"n\", , drop = FALSE]",
-              obj, obj, obj),
-      "bign_n <- stats::setNames(as.numeric(unlist(bign$stat)),",
-      "  vapply(bign$variable_level, function(x) if (length(x)) as.character(x[[1L]]) else \"\", \"\"))",
-      "if (!any(nzchar(names(bign_n)))) bign_n <- unname(bign_n[1L])",
-      if (!is.null(labels)) c(
-        "# (named by the columns' labels, as the table's columns are)",
-        paste("bign_lab <-", if (inherits(labels, "tfl_r")) as.character(labels)
-              else paste(deparse(labels, width.cutoff = 500L), collapse = "")),
-        "hit <- names(bign_n) %in% names(bign_lab)",
-        "names(bign_n)[hit] <- unname(bign_lab[names(bign_n)[hit]])")),
-    sprintf("%s <- %s[!%s$analysis_id %%in%% \"BIGN\", , drop = FALSE]", obj, obj, obj),
-    "")
+  lab <- if (inherits(labels, "tfl_r")) as.character(labels)
+         else if (!is.null(labels)) paste(deparse(labels, width.cutoff = 500L), collapse = "")
+  .drop_attached_ns(c(
+    "# BIGN: the column headings' N, apart from the table's rows",
+    if (n) sprintf("bign <- tflspec::tfl_bign_values(%s%s)", obj,
+                   if (is.null(lab)) "" else paste0(", labels = ", lab)),
+    sprintf("%s <- tflspec::tfl_bign_drop(%s)", obj, obj),
+    ""))
 }
+
+#' BIGN: the column headings' N, apart from the table's rows
+#'
+#' A report's ARD holds the subjects of each group as the rows of its
+#' `BIGN` analysis (`analysis_id == "BIGN"`): they are the column
+#' headings' N, not the table's cells.  tflspec takes them out before the
+#' table is made and gives their numbers to rtfreporter apart, as
+#' `plan_col_header(values = )`; rtfreporter reads no `analysis_id`.  The
+#' program of a table made from an ARD calls these two, and so does
+#' [tfl_content_run()].
+#'
+#' @param ard An ARD (a data frame with `analysis_id`, `stat_name` and
+#'   `stat`).  Without those columns, or with no BIGN row, nothing is
+#'   found and nothing changes.
+#' @param labels The labels the table's column variable takes (a named
+#'   character vector, code = label, as its `plan_labels()` entry): the
+#'   numbers are named as the columns are.  `NULL`: the codes.
+#' @return `tfl_bign_values()`: `list(n = )`, the n of each group named by
+#'   its value (one unnamed number when BIGN has no group), for
+#'   `plan_col_header(values = )`; `NULL` when the ARD has no BIGN row.
+#'   `tfl_bign_drop()`: the ARD without its BIGN rows.
+#' @examples
+#' ard <- data.frame(analysis_id = c("BIGN", "BIGN", "SEX"),
+#'                   variable_level = I(list("Drug X", "Control", "F")),
+#'                   stat_name = c("n", "n", "n"), stat = I(list(80, 78, 41)))
+#' tfl_bign_values(ard, labels = c("Drug X" = "Drug X 200 mg"))
+#' nrow(tfl_bign_drop(ard))
+#' @export
+tfl_bign_values <- function(ard, labels = NULL) {
+  n <- .bign_n(ard)
+  if (is.null(n)) return(NULL)
+  list(n = .bign_relabel(n, labels))
+}
+
+#' @rdname tfl_bign_values
+#' @export
+tfl_bign_drop <- function(ard) .bign_drop(ard)
+
 
 #' Make a report's content, from its spec file, without its code
 #'
@@ -1606,11 +1629,11 @@ tfl_content_run <- function(output, data) {
   }
   # plan_levels() the ARD already says: left out, as the program does
   if (identical(output$kind, "table")) output$content <- .levels_prune(output$content, output)
-  # BIGN's rows: the headings' N, not the table's (.bign_has())
-  if (.bign_has(output)) {
-    n <- .bign_relabel(.bign_n(data), .bign_labels(output$content, .bign_var(output)))
-    data <- .bign_drop(data)
-    if (!is.null(n)) output$content <- .bign_header_items(output$content, list(n = n))
+  # BIGN's rows: the headings' N, not the table's (.bign_applies())
+  if (.bign_applies(output)) {
+    v <- tfl_bign_values(data, labels = .bign_labels(output$content, .bign_var(output$content)))
+    data <- tfl_bign_drop(data)
+    if (!is.null(v)) output$content <- .bign_header_items(output$content, v)
   }
   # a table of records (its data a dataset: a table_plan(value = ) with
   # its parts) has no ARD to normalize
@@ -1836,16 +1859,16 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
     message(sprintf(paste0("%s: the template's call cannot say this report's own data, table ",
                            "roles or normalize_ard() arguments; its items are written."), output$id))
   }
-  # BIGN's rows: the headings' N, not the table's (.bign_has()); the
+  # BIGN's rows: the headings' N, not the table's (.bign_applies()); the
   # lines that take them out go first, on the object the ARD is
-  bign <- .bign_has(output)
+  bign <- .bign_applies(output)
   if (bign) {
-    output$content <- .bign_header_items(output$content, tfl_r("list(n = bign_n)"))
+    output$content <- .bign_header_items(output$content, tfl_r("bign"))
     bign_n <- isTRUE(attr(output$content, "used"))
     attr(output$content, "used") <- NULL
   }
   bign_pre <- function(obj) if (bign) .bign_code(obj, n = bign_n,
-                                                   labels = .bign_labels(output$content, .bign_var(output)))
+                                                   labels = .bign_labels(output$content, .bign_var(output$content)))
   # the object the pipe starts from: the output's own name for it, else
   # the ARD when the content normalizes it, else the normalized data
   # the data's steps (`data.steps`, the Rework, the old process_code): R
