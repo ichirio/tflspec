@@ -1,5 +1,6 @@
-cols <- c("name", "label_key", "step", "input", "type", "required", "default",
-          "default_kind", "choices", "values", "free", "ordered", "columns", "fixed_rows", "tier",
+cols <- c("name", "label_en", "label_ja", "help_en", "help_ja", "step", "group", "input", "type",
+          "required", "default", "default_kind", "unset", "choices", "values", "value_labels",
+          "free", "ordered", "columns", "fixed_rows", "tier", "passes_to", "member_of",
           "description")
 
 test_that("tfl_arg_defs() takes fn or template, one of them", {
@@ -29,7 +30,8 @@ test_that("the data row's and the analysis item's keys are defined", {
   expect_identical(a$values[[which(a$name == "type")]], c("ard", "model", "value"))
   expect_identical(a$default_kind[a$name == "type"], "value")
   expect_true(a$required[a$name == "method"])
-  expect_true(all(a$input %in% c("pick", "text", "condition", "table")))
+  expect_true(all(a$input %in% c("pick", "text", "condition", "table", "r")))
+  expect_identical(a$input[a$name == "code"], "r")
 })
 
 test_that("a schema function's arguments come back in the same table", {
@@ -74,18 +76,26 @@ test_that("the paginate functions are the page step, other stages stay content",
   expect_true(all(tfl_arg_defs(fn = "plan_blanks")$step == "content"))
 })
 
-test_that("an r argument is a text box, a condition only for where", {
-  expect_identical(.arg_input_for_type("r", "code"), "text")
+test_that("an r argument is the r input, a condition only for where", {
+  expect_identical(.arg_input_for_type("r", "code"), "r")
   expect_identical(.arg_input_for_type("r", "where"), "condition")
-  expect_identical(.arg_input_for_type("r", "when"), "text")
-  expect_identical(.arg_input_for_type("r"), "text")
+  expect_identical(.arg_input_for_type("r", "when"), "r")
+  expect_identical(.arg_input_for_type("r"), "r")
+  expect_identical(.arg_input_for_type("formula", "x"), "r")
+  expect_identical(.arg_input_for_type("string"), "text")
 })
 
-test_that("no row is made for a ... argument", {
-  for (f in c("plan_cells", "rtf_col_header", "cell_rows")) {
+test_that("a ... row only for a function with dots:", {
+  for (f in names(tfl_schema())) {
+    e <- tfl_schema(f)
+    if (!is.list(e) || is.null(e$args) && is.null(e$dots)) next
     d <- tfl_arg_defs(fn = f)
-    expect_false("..." %in% d$name, info = f)
-    expect_false(any(grepl("...", d$label_key, fixed = TRUE)), info = f)
+    if (is.list(e$dots)) {
+      expect_identical(utils::tail(d$name, 1L), "...", info = f)
+      expect_identical(d$type[d$name == "..."], as.character(e$dots$type %||% "string"), info = f)
+    } else if (!"..." %in% names(e$args)) {
+      expect_false("..." %in% d$name, info = f)
+    }
   }
 })
 
@@ -137,13 +147,12 @@ test_that("a template's params: are read the same way, tags kept", {
   expect_s3_class(d$default[[2L]], "tfl_tagged")
   expect_identical(d$default[[2L]]$value, "total")
   expect_identical(d$columns[[4L]], "params")
-  expect_identical(d$label_key[1L], "template.test_v1.demog.by")
   expect_error(tfl_arg_defs(template = "test_v1/none"), "no file")
   expect_error(tfl_arg_defs(template = "demog"), "<series>/<template>")
   expect_error(tfl_arg_defs(template = "Test/demog"), "lower case")
 })
 
-test_that("a choice source outside the 14 words stops", {
+test_that("a choice source outside the 15 words stops", {
   expect_error(.arg_check_choices("vars(adsl_sub), datasets", "x"), "unknown choice source")
   expect_silent(.arg_check_choices("from_args(continuous, categorical), report_data", "x"))
   expect_identical(.arg_choice_words("from_args(continuous, categorical), report_data"),

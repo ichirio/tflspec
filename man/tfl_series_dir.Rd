@@ -19,29 +19,33 @@ the default search only.}
 \value{
 \code{tfl_series_dir()}: the folder of the series (stops if none has
 it).  \code{tfl_series_read()}: a list of class \code{tfl_series} -- \code{name},
-\code{label}, \code{released}, \code{needs}, \code{fixes}, \code{values} (a named list), \code{path}
+\code{label}, \code{released}, \code{needs}, \code{fixes}, \code{values} (a named list),
+\code{descriptions} (a named character vector, a value's key to its meaning;
+empty if the series has none), \code{path}
 (the series's folder) and \code{file} (its \code{series.yml}).
 }
 \description{
 A series is a versioned folder of template SPECs (\code{tflspec_v1},
 \code{acme_v1}, ...): \code{series.yml} (\code{name}, \code{label}, \code{released}, \code{needs},
-\code{fixes}, and the values its templates read with \verb{!series K} under
-\verb{values:}), \verb{templates/<name>.yml} and \verb{styles/<name>.yml}.  A report SPEC
-names a template as \code{template: name: tflspec_v1/demog}, and a study
-changes a series's values in \code{study.yml}:
+\code{fixes}, the values its templates read with \verb{!series K} under \verb{values:},
+and, optionally, what each value means under \verb{descriptions:} (a value's
+key and one line of English, for a screen that shows the values),
+\verb{templates/<name>.yml} and \verb{styles/<name>.yml}.  A report SPEC
+names a template as \code{template: name: tflspec_v1/demog}.
 }
 \details{
-\if{html}{\out{<div class="sourceCode yaml">}}\preformatted{series_settings:
-  tflspec_v1:
-    max_rows: 25
-}\if{html}{\out{</div>}}
+These folders are the sources (the company's and tflspec's own).  A
+study does not read them: it copies the \code{series.yml} and the templates
+its reports use into \verb{<study>/spec/series/<series>/}
+(\code{\link[=tfl_copy_templates]{tfl_copy_templates()}}) and reads its copy, and it changes a value in
+its copy's \verb{values:} (\code{\link[=tfl_series_values_set]{tfl_series_values_set()}}).
 
 A value under \verb{values:} may be the study's: \verb{!study K} reads the study's
 \verb{settings:} at \code{K}, and \verb{!study \{key: K, fallback: v\}} gives \code{v} when the
-study has no \code{K} (\verb{style_listing: !study \{key: style, fallback: tfl_small\}}: the study's style, else \code{tfl_small}).  A study's
-\verb{series_settings:} value is read before it.
+study has no \code{K} (\verb{style_listing: !study \{key: style, fallback: tfl_small\}}: the study's style, else \code{tfl_small}).  A study that sets the
+value in its copy's \verb{values:} replaces the tag.
 
-\code{tfl_series_dir()} finds the folder of a series.  It looks in \code{dir}, then
+\code{tfl_series_dir()} finds the source folder of a series.  It looks in \code{dir}, then
 \code{getOption("tflspec.series_dir")}, then
 \code{file.path(tools::R_user_dir("tflplanner", "data"), "standards", "series")},
 then the series that come with tflspec (\code{system.file("series", package = "tflspec")}); the first folder that holds \verb{<series>/series.yml} wins.
@@ -50,12 +54,14 @@ then the series that come with tflspec (\code{system.file("series", package = "t
 \examples{
 d <- tempfile("series")
 dir.create(file.path(d, "demo_v1"), recursive = TRUE)
-writeLines(c("name: demo_v1", "label: Demo", "values:", "  max_rows: 30"),
+writeLines(c("name: demo_v1", "label: Demo", "values:", "  max_rows: 30",
+             "descriptions:", "  max_rows: The most rows a page holds."),
            file.path(d, "demo_v1", "series.yml"))
 tfl_series_dir("demo_v1", dir = d)
 tfl_series_read("demo_v1", dir = d)$values
+tfl_series_read("demo_v1", dir = d)$descriptions
 unlink(d, recursive = TRUE)
 }
 \seealso{
-\code{\link[=tfl_pin_series]{tfl_pin_series()}}
+\code{\link[=tfl_series_list]{tfl_series_list()}}, \code{\link[=tfl_copy_templates]{tfl_copy_templates()}}
 }

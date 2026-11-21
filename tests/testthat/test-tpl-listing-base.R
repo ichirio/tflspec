@@ -41,6 +41,7 @@ lstb_report <- function(id, more = character(), where = "TRTEMFL == \"Y\" & AESE
 lstb_run <- function(d, id, lines) {
   f <- file.path(d, "spec", "outputs", paste0(id, ".yml"))
   writeLines(lines, f)
+  invisible(tfl_copy_templates(d))
   st <- tfl_read_study_spec(d)
   tfl_write_output(tfl_template_to_spec(tfl_read_output(f), st), f)
   rtf <- tfl_run_output(id, dir = d)
@@ -180,27 +181,44 @@ test_that("a data row's arrange: a column, -column or desc(column)", {
 
 test_that("a listing's style is the study's settings.style, else tfl_small (canon e023312)", {
   args <- c(list(name = "tflspec_v1/tflspec_listing"), lstb_args)
-  res <- function(study) tfl_template_resolve(list(id = "X", kind = "listing", template = args),
-                                              study = study)
-  r <- res(list(settings = list(style = "standard")))
-  expect_identical(r$style, "standard")
-  expect_identical(res(list(settings = list(rounding = "sas")))$style, "tfl_small")
-  expect_identical(res(NULL)$style, "tfl_small")
-  # the study's series_settings: style_listing is read first
-  own <- list(settings = list(style = "standard"),
-              series_settings = list(tflspec_v1 = list(style_listing = "landscape")))
-  expect_identical(res(own)$style, "landscape")
-  # the other listing template too; a table keeps the series' style
+  rep <- list(id = "X", kind = "listing", template = args)
+  res <- function(study) tfl_template_resolve(rep, study = study)$style
+  # a study given as study.yml read (the source series)
+  expect_identical(res(list(settings = list(style = "standard"))), "standard")
+  expect_identical(res(list(settings = list(rounding = "sas"))), "tfl_small")
+  expect_identical(res(NULL), "tfl_small")
+  # the other listing template too
   l <- tfl_template_resolve(list(id = "Y", kind = "listing",
                                  template = list(name = "tflspec_v1/listing", from = "ADAE")),
                             study = list(settings = list(style = "standard")))
   expect_identical(l$style, "standard")
-  # the study's values of the series: style_listing as the study has it
-  v <- tfl_series_settings(list(settings = list(style = "standard")), "tflspec_v1")
-  expect_identical(v$style_listing, "standard")
-  expect_identical(attr(v, "origins")[["style_listing"]], "series")
-  expect_identical(tfl_series_settings(list(), "tflspec_v1")$style_listing, "tfl_small")
-  expect_identical(attr(tfl_series_settings(own, "tflspec_v1"), "origins")[["style_listing"]], "study")
+  # a study folder: its copy of series.yml keeps the !study value, read
+  # for the study; a value the study sets in its copy wins
+  root <- tempfile("lsty")
+  on.exit(unlink(root, recursive = TRUE), add = TRUE)
+  mk <- function(name, settings) {
+    st <- file.path(root, name)
+    dir.create(file.path(st, "spec", "outputs"), recursive = TRUE)
+    writeLines(c(paste0("study_id: ", name), "settings:", settings), file.path(st, "study.yml"))
+    invisible(tfl_copy_templates(st, "tflspec_v1/tflspec_listing"))
+    st
+  }
+  a <- mk("STUDY-A", c("  rounding: sas", "  style: standard"))
+  copy <- file.path(a, "spec", "series", "tflspec_v1", "series.yml")
+  expect_true(any(grepl("style_listing: !study {key: style, fallback: tfl_small}",
+                        readLines(copy), fixed = TRUE)))
+  expect_identical(res(a), "standard")
+  b <- mk("STUDY-B", "  rounding: sas")
+  expect_identical(res(b), "tfl_small")
+  # another value set in the copy: the !study line stays, still read
+  tfl_series_values_set(a, "tflspec_v1", list(max_rows = 25L))
+  expect_true(any(grepl("style_listing: !study", readLines(copy), fixed = TRUE)))
+  expect_identical(res(a), "standard")
+  # the study's own value in its copy wins over the study's style
+  tfl_series_values_set(a, "tflspec_v1", list(style_listing = "landscape"))
+  expect_identical(res(a), "landscape")
+  tfl_series_values_set(b, "tflspec_v1", list(style_listing = "landscape"))
+  expect_identical(res(b), "landscape")
 })
 
 test_that("!study {key, fallback}: the study's value, else the fallback", {
