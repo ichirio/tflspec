@@ -35,12 +35,16 @@ test_that("blank: its own size; fit: the page's body; a number: that size", {
   expect_error(sz_spec(report = bad), "a number of inches or fit")
 })
 
-test_that("the report step sizes only what is said", {
-  code <- tfl_report_code(sz_spec(), "F-1", content = "plot")
-  expect_true(any(grepl("rtf_figures(plot)", code, fixed = TRUE)))
+test_that("the report step sizes what is said, the figure style standard the rest", {
+  one <- function(code) gsub("\\s+", " ", paste(code, collapse = " "))
+  # nothing said: the figure style standard's all-figures size (7.3 x 4.2 in),
+  # as the YAML spec's route writes it
+  code <- one(tfl_report_code(sz_spec(), "F-1", content = "plot"))
+  expect_match(code, "plot, width_twips = 10512, height_twips = 6048,", fixed = TRUE)
   rep <- data.frame(output_id = "F-1", type = "figure", figure_width_in = "fit")
-  code <- tfl_report_code(sz_spec(report = rep), "F-1", content = "plot")
-  expect_true(any(grepl("rtf_figures(plot, width_twips = 13680)", code, fixed = TRUE)))
+  code <- one(tfl_report_code(sz_spec(report = rep), "F-1", content = "plot"))
+  expect_match(code, "plot, width_twips = 13680, height_twips = 6048,", fixed = TRUE)
+  expect_match(code, "render_width = 9.5, render_height = 4.2", fixed = TRUE)
 })
 
 test_that("an old design's size is read as nothing: its report's now", {

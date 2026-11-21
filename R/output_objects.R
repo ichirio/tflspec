@@ -7,7 +7,8 @@
 #  (`{kind, data, content, template, plot}`) has its own data.  The
 #  output's `page.layout:` rows say each object's place, as rtfreporter's
 #  rtf_tables() / rtf_figures() take it (page_break, space_before,
-#  first_rows, cont_title, titles, footnotes, width_in, height_in).  The
+#  first_rows, cont_title, titles, footnotes); a figure's size is its
+#  content's tfl_image (R/fig_content.R).  The
 #  output's titles go above the first object, its footnotes below the last.
 #
 #  Each object is run as an output of its own (.output_objects()): the

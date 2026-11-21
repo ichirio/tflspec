@@ -217,12 +217,12 @@ test_that("tfl_image: the figure drawn at its size on the page and its dpi, save
   cc <- tfl_content_code(o)
   expect_identical(utils::tail(cc, 1L),
                    'ggsave("F-1.png", content, width = 9.5, height = 4, dpi = 150, device = "png")')
-  # no file: nothing saved; no tfl_image: drawn at the figure's own size, 300 dpi
+  # no file: nothing saved; no size: the figure style standard's (7.3 x 4.2 in, 300 dpi)
   x$content[[n]] <- tfl_item("tfl_image", list(dpi = 300))
   o2 <- tfl_output("F-1", "figure", data = x$data, content = x$content)
   expect_false(any(grepl("ggsave", tfl_content_code(o2))))
   expect_match(paste(tfl_report_code(o2, study = st, content = "content"), collapse = "\n"),
-               "render_width = 6.5, render_height = 4.5, render_dpi = 300", fixed = TRUE)
+               "render_width = 7.3, render_height = 4.2, render_dpi = 300", fixed = TRUE)
 })
 
 test_that("tfl_fig_template(form = \"items\"): the content of calls, marked as the template's, with its arguments", {

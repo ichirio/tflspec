@@ -126,6 +126,8 @@ tfl_read_study_spec <- function(dir) {
          "templates. A report that differs from a template changes its arguments or adds ",
          "cards after the template's; remove the folder.", call. = FALSE)
   }
+  # (a figure's defaults are the figure style standard's: settings: figure: stops)
+  .fig_settings_figure_stop(study$settings)
   structure(list(
     study = study,
     data = .calls_in(rd(file.path(spec, "data.yml")) %||% list()),
@@ -344,6 +346,11 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   output$content <- .study_refs_prune(output$content, names(study$codelists))
   attr(output, "study_codelists") <- study$codelists %||% list()
   output$content <- .listing_rows_default(output$content, output$kind, provenance)
+  # a figure's render settings: the study's figure style standard's for its
+  # type under its tfl_image's (defaults.yml figure_style:)
+  if (identical(output$kind, "figure") && .fig_new_content(output$content)) {
+    output$content <- .fig_image_fill(output$content, study, .fig_type_of_output(output))
+  }
   # the study's rounding: the setup's option, so the program leaves it out
   attr(output, "study_rounding") <- .study_rounding(study)
   # the page: the report's configuration < the template < the report < force;
