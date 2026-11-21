@@ -68,6 +68,7 @@ params:
     step: analysis
     tier: usual
     description: The decimals (or the format) of each statistic.
+      A report's names go over the series' formats; `!unset` removes one.
   overall_label:
     type: string
     input: text

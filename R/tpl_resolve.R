@@ -30,6 +30,14 @@
 #' data, and replaces the template's row of its id.  The result is a plain
 #' code SPEC, as [tfl_read_output()] reads one.
 #'
+#' A report's value replaces the default, but for an argument of a map type
+#' whose default is the series' (`!series K`, such as `formats`): the
+#' report's map is put over the series' map name by name.  A name the report
+#' writes replaces the series' value of that name (a map value merges into
+#' the series' map of that name, in the same way), a name whose value is
+#' `!unset` is removed, and the names the report does not write keep the
+#' series' values.
+#'
 #' An analysis item's `analyses:` (`per`, `ids`) says its analyses: `per:
 #' variable` one a variable (its id the variable's entry in `ids`, else the
 #' variable's name); `per: level` or `per: [columns]` one row whose
@@ -126,6 +134,12 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
              call. = FALSE)
       }
       val <- given[[p]]
+      # a map whose default is the series' (!series K): the report's names
+      # over the series' map, the rest as the series has them (canon e023312)
+      if (identical(defs$default_kind[[i]], "series") && startsWith(defs$type[[i]], "map<") &&
+          .tr_is_map(val)) {
+        val <- .tr_merge_map(def, val)
+      }
       o <- "report"
     } else {
       val <- def
@@ -406,6 +420,32 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
          call. = FALSE)
   }
   invisible()
+}
+
+# A map as read (a named list, not a tagged value); an empty list is one too
+.tr_is_map <- function(x) {
+  is.list(x) && !is.object(x) && (!length(x) || .series_is_map(x))
+}
+
+# `over` put over `base` name by name (canon e023312): a name `over` writes
+# replaces the base's, a map value merges into the base's map of that name,
+# and `!unset` removes the name; the base's other names stay.  Nothing left
+# is NULL (as `!unset` for the whole argument); a map inside left empty
+# drops its name.
+.tr_merge_map <- function(base, over) {
+  out <- if (.tr_is_map(base)) base else list()
+  attributes(out) <- if (length(out)) list(names = names(out))
+  for (k in names(over)) {
+    v <- over[[k]]
+    if (inherits(v, "tfl_unset")) {
+      out[[k]] <- NULL
+    } else if (.tr_is_map(v)) {
+      out[[k]] <- .tr_merge_map(out[[k]], v)
+    } else {
+      out[k] <- list(v)
+    }
+  }
+  if (length(out)) out
 }
 
 # The report's arguments: `template:` without `name`, its step sections

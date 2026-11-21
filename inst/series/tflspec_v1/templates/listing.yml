@@ -34,6 +34,7 @@ params:
     step: analysis
     tier: other
     description: The decimals (or the format) of the header N statistics.
+      A report's names go over the series' formats; `!unset` removes one.
 extends: !series extends
 style: !series style_listing
 data:

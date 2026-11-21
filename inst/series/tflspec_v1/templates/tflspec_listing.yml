@@ -117,6 +117,7 @@ params:
     tier: other
     description: The decimals (or the format) of each statistic (a listing counts
       nothing; kept as every template has it).
+      A report's names go over the series' formats; `!unset` removes one.
 extends: !series extends
 style: !series style_listing
 derive:

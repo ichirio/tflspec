@@ -91,6 +91,7 @@ params:
     step: analysis
     tier: usual
     description: The decimals (or the format) of each statistic; VAR:stat for one variable.
+      A report's names go over the series' formats; `!unset` removes one.
   labels:
     type: map<column,string>
     input: table
