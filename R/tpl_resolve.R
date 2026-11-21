@@ -164,6 +164,13 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   # data: rows -- the template's, the report's merged in by id key by key
   # (a report row with `code:` makes the whole data: it replaces the
   # template's row of its id), then filled in
+  # (a figure's data written as its steps, `data: {source, steps}` as a
+  # code SPEC writes it, is filled in as it is; a report's rows have no
+  # place in it)
+  if (is.list(tpl$data) && !is.null(names(tpl$data)) && length(report$data)) {
+    stop(who, ": ", template, "'s data are its steps (data: steps:); a report adds no data rows to them.",
+         call. = FALSE)
+  }
   rows <- tpl$data %||% list()
   for (r in report$data %||% list()) {
     k <- match(r$id %||% NA_character_, vapply(rows, function(e) e$id %||% NA_character_, ""))
@@ -197,12 +204,18 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   kind <- report$kind %||% tpl$kind %||% "table"
 
   # (labels and value_labels are one plan_labels: a later plan_labels
-  # replaces an entry of the same name whole, a heading would be lost)
+  # replaces an entry of the same name whole, a heading would be lost;
+  # a value_labels entry may be a reference to a study list,
+  # !r study$codelists$X, as demog's default)
   cenv <- env
   if ("value_labels" %in% names(env)) {
     cenv["labels"] <- list(.tr_merge_labels(env$labels, env$value_labels, template))
   }
   content <- .tr_fill(tpl$content %||% list(), cenv)
+  # (the plan_labels items as one; a reference to a study list for a column
+  # no analysis reads left out)
+  cols <- unique(as.character(unlist(lapply(items, function(a) c(a$variables, a$by)))))
+  content <- .tr_labels_join(content, cols)
   if (is.list(report$content)) content <- c(content, report$content)
   page <- .tr_fill(tpl$page %||% list(), env)
   for (k in names(report$page)) page[k] <- list(report$page[[k]])
@@ -472,6 +485,13 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   out <- as.list(labels)
   for (v in names(value_labels)) {
     vl <- value_labels[[v]]
+    if (is.null(vl) || inherits(vl, "tfl_unset")) next
+    if (.has_study_ref(vl)) {
+      # a study list (R): the heading goes in front of it in R
+      head <- out[[v]]
+      out[[v]] <- if (is.null(head)) vl else .tr_label_pair(v, head, vl)
+      next
+    }
     if (!is.list(vl) || is.null(names(vl)) || !all(nzchar(names(vl)))) {
       stop("template ", template, ": value_labels: ", v, " is a map ({code: text}).", call. = FALSE)
     }

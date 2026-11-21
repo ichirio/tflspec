@@ -181,7 +181,7 @@ tfl_output_contents <- function(output, study, dir = ".") {
     p <- ds[[i]]$path
     if (!grepl("^([A-Za-z]:)?[/\\\\]", p)) p <- file.path(dir, p)
     .data_file_must_exist(r, ds[[i]]$path, dir)
-    data[[tolower(r)]] <- .ai_read_adam(p)
+    data[[tolower(r)]] <- .ai_read_adam(p, r, study)
   }
   # the report's analysis data its reads name (`data:`): its data part of
   # the ARD program run from the study folder (tfl_ard_code(part = "data"))

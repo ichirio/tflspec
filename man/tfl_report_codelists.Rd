@@ -2,7 +2,7 @@
 % Please edit documentation in R/spec_ard.R
 \name{tfl_report_codelists}
 \alias{tfl_report_codelists}
-\title{A report's code lists, with the ones its layers give}
+\title{A report's code lists}
 \usage{
 tfl_report_codelists(study, outputs = NULL, rows = NULL)
 }
@@ -15,9 +15,9 @@ files, read as \code{\link[=tfl_sheets_from_yaml]{tfl_sheets_from_yaml()}} reads
 
 \item{rows}{The reports' own code list rows (the sheets' \code{codelists},
 a template's lists among them), when the caller has them: the sheets are
-then not made again.  The result keeps the columns of \code{rows} (a layer's
-rows have \code{NA} there), and a row of a report not in \code{outputs} stays.
-\code{NULL} (default): made from \code{outputs}.}
+then not made again.  The result keeps the columns of \code{rows}, and a row
+of a report not in \code{outputs} stays.  \code{NULL} (default): made from
+\code{outputs}.}
 }
 \value{
 A data frame of the sheets' \code{codelists} rows (\code{output_id},
@@ -28,19 +28,17 @@ write a study's ARD with these.
 }
 \description{
 \code{tfl_report_codelists()} gives the code lists the ARD program of each
-report is written with.  A report's code lists can come from the layers
-it extends -- the study's \code{defaults.yml}, a pattern -- as well as from its
-own file (\code{\link[=tfl_resolve_output]{tfl_resolve_output()}} puts them together for the RTF); the
-sheets (\code{\link[=tfl_sheets_from_yaml]{tfl_sheets_from_yaml()}}) hold a report's own only, so that they
-stay the round trip back to the YAML.  This is the sheets' \code{codelists}
-rows with the layers' lists added, report by report.
+report is written with: the report's own (\verb{codelists:} in its file, a
+template's own lists among them), as the sheets' \code{codelists} rows hold
+them, the reports in the TOC's order.  No layer gives a report a list:
+the study's code lists (\code{spec/defaults.yml} \verb{codelists:}) are
+\code{study$codelists}, which a report or a template names where it uses one
+(\code{study$codelists$SEX}), and the levels of the ADaM columns come from the
+study's ADaM metadata (\verb{adam_meta:}, \code{study$adam}); a pattern holds no
+list.
 }
 \details{
-For each report and variable there is one list: the report's own when
-it has one (a template's own lists among them, as the sheets hold them),
-else the one of the layers it extends (a pattern's over the defaults').
-A report that extends nothing (\code{extends: none}) has only its own.  The
-ARD holds each row's \code{value} (the code); its \code{label} is applied by the
+The ARD holds each row's \code{value} (the code); its \code{label} is applied by the
 report's table plan (\code{plan_labels}), and by a figure's legend.
 }
 \examples{

@@ -239,12 +239,15 @@ generate_rtfreport(tfl_report(o, content = plan, study = st), "T-1.rtf")
 **study.yml** — `study_id`, `title`; `settings:` the table and report
 study keys (`rounding`: `sas` / `r`; `program_dir`; `program` and
 `file`, each report's program and RTF file, `{output_id}.R` /
-`{output_id}.rtf`; `adam_levels`: `codelists`, the default, puts the
-study's code lists' levels on `study$adam`, `none` does not -- blanks are
-`NA` either way (the generated ARD, listing and figure programs always read
-`study$adam`; `study$adam_org` is the file as it is; test a blank with
-`is.na()`), a report's own levels and labels written as values still
-work, and naming a study code list (`cl_sex`) stops); `keys:` the ARD's (`id`: the subject key, `USUBJID`;
+`{output_id}.rtf`; `adam_levels`: `codelists`, the default, puts on
+`study$adam` the levels of the code lists the study's ADaM metadata maps to
+each dataset's variables (`spec/defaults.yml` `adam_meta:`, a define's
+tables: `variables` with each variable's code list OID, `codelists` a value
+a row; only the variables it maps, never a list by its name, never a
+value-level list), `none` does not -- blanks are `NA` either way (the
+generated ARD, listing and figure programs always read `study$adam`;
+`study$adam_org` is the file as it is; test a blank with `is.na()`), and a
+report's own levels and labels written as values still work); `keys:` the ARD's (`id`: the subject key, `USUBJID`;
 `output`: where the study ARD goes; `source`: R files of the study's own
 analysis functions).
 
@@ -273,7 +276,7 @@ sections follow this order.
 | `data` (a table, a listing) | the report's datasets: a flat list of definitions (`id`, `from`, `population`, `subjects_in`, `where`, `add`, `derive`, `keep`, `distinct`, `then`, `code`: the `analysis_data` sheet's rows, `data_id` as `id`), in build order, named `<dataset>_sub` / `_den` / `_<noun>` (`adsl_sub`, `adae_sub`, `adlb_den`) -- §A.1.  `then` is R piped onto the end of the definition's data after all its other keys (and the code lists' levels), as written: the data is its first argument, a pipe of several steps is fine (`dplyr::mutate(...) |> dplyr::filter(...)`), and it may do anything R does; it is not written with `code` (an error: `code` makes the whole data).  A report on a template writes a definition of the template's id to change that definition: its keys go over the template's key by key, but a definition with `code` replaces the template's one whole (none of the template's `from`, `subjects_in`, `add`, `where`, `derive` stay).  For example, `tflspec_v1/lab_tox_shift` keeps each subject's worst record by its `record_where` (default `AVISIT == "WORST POST-BASELINE"`, the ADaM's own worst record); for an ADaM with no worst record, set it to TRUE and pick the record with `then` on the template's `adlb_sub`: `template: {name: tflspec_v1/lab_tox_shift, data: {record_where: !r TRUE}, analysis: {...}}` and `data: [{id: adlb_sub, then: !r 'dplyr::slice_max(ATOXGRH, n = 1, with_ties = FALSE, by = USUBJID)'}]` (several tests: `by = c(USUBJID, PARAMCD)`, and each test's own direction, `dplyr::coalesce(ATOXGRH, ATOXGRL)` for `ATOXGRH`).  Likewise `tflspec_v1/tflspec_shift` (a category at baseline by the same after it, `BNRIND` by `ANRIND` by default, a page a `PARAMCD`) computes no worst record: the shell's rule goes on the template's `rec_sub` as `where` and `then`, for example "a subject with both Low and High after baseline counts as High": `data: [{id: rec_sub, where: !r 'PARAMCD %in% c("ALT", "HGB") & !ABLFL %in% "Y"', then: !r 'dplyr::arrange(match(ANRIND, c("HIGH", "LOW", "NORMAL"))) |> dplyr::distinct(USUBJID, PARAMCD, .keep_all = TRUE)'}]` (the order is the study's rule, worst first; one record a subject and parameter).  A subjects definition (`from: ADSL`, no `subjects_in`) without a `population` of its own takes `common: population`.  A table writes no `data: {source: ard}` (it always reads its ARD: that map stops); `ard: analysis_data:` stops (it is `data:`) |
 | `ard` | the report's part of the study ARD: `analyses:` (the `analyses` sheet's rows, `analysis_id` as `id`, `population_id` as `population`) -- §A.1 |
 | `data` (a figure, or a listing's records) | what the report reads, a map.  a table's Rework is not written here: it is the first item of `content:`, `- rework: {steps: [...]}` (optional R after the content's `normalize_ard()` and before `table_plan()`: it starts from `data`, which is the object normalized by the `normalize_ard` item (`data <- ard` when there is none), and leaves `data`; a Rework that never names `data` is an error; `object: ard` names the ARD object; written under `ard: data:` or `data:` it stops); `source: dataset` (a listing: `dataset`, `where`, `sort`); `source: code` (a figure: `steps:`, the design's data steps of §7; or `code: !r ...`, the report's own R) |
-| `codelists` | by variable, a list of `{value, label}` in the order printed (the `codelists` sheet); a nested count's inner value may say `under:` (its parent's value, for `complete_hierarchy()`) |
+| `codelists` | the report's own, by variable, a list of `{value, label}` in the order printed (the `codelists` sheet); a nested count's inner value may say `under:` (its parent's value, for `complete_hierarchy()`).  No layer gives a report a list: the study's lists (`spec/defaults.yml` `codelists:`, by name) are named where used, in R: `plan_labels: {SEX: !r study$codelists$SEX}` (the template `tflspec_v1/demog` does so by default, its `value_labels`; a list the study has not got is left out) |
 | `content` | the report, a list of items, each one call: `- plan_cells: {categorical: '{n} ({p:.1f%})'}`.  A table's items are rtfreporter's `normalize_ard()`, `table_plan()` and `plan_*()` verbs; a listing's `plan_listing()` (its columns `listing_col()` calls); a figure's the calls of its plot -- `ggplot`, `geom_*`, `scale_*`, `labs`, `theme` ..., and `tfl_image` last (§7.1).  Or `content: !r ...`, the report's own R |
 | `page` | the document: `titles`, `footnotes`, `header`, `footer` (maps by line number: `'1': {center: Table 14.1.1}`), `tokens`, and rtfreporter's calls by name (`rtf_page: {orientation: landscape}`, `rtf_tables: {auto_section: true}`, `rtf_document: {watermark: DRAFT}`); where a table's page names print is better said in its content, `plan_paginate_group: {heading_at: section}` -- a page's `rtf_tables: {auto_section: }` given wins |
 | `template` | a template SPEC, `{name: km_survival, args: {...}}` (`tfl_templates()`; a catalog alias runs its template as itself, `{name: stf_t14_ae_soc_pt}`, and a report keeps the name it was written with -- `tfl_templates(source = "FDA STF IG v2")` / `"PhUSE CSS"` / `"CDISC ARS"` lists a collection's every item with its alias and template; FDA STF Figures 1, 4, 13: `km_cumulative`, its data stage in `data:` steps, samples in `extdata/report-definitions/`); a figure designer's preset is a name (`km_simple` ...), the designer's `plot`, `plots`, `compose` its old form (§7) |
@@ -293,8 +296,11 @@ a number, `true` / `false`.  A condition is written bare
 removes what a layer below set. It reads in flow style too: `{b: !unset}`.
 
 **The layers.**  A report says only what differs from what it extends
-(`tfl_resolve_output()`): `page` lines, `tokens`, `codelists` and a call's
-arguments merge by key; in `content`, the report's items of one function
+(`tfl_resolve_output()`): `page` lines, `tokens` and a call's
+arguments merge by key (no layer gives a report a code list: a
+`codelists:` in a pattern stops; the study's `codelists:` in
+`defaults.yml` are `study$codelists`, by name, which a report or a
+template names where it uses one, `!r study$codelists$SEX`); in `content`, the report's items of one function
 replace every item of that function below it, in the place the first had;
 a function only the report has goes after them.  `defaults.yml` holds the
 study-wide content (the rounding ...) and the page configurations
@@ -446,6 +452,15 @@ content:
   `tfl_image` is the last item.  The code is each plot as `p_<name>`, then
   `content <- wrap_plots(p_km, p_risk, ...)`; one plot is `content`.  A
   `position_dodge()` said twice is written once as `pd`.
+  `wrap_plots`'s `plots` names only the figure's plots, and an object
+  argument (`x`, `data`, `fit`) only an object above the content (a data
+  row, a data step's name, an analysis item): another name is an error
+  of `tfl_check_spec()`, as is a field that names an object made below
+  it, a name given twice, or a dataset's or a function's name; an object
+  made and not used is a note.  `tfl_output_objects(report)` lists a
+  report's objects with their R names; `tfl_default_name(report, "plot")`
+  names a new one (`plot_1`, `model_1`; a data row `<dataset>_sub`, then
+  `_sub2`).
 - `tfl_image: {width_in, height_in, dpi, format, file}` is the image:
   its size on the page (inches, or `fit` -- the page's body; left out: the
   page's `rtf_figures` size, else the figure's own 6.5 x 4.5 in) and its
@@ -848,7 +863,7 @@ columns are upper case (`USUBJID`, `TRT01A`), ARD and spec columns lower
 case with underscores (`output_id`, `analysis_id`, `stat_name`), and the
 program's names are
 `report_id` (the report's id, in the ARD and the report programs), `cl_<variable>` (a code
-list), `path_<folder>` (a folder of the study's setup), `ard_<analysis id>`
+list), `path_<folder>` (a folder of the study's setup), `.ard_<analysis id>`
 (an analysis's ARD), `<dataset>_sub` (the data the program makes: an
 analysis set's, `adsl_sub`, and an analysis's records, `adae_sub`; a
 report's second of a dataset `adsl_sub2`, each under a comment saying
@@ -966,7 +981,7 @@ back): rename the value or choose another separator.
 
 **Spec files (YAML, one file a report):** `tfl_output` `tfl_item` `tfl_plot` `tfl_call` `tfl_r`
 `tfl_unset` `tfl_read_output` `tfl_write_output` `tfl_read_study_spec`
-`tfl_read_outputs` `tfl_resolve_output` `tfl_run_output` `tfl_output_contents` `tfl_output_extends` `tfl_study_value` `tfl_styles` `tfl_output_data_names` `tfl_code_refs` `tfl_write_study_part` `tfl_item_code`
+`tfl_read_outputs` `tfl_resolve_output` `tfl_run_output` `tfl_output_contents` `tfl_output_extends` `tfl_study_value` `tfl_styles` `tfl_output_objects` `tfl_output_object_uses` `tfl_output_rename` `tfl_default_name` `tfl_output_name_check` `tfl_code_refs` `tfl_write_study_part` `tfl_item_code`
 `tfl_item_written` `tfl_item_own` `tfl_convert_sheets_to_yaml`
 `tfl_yaml_from_sheets` `tfl_sheets_from_yaml` `tfl_sheets_from_spec` `tfl_report_codelists` `tfl_write_spec_xlsx`
 `tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_check_spec` `tfl_check_build` `tfl_check_reports` `tfl_check_fix_text` `tfl_data_code` `tfl_schema_help` `tfl_ai_decisions_read` `tfl_ai_decisions_write` `tfl_ai_confirm` `tfl_content_code` `tfl_content_run`
