@@ -265,7 +265,8 @@ versions, each when it is first used:
 
 - `study$adam_org`: the dataset as the file has it.
 - `study$adam`: the same dataset with blanks as `NA` (`blank_as_na()`),
-  then the study's code lists' levels (`set_levels()`).
+  then the levels of the columns the study's ADaM metadata maps
+  (`set_levels()`).
 
 The generated ARD, listing and figure programs always read `study$adam`.
 `study$adam_org` is there for a program a person writes on the data as
@@ -277,13 +278,18 @@ Lab report's program from part 1:
 cat(section(lab$code, "input data"), sep = "\n")
 ```
 
-Here the study has one code list, for `SEX`, in `spec/defaults.yml`:
+The levels come from the study's ADaM metadata, `spec/defaults.yml`'s
+`adam_meta:` (the rows of a Define-XML: `variables` maps a dataset's
+column to a code list, `codelists` gives each list's values in order).
+Here it maps ADSL's `SEX`:
 
 ```{r}
-cat("codelists:",
-    "  SEX:",
-    "    - {value: F, label: Female}",
-    "    - {value: M, label: Male}",
+cat("adam_meta:",
+    "  variables:",
+    "    - {dataset: ADSL, variable: SEX, codelist: CL.SEX}",
+    "  codelists:",
+    "    - {codelist: CL.SEX, value: F, decode: Female, order: 1}",
+    "    - {codelist: CL.SEX, value: M, decode: Male, order: 2}",
     file = file.path(study, "spec", "defaults.yml"), sep = "\n", append = TRUE)
 ```
 
@@ -307,7 +313,7 @@ setwd(old)
 
 table(lb_org$ABLFL, useNA = "ifany")   # as read: "" and "Y"
 table(lb$ABLFL, useNA = "ifany")       # blanks as NA
-levels(sl$SEX)                         # the code list's levels
+levels(sl$SEX)                         # CL.SEX's values, in order
 ```
 
 So a condition on a blank is written `is.na(ABLFL)`, not `ABLFL == ""`.
@@ -315,11 +321,11 @@ So a condition on a blank is written `is.na(ABLFL)`, not `ABLFL == ""`.
 ### `adam_levels: codelists | none`
 
 `study.yml`'s `settings: adam_levels` says whether `study$adam` gets the
-study's code lists' levels:
+levels of `adam_meta`:
 
 - `codelists` (the default, also when the key is not there): blanks as
-  `NA`, then the code lists' levels.
-- `none`: blanks as `NA` only. No `cl_*` objects are written.
+  `NA`, then the levels of the columns `adam_meta` maps.
+- `none`: blanks as `NA` only.
 
 ```{r, opts.label = "code"}
 y <- file.path(study, "study.yml")
@@ -329,7 +335,6 @@ cat(tfl_study_setup_code(tfl_read_study_spec(study)), sep = "\n")
 
 The setting is part of each ARD's fingerprint, so changing it marks the
 ARD outdated. Under `none`, a report's own levels and labels still work.
-A report that names a study code list (`cl_sex`) stops with a message.
 
 ## 4. Figures: `figure: {name, args}`
 

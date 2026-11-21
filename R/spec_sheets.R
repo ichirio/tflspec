@@ -544,23 +544,16 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
                                " is a built-in configuration or not the study's: no sheet or column holds it"))
     }
   }
-  # the layers' code lists have no sheet of their own (a report's own are
-  # its rows): they stay in the YAML
-  # (in the YAML they stay; a study written from the sheets has not got them,
-  # and a report that reads the variable is then made without the list: its
-  # ARD program loses the set_levels() step -- the values' order, and the table its labels, #689)
-  cl_said <- function(cl, whose, file) paste0(
-    whose, " code lists (", file, ": ", paste(names(cl), collapse = ", "), ") stay in YAML, not on the sheets: ",
-    "a study written from the sheets has not got them, so a report that reads one of these variables ",
-    "is made without the list: its ARD program does not set the values' order, and its table has no labels for them")
-  if (length(s$defaults$codelists)) {
-    note(NA_character_, "codelists", cl_said(s$defaults$codelists, "the defaults'", "defaults.yml"))
+  # (the study's own lists, by name, and its ADaM metadata: no sheet holds them)
+  if (length(s$codelists)) {
+    note(NA_character_, "codelists", paste0(
+      "the study's code lists (defaults.yml: ", paste(names(s$codelists), collapse = ", "),
+      ") stay in YAML, not on the sheets: a study written from the sheets has not got them"))
   }
-  for (nm in names(s$patterns)) {
-    if (length(s$patterns[[nm]]$codelists)) {
-      note(paste0("@", nm), "codelists", cl_said(s$patterns[[nm]]$codelists, "a pattern's",
-                                                  paste0("patterns/", nm, ".yml")))
-    }
+  if (nrow(s$adam_meta$variables %||% data.frame())) {
+    note(NA_character_, "adam_meta", paste0(
+      "the study's ADaM metadata (defaults.yml adam_meta:) stays in YAML, not on the sheets: ",
+      "a study written from the sheets has not got it, so study$adam has no levels from it"))
   }
   # the setup code on the planner sheet's study row
   planner <- c(list(list(output_id = NA_character_, description = "(every report)",

@@ -32,7 +32,7 @@ test_that("a stack is one ard_stack() call, each variable tagged with its analys
          variables = "SEX")))
   code <- tfl_ard_code(sp, part = "body")
   txt <- paste(code, collapse = "\n")
-  expect_match(txt, "ard_demo <- adsl_sub |>\n  ard_stack(\n    .by = ARM,\n", fixed = TRUE)
+  expect_match(txt, ".ard_demo <- adsl_sub |>\n  ard_stack(\n    .by = ARM,\n", fixed = TRUE)
   expect_match(txt, "    ard_summary(\n      variables = c(AGE, BMIBL),", fixed = TRUE)
   expect_match(txt, "    ard_tabulate(variables = SEX,", fixed = TRUE)
   # each analysis's variables; the rest the stack's
@@ -40,7 +40,7 @@ test_that("a stack is one ard_stack() call, each variable tagged with its analys
                            "    analyses = list(CONT = c(\"AGE\", \"BMIBL\"), CAT = \"SEX\")"),
                fixed = TRUE)
   # one call, not three
-  expect_length(grep("^ard_[a-z0-9_]+ <- ", code), 1L)
+  expect_length(grep("^[.]ard_[a-z0-9_]+ <- ", code), 1L)
 
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE))
   ids <- tapply(ard$analysis_id, ard$variable, unique)
