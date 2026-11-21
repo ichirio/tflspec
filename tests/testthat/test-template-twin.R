@@ -47,6 +47,7 @@ twin_build <- function(name, d, rtf = TRUE, drop = NULL) {
     }
     writeLines(x, file.path(out, paste0(name, s, ".yml")))
   }
+  invisible(tfl_copy_templates(d))
   ft <- file.path(out, paste0(name, "T.yml"))
   st <- tfl_read_study_spec(d)
   tfl_write_output(tfl_template_to_spec(tfl_read_output(ft), st), ft)
@@ -139,6 +140,7 @@ test_that("tflspec_summary: DM's arguments give demog's ARD", {
   ids <- c(demog = "T-14-1-1T", summary = "T-14-1-1S")
   writeLines(x, file.path(out, "T-14-1-1T.yml"))
   writeLines(y, file.path(out, "T-14-1-1S.yml"))
+  invisible(tfl_copy_templates(d))
   st <- tfl_read_study_spec(d)
   for (id in ids) {
     f <- file.path(out, paste0(id, ".yml"))
@@ -165,6 +167,7 @@ test_that("tflspec_summary: a report's filter on adsl_sub reaches BIGN (header N
               after = match("codelists:", x) - 1L)
   f <- file.path(d, "spec", "outputs", "T-14-1-1F.yml")
   writeLines(x, f)
+  invisible(tfl_copy_templates(d))
   st <- tfl_read_study_spec(d)
   tfl_write_output(tfl_template_to_spec(tfl_read_output(f), st), f)
   st <- tfl_read_study_spec(d)
@@ -202,6 +205,7 @@ test_that("tflspec_summary: nest moves rows, the header has the arms and N, labe
                  "template:", "  name: tflspec_v1/tflspec_summary",
                  "  analysis:", "    by: [TRT01A]", "    categorical: [SEX, RACE, ETHNIC]",
                  "    missing_row: false", "  content:", content), f)
+    invisible(tfl_copy_templates(d))
     st <- tfl_read_study_spec(d)
     tfl_write_output(tfl_template_to_spec(tfl_read_output(f), st), f)
     st <- tfl_read_study_spec(d)
