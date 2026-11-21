@@ -452,6 +452,15 @@ content:
   `tfl_image` is the last item.  The code is each plot as `p_<name>`, then
   `content <- wrap_plots(p_km, p_risk, ...)`; one plot is `content`.  A
   `position_dodge()` said twice is written once as `pd`.
+  `wrap_plots`'s `plots` names only the figure's plots, and an object
+  argument (`x`, `data`, `fit`) only an object above the content (a data
+  row, a data step's name, an analysis item): another name is an error
+  of `tfl_check_spec()`, as is a field that names an object made below
+  it, a name given twice, or a dataset's or a function's name; an object
+  made and not used is a note.  `tfl_output_objects(report)` lists a
+  report's objects with their R names; `tfl_default_name(report, "plot")`
+  names a new one (`plot_1`, `model_1`; a data row `<dataset>_sub`, then
+  `_sub2`).
 - `tfl_image: {width_in, height_in, dpi, format, file}` is the image:
   its size on the page (inches, or `fit` -- the page's body; left out: the
   page's `rtf_figures` size, else the figure's own 6.5 x 4.5 in) and its
@@ -854,7 +863,7 @@ columns are upper case (`USUBJID`, `TRT01A`), ARD and spec columns lower
 case with underscores (`output_id`, `analysis_id`, `stat_name`), and the
 program's names are
 `report_id` (the report's id, in the ARD and the report programs), `cl_<variable>` (a code
-list), `path_<folder>` (a folder of the study's setup), `ard_<analysis id>`
+list), `path_<folder>` (a folder of the study's setup), `.ard_<analysis id>`
 (an analysis's ARD), `<dataset>_sub` (the data the program makes: an
 analysis set's, `adsl_sub`, and an analysis's records, `adae_sub`; a
 report's second of a dataset `adsl_sub2`, each under a comment saying
@@ -972,7 +981,7 @@ back): rename the value or choose another separator.
 
 **Spec files (YAML, one file a report):** `tfl_output` `tfl_item` `tfl_plot` `tfl_call` `tfl_r`
 `tfl_unset` `tfl_read_output` `tfl_write_output` `tfl_read_study_spec`
-`tfl_read_outputs` `tfl_resolve_output` `tfl_run_output` `tfl_output_contents` `tfl_output_extends` `tfl_study_value` `tfl_styles` `tfl_output_data_names` `tfl_code_refs` `tfl_write_study_part` `tfl_item_code`
+`tfl_read_outputs` `tfl_resolve_output` `tfl_run_output` `tfl_output_contents` `tfl_output_extends` `tfl_study_value` `tfl_styles` `tfl_output_objects` `tfl_output_object_uses` `tfl_output_rename` `tfl_default_name` `tfl_output_name_check` `tfl_code_refs` `tfl_write_study_part` `tfl_item_code`
 `tfl_item_written` `tfl_item_own` `tfl_convert_sheets_to_yaml`
 `tfl_yaml_from_sheets` `tfl_sheets_from_yaml` `tfl_sheets_from_spec` `tfl_report_codelists` `tfl_write_spec_xlsx`
 `tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_check_spec` `tfl_check_build` `tfl_check_reports` `tfl_check_fix_text` `tfl_data_code` `tfl_schema_help` `tfl_ai_decisions_read` `tfl_ai_decisions_write` `tfl_ai_confirm` `tfl_content_code` `tfl_content_run`

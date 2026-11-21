@@ -1090,7 +1090,7 @@
 # ---- the program ---------------------------------------------------------
 
 # The analyses `a`: their data, their analysis sets, one statement each
-# (`ard_<id> <- call |> format |> tag_ard()`), bound into `ard`.  `levels`:
+# (`.ard_<id> <- call |> format |> tag_ard()`), bound into `ard`.  `levels`:
 # each report's code lists (.codelist_levels_by()).  One report's program
 # starts with `output_id <- "..."`; the study's has a part a report, each
 # report's ARD into `ards`.
@@ -1308,13 +1308,10 @@
                           code[length(code)] != "# ---- data ----") "", made)
     }
     if (!several) code <- c(code, "", "# ---- analyses ----")
-    # each analysis's ARD under a name of its own: ard_<id>
+    # each analysis's ARD under a name of its own: .ard_<id>
     top <- rows[is.na(par[rows])]
     fun_names <- .ard_fun_names()
-    ard_names <- make.unique(c(taken, fun_names,
-                               paste0("ard_", gsub("[^a-z0-9]+", "_",
-                                                   tolower(a$analysis_id[top])))),
-                             sep = "_")[-seq_along(c(taken, fun_names))]
+    ard_names <- .ard_item_names(a$analysis_id[top], c(taken, fun_names))
     avoid <- c(taken, ard_names, paste0(ard_names, "_conditions"), paste0(ard_names, "_one"),
                "ard", "ards", "report_id", if (length(lv)) .cl_name(names(lv)),
                .ard_helper_names)
@@ -1336,7 +1333,7 @@
       }
       lines <- if (.item_type(r) == "model") {
         # a model: its call under its own name, not an ARD's
-        mn <- make.unique(c(avoid, make.names(tolower(r$analysis_id))), sep = "_")[length(avoid) + 1L]
+        mn <- .ard_model_name(r$analysis_id, avoid)
         avoid <- c(avoid, mn)
         .ard_model_lines(r, dname, mn)
       } else if (!is.null(cond)) {
@@ -1561,7 +1558,7 @@
   paste0(data, " |>\n  ", gsub("\n", "\n  ", .lay(node, lead = 4L), fixed = TRUE))
 }
 
-# One analysis: `ard_<id> <- call |> ... |> tag_ard(...)`, its label a
+# One analysis: `.ard_<id> <- call |> ... |> tag_ard(...)`, its label a
 # comment above it
 .ard_analysis_lines <- function(x, r, keys, subj, data, name, avoid) {
   pid <- r$population_id
@@ -2003,6 +2000,18 @@
   as.character(v[1L])
 }
 
+# The R names the program gives the report's items (one builder: the ARD
+# program and tfl_output_objects() both call these).  An ARD or a value
+# item: .ard_<its id, lower case, other characters _>, made unique against
+# `taken` (_1, _2 ...); a model item: its id, lower case.
+.ard_item_names <- function(ids, taken = character()) {
+  nm <- make.unique(c(taken, paste0(".ard_", gsub("[^a-z0-9]+", "_", tolower(ids)))), sep = "_")
+  if (length(taken)) nm[-seq_along(taken)] else nm
+}
+.ard_model_name <- function(id, avoid = character()) {
+  make.unique(c(avoid, make.names(tolower(id))), sep = "_")[length(avoid) + 1L]
+}
+
 # An item's type: "ard" (the default), "model" or "value"; only an ARD is
 # bound into the report's (bind_items())
 .item_type <- function(r) {
@@ -2208,7 +2217,7 @@
     return(c(.ard_analysis_lines(x, r, keys, subj, data, name, avoid),
              if (per_cols) .item_per_cols_lines(r, r, name)))
   }
-  nm <- paste0(name, "_", seq_along(ar))
+  nm <- paste0(if (identical(name, "ard")) ".ard" else name, "_", seq_along(ar))
   out <- character()
   for (k in seq_along(ar)) {
     rk <- r
