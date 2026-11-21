@@ -863,9 +863,8 @@ test_that("the codelists sheet: the values' place (plan_levels) and text (plan_l
   expect_true(any(grepl("SEX = names(cl_sex)", code, fixed = TRUE)))
   pl <- paste(code, collapse = "
 ")
-  expect_match(pl, 'variable = c(SEX = "Sex", AGEGR1 = "Age group")', fixed = TRUE)
-  expect_match(pl, 'SEX = c(M = "Male", F = "Female")', fixed = TRUE)
-  expect_match(pl, 'AGEGR1 = c("<65" = "Under 65")', fixed = TRUE)
+  expect_match(pl, 'SEX = c(SEX = "Sex", M = "Male", F = "Female")', fixed = TRUE)
+  expect_match(pl, 'AGEGR1 = c(AGEGR1 = "Age group", "<65" = "Under 65")', fixed = TRUE)
   expect_identical(lengths(regmatches(pl, gregexpr("plan_labels(", pl, fixed = TRUE))), 1L)
   e <- new.env()
   e$data <- d

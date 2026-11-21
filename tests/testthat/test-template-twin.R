@@ -113,6 +113,52 @@ test_that("DM: the template SPEC and the code SPEC give the same ARD and the sam
   }
 })
 
+# The call `plan_labels(...)` of a program, from its "plan_labels(" to the
+# bracket that closes it (a label may hold brackets: "Age (years)")
+twin_labels_call <- function(code) {
+  x <- paste(code, collapse = "\n")
+  s <- regexpr("plan_labels(", x, fixed = TRUE)
+  expect_true(s > 0L)
+  ch <- strsplit(substring(x, s), "")[[1L]]
+  depth <- 0L
+  quote <- ""
+  for (i in seq_along(ch)) {
+    if (nzchar(quote)) {
+      if (ch[i] == "\\") ch[i + 1L] <- "" else if (ch[i] == quote) quote <- ""
+    } else if (ch[i] %in% c("\"", "'")) {
+      quote <- ch[i]
+    } else if (ch[i] == "(") {
+      depth <- depth + 1L
+    } else if (ch[i] == ")") {
+      depth <- depth - 1L
+      if (depth == 0L) return(gsub("\\s+", " ", paste(ch[seq_len(i)], collapse = "")))
+    }
+  }
+  NA_character_
+}
+
+test_that("template labels: the YAML path and the code SPEC (the planner's path) write the same plan_labels", {
+  twin_skip()
+  d <- twin_study(file.path(tempdir(), "twin-labels"),
+                  system.file("extdata", "spec-yaml", "defaults.yml", package = "tflspec"),
+                  style = FALSE)
+  on.exit(unlink(d, recursive = TRUE))
+  file.copy(twin_fx("T-14-1-1T.yml"), file.path(d, "spec", "outputs", "T-14-1-1T.yml"))
+  st <- tfl_read_study_spec(d)
+  outs <- tfl_read_outputs(d)
+  # the planner's path: the template as its code SPEC, written as it is
+  code_spec <- tfl_content_code(tfl_resolve_output(tfl_template_to_spec(outs[["T-14-1-1T"]], st), st),
+                                pipe = "|>", template = "items")
+  # the YAML path: the expanded template on the sheets, then the sheets' program
+  sh <- tfl_sheets_from_spec(st, outs, templates = "expand")
+  from_sheets <- tfl_table_code(tfl_table_spec(sh$table), "T-14-1-1T", pipe = "|>")
+  a <- twin_labels_call(code_spec)
+  b <- twin_labels_call(from_sheets)
+  expect_identical(b, a)
+  expect_match(b, "plan_labels\\( ?AGE = \"Age \\(years\\)\"")
+  expect_false(grepl("variable = ", b, fixed = TRUE))
+})
+
 test_that("AE: the template SPEC and the code SPEC give the same ARD", {
   twin_skip()
   d <- twin_study(file.path(tempdir(), "twin-ae"), twin_fx("defaults-sample01.yml"))
