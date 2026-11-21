@@ -41,6 +41,7 @@ lstb_report <- function(id, more = character(), where = "TRTEMFL == \"Y\" & AESE
 lstb_run <- function(d, id, lines) {
   f <- file.path(d, "spec", "outputs", paste0(id, ".yml"))
   writeLines(lines, f)
+  invisible(tfl_copy_templates(d))
   st <- tfl_read_study_spec(d)
   tfl_write_output(tfl_template_to_spec(tfl_read_output(f), st), f)
   rtf <- tfl_run_output(id, dir = d)
@@ -146,7 +147,9 @@ test_that("tflspec_listing on ADAE: by starts a page each value, named in the ti
   on.exit(unlink(d, recursive = TRUE))
   x <- lstb_run(d, "L-2", lstb_report("L-2", c("    by: [TRT01A]", "    max_rows: 200")))
   arms <- sort(unique(tflspec::adsl$TRT01A[tflspec::adsl$SAFFL %in% "Y"]))
-  for (a in arms) expect_true(paste0("TRT01A: ", a) %in% x$cells, info = a)
+  # (the study's style, canon e023312: the heading is a line above the
+  # table, not a cell)
+  for (a in arms) expect_match(x$txt, paste0("TRT01A: ", a), fixed = TRUE, info = a)
   # a page an arm (200 rows a page hold an arm's records)
   pages <- as.integer(sub("^Page 1 of ", "", grep("^Page 1 of ", x$cells, value = TRUE)[1L]))
   expect_identical(pages, length(arms))
@@ -174,4 +177,69 @@ test_that("a data row's arrange: a column, -column or desc(column)", {
                    c("USUBJID", "dplyr::desc(ASTDT)", "dplyr::desc(AESEV)"))
   ok <- grepl(tflspec:::.arrange_re, c("USUBJID", "-ASTDT", "desc(AESEV)", "ASTDT + 1", "desc(-X)"))
   expect_identical(ok, c(TRUE, TRUE, TRUE, FALSE, FALSE))
+})
+
+test_that("a listing's style is the study's settings.style, else tfl_small (canon e023312)", {
+  args <- c(list(name = "tflspec_v1/tflspec_listing"), lstb_args)
+  rep <- list(id = "X", kind = "listing", template = args)
+  res <- function(study) tfl_template_resolve(rep, study = study)$style
+  # a study given as study.yml read (the source series)
+  expect_identical(res(list(settings = list(style = "standard"))), "standard")
+  expect_identical(res(list(settings = list(rounding = "sas"))), "tfl_small")
+  expect_identical(res(NULL), "tfl_small")
+  # the other listing template too
+  l <- tfl_template_resolve(list(id = "Y", kind = "listing",
+                                 template = list(name = "tflspec_v1/listing", from = "ADAE")),
+                            study = list(settings = list(style = "standard")))
+  expect_identical(l$style, "standard")
+  # a study folder: its copy of series.yml keeps the !study value, read
+  # for the study; a value the study sets in its copy wins
+  root <- tempfile("lsty")
+  on.exit(unlink(root, recursive = TRUE), add = TRUE)
+  mk <- function(name, settings) {
+    st <- file.path(root, name)
+    dir.create(file.path(st, "spec", "outputs"), recursive = TRUE)
+    writeLines(c(paste0("study_id: ", name), "settings:", settings), file.path(st, "study.yml"))
+    invisible(tfl_copy_templates(st, "tflspec_v1/tflspec_listing"))
+    st
+  }
+  a <- mk("STUDY-A", c("  rounding: sas", "  style: standard"))
+  copy <- file.path(a, "spec", "series", "tflspec_v1", "series.yml")
+  expect_true(any(grepl("style_listing: !study {key: style, fallback: tfl_small}",
+                        readLines(copy), fixed = TRUE)))
+  expect_identical(res(a), "standard")
+  b <- mk("STUDY-B", "  rounding: sas")
+  expect_identical(res(b), "tfl_small")
+  # another value set in the copy: the !study line stays, still read
+  tfl_series_values_set(a, "tflspec_v1", list(max_rows = 25L))
+  expect_true(any(grepl("style_listing: !study", readLines(copy), fixed = TRUE)))
+  expect_identical(res(a), "standard")
+  # the study's own value in its copy wins over the study's style
+  tfl_series_values_set(a, "tflspec_v1", list(style_listing = "landscape"))
+  expect_identical(res(a), "landscape")
+  tfl_series_values_set(b, "tflspec_v1", list(style_listing = "landscape"))
+  expect_identical(res(b), "landscape")
+})
+
+test_that("!study {key, fallback}: the study's value, else the fallback", {
+  ref <- tflspec:::.series_study_tag(list(key = "style", fallback = "tfl_small"))
+  expect_s3_class(ref, "tfl_study_ref")
+  hit <- tflspec:::.series_study_ref_value(list(settings = list(style = "acme")), ref)
+  expect_identical(hit, list(value = "acme", study = TRUE))
+  expect_identical(tflspec:::.series_study_ref_value(list(), ref), list(value = "tfl_small", study = FALSE))
+  plain <- tflspec:::.series_study_tag("style")
+  expect_s3_class(tflspec:::.series_study_ref_value(list(), plain)$value, "tfl_unset")
+  expect_error(tflspec:::.series_study_tag(list(key = "style", other = 1)), "!study is")
+  # in a template: the fallback's origin is the template's
+  f <- tempfile(fileext = ".yml")
+  on.exit(unlink(f))
+  writeLines(c("a: !study {key: style, fallback: tfl_small}", "b: !study style"), f)
+  x <- tflspec:::.series_read_yaml(f)
+  r <- tflspec:::.series_resolve(x, "tflspec_v1", study = list())
+  expect_identical(r$a, "tfl_small")
+  expect_identical(attr(r, "origins")[["a"]], "template")
+  expect_identical(attr(r, "origins")[["b"]], "study")
+  s <- tflspec:::.series_resolve(x, "tflspec_v1", study = list(settings = list(style = "acme")))
+  expect_identical(s$a, "acme")
+  expect_identical(attr(s, "origins")[["a"]], "study")
 })
