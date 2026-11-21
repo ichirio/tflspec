@@ -146,7 +146,12 @@ test_that("tflspec_listing on ADAE: by starts a page each value, named in the ti
   on.exit(unlink(d, recursive = TRUE))
   x <- lstb_run(d, "L-2", lstb_report("L-2", c("    by: [TRT01A]", "    max_rows: 200")))
   arms <- sort(unique(tflspec::adsl$TRT01A[tflspec::adsl$SAFFL %in% "Y"]))
-  for (a in arms) expect_true(paste0("TRT01A: ", a) %in% x$cells, info = a)
+  # the name once a page: the last title row (heading_at: title), not a
+  # section row as well (one page an arm)
+  for (a in arms) {
+    hits <- gregexpr(paste0("TRT01A: ", a), x$txt, fixed = TRUE)[[1L]]
+    expect_identical(sum(hits > 0L), 1L, info = a)
+  }
   # a page an arm (200 rows a page hold an arm's records)
   pages <- as.integer(sub("^Page 1 of ", "", grep("^Page 1 of ", x$cells, value = TRUE)[1L]))
   expect_identical(pages, length(arms))

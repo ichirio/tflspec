@@ -349,6 +349,8 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   # the page: the report's configuration < the template < the report < force;
   # the study's tokens under the report's
   cfg <- (lb$style %||% .style_of(output, study))$page
+  cfg <- .page_heading_once(cfg, lb$style_name %||% output$style %||% .style_default_name(study),
+                            output$content)
   output$page <- .page_resolve(cfg, .study_tokens(study), own$page)
   output <- .page_font_to_plan(output)
   attr(output, "resolved") <- TRUE
