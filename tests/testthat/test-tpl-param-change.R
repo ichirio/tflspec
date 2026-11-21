@@ -457,8 +457,11 @@ test_that("a report's plan_stub keeps the stub's name from the layers below (wid
   wo <- list(tfl_item("plan_columns", list(widths = list(other = 2, .values = 1))))
   r3 <- pch_run(c(list(tfl_item("plan_stub", list(name = "other", heading = "H"))), wo))
   expect_identical(st(r3)[[1L]]$args$name, "other")
+  # widths by a name that is no column: rtfreporter skips it with a warning
+  # (rtfreporter#1122), and the stub column `other` is then left without a
+  # width -- it stops, naming it
   expect_error(pch_run(c(list(tfl_item("plan_stub", list(name = "other", heading = "H"))), w)),
-               "names 'row_label', not a column")
+               "not for: 'other'", fixed = TRUE)
 })
 
 test_that("the template's heading is printed, the report's plan_stub heading is not (the template's header wins)", {
