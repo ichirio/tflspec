@@ -1462,6 +1462,46 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   if (all(!nzchar(nm))) unname(n[1L]) else n[nzchar(nm)]
 }
 
+# BIGN's variable: the variable its item counts (the table's column
+# variable, TRT01A)
+.bign_var <- function(output) {
+  for (a in output$ard$analyses %||% list()) {
+    if (is.list(a) && .bign_id %in% c(a$id, a$analysis_id)) {
+      v <- unlist(c(a$variables, a$by))
+      if (length(v)) return(as.character(v[[1L]]))
+    }
+  }
+  NULL
+}
+
+# The labels the content gives the values of `var` (its plan_labels()
+# entry: the code lists' labels .tpl_labels_items() added, or the
+# report's own): the column keys the header's N goes under are these,
+# so BIGN's n is named by them too.  A character vector code = label, or
+# the entry's R (tfl_r) as it is; NULL when there is none
+.bign_labels <- function(content, var) {
+  if (is.null(var)) return(NULL)
+  for (it in content) {
+    if (!identical(.schema_fn_name(it$fn), "plan_labels")) next
+    v <- it$args[[var]]
+    if (inherits(v, "tfl_r")) return(v)
+    v <- unlist(v)
+    if (is.character(v) && !is.null(names(v))) {
+      v <- v[nzchar(names(v)) & names(v) != var]
+      if (length(v)) return(v)
+    }
+  }
+  NULL
+}
+
+# n named by the labels (a value with no label keeps its own)
+.bign_relabel <- function(n, labels) {
+  if (is.null(n) || is.null(names(n)) || !is.character(labels)) return(n)
+  hit <- names(n) %in% names(labels)
+  names(n)[hit] <- unname(labels[names(n)[hit]])
+  n
+}
+
 # The ARD without BIGN's rows
 .bign_drop <- function(ard) {
   if (!"analysis_id" %in% names(ard)) return(ard)
@@ -1470,14 +1510,20 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 
 # The same, as the program's lines on its ARD object `obj`: `bign_n` when
 # a heading reads it, then the ARD without BIGN's rows
-.bign_code <- function(obj, n = TRUE) {
+.bign_code <- function(obj, n = TRUE, labels = NULL) {
   c("# BIGN, the column headings' N: its numbers apart from the table's rows",
     if (n) c(
       sprintf("bign <- %s[%s$analysis_id %%in%% \"BIGN\" & %s$stat_name %%in%% \"n\", , drop = FALSE]",
               obj, obj, obj),
       "bign_n <- stats::setNames(as.numeric(unlist(bign$stat)),",
       "  vapply(bign$variable_level, function(x) if (length(x)) as.character(x[[1L]]) else \"\", \"\"))",
-      "if (!any(nzchar(names(bign_n)))) bign_n <- unname(bign_n[1L])"),
+      "if (!any(nzchar(names(bign_n)))) bign_n <- unname(bign_n[1L])",
+      if (!is.null(labels)) c(
+        "# (named by the columns' labels, as the table's columns are)",
+        paste("bign_lab <-", if (inherits(labels, "tfl_r")) as.character(labels)
+              else paste(deparse(labels, width.cutoff = 500L), collapse = "")),
+        "hit <- names(bign_n) %in% names(bign_lab)",
+        "names(bign_n)[hit] <- unname(bign_lab[names(bign_n)[hit]])")),
     sprintf("%s <- %s[!%s$analysis_id %%in%% \"BIGN\", , drop = FALSE]", obj, obj, obj),
     "")
 }
@@ -1540,7 +1586,7 @@ tfl_content_run <- function(output, data) {
   if (identical(output$kind, "table")) output$content <- .levels_prune(output$content, output)
   # BIGN's rows: the headings' N, not the table's (.bign_has())
   if (.bign_has(output)) {
-    n <- .bign_n(data)
+    n <- .bign_relabel(.bign_n(data), .bign_labels(output$content, .bign_var(output)))
     data <- .bign_drop(data)
     if (!is.null(n)) output$content <- .bign_header_items(output$content, list(n = n))
   }
@@ -1776,7 +1822,8 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
     bign_n <- isTRUE(attr(output$content, "used"))
     attr(output$content, "used") <- NULL
   }
-  bign_pre <- function(obj) if (bign) .bign_code(obj, n = bign_n)
+  bign_pre <- function(obj) if (bign) .bign_code(obj, n = bign_n,
+                                                   labels = .bign_labels(output$content, .bign_var(output)))
   # the object the pipe starts from: the output's own name for it, else
   # the ARD when the content normalizes it, else the normalized data
   # the data's steps (`data.steps`, the Rework, the old process_code): R

@@ -55,3 +55,22 @@ test_that("the program takes BIGN's rows out of the ARD and names their n", {
   expect_identical(get("bign_n", env), tflspec:::.bign_n(bs_ard()))
   expect_false(any(grepl("bign_n", tflspec:::.bign_code("ard", n = FALSE))))
 })
+
+test_that("BIGN's n is named as the columns are: by the labels the content gives its variable", {
+  o <- bs_out("{col} (N={n})")
+  o$ard$analyses[[1L]]$variables <- "ARM"
+  expect_identical(tflspec:::.bign_var(o), "ARM")
+  o$content <- c(o$content, list(tfl_item("plan_labels",
+    list(ARM = c(ARM = "Arm", `Drug A` = "Drug A 10 mg")))))
+  lab <- tflspec:::.bign_labels(o$content, "ARM")
+  expect_identical(lab, c(`Drug A` = "Drug A 10 mg"))
+  # a value with no label keeps its own name
+  expect_identical(tflspec:::.bign_relabel(tflspec:::.bign_n(bs_ard()), lab),
+                   c(`Drug A 10 mg` = 12, `Drug B` = 18))
+  # the program does the same
+  env <- new.env()
+  assign("ard", bs_ard(), envir = env)
+  eval(parse(text = tflspec:::.bign_code("ard", labels = lab)), env)
+  expect_identical(get("bign_n", env), c(`Drug A 10 mg` = 12, `Drug B` = 18))
+  expect_null(tflspec:::.bign_labels(o$content, "SEX"))
+})
