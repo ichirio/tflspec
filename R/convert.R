@@ -678,7 +678,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   for (k in setdiff(names(pg), .page_config_keys)) {
     note(NA, "page", name, NA, if (identical(k, ".image")) {
       paste0("a figure's size (figure_width_in / figure_height_in) is no page setting: ",
-             "the study's is study.yml settings: figure: width_in / height_in")
+             "the study's is defaults.yml figure_style: settings, keys width / height")
     } else sprintf("page.%s is not kept in a page configuration", k))
   }
   if (length(keep)) list(page = .calls_out(keep)) else list()

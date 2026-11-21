@@ -187,7 +187,7 @@ going and leaves the message in the `error` / `warning` column.
 | a listing written in code (`listing_spec()` / `plan_listing()`), back to a listing spec | `tfl_as_listing_spec(x, output_id, dataset = )` |
 | the document / its code / its file | `tfl_report(spec, output_id, content = plan)` / `tfl_report_code(spec)` / `tfl_report_path(spec)` |
 | a listing's program / its pages | `tfl_listing_code(spec)` / `tfl_listing(data, spec)` |
-| a figure: start / check / write the script / its size on the page | `tfl_fig_template()` / `tfl_check_fig_design()` / `tfl_fig_design_code()` / `tfl_fig_page_size()` |
+| a figure: start / check / write the script / its size on the page / its render defaults (tfl_image, by type) | `tfl_fig_template()` / `tfl_check_fig_design()` / `tfl_fig_design_code()` / `tfl_fig_page_size()` / `tfl_image_defaults()` |
 | a figure report's content of function calls; a design as one | `tfl_content_code(report)` / `tfl_content_run(report, data)` (§7.1); `tfl_fig_content_from_design(design)`; a named plot `tfl_plot(name, items)` |
 | an item's arguments as R text, and back (the builder's R form) | `tfl_args_to_r(fn, args)` / `tfl_args_from_r(fn, text)` |
 | review the whole definition: errors, what is probably wrong, what to set by hand | `tfl_review_spec(spec, ard, listings, figures)`; against the data: `facts = tfl_data_facts(data, populations = ard)`; the rules: `tfl_review_rules()`; each row's sentence is `template` filled with `args` (`message` is the two put together; the sentences beyond the rules': `tfl_review_templates()`) |
@@ -452,9 +452,12 @@ content:
   where it sits across the page (`align`), its resolution and PNG device,
   the picture the RTF holds (`rtf_format`: `png`, the default, or `emf`, a
   vector picture -- no `dpi` then; another value stops).  A setting left
-  out is the study's (`study.yml` `settings: {figure: {width_in: fit, dpi:
-  300}}`, read as `!study figure.<setting>`), else the built-in one (the
-  figure's own 6.5 x 4.5 in, 300 dpi, centred).  The report draws the figure
+  out is the study's figure style standard's (`spec/defaults.yml`
+  `figure_style:` settings, the figure type's row -- `km`, `swimmer` ...,
+  its template's kind -- else the all-figures row: `width`, `height`,
+  `units`, `dpi`, `align`, `rtf_format`, `png_device`;
+  `tfl_image_defaults(study, type)` shows them), else the built-in one
+  (6.5 x 4.5 in, 300 dpi, centred, png).  The report draws the figure
   at that size and resolution (`rtf_figures(doc, rtfplot(content,
   render_width =, render_height =, render_dpi =), align =)`), so it is never
   stretched into its box; with `file` (`{output_id}.png`) the figure's code
@@ -1026,7 +1029,7 @@ back): rename the value or choose another separator.
 **Figure design:** `tfl_fig_design` `tfl_read_fig_design`
 `tfl_write_fig_design` `tfl_fig_design_code` `tfl_check_fig_design`
 `tfl_fig_advice` `tfl_fig_apply_fix` `tfl_fig_template` `tfl_fig_forest_analyses` `tfl_fig_templates`
-`tfl_fig_parts` `tfl_fig_objects` `tfl_fig_page_size` `tfl_fig_uses_ard` `tfl_fig_add_layer` `tfl_fig_calls` `tfl_fig_compat`
+`tfl_fig_parts` `tfl_fig_objects` `tfl_fig_page_size` `tfl_image_defaults` `tfl_fig_uses_ard` `tfl_fig_add_layer` `tfl_fig_calls` `tfl_fig_compat`
 `tfl_fig_data_name`
 `tfl_r`
 

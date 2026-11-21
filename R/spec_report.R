@@ -103,8 +103,8 @@
     ft <- args_of("rtf_tables")
     fa <- c(fa, ft[setdiff(intersect(c("page_break", "space_before"), names(ft)), names(fa))])
     # how it is drawn and placed: its content's tfl_image, the study's
-    # figure settings under it
-    img <- .fig_image_of(.fig_image_fill(output$content, study))
+    # figure style standard's for its type under it
+    img <- .fig_image_of(.fig_image_fill(output$content, study, .fig_type_of_output(output)))
     # its size on the page: inches as twips, or the page's body (fit)
     # worked out from the page; blank, the figure's own size
     sz <- .fig_image_size(img, pg, length(tt) + length(fn))
@@ -123,11 +123,14 @@
       st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_figures", doc, fig, align = img$align), flow(fa)))
     } else {
       # (a figure of the designer's pieces, a figure template's call, R:
-      # placed at its size, drawn at its own)
+      # placed at its size and drawn at it, never stretched)
+      w <- sz$mode[["width"]] != "native"
+      h <- sz$mode[["height"]] != "native"
       st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_figures", doc, .spec_sym(content),
-        width_twips = if (sz$mode[["width"]] != "native") twips(sz$width_in),
-        height_twips = if (sz$mode[["height"]] != "native") twips(sz$height_in),
-        align = img$align, render_dpi = if (!emf && !is.null(img$dpi)) as.numeric(img$dpi),
+        width_twips = if (w) twips(sz$width_in),
+        height_twips = if (h) twips(sz$height_in),
+        align = img$align,
+        render_width = if (w) sz$width_in, render_height = if (h) sz$height_in, render_dpi = if (!emf && !is.null(img$dpi)) as.numeric(img$dpi),
         png_device = if (!emf) img$png_device, render_format = rf), flow(fa)))
     }
   } else {
@@ -186,7 +189,8 @@
     tb <- if (length(titles)) list(titles)
     fb <- if (length(foot)) list(foot)
     if (identical(kind, "figure")) {
-      img <- .fig_image_of(.fig_image_fill(output$contents[[nm]]$content, study))
+      co <- output$contents[[nm]]
+      img <- .fig_image_of(.fig_image_fill(co$content, study, .fig_type_of_output(co)))
       # (inches as twips; fit, rtfreporter's: the page's body)
       num <- function(v) {
         if (is.null(v)) return(NULL)
@@ -196,6 +200,9 @@
       steps[[k]] <- do.call(.spec_call, c(list("rtf_figures", doc, .spec_sym(sym),
         width_twips = num(img$width_in), height_twips = num(img$height_in),
         align = img$align,
+        # (drawn at a size in inches it is placed at: never stretched)
+        render_width = if (is.numeric(num(img$width_in))) as.numeric(img$width_in),
+        render_height = if (is.numeric(num(img$height_in))) as.numeric(img$height_in),
         render_format = if (identical(.fig_rtf_format(img, output$id), "emf")) "emf",
         titles = tb, footnotes = fb),
         flow[intersect(c("page_break", "space_before"), names(flow))]))

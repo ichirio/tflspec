@@ -1,14 +1,19 @@
 # A figure's render settings are its content's tfl_image, no more its page's
 # (decided 2026-11-19): the same values write the same program (so the same
-# RTF), the study's figure settings (study.yml settings: figure:) are the
-# defaults, and the page keys that said them stop, named where they went.
+# RTF); the defaults are the study's figure style standard's (defaults.yml
+# figure_style:, the figure type's row, else all figures'), else built-in;
+# the page keys that said them, and study.yml settings: figure:, stop.
 
-fi_study <- function(figure = NULL) {
-  structure(list(study = list(settings = if (!is.null(figure)) list(figure = figure)),
+# a study whose figure style settings are `rows` (records type, key, value);
+# NULL: tflspec's built-in style
+fi_study <- function(rows = NULL) {
+  structure(list(study = list(settings = list()),
                  data = list(), defaults = list(content = list(), page = list()),
+                 figure_style = if (!is.null(rows)) list(settings = rows) else list(),
                  codelists = list(), patterns = list(), toc = list(), dir = NULL),
             class = "tfl_study_spec")
 }
+fi_row <- function(key, value, type = NA) list(type = type, key = key, value = value)
 
 fi_items <- function(img = NULL) {
   c(list(tfl_item("ggplot", list(data = "df", mapping = list(x = "AVAL", y = "CHG"))),
@@ -36,37 +41,93 @@ test_that("a figure of items: tfl_image writes the call page.rtf_figures wrote b
     "png_device = \"ragg\"), align = \"left\")"))
 })
 
-test_that("a figure of R or a template's call: placed at its size, as before", {
+test_that("a figure of R or a template's call: placed at its size and drawn at it", {
   o <- tfl_output("F-1", "figure", content = list(tfl_item("tfl_image", list(
     width_in = 9.5, height_in = 5.5, align = "right", dpi = 200L, png_device = "png"))))
-  # (as rtf_figures: {width_twips: 13680, height_twips: 7920, align: right,
-  # render_dpi: 200, png_device: png} wrote it)
   expect_identical(fi_fig_call(o), paste0(
     "rtf_figures(content, width_twips = 13680, height_twips = 7920, align = \"right\", ",
-    "render_dpi = 200, png_device = \"png\")"))
-  # nothing said: the figure's own size, as before
-  expect_identical(fi_fig_call(tfl_output("F-1", "figure")), "rtf_figures(content)")
+    "render_width = 9.5, render_height = 5.5, render_dpi = 200, png_device = \"png\")"))
+  # nothing said: the figure style standard's all-figures size (7.3 x 4.2 in, 300 dpi)
+  expect_identical(fi_fig_call(tfl_output("F-1", "figure")), paste0(
+    "rtf_figures(content, width_twips = 10512, height_twips = 6048, render_width = 7.3, ",
+    "render_height = 4.2, render_dpi = 300)"))
 })
 
-test_that("the study's figure settings are the defaults; the item's own win", {
-  st <- fi_study(list(dpi = 150L, align = "left", width_in = 7, height_in = 4))
+test_that("the defaults are the figure style standard's by the figure's type", {
+  # tflspec's built-in style: km 8.33 x 4.79, swimmer 7.71 x 4.17, the rest 7.3 x 4.2
+  km <- tfl_output("F-1", "figure", content = fi_items())
+  km$template <- "km_simple"
+  expect_identical(fi_fig_call(km),
+                   "rtf_figures(rtfplot(content, render_width = 8.33, render_height = 4.79, render_dpi = 300))")
+  sw <- tfl_output("F-1", "figure")
+  sw$template <- list(name = "swimmer_bar")
+  expect_match(fi_fig_call(sw), "render_width = 7.71, render_height = 4.17", fixed = TRUE)
+  expect_match(fi_fig_call(tfl_output("F-1", "figure", content = fi_items())),
+               "render_width = 7.3, render_height = 4.2, render_dpi = 300", fixed = TRUE)
+  # a study's own rows: the type's row, else the all-figures row; units in cm
+  st <- fi_study(list(fi_row("width", 20), fi_row("height", 10), fi_row("units", "cm"),
+                      fi_row("dpi", 150), fi_row("align", "left"),
+                      fi_row("width", 25.4, "km"), fi_row("rtf_format", "emf", "km")))
+  d <- tfl_image_defaults(st, "km")
+  expect_equal(d$width_in, 10)
+  expect_equal(d$height_in, 10 / 2.54)
+  expect_identical(d[c("dpi", "align", "rtf_format", "png_device", "format")],
+                   list(dpi = 150L, align = "left", rtf_format = "emf", png_device = "auto", format = "png"))
+  expect_identical(attr(d, "source")[c("width_in", "height_in", "rtf_format", "png_device")],
+                   c(width_in = "figure_style.km", height_in = "figure_style",
+                     rtf_format = "figure_style.km", png_device = "builtin"))
+  all <- tfl_image_defaults(st)
+  expect_equal(all$width_in, 20 / 2.54)
+  expect_identical(all$rtf_format, "png")
+  expect_identical(unname(attr(all, "source")["width_in"]), "figure_style")
+  expect_error(tfl_image_defaults(st, "pie"), "the types are .*km")
+  # the resolved report carries them in its tfl_image
   o <- tfl_output("F-1", "figure", extends = "none", content = fi_items())
-  r <- tfl_resolve_output(o, st)
-  last <- r$content[[length(r$content)]]
+  last <- utils::tail(tfl_resolve_output(o, st)$content, 1L)[[1L]]
   expect_identical(last$fn, "tfl_image")
-  expect_identical(last$args[c("dpi", "align")], list(dpi = 150L, align = "left"))
-  expect_identical(fi_fig_call(r, st), paste0(
-    "rtf_figures(rtfplot(content, render_width = 7, render_height = 4, render_dpi = 150), ",
-    "align = \"left\")"))
-  own <- tfl_output("F-1", "figure", extends = "none", content = fi_items(list(dpi = 300L)))
-  expect_match(fi_fig_call(tfl_resolve_output(own, st), st), "render_dpi = 300", fixed = TRUE)
-  # a figure template's call (no items): the study's settings place it too
-  tp <- tfl_output("F-1", "figure")
-  expect_identical(fi_fig_call(tp, st), paste0(
-    "rtf_figures(content, width_twips = 10080, height_twips = 5760, align = \"left\", ",
-    "render_dpi = 150)"))
-  # no study settings: as before
-  expect_identical(tflspec:::.fig_image_fill(fi_items(), fi_study()), fi_items())
+  expect_identical(last$args$align, "left")
+  # a study folder works too
+  dir <- system.file("extdata", "spec-yaml", package = "tflspec")
+  expect_equal(tfl_image_defaults(dir, "km")$width_in, 8.33)
+})
+
+test_that("a report's own tfl_image wins over the figure style standard's", {
+  km <- tfl_output("F-1", "figure", content = fi_items(list(width_in = 5, dpi = 150L)))
+  km$template <- "km_simple"
+  expect_identical(fi_fig_call(km),
+                   "rtf_figures(rtfplot(content, render_width = 5, render_height = 4.79, render_dpi = 150))")
+  st <- fi_study(list(fi_row("align", "left"), fi_row("rtf_format", "emf")))
+  own <- tfl_output("F-1", "figure", extends = "none",
+                    content = fi_items(list(align = "right", rtf_format = "png")))
+  call <- fi_fig_call(tfl_resolve_output(own, st), st)
+  expect_match(call, "align = \"right\"", fixed = TRUE)
+  expect_false(grepl("render_format", call, fixed = TRUE))
+})
+
+test_that("study.yml settings: figure: stops, naming the figure_style key", {
+  d <- tempfile("fi-settings-")
+  dir.create(file.path(d, "spec"), recursive = TRUE)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  writeLines(c("id: FI-1", "settings:", "  figure: {width_in: 7, dpi: 150, file: x.png}"),
+             file.path(d, "study.yml"))
+  expect_error(tfl_read_study_spec(d), "width_in -> figure_style key width", fixed = TRUE)
+  expect_error(tfl_read_study_spec(d), "file -> the report's tfl_image", fixed = TRUE)
+  st <- fi_study()
+  st$study$settings$figure <- list(dpi = 150L)
+  expect_error(tfl_image_defaults(st), "dpi -> figure_style key dpi", fixed = TRUE)
+})
+
+test_that("a figure style with no size, dpi or look: the built-in defaults", {
+  st <- fi_study(list(fi_row("theme", "classic")))
+  d <- tfl_image_defaults(st, "km")
+  expect_identical(unname(attr(d, "source")), rep("builtin", 7L))
+  expect_identical(d[c("width_in", "height_in", "dpi", "align", "rtf_format")],
+                   list(width_in = 6.5, height_in = 4.5, dpi = 300L, align = "center", rtf_format = "png"))
+  # nothing written: rtfplot()'s and rtf_figures()'s own
+  expect_identical(fi_fig_call(tfl_output("F-1", "figure"), st), "rtf_figures(content)")
+  expect_identical(fi_fig_call(tfl_output("F-1", "figure", extends = "none", content = fi_items()), st),
+                   "rtf_figures(rtfplot(content, render_width = 6.5, render_height = 4.5, render_dpi = 300))")
+  expect_identical(tflspec:::.fig_image_fill(fi_items(), st), fi_items())
 })
 
 test_that("page.rtf_figures's own settings and a layout row's size stop, saying where they went", {
@@ -119,12 +180,12 @@ test_that("tfl_image: rtf_format emf is render_format; png and none write what t
   expect_identical(fi_fig_call(items(list(width_in = 9.5, dpi = 150L, rtf_format = "png"))), plain)
   expect_false(grepl("render_format", plain, fixed = TRUE))
   emf <- fi_fig_call(items(list(width_in = 9.5, dpi = 150L, png_device = "ragg", rtf_format = "emf")))
-  expect_identical(emf, paste0("rtf_figures(rtfplot(content, render_width = 9.5, render_height = 4.5, ",
+  expect_identical(emf, paste0("rtf_figures(rtfplot(content, render_width = 9.5, render_height = 4.2, ",
                                "render_format = \"emf\"))"))
   # a figure of R / a template's call: rtf_figures()'s own
   tp <- tfl_output("F-1", "figure", content = list(tfl_item("tfl_image", list(dpi = 200L, rtf_format = "emf"))))
-  expect_identical(fi_fig_call(tp), "rtf_figures(content, render_format = \"emf\")")
-  expect_identical(fi_fig_call(tfl_output("F-1", "figure")), "rtf_figures(content)")
+  expect_identical(fi_fig_call(tp), paste0("rtf_figures(content, width_twips = 10512, height_twips = 6048, ",
+                                         "render_width = 7.3, render_height = 4.2, render_format = \"emf\")"))
   expect_error(fi_fig_call(items(list(rtf_format = "svg"))), "rtf_format is png or emf, not svg", fixed = TRUE)
   expect_false(nrow(tfl_schema_check(tfl_item("tfl_image", list(rtf_format = "jpeg")))) == 0L)
 })

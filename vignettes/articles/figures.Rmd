@@ -155,17 +155,27 @@ is drawn and placed -- its render settings: `width_in` and `height_in`
 (inches, or `fit`, the page's body), `align`, `dpi`, `png_device`, the
 picture the RTF holds (`rtf_format`: `png`, or `emf`, a vector picture),
 and the `format` and `file` of a saved copy. A setting it leaves out is the
-study's, `study.yml`'s `settings: figure:` (`!study figure.dpi`), else the
-built-in one (the figure's own size, 300 dpi, centred). The report's
+study's figure style standard's -- `defaults.yml`'s `figure_style:`
+settings, the row of the figure's type (`km`, `swimmer` ..., its
+template's kind), else the all-figures row: `width`, `height` (in
+`units`), `dpi`, `align`, `rtf_format`, `png_device`, the values
+`tfl_save()` uses too -- else the built-in one (6.5 x 4.5 in, 300 dpi,
+centred, png). `tfl_image_defaults(study, "km")` shows them and where
+each came from. The report's
 `page:` keeps only what tables and figures share -- the titles, the
 footnotes, `page_break`, `space_before`; a size or an alignment written
 under `page: rtf_figures:` stops the program, and `tfl_check_spec()` says
 where it moved.
 
 ```yaml
-# study.yml
-settings:
-  figure: {width_in: fit, dpi: 300}
+# spec/defaults.yml
+figure_style:
+  settings:
+    - {key: width, value: 7.3}
+    - {key: height, value: 4.2}
+    - {key: units, value: in}
+    - {key: dpi, value: 300}
+    - {type: km, key: width, value: 8.33}
 # spec/outputs/F-14-2-1.yml
 content:
   - ggplot: {data: sm, mapping: {x: AVISIT, 'y': mean, colour: TRTA}}
