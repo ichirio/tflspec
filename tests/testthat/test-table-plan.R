@@ -357,6 +357,20 @@ test_that("group_collapse alone does not become the grouping column", {
   expect_identical(g$collapse_repeats, 1L)
 })
 
+test_that("group_collapse TRUE: the outer row key by its column name (rtfreporter takes names)", {
+  expect_identical(tflspec:::.spec_outer_row_key(list(rows = c(Analyte = "ANALYTE"))), "Analyte")
+  expect_identical(tflspec:::.spec_outer_row_key(list(rows = "variable")), "variable")
+  expect_null(tflspec:::.spec_outer_row_key(list(cols = "TRT")))
+  skip_if_no_cards2()
+  sp <- tfl_table_spec(tables = data.frame(cols = "TRT", rows = "group = variable"),
+                       layout = data.frame(group_collapse = "TRUE"))
+  p <- tfl_table_plan(spec_pages_ard(), sp) |>
+         plan_cells(notes = FALSE)
+  g <- rtfreporter:::.plan_merge(rtfreporter:::.plan_of(p, "group"))
+  expect_identical(g$collapse_repeats, "group")
+  expect_true(any(grepl("collapse = \"group\"", tfl_table_code(sp), fixed = TRUE)))
+})
+
 test_that("stats = rows formats come from `cells` rows with no template", {
   skip_if_no_cards2()
   d <- spec_pages_ard()
