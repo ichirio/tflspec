@@ -385,6 +385,21 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       # the ARD's name in the report's program, when not ard
       if (!is.null(o$data$object) && !identical(o$data$object, "ard")) rr$ard_object <- cell(o$data$object)
     }
+    # a figure of the designer's pieces: its tfl_image's size is the report
+    # row's (figure_width_in / figure_height_in, read back into its
+    # tfl_image: .conv_fig_image()); a figure of items keeps its tfl_image
+    # with its items
+    if (identical(o$kind, "figure") && !.fig_new_content(o$content)) {
+      img <- .fig_image_of(o$content)
+      if (!is.null(img$width_in)) rr$figure_width_in <- cell(img$width_in)
+      if (!is.null(img$height_in)) rr$figure_height_in <- cell(img$height_in)
+      lost <- setdiff(names(img), c("width_in", "height_in"))
+      if (length(lost)) {
+        note(id, "figure", paste0("a figure of the designer's pieces: its tfl_image's ",
+                                   paste(lost, collapse = ", "),
+                                   " is not kept (the report sheet says only its size)"))
+      }
+    }
     add("report", rr)
     for (v in names(o$codelists)) for (i in seq_along(o$codelists[[v]])) {
       cl <- o$codelists[[v]][[i]]

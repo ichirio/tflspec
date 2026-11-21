@@ -1345,19 +1345,36 @@ tfl_image_defaults <- function(study, type = NULL) {
 # one and the content has none.  R as a whole is left as it is.
 .fig_image_fill <- function(content, study, type = NA) {
   d <- .fig_image_defaults(study, type)
-  dflt <- d[attr(d, "source") != "builtin"]
-  if (!length(dflt) || inherits(content, "tfl_r")) return(content)
+  # (the study's: as its defaults' items are)
+  .fig_image_under(content, d[attr(d, "source") != "builtin"], from = "defaults")
+}
+
+# A figure content with `settings` (tfl_image's, a named list; blank ones
+# left out) under its tfl_image's: its own win; the item made (last, from
+# `from`) when there is none.  R as a whole is left as it is.
+.fig_image_under <- function(content, settings, from = "own") {
+  settings <- Filter(function(v) !is.null(v) && !(length(v) == 1L && is.atomic(v) &&
+                                                   (is.na(v) || !nzchar(trimws(as.character(v))))),
+                     settings)
+  if (!length(settings) || inherits(content, "tfl_r")) return(content)
   content <- content %||% list()
   n <- length(content)
   if (n && .fig_is_image(content[[n]])) {
     a <- content[[n]]$args %||% list()
-    for (k in setdiff(names(dflt), names(a))) a[[k]] <- dflt[[k]]
+    for (k in setdiff(names(settings), names(a))) a[[k]] <- settings[[k]]
     content[[n]]$args <- a
   } else {
-    # (the study's: as its defaults' items are)
-    content[[n + 1L]] <- tfl_item("tfl_image", dflt, from = "defaults")
+    content[[n + 1L]] <- tfl_item("tfl_image", settings, from = from)
   }
   content
+}
+
+# A figure's content as its design list has it (tfl_sheets_from_spec()'s
+# `figures`, a figure of items: its `content`): the items; NULL for a
+# design of the designer's pieces (`layers`), which has no tfl_image
+.fig_content_of_design <- function(fd) {
+  if (!is.list(fd) || !is.null(fd$layers) || !is.list(fd$content) || !length(fd$content)) return(NULL)
+  lapply(unname(fd$content), .item_from_list)
 }
 
 # The image saved, when its tfl_image names a file: at its size on the page

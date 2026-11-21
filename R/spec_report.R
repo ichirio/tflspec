@@ -102,37 +102,10 @@
     fa <- args_of("rtf_figures")
     ft <- args_of("rtf_tables")
     fa <- c(fa, ft[setdiff(intersect(c("page_break", "space_before"), names(ft)), names(fa))])
-    # how it is drawn and placed: its content's tfl_image, the study's
-    # figure style standard's for its type under it
-    img <- .fig_image_of(.fig_image_fill(output$content, study, .fig_type_of_output(output)))
-    # its size on the page: inches as twips, or the page's body (fit)
-    # worked out from the page; blank, the figure's own size
-    sz <- .fig_image_size(img, pg, length(tt) + length(fn))
-    twips <- function(v) as.integer(round(v * 1440))
-    # the picture in the RTF: png (the default, said by nothing) or emf, a
-    # vector picture -- no resolution, no PNG device then
-    emf <- identical(.fig_rtf_format(img, id), "emf")
-    rf <- if (emf) "emf"
-    if (.fig_new_content(output$content)) {
-      # drawn at its size on the page, at its resolution: what the page
-      # shows is the plot as drawn, never stretched into the box
-      fig <- .spec_call("rtfplot", .spec_sym(content),
-                        render_width = sz$width_in, render_height = sz$height_in,
-                        render_dpi = if (!emf) as.numeric(img$dpi %||% 300),
-                        png_device = if (!emf) img$png_device, render_format = rf)
-      st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_figures", doc, fig, align = img$align), flow(fa)))
-    } else {
-      # (a figure of the designer's pieces, a figure template's call, R:
-      # placed at its size and drawn at it, never stretched)
-      w <- sz$mode[["width"]] != "native"
-      h <- sz$mode[["height"]] != "native"
-      st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_figures", doc, .spec_sym(content),
-        width_twips = if (w) twips(sz$width_in),
-        height_twips = if (h) twips(sz$height_in),
-        align = img$align,
-        render_width = if (w) sz$width_in, render_height = if (h) sz$height_in, render_dpi = if (!emf && !is.null(img$dpi)) as.numeric(img$dpi),
-        png_device = if (!emf) img$png_device, render_format = rf), flow(fa)))
-    }
+    # (the step the sheets' route writes too: .fig_report_step())
+    st[[length(st) + 1L]] <- .fig_report_step(content, output$content, study,
+                                              .fig_type_of_output(output), .fig_size_page(pg),
+                                              length(tt) + length(fn), flow(fa), id)
   } else {
     ta <- args_of("rtf_tables")
     st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_tables", doc, .spec_sym(content)),
@@ -454,9 +427,56 @@
 # `page` the report's page: (resolved: its paper and margins), `lines` its
 # titles' and footnotes' lines
 .fig_image_size <- function(img, page, lines = 0L) {
-  pg <- c(.page_args(page$rtf_page), .page_style(page))
   r <- list(figure_width_in = img$width_in, figure_height_in = img$height_in)
-  .fig_page_size(r, pg, lines)
+  .fig_page_size(r, .fig_size_page(page), lines)
+}
+
+# a report's page: (resolved) as .fig_page_size() takes it: its paper,
+# margins and font size
+.fig_size_page <- function(page) c(.page_args(page$rtf_page), .page_style(page))
+
+# A figure report's rtf_figures() step -- one rule for both routes, the
+# YAML spec's (.page_report_steps()) and the sheets' (.report_spec_steps()):
+# `fig` the figure's content (its items, the designer's pieces, R; NULL
+# when there is none to give), its tfl_image with the study's figure style
+# standard's for `type` under it (.fig_image_fill()); `size_pg` the page as
+# .fig_page_size() takes it, `lines` its titles' and footnotes' lines;
+# `flow` the step's place (page_break, space_before); `content` the plot's
+# name in the program
+.fig_report_step <- function(content, fig, study, type, size_pg, lines, flow, id) {
+  doc <- .spec_sym("doc")
+  # how it is drawn and placed: its content's tfl_image, the study's figure
+  # style standard's for its type under it
+  img <- .fig_image_of(.fig_image_fill(fig, study, type))
+  # its size on the page: inches as twips, or the page's body (fit) worked
+  # out from the page; blank, the figure's own size
+  sz <- .fig_page_size(list(figure_width_in = img$width_in, figure_height_in = img$height_in),
+                       size_pg, lines)
+  twips <- function(v) as.integer(round(v * 1440))
+  # the picture in the RTF: png (the default, said by nothing) or emf, a
+  # vector picture -- no resolution, no PNG device then
+  emf <- identical(.fig_rtf_format(img, id), "emf")
+  rf <- if (emf) "emf"
+  if (.fig_new_content(fig)) {
+    # drawn at its size on the page, at its resolution: what the page shows
+    # is the plot as drawn, never stretched into the box
+    p <- .spec_call("rtfplot", .spec_sym(content),
+                    render_width = sz$width_in, render_height = sz$height_in,
+                    render_dpi = if (!emf) as.numeric(img$dpi %||% 300),
+                    png_device = if (!emf) img$png_device, render_format = rf)
+    return(do.call(.spec_call, c(list("rtf_figures", doc, p, align = img$align), flow)))
+  }
+  # (a figure of the designer's pieces, a figure template's call, R: placed
+  # at its size and drawn at it, never stretched)
+  w <- sz$mode[["width"]] != "native"
+  h <- sz$mode[["height"]] != "native"
+  do.call(.spec_call, c(list("rtf_figures", doc, .spec_sym(content),
+    width_twips = if (w) twips(sz$width_in),
+    height_twips = if (h) twips(sz$height_in),
+    align = img$align,
+    render_width = if (w) sz$width_in, render_height = if (h) sz$height_in,
+    render_dpi = if (!emf && !is.null(img$dpi)) as.numeric(img$dpi),
+    png_device = if (!emf) img$png_device, render_format = rf), flow))
 }
 
 # the report's entry of the study's TOC

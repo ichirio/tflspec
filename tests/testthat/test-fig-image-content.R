@@ -21,8 +21,7 @@ fi_items <- function(img = NULL) {
     if (!is.null(img)) list(tfl_item("tfl_image", img)))
 }
 
-fi_fig_call <- function(o, study = NULL) {
-  code <- tfl_report_code(o, study = study, content = "content")
+fi_fig_call <- function(o, study = NULL, code = tfl_report_code(o, study = study, content = "content")) {
   # (its lines as one: the call between the pipes)
   code <- gsub("\\s*\n\\s*", " ", paste(code, collapse = "\n"))
   code <- gsub(" [)]", ")", gsub("[(] ", "(", code))
@@ -188,4 +187,40 @@ test_that("tfl_image: rtf_format emf is render_format; png and none write what t
                                          "render_width = 7.3, render_height = 4.2, render_format = \"emf\")"))
   expect_error(fi_fig_call(items(list(rtf_format = "svg"))), "rtf_format is png or emf, not svg", fixed = TRUE)
   expect_false(nrow(tfl_schema_check(tfl_item("tfl_image", list(rtf_format = "jpeg")))) == 0L)
+})
+
+test_that("the sheets' route writes the rtf_figures line the YAML spec's route writes", {
+  # one rule for both (.fig_report_step()): the same figure report and study
+  # give the same line, from its YAML report or from its sheets
+  # (tfl_sheets_from_spec() -> tfl_table_spec(), the design its `figure`)
+  st <- tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
+  st$figure_style <- list(settings = list(fi_row("align", "left"), fi_row("width", "9", "km"),
+                                          fi_row("dpi", "150", "km")))
+  both <- function(o) {
+    sh <- suppressWarnings(suppressMessages(tfl_sheets_from_spec(st, stats::setNames(list(o), o$id))))
+    sp <- tfl_table_spec(sh$table[intersect(names(sh$table), c("study", names(.ard_spec_schema())))])
+    list(spec = fi_fig_call(o, st),
+         sheets = fi_fig_call(code = tfl_report_code(sp, o$id, study = st, figure = sh$figures[[o$id]],
+                                                     content = "content")))
+  }
+  # a figure of items, its tfl_image with it; of the km type, its template's
+  o <- tfl_output("F-1", "figure", content = fi_items(list(height_in = 4, png_device = "ragg")))
+  x <- both(o)
+  expect_identical(x$sheets, x$spec)
+  o$id <- "F-2"
+  o$template <- "km_simple"
+  x <- both(o)
+  expect_identical(x$sheets, x$spec)
+  expect_match(x$spec, "render_width = 9, render_height = 4, render_dpi = 150", fixed = TRUE)
+  # a figure of the designer's pieces: its size the report sheet's
+  o <- tfl_output("F-3", "figure", content = list(
+    tfl_item("km_curve", list(linewidth = 0.3)),
+    tfl_item("tfl_image", list(width_in = 7, height_in = "fit"))))
+  x <- both(o)
+  expect_identical(x$sheets, x$spec)
+  expect_match(x$spec, "width_twips = 10080", fixed = TRUE)
+  # nothing said: the study's all-figures row on both
+  x <- both(tfl_output("F-4", "figure", content = list(tfl_item("km_curve", list()))))
+  expect_identical(x$sheets, x$spec)
+  expect_identical(x$spec, "rtf_figures(content, align = \"left\")")
 })

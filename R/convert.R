@@ -833,7 +833,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   by_items <- !is.null(y) && is.null(y$layers) && is.list(y$content) && length(y$content) > 0L
   if (by_items) {
     items <- list(data = if (!is.null(y$data)) list(steps = y$data),
-                  content = lapply(unname(y$content), .item_from_list), template = y$template)
+                  content = .fig_content_of_design(y), template = y$template)
   } else if (kind == "figure" && !is.null(fig) && identical(figures, "items")) {
     # the design's content of function calls (R/fig_content.R); a design
     # it cannot convert stays the designer's, said
@@ -1058,16 +1058,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
          paste(names(im), unlist(im), sep = "=", collapse = "; "))
     return(out)
   }
-  cn <- out$content %||% list()
-  n <- length(cn)
-  if (n && .fig_is_image(cn[[n]])) {
-    a <- cn[[n]]$args %||% list()
-    for (k in setdiff(names(im), names(a))) a[[k]] <- im[[k]]
-    cn[[n]]$args <- a
-  } else {
-    cn[[n + 1L]] <- tfl_item("tfl_image", im)
-  }
-  out$content <- cn
+  out$content <- .fig_image_under(out$content, im)
   out
 }
 
