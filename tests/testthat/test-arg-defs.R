@@ -1,6 +1,6 @@
 cols <- c("name", "label_en", "label_ja", "help_en", "help_ja", "step", "group", "input", "type",
           "required", "default", "default_kind", "unset", "choices", "values", "value_labels",
-          "free", "ordered", "columns", "fixed_rows", "tier", "passes_to", "member_of",
+          "free", "ordered", "columns", "new_row", "fixed_rows", "tier", "passes_to", "member_of",
           "description")
 
 test_that("tfl_arg_defs() takes fn or template, one of them", {
@@ -381,4 +381,28 @@ test_that("plan_cell_style and plan_filter take their logical formal defaults, a
   expect_true(is.na(e$default_kind[e$name == "text"]))
   expect_false(f$required[f$name == "any"])
   expect_identical(tfl_schema("plan_filter")$data_args, ".plan")
+})
+
+test_that("a column field's choices are written in its definition", {
+  y <- yaml::read_yaml(system.file("spec", "schema.yml", package = "tflspec"))
+  # (a column member of the type, a union's too: `list<column>|column`)
+  col <- function(d) {
+    is.list(d) && any(grepl("^(list<)?column>?$", tflspec:::.type_members(as.character(d$type %||% "string"))))
+  }
+  n <- 0L
+  for (fn in names(y)) {
+    word <- if (identical(fn, "normalize_ard")) "ard" else if (startsWith(fn, "plan_")) "columns" else
+      if (identical(y[[fn]]$package, "cards")) "vars"
+    if (is.null(word) || !is.list(y[[fn]]$args)) next
+    for (a in names(y[[fn]]$args)) {
+      d <- y[[fn]]$args[[a]]
+      if (col(d)) {
+        n <- n + 1L
+        expect_identical(d$choices, word, info = paste(fn, a))
+      }
+    }
+  }
+  expect_gt(n, 30L)
+  expect_identical(y$plan_hide$dots$choices, "columns")
+  expect_true(isTRUE(y$normalize_ard$args$hierarchy$ordered))
 })

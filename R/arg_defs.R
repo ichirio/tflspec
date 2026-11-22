@@ -127,16 +127,48 @@
 
 # A type's members: split at `|` outside <> and [] (`enum[a|b]` and
 # `map<string, column|r>` are one member each)
-.type_members <- function(type) {
+.type_members <- function(type, sep = "|") {
   ch <- strsplit(as.character(type %||% "string")[1L], "", fixed = TRUE)[[1L]]
   depth <- cumsum(ch %in% c("<", "[")) - cumsum(ch %in% c(">", "]"))
-  cut <- which(ch == "|" & depth == 0L)
+  cut <- which(ch == sep & depth == 0L)
   if (!length(cut)) return(trimws(paste(ch, collapse = "")))
   from <- c(1L, cut + 1L)
   to <- c(cut - 1L, length(ch))
   trimws(vapply(seq_along(from), function(i) {
     paste(ch[seq_len(to[i] - from[i] + 1L) + from[i] - 1L], collapse = "")
   }, ""))
+}
+
+# A table's columns from its type, where the definition writes none (the
+# field contract, section 4): the first table member's.  map<K, V> and
+# vec<K, V> (or a list of them) give a key column of K and a value column of
+# V, each with the input section 2 gives it, a value that is itself a map its
+# own key and value; rows<f1, f2, ..> gives a column a field.  NULL: no
+# table member (step<content>, whose items are cards).
+.arg_type_columns <- function(type) {
+  m <- sub("^list<((map|vec)<.*>)>$", "\\1", .type_members(type))
+  t <- m[grepl("^(map|vec|rows)<", m)][1L]
+  if (is.na(t)) return(NULL)
+  inner <- .type_members(sub("^[a-z]+<(.*)>$", "\\1", t), sep = ",")
+  if (startsWith(t, "rows<")) {
+    out <- lapply(inner, function(f) list(label = list(en = f, ja = f)))
+    return(stats::setNames(out, inner))
+  }
+  list(key = .arg_type_column(inner[1L], "key"),
+       value = .arg_type_column(inner[length(inner)], "value"))
+}
+
+# ... one column: its type, input and label (by what the key is: a column,
+# a statistic, else a name; the value "Value")
+.arg_type_column <- function(type, role) {
+  label <- if (identical(role, "value")) list(en = "Value", ja = "\u5024") else
+    switch(.type_deciding(type),
+           column = list(en = "Column", ja = "\u5217"),
+           stat = list(en = "Statistic", ja = "\u7d71\u8a08\u91cf"),
+           list(en = "Name", ja = "\u540d\u524d"))
+  col <- list(type = type, input = .arg_input_for_type(type), label = label)
+  if (grepl("^(map|vec)<", .type_deciding(type))) col$columns <- .arg_type_columns(.type_deciding(type))
+  col
 }
 
 # The member that decides the field: the first that is not `r` ("r" when r
@@ -175,32 +207,17 @@
 # the plan_paginate_*() functions are the page step
 .arg_page_fns <- c("plan_paginate_rows", "plan_paginate_cols", "plan_paginate_group")
 
-# What a schema function's argument gets where schema.yml is silent: a column
-# argument without choices picks from the ARD (normalize_ard) or from the
-# table's columns (plan_*); normalize_ard's hierarchy is ordered.
-.arg_schema_fill <- function(fn, args, package = NULL) {
-  column_type <- function(d) {
-    is.list(d) && any(grepl("^(list<)?column>?$", .type_members(as.character(d$type %||% "string"))))
-  }
+# What a schema function's argument gets where schema.yml is silent: a
+# statistic member (`stat`, `list<stat>`) picks from the statistics' names.
+# That is a rule of the type.  A column argument's choices (ard, columns,
+# vars) and an ordered list (`ordered: true`) are written in the definition,
+# not worked out here from the function's name or package.
+.arg_schema_fill <- function(args) {
   for (n in names(args)) {
     d <- args[[n]]
-    if (column_type(d) && is.null(d$choices)) {
-      if (identical(fn, "normalize_ard")) {
-        args[[n]]$choices <- "ard"
-      } else if (startsWith(fn, "plan_")) {
-        args[[n]]$choices <- "columns"
-      } else if (identical(package, "cards")) {
-        # (a cards function: the columns of the data it is given)
-        args[[n]]$choices <- "vars"
-      }
-    }
-    # (a statistic member: the statistics' names to pick from)
-    if (is.list(d) && is.null(d$choices) && is.null(args[[n]]$choices) &&
+    if (is.list(d) && is.null(d$choices) &&
         any(grepl("^(list<)?stat>?$", .type_members(as.character(d$type %||% "string"))))) {
       args[[n]]$choices <- "stats"
-    }
-    if (identical(fn, "normalize_ard") && n %in% c("hierarchy", ".hierarchy")) {
-      args[[n]]$ordered <- TRUE
     }
   }
   args
@@ -292,9 +309,28 @@
     cd$label_ja <- l[["ja"]]
     cd$help_en <- if (is.na(h[["en"]])) as.character(cd[["description"]] %||% NA_character_) else h[["en"]]
     cd$help_ja <- h[["ja"]]
+    # a map's value that is itself a map has its own key / value columns
+    if (is.list(cd[["columns"]])) cd$columns <- .arg_columns(cd[["columns"]], NULL, w)
     cols[[k]] <- cd
   }
   cols
+}
+
+# A table's new_row as written: the values a row the user adds starts
+# with, by column; each a named column of `cols`.  NULL for none.
+.arg_new_row <- function(nr, cols, where) {
+  if (is.null(nr)) return(NULL)
+  if (!is.list(nr) || is.null(names(nr)) || !all(nzchar(names(nr)))) {
+    stop(sprintf("%s: new_row is a map, column: value.", where), call. = FALSE)
+  }
+  known <- if (is.list(cols)) names(cols)[nzchar(names(cols))] else character()
+  bad <- setdiff(names(nr), known)
+  if (length(bad)) {
+    stop(sprintf("%s: new_row column `%s` is not one of the table's columns (%s).", where, bad[1L],
+                 if (length(known)) paste(known, collapse = ", ") else "none written"),
+         call. = FALSE)
+  }
+  nr
 }
 
 # A passes_to as written (`passes_to:`, or `maps_to:` in a template, the
@@ -422,7 +458,10 @@
   row$value_labels <- I(list(vl$labels))
   row$free <- as.logical(free)
   row$ordered <- as.logical(ordered)
-  row$columns <- I(list(.arg_columns(d[["columns"]], d[["labels"]], where_arg)))
+  # (a table whose definition writes no columns: gets them from its type)
+  cols <- d[["columns"]] %||% (if (identical(input, "table")) .arg_type_columns(type))
+  row$columns <- I(list(.arg_columns(cols, d[["labels"]], where_arg)))
+  row$new_row <- I(list(.arg_new_row(d[["new_row"]], d[["columns"]], where_arg)))
   row$fixed_rows <- I(list(NULL))
   row$tier <- tier
   row$passes_to <- I(list(.arg_passes_to(d, where_arg)))
@@ -702,7 +741,11 @@
 #'       `analysis_id`).  A named column's definition also has `label_en`,
 #'       `label_ja`, `help_en`, `help_ja`, from its own `label:` / `help:`
 #'       or the argument's `labels:` map (column: label).  A `map<K, V>`'s
-#'       two columns are written `columns: {key: {label: }, value: {label: }}`.}
+#'       two columns are written `columns: {key: {label: }, value: {label: }}`;
+#'       a value that is itself a map has its own `columns:` (the same form).}
+#'     \item{new_row}{(a list column) a table's values for a row the user
+#'       adds, by column (`new_row: {key: subgroup}`); `NULL` when none.  Each
+#'       name must be one of the argument's `columns:`.}
 #'     \item{fixed_rows}{(a list column) a template's table param: the rows
 #'       the template writes with fixed values next to its `"{name}"` (the
 #'       ALL row of forest_hr's conditions), a data frame whose attribute
@@ -764,8 +807,7 @@ tfl_arg_defs <- function(fn = NULL, template = NULL) {
     stop(sprintf("tfl_arg_defs(): %s is not a function of the schema.",
                  encodeString(fn, quote = "\"")), call. = FALSE)
   }
-  args <- .arg_schema_key(.arg_schema_fill(fn, .arg_schema_dots(ent$args %||% list(), ent$dots),
-                                           ent$package),
+  args <- .arg_schema_key(.arg_schema_fill(.arg_schema_dots(ent$args %||% list(), ent$dots)),
                           ent$visible)
   args <- .arg_formal_defaults(args, ent$formal_defaults)
   step <- if (fn %in% .arg_page_fns) "page" else .arg_step_for_stage(ent$stage)
@@ -807,6 +849,7 @@ tfl_arg_defs <- function(fn = NULL, template = NULL) {
   }
   d <- list(type = dots$type %||% "string", description = dots$description %||% "")
   if (!is.null(dots$input)) d$input <- dots$input
+  if (!is.null(dots$choices)) d$choices <- dots$choices
   own <- args[["..."]]
   if (is.list(own)) for (k in names(own)) d[k] <- list(own[[k]])
   args[["..."]] <- NULL

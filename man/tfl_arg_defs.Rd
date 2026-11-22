@@ -74,7 +74,11 @@ params go (an item's conditions: \code{"params"}, \code{where}, an optional
 \code{analysis_id}).  A named column's definition also has \code{label_en},
 \code{label_ja}, \code{help_en}, \code{help_ja}, from its own \verb{label:} / \verb{help:}
 or the argument's \verb{labels:} map (column: label).  A \verb{map<K, V>}'s
-two columns are written \verb{columns: \{key: \{label: \}, value: \{label: \}\}}.}
+two columns are written \verb{columns: \{key: \{label: \}, value: \{label: \}\}};
+a value that is itself a map has its own \verb{columns:} (the same form).}
+\item{new_row}{(a list column) a table's values for a row the user
+adds, by column (\verb{new_row: \{key: subgroup\}}); \code{NULL} when none.  Each
+name must be one of the argument's \verb{columns:}.}
 \item{fixed_rows}{(a list column) a template's table param: the rows
 the template writes with fixed values next to its \code{"{name}"} (the
 ALL row of forest_hr's conditions), a data frame whose attribute
