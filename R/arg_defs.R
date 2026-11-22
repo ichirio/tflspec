@@ -176,7 +176,7 @@
 # What a schema function's argument gets where schema.yml is silent: a column
 # argument without choices picks from the ARD (normalize_ard) or from the
 # table's columns (plan_*); normalize_ard's hierarchy is ordered.
-.arg_schema_fill <- function(fn, args) {
+.arg_schema_fill <- function(fn, args, package = NULL) {
   column_type <- function(d) {
     is.list(d) && any(grepl("^(list<)?column>?$", .type_members(as.character(d$type %||% "string"))))
   }
@@ -187,6 +187,9 @@
         args[[n]]$choices <- "ard"
       } else if (startsWith(fn, "plan_")) {
         args[[n]]$choices <- "columns"
+      } else if (identical(package, "cards")) {
+        # (a cards function: the columns of the data it is given)
+        args[[n]]$choices <- "vars"
       }
     }
     # (a statistic member: the statistics' names to pick from)
@@ -202,16 +205,16 @@
 }
 
 # The fixed values of a type's members: each `enum[..]` member's words (a
-# `list<enum[..]>`'s too), and TRUE / FALSE when a `logical` is beside them
-# (`logical|enum[single|double]`: TRUE, FALSE, single, double; a plain
-# logical has none: a switch)
+# `list<enum[..]>`'s too), and TRUE / FALSE when a `logical` is beside other
+# members (`logical|enum[single|double]`: TRUE, FALSE, single, double;
+# `logical|string`: TRUE, FALSE; a plain logical has none: a switch)
 .arg_enum_values <- function(type) {
   m <- .type_members(type %||% "")
   m <- sub("^list<(enum[[].*[]])>$", "\\1", m)
   e <- m[startsWith(m, "enum[")]
   vals <- unlist(lapply(e, function(x) strsplit(sub("^enum[[]([^]]*)[]].*$", "\\1", x), "|", fixed = TRUE)[[1L]]))
+  if ("logical" %in% m && sum(m != "r") > 1L) vals <- c("TRUE", "FALSE", vals)
   if (!length(vals)) return(NULL)
-  if ("logical" %in% m) vals <- c("TRUE", "FALSE", vals)
   unique(vals)
 }
 
@@ -364,8 +367,10 @@
   if (is.null(choices) && length(values)) choices <- "fixed"
   .arg_check_choices(choices, where_arg)
   words <- sub("[(].*$", "", .arg_choice_words(choices))
-  # (a string member beside a pick lets it take a value not in the list)
-  beside <- "string" %in% .type_members(type)
+  # (a text member beside a pick -- a string, a number, an integer, or a
+  # list of them -- lets it take a value not in the list: row_title's
+  # column numbers, wrap's text)
+  beside <- any(grepl("^(list<)?(string|number|integer)>?$", .type_members(type)))
   free <- d$free %||% (if (input == "pick" && (length(words) || beside)) {
     any(words %in% .arg_free_sources) || beside
   } else NA)
@@ -754,7 +759,8 @@ tfl_arg_defs <- function(fn = NULL, template = NULL) {
     stop(sprintf("tfl_arg_defs(): %s is not a function of the schema.",
                  encodeString(fn, quote = "\"")), call. = FALSE)
   }
-  args <- .arg_schema_key(.arg_schema_fill(fn, .arg_schema_dots(ent$args %||% list(), ent$dots)),
+  args <- .arg_schema_key(.arg_schema_fill(fn, .arg_schema_dots(ent$args %||% list(), ent$dots),
+                                           ent$package),
                           ent$visible)
   step <- if (fn %in% .arg_page_fns) "page" else .arg_step_for_stage(ent$stage)
   .arg_table(args, step, fn, ent[["groups"]])

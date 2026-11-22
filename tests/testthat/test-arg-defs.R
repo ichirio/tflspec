@@ -251,8 +251,15 @@ test_that("a union's input: the first member that is not r, the exceptions writt
   expect_identical(row("plan_columns", "row_title")$choices[[1L]], "columns")
   expect_false(row("plan_columns", "row_title")$ordered)
   expect_true(is.na(row("rtf_border", "top")$ordered))
-  # a string beside a pick: a value not in the list too
+  # a text member beside a pick: a value not in the list too
   expect_true(row("plan_listing", "wrap")$free)
+  expect_true(row("plan_columns", "row_title")$free)
+  # a logical beside other members: TRUE / FALSE (GT's review of #895)
+  expect_identical(row("plan_listing", "wrap")$values[[1L]], c("TRUE", "FALSE"))
+  expect_identical(row("plan_listing", "record")$values[[1L]], c("TRUE", "FALSE"))
+  # a cards function's column: the columns of its data (by the package, not the name)
+  expect_identical(row("ard_summary", "variables")$choices[[1L]], "vars")
+  expect_identical(row("ard_tabulate", "by")$choices[[1L]], "vars")
   # the 22 exceptions are still needed: the rule alone gives another input
   ex <- cases[13:34]
   ents <- tflspec:::.schema_all(figure = TRUE)
