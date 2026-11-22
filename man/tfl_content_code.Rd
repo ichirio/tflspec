@@ -48,9 +48,8 @@ report's own items \code{+}-ed after it; \code{"items"} (or a report that
 replaces one of the template's layers) writes its design.  A figure
 of a series template (\verb{<series>/<template>}, resolved by
 \code{\link[=tfl_template_resolve]{tfl_template_resolve()}}) whose template names its content in \verb{figure:}
-(\code{km_curves}, \code{forest_hr}): \code{content <- tflspec::km_curves(km_fit = km_fit, ard = ard, params = list(...))} -- the function \code{\link[=tfl_figure_fn]{tfl_figure_fn()}}
-finds, with the report's resolved arguments, one a line (the model
-\code{km_fit} written before it).}
+(\code{fig_km}, \code{forest_hr}): \code{content <- tflspec::fig_km(km_fit = km_fit, ard = ard, legend = "bottom", ...)} (\code{forest_hr(ard = ard, params = list(...))}) -- the function \code{\link[=tfl_figure_fn]{tfl_figure_fn()}} finds, with the report's
+resolved arguments, one a line (the model \code{km_fit} written before it).}
 
 \item{study}{The study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}) or its folder; for a listing
 of records (\code{data: {source: dataset}}) the code starts with its data

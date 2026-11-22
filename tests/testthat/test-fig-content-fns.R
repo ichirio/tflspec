@@ -1,4 +1,4 @@
-# The figure content functions a template names in `figure:` (km_curves,
+# The figure content functions a template names in `figure:` (fig_km,
 # forest_hr) and their lookup tfl_figure_fn().  Fictional data only.
 
 .fcf_adtte <- function() {
@@ -40,47 +40,11 @@
 }
 
 test_that("tfl_figure_fn() finds the content by the template's figure: name", {
-  expect_identical(tfl_figure_fn("km_curves"), km_curves)
+  expect_identical(tfl_figure_fn("fig_km"), fig_km)
   expect_identical(tfl_figure_fn("forest_hr"), forest_hr)
-  expect_error(tfl_figure_fn("waterfall"), "km_curves, forest_hr")
+  expect_error(tfl_figure_fn("waterfall"), "fig_km, forest_hr")
   expect_error(tfl_figure_fn(NA_character_), "one of")
-  expect_error(tfl_figure_fn(c("km_curves", "forest_hr")), "one of")
-})
-
-test_that("km_curves() draws the KM curves with N in the legend", {
-  skip_if_not_installed("ggplot2", "3.5.2")
-  skip_if_not_installed("ggsurvfit")
-  skip_if_not_installed("survival")
-  skip_if_not_installed("cards")
-  d <- .fcf_adtte()
-  fit <- ggsurvfit::survfit2(ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ TRT01A, data = d)
-  p <- km_curves(fit, .fcf_bign(d), list(time_unit = "days"))
-  expect_s3_class(p, "ggplot")
-  expect_no_error(b <- ggplot2::ggplot_build(p))
-  sc <- b$plot$scales$get_scales("colour")
-  expect_equal(unname(sc$get_labels()), c("Control (N=20)", "Drug X (N=20)"), ignore_attr = TRUE)
-  expect_identical(p$labels$x %||% ggplot2::get_labs(p)$x, "Time (Days)")
-  expect_identical(p$labels$y %||% ggplot2::get_labs(p)$y, "Survival Probability")
-})
-
-test_that("km_curves() takes its params; an unknown one stops", {
-  skip_if_not_installed("ggplot2", "3.5.2")
-  skip_if_not_installed("ggsurvfit")
-  skip_if_not_installed("survival")
-  d <- .fcf_adtte()
-  fit <- ggsurvfit::survfit2(ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ TRT01A, data = d)
-  for (lg in c("inside", "bottom", "none")) {
-    p <- km_curves(fit, NULL, list(legend = lg, x_label = "Months ({time_unit})",
-                                   time_unit = "months", y_label = "S(t)"))
-    expect_no_error(ggplot2::ggplot_build(p))
-  }
-  expect_identical(p$theme$legend.position, "none")
-  # no BIGN: the levels alone
-  sc <- ggplot2::ggplot_build(p)$plot$scales$get_scales("colour")
-  expect_equal(unname(sc$get_labels()), c("Control", "Drug X"), ignore_attr = TRUE)
-  expect_error(km_curves(fit, NULL, list(colour = "red")), "unknown params colour")
-  expect_error(km_curves(fit, NULL, list(legend = "left")), "should be one of")
-  expect_error(km_curves(list(), NULL), "survfit")
+  expect_error(tfl_figure_fn(c("fig_km", "forest_hr")), "one of")
 })
 
 test_that("forest_hr() draws a row per condition row, ALL first", {

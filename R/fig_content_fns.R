@@ -1,10 +1,11 @@
 # ---- figure content functions: the ggplot a figure template names ----------------
 #
 # A template in code-SPEC form (tflspec_v1/templates/*.yml) names its
-# figure content in `figure:` (km_simple -> km_curves, forest_hr ->
+# figure content in `figure:` (km_simple -> fig_km, forest_hr ->
 # forest_hr).  The content is an R function of what the template's
 # analysis step makes -- a model object (`type: model`) and the ARD -- and
-# the appearance params; it returns a ggplot.  tfl_figure_fn() finds it by
+# the appearance params; it returns a ggplot (fig_km(): the figure, built).
+# tfl_figure_fn() finds it by
 # that name (the registry below), as tfl_definition() finds a definition.
 #
 # The look reuses the figure style standard (tfl_fig_style()): the
@@ -18,11 +19,14 @@
 #   model   the model object the function's first argument takes: its name in
 #           the program and the call that makes it, with the template's
 #           arguments in {braces} (NULL: the function takes the ARD only)
-#   params  the template's arguments that go into the function's `params`
+#   params  the template's arguments the function takes
+#   direct  TRUE: they are the function's own arguments (fig_km(type = ));
+#           FALSE: they go into its `params` list (forest_hr(params = ))
 .fig_content_table <- function() {
   list(
-    km_curves = list(
-      fn = "km_curves",
+    fig_km = list(
+      fn = "fig_km",
+      direct = TRUE,
       model = list(
         arg = "km_fit",
         call = paste0("ggsurvfit::survfit2(ggsurvfit::Surv_CNSR({time}, {censor}) ~ {by}, ",
@@ -30,6 +34,7 @@
       params = c("time_unit", "x_label", "y_label", "legend")),
     forest_hr = list(
       fn = "forest_hr",
+      direct = FALSE,
       model = NULL,
       params = c("comparison", "subgroup_labels", "favours", "x_breaks", "size_by_n",
                  "bold_headings", "n_by_arm")))
@@ -82,15 +87,15 @@
 #'
 #' A figure template in code-SPEC form names its content -- the ggplot
 #' drawn from what its analysis step makes -- in its `figure:` key:
-#' `km_simple` names `km_curves`, `forest_hr` names `forest_hr`.  This
+#' `km_simple` names `fig_km`, `forest_hr` names `forest_hr`.  This
 #' returns the R function of that name, as `tfl_definition()` returns a
 #' definition.
 #'
 #' @param name The name a template gives in `figure:`.
-#' @return The function: [km_curves()] or [forest_hr()].
-#' @seealso [km_curves()], [forest_hr()]
+#' @return The function: [fig_km()] or [forest_hr()].
+#' @seealso [fig_km()], [forest_hr()]
 #' @examples
-#' tfl_figure_fn("km_curves")
+#' tfl_figure_fn("fig_km")
 #' @export
 tfl_figure_fn <- function(name) {
   fns <- .fig_content_fns()
@@ -153,77 +158,6 @@ tfl_figure_fn <- function(name) {
   Reduce(`+`, terms[-1L], terms[[1L]])
 }
 
-# The legend's place: inside (top right), bottom, none
-.fig_fn_legend <- function(legend) {
-  legend <- match.arg(legend, c("inside", "bottom", "none"))
-  switch(legend,
-    inside = ggplot2::theme(legend.position = "inside",
-                            legend.position.inside = c(0.98, 0.98),
-                            legend.justification.inside = c(1, 1),
-                            legend.title = ggplot2::element_blank()),
-    bottom = ggplot2::theme(legend.position = "bottom", legend.title = ggplot2::element_blank()),
-    none = ggplot2::theme(legend.position = "none"))
-}
-
-# ---- km_curves ----------------------------------------------------------------------
-
-#' Kaplan-Meier curves: the figure content of km_simple
-#'
-#' The ggplot of the template `km_simple` (its `figure: km_curves`): the
-#' Kaplan-Meier curves of the template's model item `km_fit`, with censor
-#' marks, each curve's legend entry with its N from the ARD's `BIGN`.
-#' The colours, the censor mark and the theme are the figure style
-#' standard's ([tfl_fig_style()]).
-#'
-#' @param km_fit The fit, `ggsurvfit::survfit2(Surv_CNSR(AVAL, CNSR) ~ <by>,
-#'   data = adtte_sub)`.
-#' @param ard The ARD with the subjects per group: the rows of
-#'   `analysis_id == "BIGN"` (all rows when the ARD has no `analysis_id`),
-#'   stat `n`, from `cards::ard_tabulate(variables = <by>)`.  A level
-#'   without such a row has no N in its legend.  `NULL`: no N.
-#' @param params The appearance params, a named list; an unset one takes
-#'   its default:
-#'   - `time_unit`: the time's unit, for the x axis's title (`"days"`).
-#'   - `x_label`: the x axis's title (`"Time ({time_unit})"`, the unit
-#'     title-cased: `Time (Days)`); `{time_unit}` is filled.
-#'   - `y_label`: the y axis's title (`"Survival Probability"`).
-#'   - `legend`: `"inside"` (top right), `"bottom"` or `"none"`.
-#' @return A ggplot.
-#' @seealso [tfl_figure_fn()], [forest_hr()]
-#' @examplesIf requireNamespace("ggsurvfit", quietly = TRUE) && requireNamespace("cards", quietly = TRUE)
-#' adtte <- data.frame(AVAL = c(5, 8, 12, 20, 3, 9, 15, 30), CNSR = c(0, 1, 0, 0, 0, 0, 1, 1),
-#'                     ARM = rep(c("A", "B"), each = 4))
-#' fit <- ggsurvfit::survfit2(ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ ARM, data = adtte)
-#' bign <- cards::ard_tabulate(adtte, variables = "ARM")
-#' km_curves(fit, bign, list(time_unit = "months"))
-#' @export
-km_curves <- function(km_fit, ard = NULL, params = list()) {
-  .fig_fn_need(c("ggsurvfit", "survival"), "km_curves")
-  if (!inherits(km_fit, "survfit")) stop("km_curves(): `km_fit` is a survfit object (survfit2()).", call. = FALSE)
-  p <- .fig_fn_params(params, list(time_unit = "days", x_label = "Time ({time_unit})",
-                                   y_label = "Survival Probability", legend = "inside"), "km_curves")
-  o <- pp_default_options("km")
-  opt <- function(k, d) { x <- o[[k]]; if (is.null(x) || identical(x, "")) d else x }
-  # the curves: one a level of the by variable (strata "TRT01A=Drug X")
-  lv <- if (is.null(km_fit$strata)) "All" else sub("^[^=]*=", "", names(km_fit$strata))
-  pal <- stats::setNames(rep_len(unname(tfl_fig_palettes()[["treatment"]]), length(lv)), lv)
-  by <- if (is.null(km_fit$strata)) NULL else sub("=.*$", "", names(km_fit$strata)[[1L]])
-  lab <- stats::setNames(.km_legend_labels(lv, ard, by), lv)
-  shape <- opt("censor_shape", "x")
-  shape <- if (shape %in% names(pp_shape_names)) pp_shape_names[[shape]] else shape
-  x_label <- gsub("{time_unit}", tools::toTitleCase(as.character(p$time_unit)), p$x_label, fixed = TRUE)
-  ggsurvfit::ggsurvfit(km_fit, linewidth = as.numeric(opt("line_width", 0.3))) +
-    ggsurvfit::add_censor_mark(shape = shape, size = as.numeric(opt("censor_size", 3)),
-                               stroke = as.numeric(opt("censor_stroke", 0.6))) +
-    ggplot2::scale_colour_manual(values = pal, breaks = lv, labels = lab) +
-    ggplot2::scale_x_continuous(limits = c(0, NA), expand = ggplot2::expansion(mult = c(0, 0.03))) +
-    ggplot2::scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, as.numeric(opt("y_by", 0.2))),
-                                expand = ggplot2::expansion(mult = c(0, 0.02))) +
-    ggplot2::labs(x = x_label, y = p$y_label) +
-    .fig_fn_theme(opt("theme", "boxed"), as.numeric(opt("base_size", 10))) +
-    .fig_fn_legend(p$legend)
-}
-
 # Each level's legend text: the level and its N from BIGN ("Drug X (N=20)")
 # (the rows of the by variable, when the ARD names its variable)
 .km_legend_labels <- function(lv, ard, by = NULL) {
@@ -271,7 +205,7 @@ km_curves <- function(km_fit, ard = NULL, params = list()) {
 #'   - `n_by_arm`: arms whose events / subjects are shown, a column each
 #'     (`NULL`: none).
 #' @return A ggplot.
-#' @seealso [tfl_figure_fn()], [km_curves()]
+#' @seealso [tfl_figure_fn()], [fig_km()]
 #' @examplesIf requireNamespace("cardx", quietly = TRUE) && requireNamespace("survival", quietly = TRUE) && requireNamespace("broom.helpers", quietly = TRUE)
 #' set.seed(1)
 #' d <- data.frame(AVAL = rexp(60, 0.1), CNSR = rbinom(60, 1, 0.3),

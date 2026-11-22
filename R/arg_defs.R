@@ -300,6 +300,131 @@
   out
 }
 
+# A label or a help as written: `{en: , ja: }` or a plain text (English, ja
+# NA).  Returns c(en, ja).
+.arg_en_ja <- function(x, where, what) {
+  na <- c(en = NA_character_, ja = NA_character_)
+  if (is.null(x)) return(na)
+  if (is.list(x) && !is.null(names(x))) {
+    bad <- setdiff(names(x), c("en", "ja"))
+    ok <- !length(bad) && all(vapply(x, function(v) is.null(v) || (is.character(v) && length(v) == 1L), NA))
+    if (ok) {
+      return(c(en = as.character(x$en %||% NA_character_), ja = as.character(x$ja %||% NA_character_)))
+    }
+  } else if (is.character(x) && length(x) == 1L) {
+    return(c(en = x, ja = NA_character_))
+  }
+  stop(sprintf("%s: %s is a text or {en: , ja: }.", where, what), call. = FALSE)
+}
+
+# A definition's fixed values with their labels: the values written as
+# plain values or as `{value: , label: {en, ja}}`, else an enum type's; a
+# `labels:` map (value: label) labels them too.  list(values, labels): the
+# values a character vector (NULL for none), the labels a data frame
+# (value, label_en, label_ja) or NULL when no value has one.
+.arg_values <- function(d, type, where) {
+  # ([[ ]]: a `$` would read `labels` for a missing `label`)
+  raw <- d[["values"]]
+  if (is.null(raw)) {
+    vals <- .arg_enum_values(type)
+    lab <- vector("list", length(vals))
+  } else {
+    raw <- if (is.list(raw) && !is.null(names(raw)) && "value" %in% names(raw)) list(raw) else as.list(raw)
+    vals <- vapply(raw, function(v) {
+      if (is.list(v)) v <- v[["value"]]
+      if (is.null(v) || length(v) != 1L || is.list(v)) {
+        stop(sprintf("%s: values: an entry is a value or {value: , label: }.", where), call. = FALSE)
+      }
+      as.character(v)
+    }, "")
+    lab <- lapply(raw, function(v) if (is.list(v)) v[["label"]])
+  }
+  if (!length(vals)) return(list(values = NULL, labels = NULL))
+  extra <- d[["labels"]]
+  if (!is.null(extra) && (!is.list(extra) || is.null(names(extra)))) {
+    stop(sprintf("%s: labels: is a map, a value or a column to its label.", where), call. = FALSE)
+  }
+  ens <- lapply(seq_along(vals), function(i) {
+    .arg_en_ja(extra[[vals[i]]] %||% lab[[i]], where, sprintf("the label of value %s", vals[i]))
+  })
+  en <- vapply(ens, `[[`, "", "en")
+  ja <- vapply(ens, `[[`, "", "ja")
+  labels <- if (any(!is.na(en) | !is.na(ja))) {
+    data.frame(value = vals, label_en = en, label_ja = ja, stringsAsFactors = FALSE)
+  }
+  # (plain values stay as written)
+  list(values = if (is.atomic(d[["values"]]) && !is.null(d[["values"]])) d[["values"]] else vals,
+       labels = labels)
+}
+
+# A table's columns as written, each named column's definition given its
+# label_en / label_ja / help_en / help_ja (from its own `label:` / `help:`,
+# or the argument's `labels:` map); "params" and other entries kept.
+.arg_columns <- function(cols, labels, where) {
+  if (!is.list(cols) || is.null(names(cols))) return(cols)
+  for (k in names(cols)[nzchar(names(cols))]) {
+    cd <- cols[[k]]
+    if (!is.list(cd)) next
+    w <- sprintf("%s: column `%s`", where, k)
+    l <- .arg_en_ja(labels[[k]] %||% cd[["label"]], w, "label")
+    h <- .arg_en_ja(cd[["help"]], w, "help")
+    cd$label_en <- l[["en"]]
+    cd$label_ja <- l[["ja"]]
+    cd$help_en <- if (is.na(h[["en"]])) as.character(cd[["description"]] %||% NA_character_) else h[["en"]]
+    cd$help_ja <- h[["ja"]]
+    cols[[k]] <- cd
+  }
+  cols
+}
+
+# A passes_to as written (`passes_to:`, or `maps_to:` in a template, the
+# same thing): where the value goes, "<fn>.<arg>" or "<fn>.<arg>.<name>"
+# (the study keys' grammar), one or a list.  character() for none.
+.arg_passes_re <- "^[A-Za-z][A-Za-z0-9_]*[.][.]?[A-Za-z_][A-Za-z0-9_]*([.][A-Za-z0-9_]+)?$"
+.arg_passes_to <- function(d, where) {
+  if (!is.null(d[["passes_to"]]) && !is.null(d[["maps_to"]])) {
+    stop(sprintf("%s: passes_to: and maps_to: say the same; write passes_to: only.", where),
+         call. = FALSE)
+  }
+  x <- d[["passes_to"]] %||% d[["maps_to"]]
+  if (is.null(x)) return(character())
+  ok <- (is.character(x) || (is.list(x) && all(vapply(x, function(v) is.character(v) && length(v) == 1L, NA)))) &&
+    length(x) > 0L
+  x <- if (ok) as.character(unlist(x)) else character()
+  if (!ok || anyNA(x) || !all(grepl(.arg_passes_re, x))) {
+    stop(sprintf(paste0("%s: passes_to: is \"<fn>.<arg>\" or \"<fn>.<arg>.<name>\" ",
+                        "(\"plan_blanks.where\"), one or a list."), where), call. = FALSE)
+  }
+  x
+}
+
+# A `groups:` list (a function's or a template's): one entry `{id, label}`
+# a group, in the card's order.  A data frame (id, label_en, label_ja); no
+# rows when there is none.
+.arg_groups <- function(groups, where) {
+  empty <- data.frame(id = character(), label_en = character(), label_ja = character(),
+                      stringsAsFactors = FALSE)
+  if (is.null(groups) || !length(groups)) return(empty)
+  if (!is.list(groups) || !is.null(names(groups))) {
+    stop(sprintf("%s: groups: is a list of {id: , label: {en: , ja: }}.", where), call. = FALSE)
+  }
+  rows <- lapply(groups, function(g) {
+    id <- if (is.list(g)) g[["id"]]
+    if (!is.character(id) || length(id) != 1L || !grepl("^[A-Za-z][A-Za-z0-9_]*$", id)) {
+      stop(sprintf("%s: groups: each entry is {id: , label: }, the id a name (letters, digits, _).",
+                   where), call. = FALSE)
+    }
+    l <- .arg_en_ja(g[["label"]], sprintf("%s: group `%s`", where, id), "label")
+    data.frame(id = id, label_en = l[["en"]], label_ja = l[["ja"]], stringsAsFactors = FALSE)
+  })
+  out <- do.call(rbind, rows)
+  if (anyDuplicated(out$id)) {
+    stop(sprintf("%s: groups: the id %s is given twice.", where,
+                 encodeString(out$id[anyDuplicated(out$id)], quote = "\"")), call. = FALSE)
+  }
+  out
+}
+
 # One row of the table from one definition (a list as written in the schema
 # or a template's params:).
 .arg_row <- function(name, d, step, where) {

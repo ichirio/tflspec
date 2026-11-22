@@ -6,7 +6,7 @@
 \alias{tfl_read_fig_style}
 \title{The figure style standard}
 \usage{
-tfl_fig_style()
+tfl_fig_style(study = NULL)
 
 tfl_fig_style_template(path)
 
@@ -14,6 +14,10 @@ tfl_read_fig_style(path)
 }
 \arguments{
 \item{path}{A workbook.}
+\item{study}{A study: what \code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}} returns, or its
+folder.  Given, \code{tfl_fig_style()} returns that study's figure style
+(\code{defaults.yml}'s \verb{figure_style:}, tflspec's built-in one for a sheet
+it does not give) instead of the session's.}
 }
 \value{
 \code{tfl_fig_style()} and \code{tfl_read_fig_style()}: a list of three data frames;
@@ -54,4 +58,8 @@ white; a designed figure that colours by the arms maps them too.
 by label (a swimmer event named \code{Death} takes the \code{Death} row) and the
 figures' own symbols (\code{censor}, \code{assessment}).
 }
+}
+\examples{
+s <- tfl_fig_style(system.file("extdata", "spec-yaml", package = "tflspec"))
+head(s$colors)
 }

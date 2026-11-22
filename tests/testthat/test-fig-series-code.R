@@ -49,27 +49,34 @@ test_that("every series figure template's figure: is in the content table, table
     if (!is.null(t$figure)) figs <- c(figs, t$figure)
   }
   expect_setequal(figs, names(tb))
-  # the params a table lists are the function's own
+  # the params a table lists are the function's own arguments, or go into
+  # its params list
   for (k in names(tb)) {
     fn <- tfl_figure_fn(k)
-    expect_true("params" %in% names(formals(fn)))
+    if (isTRUE(tb[[k]]$direct)) {
+      expect_true(all(tb[[k]]$params %in% names(formals(fn))), info = k)
+    } else {
+      expect_true("params" %in% names(formals(fn)), info = k)
+    }
   }
 })
 
-test_that("a km_simple report's program calls km_curves() with its resolved arguments", {
+test_that("a km_simple report's program calls fig_km() with its resolved arguments", {
   o <- tfl_template_resolve(sfc_km(), study = sfc_study)
-  expect_identical(o$figure, "km_curves")
+  expect_identical(o$figure, "fig_km")
   code <- tfl_content_code(o)
   expect_identical(code, tfl_content_code(o, template = "call"))
   expect_true(any(grepl("^# template tflspec_v1/km_simple", code)))
   expect_true(any(code == "km_fit <- ggsurvfit::survfit2("))
   expect_true(any(code == "  ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ TRT01A,"))
   expect_true(any(code == "  data = adtte_sub"))
-  expect_true(any(code == "content <- tflspec::km_curves("))
+  expect_true(any(code == "content <- tflspec::fig_km("))
   expect_true(any(code == "  km_fit = km_fit,"))
   expect_true(any(code == "  ard = ard,"))
-  expect_true(any(code == "    time_unit = \"months\","))
-  expect_true(any(code == "    legend = \"bottom\""))
+  # the function's own arguments, not a params list
+  expect_true(any(code == "  time_unit = \"months\","))
+  expect_true(any(code == "  legend = \"bottom\""))
+  expect_false(any(grepl("params", code, fixed = TRUE)))
   # one argument a line, parses
   expect_no_error(parse(text = code, keep.source = FALSE))
 })
@@ -100,6 +107,7 @@ test_that("the programs run on fictional data to a ggplot", {
   bign$analysis_id <- "BIGN"
   env$ard <- bign
   eval(parse(text = code, keep.source = FALSE), envir = env)
+  expect_s3_class(env$content, "tfl_figure")
   expect_s3_class(env$content, "ggplot")
   expect_no_error(ggplot2::ggplot_build(env$content))
   expect_s3_class(env$km_fit, "survfit")
@@ -145,7 +153,7 @@ test_that("a series figure naming a figure content the table lacks stops", {
   expect_error(tfl_content_code(o), "not a figure content")
 })
 
-test_that("km_simple's legend choices and y_label default are km_curves()'s", {
+test_that("km_simple's legend choices and y_label default are fig_km()'s", {
   skip_if_not_installed("ggplot2", "3.5.2")
   skip_if_not_installed("ggsurvfit")
   skip_if_not_installed("survival")
@@ -154,9 +162,11 @@ test_that("km_simple's legend choices and y_label default are km_curves()'s", {
   expect_identical(t$params$legend$default, "bottom")
   d <- sfc_adtte()
   fit <- ggsurvfit::survfit2(ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ TRT01A, data = d)
-  p <- km_curves(fit)
+  p <- fig_km(fit)
   expect_identical(ggplot2::get_labs(p)$y, t$params$y_label$default)
-  for (lg in c("inside", "bottom", "none")) {
-    expect_no_error(ggplot2::ggplot_build(km_curves(fit, params = list(legend = lg))))
+  lg_values <- .arg_enum_values(t$params$legend$type)
+  expect_true(all(lg_values %in% c("inside", "bottom", "right", "none")))
+  for (lg in lg_values) {
+    expect_no_error(ggplot2::ggplot_build(fig_km(fit, legend = lg)))
   }
 })
