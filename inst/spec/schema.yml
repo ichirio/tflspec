@@ -23,6 +23,16 @@
 #   rows<f1, f2, ...>  a YAML sequence of maps; in R a data frame with those
 #                 columns, in that order (a cell's missing field is NA)
 #   T|U           either (the first that fits)
+#   step<data>    one data record of a part (its keys are the definition's
+#                 `columns:`); step<content> a part's items, each one schema
+#                 function's call
+#
+# The input a type takes (tfl_arg_defs()): the first member that is not `r`
+# decides it -- a table (rows<, map<, vec<, list<map<, list<vec<, step<), a
+# pick (column, level, stat, enum[], logical, or a list< of these), R (call,
+# call<>, list<r>, formula, guard, object, or only r) or a text; the other
+# members' enum words (and TRUE / FALSE beside them) join its values, and an
+# `r` member lets it be written in R.  An argument's own `input:` wins.
 #
 # `rank:` is a function's place in a table's code (the order the layers are
 # written in when a report adds a function its defaults do not have).
@@ -90,7 +100,7 @@ plan_digits:
   label: {en: "Decimals and rounding", ja: "桁と丸め"}
   tier: usual
   description: The digits of each statistic, as a house rule.
-  dots: {style: named, type: "number|string|vec<stat, number|string>|map<string, number|string|vec<stat, number|string>>", description: "By variable, kind (continuous / categorical) or `default`: one number for every statistic, or one a statistic; \"3s\" for three significant digits. By a row key's value (a lab table's parameter): the key, then each value's digits -- one number, or one a statistic (`PARAM: {\"Alanine Aminotransferase (U/L)\": 1, \"Bilirubin (umol/L)\": {mean: 2, sd: 3}}`); on the `param_change` template the key is `PARAM`, the parameter's label (the name `ai/adam_summary.md` lists), as the table prints it, not `PARAMCD`, which matches nothing there; a value no row has is ignored.", example: {continuous: {mean: 1, sd: 2}, AGE: 0, PARAM: {"Alanine Aminotransferase (U/L)": 1, "Bilirubin (umol/L)": {mean: 2, sd: 3}}}}
+  dots: {input: table, style: named, type: "number|string|vec<stat, number|string>|map<string, number|string|vec<stat, number|string>>", description: "By variable, kind (continuous / categorical) or `default`: one number for every statistic, or one a statistic; \"3s\" for three significant digits. By a row key's value (a lab table's parameter): the key, then each value's digits -- one number, or one a statistic (`PARAM: {\"Alanine Aminotransferase (U/L)\": 1, \"Bilirubin (umol/L)\": {mean: 2, sd: 3}}`); on the `param_change` template the key is `PARAM`, the parameter's label (the name `ai/adam_summary.md` lists), as the table prints it, not `PARAMCD`, which matches nothing there; a value no row has is ignored.", example: {continuous: {mean: 1, sd: 2}, AGE: 0, PARAM: {"Alanine Aminotransferase (U/L)": 1, "Bilirubin (umol/L)": {mean: 2, sd: 3}}}}
   args:
     rounding: {label: {en: "Rounding", ja: "丸め方 (rounding)"}, type: "enum[sas|r|iec60559]", description: The tie-breaking family.}
     .rows: {label: {en: "Decimals by row", ja: "行ごとの桁"}, type: "vec<string, integer|string>", description: "The digits of a statistic row (a table with stats = rows), by its label."}
@@ -113,7 +123,7 @@ plan_labels:
   label: {en: "Display names", ja: "表示名"}
   tier: usual
   description: The printed text of variables and values.
-  dots: {style: named, map: true, type: "string|vec<string, string>", description: "A variable's label, or its values' labels."}
+  dots: {input: table, style: named, map: true, type: "string|vec<string, string>", description: "A variable's label, or its values' labels."}
 
 plan_nest:
   package: rtfreporter
@@ -157,7 +167,7 @@ plan_cells:
   label: {en: "Statistics in the cells", ja: "セルに入れる統計量"}
   tier: required
   description: How the statistics become cell text.
-  dots: {style: named, type: "template|map<string, template|list<guard|template>>|call<cell_rows>|list<guard|template>", description: "By variable, context, kind (continuous / categorical), stat group or `default`: one template, one a printed row (named by its label), cell_rows() for a cell of several lines, or guards (`!r \"n == 0 ~ '0'\"`) before the template, for the kind or for one of its rows.", example: {categorical: "{n:.0f} ({p:.1f%})", continuous: {"Mean (SD)": "{mean:.1f} ({sd:.2f})"}}}
+  dots: {input: table, style: named, type: "template|map<string, template|list<guard|template>>|call<cell_rows>|list<guard|template>", description: "By variable, context, kind (continuous / categorical), stat group or `default`: one template, one a printed row (named by its label), cell_rows() for a cell of several lines, or guards (`!r \"n == 0 ~ '0'\"`) before the template, for the kind or for one of its rows.", example: {categorical: "{n:.0f} ({p:.1f%})", continuous: {"Mean (SD)": "{mean:.1f} ({sd:.2f})"}}}
   args:
     stats: {label: {en: "Statistics as", ja: "統計量の並べ方"}, help: "How the statistics are laid out: \"cells\" one template a cell (n (%) in one cell), \"rows\" each statistic a row of its own. Blank: cells. e.g. \"rows\"", type: "enum[cells|rows]"}
     value: {label: {en: "Values used", ja: "使う値"}, help: "Which value a template's {x} reads: the number (stat), which the template formats, or the ARD's formatted text (stat_fmt). Blank: stat. e.g. \"stat_fmt\"", type: string}
@@ -174,7 +184,7 @@ plan_filter:
   label: {en: "Row filter", ja: "行のフィルター"}
   tier: other
   description: The rows kept by a condition on the ARD's statistics.
-  dots: {style: positional, key: where, type: "list<r>|r", description: "The conditions, R over a record's statistics and keys.", example: "!r p >= 0.05"}
+  dots: {input: condition, style: positional, key: where, type: "list<r>|r", description: "The conditions, R over a record's statistics and keys.", example: "!r p >= 0.05"}
   args:
     any: {main: true, label: {en: "In any column", ja: "いずれかの列で"}, help: "TRUE: a row stays when any column's statistics meet the condition (PTs of 5% or more in any arm); FALSE: when every column's do. Blank: TRUE. e.g. FALSE", type: logical}
     parents: {main: true, label: {en: "Parent rows", ja: "親の行"}, help: "\"keep\": a parent row (a SOC) stays exactly when one of its children does; \"drop\": it is judged by its own counts. Blank: keep. e.g. \"drop\"", type: "enum[keep|drop]"}
@@ -188,7 +198,7 @@ plan_compare:
   label: {en: "Comparison columns", ja: "比較列"}
   tier: other
   description: Columns from the comparison records (tests, differences).
-  dots: {style: named, type: "template|vec<string, template>|call<cell_rows>|list<guard|template>", description: "A comparison column's name and its template."}
+  dots: {input: table, style: named, type: "template|vec<string, template>|call<cell_rows>|list<guard|template>", description: "A comparison column's name and its template."}
   args:
     by: {label: {en: "By group", ja: "群ごとに"}, help: "The column that splits the comparison records (tests, differences) into columns, one a level (each arm against placebo). Blank: one comparison a variable. e.g. \"COMPARISON\"", type: column, choices: columns}
     position: {label: {en: "Place", ja: "位置"}, help: "Where the comparison columns go: after the column key's values (\"last\") or before them (\"first\"). Blank: last. e.g. \"first\"", type: "enum[last|first]"}
@@ -228,7 +238,7 @@ plan_row_group:
   tier: other
   args:
     mode: {main: true, label: {en: "Group boundary", ja: "グループの区切り"}, help: "How a group's first row is found: \"value\" each run of equal values, \"indent\" a row whose cell is not indented, \"filled\" a row whose cell is not empty, \"auto\". e.g. \"value\"", type: "enum[auto|indent|value|filled]"}
-    collapse: {main: true, label: {en: "A repeat printed once", ja: "繰り返しを 1 回だけ表示"}, help: "A repeated value printed once and then blank: TRUE in every row key, or in the columns named. e.g. TRUE", type: "list<integer>|list<column>|logical"}
+    collapse: {input: pick, main: true, label: {en: "A repeat printed once", ja: "繰り返しを 1 回だけ表示"}, help: "A repeated value printed once and then blank: TRUE in every row key, or in the columns named. e.g. TRUE", type: "list<integer>|list<column>|logical", choices: columns}
     group_col: {label: {en: "Group column", ja: "グループの列"}, help: "The column whose runs of the same value are the groups, for a table already built (not from an ARD; an ARD table's groups are its outermost row key). e.g. \"V1\"", type: column, input: pick, choices: columns}
 
 plan_append:
@@ -241,8 +251,8 @@ plan_append:
   args:
     name: {label: {en: "Part name", ja: "部の名前"}, type: string, description: "The part's name; part2, part3, ... by default."}
     absent: {label: {en: "Page without the part", ja: "部の無いページ"}, type: "enum[error|skip]", description: "A page group the part has no rows for: an error, or the page without the part."}
-    data: {label: {en: "Part's data", ja: "部のデータ"}, description: "Where the part's rows come from: source: ard, or source: dataset with its dataset."}
-    content: {label: {en: "Part's items", ja: "部の項目"}, description: "The part's own table items: table_plan and the verbs that make its rows."}
+    data: {type: "step<data>", columns: {source: {type: "enum[ard|dataset]", label: {en: Source, ja: 元}}, dataset: {type: string, input: pick, choices: report_data, label: {en: Dataset, ja: データ}}}, label: {en: "Part's data", ja: "部のデータ"}, description: "Where the part's rows come from: source: ard, or source: dataset with its dataset."}
+    content: {type: "step<content>", label: {en: "Part's items", ja: "部の項目"}, description: "The part's own table items: table_plan and the verbs that make its rows."}
 
 plan_blanks:
   package: rtfreporter
@@ -280,10 +290,10 @@ plan_paginate_cols:
   label: {en: "Column pages", ja: "列のページ分割"}
   tier: other
   args:
-    at: {main: true, label: {en: "Break before columns", ja: "この列の前で分ける"}, help: "The columns a new column page starts before. One of these, cut by or columns a page is given. e.g. \"Drug Y\"", type: "list<integer>|list<column>"}
+    at: {input: pick, main: true, label: {en: "Break before columns", ja: "この列の前で分ける"}, help: "The columns a new column page starts before. One of these, cut by or columns a page is given. e.g. \"Drug Y\"", type: "list<integer>|list<column>", choices: columns}
     cut_by: {main: true, label: {en: "Cut by", ja: "分ける単位"}, help: "The column blocks as a list, or a separator in the columns' names (a block a key value). e.g. \"____\"", type: string}
     every: {main: true, label: {en: "Columns a page", ja: "1 ページの列数"}, help: "A new column page every this many columns (the columns on every page not counted). e.g. 3", type: integer}
-    keep: {main: true, label: {en: "Columns on every page", ja: "どのページにも出す列"}, help: "The columns every column page repeats. Blank: the row heading columns. e.g. \"row_label\"", type: "list<integer>|list<column>"}
+    keep: {input: pick, main: true, label: {en: "Columns on every page", ja: "どのページにも出す列"}, help: "The columns every column page repeats. Blank: the row heading columns. e.g. \"row_label\"", type: "list<integer>|list<column>", choices: columns}
     fit: {main: true, label: {en: "Fit to the page", ja: "ページに合わせる"}, help: "TRUE: every page's columns on page 1's scale, filling the width; FALSE: each column keeps its width. e.g. FALSE", type: logical}
     allow_span_break: {main: true, label: {en: "A spanning header may break", ja: "またがる見出しを途中で切ってよい"}, help: "FALSE: a page is not cut inside a spanning header's cell. Blank: TRUE. e.g. FALSE", type: logical}
     order: {main: true, label: {en: "Order of the pages", ja: "ページの順"}, help: "The order the pages come out in: \"across\" a row's column pages one after another, \"down\" all the rows' pages of a block first. Blank: across. e.g. \"down\"", type: "enum[across|down]|list<enum[group|rows|cols]>"}
@@ -309,7 +319,7 @@ plan_style:
     align_count_pct: {main: true, label: {en: "Align n (%)", ja: "n (%) を揃える"}, type: "logical", help: "TRUE: the n and the (%) of a count cell line up from row to row. e.g. TRUE"}
     border: {main: true, label: {en: "Borders", ja: "罫線"}, type: "string|call<rtf_border>", help: "The table's borders: \"tfl\" (rules over and under the header and under the last row) or \"none\"; another style as a border ({fn: rtf_border, args: {all: true, inside_h: true}}). Blank: tfl. e.g. \"none\""}
     font_size_half_points: {main: true, label: {en: "Font size (half points)", ja: "文字の大きさ（半ポイント）"}, type: "integer", help: "The table's font size in half points (18 = 9 pt). Blank: the document's. e.g. 16"}
-    font: {label: {en: "Font", ja: "フォント"}, help: "The table's font. Blank: the document's font. e.g. \"Arial\"", type: "string|vec<string, string>"}
+    font: {input: table, label: {en: "Font", ja: "フォント"}, help: "The table's font. Blank: the document's font. e.g. \"Arial\"", type: "string|vec<string, string>"}
     row_height_exact: {label: {en: "Exact row height", ja: "行の高さを固定"}, help: "TRUE: the rows' height is exact (a longer text is cut); FALSE: it is the least height (a row grows). e.g. TRUE", type: "logical"}
     header_row_height_twips: {label: {en: "Header row height (twips)", ja: "見出し行の高さ（twip）"}, help: "The height of the column header's rows in twips. Blank: as the body's. e.g. 300", type: "integer"}
     blank_row_height_twips: {label: {en: "Blank row height (twips)", ja: "空行の高さ（twip）"}, help: "The height of the blank rows in twips: lower ones make a table shorter. Blank: as the body's. e.g. 120", type: "integer"}
@@ -338,7 +348,7 @@ plan_cell_style:
   args:
     cols: {main: true, label: {en: "Columns styled", ja: "書式を付ける列"}, help: "The columns styled, by name (.values every value column). Blank: every column. e.g. .values", type: "list<column>", choices: columns}
     header: {main: true, label: {en: "The column header", ja: "列見出し"}, help: "TRUE: the column header is styled (not the body). e.g. TRUE", type: logical}
-    where: {main: true, label: {en: "Rows styled", ja: "書式を付ける行（条件）"}, type: formula, description: "The rows it applies to, R over the table's columns: `!r \"p > 0.5\"`."}
+    where: {input: condition, main: true, label: {en: "Rows styled", ja: "書式を付ける行（条件）"}, type: formula, description: "The rows it applies to, R over the table's columns: `!r \"p > 0.5\"`."}
     indent_twips: {label: {en: "Indent (twips)", ja: "字下げ（twips）"}, help: "The left indent of the chosen cells' text in twips (not the header's). e.g. 240", type: integer}
     border: {label: {en: "Borders", ja: "罫線"}, help: "The chosen cells' borders, as R (rtf_border()). e.g. rtf_border(bottom = \"single\")", type: "call<rtf_border>", input: r}
     bold: {main: true, label: {en: "Bold", ja: "太字"}, type: "enum[TRUE|FALSE]|logical", help: "TRUE: the chosen cells in bold; FALSE: not. Blank: as they are. e.g. TRUE"}
@@ -355,7 +365,7 @@ plan_hide:
   label: {en: "Hidden columns", ja: "隠す列"}
   tier: other
   description: Columns kept in the data but not printed.
-  dots: {style: positional, key: cols, type: "list<column>"}
+  dots: {style: positional, key: cols, type: "list<column>", choices: columns}
   args:
     cols: {main: true, label: {en: "Hidden columns", ja: "隠す列"}, type: "list<column>", help: "The columns not printed, by name: a key a page break or an order reads stays in the data. e.g. TRT01AN", choices: columns}
 
@@ -395,7 +405,7 @@ plan_columns:
   args:
     widths: {main: true, label: {en: "Widths", ja: "幅"}, help: "The columns' relative widths, by column (.values every value column). e.g. row_label 5, .values 2", type: "vec<column, number>|list<number>", input: table, columns: {column: {type: column, input: pick, choices: columns}, width: {type: number, input: text}}}
     decimal: {main: true, label: {en: "Decimal alignment", ja: "小数点揃え"}, help: "The columns whose numbers line up at the decimal point (.values every value column). e.g. .values", type: "list<column>", choices: columns}
-    row_title: {main: true, label: {en: "Row title", ja: "行の見出し"}, help: "The row heading columns: left aligned (the others centred) and repeated on every column page. Blank: the first column. e.g. row_label", type: "list<column>|list<integer>"}
+    row_title: {main: true, label: {en: "Row title", ja: "行の見出し"}, help: "The row heading columns: left aligned (the others centred) and repeated on every column page. Blank: the first column. e.g. row_label", type: "list<column>|list<integer>", choices: columns}
     auto_width: {main: true, label: {en: "Automatic width", ja: "自動の幅"}, help: "TRUE: each column sized to its content. e.g. TRUE", type: logical}
     sep: {label: {en: "Separator", ja: "区切り"}, help: "The text that joins several column keys in the value columns' names; the spanning header is cut at it. Blank: \"____\" (Placebo____F). Changed only when a value has \"____\" in it. e.g. \"__\"", type: string}
     cell_format: {label: {en: "Cell formats", ja: "セルの書式"}, help: "A function that formats the cells' text, or a list of them one a column, as R. e.g. function(x) toupper(x)", type: r, input: r}
@@ -518,9 +528,9 @@ ard_summary:
   package: cards
   description: Summary statistics of continuous variables.
   args:
-    variables: {type: "list<column>|column"}
-    by: {type: "list<column>|column"}
-    strata: {type: "list<column>|column"}
+    variables: {type: "list<column>|column", choices: vars}
+    by: {type: "list<column>|column", choices: vars}
+    strata: {type: "list<column>|column", choices: vars}
     statistic: {type: "map<column, call<continuous_summary_fns>>|r", description: "The statistics by variable, each a function list: {AGE: {fn: cards::continuous_summary_fns, args: {summaries: [N, mean, sd]}}}, or !r for a formula."}
     fmt_fun: {type: "map<column, map<stat, integer>>|r", description: "Digits by variable and statistic: {AGE: {mean: 1, sd: 2}}."}
     stat_label: {type: "map<column, map<stat, string>>|r"}
@@ -529,9 +539,9 @@ ard_tabulate:
   package: cards
   description: Counts and percentages of categorical variables.
   args:
-    variables: {type: "list<column>|column"}
-    by: {type: "list<column>|column"}
-    strata: {type: "list<column>|column"}
+    variables: {type: "list<column>|column", choices: vars}
+    by: {type: "list<column>|column", choices: vars}
+    strata: {type: "list<column>|column", choices: vars}
     statistic: {type: "map<column, list<stat>>|r"}
     denominator: {type: "string|r", description: "\"column\", \"row\", \"cell\", or the data of the population (`!r adsl`)."}
     fmt_fun: {type: "map<column, map<stat, integer>>|r"}
@@ -541,9 +551,9 @@ ard_tabulate_value:
   package: cards
   description: Counts of one value of each variable (a flag's "Y").
   args:
-    variables: {type: "list<column>|column"}
-    by: {type: "list<column>|column"}
-    strata: {type: "list<column>|column"}
+    variables: {type: "list<column>|column", choices: vars}
+    by: {type: "list<column>|column", choices: vars}
+    strata: {type: "list<column>|column", choices: vars}
     value: {type: "map<column, string|logical|number>|r"}
     statistic: {type: "map<column, list<stat>>|r"}
     denominator: {type: "string|r"}
@@ -554,11 +564,11 @@ ard_hierarchical:
   package: cards
   description: Counts in a hierarchy (SOC and PT).
   args:
-    variables: {type: "list<column>"}
-    by: {type: "list<column>|column"}
+    variables: {type: "list<column>", choices: vars}
+    by: {type: "list<column>|column", choices: vars}
     statistic: {type: "map<column, list<stat>>|r"}
     denominator: {type: "string|r"}
-    id: {type: column}
+    id: {type: column, choices: vars}
     fmt_fun: {type: "map<column, map<stat, integer>>|r"}
     stat_label: {type: "map<column, map<stat, string>>|r"}
 
@@ -566,11 +576,11 @@ ard_stack_hierarchical:
   package: cards
   description: Counts in a hierarchy, each level's own and the overall rows.
   args:
-    variables: {type: "list<column>"}
-    by: {type: "list<column>|column"}
-    id: {type: column}
+    variables: {type: "list<column>", choices: vars}
+    by: {type: "list<column>|column", choices: vars}
+    id: {type: column, choices: vars}
     denominator: {type: "r|string"}
-    include: {type: "list<column>"}
+    include: {type: "list<column>", choices: vars}
     statistic: {type: "map<column, list<stat>>|r"}
     overall: {type: logical}
     over_variables: {type: logical}
@@ -587,8 +597,8 @@ continuous_summary_fns:
 ard_missing:
   package: cards
   args:
-    variables: {type: "list<column>|column"}
-    by: {type: "list<column>|column"}
+    variables: {type: "list<column>|column", choices: vars}
+    by: {type: "list<column>|column", choices: vars}
     statistic: {type: "map<column, list<stat>>|r"}
 
 ard_total_n:
@@ -600,7 +610,7 @@ ard_stack:
   description: Several analyses stacked, by the same `by`, with the overall rows.
   dots: {style: positional, key: analyses, type: "list<call>", description: "The analyses, each a cards call without its data."}
   args:
-    .by: {type: "list<column>|column"}
+    .by: {type: "list<column>|column", choices: vars}
     .overall: {type: logical}
     .missing: {type: logical}
     .attributes: {type: logical}
@@ -611,8 +621,8 @@ ard_strata:
   package: cards
   description: One analysis repeated within each level of the strata.
   args:
-    .by: {type: "list<column>|column"}
-    .strata: {type: "list<column>|column"}
+    .by: {type: "list<column>|column", choices: vars}
+    .strata: {type: "list<column>|column", choices: vars}
     .f: {type: "r|call"}
 
 ard_categorical_ci:
@@ -689,7 +699,7 @@ rtf_style:
   package: rtfreporter
   description: "The document's style (rtf_document(style = )): the shared keys reach every module that has them; a section (table, titles, footnotes, header, footer) is a map of that module's own arguments and wins over the shared key; a module's own argument wins over both."
   args:
-    font: {type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
+    font: {input: table, type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
     font_size_half_points: {type: integer}
     row_height_twips: {type: integer}
     cell_padding_left_twips: {type: integer}
@@ -781,7 +791,7 @@ rtf_titles:
     font_size_half_points: {type: integer}
     row_height_twips: {type: integer}
     markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
-    font: {type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
+    font: {input: table, type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
     align: {type: "enum[left|center|right]"}
 
 rtf_footnotes:
@@ -791,7 +801,7 @@ rtf_footnotes:
     font_size_half_points: {type: integer}
     row_height_twips: {type: integer}
     markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
-    font: {type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
+    font: {input: table, type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
     align: {type: "enum[left|center|right]"}
     border: {type: "call<rtf_border>", description: "The footnotes' border: {fn: rtf_border, args: {top: true}}."}
 
@@ -810,7 +820,7 @@ rtf_header:
     width: {type: "enum[page]|number", description: "page (the writable width), a fraction of it in (0, 1], or twips."}
     row_height_twips: {type: integer}
     font_size_half_points: {type: integer}
-    font: {type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
+    font: {input: table, type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
     markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
     cell_padding_left_twips: {type: integer}
     cell_padding_right_twips: {type: integer}
@@ -828,7 +838,7 @@ rtf_footer:
     width: {type: "enum[page]|number", description: "page (the writable width), a fraction of it in (0, 1], or twips."}
     row_height_twips: {type: integer}
     font_size_half_points: {type: integer}
-    font: {type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
+    font: {input: table, type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
     markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
     cell_padding_left_twips: {type: integer}
     cell_padding_right_twips: {type: integer}
@@ -2707,7 +2717,7 @@ tfl_ard_number:
     variable: {type: string, label: {en: Variable, ja: 変数}}
     level: {type: "string|number", label: {en: Level, ja: 水準}}
     stat: {type: string, label: {en: Statistic, ja: 統計量}}
-    group: {type: "string|map<string, string>", label: {en: Group, ja: 群}}
+    group: {input: table, type: "string|map<string, string>", label: {en: Group, ja: 群}}
     label: {type: string, label: {en: "Text ({value})", ja: "文字（{value}）"}}
     digits: {type: number, label: {en: Digits, ja: 桁}}
     x: {type: "number|string", label: {en: X, ja: x}}
@@ -2944,7 +2954,7 @@ facet_wrap:
   label: {en: Panels, ja: 面}
   visible: [facets, ncol, scales]
   args:
-    facets: {type: "r|call<vars>|list<column>|column", label: {en: Variables (vars()), ja: 変数（vars()）}, description: "!r vars(PARAM), or the columns [PARAM] (PARAM)."}
+    facets: {input: pick, type: "r|call<vars>|list<column>|column", label: {en: Variables (vars()), ja: 変数（vars()）}, description: "!r vars(PARAM), or the columns [PARAM] (PARAM)."}
     scales: {type: "enum[fixed|free|free_x|free_y]", label: {en: Axes, ja: 軸}}
 
 facet_grid:
@@ -2955,8 +2965,8 @@ facet_grid:
   label: {en: Panel grid, ja: 面（格子）}
   visible: [rows, cols, scales]
   args:
-    rows: {type: "r|call<vars>|list<column>|column", label: {en: Rows (vars()), ja: 行（vars()）}, description: "!r vars(SEX), or the columns [SEX] (SEX)."}
-    cols: {type: "r|call<vars>|list<column>|column", label: {en: Columns (vars()), ja: 列（vars()）}, description: "!r vars(TRTA), or the columns [TRTA] (TRTA)."}
+    rows: {input: pick, type: "r|call<vars>|list<column>|column", label: {en: Rows (vars()), ja: 行（vars()）}, description: "!r vars(SEX), or the columns [SEX] (SEX)."}
+    cols: {input: pick, type: "r|call<vars>|list<column>|column", label: {en: Columns (vars()), ja: 列（vars()）}, description: "!r vars(TRTA), or the columns [TRTA] (TRTA)."}
 
 labs:
   package: ggplot2
@@ -5082,8 +5092,8 @@ facet_nested:
   description: "Panels with nested strips (SOC over PT)."
   visible: [rows, cols, scales, nest_line]
   args:
-    rows: {type: "r|call<vars>|list<column>|column", label: {en: Rows (vars()), ja: 行（vars()）}, description: "!r vars(SEX), or the columns [SEX] (SEX)."}
-    cols: {type: "r|call<vars>|list<column>|column", label: {en: Columns (vars()), ja: 列（vars()）}, description: "!r vars(TRTA), or the columns [TRTA] (TRTA)."}
+    rows: {input: pick, type: "r|call<vars>|list<column>|column", label: {en: Rows (vars()), ja: 行（vars()）}, description: "!r vars(SEX), or the columns [SEX] (SEX)."}
+    cols: {input: pick, type: "r|call<vars>|list<column>|column", label: {en: Columns (vars()), ja: 列（vars()）}, description: "!r vars(TRTA), or the columns [TRTA] (TRTA)."}
     scales: {type: "enum[fixed|free|free_x|free_y]", label: {en: Axes, ja: 軸}}
 
 facet_nested_wrap:

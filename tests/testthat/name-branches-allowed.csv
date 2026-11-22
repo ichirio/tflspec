@@ -16,7 +16,6 @@
 "ard_spec.R","identical(fn, """,1,"schema item or arg def (F1-F3, (c) 11-26)"
 "ard_spec.R","startsWith(fn, """,2,"the step from arg defs (F3 11-24, (c) 11-26)"
 "arg_defs.R","identical(fn, """,2,"schema item or arg def (F1-F3, (c) 11-26)"
-"arg_defs.R","identical(name, """,1,"schema item or arg def (F1-F3, (c) 11-26)"
 "check_spec.R","a ""plan_/fig_/tfl_"" literal",2,"schema item or arg def (F1-F3, (c) 11-26)"
 "check_spec_cells.R","a ""plan_/fig_/tfl_"" literal",2,"schema item or arg def (F1-F3, (c) 11-26)"
 "codelist_narrow.R","fn %in% c(""",1,"schema item or arg def (F1-F3, (c) 11-26)"

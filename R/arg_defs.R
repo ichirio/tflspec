@@ -125,16 +125,45 @@
   "value"
 }
 
-# the input form a type takes when the definition does not say
-.arg_input_for_type <- function(type, name = "") {
-  type <- as.character(type %||% "string")
-  if (identical(type, "logical") || startsWith(type, "enum[")) return("pick")
-  if (grepl("^(list<)?(column|level)>?$", type)) return("pick")
-  if (type %in% c("r", "formula", "guard")) {
-    return(if (identical(name, "where")) "condition" else "r")
-  }
-  if (grepl("^(rows|map|vec)<", type)) return("table")
+# A type's members: split at `|` outside <> and [] (`enum[a|b]` and
+# `map<string, column|r>` are one member each)
+.type_members <- function(type) {
+  ch <- strsplit(as.character(type %||% "string")[1L], "", fixed = TRUE)[[1L]]
+  depth <- cumsum(ch %in% c("<", "[")) - cumsum(ch %in% c(">", "]"))
+  cut <- which(ch == "|" & depth == 0L)
+  if (!length(cut)) return(trimws(paste(ch, collapse = "")))
+  from <- c(1L, cut + 1L)
+  to <- c(cut - 1L, length(ch))
+  trimws(vapply(seq_along(from), function(i) {
+    paste(ch[seq_len(to[i] - from[i] + 1L) + from[i] - 1L], collapse = "")
+  }, ""))
+}
+
+# The member that decides the field: the first that is not `r` ("r" when r
+# is all there is)
+.type_deciding <- function(type) {
+  m <- .type_members(type)
+  m <- m[m != "r"]
+  if (length(m)) m[1L] else "r"
+}
+
+# the input one member takes (the field contract, 2026-11-22, section 2)
+.arg_member_input <- function(m) {
+  if (grepl("^(rows|map|vec|step)<", m) || grepl("^list<(map|vec)<", m)) return("table")
+  if (identical(m, "logical") || startsWith(m, "enum[") ||
+      grepl("^(list<)?(column|level|stat)>?$", m) || startsWith(m, "list<enum[")) return("pick")
+  if (m %in% c("r", "formula", "guard") || grepl("^list<(r|call)[<>]", m)) return("r")
+  # (the rest -- string, number, colour, template, date, and object, call and
+  # call<fn>, which the planner draws by the type: a pick of the objects, the
+  # call's own small form -- is text: decided 2026-11-22, the call form in F3)
   "text"
+}
+
+# the input form a type takes when the definition does not say: the first
+# member that is not `r` decides it.  (A `where` says `input: condition`
+# itself; no argument's name decides it.)
+.arg_input_for_type <- function(type) {
+  .arg_member_input(.type_deciding(type))
 }
 
 # a schema function's stage as a step: the content stage's mapping and
@@ -146,10 +175,34 @@
 # the plan_paginate_*() functions are the page step
 .arg_page_fns <- c("plan_paginate_rows", "plan_paginate_cols", "plan_paginate_group")
 
-# (the enum's own brackets only: `enum[TRUE|FALSE]|logical` is TRUE, FALSE)
+# What a schema function's argument gets where schema.yml is silent: a
+# statistic member (`stat`, `list<stat>`) picks from the statistics' names.
+# That is a rule of the type.  A column argument's choices (ard, columns,
+# vars) and an ordered list (`ordered: true`) are written in the definition,
+# not worked out here from the function's name or package.
+.arg_schema_fill <- function(args) {
+  for (n in names(args)) {
+    d <- args[[n]]
+    if (is.list(d) && is.null(d$choices) &&
+        any(grepl("^(list<)?stat>?$", .type_members(as.character(d$type %||% "string"))))) {
+      args[[n]]$choices <- "stats"
+    }
+  }
+  args
+}
+
+# The fixed values of a type's members: each `enum[..]` member's words (a
+# `list<enum[..]>`'s too), and TRUE / FALSE when a `logical` is beside other
+# members (`logical|enum[single|double]`: TRUE, FALSE, single, double;
+# `logical|string`: TRUE, FALSE; a plain logical has none: a switch)
 .arg_enum_values <- function(type) {
-  if (!startsWith(type %||% "", "enum[")) return(NULL)
-  strsplit(sub("^enum\\[([^]]*)\\].*$", "\\1", type), "|", fixed = TRUE)[[1L]]
+  m <- .type_members(type %||% "")
+  m <- sub("^list<(enum[[].*[]])>$", "\\1", m)
+  e <- m[startsWith(m, "enum[")]
+  vals <- unlist(lapply(e, function(x) strsplit(sub("^enum[[]([^]]*)[]].*$", "\\1", x), "|", fixed = TRUE)[[1L]]))
+  if ("logical" %in% m && sum(m != "r") > 1L) vals <- c("TRUE", "FALSE", vals)
+  if (!length(vals)) return(NULL)
+  unique(vals)
 }
 
 # A label or a help as written: `{en: , ja: }` or a plain text (English, ja
@@ -283,7 +336,7 @@
   if (!is.list(d)) d <- list(default = d)
   where_arg <- sprintf("%s: argument `%s`", where, name)
   type <- as.character(d$type %||% "string")
-  input <- as.character(d$input %||% .arg_input_for_type(type, name))
+  input <- as.character(d$input %||% .arg_input_for_type(type))
   if (!input %in% .arg_input_forms) {
     stop(sprintf("%s: argument `%s`: input %s is not one of %s.", where, name,
                  encodeString(input, quote = "\""), paste(.arg_input_forms, collapse = ", ")),
@@ -301,8 +354,14 @@
   if (is.null(choices) && length(values)) choices <- "fixed"
   .arg_check_choices(choices, where_arg)
   words <- sub("[(].*$", "", .arg_choice_words(choices))
-  free <- d$free %||% (if (input == "pick" && length(words)) any(words %in% .arg_free_sources) else NA)
-  ordered <- d$ordered %||% (if (input == "pick" && startsWith(type, "list<")) FALSE else NA)
+  # (a text member beside a pick -- a string, a number, an integer, or a
+  # list of them -- lets it take a value not in the list: row_title's
+  # column numbers, wrap's text)
+  beside <- any(grepl("^(list<)?(string|number|integer)>?$", .type_members(type)))
+  free <- d$free %||% (if (input == "pick" && (length(words) || beside)) {
+    any(words %in% .arg_free_sources) || beside
+  } else NA)
+  ordered <- d$ordered %||% (if (input == "pick" && startsWith(.type_deciding(type), "list<")) FALSE else NA)
   has_default <- "default" %in% names(d)
   default <- if (has_default) d$default else NULL
   required <- isTRUE(d$required) || (identical(d$tier, "required") && !has_default)
@@ -687,7 +746,7 @@ tfl_arg_defs <- function(fn = NULL, template = NULL) {
     stop(sprintf("tfl_arg_defs(): %s is not a function of the schema.",
                  encodeString(fn, quote = "\"")), call. = FALSE)
   }
-  args <- .arg_schema_key(.arg_schema_dots(ent$args %||% list(), ent$dots),
+  args <- .arg_schema_key(.arg_schema_fill(.arg_schema_dots(ent$args %||% list(), ent$dots)),
                           ent$visible)
   step <- if (fn %in% .arg_page_fns) "page" else .arg_step_for_stage(ent$stage)
   .arg_table(args, step, fn, ent[["groups"]])
@@ -702,9 +761,14 @@ tfl_arg_defs <- function(fn = NULL, template = NULL) {
 .arg_schema_dots <- function(args, dots) {
   if (!is.list(dots)) return(args)
   for (n in setdiff(names(args), "...")) {
-    if (is.list(args[[n]]) && is.null(args[[n]]$type)) args[[n]]$type <- dots$type %||% "string"
+    if (is.list(args[[n]]) && is.null(args[[n]]$type)) {
+      args[[n]]$type <- dots$type %||% "string"
+      if (is.null(args[[n]]$input)) args[[n]]$input <- dots$input
+    }
   }
   d <- list(type = dots$type %||% "string", description = dots$description %||% "")
+  if (!is.null(dots$input)) d$input <- dots$input
+  if (!is.null(dots$choices)) d$choices <- dots$choices
   own <- args[["..."]]
   if (is.list(own)) for (k in names(own)) d[k] <- list(own[[k]])
   args[["..."]] <- NULL
