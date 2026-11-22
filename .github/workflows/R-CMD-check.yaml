@@ -4,9 +4,10 @@
 # inst/fig/ggplot2_compat.csv).
 # ggsurvfit >= 1.2.0 needs ggplot2 >= 4.0.0, so the 3.5.2 row pins ggsurvfit 1.1.0.
 # The ARD functions are checked on the oldest cards / cardx DESCRIPTION
-# allows (the `cards` row) and, every week, on what CRAN has now: a version
-# that adds or renames an ard_*() fails test-ard-functions.R until the
-# catalog (inst/ard/functions.csv) describes it.
+# allows (the `cards` row) and on what CRAN has now, when next goes into
+# main: a version that adds or renames an ard_*() fails
+# test-ard-functions.R until the catalog (inst/ard/functions.csv)
+# describes it.
 on:
   # (not next: the user, 2026-11-22 -- the full check runs once, when next
   # goes into main; a release from a frozen next is run by hand first)
