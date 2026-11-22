@@ -6,10 +6,13 @@
 
 f12_not_cards <- c("plan_apply", "plan_header_tokens", "plan_n_candidates", "plan_layers",
                    "plan_template")
-# the gaps there are today (rtfreporter next, 2026-11-22), filled with F1's
-# rows on 11-23; one filled must come off this list
-f12_gaps <- c("plan_append.part", "plan_total.direction", "plan_cell_style.row", "plan_titles.border",
-              "plan_footnotes.border")
+# the gaps there are today: one filled must come off this list (none since
+# 2026-11-22: plan_total direction, plan_cell_style row, plan_titles and
+# plan_footnotes border added)
+f12_gaps <- character()
+# a formal the SPEC writes another way: plan_append's `part` is a table_plan
+# that tflspec builds from the part's own `data` and `content`
+f12_written_as <- c(plan_append.part = "data, content")
 f12_piped <- c(".plan", "x", "data", "ard")
 
 test_that("every formal of rtfreporter's exported plan_*() is in the schema (or a listed gap)", {
@@ -24,6 +27,10 @@ test_that("every formal of rtfreporter's exported plan_*() is in the schema (or 
     if (length(fm)) paste0(f, ".", setdiff(fm, have)) else character()
   }))
   miss <- miss[!grepl("[.]$", miss)]
+  miss <- setdiff(miss, names(f12_written_as))
+  expect_true(all(vapply(strsplit(names(f12_written_as), ".", fixed = TRUE), function(p) {
+    all(trimws(strsplit(f12_written_as[[paste(p, collapse = ".")]], ",")[[1L]]) %in% names(tfl_schema(p[1L])$args))
+  }, NA)))
   expect(length(setdiff(miss, f12_gaps)) == 0L,
          paste0("rtfreporter arguments the schema does not say: ", paste(setdiff(miss, f12_gaps), collapse = ", ")))
   # (a gap whose formal the installed rtfreporter does not have yet is not
