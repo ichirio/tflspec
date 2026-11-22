@@ -56,7 +56,7 @@ lists are its own (\verb{codelists:} in its file), and a pattern's
 \verb{value_level:} may be given too.  A row may give any column of the
 define's table, the others are \code{NA}.  A part or a column the define does
 not have stops the read, as do a variable or a value given twice and a
-variable whose code list is not there.  Under study.yml's \code{settings: adam_levels: codelists} (the default) \code{study$adam} gets the levels of
+variable whose code list is not there.  Under study.yml's \code{settings: adam_levels: define_xml} or \code{define_spec} \code{study$adam} gets the levels of
 the code lists it maps to each dataset's variables, and of those only
 (\code{\link[=tfl_study_setup_code]{tfl_study_setup_code()}}); a value that reads as yes or no in YAML (\code{Y},
 \code{N}) is written in quotes.
