@@ -27,6 +27,13 @@ twin_study <- function(d, defaults, style = TRUE) {
     dl <- append(dl, "  - normalize_ard: {}", after = match("content:", dl))
   }
   writeLines(dl, file.path(d, "spec", "defaults.yml"))
+  # (the sample defaults.yml's adam_meta levels apply as in the sample
+  # study.yml: settings: {adam_levels: define_xml}; none, the default, applies none)
+  sy <- readLines(file.path(d, "study.yml"))
+  at <- grep("^settings:", sy)
+  sy <- if (length(at)) append(sy, "  adam_levels: define_xml", after = at[1L]) else
+    c(sy, "settings: {adam_levels: define_xml}")
+  writeLines(sy, file.path(d, "study.yml"))
   if (!style) {
     sy <- readLines(file.path(d, "study.yml"))
     writeLines(sy[!grepl("^  style:", sy)], file.path(d, "study.yml"))
