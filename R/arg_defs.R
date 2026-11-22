@@ -152,8 +152,10 @@
   if (grepl("^(rows|map|vec|step)<", m) || grepl("^list<(map|vec)<", m)) return("table")
   if (identical(m, "logical") || startsWith(m, "enum[") ||
       grepl("^(list<)?(column|level|stat)>?$", m) || startsWith(m, "list<enum[")) return("pick")
-  if (m %in% c("r", "formula", "guard", "object", "call") || startsWith(m, "call<") ||
-      grepl("^list<(r|call)[<>]", m)) return("r")
+  if (m %in% c("r", "formula", "guard") || grepl("^list<(r|call)[<>]", m)) return("r")
+  # (the rest -- string, number, colour, template, date, and object, call and
+  # call<fn>, which the planner draws by the type: a pick of the objects, the
+  # call's own small form -- is text: decided 2026-11-22, the call form in F3)
   "text"
 }
 

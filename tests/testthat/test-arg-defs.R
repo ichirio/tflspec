@@ -216,7 +216,8 @@ test_that("a union's input: the first member that is not r, the exceptions writt
     c("rtf_figures", "width_twips", "text"),      # integer|enum[fit]
     c("plan_sort", "keys", "text"),               # list<string>|logical (the dots' type)
     c("scale_x_continuous", "breaks", "text"),    # list<number>|call<..>|r
-    c("ggplot", "data", "r"),                     # object|r
+    c("ggplot", "data", "text"),                  # object|r (drawn by the type)
+    c("plan_cell_style", "color", "text"),        # colour|r|map<..> (the colour field)
     c("plan_blanks", "where", "pick"),            # enum[..]|list<integer>|r
     c("plan_append", "data", "table"),            # step<data>
     c("plan_append", "content", "table"),         # step<content>
@@ -226,7 +227,6 @@ test_that("a union's input: the first member that is not r, the exceptions writt
     c("plan_style", "font", "table"), c("rtf_style", "font", "table"),
     c("rtf_titles", "font", "table"), c("rtf_footnotes", "font", "table"),
     c("rtf_header", "font", "table"), c("rtf_footer", "font", "table"),
-    c("plan_cell_style", "color", "table"), c("plan_cell_style", "background", "table"),
     c("tfl_ard_number", "group", "table"),
     c("plan_row_group", "collapse", "pick"),
     c("plan_paginate_cols", "at", "pick"), c("plan_paginate_cols", "keep", "pick"),
@@ -260,14 +260,67 @@ test_that("a union's input: the first member that is not r, the exceptions writt
   # a cards function's column: the columns of its data (by the package, not the name)
   expect_identical(row("ard_summary", "variables")$choices[[1L]], "vars")
   expect_identical(row("ard_tabulate", "by")$choices[[1L]], "vars")
-  # the 22 exceptions are still needed: the rule alone gives another input
-  ex <- cases[13:34]
+  # the 20 exceptions are still needed: the rule alone gives another input
+  ex <- cases[14:33]
   ents <- tflspec:::.schema_all(figure = TRUE)
   for (k in ex) {
     e <- ents[[k[1L]]]
     ty <- if (identical(k[2L], "...")) e$dots$type else e$args[[k[2L]]]$type %||% e$dots$type
     expect_false(identical(tflspec:::.arg_input_for_type(ty), k[3L]), label = paste(k[1L], k[2L], "needs its input:"))
   }
+})
+
+# F12 (a), 2026-11-22 (the coordinator, after #895 turned about 74 fields into
+# R fields and no test saw it): a field whose first member that is not `r` is
+# object, call or call<fn> is drawn by its type (input text), never as R; a
+# list of calls (list<call<..>>, list<call>) is R.  The expected input of each
+# family is written here, the family read by this test's own split.
+test_that("object, call and call<fn> fields are drawn by their type, not as R", {
+  fixtures <- list(
+    c("ggplot", "data", "text"),           # object|r
+    c("ggsurvfit", "x", "text"),           # object
+    c("geom_line", "position", "text"),    # call|string|r
+    c("plan_style", "border_header", "text"), # call<rtf_border>
+    c("plan_listing", "...", "r"),         # list<call<listing_col>>
+    c("ard_stack", "...", "r"))            # list<call>
+  for (k in fixtures) {
+    d <- tfl_arg_defs(fn = k[1L])
+    expect_identical(d$input[d$name == k[2L]], k[3L], label = paste(k[1L], k[2L]))
+  }
+  # every such row of the schema (the definition writes no input:)
+  first_member <- function(type) {
+    ch <- strsplit(type, "", fixed = TRUE)[[1L]]
+    depth <- cumsum(ch %in% c("<", "[")) - cumsum(ch %in% c(">", "]"))
+    cut <- c(0L, which(ch == "|" & depth == 0L), length(ch) + 1L)
+    m <- trimws(vapply(seq_len(length(cut) - 1L), function(i)
+      paste(ch[seq_len(cut[i + 1L] - cut[i] - 1L) + cut[i]], collapse = ""), ""))
+    m <- m[m != "r"]
+    if (length(m)) m[1L] else "r"
+  }
+  family <- function(m) {
+    if (grepl("^list<call", m)) return("list<call>")
+    if (m %in% c("object", "call") || startsWith(m, "call<")) return("drawn")
+    NA_character_
+  }
+  want <- c(drawn = "text", `list<call>` = "r")
+  ents <- tflspec:::.schema_all(figure = TRUE)
+  seen <- character()
+  for (fn in names(ents)) {
+    e <- ents[[fn]]
+    rows <- e$args
+    if (!is.null(e$dots)) rows[["..."]] <- e$dots
+    todo <- Filter(function(a) is.list(a) && is.character(a$type) && is.null(a$input) &&
+                     !is.na(family(first_member(a$type))), rows)
+    if (!length(todo)) next
+    d <- tfl_arg_defs(fn = fn)
+    for (a in names(todo)) {
+      f <- family(first_member(todo[[a]]$type))
+      seen <- union(seen, f)
+      expect_identical(d$input[d$name == a], want[[f]], label = paste(fn, a, todo[[a]]$type))
+    }
+  }
+  # (both families are in the schema: the check above is not empty)
+  expect_setequal(seen, names(want))
 })
 
 test_that("the members are split at the top level only", {

@@ -354,8 +354,8 @@ plan_cell_style:
     bold: {main: true, label: {en: "Bold", ja: "太字"}, type: "enum[TRUE|FALSE]|logical", help: "TRUE: the chosen cells in bold; FALSE: not. Blank: as they are. e.g. TRUE"}
     italic: {main: true, label: {en: "Italic", ja: "斜体"}, type: "enum[TRUE|FALSE]|logical", help: "TRUE: the chosen cells in italics; FALSE: not. Blank: as they are. e.g. TRUE"}
     align: {main: true, label: {en: "Alignment", ja: "揃え"}, type: "enum[left|center|right]", help: "The chosen cells' alignment: \"left\", \"center\" or \"right\". e.g. \"left\""}
-    color: {input: table, main: true, label: {en: "Text colour", ja: "文字の色"}, type: "colour|r|map<column, r>", help: "The chosen cells' text colour. e.g. \"#CC0000\""}
-    background: {input: table, main: true, label: {en: "Background colour", ja: "背景の色"}, type: "colour|r|map<column, r>", help: "The chosen cells' background colour. e.g. \"#F2F2F2\""}
+    color: {main: true, label: {en: "Text colour", ja: "文字の色"}, type: "colour|r|map<column, r>", help: "The chosen cells' text colour. e.g. \"#CC0000\""}
+    background: {main: true, label: {en: "Background colour", ja: "背景の色"}, type: "colour|r|map<column, r>", help: "The chosen cells' background colour. e.g. \"#F2F2F2\""}
     underline: {label: {en: "Underline", ja: "下線"}, type: "enum[TRUE|FALSE]|logical", help: "The chosen cells underlined: TRUE / FALSE, or a condition as R. e.g. TRUE"}
 
 plan_hide:
