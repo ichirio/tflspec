@@ -671,7 +671,10 @@
 #'       given.}
 #'     \item{default}{(a list column) the default as written; a tagged value
 #'       (`!series K`, `!study K`, `!fixed v`, `!r`) is a `tfl_tagged` object.
-#'       It is resolved for a study by [tfl_template_resolve()].}
+#'       It is resolved for a study by [tfl_template_resolve()].  A schema
+#'       function's argument with no default written takes the function's own
+#'       default when that is a literal constant (one `TRUE`/`FALSE`, number or
+#'       string, or `NULL`); a call or symbol gives none.}
 #'     \item{default_kind}{`value`, `study`, `series`, `unset` or `fixed`;
 #'       `NA` when there is no default.}
 #'     \item{unset}{what "(none)" (`!unset`) does, from `unset:` (the words
@@ -764,8 +767,23 @@ tfl_arg_defs <- function(fn = NULL, template = NULL) {
   args <- .arg_schema_key(.arg_schema_fill(fn, .arg_schema_dots(ent$args %||% list(), ent$dots),
                                            ent$package),
                           ent$visible)
+  args <- .arg_formal_defaults(args, ent$formal_defaults)
   step <- if (fn %in% .arg_page_fns) "page" else .arg_step_for_stage(ent$stage)
   .arg_table(args, step, fn, ent[["groups"]])
+}
+
+# An argument whose definition writes no `default` takes the function's own
+# default when that is a literal constant (`formal_defaults`, from
+# .schema_add_formals()).  A written default wins; `...` gets none; a
+# required argument keeps its tier, so `required` does not change.
+.arg_formal_defaults <- function(args, formal_defaults) {
+  for (n in setdiff(names(formal_defaults), "...")) {
+    d <- args[[n]]
+    if (!is.list(d) || "default" %in% names(d) || isTRUE(d$required) ||
+        identical(d$tier, "required")) next
+    args[[n]]["default"] <- list(formal_defaults[[n]])
+  }
+  args
 }
 
 # A schema function's `...` (its `dots:`): one row, last, with the dots'

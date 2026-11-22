@@ -43,7 +43,10 @@ default for a type \code{r}, \code{formula} or \code{guard}, \code{condition} fo
 given.}
 \item{default}{(a list column) the default as written; a tagged value
 (\verb{!series K}, \verb{!study K}, \verb{!fixed v}, \code{!r}) is a \code{tfl_tagged} object.
-It is resolved for a study by \code{\link[=tfl_template_resolve]{tfl_template_resolve()}}.}
+It is resolved for a study by \code{\link[=tfl_template_resolve]{tfl_template_resolve()}}.  A schema
+function's argument with no default written takes the function's own
+default when that is a literal constant (one \code{TRUE}/\code{FALSE}, number or
+string, or \code{NULL}); a call or symbol gives none.}
 \item{default_kind}{\code{value}, \code{study}, \code{series}, \code{unset} or \code{fixed};
 \code{NA} when there is no default.}
 \item{unset}{what "(none)" (\code{!unset}) does, from \verb{unset:} (the words
