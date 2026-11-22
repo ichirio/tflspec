@@ -49,7 +49,7 @@ Unset or \code{FALSE} (the default), the code is as it has always been:
 literal paths, \verb{pkg::} on every call, the rounding in each setup; a
 program reads each dataset itself, with \code{blank_as_na()} after its
 \code{derive} (a blank text value is \code{NA}, as in \code{study$adam}) and, for a YAML
-study under \code{settings: adam_levels: codelists}, the levels of the code
+study under \code{settings: adam_levels: define_xml} (or \code{define_spec}), the levels of the code
 lists its ADaM metadata maps to the dataset's variables (the program
 writes the rows it uses as \code{study$adam_meta} first).  The functions that write code read them:
 \code{\link[=tfl_ard_code]{tfl_ard_code()}}, \code{\link[=tfl_build_ard]{tfl_build_ard()}}, \code{\link[=tfl_table_code]{tfl_table_code()}},

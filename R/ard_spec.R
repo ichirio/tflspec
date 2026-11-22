@@ -1278,8 +1278,9 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
                              c(a$population_id, ad$population_id), , drop = FALSE]
   dss <- spec$datasets[spec$datasets$dataset %in%
                          c(a$dataset, pops$dataset, ad$from), , drop = FALSE]
-  # (adam_levels: its own line under none; codelists, the default, none --
-  # a study that does not say it keeps its fingerprints)
+  # (adam_levels: one line when levels go on -- the same for define_xml and
+  # define_spec, whose levels both come from adam_meta; none, the default,
+  # none: a study that does not say it keeps its fingerprints)
   st <- spec$study
   if (is.data.frame(st) && "key" %in% names(st)) st <- st[!st$key %in% "adam_levels", , drop = FALSE]
   al <- .adam_levels_check(.study_value(spec, "adam_levels", NA), "study key adam_levels")
@@ -1288,7 +1289,7 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
                  utils::capture.output(print(as.list(pops))),
                  utils::capture.output(print(as.list(dss[setdiff(names(dss), "level")]))),
                  utils::capture.output(print(as.list(st))),
-                 if (identical(al, "none")) "adam_levels: none",
+                 if (!identical(al, "none")) "adam_levels: applied",
                  # (adam_meta: the levels study$adam puts on the datasets read)
                  if (!identical(al, "none")) .adam_meta_hash_lines(spec$adam_meta, dss$dataset),
                  if (length(src)) paste(src, src_md5),
