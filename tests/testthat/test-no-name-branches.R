@@ -8,9 +8,25 @@
 # branch.
 
 nb_patterns <- c('identical(fn, "', 'fn %in% c("', 'startsWith(fn, "', "switch(fn,",
-                 "identical(template", '"tflspec_v1/')
+                 "identical(template", '"tflspec_v1/',
+                 # (11-22 decision 5) an argument's name held in name / nm / arg
+                 'identical(name, "', 'identical(nm, "', 'identical(arg, "',
+                 'name %in% c("', 'nm %in% c("', 'arg %in% c("',
+                 # a function's name as the literal, whatever the variable
+                 # (fn's own forms are counted above)
+                 'a "plan_/fig_/tfl_" literal')
+
+# the forms matched as regular expressions (the others are fixed text)
+nb_regex <- c(
+  'name %in% c("' = '(?<![A-Za-z0-9_.$])name %in% c[(]"',
+  'nm %in% c("' = '(?<![A-Za-z0-9_.$])nm %in% c[(]"',
+  'arg %in% c("' = '(?<![A-Za-z0-9_.$])arg %in% c[(]"',
+  'a "plan_/fig_/tfl_" literal' =
+    '(identical[(](?!fn,)[^,()]+, |(?<![A-Za-z0-9_.$])(?!fn )[A-Za-z0-9_.$]+ %in% c[(])"(plan|fig|tfl)_'
+)
 
 nb_count <- function(t, p) {
+  if (p %in% names(nb_regex)) return(sum(gregexpr(nb_regex[[p]], t, perl = TRUE)[[1L]] > 0L))
   k <- sum(gregexpr(p, t, fixed = TRUE)[[1L]] > 0L)
   if (startsWith(p, '"')) k <- k - sum(gregexpr(paste0(intToUtf8(92L), p), t, fixed = TRUE)[[1L]] > 0L)
   k
