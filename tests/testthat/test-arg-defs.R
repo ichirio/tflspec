@@ -332,20 +332,26 @@ test_that("the members are split at the top level only", {
   expect_identical(tflspec:::.type_deciding("r"), "r")
 })
 
-test_that("an argument with no written default takes a literal default from the formals (contract 14i)", {
-  fd <- list(a = TRUE, b = 2, c = "x", d = NULL)
-  out <- .arg_formal_defaults(list(a = list(type = "logical"), b = list(type = "number", default = 5),
+test_that("an argument with no written default takes a logical formal default when its type is logical (contract 14i)", {
+  fd <- list(a = TRUE, b = 2, c = "x", d = NULL, f = FALSE, g = TRUE)
+  out <- .arg_formal_defaults(list(a = list(type = "logical"), b = list(type = "number"),
                                    c = list(type = "string"), d = list(type = "string"),
-                                   e = list(type = "string"), `...` = list(type = "string")), fd)
+                                   e = list(type = "logical"), f = list(type = "logical", default = TRUE),
+                                   g = list(type = "string"),
+                                   `...` = list(type = "logical")), fd)
   expect_identical(out$a$default, TRUE)
-  expect_identical(out$b$default, 5)
-  expect_identical(out$c$default, "x")
-  expect_true("default" %in% names(out$d))
-  expect_null(out$d$default)
+  expect_identical(out$f$default, TRUE)
+  expect_false("default" %in% names(out$b))
+  expect_false("default" %in% names(out$c))
+  expect_false("default" %in% names(out$d))
   expect_false("default" %in% names(out$e))
+  expect_false("default" %in% names(out$g))
   expect_false("default" %in% names(out$`...`))
+  # the deciding member of a union decides: logical|string is a logical kind
+  u <- .arg_formal_defaults(list(a = list(type = "logical|string")), list(a = FALSE))
+  expect_identical(u$a$default, FALSE)
   # a required argument keeps its tier: no default added
-  req <- .arg_formal_defaults(list(a = list(tier = "required")), fd)
+  req <- .arg_formal_defaults(list(a = list(type = "logical", tier = "required")), fd)
   expect_false("default" %in% names(req$a))
 })
 
@@ -361,7 +367,7 @@ test_that("the formals' defaults recorded are literal constants only", {
   expect_true("ard" %in% .schema_data_args)
 })
 
-test_that("plan_cell_style and plan_filter take their literal formal defaults, a call gives none", {
+test_that("plan_cell_style and plan_filter take their logical formal defaults, a call or string gives none", {
   skip_if_not_installed("rtfreporter")
   d <- tfl_arg_defs(fn = "plan_cell_style")
   expect_identical(d$default[[which(d$name == "header")]], FALSE)
@@ -370,6 +376,9 @@ test_that("plan_cell_style and plan_filter take their literal formal defaults, a
   expect_identical(f$default[[which(f$name == "any")]], TRUE)
   # parents = c("keep", "drop") is a call: not taken as the default
   expect_false(identical(f$default[[which(f$name == "parents")]], c("keep", "drop")))
+  # a string formal default is not taken
+  e <- tfl_arg_defs(fn = "plan_empty")
+  expect_true(is.na(e$default_kind[e$name == "text"]))
   expect_false(f$required[f$name == "any"])
   expect_identical(tfl_schema("plan_filter")$data_args, ".plan")
 })

@@ -673,8 +673,8 @@
 #'       (`!series K`, `!study K`, `!fixed v`, `!r`) is a `tfl_tagged` object.
 #'       It is resolved for a study by [tfl_template_resolve()].  A schema
 #'       function's argument with no default written takes the function's own
-#'       default when that is a literal constant (one `TRUE`/`FALSE`, number or
-#'       string, or `NULL`); a call or symbol gives none.}
+#'       default when that is one `TRUE` or `FALSE` and the argument's type is
+#'       a logical kind; any other formal default gives none.}
 #'     \item{default_kind}{`value`, `study`, `series`, `unset` or `fixed`;
 #'       `NA` when there is no default.}
 #'     \item{unset}{what "(none)" (`!unset`) does, from `unset:` (the words
@@ -773,15 +773,20 @@ tfl_arg_defs <- function(fn = NULL, template = NULL) {
 }
 
 # An argument whose definition writes no `default` takes the function's own
-# default when that is a literal constant (`formal_defaults`, from
-# .schema_add_formals()).  A written default wins; `...` gets none; a
-# required argument keeps its tier, so `required` does not change.
+# default when that is one non-NA logical (`formal_defaults`, from
+# .schema_add_formals()) and the argument's type is a logical kind (its
+# deciding member is `logical`), as the planner's card does.  A written
+# default wins; `...` gets none; a required argument keeps its tier, so
+# `required` does not change.
 .arg_formal_defaults <- function(args, formal_defaults) {
   for (n in setdiff(names(formal_defaults), "...")) {
     d <- args[[n]]
+    v <- formal_defaults[[n]]
     if (!is.list(d) || "default" %in% names(d) || isTRUE(d$required) ||
         identical(d$tier, "required")) next
-    args[[n]]["default"] <- list(formal_defaults[[n]])
+    if (!(is.logical(v) && length(v) == 1L && !is.na(v)) ||
+        !identical(.type_deciding(as.character(d$type %||% "string")), "logical")) next
+    args[[n]]["default"] <- list(v)
   }
   args
 }
