@@ -37,6 +37,7 @@ hier_report <- function(id, tpl, data = character()) {
 hier_run <- function(d, id, lines, rtf = TRUE) {
   f <- file.path(d, "spec", "outputs", paste0(id, ".yml"))
   writeLines(lines, f)
+  invisible(tfl_copy_templates(d))
   st <- tfl_read_study_spec(d)
   tfl_write_output(tfl_template_to_spec(tfl_read_output(f), st), f)
   st <- tfl_read_study_spec(d)
