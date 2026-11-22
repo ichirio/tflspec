@@ -207,32 +207,17 @@
 # the plan_paginate_*() functions are the page step
 .arg_page_fns <- c("plan_paginate_rows", "plan_paginate_cols", "plan_paginate_group")
 
-# What a schema function's argument gets where schema.yml is silent: a column
-# argument without choices picks from the ARD (normalize_ard) or from the
-# table's columns (plan_*); normalize_ard's hierarchy is ordered.
-.arg_schema_fill <- function(fn, args, package = NULL) {
-  column_type <- function(d) {
-    is.list(d) && any(grepl("^(list<)?column>?$", .type_members(as.character(d$type %||% "string"))))
-  }
+# What a schema function's argument gets where schema.yml is silent: a
+# statistic member (`stat`, `list<stat>`) picks from the statistics' names.
+# That is a rule of the type.  A column argument's choices (ard, columns,
+# vars) and an ordered list (`ordered: true`) are written in the definition,
+# not worked out here from the function's name or package.
+.arg_schema_fill <- function(args) {
   for (n in names(args)) {
     d <- args[[n]]
-    if (column_type(d) && is.null(d$choices)) {
-      if (identical(fn, "normalize_ard")) {
-        args[[n]]$choices <- "ard"
-      } else if (startsWith(fn, "plan_")) {
-        args[[n]]$choices <- "columns"
-      } else if (identical(package, "cards")) {
-        # (a cards function: the columns of the data it is given)
-        args[[n]]$choices <- "vars"
-      }
-    }
-    # (a statistic member: the statistics' names to pick from)
-    if (is.list(d) && is.null(d$choices) && is.null(args[[n]]$choices) &&
+    if (is.list(d) && is.null(d$choices) &&
         any(grepl("^(list<)?stat>?$", .type_members(as.character(d$type %||% "string"))))) {
       args[[n]]$choices <- "stats"
-    }
-    if (identical(fn, "normalize_ard") && n %in% c("hierarchy", ".hierarchy")) {
-      args[[n]]$ordered <- TRUE
     }
   }
   args
@@ -819,8 +804,7 @@ tfl_arg_defs <- function(fn = NULL, template = NULL) {
     stop(sprintf("tfl_arg_defs(): %s is not a function of the schema.",
                  encodeString(fn, quote = "\"")), call. = FALSE)
   }
-  args <- .arg_schema_key(.arg_schema_fill(fn, .arg_schema_dots(ent$args %||% list(), ent$dots),
-                                           ent$package),
+  args <- .arg_schema_key(.arg_schema_fill(.arg_schema_dots(ent$args %||% list(), ent$dots)),
                           ent$visible)
   step <- if (fn %in% .arg_page_fns) "page" else .arg_step_for_stage(ent$stage)
   .arg_table(args, step, fn, ent[["groups"]])
@@ -842,6 +826,7 @@ tfl_arg_defs <- function(fn = NULL, template = NULL) {
   }
   d <- list(type = dots$type %||% "string", description = dots$description %||% "")
   if (!is.null(dots$input)) d$input <- dots$input
+  if (!is.null(dots$choices)) d$choices <- dots$choices
   own <- args[["..."]]
   if (is.list(own)) for (k in names(own)) d[k] <- list(own[[k]])
   args[["..."]] <- NULL

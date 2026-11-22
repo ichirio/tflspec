@@ -331,3 +331,27 @@ test_that("the members are split at the top level only", {
   expect_identical(tflspec:::.type_deciding("r|call<vars>|list<column>|column"), "call<vars>")
   expect_identical(tflspec:::.type_deciding("r"), "r")
 })
+
+test_that("a column field's choices are written in its definition", {
+  y <- yaml::read_yaml(system.file("spec", "schema.yml", package = "tflspec"))
+  # (a column member of the type, a union's too: `list<column>|column`)
+  col <- function(d) {
+    is.list(d) && any(grepl("^(list<)?column>?$", tflspec:::.type_members(as.character(d$type %||% "string"))))
+  }
+  n <- 0L
+  for (fn in names(y)) {
+    word <- if (identical(fn, "normalize_ard")) "ard" else if (startsWith(fn, "plan_")) "columns" else
+      if (identical(y[[fn]]$package, "cards")) "vars"
+    if (is.null(word) || !is.list(y[[fn]]$args)) next
+    for (a in names(y[[fn]]$args)) {
+      d <- y[[fn]]$args[[a]]
+      if (col(d)) {
+        n <- n + 1L
+        expect_identical(d$choices, word, info = paste(fn, a))
+      }
+    }
+  }
+  expect_gt(n, 30L)
+  expect_identical(y$plan_hide$dots$choices, "columns")
+  expect_true(isTRUE(y$normalize_ard$args$hierarchy$ordered))
+})

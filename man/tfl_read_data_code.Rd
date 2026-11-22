@@ -15,7 +15,7 @@ and \code{derive} (\verb{NAME = R expression}, \code{|} between them), as the
 
 \item{adam_meta}{The study's ADaM metadata whose levels the read puts on
 (an ARD definition's \code{adam_meta}, which a YAML study's carries under
-\code{settings: adam_levels: codelists}); \code{NULL} (default): none.}
+\code{settings: adam_levels: define_xml} or \code{define_spec}); \code{NULL} (default): none.}
 }
 \value{
 The code, one element per line.  A dataset the catalog does not
