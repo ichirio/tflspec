@@ -1,0 +1,77 @@
+# A pull request into next, labelled automerge (or tflplanner-check for a
+# pair PR merged by hand): tflplanner's next, its full test suite, with
+# this pull request's tflspec installed. It replaces running tflplanner's
+# tests on a local PC before a tflspec change goes in (the user's decision
+# of 2026-11-22: the full regression once in CI before the merge, only the
+# changed area locally).
+on:
+  pull_request:
+    branches: [next]
+    types: [opened, synchronize, reopened, labeled]
+
+name: tflplanner-suite
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tflplanner-suite-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    if: >-
+      contains(github.event.pull_request.labels.*.name, 'automerge') ||
+      contains(github.event.pull_request.labels.*.name, 'tflplanner-check')
+    runs-on: ubuntu-latest
+    name: tflplanner next with this tflspec
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      NOT_CRAN: true
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: tflspec
+
+      - uses: actions/checkout@v4
+        with:
+          repository: ichirio/tflplanner
+          ref: next
+          path: tflplanner
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      # tflplanner's own dependencies, as its DESCRIPTION says them (its
+      # Remotes name tflspec@next); this pull request's tflspec goes in after
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: tflplanner
+          extra-packages: any::testthat
+          needs: check
+
+      - name: Install this tflspec, then tflplanner
+        run: |
+          R CMD INSTALL --no-docs --no-multiarch tflspec
+          R CMD INSTALL --no-docs --no-multiarch tflplanner
+
+      # (as tflplanner's own full run, R-CMD-check.yaml "Tests (all)")
+      - name: tflplanner's tests
+        working-directory: tflplanner
+        env:
+          TESTTHAT_CPUS: 4
+          TFLPLANNER_QUICK: false
+        shell: Rscript {0}
+        run: |
+          options(Ncpus = 4L)
+          testthat::set_max_fails(Inf)
+          cat("tflspec", as.character(packageVersion("tflspec")), "from this pull request\n")
+          library(tflplanner)
+          testthat::test_dir("tests/testthat", package = "tflplanner", load_package = "installed",
+                             reporter = testthat::ProgressReporter$new(show_praise = FALSE),
+                             stop_on_failure = TRUE)
