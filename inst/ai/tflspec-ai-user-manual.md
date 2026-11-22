@@ -239,7 +239,7 @@ generate_rtfreport(tfl_report(o, content = plan, study = st), "T-1.rtf")
 **study.yml** — `study_id`, `title`; `settings:` the table and report
 study keys (`rounding`: `sas` / `r`; `program_dir`; `program` and
 `file`, each report's program and RTF file, `{output_id}.R` /
-`{output_id}.rtf`; `adam_levels`: `codelists`, the default, puts on
+`{output_id}.rtf`; `adam_levels`: `define_xml` or `define_spec` puts on
 `study$adam` the levels of the code lists the study's ADaM metadata maps to
 each dataset's variables (`spec/defaults.yml` `adam_meta:`, a define's
 tables: `variables` with each variable's code list OID, `codelists` a value
@@ -1297,7 +1297,7 @@ sp$ard; sp$report; sp$table       # fill sp$ard$datasets$path before running
 `tfl_table_spec_template(ard)` (scaffolds `tables` / `variables` / `cells`
 from an ARD). A workbook may be split over several files; a sheet is said
 once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `r`;
-`output_path`; `program_dir`; `adam_levels`: `codelists` / `none`).
+`output_path`; `program_dir`; `adam_levels`: `define_xml` / `define_spec` / `none`, the default).
 
 **tables** (one row a table) — the roles and the table-wide layers:
 

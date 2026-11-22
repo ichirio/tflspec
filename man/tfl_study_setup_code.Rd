@@ -59,13 +59,14 @@ writes on the data as the file has it.
 }
 
 study.yml's \code{settings: adam_levels} says whether \code{study$adam} gets
-adam_meta's levels: \code{codelists} (the default, also when the key is not
-there) as above, or \code{none}: \code{study$adam} is \code{study$adam_org} with blanks
-as \code{NA} only.  \code{study$codelists} and \code{study$adam_meta} are written either
+adam_meta's levels: \code{define_xml} or \code{define_spec} (the file whose levels
+were applied to adam_meta) as above, or \code{none} (the default, also when
+the key is not there): \code{study$adam} is \code{study$adam_org} with blanks as
+\code{NA} only.  \code{codelists} (the value before 2026-11-22) is an error.  \code{study$codelists} and \code{study$adam_meta} are written either
 way, so a report's explicit reference to a study code list works under
 \code{none} too.  \code{study$adam} always has its blanks as \code{NA}, and
 \code{study$adam_org} is always the dataset as the file has it.  The setup's
-first line says the setting (\verb{# ADaM levels: codelists}), and it is part
+first line says the setting (\verb{# ADaM levels: define_xml}), and it is part
 of each ARD's fingerprint (\code{\link[=tfl_ard_spec_hash]{tfl_ard_spec_hash()}}), so changing it marks
 the ARD outdated; so are the variables adam_meta maps and their codes.  A
 spec of the sheets says it on its \code{study} sheet (key \code{adam_levels}).

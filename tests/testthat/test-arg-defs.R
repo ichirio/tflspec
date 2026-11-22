@@ -1,6 +1,6 @@
 cols <- c("name", "label_en", "label_ja", "help_en", "help_ja", "step", "group", "input", "type",
           "required", "default", "default_kind", "unset", "choices", "values", "value_labels",
-          "free", "ordered", "columns", "fixed_rows", "tier", "passes_to", "member_of",
+          "free", "ordered", "columns", "new_row", "fixed_rows", "tier", "passes_to", "member_of",
           "description")
 
 test_that("tfl_arg_defs() takes fn or template, one of them", {
@@ -76,13 +76,12 @@ test_that("the paginate functions are the page step, other stages stay content",
   expect_true(all(tfl_arg_defs(fn = "plan_blanks")$step == "content"))
 })
 
-test_that("an r argument is the r input, a condition only for where", {
-  expect_identical(.arg_input_for_type("r", "code"), "r")
-  expect_identical(.arg_input_for_type("r", "where"), "condition")
-  expect_identical(.arg_input_for_type("r", "when"), "r")
+test_that("an r argument is the r input; a condition is written, not by the name", {
   expect_identical(.arg_input_for_type("r"), "r")
-  expect_identical(.arg_input_for_type("formula", "x"), "r")
+  expect_identical(.arg_input_for_type("formula"), "r")
   expect_identical(.arg_input_for_type("string"), "text")
+  # (no name decides it: a where without input: condition is r)
+  expect_identical(tfl_arg_defs(fn = "data")$input[tfl_arg_defs(fn = "data")$name == "where"], "condition")
 })
 
 test_that("a ... row only for a function with dots:", {
@@ -172,4 +171,187 @@ test_that("fixed_rows: the rows a template writes next to a table param's \"{nam
   expect_identical(fx$subgroup, "ALL")
   expect_null(d$fixed_rows[[which(d$name == "by")]])
   expect_null(tfl_arg_defs(fn = "analysis")$fixed_rows[[1L]])
+})
+
+test_that("every argument of the file's schema functions has a type (F1); a name the dots take, the dots' type", {
+  # (the declarations as written: tfl_arg_defs() fills a missing type with
+  # "string", so its table cannot show one missing)
+  ents <- tflspec:::.schema_all(figure = FALSE)
+  # (plan_append's data and content are step<data> / step<content>: none open)
+  open <- character()
+  miss <- unlist(lapply(names(ents), function(f) {
+    e <- ents[[f]]
+    args <- e$args %||% list()
+    dots_type <- if (is.list(e$dots)) e$dots$type
+    n <- names(args)[vapply(args, function(d) is.list(d) && is.null(d$type), NA)]
+    # a name the dots take (and `...` itself) has the dots' type
+    if (!is.null(dots_type)) n <- character()
+    if (length(n)) paste0(f, ".", n) else character()
+  }))
+  expect_identical(setdiff(miss, open), character())
+  d <- tfl_arg_defs(fn = "plan_filter")
+  expect_identical(d$type[d$name == "where"], d$type[d$name == "..."])
+  expect_identical(d$type[d$name == "where"], tfl_schema("plan_filter")$dots$type)
+  d <- tfl_arg_defs(fn = "plan_cells")
+  expect_identical(d$type[d$name == "default"], d$type[d$name == "..."])
+})
+
+# ---- the field contract, section 2 (2026-11-22): the first member that is
+# not r decides the input; the other members' fixed values join its values;
+# the exceptions say input: themselves
+
+test_that("a union's input: the first member that is not r, the exceptions written (contract 2)", {
+  row <- function(fn, arg) {
+    d <- tfl_arg_defs(fn = fn)
+    expect_true(arg %in% d$name, label = paste(fn, arg))
+    d[d$name == arg, , drop = FALSE]
+  }
+  cases <- list(
+    # fn, arg, input (by the rule unless the schema says it)
+    c("ard_summary", "variables", "pick"),        # list<column>|column
+    c("plan_columns", "row_title", "pick"),       # list<column>|list<integer>
+    c("rtf_border", "top", "pick"),               # logical|enum[..]|call<..>
+    c("plan_listing", "wrap", "pick"),            # logical|string
+    c("tfl_image", "width_in", "text"),           # number|enum[fit]
+    c("rtf_figures", "width_twips", "text"),      # integer|enum[fit]
+    c("plan_sort", "keys", "text"),               # list<string>|logical (the dots' type)
+    c("scale_x_continuous", "breaks", "text"),    # list<number>|call<..>|r
+    c("ggplot", "data", "text"),                  # object|r (drawn by the type)
+    c("plan_cell_style", "color", "text"),        # colour|r|map<..> (the colour field)
+    c("plan_blanks", "where", "pick"),            # enum[..]|list<integer>|r
+    c("plan_append", "data", "table"),            # step<data>
+    c("plan_append", "content", "table"),         # step<content>
+    # the exceptions (input: written)
+    c("plan_digits", "...", "table"), c("plan_labels", "...", "table"),
+    c("plan_cells", "...", "table"), c("plan_compare", "...", "table"),
+    c("plan_style", "font", "table"), c("rtf_style", "font", "table"),
+    c("rtf_titles", "font", "table"), c("rtf_footnotes", "font", "table"),
+    c("rtf_header", "font", "table"), c("rtf_footer", "font", "table"),
+    c("tfl_ard_number", "group", "table"),
+    c("plan_row_group", "collapse", "pick"),
+    c("plan_paginate_cols", "at", "pick"), c("plan_paginate_cols", "keep", "pick"),
+    c("facet_wrap", "facets", "pick"), c("facet_grid", "rows", "pick"),
+    c("facet_grid", "cols", "pick"), c("facet_nested", "rows", "pick"),
+    c("facet_nested", "cols", "pick"),
+    # where: written, no name decides it
+    c("plan_cell_style", "where", "condition"), c("plan_filter", "where", "condition"),
+    c("plan_filter", "...", "condition"))
+  for (k in cases) {
+    expect_identical(row(k[1L], k[2L])$input, k[3L], label = paste(k[1L], k[2L]))
+  }
+  # the other members' fixed values join the field's
+  expect_identical(row("tfl_image", "width_in")$values[[1L]], "fit")
+  expect_identical(row("rtf_border", "top")$values[[1L]],
+                   c("TRUE", "FALSE", "single", "double", "thick", "dash", "dot", "none"))
+  expect_identical(row("plan_cell_style", "bold")$values[[1L]], c("TRUE", "FALSE"))
+  # a plain logical stays a switch: no values
+  expect_identical(row("plan_filter", "any")$type, "logical")
+  expect_null(row("plan_filter", "any")$values[[1L]])
+  # a column member gets the columns; a list member is several (ordered FALSE)
+  expect_identical(row("plan_columns", "row_title")$choices[[1L]], "columns")
+  expect_false(row("plan_columns", "row_title")$ordered)
+  expect_true(is.na(row("rtf_border", "top")$ordered))
+  # a text member beside a pick: a value not in the list too
+  expect_true(row("plan_listing", "wrap")$free)
+  expect_true(row("plan_columns", "row_title")$free)
+  # a logical beside other members: TRUE / FALSE (GT's review of #895)
+  expect_identical(row("plan_listing", "wrap")$values[[1L]], c("TRUE", "FALSE"))
+  expect_identical(row("plan_listing", "record")$values[[1L]], c("TRUE", "FALSE"))
+  # a cards function's column: the columns of its data (by the package, not the name)
+  expect_identical(row("ard_summary", "variables")$choices[[1L]], "vars")
+  expect_identical(row("ard_tabulate", "by")$choices[[1L]], "vars")
+  # the 20 exceptions are still needed: the rule alone gives another input
+  ex <- cases[14:33]
+  ents <- tflspec:::.schema_all(figure = TRUE)
+  for (k in ex) {
+    e <- ents[[k[1L]]]
+    ty <- if (identical(k[2L], "...")) e$dots$type else e$args[[k[2L]]]$type %||% e$dots$type
+    expect_false(identical(tflspec:::.arg_input_for_type(ty), k[3L]), label = paste(k[1L], k[2L], "needs its input:"))
+  }
+})
+
+# F12 (a), 2026-11-22 (the coordinator, after #895 turned about 74 fields into
+# R fields and no test saw it): a field whose first member that is not `r` is
+# object, call or call<fn> is drawn by its type (input text), never as R; a
+# list of calls (list<call<..>>, list<call>) is R.  The expected input of each
+# family is written here, the family read by this test's own split.
+test_that("object, call and call<fn> fields are drawn by their type, not as R", {
+  fixtures <- list(
+    c("ggplot", "data", "text"),           # object|r
+    c("ggsurvfit", "x", "text"),           # object
+    c("geom_line", "position", "text"),    # call|string|r
+    c("plan_style", "border_header", "text"), # call<rtf_border>
+    c("plan_listing", "...", "r"),         # list<call<listing_col>>
+    c("ard_stack", "...", "r"))            # list<call>
+  for (k in fixtures) {
+    d <- tfl_arg_defs(fn = k[1L])
+    expect_identical(d$input[d$name == k[2L]], k[3L], label = paste(k[1L], k[2L]))
+  }
+  # every such row of the schema (the definition writes no input:)
+  first_member <- function(type) {
+    ch <- strsplit(type, "", fixed = TRUE)[[1L]]
+    depth <- cumsum(ch %in% c("<", "[")) - cumsum(ch %in% c(">", "]"))
+    cut <- c(0L, which(ch == "|" & depth == 0L), length(ch) + 1L)
+    m <- trimws(vapply(seq_len(length(cut) - 1L), function(i)
+      paste(ch[seq_len(cut[i + 1L] - cut[i] - 1L) + cut[i]], collapse = ""), ""))
+    m <- m[m != "r"]
+    if (length(m)) m[1L] else "r"
+  }
+  family <- function(m) {
+    if (grepl("^list<call", m)) return("list<call>")
+    if (m %in% c("object", "call") || startsWith(m, "call<")) return("drawn")
+    NA_character_
+  }
+  want <- c(drawn = "text", `list<call>` = "r")
+  ents <- tflspec:::.schema_all(figure = TRUE)
+  seen <- character()
+  for (fn in names(ents)) {
+    e <- ents[[fn]]
+    rows <- e$args
+    if (!is.null(e$dots)) rows[["..."]] <- e$dots
+    todo <- Filter(function(a) is.list(a) && is.character(a$type) && is.null(a$input) &&
+                     !is.na(family(first_member(a$type))), rows)
+    if (!length(todo)) next
+    d <- tfl_arg_defs(fn = fn)
+    for (a in names(todo)) {
+      f <- family(first_member(todo[[a]]$type))
+      seen <- union(seen, f)
+      expect_identical(d$input[d$name == a], want[[f]], label = paste(fn, a, todo[[a]]$type))
+    }
+  }
+  # (both families are in the schema: the check above is not empty)
+  expect_setequal(seen, names(want))
+})
+
+test_that("the members are split at the top level only", {
+  m <- tflspec:::.type_members
+  expect_identical(m("enum[a|b]"), "enum[a|b]")
+  expect_identical(m("map<string, column|r>|r"), c("map<string, column|r>", "r"))
+  expect_identical(m("logical|enum[x|y]|call<f>"), c("logical", "enum[x|y]", "call<f>"))
+  expect_identical(tflspec:::.type_deciding("r|call<vars>|list<column>|column"), "call<vars>")
+  expect_identical(tflspec:::.type_deciding("r"), "r")
+})
+
+test_that("a column field's choices are written in its definition", {
+  y <- yaml::read_yaml(system.file("spec", "schema.yml", package = "tflspec"))
+  # (a column member of the type, a union's too: `list<column>|column`)
+  col <- function(d) {
+    is.list(d) && any(grepl("^(list<)?column>?$", tflspec:::.type_members(as.character(d$type %||% "string"))))
+  }
+  n <- 0L
+  for (fn in names(y)) {
+    word <- if (identical(fn, "normalize_ard")) "ard" else if (startsWith(fn, "plan_")) "columns" else
+      if (identical(y[[fn]]$package, "cards")) "vars"
+    if (is.null(word) || !is.list(y[[fn]]$args)) next
+    for (a in names(y[[fn]]$args)) {
+      d <- y[[fn]]$args[[a]]
+      if (col(d)) {
+        n <- n + 1L
+        expect_identical(d$choices, word, info = paste(fn, a))
+      }
+    }
+  }
+  expect_gt(n, 30L)
+  expect_identical(y$plan_hide$dots$choices, "columns")
+  expect_true(isTRUE(y$normalize_ard$args$hierarchy$ordered))
 })
