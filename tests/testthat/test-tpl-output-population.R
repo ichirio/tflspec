@@ -13,6 +13,7 @@ test_that("a template report's {OUTPUT_POPULATION} is its subjects entry's set l
                   template = list(name = "tflspec_v1/demog",
                                   args = list(by = "TRT01A", continuous = "AGE")))
   tfl_write_output(o, file.path(sd, "spec", "outputs", "T-DM.yml"))
+  invisible(tfl_copy_templates(sd))
   st <- tfl_read_study_spec(sd)
   ro <- tfl_resolve_output(tfl_read_output(file.path(sd, "spec", "outputs", "T-DM.yml")), st)
   expect_true(is.na(tflspec:::.out_population(ro)))
