@@ -127,16 +127,48 @@
 
 # A type's members: split at `|` outside <> and [] (`enum[a|b]` and
 # `map<string, column|r>` are one member each)
-.type_members <- function(type) {
+.type_members <- function(type, sep = "|") {
   ch <- strsplit(as.character(type %||% "string")[1L], "", fixed = TRUE)[[1L]]
   depth <- cumsum(ch %in% c("<", "[")) - cumsum(ch %in% c(">", "]"))
-  cut <- which(ch == "|" & depth == 0L)
+  cut <- which(ch == sep & depth == 0L)
   if (!length(cut)) return(trimws(paste(ch, collapse = "")))
   from <- c(1L, cut + 1L)
   to <- c(cut - 1L, length(ch))
   trimws(vapply(seq_along(from), function(i) {
     paste(ch[seq_len(to[i] - from[i] + 1L) + from[i] - 1L], collapse = "")
   }, ""))
+}
+
+# A table's columns from its type, where the definition writes none (the
+# field contract, section 4): the first table member's.  map<K, V> and
+# vec<K, V> (or a list of them) give a key column of K and a value column of
+# V, each with the input section 2 gives it, a value that is itself a map its
+# own key and value; rows<f1, f2, ..> gives a column a field.  NULL: no
+# table member (step<content>, whose items are cards).
+.arg_type_columns <- function(type) {
+  m <- sub("^list<((map|vec)<.*>)>$", "\\1", .type_members(type))
+  t <- m[grepl("^(map|vec|rows)<", m)][1L]
+  if (is.na(t)) return(NULL)
+  inner <- .type_members(sub("^[a-z]+<(.*)>$", "\\1", t), sep = ",")
+  if (startsWith(t, "rows<")) {
+    out <- lapply(inner, function(f) list(label = list(en = f, ja = f)))
+    return(stats::setNames(out, inner))
+  }
+  list(key = .arg_type_column(inner[1L], "key"),
+       value = .arg_type_column(inner[length(inner)], "value"))
+}
+
+# ... one column: its type, input and label (by what the key is: a column,
+# a statistic, else a name; the value "Value")
+.arg_type_column <- function(type, role) {
+  label <- if (identical(role, "value")) list(en = "Value", ja = "\u5024") else
+    switch(.type_deciding(type),
+           column = list(en = "Column", ja = "\u5217"),
+           stat = list(en = "Statistic", ja = "\u7d71\u8a08\u91cf"),
+           list(en = "Name", ja = "\u540d\u524d"))
+  col <- list(type = type, input = .arg_input_for_type(type), label = label)
+  if (grepl("^(map|vec)<", .type_deciding(type))) col$columns <- .arg_type_columns(.type_deciding(type))
+  col
 }
 
 # The member that decides the field: the first that is not `r` ("r" when r
@@ -426,7 +458,9 @@
   row$value_labels <- I(list(vl$labels))
   row$free <- as.logical(free)
   row$ordered <- as.logical(ordered)
-  row$columns <- I(list(.arg_columns(d[["columns"]], d[["labels"]], where_arg)))
+  # (a table whose definition writes no columns: gets them from its type)
+  cols <- d[["columns"]] %||% (if (identical(input, "table")) .arg_type_columns(type))
+  row$columns <- I(list(.arg_columns(cols, d[["labels"]], where_arg)))
   row$new_row <- I(list(.arg_new_row(d[["new_row"]], d[["columns"]], where_arg)))
   row$fixed_rows <- I(list(NULL))
   row$tier <- tier

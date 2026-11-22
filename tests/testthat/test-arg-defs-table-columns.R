@@ -16,7 +16,13 @@ test_that("every table argument has labelled columns, a map its key and value", 
       }
     }
   }
-  for (fn in c("normalize_ard", "plan_columns")) check(tfl_arg_defs(fn = fn), fn)
+  # (every schema function: a table the definition writes no columns for
+  # gets them from its type, the field contract section 4; step<content>
+  # alone has none, its items are cards)
+  for (fn in names(tflspec:::.schema_all(figure = TRUE))) {
+    d <- tfl_arg_defs(fn = fn)
+    check(d[d$type != "step<content>", , drop = FALSE], fn)
+  }
   dir <- system.file("series", package = "tflspec")
   for (s in list.dirs(dir, recursive = FALSE, full.names = FALSE)) {
     for (f in list.files(file.path(dir, s, "templates"), pattern = "[.]yml$")) {
@@ -58,4 +64,30 @@ test_that("new_row names a column of the table, else it stops", {
   expect_error(tflspec:::.arg_new_row(list(nope = "a"), cols, "x"),
                "new_row column `nope` is not one of the table's columns [(]key, value[)]")
   expect_error(tflspec:::.arg_new_row("a", cols, "x"), "new_row is a map")
+})
+
+test_that("a table without columns: gets them from its type (contract section 4)", {
+  w <- tflspec:::.arg_columns(tflspec:::.arg_type_columns("vec<column, number>|list<number>"),
+                              NULL, "x")
+  expect_identical(names(w), c("key", "value"))
+  expect_identical(c(w$key$label_en, w$key$label_ja), c("Column", "\u5217"))
+  expect_identical(c(w$key$type, w$key$input), c("column", "pick"))
+  expect_identical(c(w$value$type, w$value$input), c("number", "text"))
+  expect_identical(w$value$label_en, "Value")
+  # rows<..>: a column a field, in order
+  h <- tfl_arg_defs(fn = "plan_col_header")
+  hc <- h$columns[[which(h$name == "header")]]
+  expect_identical(names(hc)[1:3], c("line", "cols", "span"))
+  # a map whose value is a map: its own key and value
+  cols <- tflspec:::.arg_type_columns("map<string, map<stat, string>>")
+  expect_identical(cols$value$columns$key$label$en, "Statistic")
+  # a list of maps: the map's columns; no table member: none
+  expect_identical(names(tflspec:::.arg_type_columns("list<map<string, string>>")), c("key", "value"))
+  expect_null(tflspec:::.arg_type_columns("step<content>"))
+  expect_null(tflspec:::.arg_type_columns("list<column>"))
+  # written columns: win
+  d <- tfl_arg_defs(fn = "plan_columns")
+  expect_identical(names(d$columns[[which(d$name == "widths")]]), c("column", "width"))
+  n <- tfl_arg_defs(fn = "normalize_ard")
+  expect_identical(n$columns[[which(n$name == "stack")]]$value$label_en, "Layers")
 })
