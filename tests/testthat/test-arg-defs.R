@@ -197,3 +197,17 @@ test_that("every argument of the file's schema functions has a type (F1); a name
   d <- tfl_arg_defs(fn = "plan_cells")
   expect_identical(d$type[d$name == "default"], d$type[d$name == "..."])
 })
+
+test_that("a column field's choices are written in its definition", {
+  y <- yaml::read_yaml(system.file("spec", "schema.yml", package = "tflspec"))
+  col <- function(d) is.list(d) && grepl("^(list<)?column>?$", d$type %||% "")
+  for (fn in names(y)) {
+    word <- if (identical(fn, "normalize_ard")) "ard" else if (startsWith(fn, "plan_")) "columns"
+    if (is.null(word) || !is.list(y[[fn]]$args)) next
+    for (a in names(y[[fn]]$args)) {
+      d <- y[[fn]]$args[[a]]
+      if (col(d)) expect_identical(d$choices, word, info = paste(fn, a))
+    }
+  }
+  expect_true(isTRUE(y$normalize_ard$args$hierarchy$ordered))
+})

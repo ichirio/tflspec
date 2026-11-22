@@ -104,7 +104,7 @@ plan_levels:
   description: The order (and the subset) of a variable's values.
   dots: {style: named, map: true, type: "vec<string, string>|list<string>", description: "A variable's values in their order; a map (value: text) names their text too."}
   args:
-    .drop_empty: {label: {en: "Hide empty values", ja: "データに無い値を隠す"}, type: "list<column>", description: Variables whose levels with no data are left out.}
+    .drop_empty: {label: {en: "Hide empty values", ja: "データに無い値を隠す"}, type: "list<column>", description: Variables whose levels with no data are left out., choices: columns}
 
 plan_labels:
   package: rtfreporter
@@ -146,7 +146,7 @@ plan_stat_groups:
   description: Columns made of groups of statistics.
   dots: {style: named, type: "list<stat>", description: "A group's name and its statistics.", example: {"n": N, orr_ci: [n, estimate, conf.low, conf.high]}}
   args:
-    .variables: {label: {en: "Variables split", ja: "分ける変数"}, help: "The variables whose statistics are split into the groups. Blank: every variable. e.g. c(\"AGE\", \"BMI\")", type: "list<column>"}
+    .variables: {label: {en: "Variables split", ja: "分ける変数"}, help: "The variables whose statistics are split into the groups. Blank: every variable. e.g. c(\"AGE\", \"BMI\")", type: "list<column>", choices: columns}
     .others: {label: {en: "Group of the other variables", ja: "ほかの変数のグループ"}, help: "The group the other variables' statistics go to whole. Blank: none. e.g. \"Summary\"", type: string}
     ...: {label: {en: "Group and its statistics", ja: "グループとその統計量"}}
 
@@ -190,7 +190,7 @@ plan_compare:
   description: Columns from the comparison records (tests, differences).
   dots: {style: named, type: "template|vec<string, template>|call<cell_rows>|list<guard|template>", description: "A comparison column's name and its template."}
   args:
-    by: {label: {en: "By group", ja: "群ごとに"}, help: "The column that splits the comparison records (tests, differences) into columns, one a level (each arm against placebo). Blank: one comparison a variable. e.g. \"COMPARISON\"", type: column}
+    by: {label: {en: "By group", ja: "群ごとに"}, help: "The column that splits the comparison records (tests, differences) into columns, one a level (each arm against placebo). Blank: one comparison a variable. e.g. \"COMPARISON\"", type: column, choices: columns}
     position: {label: {en: "Place", ja: "位置"}, help: "Where the comparison columns go: after the column key's values (\"last\") or before them (\"first\"). Blank: last. e.g. \"first\"", type: "enum[last|first]"}
     ...: {label: {en: "Columns", ja: "列"}}
 
@@ -201,7 +201,7 @@ plan_stub:
   label: {en: "Row label column", ja: "行ラベルの列"}
   tier: usual
   args:
-    vars: {label: {en: "Variables", ja: "変数"}, help: "The row keys folded into the one row label column, outermost first. Blank: worked out from the table's row layers, which is usually right. e.g. c(\"AEBODSYS\", \"AEDECOD\")", type: "list<column>"}
+    vars: {label: {en: "Variables", ja: "変数"}, help: "The row keys folded into the one row label column, outermost first. Blank: worked out from the table's row layers, which is usually right. e.g. c(\"AEBODSYS\", \"AEDECOD\")", type: "list<column>", choices: columns}
     name: {main: true, label: {en: "Column name", ja: "列の名前"}, help: "The name of the one row label column the row keys are folded into. Blank: row_label. e.g. \"stub\"", type: string}
     indent: {main: true, label: {en: "Indent", ja: "字下げ"}, help: "The spaces a level of the folded rows is indented by. Blank: 4. e.g. 2", type: integer}
     group_summary: {label: {en: "Group summary rows", ja: "群の要約行"}, help: "Which rows are a group's own summary, printed on the group's heading row: \"empty\" a blank leaf, \"parent\" a leaf equal to its parent. Blank: both; \"none\" turns it off. e.g. \"empty\"", type: "enum[empty|parent]"}
@@ -215,7 +215,7 @@ plan_paginate_group:
   label: {en: "A page per group", ja: "群ごとに 1 ページ"}
   tier: other
   args:
-    col: {main: true, label: {en: "Column", ja: "列"}, help: "The column whose value starts a new page, a page a value however long. Blank: the outermost row key. e.g. \"PARAM\"", type: column}
+    col: {main: true, label: {en: "Column", ja: "列"}, help: "The column whose value starts a new page, a page a value however long. Blank: the outermost row key. e.g. \"PARAM\"", type: column, choices: columns}
     keep: {main: true, label: {en: "Keep the column", ja: "列を残す"}, help: "FALSE: the page column is not printed (each page's name says its value). Blank (TRUE): it is printed. e.g. FALSE", type: logical, default: true}
     heading: {main: true, label: {en: "Heading", ja: "見出し"}, help: "Each page's name as a template, {value} the page's value and {n} its subjects. Blank: the value. e.g. Parameter: {value}", type: string}
     heading_at: {label: {en: "Where the heading prints", ja: "見出しを出す場所"}, help: "Where a page's name (its heading) prints: \"section\" the section header, \"title\" under the titles, \"none\" nowhere. Blank: the report's. e.g. \"title\"", type: "enum[section|title|none]"}
@@ -268,7 +268,7 @@ plan_paginate_rows:
     break_before: {label: {en: "Break before rows", ja: "この行の前で改ページ"}, help: "The row numbers a page starts at, for the split rule \"rows\". Used for breaks by hand. e.g. c(20, 40): pages 1-19, 20-39, 40-", type: "list<integer>"}
     min_group_rows: {label: {en: "Fewest rows of a group on a page", ja: "1 ページに残すグループの最少行数"}, help: "The fewest rows of a group a page may end with: a group with fewer moves whole to the next page, so its heading is not left alone at the foot. Blank: 2; 0 turns it off. e.g. 3", type: integer}
     cont_label: {label: {en: "Continued label", ja: "続きのマーク"}, help: "The text after a group's heading on the pages it continues onto. Blank: \" (Cont.)\". e.g. \" (continued)\"", type: string}
-    page_by: {main: true, label: {en: "Page by", ja: "ページを分ける変数"}, help: "The columns whose value starts a new page first, each page named after it; the most rows a page applies within each. e.g. \"PARAM\"", type: "list<column>"}
+    page_by: {main: true, label: {en: "Page by", ja: "ページを分ける変数"}, help: "The columns whose value starts a new page first, each page named after it; the most rows a page applies within each. e.g. \"PARAM\"", type: "list<column>", choices: columns}
     heading: {label: {en: "Heading", ja: "見出し"}, help: "With page by one column: each page's name as a template, {value} the page's value and {n} its subjects. e.g. Treatment: {value} (N={n})", type: string}
     heading_at: {label: {en: "Where the heading prints", ja: "見出しを出す場所"}, help: "Where a page's name (its heading) prints: \"section\" the section header, \"title\" under the titles, \"none\" nowhere. Blank: the report's. e.g. \"title\"", type: "enum[section|title|none]"}
     na_label: {label: {en: "Blank value's text", ja: "空欄の値の文字"}, help: "With page by: the text a blank or missing page value prints as, in the page's heading ({value}) and its name. Blank: nothing, so \"Severity: {value}\" prints \"Severity: \". e.g. \"(Missing)\"", type: string}
@@ -336,7 +336,7 @@ plan_cell_style:
   label: {en: "Cell styles", ja: "セルのスタイル"}
   tier: other
   args:
-    cols: {main: true, label: {en: "Columns styled", ja: "書式を付ける列"}, help: "The columns styled, by name (.values every value column). Blank: every column. e.g. .values", type: "list<column>"}
+    cols: {main: true, label: {en: "Columns styled", ja: "書式を付ける列"}, help: "The columns styled, by name (.values every value column). Blank: every column. e.g. .values", type: "list<column>", choices: columns}
     header: {main: true, label: {en: "The column header", ja: "列見出し"}, help: "TRUE: the column header is styled (not the body). e.g. TRUE", type: logical}
     where: {main: true, label: {en: "Rows styled", ja: "書式を付ける行（条件）"}, type: formula, description: "The rows it applies to, R over the table's columns: `!r \"p > 0.5\"`."}
     indent_twips: {label: {en: "Indent (twips)", ja: "字下げ（twips）"}, help: "The left indent of the chosen cells' text in twips (not the header's). e.g. 240", type: integer}
@@ -357,7 +357,7 @@ plan_hide:
   description: Columns kept in the data but not printed.
   dots: {style: positional, key: cols, type: "list<column>"}
   args:
-    cols: {main: true, label: {en: "Hidden columns", ja: "隠す列"}, type: "list<column>", help: "The columns not printed, by name: a key a page break or an order reads stays in the data. e.g. TRT01AN"}
+    cols: {main: true, label: {en: "Hidden columns", ja: "隠す列"}, type: "list<column>", help: "The columns not printed, by name: a key a page break or an order reads stays in the data. e.g. TRT01AN", choices: columns}
 
 plan_empty:
   package: rtfreporter
@@ -394,7 +394,7 @@ plan_columns:
   tier: usual
   args:
     widths: {main: true, label: {en: "Widths", ja: "幅"}, help: "The columns' relative widths, by column (.values every value column). e.g. row_label 5, .values 2", type: "vec<column, number>|list<number>", input: table, columns: {column: {type: column, input: pick, choices: columns}, width: {type: number, input: text}}}
-    decimal: {main: true, label: {en: "Decimal alignment", ja: "小数点揃え"}, help: "The columns whose numbers line up at the decimal point (.values every value column). e.g. .values", type: "list<column>"}
+    decimal: {main: true, label: {en: "Decimal alignment", ja: "小数点揃え"}, help: "The columns whose numbers line up at the decimal point (.values every value column). e.g. .values", type: "list<column>", choices: columns}
     row_title: {main: true, label: {en: "Row title", ja: "行の見出し"}, help: "The row heading columns: left aligned (the others centred) and repeated on every column page. Blank: the first column. e.g. row_label", type: "list<column>|list<integer>"}
     auto_width: {main: true, label: {en: "Automatic width", ja: "自動の幅"}, help: "TRUE: each column sized to its content. e.g. TRUE", type: logical}
     sep: {label: {en: "Separator", ja: "区切り"}, help: "The text that joins several column keys in the value columns' names; the spanning header is cut at it. Blank: \"____\" (Placebo____F). Changed only when a value has \"____\" in it. e.g. \"__\"", type: string}
@@ -487,8 +487,8 @@ normalize_ard:
   tier: required
   description: The ARD flattened -- groups and hierarchy as key columns -- before the plan.
   args:
-    keys: {label: {en: "Keys", ja: "キー"}, help: "The group variables made into columns of their own (TRT01A, SEX ...). Blank: every group of the ARD, which is what a table usually needs. e.g. TRT01A", type: "list<column>"}
-    hierarchy: {label: {en: "Hierarchy", ja: "階層"}, help: "The nested row keys, outermost first: each level's own summary rows become its rows (a SOC's row over its PTs). Blank: step 1's hierarchical analysis's, which is usually right; another may not match the ARD. e.g. AEBODSYS, AEDECOD", type: "list<column>"}
+    keys: {label: {en: "Keys", ja: "キー"}, help: "The group variables made into columns of their own (TRT01A, SEX ...). Blank: every group of the ARD, which is what a table usually needs. e.g. TRT01A", type: "list<column>", choices: ard}
+    hierarchy: {label: {en: "Hierarchy", ja: "階層"}, help: "The nested row keys, outermost first: each level's own summary rows become its rows (a SOC's row over its PTs). Blank: step 1's hierarchical analysis's, which is usually right; another may not match the ARD. e.g. AEBODSYS, AEDECOD", type: "list<column>", choices: ard, ordered: true}
     overall: {main: true, label: {en: "Overall row", ja: "全体の行"}, help: "The text of the row a hierarchical analysis makes over all its terms (the subjects with any event), put on the first hierarchy column. Blank: that row is left as it is. e.g. Any TEAE", type: string}
     drop_contexts: {label: {en: "Contexts dropped", ja: "除く context"}, help: "The kinds of ARD rows (context) left out before the table. Blank: the attributes rows and the total_n row, which no cell prints (the total N is still kept for a header). e.g. attributes", type: "list<string>", input: text}
     drop_key_variables: {label: {en: "Drop the key variables", ja: "キー変数の行を除く"}, help: "The rows that count a group variable itself (the subjects per arm): TRUE takes them out; blank (FALSE) keeps them out of the body for a header's (N=n). Usually left blank. e.g. TRUE", type: logical}

@@ -146,29 +146,6 @@
 # the plan_paginate_*() functions are the page step
 .arg_page_fns <- c("plan_paginate_rows", "plan_paginate_cols", "plan_paginate_group")
 
-# What a schema function's argument gets where schema.yml is silent: a column
-# argument without choices picks from the ARD (normalize_ard) or from the
-# table's columns (plan_*); normalize_ard's hierarchy is ordered.
-.arg_schema_fill <- function(fn, args) {
-  column_type <- function(d) {
-    is.list(d) && grepl("^(list<)?column>?$", as.character(d$type %||% ""))
-  }
-  for (n in names(args)) {
-    d <- args[[n]]
-    if (column_type(d) && is.null(d$choices)) {
-      if (identical(fn, "normalize_ard")) {
-        args[[n]]$choices <- "ard"
-      } else if (startsWith(fn, "plan_")) {
-        args[[n]]$choices <- "columns"
-      }
-    }
-    if (identical(fn, "normalize_ard") && n %in% c("hierarchy", ".hierarchy")) {
-      args[[n]]$ordered <- TRUE
-    }
-  }
-  args
-}
-
 # (the enum's own brackets only: `enum[TRUE|FALSE]|logical` is TRUE, FALSE)
 .arg_enum_values <- function(type) {
   if (!startsWith(type %||% "", "enum[")) return(NULL)
@@ -710,7 +687,7 @@ tfl_arg_defs <- function(fn = NULL, template = NULL) {
     stop(sprintf("tfl_arg_defs(): %s is not a function of the schema.",
                  encodeString(fn, quote = "\"")), call. = FALSE)
   }
-  args <- .arg_schema_key(.arg_schema_dots(.arg_schema_fill(fn, ent$args %||% list()), ent$dots),
+  args <- .arg_schema_key(.arg_schema_dots(ent$args %||% list(), ent$dots),
                           ent$visible)
   step <- if (fn %in% .arg_page_fns) "page" else .arg_step_for_stage(ent$stage)
   .arg_table(args, step, fn, ent[["groups"]])

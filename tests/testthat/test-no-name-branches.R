@@ -18,6 +18,8 @@ nb_patterns <- c('identical(fn, "', 'fn %in% c("', 'startsWith(fn, "', "switch(f
 
 # the forms matched as regular expressions (the others are fixed text)
 nb_regex <- c(
+  # (`identical(templates, ` is not a branch on a template's name)
+  'identical(template' = 'identical[(]template[,) ]',
   'name %in% c("' = '(?<![A-Za-z0-9_.$])name %in% c[(]"',
   'nm %in% c("' = '(?<![A-Za-z0-9_.$])nm %in% c[(]"',
   'arg %in% c("' = '(?<![A-Za-z0-9_.$])arg %in% c[(]"',
