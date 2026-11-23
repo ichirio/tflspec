@@ -89,15 +89,18 @@ tfl_read_data_code <- function(datasets, dataset, adam_meta = NULL) {
 
 # what the sheets' columns cannot say, as YAML text for a cell: content
 # items (`- fn: {args}`), or a column's other arguments (a map); and back.
-# The listings' content_more / more and the tables' content_more (#447, #448)
+# The listings' content_more / more and the tables' content_more (#447, #448).
+# `!sheet`: an argument whose value is on the sheets in another form
+# (.sheet_mark(), R/sheets_check.R)
 .sheet_more_out <- function(x, items = FALSE) {
   y <- if (items) .items_to_list(x) else .calls_out(x)
-  txt <- yaml::as.yaml(y, indent.mapping.sequence = TRUE, handlers = .yaml_out_handlers())
+  h <- c(.yaml_out_handlers(), list(tfl_sheet = .sheet_mark_out))
+  txt <- yaml::as.yaml(y, indent.mapping.sequence = TRUE, handlers = h)
   sub("\n$", "", txt)
 }
 .sheet_more_in <- function(txt, items = FALSE) {
   if (is.null(txt) || is.na(txt) || !nzchar(trimws(txt))) return(if (items) list() else NULL)
-  y <- yaml::yaml.load(txt, handlers = .yaml_handlers())
+  y <- yaml::yaml.load(txt, handlers = c(.yaml_handlers(), list(sheet = .sheet_mark_in)))
   if (items) lapply(y, .item_from_list) else .calls_in(y)
 }
 

@@ -2,8 +2,7 @@
 # sheet has a column for: what the columns can say stays on the sheets' rows,
 # and the tables row's content_more holds only the rest (#689).  Each case
 # goes YAML -> sheets -> YAML, in memory and through a workbook, and the
-# table it builds is the original's.  An argument that comes back in
-# another form (header `lines`, read as header rows) is the rest too.
+# table it builds is the original's.
 
 trc_head <- tfl_item("table_plan", list(cols = "ARM", rows = list(group = "variable")))
 trc_cf <- tfl_r("function(x) paste0(x, '!')")
@@ -97,10 +96,16 @@ trc_col <- function(sh, sheet, col, by = NULL) {
 }
 
 # the items of the content_more cell as a list
+# content_more's items: the arguments kept as YAML (an argument marked
+# `!sheet` is on the sheets, in another form: not the rest)
 trc_rest <- function(sh) {
   cm <- trc_cm(sh)
   if (is.na(cm)) return(list())
-  tflspec:::.sheet_more_in(cm, items = TRUE)
+  more <- lapply(tflspec:::.sheet_more_in(cm, items = TRUE), function(it) {
+    it$args <- it$args[!vapply(it$args, inherits, NA, "tfl_sheet")]
+    it
+  })
+  Filter(function(it) length(it$args) > 0L, more)
 }
 
 trc_route <- function(d, route, env = parent.frame()) {
@@ -155,8 +160,8 @@ trc_cases <- list(
     rest = list(plan_columns = "row_title")),
   header_sep = list(
     content = list(trc_head, tfl_item("plan_col_header", list(
-      header = list(list(line = "1", cols = "label", text = "Parameter"),
-                    list(line = "1", cols = ".values", text = "{col}")),
+      header = list(list(line = 1L, cols = "label", text = "Parameter"),
+                    list(line = 1L, cols = ".values", text = "{col}")),
       header_sep = " / "))),
     cells = function(sh) {
       expect_identical(trc_col(sh, "col_header", "cols"), c("label", ".values"))
@@ -167,23 +172,44 @@ trc_cases <- list(
     content = list(trc_head, tfl_item("plan_col_header", list(
       lines = list(list(group = "", label = "Parameter", .values = "{col}")),
       header_sep = " / "))),
-    # (`lines` would come back as header rows, another argument: kept as written)
-    cells = function(sh) expect_false(any(sh$table$col_header$output_id %in% "T-1")),
-    rest = list(plan_col_header = c("lines", "header_sep"))),
+    cells = function(sh) {
+      expect_identical(trc_col(sh, "col_header", "cols"), c("group", "label", ".values"))
+      expect_identical(trc_col(sh, "col_header", "text"), c(NA, "Parameter", "{col}"))
+      # (`lines` with no `span` is "each": written, a blank cell would be one cell over the columns)
+      expect_identical(trc_col(sh, "col_header", "span"), rep("each", 3))
+    },
+    rest = list(plan_col_header = "header_sep")),
   lines_span = list(
     content = list(trc_head, tfl_item("plan_col_header", list(
       lines = list(list(group = "", label = "", .values = "Treatment"),
                    list(group = "", label = "Parameter", .values = "{col}")),
       span = list(list(.values = "one"), list(.values = "each"))))),
-    cells = function(sh) expect_false(any(sh$table$col_header$output_id %in% "T-1")),
-    rest = list(plan_col_header = c("lines", "span"))),
+    cells = function(sh) {
+      expect_identical(trc_col(sh, "col_header", "line"), c("1", "1", "1", "2", "2", "2"))
+      expect_identical(trc_col(sh, "col_header", "span"), c("each", "each", NA, "each", "each", "each"))
+      expect_identical(trc_col(sh, "col_header", "text"), c(NA, NA, "Treatment", NA, "Parameter", "{col}"))
+      # (the span's shape -- the cells each line names -- is its mark's)
+      expect_match(trc_cm(sh), "span: !sheet\n", fixed = TRUE)
+    },
+    rest = list()),
+  lines_span_lines = list(
+    content = list(trc_head, tfl_item("plan_col_header", list(
+      lines = list(list(group = "", label = "", .values = "Treatment"),
+                   list(group = "", label = "Parameter", .values = "{col}")),
+      span = list(list(group = "each", label = "each", .values = "one"), "each")))),
+    cells = function(sh) {
+      expect_identical(trc_col(sh, "col_header", "span"), c("each", "each", NA, "each", "each", "each"))
+    },
+    rest = list()),
   lines_span_key = list(
     content = list(trc_head, tfl_item("plan_col_header", list(
       lines = list(list(group = "", label = "", .values = "Treatment"),
                    list(group = "", label = "Parameter", .values = "{col}")),
       span = "ARM", header_sep = " / "))),
-    cells = function(sh) expect_false(any(sh$table$col_header$output_id %in% "T-1")),
-    rest = list(plan_col_header = c("lines", "span", "header_sep"))),
+    cells = function(sh) {
+      expect_identical(trc_col(sh, "col_header", "span"), rep("ARM", 6))
+    },
+    rest = list(plan_col_header = "header_sep")),
   # (a span that is R, not a value the cells can hold: it stays with the lines)
   lines_span_code = list(
     content = list(trc_head, tfl_item("plan_col_header", list(
@@ -268,18 +294,14 @@ test_that("round trip: the item's arguments and the table built are the original
   }
 })
 
-test_that("header lines with no span (the sample defaults' form): kept as written, the same table", {
+test_that("header lines with no span (the sample defaults' form): the built header is the same after the round trip", {
   skip_if_not_installed("cards")
   ard <- trc_ard()
   d <- trc_study(list(trc_head, tfl_item("plan_col_header", list(
     lines = list(list(group = "", .values = "{col}"), list(group = "Characteristic", .values = "Arm"))))))
   sh <- tfl_sheets_from_yaml(d)
-  # (read as header rows they would be another argument: the item stays YAML)
-  expect_false(any(sh$table$col_header$output_id %in% "T-1"))
-  expect_identical(names(trc_rest(sh)[[1L]]$args), "lines")
-  r <- trc_trip(d, sh)
-  expect_identical(trc_args(r$to, "plan_col_header"), trc_args(d, "plan_col_header"))
-  trc_same(trc_pages(d, ard), trc_pages(r$to, ard))
+  expect_identical(trc_col(sh, "col_header", "span"), rep("each", 4))
+  trc_same(trc_pages(d, ard), trc_pages(trc_trip(d, sh)$to, ard))
 })
 
 test_that("a cell edited after writing takes effect", {
@@ -306,12 +328,8 @@ test_that("a cell edited after writing takes effect", {
   expect_identical(trc_args(r$to, "plan_labels")[[1L]]$variable$BMIBL, "Body mass index")
   expect_identical(trc_args(r$to, "plan_labels")[[1L]]$AGE, "Age at baseline")
   expect_true(any(grepl("Body mass index", unlist(lapply(as.data.frame(trc_pages(r$to, ard)[[1L]]$data), as.character)), fixed = TRUE)))
-  # a header cell (header rows: what the col_header sheet says)
-  d <- trc_study(list(trc_head, tfl_item("plan_col_header", list(header = list(
-    list(line = "1", cols = "group"), list(line = "1", cols = "label"),
-    list(line = "1", cols = ".values", text = "Treatment"),
-    list(line = "2", cols = "group"), list(line = "2", cols = "label", text = "Parameter"),
-    list(line = "2", cols = ".values", text = "{col}"))))))
+  # a header cell and its span
+  d <- trc_study(trc_cases$lines_span$content)
   sh <- tfl_sheets_from_yaml(d)
   h <- sh$table$col_header
   h$text[h$output_id %in% "T-1" & h$line %in% "1" & h$cols %in% ".values"] <- "Arm"
@@ -413,11 +431,16 @@ test_that("two calls: the bridge gives the second's rest, and the reader puts th
   lb <- Filter(function(it) identical(it$fn, "plan_labels"), sp2)
   expect_length(lb, 1L)
   expect_identical(names(lb[[1L]]$args), c("variable", "AGE"))
-  # a name both have: separate, in order, the later one winning as written
+  # a name both have is one argument: the sheets' value (the grid's edit)
+  # is used, and that is said
   tb2 <- data.frame(output_id = "T-1", content_more = tflspec:::.sheet_more_out(
     list(tfl_item("plan_labels", list(variable = list(AGE = "x")))), items = TRUE))
   sp3 <- tflspec:::.plan_content_more(tflspec:::.plan_content_items(sp), tb2)
-  expect_identical(sum(vapply(sp3, function(it) identical(it$fn, "plan_labels"), NA)), 2L)
+  lb3 <- Filter(function(it) identical(it$fn, "plan_labels"), sp3)
+  expect_length(lb3, 1L)
+  expect_identical(lb3[[1L]]$args$variable$AGE, "Age (years)")
+  expect_match(attr(sp3, "content_more_said"), "plan_labels(variable): on the sheets and in content_more",
+               fixed = TRUE)
   # `variable` is never split: a heading twice inside it sends the item whole
   sp4 <- tflspec:::.plan_sheets_from_content(list(
     tfl_item("plan_labels", list(AGE = "Age at baseline", variable = list(AGE = "Age (years)", BMIBL = "BMI")))), "T-1")

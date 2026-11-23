@@ -591,13 +591,13 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 # kinds, the contexts, `default`) as they come; stats / value / na after.
 # A layered content has the study default's keys first, which the sheets
 # give after the table's own variables.
-.content_cells_order <- function(content, fns) {
+.content_cells_order <- function(content, fns, bridge = .plan_sheets_from_content) {
   i <- which(fns == "plan_cells")
   if (length(i) != 1L) return(content)
   args <- content[[i]]$args
   nm <- names(args)
   if (is.null(nm) || length(args) < 2L) return(content)
-  sh <- tryCatch(.plan_sheets_from_content(content), error = function(e) NULL)
+  sh <- tryCatch(bridge(content), error = function(e) NULL)
   v <- sh$variables
   ord <- if (is.data.frame(v) && nrow(v)) {
     if ("order" %in% names(v) && any(!is.na(v$order))) {
@@ -751,28 +751,48 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 .plan_content_more <- function(items, tables) {
   if (!is.data.frame(tables) || !"content_more" %in% names(tables)) return(items)
   more <- do.call(c, c(list(list()), lapply(tables$content_more, .sheet_more_in, items = TRUE)))
+  # (a report's data steps the planner row cannot hold are the converter's,
+  # not an item; an argument marked `!sheet` is the sheets' item's, read in
+  # its own form, .sheet_marks_take())
+  more <- Filter(function(it) !identical(it$fn, "rework"), more)
+  if (!length(more)) return(items)
+  mk <- .sheet_marks_take(items, more)
+  items <- mk$items
+  more <- mk$more
   if (!length(more)) return(items)
   if (any(vapply(more, function(it) identical(it$fn, "table_plan"), NA))) {
     items <- Filter(function(it) !identical(it$fn, "table_plan"), items)
   }
   # (a verb's rest -- what its columns could not say -- is put with the
   # sheets' item of that verb: one item, as it was written.  Not a verb
-  # whose items are layers of their own, plan_filter() ...)
+  # whose items are layers of their own, plan_filter() ...  An argument on
+  # both sides is one argument: the sheets' value, the grid's edit, is
+  # used, and that is said)
+  said <- character()
+  named <- function(a) length(a) && !is.null(names(a)) && all(nzchar(names(a)))
   fns <- unique(vapply(more, function(it) it$fn, ""))
   for (fn in setdiff(fns, c(.plan_repeat_kept, "table_plan", "normalize_ard"))) {
     im <- which(vapply(more, function(it) identical(it$fn, fn), NA))
     ix <- which(vapply(items, function(it) identical(it$fn, fn), NA))
-    if (length(im) == 1L && length(ix) == 1L &&
-        !length(intersect(names(items[[ix]]$args), names(more[[im]]$args)))) {
-      items[[ix]]$args <- c(items[[ix]]$args, more[[im]]$args)
-      more <- more[-im]
+    if (length(im) != 1L || length(ix) != 1L) next
+    a <- items[[ix]]$args
+    r <- more[[im]]$args
+    both <- intersect(names(a), names(r))
+    if (length(both) && !(named(a) && named(r))) next
+    if (length(both)) {
+      said <- c(said, sprintf("%s(%s): on the sheets and in content_more; the sheets' value is used",
+                              fn, paste(both, collapse = ", ")))
     }
+    items[[ix]]$args <- c(a, r[!names(r) %in% both])
+    more <- more[-im]
   }
   for (it in more) items <- .insert_by_rank(items, it)
   # (a normalize_ard() there is the table's own, the tables row's overall_label /
   # stack cells on it: tfl_table_code(), the YAML converter and the
   # app's reading of the sheets all come through here)
-  .table_plan_first(.nz_with_row(items, tables))
+  out <- .table_plan_first(.nz_with_row(items, tables))
+  if (length(said)) attr(out, "content_more_said") <- said
+  out
 }
 
 # A call as the program writes it: an argument the schema marks
@@ -992,8 +1012,8 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   # the key columns the plan makes (a stack's pair, the statistics' groups):
   # their values' labels are the report's code list rows
   own <- ".stat_group"
-  for (it in items) if (identical(it$fn, "normalize_ard") && length(it$args$stack)) {
-    own <- c(own, names(it$args$stack), paste0(names(it$args$stack), "_level"))
+  for (it in items) if (identical(it$fn, "normalize_ard") && length(it$args[["stack"]])) {
+    own <- c(own, names(it$args[["stack"]]), paste0(names(it$args[["stack"]]), "_level"))
   }
   items <- Filter(function(it) !identical(it$fn, "normalize_ard"), items)
   codes <- list()
@@ -1248,7 +1268,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
         r <- named
         if (!is.null(r$where)) r$where <- if (inherits(r$where, "tfl_spec_formula")) r$where$text
                                          else paste(deparse(r$where), collapse = " ")
-        if (!is.null(r$border)) { miss(fn, "border"); r$border <- NULL }
+        if (!is.null(r[["border"]])) { miss(fn, "border"); r[["border"]] <- NULL }
         cstyles[[length(cstyles) + 1L]] <- r
       },
       plan_hide = {

@@ -97,6 +97,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
   tparam_rows <- list()
   tmap_rows <- list()
   bridge <- .bridge_fn(".plan_sheets_from_content")
+  if (!is.null(bridge)) bridge <- .bridge_cached(bridge)
   nc <- list()
   note <- function(output, part, reason) nc[[length(nc) + 1L]] <<- data.frame(
     output = .na_scalar(output), part = part, reason = reason, stringsAsFactors = FALSE)
@@ -128,8 +129,9 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     # each item on the sheets, read back and compared: what does not come
     # back as written goes, as YAML, in the tables row's content_more --
     # the item's rest, or the item whole -- never on both (#448, #689)
-    said <- .sheets_said(items, nz, id, bridge)
+    said <- .sheets_said(items, nz, id, bridge, study = if (is.na(id)) study_sheet)
     sp <- said$sp
+    if (is.na(id)) def_study <<- sp$study
     more <- c(more, said$more)
     if (length(more)) more_rows[[key]] <<- more
     for (sh in names(sp)) {
@@ -146,9 +148,39 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       warning(sprintf("%s: %s", if (is.na(id)) "defaults" else id, x), call. = FALSE)
     }
   }
+  # the study sheet: study.yml's settings (a report's file and program are
+  # the report sheet's), and what the defaults' content says of the study
+  # (plan_digits(rounding = )), which wins as it does in the plan
+  # (.study_rounding()): the sheets the defaults are read back from
+  settings <- s$study$settings %||% list()
+  study_sheet <- function(from_bridge) {
+    st <- settings[setdiff(names(settings), c("file", "program"))]
+    st <- data.frame(key = as.character(names(st)), value = vapply(st, cell, ""), stringsAsFactors = FALSE)
+    if (is.data.frame(from_bridge) && nrow(from_bridge)) {
+      for (k in seq_len(nrow(from_bridge))) {
+        i <- match(from_bridge$key[k], st$key)
+        if (is.na(i)) i <- nrow(st) + 1L
+        st[i, c("key", "value")] <- list(from_bridge$key[k], as.character(from_bridge$value[k]))
+      }
+    }
+    rownames(st) <- NULL
+    st
+  }
+  def_study <- NULL
   norm_rows <- list()
   more_rows <- list()
+  steps_more <- list()
   table_rows(s$defaults$content, NA_character_)
+  if (is.data.frame(def_study) && nrow(def_study)) {
+    for (k in seq_len(nrow(def_study))) {
+      v <- settings[[def_study$key[k]]]
+      if (!is.null(v) && !identical(cell(v), as.character(def_study$value[k]))) {
+        note(NA_character_, "study", sprintf(paste0(
+          "settings %s: %s; the defaults' content says %s, which the study uses: the study sheet ",
+          "holds %s"), def_study$key[k], cell(v), def_study$value[k], def_study$value[k]))
+      }
+    }
+  }
   # (a pattern has rows of the report and page sheets only -- no tables row
   # -- so its content cannot be put on the sheets: said, by pattern, #689)
   for (nm in names(s$patterns)) {
@@ -316,10 +348,18 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     o <- outs[[id]]
     e <- toc_index[[id]] %||% list()
     tpl <- .tpl_spec_of(o)
+    # (a table's or listing's steps: R in process_code; a step that is not
+    # R, all of them as YAML in its content_more, the cell blank)
+    tl <- o$kind %in% c("table", "listing")
+    pcode <- if (tl) .steps_cell(o$data$steps) else .first_r_step(o$data$steps)
+    if (tl && is.na(pcode) && length(o$data$steps)) {
+      steps_more[[id]] <- tfl_item("rework", list(steps = .data_steps_in(o$data)$steps))
+      note(id, "data", paste0("data.steps: a step that is not R, which process_code (R) cannot hold: ",
+                              "the steps are kept whole in content_more (YAML)"))
+    }
     planner[[length(planner) + 1L]] <- list(
       output_id = id, description = cell(e$label %||% o$label), setup_code = NA_character_,
-      process_code = if (o$kind %in% c("table", "listing")) .steps_cell(o$data$steps) else
-        .first_r_step(o$data$steps),
+      process_code = pcode,
       section = cell(e$section), population = cell(e$population %||% .out_population(o)),
       datasets = cell(e$datasets %||% .records_dataset(o)), batches = cell(e$sets))
     if (!is.null(.records_dataset(o)) && !is.null(o$data$where)) {
@@ -484,6 +524,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
           lr$max_rows <- cell(a$max_rows)
         } else more <- c(more, list(it))
       }
+      if (!is.null(steps_more[[id]])) more <- c(more, list(steps_more[[id]]))
       if (length(more)) lr$content_more <- .sheet_more_out(more, items = TRUE)
       listings[[length(listings) + 1L]] <- lr
     } else if (o$kind == "figure" && .fig_new_content(o$content)) {
@@ -556,12 +597,11 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
 
   # the table and report sheets as data frames (the study sheet from study.yml's settings)
   table <- list()
-  settings <- s$study$settings %||% list()
   # every report's file and program go back to the report sheet's study row
   fp <- settings[intersect(c("file", "program"), names(settings))]
-  # (the default style is the default rows' page configuration; its name stays a study row)
-  settings <- settings[setdiff(names(settings), c("file", "program"))]
-  table$study <- data.frame(key = as.character(names(settings)), value = vapply(settings, cell, ""), stringsAsFactors = FALSE)
+  # (the default style is the default rows' page configuration; its name
+  # stays a study row; the defaults' rounding is the study's, study_sheet())
+  table$study <- study_sheet(def_study)
   for (sh in c(names(.ard_spec_schema()), .ard_spec_pattern_sheets)) {
     table[[sh]] <- .rows_df(rows[[sh]] %||% list(), c("output_id", setdiff(.sheet_columns(sh), "output_id")))
   }
@@ -597,31 +637,35 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     i <- match(id, tb$output_id)
     if (is.na(i)) { tb[nrow(tb) + 1L, ] <- NA; i <- nrow(tb); tb$output_id[i] <- id }
     put <- function(col, v) { if (!col %in% names(tb)) tb[[col]] <<- NA_character_; tb[[col]][i] <<- v }
-    if (!is.null(a$overall)) put("overall_label", as.character(a$overall))
-    if (!is.null(a$stack)) {
-      put("stack", paste(vapply(names(a$stack), function(n) {
-        v <- a$stack[[n]]
+    if (!is.null(a[["overall"]])) put("overall_label", as.character(a[["overall"]]))
+    if (!is.null(a[["stack"]])) {
+      put("stack", paste(vapply(names(a[["stack"]]), function(n) {
+        v <- a[["stack"]][[n]]
         parts <- if (is.list(v)) vapply(v, function(p) paste(unlist(p), collapse = " * "), "") else v
         paste0(n, " = ", paste(parts, collapse = ", "))
       }, ""), collapse = " | "))
-      if (!is.null(a$stack_sep)) put("stack_sep", encodeString(as.character(a$stack_sep), quote = "\""))
-      if (isTRUE(a$stack_nest)) put("stack_nest", "TRUE")
+      if (!is.null(a[["stack_sep"]])) put("stack_sep", encodeString(as.character(a[["stack_sep"]]), quote = "\""))
+      if (isTRUE(a[["stack_nest"]])) put("stack_nest", "TRUE")
     }
     table$tables <- tb
     got <- tryCatch(.conv_normalize_args(list(tables = tb), ard, id), error = function(e) NULL)
     # (an overall runs only with a hierarchy: one a card leaves to the ARD is the
     # one read back; a stack alone runs without, so its missing hierarchy means something)
-    if (!is.null(got) && !is.null(a$overall) && is.null(a$hierarchy) && !is.null(got$hierarchy)) {
-      a$hierarchy <- got$hierarchy
+    if (!is.null(got) && !is.null(a[["overall"]]) && is.null(a[["hierarchy"]]) && !is.null(got[["hierarchy"]])) {
+      a[["hierarchy"]] <- got[["hierarchy"]]
     }
     # (nothing read back: the report's normalize_ard() with no arguments is
     # not made again from the row, so it is kept as it is)
     if (is.null(got) || !length(got) || !identical(.nz_canon(got), .nz_canon(a))) {
       # (a stack_sep / stack_nest with no stack: the row cannot say it)
-      on_row <- c("overall", "stack", if (!is.null(a$stack)) c("stack_sep", "stack_nest"))
+      on_row <- c("overall", "stack", if (!is.null(a[["stack"]])) c("stack_sep", "stack_nest"))
       rest <- a[setdiff(names(a), on_row)]
       more_rows[[id]] <- c(list(tfl_item("normalize_ard", rest)), more_rows[[id]])
     }
+  }
+  # (a table's data steps that are not all R: with its items)
+  for (id in names(steps_more)) {
+    if (identical(outs[[id]]$kind, "table")) more_rows[[id]] <- c(more_rows[[id]], list(steps_more[[id]]))
   }
   # a table's items the sheets cannot say on its tables row (content_more)
   for (key in names(more_rows)) {
@@ -786,25 +830,33 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
   NA_character_
 }
 
-# A table's or listing's data steps in the planner sheet's process_code: one
-# `!r` step as its R text; any other steps (two or more, or a step that is
-# not R) as their YAML, a sequence (`- !r ...`), which is no R code
-# -- read back by .steps_from_cell(), every step as it was (#689)
+# A table's or listing's data steps in the planner sheet's process_code, R
+# that tflplanner pastes into the program and edits as R: one `!r` step as
+# its text; several, their texts with a separator line between them (a
+# comment, .steps_sep), which .steps_from_cell() splits on -- every step
+# as it was (#689).  NA when a step is not R (the caller keeps the steps
+# whole in content_more).
+.steps_sep <- "# ---- step ----"
 .steps_cell <- function(steps) {
-  if (!length(steps)) return(NA_character_)
-  if (length(steps) == 1L && inherits(steps[[1L]], "tfl_r")) return(as.character(steps[[1L]]))
-  .sheet_more_out(unname(as.list(steps)), items = FALSE)
+  steps <- .data_steps_in(list(steps = steps))$steps
+  if (!length(steps) || !all(vapply(steps, inherits, NA, "tfl_r"))) return(NA_character_)
+  paste(vapply(steps, as.character, ""), collapse = paste0("\n", .steps_sep, "\n"))
 }
 .steps_from_cell <- function(txt) {
   txt <- gsub("\r\n?", "\n", txt)
-  if (grepl("^- ", txt)) {
-    y <- tryCatch(.sheet_more_in(txt), error = function(e) NULL)
-    if (is.list(y) && is.null(names(y)) && length(y) &&
-        all(vapply(y, function(e) inherits(e, "tfl_r") || is.list(e), NA))) {
-      return(y)
-    }
-  }
-  list(tfl_r(txt))
+  l <- strsplit(txt, "\n", fixed = TRUE)[[1L]]
+  at <- trimws(l) == .steps_sep
+  if (!any(at)) return(list(tfl_r(txt)))
+  k <- cumsum(at)
+  st <- lapply(split(l[!at], k[!at]), function(x) paste(x, collapse = "\n"))
+  unname(lapply(Filter(function(x) nzchar(trimws(x)), st), tfl_r))
+}
+# The steps content_more keeps (`- rework: {steps: [...]}`), NULL when none
+.steps_from_more <- function(txt) {
+  if (!length(txt)) return(NULL)
+  more <- do.call(c, c(list(list()), lapply(txt, .sheet_more_in, items = TRUE)))
+  for (it in more) if (identical(it$fn, "rework") && length(it$args$steps)) return(it$args$steps)
+  NULL
 }
 
 .page_known <- c("header", "footer", "titles", "footnotes", "tokens", "page", "report",

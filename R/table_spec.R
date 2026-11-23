@@ -312,6 +312,20 @@
 # never applies -- except `note`, which is there for people.
 .ard_spec_sheet <- function(d, sheet) {
   allowed <- .ard_spec_schema()[[sheet]]
+  # (an empty sheet, as it always reads: made once a session)
+  if (is.null(d) || (is.data.frame(d) && !nrow(d) && all(names(d) %in% allowed))) {
+    key <- paste(c(sheet, allowed), collapse = "\r")
+    got <- .ard_spec_sheet_empty[[key]]
+    if (is.null(got)) {
+      got <- .ard_spec_sheet_read(NULL, sheet, allowed)
+      assign(key, got, envir = .ard_spec_sheet_empty)
+    }
+    return(got)
+  }
+  .ard_spec_sheet_read(d, sheet, allowed)
+}
+.ard_spec_sheet_empty <- new.env(parent = emptyenv())
+.ard_spec_sheet_read <- function(d, sheet, allowed) {
   if (is.null(d)) d <- data.frame()
   d <- as.data.frame(d, stringsAsFactors = FALSE, check.names = FALSE)
   names(d) <- trimws(names(d))
@@ -906,7 +920,8 @@ tfl_table_spec <- function(tables = NULL, variables = NULL, cells = NULL,
 # what its column takes is one problem.
 .table_spec_problems <- function(args) {
   pr <- list()
-  put <- function(p) pr[[length(pr) + 1L]] <<- p
+  # (a check with no problem adds no rows)
+  put <- function(p) if (NROW(p)) pr[[length(pr) + 1L]] <<- p
   keyed <- function(p, d, sheet) put(.spec_problems_keyed(p, d, sheet))
   sheets <- c("study", names(.ard_spec_schema()))
   bad <- setdiff(names(args), sheets)

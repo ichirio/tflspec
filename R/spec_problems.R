@@ -15,9 +15,13 @@
 # One problem; `i` (a check's own row index) is mapped to the row's key by
 # .spec_problems_keyed()
 .pb <- function(message, i = NA_integer_, field = "") {
+  # (no problem: the empty rows, made once -- a definition is checked often)
+  if (!length(message)) return(.pb_empty)
   data.frame(i = as.integer(i), field = field, message = message,
              stringsAsFactors = FALSE)
 }
+.pb_empty <- data.frame(i = integer(), field = character(), message = character(),
+                        stringsAsFactors = FALSE)
 
 .pb_none <- function() .pb(character(), integer(), character())
 
@@ -43,11 +47,10 @@
              message = p$message, stringsAsFactors = FALSE)
 }
 
-.spec_problems_empty <- function() {
-  data.frame(output_id = character(), sheet = character(), row = character(),
-             field = character(), message = character(),
-             stringsAsFactors = FALSE)
-}
+.spec_problems_empty <- function() .spec_problems_none
+.spec_problems_none <- data.frame(output_id = character(), sheet = character(), row = character(),
+                                  field = character(), message = character(),
+                                  stringsAsFactors = FALSE)
 
 .spec_problem <- function(message, sheet = "", output_id = NA_character_,
                           row = "", field = "") {

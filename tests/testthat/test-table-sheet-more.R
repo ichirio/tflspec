@@ -102,9 +102,12 @@ test_that("a table the sheets say whole: no content_more, as before", {
   d <- tsm_study()
   sh <- tfl_sheets_from_yaml(d)
   tb <- sh$table$tables
-  # (the report's row; the sample's defaults write their header `lines` and
-  # plan_labels(AGE = ) in a form the sheets give back otherwise: kept as YAML)
-  expect_true(is.null(tb$content_more) || all(is.na(tb$content_more[tb$output_id %in% "T-14-1-1"])))
+  # (the report's row has none; the defaults' header `lines` are on the
+  # col_header sheet, which gives them back as header rows: content_more
+  # holds only its mark, the value is the grid's)
+  expect_true(all(is.na(tb$content_more[tb$output_id %in% "T-14-1-1"])))
+  expect_identical(tb$content_more[is.na(tb$output_id)], "- plan_col_header:\n    lines: !sheet ''")
+  expect_identical(nrow(sh$table$col_header), 4L)
   back <- tfl_read_outputs(tsm_back(sh))[["T-14-1-1"]]
   expect_identical(tsm_key(back$content), tsm_key(tfl_read_outputs(d)[["T-14-1-1"]]$content))
 })
@@ -338,9 +341,10 @@ test_that("two plan_labels items naming a heading twice: the second stays whole"
   expect_identical(labs[[1L]]$args$variable$RESP, "Response rate")
   expect_setequal(t689_items(r$to), t689_items(d))
   expect_identical(t689_code(r$to), t689_code(d))
-  # two items naming different variables are put together by the reader; as
-  # plan_labels(variable = ) they are on the sheets, as plan_labels(AGE = )
-  # (read back as `variable`, another argument) they stay as written
+  # two items naming different variables are put together by the reader and
+  # are on the sheets: as plan_labels(variable = ), and as plan_labels(AGE = )
+  # (read back as `variable`: content_more marks them, `AGE: !sheet`, and
+  # the reader gives them back as written)
   content2 <- c(t689_head, list(tfl_item("plan_labels", list(variable = list(AGE = "Age (y)"))),
                                 tfl_item("plan_labels", list(variable = list(SEX = "Sex")))))
   r2 <- t689_trip(t689_study(content2))
@@ -350,8 +354,11 @@ test_that("two plan_labels items naming a heading twice: the second stays whole"
                                 tfl_item("plan_labels", list(SEX = "Sex"))))
   d3 <- t689_study(content3)
   r3 <- t689_trip(d3)
-  expect_match(r3$sh$table$tables$content_more[r3$sh$table$tables$output_id %in% "T-1"],
-               "AGE: Age (y)", fixed = TRUE)
+  v3 <- r3$sh$table$variables
+  expect_identical(v3$label[v3$output_id %in% "T-1"], c("Age (y)", "Sex"))
+  cm3 <- r3$sh$table$tables$content_more[r3$sh$table$tables$output_id %in% "T-1"]
+  expect_false(grepl("Age (y)", cm3, fixed = TRUE))
+  expect_match(cm3, "AGE: !sheet", fixed = TRUE)
   expect_setequal(t689_items(r3$to), t689_items(d3))
   expect_identical(t689_code(r3$to), t689_code(d3))
 })
