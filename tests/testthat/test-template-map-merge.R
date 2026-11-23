@@ -98,6 +98,33 @@ test_that("two series in one study: each report gets its own series' digits", {
   # the name each report writes, and its own series for the rest
   expect_identical(a, list(N = 0L, mean = 3L, sd = 3L, min = 0L))
   expect_identical(b, list(N = 0L, mean = 1L, sd = 4L, min = 1L))
+  # the other order, and a report of each series that writes no formats
+  b2 <- attr(tfl_template_resolve(r2, study = st), "args")$formats
+  a2 <- attr(tfl_template_resolve(mm_demog(c("    formats: {mean: 3}")), study = st), "args")$formats
+  expect_identical(a2, a)
+  expect_identical(b2, b)
+  u2 <- mm_demog()
+  u2$template$name <- "tflspec_v2/demog"
+  expect_identical(attr(tfl_template_resolve(u2, study = st), "args")$formats,
+                   list(N = 0L, mean = 1L, sd = 2L, min = 1L))
+  expect_identical(attr(tfl_template_resolve(mm_demog(), study = st), "args")$formats,
+                   list(N = 0L, mean = 2L, sd = 3L, min = 0L))
+})
+
+test_that("a name removed with !unset takes the catalog's format in the ARD call", {
+  root <- tempfile("mm")
+  dir.create(root)
+  on.exit(unlink(root, recursive = TRUE), add = TRUE)
+  st <- mm_study(root, v1_formats = list(N = 0L, mean = 2L, sd = 3L))
+  f <- attr(tfl_template_resolve(mm_demog(c("    formats: {sd: !unset}")), study = st),
+            "args")$formats
+  expect_identical(f, list(N = 0L, mean = 2L))
+  # the call starts from fmt_default (the catalog's formats) and names only
+  # what the report's map has, so sd is the catalog's
+  call <- paste(unlist(tflspec:::.fmt_fun_arg(f, "AGE")), collapse = " ")
+  expect_match(call, "fmt_default", fixed = TRUE)
+  expect_match(call, "mean = 2L", fixed = TRUE)
+  expect_false(grepl("sd =", call, fixed = TRUE))
 })
 
 test_that("a list argument is still replaced whole", {
