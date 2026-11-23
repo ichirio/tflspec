@@ -128,6 +128,7 @@ params:
   analysis_ids:
     type: map<string,string>
     input: table
+    columns: {key: {label: {en: "Value", ja: "値"}}, value: {label: {en: "Analysis ID", ja: "解析 ID"}}}
     choices: fixed
     default: ~
     step: analysis
@@ -137,15 +138,18 @@ params:
   formats:
     type: map<string,number|string>
     input: table
+    columns: {key: {label: {en: "Statistic", ja: "統計量"}}, value: {label: {en: "Format", ja: "書式"}}}
     choices: stats
     free: true
     default: !series formats
     step: analysis
     tier: usual
     description: The decimals (or the format) of each statistic.
+      A report's names go over the series' formats; `!unset` removes one.
   value_labels:
     type: map<column,map<string,string>>
     input: table
+    columns: {key: {label: {en: "Variable", ja: "変数"}}, value: {label: {en: "Value labels", ja: "値のラベル"}, columns: {key: {label: {en: "Code", ja: "コード"}}, value: {label: {en: "Label", ja: "ラベル"}}}}}
     choices: vars(rec_sub)
     default: ~
     step: content

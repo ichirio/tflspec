@@ -57,11 +57,11 @@ params:
     type: rows<vars,label,width,collapse_repeats>
     input: table
     columns:
-      vars: {type: list<column>, input: pick, choices: vars(lst_sub), ordered: true,
+      vars: {label: {en: "Variables", ja: "変数"}, type: list<column>, input: pick, choices: vars(lst_sub), ordered: true,
              required: true, description: The variables of the column, stacked in the cell.}
-      label: {type: string, input: text, description: The column's heading; empty for the variables' names.}
-      width: {type: number, input: text, description: The most characters a line of the column holds.}
-      collapse_repeats: {type: logical, input: pick, description: A value printed once while it repeats (a subject's id).}
+      label: {label: {en: "Label", ja: "ラベル"}, type: string, input: text, description: The column's heading; empty for the variables' names.}
+      width: {label: {en: "Width", ja: "幅"}, type: number, input: text, description: The most characters a line of the column holds.}
+      collapse_repeats: {label: {en: "Print repeats once", ja: "繰り返しは 1 回だけ"}, type: logical, input: pick, description: A value printed once while it repeats (a subject's id).}
     required: true
     step: content
     tier: required
@@ -110,6 +110,7 @@ params:
   formats:
     type: map<string,number|string>
     input: table
+    columns: {key: {label: {en: "Statistic", ja: "統計量"}}, value: {label: {en: "Format", ja: "書式"}}}
     choices: stats
     free: true
     default: !series formats
@@ -117,6 +118,7 @@ params:
     tier: other
     description: The decimals (or the format) of each statistic (a listing counts
       nothing; kept as every template has it).
+      A report's names go over the series' formats; `!unset` removes one.
 extends: !series extends
 style: !series style_listing
 derive:

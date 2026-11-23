@@ -65,9 +65,9 @@ test_that("tfl_check_spec() gives the note, not an error", {
   haven::write_xpt(tflspec:::.ai_chr(tflspec::adsl), file.path(d, "adam", "adsl.xpt"))
   tfl_ai_study_init(d, adam = "adam", study_id = "CS-1")
   o <- tfl_output("T-AGE", "table", common = list(population = "SAF"), label = "Age",
-    ard = list(analysis_data = list(list(id = "adsl_saf", from = "ADSL", population = "SAF",
+    ard = list(analysis_data = list(list(id = "adsl_sub", from = "ADSL", population = "SAF",
                                          where = "TRT01A != \"\"")),
-               analyses = list(list(id = "AGE", method = "cards::ard_summary", data = "adsl_saf",
+               analyses = list(list(id = "AGE", method = "cards::ard_summary", data = "adsl_sub",
                                     by = "TRT01A", variables = "AGE"))),
     content = list(tfl_item("table_plan", list(cols = "TRT01A"))))
   tfl_write_output(o, file.path(d, "spec", "outputs", "T-AGE.yml"))

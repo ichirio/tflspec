@@ -191,6 +191,7 @@ reference:
       - tfl_schema_help
       - tfl_content_code
       - tfl_content_run
+      - tfl_bign_values
       - tfl_convert_sheets_to_yaml
       - tfl_write_spec_xlsx
       - tfl_import_spec_xlsx
@@ -271,12 +272,15 @@ reference:
   - title: Template SPEC, series
     desc: >
       A series is a versioned folder of template SPECs (`tflspec_v1`, ...)
-      with its common values in `series.yml`.  A study changes them in
-      `study.yml` `series_settings:` and pins the files its reports use in
-      `spec/series.lock`.
+      with its common values in `series.yml`.  A study copies the series and
+      the templates its reports use into `spec/series/<series>/`, reads only
+      its copy and changes it there; a source's changes are copied again only
+      for the templates chosen.
     contents:
       - tfl_series_dir
-      - tfl_pin_series
+      - tfl_series_list
+      - tfl_copy_templates
+      - tfl_series_values_set
   - title: Template SPEC, a template's help
     desc: >
       A template's parameters by tier (required, usual, other): the value

@@ -56,6 +56,7 @@ shb_tpl <- c("  analysis:", "    by: [TRT01A]")
 shb_run <- function(d, id, lines, rtf = TRUE) {
   f <- file.path(d, "spec", "outputs", paste0(id, ".yml"))
   writeLines(lines, f)
+  invisible(tfl_copy_templates(d))
   st <- tfl_read_study_spec(d)
   tfl_write_output(tfl_template_to_spec(tfl_read_output(f), st), f)
   st <- tfl_read_study_spec(d)
@@ -164,6 +165,27 @@ test_that("tflspec_shift: the Total row and column, on and off, and their calls"
   # the corner: the subjects of a parameter in each group
   expect_gt(sum(both$ard$analysis_id %in% c("ALT", "HGB") & both$ard$variable == "PARAMCD"), 0L)
   expect_true(file.exists(both$rtf))
+  # rtfreporter#1103: BIGN's rows are not the table's (tflspec hands their N
+  # to the header apart): a page a parameter and no page of BIGN's own
+  # ("group_0"), the header's N each group's, the Total column the last
+  # under each group
+  x <- paste(readLines(both$rtf, warn = FALSE), collapse = "\n")
+  expect_false(grepl("group_0", x, fixed = TRUE))
+  expect_false(grepl("N=NA", x, fixed = TRUE))
+  big <- tflspec::adsl[tflspec::adsl$SAFFL %in% "Y", ]
+  for (arm in unique(as.character(big$TRT01A))) {
+    expect_true(grepl(sprintf("N=%d", sum(big$TRT01A %in% arm)), x, fixed = TRUE), info = arm)
+  }
+  old <- setwd(d)
+  on.exit(setwd(old), add = TRUE, after = FALSE)
+  pages <- rtfreporter::plan_apply(tflspec:::.output_build_content(tfl_read_outputs(d)[["S-2"]],
+                                                                   tfl_read_study_spec(d)))
+  expect_length(pages, 2L)
+  expect_false(any(grepl("group_0", names(pages), fixed = TRUE)))
+  cols <- names(pages[[1L]]$data)
+  last <- vapply(split(cols, sub("____.*$", "", cols)), function(v) v[length(v)], "")
+  last <- last[grepl("____", last)]
+  expect_true(length(last) > 0L && all(grepl("____Total$", last)), info = paste(cols, collapse = " | "))
   none <- shb_run(d, "S-3", shb_report("S-3", c(shb_tpl, "    baseline_total: false")), rtf = FALSE)
   expect_false(any(none$ard$variable == "ANRIND"))
 })

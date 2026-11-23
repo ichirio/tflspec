@@ -117,7 +117,7 @@ ssc_sheets <- function(rounding = NULL) {
     datasets = data.frame(dataset = c("ADAE", "ADSL"), path = c("adae.rds", "adsl.rds"),
                           derive = c("AEDUR = AENDY - ASTDY + 1", NA)),
     populations = data.frame(population_id = "SAF", dataset = "ADSL", where = "SAFFL == \"Y\""),
-    analysis_data = data.frame(output_id = "F-1", data_id = "adae_saf", from = "ADAE",
+    analysis_data = data.frame(output_id = "F-1", data_id = "adae_sub", from = "ADAE",
                                population_id = "SAF"),
     analyses = data.frame(output_id = "T-1", analysis_id = "A1", method = "categorical",
                           dataset = "ADSL", population_id = "SAF", by = "TRT01A",
@@ -136,7 +136,7 @@ ssc_has <- function(code, lines) {
 
 # the lines of a study with no code lists and no adam_meta, the adam_org lines given
 ssc_no_lists <- function(...) {
-  c("# ADaM levels: codelists", "",
+  c("# ADaM levels: define_xml", "",
     "study <- list(adam_org = new.env(), adam = new.env())", "",
     "# the study's code lists, by name (spec/defaults.yml codelists:)",
     "study$codelists <- list()", "",
@@ -186,12 +186,17 @@ test_that("tfl_study_setup_code() reads the study's datasets: the YAML study", {
 })
 
 test_that("tfl_study_setup_code() reads the study's datasets: the sheets", {
-  code <- tfl_study_setup_code(ssc_sheets())
+  # (the study sheet's key: levels from adam_meta, as the YAML example)
+  lv <- function(x) {
+    x$study <- rbind(x$study, data.frame(key = "adam_levels", value = "define_xml"))
+    x
+  }
+  code <- tfl_study_setup_code(lv(ssc_sheets()))
   expect_identical(code, ssc_no_lists(
     "delayedAssign(\"adsl\", readRDS(\"adsl.rds\"), assign.env = study$adam_org)",
     ssc_wrapped("adae", "readRDS(\"adae.rds\") |> dplyr::mutate(AEDUR = AENDY - ASTDY + 1)",
                 "study$adam_org")))
-  expect_identical(tfl_study_setup_code(ssc_sheets("r"))[-(3:5)], code)
+  expect_identical(tfl_study_setup_code(lv(ssc_sheets("r")))[-(3:5)], code)
   sp <- tfl_table_spec(
     tables = data.frame(output_id = "T1", cols = "TRT01A", stringsAsFactors = FALSE),
     study = data.frame(key = "id", value = "USUBJID", stringsAsFactors = FALSE))
@@ -218,7 +223,7 @@ test_that("tflspec.study_setup: ARD, listing and figure programs start from the 
   expect_false(any(grepl("^adsl <- adsl$", on$ard)))
   expect_true(any(grepl("^adae <- order_levels\\(adae", on$data)))
   expect_false(any(grepl("mutate(AEDUR", on$ard, fixed = TRUE)))
-  expect_true(any(grepl("^adae_saf <- ", on$data)))
+  expect_true(any(grepl("^adae_sub <- ", on$data)))
   expect_true(any(grepl("^data <- adae", on$listing)))
   expect_false(any(grepl("^adae <- ", on$listing)))
   # off again: as it was
@@ -290,7 +295,7 @@ ssc_eval <- function(code, path_adam = NULL) {
 test_that("the setup writes study$codelists, study$adam_meta and both environments", {
   code <- tfl_study_setup_code(ssc_lists_study())
   expect_identical(code[1:9], c(
-    "# ADaM levels: codelists", "",
+    "# ADaM levels: define_xml", "",
     "study <- list(adam_org = new.env(), adam = new.env())", "",
     "# the study's code lists, by name (spec/defaults.yml codelists:)",
     "study$codelists <- list(",
@@ -475,7 +480,7 @@ test_that("adam_codes(): one list's codes by order, then rank, then as the table
   expect_identical(.adam_codes(meta, "A"), env$adam_codes("A", meta))
 })
 
-# ---- settings: adam_levels (codelists | none) --------------------------------
+# ---- settings: adam_levels (define_xml | define_spec | none) ------------------
 
 ssc_levels_study <- function(value = NULL) {
   st <- ssc_lists_study()
@@ -483,11 +488,28 @@ ssc_levels_study <- function(value = NULL) {
   st
 }
 
-test_that("adam_levels: the setup says it first; codelists is the default", {
-  code <- tfl_study_setup_code(ssc_levels_study())
-  expect_identical(code[1L], "# ADaM levels: codelists")
-  expect_identical(tfl_study_setup_code(ssc_levels_study("codelists")), code)
+test_that("adam_levels: the setup says it first; none is the default; codelists stops", {
+  # (tflplanner#742, 2026-11-19: no levels until a file is chosen and applied)
+  none <- tfl_study_setup_code(ssc_levels_study())
+  expect_identical(none[1L], "# ADaM levels: none")
+  expect_identical(tfl_study_setup_code(ssc_levels_study("none")), none)
+  expect_false(any(grepl("set_levels", none, fixed = TRUE)))
+  code <- tfl_study_setup_code(ssc_levels_study("define_xml"))
+  expect_identical(code[1L], "# ADaM levels: define_xml")
   expect_true(any(grepl("set_levels(SEX = adam_codes(\"CL.SEX\")", code, fixed = TRUE)))
+  expect_true(any(grepl("adam_levels: define_xml)", code, fixed = TRUE)))
+  # define_spec: the same code but for the lines that name it
+  spec <- tfl_study_setup_code(ssc_levels_study("define_spec"))
+  expect_identical(spec[1L], "# ADaM levels: define_spec")
+  expect_identical(gsub("define_spec", "define_xml", spec, fixed = TRUE), code)
+  # the planner's record of the choice is read and changes nothing
+  st <- ssc_levels_study("define_xml")
+  st$study$settings$adam_levels_file <- "spec/adam_meta/define.yml"
+  st$study$settings$adam_levels_applied <- "2026-11-22 15:00:00"
+  expect_identical(tfl_study_setup_code(st), code)
+  # codelists (before 2026-11-22) is not another name
+  expect_error(tfl_study_setup_code(ssc_levels_study("codelists")),
+               "no longer applies levels: give define_xml or define_spec")
 })
 
 test_that("adam_levels: none -- the lists are written, study$adam is blank_as_na() only", {
@@ -514,7 +536,7 @@ test_that("adam_levels: none -- the lists are written, study$adam is blank_as_na
   expect_identical(tfl_study_setup_code(sp)[1L], "# ADaM levels: none")
   # another value stops
   expect_error(tfl_study_setup_code(ssc_levels_study("define")),
-               "adam_levels is codelists or none; got \"define\"")
+               "adam_levels is define_xml or define_spec or none; got \"define\"")
 })
 
 test_that("adam_levels: none -- the blanks are NA in study$adam all the same", {
@@ -545,11 +567,15 @@ test_that("adam_levels and adam_meta are part of the ARD's fingerprint", {
     x
   }
   h <- tfl_ard_spec_hash(sp, "T")
-  # codelists, the default, leaves it as it was; none changes it
-  expect_identical(tfl_ard_spec_hash(with_key("codelists"), "T"), h)
-  expect_false(identical(tfl_ard_spec_hash(with_key("none"), "T"), h))
-  expect_error(tfl_ard_spec_hash(with_key("x"), "T"), "codelists or none")
-  # the ARD's study sheet of a YAML study says none, and only none
+  # none, the default, leaves it as it was; levels change it -- the same
+  # for both files (their levels both come from adam_meta)
+  expect_identical(tfl_ard_spec_hash(with_key("none"), "T"), h)
+  expect_false(identical(tfl_ard_spec_hash(with_key("define_xml"), "T"), h))
+  expect_identical(tfl_ard_spec_hash(with_key("define_spec"), "T"),
+                   tfl_ard_spec_hash(with_key("define_xml"), "T"))
+  expect_error(tfl_ard_spec_hash(with_key("x"), "T"), "define_xml or define_spec or none")
+  expect_error(tfl_ard_spec_hash(with_key("codelists"), "T"), "no longer applies levels")
+  # the ARD's study sheet of a YAML study says the file, not none
   o <- tfl_output("T-9", "table", common = list(population = "SAF"),
                   content = list(tfl_item("table_plan", list(cols = "TRT01A"))))
   outs <- list(`T-9` = o)
@@ -558,14 +584,14 @@ test_that("adam_levels and adam_meta are part of the ARD's fingerprint", {
     s$value[s$key %in% "adam_levels"]
   }
   expect_identical(ard_key(ssc_levels_study()), character())
-  expect_identical(ard_key(ssc_levels_study("codelists")), character())
-  expect_identical(ard_key(ssc_levels_study("none")), "none")
+  expect_identical(ard_key(ssc_levels_study("none")), character())
+  expect_identical(ard_key(ssc_levels_study("define_xml")), "define_xml")
   # adam_meta: the variables of the datasets read and their codes count
   ds <- ssc_lists_study()
   meta <- ds$adam_meta
-  x <- sp
+  x <- with_key("define_xml")
   x$adam_meta <- .adam_meta_used(ds)
-  expect_false(identical(tfl_ard_spec_hash(x, "T"), h))
+  expect_false(identical(tfl_ard_spec_hash(x, "T"), tfl_ard_spec_hash(with_key("define_xml"), "T")))
   # a code in another order: another fingerprint
   y <- x
   y$adam_meta$codelists$order[y$adam_meta$codelists$codelist == "CL.SEX"] <- c(1L, 2L)
@@ -578,9 +604,10 @@ test_that("adam_levels and adam_meta are part of the ARD's fingerprint", {
   n1 <- with_key("none")
   n1$adam_meta <- x$adam_meta
   expect_identical(tfl_ard_spec_hash(n1, "T"), tfl_ard_spec_hash(with_key("none"), "T"))
-  # the study's ARD definition carries it under codelists only
+  # the study's ARD definition carries it under define_xml / define_spec only
   expect_null(.adam_meta_used(ssc_levels_study("none")))
-  expect_identical(.adam_meta_used(ssc_levels_study())$variables$variable, c("SEX", "RACE", "AESEV"))
+  expect_null(.adam_meta_used(ssc_levels_study()))
+  expect_identical(.adam_meta_used(ssc_levels_study("define_xml"))$variables$variable, c("SEX", "RACE", "AESEV"))
   expect_identical(meta$variables$variable, c("SEX", "RACE", "AESEV", "VSTESTCD"))
 })
 
@@ -589,20 +616,20 @@ test_that("adam_levels: none -- a report's own levels work, and so does a study 
   item <- function(...) tfl_item("table_plan", list(cols = "TRT01A"))
   # levels written as values, and the report's own list: fine
   own <- tfl_output("T-1", "table", common = list(population = "SAF"),
-                    data = list(list(id = "adsl_saf", from = "ADSL",
+                    data = list(list(id = "adsl_sub", from = "ADSL",
                                      derive = list(SEXF = "factor(SEX, levels = c(\"F\", \"M\"))"))),
                     content = list(item()))
   expect_no_error(tfl_resolve_output(own, st))
   mine <- tfl_output("T-2", "table", common = list(population = "SAF"),
                      codelists = list(SEX = c("F", "M")),
-                     data = list(list(id = "adsl_saf", from = "ADSL",
+                     data = list(list(id = "adsl_sub", from = "ADSL",
                                       derive = list(SEXF = "factor(SEX, levels = cl_sex)"))),
                      content = list(item()))
   expect_no_error(tfl_resolve_output(mine, st))
   # the study's list by name (study$codelists$SEX): no error, and the setup
   # writes study$codelists under none too
   named <- tfl_output("T-3", "table", common = list(population = "SAF"),
-                      data = list(list(id = "adsl_saf", from = "ADSL",
+                      data = list(list(id = "adsl_sub", from = "ADSL",
                                        derive = list(SEXF = "factor(SEX, levels = names(study$codelists$SEX))"))),
                       content = list(item()))
   expect_no_error(tfl_resolve_output(named, st))

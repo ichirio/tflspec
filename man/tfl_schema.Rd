@@ -13,8 +13,11 @@ tfl_schema(fn = NULL)
 The function's entry (\code{package}, \code{description}, \code{dots}, \code{args};
 \code{rank}, its place in the recommended order, and \code{stage}, \code{"mapping"},
 \code{"finishing"} or \code{"output"}; \code{formals}, the function's own arguments
-but the data's (\code{x}, \code{plan}, \code{.plan}, \code{data}, \code{mapping}), and
-\code{required}, those of them with no default value),
+but the data's (\code{x}, \code{plan}, \code{.plan}, \code{data}, \code{mapping}, \code{ard}), and
+\code{required}, those of them with no default value; \code{data_args}, the
+data's arguments the function has, a card never shows them;
+\code{formal_defaults}, the formals whose default is a literal constant,
+by name),
 or the whole schema, a list by function; \code{NULL} for a function the
 schema does not have.
 }
