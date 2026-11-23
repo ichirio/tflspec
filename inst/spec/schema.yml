@@ -709,7 +709,7 @@ rtf_style:
   package: rtfreporter
   description: "The document's style (rtf_document(style = )): the shared keys reach every module that has them; a section (table, titles, footnotes, header, footer) is a map of that module's own arguments and wins over the shared key; a module's own argument wins over both."
   args:
-    font: {input: table, type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
+    font: {input: table, type: "string|vec<enum[latin|east_asian|complex|hansi], string>", columns: {key: {label: {en: "Part", ja: "部分"}, type: "enum[latin|east_asian|complex|hansi]", input: pick}, value: {label: {en: "Font", ja: "フォント"}, type: string, input: text}}}
     font_size_half_points: {type: integer}
     row_height_twips: {type: integer}
     cell_padding_left_twips: {type: integer}
@@ -801,7 +801,7 @@ rtf_titles:
     font_size_half_points: {type: integer}
     row_height_twips: {type: integer}
     markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
-    font: {input: table, type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
+    font: {input: table, type: "string|vec<enum[latin|east_asian|complex|hansi], string>", columns: {key: {label: {en: "Part", ja: "部分"}, type: "enum[latin|east_asian|complex|hansi]", input: pick}, value: {label: {en: "Font", ja: "フォント"}, type: string, input: text}}}
     align: {type: "enum[left|center|right]"}
 
 rtf_footnotes:
@@ -811,7 +811,7 @@ rtf_footnotes:
     font_size_half_points: {type: integer}
     row_height_twips: {type: integer}
     markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
-    font: {input: table, type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
+    font: {input: table, type: "string|vec<enum[latin|east_asian|complex|hansi], string>", columns: {key: {label: {en: "Part", ja: "部分"}, type: "enum[latin|east_asian|complex|hansi]", input: pick}, value: {label: {en: "Font", ja: "フォント"}, type: string, input: text}}}
     align: {type: "enum[left|center|right]"}
     border: {type: "call<rtf_border>", description: "The footnotes' border: {fn: rtf_border, args: {top: true}}."}
 
@@ -830,7 +830,7 @@ rtf_header:
     width: {type: "enum[page]|number", description: "page (the writable width), a fraction of it in (0, 1], or twips."}
     row_height_twips: {type: integer}
     font_size_half_points: {type: integer}
-    font: {input: table, type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
+    font: {input: table, type: "string|vec<enum[latin|east_asian|complex|hansi], string>", columns: {key: {label: {en: "Part", ja: "部分"}, type: "enum[latin|east_asian|complex|hansi]", input: pick}, value: {label: {en: "Font", ja: "フォント"}, type: string, input: text}}}
     markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
     cell_padding_left_twips: {type: integer}
     cell_padding_right_twips: {type: integer}
@@ -848,7 +848,7 @@ rtf_footer:
     width: {type: "enum[page]|number", description: "page (the writable width), a fraction of it in (0, 1], or twips."}
     row_height_twips: {type: integer}
     font_size_half_points: {type: integer}
-    font: {input: table, type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
+    font: {input: table, type: "string|vec<enum[latin|east_asian|complex|hansi], string>", columns: {key: {label: {en: "Part", ja: "部分"}, type: "enum[latin|east_asian|complex|hansi]", input: pick}, value: {label: {en: "Font", ja: "フォント"}, type: string, input: text}}}
     markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
     cell_padding_left_twips: {type: integer}
     cell_padding_right_twips: {type: integer}
@@ -2727,7 +2727,7 @@ tfl_ard_number:
     variable: {type: string, label: {en: Variable, ja: 変数}}
     level: {type: "string|number", label: {en: Level, ja: 水準}}
     stat: {type: string, label: {en: Statistic, ja: 統計量}}
-    group: {input: table, type: "string|map<string, string>", label: {en: Group, ja: 群}}
+    group: {input: table, type: "string|map<string, string>", label: {en: Group, ja: 群}, columns: {key: {label: {en: "Group variable", ja: "群の変数"}, type: string, input: text}, value: {label: {en: "Value", ja: "値"}, type: string, input: text}}}
     label: {type: string, label: {en: "Text ({value})", ja: "文字（{value}）"}}
     digits: {type: number, label: {en: Digits, ja: 桁}}
     x: {type: "number|string", label: {en: X, ja: x}}
