@@ -215,8 +215,8 @@ tfl_data_code <- function(output, study, ard = TRUE) {
       c("# the study ARD's rows of this report",
         sprintf("%s <- readRDS(\"output/ard/ard.rds\") |>\n  subset(output_id == \"%s\")", nm, ro$id))
     } else {
-      if (is.null(spec)) spec <- .ard_spec_of_study(study, output_id = ro$id)$spec
-      .records_code(ro, d, nm, spec)
+      if (is.null(spec)) spec <- .ard_spec_of_study(study, output_id = ro$id)
+      .records_code(ro, d, nm, spec$spec, spec$codelists)
     }
     stmt <- !grepl("^#", lines) & nzchar(lines)
     lines <- lines[!(stmt & lines %in% seen)]
@@ -235,7 +235,7 @@ tfl_data_code <- function(output, study, ard = TRUE) {
   if (length(s)) s
 }
 
-.records_code <- function(o, data, name, ard_spec) {
+.records_code <- function(o, data, name, ard_spec, codelists = NULL) {
   txt <- function(x) {
     v <- unlist(lapply(x, as.character))
     if (!length(v)) NA_character_ else paste(v, collapse = " | ")
@@ -247,7 +247,7 @@ tfl_data_code <- function(output, study, ard = TRUE) {
                   where = txt(data[["where"]]), sort = txt(data[["sort"]]), stringsAsFactors = FALSE)
   sp <- tfl_listing_spec(l, data.frame(output_id = o$id, vars = "USUBJID"), check = FALSE)
   code <- tfl_listing_code(sp, o$id, ard = ard_spec, part = "data",
-                           rework = .records_rework(data))
+                           rework = .records_rework(data), codelists = codelists)
   at <- grep("^data <- ", code)
   if (length(at)) code[at] <- sub("^data <- ", paste0(name, " <- "), code[at])
   code
