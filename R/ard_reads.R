@@ -4,6 +4,7 @@
 
 #' The ARD each report of a study reads
 #'
+#' @description
 #' Works out, from the study's SPEC, whose ARD each report reads, so that a
 #' run builds those ARD before the report:
 #'
@@ -14,10 +15,12 @@
 #'   template or a `figure:` content key and analyses of its own reads its
 #'   own ARD; `import:<file>` reads an ARD taken in, no report's.
 #'
+#' @details
 #' A read that cannot be worked out is a row with `reads = NA` and a
 #' reason; a run must not start on it.  What a report's own R code reads of
 #' another report's ARD is not found here: that read stops the run when it
-#' happens.
+#' happens.  A report file that cannot be read is named by its file's name
+#' (`T-14-1-1.yml`: `T-14-1-1`).
 #'
 #' @param study A study folder, or a `tfl_study_spec`
 #'   ([tfl_read_study_spec()]).
@@ -38,7 +41,7 @@
 #' @export
 tfl_ard_reads <- function(study, outputs = NULL) {
   st <- if (inherits(study, "tfl_study_spec")) study else tfl_read_study_spec(study)
-  bad <- .reads_row(character(), character(), character())
+  bad <- .reads_row(character(), character(), character(), character())
   if (is.null(outputs)) {
     if (is.null(st$dir)) {
       stop("tfl_ard_reads(): give `outputs`, or a study read from its folder.", call. = FALSE)
@@ -63,6 +66,10 @@ tfl_ard_reads <- function(study, outputs = NULL) {
   }
   if (length(outputs) && (is.null(names(outputs)) || !all(vapply(outputs, inherits, NA, "tfl_output")))) {
     stop("tfl_ard_reads(): `outputs` is a named list of tfl_output.", call. = FALSE)
+  }
+  if (anyDuplicated(names(outputs)) ||
+      !identical(unname(names(outputs)), unname(vapply(outputs, function(o) as.character(o$id), "")))) {
+    stop("tfl_ard_reads(): `outputs` is named by the reports' ids, each once.", call. = FALSE)
   }
   ids <- names(outputs)
   # each report's analyses: its own, or its template's (resolved)
@@ -114,6 +121,7 @@ tfl_ard_reads <- function(study, outputs = NULL) {
 # whose ARD it is
 .reads_fig_source <- function(o, id, has_own) {
   src <- o$page$report$ard_source
+  if (length(src) > 1L) stop("`page: report: ard_source:` is one value.", call. = FALSE)
   src <- if (is.null(src) || !length(src) || is.na(src[[1L]])) "" else trimws(as.character(src[[1L]]))
   if (identical(src, "own")) return(list(kind = "own", id = id))
   if (startsWith(src, "table:")) return(list(kind = "table", id = trimws(sub("^table:", "", src))))
@@ -127,8 +135,11 @@ tfl_ard_reads <- function(study, outputs = NULL) {
 }
 
 # whether a figure's design reads an ARD (an ard_stats step, an ard_number
-# layer): the report as it resolves (a template's layers too), else its file
+# layer): the report as it resolves (a template's layers too); a report with
+# no template that does not resolve, its file (a template report that does
+# not resolve stops: its layers are not known)
 .reads_fig_uses_ard <- function(o, st) {
-  r <- tryCatch(tfl_resolve_output(o, st), error = function(e) o)
+  r <- if (is.null(.tpl_spec_of(o))) tryCatch(tfl_resolve_output(o, st), error = function(e) o) else
+    tfl_resolve_output(o, st)
   isTRUE(.fig_uses_ard(.fig_design_of_output(r))) || isTRUE(.fig_uses_ard(.fig_design_of_output(o)))
 }

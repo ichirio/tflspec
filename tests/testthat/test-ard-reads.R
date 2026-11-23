@@ -70,6 +70,17 @@ test_that("from the study's files: a file that cannot be read is a row with its 
   expect_match(bad$reason, "^file not read: ")
 })
 
-test_that("outputs that are not reports stop", {
+test_that("a figure whose table source is itself; no reports", {
+  outs <- list(F1 = reads_fig("F1", "table:F1", ard = list(analyses = reads_an("HR"))))
+  r <- tfl_ard_reads(reads_study(), outs)
+  expect_identical(r$reads, "F1")
+  expect_identical(nrow(tfl_ard_reads(reads_study(), list())), 0L)
+  expect_named(tfl_ard_reads(reads_study(), list()), c("report", "reads", "kind", "reason"))
+})
+
+test_that("outputs that are not reports, or not named by their ids, stop", {
   expect_error(tfl_ard_reads(reads_study(), list(T1 = list(id = "T1"))), "named list of tfl_output")
+  t1 <- tfl_output("T1", "table")
+  expect_error(tfl_ard_reads(reads_study(), list(T1 = t1, T1 = t1)), "each once")
+  expect_error(tfl_ard_reads(reads_study(), list(T2 = t1)), "each once")
 })

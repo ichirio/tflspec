@@ -40,7 +40,8 @@ own ARD; \verb{import:<file>} reads an ARD taken in, no report's.
 A read that cannot be worked out is a row with \code{reads = NA} and a
 reason; a run must not start on it.  What a report's own R code reads of
 another report's ARD is not found here: that read stops the run when it
-happens.
+happens.  A report file that cannot be read is named by its file's name
+(\verb{T-14-1-1.yml}: \code{T-14-1-1}).
 }
 \examples{
 d <- system.file("extdata", "spec-yaml", package = "tflspec")
