@@ -4,7 +4,7 @@
 \alias{tfl_arg_defs}
 \title{The definitions of the arguments a card takes}
 \usage{
-tfl_arg_defs(fn = NULL, template = NULL)
+tfl_arg_defs(fn = NULL, template = NULL, study_dir = NULL)
 }
 \arguments{
 \item{fn}{A function of the schema (\code{"plan_cells"}), or \code{"data"} (the keys
@@ -13,6 +13,10 @@ of a \verb{data:} row) or \code{"analysis"} (the keys of an analysis item).}
 \item{template}{A template, \code{"<series>/<template>"} (\code{"tflspec_v1/demog"}).
 Its file is found in the series folders: the option \code{tflspec.series_dir},
 tflplanner's home \verb{standards/series/}, the series tflspec ships.}
+
+\item{study_dir}{A study folder: the template is read from the study's
+copy (\code{\link[=tfl_copy_templates]{tfl_copy_templates()}}) instead, a template of the study's own
+(copied with \code{as}) too.  \code{NULL} (default) for the series folders.}
 }
 \value{
 A data frame, one row an argument in the definition's order (the
@@ -43,7 +47,10 @@ default for a type \code{r}, \code{formula} or \code{guard}, \code{condition} fo
 given.}
 \item{default}{(a list column) the default as written; a tagged value
 (\verb{!series K}, \verb{!study K}, \verb{!fixed v}, \code{!r}) is a \code{tfl_tagged} object.
-It is resolved for a study by \code{\link[=tfl_template_resolve]{tfl_template_resolve()}}.}
+It is resolved for a study by \code{\link[=tfl_template_resolve]{tfl_template_resolve()}}.  A schema
+function's argument with no default written takes the function's own
+default when that is one \code{TRUE} or \code{FALSE} and the argument's type is
+a logical kind; any other formal default gives none.}
 \item{default_kind}{\code{value}, \code{study}, \code{series}, \code{unset} or \code{fixed};
 \code{NA} when there is no default.}
 \item{unset}{what "(none)" (\code{!unset}) does, from \verb{unset:} (the words

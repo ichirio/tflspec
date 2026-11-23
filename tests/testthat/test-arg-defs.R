@@ -332,6 +332,57 @@ test_that("the members are split at the top level only", {
   expect_identical(tflspec:::.type_deciding("r"), "r")
 })
 
+test_that("an argument with no written default takes a logical formal default when its type is logical (contract 14i)", {
+  fd <- list(a = TRUE, b = 2, c = "x", d = NULL, f = FALSE, g = TRUE)
+  out <- .arg_formal_defaults(list(a = list(type = "logical"), b = list(type = "number"),
+                                   c = list(type = "string"), d = list(type = "string"),
+                                   e = list(type = "logical"), f = list(type = "logical", default = TRUE),
+                                   g = list(type = "string"),
+                                   `...` = list(type = "logical")), fd)
+  expect_identical(out$a$default, TRUE)
+  expect_identical(out$f$default, TRUE)
+  expect_false("default" %in% names(out$b))
+  expect_false("default" %in% names(out$c))
+  expect_false("default" %in% names(out$d))
+  expect_false("default" %in% names(out$e))
+  expect_false("default" %in% names(out$g))
+  expect_false("default" %in% names(out$`...`))
+  # the deciding member of a union decides: logical|string is a logical kind
+  u <- .arg_formal_defaults(list(a = list(type = "logical|string")), list(a = FALSE))
+  expect_identical(u$a$default, FALSE)
+  # a required argument keeps its tier: no default added
+  req <- .arg_formal_defaults(list(a = list(type = "logical", tier = "required")), fd)
+  expect_false("default" %in% names(req$a))
+})
+
+test_that("the formals' defaults recorded are literal constants only", {
+  skip_if_not_installed("rtfreporter")
+  ent <- tfl_schema("plan_cells")
+  expect_true(all(vapply(ent$formal_defaults, function(v) {
+    is.null(v) || (length(v) == 1L && (is.logical(v) || is.numeric(v) || is.character(v)))
+  }, NA)))
+  expect_false(any(c(".plan", "...") %in% names(ent$formal_defaults)))
+  expect_identical(ent$data_args, ".plan")
+  expect_false(".plan" %in% ent$formals)
+  expect_true("ard" %in% .schema_data_args)
+})
+
+test_that("plan_cell_style and plan_filter take their logical formal defaults, a call or string gives none", {
+  skip_if_not_installed("rtfreporter")
+  d <- tfl_arg_defs(fn = "plan_cell_style")
+  expect_identical(d$default[[which(d$name == "header")]], FALSE)
+  expect_identical(d$default_kind[d$name == "header"], "value")
+  f <- tfl_arg_defs(fn = "plan_filter")
+  expect_identical(f$default[[which(f$name == "any")]], TRUE)
+  # parents = c("keep", "drop") is a call: not taken as the default
+  expect_false(identical(f$default[[which(f$name == "parents")]], c("keep", "drop")))
+  # a string formal default is not taken
+  e <- tfl_arg_defs(fn = "plan_empty")
+  expect_true(is.na(e$default_kind[e$name == "text"]))
+  expect_false(f$required[f$name == "any"])
+  expect_identical(tfl_schema("plan_filter")$data_args, ".plan")
+})
+
 test_that("a column field's choices are written in its definition", {
   y <- yaml::read_yaml(system.file("spec", "schema.yml", package = "tflspec"))
   # (a column member of the type, a union's too: `list<column>|column`)
