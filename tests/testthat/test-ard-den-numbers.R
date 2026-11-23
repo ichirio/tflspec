@@ -27,7 +27,7 @@ test_that("numbers are read: one, or one a value; else NULL or NA", {
   expect_identical(tflspec:::.den_numbers("86"), 86L)
   expect_identical(tflspec:::.den_numbers(dn_text), dn_arms)
   expect_null(tflspec:::.den_numbers("population"))
-  expect_null(tflspec:::.den_numbers("adsl_saf"))
+  expect_null(tflspec:::.den_numbers("adsl_sub"))
   expect_identical(tflspec:::.den_numbers("c(86, 85)"), NA)
   expect_identical(tflspec:::.den_numbers("c(A = 1.5)"), NA)
   expect_identical(tflspec:::.den_numbers("c(A = 1, A = 2)"), NA)
@@ -81,7 +81,7 @@ test_that("YAML: a map of numbers is the sheet's c(...) and back", {
   expect_identical(tflspec:::.den_yaml(cell), list(`Drug X` = 86L, Placebo = 85L))
   expect_identical(tflspec:::.den_yaml("86"), 86L)
   expect_identical(tflspec:::.den_cell(86L), 86L)
-  expect_identical(tflspec:::.den_yaml("adsl_saf"), "adsl_saf")
+  expect_identical(tflspec:::.den_yaml("adsl_sub"), "adsl_sub")
 })
 
 test_that("a YAML study: the report's map of numbers is the program's, and comes back a map", {

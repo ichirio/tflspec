@@ -106,10 +106,10 @@ its `data` column instead of `dataset` / `population_id`.
 ```{r}
 adata <- df(
   output_id = "T-14-3-1",
-  data_id = c("adsl_saf", "adae_teae", "adae_ser"),
+  data_id = c("adsl_sub", "adae_teae", "adae_ser"),
   from = c("ADSL", "ADAE", "adae_teae"),
   population_id = c("SAF", NA, NA),
-  subjects_in = c(NA, "adsl_saf", NA),
+  subjects_in = c(NA, "adsl_sub", NA),
   where = c(NA, 'TRTEMFL == "Y"', 'AESER == "Y"'),
   keep = c(NA, "AEBODSYS | AEDECOD | AESER | TRT01A", NA))
 
@@ -120,7 +120,7 @@ analyses <- df(
   data = c("adae_teae", "adae_ser"),
   by = "TRT01A",
   variables = c("AEBODSYS | AEDECOD", "AEDECOD"),
-  denominator = "adsl_saf")
+  denominator = "adsl_sub")
 
 spec <- tfl_ard_spec(c(base, list(analysis_data = adata, analyses = analyses)))
 ```

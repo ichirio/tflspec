@@ -1,16 +1,16 @@
 # ---- data ------------------------------------------------------------------
-adtte_os <- adtte |>
+adtte_sub <- adtte |>
   order_levels() |>
   filter(PARAMCD == "OS", FASFL == "Y")
 
 # AVAL in months, from each record's unit, AVALU (days when the data has no AVALU)
-adtte_os <- adtte_os |>
-  mutate(AVALU = if ("AVALU" %in% names(adtte_os)) toupper(AVALU) else "DAYS")
-units_unknown <- setdiff(adtte_os$AVALU, c("DAYS", "WEEKS", "MONTHS", "YEARS"))
+adtte_sub <- adtte_sub |>
+  mutate(AVALU = if ("AVALU" %in% names(adtte_sub)) toupper(AVALU) else "DAYS")
+units_unknown <- setdiff(adtte_sub$AVALU, c("DAYS", "WEEKS", "MONTHS", "YEARS"))
 if (length(units_unknown)) {
   stop("AVALU: a unit not DAYS, WEEKS, MONTHS or YEARS: ", toString(units_unknown), call. = FALSE)
 }
-adtte_os <- adtte_os |>
+adtte_sub <- adtte_sub |>
   mutate(
     AVAL = AVAL * case_when(
       AVALU == "DAYS"   ~ 1,
@@ -21,13 +21,13 @@ adtte_os <- adtte_os |>
     AVALU = "MONTHS"
   )
 
-fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = adtte_os)
+fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = adtte_sub)
 
 x_breaks <- pretty(c(0, max(fit$time)))
 
 # ---- plot ------------------------------------------------------------------
 # the treatment palette, a colour for each TRT01P
-pal <- tfl_colours("treatment", levels(factor(adtte_os$TRT01P)))
+pal <- tfl_colours("treatment", levels(factor(adtte_sub$TRT01P)))
 
 plot <- ggsurvfit(fit, linewidth = 0.3) +
   add_censor_mark(shape = 3, size = 3, stroke = 0.6) +
