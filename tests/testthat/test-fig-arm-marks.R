@@ -12,7 +12,7 @@ test_that("the treatment palette: Okabe-Ito in order; the arms' shapes and line 
 
 test_that("more groups than colours: the colours repeat with a warning, and the check says which share one", {
   e <- new.env(parent = globalenv())
-  eval(parse(text = tfl_fig_setup_code()), envir = e)
+  .fig_setup_eval(e)
   expect_warning(pal <- e$tfl_colours("treatment", LETTERS[1:7]),
                  "has 6 colours for 7 groups: they repeat [(]G[)]")
   expect_identical(unname(pal[["G"]]), unname(pal[["A"]]))
@@ -48,7 +48,7 @@ test_that("the arms' shapes and line types of the standard: the layers that colo
   expect_silent(parse(text = code))
   # the setup's helpers give them to the groups in order
   e <- new.env(parent = globalenv())
-  eval(parse(text = tfl_fig_setup_code(st)), envir = e)
+  .fig_setup_eval(e, st)
   expect_identical(e$tfl_shapes(c("P", "L", "H")), c(P = 16, L = 17, H = 15))
   expect_identical(e$tfl_linetypes(c("P", "L")), c(P = "solid", L = "dashed"))
 })

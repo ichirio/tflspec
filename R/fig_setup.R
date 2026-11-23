@@ -7,7 +7,9 @@
 #' The helper script of a study's figure programs
 #'
 #' `tfl_fig_setup_code()` writes the figure style standard ([tfl_fig_style()]) as
-#' data -- `tfl_settings`, `tfl_palettes`, `tfl_markers` -- followed by
+#' data -- `tfl_settings`, `tfl_palettes`, `tfl_markers` --, sets the same
+#' data as `options(tflspec.fig_style =)` (so [km_curves()] and
+#' [forest_hr()] draw with the program's style too), followed by
 #' helpers in plain ggplot2:
 #'
 #' * `theme_tfl(type)` -- the standard's theme, font sizes, lines and ticks;
@@ -74,6 +76,8 @@ tfl_fig_setup_code <- function(style = tfl_fig_style(), date = Sys.Date()) {
     "",
     df_code("tfl_markers", style$markers),
     "",
+    .fig_style_option_code(),
+    "",
     .fig_unit_guard(),
     "",
     helpers,
@@ -84,6 +88,35 @@ tfl_fig_setup_code <- function(style = tfl_fig_style(), date = Sys.Date()) {
 #' @export
 tfl_check_fig <- function(plot, levels = NULL, quiet = FALSE) {
   e <- new.env(parent = globalenv())
-  eval(parse(text = tfl_fig_setup_code(), encoding = "UTF-8"), envir = e)
+  .fig_setup_eval(e)
   e$tfl_check(plot, levels = levels, quiet = quiet)
+}
+
+# The setup's lines that set options(tflspec.fig_style =) from the data
+# above them (tfl_settings, tfl_palettes, tfl_markers): tflspec's figure
+# functions (km_curves(), forest_hr()) read the style there, through
+# tfl_fig_style(), so they draw with the program's style.  The colors table
+# is built back from tfl_palettes, as .fs_palettes() reads it.
+.fig_style_option_code <- function() {
+  c("# the same style for tflspec's figure functions (km_curves(), forest_hr())",
+    "options(tflspec.fig_style = list(",
+    "  settings = tfl_settings,",
+    "  colors = data.frame(",
+    "    palette = rep(names(tfl_palettes), lengths(tfl_palettes)),",
+    "    value = unlist(lapply(tfl_palettes, function(p)",
+    "      if (is.null(names(p))) rep(NA_character_, length(p)) else names(p)),",
+    "      use.names = FALSE),",
+    "    colour = unlist(tfl_palettes, use.names = FALSE),",
+    "    stringsAsFactors = FALSE),",
+    "  markers = tfl_markers))")
+}
+
+# The figure setup run in `env`, as a program sources it.  The setup sets
+# options(tflspec.fig_style =); here it is put back as it was, so running
+# a figure inside the session does not change the session's style.
+.fig_setup_eval <- function(env, style = tfl_fig_style()) {
+  old <- options(tflspec.fig_style = getOption("tflspec.fig_style"))
+  on.exit(options(old), add = TRUE)
+  eval(parse(text = tfl_fig_setup_code(style), encoding = "UTF-8"), envir = env)
+  invisible(env)
 }

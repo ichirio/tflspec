@@ -90,8 +90,11 @@
   code <- sub(sprintf('file.path("output", "%s.png")', id),
               sprintf('file.path("%s", "%s.png")', out_dir, id), code, fixed = TRUE)
   # after the study's figure setup (theme_tfl(), the palettes, the days in
-  # a month), as the program runs after programs/tfl/fig_setup.R
+  # a month), as the program runs after programs/tfl/fig_setup.R (which
+  # sets options(tflspec.fig_style =): put back as it was afterwards)
   code <- c(tfl_fig_setup_code(), .fig_strip_library(code))
+  old <- options(tflspec.fig_style = getOption("tflspec.fig_style"))
+  on.exit(options(old), add = TRUE)
   # (the study's helpers: set_levels() of the code lists, order_levels() of the arms)
   if (any(grepl("set_levels(", code, fixed = TRUE)) ||
       any(grepl("order_levels(", code, fixed = TRUE))) eval(parse(text = tfl_helpers_code()), env)

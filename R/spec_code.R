@@ -1519,7 +1519,7 @@ tfl_content_run <- function(output, data) {
     # a figure's own code reads the datasets by their names (adsl, adae),
     # after the study's figure setup, as its program does
     for (n in names(data)) assign(n, data[[n]], envir = env)
-    eval(parse(text = tfl_fig_setup_code()), env)
+    .fig_setup_eval(env)
     if (!is.null(data$ard)) eval(parse(text = tfl_helpers_code()), env)
   } else {
     assign(output$data$object %||% "ard", data, envir = env)

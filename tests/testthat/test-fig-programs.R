@@ -265,7 +265,7 @@ lv_fig_run <- function(d, ...) {
   code <- as.character(tfl_fig_design_code(d, "F-9", setup = TRUE, save = FALSE))
   env <- new.env(parent = .fig_pkg_env(c("dplyr", "ggplot2", "ggsurvfit", "patchwork")))
   list2env(list(...), env)
-  eval(parse(text = tfl_fig_setup_code()), env)
+  .fig_setup_eval(env)
   eval(parse(text = tfl_helpers_code()), env)
   grDevices::pdf(NULL)
   on.exit(grDevices::dev.off())
@@ -327,7 +327,7 @@ test_that("a code list with labels: the data holds the codes, the legend shows t
   env$adsl$TRTA <- c(Control = "Placebo", `Drug X` = "Xanomeline High Dose")[as.character(env$adsl$TRT01A)]
   # (the figure takes the arm and the flag from ADSL: ADVS has none of its own)
   env$advs <- tflspec::advs[setdiff(names(tflspec::advs), c("TRTA", "SAFFL"))]
-  eval(parse(text = tfl_fig_setup_code()), env)
+  .fig_setup_eval(env)
   eval(parse(text = tfl_helpers_code()), env)
   eval(parse(text = code), env)
   arms <- c("Placebo", "Xanomeline Low Dose", "Xanomeline High Dose")

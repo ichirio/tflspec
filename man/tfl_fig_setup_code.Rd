@@ -28,7 +28,9 @@ data, to tell whether a figure changed between two runs).
 }
 \description{
 \code{tfl_fig_setup_code()} writes the figure style standard (\code{\link[=tfl_fig_style]{tfl_fig_style()}}) as
-data -- \code{tfl_settings}, \code{tfl_palettes}, \code{tfl_markers} -- followed by
+data -- \code{tfl_settings}, \code{tfl_palettes}, \code{tfl_markers} --, sets the same
+data as \code{options(tflspec.fig_style =)} (so \code{\link[=km_curves]{km_curves()}} and
+\code{\link[=forest_hr]{forest_hr()}} draw with the program's style too), followed by
 helpers in plain ggplot2:
 }
 \details{

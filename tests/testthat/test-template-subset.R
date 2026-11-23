@@ -223,7 +223,7 @@ test_that("a figure (km) of Part 1's subjects: A = B = the template SPEC", {
   expect_match(txt, "PART == \"Part 1\"", fixed = TRUE)
   env <- new.env(parent = .fig_pkg_env(c(attr(x$a, "libs"), "tflspec")))
   for (n in names(data)) assign(n, data[[n]], envir = env)
-  eval(parse(text = tfl_fig_setup_code()), env)
+  .fig_setup_eval(env)
   eval(parse(text = tfl_helpers_code()), env)
   eval(parse(text = x$a), env)
   p1 <- sl$USUBJID[sl$SAFFL == "Y" & sl$PART == "Part 1"]

@@ -38,7 +38,7 @@ tplfig_check <- function(o, d, data) {
   testthat::expect_true(any(grepl(sprintf(", \"%s\"", o$template$name), call, fixed = TRUE)))
   env <- new.env(parent = .fig_pkg_env(c(attr(a, "libs"), "tflspec")))
   for (n in names(data)) assign(n, data[[n]], envir = env)
-  eval(parse(text = tfl_fig_setup_code()), env)
+  .fig_setup_eval(env)
   eval(parse(text = tfl_helpers_code()), env)
   eval(parse(text = a), env)
   testthat::expect_identical(tplfig_png(env$content), png_t)

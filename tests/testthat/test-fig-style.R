@@ -45,6 +45,8 @@ test_that("the helper script gives the standard's look and checks figures", {
   code <- tfl_fig_setup_code()
   expect_silent(parse(text = code))
   e <- new.env()
+  old <- options(tflspec.fig_style = NULL)
+  on.exit(options(old), add = TRUE)
   eval(parse(text = code), envir = e)
   d <- data.frame(id = 1:5, v = c(-50, -35, 10, 25, NA),
                   r = c("CR", "PR", "SD", "PD", "SD"))
@@ -106,7 +108,7 @@ test_that("the KM number at risk can come from the table's ARD", {
 test_that("tfl_km_risk() reads the table's ARD and checks it", {
   skip_if_not_installed("cardx")
   e <- new.env()
-  eval(parse(text = tfl_fig_setup_code()), envir = e)
+  .fig_setup_eval(e)
   d <- tfl_example_adam()$ADTTE
   d <- d[d$PARAMCD == "OS", ]
   fit <- survival::survfit(survival::Surv(AVAL, 1 - CNSR) ~ TRT01P, data = d)
@@ -116,4 +118,37 @@ test_that("tfl_km_risk() reads the table's ARD and checks it", {
   expect_equal(nrow(r), 3L * length(unique(d$TRT01P)))
   ard$stat[[which(ard$stat_name == "n.risk")[2]]] <- -1
   expect_warning(e$tfl_km_risk(ard, fit), "Figure check: the number at risk")
+})
+
+test_that("the setup sets the style it writes, so km_curves() draws with it too", {
+  st <- tfl_fig_style()
+  pal <- c("#112233", "#445566", "#778899", "#AA0000", "#00AA00", "#0000AA")
+  st$colors$colour[st$colors$palette == "treatment"] <- pal
+  st$colors$colour[st$colors$palette == "response" & st$colors$value %in% "CR"] <- "#00AA00"
+  code <- tfl_fig_setup_code(st)
+  expect_true("options(tflspec.fig_style = list(" %in% code)
+  old <- options(tflspec.fig_style = NULL)
+  on.exit(options(old), add = TRUE)
+  e <- new.env(parent = globalenv())
+  eval(parse(text = code), envir = e)
+  expect_identical(unname(tfl_fig_palettes()[["treatment"]]), pal)
+  expect_identical(tfl_fig_palettes()[["response"]][["CR"]], "#00AA00")
+  expect_equal(tfl_fig_palettes(), e$tfl_palettes)
+  expect_identical(tfl_fig_style()$settings$value, st$settings$value)
+  expect_identical(tfl_fig_style()$markers$shape, st$markers$shape)
+  # the session's figures, run with the setup, leave the option as it was
+  options(tflspec.fig_style = NULL)
+  .fig_setup_eval(new.env(parent = globalenv()), st)
+  expect_null(getOption("tflspec.fig_style"))
+  # km_curves() draws the arms in that palette
+  skip_if_not_installed("ggplot2", "3.5.2")
+  skip_if_not_installed("ggsurvfit")
+  skip_if_not_installed("survival")
+  eval(parse(text = code), envir = e)
+  d <- data.frame(AVAL = c(5, 8, 12, 3, 9, 15, 4, 7), CNSR = c(0, 1, 0, 0, 1, 0, 0, 1),
+                  TRT01A = rep(c("Arm A", "Arm B"), 4))
+  fit <- ggsurvfit::survfit2(ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ TRT01A, data = d)
+  p <- km_curves(fit)
+  b <- suppressWarnings(ggplot2::ggplot_build(p))
+  expect_setequal(unique(b$data[[1L]]$colour), pal[1:2])
 })
