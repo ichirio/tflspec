@@ -29,7 +29,7 @@ test_that("the user's pipeline is a spec file's content, and comes back as its c
     p <- tfl_schema_check(it)
     expect_identical(nrow(p[p$level == "error", ]), 0L, info = it$fn)
   }
-  code <- tfl_content_code(out, pipe = "|>")
+  code <- no_bign(tfl_content_code(out, pipe = "|>"))
   expect_identical(code, c(
     "plan <- ard |>",
     "  normalize_ard() |>",
