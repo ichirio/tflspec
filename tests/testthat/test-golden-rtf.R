@@ -8,13 +8,15 @@
 #
 # The studies:
 #   shipped  the study as tfl_ai_study_init() writes it (its defaults.yml)
-#   plain    no defaults at all: no digits, header, stub or page settings
+#   plain    no defaults content: no digits, header or stub settings (only
+#            the shipped page and style sets, which study.yml's style names)
 #   company  the company standard that tfl_use_company_templates() writes
 #            (inst/standards/defaults.yml) as the study's defaults.yml, with
 #            the shipped page header and footer
 # A template that cannot build in a study is a line saying why, never left
 # out.  What is hashed is the RTF's text, line endings as "\n", with the
-# run's dates and times and any file path replaced by a mark.
+# run's dates and times, any file path and a figure's image bytes (they
+# differ by platform) replaced by a mark.
 #
 # Also: a company's copy of a template (tfl_use_company_templates()) gives
 # the same RTF as the template, in the company study.
@@ -30,6 +32,8 @@ golden_rtf_hash <- function(p) {
   # (a path to a file or folder of the run)
   x <- gsub("[A-Za-z]:[/\\\\][^ \"'}{;]*", "<path>", x, useBytes = TRUE)
   x <- gsub("/(tmp|var|home|Users)/[^ \"'}{;]*", "<path>", x, useBytes = TRUE)
+  # (a figure's picture: its hex bytes, however the lines break)
+  x <- gsub("[0-9a-fA-F\n]{64,}", "<image>", x, useBytes = TRUE)
   f <- tempfile("golden-rtf")
   on.exit(unlink(f), add = TRUE)
   writeBin(charToRaw(x), f)
@@ -96,9 +100,10 @@ test_that("golden RTFs: every template in three studies, a company's copy the sa
   tfl_use_company_templates(co, templates = c("demog", "ae_soc_pt"))
   std <- readLines(file.path(co, "inst", "standards", "defaults.yml"))
   shipped <- readLines(file.path(d, "spec", "defaults.yml"))
-  company <- c(std, shipped[seq(grep("^(page|styles):", shipped)[1L], length(shipped))])
+  sets <- shipped[seq(grep("^(page|styles):", shipped)[1L], length(shipped))]
+  company <- c(std, sets)
   studies <- c(shipped = d,
-               plain = golden_study(d, "content: []", file.path(root, "plain")),
+               plain = golden_study(d, c("content: []", sets), file.path(root, "plain")),
                company = golden_study(d, company, file.path(root, "company")))
   expect_true(all(dir.exists(studies)))
 
