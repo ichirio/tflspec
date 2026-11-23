@@ -46,6 +46,9 @@ character vector of paths, in the order they run.
 \code{programs$tfl}) -> its output id.
 \item \code{needs} -- a named list: a report program -> a character vector of the
 reports whose ARD it reads.  \code{list()} for none.
+\item \code{unresolved} -- a named character vector: a report program -> why the
+ARD it reads cannot be worked out (a run that selects it does not
+start).  \code{character()} for none.
 \item \code{sets} -- a named list: the name of a batch -> a character vector of
 its outputs.  \code{list()} for none.
 \item \code{outputs} -- a named list: a report program -> the files it makes.
@@ -60,7 +63,7 @@ m <- list(
   root = "runs", ard = "output/ard/ard.rds", study = "S-1", spec = "spec",
   programs = list(ard = "programs/ard/ard_t1.R", tfl = "programs/tfl/t1.R"),
   ard_outputs = c(ard_t1.R = "T-1"), report_ids = c(`programs/tfl/t1.R` = "T-1"),
-  needs = list(), sets = list(),
+  needs = list(), unresolved = character(), sets = list(),
   outputs = list(`programs/tfl/t1.R` = "output/tfl/t1.rtf"),
   support = list(ard = character(), tfl = character(), all = character()),
   data = list())
