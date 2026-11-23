@@ -47,7 +47,7 @@
 #'   define's table, the others are `NA`.  A part or a column the define does
 #'   not have stops the read, as do a variable or a value given twice and a
 #'   variable whose code list is not there.  Under study.yml's `settings:
-#'   adam_levels: codelists` (the default) `study$adam` gets the levels of
+#'   adam_levels: define_xml` or `define_spec` `study$adam` gets the levels of
 #'   the code lists it maps to each dataset's variables, and of those only
 #'   ([tfl_study_setup_code()]); a value that reads as yes or no in YAML (`Y`,
 #'   `N`) is written in quotes.

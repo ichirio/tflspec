@@ -17,7 +17,8 @@ codelists:
   AGEGR1: [{value: "<65", label: "<65 years"}, {value: ">=65", label: ">=65 years"}]
 # The ADaM metadata, in a define's shape (tfl_read_define()): each variable's
 # code list (its OID) and the code lists, a value a row.  Under settings:
-# adam_levels: codelists (the default) study$adam gets these levels.
+# adam_levels: define_xml or define_spec (study.yml) study$adam gets these
+# levels; with none, the default, it gets none.
 adam_meta:
   variables:
     - {dataset: ADSL, variable: SEX, codelist: CL.SEX}

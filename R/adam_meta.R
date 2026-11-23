@@ -10,7 +10,7 @@
 #                    read it is written by hand in spec/defaults.yml
 #                    `adam_meta:`.
 #
-# Under `settings: adam_levels: codelists` study$adam gets the levels of the
+# Under `settings: adam_levels: define_xml | define_spec` study$adam gets the levels of the
 # code lists adam_meta maps to each dataset's variables (and only those: no
 # list is put on a column by its name); value-level lists are never put on.
 
