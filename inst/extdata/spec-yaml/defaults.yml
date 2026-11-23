@@ -10,3 +10,26 @@ content:
   - plan_stub: {name: row_label, before: true}
   - plan_blanks: {where: between_groups, first: true, last: true, counted: true}
   - plan_style: {border_header: {fn: rtf_border, args: {top: true, bottom: true}}}
+# The study's code lists, by name: for display, referred to by name
+# (study$codelists$SEX); none reaches a report through extends:.
+codelists:
+  SEX: [{value: F, label: Female}, {value: M, label: Male}]
+  AGEGR1: [{value: "<65", label: "<65 years"}, {value: ">=65", label: ">=65 years"}]
+# The ADaM metadata, in a define's shape (tfl_read_define()): each variable's
+# code list (its OID) and the code lists, a value a row.  Under settings:
+# adam_levels: define_xml or define_spec (study.yml) study$adam gets these
+# levels; with none, the default, it gets none.
+adam_meta:
+  variables:
+    - {dataset: ADSL, variable: SEX, codelist: CL.SEX}
+    - {dataset: ADSL, variable: AGEGR1, codelist: CL.AGEGR1}
+    - {dataset: ADSL, variable: RACE, codelist: CL.RACE}
+  codelists:
+    - {codelist: CL.SEX, name: Sex, value: F, decode: Female, order: 1}
+    - {codelist: CL.SEX, name: Sex, value: M, decode: Male, order: 2}
+    - {codelist: CL.AGEGR1, name: Pooled Age Group 1, value: "<65", order: 1}
+    - {codelist: CL.AGEGR1, name: Pooled Age Group 1, value: ">=65", order: 2}
+    - {codelist: CL.RACE, name: Race, value: WHITE, order: 1}
+    - {codelist: CL.RACE, name: Race, value: BLACK OR AFRICAN AMERICAN, order: 2}
+    - {codelist: CL.RACE, name: Race, value: ASIAN, order: 3}
+    - {codelist: CL.RACE, name: Race, value: OTHER, order: 4}

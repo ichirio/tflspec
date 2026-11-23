@@ -6,8 +6,16 @@ A series is one folder of template SPECs, the version in its name
 - `series.yml`: the common file: `name`, `label`, `released`, `needs`, `fixes` and `values:`.
 - `templates/<name>.yml`: one template each; a report names it `tflspec_v1/<name>`.
 
-`!series <key>` in a template reads `values: <key>`: the study's
-`series_settings.tflspec_v1.<key>` (study.yml) first, then this folder's `series.yml`.
+`!series <key>` in a template reads `values: <key>` of the `series.yml` read.
+
+A study does not read this folder. `tfl_copy_templates()` copies `series.yml` and
+the templates its reports use, whole, into `<study>/spec/series/tflspec_v1/`
+(`copied.yml` there records where each came from, when, and its md5), and the
+study reads only its copy. The study changes a template by editing its copy, and
+a value in its copy's `values:` (`tfl_series_values_set()`). When this folder
+changes (a new tflspec), `tfl_template_status()` lists what changed,
+`tfl_template_diff()` shows a copy against it, and `tfl_recopy_templates()`
+copies the chosen templates again.
 
 A template is a code SPEC (`data:` rows, `analysis:` items with `method:`, `content:`, `page:`)
 plus a `params:` block: argument definitions in the schema's shape (`type`, `input`,

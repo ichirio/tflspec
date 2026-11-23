@@ -25,7 +25,8 @@ merged with the report's own \verb{ard:}, \verb{data:} and \verb{content:}, and 
 \code{from = "template:<name>"}.  The report is then a code SPEC: later
 changes of the template do not reach it.  A series template
 (\verb{<series>/<template>}) is written out by \code{\link[=tfl_template_resolve]{tfl_template_resolve()}}, with
-the study's \code{study.yml} values.
+the study's \code{study.yml} values and its copies of the series
+(\code{\link[=tfl_copy_templates]{tfl_copy_templates()}}).
 }
 \examples{
 d <- system.file("extdata", "spec-yaml", package = "tflspec")

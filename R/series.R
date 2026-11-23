@@ -1,17 +1,18 @@
 # Series: versioned folders of template SPECs (tflspec_v1, acme_v1, ...).
 #
-#   <series>/series.yml            name, label, released, needs, fixes, values
+#   <series>/series.yml            name, label, released, needs, fixes, values,
+#                                  descriptions (a value key's meaning, for a screen)
 #   <series>/templates/<name>.yml  the templates (`!series K` reads values:)
 #   <series>/styles/<name>.yml
 #
-# A study changes a series's values in study.yml `series_settings:`
-# ({<series>: {<keys of values:>}}), beside `settings:`.  A report SPEC
-# names a template as `template: name: <series>/<template>`.
-# tfl_pin_series() writes spec/series.lock (the md5 of series.yml and of
-# each template the reports use); tfl_series_check_lock() compares.
+# These folders are the sources.  A study copies the series.yml and the
+# templates its reports use into <study>/spec/series/<series>/ (R/study_templates.R,
+# tfl_copy_templates()) and reads only its copy; it changes a value in its
+# copy's values:.  A report SPEC names a template as
+# `template: name: <series>/<template>`.
 #
 # Tags (the handlers below, added to .yaml_handlers()):
-#   !series K   study series_settings[[series]][[K]], else values[[K]]
+#   !series K   values[[K]] of the series.yml read (the study's copy)
 #   !study K    study.yml settings: at key path K (dotted); unset if missing
 #   !fixed v    v, marked fixed: a later layer cannot override it
 #   !unset      tfl_unset()
@@ -40,18 +41,19 @@
 #'
 #' A series is a versioned folder of template SPECs (`tflspec_v1`,
 #' `acme_v1`, ...): `series.yml` (`name`, `label`, `released`, `needs`,
-#' `fixes`, and the values its templates read with `!series K` under
-#' `values:`), `templates/<name>.yml` and `styles/<name>.yml`.  A report SPEC
-#' names a template as `template: name: tflspec_v1/demog`, and a study
-#' changes a series's values in `study.yml`:
+#' `fixes`, the values its templates read with `!series K` under `values:`,
+#' and, optionally, what each value means under `descriptions:` (a value's
+#' key and one line of English, for a screen that shows the values),
+#' `templates/<name>.yml` and `styles/<name>.yml`.  A report SPEC
+#' names a template as `template: name: tflspec_v1/demog`.
 #'
-#' ```yaml
-#' series_settings:
-#'   tflspec_v1:
-#'     max_rows: 25
-#' ```
+#' These folders are the sources (the company's and tflspec's own).  A
+#' study does not read them: it copies the `series.yml` and the templates
+#' its reports use into `<study>/spec/series/<series>/`
+#' ([tfl_copy_templates()]) and reads its copy, and it changes a value in
+#' its copy's `values:` ([tfl_series_values_set()]).
 #'
-#' `tfl_series_dir()` finds the folder of a series.  It looks in `dir`, then
+#' `tfl_series_dir()` finds the source folder of a series.  It looks in `dir`, then
 #' `getOption("tflspec.series_dir")`, then
 #' `file.path(tools::R_user_dir("tflplanner", "data"), "standards", "series")`,
 #' then the series that come with tflspec (`system.file("series", package =
@@ -64,50 +66,84 @@
 #'   the default search only.
 #' @return `tfl_series_dir()`: the folder of the series (stops if none has
 #'   it).  `tfl_series_read()`: a list of class `tfl_series` -- `name`,
-#'   `label`, `released`, `needs`, `fixes`, `values` (a named list), `path`
+#'   `label`, `released`, `needs`, `fixes`, `values` (a named list),
+#'   `descriptions` (a named character vector, a value's key to its meaning;
+#'   empty if the series has none), `path`
 #'   (the series's folder) and `file` (its `series.yml`).
-#' @seealso [tfl_pin_series()]
+#' @seealso [tfl_series_list()], [tfl_copy_templates()]
 #' @examples
 #' d <- tempfile("series")
 #' dir.create(file.path(d, "demo_v1"), recursive = TRUE)
-#' writeLines(c("name: demo_v1", "label: Demo", "values:", "  max_rows: 30"),
+#' writeLines(c("name: demo_v1", "label: Demo", "values:", "  max_rows: 30",
+#'              "descriptions:", "  max_rows: The most rows a page holds."),
 #'            file.path(d, "demo_v1", "series.yml"))
 #' tfl_series_dir("demo_v1", dir = d)
 #' tfl_series_read("demo_v1", dir = d)$values
+#' tfl_series_read("demo_v1", dir = d)$descriptions
 #' unlink(d, recursive = TRUE)
 #' @export
 tfl_series_dir <- function(series, dir = NULL) {
   .series_check_name(series, "tfl_series_dir()")
+  hit <- .series_find(series, dir)
+  if (!is.null(hit)) return(hit$path)
   dirs <- .series_search_dirs(dir)
   dirs <- dirs[nzchar(dirs)]
-  for (d in dirs) {
-    f <- file.path(d, series, "series.yml")
-    if (file.exists(f)) return(normalizePath(file.path(d, series), winslash = "/", mustWork = TRUE))
-  }
   stop("tfl_series_dir(): no series \"", series, "\" (no ", series, "/series.yml in ",
        if (length(dirs)) paste(dirs, collapse = ", ") else "any folder", ").", call. = FALSE)
+}
+
+# The source folder of a series and where it is from: list(path, source)
+# with source "dir", "option", "user" or "package"; NULL when none has it.
+.series_find <- function(series, dir = NULL) {
+  opt <- getOption("tflspec.series_dir")
+  src <- c(rep("dir", length(dir)), rep("option", length(opt)), "user", "package")
+  dirs <- .series_search_dirs(dir)
+  for (i in seq_along(dirs)) {
+    d <- dirs[[i]]
+    if (!nzchar(d)) next
+    if (file.exists(file.path(d, series, "series.yml"))) {
+      return(list(path = normalizePath(file.path(d, series), winslash = "/", mustWork = TRUE),
+                  source = src[[i]]))
+    }
+  }
+  NULL
 }
 
 #' @rdname tfl_series_dir
 #' @export
 tfl_series_read <- function(series, dir = NULL) {
   .series_check_name(series, "tfl_series_read()")
-  path <- tfl_series_dir(series, dir = dir)
+  .series_read_at(tfl_series_dir(series, dir = dir), series, "tfl_series_read()")
+}
+
+# a series's series.yml read from the folder `path` (a source's, or a
+# study's copy), as tfl_series_read() gives it
+.series_read_at <- function(path, series, fn) {
   file <- file.path(path, "series.yml")
   y <- .yaml_read_file(file, handlers = .yaml_handlers())
   if (is.null(y)) y <- list()
-  if (!.series_is_map(y)) stop("tfl_series_read(): ", file, " is not a map.", call. = FALSE)
+  if (!.series_is_map(y)) stop(fn, ": ", file, " is not a map.", call. = FALSE)
   if (!is.null(y$name) && !identical(y$name, series)) {
-    stop("tfl_series_read(): series \"", series, "\": its series.yml says name: ", y$name,
+    stop(fn, ": series \"", series, "\": its series.yml says name: ", y$name,
          " (the name is the folder's).", call. = FALSE)
   }
   values <- y$values %||% list()
   if (!.series_is_map(values) && length(values)) {
-    stop("tfl_series_read(): series \"", series, "\": values: is a map ({key: value}).", call. = FALSE)
+    stop(fn, ": series \"", series, "\": values: is a map ({key: value}).", call. = FALSE)
   }
+  docs <- y$descriptions %||% list()
+  if (length(docs) && (!.series_is_map(docs) ||
+                       !all(vapply(docs, function(d) is.character(d) && length(d) == 1L && !is.na(d),
+                                   logical(1))))) {
+    stop(fn, ": series \"", series, "\": descriptions: is a map ({key: text}), ",
+         "one text a key of values:.", call. = FALSE)
+  }
+  docs <- if (length(docs)) unlist(docs) else stats::setNames(character(), character())
   structure(list(name = series, label = y$label, released = y$released, needs = y$needs,
                  fixes = y$fixes %||% list(), values = if (length(values)) values else list(),
-                 path = path, file = normalizePath(file, winslash = "/", mustWork = TRUE)),
+                 descriptions = docs,
+                 path = normalizePath(path, winslash = "/", mustWork = TRUE),
+                 file = normalizePath(file, winslash = "/", mustWork = TRUE)),
             class = "tfl_series")
 }
 
@@ -152,37 +188,36 @@ print.tfl_series <- function(x, ...) {
 # ---- resolution -------------------------------------------------------------
 
 # Replaces the tagged values of `x` (a parsed YAML value: a list or a vector).
-#   series    a tfl_series (tfl_series_read()), or a series's name
-#   study     the parsed study.yml (settings:, series_settings:), or NULL
+#   series    a tfl_series (the study's copy, or a source's), or a series's name
+#   study     the parsed study.yml (settings:), or NULL
 #   template  the template's name, for the messages
 #   origin    the origin of an untagged value ("template", or "report" for a
 #             report SPEC)
 # The result has attribute "origins": a named character vector, by the
 # dotted path of each value (a list's element without a name by its
-# position), of "report" / "template" / "study" / "series" / "fixed".  A
-# `!fixed` value also carries attribute "fixed" = TRUE and "origin" = "fixed".
+# position), of "report" / "template" / "study" / "series" / "fixed"
+# ("series": a `!series K` value, from the series.yml read; "study": a
+# `!study K` value).  A `!fixed` value also carries attribute "fixed" = TRUE
+# and "origin" = "fixed".
 .series_resolve <- function(x, series, study = NULL, template = NULL, origin = "template") {
   if (is.character(series)) series <- tfl_series_read(series)
   if (!inherits(series, "tfl_series")) {
     stop(".series_resolve(): `series` is a tfl_series or a series's name.", call. = FALSE)
   }
-  .series_check_settings(study, series)
   sname <- series$name
-  own <- study$series_settings[[sname]]
   where <- if (is.null(template)) paste0("series ", sname) else paste0("template ", template)
   origins <- character()
   note <- function(path, o) origins[[if (length(path)) paste(path, collapse = ".") else "."]] <<- o
   lookup <- function(key) {
-    if (!is.null(own) && key %in% names(own)) return(list(value = own[[key]], origin = "study"))
-    if (key %in% names(series$values)) return(list(value = series$values[[key]], origin = "series"))
+    if (key %in% names(series$values)) return(series$values[[key]])
     stop(where, ": !series ", key, ": no value ", key, " in series ", sname,
-         " (series.yml values:) or in study.yml series_settings: ", sname, ":.", call. = FALSE)
+         " (", series$file, " values:).", call. = FALSE)
   }
   walk <- function(v, path, o) {
     if (inherits(v, "tfl_series_ref")) {
-      hit <- lookup(v$key)
-      note(path, hit$origin)
-      return(hit$value)
+      val <- lookup(v$key)
+      note(path, "series")
+      return(val)
     }
     if (inherits(v, "tfl_study_ref")) {
       val <- .series_study_value(study, v$key)
@@ -228,19 +263,20 @@ print.tfl_series <- function(x, ...) {
   v
 }
 
-# study.yml series_settings: a key of a series that its values: do not have
-.series_check_settings <- function(study, series) {
-  own <- study$series_settings[[series$name]]
-  if (is.null(own)) return(invisible(character()))
-  if (!.series_is_map(own)) {
-    stop("study.yml series_settings: ", series$name, ": is a map ({key: value}).", call. = FALSE)
-  }
-  bad <- setdiff(names(own), names(series$values))
-  for (k in bad) {
-    warning("study.yml series_settings: ", series$name, ": ", k, " is not a value of series ",
-            series$name, " (series.yml values:); it is not read.", call. = FALSE)
-  }
-  invisible(bad)
+# study.yml `series_settings:` is no longer read: a study changes a series's
+# values in its copy of series.yml.  Stops naming each series in it.
+# `study` is study.yml read as a list; `study_dir` the study folder, or NULL.
+.series_settings_gone <- function(study, study_dir = NULL) {
+  if (is.null(study) || !is.list(study) || is.null(study$series_settings)) return(invisible())
+  ss <- study$series_settings
+  where <- if (is.null(study_dir)) "<study>" else study_dir
+  sn <- if (.series_is_map(ss)) names(ss) else "<series>"
+  to <- vapply(sn, function(s) {
+    paste0(s, ": move these values into ", where, "/spec/series/", s,
+           "/series.yml values: (tfl_series_values_set()), after tfl_copy_templates()")
+  }, "")
+  stop("study.yml series_settings: is no longer read. ", paste(to, collapse = "; "), ".",
+       call. = FALSE)
 }
 
 # ---- formats ----------------------------------------------------------------
@@ -275,7 +311,7 @@ print.tfl_series <- function(x, ...) {
   list(base = base, vars = vars)
 }
 
-# ---- lock ---------------------------------------------------------------------
+# ---- the templates the reports use -----------------------------------------
 
 # the series/template pairs that report SPECs name (`template: name: s/t`)
 .series_templates_used <- function(files) {
@@ -297,104 +333,3 @@ print.tfl_series <- function(x, ...) {
 }
 
 .series_md5 <- function(f) unname(as.character(tools::md5sum(f)))
-
-#' Pin the series a study uses
-#'
-#' `tfl_pin_series()` writes `<study_dir>/spec/series.lock`: one entry for
-#' each series the report SPECs (`spec/outputs/*.yml`) name a template of
-#' (`template: name: <series>/<template>`), with the series's folder
-#' (`path`), the md5 of its `series.yml` (`series`) and the md5 of each
-#' template file used (`templates`, `<series>/templates/<template>.yml`).
-#' The file is written by this function and never edited by hand.
-#' `tfl_series_check_lock()` compares the current files with the lock and
-#' warns, naming the file, for each one that changed or is missing.
-#'
-#' ```yaml
-#' tflspec_v1:
-#'   path: <series folder>/tflspec_v1
-#'   series: 41d7e2...
-#'   templates:
-#'     demog: 3f9c1a...
-#' ```
-#'
-#' @param study_dir The study folder (holds `study.yml` and `spec/`).
-#' @param reports The report SPEC files to read; `NULL` (default) for every
-#'   `.yml` file under `spec/outputs/`.  A relative path that is not a file
-#'   is read from `spec/outputs/`.
-#' @return `tfl_pin_series()`: the lock file's path, invisibly.
-#'   `tfl_series_check_lock()`: invisibly, a data frame of the files of the
-#'   lock -- `series`, `template` (`NA` for `series.yml`), `file`, `locked`
-#'   and `current` (md5s) and `status` (`"ok"`, `"changed"` or `"missing"`).
-#' @seealso [tfl_series_dir()]
-#' @export
-tfl_pin_series <- function(study_dir, reports = NULL) {
-  if (!dir.exists(study_dir)) stop("tfl_pin_series(): no folder ", study_dir, call. = FALSE)
-  out_dir <- file.path(study_dir, "spec", "outputs")
-  if (is.null(reports)) {
-    reports <- list.files(out_dir, "\\.ya?ml$", full.names = TRUE, recursive = TRUE)
-  } else {
-    alt <- file.path(out_dir, reports)
-    reports <- ifelse(file.exists(reports), reports, alt)
-    miss <- reports[!file.exists(reports)]
-    if (length(miss)) stop("tfl_pin_series(): no report file ", miss[[1L]], call. = FALSE)
-  }
-  used <- .series_templates_used(reports)
-  lock <- list()
-  for (s in sort(unique(used$series))) {
-    .series_check_name(s, "tfl_pin_series()")
-    path <- tfl_series_dir(s)
-    tpls <- sort(unique(used$template[used$series == s]))
-    md5 <- vapply(tpls, function(t) {
-      f <- file.path(path, "templates", paste0(t, ".yml"))
-      if (!file.exists(f)) stop("tfl_pin_series(): no template ", s, "/", t, " (", f, ").", call. = FALSE)
-      .series_md5(f)
-    }, "")
-    lock[[s]] <- list(path = path, series = .series_md5(file.path(path, "series.yml")),
-                      templates = as.list(stats::setNames(md5, tpls)))
-  }
-  f <- file.path(study_dir, "spec", "series.lock")
-  dir.create(dirname(f), recursive = TRUE, showWarnings = FALSE)
-  body <- if (length(lock)) yaml::as.yaml(lock) else "{}\n"
-  con <- file(f, open = "wb")
-  on.exit(close(con), add = TRUE)
-  writeLines(c("# spec/series.lock: written by tflspec::tfl_pin_series() from the report SPECs;",
-               "# do not edit by hand.", sub("\n$", "", body)), con, sep = "\n")
-  invisible(f)
-}
-
-#' @rdname tfl_pin_series
-#' @export
-tfl_series_check_lock <- function(study_dir) {
-  f <- file.path(study_dir, "spec", "series.lock")
-  if (!file.exists(f)) stop("tfl_series_check_lock(): no ", f, " (see tfl_pin_series()).", call. = FALSE)
-  lock <- yaml::read_yaml(f)
-  rows <- list()
-  add <- function(s, t, file, locked) {
-    cur <- if (!is.na(file) && file.exists(file)) .series_md5(file) else NA_character_
-    st <- if (is.na(cur)) "missing" else if (identical(cur, locked)) "ok" else "changed"
-    if (st == "changed") warning("series ", s, ": ", file, " changed since tfl_pin_series().", call. = FALSE)
-    if (st == "missing") {
-      warning("series ", s, ": ", if (is.na(file)) "the series" else file,
-              " is missing (locked by tfl_pin_series()).", call. = FALSE)
-    }
-    rows[[length(rows) + 1L]] <<- data.frame(series = s, template = t, file = file,
-                                             locked = locked, current = cur, status = st)
-  }
-  for (s in names(lock)) {
-    e <- lock[[s]]
-    path <- tryCatch(tfl_series_dir(s), error = function(err) NA_character_)
-    if (!is.na(path) && !is.null(e$path) && !identical(path, e$path)) {
-      message("series ", s, " is read from ", path, " (lock: ", e$path, ").")
-    }
-    add(s, NA_character_, if (is.na(path)) NA_character_ else file.path(path, "series.yml"),
-        as.character(e$series))
-    for (t in names(e$templates)) {
-      add(s, t, if (is.na(path)) NA_character_ else file.path(path, "templates", paste0(t, ".yml")),
-          as.character(e$templates[[t]]))
-    }
-  }
-  out <- if (length(rows)) do.call(rbind, rows) else
-    data.frame(series = character(), template = character(), file = character(),
-               locked = character(), current = character(), status = character())
-  invisible(out)
-}

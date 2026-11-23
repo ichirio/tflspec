@@ -1,9 +1,10 @@
 # tfl_template_resolve(): the 7 SAMPLE-01 reports of the tflspec_v1 series
 # (fictional study) as code SPECs.
 
+# (a study given as a list, without its folder: the package's series read;
+# a study's own copies: test-study-template-copy.R)
 tr_study <- function() {
-  list(settings = list(rounding = "sas", output_path = "output/tfl"),
-       series_settings = list(tflspec_v1 = list(style = "standard", max_rows = 25L)))
+  list(settings = list(rounding = "sas", output_path = "output/tfl"))
 }
 
 tr_report <- function(text) {
@@ -85,11 +86,11 @@ test_that("demog: an analysis a variable, its id the variable's name", {
   expect_identical(an[[3L]]$by, "TRT01A")
   expect_identical(an[[3L]]$type, "ard")
   expect_identical(an[[1L]]$variables, "TRT01A")
-  # the series' formats; the study's max_rows over the series's
+  # the series' formats and max_rows
   expect_identical(an[[2L]]$formats$mean, 2L)
-  expect_identical(attr(out, "origins")[["max_rows"]], "study")
+  expect_identical(attr(out, "origins")[["max_rows"]], "series")
   expect_identical(attr(out, "origins")[["by"]], "report")
-  expect_identical(attr(out, "args")$max_rows, 25L)
+  expect_identical(attr(out, "args")$max_rows, 30L)
 })
 
 test_that("demog: analysis_ids name a variable's analysis", {
@@ -178,29 +179,11 @@ test_that("the fill: braces, splicing, NULL drops a key", {
   expect_identical(f("{p} {n}", env, shadow = "n"), "{p} {n}")
 })
 
-test_that("tfl_series_list() and a study's series values", {
+test_that("tfl_series_list() lists the sources", {
   sl <- tfl_series_list()
   expect_true("tflspec_v1" %in% sl$name)
   expect_identical(names(sl), c("name", "label", "released", "path", "source"))
-  v <- tfl_series_settings(tr_study(), "tflspec_v1")
-  expect_identical(v$max_rows, 25L)
-  expect_identical(attr(v, "origins")[["max_rows"]], "study")
-  expect_identical(attr(v, "origins")[["total"]], "series")
-
-  d <- tempfile("study")
-  dir.create(d)
-  on.exit(unlink(d, recursive = TRUE), add = TRUE)
-  writeLines(c("# a study", "settings:", "  rounding: sas", "series_settings:",
-               "  tflspec_v1:", "    max_rows: 25", "other: 1"), file.path(d, "study.yml"))
-  tfl_series_settings_set(d, "tflspec_v1", list(max_rows = 20L, total = TRUE))
-  y <- yaml::read_yaml(file.path(d, "study.yml"))
-  expect_identical(y$series_settings$tflspec_v1$max_rows, 20L)
-  expect_true(y$series_settings$tflspec_v1$total)
-  expect_identical(y$other, 1L)
-  expect_identical(readLines(file.path(d, "study.yml"))[1L], "# a study")
-  tfl_series_settings_set(d, "tflspec_v1", list(max_rows = NULL, total = NULL))
-  expect_null(yaml::read_yaml(file.path(d, "study.yml"))$series_settings)
-  expect_error(tfl_series_settings_set(d, "tflspec_v1", list(zz = 1)), "not a value")
+  expect_identical(sl$source[sl$name == "tflspec_v1"], "package")
 })
 
 test_that("lab: record_where is adlb_sub's where; a report row merges key by key, one with code replaces the template's", {
@@ -256,6 +239,9 @@ test_that("tflspec_summary: demog's arguments give demog's code SPEC; the analys
   sm <- dm
   sm$template$name <- "tflspec_v1/tflspec_summary"
   a <- tfl_template_resolve(dm, study = tr_study())
+  # (demog's value_labels default, the study lists by name, given to the
+  # summary, whose value_labels has no default)
+  sm$template$content <- list(value_labels = attr(a, "args")$value_labels)
   b <- tfl_template_resolve(sm, study = tr_study())
   for (k in c("id", "kind", "label", "extends", "style", "data", "ard", "content", "page")) {
     expect_identical(b[[k]], a[[k]], info = k)

@@ -28,6 +28,7 @@ fk_spec <- function(lines, d) {
   f <- file.path(d, "spec", "outputs", paste0(sub("^id: ", "", lines[1L]), ".yml"))
   writeLines(lines, f)
   on.exit(unlink(f))
+  invisible(tfl_copy_templates(d))
   tfl_template_to_spec(tfl_read_output(f), tfl_read_study_spec(d))
 }
 

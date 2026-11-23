@@ -1044,7 +1044,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #' The R code that makes the study's ARD
 #'
 #' One cards / cardx call per analysis row, each result under a name of its
-#' own (`ard_<analysis_id>`) and tagged with its `output_id`, `analysis_id`
+#' own (`.ard_<analysis_id>`) and tagged with its `output_id`, `analysis_id`
 #' and `population_id` (`tag_ard()`), bound into one ARD and saved to the
 #' study key `output` (default `output/ard/ard.rds`).  The code runs from
 #' the study folder, and reads as a person writes it: the tidyverse layout
@@ -1244,6 +1244,11 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
 #' (study.yml's `settings: adam_levels`, which [tfl_sheets_from_spec()] puts
 #' on the `study` sheet when it is `none`) counts: `none` gives another
 #' fingerprint than `codelists`, the default, which leaves it as it was.
+#' Under `codelists`, the study's ADaM metadata (`spec$adam_meta`, which a
+#' YAML study's ARD definition carries: [tfl_read_study_spec()]'s
+#' `adam_meta` for the study's datasets) counts too, for the datasets the
+#' output reads: each variable it maps and the codes it puts on it, in
+#' order.  A study whose adam_meta maps none of them keeps its fingerprints.
 #'
 #' @param spec An [tfl_ard_spec()].
 #' @param output_id The output.
@@ -1273,8 +1278,9 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
                              c(a$population_id, ad$population_id), , drop = FALSE]
   dss <- spec$datasets[spec$datasets$dataset %in%
                          c(a$dataset, pops$dataset, ad$from), , drop = FALSE]
-  # (adam_levels: its own line under none; codelists, the default, none --
-  # a study that does not say it keeps its fingerprints)
+  # (adam_levels: one line when levels go on -- the same for define_xml and
+  # define_spec, whose levels both come from adam_meta; none, the default,
+  # none: a study that does not say it keeps its fingerprints)
   st <- spec$study
   if (is.data.frame(st) && "key" %in% names(st)) st <- st[!st$key %in% "adam_levels", , drop = FALSE]
   al <- .adam_levels_check(.study_value(spec, "adam_levels", NA), "study key adam_levels")
@@ -1283,7 +1289,9 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
                  utils::capture.output(print(as.list(pops))),
                  utils::capture.output(print(as.list(dss[setdiff(names(dss), "level")]))),
                  utils::capture.output(print(as.list(st))),
-                 if (identical(al, "none")) "adam_levels: none",
+                 if (!identical(al, "none")) "adam_levels: applied",
+                 # (adam_meta: the levels study$adam puts on the datasets read)
+                 if (!identical(al, "none")) .adam_meta_hash_lines(spec$adam_meta, dss$dataset),
                  if (length(src)) paste(src, src_md5),
                  # the code lists, only when there are some: a study without
                  # keeps the fingerprints it had

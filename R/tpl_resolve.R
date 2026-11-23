@@ -93,16 +93,26 @@
 #' An operation inside `then`/`else` is not worked out: derive a name for it
 #' and write `"{name}"`.
 #'
+#' A study reads its own copy of the series and the template
+#' (`<study>/spec/series/<series>/`, [tfl_copy_templates()]) and nothing
+#' else: a template it has not copied stops, with the call that copies it.
+#' Only a study given without its folder (`study.yml` read as a list, or
+#' `NULL`) reads the source folders ([tfl_series_dir()]).  A `study.yml`
+#' with `series_settings:` stops: a study's series values are in its copy
+#' of `series.yml` ([tfl_series_values_set()]).
+#'
 #' @param report A report SPEC (a list, as read) or its file.
 #' @param template A template, `"<series>/<template>"`; default the report's
 #'   `template: name:`.
-#' @param study The study: its `study.yml` read as a list (`settings:`,
-#'   `series_settings:`), the file, or the study folder; `NULL` for none.
+#' @param study The study: the study folder, its `study.yml` file, or
+#'   `study.yml` read as a list (`settings:`; with attribute `"study_dir"`,
+#'   the study folder, it reads that study's copies); `NULL` for none.
 #' @return A `tfl_output` (the report as a code SPEC).  Its attribute
 #'   `"args"` holds the template's arguments as used, and `"origins"` where
-#'   each came from (`"report"`, `"template"`, `"series"`, `"study"`,
-#'   `"fixed"`).
-#' @seealso [tfl_arg_defs()], [tfl_series_dir()]
+#'   each came from (`"report"`, `"template"`, `"series"` -- a `!series`
+#'   value, from the study's copy of `series.yml` --, `"study"` -- a
+#'   `!study` value, from `study.yml` --, `"fixed"`).
+#' @seealso [tfl_arg_defs()], [tfl_copy_templates()], [tfl_series_dir()]
 #' @export
 tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   who <- "tfl_template_resolve()"
@@ -114,12 +124,13 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   study <- .tr_study(study, who)
   template <- template %||% report$template$name
   if (is.null(template)) stop(who, ": the report names no template (template: name:).", call. = FALSE)
-  tf <- .template_file(template)
-  series <- tfl_series_read(sub("/.*$", "", template), dir = dirname(dirname(dirname(tf))))
+  study_dir <- attr(study, "study_dir")
+  tf <- .template_file(template, study_dir)
+  series <- .tr_series(template, tf, study_dir, who)
   tpl <- .series_resolve(.series_read_yaml(tf), series, study, template)
   torig <- attr(tpl, "origins")
   report <- .series_resolve(report, series, study, template, origin = "report")
-  defs <- tfl_arg_defs(template = template)
+  defs <- tfl_arg_defs(template = template, study_dir = study_dir)
 
   given <- .tr_given(report$template, defs$name, template, who)
   env <- list()
@@ -164,6 +175,13 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   # data: rows -- the template's, the report's merged in by id key by key
   # (a report row with `code:` makes the whole data: it replaces the
   # template's row of its id), then filled in
+  # (a figure's data written as its steps, `data: {source, steps}` as a
+  # code SPEC writes it, is filled in as it is; a report's rows have no
+  # place in it)
+  if (is.list(tpl$data) && !is.null(names(tpl$data)) && length(report$data)) {
+    stop(who, ": ", template, "'s data are its steps (data: steps:); a report adds no data rows to them.",
+         call. = FALSE)
+  }
   rows <- tpl$data %||% list()
   for (r in report$data %||% list()) {
     k <- match(r$id %||% NA_character_, vapply(rows, function(e) e$id %||% NA_character_, ""))
@@ -197,12 +215,18 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   kind <- report$kind %||% tpl$kind %||% "table"
 
   # (labels and value_labels are one plan_labels: a later plan_labels
-  # replaces an entry of the same name whole, a heading would be lost)
+  # replaces an entry of the same name whole, a heading would be lost;
+  # a value_labels entry may be a reference to a study list,
+  # !r study$codelists$X, as demog's default)
   cenv <- env
   if ("value_labels" %in% names(env)) {
     cenv["labels"] <- list(.tr_merge_labels(env$labels, env$value_labels, template))
   }
   content <- .tr_fill(tpl$content %||% list(), cenv)
+  # (the plan_labels items as one; a reference to a study list for a column
+  # no analysis reads left out)
+  cols <- unique(as.character(unlist(lapply(items, function(a) c(a$variables, a$by)))))
+  content <- .tr_labels_join(content, cols)
   if (is.list(report$content)) content <- c(content, report$content)
   page <- .tr_fill(tpl$page %||% list(), env)
   for (k in names(report$page)) page[k] <- list(report$page[[k]])
@@ -369,15 +393,45 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   TRUE
 }
 
-# the study as a list: a list as given, study.yml, or a folder that holds it
+# The study as a list: a list as given, study.yml, or a folder that holds
+# it.  Read from a file or a folder, it has attribute "study_dir" (the
+# study folder: the series are read from its copies).  A study.yml with
+# series_settings: stops (.series_settings_gone()).
 .tr_study <- function(study, who) {
-  if (is.null(study) || is.list(study)) return(study)
+  if (is.null(study)) return(study)
+  if (is.list(study)) {
+    .series_settings_gone(study, attr(study, "study_dir"))
+    return(study)
+  }
   if (!is.character(study) || length(study) != 1L) {
     stop(who, ": `study` is study.yml read as a list, the file or the study folder.", call. = FALSE)
   }
-  f <- if (dir.exists(study)) file.path(study, "study.yml") else study
+  is_dir <- dir.exists(study)
+  f <- if (is_dir) file.path(study, "study.yml") else study
+  sd <- normalizePath(if (is_dir) study else dirname(study), winslash = "/", mustWork = FALSE)
   if (!file.exists(f)) stop(who, ": no file ", f, call. = FALSE)
-  .series_read_yaml(f) %||% list()
+  out <- .series_read_yaml(f) %||% list()
+  .series_settings_gone(out, sd)
+  structure(out, study_dir = sd)
+}
+
+# A study spec's study.yml as .tr_study() gives it: with its folder, so
+# that its series are read from its copies
+.tr_study_of <- function(study) {
+  structure(study$study %||% list(), study_dir = study$dir)
+}
+
+# The series of a template file `tf`: the study's copy of series.yml (next
+# to the copied template) when `study_dir` is given, else the source's.
+.tr_series <- function(template, tf, study_dir, who) {
+  s <- sub("/.*$", "", template)
+  if (is.null(study_dir)) return(tfl_series_read(s, dir = dirname(dirname(dirname(tf)))))
+  path <- dirname(dirname(tf))
+  if (!file.exists(file.path(path, "series.yml"))) {
+    stop(who, ": series ", s, " is not copied into the study (no ", file.path(path, "series.yml"),
+         "): ", .study_copy_hint(study_dir, template), ".", call. = FALSE)
+  }
+  .series_read_at(path, s, who)
 }
 
 # where a param's default came from (the first value under its path)
@@ -472,6 +526,13 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   out <- as.list(labels)
   for (v in names(value_labels)) {
     vl <- value_labels[[v]]
+    if (is.null(vl) || inherits(vl, "tfl_unset")) next
+    if (.has_study_ref(vl)) {
+      # a study list (R): the heading goes in front of it in R
+      head <- out[[v]]
+      out[[v]] <- if (is.null(head)) vl else .tr_label_pair(v, head, vl)
+      next
+    }
     if (!is.list(vl) || is.null(names(vl)) || !all(nzchar(names(vl)))) {
       stop("template ", template, ": value_labels: ", v, " is a map ({code: text}).", call. = FALSE)
     }

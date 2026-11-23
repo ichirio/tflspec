@@ -77,6 +77,7 @@ params:
   analysis_ids:
     type: map<column,string>
     input: table
+    columns: {key: {label: {en: "Variable", ja: "変数"}}, value: {label: {en: "Analysis ID", ja: "解析 ID"}}}
     choices: vars(adsl_sub)
     default: ~
     step: analysis
@@ -85,6 +86,7 @@ params:
   formats:
     type: map<string,number|string>
     input: table
+    columns: {key: {label: {en: "Statistic", ja: "統計量"}}, value: {label: {en: "Format", ja: "書式"}}}
     choices: stats
     free: true
     default: !series formats
@@ -95,24 +97,28 @@ params:
   labels:
     type: map<column,string>
     input: table
+    columns: {key: {label: {en: "Variable", ja: "変数"}}, value: {label: {en: "Label", ja: "ラベル"}}}
     choices: vars(adsl_sub)
     default: ~
     step: content
     tier: usual
     description: The row label of each variable; empty for the variable's label.
   value_labels:
-    type: map<column,map<string,string>>
+    type: map<column,r>
     input: table
+    columns: {key: {label: {en: "Variable", ja: "変数"}}, value: {label: {en: "Value labels", ja: "値のラベル"}}}
     choices: vars(adsl_sub)
     default: ~
     step: content
     tier: other
     description: "The label of each value of a variable, code to text ({SEX:
-      {F: Female}}); empty for the code list's labels.  It goes with labels
+      {F: Female}}) or a study list (!r study$codelists$SEX); empty for the
+      code list's labels.  It goes with labels
       in one plan_labels, a variable's heading kept."
   nest:
     type: map<column,map<column,string>>
     input: table
+    columns: {key: {label: {en: "Nested variable", ja: "入れ子の変数"}}, value: {label: {en: "Under", ja: "親"}, columns: {key: {label: {en: "Parent variable", ja: "親の変数"}}, value: {label: {en: "Level", ja: "水準"}}}}}
     choices: vars(adsl_sub)
     default: ~
     step: content
@@ -123,6 +129,7 @@ params:
   cells:
     type: map<string,string>
     input: table
+    columns: {key: {label: {en: "Statistic", ja: "統計量"}}, value: {label: {en: "Text", ja: "テキスト"}}}
     ordered: true
     default:
       "n": "{N}"
@@ -146,10 +153,12 @@ params:
     input: table
     columns:
       row_label:
+        label: {en: "Row labels", ja: "行ラベル"}
         type: string
         input: text
         description: The text over the row labels' column.
       .values:
+        label: {en: "Value columns", ja: "値の列"}
         type: string
         input: text
         description: "The text over each value column ({col} the column's value)."

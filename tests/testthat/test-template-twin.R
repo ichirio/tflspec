@@ -27,6 +27,13 @@ twin_study <- function(d, defaults, style = TRUE) {
     dl <- append(dl, "  - normalize_ard: {}", after = match("content:", dl))
   }
   writeLines(dl, file.path(d, "spec", "defaults.yml"))
+  # (the sample defaults.yml's adam_meta levels apply as in the sample
+  # study.yml: settings: {adam_levels: define_xml}; none, the default, applies none)
+  sy <- readLines(file.path(d, "study.yml"))
+  at <- grep("^settings:", sy)
+  sy <- if (length(at)) append(sy, "  adam_levels: define_xml", after = at[1L]) else
+    c(sy, "settings: {adam_levels: define_xml}")
+  writeLines(sy, file.path(d, "study.yml"))
   if (!style) {
     sy <- readLines(file.path(d, "study.yml"))
     writeLines(sy[!grepl("^  style:", sy)], file.path(d, "study.yml"))
@@ -47,6 +54,7 @@ twin_build <- function(name, d, rtf = TRUE, drop = NULL) {
     }
     writeLines(x, file.path(out, paste0(name, s, ".yml")))
   }
+  invisible(tfl_copy_templates(d))
   ft <- file.path(out, paste0(name, "T.yml"))
   st <- tfl_read_study_spec(d)
   tfl_write_output(tfl_template_to_spec(tfl_read_output(ft), st), ft)
@@ -139,6 +147,7 @@ test_that("tflspec_summary: DM's arguments give demog's ARD", {
   ids <- c(demog = "T-14-1-1T", summary = "T-14-1-1S")
   writeLines(x, file.path(out, "T-14-1-1T.yml"))
   writeLines(y, file.path(out, "T-14-1-1S.yml"))
+  invisible(tfl_copy_templates(d))
   st <- tfl_read_study_spec(d)
   for (id in ids) {
     f <- file.path(out, paste0(id, ".yml"))
@@ -165,6 +174,7 @@ test_that("tflspec_summary: a report's filter on adsl_sub reaches BIGN (header N
               after = match("codelists:", x) - 1L)
   f <- file.path(d, "spec", "outputs", "T-14-1-1F.yml")
   writeLines(x, f)
+  invisible(tfl_copy_templates(d))
   st <- tfl_read_study_spec(d)
   tfl_write_output(tfl_template_to_spec(tfl_read_output(f), st), f)
   st <- tfl_read_study_spec(d)
@@ -202,6 +212,7 @@ test_that("tflspec_summary: nest moves rows, the header has the arms and N, labe
                  "template:", "  name: tflspec_v1/tflspec_summary",
                  "  analysis:", "    by: [TRT01A]", "    categorical: [SEX, RACE, ETHNIC]",
                  "    missing_row: false", "  content:", content), f)
+    invisible(tfl_copy_templates(d))
     st <- tfl_read_study_spec(d)
     tfl_write_output(tfl_template_to_spec(tfl_read_output(f), st), f)
     st <- tfl_read_study_spec(d)
@@ -221,12 +232,14 @@ test_that("tflspec_summary: nest moves rows, the header has the arms and N, labe
     expect_true(has(x, "Drug X") == has(x, "Characteristic") - 1L)
   }
   # without nest the ETHNIC block follows RACE's; with it the rows sit under ASIAN
+  # (RACE in the order of the sample defaults.yml's adam_meta, CL.RACE:
+  # WHITE, BLACK OR AFRICAN AMERICAN, ASIAN)
   rows <- function(x, s) min(has(x, s))
-  expect_true(rows(a, "BLACK OR AFRICAN AMERICAN") == rows(a, "ASIAN") + 1L)
-  expect_true(rows(a, "HISPANIC OR LATINO") > rows(a, "WHITE"))
+  expect_true(rows(a, "ASIAN") == rows(a, "BLACK OR AFRICAN AMERICAN") + 1L)
+  expect_true(rows(a, "HISPANIC OR LATINO") > rows(a, "ASIAN"))
   expect_true(rows(b, "HISPANIC OR LATINO") == rows(b, "ASIAN") + 1L)
-  expect_true(rows(b, "BLACK OR AFRICAN AMERICAN") > max(has(b, "NOT HISPANIC OR LATINO")))
-  expect_true(rows(b, "WHITE") > rows(b, "BLACK OR AFRICAN AMERICAN"))
+  expect_true(rows(b, "BLACK OR AFRICAN AMERICAN") > rows(b, "WHITE"))
+  expect_true(rows(b, "ASIAN") > rows(b, "BLACK OR AFRICAN AMERICAN"))
   expect_length(has(a, "ETHNIC"), 1L)
   expect_length(has(b, "ETHNIC"), 0L)
   # labels and value_labels in one plan_labels: the heading and the values both print

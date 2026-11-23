@@ -61,6 +61,7 @@ params:
   analysis_ids:
     type: map<column,string>
     input: table
+    columns: {key: {label: {en: "Variable", ja: "変数"}}, value: {label: {en: "Analysis ID", ja: "解析 ID"}}}
     choices: vars(adsl_sub)
     default: ~
     step: analysis
@@ -69,6 +70,7 @@ params:
   formats:
     type: map<string,number|string>
     input: table
+    columns: {key: {label: {en: "Statistic", ja: "統計量"}}, value: {label: {en: "Format", ja: "書式"}}}
     choices: stats
     free: true
     default: !series formats
@@ -79,14 +81,32 @@ params:
   labels:
     type: map<column,string>
     input: table
+    columns: {key: {label: {en: "Variable", ja: "変数"}}, value: {label: {en: "Label", ja: "ラベル"}}}
     choices: vars(adsl_sub)
     default: ~
     step: content
     tier: usual
     description: The row label of each variable; empty for the variable's label.
+  value_labels:
+    type: map<column,r>
+    input: table
+    columns: {key: {label: {en: "Variable", ja: "変数"}}, value: {label: {en: "Value labels", ja: "値のラベル"}}}
+    choices: vars(adsl_sub)
+    default:
+      SEX: !r study$codelists$SEX
+      RACE: !r study$codelists$RACE
+      ETHNIC: !r study$codelists$ETHNIC
+      AGEGR1: !r study$codelists$AGEGR1
+    step: content
+    tier: usual
+    description: The text of each categorical variable's values, by variable
+      (R; the study's code lists by name, study$codelists$<name>). A
+      variable the report does not show is left out, and so is a list the
+      study has not got.
   cells:
     type: map<string,string>
     input: table
+    columns: {key: {label: {en: "Statistic", ja: "統計量"}}, value: {label: {en: "Text", ja: "テキスト"}}}
     ordered: true
     default:
       "n": "{N}"
