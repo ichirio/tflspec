@@ -451,7 +451,7 @@ plan_titles:
   tier: other
   dots: {style: positional, key: titles, type: "list<string>"}
   args:
-    titles: {label: {en: "Titles", ja: "タイトル"}, help: "The title lines over the table, one entry a line, the same on every page. Give this or Pages, not both. e.g. c(\"Table 14.1.1\", \"Demographics\")", type: r, input: r}
+    titles: {label: {en: "Titles", ja: "タイトル"}, help: "The title lines over the table, one entry a line, the same on every page. Give this or Pages, not both. e.g. Table 14.1.1"}
     pages: {label: {en: "Pages", ja: "ページ"}, help: "One block of titles for each page, when the pages do not share one: one entry a page. Give this or Titles, not both. e.g. list(\"Page A\", \"Page B\")", type: "list<string>", input: text}
     border: {label: {en: "Border", ja: "罫線"}, help: "The border of the title block as a whole, as R (rtf_border()): top above the first line, bottom under the last, inside_h between lines. Blank: none. e.g. rtf_border(bottom = \"single\")", type: r, input: r}
 
@@ -463,7 +463,7 @@ plan_footnotes:
   tier: other
   dots: {style: positional, key: footnotes, type: "list<string>"}
   args:
-    footnotes: {label: {en: "Footnotes", ja: "脚注"}, help: "The footnote lines under the table, one entry a line, the same on every page. Give this or Pages, not both. e.g. c(\"n (%)\", \"Source: ADSL\")", type: r, input: r}
+    footnotes: {label: {en: "Footnotes", ja: "脚注"}, help: "The footnote lines under the table, one entry a line, the same on every page. Give this or Pages, not both. e.g. n (%)"}
     pages: {label: {en: "Pages", ja: "ページ"}, help: "One block of footnotes for each page, when the pages do not share one: one entry a page. Give this or Footnotes, not both. e.g. list(\"Note A\", \"Note B\")", type: "list<string>", input: text}
     border: {label: {en: "Border", ja: "罫線"}, help: "The border of the footnote block as a whole, as R (rtf_border()): top is the rule above the first line. Blank: none. e.g. rtf_border(top = \"single\")", type: r, input: r}
 
