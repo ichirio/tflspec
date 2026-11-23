@@ -113,43 +113,24 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     items <- items[!is_nz]
     # the defaults have no tables row to read the arguments from, and a
     # second normalize_ard() no row of its own: all of them are kept whole
-    # with the items the sheets cannot say (#689).  A single one with
-    # arguments is tried on the tables row below, and kept whole too when
-    # reading the row does not give its arguments back.
+    # with the items the sheets cannot say (#689).  A single one is tried on
+    # the tables row below, and kept too when reading the row does not give
+    # it back (one with no arguments included).
     whole <- length(nz) > 1L ||
       (is.na(id) && any(vapply(nz, function(it) length(it$args) > 0L, NA)))
-    if (length(nz) && !whole && !is.na(id) && length(nz[[1L]]$args)) norm_rows[[id]] <<- nz[[1L]]$args
+    if (length(nz) && !whole && !is.na(id)) norm_rows[id] <<- list(nz[[1L]]$args %||% list())
     more <- if (whole) nz else list()
     nz <- nz[seq_len(min(1L, length(nz)))]
     key <- if (is.na(id)) ".defaults" else id
     if (!length(items)) { if (length(more)) more_rows[[key]] <<- more; return() }
     if (is.null(bridge)) { note(id, "content", "no bridge from the layers to the sheets (tflspec's .plan_sheets_from_content)"); return() }
     # (the bridge reads normalize_ard()'s stack: the columns the plan makes)
-    # an item any of whose arguments the sheets cannot say goes whole, as
-    # YAML, in the tables row's content_more -- never on both (#448): taken
-    # out, and the bridge run again on the rest
-    keep <- seq_along(items)
-    repeat {
-      sp <- tryCatch(bridge(c(nz, items[keep]), if (is.na(id)) NULL else id), error = function(e) e)
-      # (the sheets refuse the rows of an item: which one, tried each alone;
-      # that one goes whole too, not the report's whole content)
-      if (inherits(sp, "error")) {
-        refused <- vapply(keep, function(k) inherits(tryCatch(
-          bridge(c(nz, items[k]), if (is.na(id)) NULL else id), error = function(e) e), "error"), NA)
-        if (!any(refused)) stop(sp)
-        out <- which(refused)
-        keep <- keep[-out]
-        if (!length(keep)) { sp <- list(); break }
-        next
-      }
-      out <- attr(sp, "not_converted_at") %||% integer()
-      if (!length(out)) break
-      keep <- keep[-out]
-      if (!length(keep)) { sp <- list(); break }
-    }
-    # (and the rest of a plan_columns() / plan_col_header() / plan_labels()
-    # whose columns say a part: the arguments no column says)
-    more <- c(more, items[setdiff(seq_along(items), keep)], attr(sp, "not_converted_rest"))
+    # each item on the sheets, read back and compared: what does not come
+    # back as written goes, as YAML, in the tables row's content_more --
+    # the item's rest, or the item whole -- never on both (#448, #689)
+    said <- .sheets_said(items, nz, id, bridge)
+    sp <- said$sp
+    more <- c(more, said$more)
     if (length(more)) more_rows[[key]] <<- more
     for (sh in names(sp)) {
       d <- sp[[sh]]
@@ -158,7 +139,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       d$output_id[is.na(d$output_id) & !is.na(id)] <- id
       for (i in seq_len(nrow(d))) add(sh, as.list(d[i, , drop = FALSE]))
     }
-    for (x in attr(sp, "not_converted") %||% character()) note(id, "content", x)
+    for (x in said$notes) note(id, "content", x)
   }
   norm_rows <- list()
   more_rows <- list()
@@ -332,7 +313,8 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     tpl <- .tpl_spec_of(o)
     planner[[length(planner) + 1L]] <- list(
       output_id = id, description = cell(e$label %||% o$label), setup_code = NA_character_,
-      process_code = .first_r_step(o$data$steps),
+      process_code = if (o$kind %in% c("table", "listing")) .steps_cell(o$data$steps) else
+        .first_r_step(o$data$steps),
       section = cell(e$section), population = cell(e$population %||% .out_population(o)),
       datasets = cell(e$datasets %||% .records_dataset(o)), batches = cell(e$sets))
     if (!is.null(.records_dataset(o)) && !is.null(o$data$where)) {
@@ -627,7 +609,9 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     if (!is.null(got) && !is.null(a$overall) && is.null(a$hierarchy) && !is.null(got$hierarchy)) {
       a$hierarchy <- got$hierarchy
     }
-    if (is.null(got) || !identical(.nz_canon(got), .nz_canon(a))) {
+    # (nothing read back: the report's normalize_ard() with no arguments is
+    # not made again from the row, so it is kept as it is)
+    if (is.null(got) || !length(got) || !identical(.nz_canon(got), .nz_canon(a))) {
       # (a stack_sep / stack_nest with no stack: the row cannot say it)
       on_row <- c("overall", "stack", if (!is.null(a$stack)) c("stack_sep", "stack_nest"))
       rest <- a[setdiff(names(a), on_row)]
@@ -795,6 +779,27 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
 .first_r_step <- function(steps) {
   for (s in steps %||% list()) if (inherits(s, "tfl_r")) return(as.character(s))
   NA_character_
+}
+
+# A table's or listing's data steps in the planner sheet's process_code: one
+# `!r` step as its R text; any other steps (two or more, or a step that is
+# not R) as their YAML, a sequence (`- !r ...`), which is no R code
+# -- read back by .steps_from_cell(), every step as it was (#689)
+.steps_cell <- function(steps) {
+  if (!length(steps)) return(NA_character_)
+  if (length(steps) == 1L && inherits(steps[[1L]], "tfl_r")) return(as.character(steps[[1L]]))
+  .sheet_more_out(unname(as.list(steps)), items = FALSE)
+}
+.steps_from_cell <- function(txt) {
+  txt <- gsub("\r\n?", "\n", txt)
+  if (grepl("^- ", txt)) {
+    y <- tryCatch(.sheet_more_in(txt), error = function(e) NULL)
+    if (is.list(y) && is.null(names(y)) && length(y) &&
+        all(vapply(y, function(e) inherits(e, "tfl_r") || is.list(e), NA))) {
+      return(y)
+    }
+  }
+  list(tfl_r(txt))
 }
 
 .page_known <- c("header", "footer", "titles", "footnotes", "tokens", "page", "report",

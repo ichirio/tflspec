@@ -578,7 +578,7 @@ test_that("a stub heading goes in the layout sheet's stub_heading and comes back
   file.copy(list.files(src, full.names = TRUE), d, recursive = TRUE)
   f <- file.path(d, "defaults.yml")
   y <- sub("plan_stub: {name: row_label, before: true}",
-           "plan_stub: {name: row_label, heading: \"\", before: true}", readLines(f), fixed = TRUE)
+           "plan_stub: {name: row_label, before: true, heading: \"\"}", readLines(f), fixed = TRUE)
   writeLines(y, f)
   out <- withr::local_tempdir()
   sh <- tfl_sheets_from_yaml(d)

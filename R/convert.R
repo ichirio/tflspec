@@ -863,7 +863,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     }
     # its rework step (the planner row's process_code, a table's too): data.steps
     if (!is.null(prow) && nrow(prow) && !is.na(prow$process_code[1L])) {
-      data$steps <- list(tfl_r(gsub("\r\n?", "\n", prow$process_code[1L])))
+      data$steps <- .steps_from_cell(prow$process_code[1L])
       note(id, "_tflplanner", id, "process_code", "the listing's rework step kept as R text (data.steps)", prow$process_code[1L])
     }
     # rtfreporter's chain: plan_listing(listing_col(...), ..., type, sep ...)
@@ -915,7 +915,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
                  nzchar(rrow$ard_object[1L])) rrow$ard_object[1L] else "ard"
     data <- list(source = "ard", object = obj)
     if (!is.null(prow) && nrow(prow) && !is.na(prow$process_code[1L])) {
-      data$steps <- list(tfl_r(gsub("\r\n?", "\n", prow$process_code[1L])))
+      data$steps <- .steps_from_cell(prow$process_code[1L])
       note(id, "_tflplanner", id, "process_code", "the table's rework step kept as R text (data.steps)", prow$process_code[1L])
     }
     if (!is.null(sp)) {
