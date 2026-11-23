@@ -205,6 +205,36 @@
        set = lb$style %||% .style_of(output, study))
 }
 
+# A built-in style's page prints a page's name as a section heading
+# (rtf_tables: {auto_section: true}), for the pages whose content does not
+# say where the name prints.  A content that says it -- plan_paginate_rows()
+# or plan_paginate_group()'s `heading_at` -- keeps rtfreporter's own choice:
+# an auto_section given to rtf_tables() wins over heading_at, so with
+# heading_at = "title" the name would print twice (the last title row and a
+# section row).  The built-in's auto_section is taken out then; a study's own
+# style and the report's own page keep theirs.  `name`: the style's name.
+.page_heading_once <- function(cfg, name, content) {
+  if (!is.character(name) || length(name) != 1L || !name %in% .tpl_style_builtin_names) return(cfg)
+  if (!.content_heading_at(content)) return(cfg)
+  ta <- cfg$rtf_tables
+  if (!is.list(ta) || is.null(ta$auto_section)) return(cfg)
+  ta$auto_section <- NULL
+  # (no argument left: no rtf_tables key)
+  cfg$rtf_tables <- if (length(ta)) ta
+  cfg
+}
+
+# Whether a content's items say where a page's name prints: an item with
+# a `heading_at` (the argument is the rule, not the functions that have
+# it: plan_paginate_rows and plan_paginate_group today)
+.content_heading_at <- function(content) {
+  if (inherits(content, "tfl_r") || !is.list(content)) return(FALSE)
+  any(vapply(content, function(it) {
+    is.list(it) && is.list(it$args) &&
+      is.character(it$args$heading_at) && length(it$args$heading_at) == 1L
+  }, NA))
+}
+
 # The study's default configuration's page (the one a report with no
 # `style:` gets), as the blocks
 .study_default_page <- function(study) {
