@@ -50,8 +50,8 @@ test_that("every table input says its columns", {
     n <- names(args)[vapply(args, function(d) is.list(d) && identical(d$input, "table") && is.null(d$columns), NA)]
     if (length(n)) paste0(f, ".", n) else character()
   }))
-  # (the ones without today: their columns come with #881 and the generic table, 11-23)
-  known <- c("normalize_ard.stack", "normalize_ard.combine")
+  # (none without today; a new one is added here only with a reason)
+  known <- character()
   # (step<content>: its columns are the items' own cards, not a columns: map)
   bad <- bad[!vapply(strsplit(bad, ".", fixed = TRUE), function(p) {
     identical(ents[[p[1L]]]$args[[p[2L]]]$type, "step<content>")
