@@ -20,6 +20,19 @@
 # field; canon 17dfbb8)
 .arg_input_forms <- c("pick", "text", "condition", "table", "r")
 
+# the closed list of tflplanner's special editors (contract v3 section 9,
+# point 16).  A definition (an argument, or a `dots:` entry) writes
+# `editor: <word>` to name the editor the planner draws for it; unset, the
+# planner draws the field from its input and type.  An argument with an
+# editor still has its `input:` (the value form, for the CUI and the AI kit).
+#   roles         table_plan's ordered column roles (cols, rows, label)
+#   cells         plan_cells' per-variable statistic templates
+#   header_lines  plan_col_header's header lines
+#   digits        plan_digits' decimals per variable and statistic
+#   levels        plan_levels' ordered values per variable
+#   sort_keys     plan_sort's per-level sort keys
+.arg_editors <- c("roles", "cells", "header_lines", "digits", "levels", "sort_keys")
+
 # the closed list of choice sources (15 words, canon 11-14 and the
 # figure_style word of 2026-11-18).  An entry writes one with what it
 # depends on in brackets ("vars(adsl_sub)", "levels(SEX)",
@@ -393,6 +406,13 @@
                  encodeString(input, quote = "\""), paste(.arg_input_forms, collapse = ", ")),
          call. = FALSE)
   }
+  editor <- d[["editor"]] %||% NA_character_
+  if (!(is.character(editor) && length(editor) == 1L &&
+        (is.na(editor) || editor %in% .arg_editors))) {
+    stop(sprintf("%s: argument `%s`: editor %s is not one of %s.", where, name,
+                 encodeString(paste(as.character(editor), collapse = ", "), quote = "\""),
+                 paste(.arg_editors, collapse = ", ")), call. = FALSE)
+  }
   st <- as.character(d$step %||% step)
   if (!st %in% .arg_steps) {
     stop(sprintf("%s: argument `%s`: step %s is not one of %s.", where, name,
@@ -467,6 +487,12 @@
   row$passes_to <- I(list(.arg_passes_to(d, where_arg)))
   row$member_of <- member_of
   row$description <- description
+  row$editor <- editor
+  # the `...` row only (from .arg_schema_dots()): how the dots' entries are
+  # written; NA on every other row
+  row$dots_style <- as.character(d[["dots_style"]] %||% NA_character_)
+  row$dots_key <- as.character(d[["dots_key"]] %||% NA_character_)
+  row$dots_map <- as.logical(d[["dots_map"]] %||% NA)
   row
 }
 
@@ -770,10 +796,25 @@
 #'     \item{member_of}{the list argument it is a member of (written
 #'       `member_of:`, after its parent); `NA` otherwise.}
 #'     \item{description}{one line.}
+#'     \item{editor}{the tflplanner special editor the definition names, from
+#'       `editor:`: one of `roles`, `cells`, `header_lines`, `digits`,
+#'       `levels`, `sort_keys` (the closed list kept here); `NA` when none (the
+#'       planner draws the field from `input` and `type`).  A row with an
+#'       editor still has its `input`, the value form for the CUI and the AI
+#'       kit.  A schema function's `dots:` may write it too (the `...` row).}
+#'     \item{dots_style}{the `...` row only: `named` (the item's other keys are
+#'       the entries, by name) or `positional` (the entries are the value of
+#'       the one key `dots_key`), from the `dots:` entry's `style:`; `NA` on
+#'       every other row.}
+#'     \item{dots_key}{the `...` row only: the key of positional dots
+#'       (`plan_sort`: `keys`); `NA` for named dots and on other rows.}
+#'     \item{dots_map}{the `...` row only: `TRUE` when R code may also give
+#'       the entries as one named vector (`plan_labels(c(AGE = "Age"))`);
+#'       `NA` on other rows.}
 #'   }
 #'
 #'   A definition stops, saying what to write, for an unknown `tier` or
-#'   `unset` word, a `group` not in `groups:`, a `member_of` that is not
+#'   `unset` or `editor` word, a `group` not in `groups:`, a `member_of` that is not
 #'   another argument, a malformed `passes_to`, a label or help that is
 #'   neither a text nor `{en: , ja: }`, and a choice word outside the 15.
 #' @seealso [tfl_schema()] (the schema's functions), [tfl_template_resolve()]
@@ -858,6 +899,10 @@ tfl_arg_defs <- function(fn = NULL, template = NULL, study_dir = NULL) {
   d <- list(type = dots$type %||% "string", description = dots$description %||% "")
   if (!is.null(dots$input)) d$input <- dots$input
   if (!is.null(dots$choices)) d$choices <- dots$choices
+  if (!is.null(dots$editor)) d$editor <- dots$editor
+  d$dots_style <- dots$style %||% NA_character_
+  d$dots_key <- dots$key %||% NA_character_
+  d$dots_map <- isTRUE(dots$map)
   own <- args[["..."]]
   if (is.list(own)) for (k in names(own)) d[k] <- list(own[[k]])
   args[["..."]] <- NULL

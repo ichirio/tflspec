@@ -1,7 +1,7 @@
 cols <- c("name", "label_en", "label_ja", "help_en", "help_ja", "step", "group", "input", "type",
           "required", "default", "default_kind", "unset", "choices", "values", "value_labels",
           "free", "ordered", "columns", "new_row", "fixed_rows", "tier", "passes_to", "member_of",
-          "description")
+          "description", "editor", "dots_style", "dots_key", "dots_map")
 
 test_that("tfl_arg_defs() takes fn or template, one of them", {
   expect_error(tfl_arg_defs(), "one of them")
@@ -405,4 +405,61 @@ test_that("a column field's choices are written in its definition", {
   expect_gt(n, 30L)
   expect_identical(y$plan_hide$dots$choices, "columns")
   expect_true(isTRUE(y$normalize_ard$args$hierarchy$ordered))
+})
+
+test_that("the editor words are used, each with an input, and sit where tflplanner's editors are", {
+  all <- do.call(rbind, lapply(names(tfl_schema()), function(fn) {
+    d <- tfl_arg_defs(fn = fn)
+    if (nrow(d)) cbind(fn = fn, d[, c("name", "input", "editor")])
+  }))
+  ed <- all[!is.na(all$editor), ]
+  # F12: every word of the closed list is used, and only those words
+  expect_true(all(tflspec:::.arg_editors %in% ed$editor))
+  expect_true(all(ed$editor %in% tflspec:::.arg_editors))
+  # a row with an editor still has its value form
+  expect_true(all(!is.na(ed$input) & ed$input %in% tflspec:::.arg_input_forms))
+  got <- stats::setNames(ed$editor, paste(ed$fn, ed$name, sep = "."))
+  want <- c(table_plan.cols = "roles", table_plan.rows = "roles", table_plan.label = "roles",
+            plan_cells.value = "cells", plan_cells.categorical = "cells",
+            plan_cells.continuous = "cells", plan_cells.default = "cells",
+            plan_col_header.header = "header_lines", plan_col_header.values = "header_lines",
+            plan_sort.keys = "sort_keys", plan_sort.stat = "sort_keys",
+            plan_digits.... = "digits", plan_levels.... = "levels")
+  expect_identical(got[order(names(got))], want[order(names(want))])
+  # an argument without one: NA
+  expect_true(is.na(tfl_arg_defs(fn = "plan_cells")$editor[tfl_arg_defs(fn = "plan_cells")$name == "na"]))
+  expect_true(all(is.na(tfl_arg_defs(fn = "data")$editor)))
+})
+
+test_that("an unknown editor word is an error naming the allowed words", {
+  expect_error(tflspec:::.arg_row("x", list(type = "string", editor = "wizard"), "content", "fn"),
+               "editor \"wizard\" is not one of roles, cells, header_lines, digits, levels, sort_keys")
+  expect_error(tflspec:::.arg_row("x", list(type = "string", editor = c("roles", "cells")),
+                                  "content", "fn"), "is not one of roles")
+  r <- tflspec:::.arg_row("x", list(type = "string", editor = "cells"), "content", "fn")
+  expect_identical(r$editor, "cells")
+})
+
+test_that("the ... row carries how the dots are written; other rows have NA", {
+  dots <- function(fn) {
+    d <- tfl_arg_defs(fn = fn)
+    d[d$name == "...", c("dots_style", "dots_key", "dots_map")]
+  }
+  l <- dots("plan_labels")
+  expect_identical(l$dots_style, "named")
+  expect_true(is.na(l$dots_key))
+  expect_true(l$dots_map)
+  s <- dots("plan_sort")
+  expect_identical(s$dots_style, "positional")
+  expect_identical(s$dots_key, "keys")
+  expect_false(s$dots_map)
+  # not a ... row: NA (plan_sort's `keys` row, a function without dots)
+  d <- tfl_arg_defs(fn = "plan_sort")
+  expect_true(all(is.na(d$dots_style[d$name != "..."])))
+  expect_true(all(is.na(d$dots_map[d$name != "..."])))
+  n <- tfl_arg_defs(fn = "plan_cells")
+  expect_identical(n$dots_style[n$name == "..."], "named")
+  e <- tfl_arg_defs(fn = "table_plan")
+  expect_false("..." %in% e$name)
+  expect_true(all(is.na(e$dots_style) & is.na(e$dots_key) & is.na(e$dots_map)))
 })
