@@ -24,6 +24,11 @@
 #'   the curve;
 #' * `tfl_check(plot, levels = )` -- the checks of [tfl_check_fig()].
 #'
+#' The script also sets `options(tflspec.fig_style =)` to the same tables
+#' (`colors` rebuilt from `tfl_palettes`), so that [km_curves()] and
+#' [forest_hr()], which read the style from that option, draw with the
+#' study's treatment colours like the rest of the program.
+#'
 #' A figure program sources it (`source("programs/tfl/fig_setup.R")`) and
 #' ends with `tfl_check(plot)`.  `tfl_check_fig()` runs the same checks from
 #' R, against the style in use.
@@ -74,6 +79,18 @@ tfl_fig_setup_code <- function(style = tfl_fig_style(), date = Sys.Date()) {
     "",
     df_code("tfl_markers", style$markers),
     "",
+    "# km_curves() and forest_hr() read the style from this option: the same tables",
+    "options(tflspec.fig_style = list(",
+    "  settings = tfl_settings,",
+    "  colors = data.frame(",
+    "    palette = rep(names(tfl_palettes), lengths(tfl_palettes)),",
+    "    value = unlist(lapply(tfl_palettes, function(p)",
+    "      if (is.null(names(p))) rep(NA_character_, length(p)) else names(p)),",
+    "      use.names = FALSE),",
+    "    colour = unlist(tfl_palettes, use.names = FALSE),",
+    "    stringsAsFactors = FALSE),",
+    "  markers = tfl_markers))",
+    "",
     .fig_unit_guard(),
     "",
     helpers,
@@ -84,6 +101,15 @@ tfl_fig_setup_code <- function(style = tfl_fig_style(), date = Sys.Date()) {
 #' @export
 tfl_check_fig <- function(plot, levels = NULL, quiet = FALSE) {
   e <- new.env(parent = globalenv())
-  eval(parse(text = tfl_fig_setup_code(), encoding = "UTF-8"), envir = e)
+  .fig_setup_eval(e)
   e$tfl_check(plot, levels = levels, quiet = quiet)
+}
+
+# The setup script run into `env` for tflspec's own use: the style option it
+# sets is put back, so a call does not change the session's options.
+.fig_setup_eval <- function(env, style = tfl_fig_style()) {
+  old <- options(tflspec.fig_style = getOption("tflspec.fig_style"))
+  on.exit(options(old), add = TRUE)
+  eval(parse(text = tfl_fig_setup_code(style), encoding = "UTF-8"), envir = env)
+  invisible(env)
 }

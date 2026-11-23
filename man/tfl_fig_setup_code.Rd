@@ -48,6 +48,11 @@ the curve;
 \item \code{tfl_check(plot, levels = )} -- the checks of \code{\link[=tfl_check_fig]{tfl_check_fig()}}.
 }
 
+The script also sets \code{options(tflspec.fig_style =)} to the same tables
+(\code{colors} rebuilt from \code{tfl_palettes}), so that \code{\link[=km_curves]{km_curves()}} and
+\code{\link[=forest_hr]{forest_hr()}}, which read the style from that option, draw with the
+study's treatment colours like the rest of the program.
+
 A figure program sources it (\code{source("programs/tfl/fig_setup.R")}) and
 ends with \code{tfl_check(plot)}.  \code{tfl_check_fig()} runs the same checks from
 R, against the style in use.
