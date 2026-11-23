@@ -75,7 +75,7 @@ NULL
 .path_code <- function(path) {
   # (one rule for the run's path check and the code: a backslash is a slash,
   # a leading ./ goes)
-  if (!is.na(path)) path <- sub("^(\\./)+", "", gsub("\\\\", "/", path))
+  if (!is.na(path)) path <- sub("^(\\./+)+", "", gsub("\\\\", "/", path))
   q <- encodeString(path, quote = "\"")
   pv <- getOption("tflspec.paths")
   if (!length(pv) || is.null(names(pv)) || is.na(path)) return(q)

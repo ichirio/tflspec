@@ -15,7 +15,7 @@ rr_manifest <- function() {
     support = list(ard = character(), tfl = character(), all = character()),
     data = list(`programs/tfl/T.R` = "data/adam/x.csv"),
     data_vars = c(`data/adam/x.csv` = "path_adam"),
-    data_dirs = c("data/adam", "data/sdtm", "data/other"),
+    data_dirs = c(adam = "data/adam", sdtm = "data/sdtm", other = "data/other"),
     sources = character(), check_code = "programs/company_setup.R",
     kind = "run", paths = list())
 }

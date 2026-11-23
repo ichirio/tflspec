@@ -152,7 +152,7 @@
 .batch_env <- function() environment(.batch_env)
 
 # a path with / for \ and no leading ./
-.batch_norm <- function(p) sub("^(\\./)+", "", gsub("\\\\", "/", p))
+.batch_norm <- function(p) sub("^(\\./+)+", "", gsub("\\\\", "/", p))
 
 # why a path is not inside the study ("" when it is): judged by its
 # segments -- absolute (/, \, C:, C:foo, ~) or a .. segment
