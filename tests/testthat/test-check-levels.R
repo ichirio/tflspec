@@ -9,9 +9,9 @@ cl_study <- function(root) {
   chr <- function(x) if (is.factor(x)) as.character(x) else x
   haven::write_xpt(as.data.frame(lapply(adsl, chr)), file.path(d, "adam", "adsl.xpt"))
   tfl_ai_study_init(d, adam = "adam", study_id = "EX-1")
-  an <- list(id = "AGE", method = "cards::ard_summary", data = "adsl_saf", by = "TRT01A", variables = "AGE")
+  an <- list(id = "AGE", method = "cards::ard_summary", data = "adsl_sub", by = "TRT01A", variables = "AGE")
   ok <- tfl_output("T-OK", "table", common = list(population = "SAF"), label = "Age",
-    ard = list(analysis_data = list(list(id = "adsl_saf", from = "ADSL", population = "SAF")),
+    ard = list(analysis_data = list(list(id = "adsl_sub", from = "ADSL", population = "SAF")),
                analyses = list(an)),
     content = list(tfl_item("table_plan", list(cols = "TRT01A", rows = "variable")),
                    tfl_item("plan_cells", list(continuous = "{mean} ({sd})"))),

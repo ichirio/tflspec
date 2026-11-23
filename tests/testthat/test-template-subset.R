@@ -227,6 +227,6 @@ test_that("a figure (km) of Part 1's subjects: A = B = the template SPEC", {
   eval(parse(text = tfl_helpers_code()), env)
   eval(parse(text = x$a), env)
   p1 <- sl$USUBJID[sl$SAFFL == "Y" & sl$PART == "Part 1"]
-  expect_setequal(unique(env$adtte_pfs$USUBJID),
+  expect_setequal(unique(env$adtte_sub$USUBJID),
                   intersect(p1, adtte$USUBJID[adtte$PARAMCD == "PFS"]))
 })

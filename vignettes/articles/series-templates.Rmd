@@ -46,7 +46,12 @@ ordinary report SPEC.
 
 A report changes the table in two ways:
 
-- **by an argument**: `args:` gives a value in place of the default;
+- **by an argument**: `args:` gives a value in place of the default. A
+  map whose default is a series value (`formats`) is the exception: the
+  report's names go over the series' map one by one, a name whose value
+  is `!unset` is removed (for `formats`, that statistic then takes the
+  ARD catalog's format), and the names the report does not write keep
+  the series' values (see [Series values](#series-values));
 - **by an appended card**: the report's own `content:` lists plan items
   (cards) that come after the template's. When the template already has
   a card of the same verb, the two become one. The last one wins, and
@@ -335,6 +340,21 @@ ae2 <- run_report(file.path(tempdir(), "T-AE.yml"))
 na <- Filter(function(i) i$fn == "normalize_ard", ae2$spec$content)
 na[[1]]$args$overall
 ```
+
+A report that writes a map argument whose default is `!series K`
+changes only the names it writes. With the series's `formats` above,
+
+```yaml
+template:
+  name: tflspec_v1/demog
+  analysis:
+    formats: {mean: 3, "AGE:sd": !unset}
+```
+
+gives `mean` 3 decimals, drops `AGE:sd`, and keeps `N`, `sd`, `median`
+and the others as the series has them. A map inside the map (one
+variable's statistics) is put over in the same way. Other arguments, a
+list such as `hierarchy` among them, are replaced whole.
 
 ## For template authors: `derive:`
 

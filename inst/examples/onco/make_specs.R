@@ -25,10 +25,10 @@ ard_spec <- tfl_ard_spec(list(
                    label = c("Intent-to-Treat Set", "Safety Analysis Set")),
   analysis_data = df(
     output_id = c("T-14-2-1", "T-14-3-1", "T-14-3-2", "T-14-3-2"),
-    data_id = c("adrs_bor", "adae_teae", "adsl_saf", "adae_saf"),
+    data_id = c("adrs_bor", "adae_teae", "adsl_sub", "adae_sub"),
     from = c("ADRS", "ADAE", "ADSL", "ADAE"),
     population_id = c("ITT", "SAF", "SAF", NA),
-    subjects_in = c(NA, NA, NA, "adsl_saf"),
+    subjects_in = c(NA, NA, NA, "adsl_sub"),
     where = c('PARAMCD == "BOR"', 'TRTEMFL == "Y"', NA, 'TRTEMFL == "Y"'),
     derive = c('RESP = AVALC %in% c("CR", "PR") | DCR = AVALC %in% c("CR", "PR", "SD")', NA, NA, NA)),
   # T-14-3-2: the subjects with a TEAE of each kind (`subjects_in`: has the
@@ -52,7 +52,7 @@ ard_spec <- tfl_ard_spec(list(
                "categorical", rep("subjects", 6)),
     dataset = c(rep(NA, 16)),
     data = c(NA, NA, NA, NA, "adrs_bor", "adrs_bor", "adrs_bor", NA, "adae_teae",
-             "adsl_saf", rep("adae_saf", 6)),
+             "adsl_sub", rep("adae_sub", 6)),
     population_id = c("SAF", "SAF", "SAF", "ITT", NA, NA, NA, "SAF", NA, rep(NA, 7)),
     where = c(rep(NA, 11), 'AEREL == "RELATED"', 'AETOXGR %in% c("3", "4", "5")',
               'AESER == "Y"', 'AEACN == "DRUG WITHDRAWN"', 'AEOUT == "FATAL"'),
