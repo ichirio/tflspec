@@ -355,3 +355,26 @@ test_that("a column field's choices are written in its definition", {
   expect_identical(y$plan_hide$dots$choices, "columns")
   expect_true(isTRUE(y$normalize_ard$args$hierarchy$ordered))
 })
+
+test_that("the titles, footnotes and row arguments carry a label and a help (tflplanner#783)", {
+  want <- list(
+    plan_titles = c("titles", "pages", "border"),
+    plan_footnotes = c("footnotes", "pages", "border"),
+    plan_cell_style = "row")
+  for (fn in names(want)) {
+    d <- tfl_arg_defs(fn = fn)
+    for (a in want[[fn]]) {
+      r <- d[d$name == a, ]
+      info <- paste(fn, a)
+      expect_identical(nrow(r), 1L, info = info)
+      expect_true(nzchar(r$label_en) && nzchar(r$label_ja), info = info)
+      expect_true(!is.na(r$help_en) && nzchar(r$help_en), info = info)
+    }
+  }
+  d <- tfl_arg_defs(fn = "plan_style")
+  cols <- d$columns[[which(d$name == "font")]]
+  expect_identical(cols$key$label_en, "Part")
+  expect_identical(cols$key$label_ja, "\u90e8\u5206")
+  expect_identical(cols$value$label_en, "Font")
+  expect_identical(cols$value$label_ja, "\u30d5\u30a9\u30f3\u30c8")
+})
