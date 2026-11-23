@@ -16,7 +16,9 @@
 # A template that cannot build in a study is a line saying why, never left
 # out.  What is hashed is the RTF's text, line endings as "\n", with the
 # run's dates and times, any file path and a figure's image bytes (they
-# differ by platform) replaced by a mark.
+# differ by platform) replaced by a mark.  So a figure's line checks that
+# it builds and its RTF around the picture; what the picture draws is
+# tested on the plot's layers (layer_data()) in the figure tests.
 #
 # Also: a company's copy of a template (tfl_use_company_templates()) gives
 # the same RTF as the template, in the company study.
@@ -67,6 +69,8 @@ golden_build <- function(d, ids) {
     if (nzchar(r$err[i]) || !file.exists(p)) "" else golden_rtf_hash(p)
   }, "")
   r$err <- gsub("[A-Za-z]:[/\\\\][^ ']*", "<path>", r$err)
+  # (a message's quotes as the locale prints them: one form)
+  r$err <- gsub("[\u2018\u2019]", "'", r$err)
   r$err <- substr(trimws(gsub("[ ]+", " ", r$err)), 1L, 100L)
   r[match(ids, r$id), c("id", "md5", "err"), drop = FALSE]
 }
