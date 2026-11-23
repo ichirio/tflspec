@@ -292,7 +292,7 @@ test_that("tflspec_summary: nest, value_labels and col_header are optional steps
   expect_identical(fns(h), c("table_plan", "plan_cells", "plan_col_header", "plan_paginate_rows"))
 })
 
-test_that("tflspec_summary: labels and value_labels are one plan_labels, a heading kept", {
+test_that("tflspec_summary: labels and value_labels are one plan_labels, every heading under variable", {
   sm <- tr_reports()$demog
   sm$template$name <- "tflspec_v1/tflspec_summary"
   fns <- function(o) vapply(o$content, function(it) it$fn, "")
@@ -302,22 +302,25 @@ test_that("tflspec_summary: labels and value_labels are one plan_labels, a headi
   b <- tfl_template_resolve(sm, study = tr_study())
   expect_identical(sum(fns(b) == "plan_labels"), 1L)
   expect_identical(lab(b), list(SEX = list(F = "Female", M = "Male")))
-  # both, a variable in each: one entry, its heading first, then its values;
-  # a variable only in labels is a heading, only in value_labels its values
+  # both, a variable in each: the headings under `variable` (as the sheets
+  # write them, tflspec#856), first; the values by variable
   sm$template$content <- list(
     labels = list(SEX = "Sex, n (%)", RACE = "Race"),
     value_labels = list(SEX = list(F = "Female", M = "Male"), AGEGR1 = list(`<65` = "Under 65")))
   b <- tfl_template_resolve(sm, study = tr_study())
   expect_identical(sum(fns(b) == "plan_labels"), 1L)
-  expect_identical(lab(b), list(SEX = list(SEX = "Sex, n (%)", F = "Female", M = "Male"),
-                                RACE = "Race", AGEGR1 = list(`<65` = "Under 65")))
+  expect_identical(lab(b), list(variable = list(SEX = "Sex, n (%)", RACE = "Race"),
+                                SEX = list(F = "Female", M = "Male"),
+                                AGEGR1 = list(`<65` = "Under 65")))
   # the heading a value_labels entry gives under the variable's own name wins
   sm$template$content$value_labels$SEX <- list(SEX = "Sex", F = "Female")
-  expect_identical(lab(tfl_template_resolve(sm, study = tr_study()))$SEX,
-                   list(SEX = "Sex", F = "Female"))
-  # labels alone, as before
+  b <- lab(tfl_template_resolve(sm, study = tr_study()))
+  expect_identical(b$variable$SEX, "Sex")
+  expect_identical(b$SEX, list(F = "Female"))
+  # labels alone
   sm$template$content <- list(labels = list(SEX = "Sex, n (%)"))
-  expect_identical(lab(tfl_template_resolve(sm, study = tr_study())), list(SEX = "Sex, n (%)"))
+  expect_identical(lab(tfl_template_resolve(sm, study = tr_study())),
+                   list(variable = list(SEX = "Sex, n (%)")))
   # a value_labels entry is a map of codes
   sm$template$content <- list(value_labels = list(SEX = "Female"))
   expect_error(tfl_template_resolve(sm, study = tr_study()), "value_labels: SEX is a map")
