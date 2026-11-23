@@ -21,8 +21,15 @@ installed with it).
 \description{
 The code of the runner a study's official runs use: base R, so the
 study's programs run without tflspec.  It makes a batch folder
-\verb{runs/<date>_<time>_<what>/} with the logs, what the run made and the code
-it ran.  \code{tfl_runner_file()} is the path of the runner file shipped with
+\verb{runs/<date>_<time>_<what>/}, copies the study's \verb{programs/}, \verb{spec/},
+\verb{input/}, \code{study.yml} and \code{renv.lock} into it, and runs the programs there:
+what they make lands in the folder's own \verb{output/} and \verb{logs/}, never in
+the study's.  The data are read through the data root (\code{run_paths.R}).  The
+folder holds three entry files (\code{autoexec_all.R}, \code{autoexec_ard.R},
+\code{autoexec_report.R}) that run it again elsewhere (never in place in a
+study's \verb{runs/}) and, at the end, \code{issues.csv} and a \code{batch.txt} ending
+in \verb{Verified : yes}.  A path outside the study that a run would read
+stops it before any folder is made.  \code{tfl_runner_file()} is the path of the runner file shipped with
 tflspec.  \code{tfl_runner_code()} returns the code of a study's \code{batch.R}
 without its banner and without the call that starts a run (the program
 that sources the runner adds it, as it differs between the autoexec files):
@@ -56,6 +63,26 @@ its outputs.  \code{list()} for none.
 the files kept with the code of a run.
 \item \code{data} -- a named list: a program -> the data files it reads.  \code{list()}
 for none.
+\item \code{data_vars} -- a named character vector: a data catalog path -> the
+data-folder variable (\code{path_adam}) the generated code reads it through,
+or \code{""} when no variable maps it.  A path of \code{data} that no variable maps
+stops the run, except the files of \verb{input/ard/}.  \code{character()} for none.
+\item \code{data_dirs} -- the study's data folders (\code{c("data/adam", "data/sdtm", "data/other")}), copied with \code{--data}; a string in the study's code that
+starts with one stops the run (it bypasses the data root).
+\item \code{sources} -- the files the study's keys \code{source} name; each must lie
+inside \verb{programs/}, \verb{spec/} or \verb{input/}.  \code{character()} for none.
+\item \code{check_code} -- the study's own code files (\code{company_setup.R},
+\code{study_user.R}, \code{study_helpers.R}, \verb{programs/ard/functions/*.R}) the
+runner scans before the run: a string that is an absolute path (\code{/},
+\verb{\\}, \code{C:}, \code{~}) or has a \code{..} segment stops the run, naming file and
+line.  The scan cannot prove there is no such path (\code{paste()} and
+\code{getOption()} escape it).
+\item \code{kind} -- \code{"run"} (an official run) or \code{"preview"}.  batch.txt records it;
+only a \code{"run"} ends in \verb{Verified : yes}.
+\item \code{paths} -- a named list with optional elements \code{data} (a named character
+vector, dataset -> file; a preview reads these outside the study),
+\code{company_setup}, \code{study_user} and \code{output} (strings); \code{list()} when not
+used.  A \code{kind} of \code{"run"} takes none.
 }
 }
 \examples{
@@ -66,6 +93,8 @@ m <- list(
   needs = list(), unresolved = character(), sets = list(),
   outputs = list(`programs/tfl/t1.R` = "output/tfl/t1.rtf"),
   support = list(ard = character(), tfl = character(), all = character()),
-  data = list())
+  data = list(), data_vars = character(), data_dirs = "data/adam",
+  sources = character(), check_code = character(), kind = "run",
+  paths = list())
 head(tfl_runner_code(m), 8)
 }

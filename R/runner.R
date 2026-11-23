@@ -2,8 +2,15 @@
 #'
 #' The code of the runner a study's official runs use: base R, so the
 #' study's programs run without tflspec.  It makes a batch folder
-#' `runs/<date>_<time>_<what>/` with the logs, what the run made and the code
-#' it ran.  `tfl_runner_file()` is the path of the runner file shipped with
+#' `runs/<date>_<time>_<what>/`, copies the study's `programs/`, `spec/`,
+#' `input/`, `study.yml` and `renv.lock` into it, and runs the programs there:
+#' what they make lands in the folder's own `output/` and `logs/`, never in
+#' the study's.  The data are read through the data root (`run_paths.R`).  The
+#' folder holds three entry files (`autoexec_all.R`, `autoexec_ard.R`,
+#' `autoexec_report.R`) that run it again elsewhere (never in place in a
+#' study's `runs/`) and, at the end, `issues.csv` and a `batch.txt` ending
+#' in `Verified : yes`.  A path outside the study that a run would read
+#' stops it before any folder is made.  `tfl_runner_file()` is the path of the runner file shipped with
 #' tflspec.  `tfl_runner_code()` returns the code of a study's `batch.R`
 #' without its banner and without the call that starts a run (the program
 #' that sources the runner adds it, as it differs between the autoexec files):
@@ -36,6 +43,27 @@
 #'   the files kept with the code of a run.
 #' * `data` -- a named list: a program -> the data files it reads.  `list()`
 #'   for none.
+#' * `data_vars` -- a named character vector: a data catalog path -> the
+#'   data-folder variable (`path_adam`) the generated code reads it through,
+#'   or `""` when no variable maps it.  A path of `data` that no variable maps
+#'   stops the run, except the files of `input/ard/`.  `character()` for none.
+#' * `data_dirs` -- the study's data folders (`c("data/adam", "data/sdtm",
+#'   "data/other")`), copied with `--data`; a string in the study's code that
+#'   starts with one stops the run (it bypasses the data root).
+#' * `sources` -- the files the study's keys `source` name; each must lie
+#'   inside `programs/`, `spec/` or `input/`.  `character()` for none.
+#' * `check_code` -- the study's own code files (`company_setup.R`,
+#'   `study_user.R`, `study_helpers.R`, `programs/ard/functions/*.R`) the
+#'   runner scans before the run: a string that is an absolute path (`/`,
+#'   `\`, `C:`, `~`) or has a `..` segment stops the run, naming file and
+#'   line.  The scan cannot prove there is no such path (`paste()` and
+#'   `getOption()` escape it).
+#' * `kind` -- `"run"` (an official run) or `"preview"`.  batch.txt records it;
+#'   only a `"run"` ends in `Verified : yes`.
+#' * `paths` -- a named list with optional elements `data` (a named character
+#'   vector, dataset -> file; a preview reads these outside the study),
+#'   `company_setup`, `study_user` and `output` (strings); `list()` when not
+#'   used.  A `kind` of `"run"` takes none.
 #'
 #' @param manifest The named list above.  A missing or wrong element stops
 #'   with a message that names it.
@@ -50,7 +78,9 @@
 #'   needs = list(), unresolved = character(), sets = list(),
 #'   outputs = list(`programs/tfl/t1.R` = "output/tfl/t1.rtf"),
 #'   support = list(ard = character(), tfl = character(), all = character()),
-#'   data = list())
+#'   data = list(), data_vars = character(), data_dirs = "data/adam",
+#'   sources = character(), check_code = character(), kind = "run",
+#'   paths = list())
 #' head(tfl_runner_code(m), 8)
 #' @export
 tfl_runner_code <- function(manifest) {
@@ -81,6 +111,13 @@ tfl_runner_code <- function(manifest) {
     paste0("list(\n", paste0("  ", bq(names(l)), " = ", vapply(l, one, ""),
                              collapse = ",\n"), ")")
   }
+  paths_code <- if (!length(m$paths)) "list()" else {
+    one <- vapply(names(m$paths), function(k) {
+      if (identical(k, "data")) vec(unname(m$paths$data), names(m$paths$data), indent = "    ")
+      else q(m$paths[[k]])
+    }, "")
+    paste0("list(\n", paste0("  ", bq(names(m$paths)), " = ", one, collapse = ",\n"), ")")
+  }
   c("# ---- the study's programs, in the order they run ---------------------------",
     paste0(".batch_root <- ", q(m$root)),
     paste0(".batch_ard  <- ", q(m$ard)),
@@ -109,6 +146,18 @@ tfl_runner_code <- function(manifest) {
                                        all = m$support$all)),
     "# the data files each program reads (the data catalog's; --data keeps them)",
     paste0(".batch_data <- ", nlist(m$data, inline)),
+    "# a catalog path -> the data-folder variable that reads it (\"\": none)",
+    paste0(".batch_data_vars <- ", vec(unname(m$data_vars), names(m$data_vars))),
+    "# the data folders: copied with --data; no string of the code may start with one",
+    paste0(".batch_data_dirs <- ", inline(m$data_dirs)),
+    "# the files the study's keys `source` name: inside programs/, spec/ or input/",
+    paste0(".batch_sources <- ", inline(m$sources)),
+    "# the study's own code, scanned for paths outside the folder",
+    paste0(".batch_check_code <- ", inline(m$check_code)),
+    "# run or preview",
+    paste0(".batch_kind <- ", q(m$kind)),
+    "# a preview's files outside the study (data, company_setup, study_user, output)",
+    paste0(".batch_paths <- ", paths_code),
     "",
     readLines(tfl_runner_file(), warn = FALSE, encoding = "UTF-8"))
 }
@@ -122,7 +171,8 @@ tfl_runner_file <- function() {
 # The manifest tfl_runner_code() takes: every field there, of its type, and the
 # names agreeing with each other.  Stops with a message naming the field.
 .runner_fields <- c("root", "ard", "study", "spec", "programs", "ard_outputs", "report_ids",
-                    "needs", "unresolved", "sets", "outputs", "support", "data")
+                    "needs", "unresolved", "sets", "outputs", "support", "data",
+                    "data_vars", "data_dirs", "sources", "check_code", "kind", "paths")
 
 .runner_check <- function(manifest) {
   bad <- function(field, what) {
@@ -169,6 +219,29 @@ tfl_runner_file <- function() {
   named_chr("ard_outputs")
   named_chr("report_ids")
   named_chr("unresolved")
+  named_chr("data_vars")
+  for (f in c("data_dirs", "sources", "check_code")) {
+    if (!is_chr(m[[f]])) bad(f, "must be a character vector.")
+  }
+  if (!is_str(m$kind) || !m$kind %in% c("run", "preview")) {
+    bad("kind", "must be \"run\" or \"preview\".")
+  }
+  pa <- m$paths
+  if (!is.list(pa) || is.data.frame(pa) || (length(pa) && !named(pa)) ||
+      !all(names(pa) %in% c("data", "company_setup", "study_user", "output"))) {
+    bad("paths", paste("must be a named list with elements among `data`,",
+                       "`company_setup`, `study_user` and `output`."))
+  }
+  for (k in intersect(names(pa), c("company_setup", "study_user", "output"))) {
+    if (!is_str(pa[[k]])) bad("paths", paste0("`", k, "` must be one non-empty string."))
+  }
+  if ("data" %in% names(pa) &&
+      (!is_chr(pa$data) || (length(pa$data) && !named(pa$data)))) {
+    bad("paths", "`data` must be a named character vector (dataset -> file).")
+  }
+  if (identical(m$kind, "run") && length(pa)) {
+    bad("paths", "must be list() for a kind of \"run\".")
+  }
   named_lst("needs")
   named_lst("sets")
   named_lst("outputs")
