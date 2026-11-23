@@ -54,6 +54,12 @@
 # (plan_col_header()'s header, as a person writes it); its value is the
 # same by position.
 #
+# `editor:` (an argument, or the `dots:` entry) names a tflplanner special
+# editor, one word of the closed list in R/arg_defs.R (`.arg_editors`: roles,
+# cells, header_lines, digits, levels, sort_keys); unset, the planner draws
+# the field from its input and type.  The argument keeps its `input:` (the
+# value form, for the CUI and the AI kit).
+#
 # An argument may also say its version, as a hint: `since: "rtfreporter
 # 0.8.2.9047"` (the first version that has it; tfl_content_code() warns for
 # an older one), and `renamed_to: <new name>` (tfl_schema_check() says the
@@ -73,9 +79,9 @@ table_plan:
   tier: required
   description: The roles -- what goes across, what goes down, which column carries the row text.
   args:
-    cols: {label: {en: "Columns", ja: "列"}, type: "list<column>", description: The key(s) that go across.}
-    rows: {label: {en: "Row layers", ja: "行"}, type: "vec<string, column>|map<string, column|guard>|list<column>", description: "The keys that go down, named as the table calls them; a constant heading as `!r '~\"Worst grade\"'`."}
-    label: {label: {en: "Row text column", ja: "行の文字の列"}, type: "vec<string, column>|map<string, column|guard>|list<column>|logical", description: "The column the row text comes from; false for none."}
+    cols: {editor: roles, label: {en: "Columns", ja: "列"}, type: "list<column>", description: The key(s) that go across.}
+    rows: {editor: roles, label: {en: "Row layers", ja: "行"}, type: "vec<string, column>|map<string, column|guard>|list<column>", description: "The keys that go down, named as the table calls them; a constant heading as `!r '~\"Worst grade\"'`."}
+    label: {editor: roles, label: {en: "Row text column", ja: "行の文字の列"}, type: "vec<string, column>|map<string, column|guard>|list<column>|logical", description: "The column the row text comes from; false for none."}
     stat: {label: {en: "Statistic columns", ja: "統計量の列"}, type: "vec<string, column>", description: The columns that hold the statistic name and value.}
     show_keys: {label: {en: "Keys shown", ja: "見せるキー"}, type: "list<column>", description: Row keys also shown as variables.}
     value: {label: {en: "Value column", ja: "値の列"}, type: "column", description: "A records table: the column whose values the cells show (one row a record, the key's values across)."}
@@ -89,9 +95,9 @@ plan_sort:
   description: The row order, key by key.
   dots: {style: positional, key: keys, type: "list<string>|logical", description: "The keys to sort by, most important first; a minus for descending; false for the data's order.", example: [".overall", "-n@SOC", "SOC", ".depth", "-n", "PT"]}
   args:
-    stat: {label: {en: "Statistic counted", ja: "数える統計量"}, type: stat, description: The statistic a key sorts by.}
+    stat: {editor: sort_keys, label: {en: "Statistic counted", ja: "数える統計量"}, type: stat, description: The statistic a key sorts by.}
     keep: {label: {en: "Print the sort columns", ja: "並べ替えの列を印刷"}, help: "FALSE: the columns the order is read from (the sort keys) are not printed, with no plan_hide() for them. Blank (TRUE): they are printed as they are. e.g. FALSE", type: logical, default: true}
-    keys: {label: {en: "Order", ja: "並び順"}}
+    keys: {editor: sort_keys, label: {en: "Order", ja: "並び順"}}
 
 plan_digits:
   package: rtfreporter
@@ -100,7 +106,7 @@ plan_digits:
   label: {en: "Decimals and rounding", ja: "桁と丸め"}
   tier: usual
   description: The digits of each statistic, as a house rule.
-  dots: {input: table, style: named, type: "number|string|vec<stat, number|string>|map<string, number|string|vec<stat, number|string>>", description: "By variable, kind (continuous / categorical) or `default`: one number for every statistic, or one a statistic; \"3s\" for three significant digits. By a row key's value (a lab table's parameter): the key, then each value's digits -- one number, or one a statistic (`PARAM: {\"Alanine Aminotransferase (U/L)\": 1, \"Bilirubin (umol/L)\": {mean: 2, sd: 3}}`); on the `param_change` template the key is `PARAM`, the parameter's label (the name `ai/adam_summary.md` lists), as the table prints it, not `PARAMCD`, which matches nothing there; a value no row has is ignored.", example: {continuous: {mean: 1, sd: 2}, AGE: 0, PARAM: {"Alanine Aminotransferase (U/L)": 1, "Bilirubin (umol/L)": {mean: 2, sd: 3}}}}
+  dots: {editor: digits, input: table, style: named, type: "number|string|vec<stat, number|string>|map<string, number|string|vec<stat, number|string>>", description: "By variable, kind (continuous / categorical) or `default`: one number for every statistic, or one a statistic; \"3s\" for three significant digits. By a row key's value (a lab table's parameter): the key, then each value's digits -- one number, or one a statistic (`PARAM: {\"Alanine Aminotransferase (U/L)\": 1, \"Bilirubin (umol/L)\": {mean: 2, sd: 3}}`); on the `param_change` template the key is `PARAM`, the parameter's label (the name `ai/adam_summary.md` lists), as the table prints it, not `PARAMCD`, which matches nothing there; a value no row has is ignored.", example: {continuous: {mean: 1, sd: 2}, AGE: 0, PARAM: {"Alanine Aminotransferase (U/L)": 1, "Bilirubin (umol/L)": {mean: 2, sd: 3}}}}
   args:
     rounding: {label: {en: "Rounding", ja: "丸め方 (rounding)"}, type: "enum[sas|r|iec60559]", description: The tie-breaking family.}
     .rows: {label: {en: "Decimals by row", ja: "行ごとの桁"}, type: "vec<string, integer|string>", description: "The digits of a statistic row (a table with stats = rows), by its label."}
@@ -112,7 +118,7 @@ plan_levels:
   label: {en: "Level order", ja: "値の順"}
   tier: usual
   description: The order (and the subset) of a variable's values.
-  dots: {style: named, map: true, type: "vec<string, string>|list<string>", description: "A variable's values in their order; a map (value: text) names their text too."}
+  dots: {editor: levels, style: named, map: true, type: "vec<string, string>|list<string>", description: "A variable's values in their order; a map (value: text) names their text too."}
   args:
     .drop_empty: {label: {en: "Hide empty values", ja: "データに無い値を隠す"}, type: "list<column>", description: Variables whose levels with no data are left out., choices: columns}
 
@@ -170,12 +176,12 @@ plan_cells:
   dots: {input: table, style: named, type: "template|map<string, template|list<guard|template>>|call<cell_rows>|list<guard|template>", description: "By variable, context, kind (continuous / categorical), stat group or `default`: one template, one a printed row (named by its label), cell_rows() for a cell of several lines, or guards (`!r \"n == 0 ~ '0'\"`) before the template, for the kind or for one of its rows.", example: {categorical: "{n:.0f} ({p:.1f%})", continuous: {"Mean (SD)": "{mean:.1f} ({sd:.2f})"}}}
   args:
     stats: {label: {en: "Statistics as", ja: "統計量の並べ方"}, help: "How the statistics are laid out: \"cells\" one template a cell (n (%) in one cell), \"rows\" each statistic a row of its own. Blank: cells. e.g. \"rows\"", type: "enum[cells|rows]"}
-    value: {label: {en: "Values used", ja: "使う値"}, help: "Which value a template's {x} reads: the number (stat), which the template formats, or the ARD's formatted text (stat_fmt). Blank: stat. e.g. \"stat_fmt\"", type: string}
+    value: {editor: cells, label: {en: "Values used", ja: "使う値"}, help: "Which value a template's {x} reads: the number (stat), which the template formats, or the ARD's formatted text (stat_fmt). Blank: stat. e.g. \"stat_fmt\"", type: string}
     na: {label: {en: "Text for missing", ja: "欠測の文字"}, help: "The text of a cell no template could fill (a statistic the ARD does not have). Blank: empty. e.g. \"-\"", type: string}
     notes: {label: {en: "Notes of unused statistics", ja: "使わない統計量の知らせ"}, help: "FALSE: no note of the ARD's statistics that no template uses. Blank (TRUE): such statistics are listed when the table is made. e.g. FALSE", type: logical}
-    default: {label: {en: "Every cell", ja: "すべてのセル"}}
-    continuous: {label: {en: "Continuous variables", ja: "連続変数"}}
-    categorical: {label: {en: "Categorical variables", ja: "カテゴリ変数"}}
+    default: {editor: cells, label: {en: "Every cell", ja: "すべてのセル"}}
+    continuous: {editor: cells, label: {en: "Continuous variables", ja: "連続変数"}}
+    categorical: {editor: cells, label: {en: "Categorical variables", ja: "カテゴリ変数"}}
 
 plan_filter:
   package: rtfreporter
@@ -390,9 +396,9 @@ plan_col_header:
   label: {en: "Column header", ja: "列見出し"}
   tier: usual
   args:
-    header: {label: {en: "Header lines", ja: "見出しの行"}, type: "rows<line, cols, span, text, align, bold, italic, border_top, border_bottom>|call<rtf_col_header>", print: unnamed, description: "The header: its cells, one a row (`line`, `cols`, `span`, `text`), or an rtf_col_header() call."}
+    header: {editor: header_lines, label: {en: "Header lines", ja: "見出しの行"}, type: "rows<line, cols, span, text, align, bold, italic, border_top, border_bottom>|call<rtf_col_header>", print: unnamed, description: "The header: its cells, one a row (`line`, `cols`, `span`, `text`), or an rtf_col_header() call."}
     lines: {label: {en: "Header lines, a row at a time", ja: "見出しの行（1 行ずつ）"}, type: "list<vec<string, string>>", description: "The header a row at a time: each row a map, a cell's name the columns it sits on."}
-    values: {label: {en: "Values of the tokens", ja: "トークンの値"}, help: "What the header's tokens take: TRUE (list(n = TRUE)) reads each column's N from the ARD; numbers named by column give them by hand. e.g. list(n = TRUE)", type: "map<string, logical|vec<string, number>>"}
+    values: {editor: header_lines, label: {en: "Values of the tokens", ja: "トークンの値"}, help: "What the header's tokens take: TRUE (list(n = TRUE)) reads each column's N from the ARD; numbers named by column give them by hand. e.g. list(n = TRUE)", type: "map<string, logical|vec<string, number>>"}
     col_header_align: {label: {en: "Alignment", ja: "揃え"}, help: "The column header's alignment: \"left\", \"center\" or \"right\". Blank: center. e.g. \"left\"", type: string}
     header_sep: {label: {en: "Header separator", ja: "見出しの区切り"}, help: "The text a plain table's column names are cut at into spanning header rows. e.g. \"____\"", type: "string"}
     span: {label: {en: "Cells over columns", ja: "複数列にまたがるセル"}, help: "How a cell of the header lines over several columns is made: \"each\" a cell a column, \"one\" one cell over them all, or a key's name (a cell a value of that key: a spanner). Blank: each. e.g. \"one\"", type: "string|r"}
