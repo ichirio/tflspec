@@ -121,8 +121,8 @@ test_that("a name removed with !unset takes the catalog's format in the ARD call
   expect_identical(f, list(N = 0L, mean = 2L))
   # the call starts from fmt_default (the catalog's formats) and names only
   # what the report's map has, so sd is the catalog's
-  call <- paste(unlist(tflspec:::.fmt_fun_arg(vapply(f, as.character, ""), "AGE")),
-                collapse = " ")
+  call <- tflspec:::.lay(tflspec:::.fmt_fun_arg(vapply(f, as.character, ""), "AGE"),
+                        width = Inf)
   expect_match(call, "fmt_default", fixed = TRUE)
   expect_match(call, "mean = ", fixed = TRUE)
   expect_false(grepl("sd =", call, fixed = TRUE))
