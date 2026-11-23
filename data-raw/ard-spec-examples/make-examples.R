@@ -100,13 +100,13 @@ specs <- list()
 # ============================================================================
 
 arms <- levels(tflspec::adsl$TRT01A)     # Drug X, Control
-adsl_saf <- tflspec::adsl |> filter(SAFFL == "Y")
+adsl_sub <- tflspec::adsl |> filter(SAFFL == "Y")
 
 # ---------------------------------------------------------------- 1. DM
 # Demographics by actual arm: age and the baseline sum of diameters
 # summarised; age group, sex, race and baseline ECOG counted.
 ard_dm <- ard_stack(
-  adsl_saf, .by = TRT01A,
+  adsl_sub, .by = TRT01A,
   ard_continuous(variables = c(AGE, BSLD),
                  statistic = ~ continuous_summary_fns(
                    c("N", "mean", "sd", "median", "min", "max"))),
@@ -187,10 +187,10 @@ dm_plan <- table_plan(dm_n, cols = "TRT01A", rows = c(group = "variable")) |>
 # (its `tabulate` rows) is not a row of the table.
 adae <- tflspec::adae |>
   filter(SAFFL == "Y", TRTEMFL == "Y") |>
-  left_join(select(adsl_saf, USUBJID, SEX), by = "USUBJID")
+  left_join(select(adsl_sub, USUBJID, SEX), by = "USUBJID")
 ard_ae <- ard_stack_hierarchical(
   adae, variables = c(AEBODSYS, AEDECOD), by = c(TRT01A, SEX),
-  denominator = adsl_saf, id = USUBJID, over_variables = TRUE)
+  denominator = adsl_sub, id = USUBJID, over_variables = TRUE)
 ard_ae <- ard_ae[ard_ae$context != "tabulate", ]
 
 ae_levels <- list(TRT01A = arms, SEX = c("F", "M"))
@@ -443,7 +443,7 @@ set.seed(5)
 pk_times <- c("Pre-dose", paste(c(0.25, 0.5, 1, 1.5, 2, 3, 4, 6, 8, 10, 12, 16,
                                   24, 36, 48, 72, 96, 120, 144, 168, 192, 216,
                                   240), "h"))
-pk <- adsl_saf |>
+pk <- adsl_sub |>
   filter(TRT01A == "Drug X") |>
   select(USUBJID) |>
   tidyr::crossing(ANALYTE = c("Drug X", "Metabolite M1"), NOMTIME = pk_times) |>
