@@ -247,16 +247,16 @@ test_that("the study's program: an analysis data that is its population under a 
   sp <- tfl_ard_spec(list(
     study = base$study, datasets = base$datasets, populations = base$populations,
     analysis_data = exact_sheet(lapply(c("T", "U"), function(o)
-      list(output_id = o, data_id = "adsl_saf", from = "ADSL", population_id = "SAF")),
+      list(output_id = o, data_id = "adsl_sub", from = "ADSL", population_id = "SAF")),
       S$analysis_data),
     analyses = exact_sheet(lapply(c("T", "U"), function(o)
-      list(output_id = o, analysis_id = "A", method = "categorical", data = "adsl_saf",
+      list(output_id = o, analysis_id = "A", method = "categorical", data = "adsl_sub",
            by = "ARM", variables = "SEX")), S$analyses)))
   cl <- data.frame(output_id = c("T", "T", "U", "U"), variable = "SEX", value = c("M", "F", "M", "F"),
                    label = c("Male", "Female", "Male", "Female"), order = c("1", "2", "1", "2"))
   all <- tfl_ard_code(sp, save = FALSE, codelists = cl)
-  # (the study's part: adsl_saf <- adsl_sub, the code lists on adsl_sub)
-  expect_true(any(grepl("adsl_saf <- adsl_sub", all, fixed = TRUE)))
+  # (the study's part: adsl_sub <- adsl_sub, the code lists on adsl_sub)
+  expect_true(any(grepl("adsl_sub <- adsl_sub", all, fixed = TRUE)))
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, codelists = cl))
   sx <- unique(vapply(ard$variable_level[ard$variable == "SEX"], as.character, ""))
   expect_identical(sx, c("M", "F"))

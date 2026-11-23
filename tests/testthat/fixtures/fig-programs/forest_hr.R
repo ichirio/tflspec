@@ -1,5 +1,5 @@
 # ---- data ------------------------------------------------------------------
-adtte_ttde <- adtte |>
+adtte_sub <- adtte |>
   order_levels() |>
   filter(PARAMCD == "TTDE", SAFFL == "Y")
 

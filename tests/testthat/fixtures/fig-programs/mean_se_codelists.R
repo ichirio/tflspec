@@ -7,7 +7,7 @@ cl_trta <- c(
   "Xanomeline High Dose" = "High Dose"
 )
 
-advs_sysbp <- advs |>
+advs_sub <- advs |>
   order_levels(from = adsl) |>
   filter(PARAMCD == "SYSBP") |>
   left_join(
@@ -18,7 +18,7 @@ advs_sysbp <- advs |>
   mutate(AVISIT = reorder(factor(AVISIT), AVISITN)) |>
   set_levels(TRTA = cl_trta)
 
-sm <- advs_sysbp |>
+sm <- advs_sub |>
   filter(!is.na(AVAL)) |>
   group_by(TRTA, AVISITN, AVISIT) |>
   summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
@@ -26,7 +26,7 @@ sm <- advs_sysbp |>
 
 # ---- plot ------------------------------------------------------------------
 # the treatment palette, a colour for each TRTA
-pal <- tfl_colours("treatment", levels(factor(advs_sysbp$TRTA)))
+pal <- tfl_colours("treatment", levels(factor(advs_sub$TRTA)))
 pd <- position_dodge(width = 0.3)
 
 plot <- ggplot() +

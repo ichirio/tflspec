@@ -32,7 +32,7 @@ test_that("the arms' shapes and line types of the standard: the layers that colo
   withr::local_options(tflspec.fig_style = st)
   km <- tfl_fig_template("km_simple", data = "ADTTE", param = "TTDE", pop = "SAFFL", group = "TRT01A")
   code <- tfl_fig_design_code(km, setup = TRUE, save = FALSE)
-  expect_true("lty <- tfl_linetypes(levels(factor(adtte_ttde$TRT01A)))" %in% code)
+  expect_true("lty <- tfl_linetypes(levels(factor(adtte_sub$TRT01A)))" %in% code)
   expect_true(any(grepl("ggsurvfit(fit, linewidth = 0.3, linetype_aes = TRUE)", code, fixed = TRUE)))
   expect_true(any(grepl("scale_linetype_manual(values = lty, breaks = names(lty))", code, fixed = TRUE)))
   expect_true(any(grepl('theme(legend.key.width = unit(2.5, "lines"))', code, fixed = TRUE)))

@@ -14,12 +14,12 @@ The name, or \code{NULL} when the program calls it \code{df}.
 }
 \description{
 A designed figure's data steps make one data frame that its layers draw
-from.  In the program it is named for what it is, as the ARD programs
-name theirs: \verb{<dataset>_<parameter>} (\code{adtte_ttde}), else
-\verb{<dataset>_<population>} (\code{adsl_saf}).  Code of the design's own (a
-\code{code} step, a \code{layer_code} layer) says \code{df} and is written with the
-name too.  A design with neither a parameter nor a population keeps
-\code{df}, and so does one whose code has the name already.
+from.  In the program it is named \verb{<dataset>_sub} (\code{adtte_sub}, \code{adsl_sub}),
+as the ARD programs name the analysis data made in the data step.  Code
+of the design's own (a \code{code} step, a \code{layer_code} layer) says \code{df} and is
+written with the name too.  A design that reads no dataset (or an analysis
+data by its name) keeps \code{df}, and so does one whose code has the name
+already.
 }
 \examples{
 tfl_fig_data_name(tfl_fig_template("km_simple", data = "ADTTE", param = "TTDE",

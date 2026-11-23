@@ -66,8 +66,8 @@ test_that("your own code, and any function, fit in", {
                   list(layer = "layer_code", code = "p <- p + ggplot2::ggtitle('mine')")))
   r <- run_design(d)
   expect_true(r$png)
-  expect_true(any(grepl("df <- df[df$AVAL > 0, ]", r$code, fixed = TRUE)))
-  expect_true(any(grepl("geom_boxplot(data = df, aes(x = AVISIT, y = LOGV), outlier.shape = NA)",
+  expect_true(any(grepl("adlb_sub <- adlb_sub[adlb_sub$AVAL > 0, ]", r$code, fixed = TRUE)))
+  expect_true(any(grepl("geom_boxplot(data = adlb_sub, aes(x = AVISIT, y = LOGV), outlier.shape = NA)",
                         r$code, fixed = TRUE)))
 })
 
@@ -79,7 +79,7 @@ test_that("a layer is added to the catalog, and used like the others", {
   d <- tfl_fig_design(data = list(list(step = "read", dataset = "ADSL")),
                       layers = list(list(layer = "my_rug", x = "TRTDURD")))
   expect_match(paste(tfl_fig_design_code(d), collapse = "\n"),
-               "geom_rug(data = df, aes(x = TRTDURD), alpha = 0.4)", fixed = TRUE)
+               "geom_rug(data = adsl_sub, aes(x = TRTDURD), alpha = 0.4)", fixed = TRUE)
   expect_true(run_design(d)$png)
 })
 
@@ -153,7 +153,7 @@ test_that("the new statistics and settings write what they say", {
   d <- tfl_fig_template("swimmer_assessment")
   code <- paste(tfl_fig_design_code(d), collapse = "\n")
   expect_match(code, "assess <- adrs |>", fixed = TRUE)
-  expect_match(code, "inner_join(adsl_fas |> select(USUBJID, Y_ID)", fixed = TRUE)
+  expect_match(code, "inner_join(adsl_sub |> select(USUBJID, Y_ID)", fixed = TRUE)
   expect_match(code, "arrow = arrow(", fixed = TRUE)
   # a whole-script template is one figure layer
   d <- tfl_fig_template("edish_alt")
@@ -195,10 +195,11 @@ test_that("a report program's figure: no save, its own name, the study's palette
   expect_identical(part[[1L]], "# ---- data ------------------------------------------------------------------")
   expect_true(any(grepl("^# ---- plot ", part)))
   expect_false(any(grepl("^fig", part)))
-  # the data under a name that says what it is (adtte_ttde, not df)
-  expect_identical(tfl_fig_data_name(d), "adtte_ttde")
-  expect_null(tfl_fig_data_name(tfl_fig_design(data = list(list(step = "read", dataset = "ADSL")))))
-  expect_true(any(grepl('pal <- tfl_colours("treatment", levels(factor(adtte_ttde$TRT01A)))',
+  # the data under a name that says what it is (adtte_sub, not df)
+  expect_identical(tfl_fig_data_name(d), "adtte_sub")
+  expect_identical(tfl_fig_data_name(tfl_fig_design(data = list(list(step = "read", dataset = "ADSL")))), "adsl_sub")
+  expect_null(tfl_fig_data_name(tfl_fig_design(data = list(list(step = "flag", variable = "SAFFL")))))
+  expect_true(any(grepl('pal <- tfl_colours("treatment", levels(factor(adtte_sub$TRT01A)))',
                         part, fixed = TRUE)))
   # it runs, after the study's figure setup
   skip_if_not_installed("ggsurvfit")
@@ -259,7 +260,7 @@ test_that("a figure's own colours over the palette, and its legend title (#577)"
   d$plot$colours <- "Drug B = grey40, Drug A = #D62728"
   code <- paste(tfl_fig_design_code(d, setup = TRUE, save = FALSE), collapse = "
 ")
-  expect_match(code, "pal <- replace(tfl_colours(\"treatment\", levels(factor(df$TRT01A))), c(\"Drug B\", \"Drug A\"), c(\"grey40\", \"#D62728\"))",
+  expect_match(code, "pal <- replace(tfl_colours(\"treatment\", levels(factor(adsl_sub$TRT01A))), c(\"Drug B\", \"Drug A\"), c(\"grey40\", \"#D62728\"))",
                fixed = TRUE)
   x <- tfl_fig_content_from_design(d)
   fns <- vapply(x$content, function(it) it$fn, "")
