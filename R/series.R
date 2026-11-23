@@ -13,7 +13,11 @@
 #
 # Tags (the handlers below, added to .yaml_handlers()):
 #   !series K   values[[K]] of the series.yml read (the study's copy)
-#   !study K    study.yml settings: at key path K (dotted); unset if missing
+#   !study K    study.yml at key path K (dotted, from the top: settings.formats);
+#               unset if missing
+#   !study {key: K, fallback: V}
+#               the same, but a study without K gives V (a value, or a
+#               `!series K2`): first the study, else the fallback
 #   !fixed v    v, marked fixed: a later layer cannot override it
 #   !unset      tfl_unset()
 
@@ -120,7 +124,9 @@ tfl_series_read <- function(series, dir = NULL) {
 # study's copy), as tfl_series_read() gives it
 .series_read_at <- function(path, series, fn) {
   file <- file.path(path, "series.yml")
-  y <- .yaml_read_file(file, handlers = .yaml_handlers())
+  # (read with the `!study` tag, only to find one in values:; other tags are
+  # not read here)
+  y <- .yaml_read_file(file, handlers = c(.yaml_handlers(), list(study = .series_study_tag)))
   if (is.null(y)) y <- list()
   if (!.series_is_map(y)) stop(fn, ": ", file, " is not a map.", call. = FALSE)
   if (!is.null(y$name) && !identical(y$name, series)) {
@@ -128,6 +134,7 @@ tfl_series_read <- function(series, dir = NULL) {
          " (the name is the folder's).", call. = FALSE)
   }
   values <- y$values %||% list()
+  .series_values_no_study(y, file, fn)
   if (!.series_is_map(values) && length(values)) {
     stop(fn, ": series \"", series, "\": values: is a map ({key: value}).", call. = FALSE)
   }
@@ -147,6 +154,24 @@ tfl_series_read <- function(series, dir = NULL) {
             class = "tfl_series")
 }
 
+# A series.yml's values: hold no `!study` (the series is the study's fallback).
+# `y` is the file read with the `!study` handler (a tfl_study_ref marker).
+.series_values_no_study <- function(y, file, fn) {
+  found <- function(v) {
+    if (inherits(v, "tfl_study_ref")) return(TRUE)
+    is.list(v) && any(vapply(v, found, NA))
+  }
+  vals <- y$values
+  if (!is.list(vals)) return(invisible())
+  for (k in names(vals)) {
+    if (found(vals[[k]])) {
+      stop(file, ": values: ", k, ": !study is not allowed in a series's values ",
+           "(the series is the study's fallback).", call. = FALSE)
+    }
+  }
+  invisible()
+}
+
 #' @export
 print.tfl_series <- function(x, ...) {
   cat("<tfl_series> ", x$name, if (!is.null(x$label)) paste0(" (", x$label, ")"), "\n", sep = "")
@@ -159,14 +184,44 @@ print.tfl_series <- function(x, ...) {
 
 # ---- tags -------------------------------------------------------------------
 
-# .yaml_handlers() and the series tags: !series K, !study K, !fixed v.
+# .yaml_handlers() and the series tags: !series K, !study K,
+# !study {key: K, fallback: V}, !fixed v.
 # A tagged value is kept as a marker (a list, so that .yaml_seq() does not
 # fold it into a vector); .series_resolve() replaces it.
 .series_handlers <- function() {
   c(.yaml_handlers(),
     list(series = function(x) structure(list(key = as.character(x)), class = "tfl_series_ref"),
-         study = function(x) structure(list(key = as.character(x)), class = "tfl_study_ref"),
+         study = .series_study_tag,
          fixed = function(x) structure(list(value = .series_fixed_value(x)), class = "tfl_fixed_ref")))
+}
+
+# The `!study` tag: a scalar K, or a map {key: K, fallback: V}.  V keeps its
+# own tags (the reader has resolved a nested `!series K` into its marker by
+# the time it gives the map).  A bad map is not stopped here (yaml::yaml.load()
+# catches an error in a handler and goes on): it is a marker with `problem`
+# (the message) and an NA key, and stops where it is used (.series_resolve(),
+# .series_values_no_study()).
+.series_study_tag <- function(x) {
+  if (is.list(x)) {
+    nms <- names(x)
+    bad <- if (is.null(nms)) "<no names>" else setdiff(nms, c("key", "fallback"))
+    problem <- NULL
+    if (length(bad) || !"key" %in% nms) {
+      problem <- paste0("!study {key: K, fallback: V}: the keys are key and fallback; ",
+                        if (length(bad)) paste0("not ", paste(bad, collapse = ", ")) else "key is missing",
+                        ".")
+    } else if (!is.character(x$key) || length(x$key) != 1L || is.na(x$key) || !nzchar(x$key)) {
+      problem <- "!study {key: K, fallback: V}: key is a dotted path (text)."
+    }
+    if (!is.null(problem)) {
+      return(structure(list(key = NA_character_, problem = problem), class = "tfl_study_ref"))
+    }
+    key <- x$key
+    out <- list(key = key)
+    if ("fallback" %in% nms) out["fallback"] <- list(x$fallback)
+    return(structure(out, class = "tfl_study_ref"))
+  }
+  structure(list(key = as.character(x)), class = "tfl_study_ref")
 }
 
 # The value of a `!fixed` tag.  The reader gives a tagged scalar as its
@@ -189,7 +244,7 @@ print.tfl_series <- function(x, ...) {
 
 # Replaces the tagged values of `x` (a parsed YAML value: a list or a vector).
 #   series    a tfl_series (the study's copy, or a source's), or a series's name
-#   study     the parsed study.yml (settings:), or NULL
+#   study     the parsed study.yml (a list; `!study` keys start at its top), or NULL
 #   template  the template's name, for the messages
 #   origin    the origin of an untagged value ("template", or "report" for a
 #             report SPEC)
@@ -197,7 +252,7 @@ print.tfl_series <- function(x, ...) {
 # dotted path of each value (a list's element without a name by its
 # position), of "report" / "template" / "study" / "series" / "fixed"
 # ("series": a `!series K` value, from the series.yml read; "study": a
-# `!study K` value).  A `!fixed` value also carries attribute "fixed" = TRUE
+# `!study` value, or its fallback's origin).  A `!fixed` value also carries attribute "fixed" = TRUE
 # and "origin" = "fixed".
 .series_resolve <- function(x, series, study = NULL, template = NULL, origin = "template") {
   if (is.character(series)) series <- tfl_series_read(series)
@@ -220,7 +275,22 @@ print.tfl_series <- function(x, ...) {
       return(val)
     }
     if (inherits(v, "tfl_study_ref")) {
+      if (!is.null(v$problem)) stop(where, ": ", v$problem, call. = FALSE)
+      # By what the study has at the key (a dotted path from the top of study.yml):
+      #   a step of the path missing, no study, or YAML null (~)
+      #                    -> the fallback, walked as any value (so a `!series K`
+      #                       resolves and stops when missing); its origin ("series"
+      #                       for a `!series`, else `o`).  No fallback: tfl_unset(),
+      #                       origin "study".
+      #   `!unset`         -> tfl_unset(), origin "study" (the study switched it
+      #                       off; the fallback is not used)
+      #   any other value  -> the value as it is (FALSE, 0, "" and an empty list
+      #                       too), origin "study"
       val <- .series_study_value(study, v$key)
+      if (inherits(val, "tfl_absent") || is.null(val)) {
+        if ("fallback" %in% names(v)) return(walk(v$fallback, path, o))
+        val <- tfl_unset()
+      }
       note(path, "study")
       return(val)
     }
@@ -253,11 +323,13 @@ print.tfl_series <- function(x, ...) {
   out
 }
 
-# study.yml settings: at a dotted key path; tfl_unset() if it is missing
+# study.yml at a dotted key path from its top (settings.formats); a
+# `tfl_absent` marker if a step is missing or there is no study (a value of
+# NULL is YAML null)
 .series_study_value <- function(study, key) {
-  v <- study$settings
+  v <- study
   for (k in strsplit(key, ".", fixed = TRUE)[[1L]]) {
-    if (!is.list(v) || !k %in% names(v)) return(tfl_unset())
+    if (!is.list(v) || !k %in% names(v)) return(structure(list(), class = "tfl_absent"))
     v <- v[[k]]
   }
   v

@@ -66,6 +66,35 @@ test_that("ard_fingerprint() reads ard_status.csv", {
   expect_identical(e$ard_fingerprint("T-3"), "")
 })
 
+test_that("read_ard() gives a report's rows of the study ARD, or stops naming the ARD program", {
+  e <- helper_env()
+  dir <- tempfile("study")
+  dir.create(file.path(dir, "output", "ard"), recursive = TRUE)
+  on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+  path <- file.path(dir, "output", "ard", "ard.rds")
+  # no study ARD yet
+  expect_error(e$read_ard("T-1", path),
+               sprintf("There is no study ARD (%s): run programs/ard/T-1.R first.", path),
+               fixed = TRUE)
+  ard <- data.frame(output_id = c("T-1", "T-1", "T-2"), analysis_id = "A",
+                    stat_name = c("n", "p", "n"), stat = c(1, 0.5, 2))
+  saveRDS(ard, path)
+  got <- e$read_ard("T-1", path)
+  expect_identical(names(got), names(ard))
+  expect_identical(got$stat_name, c("n", "p"))
+  expect_identical(unique(got$output_id), "T-1")
+  # an id with no rows stops, as the generated reads do (the program's name
+  # made from the id as tflplanner makes it)
+  expect_error(e$read_ard("T 3", path),
+               "The study ARD has no rows for T 3: run programs/ard/T_3.R first.",
+               fixed = TRUE)
+  expect_error(e$read_ard(c("T-1", "T-2"), path), "one output id")
+  # the default path: the study ARD under the study folder the programs run in
+  old <- setwd(dir)
+  on.exit(setwd(old), add = TRUE, after = FALSE)
+  expect_identical(e$read_ard("T-2")$stat, 2)
+})
+
 test_that("a figure's ARD pieces: the code reads `ard`, the checks look in it", {
   a <- km_ard()
   d <- tfl_fig_design(

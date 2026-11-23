@@ -743,7 +743,7 @@
 #'     \item{required}{`TRUE` for an argument that has no default and must be
 #'       given.}
 #'     \item{default}{(a list column) the default as written; a tagged value
-#'       (`!series K`, `!study K`, `!fixed v`, `!r`) is a `tfl_tagged` object.
+#'       (`!series K`, `!study K`, `!study {key: K, fallback: V}`, `!fixed v`, `!r`) is a `tfl_tagged` object.
 #'       It is resolved for a study by [tfl_template_resolve()].  A schema
 #'       function's argument with no default written takes the function's own
 #'       default when that is one `TRUE` or `FALSE` and the argument's type is

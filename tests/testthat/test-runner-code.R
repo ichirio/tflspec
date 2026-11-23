@@ -5,6 +5,8 @@ runner_manifest <- function() {
   list(
     root = "runs",
     ard = "output/ard/ard.rds",
+    study = "S-1",
+    spec = "spec",
     programs = list(
       ard = c("programs/ard/ard_t_demo.R", "programs/ard/ard_t_ae.R"),
       tfl = c("programs/tfl/t_demo.R", "programs/tfl/t_ae.R")),
@@ -40,6 +42,8 @@ test_that("tfl_runner_code(): the head, then the runner's lines", {
   expect_match(head_lines[[1L]], "^# ---- the study's programs")
   expect_identical(head_lines[[2L]], ".batch_root <- \"runs\"")
   expect_identical(head_lines[[3L]], ".batch_ard  <- \"output/ard/ard.rds\"")
+  expect_identical(head_lines[[4L]], ".batch_study <- \"S-1\"")
+  expect_identical(head_lines[[5L]], ".batch_spec <- \"spec\"")
   expect_identical(head_lines[[n]], "")
   for (nm in c("programs", "ard_outputs", "report_ids", "needs", "unresolved", "sets",
                "outputs", "support", "data")) {
@@ -113,7 +117,7 @@ test_that("tfl_runner_code(): a missing field stops, naming it", {
 
 test_that("tfl_runner_code(): a field of the wrong type stops, naming it", {
   wrong <- list(
-    root = 1, ard = c("a", "b"), programs = list(ard = "a"),
+    root = 1, ard = c("a", "b"), study = character(), spec = NA_character_, programs = list(ard = "a"),
     ard_outputs = c("T-1"), report_ids = list("T-1"), needs = "T-1",
     unresolved = c("x"),
     sets = list("T-1"), outputs = c(a = "b"), support = list(ard = "a"),

@@ -71,7 +71,8 @@ template of this study only (\code{copied.yml} keeps the original's name).
 When a source changes, \code{tfl_template_status()} lists each copied file's
 state, \code{tfl_template_diff()} shows a copy's lines against its source,
 and \code{tfl_recopy_templates()} copies the chosen templates again (the
-study's own edits of them are lost, with a warning).
+study's own edits of them are replaced, with a warning; the file as it
+was is kept under \verb{spec/.backup/}).
 }
 \examples{
 study <- tempfile("study")
