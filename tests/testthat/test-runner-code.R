@@ -25,7 +25,7 @@ runner_manifest <- function() {
     data = list(`programs/ard/ard_t_demo.R` = "data/adsl.csv",
                 `programs/ard/ard_t_ae.R` = character()),
     data_vars = c(`data/adsl.csv` = "path_adam"),
-    data_dirs = c("data/adam", "data/sdtm", "data/other"),
+    data_dirs = c(adam = "data/adam", sdtm = "data/sdtm", other = "data/other"),
     sources = "programs/ard/functions/f.R",
     check_code = c("programs/company_setup.R", "programs/study_user.R"),
     kind = "run",
@@ -220,4 +220,10 @@ test_that("the runner file is base R", {
 
 test_that("tfl_runner_code() parses", {
   expect_no_error(parse(text = tfl_runner_code(runner_manifest())))
+})
+
+test_that("tfl_runner_code(): data_dirs is named by the layout keys", {
+  m <- runner_manifest()
+  m$data_dirs <- c("data/adam", "data/sdtm")
+  expect_error(tfl_runner_code(m), "manifest[$]data_dirs`")
 })

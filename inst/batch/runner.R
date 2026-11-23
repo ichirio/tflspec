@@ -215,10 +215,14 @@
       if (startsWith(.batch_norm(f), "input/ard/")) next
       v <- unname(.batch_data_vars[c(f, .batch_norm(f))])
       if (!any(!is.na(v) & nzchar(v))) {
+        keys <- names(.batch_data_dirs)
+        keys <- if (length(keys) > 1L) {
+          paste0(paste(keys[-length(keys)], collapse = ", "), " or ", keys[length(keys)])
+        } else keys
         out <- c(out, sprintf(paste0("Data path '%s' (%s) is not mapped to a data-folder variable: ",
-                                     "add its folder to the layout's data folders, or ",
-                                     "move the file under data/ or give it through the data root."),
-                              f, p))
+                                     "add its folder as a data key of the layout (%s in study.yml), ",
+                                     "or move the file under one of: %s."),
+                              f, p, keys, paste(unname(.batch_data_dirs), collapse = ", ")))
       }
     }
   }
@@ -401,17 +405,56 @@
        excluded = excluded, data = data, what = what)
 }
 
-# the data root a batch folder reads its data through (run_paths.R)
-.batch_read_root <- function() {
-  if (!file.exists("run_paths.R")) return(".")
+# run_paths.R: where the data and the study are, seen from the batch folder
+# (.tfl_data_root, .tfl_study_root); "." and "../.." as defaults
+.batch_read_paths <- function() {
+  out <- list(data = ".", study = "../..")
+  if (!file.exists("run_paths.R")) return(out)
   e <- new.env()
   tryCatch(sys.source("run_paths.R", envir = e), error = function(err) NULL)
-  r <- get0(".tfl_data_root", envir = e, inherits = FALSE)
-  if (is.character(r) && length(r) == 1L && !is.na(r)) r else "."
+  one <- function(nm) {
+    r <- get0(nm, envir = e, inherits = FALSE)
+    if (is.character(r) && length(r) == 1L && !is.na(r)) r else NULL
+  }
+  if (!is.null(one(".tfl_data_root"))) out$data <- one(".tfl_data_root")
+  if (!is.null(one(".tfl_study_root"))) out$study <- one(".tfl_study_root")
+  out
 }
 
-.batch_root_line <- function(root) {
-  sprintf(".tfl_data_root <- %s", encodeString(root, quote = "\""))
+.batch_paths_lines <- function(data_root, study_root) {
+  c(sprintf(".tfl_data_root <- %s", encodeString(data_root, quote = "\"")),
+    sprintf(".tfl_study_root <- %s", encodeString(study_root, quote = "\"")))
+}
+
+.batch_is_abs <- function(p) grepl("^([A-Za-z]:|/|~)", gsub("\\\\", "/", p))
+
+# the path from a batch folder back to the study: one .. per segment of the
+# folder's path below the study, or the study's absolute path when the runs'
+# root is absolute (a preview) or has a .. in it
+.batch_study_root <- function(batch_dir, study_dir) {
+  q <- .batch_norm(batch_dir)
+  seg <- strsplit(q, "/", fixed = TRUE)[[1L]]
+  seg <- seg[nzchar(seg) & seg != "."]
+  if (.batch_is_abs(q) || ".." %in% seg) {
+    return(normalizePath(study_dir, winslash = "/", mustWork = FALSE))
+  }
+  paste(rep("..", length(seg)), collapse = "/")
+}
+
+# where the runner itself reads a data file of the catalog: through the data
+# root when a data-folder variable maps it; an input/ard/ file as the copy in
+# the folder; a preview's own data file as it is
+.batch_data_at <- function(f, root) {
+  allowed <- as.character(unlist(.batch_paths$data, use.names = FALSE))
+  one <- function(f) {
+    n <- .batch_norm(f)
+    v <- unname(.batch_data_vars[c(f, n)])
+    if (f %in% allowed) f
+    else if (startsWith(n, "input/ard/")) n
+    else if (any(!is.na(v) & nzchar(v))) file.path(root, n)
+    else f
+  }
+  vapply(f, one, "", USE.NAMES = FALSE)
 }
 
 # the files under a folder, as paths from the working directory; no dot
@@ -421,7 +464,9 @@
     file.path(d, list.files(d, recursive = TRUE, all.files = TRUE))
   }))
   f <- as.character(f)
-  f[!grepl("(^|/)[.]", f) & !grepl("(~|[.]tmp)$", f)]
+  f[!grepl("(^|/)[.]", f) & !grepl("(~|[.]tmp)$", f) &
+      !grepl("(^|/)~[$]", f) &
+      !grepl("(^|/)(Thumbs[.]db|desktop[.]ini)$", f, ignore.case = TRUE)]
 }
 
 # The data files the run's programs read (.batch_data, by the data
@@ -430,9 +475,8 @@
 .batch_keep_data <- function(progs, root) {
   files <- unique(unlist(.batch_data[intersect(names(.batch_data), progs)],
                          use.names = FALSE))
-  at <- file.path(root, files)
-  files <- files[file.exists(at)]
-  at <- file.path(root, files)
+  files <- files[file.exists(.batch_data_at(files, root))]
+  at <- .batch_data_at(files, root)
   man <- data.frame(
     path = files, kept = files,
     size = unname(file.size(at)),
@@ -450,7 +494,7 @@
   rows <- lapply(intersect(names(.batch_data), progs), function(p) {
     f <- .batch_data[[p]]
     if (!length(f)) return(NULL)
-    at <- file.path(root, f)
+    at <- .batch_data_at(f, root)
     there <- file.exists(at)
     data.frame(program = p, file = f,
                size = ifelse(there, file.size(at), NA_real_),
@@ -481,10 +525,10 @@
 # test.  Left out: spec/.backup/ and editor temporary files (~, .tmp).
 .batch_spec_md5 <- function() {
   if (!dir.exists(.batch_spec)) return("none")
-  # (radix: the same order in every locale, so the same md5 on every machine)
-  f <- sort(list.files(.batch_spec, recursive = TRUE, all.files = TRUE),
-            method = "radix")
-  f <- f[!startsWith(f, ".backup/") & !grepl("(~|[.]tmp)$", f)]
+  # (the same files as the copy: .batch_walk(); radix: the same order in
+  # every locale, so the same md5 on every machine)
+  f <- substring(.batch_walk(.batch_spec), nchar(.batch_spec) + 2L)
+  f <- sort(f, method = "radix")
   if (!length(f)) return("none")
   tmp <- tempfile()
   on.exit(unlink(tmp))
@@ -561,9 +605,11 @@
 
 # what a re-run clears: the outputs and logs (a reports-only run: the
 # reports' only)
-.batch_clear <- function(parts) {
+.batch_clear <- function(parts, report_ids = character()) {
   if (identical(parts, "tfl")) {
     unlink(c("output/tfl", "logs/tfl"), recursive = TRUE)
+    # (and the conditions the selected reports wrote)
+    unlink(file.path("logs", "conditions", paste0(report_ids, ".csv")))
   } else {
     unlink(c("output", "logs"), recursive = TRUE)
   }
@@ -603,6 +649,8 @@
     dir <- paste0(base, "_", n)
   }
   cat("Batch folder:", dir, "\n\n")
+  # the path from the batch folder back to the study
+  study_root <- .batch_study_root(dir, getwd())
   fail <- function(msg) {
     unlink(dir, recursive = TRUE, force = TRUE)
     cat(msg, "\n")
@@ -633,7 +681,7 @@
       paste0("The copy does not match the study (something was saved while it was made): ",
              paste(utils::head(bad, 5L), collapse = ", "))
     } else {
-      writeLines(.batch_root_line(if (plan$data) "." else "../.."),
+      writeLines(.batch_paths_lines(if (plan$data) "." else study_root, study_root),
                  file.path(dir, "run_paths.R"))
       writeLines(args, file.path(dir, "run_args.txt"))
       for (e in c(all = "all", ard = "ard", report = "report")) {
@@ -656,7 +704,7 @@
     setwd(old)
     assign(".batch_staged", FALSE, envir = .batch_env())
   })
-  .batch_execute(parts, args)
+  .batch_execute(parts, args, plan = plan)
 }
 
 # An official run, in its batch folder (the working directory): the programs
@@ -686,37 +734,67 @@
 # names to run only those; --exclude=<name> (again for another) to leave a
 # program out; --batch <name> (or --batch=<name>) to run a named batch of
 # `.batch_sets`; --no-code is accepted and does nothing.
-.batch_execute <- function(parts, args = character()) {
+.batch_execute <- function(parts, args = character(), plan = NULL) {
   staged <- isTRUE(get0(".batch_staged", envir = .batch_env(), inherits = FALSE))
   rerun <- !staged
-  if (rerun && file.exists("../../study.yml")) {
-    stop("Official results cannot be overwritten: copy this folder elsewhere and run it there.",
-         call. = FALSE)
+  paths <- .batch_read_paths()
+  if (rerun && identical(.batch_kind, "run")) {
+    sr <- paths$study
+    in_study <- file.exists(file.path(sr, "study.yml"))
+    if (in_study && .batch_is_abs(sr)) {
+      # (an absolute study path: in place only when this folder lies in it)
+      in_study <- startsWith(normalizePath(getwd(), winslash = "/"),
+                             paste0(normalizePath(sr, winslash = "/"), "/"))
+    }
+    if (in_study) {
+      stop("Official results cannot be overwritten: copy this folder elsewhere and run it there.",
+           call. = FALSE)
+    }
   }
   root_arg <- sub("^--data-root=", "", grep("^--data-root=", args, value = TRUE))
   args <- args[!grepl("^--data-root=", args)]
   if (rerun && !length(args) && file.exists("run_args.txt")) {
     args <- readLines("run_args.txt", warn = FALSE)
   }
-  root <- if (length(root_arg)) root_arg[[length(root_arg)]] else .batch_read_root()
-  if (rerun && !file.exists(file.path(root, "study.yml")) && !dir.exists("data")) {
-    stop("This batch folder has no data: run it with --data-root=<the study folder> or make it with the data kept.",
+  root <- if (length(root_arg)) root_arg[[length(root_arg)]] else paths$data
+  # a reports-only run again reads this folder's own ARD
+  if (rerun && identical(intersect(c("ard", "tfl"), parts), "tfl") &&
+      !file.exists(.batch_ard)) {
+    stop("No ARD in this batch folder: run autoexec_ard.R or autoexec_all.R first.",
          call. = FALSE)
   }
-  plan <- .batch_plan(parts, args, have_ard = file.exists(.batch_ard))
+  if (is.null(plan)) plan <- .batch_plan(parts, args, have_ard = file.exists(.batch_ard))
   parts <- plan$parts
+  # (checked before anything is cleared)
+  if (!length(unlist(plan$selected[parts]))) stop("Nothing to run.")
+  # no data: none of the selected programs' mapped data files is under the root
+  if (rerun) {
+    mapped <- names(.batch_data_vars)[nzchar(.batch_data_vars)]
+    need <- unique(unlist(.batch_data[intersect(names(.batch_data),
+                                                unlist(plan$selected[parts], use.names = FALSE))],
+                          use.names = FALSE))
+    need <- need[need %in% c(mapped, .batch_norm(mapped))]
+    if (length(need) && !any(file.exists(.batch_data_at(need, root)))) {
+      stop("This batch folder has no data: run it with --data-root=<the study folder> or make it with the data kept.",
+           call. = FALSE)
+    }
+  }
   old_rerun <- character()
   if (rerun) {
     if (file.exists("batch.txt")) {
       old_rerun <- grep("^Re-run", readLines("batch.txt", warn = FALSE), value = TRUE)
     }
     if (file.exists("run.csv") && !file.exists("run_1.csv")) file.copy("run.csv", "run_1.csv")
-    .batch_clear(parts)
-    if (length(root_arg)) writeLines(.batch_root_line(root), "run_paths.R")
+    if (file.exists("issues.csv") && !file.exists("issues_1.csv")) file.copy("issues.csv", "issues_1.csv")
+    rep_ids <- unname(.batch_report_ids[plan$selected[["tfl"]]])
+    .batch_clear(parts, rep_ids[!is.na(rep_ids)])
+    if (length(root_arg)) writeLines(.batch_paths_lines(root, paths$study), "run_paths.R")
   }
   # the programs' own R processes find the packages this one does
   libs <- Sys.getenv("R_LIBS", unset = NA)
   Sys.setenv(R_LIBS = paste(.libPaths(), collapse = .Platform$path.sep))
+  on.exit(if (is.na(libs)) Sys.unsetenv("R_LIBS") else Sys.setenv(R_LIBS = libs),
+          add = TRUE)
   dir.create(file.path("output", "ard"), recursive = TRUE, showWarnings = FALSE)
   dir.create(file.path("output", "tfl"), recursive = TRUE, showWarnings = FALSE)
   selected <- plan$selected
@@ -822,7 +900,7 @@
     id <- ifelse(is.na(cd$output_id) | !nzchar(cd$output_id),
                  sub("[.]csv$", "", basename(cf)), cd$output_id)
     cl <- tolower(cd$class)
-    add_issues(vapply(id, prog_of, ""), id,
+    add_issues(vapply(id, prog_of, "", USE.NAMES = FALSE), id,
                ifelse(grepl("error", cl), "error", ifelse(grepl("warning", cl), "warning", "note")),
                "condition", cd$message)
   }
@@ -837,6 +915,25 @@
     empty[tf] <- ifelse(!is.na(v) & v %in% c("TRUE", "FALSE"), v, "unknown")
     for (k in tf[empty[tf] == "TRUE"]) {
       add_issues(result$program[k], oid[k], "note", "output", "no rows")
+    }
+  }
+  # one rule for errors: a program is ERROR when its exit status is not 0, or
+  # it has an error-level issue from any source; an ERROR program with no
+  # error issue gets one, from the log
+  for (k in seq_len(nrow(result))) {
+    errs_k <- issues$text[issues$program == result$program[k] & issues$level == "error"]
+    if (length(errs_k)) {
+      if (result$status[k] == "OK") {
+        result$status[k] <- "ERROR"
+        result$note[k] <- errs_k[[1L]]
+      }
+    } else if (result$status[k] == "ERROR") {
+      rc <- attr(rows[[k]], "rc")
+      lg <- result$log[k]
+      txt <- sprintf("the program ended with status %s; see %s",
+                     if (is.null(rc)) "?" else rc, if (is.na(lg)) "its log" else lg)
+      add_issues(result$program[k], oid[k], "error", "log", txt)
+      if (!nzchar(result$note[k])) result$note[k] <- txt
     }
   }
   # errors and warnings: as issues.csv has them
@@ -887,8 +984,6 @@
     if (rerun) c(old_rerun, paste("Re-run   :", now)),
     if (!rerun && identical(.batch_kind, "run")) "Verified : yes"),
     "batch.txt")
-  if (is.na(libs)) Sys.unsetenv("R_LIBS") else Sys.setenv(R_LIBS = libs)
-
   cat(sprintf("\n%d of %d program(s) ran without error.  %s\n",
               sum(result$status == "OK"), nrow(result), getwd()))
   if (any(result$status != "OK")) {
@@ -903,7 +998,8 @@
 # by the stage; a batch folder's own entry file runs again.
 run_batch <- function(parts, args = character()) {
   staged <- isTRUE(get0(".batch_staged", envir = .batch_env(), inherits = FALSE))
-  in_batch <- file.exists("run_paths.R") && file.exists("snapshot.csv")
+  # (snapshot.csv alone is the sign of a batch folder)
+  in_batch <- file.exists("snapshot.csv")
   if (!staged && !in_batch) return(invisible(.batch_stage(parts, args)))
   invisible(.batch_execute(parts, args))
 }
