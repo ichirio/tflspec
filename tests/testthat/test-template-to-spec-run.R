@@ -67,7 +67,7 @@ test_that("every template: its RTF as a template report = as the code SPEC tfl_t
   # B says what A extends and its style, always (canon: B = A, `extends` and
   # `style:` explicit): demog's [defaults], stf_t02_demog's fixed {content: none}
   for (nm in intersect(c("demog", "stf_t02_demog"), names_)) {
-    f <- Filter(file.exists, file.path(sds, "spec", "outputs", paste0(ids[[nm]], ".yml")))
+    f <- Filter(file.exists, file.path(got$sds, "spec", "outputs", paste0(ids[[nm]], ".yml")))
     y <- yaml::read_yaml(f[1L])
     expect_identical(y$extends, if (nm == "demog") "defaults" else list(content = "none"), info = nm)
     expect_identical(y$style, if (nm == "demog") "standard" else "stf_t02", info = nm)

@@ -85,7 +85,7 @@ tsr_children <- function(d, ids, script, w, n_max = 4L, mins = 30) {
   }))
   r <- do.call(rbind, lapply(csvs[file.exists(csvs)], utils::read.csv,
                              colClasses = "character", na.strings = character()))
-  list(ok = all(file.exists(csvs)), r = r, out = out)
+  list(ok = all(file.exists(csvs)), r = r, out = out, sds = sds)
 }
 
 # A child R must find tflspec where this R does: skips the test when not.

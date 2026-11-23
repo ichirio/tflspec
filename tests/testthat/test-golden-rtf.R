@@ -96,7 +96,7 @@ test_that("golden RTFs: every template in three studies, a company's copy the sa
   tfl_use_company_templates(co, templates = c("demog", "ae_soc_pt"))
   std <- readLines(file.path(co, "inst", "standards", "defaults.yml"))
   shipped <- readLines(file.path(d, "spec", "defaults.yml"))
-  company <- c(std, shipped[seq(which(shipped == "page:"), length(shipped))])
+  company <- c(std, shipped[seq(grep("^(page|styles):", shipped)[1L], length(shipped))])
   studies <- c(shipped = d,
                plain = golden_study(d, "content: []", file.path(root, "plain")),
                company = golden_study(d, company, file.path(root, "company")))
