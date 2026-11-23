@@ -82,6 +82,9 @@
 # the template SPEC needs: that can only be the preset
 .fig_preset_named <- function(t) {
   if (!is.list(t) || !is.character(t$name) || length(t$name) != 1L) return(FALSE)
+  # (a series template, `<series>/<template>`, is no preset: the catalog
+  # is not built for it)
+  if (grepl("/", t$name, fixed = TRUE)) return(FALSE)
   if (!t$name %in% tfl_fig_templates()$template) return(FALSE)
   if (!exists(t$name, envir = .tpl_registry, inherits = FALSE)) return(TRUE)
   need <- Filter(function(p) isTRUE(p$required), get0(t$name, envir = .tpl_registry, inherits = FALSE)$params)
