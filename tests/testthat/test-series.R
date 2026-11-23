@@ -40,7 +40,7 @@ series_test_demog <- c(
   "  missing_row: true",
   "  formats: !series formats",
   "  denominator: !fixed adsl_sub",
-  "  page_note: !study output.note",
+  "  page_note: !study settings.output.note",
   "  footnote: !unset",
   "extends: !series extends",
   "style: !series style",
@@ -157,7 +157,7 @@ test_that("!study: a missing key, or no study, is unset", {
   on.exit(unlink(root, recursive = TRUE), add = TRUE)
   series_test_make(root)
   s <- tfl_series_read("demo_v1", dir = root)
-  x <- yaml::yaml.load("a: !study rounding\nb: !study x.y.z", handlers = tflspec:::.series_handlers())
+  x <- yaml::yaml.load("a: !study settings.rounding\nb: !study settings.x.y.z", handlers = tflspec:::.series_handlers())
   r <- tflspec:::.series_resolve(x, s, study = list(settings = list(rounding = "sas")))
   expect_identical(r$a, "sas")
   expect_s3_class(r$b, "tfl_unset")

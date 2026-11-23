@@ -111,7 +111,7 @@
 #'   `"args"` holds the template's arguments as used, and `"origins"` where
 #'   each came from (`"report"`, `"template"`, `"series"` -- a `!series`
 #'   value, from the study's copy of `series.yml` --, `"study"` -- a
-#'   `!study` value, from `study.yml` --, `"fixed"`).
+#'   `!study` value, from `study.yml`, or its fallback's origin --, `"fixed"`).
 #' @seealso [tfl_arg_defs()], [tfl_copy_templates()], [tfl_series_dir()]
 #' @export
 tfl_template_resolve <- function(report, template = NULL, study = NULL) {
@@ -145,9 +145,10 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
              call. = FALSE)
       }
       val <- given[[p]]
-      # a map whose default is the series' (!series K): the report's names
-      # over the series' map, the rest as the series has them (canon e023312)
-      if (identical(defs$default_kind[[i]], "series") && startsWith(defs$type[[i]], "map<") &&
+      # a map whose default is the series' (!series K) or the study's
+      # (!study K, with or without a fallback): the report's names
+      # over that map, the rest as the series has them (canon e023312)
+      if (defs$default_kind[[i]] %in% c("series", "study") && startsWith(defs$type[[i]], "map<") &&
           .tr_is_map(val)) {
         val <- .tr_merge_map(def, val)
       }
