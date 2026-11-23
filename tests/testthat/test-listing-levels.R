@@ -6,8 +6,9 @@
 # report's list wins over it.  Package fictional data (adsl, adlb); the
 # expected orders are the lists written here.
 
-# `defaults`: lines added to defaults.yml
-ll_study <- function(defaults = NULL) {
+# `defaults`: lines added to defaults.yml; `levels`: study.yml's
+# settings: adam_levels (none when not written)
+ll_study <- function(defaults = NULL, levels = NULL) {
   skip_if_not_installed("haven")
   d <- file.path(tempfile("ll"), "study")
   dir.create(file.path(d, "adam"), recursive = TRUE)
@@ -16,6 +17,11 @@ ll_study <- function(defaults = NULL) {
                      file.path(d, "adam", paste0(x, ".xpt")))
   }
   suppressMessages(tfl_ai_study_init(d, adam = "adam", study_id = "LL-1"))
+  if (!is.null(levels)) {
+    st <- yaml::read_yaml(file.path(d, "study.yml"))
+    st$settings$adam_levels <- levels
+    yaml::write_yaml(st, file.path(d, "study.yml"))
+  }
   if (length(defaults)) cat(c(defaults, ""), sep = "\n",
                             file = file.path(d, "spec", "defaults.yml"), append = TRUE)
   d
@@ -111,7 +117,8 @@ test_that("a table of records: the study's ADaM metadata orders it, the report's
   v <- ll_visits()
   # the study's display lists (defaults.yml codelists:) are lists by name and
   # reach no report (#857); its ADaM metadata orders the records
-  d <- ll_study(defaults = c(ll_adam_meta(v), "codelists:", paste0("  ", ll_list(rev(v)))))
+  d <- ll_study(defaults = c(ll_adam_meta(v), "codelists:", paste0("  ", ll_list(rev(v)))),
+                levels = "define_xml")
   on.exit(unlink(dirname(d), recursive = TRUE), add = TRUE)
   ll_report(d, "T-LS")
   expect_identical(levels(ll_records(d, "T-LS")$recs$AVISIT), v)
