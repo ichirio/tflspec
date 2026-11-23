@@ -49,7 +49,8 @@ A report changes the table in two ways:
 - **by an argument**: `args:` gives a value in place of the default. A
   map whose default is a series value (`formats`) is the exception: the
   report's names go over the series' map one by one, a name whose value
-  is `!unset` is removed, and the names the report does not write keep
+  is `!unset` is removed (for `formats`, that statistic then takes the
+  ARD catalog's format), and the names the report does not write keep
   the series' values (see [Series values](#series-values));
 - **by an appended card**: the report's own `content:` lists plan items
   (cards) that come after the template's. When the template already has
