@@ -67,8 +67,8 @@ tfl_ard_reads <- function(study, outputs = NULL) {
   if (length(outputs) && (is.null(names(outputs)) || !all(vapply(outputs, inherits, NA, "tfl_output")))) {
     stop("tfl_ard_reads(): `outputs` is a named list of tfl_output.", call. = FALSE)
   }
-  if (anyDuplicated(names(outputs)) ||
-      !identical(unname(names(outputs)), unname(vapply(outputs, function(o) as.character(o$id), "")))) {
+  if (length(outputs) && (anyDuplicated(names(outputs)) ||
+      !identical(unname(names(outputs)), unname(vapply(outputs, function(o) as.character(o$id), ""))))) {
     stop("tfl_ard_reads(): `outputs` is named by the reports' ids, each once.", call. = FALSE)
   }
   ids <- names(outputs)
