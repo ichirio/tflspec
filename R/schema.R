@@ -226,8 +226,20 @@ tfl_schema <- function(fn = NULL) {
 # ---- the type notation -------------------------------------------------------
 
 # "list<vec<string, number>>|string" -> a parsed type: list(kind, args), the
-# alternatives of a `|` as kind "either"
+# alternatives of a `|` as kind "either" (each text parsed once: a code
+# writer asks for the same types again and again)
 .schema_type <- function(txt) {
+  if (!is.character(txt) || length(txt) != 1L || is.na(txt)) return(.schema_type_parse(txt))
+  key <- paste0("t:", txt)
+  hit <- .schema_cache$types[[key]]
+  if (!is.null(hit)) return(hit)
+  if (is.null(.schema_cache$types)) .schema_cache$types <- new.env(hash = TRUE, parent = emptyenv())
+  out <- .schema_type_parse(txt)
+  assign(key, out, envir = .schema_cache$types)
+  out
+}
+
+.schema_type_parse <- function(txt) {
   txt <- trimws(txt)
   alts <- .schema_split(txt, "|")
   if (length(alts) > 1L) {

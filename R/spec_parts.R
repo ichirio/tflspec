@@ -36,7 +36,8 @@
 # A part item as read from YAML: its content as items, its data as a
 # report's data
 .part_in <- function(args) {
-  if (!is.null(args$content)) {
+  # (`content: !unset`: the layers' part content taken away, as it is)
+  if (!is.null(args$content) && !inherits(args$content, "tfl_unset")) {
     if (!is.list(args$content) || !is.null(names(args$content))) {
       .ard_stop(sprintf("%s: `content` is a sequence of items (`- fn: {args}`).", .spec_part$fn))
     }
@@ -56,7 +57,11 @@
 .part_out <- function(args) {
   out <- .calls_out(args[setdiff(names(args), c("content", "data"))])
   if (!is.null(args$data)) out$data <- .calls_out(args$data)
-  if (!is.null(args$content)) out$content <- .items_to_list(.part_items(args$content))
+  if (inherits(args$content, "tfl_unset")) {
+    out$content <- args$content
+  } else if (!is.null(args$content)) {
+    out$content <- .items_to_list(.part_items(args$content))
+  }
   out[c(intersect(c("name", "absent", "data"), names(out)),
         setdiff(names(out), c("name", "absent", "data", "content")),
         intersect("content", names(out)))]
