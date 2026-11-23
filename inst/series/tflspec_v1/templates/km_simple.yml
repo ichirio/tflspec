@@ -52,6 +52,7 @@ params:
     step: analysis
     tier: other
     description: The decimals (or the format) of the legend N.
+      A report's names go over the series' formats; `!unset` removes one.
   x_label:
     type: string
     input: text
