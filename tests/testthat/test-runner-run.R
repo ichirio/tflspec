@@ -51,10 +51,11 @@ rr_study <- function(m = rr_manifest()) {
 
 rr_write_batch <- function(s, m) {
   writeLines(tfl_runner_code(m), file.path(s, "programs", "batch.R"))
-  for (e in c(all = "c(\"ard\", \"tfl\")", ard = "\"ard\"", report = "\"tfl\"")) {
+  parts <- c(all = "c(\"ard\", \"tfl\")", ard = "\"ard\"", report = "\"tfl\"")
+  for (n in names(parts)) {
     writeLines(c("source(\"programs/batch.R\")",
-                 paste0("run_batch(", e, ", commandArgs(TRUE))")),
-               file.path(s, "programs", paste0("autoexec_", names(e), ".R")))
+                 paste0("run_batch(", parts[[n]], ", commandArgs(TRUE))")),
+               file.path(s, "programs", paste0("autoexec_", n, ".R")))
   }
 }
 
@@ -639,7 +640,7 @@ test_that("a reports-only run again needs the folder's ARD and drops stale condi
   file.copy(x$batch, el, recursive = TRUE)
   b2 <- file.path(el, basename(x$batch))
   dir.create(file.path(b2, "logs", "conditions"), recursive = TRUE, showWarnings = FALSE)
-  write.csv(data.frame(output_id = "T-2", class = "simpleError", message = "stale"),
+  utils::write.csv(data.frame(output_id = "T-2", class = "simpleError", message = "stale"),
             file.path(b2, "logs", "conditions", "T-2.csv"), row.names = FALSE)
   r <- rr_rscript(b2, "autoexec_report.R", paste0("--data-root=", x$s))
   expect_identical(r$status, 0L, info = r$text)
