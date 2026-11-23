@@ -718,7 +718,10 @@
 #'       given.}
 #'     \item{default}{(a list column) the default as written; a tagged value
 #'       (`!series K`, `!study K`, `!fixed v`, `!r`) is a `tfl_tagged` object.
-#'       It is resolved for a study by [tfl_template_resolve()].}
+#'       It is resolved for a study by [tfl_template_resolve()].  A schema
+#'       function's argument with no default written takes the function's own
+#'       default when that is one `TRUE` or `FALSE` and the argument's type is
+#'       a logical kind; any other formal default gives none.}
 #'     \item{default_kind}{`value`, `study`, `series`, `unset` or `fixed`;
 #'       `NA` when there is no default.}
 #'     \item{unset}{what "(none)" (`!unset`) does, from `unset:` (the words
@@ -814,8 +817,28 @@ tfl_arg_defs <- function(fn = NULL, template = NULL, study_dir = NULL) {
   }
   args <- .arg_schema_key(.arg_schema_fill(.arg_schema_dots(ent$args %||% list(), ent$dots)),
                           ent$visible)
+  args <- .arg_formal_defaults(args, ent$formal_defaults)
   step <- if (fn %in% .arg_page_fns) "page" else .arg_step_for_stage(ent$stage)
   .arg_table(args, step, fn, ent[["groups"]])
+}
+
+# An argument whose definition writes no `default` takes the function's own
+# default when that is one non-NA logical (`formal_defaults`, from
+# .schema_add_formals()) and the argument's type is a logical kind (its
+# deciding member is `logical`), as the planner's card does.  A written
+# default wins; `...` gets none; a required argument keeps its tier, so
+# `required` does not change.
+.arg_formal_defaults <- function(args, formal_defaults) {
+  for (n in setdiff(names(formal_defaults), "...")) {
+    d <- args[[n]]
+    v <- formal_defaults[[n]]
+    if (!is.list(d) || "default" %in% names(d) || isTRUE(d$required) ||
+        identical(d$tier, "required")) next
+    if (!(is.logical(v) && length(v) == 1L && !is.na(v)) ||
+        !identical(.type_deciding(as.character(d$type %||% "string")), "logical")) next
+    args[[n]]["default"] <- list(v)
+  }
+  args
 }
 
 # A schema function's `...` (its `dots:`): one row, last, with the dots'
