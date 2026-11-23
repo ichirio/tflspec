@@ -36,7 +36,8 @@ differ, trust the package, not this file, and fetch the matching copy with
    with `library(rtfreporter)`.
 3. **Every tflspec function is `tfl_*`** (and `tflspec_ai_manual()`).
    The functions the generated programs call as they run (`blank_as_na()`, `set_levels()`,
-   `tag_ard()`, `bind_items()`, `fmt_ard()`, `keep_stats()`, `fmt_pvalue()`, `save_ard()`)
+   `tag_ard()`, `bind_items()`, `fmt_ard()`, `keep_stats()`, `fmt_pvalue()`, `save_ard()`,
+   `read_ard()`)
    are not tflspec's exports: `tfl_helpers_code()` gives their code, which a
    study keeps in a file of its own (tflplanner: `programs/study_helpers.R`),
    so the programs run without tflspec.
@@ -163,6 +164,12 @@ warning); the rds stays the record. An ARD made elsewhere: `report$ard_source`
 `tfl_ard_conditions(ard)` lists what went wrong while an ARD was made (a
 test that could not run, a statistic that stopped or warned): cards keeps
 going and leaves the message in the `error` / `warning` column.
+
+To read another report's ARD in your own code (a program's `code` step, a
+figure's own data), call the study helper `read_ard("<output id>")`: that
+report's rows of the study ARD (`output/ard/ard.rds`). Do not write
+`readRDS()` and a filter: an id with no rows gives an empty table without a
+word, while `read_ard()` stops and names the ARD program to run first.
 
 ---
 ## 4. Function map — what to call for what

@@ -1,8 +1,8 @@
 # The functions a study's generated programs call: the code lists on a
 # data, the ids in front of an analysis's ARD, the formats after a call,
-# the statistics asked for, one report's rows into the study ARD, and a
-# figure's reading of an ARD (one statistic, statistics as a data frame,
-# the fingerprint of what was built).
+# the statistics asked for, one report's rows into the study ARD and back
+# out of it, and a figure's reading of an ARD (one statistic, statistics as
+# a data frame, the fingerprint of what was built).
 # Base R, cards and dplyr only: the programs run without tflspec.
 
 # The code lists on a data: each listed column a factor whose levels are
@@ -692,6 +692,31 @@ ard_fingerprint <- function(report_id, path = "output/ard/ard_status.csv") {
   st <- utils::read.csv(path, colClasses = "character")
   d <- st$definition[st$output_id == report_id]
   if (!length(d) || is.na(d[1L])) "" else d[1L]
+}
+
+# One report's rows of the study ARD (what save_ard() put there), or the
+# program stops and says which ARD program to run first: no study ARD, or
+# no rows for the report.  What a program reading another report's ARD
+# calls, in place of readRDS() and a filter that gives no rows without a
+# word.
+#   ard <- read_ard("T-14-2-1")
+read_ard <- function(report_id, path = "output/ard/ard.rds") {
+  if (!is.character(report_id) || length(report_id) != 1L || is.na(report_id)) {
+    stop("read_ard(): `report_id` is one output id.", call. = FALSE)
+  }
+  prog <- file.path("programs", "ard",
+                    paste0(gsub("[^A-Za-z0-9._-]", "_", report_id), ".R"))
+  if (!file.exists(path)) {
+    stop(sprintf("There is no study ARD (%s): run %s first.", path, prog),
+         call. = FALSE)
+  }
+  ard <- readRDS(path)
+  ard <- ard[ard$output_id %in% report_id, , drop = FALSE]
+  if (!nrow(ard)) {
+    stop(sprintf("The study ARD has no rows for %s: run %s first.", report_id, prog),
+         call. = FALSE)
+  }
+  ard
 }
 
 # One report's rows into the study ARD (the other reports' left as they
