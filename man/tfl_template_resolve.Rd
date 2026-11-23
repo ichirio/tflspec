@@ -35,6 +35,14 @@ data, and replaces the template's row of its id.  The result is a plain
 code SPEC, as \code{\link[=tfl_read_output]{tfl_read_output()}} reads one.
 }
 \details{
+A report's value replaces the default, but for an argument of a map type
+whose default is the series' (\verb{!series K}, such as \code{formats}): the
+report's map is put over the series' map name by name.  A name the report
+writes replaces the series' value of that name (a map value merges into
+the series' map of that name, in the same way), a name whose value is
+\code{!unset} is removed, and the names the report does not write keep the
+series' values.
+
 An analysis item's \verb{analyses:} (\code{per}, \code{ids}) says its analyses: \code{per: variable} one a variable (its id the variable's entry in \code{ids}, else the
 variable's name); \code{per: level} or \verb{per: [columns]} one row whose
 \code{analysis_per} tells the generator how to name the analyses; no \code{per}

@@ -19,17 +19,17 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtte
       
-      adtte_os <- adtte |>
+      adtte_sub <- adtte |>
         filter(PARAMCD == "OS", FASFL == "Y")
       
       # AVAL in months, from each record's unit, AVALU (days when the data has no AVALU)
-      adtte_os <- adtte_os |>
-        mutate(AVALU = if ("AVALU" %in% names(adtte_os)) toupper(AVALU) else "DAYS")
-      units_unknown <- setdiff(adtte_os$AVALU, c("DAYS", "WEEKS", "MONTHS", "YEARS"))
+      adtte_sub <- adtte_sub |>
+        mutate(AVALU = if ("AVALU" %in% names(adtte_sub)) toupper(AVALU) else "DAYS")
+      units_unknown <- setdiff(adtte_sub$AVALU, c("DAYS", "WEEKS", "MONTHS", "YEARS"))
       if (length(units_unknown)) {
         stop("AVALU: a unit not DAYS, WEEKS, MONTHS or YEARS: ", toString(units_unknown), call. = FALSE)
       }
-      adtte_os <- adtte_os |>
+      adtte_sub <- adtte_sub |>
         mutate(
           AVAL = AVAL * case_when(
             AVALU == "DAYS"   ~ 1,
@@ -40,7 +40,7 @@
           AVALU = "MONTHS"
         )
       
-      fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = adtte_os)
+      fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = adtte_sub)
       
       x_breaks <- pretty(c(0, max(fit$time)))
       
@@ -51,11 +51,11 @@
         strata = sub("^[^=]*=", "", as.character(sr$strata)),
         n_risk = sr$n.risk
       ) |>
-        mutate(strata = factor(strata, levels = rev(levels(factor(adtte_os$TRT01P)))))
+        mutate(strata = factor(strata, levels = rev(levels(factor(adtte_sub$TRT01P)))))
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01P
-      lv <- levels(factor(adtte_os$TRT01P))
+      lv <- levels(factor(adtte_sub$TRT01P))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggsurvfit(fit, linewidth = 0.3) +
@@ -146,17 +146,17 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtte
       
-      adtte_os <- adtte |>
+      adtte_sub <- adtte |>
         filter(PARAMCD == "OS", FASFL == "Y")
       
       # AVAL in months, from each record's unit, AVALU (days when the data has no AVALU)
-      adtte_os <- adtte_os |>
-        mutate(AVALU = if ("AVALU" %in% names(adtte_os)) toupper(AVALU) else "DAYS")
-      units_unknown <- setdiff(adtte_os$AVALU, c("DAYS", "WEEKS", "MONTHS", "YEARS"))
+      adtte_sub <- adtte_sub |>
+        mutate(AVALU = if ("AVALU" %in% names(adtte_sub)) toupper(AVALU) else "DAYS")
+      units_unknown <- setdiff(adtte_sub$AVALU, c("DAYS", "WEEKS", "MONTHS", "YEARS"))
       if (length(units_unknown)) {
         stop("AVALU: a unit not DAYS, WEEKS, MONTHS or YEARS: ", toString(units_unknown), call. = FALSE)
       }
-      adtte_os <- adtte_os |>
+      adtte_sub <- adtte_sub |>
         mutate(
           AVAL = AVAL * case_when(
             AVALU == "DAYS"   ~ 1,
@@ -167,11 +167,11 @@
           AVALU = "MONTHS"
         )
       
-      fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = adtte_os)
+      fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = adtte_sub)
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01P
-      lv <- levels(factor(adtte_os$TRT01P))
+      lv <- levels(factor(adtte_sub$TRT01P))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggsurvfit(fit, linewidth = 0.3) +
@@ -239,17 +239,17 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtte
       
-      adtte_os <- adtte |>
+      adtte_sub <- adtte |>
         filter(PARAMCD == "OS", FASFL == "Y")
       
       # AVAL in months, from each record's unit, AVALU (days when the data has no AVALU)
-      adtte_os <- adtte_os |>
-        mutate(AVALU = if ("AVALU" %in% names(adtte_os)) toupper(AVALU) else "DAYS")
-      units_unknown <- setdiff(adtte_os$AVALU, c("DAYS", "WEEKS", "MONTHS", "YEARS"))
+      adtte_sub <- adtte_sub |>
+        mutate(AVALU = if ("AVALU" %in% names(adtte_sub)) toupper(AVALU) else "DAYS")
+      units_unknown <- setdiff(adtte_sub$AVALU, c("DAYS", "WEEKS", "MONTHS", "YEARS"))
       if (length(units_unknown)) {
         stop("AVALU: a unit not DAYS, WEEKS, MONTHS or YEARS: ", toString(units_unknown), call. = FALSE)
       }
-      adtte_os <- adtte_os |>
+      adtte_sub <- adtte_sub |>
         mutate(
           AVAL = AVAL * case_when(
             AVALU == "DAYS"   ~ 1,
@@ -260,7 +260,7 @@
           AVALU = "MONTHS"
         )
       
-      fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = adtte_os)
+      fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = adtte_sub)
       
       x_breaks <- pretty(c(0, max(fit$time)))
       
@@ -271,11 +271,11 @@
         strata = sub("^[^=]*=", "", as.character(sr$strata)),
         n_risk = sr$n.risk
       ) |>
-        mutate(strata = factor(strata, levels = rev(levels(factor(adtte_os$TRT01P)))))
+        mutate(strata = factor(strata, levels = rev(levels(factor(adtte_sub$TRT01P)))))
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01P
-      lv <- levels(factor(adtte_os$TRT01P))
+      lv <- levels(factor(adtte_sub$TRT01P))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggsurvfit(fit, linewidth = 0.3) +
@@ -369,17 +369,17 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtte
       
-      adtte_os <- adtte |>
+      adtte_sub <- adtte |>
         filter(PARAMCD == "OS", FASFL == "Y")
       
       # AVAL in months, from each record's unit, AVALU (days when the data has no AVALU)
-      adtte_os <- adtte_os |>
-        mutate(AVALU = if ("AVALU" %in% names(adtte_os)) toupper(AVALU) else "DAYS")
-      units_unknown <- setdiff(adtte_os$AVALU, c("DAYS", "WEEKS", "MONTHS", "YEARS"))
+      adtte_sub <- adtte_sub |>
+        mutate(AVALU = if ("AVALU" %in% names(adtte_sub)) toupper(AVALU) else "DAYS")
+      units_unknown <- setdiff(adtte_sub$AVALU, c("DAYS", "WEEKS", "MONTHS", "YEARS"))
       if (length(units_unknown)) {
         stop("AVALU: a unit not DAYS, WEEKS, MONTHS or YEARS: ", toString(units_unknown), call. = FALSE)
       }
-      adtte_os <- adtte_os |>
+      adtte_sub <- adtte_sub |>
         mutate(
           AVAL = AVAL * case_when(
             AVALU == "DAYS"   ~ 1,
@@ -390,7 +390,7 @@
           AVALU = "MONTHS"
         )
       
-      fit <- survfit2(Surv(AVAL, CNSR == 0) ~ 1, data = adtte_os)
+      fit <- survfit2(Surv(AVAL, CNSR == 0) ~ 1, data = adtte_sub)
       
       x_breaks <- pretty(c(0, max(fit$time)))
       
@@ -481,7 +481,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtr, adrs
       
-      adtr_bpchg <- adtr |>
+      adtr_sub <- adtr |>
         filter(PARAMCD == "BPCHG", FASFL == "Y") |>
         left_join(
           adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
@@ -504,7 +504,7 @@
       )
       
       fig <- ggplot() +
-        geom_col(data = adtr_bpchg, aes(x = INDEX, y = AVAL, fill = BOR), width = 0.8) +
+        geom_col(data = adtr_sub, aes(x = INDEX, y = AVAL, fill = BOR), width = 0.8) +
         geom_hline(yintercept = 0, linetype = "solid", colour = "black",
                    linewidth = 0.5) +
         geom_hline(
@@ -580,7 +580,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtr
       
-      adtr_bpchg <- adtr |>
+      adtr_sub <- adtr |>
         filter(PARAMCD == "BPCHG", FASFL == "Y", !is.na(AVAL)) |>
         arrange(desc(AVAL)) |>
         mutate(INDEX = row_number())
@@ -588,7 +588,7 @@
       # ---- plot ------------------------------------------------------------------
       
       fig <- ggplot() +
-        geom_col(data = adtr_bpchg, aes(x = INDEX, y = AVAL), width = 0.8) +
+        geom_col(data = adtr_sub, aes(x = INDEX, y = AVAL), width = 0.8) +
         geom_hline(yintercept = 0, linetype = "solid", colour = "black",
                    linewidth = 0.5) +
         geom_hline(
@@ -660,7 +660,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adsl
       
-      adsl_fas <- adsl |>
+      adsl_sub <- adsl |>
         filter(FASFL == "Y", !is.na(TRTDURD)) |>
         # days -> months
         mutate(TRTDURD = TRTDURD / days_per_month) |>
@@ -668,14 +668,14 @@
         mutate(Y_ID = reorder(USUBJID, TRTDURD)) |>
         mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03)
       
-      ongoing <- adsl_fas |>
+      ongoing <- adsl_sub |>
         filter(EOSSTT == "ONGOING")
       
       # ---- plot ------------------------------------------------------------------
       
       fig <- ggplot() +
         geom_segment(
-          data = adsl_fas,
+          data = adsl_sub,
           aes(x = X0, y = Y_ID, xend = TRTDURD, yend = Y_ID),
           linewidth = 1.2
         ) +
@@ -734,7 +734,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adsl, adrs
       
-      adsl_fas <- adsl |>
+      adsl_sub <- adsl |>
         filter(FASFL == "Y") |>
         left_join(
           adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
@@ -748,7 +748,7 @@
         mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03) |>
         mutate(BOR = factor(BOR, levels = c("CR", "PR", "SD", "PD", "NE")))
       
-      ongoing <- adsl_fas |>
+      ongoing <- adsl_sub |>
         filter(EOSSTT == "ONGOING")
       
       # ---- plot ------------------------------------------------------------------
@@ -764,7 +764,7 @@
       
       fig <- ggplot() +
         geom_segment(
-          data = adsl_fas,
+          data = adsl_sub,
           aes(x = X0, y = Y_ID, xend = TRTDURD, yend = Y_ID, colour = BOR),
           linewidth = 1.2
         ) +
@@ -824,7 +824,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adsl, adrs
       
-      adsl_fas <- adsl |>
+      adsl_sub <- adsl |>
         filter(FASFL == "Y") |>
         left_join(
           adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
@@ -838,12 +838,12 @@
         mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03) |>
         mutate(BOR = factor(BOR, levels = c("CR", "PR", "SD", "PD", "NE")))
       
-      ongoing <- adsl_fas |>
+      ongoing <- adsl_sub |>
         filter(EOSSTT == "ONGOING")
       
       assess <- adrs |>
         filter(PARAMCD == "OVR" & !is.na(ADY)) |>
-        inner_join(adsl_fas |> select(USUBJID, Y_ID), by = "USUBJID") |>
+        inner_join(adsl_sub |> select(USUBJID, Y_ID), by = "USUBJID") |>
         mutate(ADY = ADY / days_per_month)
       
       # ---- plot ------------------------------------------------------------------
@@ -859,7 +859,7 @@
       
       fig <- ggplot() +
         geom_segment(
-          data = adsl_fas,
+          data = adsl_sub,
           aes(x = X0, y = Y_ID, xend = TRTDURD, yend = Y_ID, colour = BOR),
           linewidth = 1.2
         ) +
@@ -925,7 +925,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adsl, adrs
       
-      adsl_fas <- adsl |>
+      adsl_sub <- adsl |>
         filter(FASFL == "Y") |>
         left_join(
           adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
@@ -939,12 +939,12 @@
         mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03) |>
         mutate(BOR = factor(BOR, levels = c("CR", "PR", "SD", "PD", "NE")))
       
-      ongoing <- adsl_fas |>
+      ongoing <- adsl_sub |>
         filter(EOSSTT == "ONGOING")
       
       assess <- adrs |>
         filter(PARAMCD == "OVR" & !is.na(ADY)) |>
-        inner_join(adsl_fas |> select(USUBJID, Y_ID), by = "USUBJID") |>
+        inner_join(adsl_sub |> select(USUBJID, Y_ID), by = "USUBJID") |>
         mutate(ADY = ADY / days_per_month)
       
       # ---- plot ------------------------------------------------------------------
@@ -960,7 +960,7 @@
       
       fig <- ggplot() +
         geom_segment(
-          data = adsl_fas,
+          data = adsl_sub,
           aes(x = X0, y = Y_ID, xend = TRTDURD, yend = Y_ID, colour = BOR),
           linewidth = 1.2
         ) +
@@ -977,7 +977,7 @@
           size = 1.5
         ) +
         geom_point(
-          data = adsl_fas,
+          data = adsl_sub,
           aes(x = DTHADY, y = Y_ID),
           shape = 17,
           size = 2.5,
@@ -1033,7 +1033,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtr, adrs
       
-      adtr_sdiam <- adtr |>
+      adtr_sub <- adtr |>
         filter(PARAMCD == "SDIAM", FASFL == "Y") |>
         left_join(
           adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
@@ -1065,13 +1065,13 @@
           linewidth = 0.3
         ) +
         geom_line(
-          data = adtr_sdiam,
+          data = adtr_sub,
           aes(x = ADY, y = PCHG, colour = BOR, group = USUBJID),
           linewidth = 0.5,
           alpha = 0.8
         ) +
         geom_point(
-          data = adtr_sdiam,
+          data = adtr_sub,
           aes(x = ADY, y = PCHG, colour = BOR, group = BOR),
           shape = 16,
           size = 1
@@ -1125,7 +1125,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adrs, adsl
       
-      adrs_bor <- adrs |>
+      adrs_sub <- adrs |>
         filter(PARAMCD == "BOR") |>
         left_join(
           adsl |> select(USUBJID, TRT01P, FASFL),
@@ -1133,7 +1133,7 @@
         ) |>
         filter(FASFL == "Y")
       
-      rt <- adrs_bor |>
+      rt <- adrs_sub |>
         group_by(TRT01P) |>
         summarise(n = n(), x = sum(AVALC %in% c("CR", "PR")), .groups = "drop") |>
         mutate(
@@ -1145,7 +1145,7 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01P
-      lv <- levels(factor(adrs_bor$TRT01P))
+      lv <- levels(factor(adrs_sub$TRT01P))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
@@ -1210,7 +1210,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adrs, adsl
       
-      adrs_bor <- adrs |>
+      adrs_sub <- adrs |>
         filter(PARAMCD == "BOR") |>
         left_join(
           adsl |> select(USUBJID, TRT01P, FASFL),
@@ -1218,7 +1218,7 @@
         ) |>
         filter(FASFL == "Y")
       
-      ct <- adrs_bor |>
+      ct <- adrs_sub |>
         count(TRT01P, AVALC) |>
         group_by(TRT01P) |>
         mutate(pct = 100 * n / sum(n), label = sprintf("%.0f%%", pct)) |>
@@ -1297,7 +1297,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adrs, adsl
       
-      adrs_bor <- adrs |>
+      adrs_sub <- adrs |>
         filter(PARAMCD == "BOR") |>
         left_join(
           adsl |> select(USUBJID, TRT01P, FASFL),
@@ -1305,7 +1305,7 @@
         ) |>
         filter(FASFL == "Y")
       
-      ct <- adrs_bor |>
+      ct <- adrs_sub |>
         count(TRT01P, AVALC) |>
         group_by(TRT01P) |>
         mutate(pct = 100 * n / sum(n), label = sprintf("%.0f%%", pct)) |>
@@ -1313,7 +1313,7 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01P
-      lv <- levels(factor(adrs_bor$TRT01P))
+      lv <- levels(factor(adrs_sub$TRT01P))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
@@ -1378,7 +1378,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      adlb_alt <- adlb |>
+      adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
           adsl |> select(USUBJID, TRT01A, SAFFL),
@@ -1387,7 +1387,7 @@
         filter(SAFFL == "Y", !is.na(AVAL) & !is.na(AVISITN)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
-      sm <- adlb_alt |>
+      sm <- adlb_sub |>
         filter(!is.na(AVAL)) |>
         group_by(TRT01A, AVISITN, AVISIT) |>
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
@@ -1395,7 +1395,7 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adlb_alt$TRT01A))
+      lv <- levels(factor(adlb_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       pd <- position_dodge(width = 0.3)
       
@@ -1467,7 +1467,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      adlb_alt <- adlb |>
+      adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
           adsl |> select(USUBJID, TRT01A, SAFFL),
@@ -1476,7 +1476,7 @@
         filter(SAFFL == "Y", !is.na(AVAL) & !is.na(AVISITN)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
-      sm <- adlb_alt |>
+      sm <- adlb_sub |>
         filter(!is.na(AVAL)) |>
         group_by(TRT01A, AVISITN, AVISIT) |>
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
@@ -1484,7 +1484,7 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adlb_alt$TRT01A))
+      lv <- levels(factor(adlb_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       pd <- position_dodge(width = 0.3)
       
@@ -1556,7 +1556,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      adlb_alt <- adlb |>
+      adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
           adsl |> select(USUBJID, TRT01A, SAFFL),
@@ -1565,7 +1565,7 @@
         filter(SAFFL == "Y", !is.na(AVAL) & !is.na(AVISITN)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
-      sm <- adlb_alt |>
+      sm <- adlb_sub |>
         filter(!is.na(AVAL)) |>
         group_by(TRT01A, AVISITN, AVISIT) |>
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
@@ -1573,7 +1573,7 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adlb_alt$TRT01A))
+      lv <- levels(factor(adlb_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       pd <- position_dodge(width = 0.3)
       
@@ -1646,7 +1646,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      adlb_alt <- adlb |>
+      adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
           adsl |> select(USUBJID, TRT01A, SAFFL),
@@ -1655,7 +1655,7 @@
         filter(SAFFL == "Y", !is.na(AVAL) & !is.na(AVISITN)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
-      sm <- adlb_alt |>
+      sm <- adlb_sub |>
         filter(!is.na(AVAL)) |>
         group_by(TRT01A, AVISITN, AVISIT) |>
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
@@ -1663,7 +1663,7 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adlb_alt$TRT01A))
+      lv <- levels(factor(adlb_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       pd <- position_dodge(width = 0.3)
       
@@ -1755,7 +1755,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      adlb_alt <- adlb |>
+      adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
           adsl |> select(USUBJID, TRT01A, SAFFL),
@@ -1764,7 +1764,7 @@
         filter(SAFFL == "Y", !is.na(AVAL) & !is.na(AVISIT)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
-      sm <- adlb_alt |>
+      sm <- adlb_sub |>
         filter(!is.na(AVAL)) |>
         group_by(TRT01A, AVISITN, AVISIT) |>
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
@@ -1772,12 +1772,12 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adlb_alt$TRT01A))
+      lv <- levels(factor(adlb_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
         geom_line(
-          data = adlb_alt,
+          data = adlb_sub,
           aes(x = AVISIT, y = AVAL, colour = TRT01A, group = USUBJID),
           linewidth = 0.5,
           alpha = 0.35
@@ -1835,7 +1835,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      adlb_alt <- adlb |>
+      adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
           adsl |> select(USUBJID, TRT01A, SAFFL),
@@ -1844,7 +1844,7 @@
         filter(SAFFL == "Y", !is.na(AVAL)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
-      sg <- adlb_alt |>
+      sg <- adlb_sub |>
         filter(!is.na(AVAL)) |>
         group_by(TRT01A, AVISITN, AVISIT) |>
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
@@ -1852,13 +1852,13 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adlb_alt$TRT01A))
+      lv <- levels(factor(adlb_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       pd <- position_dodge(width = 0.8)
       
       fig <- ggplot() +
         geom_boxplot(
-          data = adlb_alt,
+          data = adlb_sub,
           aes(x = AVISIT, y = AVAL, fill = TRT01A),
           width = 0.7,
           outlier.shape = 16,
@@ -1919,7 +1919,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      adlb_alt <- adlb |>
+      adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
           adsl |> select(USUBJID, TRT01A, SAFFL),
@@ -1927,7 +1927,7 @@
         ) |>
         filter(SAFFL == "Y", !is.na(AVAL), AVISITN == max(AVISITN))
       
-      sg <- adlb_alt |>
+      sg <- adlb_sub |>
         filter(!is.na(AVAL)) |>
         group_by(TRT01A) |>
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
@@ -1935,19 +1935,19 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adlb_alt$TRT01A))
+      lv <- levels(factor(adlb_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
         geom_boxplot(
-          data = adlb_alt,
+          data = adlb_sub,
           aes(x = TRT01A, y = AVAL, fill = TRT01A),
           width = 0.5,
           outlier.shape = 1,
           alpha = 0.6
         ) +
         geom_jitter(
-          data = adlb_alt,
+          data = adlb_sub,
           aes(x = TRT01A, y = AVAL),
           width = 0.12,
           height = 0,
@@ -2003,7 +2003,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      adlb_alt <- adlb |>
+      adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
           adsl |> select(USUBJID, TRT01A, SAFFL),
@@ -2012,7 +2012,7 @@
         filter(SAFFL == "Y", !is.na(CHG), AVISITN > 0) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
-      sg <- adlb_alt |>
+      sg <- adlb_sub |>
         filter(!is.na(CHG)) |>
         group_by(TRT01A, AVISITN, AVISIT) |>
         summarise(n = n(), mean = mean(CHG), sd = sd(CHG), .groups = "drop") |>
@@ -2020,7 +2020,7 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adlb_alt$TRT01A))
+      lv <- levels(factor(adlb_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       pd <- position_dodge(width = 0.8)
       
@@ -2028,7 +2028,7 @@
         geom_hline(yintercept = 0, linetype = "solid", colour = "grey60",
                    linewidth = 0.3) +
         geom_boxplot(
-          data = adlb_alt,
+          data = adlb_sub,
           aes(x = AVISIT, y = CHG, fill = TRT01A),
           width = 0.7,
           outlier.shape = 16,
@@ -2089,7 +2089,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      adlb_alt <- adlb |>
+      adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
           adsl |> select(USUBJID, TRT01A, SAFFL),
@@ -2099,14 +2099,14 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adlb_alt$TRT01A))
+      lv <- levels(factor(adlb_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
         geom_abline(intercept = 0, slope = 1, linetype = "dashed",
                     colour = "grey50") +
         geom_point(
-          data = adlb_alt,
+          data = adlb_sub,
           aes(x = BASE, y = AVAL, colour = TRT01A, group = TRT01A),
           shape = 16,
           size = 1.8,
@@ -2166,7 +2166,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      adlb_alt <- adlb |>
+      adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
           adsl |> select(USUBJID, TRT01A, SAFFL),
@@ -2176,21 +2176,21 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adlb_alt$TRT01A))
+      lv <- levels(factor(adlb_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
         geom_hline(yintercept = 0, linetype = "solid", colour = "grey60",
                    linewidth = 0.3) +
         geom_point(
-          data = adlb_alt,
+          data = adlb_sub,
           aes(x = BASE, y = CHG, colour = TRT01A, group = TRT01A),
           shape = 16,
           size = 1.8,
           alpha = 0.8
         ) +
         geom_smooth(
-          data = adlb_alt,
+          data = adlb_sub,
           aes(x = BASE, y = CHG, colour = TRT01A),
           method = "lm",
           se = FALSE
@@ -2249,14 +2249,14 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adpc, adsl
       
-      adpc_saf <- adpc |>
+      adpc_sub <- adpc |>
         left_join(
           adsl |> select(USUBJID, TRT01A, SAFFL),
           by = "USUBJID"
         ) |>
         filter(SAFFL == "Y", !is.na(AVAL))
       
-      sm <- adpc_saf |>
+      sm <- adpc_sub |>
         filter(!is.na(AVAL)) |>
         group_by(TRT01A, NFRLT) |>
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
@@ -2264,7 +2264,7 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adpc_saf$TRT01A))
+      lv <- levels(factor(adpc_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
@@ -2338,14 +2338,14 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adpc, adsl
       
-      adpc_saf <- adpc |>
+      adpc_sub <- adpc |>
         left_join(
           adsl |> select(USUBJID, TRT01A, SAFFL),
           by = "USUBJID"
         ) |>
         filter(SAFFL == "Y", !is.na(AVAL), AVAL > 0)
       
-      sm <- adpc_saf |>
+      sm <- adpc_sub |>
         filter(!is.na(AVAL)) |>
         group_by(TRT01A, NFRLT) |>
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
@@ -2354,7 +2354,7 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adpc_saf$TRT01A))
+      lv <- levels(factor(adpc_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
@@ -2429,7 +2429,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adpc, adsl
       
-      adpc_saf <- adpc |>
+      adpc_sub <- adpc |>
         left_join(
           adsl |> select(USUBJID, TRT01A, SAFFL),
           by = "USUBJID"
@@ -2438,18 +2438,18 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adpc_saf$TRT01A))
+      lv <- levels(factor(adpc_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
         geom_line(
-          data = adpc_saf,
+          data = adpc_sub,
           aes(x = NFRLT, y = AVAL, colour = TRT01A, group = USUBJID),
           linewidth = 0.5,
           alpha = 0.5
         ) +
         geom_point(
-          data = adpc_saf,
+          data = adpc_sub,
           aes(x = NFRLT, y = AVAL, colour = TRT01A, group = TRT01A),
           shape = 16,
           size = 0.8,
@@ -2507,7 +2507,7 @@
       # Input data frames: adtte
       # Input ARD: ard (read with ard_value() / ard_stats(), tfl_helpers_code())
       
-      adtte_os <- adtte |>
+      adtte_sub <- adtte |>
         filter(PARAMCD == "OS", FASFL == "Y")
       
       est <- ard_stats(

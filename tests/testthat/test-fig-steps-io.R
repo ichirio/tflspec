@@ -17,8 +17,8 @@ test_that("no in or out: the steps' objects as before", {
   o <- tfl_fig_objects(d)
   expect_identical(o$out, c("df", "df", "fit"))
   expect_identical(o[["in"]], c(NA, "df", "df"))
-  # (the program names df after its data: adtte_os)
-  expect_match(code_of(d), "fit <- survfit2(Surv(AVAL, CNSR == 0) ~ 1, data = adtte_os)", fixed = TRUE)
+  # (the program names df after its data: adtte_sub)
+  expect_match(code_of(d), "fit <- survfit2(Surv(AVAL, CNSR == 0) ~ 1, data = adtte_sub)", fixed = TRUE)
 })
 
 test_that("a step into another object: an assignment of its own; a named step reads it", {
@@ -27,8 +27,8 @@ test_that("a step into another object: an assignment of its own; a named step re
                       list(step = "filter", expr = "AVAL > 0", out = "df_ev"),
                       list(step = "survfit", time = "AVAL", censor = "CNSR", `in` = "df_ev")))
   code <- code_of(d)
-  expect_match(code, "adtte_os <- adtte |>\n  filter(PARAMCD == \"OS\")", fixed = TRUE)
-  expect_match(code, "df_ev <- adtte_os |>\n  filter(AVAL > 0)", fixed = TRUE)
+  expect_match(code, "adtte_sub <- adtte |>\n  filter(PARAMCD == \"OS\")", fixed = TRUE)
+  expect_match(code, "df_ev <- adtte_sub |>\n  filter(AVAL > 0)", fixed = TRUE)
   expect_match(code, "data = df_ev)", fixed = TRUE)
   # the steps after it go on df_ev (the object above them)
   d2 <- io_design(c(d$data, list(list(step = "derive", variable = "M", expr = "AVAL / 30"))))
@@ -36,7 +36,7 @@ test_that("a step into another object: an assignment of its own; a named step re
   d3 <- io_design(list(list(step = "read", dataset = "ADTTE"),
                        list(step = "filter", expr = "AVAL > 0", out = "df_ev"),
                        list(step = "derive", variable = "M", expr = "AVAL / 30")))
-  expect_match(code_of(d3), "df_ev <- df |>\n  filter(AVAL > 0) |>\n  mutate(M = AVAL / 30)", fixed = TRUE)
+  expect_match(code_of(d3), "df_ev <- adtte_sub |>\n  filter(AVAL > 0) |>\n  mutate(M = AVAL / 30)", fixed = TRUE)
 })
 
 test_that("a second read makes df2; df is kept", {
@@ -45,7 +45,7 @@ test_that("a second read makes df2; df is kept", {
                       list(step = "flag", variable = "SAFFL")))
   expect_identical(tfl_fig_objects(d)$out, c("df", "df2", "df2"))
   code <- code_of(d)
-  expect_match(code, "adtte_saf <- adtte", fixed = TRUE)
+  expect_match(code, "adtte_sub <- adtte", fixed = TRUE)
   expect_match(code, "df2 <- adsl |>\n  filter(SAFFL == \"Y\")", fixed = TRUE)
 })
 
@@ -54,7 +54,7 @@ test_that("any function: its arguments as written, the object it reads as its da
                       list(step = "function", fn = "survival::survfit", name = "fit2",
                            args = "formula = Surv(AVAL, CNSR == 0) ~ TRT01A | conf.type = \"log-log\"")))
   expect_match(code_of(d),
-               "fit2 <- survival::survfit(formula = Surv(AVAL, CNSR == 0) ~ TRT01A, conf.type = \"log-log\", data = df)",
+               "fit2 <- survival::survfit(formula = Surv(AVAL, CNSR == 0) ~ TRT01A, conf.type = \"log-log\", data = adtte_sub)",
                fixed = TRUE)
   expect_identical(nrow(tfl_check_fig_design(d)), 0L)
 })
@@ -74,7 +74,7 @@ test_that("code with an out: the next steps go on it; a dataset by name is read"
 test_that("an ARD analysis step: no line of the program; the program reads the ARD", {
   d <- io_design(list(list(step = "read", dataset = "ADTTE"),
                       list(step = "ard", analysis_id = "KM", fn = "cardx::ard_survival_survfit",
-                           `in` = "adtte_saf", args = "times = c(90, 180)")))
+                           `in` = "adtte_sub", args = "times = c(90, 180)")))
   code <- tfl_fig_design_code(d)
   expect_false(any(grepl("ard_survival_survfit", code, fixed = TRUE)))
   expect_true(attr(code, "ard"))
