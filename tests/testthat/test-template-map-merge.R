@@ -42,13 +42,37 @@ test_that("a name whose value is !unset is removed from the series' map", {
   expect_null(attr(u, "args")$formats)
 })
 
+# a fictional study folder with its own copy of tflspec_v1 (and, given
+# `v2`, of a second series tflspec_v2 made from it with other formats)
+mm_study <- function(root, v1_formats = NULL, v2_formats = NULL) {
+  st <- file.path(root, "STUDY-MM")
+  dir.create(st)
+  writeLines(c("study_id: STUDY-MM", "settings:", "  rounding: sas"), file.path(st, "study.yml"))
+  tfl_copy_templates(st, "tflspec_v1/demog")
+  if (!is.null(v1_formats)) tfl_series_values_set(st, "tflspec_v1", list(formats = v1_formats))
+  if (!is.null(v2_formats)) {
+    src <- file.path(root, "src")
+    dir.create(src)
+    file.copy(system.file("series", "tflspec_v1", package = "tflspec"), src, recursive = TRUE)
+    file.rename(file.path(src, "tflspec_v1"), file.path(src, "tflspec_v2"))
+    f <- file.path(src, "tflspec_v2", "series.yml")
+    writeLines(sub("^name: tflspec_v1$", "name: tflspec_v2", readLines(f)), f)
+    tfl_copy_templates(st, "tflspec_v2/demog", dir = src)
+    tfl_series_values_set(st, "tflspec_v2", list(formats = v2_formats))
+  }
+  st
+}
+
 test_that("a map inside the map merges by name too", {
-  study <- list(series_settings = list(tflspec_v1 = list(
-    formats = list(mean = 2L, AUCLST = list(mean = 1L, sd = 2L), CMAX = list(mean = 0L)))))
+  root <- tempfile("mm")
+  dir.create(root)
+  on.exit(unlink(root, recursive = TRUE), add = TRUE)
+  st <- mm_study(root, v1_formats = list(mean = 2L, AUCLST = list(mean = 1L, sd = 2L),
+                                         CMAX = list(mean = 0L)))
   out <- tfl_template_resolve(
     mm_demog(c("    formats:", "      AUCLST: {mean: 3, median: !unset}",
                "      CMAX: {sd: !unset}", "      TMAX: {median: 1}")),
-    study = study)
+    study = st)
   f <- attr(out, "args")$formats
   expect_identical(f$mean, 2L)
   expect_identical(f$AUCLST, list(mean = 3L, sd = 2L))
@@ -56,9 +80,24 @@ test_that("a map inside the map merges by name too", {
   expect_identical(f$TMAX, list(median = 1L))
   # a map left empty drops its name
   e <- tfl_template_resolve(mm_demog(c("    formats:", "      CMAX: {mean: !unset}")),
-                            study = study)
+                            study = st)
   expect_false("CMAX" %in% names(attr(e, "args")$formats))
   expect_identical(attr(e, "args")$formats$AUCLST, list(mean = 1L, sd = 2L))
+})
+
+test_that("two series in one study: each report gets its own series' digits", {
+  root <- tempfile("mm")
+  dir.create(root)
+  on.exit(unlink(root, recursive = TRUE), add = TRUE)
+  st <- mm_study(root, v1_formats = list(N = 0L, mean = 2L, sd = 3L, min = 0L),
+                 v2_formats = list(N = 0L, mean = 1L, sd = 2L, min = 1L))
+  r2 <- mm_demog(c("    formats: {sd: 4}"))
+  r2$template$name <- "tflspec_v2/demog"
+  a <- attr(tfl_template_resolve(mm_demog(c("    formats: {mean: 3}")), study = st), "args")$formats
+  b <- attr(tfl_template_resolve(r2, study = st), "args")$formats
+  # the name each report writes, and its own series for the rest
+  expect_identical(a, list(N = 0L, mean = 3L, sd = 3L, min = 0L))
+  expect_identical(b, list(N = 0L, mean = 1L, sd = 4L, min = 1L))
 })
 
 test_that("a list argument is still replaced whole", {
