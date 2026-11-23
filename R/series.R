@@ -197,20 +197,26 @@ print.tfl_series <- function(x, ...) {
 
 # The `!study` tag: a scalar K, or a map {key: K, fallback: V}.  V keeps its
 # own tags (the reader has resolved a nested `!series K` into its marker by
-# the time it gives the map).
+# the time it gives the map).  A bad map is not stopped here (yaml::yaml.load()
+# catches an error in a handler and goes on): it is a marker with `problem`
+# (the message) and an NA key, and stops where it is used (.series_resolve(),
+# .series_values_no_study()).
 .series_study_tag <- function(x) {
   if (is.list(x)) {
     nms <- names(x)
     bad <- if (is.null(nms)) "<no names>" else setdiff(nms, c("key", "fallback"))
+    problem <- NULL
     if (length(bad) || !"key" %in% nms) {
-      stop("!study {key: K, fallback: V}: the keys are key and fallback; ",
-           if (length(bad)) paste0("not ", paste(bad, collapse = ", ")) else "key is missing",
-           ".", call. = FALSE)
+      problem <- paste0("!study {key: K, fallback: V}: the keys are key and fallback; ",
+                        if (length(bad)) paste0("not ", paste(bad, collapse = ", ")) else "key is missing",
+                        ".")
+    } else if (!is.character(x$key) || length(x$key) != 1L || is.na(x$key) || !nzchar(x$key)) {
+      problem <- "!study {key: K, fallback: V}: key is a dotted path (text)."
+    }
+    if (!is.null(problem)) {
+      return(structure(list(key = NA_character_, problem = problem), class = "tfl_study_ref"))
     }
     key <- x$key
-    if (!is.character(key) || length(key) != 1L || is.na(key) || !nzchar(key)) {
-      stop("!study {key: K, fallback: V}: key is a dotted path (text).", call. = FALSE)
-    }
     out <- list(key = key)
     if ("fallback" %in% nms) out["fallback"] <- list(x$fallback)
     return(structure(out, class = "tfl_study_ref"))
@@ -269,6 +275,7 @@ print.tfl_series <- function(x, ...) {
       return(val)
     }
     if (inherits(v, "tfl_study_ref")) {
+      if (!is.null(v$problem)) stop(where, ": ", v$problem, call. = FALSE)
       # By what the study has at the key (a dotted path from the top of study.yml):
       #   a step of the path missing, no study, or YAML null (~)
       #                    -> the fallback, walked as any value (so a `!series K`

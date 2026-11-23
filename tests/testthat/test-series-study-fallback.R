@@ -1,9 +1,35 @@
 # `!study` with a fallback: !study {key: K, fallback: V} (R/series.R).
 # The key is a dotted path from the top of study.yml.  Fictional data only.
 
+sf_root <- function() {
+  root <- tempfile("series-test")
+  dir.create(root)
+  root
+}
+
+# a series folder under `root`: series.yml (and an empty templates/)
+sf_make <- function(root, name = "demo_v1", values = NULL) {
+  d <- file.path(root, name)
+  dir.create(file.path(d, "templates"), recursive = TRUE, showWarnings = FALSE)
+  writeLines(c(
+    paste0("name: ", name),
+    "label: Demo templates",
+    "released: 2026-11-16",
+    "needs: tflspec (>= 0.0)",
+    "fixes: []",
+    "values:",
+    values %||% c(
+      "  style: tfl_standard",
+      "  formats: {N: 0, mean: 2, sd: 3, median: 1, min: 0, max: 0}",
+      "  total: false",
+      "  max_rows: 30")
+  ), file.path(d, "series.yml"))
+  d
+}
+
 sf_series <- function() {
-  root <- series_test_root()
-  series_test_make(root)
+  root <- sf_root()
+  sf_make(root)
   list(root = root, series = tfl_series_read("demo_v1", dir = root))
 }
 
@@ -23,9 +49,15 @@ test_that("!study parses as a scalar and as a {key, fallback} map", {
   expect_identical(x$b$fallback$key, "formats")
   expect_identical(x$c$fallback, 30L)
   expect_false("fallback" %in% names(x$d))
-  expect_error(sf_load("a: !study {key: k, other: 1, more: 2}"), "not other, more")
-  expect_error(sf_load("a: !study {fallback: 1}"), "key is missing")
-  expect_error(sf_load("a: !study {fallback: 1, x: 2}"), "not x")
+  # a bad map is a marker with the problem (yaml::yaml.load() would only warn
+  # about an error in a handler); it stops when it is resolved
+  sf <- sf_series()
+  on.exit(unlink(sf$root, recursive = TRUE), add = TRUE)
+  res <- function(text) tflspec:::.series_resolve(sf_load(text), sf$series, template = "demo_v1/km")
+  expect_error(res("a: !study {key: k, other: 1, more: 2}"), "template demo_v1/km: .*not other, more")
+  expect_error(res("a: !study {fallback: 1}"), "key is missing")
+  expect_error(res("a: !study {fallback: 1, x: 2}"), "not x")
+  expect_true(!is.null(sf_load("a: !study {fallback: 1}")$a$problem))
 })
 
 test_that("an absent key gives the fallback; a !series fallback gives the series value", {
@@ -95,17 +127,17 @@ test_that("null falls back; !unset is unset; FALSE, 0, empty text and an empty l
 })
 
 test_that("a series.yml with !study under values: stops", {
-  root <- series_test_root()
+  root <- sf_root()
   on.exit(unlink(root, recursive = TRUE), add = TRUE)
-  series_test_make(root, values = c("  total: false", "  note: !study settings.note"))
+  sf_make(root, values = c("  total: false", "  note: !study settings.note"))
   expect_error(tfl_series_read("demo_v1", dir = root),
                "values: note: !study is not allowed in a series's values \\(the series is the study's fallback\\)")
   unlink(file.path(root, "demo_v1"), recursive = TRUE)
-  series_test_make(root, values = c("  total: false",
+  sf_make(root, values = c("  total: false",
                                     "  deep:", "    a: [1, {b: !study {key: k, fallback: 1}}]"))
   expect_error(tfl_series_read("demo_v1", dir = root), "values: deep: !study is not allowed")
   unlink(file.path(root, "demo_v1"), recursive = TRUE)
-  series_test_make(root)
+  sf_make(root)
   expect_s3_class(tfl_series_read("demo_v1", dir = root), "tfl_series")
 })
 
