@@ -96,6 +96,10 @@ test_that("the runner records what the index reads", {
   on.exit(unlink(outside), add = TRUE)
   writeLines("y\n1", outside)
   writeLines("a: 1", file.path(s, "spec", "outputs.yml"))
+  # names whose order differs between locales (case, _ and .)
+  for (f in c("Zeta.yml", "alpha.yml", "B_c.yml", "b.c.yml")) {
+    writeLines(f, file.path(s, "spec", f))
+  }
   writeLines(c("dir.create('output/ard', recursive = TRUE, showWarnings = FALSE)",
                "saveRDS(data.frame(id = 'T-1'), 'output/ard/ard.rds')"),
              file.path(s, "programs", "ard", "ard_t1.R"))
@@ -126,6 +130,14 @@ test_that("the runner records what the index reads", {
   expect_true("Study    : S-1" %in% bt)
   spec1 <- grep("^Spec     : ", bt, value = TRUE)
   expect_match(spec1, "^Spec     : [0-9a-f]{32}$")
+  # the md5 of "path md5" lines in byte (radix) order, whatever the locale
+  sf <- c("B_c.yml", "Zeta.yml", "alpha.yml", "b.c.yml", "outputs.yml")
+  expect_identical(sf, sort(sf, method = "radix"))
+  tmp <- tempfile()
+  writeLines(paste(sf, tools::md5sum(file.path(s, "spec", sf))), tmp,
+             useBytes = TRUE)
+  expect_identical(spec1, paste("Spec     :", unname(tools::md5sum(tmp))))
+  unlink(tmp)
   dr <- utils::read.csv(file.path(run, "data_read.csv"),
                         colClasses = "character")
   expect_identical(dr$file, c("data/adsl.csv",

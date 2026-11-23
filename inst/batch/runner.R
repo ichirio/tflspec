@@ -149,7 +149,9 @@
 # test.  Left out: spec/.backup/ and editor temporary files (~, .tmp).
 .batch_spec_md5 <- function() {
   if (!dir.exists(.batch_spec)) return("none")
-  f <- sort(list.files(.batch_spec, recursive = TRUE, all.files = TRUE))
+  # (radix: the same order in every locale, so the same md5 on every machine)
+  f <- sort(list.files(.batch_spec, recursive = TRUE, all.files = TRUE),
+            method = "radix")
   f <- f[!startsWith(f, ".backup/") & !grepl("(~|[.]tmp)$", f)]
   if (!length(f)) return("none")
   tmp <- tempfile()
