@@ -183,7 +183,8 @@
 #' When a source changes, `tfl_template_status()` lists each copied file's
 #' state, `tfl_template_diff()` shows a copy's lines against its source,
 #' and `tfl_recopy_templates()` copies the chosen templates again (the
-#' study's own edits of them are lost, with a warning).
+#' study's own edits of them are replaced, with a warning; the file as it
+#' was is kept under `spec/.backup/`).
 #'
 #' @param study_dir The study folder (holds `study.yml` and `spec/`).
 #' @param templates Template ids, `"<series>/<name>"`.  `NULL`
