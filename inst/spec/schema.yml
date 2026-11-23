@@ -365,7 +365,6 @@ plan_cell_style:
     color: {main: true, label: {en: "Text colour", ja: "文字の色"}, type: "colour|r|map<column, r>", help: "The chosen cells' text colour. e.g. \"#CC0000\""}
     background: {main: true, label: {en: "Background colour", ja: "背景の色"}, type: "colour|r|map<column, r>", help: "The chosen cells' background colour. e.g. \"#F2F2F2\""}
     underline: {label: {en: "Underline", ja: "下線"}, type: "enum[TRUE|FALSE]|logical", help: "The chosen cells underlined: TRUE / FALSE, or a condition as R. e.g. TRUE"}
-    row: {label: {en: "Header rows styled", ja: "書式を付ける見出しの行"}, help: "With the column header styled, which of its rows, by number: 1 is the top row, the last one the column labels. Blank: every header row. Only bold, italic, underline, alignment and border go to one row. e.g. 1", type: r, input: r}
 
 plan_hide:
   package: rtfreporter
