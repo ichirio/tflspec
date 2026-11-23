@@ -99,10 +99,25 @@ one or several; empty for none.}
 \item{member_of}{the list argument it is a member of (written
 \verb{member_of:}, after its parent); \code{NA} otherwise.}
 \item{description}{one line.}
+\item{editor}{the tflplanner special editor the definition names, from
+\verb{editor:}: one of \code{roles}, \code{cells}, \code{header_lines}, \code{digits},
+\code{levels}, \code{sort_keys} (the closed list kept here); \code{NA} when none (the
+planner draws the field from \code{input} and \code{type}).  A row with an
+editor still has its \code{input}, the value form for the CUI and the AI
+kit.  A schema function's \verb{dots:} may write it too (the \code{...} row).}
+\item{dots_style}{the \code{...} row only: \code{named} (the item's other keys are
+the entries, by name) or \code{positional} (the entries are the value of
+the one key \code{dots_key}), from the \verb{dots:} entry's \verb{style:}; \code{NA} on
+every other row.}
+\item{dots_key}{the \code{...} row only: the key of positional dots
+(\code{plan_sort}: \code{keys}); \code{NA} for named dots and on other rows.}
+\item{dots_map}{the \code{...} row only: \code{TRUE} when R code may also give
+the entries as one named vector (\code{plan_labels(c(AGE = "Age"))});
+\code{NA} on other rows.}
 }
 
 A definition stops, saying what to write, for an unknown \code{tier} or
-\code{unset} word, a \code{group} not in \verb{groups:}, a \code{member_of} that is not
+\code{unset} or \code{editor} word, a \code{group} not in \verb{groups:}, a \code{member_of} that is not
 another argument, a malformed \code{passes_to}, a label or help that is
 neither a text nor \verb{\{en: , ja: \}}, and a choice word outside the 15.
 }
