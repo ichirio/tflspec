@@ -779,38 +779,22 @@ test_that("stf_t02_demog is values only (canon 1.30): no reference; formats and 
   expect_identical(Filter(function(a) identical(a$id, "CAT"), x$ard$analyses)[[1L]]$denominator, "adsl_sub")
 })
 
-test_that("the `unset` flag is shown for the migrated templates, NA for the others", {
-
-  # (extends [defaults], batch 2 (ii)): summary, disposition, ae_overview and
-
-  # param_change are migrated too
-
-  for (n in c("demog", "stf_t02_demog", "summary", "disposition", "ae_overview", "param_change")) {
-
-    a <- tfl_tpl_args(n)
-
-    expect_false(anyNA(a$unset), info = n)
-
-    expect_true(all(a$unset %in% c("omit", "stop", "step_off")), info = n)
-
-    pr <- tfl_template_params(n)
-
-    expect_identical(unname(vapply(pr[a$param], function(p) p$unset, "")), a$unset)
-
-    # (the flag the body checks)
-
-    expect_identical(unname(vapply(tflspec:::.tpl_registry[[n]]$params, `[[`, "", "unset")),
-
-                     unname(vapply(pr, `[[`, "", "unset")))
-
-  }
-
-  # (extends [defaults], batch 2 (ii)): ae_soc_pt, not migrated, is the NA case
-
-  expect_true(all(is.na(tfl_tpl_args("ae_soc_pt")$unset)))
-
-  expect_true(all(is.na(vapply(tfl_template_params("ae_soc_pt"), function(p) p$unset, ""))))
-
+test_that("the `unset` flag is shown for the migrated templates, NA for the others", {
+  # (extends [defaults], batch 2 (ii)): summary, disposition, ae_overview and
+  # param_change are migrated too
+  for (n in c("demog", "stf_t02_demog", "summary", "disposition", "ae_overview", "param_change")) {
+    a <- tfl_tpl_args(n)
+    expect_false(anyNA(a$unset), info = n)
+    expect_true(all(a$unset %in% c("omit", "stop", "step_off")), info = n)
+    pr <- tfl_template_params(n)
+    expect_identical(unname(vapply(pr[a$param], function(p) p$unset, "")), a$unset)
+    # (the flag the body checks)
+    expect_identical(unname(vapply(tflspec:::.tpl_registry[[n]]$params, `[[`, "", "unset")),
+                     unname(vapply(pr, `[[`, "", "unset")))
+  }
+  # (extends [defaults], batch 2 (ii)): ae_soc_pt, not migrated, is the NA case
+  expect_true(all(is.na(tfl_tpl_args("ae_soc_pt")$unset)))
+  expect_true(all(is.na(vapply(tfl_template_params("ae_soc_pt"), function(p) p$unset, ""))))
 })
 
 sr_study_b1 <- function(settings) {
