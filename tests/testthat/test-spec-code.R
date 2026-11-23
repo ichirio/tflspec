@@ -488,18 +488,18 @@ test_that("tfl_table_code(): one pipe from the ARD, normalize_ard() its first st
                           dataset = c("ADSL", "ADAE"), by = "TRTA",
                           variables = c("AGE", "AEBODSYS | AEDECOD"),
                           args = c(NA, "over_variables = TRUE"))))
-  c1 <- tfl_table_code(sp, "T-1", pipe = "|>")
+  c1 <- no_bign(tfl_table_code(sp, "T-1", pipe = "|>"))
   expect_identical(c1[1:3], c("plan <- ard |>", "  normalize_ard() |>",
                               "  table_plan(cols = \"TRTA\", rows = c(group = \"variable\"))"))
   flat <- function(x) gsub("[[:space:]]+", " ", paste(x, collapse = " "))
-  c2 <- tfl_table_code(sp, "T-2", pipe = "|>", ard_spec = ard)
+  c2 <- no_bign(tfl_table_code(sp, "T-2", pipe = "|>", ard_spec = ard))
   expect_match(flat(c2), paste0("plan <- ard |> normalize_ard( hierarchy = c(\"AEBODSYS\", \"AEDECOD\"), ",
                                 "overall = \"Subjects with at least one TEAE\" ) |> table_plan("),
                fixed = TRUE)
   # no ARD definition: the hierarchy its rows and label say, as the spec files take it
-  expect_identical(tfl_table_code(sp, "T-2", pipe = "|>"), c2)
+  expect_identical(no_bign(tfl_table_code(sp, "T-2", pipe = "|>")), c2)
   # the program normalizes the ARD itself
-  c3 <- tfl_table_code(sp, "T-1", data = "data", pipe = "|>", normalize = FALSE)
+  c3 <- no_bign(tfl_table_code(sp, "T-1", data = "data", pipe = "|>", normalize = FALSE))
   expect_match(c3[1L], "^plan <- table_plan[(]data, cols")
 })
 

@@ -126,6 +126,8 @@ reference:
       tflspec.
     contents:
       - tfl_helpers_code
+      - tfl_runner_code
+      - tfl_runner_file
   - title: Data, analysis data and populations
     desc: >
       The `datasets`, `populations` and `analysis_data` sheets of the ARD
@@ -192,6 +194,7 @@ reference:
       - tfl_schema_help
       - tfl_content_code
       - tfl_content_run
+      - tfl_bign_values
       - tfl_convert_sheets_to_yaml
       - tfl_write_spec_xlsx
       - tfl_import_spec_xlsx
