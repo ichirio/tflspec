@@ -12,7 +12,7 @@ runner_manifest <- function() {
     report_ids = c(`programs/tfl/t_demo.R` = "T-1",
                    `programs/tfl/t_ae.R` = "T-2"),
     needs = list(`programs/tfl/t_ae.R` = "T-1"),
-    unresolved = c(`programs/tfl/t_demo.R` = "no ARD source is chosen"),
+    unresolved = c(`programs/tfl/t_demo.R` = "no source"),
     sets = list(main = c("T-1", "T-2")),
     outputs = list(`programs/tfl/t_demo.R` = "output/tfl/t_demo.rtf",
                    `programs/tfl/t_ae.R` = c("output/tfl/t_ae.rtf",
