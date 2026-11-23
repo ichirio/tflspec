@@ -12,6 +12,7 @@ runner_manifest <- function() {
     report_ids = c(`programs/tfl/t_demo.R` = "T-1",
                    `programs/tfl/t_ae.R` = "T-2"),
     needs = list(`programs/tfl/t_ae.R` = "T-1"),
+    unresolved = c(`programs/tfl/t_demo.R` = "no ARD source is chosen"),
     sets = list(main = c("T-1", "T-2")),
     outputs = list(`programs/tfl/t_demo.R` = "output/tfl/t_demo.rtf",
                    `programs/tfl/t_ae.R` = c("output/tfl/t_ae.rtf",
@@ -40,7 +41,7 @@ test_that("tfl_runner_code(): the head, then the runner's lines", {
   expect_identical(head_lines[[2L]], ".batch_root <- \"runs\"")
   expect_identical(head_lines[[3L]], ".batch_ard  <- \"output/ard/ard.rds\"")
   expect_identical(head_lines[[n]], "")
-  for (nm in c("programs", "ard_outputs", "report_ids", "needs", "sets",
+  for (nm in c("programs", "ard_outputs", "report_ids", "needs", "unresolved", "sets",
                "outputs", "support", "data")) {
     expect_true(any(startsWith(head_lines, paste0(".batch_", nm, " <- "))), nm)
   }
@@ -59,6 +60,7 @@ test_that("tfl_runner_code(): the head is the values, as R", {
   expect_identical(env$.batch_ard_outputs, m$ard_outputs)
   expect_identical(env$.batch_report_ids, m$report_ids)
   expect_identical(env$.batch_needs, m$needs)
+  expect_identical(env$.batch_unresolved, m$unresolved)
   expect_identical(env$.batch_sets, m$sets)
   expect_identical(env$.batch_outputs, m$outputs)
   expect_identical(env$.batch_support, m$support)
@@ -71,6 +73,7 @@ test_that("tfl_runner_code(): a study with no programs still gives the head", {
   m$ard_outputs <- character()
   m$report_ids <- character()
   m$needs <- list()
+  m$unresolved <- character()
   m$sets <- list()
   m$outputs <- list()
   m$data <- list()
@@ -112,6 +115,7 @@ test_that("tfl_runner_code(): a field of the wrong type stops, naming it", {
   wrong <- list(
     root = 1, ard = c("a", "b"), programs = list(ard = "a"),
     ard_outputs = c("T-1"), report_ids = list("T-1"), needs = "T-1",
+    unresolved = c("x"),
     sets = list("T-1"), outputs = c(a = "b"), support = list(ard = "a"),
     data = 1)
   for (f in names(wrong)) {
@@ -134,6 +138,9 @@ test_that("tfl_runner_code(): the names must agree", {
   m <- runner_manifest()
   names(m$needs) <- "programs/tfl/t_other.R"
   expect_error(tfl_runner_code(m), "manifest[$]needs`.*t_other")
+  m <- runner_manifest()
+  names(m$unresolved) <- "programs/tfl/t_other.R"
+  expect_error(tfl_runner_code(m), "manifest[$]unresolved`.*t_other")
   m <- runner_manifest()
   names(m$ard_outputs)[[1L]] <- "ard_t_other.R"
   expect_error(tfl_runner_code(m), "manifest[$]ard_outputs`.*ard_t_other")

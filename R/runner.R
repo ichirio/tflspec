@@ -22,6 +22,9 @@
 #'   `programs$tfl`) -> its output id.
 #' * `needs` -- a named list: a report program -> a character vector of the
 #'   reports whose ARD it reads.  `list()` for none.
+#' * `unresolved` -- a named character vector: a report program -> why the
+#'   ARD it reads cannot be worked out (a run that selects it does not
+#'   start).  `character()` for none.
 #' * `sets` -- a named list: the name of a batch -> a character vector of
 #'   its outputs.  `list()` for none.
 #' * `outputs` -- a named list: a report program -> the files it makes.
@@ -40,7 +43,7 @@
 #'   root = "runs", ard = "output/ard/ard.rds",
 #'   programs = list(ard = "programs/ard/ard_t1.R", tfl = "programs/tfl/t1.R"),
 #'   ard_outputs = c(ard_t1.R = "T-1"), report_ids = c(`programs/tfl/t1.R` = "T-1"),
-#'   needs = list(), sets = list(),
+#'   needs = list(), unresolved = character(), sets = list(),
 #'   outputs = list(`programs/tfl/t1.R` = "output/tfl/t1.rtf"),
 #'   support = list(ard = character(), tfl = character(), all = character()),
 #'   data = list())
@@ -88,6 +91,9 @@ tfl_runner_code <- function(manifest) {
     "# a report program -> the reports whose ARD it reads (a run that selects",
     "# the report but not these reports does not start)",
     paste0(".batch_needs <- ", nlist(m$needs, function(v) vec(v, indent = "    "))),
+    "# a report program -> why the ARD it reads cannot be worked out (a run",
+    "# that selects it does not start)",
+    paste0(".batch_unresolved <- ", vec(unname(m$unresolved), names(m$unresolved))),
     "# the named batches (the report list's `batches`): name -> outputs",
     paste0(".batch_sets <- ", nlist(m$sets, inline)),
     "# what each report program makes",
@@ -110,7 +116,7 @@ tfl_runner_file <- function() {
 # The manifest tfl_runner_code() takes: every field there, of its type, and the
 # names agreeing with each other.  Stops with a message naming the field.
 .runner_fields <- c("root", "ard", "programs", "ard_outputs", "report_ids",
-                    "needs", "sets", "outputs", "support", "data")
+                    "needs", "unresolved", "sets", "outputs", "support", "data")
 
 .runner_check <- function(manifest) {
   bad <- function(field, what) {
@@ -156,6 +162,7 @@ tfl_runner_file <- function() {
   }
   named_chr("ard_outputs")
   named_chr("report_ids")
+  named_chr("unresolved")
   named_lst("needs")
   named_lst("sets")
   named_lst("outputs")
@@ -179,7 +186,7 @@ tfl_runner_file <- function() {
     bad("ard_outputs", paste0("names an ARD program that is not in ",
                               "`programs$ard`: ", d[[1L]], "."))
   }
-  for (f in c("report_ids", "needs", "outputs")) {
+  for (f in c("report_ids", "needs", "unresolved", "outputs")) {
     d <- not_in(names(m[[f]]), p$tfl)
     if (length(d)) {
       bad(f, paste0("names a program that is not in `programs$tfl`: ",
