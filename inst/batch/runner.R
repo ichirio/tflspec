@@ -122,6 +122,43 @@
   man
 }
 
+# The data files the run's programs read (.batch_data), with their size and
+# md5 when the run starts, in data_read.csv: written by every run, kept data
+# or not, so a later change of the data is seen.  A file outside the study
+# folder is written <outside>/<name>: no absolute path in a batch folder.
+.batch_data_read <- function(progs, dir) {
+  rows <- lapply(intersect(names(.batch_data), progs), function(p) {
+    f <- .batch_data[[p]]
+    if (!length(f)) return(NULL)
+    out <- grepl("^([A-Za-z]:)?[/\\\\]", f) | startsWith(f, "..")
+    there <- file.exists(f)
+    data.frame(program = p,
+               file = ifelse(out, file.path("<outside>", basename(f)), f),
+               size = ifelse(there, file.size(f), NA_real_),
+               md5 = ifelse(there, unname(tools::md5sum(f)), NA_character_),
+               stringsAsFactors = FALSE)
+  })
+  read <- do.call(rbind, c(list(data.frame(
+    program = character(), file = character(), size = numeric(),
+    md5 = character(), stringsAsFactors = FALSE)), rows))
+  utils::write.csv(read, file.path(dir, "data_read.csv"), row.names = FALSE)
+}
+
+# One md5 of the study's spec folder (each file's path and md5, in path
+# order), for the record and to tell two runs' specs apart.  Not a freshness
+# test.  Left out: spec/.backup/ and editor temporary files (~, .tmp).
+.batch_spec_md5 <- function() {
+  if (!dir.exists(.batch_spec)) return("none")
+  f <- sort(list.files(.batch_spec, recursive = TRUE, all.files = TRUE))
+  f <- f[!startsWith(f, ".backup/") & !grepl("(~|[.]tmp)$", f)]
+  if (!length(f)) return("none")
+  tmp <- tempfile()
+  on.exit(unlink(tmp))
+  writeLines(paste(f, tools::md5sum(file.path(.batch_spec, f))), tmp,
+             useBytes = TRUE)
+  unname(tools::md5sum(tmp))
+}
+
 # The packages the run's programs name (library(), require(), pkg::), with
 # the versions installed here, and sessionInfo() once they are loaded:
 # session_info.txt.  The study's renv.lock, when it has one, is kept too.
@@ -167,10 +204,14 @@
 #   data/      with --data: the data files the programs read, under their
 #              path in the study folder; data_manifest.csv lists them
 #              (size, md5, time)
-#   run.csv    one row per program: status, errors, warnings, time, md5
+#   run.csv    one row per program: its output id, status, errors, warnings,
+#              time, md5
+#   data_read.csv  the data files each program read: size and md5 as the
+#              run started (every run, kept data or not)
 #   session_info.txt  the R and package versions (renv.lock when the study
 #              has one)
-#   batch.txt  who, where, when, which R, what was kept
+#   batch.txt  the study, the md5 of its spec, who, where, when, which R,
+#              what was kept
 # `args`: --no-code; --data; program or output names to run only those;
 # --exclude=<name> (again for another) to leave a program out; --batch <name>
 # (or --batch=<name>) to run a named batch of `.batch_sets`.
@@ -277,6 +318,9 @@ run_batch <- function(parts, args = character()) {
   engine <- if (requireNamespace("logrx", quietly = TRUE)) "logrx" else "batch"
   if (engine == "batch") message("logrx is not installed: the logs are R CMD BATCH's.")
   cat("Batch folder:", dir, "\n\n")
+  # the data and the spec as the run starts
+  .batch_data_read(unlist(selected[parts], use.names = FALSE), dir)
+  spec_md5 <- .batch_spec_md5()
   rows <- list()
   # the reports whose ARD program failed in this run
   failed_ard <- character()
@@ -327,9 +371,19 @@ run_batch <- function(parts, args = character()) {
   .batch_session_info(unique(c(result$program,
                                unlist(.batch_support[c(parts, "all")]))), dir)
   result$log <- substring(result$log, nchar(dir) + 2L)
+  # the output each program made or was for (the screens find a report's
+  # latest run by it)
+  oid <- ifelse(result$part == "ard",
+                unname(.batch_ard_outputs[basename(result$program)]),
+                unname(.batch_report_ids[result$program]))
+  oid[is.na(oid)] <- ""
+  result <- cbind(result[1:2], output_id = oid, result[-(1:2)],
+                  stringsAsFactors = FALSE)
   utils::write.csv(result, file.path(dir, "run.csv"), row.names = FALSE)
   writeLines(c(
     paste("Batch    :", basename(dir)),
+    paste("Study    :", .batch_study),
+    paste("Spec     :", spec_md5),
     paste("Runs     :", paste(parts, collapse = ", "),
           if (length(only)) paste0("(", paste(only, collapse = ", "), ")")),
     paste("Batch set :", if (is.null(set)) "none" else set),

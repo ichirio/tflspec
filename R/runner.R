@@ -14,6 +14,10 @@
 #'
 #' * `root` -- the folder of the runs (a string).
 #' * `ard` -- the study ARD file the ARD programs make (a string).
+#' * `study` -- the study's id (study.yml's `study_id`), written into each
+#'   run's batch.txt: [tfl_run_index()] counts only the runs of its study.
+#' * `spec` -- the study's spec folder (a string), whose md5 batch.txt
+#'   records.
 #' * `programs` -- a list `list(ard = , tfl = )` of the programs, each a
 #'   character vector of paths, in the order they run.
 #' * `ard_outputs` -- a named character vector: the ARD program's file name
@@ -37,7 +41,7 @@
 #'   installed with it).
 #' @examples
 #' m <- list(
-#'   root = "runs", ard = "output/ard/ard.rds",
+#'   root = "runs", ard = "output/ard/ard.rds", study = "S-1", spec = "spec",
 #'   programs = list(ard = "programs/ard/ard_t1.R", tfl = "programs/tfl/t1.R"),
 #'   ard_outputs = c(ard_t1.R = "T-1"), report_ids = c(`programs/tfl/t1.R` = "T-1"),
 #'   needs = list(), sets = list(),
@@ -77,6 +81,8 @@ tfl_runner_code <- function(manifest) {
   c("# ---- the study's programs, in the order they run ---------------------------",
     paste0(".batch_root <- ", q(m$root)),
     paste0(".batch_ard  <- ", q(m$ard)),
+    paste0(".batch_study <- ", q(m$study)),
+    paste0(".batch_spec <- ", q(m$spec)),
     paste0(".batch_programs <- ", vlist(ard = m$programs$ard,
                                         tfl = m$programs$tfl)),
     "# the output each ARD program makes",
@@ -109,7 +115,7 @@ tfl_runner_file <- function() {
 
 # The manifest tfl_runner_code() takes: every field there, of its type, and the
 # names agreeing with each other.  Stops with a message naming the field.
-.runner_fields <- c("root", "ard", "programs", "ard_outputs", "report_ids",
+.runner_fields <- c("root", "ard", "study", "spec", "programs", "ard_outputs", "report_ids",
                     "needs", "sets", "outputs", "support", "data")
 
 .runner_check <- function(manifest) {
@@ -129,7 +135,7 @@ tfl_runner_file <- function() {
   extra <- setdiff(names(manifest), .runner_fields)
   if (length(extra)) bad(extra[[1L]], "is not a field of the manifest.")
   m <- manifest
-  for (f in c("root", "ard")) {
+  for (f in c("root", "ard", "study", "spec")) {
     if (!is_str(m[[f]])) bad(f, "must be one non-empty string.")
   }
   p <- m$programs

@@ -34,6 +34,10 @@ vectors are never \code{NA}.
 \itemize{
 \item \code{root} -- the folder of the runs (a string).
 \item \code{ard} -- the study ARD file the ARD programs make (a string).
+\item \code{study} -- the study's id (study.yml's \code{study_id}), written into each
+run's batch.txt: \code{\link[=tfl_run_index]{tfl_run_index()}} counts only the runs of its study.
+\item \code{spec} -- the study's spec folder (a string), whose md5 batch.txt
+records.
 \item \code{programs} -- a list \code{list(ard = , tfl = )} of the programs, each a
 character vector of paths, in the order they run.
 \item \code{ard_outputs} -- a named character vector: the ARD program's file name
@@ -53,7 +57,7 @@ for none.
 }
 \examples{
 m <- list(
-  root = "runs", ard = "output/ard/ard.rds",
+  root = "runs", ard = "output/ard/ard.rds", study = "S-1", spec = "spec",
   programs = list(ard = "programs/ard/ard_t1.R", tfl = "programs/tfl/t1.R"),
   ard_outputs = c(ard_t1.R = "T-1"), report_ids = c(`programs/tfl/t1.R` = "T-1"),
   needs = list(), sets = list(),
