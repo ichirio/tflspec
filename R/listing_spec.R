@@ -416,11 +416,13 @@ print.tfl_listing_spec <- function(x, ...) {
 #'   rtfreporter's `listing_spec()` types).
 #' @param codelists The reports' code lists (a table definition's
 #'   `codelists` sheet, or a data frame with `output_id`, `variable`,
-#'   `value`, `label`, `order`): the listing's rows of the columns it shows
-#'   or sorts by are put on its data after its condition (`cl_<variable>`
-#'   and `set_levels()`, see [tfl_helpers_code()]) -- each such column a
-#'   factor in its list's order (it sorts so), its values as the list has
-#'   them.  Before them the arms are put in their numeric order by
+#'   `value`, `label`, `order`): the listing's rows are put on its data
+#'   after its condition (`cl_<variable>` and `set_levels()`, see
+#'   [tfl_helpers_code()]) -- each column of its records that has a list
+#'   (shown, sorted by, or one a column across or a row of a table of the
+#'   records is made from) a factor in its list's order (it sorts so), its
+#'   values as the list has them; a list of a column the records do not
+#'   have changes nothing.  Before them the arms are put in their numeric order by
 #'   `order_levels()` (`TRT01A` by `TRT01AN`; a list wins), so a sort on
 #'   an arm sorts so.  The columns are factors of the codes, in the list's
 #'   order (for sorting); a label, when the display needs one, goes in the
@@ -497,10 +499,10 @@ tfl_listing_code <- function(spec, output_id = NULL, datasets = NULL,
     sprintf("listing_col(%s)", paste(a, collapse = ", "))
   }, "")
   type <- if (is.na(l$type)) type else l$type
-  # the code lists of the columns it shows or sorts by
-  shown <- unique(c(unlist(lapply(cols$vars, .split_bar)),
-                    sub("^-", "", .split_bar(l$sort))))
-  lv <- .codelist_levels(codelists, l$output_id, shown)
+  # its code lists: every column of its records with one (not only the
+  # columns it shows or sorts by: a table of the records makes its columns
+  # across and its rows of others), as the ARD's analyses have them
+  lv <- .codelist_levels(codelists, l$output_id)
   # the records its condition keeps, its code lists, its order -- in one
   # statement; a rework (code of its own) before the order
   sort <- .r_sort(l$sort)

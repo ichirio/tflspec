@@ -30,11 +30,13 @@ rtfreporter's \code{listing_spec()} types).}
 
 \item{codelists}{The reports' code lists (a table definition's
 \code{codelists} sheet, or a data frame with \code{output_id}, \code{variable},
-\code{value}, \code{label}, \code{order}): the listing's rows of the columns it shows
-or sorts by are put on its data after its condition (\verb{cl_<variable>}
-and \code{set_levels()}, see \code{\link[=tfl_helpers_code]{tfl_helpers_code()}}) -- each such column a
-factor in its list's order (it sorts so), its values as the list has
-them.  Before them the arms are put in their numeric order by
+\code{value}, \code{label}, \code{order}): the listing's rows are put on its data
+after its condition (\verb{cl_<variable>} and \code{set_levels()}, see
+\code{\link[=tfl_helpers_code]{tfl_helpers_code()}}) -- each column of its records that has a list
+(shown, sorted by, or one a column across or a row of a table of the
+records is made from) a factor in its list's order (it sorts so), its
+values as the list has them; a list of a column the records do not
+have changes nothing.  Before them the arms are put in their numeric order by
 \code{order_levels()} (\code{TRT01A} by \code{TRT01AN}; a list wins), so a sort on
 an arm sorts so.  The columns are factors of the codes, in the list's
 order (for sorting); a label, when the display needs one, goes in the

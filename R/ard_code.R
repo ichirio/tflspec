@@ -1500,7 +1500,7 @@
   syms <- unique(unlist(lapply(rest, function(l)
     tryCatch(all.names(parse(text = l, keep.source = FALSE)),
              error = function(e) character()))))
-  # a data that is another under a name of its own (`adsl_saf <- pop_saf`,
+  # a data that is another under a name of its own (`adsl_sub <- pop_saf`,
   # the study's program keeps pop_* for every report): what it names is
   # read too -- it has no step of its own to put the code lists on
   alias <- "^([A-Za-z.][A-Za-z0-9._]*) <- ([A-Za-z.][A-Za-z0-9._]*)$"
@@ -1636,16 +1636,16 @@
   .ard_call_lines(.ard_analysis_call(x, r, keys, subj, data = data), r, data, name)
 }
 
-# An analysis data that is an analysis set and nothing else (`adsl_saf <-
+# An analysis data that is an analysis set and nothing else (`adsl_sub <-
 # pop_saf`), when the set is used for nothing else in the program: made
 # once, under the data's name, where the analysis data are
-# (`adsl_saf <- adsl |> dplyr::filter(SAFFL == "Y") |> ...`), and no pop_saf.
+# (`adsl_sub <- adsl |> dplyr::filter(SAFFL == "Y") |> ...`), and no pop_saf.
 .pop_as_adata <- function(code, data_ids) {
   rx <- "^([A-Za-z.][A-Za-z0-9._]*) <- (pop_[A-Za-z0-9._]+)$"
-  # (or the set's subjects narrowed further: `adsl_saf <- pop_saf |>
+  # (or the set's subjects narrowed further: `adsl_sub <- pop_saf |>
   # filter(PART == "Part 1")`, the set's own steps then these)
   rx_pipe <- "^([A-Za-z.][A-Za-z0-9._]*) <- (pop_[A-Za-z0-9._]+) \\|>\n"
-  # (one step, in one call: `adsl_saf <- filter(pop_saf, PART == "Part 1")`)
+  # (one step, in one call: `adsl_sub <- filter(pop_saf, PART == "Part 1")`)
   rx_call <- paste0("^([A-Za-z.][A-Za-z0-9._]*) <- ([A-Za-z_.][A-Za-z0-9._:]*)",
                     "\\((pop_[A-Za-z0-9._]+), (.*)\\)$")
   one <- grepl(rx_call, code) & !grepl("\n", code, fixed = TRUE)
@@ -2094,7 +2094,9 @@
     .item_id_given(sprintf("toupper(paste(%s, sep = \"_\"))",
                            paste(sprintf("unique(data$%s)", per), collapse = ", ")), rule$ids)
   } else .q(r$analysis_id)
-  if (own) rule <- sprintf("if (nzchar(analysis_id)) analysis_id else %s", rule)
+  # (the function's argument, .env$: inside mutate() a bare analysis_id is
+  # the ARD's own column, which tag_ard() has added, one value a row)
+  if (own) rule <- sprintf("if (nzchar(.env$analysis_id)) .env$analysis_id else %s", rule)
   sprintf("  ard <- dplyr::mutate(ard, analysis_id = %s)", rule)
 }
 
@@ -2301,7 +2303,7 @@
   # (an analysis_id column: the row's own id, else the per rule's)
   if ("analysis_id" %in% names(cond)) {
     cond$analysis_id[is.na(cond$analysis_id)] <- ""
-    p <- c(p, "analysis_id")
+    p <- unique(c(p, "analysis_id"))
   }
   tab <- paste0(name, "_conditions")
   fun <- paste0(name, "_one")

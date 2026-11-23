@@ -116,9 +116,64 @@ test_that("analyses per columns: a condition row's id from its data, or the row'
   txt <- paste(tfl_ard_code(sp, output_id = "T", save = FALSE), collapse = "\n")
   expect_match(txt, "function(sexv, analysis_id) {", fixed = TRUE)
   expect_match(txt, "\"F\", \"\",", fixed = TRUE)
-  expect_match(txt, paste0("analysis_id = if (nzchar(analysis_id)) analysis_id else ",
+  expect_match(txt, paste0("analysis_id = if (nzchar(.env$analysis_id)) .env$analysis_id else ",
                            "toupper(paste(unique(data$SEX), unique(data$TRTA), sep = \"_\"))"),
                fixed = TRUE)
+})
+
+test_that("condition rows with no params: the analysis_id column is one argument, not two", {
+  cond <- data.frame(sexv = c("F", "M"), analysis_id = c("", "MEN"), stringsAsFactors = FALSE)
+  sp <- item_spec(
+    list(method = "categorical", population_id = "SAF", by = "TRTA", variables = "RACE"),
+    list(conditions = list(cond), where = "SEX == \"{sexv}\""))
+  txt <- paste(tfl_ard_code(sp, output_id = "T", save = FALSE), collapse = "\n")
+  expect_match(txt, "function(sexv, analysis_id) {", fixed = TRUE)
+  expect_match(txt, "~sexv, ~analysis_id,", fixed = TRUE)
+  expect_no_match(txt, "analysis_id, analysis_id", fixed = TRUE)
+})
+
+test_that("a condition row's own analysis_id: the generated program runs, each row its id", {
+  skip_if_not_installed("cards")
+  adam <- exact_data()
+  dir <- exact_dir(adam)
+  on.exit(unlink(dir, recursive = TRUE))
+  # (an empty analysis_id: the item's id, A; a given one: the row's own)
+  cond <- data.frame(sexv = c("F", "M"), analysis_id = c("", "MEN"), stringsAsFactors = FALSE)
+  sp <- item_spec(
+    list(method = "categorical", population_id = "SAF", by = "TRTA", variables = "RACE"),
+    list(params = "sexv", conditions = list(cond), where = "SEX == \"{sexv}\""))
+  ard <- suppressMessages(tfl_build_ard(sp, dir = dir, output_id = "T", save = FALSE))
+  expect_setequal(unique(ard$analysis_id), c("A", "MEN"))
+  saf <- adam$ADSL[adam$ADSL$SAFFL == "Y", ]
+  n_in <- function(id) {
+    k <- ard$analysis_id == id & ard$variable == "RACE" & ard$stat_name == "n"
+    as.integer(sum(unlist(ard$stat[k])))
+  }
+  expect_identical(n_in("A"), sum(saf$SEX == "F"))
+  expect_identical(n_in("MEN"), sum(saf$SEX == "M"))
+})
+
+test_that("a template item's params: a name the ARD uses itself stops, saying to rename it", {
+  it <- list(id = "A", method = "categorical", variables = "RACE",
+             params = list("variable", "sexv"),
+             conditions = list(list(variable = "x", sexv = "F")))
+  expect_error(.tr_item(it, list(), "s/t"), "item A: params: variable is a name the ARD uses itself")
+  it$params <- list("group1_level")
+  it$conditions <- list(list(group1_level = "x"))
+  expect_error(.tr_item(it, list(), "s/t"), "params: group1_level is a name the ARD")
+  it$params <- list("analysis_id")
+  it$conditions <- list(list(analysis_id = "x"))
+  expect_error(.tr_item(it, list(), "s/t"), "give the param another name")
+  # (the row function's own names: its rows and its result)
+  for (nm in c("data", "ard")) {
+    it$params <- list(nm)
+    it$conditions <- list(stats::setNames(list("x"), nm))
+    expect_error(.tr_item(it, list(), "s/t"), "row function's own")
+  }
+  # (a name of its own passes)
+  it$params <- list("sexv")
+  it$conditions <- list(list(sexv = "F"))
+  expect_length(.tr_item(it, list(), "s/t"), 1L)
 })
 
 test_that("levels reading params: the function's argument (.env$p), not a column of that name", {

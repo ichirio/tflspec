@@ -5,7 +5,7 @@
 # it is filled.  A new rtfreporter argument the schema does not say fails here.
 
 f12_not_cards <- c("plan_apply", "plan_header_tokens", "plan_n_candidates", "plan_layers",
-                   "plan_template")
+                   "plan_template", "plan_is_empty")
 # the gaps there are today: one filled must come off this list (none since
 # 2026-11-22: plan_total direction, plan_cell_style row, plan_titles and
 # plan_footnotes border added)
@@ -50,8 +50,8 @@ test_that("every table input says its columns", {
     n <- names(args)[vapply(args, function(d) is.list(d) && identical(d$input, "table") && is.null(d$columns), NA)]
     if (length(n)) paste0(f, ".", n) else character()
   }))
-  # (the ones without today: their columns come with #881 and the generic table, 11-23)
-  known <- c("normalize_ard.stack", "normalize_ard.combine")
+  # (none without today; a new one is added here only with a reason)
+  known <- character()
   # (step<content>: its columns are the items' own cards, not a columns: map)
   bad <- bad[!vapply(strsplit(bad, ".", fixed = TRUE), function(p) {
     identical(ents[[p[1L]]]$args[[p[2L]]]$type, "step<content>")
