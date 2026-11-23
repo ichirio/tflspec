@@ -63,7 +63,11 @@ tfl_runner_code <- function(manifest) {
                              vapply(v, vec, "", indent = "    "),
                              collapse = ",\n"), "\n)")
   }
-  inline <- function(v) paste0("c(", paste(q(v), collapse = ", "), ")")
+  # (an empty vector is character(): c() would be NULL)
+  inline <- function(v) {
+    if (!length(v)) return("character()")
+    paste0("c(", paste(q(v), collapse = ", "), ")")
+  }
   # a named list of vectors: one element per line, `name` = c(...)
   nlist <- function(l, one) {
     if (!length(l)) return("list()")
@@ -92,9 +96,7 @@ tfl_runner_code <- function(manifest) {
     paste0(".batch_support <- ", vlist(ard = m$support$ard, tfl = m$support$tfl,
                                        all = m$support$all)),
     "# the data files each program reads (the data catalog's; --data keeps them)",
-    paste0(".batch_data <- ", nlist(m$data, function(v) {
-      if (length(v)) inline(v) else "character()"
-    })),
+    paste0(".batch_data <- ", nlist(m$data, inline)),
     "",
     readLines(tfl_runner_file(), warn = FALSE, encoding = "UTF-8"))
 }
@@ -163,6 +165,12 @@ tfl_runner_file <- function() {
       !all(vapply(s[c("ard", "tfl", "all")], is_chr, NA))) {
     bad("support", paste("must be a list with character vectors `ard`,",
                          "`tfl` and `all`."))
+  }
+  # the runner finds an ARD program's output by its file name: one name, one
+  # program
+  d <- basename(p$ard)[duplicated(basename(p$ard))]
+  if (length(d)) {
+    bad("programs", paste0("`ard` has two programs named ", d[[1L]], "."))
   }
   # the names agree
   not_in <- function(x, set) setdiff(x, set)

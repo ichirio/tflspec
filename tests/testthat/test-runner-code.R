@@ -79,6 +79,24 @@ test_that("tfl_runner_code(): a study with no programs still gives the head", {
   expect_true(".batch_needs <- list()" %in% code)
 })
 
+test_that("tfl_runner_code(): an empty element stays character()", {
+  m <- runner_manifest()
+  m$sets$none <- character()
+  m$outputs[["programs/tfl/t_demo.R"]] <- character()
+  code <- tfl_runner_code(m)
+  env <- new.env()
+  eval(parse(text = code[seq_len(which(code == "")[[1L]])]), env)
+  expect_identical(env$.batch_sets, m$sets)
+  expect_identical(env$.batch_outputs, m$outputs)
+  expect_identical(env$.batch_data, m$data)
+})
+
+test_that("tfl_runner_code(): two ARD programs with one file name stop", {
+  m <- runner_manifest()
+  m$programs$ard[[2L]] <- "programs/ard/sub/ard_t_demo.R"
+  expect_error(tfl_runner_code(m), "manifest[$]programs`.*ard_t_demo")
+})
+
 test_that("tfl_runner_code(): a missing field stops, naming it", {
   for (f in names(runner_manifest())) {
     m <- runner_manifest()
