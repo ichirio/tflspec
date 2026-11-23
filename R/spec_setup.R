@@ -50,13 +50,14 @@
 #'   writes on the data as the file has it.
 #'
 #' study.yml's `settings: adam_levels` says whether `study$adam` gets
-#' adam_meta's levels: `codelists` (the default, also when the key is not
-#' there) as above, or `none`: `study$adam` is `study$adam_org` with blanks
-#' as `NA` only.  `study$codelists` and `study$adam_meta` are written either
+#' adam_meta's levels: `define_xml` or `define_spec` (the file whose levels
+#' were applied to adam_meta) as above, or `none` (the default, also when
+#' the key is not there): `study$adam` is `study$adam_org` with blanks as
+#' `NA` only.  `codelists` (the value before 2026-11-22) is an error.  `study$codelists` and `study$adam_meta` are written either
 #' way, so a report's explicit reference to a study code list works under
 #' `none` too.  `study$adam` always has its blanks as `NA`, and
 #' `study$adam_org` is always the dataset as the file has it.  The setup's
-#' first line says the setting (`# ADaM levels: codelists`), and it is part
+#' first line says the setting (`# ADaM levels: define_xml`), and it is part
 #' of each ARD's fingerprint ([tfl_ard_spec_hash()]), so changing it marks
 #' the ARD outdated; so are the variables adam_meta maps and their codes.  A
 #' spec of the sheets says it on its `study` sheet (key `adam_levels`).
@@ -102,22 +103,32 @@ tfl_study_setup_code <- function(study) {
   out
 }
 
-# study.yml's `settings: adam_levels`: does study$adam get the study's code
-# lists' levels -- "codelists" (the default; the key not there) or "none".
-# A spec of the sheets: its study sheet's key `adam_levels`.
-.adam_levels_values <- c("codelists", "none")
+# study.yml's `settings: adam_levels`: where study$adam's levels come from
+# (tflplanner#742, decided 2026-11-19) -- "define_xml" or "define_spec" (the
+# file chosen and applied: its adam_meta), or "none" (the key not there: no
+# levels).  The planner's own record of the choice, `adam_levels_file` and
+# `adam_levels_applied`, is read and not used: the code does not change by
+# it.  A spec of the sheets: its study sheet's key `adam_levels`.
+.adam_levels_values <- c("define_xml", "define_spec", "none")
 .study_adam_levels <- function(study) {
   v <- if (inherits(study, "tfl_study_spec")) study$study$settings$adam_levels else
     if (is.list(study) && is.data.frame(study$study)) .ard_spec_study_value(study, "adam_levels")
   .adam_levels_check(v, "study.yml: settings: adam_levels")
 }
 
-# A value of adam_levels, checked: NULL, NA or "" is the default "codelists"
+# A value of adam_levels, checked: NULL, NA or "" is the default "none".
+# "codelists" (before 2026-11-22) is not read as another name: choose the
+# file whose levels go on.
 .adam_levels_check <- function(v, where) {
   if (is.null(v) || !length(v) || is.na(v[1L]) || !nzchar(trimws(as.character(v[1L])))) {
-    return("codelists")
+    return("none")
   }
   v <- trimws(as.character(v[1L]))
+  if (identical(v, "codelists")) {
+    stop(sprintf(paste0("%s is \"codelists\", which no longer applies levels: give define_xml or ",
+                        "define_spec (the file whose levels study$adam gets), or none."), where),
+         call. = FALSE)
+  }
   if (!v %in% .adam_levels_values) {
     stop(sprintf("%s is %s; got %s.", where,
                  paste(.adam_levels_values, collapse = " or "), encodeString(v, quote = "\"")),
@@ -163,11 +174,11 @@ tfl_study_setup_code <- function(study) {
 # catalog's datasets), always; then two environments read when first used,
 # study$adam_org (each dataset as the file has it, with the catalog's
 # derive) and study$adam (blank_as_na() on it, then, under adam_levels
-# "codelists", set_levels() of the code lists adam_meta maps to that
+# define_xml or define_spec, set_levels() of the code lists adam_meta maps to that
 # dataset's variables: adam_codes("<OID>")).  The last lines make the
 # objects the ARD, listing and figure programs read (`adsl`) the datasets
 # of study$adam: the generated programs always read study$adam.
-.study_data_lines <- function(ds, codelists = list(), meta = NULL, adam_levels = "codelists") {
+.study_data_lines <- function(ds, codelists = list(), meta = NULL, adam_levels = "none") {
   if (!nrow(ds)) return(character())
   if (is.null(meta)) meta <- .adam_meta_empty()
   nm <- .r_name(ds$dataset)
@@ -200,7 +211,7 @@ tfl_study_setup_code <- function(study) {
     "# with the catalog's derive), study$adam (blanks as NA; adam_levels: none, so no levels)"
   } else if (leveled) {
     c("# with the catalog's derive), study$adam (blanks as NA, then the levels of the code",
-      "# lists adam_meta maps to its variables)")
+      sprintf("# lists adam_meta maps to its variables; adam_levels: %s)", adam_levels))
   } else {
     c("# with the catalog's derive), study$adam (blanks as NA; adam_meta maps no variable of",
       "# its datasets to a code list)")

@@ -245,9 +245,9 @@
                              # the name of the default page configuration
                              # (the default page rows' set; YAML settings.style)
                              style = NULL,
-                             # study$adam: the study's code lists' levels or
-                             # not (YAML settings.adam_levels)
-                             adam_levels = c("codelists", "none"))
+                             # study$adam: whose levels it gets, or none
+                             # (YAML settings.adam_levels)
+                             adam_levels = c("define_xml", "define_spec", "none"))
 
 # What a report's own row replaces a default row by.  `tables` has one row
 # per report, so its key is the report itself.

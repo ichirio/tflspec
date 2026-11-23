@@ -46,7 +46,12 @@ ordinary report SPEC.
 
 A report changes the table in two ways:
 
-- **by an argument**: `args:` gives a value in place of the default;
+- **by an argument**: `args:` gives a value in place of the default. A
+  map whose default is a series value (`formats`) is the exception: the
+  report's names go over the series' map one by one, a name whose value
+  is `!unset` is removed (for `formats`, that statistic then takes the
+  ARD catalog's format), and the names the report does not write keep
+  the series' values (see [Series values](#series-values));
 - **by an appended card**: the report's own `content:` lists plan items
   (cards) that come after the template's. When the template already has
   a card of the same verb, the two become one. The last one wins, and
@@ -79,6 +84,22 @@ for (x in c("adsl", "adae")) {
 invisible(tfl_ai_study_init(study, adam = "adam", study_id = "SERIES-1"))
 outputs <- file.path(study, "spec", "outputs")
 ```
+
+A study reads its own copy of a series and of each template its reports
+use, never the series's folder. `tfl_copy_templates()` copies them,
+whole, into `spec/series/tflspec_v1/`, and writes there which file came
+from where, when, and its md5 (`copied.yml`):
+
+```{r}
+copied <- tfl_copy_templates(study, c("tflspec_v1/tflspec_summary",
+                                      "tflspec_v1/tflspec_hierarchy"))
+copied[, c("template", "status")]
+```
+
+With no templates named, it copies every template the study's report
+SPECs name that it has not copied yet. A study that needs a template of
+its own copies one under a new name (`as = "summary_wide"`), then edits
+the copy.
 
 One helper does the same steps for each report. It fills the template in
 (`tfl_template_resolve()`), saves the report in the study, and returns
@@ -299,25 +320,16 @@ cat(readLines(system.file("series", "tflspec_v1", "series.yml", package = "tflsp
     sep = "\n")
 ```
 
-A study changes them in its `study.yml`, under `series_settings:`. The
-study's value is read first; a key the study does not write keeps the
-series's value:
-
-```yaml
-series_settings:
-  tflspec_v1:
-    population_safety: SAF
-    max_rows: 25
-    any_row_label: "Subjects with at least one TEAE"
-```
-
-`tfl_series_settings()` shows a study's values of a series, and
-`tfl_series_settings_set()` writes them.
+A study changes them in its own copy of `series.yml`
+(`spec/series/tflspec_v1/series.yml`), under `values:`. It may edit the
+file, or let `tfl_series_values_set()` write the values (the rest of the
+file stays as it is):
 
 ```{r}
-tfl_series_settings_set(study, "tflspec_v1",
-                        list(any_row_label = "Subjects with at least one TEAE"))
-tfl_series_settings(study, "tflspec_v1")$any_row_label
+tfl_series_values_set(study, "tflspec_v1",
+                      list(any_row_label = "Subjects with at least one TEAE"))
+f <- file.path(study, "spec", "series", "tflspec_v1", "series.yml")
+yaml::read_yaml(f)$values$any_row_label
 ```
 
 The AE report now prints the study's text in its first row, with no
@@ -328,6 +340,21 @@ ae2 <- run_report(file.path(tempdir(), "T-AE.yml"))
 na <- Filter(function(i) i$fn == "normalize_ard", ae2$spec$content)
 na[[1]]$args$overall
 ```
+
+A report that writes a map argument whose default is `!series K`
+changes only the names it writes. With the series's `formats` above,
+
+```yaml
+template:
+  name: tflspec_v1/demog
+  analysis:
+    formats: {mean: 3, "AGE:sd": !unset}
+```
+
+gives `mean` 3 decimals, drops `AGE:sd`, and keeps `N`, `sd`, `median`
+and the others as the series has them. A map inside the map (one
+variable's statistics) is put over in the same way. Other arguments, a
+list such as `hierarchy` among them, are replaced whole.
 
 ## For template authors: `derive:`
 

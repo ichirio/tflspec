@@ -1809,12 +1809,12 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
 #' The name of a figure's data in its program
 #'
 #' A designed figure's data steps make one data frame that its layers draw
-#' from.  In the program it is named for what it is, as the ARD programs
-#' name theirs: `<dataset>_<parameter>` (`adtte_ttde`), else
-#' `<dataset>_<population>` (`adsl_saf`).  Code of the design's own (a
-#' `code` step, a `layer_code` layer) says `df` and is written with the
-#' name too.  A design with neither a parameter nor a population keeps
-#' `df`, and so does one whose code has the name already.
+#' from.  In the program it is named `<dataset>_sub` (`adtte_sub`, `adsl_sub`),
+#' as the ARD programs name the analysis data made in the data step.  Code
+#' of the design's own (a `code` step, a `layer_code` layer) says `df` and is
+#' written with the name too.  A design that reads no dataset (or an analysis
+#' data by its name) keeps `df`, and so does one whose code has the name
+#' already.
 #'
 #' @param design A [tfl_fig_design()].
 #' @return The name, or `NULL` when the program calls it `df`.
@@ -1825,18 +1825,12 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
 tfl_fig_data_name <- function(design) {
   design <- if (inherits(design, "tfl_fig_design")) design else .fig_design_from_list(design)
   st <- design$data %||% list()
-  get <- function(k, f) {
-    hit <- Filter(function(x) identical(x$step, k), st)
-    if (length(hit)) .fv(hit[[1L]], f, k)
-  }
-  ds <- get("read", "dataset")
+  hit <- Filter(function(x) identical(x$step, "read"), st)
+  # a read by the name of an analysis data (`data`) has no dataset: `df` stays
+  if (length(hit) && !is.null(hit[[1L]][["data"]])) return(NULL)
+  ds <- if (length(hit)) .fv(hit[[1L]], "dataset", "read")
   if (is.null(ds)) return(NULL)
-  par <- get("param", "value")
-  par <- if (length(.split_vals(par)) == 1L) .split_vals(par)
-  flag <- get("flag", "variable")
-  tail <- par %||% (if (!is.null(flag)) sub("FL$", "", flag, ignore.case = TRUE))
-  if (is.null(tail)) return(NULL)
-  make.names(gsub("[^a-z0-9]+", "_", tolower(paste(ds, tail, sep = "_"))))
+  make.names(gsub("[^a-z0-9]+", "_", tolower(paste(ds, "sub", sep = "_"))))
 }
 
 # The plot part's names: a palette no term uses goes (with its comment);

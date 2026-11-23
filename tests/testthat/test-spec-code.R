@@ -518,9 +518,9 @@ test_that("plan_levels() the ARD already says is left out of the program and the
   cl <- list(TRT01A = list(list(value = "A"), list(value = "B")),
              SEX = list(list(value = "F", label = "Female"), list(value = "M", label = "Male")))
   ard <- list(analyses = list(
-    list(id = "N", method = "categorical", data = "adsl_saf", variables = "TRT01A"),
-    list(id = "CONT", method = "continuous", data = "adsl_saf", by = "TRT01A", variables = "AGE"),
-    list(id = "CAT", method = "categorical", data = "adsl_saf", by = "TRT01A", variables = "SEX")))
+    list(id = "N", method = "categorical", data = "adsl_sub", variables = "TRT01A"),
+    list(id = "CONT", method = "continuous", data = "adsl_sub", by = "TRT01A", variables = "AGE"),
+    list(id = "CAT", method = "categorical", data = "adsl_sub", by = "TRT01A", variables = "SEX")))
   lv <- function(args) tfl_output("T-1", "table", codelists = cl, ard = ard, content = list(
     tfl_item("table_plan", list(cols = "TRT01A", rows = list(group = "variable"))),
     tfl_item("plan_levels", args)))
