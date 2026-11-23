@@ -195,10 +195,11 @@ print.tfl_series <- function(x, ...) {
 #             report SPEC)
 # The result has attribute "origins": a named character vector, by the
 # dotted path of each value (a list's element without a name by its
-# position), of "report" / "template" / "study" / "series" / "fixed"
-# ("series": a `!series K` value, from the series.yml read; "study": a
-# `!study K` value).  A `!fixed` value also carries attribute "fixed" = TRUE
-# and "origin" = "fixed".
+# position), of one of .series_origins: "report" / "template" (untagged),
+# "series" (!series, from the series.yml read: the study's copy),
+# "study_settings" (!study, the study's settings:), "fallback" (!study, the
+# study has no value: unset), "fixed".  A `!fixed` value also carries
+# attribute "fixed" = TRUE and "origin" = "fixed".
 .series_resolve <- function(x, series, study = NULL, template = NULL, origin = "template") {
   if (is.character(series)) series <- tfl_series_read(series)
   if (!inherits(series, "tfl_series")) {
@@ -221,7 +222,7 @@ print.tfl_series <- function(x, ...) {
     }
     if (inherits(v, "tfl_study_ref")) {
       val <- .series_study_value(study, v$key)
-      note(path, "study")
+      note(path, if (inherits(val, "tfl_unset")) "fallback" else "study_settings")
       return(val)
     }
     if (inherits(v, "tfl_fixed_ref")) {
@@ -252,6 +253,10 @@ print.tfl_series <- function(x, ...) {
   attr(out, "origins") <- origins
   out
 }
+
+# Where a resolved value comes from (the words of .series_resolve()'s and
+# tfl_template_resolve()'s "origins", and tfl_template_values()'s source)
+.series_origins <- c("report", "template", "series", "study_settings", "fallback", "fixed")
 
 # study.yml settings: at a dotted key path; tfl_unset() if it is missing
 .series_study_value <- function(study, key) {

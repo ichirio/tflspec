@@ -280,6 +280,7 @@ reference:
       - tfl_series_list
       - tfl_copy_templates
       - tfl_series_values_set
+      - tfl_template_values
   - title: Template SPEC, a template's help
     desc: >
       A template's parameters by tier (required, usual, other): the value

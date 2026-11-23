@@ -19,9 +19,11 @@ the study folder, it reads that study's copies); \code{NULL} for none.}
 \value{
 A \code{tfl_output} (the report as a code SPEC).  Its attribute
 \code{"args"} holds the template's arguments as used, and \code{"origins"} where
-each came from (\code{"report"}, \code{"template"}, \code{"series"} -- a \code{!series}
-value, from the study's copy of \code{series.yml} --, \code{"study"} -- a
-\code{!study} value, from \code{study.yml} --, \code{"fixed"}).
+each came from: \code{"report"}, \code{"template"} (the template's own default),
+\code{"series"} (\code{!series}, from the study's copy of \code{series.yml}),
+\code{"study_settings"} (\code{!study}, the study's erb{settings:}), \code{"fallback"}
+(\code{!study}, the study has no value: the argument is left unset) or
+\code{"fixed"} (\code{!fixed}).
 }
 \description{
 Reads the report's template (\verb{template: name: <series>/<template>}), puts
@@ -97,5 +99,6 @@ with \verb{series_settings:} stops: a study's series values are in its copy
 of \code{series.yml} (\code{\link[=tfl_series_values_set]{tfl_series_values_set()}}).
 }
 \seealso{
-\code{\link[=tfl_arg_defs]{tfl_arg_defs()}}, \code{\link[=tfl_copy_templates]{tfl_copy_templates()}}, \code{\link[=tfl_series_dir]{tfl_series_dir()}}
+\code{\link[=tfl_arg_defs]{tfl_arg_defs()}}, \code{\link[=tfl_copy_templates]{tfl_copy_templates()}}, \code{\link[=tfl_series_dir]{tfl_series_dir()}},
+\code{\link[=tfl_template_values]{tfl_template_values()}} (the arguments' record without a whole report)
 }
