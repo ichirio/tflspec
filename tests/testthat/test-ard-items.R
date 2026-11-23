@@ -153,6 +153,12 @@ test_that("a template item's params: a name the ARD uses itself stops, saying to
   it$params <- list("analysis_id")
   it$conditions <- list(list(analysis_id = "x"))
   expect_error(.tr_item(it, list(), "s/t"), "give the param another name")
+  # (the row function's own names: its rows and its result)
+  for (nm in c("data", "ard")) {
+    it$params <- list(nm)
+    it$conditions <- list(stats::setNames(list("x"), nm))
+    expect_error(.tr_item(it, list(), "s/t"), "row function's own")
+  }
   # (a name of its own passes)
   it$params <- list("sexv")
   it$conditions <- list(list(sexv = "F"))
