@@ -409,8 +409,8 @@ test_that("a column field's choices are written in its definition", {
 
 test_that("the titles, footnotes and row arguments carry a label and a help (tflplanner#783)", {
   want <- list(
-    plan_titles = c("titles", "pages", "border"),
-    plan_footnotes = c("footnotes", "pages", "border"),
+    plan_titles = c("...", "pages", "border"),
+    plan_footnotes = c("...", "pages", "border"),
     plan_cell_style = "row")
   for (fn in names(want)) {
     d <- tfl_arg_defs(fn = fn)
@@ -421,6 +421,11 @@ test_that("the titles, footnotes and row arguments carry a label and a help (tfl
       expect_true(nzchar(r$label_en) && nzchar(r$label_ja), info = info)
       expect_true(!is.na(r$help_en) && nzchar(r$help_en), info = info)
     }
+  }
+  # (the dots key has no args row: tflplanner draws its field from the
+  # dots, whose label and description are the field's)
+  for (fn in c("plan_titles", "plan_footnotes")) {
+    expect_false(tfl_schema(fn)$dots$key %in% tfl_arg_defs(fn = fn)$name, info = fn)
   }
   d <- tfl_arg_defs(fn = "plan_style")
   cols <- d$columns[[which(d$name == "font")]]
