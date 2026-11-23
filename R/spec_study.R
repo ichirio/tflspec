@@ -9,6 +9,8 @@
 #   spec/patterns/<name>.yml  a layer a report may extend (a report's shape)
 #   spec/toc.yml              the reports in order
 #   spec/outputs/**/*.yml     one report a file (or several, `outputs:`)
+#   spec/series/<series>/     the study's copy of a series and of the templates
+#                             its reports use (tfl_copy_templates())
 #
 # A report file says only what differs from the layers it extends.  The
 # layering is here: maps merge by key (an `!unset` removes the key), the
@@ -103,6 +105,7 @@ tfl_read_study_spec <- function(dir) {
     stop("tfl_read_study_spec(): study.yml: tokens: is a map ({NAME: text}).", call. = FALSE)
   }
   .check_spec_version(study$spec_version, file.path(dir, "study.yml"))
+  .series_settings_gone(study, normalizePath(dir, "/", mustWork = FALSE))
   dflt <- rd(file.path(spec, "defaults.yml"))
   if (!is.null(dflt$page)) {
     stop("tfl_read_study_spec(): defaults.yml `page:` moved to a page configuration (styles:): ",
@@ -119,12 +122,13 @@ tfl_read_study_spec <- function(dir) {
             "(`codelists:` in spec/defaults.yml or the report's file).")
   }
   # a study defines reports, not templates (a report's own args and cards
-  # say what differs); the company's templates are copied into the study's
-  # standard at its start
+  # say what differs); the templates its reports use are copied, whole, into
+  # spec/series/<series>/ (tfl_copy_templates())
   if (dir.exists(file.path(spec, "templates"))) {
     stop("tfl_read_study_spec(): spec/templates/ is not read: a study defines reports, not ",
          "templates. A report that differs from a template changes its arguments or adds ",
-         "cards after the template's; remove the folder.", call. = FALSE)
+         "cards after the template's; remove the folder. The templates a study uses are ",
+         "copied into spec/series/<series>/ (tfl_copy_templates()).", call. = FALSE)
   }
   structure(list(
     study = study,

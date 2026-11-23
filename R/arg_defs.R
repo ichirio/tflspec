@@ -140,16 +140,48 @@
 
 # A type's members: split at `|` outside <> and [] (`enum[a|b]` and
 # `map<string, column|r>` are one member each)
-.type_members <- function(type) {
+.type_members <- function(type, sep = "|") {
   ch <- strsplit(as.character(type %||% "string")[1L], "", fixed = TRUE)[[1L]]
   depth <- cumsum(ch %in% c("<", "[")) - cumsum(ch %in% c(">", "]"))
-  cut <- which(ch == "|" & depth == 0L)
+  cut <- which(ch == sep & depth == 0L)
   if (!length(cut)) return(trimws(paste(ch, collapse = "")))
   from <- c(1L, cut + 1L)
   to <- c(cut - 1L, length(ch))
   trimws(vapply(seq_along(from), function(i) {
     paste(ch[seq_len(to[i] - from[i] + 1L) + from[i] - 1L], collapse = "")
   }, ""))
+}
+
+# A table's columns from its type, where the definition writes none (the
+# field contract, section 4): the first table member's.  map<K, V> and
+# vec<K, V> (or a list of them) give a key column of K and a value column of
+# V, each with the input section 2 gives it, a value that is itself a map its
+# own key and value; rows<f1, f2, ..> gives a column a field.  NULL: no
+# table member (step<content>, whose items are cards).
+.arg_type_columns <- function(type) {
+  m <- sub("^list<((map|vec)<.*>)>$", "\\1", .type_members(type))
+  t <- m[grepl("^(map|vec|rows)<", m)][1L]
+  if (is.na(t)) return(NULL)
+  inner <- .type_members(sub("^[a-z]+<(.*)>$", "\\1", t), sep = ",")
+  if (startsWith(t, "rows<")) {
+    out <- lapply(inner, function(f) list(label = list(en = f, ja = f)))
+    return(stats::setNames(out, inner))
+  }
+  list(key = .arg_type_column(inner[1L], "key"),
+       value = .arg_type_column(inner[length(inner)], "value"))
+}
+
+# ... one column: its type, input and label (by what the key is: a column,
+# a statistic, else a name; the value "Value")
+.arg_type_column <- function(type, role) {
+  label <- if (identical(role, "value")) list(en = "Value", ja = "\u5024") else
+    switch(.type_deciding(type),
+           column = list(en = "Column", ja = "\u5217"),
+           stat = list(en = "Statistic", ja = "\u7d71\u8a08\u91cf"),
+           list(en = "Name", ja = "\u540d\u524d"))
+  col <- list(type = type, input = .arg_input_for_type(type), label = label)
+  if (grepl("^(map|vec)<", .type_deciding(type))) col$columns <- .arg_type_columns(.type_deciding(type))
+  col
 }
 
 # The member that decides the field: the first that is not `r` ("r" when r
@@ -446,7 +478,9 @@
   row$value_labels <- I(list(vl$labels))
   row$free <- as.logical(free)
   row$ordered <- as.logical(ordered)
-  row$columns <- I(list(.arg_columns(d[["columns"]], d[["labels"]], where_arg)))
+  # (a table whose definition writes no columns: gets them from its type)
+  cols <- d[["columns"]] %||% (if (identical(input, "table")) .arg_type_columns(type))
+  row$columns <- I(list(.arg_columns(cols, d[["labels"]], where_arg)))
   row$new_row <- I(list(.arg_new_row(d[["new_row"]], d[["columns"]], where_arg)))
   row$fixed_rows <- I(list(NULL))
   row$tier <- tier
@@ -619,10 +653,11 @@
   df
 }
 
-# The template file of "<series>/<template>": the first series folder that has
-# it (the option tflspec.series_dir, tflplanner's home standards/series/, the
-# package's own series).
-.template_file <- function(template) {
+# The template file of "<series>/<template>": with `study_dir`, the study's
+# copy (spec/series/<series>/templates/<template>.yml) and nothing else; else
+# the first series folder that has it (the option tflspec.series_dir,
+# tflplanner's home standards/series/, the package's own series).
+.template_file <- function(template, study_dir = NULL) {
   if (!is.character(template) || length(template) != 1L || !grepl("^[^/]+/[^/]+$", template)) {
     stop(sprintf("template %s: write <series>/<template>, e.g. \"tflspec_v1/demog\".",
                  encodeString(as.character(template)[1L], quote = "\"")), call. = FALSE)
@@ -632,9 +667,13 @@
     stop(sprintf("series %s: a series name is lower case letters, digits and _, starting with a letter.",
                  encodeString(parts[1L], quote = "\"")), call. = FALSE)
   }
-  dirs <- c(getOption("tflspec.series_dir"),
-            file.path(tools::R_user_dir("tflplanner", "data"), "standards", "series"),
-            system.file("series", package = "tflspec"))
+  if (!is.null(study_dir)) {
+    f <- file.path(.study_series_root(study_dir), parts[1L], "templates", paste0(parts[2L], ".yml"))
+    if (file.exists(f)) return(f)
+    stop(sprintf("template %s is not copied into the study (no %s): %s.", template, f,
+                 .study_copy_hint(study_dir, template)), call. = FALSE)
+  }
+  dirs <- .series_search_dirs()
   dirs <- dirs[nzchar(dirs)]
   for (d in dirs) {
     f <- file.path(d, parts[1L], "templates", paste0(parts[2L], ".yml"))
@@ -653,8 +692,8 @@
   yaml::read_yaml(f, handlers = .arg_yaml_handlers())[["groups"]]
 }
 
-.template_read <- function(template) {
-  f <- .template_file(template)
+.template_read <- function(template, study_dir = NULL) {
+  f <- .template_file(template, study_dir)
   y <- yaml::read_yaml(f, handlers = .arg_yaml_handlers())
   attr(y, "file") <- f
   y
@@ -673,6 +712,9 @@
 #' @param template A template, `"<series>/<template>"` (`"tflspec_v1/demog"`).
 #'   Its file is found in the series folders: the option `tflspec.series_dir`,
 #'   tflplanner's home `standards/series/`, the series tflspec ships.
+#' @param study_dir A study folder: the template is read from the study's
+#'   copy ([tfl_copy_templates()]) instead, a template of the study's own
+#'   (copied with `as`) too.  `NULL` (default) for the series folders.
 #' @return A data frame, one row an argument in the definition's order (the
 #'   card's order); a schema function with `...` (its `dots:`) has a last
 #'   row `...`, of the dots' type.  Its attribute `"groups"` is the card's
@@ -702,7 +744,10 @@
 #'       given.}
 #'     \item{default}{(a list column) the default as written; a tagged value
 #'       (`!series K`, `!study K`, `!fixed v`, `!r`) is a `tfl_tagged` object.
-#'       It is resolved for a study by [tfl_template_resolve()].}
+#'       It is resolved for a study by [tfl_template_resolve()].  A schema
+#'       function's argument with no default written takes the function's own
+#'       default when that is one `TRUE` or `FALSE` and the argument's type is
+#'       a logical kind; any other formal default gives none.}
 #'     \item{default_kind}{`value`, `study`, `series`, `unset` or `fixed`;
 #'       `NA` when there is no default.}
 #'     \item{unset}{what "(none)" (`!unset`) does, from `unset:` (the words
@@ -779,12 +824,12 @@
 #' d[, c("name", "input", "type", "tier")]
 #' head(tfl_arg_defs(fn = "plan_cells")[, c("name", "input", "type")])
 #' @export
-tfl_arg_defs <- function(fn = NULL, template = NULL) {
+tfl_arg_defs <- function(fn = NULL, template = NULL, study_dir = NULL) {
   if (is.null(fn) == is.null(template)) {
     stop("tfl_arg_defs(): give `fn` or `template`, one of them.", call. = FALSE)
   }
   if (!is.null(template)) {
-    y <- .template_read(template)
+    y <- .template_read(template, study_dir)
     defs <- y$params %||% list()
     if (!is.list(defs) || (length(defs) && is.null(names(defs)))) {
       stop(sprintf("template %s: params: is a map of argument definitions.", template),
@@ -813,8 +858,28 @@ tfl_arg_defs <- function(fn = NULL, template = NULL) {
   }
   args <- .arg_schema_key(.arg_schema_fill(.arg_schema_dots(ent$args %||% list(), ent$dots)),
                           ent$visible)
+  args <- .arg_formal_defaults(args, ent$formal_defaults)
   step <- if (fn %in% .arg_page_fns) "page" else .arg_step_for_stage(ent$stage)
   .arg_table(args, step, fn, ent[["groups"]])
+}
+
+# An argument whose definition writes no `default` takes the function's own
+# default when that is one non-NA logical (`formal_defaults`, from
+# .schema_add_formals()) and the argument's type is a logical kind (its
+# deciding member is `logical`), as the planner's card does.  A written
+# default wins; `...` gets none; a required argument keeps its tier, so
+# `required` does not change.
+.arg_formal_defaults <- function(args, formal_defaults) {
+  for (n in setdiff(names(formal_defaults), "...")) {
+    d <- args[[n]]
+    v <- formal_defaults[[n]]
+    if (!is.list(d) || "default" %in% names(d) || isTRUE(d$required) ||
+        identical(d$tier, "required")) next
+    if (!(is.logical(v) && length(v) == 1L && !is.na(v)) ||
+        !identical(.type_deciding(as.character(d$type %||% "string")), "logical")) next
+    args[[n]]["default"] <- list(v)
+  }
+  args
 }
 
 # A schema function's `...` (its `dots:`): one row, last, with the dots'
