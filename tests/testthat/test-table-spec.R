@@ -484,7 +484,8 @@ test_that("a blank program is left to rtfreporter, the ID its last resort", {
     study = c(program_dir = "C:\\tfl"),
     report = data.frame(output_id = "T1", type = "table")), "T1")
   code <- paste(tfl_report_code(sp, content = "pages"), collapse = "\n")
-  expect_match(code, 'program_fallback = "C:\\\\tfl\\\\T1"', fixed = TRUE)
+  # (.path_code() writes a path with / for \: one rule for every path in the code)
+  expect_match(code, 'program_fallback = "C:/tfl/T1"', fixed = TRUE)
   expect_false(grepl("program = ", sub("program_fallback = ", "", code), fixed = TRUE))
   # written: said, no fallback
   sp2 <- tflspec:::.ard_spec_scope(tfl_table_spec(
