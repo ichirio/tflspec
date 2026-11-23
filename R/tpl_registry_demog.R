@@ -480,7 +480,8 @@
     if (length(cells)) list(tfl_item("plan_cells", cells)),
     if (length(ord)) list(tfl_item("plan_levels", ord)),
     if (length(a$labels) && length(intersect(vars, names(a$labels)))) list(tfl_item(
-      "plan_labels", list(variable = as.list(a$labels[intersect(vars, names(a$labels))])))),
+      "plan_labels", .plan_labels_args(a$labels[intersect(vars, names(a$labels))],
+                                       c(a$by, "variable")))),
     if (isTRUE(a[["total"]])) list(tfl_item("plan_total", nn(list(
       label = a$total_label, position = "last")))),
     if (!is.null(hdr)) list(hdr),
