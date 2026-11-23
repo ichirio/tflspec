@@ -42,7 +42,9 @@ a percentage of subjects or more have, in any, every or the Total column;
 the other terms' rows dropped), \code{relevel_ard()} (an ARD's
 columns in their code lists' order, after an analysis that is not
 cards'), \code{save_ard()} (one report's rows into the
-study ARD, and what was built in \code{ard_status.csv}), and what a figure
+study ARD, and what was built in \code{ard_status.csv}), \code{read_ard()} (one
+report's rows of the study ARD; none, or no study ARD, stops the program,
+naming the ARD program to run first), and what a figure
 reads an ARD with: \code{ard_value()} (one statistic, as text),
 \code{ard_stats()} (statistics as a data frame) and \code{ard_fingerprint()} (the
 fingerprint \code{ard_status.csv} recorded for a report).  Base R, cards and

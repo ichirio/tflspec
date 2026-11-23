@@ -116,6 +116,29 @@
   list(from = fr, at = format(Sys.time(), "%Y-%m-%d %H:%M:%S"), md5 = .series_md5(to))
 }
 
+# Keeps the study's file `to` before `from` is copied over it: in
+# <spec>/.backup/<yyyymmdd-HHMMSS>/<its path under spec/> (tflplanner's
+# naming; a second one in the same second gets -2, -3, ...), so a later
+# backup never replaces an earlier one.  Gives the kept file's path, or NULL
+# when there is no `to` or its content is the same as `from`'s.
+.copied_backup <- function(from, to, spec_dir) {
+  if (!file.exists(to) || identical(.series_md5(to), .series_md5(from))) return(NULL)
+  rel <- substr(to, nchar(spec_dir) + 2L, nchar(to))
+  base <- file.path(spec_dir, ".backup", format(Sys.time(), "%Y%m%d-%H%M%S"))
+  dir <- base
+  n <- 1L
+  while (file.exists(file.path(dir, rel))) {
+    n <- n + 1L
+    dir <- paste0(base, "-", n)
+  }
+  kept <- file.path(dir, rel)
+  dir.create(dirname(kept), recursive = TRUE, showWarnings = FALSE)
+  if (!isTRUE(file.copy(to, kept, copy.date = TRUE))) {
+    stop("cannot keep ", to, " in ", kept, " before copying over it.", call. = FALSE)
+  }
+  kept
+}
+
 .copied_row <- function(series, template, file, from, md5, status) {
   data.frame(series = series, template = template, file = file, from = from, md5 = md5,
              status = status, stringsAsFactors = FALSE)
@@ -160,7 +183,8 @@
 #' When a source changes, `tfl_template_status()` lists each copied file's
 #' state, `tfl_template_diff()` shows a copy's lines against its source,
 #' and `tfl_recopy_templates()` copies the chosen templates again (the
-#' study's own edits of them are lost, with a warning).
+#' study's own edits of them are replaced, with a warning; the file as it
+#' was is kept under `spec/.backup/`).
 #'
 #' @param study_dir The study folder (holds `study.yml` and `spec/`).
 #' @param templates Template ids, `"<series>/<name>"`.  `NULL`
@@ -394,9 +418,10 @@ tfl_recopy_templates <- function(study_dir, templates) {
     x <- .study_copied_tpl(study_dir, id, fn)
     e <- x$entries[[x$key]]
     st <- .copied_state(x$copy, x$source, as.character(e$md5 %||% NA_character_))
-    if (st %in% c("study_changed", "both_changed")) {
+    kept <- .copied_backup(x$source, x$copy, dirname(x$root))
+    if (st %in% c("study_changed", "both_changed") && !is.null(kept)) {
       warning(fn, ": ", id, ": the study's edits of ", x$copy, " are lost (copied again from ",
-              x$source, ").", call. = FALSE)
+              x$source, "); the file as it was is kept in ", kept, ".", call. = FALSE)
     }
     entries <- x$entries
     entries[[x$key]] <- .copied_copy(x$source, x$copy, x$src, template = e$from$template %||% x$template)
