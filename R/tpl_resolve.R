@@ -111,7 +111,7 @@
 #'   `"args"` holds the template's arguments as used, and `"origins"` where
 #'   each came from (`"report"`, `"template"`, `"series"` -- a `!series`
 #'   value, from the study's copy of `series.yml` --, `"study"` -- a
-#'   `!study` value, from `study.yml` --, `"fixed"`).
+#'   `!study` value, from `study.yml`, or its fallback's origin --, `"fixed"`).
 #' @seealso [tfl_arg_defs()], [tfl_copy_templates()], [tfl_series_dir()]
 #' @export
 tfl_template_resolve <- function(report, template = NULL, study = NULL) {
