@@ -111,7 +111,7 @@ test_that("the runner records what the index reads", {
     programs = list(ard = "programs/ard/ard_t1.R", tfl = "programs/tfl/t1.R"),
     ard_outputs = c(ard_t1.R = "T-1"),
     report_ids = c(`programs/tfl/t1.R` = "T-1"),
-    needs = list(), sets = list(),
+    needs = list(), unresolved = character(), sets = list(),
     outputs = list(`programs/tfl/t1.R` = "output/tfl/t1.rtf"),
     support = list(ard = character(), tfl = character(), all = character()),
     data = list(`programs/ard/ard_t1.R` = c("data/adsl.csv", outside)))
