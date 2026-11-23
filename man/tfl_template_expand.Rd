@@ -25,7 +25,7 @@ The B use of a template SPEC: the items its parameters stand for, to
 save in a report's YAML (each item marked \verb{template:<name>}) or to run.
 }
 \examples{
-x <- tfl_template_expand("demog", list(population = "SAF"))
+x <- tfl_template_expand("demog", list(population = "SAF", by = "TRT01A", continuous = "AGE"))
 vapply(x$content, function(it) it$fn, "")
 }
 \seealso{

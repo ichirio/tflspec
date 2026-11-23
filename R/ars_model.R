@@ -114,6 +114,11 @@
   one(e, 1L, 1L)
 }
 
+# The description of the BIGN tfl_ars() adds to an output that has none (its
+# percentages' denominator): tfl_ars_to_specs() leaves such an analysis out.
+.ars_added_bign <- paste("Subjects per group, added by tflspec as the",
+                         "denominator of the output's percentages.")
+
 # A WhereClause's condition / compoundExpression, for a class that carries
 # them at its top (AnalysisSet, DataSubset, Group).
 .ars_cond_fields <- function(w) w[intersect(names(w), c("condition",
@@ -261,6 +266,11 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
   if (!is.null(purpose)) purpose <- match.arg(toupper(purpose), .ars_purposes)
   if (!is.null(reason)) reason <- match.arg(toupper(reason), .ars_reasons)
   x <- ard_spec
+  # a condition written with a code list's label stops, as in the ARD
+  # program: the ARS compares the data's values, which are the codes
+  if (!is.null(table_spec)) {
+    .check_where_labels(x$analyses, .codelist_levels_by(table_spec, x$analyses))
+  }
   un <- data.frame(where = character(), item = character(),
                    reason = character(), stringsAsFactors = FALSE)
   miss <- function(where, item, why) {
@@ -341,13 +351,14 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
     g <- list(id = id, name = label_of(out, var), groupingDataset = ds,
               groupingVariable = var, dataDriven = !length(lv))
     if (length(lv)) {
-      # a group's name as the table shows it, its condition the data's own
-      # value (a code list's label back to its value)
+      # a group's name as the table shows it (the code list's label), its
+      # condition the data's own value: the code the levels are
       cl <- .codelist_levels(table_spec, out)[[var]]
-      val <- if (is.null(names(cl))) lv else
-        ifelse(lv %in% cl, names(cl)[match(lv, cl)], lv)
+      val <- lv
+      nm <- if (is.null(names(cl))) lv else
+        ifelse(lv %in% names(cl), unname(cl[lv]), lv)
       g$groups <- lapply(seq_along(lv), function(k) list(
-        id = paste0(id, "_", k), name = lv[k], level = 1L, order = k,
+        id = paste0(id, "_", k), name = nm[k], level = 1L, order = k,
         condition = list(dataset = ds, variable = var, comparator = "EQ",
                          value = list(val[k]))))
     }
@@ -378,11 +389,12 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
 
   keys <- tfl_ard_methods()
   methods <- list()
-  method <- function(m, stats, opt = NULL, code = NULL, tag) {
+  method <- function(m, stats, opt = NULL, code = NULL, tag, suffix = "") {
     default <- .ars_method_stats(m)
     if (!length(stats)) stats <- default
     base <- paste0("Mth_", gsub("[^A-Za-z0-9_]", "_", m),
-                   if (!is.null(opt)) paste0("_", gsub("[^A-Za-z0-9]", "", opt)))
+                   if (!is.null(opt)) paste0("_", gsub("[^A-Za-z0-9]", "", opt)),
+                   suffix)
     key <- paste(base, paste(stats, collapse = "|"), code %||% "", sep = "\r")
     hit <- match(key, vapply(methods, `[[`, "", "key"))
     if (!is.na(hit)) return(methods[[hit]])
@@ -449,7 +461,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
       paste0("(", w, ")", collapse = " & ")
     an$population_id[i] <- .adata_pop(ad_o, dcol[i])
     an$dataset[i] <- .adata_dataset(ad_o, dcol[i])
-    for (cn in c("subjects", "add", "derive", "distinct", "code")) {
+    for (cn in c("subjects_in", "add", "derive", "arrange", "distinct", "code", "then")) {
       for (j in which(!is.na(rows[[cn]]))) {
         miss(tag, paste0("analysis_data$", cn), sprintf(
           "%s: `%s` -- ARS reads the ADaM as it is, by a WhereClause",
@@ -495,11 +507,14 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
     id
   }
 
-  need_den <- function(id, r, by, mz, ds, pur, rea) {
+  # nm: the variable whose non-missing values the percentage divides by
+  # (cards' own denominator), with the analysis's dataset, data subset and
+  # groupings
+  need_den <- function(id, r, by, mz, ds, pur, rea, nm = NULL) {
     if (!"p" %in% names(mz$op)) return(invisible())
     pending_den[[length(pending_den) + 1L]] <<- list(
       id = id, out = r$output_id, pop = r$population_id, by = by, mz = mz,
-      ds = ds, r = r, pur = pur, rea = rea)
+      ds = ds, r = r, pur = pur, rea = rea, nm = nm)
   }
 
   # an analysis with `overall` is two ARS analyses: by its groups, and
@@ -577,7 +592,16 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
               vapply(al, function(e) paste(deparse(e), collapse = " "), ""),
               collapse = ", ", sep = "")))
     }
-    if (!is.na(r$denominator %||% NA) && r$denominator != "population") {
+    # (a denominator that is the analysis data of the analysis's own set --
+    # an analysis_data row with that population, what BIGN counts -- is the
+    # analysis set's subject count: nothing to say)
+    ad_o <- .adata_of(ad, out)
+    den_set <- !is.na(r$denominator %||% NA) && r$denominator %in% ad_o$data_id &&
+      !is.na(r$population_id) &&
+      identical(ad_o$population_id[match(r$denominator, ad_o$data_id)],
+                r$population_id)
+    if (!is.na(r$denominator %||% NA) && r$denominator != "population" &&
+        !den_set) {
       miss(tag, "denominator", sprintf(paste(
         "`%s`: a percentage's denominator in ARS is the analysis set's",
         "subject count; this one is the ARD program's"), r$denominator))
@@ -596,10 +620,8 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
       # the statistics: the row's, else the ones the function says it gives
       if (!length(stats)) stats <- own_stats[[m]] %||% character()
     }
-    # (the condition runs on the data with the code lists' labels; ARS
-    # compares the data's own values)
-    ss <- subset(.where_labels_to_values(
-      r$where, .codelist_levels(table_spec, out)), ds, tag)
+    # (the condition is in the data's own values: the codes)
+    ss <- subset(r$where, ds, tag)
     lbl <- if (!is.na(r$label)) r$label else NULL
     # (overall: the name says so)
     lab_of <- function(o, v) paste(c(label_of(o, v), if (overall) "(overall)"),
@@ -610,7 +632,17 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
                                  if (overall) "TOTAL", ...),
                                collapse = "_")
     shape <- .ars_method_shape(m)
-    mz <- method(m, stats, opt, code, tag)
+    # no denominator written (nor in args): the ARD's percentages divide by
+    # cards' own count, the subjects with a value of the variable in the
+    # group -- not the analysis set's subject count
+    own_den <- shape == "count" && is.na(r$denominator %||% NA) &&
+      m %in% c("categorical", "dichotomous", "max") &&
+      !(length(by) == 0L && length(vars) == 1L &&
+        vars %in% unlist(lapply(a$by[a$output_id %in% out], .split_bar))) &&
+      !"denominator" %in% tryCatch(.args_given(r$args),
+                                   error = function(e) character())
+    mz <- method(m, stats, opt, code, tag,
+                 suffix = if (own_den) "_NONMISS" else "")
     several <- length(vars) > 1L
     if (m == "hierarchical") {
       if (over) {
@@ -655,7 +687,8 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
                            lbl %||% lab_of(out, v), ds, subj, mz, gv,
                            ss = ss, pur = pur, rea = rea, role = "count",
                            v = v)
-        need_den(id, r, by, mz, pds %|NA|% ds, pur, rea)
+        need_den(id, r, by, mz, pds %|NA|% ds, pur, rea,
+                 nm = if (own_den) list(v = v, ds = ds, ss = ss, g = g_by))
       }
     } else if (shape %in% c("value", "test_value")) {
       for (v in vars) {
@@ -688,15 +721,28 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
   for (p in pending_den) {
     key <- paste(p$out, p$pop, paste(p$by, collapse = ","), sep = "\r")
     b <- groupn[[key]]
-    if (is.null(b)) {
+    if (!is.null(p$nm)) {
+      # cards' own denominator: the subjects with a non-missing value of the
+      # variable, in the same group (the `missing` method's N_nonmiss)
+      mzn <- method("missing", "N_nonmiss", tag = p$out)
+      id <- add_analysis(p$r, paste0(p$id, "_NONMISS"),
+                         paste("Subjects with a value:", p$nm$v), p$nm$ds,
+                         p$nm$v, mzn, p$nm$g, ss = p$nm$ss, pur = p$pur,
+                         rea = p$rea, role = "nonmiss", v = p$nm$v,
+                         m = "missing")
+      k <- length(analyses)
+      at <- match(p$id, vapply(analyses, function(z) z$model$id, ""))
+      analyses <- append(analyses[-k], analyses[k], after = at)
+      b <- list(id = id, op = mzn$op[["N_nonmiss"]])
+    } else if (is.null(b)) {
       r <- p$r
-      r$analysis_id <- "GROUPN"
+      r$analysis_id <- "BIGN"
       mz <- method("total_n", character(), tag = p$out)
       gv <- vapply(p$by, grouping, "", ds = p$ds, out = p$out)
-      # An_<output>_GROUPN_<by> (_ALL without a grouping), never an id the
-      # output already has
-      id <- paste(c("An", p$out, "GROUPN",
-                    if (length(p$by)) p$by else "ALL"), collapse = "_")
+      # An_<output>_BIGN (canon: the output's one BIGN, the column headings'
+      # N and the percentages' denominator); _2, _3 ... for another
+      # grouping, never an id the output already has
+      id <- paste("An", p$out, "BIGN", sep = "_")
       taken <- vapply(analyses, function(z) z$model$id, "")
       if (id %in% taken) {
         k <- 2L
@@ -707,6 +753,10 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
                          "Number of subjects", p$ds, subj, mz, gv,
                          pur = p$pur, rea = p$rea, role = "groupn",
                          m = "total_n")
+      # (said in the analysis, so that reading the ARS back leaves it out
+      # and keeps an output's own BIGN)
+      k <- length(analyses)
+      analyses[[k]]$model$description <- .ars_added_bign
       # the count comes first in its output
       k <- length(analyses)
       first <- match(p$out, vapply(analyses, `[[`, "", "output"))

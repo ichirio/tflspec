@@ -181,14 +181,14 @@ tfl_output_contents <- function(output, study, dir = ".") {
     p <- ds[[i]]$path
     if (!grepl("^([A-Za-z]:)?[/\\\\]", p)) p <- file.path(dir, p)
     .data_file_must_exist(r, ds[[i]]$path, dir)
-    data[[tolower(r)]] <- .ai_read_dataset(p)
+    data[[tolower(r)]] <- .ai_read_adam(p, r, study)
   }
   # the report's analysis data its reads name (`data:`): its data part of
   # the ARD program run from the study folder (tfl_ard_code(part = "data"))
   ids <- unique(unlist(lapply(steps, function(s)
     if (is.list(s) && identical(s$step, "read")) .fig_read_data(s))))
   if (length(ids)) {
-    old <- options(tflspec.plain_ns = TRUE)
+    old <- options(tflspec.plain_ns = TRUE, tflspec.study_setup = FALSE)
     on.exit(options(old), add = TRUE)
     code <- tfl_ard_code(study, o$id, part = "data", data = ids)
     env <- new.env(parent = globalenv())
@@ -217,7 +217,7 @@ tfl_output_contents <- function(output, study, dir = ".") {
                   sort = txt(d[["sort"]]),
                   stringsAsFactors = FALSE)
   sp <- tfl_listing_spec(l, data.frame(output_id = o$id, vars = "USUBJID"), check = FALSE)
-  old <- options(tflspec.plain_ns = TRUE)
+  old <- options(tflspec.plain_ns = TRUE, tflspec.study_setup = FALSE)
   on.exit(options(old), add = TRUE)
   # (`ard`: the ARD definition when the caller has it already)
   if (is.null(ard)) ard <- .ard_spec_of_study(study, output_id = o$id)$spec

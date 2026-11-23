@@ -28,7 +28,7 @@ test_that("a report file reads: tags, nested calls, content items", {
   expect_s3_class(out, "tfl_output")
   expect_identical(out$id, "T-14-1-1")
   expect_identical(out$kind, "table")
-  expect_identical(out$population, "SAF")
+  expect_identical(out$common$population, "SAF")
   expect_identical(out$extends, "defaults")
   fns <- vapply(out$content, `[[`, "", "fn")
   expect_identical(fns, c("table_plan", "plan_labels", "plan_cells", "plan_digits",
@@ -43,10 +43,42 @@ test_that("a report file reads: tags, nested calls, content items", {
   expect_identical(out$content[[3L]]$args$continuous[["Mean (SD)"]], "{mean} ({sd})")
   expect_identical(out$content[[4L]]$args$continuous$sd, 2L)    # plan_digits: by statistic
   # data and page
-  expect_identical(out$data$source, "ard")
-  expect_identical(out$ard$analyses[[2L]]$statistic$AGE[[2L]], "mean")
+  expect_identical(out$ard$analysis_data[[1L]]$id, "adsl_sub")
+  expect_identical(out$ard$analyses[[2L]]$statistics[[2L]], "mean")
   expect_identical(out$page$titles[["1"]]$center, "Table 14.1.1")
   expect_identical(out$codelists$TRT01A[[2L]]$label, "Control 100 mg")
+})
+
+test_that("a key the reader does not know warns, naming the close one", {
+  f <- tempfile(fileext = ".yml")
+  on.exit(unlink(f))
+  writeLines(c(
+    "id: T-1", "kind: table",
+    "data:",
+    "  - id: adsl_sub", "    from: ADSL", "    wher: !r SAFFL == \"Y\"",
+    "ard:",
+    "  analyses:",
+    "    - id: AGE",
+    "      method: continuous",
+    "      data: adsl_sub",
+    "      variables: [AGE]",
+    "      statistic: [N, mean]",
+    "      zzzzzz: 1",
+    "      args: !r foo = 1"), f)
+  w <- character()
+  out <- withCallingHandlers(tfl_read_output(f), warning = function(e) {
+    w <<- c(w, conditionMessage(e))
+    invokeRestart("muffleWarning")
+  })
+  expect_identical(w, c(
+    "T-1 / AGE: statistic: is not a key; did you mean statistics:?",
+    "T-1 / AGE: zzzzzz: is not a key (not read)",
+    "T-1 / adsl_sub: wher: is not a key; did you mean where:?"))
+  expect_s3_class(out, "tfl_output")
+  # the package's report files have none
+  for (g in list.files(yml_fixture("outputs"), full.names = TRUE)) {
+    expect_no_warning(tfl_read_output(g))
+  }
 })
 
 test_that("the defaults file reads with the same reader's pieces: a nested call", {
@@ -131,7 +163,7 @@ test_that("a file of several reports gives a list, each over the file's base", {
   writeLines(c(
     "base:",
     "  kind: table",
-    "  population: SAF",
+    "  common: {population: SAF}",
     "  content:",
     "    - table_plan: {cols: TRT01A}",
     "outputs:",
@@ -139,12 +171,12 @@ test_that("a file of several reports gives a list, each over the file's base", {
     "    label: A",
     "  - id: T-B",
     "    label: B",
-    "    population: ITT"), f)
+    "    common: {population: ITT}"), f)
   outs <- tfl_read_output(f)
   expect_length(outs, 2L)
   expect_identical(vapply(outs, `[[`, "", "id"), c("T-A", "T-B"))
-  expect_identical(outs[[1L]]$population, "SAF")
-  expect_identical(outs[[2L]]$population, "ITT")
+  expect_identical(outs[[1L]]$common$population, "SAF")
+  expect_identical(outs[[2L]]$common$population, "ITT")
   expect_identical(outs[[2L]]$content[[1L]]$fn, "table_plan")
 })
 
@@ -214,9 +246,9 @@ test_that("an NA argument (table_plan(label = NA)) is written .na and read back 
 test_that("one-element sequences of ard: and listing_col vars stay sequences (text round trip)", {
   txt <- c(
     "id: T-1", "kind: table", "extends:", "  - defaults",
-    "ard:", "  analysis_data:", "    - id: adsl", "      from: ADSL",
-    "      keep:", "        - USUBJID",
-    "  analyses:", "    - id: DEM", "      method: categorical", "      data: adsl",
+    "data:", "  - id: adsl", "    from: ADSL",
+    "    keep:", "      - USUBJID",
+    "ard:", "  analyses:", "    - id: DEM", "      method: categorical", "      data: adsl",
     "      by:", "        - TRT01A", "      variables:", "        - SEX",
     "content:", "  - table_plan:", "      cols: TRT01A",
     "  - plan_listing:", "      cols:", "        - fn: listing_col", "          args:",
@@ -228,13 +260,30 @@ test_that("one-element sequences of ard: and listing_col vars stay sequences (te
   expect_identical(readLines(g), txt)
 })
 
-test_that("plan_digits()'s rounding in either case is read in lower case (\"SAS\" is \"sas\")", {
+test_that("plan_digits()'s rounding must be spelled as its value (\"SAS\" stops; see test-spec-strict-values.R)", {
   f <- withr::local_tempfile(fileext = ".yml")
   writeLines(c("id: T-1", "kind: table", "content:",
                "  - table_plan: {cols: TRT01A}",
-               "  - plan_digits: {rounding: SAS}"), f)
+               "  - plan_digits: {rounding: sas}"), f)
   o <- tfl_read_output(f)
   expect_identical(o$content[[2L]]$args$rounding, "sas")
   expect_match(tfl_content_code(o), 'rounding = "sas"', fixed = TRUE, all = FALSE)
   expect_identical(tflspec:::.ard_spec_study_value(tfl_table_spec(study = c(rounding = "SAS")), "rounding"), "sas")
+})
+
+test_that("a data row with `label:` stops, naming the report and the row", {
+  f <- tempfile(fileext = ".yml")
+  on.exit(unlink(f), add = TRUE)
+  writeLines(c("id: T-1", "kind: table", "data:",
+               "  - id: adsl_sub", "    from: ADSL", "    population: SAF",
+               "  - id: adsl_p2", "    label: Safety set, phase 2", "    from: ADSL",
+               "content:", "  - table_plan: {cols: TRT01A}"), f)
+  expect_error(tfl_read_output(f),
+               "T-1: data row `adsl_p2`: `label:` is no longer a key of a data row (the id names it; write a YAML comment if you want a note).",
+               fixed = TRUE)
+  writeLines(c("id: T-1", "kind: table", "data:",
+               "  - id: adsl_p2", "    # Safety set, phase 2", "    from: ADSL",
+               "content:", "  - table_plan: {cols: TRT01A}"), f)
+  o <- tfl_read_output(f)
+  expect_identical(names(o$ard$analysis_data[[1L]]), c("id", "from"))
 })

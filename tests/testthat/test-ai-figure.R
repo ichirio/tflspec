@@ -58,7 +58,7 @@ test_that("the figure's answer: its report file in the design's form, the same d
   o <- tfl_read_output(file.path(d, fr$file))
   expect_identical(o$kind, "figure")
   expect_identical(o$label, "Kaplan-Meier Plot of Overall Survival")
-  expect_identical(o$population, "ITT")
+  expect_identical(o$common$population, "ITT")
   expect_identical(o$data$source, "code")
   # the design as the figure designer gets it back: the answer's design
   a <- tfl_ai_parse(readLines(ex, encoding = "UTF-8"), "figure")
@@ -121,7 +121,7 @@ test_that("an agent's figure draft with its layers as `layers:` (the instruction
   # the agent's file: no template, the layers beside an empty content
   f <- file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml")
   writeLines(c(
-    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "population: ITT",
+    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "common: {population: ITT}",
     "extends: [defaults]",
     "data:", "  source: code", "  steps:",
     "    - {step: read, dataset: ADRS}", "    - {step: flag, variable: ITTFL}",
@@ -168,7 +168,7 @@ test_that("a built figure's facts beside its PNG; a figure of the agent's own co
   # the fallback after two fixes: the data steps, and one layer_code that draws the whole plot
   f <- file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml")
   writeLines(c(
-    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "population: ITT",
+    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "common: {population: ITT}",
     "extends: [defaults]",
     "data:", "  source: code", "  steps:",
     "    - {step: read, dataset: ADRS}", "    - {step: flag, variable: ITTFL}",
@@ -200,7 +200,7 @@ test_that("a km_survival draft with `codelists` for its arms is drawn (set_level
   ai_drafts_from_fixtures(d)
   f <- file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml")
   writeLines(c(
-    "id: F-14-2-2", "kind: figure", "label: Kaplan-Meier Plot of Overall Survival", "population: ITT",
+    "id: F-14-2-2", "kind: figure", "label: Kaplan-Meier Plot of Overall Survival", "common: {population: ITT}",
     "extends: [defaults]",
     "data:", "  source: code", "  steps:",
     "    - {step: read, dataset: ADTTE}", "    - {step: flag, variable: ITTFL}",
@@ -326,7 +326,7 @@ fig_codelists_study <- function(own = FALSE) {
   ai_drafts_from_fixtures(d)
   f <- file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml")
   writeLines(c(
-    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "population: ITT",
+    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "common: {population: ITT}",
     "extends: [defaults]",
     "data:", "  source: code", "  steps:",
     if (own) c("    - {step: read, dataset: ADTTE}", "    - {step: flag, variable: ITTFL}",
@@ -384,7 +384,7 @@ fig_cl_study <- function(own = NULL, layer = NULL) {
     writeLines(c(readLines(f), "codelists:", layer), f)
   }
   writeLines(c(
-    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "population: ITT",
+    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "common: {population: ITT}",
     "extends: [defaults]",
     "data:", "  source: code", "  steps:",
     "    - {step: read, dataset: ADRS}", "    - {step: flag, variable: ITTFL}",
@@ -408,7 +408,9 @@ fig_cl_draw <- function(d, id = "F-14-2-2") {
   tflspec:::.ai_fig_draw(st, id, "out")$plot
 }
 
-# the colour variable's levels and the legend's labels of a drawn plot
+# the colour variable's levels (the data holds the codes) and the legend's
+# labels of a drawn plot (a layer_code's own plot: no scale labels unless
+# its code writes them, from the program's `cl_trt01p`)
 fig_cl_levels <- function(p) {
   b <- ggplot2::ggplot_build(p)
   sc <- b$plot$scales$get_scales("colour")
@@ -426,7 +428,7 @@ test_that("a figure with layer_code and its own codelists is drawn (set_levels i
   expect_false(grepl("set_levels", fr$rtf_problem %||% "", fixed = TRUE), info = fr$rtf_problem)
   expect_false(is.na(fr$png), info = paste(fr$first, fr$rtf_problem))
   expect_true(file.exists(file.path(d, fr$png)))
-  expect_identical(fig_cl_levels(fig_cl_draw(d))$levels, c("Own Control", "Own Drug X"))
+  expect_identical(fig_cl_levels(fig_cl_draw(d))$levels, c("Control", "Drug X"))
 })
 
 test_that("a figure's code list from a layer it extends is the draw's, as its own would be (#656)", {
@@ -439,14 +441,14 @@ test_that("a figure's code list from a layer it extends is the draw's, as its ow
   in_layer <- fig_cl_draw(fig_cl_study(layer = c("  TRT01P:", entries("List"))))
   in_own <- fig_cl_draw(fig_cl_study(own = c("  TRT01P:", entries("List"))))
   expect_identical(fig_cl_levels(in_layer), fig_cl_levels(in_own))
-  expect_identical(fig_cl_levels(in_layer)$levels, c("List Drug X", "List Control"))
-  expect_identical(fig_cl_levels(in_layer)$labels, c("List Drug X", "List Control"))
+  expect_identical(fig_cl_levels(in_layer)$levels, c("Drug X", "Control"))
+  expect_identical(fig_cl_levels(in_layer)$labels, c("Drug X", "Control"))
   # the report's own list over its layer's, for the same variable
   both <- fig_cl_draw(fig_cl_study(own = c("  TRT01P:", entries("Own")),
                                    layer = c("  TRT01P:", entries("Layer"))))
-  expect_identical(fig_cl_levels(both)$levels, c("Own Drug X", "Own Control"))
+  expect_identical(fig_cl_levels(both)$levels, c("Drug X", "Control"))
   # a layer's list on a variable the data has not stops nothing
   other <- fig_cl_draw(fig_cl_study(layer = c("  TRT01P:", entries("List"),
                                               "  NOSUCHVAR:", "    - {value: a, label: A}")))
-  expect_identical(fig_cl_levels(other)$levels, c("List Drug X", "List Control"))
+  expect_identical(fig_cl_levels(other)$levels, c("Drug X", "Control"))
 })

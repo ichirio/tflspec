@@ -26,14 +26,12 @@ ard_spec <- tfl_ard_spec(list(
   analysis_data = df(
     output_id = c("T-14-2-1", "T-14-3-1", "T-14-3-2", "T-14-3-2"),
     data_id = c("adrs_bor", "adae_teae", "adsl_saf", "adae_saf"),
-    label = c("Best confirmed overall response, ITT", "TEAEs of the safety set",
-              "Safety set", NA),
     from = c("ADRS", "ADAE", "ADSL", "ADAE"),
     population_id = c("ITT", "SAF", "SAF", NA),
-    subjects = c(NA, NA, NA, "adsl_saf"),
+    subjects_in = c(NA, NA, NA, "adsl_saf"),
     where = c('PARAMCD == "BOR"', 'TRTEMFL == "Y"', NA, 'TRTEMFL == "Y"'),
     derive = c('RESP = AVALC %in% c("CR", "PR") | DCR = AVALC %in% c("CR", "PR", "SD")', NA, NA, NA)),
-  # T-14-3-2: the subjects with a TEAE of each kind (`subjects`: has the
+  # T-14-3-2: the subjects with a TEAE of each kind (`subjects_in`: has the
   # subject a record of the data, after the analysis's `where`?)
   analyses = df(
     output_id = c(rep("T-14-1-1", 3), rep("T-14-2-1", 4), rep("T-14-3-1", 2),
@@ -41,7 +39,7 @@ ard_spec <- tfl_ard_spec(list(
     analysis_id = c("ARMN", "CONT", "CAT",
                     "ARMN", "BOR", "ORR", "DCR",
                     "ARMN", "TEAE",
-                    "GROUPN", "ANY", "REL", "G3", "SER", "DISC", "DTH"),
+                    "BIGN", "ANY", "REL", "G3", "SER", "DISC", "DTH"),
     label = c("Subjects", "Age, baseline sum of diameters", "Demographic categories",
               "Subjects", "Best overall response", "Objective response rate", "Disease control rate",
               "Subjects", "TEAEs by SOC and PT",

@@ -4,7 +4,7 @@
 # itself (the risk table's title) must pass its check, an unknown key not.
 
 fig_routed_report <- function(plot = NULL, nm = "km_survival", id = "F-9-routed") {
-  o <- tfl_output(id, "figure", population = "SAF", label = "KM",
+  o <- tfl_output(id, "figure", common = list(population = "SAF"), label = "KM",
                   extends = "defaults",
                   data = list(steps = list(list(step = "read", dataset = "ADTTE"),
                                            list(step = "param", value = "PFS"))),
@@ -16,7 +16,7 @@ fig_routed_report <- function(plot = NULL, nm = "km_survival", id = "F-9-routed"
 # the design as tflplanner is given it: the sheets' one
 fig_routed_planner_design <- function(o, d) {
   st <- tfl_read_study_spec(d)
-  tfl_sheets_from_spec(st, stats::setNames(list(o), o$id))$figures[[o$id]]
+  tfl_sheets_from_spec(st, stats::setNames(list(o), o$id), templates = "expand")$figures[[o$id]]
 }
 
 test_that("a km report with plot.risk_title passes the design check, expanded or not", {
@@ -76,7 +76,7 @@ test_that("an unknown plot key is the same error in both checks, with a template
   expect_identical(e$message, direct$problem)
 
   # a figure of the designer's own (no template): the same
-  g <- tfl_output("F-9-own", "figure", population = "SAF", label = "own",
+  g <- tfl_output("F-9-own", "figure", common = list(population = "SAF"), label = "own",
                   extends = "defaults", content = list())
   g$plot <- list(bogus = 1)
   g$data <- list(steps = list(list(step = "read", dataset = "ADTTE")))

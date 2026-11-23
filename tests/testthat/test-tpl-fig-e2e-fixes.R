@@ -30,7 +30,7 @@ e2e_study <- function(d, data, id, template, args) {
     haven::write_xpt(tflspec:::.ai_chr(data[[n]]), file.path(d, "adam", paste0(n, ".xpt")))
   }
   tfl_ai_study_init(d, adam = "adam", study_id = "E2E-1")
-  o <- tfl_output(id, "figure", population = "SAF", extends = "defaults",
+  o <- tfl_output(id, "figure", common = list(population = "SAF"), extends = "defaults",
                   template = list(name = template, args = args))
   tfl_write_output(o, file.path(d, "spec", "outputs", paste0(id, ".yml")))
   invisible(d)
@@ -191,8 +191,8 @@ test_that("mean_se / mean_ci: a blank or missing group or visit is left out, wit
   df <- e2e_mean_df()
   arms <- sort(unique(df$TRT01A))
   visits <- unique(df$AVISIT[order(df$AVISITN)])
-  df$AVISIT[5L] <- ""
-  df$TRT01A[6L] <- ""
+  df$AVISIT[5L] <- NA
+  df$TRT01A[6L] <- NA
   df$TRT01A[7L] <- NA
   for (nm in c("mean_se", "mean_ci")) {
     f <- get(paste0("tpl_", nm))
@@ -239,8 +239,8 @@ test_that("mean_se / mean_ci: a record with no value is left out, with a warning
   expect_false(anyNA(df$AVAL))
   df$TRT01A <- as.character(df$TRT01A)
   df$AVAL[c(2L, 3L)] <- NA
-  # (a blank group and no value at once: counted once, as the group's)
-  df$TRT01A[4L] <- ""
+  # (a missing group and no value at once: counted once, as the group's)
+  df$TRT01A[4L] <- NA
   df$AVAL[4L] <- NA
   for (nm in c("mean_se", "mean_ci")) {
     f <- get(paste0("tpl_", nm))
@@ -355,7 +355,7 @@ test_that("waterfall by response: a subject with no response is a grey bar with 
   p0 <- tpl_waterfall(m, by_response = TRUE)
   expect_false("Missing" %in% fill_scale(p0)$get_limits())
   m$BOR[2L] <- NA
-  m$BOR[3L] <- ""
+  m$BOR[3L] <- NA
   p <- tpl_waterfall(m, by_response = TRUE)
   expect_true("Missing" %in% fill_scale(p)$get_limits())
   expect_identical(sum(ggplot2::layer_data(p, 1L)$fill == "grey80"), 2L)

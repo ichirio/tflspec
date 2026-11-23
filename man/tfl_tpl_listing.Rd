@@ -8,7 +8,7 @@ The listing template \code{listing}, layout \code{listing}. Its program is one c
 }
 \section{Parameters}{
 \tabular{llllll}{
-   Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
+   Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
    \code{data} \tab required \tab call \tab  \tab  \tab the dataset (ADAE) \cr
    \code{columns} \tab required \tab call \tab  \tab  \tab the columns, in order: each a list of vars (one or more), label, width and collapse_repeats \cr
    \code{where} \tab other \tab call \tab  \tab  \tab the records kept (R) \cr

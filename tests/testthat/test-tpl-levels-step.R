@@ -17,7 +17,7 @@ lvs_study <- function(root, data = c("adsl", "adlb")) {
 
 lvs_report <- function(d, name, args, population = "SAF", codelists = list()) {
   f <- file.path(d, "spec", "outputs", "T-LV.yml")
-  tfl_write_output(tfl_output("T-LV", "table", population = population, extends = "defaults",
+  tfl_write_output(tfl_output("T-LV", "table", common = list(population = population), extends = "defaults",
                               codelists = codelists, template = list(name = name, args = args)), f)
   st <- tfl_read_study_spec(d)
   ard <- suppressMessages(tfl_build_ard(st, output_id = "T-LV", dir = d, save = FALSE))
@@ -90,11 +90,13 @@ test_that("ae_max_grade: the grades are shown in grade_levels' order (the data s
                                                 grade_in = "cols"))
   expect_identical(Filter(function(it) it$fn == "plan_levels", y$content)[[1L]]$args$AESEV,
                    c("Any grade", "MILD", "SEVERE"))
-  # the report's code list gives the labels
+  # the report's code list gives the order of the codes, and the labels by plan_labels()
   cl <- list(list(value = "SEVERE", label = "Severe"), list(value = "MILD", label = "Mild"))
   z <- tfl_template_expand("ae_max_grade", list(population = "SAF"), codelists = list(AESEV = cl))
   expect_identical(Filter(function(it) it$fn == "plan_levels", z$content)[[1L]]$args$label,
-                   c("Severe", "Mild"))
+                   c("SEVERE", "MILD"))
+  expect_identical(Filter(function(it) it$fn == "plan_labels", z$content)[[1L]]$args$AESEV,
+                   c(SEVERE = "Severe", MILD = "Mild"))
   # no list: the plan says no order
   n <- tfl_template_expand("ae_max_grade", list(population = "SAF"))
   expect_identical(names(Filter(function(it) it$fn == "plan_levels", n$content)[[1L]]$args), "AEBODSYS")

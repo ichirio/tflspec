@@ -8,7 +8,7 @@ The table template \code{stat_block}, layout \code{stat_block}. Its program is o
 }
 \section{Parameters}{
 \tabular{llllll}{
-   Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
+   Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
    \code{by} \tab other \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the column key (the arms) \cr
    \code{by_levels} \tab other \tab call \tab  \tab  \tab its values in order; NULL: its code list's \cr
    \code{variable} \tab required \tab call \tab  \tab  \tab the analysis variable whose record is split (RESP) \cr

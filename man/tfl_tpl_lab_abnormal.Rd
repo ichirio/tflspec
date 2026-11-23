@@ -8,8 +8,8 @@ The table template \code{lab_abnormal}, layout \code{summary}. Its program is on
 }
 \section{Parameters}{
 \tabular{llllll}{
-   Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab required \tab call \tab report: population, required \tab output.population \tab the analysis set's id (SAF) \cr
+   Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
+   \code{population} \tab required \tab call \tab report: population, required \tab output.common.population \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
    \code{data} \tab other \tab call \tab ADLB \tab  \tab the dataset of records \cr
    \code{params} \tab other \tab call \tab  \tab  \tab the PARAMCD values; NULL: all \cr
@@ -22,9 +22,10 @@ The table template \code{lab_abnormal}, layout \code{summary}. Its program is on
    \code{baseline_normal} \tab other \tab call \tab FALSE \tab  \tab only the subjects normal at baseline, in n and in the N \cr
    \code{baseline} \tab other \tab call \tab BNRIND \tab  \tab the category at baseline \cr
    \code{baseline_value} \tab other \tab call \tab NORMAL \tab  \tab the value of 'baseline' that is normal \cr
-   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<population> \cr
+   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_sub \cr
    \code{heading} \tab other \tab call \tab Parameter / Category \tab  \tab the label column's heading \cr
    \code{header_n} \tab other \tab call \tab set \tab  \tab the arm headings' N, set apart from the cells' N (a parameter's subjects with a value): "set" (default): the arm's subjects in the analysis set (with 'subset'); "tested": the arm's subjects with a record kept (after 'where', 'params' and 'baseline_normal'), one N for all the parameters; "none": no N.  "denominator" is not one N here, the cells' N differs by parameter \cr
+   \code{split} \tab other \tab call \tab group_safe \tab plan_paginate_rows.split \tab how a page break is placed (plan_paginate_rows(split = )): "none" one page; "group_safe" whole groups to a page; "group_force" a cut every 'max_rows' rows, a group continued on the next page; "rows" and "by_value" are cut by position or by value (they need their own arguments, a 'plan_paginate_rows' item) \cr
 }
 }
 

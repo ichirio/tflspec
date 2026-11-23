@@ -77,7 +77,8 @@ test_that("the program runs in rtfreporter with no deprecation", {
 })
 
 test_that("an old key of a near layer beats a new key of a far layer (each layer read first)", {
-  st <- structure(list(defaults = list(page = list(rtf_style = list(font_size_half_points = 18L))),
+  st <- structure(list(defaults = list(), study = list(settings = list(style = "std")),
+                       styles = list(std = list(page = list(rtf_style = list(font_size_half_points = 18L)))),
                        patterns = list(), data = list()),
                   class = "tfl_study_spec")
   o <- tfl_output("T-1", "table", extends = "defaults",

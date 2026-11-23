@@ -12,17 +12,18 @@
   tfl_param("start", "ASTDY",
             doc = "the event's day from the start of treatment: a variable or R (ASTDT - TRTSDT + 1)"),
   tfl_param("per", 100, doc = "the rate per this many person-years"),
-  tfl_param("overall", "Any TEAE", doc = "the any-record row's label")
+  tfl_param("overall", "Any TEAE", doc = "the any-record row's label"),
+  .tpl_split_param("group_force")
 )
 
 .tpl_eair_body <- function(a, ctx) {
   pop <- a$population
-  subj <- paste0("adsl_", tolower(pop))
-  set <- paste0(tolower(a$data), "_", tolower(pop))
+  subj <- .tpl_subj_id()
+  set <- paste0(tolower(a$data), "_sub")
   h <- a$hierarchy
   # each subject with each term (a level's): at risk to the day of their
   # first event, else for the whole exposure
-  risk <- function(suffix, keys, what) {
+  risk <- function(suffix, keys) {
     ks <- c("USUBJID", keys)
     one <- function(x, q = "") {
       if (length(x) == 1L) paste0(q, x, q) else sprintf("c(%s)", paste0(q, x, q, collapse = ", "))
@@ -51,24 +52,22 @@
       "  # at risk to the first event with a day, else for the whole exposure (years)\n",
       "  dplyr::mutate(EVENT = !is.na(EVENT),\n",
       sprintf("    YEARS = dplyr::if_else(EVENT & !is.na(DAY), DAY, %s) / 365.25)", a$exposure))
-    list(id = paste0(set, suffix), label = paste("each subject's time at risk of", what),
-         from = set, code = code)
+    list(id = paste0(tolower(a$data), suffix), from = set, code = code)
   }
   levels <- list(list("_risk", character(), h[1L], "any event"),
                  list("_risk_soc", h[1L], h[1L], paste("each", h[1L])),
                  list("_risk_pt", h, h, paste("each", h[length(h)])))
   sets <- c(list(
-    list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
-         population = pop),
+    list(id = subj, from = "ADSL", population = pop),
     Filter(Negate(is.null), list(
-      id = set, from = a$data, subjects = subj,
+      id = set, from = a$data, subjects_in = subj,
       where = if (!is.null(a$where)) tfl_r(a$where), derive = tfl_r(paste("DAY =", a$start))))),
-    lapply(levels, function(l) risk(l[[1L]], l[[2L]], l[[4L]])))
+    lapply(levels, function(l) risk(l[[1L]], l[[2L]])))
   # the rate of a level, the innermost term as the variable (the shape of a
   # hierarchical ARD: its own rows of each level)
   rate <- function(id, l) {
     k <- length(l[[3L]]) + 1L
-    list(id = id, method = "cardx::ard_incidence_rate", data = paste0(set, l[[1L]]),
+    list(id = id, method = "cardx::ard_incidence_rate", data = paste0(tolower(a$data), l[[1L]]),
          by = a$by, strata = l[[3L]],
          args = tfl_r(sprintf(paste("time = YEARS, count = EVENT, id = USUBJID,",
                                     "n_person_time = %s, unit_label = \"years\""), a$per)),
@@ -77,7 +76,7 @@
          purpose = "PRIMARY OUTCOME MEASURE")
   }
   analyses <- list(
-    list(id = "GROUPN", method = "categorical", data = subj, variables = a$by,
+    list(id = "BIGN", method = "categorical", data = subj, variables = a$by,
          purpose = "PRIMARY OUTCOME MEASURE"),
     rate("EAIR", levels[[1L]]), rate("EAIR_SOC", levels[[2L]]),
     rate("EAIR_PT", levels[[3L]]))
@@ -97,7 +96,8 @@
       list(line = "2", cols = "row_label",
            text = "System Organ Class\n   Preferred Term"),
       list(line = "2", cols = ".values", span = "each", text = sprintf("n (EAIR per %s PY)", a$per))))),
-    tfl_item("plan_paginate_rows", list(max_rows = 22L, split = "group_force")))
+    tfl_item("plan_paginate_rows", list(
+      max_rows = 22L, split = .tpl_choice(a, "split", .tpl_split_choices, "ae_eair"))))
   list(ard = list(analysis_data = sets, analyses = analyses),
        data = list(source = "ard", object = "ard"), content = content)
 }

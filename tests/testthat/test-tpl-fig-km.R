@@ -99,7 +99,7 @@ test_that("the former km_simple / km_risk_table / km_ci: km_survival with argume
                          "toString(sort(unique(df$PARAMCD))),\n",
                          "       \"); keep one in the data steps (a param step)\", call. = FALSE)\n}")),
       list(step = "filter",
-           expr = "!is.na(TRT01A) & TRT01A != \"\"",
+           expr = "!is.na(TRT01A)",
            label = "the subjects with an empty TRT01A have no curve: left out, with a warning",
            warn = "km_survival: {n} subjects with an empty TRT01A were left out"),
       list(step = "filter",
@@ -183,7 +183,7 @@ test_that("km: the arguments and what the design has for them", {
   expect_identical(x(plot = list(dpi = 150))$plot$dpi, 150)
   # the parameters: their stage and tier
   p <- tfl_template_params("km")
-  st <- vapply(p, `[[`, "", "stage")
+  st <- vapply(p, `[[`, "", "step")
   expect_identical(sort(names(st)[st == "data"]),
                    c("data", "event", "param", "population", "subset", "where"))
   expect_true(all(c("ci", "risk_table", "x_max", "x_step", "y_label") %in%
@@ -283,7 +283,7 @@ test_that("in a study: km_cumulative (STF Figure 1's sample) from ADTTE and from
                    vapply(built$layers, function(l) class(l$geom)[1L], ""))
   expect_identical(tplfig_png(env3$content), tplfig_png(built))
   # ADSL: no parameter, the event, the time
-  o2 <- tfl_output("F-9-adsl", "figure", population = "SAF", label = "KM", extends = "defaults",
+  o2 <- tfl_output("F-9-adsl", "figure", common = list(population = "SAF"), label = "KM", extends = "defaults",
                    data = list(steps = list(
                      list(step = "read", dataset = "ADSL"),
                      list(step = "filter", expr = "SAFFL == \"Y\""),

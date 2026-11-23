@@ -35,7 +35,7 @@ test_that("order_levels(): a code list, else the numeric pair, else the values s
   # a code list wins, with set_levels()'s stop on a value it does not have
   cl_arm <- c(`Drug A` = "Drug A", `Drug B` = "Drug B", Placebo = "Placebo")
   r2 <- e$order_levels(d[1:4, ], c("SEX", "RACE"), SEX = c(F = "Female", M = "Male"), TRT01A = cl_arm)
-  expect_identical(levels(r2$SEX), c("Female", "Male"))
+  expect_identical(levels(r2$SEX), c("F", "M"))
   expect_identical(levels(r2$TRT01A), names(cl_arm))
   expect_identical(levels(r2$RACE), c("WHITE", "BLACK", "ASIAN"))
   expect_error(e$order_levels(d, SEX = c(M = "Male")), "SEX has values its code list does not")
@@ -52,7 +52,7 @@ test_that("the program names the categories of its categorical analyses, the one
   spec <- exact_spec(list(method = "categorical", dataset = "ADSL", population_id = "SAF",
                           by = "ARM", variables = "SEX|RACE"))
   code <- paste(tfl_ard_code(spec, part = "body"), collapse = "\n")
-  expect_match(code, "adsl <- readRDS(\"adam/ADSL.rds\") |> order_levels(c(\"SEX\", \"RACE\"))", fixed = TRUE)
+  expect_match(code, "adsl <- readRDS(\"adam/ADSL.rds\") |>\n  blank_as_na() |>\n  order_levels(c(\"SEX\", \"RACE\"))", fixed = TRUE)
   # a code list is the order of its variable: not named
   cl <- data.frame(output_id = "T", variable = "SEX", value = c("M", "F"),
                    label = c("Male", "Female"), order = 1:2)
@@ -62,7 +62,7 @@ test_that("the program names the categories of its categorical analyses, the one
   cont <- exact_spec(list(method = "continuous", dataset = "ADSL", population_id = "SAF",
                           by = "ARM", variables = "AGE"))
   expect_match(paste(tfl_ard_code(cont, part = "body"), collapse = "\n"),
-               "adsl <- readRDS(\"adam/ADSL.rds\") |> order_levels()", fixed = TRUE)
+               "adsl <- readRDS(\"adam/ADSL.rds\") |>\n  blank_as_na() |>\n  order_levels()", fixed = TRUE)
 })
 
 # a study of the package's data: the arms numbered against the alphabet
@@ -101,7 +101,7 @@ test_that("a records dataset without TRT01AN gets the arms' order of ADSL", {
   want <- rev(arms)
   expect_false(identical(want, arms))
   put <- function(id, name, args) {
-    tfl_write_output(tfl_output(id, "table", population = "SAF", extends = "defaults",
+    tfl_write_output(tfl_output(id, "table", common = list(population = "SAF"), extends = "defaults",
                                 template = list(name = name, args = args)),
                      file.path(d, "spec", "outputs", paste0(id, ".yml")))
   }
@@ -109,7 +109,7 @@ test_that("a records dataset without TRT01AN gets the arms' order of ADSL", {
   st <- tfl_read_study_spec(d)
   code <- paste(tfl_ard_code(st, output_id = "T-LA", save = FALSE, dir = d), collapse = "\n")
   # the records keep their arm; its order is ADSL's
-  expect_match(code, "adlb <- haven::read_xpt(\"adam/adlb.xpt\") |> order_levels(", fixed = TRUE)
+  expect_match(code, "adlb <- haven::read_xpt(\"adam/adlb.xpt\") |>\n  blank_as_na() |>\n  order_levels(", fixed = TRUE)
   expect_match(code, "from = adsl", fixed = TRUE)
   ard <- suppressMessages(suppressWarnings(tfl_build_ard(st, d, output_id = "T-LA", save = FALSE)))
   expect_identical(lv_levels(ard, "ABNORMAL"), want)
@@ -120,9 +120,10 @@ test_that("RACE follows RACEN, SEX follows SEXN, where ADSL has the pair", {
   skip_if_not_installed("cards")
   skip_if_not_installed("haven")
   out <- function(d) {
-    tfl_write_output(tfl_output("T-SU", "table", population = "SAF", extends = "defaults",
+    tfl_write_output(tfl_output("T-SU", "table", common = list(population = "SAF"), extends = "defaults",
                                 template = list(name = "summary",
-                                                args = list(continuous = "AGE", categorical = c("SEX", "RACE")))),
+                                                args = list(by = "TRT01A", continuous = "AGE",
+                                                            categorical = c("SEX", "RACE")))),
                      file.path(d, "spec", "outputs", "T-SU.yml"))
     suppressMessages(suppressWarnings(tfl_build_ard(tfl_read_study_spec(d), d, output_id = "T-SU", save = FALSE)))
   }

@@ -22,7 +22,7 @@ bv_study <- function(root, data) {
 }
 
 bv_put <- function(d, id, name, args, population = "SAF") {
-  tfl_write_output(tfl_output(id, "table", population = population, extends = "defaults",
+  tfl_write_output(tfl_output(id, "table", common = list(population = population), extends = "defaults",
                               template = list(name = name, args = args)),
                    file.path(d, "spec", "outputs", paste0(id, ".yml")))
 }
@@ -57,10 +57,10 @@ test_that("demog, summary and disposition: a blank is missing, not a category", 
     adsl$EOSSTT[i[2L]] <- ""
   }
   d <- bv_study(withr::local_tempdir(), list(adsl = adsl))
-  bv_put(d, "T-D", "demog", list(population = "SAF"))
-  bv_put(d, "T-S", "summary", list(population = "SAF", continuous = "AGE",
+  bv_put(d, "T-D", "demog", list(by = "TRT01A", continuous = "AGE", categorical = c("SEX", "AGEGR1")))
+  bv_put(d, "T-S", "summary", list(by = "TRT01A", continuous = "AGE",
                                    categorical = c("SEX", "EOSSTT"), total = TRUE))
-  bv_put(d, "T-DI", "disposition", list(population = "SAF"))
+  bv_put(d, "T-DI", "disposition", list(by = "TRT01A", categorical = "EOSSTT"))
   s <- adsl[adsl$SAFFL == "Y", ]
   for (id in c("T-D", "T-S", "T-DI")) {
     a <- bv_ard(d, id)
@@ -69,9 +69,11 @@ test_that("demog, summary and disposition: a blank is missing, not a category", 
       expect_false(any(lv %in% ""), info = paste(id, v))
       for (arm in c("Drug X", "Control")) {
         x <- s[[v]][s$TRT01A == arm]
-        # demog: the percent is of the whole analysis set's arm (blanks counted in
-        # the denominator, the header N); summary, disposition: of the subjects with a value
-        den <- if (id == "T-D") length(x) else sum(x != "")
+        # the percent is of the whole analysis set's arm (blanks counted in the
+        # denominator, the header N), and the blanks are a Missing row, last
+        den <- length(x)
+        expect_equal(bv_stat(a, v, "Missing", arm, "n"), sum(x == ""), info = paste(id, v, arm))
+        expect_equal(bv_stat(a, v, "Missing", arm, "p"), sum(x == "") / den, info = paste(id, v, arm))
         x <- x[x != ""]
         for (l in unique(x)) {
           expect_equal(bv_stat(a, v, l, arm, "n"), sum(x == l), info = paste(id, v, l, arm))
@@ -82,10 +84,10 @@ test_that("demog, summary and disposition: a blank is missing, not a category", 
   }
   # the Total column too
   a <- bv_ard(d, "T-S")
-  sex <- s$SEX[s$SEX != ""]
   tot <- a$variable == "SEX" & is.na(a$group1_level) & a$stat_name == "n"
-  expect_setequal(a$variable_level[tot], c("F", "M"))
-  expect_equal(sum(as.numeric(a$stat[tot])), length(sex))
+  expect_setequal(a$variable_level[tot], c("F", "M", "Missing"))
+  expect_equal(sum(as.numeric(a$stat[tot])), nrow(s))
+  expect_equal(bv_stat(a, "SEX", "Missing", NA, "n"), sum(s$SEX == ""))
   # the program says it: the count reads the data with its blank text missing
   txt <- paste(tfl_ard_code(tfl_read_study_spec(d), output_id = "T-D", save = FALSE, dir = d),
                collapse = "\n")
@@ -160,9 +162,9 @@ test_that("forest_hr: a blank subgroup value is no subgroup", {
   tt <- tflspec::adtte
   ad <- tflspec::adsl
   pfs <- tt$USUBJID[tt$PARAMCD == "PFS" & tt$SAFFL == "Y"]
-  ad$SEX[ad$USUBJID %in% pfs[c(2, 30, 60)]] <- ""
+  ad$SEX[ad$USUBJID %in% pfs[c(2, 30, 60)]] <- NA
   d <- bv_study(withr::local_tempdir(), list(adsl = ad, adtte = tt))
-  tfl_write_output(tfl_output("F-1", "figure", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("F-1", "figure", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = "forest_hr",
                                               args = list(param = "PFS", population = "SAF"))),
                    file.path(d, "spec", "outputs", "F-1.yml"))
@@ -174,7 +176,8 @@ test_that("forest_hr: a blank subgroup value is no subgroup", {
   p <- tt[tt$PARAMCD == "PFS" & tt$SAFFL == "Y", ]
   p$SEX <- ad$SEX[match(p$USUBJID, ad$USUBJID)]
   n <- bv_stat(a, "TRT01A", "Control", "F", "n_obs", "HR_SEX")
-  expect_equal(n, sum(p$TRT01A == "Control" & p$SEX == "F"))
+  # (the subjects with SEX missing are in no subgroup)
+  expect_equal(n, sum(p$TRT01A == "Control" & p$SEX == "F", na.rm = TRUE))
 })
 
 test_that("ae_eair: an event with no day uses the subject's other events; none: counted, warned", {
@@ -236,7 +239,7 @@ test_that("stat_block: the study's stub folded first, built to RTF, the numbers 
   cells <- list(N = "{N}", "ORR(%) 95%CI" = c("{n} ({estimate:.1f%})", "{conf.low:.1f%}, {conf.high:.1f%}"))
   for (ext in c("defaults", "none")) {
     id <- paste0("T-SB-", ext)
-    o <- tfl_output(id, "table", population = "ITT", extends = ext,
+    o <- tfl_output(id, "table", common = list(population = "ITT"), extends = ext,
       ard = list(
         analysis_data = list(list(id = "adrs_bor", from = "ADRS", population = "ITT",
                                   where = tfl_r("PARAMCD == \"BOR\""),
@@ -294,7 +297,7 @@ test_that("tfl_check_spec() accepts orr's columns layout and stat_block's cells"
   bv_put(d, "T-O5", "orr", list(population = "ITT", stat_layout = "cols", conf_level = 0.9),
          population = "ITT")
   cells <- list(N = "{N}", "ORR(%) 95%CI" = c("{n} ({estimate:.1f%})", "{conf.low:.1f%}, {conf.high:.1f%}"))
-  tfl_write_output(tfl_output("T-SB", "table", population = "ITT", extends = "defaults",
+  tfl_write_output(tfl_output("T-SB", "table", common = list(population = "ITT"), extends = "defaults",
     ard = list(
       analysis_data = list(list(id = "adrs_bor", from = "ADRS", population = "ITT",
                                 where = tfl_r("PARAMCD == \"BOR\""),

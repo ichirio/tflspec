@@ -26,7 +26,7 @@ test_that("tfl_template(): registered from outside, listed, replaced with a mess
   tfl_template("tc_ages", kind = "table", layout = "summary",
     params = list(tfl_param("population", "SAF")),
     body = function(a, ctx) tfl_template_expand("summary",
-      list(population = a$population, continuous = "AGE"),
+      list(by = "TRT01A", population = a$population, continuous = "AGE"),
       codelists = ctx$codelists, population = ctx$population),
     call = "tc_ages")
   t <- tfl_templates()
@@ -36,14 +36,14 @@ test_that("tfl_template(): registered from outside, listed, replaced with a mess
   expect_true(all(vapply(x$content, `[[`, "", "from") == "template:tc_ages"))
   expect_message(tfl_template("tc_ages", kind = "table", layout = "summary",
     params = list(tfl_param("population", "SAF")),
-    body = function(a, ctx) tfl_template_expand("summary", list(population = a$population,
+    body = function(a, ctx) tfl_template_expand("summary", list(by = "TRT01A", population = a$population,
                                                                 continuous = "AGE"))),
     "replaces")
   # a parameter that ends in the look: a parameter with a default, no warning
   expect_no_warning(tfl_template("tc_wide", kind = "table", layout = "summary",
     params = list(tfl_param("population", "SAF"), tfl_param("widths", c(row_label = 4), type = "number")),
     body = function(a, ctx) {
-      x <- tfl_template_expand("summary", list(population = a$population, continuous = "AGE"))
+      x <- tfl_template_expand("summary", list(by = "TRT01A", population = a$population, continuous = "AGE"))
       x$content <- c(x$content, list(tfl_item("plan_columns", list(widths = a$widths))))
       x
     }))
@@ -58,7 +58,11 @@ test_that("tfl_template_run() and tfl_template_params(); a company's template in
   withr::defer(tc_forget("tc_demog"))
   p <- tfl_template_params("demog")
   expect_s3_class(p$cells, "tfl_param")
-  p$cells$default <- list(n = "{N:.0f}", Median = "{median:.1f}")
+  p$cells$default <- list(n = "{N}", Median = "{median}")
+  # (the company's template says the variables and the arms: demog has no defaults for them)
+  p$by$default <- "TRT01A"
+  p$continuous$default <- "AGE"
+  p$categorical$default <- c("AGEGR1", "SEX", "RACE", "ETHNIC")
   tfl_template("tc_demog", kind = "table", layout = "summary", params = p,
     body = function(a, ctx) tfl_template_expand("demog", a, codelists = ctx$codelists,
                                                 population = ctx$population),
@@ -72,8 +76,8 @@ test_that("tfl_template_run() and tfl_template_params(); a company's template in
   expect_identical(sum(tab[[2L]] %in% "Median"), 1L)
   # the program calls the company's function
   s <- tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
-  o <- tfl_output("T-9", "table", population = "SAF",
-                  template = list(name = "tc_demog", args = list(population = "SAF")))
+  o <- tfl_output("T-9", "table", common = list(population = "SAF"),
+                  template = list(name = "tc_demog", args = list()))
   expect_match(tfl_content_code(tfl_resolve_output(o, s)), "plan <- tc_demog(", fixed = TRUE, all = FALSE)
 })
 

@@ -23,5 +23,10 @@ A \code{\link[rtfreporter:table_plan]{rtfreporter::table_plan()}}.
 }
 \description{
 A display template on the \code{hierarchical} layout: treatment-emergent
-events (\code{TRTEMFL == "Y"}), the subjects with any event first.
+events (\code{TRTEMFL == "Y"}), the subjects with any event first.  With
+\code{min_pct}, the ARD program keeps the PTs of that percentage of subjects
+or more (\code{min_pct_in}: in any column, every column, or the Total column
+with \code{total = TRUE}) and the SOCs over them (\code{keep_min_pct()}); this
+function shows the terms of the ARD it is given, so \code{min_pct} here does
+not filter it.
 }

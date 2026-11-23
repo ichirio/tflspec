@@ -17,8 +17,15 @@ warning naming it (\code{tfl_read_outputs()}); \code{FALSE} (default) to stop th
 }
 \value{
 \code{tfl_read_study_spec()}: a list of class \code{tfl_study_spec} --
-\code{study}, \code{data}, \code{defaults}, \code{styles} (by name: \code{defaults.yml}'s
-\verb{styles:}, the look a report picks with \verb{style:}), \code{figure_style}
+\code{study} (\code{study.yml}, its \verb{tokens:} the study's tokens), \code{data},
+\code{defaults}, \code{codelists} (the study's code lists by name, each a
+character vector of the codes in order, named by the code when the list
+has labels: \code{c(F = "Female", M = "Male")}), \code{adam_meta} (a
+\code{tfl_define}, its tables empty when \code{defaults.yml} has no \verb{adam_meta:}),
+\code{styles} (by name: \code{defaults.yml}'s \verb{styles:}, the page
+configurations a report picks with \verb{style:}; a set holds \code{page} and
+\code{content} only, its page keys a closed list, and may not take the name
+of a built-in one), \code{figure_style}
 (\code{defaults.yml}'s \verb{figure_style:}: the study's figure style standard,
 tflspec's built-in one for a part it does not give),
 \code{patterns} (by name), \code{toc}, \code{dir}.  \code{tfl_read_outputs()}: a named list of \code{tfl_output}, by id.
@@ -28,7 +35,32 @@ tflspec's built-in one for a part it does not give),
 and \code{tfl_read_outputs()} the report files under \verb{spec/outputs/}
 (subfolders too; a file with \verb{outputs:} holds several).  An id in two
 files stops the read.  A \code{spec/codelists.yml} is not read (a code list is
-a report's or a layer's), with a message.
+the study's, \verb{codelists:} in \code{spec/defaults.yml}, or a report's), with a
+message.
+}
+\details{
+\code{spec/defaults.yml} holds the study's code lists and its ADaM metadata,
+two things kept apart:
+\itemize{
+\item \verb{codelists:} the study's code lists for display, by name (\verb{SEX: [\{value: F, label: Female\}, ...]}; the lists of value-level metadata too).  A
+report or a template refers to one by its name, in R (a content
+argument \verb{!r study$codelists$SEX}; the \code{tflspec_v1/demog} template's
+\code{value_labels} default names \code{SEX}, \code{RACE}, \code{ETHNIC} and \code{AGEGR1} so); a
+reference to a list the study has not got is left out when the report is
+resolved.  No list reaches a report through \verb{extends:}: a report's code
+lists are its own (\verb{codelists:} in its file), and a pattern's
+\verb{codelists:} stops the read.
+\item \verb{adam_meta:} the ADaM metadata in the shape \code{\link[=tfl_read_define]{tfl_read_define()}} gives
+(until a define is read): each part a list of rows, \verb{variables: [\{dataset: ADSL, variable: SEX, codelist: CL.SEX\}, ...]} (the code list's OID) and
+\verb{codelists: [\{codelist: CL.SEX, name: Sex, value: F, decode: Female, order: 1\}, ...]} (a value a row); \verb{datasets:}, \verb{external:} and
+\verb{value_level:} may be given too.  A row may give any column of the
+define's table, the others are \code{NA}.  A part or a column the define does
+not have stops the read, as do a variable or a value given twice and a
+variable whose code list is not there.  Under study.yml's \code{settings: adam_levels: define_xml} or \code{define_spec} \code{study$adam} gets the levels of
+the code lists it maps to each dataset's variables, and of those only
+(\code{\link[=tfl_study_setup_code]{tfl_study_setup_code()}}); a value that reads as yes or no in YAML (\code{Y},
+\code{N}) is written in quotes.
+}
 }
 \examples{
 d <- system.file("extdata", "spec-yaml", package = "tflspec")

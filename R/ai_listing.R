@@ -18,7 +18,8 @@
   add <- function(where, what, severity = "error") {
     p <<- .ai_problem(p, paste(at, where), what, severity)
   }
-  for (e in o[["extends"]]) {
+  # (every file it names, a map's steps' too)
+  for (e in unique(as.character(unlist(o[["extends"]])))) {
     ok <- e %in% c("defaults", "none") ||
       (startsWith(e, "patterns/") && (is.null(context$patterns) ||
                                         substring(e, 10L) %in% context$patterns))
@@ -31,7 +32,7 @@
                          paste(pops, collapse = ", ")))
     }
   }
-  if (!is.na(o[["population"]])) chk_pop("population", o[["population"]])
+  if (!is.na(.out_population(o))) chk_pop("common population", .out_population(o))
   if (is.na(o[["label"]])) add("label", "the report has no label (its title)", "warning")
   if (length(o[["ard"]]$analyses %||% list())) {
     add("ard analyses", "a listing has no analyses: its records are its `data`")
@@ -77,7 +78,7 @@
         a <- ad[[match(id, ad_ids)]]
         coded <- coded || !is.null(a[["code"]])
         chk_pop(sprintf("ard.analysis_data %s population", id), .ai_scalar_text(a[["population"]]))
-        has_pop <- has_pop || !is.null(a[["population"]]) || !is.null(a[["subjects"]])
+        has_pop <- has_pop || !is.null(a[["population"]]) || !is.null(a[["subjects_in"]])
         kept <- kept || says_par(a[["where"]]) || says_par(a[["code"]])
         have <- c(have, .ai_derived_names(a[["derive"]]), unlist(a[["add"]]))
         id <- .ai_scalar_text(a[["from"]]) %||% NA_character_

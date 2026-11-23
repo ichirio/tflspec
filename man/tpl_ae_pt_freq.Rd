@@ -28,8 +28,9 @@ with any event first, then the terms by decreasing frequency -- in the
 first group of the code list of \code{by}, or the column \code{sort_by} names --
 and, with \code{min_pct}, only the terms of that percentage of subjects or
 more: in any column (\code{min_pct_in = "any"}, as FDA's tables of common
-adverse events), in every column (\code{"all"}) or in the Total column
-(\code{"total"}).
+adverse events) or in every column (\code{"all"}).  The terms kept are a
+step of the ARD program (\code{keep_min_pct()}); this function shows the
+terms of the ARD it is given, so \code{min_pct} here does not filter it.
 }
 \examples{
 tfl_template_expand("ae_pt_freq", list(population = "SAF", min_pct = 5))$content

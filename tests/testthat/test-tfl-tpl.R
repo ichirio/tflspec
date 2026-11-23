@@ -23,15 +23,19 @@ tt_dm_ard <- function() {
     cards::ard_tabulate(saf, by = TRT01A, variables = c(AGEGR1, SEX, RACE, ETHNIC)))
 }
 
+# demog's required arguments (a template of its own)
+tt_dm_args <- list(by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC"))
+
 test_that("tfl_tpl(): the same plan as the template's own function; its errors", {
   tt_skip()
   ard <- tt_dm_ard()
-  expect_identical(tt_tab(tfl_tpl(ard, "demog", population = "SAF")),
-                   tt_tab(tpl_demog(ard, population = "SAF")))
-  s <- tt_tab(tfl_tpl(ard, "summary", population = "SAF", continuous = c("AGE", "TRTDURD")))
+  expect_identical(tt_tab(do.call(tfl_tpl, c(list(ard, "demog", population = "SAF"), tt_dm_args))),
+                   tt_tab(do.call(tpl_demog, c(list(ard, population = "SAF"), tt_dm_args))))
+  s <- tt_tab(tfl_tpl(ard, "summary", population = "SAF", by = "TRT01A", continuous = c("AGE", "TRTDURD")))
   expect_true(all(c("AGE", "TRTDURD") %in% s$group))
   expect_error(tfl_tpl(ard, "nope"), "no template 'nope'")
-  expect_error(tfl_tpl(ard, "demog", population = "SAF", colour = "red"), "no parameter")
+  expect_error(do.call(tfl_tpl, c(list(ard, "demog", population = "SAF", colour = "red"), tt_dm_args)),
+               "no parameter")
   expect_error(tfl_tpl(ard, c("demog", "summary")), "one text")
   # a figure: the data the program made, its data step's parameters not the call's
   expect_error(tfl_tpl(adtte, "km_survival", population = "SAF"), "the program's data step")
@@ -50,51 +54,53 @@ test_that("tfl_tpl(): the same plan as the template's own function; its errors",
   expect_identical(t$from[t$name == "ae_ser_soc_pt"], "ae_soc_pt")
 })
 
-test_that("the layouts' parameters: what a report changes; the look is the study standard's", {
+test_that("the layouts' parameters: what a report changes, the look too (summary: batch 2)", {
   p <- tfl_template_params("summary")
   expect_identical(p$population$tier, "required")
-  expect_identical(p$by$tier, "usual")
+  expect_identical(p$by$tier, "required")
+  # demog's parameters (one body), with `where` and `denominator`, without `rounding`
+  # and `style` (the study's force; the report's `style:` until the flip)
   expect_identical(sort(names(p)), sort(c(
-    "population", "subset", "data", "where", "by", "continuous", "categorical", "labels",
-    "order", "cells", "sd_missing", "count_cell", "denominator", "missing_row", "continuous_statistics",
-    "categorical_statistics", "total",
-    "stack")))
+    setdiff(names(tfl_template_params("demog")), c("rounding", "style")), "where")))
   expect_identical(sort(names(tfl_template_params("hierarchical"))), sort(c(
     "population", "subset", "hierarchy", "data", "where", "by", "any_row", "any_row_label",
     "heading", "sort",
-    "min_pct", "min_pct_in", "count_cell", "denominator", "total", "header_n")))
-  # every parameter's stage: an argument of the call, unless it says "data"
-  expect_true(all(vapply(p, `[[`, "", "stage") == "call"))
-  expect_identical(tfl_param("x", stage = "data")$stage, "data")
-  expect_error(tfl_param("x", stage = "plot"), "should be one of")
-  # the look is not a parameter: the study standard's, or |> plan_*() after
-  expect_error(tfl_template_expand("summary", list(population = "SAF", continuous = "AGE",
-                                                   stub_name = "row_label")),
-               "no parameter 'stub_name'")
-  x <- tfl_template_expand("summary", list(population = "SAF", continuous = "AGE", order = "AGE"))
+    "min_pct", "min_pct_in", "count_cell", "denominator", "total", "header_n", "split")))
+  # every parameter's step: an argument of the call, unless it says "data"
+  expect_true(all(vapply(p, `[[`, "", "step") == "call"))
+  expect_identical(tfl_param("x", step = "data")$step, "data")
+  expect_error(tfl_param("x", step = "plot"), "should be one of")
+  # the look is a parameter with a default (canon 1.2, 1.23)
+  s <- tfl_template_expand("summary", list(population = "SAF", by = "TRT01A", continuous = "AGE",
+                                           stub_name = "row_label"))
+  expect_identical(Filter(function(i) i$fn == "plan_stub", s$content)[[1L]]$args, list(name = "row_label"))
+  x <- tfl_template_expand("summary", list(population = "SAF", by = "TRT01A", continuous = "AGE", order = "AGE"))
   fns <- vapply(x$content, `[[`, "", "fn")
   expect_identical(fns, c("table_plan", "plan_cells", "plan_levels", "plan_paginate_rows"))
   # an item when its parameter is given (order -> plan_levels), else none
-  y <- tfl_template_expand("summary", list(population = "SAF", continuous = "AGE"))
+  y <- tfl_template_expand("summary", list(population = "SAF", by = "TRT01A", continuous = "AGE"))
   expect_false("plan_levels" %in% vapply(y$content, `[[`, "", "fn"))
   # the layout's page: its own value, which the study standard's replaces
   expect_identical(x$content[[4L]]$args, list(max_rows = 30L, split = "group_safe"))
-  # one cards::ard_stack() call, on summary itself
-  st <- tfl_template_expand("summary", list(population = "SAF", continuous = "AGE",
-                                            categorical = "SEX", stack = TRUE))
-  expect_identical(vapply(st$ard$analyses, `[[`, "", "id"), c("STACK", "CONT", "CAT"))
-  expect_identical(st$ard$analyses[[2L]]$parent, "STACK")
+  # no stack (Q-N6): the plain unknown-parameter error
+  expect_error(tfl_template_expand("summary", list(population = "SAF", by = "TRT01A", continuous = "AGE",
+                                                   categorical = "SEX", stack = TRUE)),
+               "no parameter 'stack'")
   # demog's the same ids, its label the template's
-  dm <- tfl_template_expand("demog", list(population = "SAF", stack = TRUE))
-  expect_identical(vapply(dm$ard$analyses, `[[`, "", "id"), c("STACK", "CONT", "CAT"))
-  expect_match(dm$ard$analyses[[1L]]$label, "Demographics", fixed = TRUE)
-  # a template's own default variables: those the data has (any_of)
-  expect_true(isTRUE(tfl_template_expand("demog", list(population = "SAF"))$ard$analyses[[2L]]$optional))
-  expect_null(tfl_template_expand("demog", list(population = "SAF", continuous = "AGE"))$ard$analyses[[2L]]$optional)
-  # hierarchical: min_pct the shared filter, the Total column
+  # demog has no stack (it is a template of its own); its ids, its label the template's
+  expect_error(tfl_template_expand("demog", c(list(population = "SAF", stack = TRUE), tt_dm_args)),
+               "no parameter 'stack'")
+  dm <- tfl_template_expand("demog", c(list(population = "SAF"), tt_dm_args))
+  expect_identical(vapply(dm$ard$analyses, `[[`, "", "id"), c("BIGN", "CONT", "CAT"))
+  expect_match(tfl_templates()$label[tfl_templates()$name == "demog"], "Demographics", fixed = TRUE)
+  # demog's variables are as written: none is optional (no any_of default)
+  expect_null(dm$ard$analyses[[2L]]$optional)
+  # hierarchical: min_pct the ARD's filter (no plan item), the Total column
   h <- tfl_template_expand("ae_soc_pt", list(population = "SAF", min_pct = 5, total = TRUE))
   hf <- vapply(h$content, `[[`, "", "fn")
-  expect_true(all(c("plan_filter", "plan_total") %in% hf))
+  expect_true("plan_total" %in% hf)
+  expect_false("plan_filter" %in% hf)
+  expect_identical(as.character(h$ard$analyses[[1L]]$post), "keep_min_pct(5)")
   expect_true(isTRUE(h$ard$analyses[[1L]]$overall))
   # the nested variant: its root's parameters, its own and its parent's defaults
   v <- tfl_template_params("ae_ser_soc_pt")
@@ -115,7 +121,7 @@ tt_study <- function(root) {
 }
 tt_report <- function(d, id, name, args) {
   f <- file.path(d, "spec", "outputs", paste0(id, ".yml"))
-  tfl_write_output(tfl_output(id, "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output(id, "table", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = name, args = args)), f)
   f
 }
@@ -131,8 +137,8 @@ test_that("in a study: demog with a Total column and its own order; the program 
   tt_skip()
   skip_if_not_installed("haven")
   d <- tt_study(withr::local_tempdir())
-  f <- tt_report(d, "T-DM", "demog", list(population = "SAF", total = TRUE,
-                                          order = c("SEX", "AGE", "AGEGR1", "RACE", "ETHNIC")))
+  f <- tt_report(d, "T-DM", "demog", c(tt_dm_args, list(total = TRUE,
+                                          order = c("SEX", "AGE", "AGEGR1", "RACE", "ETHNIC"))))
   r <- tt_run(d, "T-DM", f)
   t <- tt_tab(r$plan)
   expect_true("Total" %in% names(t))
@@ -141,7 +147,6 @@ test_that("in a study: demog with a Total column and its own order; the program 
   # plan_stub(heading = ""), #538); an rtfreporter before it prints the name
   if ("heading" %in% names(formals(rtfreporter::plan_stub))) {
     hdr <- unlist(suppressMessages(rtfreporter::plan_apply(r$plan, "pages"))[[1L]]$col_header)
-    expect_identical(hdr[1L], "")
     expect_false("row_label" %in% hdr)
   }
   n <- sum(adsl$SAFFL == "Y")
@@ -149,20 +154,21 @@ test_that("in a study: demog with a Total column and its own order; the program 
   # the program: the template's call, the study standard's look after it
   code <- paste(tfl_content_code(r$ro, pipe = "|>"), collapse = "\n")
   expect_match(code, "tflspec::tfl_tpl(\n  ard,\n  \"demog\",", fixed = TRUE)
-  expect_false(grepl("stub_name", code, fixed = TRUE))
-  expect_match(code, "# (study default)\n  plan_stub(", fixed = TRUE)
+  # (demog reaches the study standard through its references: the values are in the call)
+  expect_match(code, "# template demog; study defaults:", fixed = TRUE)
+  expect_match(code, "stub_name = ", fixed = TRUE)
   # the program's plan is the report's
   e <- new.env()
   e$ard <- r$ard
   suppressMessages(eval(parse(text = code), envir = e))
   expect_identical(tt_tab(e$plan), t)
   # a report's own value over the study standard's: said
-  f2 <- tt_report(d, "T-DM2", "demog", list(population = "SAF", count_cell = "{n}"))
+  f2 <- tt_report(d, "T-DM2", "demog", c(tt_dm_args, list(count_cell = "{n}")))
   expect_message(tfl_resolve_output(tfl_read_output(f2), tfl_read_study_spec(d)),
                  "count_cell overrides the study standard \\(plan_cells.categorical\\)")
   # count_cell a guarded list: a zero count `0`; the program writes the guard as R
-  f3 <- tt_report(d, "T-DM3", "demog", list(
-    population = "SAF", count_cell = list(tfl_r('n == 0 ~ "0"'), "{n} ({p:.1f%}%)")))
+  f3 <- tt_report(d, "T-DM3", "demog", c(tt_dm_args, list(
+    count_cell = list(tfl_r('n == 0 ~ "0"'), "{n} ({p:.1f%}%)"))))
   r3 <- suppressMessages(tt_run(d, "T-DM3", f3))
   t3 <- tt_tab(r3$plan)
   race <- t3[t3$group == "Race, n (%)", setdiff(names(t3), c("group", "label"))]
@@ -210,16 +216,16 @@ test_that("the layout's own page and column header: the study standard's replace
   s <- tfl_read_study_spec(d)
   fn_args <- function(ro, fn) Filter(function(i) identical(i$fn, fn), ro$content)
   res <- function(name, args) {
-    tfl_resolve_output(tfl_output("T-9", "table", population = "SAF",
+    tfl_resolve_output(tfl_output("T-9", "table", common = list(population = "SAF"),
                                   template = list(name = name, args = args)), s)
   }
   # no plan_paginate_rows in the standard: the layout's
-  pg <- fn_args(res("summary", list(continuous = "AGE")), "plan_paginate_rows")
+  pg <- fn_args(res("summary", list(by = "TRT01A", continuous = "AGE")), "plan_paginate_rows")
   expect_identical(pg[[length(pg)]]$args, list(max_rows = 30L, split = "group_safe"))
   # the standard's: it updates the layout's, argument by argument (the split stays)
   s$defaults$content <- c(s$defaults$content,
                           list(tfl_item("plan_paginate_rows", list(max_rows = 15L))))
-  ro <- res("summary", list(continuous = "AGE"))
+  ro <- res("summary", list(by = "TRT01A", continuous = "AGE"))
   pg <- fn_args(ro, "plan_paginate_rows")
   expect_identical(pg[[length(pg)]]$args, list(max_rows = 15L, split = "group_safe"))
   hp <- fn_args(res("ae_soc_pt", list()), "plan_paginate_rows")
@@ -245,7 +251,7 @@ test_that("the program runs in an R that did not library(tflspec): the template'
                                   stdout = TRUE, stderr = FALSE))
   skip_if_not(identical(utils::tail(has, 1L), "TRUE"), "tflspec is not installed where a child R looks")
   d <- tt_study(withr::local_tempdir())
-  f <- tt_report(d, "T-DM", "demog", list(population = "SAF"))
+  f <- tt_report(d, "T-DM", "demog", tt_dm_args)
   r <- tt_run(d, "T-DM", f)
   code <- tfl_content_code(r$ro, pipe = "|>")
   expect_true(any(grepl("tflspec::tfl_tpl(", code, fixed = TRUE)))

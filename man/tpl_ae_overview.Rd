@@ -4,7 +4,7 @@
 \alias{tpl_ae_overview}
 \title{Overview of adverse events: a table plan from the template \code{ae_overview}}
 \usage{
-tpl_ae_overview(ard, population = "SAF", ..., codelists = NULL)
+tpl_ae_overview(ard, population, ..., codelists = NULL)
 }
 \arguments{
 \item{ard}{The normalized ARD's source: the study ARD's rows of this
@@ -12,9 +12,11 @@ report.}
 
 \item{population}{The analysis set's id (\code{"SAF"}).}
 
-\item{...}{The template's other parameters: \code{by}, \code{data}, \code{where},
-\code{data_id}, \code{flags} (the rows: a list, each \code{id}, \code{label} and \code{where}),
-\code{heading}.}
+\item{...}{The template's other parameters: \code{by} (required, no
+default), then \code{data}, \code{where}, \code{data_id}, \code{flags} (the rows: a list,
+each \code{id}, \code{label} and \code{where}), \code{heading}, \code{denominator}, \code{header_n},
+and the look (\code{stub_name}, \code{blanks}, \code{border_header}, \code{widths},
+\code{max_rows} ...).}
 
 \item{codelists}{The report's code lists, for the order and labels of
 values; \code{NULL} takes the ARD's.}
@@ -29,5 +31,5 @@ higher, serious, leading to discontinuation, leading to death), n (\%) by
 arm, one row a kind.
 }
 \examples{
-tfl_template_expand("ae_overview")$ard$analyses[[3]]
+tfl_template_expand("ae_overview", list(population = "SAF", by = "TRT01A"))$ard$analyses[[3]]
 }

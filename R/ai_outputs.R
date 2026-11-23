@@ -32,7 +32,7 @@
     o <- tryCatch(tfl_read_output(f), error = function(e) NULL)
     if (is.null(o) || is.null(o$id)) return(NULL)
     data.frame(output_id = o$id, draft_title = .na_scalar(o$label),
-               population = .na_scalar(o$population),
+               population = .out_population(o),
                file = gsub("\\\\", "/", file.path(area, basename(f))),
                stringsAsFactors = FALSE)
   })

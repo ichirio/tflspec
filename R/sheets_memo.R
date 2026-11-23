@@ -55,7 +55,7 @@
   for (e in .sheets_memo$entries) {
     if (identical(e$key, key)) return(e$sheets)
   }
-  sheets <- tfl_sheets_from_yaml(dir)
+  sheets <- tfl_sheets_from_yaml(dir, templates = "expand")
   .sheets_memo$runs <- .sheets_memo$runs + 1L
   # (the same folder once, the last few folders)
   old <- Filter(function(e) !identical(e$key$dir, key$dir), .sheets_memo$entries)

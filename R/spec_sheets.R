@@ -20,11 +20,24 @@
 #' (the first pattern, `@<name>`), and an `extends` cell (`a | b`, or `none`)
 #' only when the chain is not `[<pattern>, defaults]` as the `pattern` cell
 #' alone says it: `extends: none`, a pattern after the defaults, a pattern
-#' alone, two patterns.  `tfl_yaml_from_sheets()` reads the cell as the chain,
+#' alone, two patterns; a map by step as `content=none; page=patterns/a |
+#' defaults`.  `tfl_yaml_from_sheets()` reads the cell as the chain,
 #' in its order; an `extends` cell whose first pattern is not the `pattern`
 #' cell's is an error (one of the two was edited).
 #'
 #' @param dir The study folder (or its `spec/`).
+#' @param templates What a report written as a template SPEC becomes.
+#'   `"sheet"` (the default): one row of the `templates` sheet (and its
+#'   `template_rows`, and its `conditions` as rows of the ARD's
+#'   `conditions` sheet with `analysis_id` blank), by the template's name
+#'   and arguments, as [tfl_read_template_sheets()] reads them; an argument
+#'   that is a map (`formats`) is not on the sheets and stays in the
+#'   report's YAML file; the report's page parts,
+#'   codelists and report row are the other sheets' as for any report. Nothing is expanded; a
+#'   report is written out as its items only by [tfl_template_to_spec()],
+#'   called on purpose.  `"expand"`: the report is expanded first
+#'   ([tfl_template_to_spec()]) and its items are on the table and ARD
+#'   sheets, for what is made from the items (the ARD, the preview).
 #' @param study The study's spec, as [tfl_read_study_spec()] reads it.
 #' @param outputs The reports, as [tfl_read_outputs()] reads them: a list of
 #'   `tfl_output` (as written, not resolved), named by id.
@@ -32,7 +45,10 @@
 #'   `planner` (the `_tflplanner` sheet: the report list and the setup),
 #'   `ard` (the ARD sheets), `listing` (`listings`, `listing_cols`),
 #'   `figures` (a figure's design list, by id), `study` (study.yml's
-#'   fields), `not_converted` (what the sheets cannot hold).
+#'   fields), `templates` and `template_rows` (the template reports; with
+#'   `templates = "expand"` both are empty), `template_maps` (`output_id`,
+#'   `param`: a template report's arguments that are maps, which the sheets
+#'   do not hold), `not_converted` (what the sheets cannot hold).
 #' @examples
 #' d <- system.file("extdata", "spec-yaml", package = "tflspec")
 #' sh <- tfl_sheets_from_yaml(d)
@@ -43,13 +59,15 @@
 #' outs[["T-14-1-1"]]$label <- "Demographics (draft)"
 #' tfl_sheets_from_spec(s, outs)$planner$description
 #' @export
-tfl_sheets_from_yaml <- function(dir) {
-  tfl_sheets_from_spec(tfl_read_study_spec(dir), tfl_read_outputs(dir, skip_bad = TRUE))
+tfl_sheets_from_yaml <- function(dir, templates = c("sheet", "expand")) {
+  tfl_sheets_from_spec(tfl_read_study_spec(dir), tfl_read_outputs(dir, skip_bad = TRUE),
+                       templates = templates)
 }
 
 #' @rdname tfl_sheets_from_yaml
 #' @export
-tfl_sheets_from_spec <- function(study, outputs) {
+tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand")) {
+  templates <- match.arg(templates)
   if (!inherits(study, "tfl_study_spec")) {
     .ard_stop("tfl_sheets_from_spec(): `study` is a study's spec, tfl_read_study_spec().")
   }
@@ -63,20 +81,21 @@ tfl_sheets_from_spec <- function(study, outputs) {
   toc_ids <- vapply(s$toc$outputs %||% list(), function(e) e$id %||% NA_character_, "")
   ids <- vapply(outs, function(o) o$id, "")
   outs <- outs[order(match(ids, toc_ids, nomatch = length(toc_ids) + 1L), seq_along(ids))]
-  # a template SPEC: the sheets hold its items (tfl_template_to_spec()),
-  # the ARD's analyses among them
-  # (one that cannot be expanded -- a KM type with no `data:` steps -- stays
-  # as it is, its template and args kept, and is named in a warning: the
-  # study still reads, the report can be opened and fixed; running it says
-  # the error again)
-  outs <- lapply(outs, function(o) {
-    if (is.null(.tpl_spec_of(o))) return(o)
-    tryCatch(tfl_template_to_spec(o, s), error = function(e) {
-      warning(sprintf("%s: kept as it is (its template not expanded): %s", o$id,
-                      conditionMessage(e)), call. = FALSE)
-      o
+  # a template SPEC is one row of the `templates` sheet; only
+  # `templates = "expand"` writes its items out first
+  if (identical(templates, "expand")) {
+    outs <- lapply(outs, function(o) {
+      if (is.null(.tpl_spec_of(o))) return(o)
+      tryCatch(tfl_template_to_spec(o, s), error = function(e) {
+        warning(sprintf("%s: kept as it is (its template not expanded): %s", o$id,
+                        conditionMessage(e)), call. = FALSE)
+        o
+      })
     })
-  })
+  }
+  trows <- list()
+  tparam_rows <- list()
+  tmap_rows <- list()
   bridge <- .bridge_fn(".plan_sheets_from_content")
   nc <- list()
   note <- function(output, part, reason) nc[[length(nc) + 1L]] <<- data.frame(
@@ -157,33 +176,129 @@ tfl_sheets_from_spec <- function(study, outputs) {
   }
 
   # -- the page parts ----------------------------------------------------------
-  page_rows <- function(page, id) {
-    for (band in c("header", "footer", "titles", "footnotes")) {
-      m <- page[[band]]
-      if (inherits(m, "tfl_unset")) next
-      for (line in names(m)) {
-        cells <- m[[line]]
-        r <- list(output_id = id, line = line)
-        if (inherits(cells, "tfl_unset")) { r$left <- "(none)"; add(band, r); next }
-        for (cn in c("left", "center", "right", "row_height_twips")) {
-          if (!is.null(cells[[cn]])) r[[cn]] <- cell(cells[[cn]])
-        }
-        add(band, r)
+  # the highest line number of a band among the reports' own (body) lines:
+  # a configuration's `last` lines are numbered above it
+  rep_max <- stats::setNames(vector("list", length(.page_bands)), .page_bands)
+  for (band in .page_bands) {
+    mx <- 0
+    for (o in outs) {
+      x <- o$page[[band]]
+      if (is.list(x) && !inherits(x, "tfl_unset")) {
+        n <- suppressWarnings(as.numeric(names(.page_own_band(x)$body)))
+        n <- n[!is.na(n)]
+        if (length(n)) mx <- max(mx, n)
       }
     }
+    rep_max[[band]] <- mx
+  }
+  add_band_line <- function(band, id, line, cells) {
+    r <- list(output_id = id, line = line)
+    if (inherits(cells, "tfl_unset")) { r$left <- "(none)"; add(band, r); return(invisible()) }
+    for (cn in c("left", "center", "right", "row_height_twips")) {
+      if (!is.null(cells[[cn]])) r[[cn]] <- cell(cells[[cn]])
+    }
+    add(band, r)
+  }
+  # a configuration band's lines by their sheet number
+  band_lines <- function(page, band) {
+    cb <- .page_config_band(page[[band]], band, "the page configuration") %||% list()
+    nums <- .cfg_numbers(cb, rep_max[[band]])
+    out <- list()
+    for (blk in .page_blocks) for (k in names(cb[[blk]])) out[[nums[[blk]][[k]] %||% k]] <- cb[[blk]][[k]]
+    out
+  }
+  # a band's rows: `m` the lines as written (a configuration's blocks, or a
+  # report's body lines and `first` / `last` overrides); `nums` the sheets'
+  # numbers of the configuration's lines (its own numbers, a `last` line
+  # renumbered above the reports' only when they would not follow them)
+  band_rows <- function(band, m, id, nums, config) {
+    add_line <- function(line, cells) add_band_line(band, id, line, cells)
+    if (config) {
+      for (blk in .page_blocks) {
+        for (k in names(m[[blk]])) add_line(nums[[blk]][[k]] %||% k, m[[blk]][[k]])
+      }
+      return(invisible())
+    }
+    ob <- .page_own_band(m)
+    # (an override says the configuration line's number)
+    for (blk in .page_blocks) {
+      if (inherits(ob[[blk]], "tfl_unset")) next
+      for (k in names(ob[[blk]])) add_line(nums[[blk]][[k]] %||% k, ob[[blk]][[k]])
+    }
+    # (a body line takes a number the configuration does not use, else it would
+    # read as an override of that line)
+    taken <- c(unlist(nums$first), unlist(nums$last))
+    free <- max(suppressWarnings(as.numeric(c(taken, names(ob$body)))), 0, na.rm = TRUE)
+    for (k in names(ob$body)) {
+      line <- k
+      if (k %in% taken) {
+        free <- free + 1
+        line <- as.character(as.integer(free))
+        note(id, paste0("page.", band), paste0("line ", k, " is a number of the page configuration's lines on the sheets; written as line ", line))
+      }
+      add_line(line, ob$body[[k]])
+    }
+  }
+  # a page: its bands (rows by line), tokens, and the rtfreporter arguments
+  # as the page and report columns; `cfg` the configuration's page a report's
+  # lines are numbered against (NULL for the configuration's own rows)
+  page_rows <- function(page, id, cfg = NULL, config = is.null(cfg), base = NULL) {
+    for (band in .page_bands) {
+      m <- page[[band]]
+      if (!is.null(base)) {
+        # a `@name` configuration lies over the default rows, as a pattern's rows
+        # do: its rows are what differs; a default line it lacks is (none)
+        xl <- band_lines(page, band)
+        bl <- base$lines[[band]]
+        for (n in names(xl)) if (!identical(bl[[n]], xl[[n]])) add_band_line(band, id, n, xl[[n]])
+        for (n in setdiff(names(bl), names(xl))) add_band_line(band, id, n, tfl_unset())
+        next
+      }
+      if (inherits(m, "tfl_unset") || is.null(m)) next
+      cb <- .page_config_band(if (config) m else cfg[[band]], band, "the page configuration")
+      nums <- .cfg_numbers(cb, rep_max[[band]])
+      band_rows(band, m, id, nums, config)
+    }
     for (nm in names(page$tokens)) add("tokens", list(output_id = id, name = nm, value = cell(page$tokens[[nm]])))
-    # the rtfreporter functions' arguments back as the page and report columns
     pr <- .page_columns(page)
+    if (!is.null(base)) {
+      for (sh in names(pr)) pr[[sh]] <- pr[[sh]][!vapply(names(pr[[sh]]), function(k) identical(pr[[sh]][[k]], base$pr[[sh]][[k]]), NA)]
+    }
     for (sh in c("page", "report")) if (length(pr[[sh]])) add(sh, c(list(output_id = id), pr[[sh]]))
     for (k in setdiff(names(page), .page_known)) note(id, paste0("page.", k), "no sheet for it")
   }
-  page_rows(s$defaults$page, NA_character_)
-  for (nm in names(s$patterns)) page_rows(s$patterns[[nm]]$page, paste0("@", nm))
+  # the study's default page configuration (when the study has its own: a
+  # built-in one is every report's anyway) with its tokens are the default
+  # rows; its other configurations are `@name` rows, as a pattern's
+  dflt <- .style_default_name(s)
+  dpage <- if (dflt %in% names(s$styles)) s$styles[[dflt]]$page else list()
+  dpage$tokens <- .study_tokens(s)
+  page_rows(dpage, NA_character_)
+  base <- list(lines = stats::setNames(lapply(.page_bands, function(b) band_lines(dpage, b)), .page_bands),
+               pr = .page_columns(dpage))
+  for (nm in setdiff(names(s$styles), dflt)) {
+    page_rows(s$styles[[nm]]$page, paste0("@", nm), base = base)
+    # (a configuration with nothing that differs from the default rows has no
+    # row: one empty row of the report sheet keeps its name, which a report's
+    # pattern cell needs to be known)
+    mine <- vapply(rows, function(l) any(vapply(l, function(r) identical(r$output_id, paste0("@", nm)), NA)), NA)
+    if (!any(mine)) add("report", list(output_id = paste0("@", nm)))
+    if (length(s$styles[[nm]]$content)) {
+      note(paste0("@", nm), "content", paste0("a page configuration's content (", nm, ") is not kept: no sheet holds it"))
+    }
+  }
 
   # -- the ARD's study-wide sheets ----------------------------------------------
   ard <- list()
   keys <- s$study$keys %||% list()
   ard$study <- data.frame(key = names(keys), value = vapply(keys, cell, ""), stringsAsFactors = FALSE)
+  # (settings: adam_levels other than none on the ARD's study sheet: the
+  # ARD's fingerprint, tfl_ard_spec_hash(), counts it)
+  al <- .study_adam_levels(s)
+  if (!identical(al, "none")) {
+    ard$study <- rbind(ard$study[!ard$study$key %in% "adam_levels", , drop = FALSE],
+                       data.frame(key = "adam_levels", value = al, stringsAsFactors = FALSE))
+  }
   ard$datasets <- .rows_df(lapply(s$data$datasets %||% list(), function(e) lapply(e, cell)), .ard_spec_sheets$datasets)
   ard$populations <- .rows_df(lapply(s$data$populations %||% list(), function(e) {
     m <- lapply(e, cell); if (!is.null(m$id)) { m$population_id <- m$id; m$id <- NULL }; m
@@ -204,7 +319,7 @@ tfl_sheets_from_spec <- function(study, outputs) {
            where = cell(l$where))
     })
   }), recursive = FALSE), .ard_spec_sheets$groups)
-  adata <- list(); analyses <- list()
+  adata <- list(); analyses <- list(); cond_rows <- list(); ards_rows <- list()
   listings <- list(); listing_cols <- list(); fig_rows <- list()
   figures <- list()
   toc_index <- stats::setNames(s$toc$outputs %||% list(), vapply(s$toc$outputs %||% list(), function(e) e$id %||% "", ""))
@@ -214,43 +329,95 @@ tfl_sheets_from_spec <- function(study, outputs) {
   for (id in names(outs)) {
     o <- outs[[id]]
     e <- toc_index[[id]] %||% list()
+    tpl <- .tpl_spec_of(o)
     planner[[length(planner) + 1L]] <- list(
       output_id = id, description = cell(e$label %||% o$label), setup_code = NA_character_,
       process_code = .first_r_step(o$data$steps),
-      section = cell(e$section), population = cell(e$population %||% o$population),
+      section = cell(e$section), population = cell(e$population %||% .out_population(o)),
       datasets = cell(e$datasets %||% .records_dataset(o)), batches = cell(e$sets))
     if (!is.null(.records_dataset(o)) && !is.null(o$data$where)) {
       note(id, "data", "a records table's where (its dataset's condition) stays in YAML")
     }
     # the report row: its kind, its pattern, its file and program
     rr <- list(output_id = id, type = o$kind)
-    pat <- grep("^patterns/", o$extends, value = TRUE)
+    # (the report's `common:`: its population is the planner's / templates' column,
+    # the other two the report row's)
+    for (k in c("treatment", "population_label")) if (!is.null(o$common[[k]])) rr[[k]] <- cell(o$common[[k]])
+    # (a map by step: the cell says it step by step, `content=none; page=a | b`
+    # (Q6 of PLAN-5B); a template report that writes none takes its template's)
+    if (is.list(o$extends)) {
+      rr$extends <- paste(sprintf("%s=%s", names(o$extends),
+                                  vapply(o$extends, paste, "", collapse = " | ")), collapse = "; ")
+    }
+    pat <- if (!is.list(o$extends)) grep("^patterns/", o$extends, value = TRUE)
+    # (a report's own configuration, a study set that is not the default, is
+    # the `@name` of its rows: the pattern cell says it, the extends cell the
+    # chain when that is not [<pattern>, defaults])
+    sty <- if (is.character(o$style) && length(o$style) == 1L && o$style != dflt &&
+               o$style %in% names(s$styles) && !length(pat) &&
+               (is.null(o$extends) || identical(as.character(unlist(o$extends)), "defaults")) &&
+               !is.list(o$extends)) o$style
     if (length(pat)) rr$pattern <- paste0("@", substring(pat[1L], 10L))
+    else if (!is.null(sty)) rr$pattern <- paste0("@", sty)
+    pat_cell <- if (length(pat)) pat[1L] else if (!is.null(sty)) paste0("patterns/", sty)
+    # (the pattern cell alone reads back as [<pattern>, defaults], a style's too)
     # (what the pattern cell alone reads back as is [first pattern, defaults];
     # any other chain -- the order flipped, `none`, a pattern alone, two
     # patterns -- is said in the `extends` cell)
-    if (!identical(as.character(unlist(o$extends)),
-                   c(if (length(pat)) pat[1L], "defaults"))) rr$extends <- .sheet_cell(o$extends)
+    if (!is.null(o$extends) && !is.list(o$extends) && is.null(sty) &&
+        !identical(as.character(unlist(o$extends)), c(pat_cell, "defaults"))) {
+      rr$extends <- .sheet_cell(o$extends)
+    }
     for (k in c("file", "program")) if (!is.null(e[[k]])) rr[[k]] <- cell(e[[k]])
     # the report row: its kind, pattern, file and program here, its
     # rtfreporter arguments from page_rows() -- one row
     before <- length(rows$report %||% list())
-    page_rows(o$page, id)
+    rs <- tryCatch(.report_style(o, s), error = function(e) NULL)
+    page_rows(o$page, id, cfg = rs$set$page %||% list())
     after <- rows$report %||% list()
     if (length(after) > before) {
       extra <- after[[length(after)]]
       for (k in setdiff(names(extra), "output_id")) rr[[k]] <- extra[[k]]
       rows$report <- after[-length(after)]
     }
-    if (inherits(o$content, "tfl_r")) rr$content_code <- cell(o$content)
-    if (identical(o$data$source, "code") && !is.null(o$data$code)) rr$data_code <- cell(o$data$code)
-    # the ARD's name in the report's program, when not ard
-    if (!is.null(o$data$object) && !identical(o$data$object, "ard")) rr$ard_object <- cell(o$data$object)
+    if (is.null(tpl)) {
+      if (inherits(o$content, "tfl_r")) rr$content_code <- cell(o$content)
+      if (identical(o$data$source, "code") && !is.null(o$data$code)) rr$data_code <- cell(o$data$code)
+      # the ARD's name in the report's program, when not ard
+      if (!is.null(o$data$object) && !identical(o$data$object, "ard")) rr$ard_object <- cell(o$data$object)
+    }
     add("report", rr)
     for (v in names(o$codelists)) for (i in seq_along(o$codelists[[v]])) {
       cl <- o$codelists[[v]][[i]]
       add("codelists", list(output_id = id, variable = v, value = cell(cl$value), label = cell(cl$label), order = as.character(i),
                             under = cell(cl$under)))
+    }
+    # a template report: its name and arguments on the templates sheet, and
+    # that is all of the template; the items are made again from them
+    if (!is.null(tpl)) {
+      enc <- .tpl_sheets_encode(id, o$kind, .na_scalar(o$label), tpl, .out_population(o))
+      trows[[length(trows) + 1L]] <- enc$row
+      tparam_rows <- c(tparam_rows, enc$rows)
+      # (its condition rows: the conditions sheet's, analysis_id blank)
+      cond_rows <- c(cond_rows, enc$cond)
+      # (its maps are not on the sheets: named, for tfl_yaml_from_sheets() to
+      # take them from the report's file it writes over)
+      for (m in enc$maps) tmap_rows[[length(tmap_rows) + 1L]] <- list(output_id = id, param = m)
+      if (length(enc$lost)) {
+        warning(sprintf("%s: template arguments the templates sheet cannot hold are not kept: %s",
+                        id, paste(enc$lost, collapse = ", ")), call. = FALSE)
+        note(id, "template", paste0("template arguments the templates sheet cannot hold: ",
+                                    paste(enc$lost, collapse = ", ")))
+      }
+      own <- c(if (length(o$content)) "content", if (length(o$ard)) "ard",
+               if (length(o$data$steps)) "data steps")
+      if (length(own)) {
+        warning(sprintf("%s: the report's own %s stay in YAML; the templates sheet has no place for them",
+                        id, paste(own, collapse = ", ")), call. = FALSE)
+        note(id, "template", paste0("the report's own ", paste(own, collapse = ", "),
+                                    " stay in YAML: the templates sheet has no place for them"))
+      }
+      next
     }
     code_content <- inherits(o$content, "tfl_r")
     # the datasets a report written by hand reads, and whether it reads its
@@ -262,6 +429,7 @@ tfl_sheets_from_spec <- function(study, outputs) {
     }
     # the report's ARD analyses and analysis data, whatever its kind
     for (a in o$ard$analysis_data %||% list()) {
+      a <- .entry_pop_inject(a, .out_population(o), .pop_from(s$data$populations, .out_population(o)))
       m <- lapply(a, cell); m$data_id <- m$id; m$id <- NULL
       if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
       adata[[length(adata) + 1L]] <- c(list(output_id = id), m)
@@ -274,6 +442,13 @@ tfl_sheets_from_spec <- function(study, outputs) {
       if (!is.null(a$denominator)) a$denominator <- .den_cell(a$denominator)
       # (`by: []`: no columns, said so)
       if ("by" %in% names(a) && !length(a$by)) a$by <- tfl_unset()
+      # an item's condition rows and its calls: rows of their own sheets
+      # (a row's own analysis_id as row_analysis_id); its levels a cell
+      cond_rows <- c(cond_rows, .item_rows_out(a$conditions, id, a$id, cell))
+      ards_rows <- c(ards_rows, .item_rows_out(a$ards, id, a$id, cell))
+      a$conditions <- NULL
+      a$ards <- NULL
+      if (is.list(a$levels) && !is.null(names(a$levels))) a$levels <- .levels_cell(a$levels)
       m <- lapply(a, cell); m$analysis_id <- m$id; m$id <- NULL
       if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
       if (!is.null(a$ref)) note(id, paste0("analyses.", a$id), "a reference to another report's analysis (ref) has no sheet")
@@ -328,12 +503,12 @@ tfl_sheets_from_spec <- function(study, outputs) {
       # a figure of items (R/fig_content.R): its data and items as they are,
       # the design list's `content` (read back by .conv_output(), #689)
       fd <- list(template = o$template, data = o$data$steps, content = .items_to_list(o$content))
-      for (k in c("ggplot2_version", "plot", "plots", "compose")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]
+      for (k in c("ggplot2_version", "plot", "plots", "compose", "figure")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]
       figures[[id]] <- fd
       # what the design list has no place for is said, by the report
       lost <- c(setdiff(names(o$data), c("steps", "code", "datasets", "ard", "source")),
                 if (!is.null(o$data$source) && !identical(o$data$source, "code")) "source")
-      lost <- c(lost, setdiff(names(o), c(.output_fields, "template", "ggplot2_version", "plot", "plots", "compose")))
+      lost <- c(lost, setdiff(names(o), c(.output_fields, "template", "ggplot2_version", "plot", "plots", "compose", "figure")))
       if (length(lost)) {
         note(id, "figure", paste0("a figure of items: ", paste(unique(lost), collapse = ", "),
                                    " is not kept (the design list has no place for it)"))
@@ -344,6 +519,7 @@ tfl_sheets_from_spec <- function(study, outputs) {
       if (code_content) oc$content <- list()
       fd <- .fig_design_of_output(oc)
       if (!is.null(o$template)) fd$template <- o$template
+      if (!is.null(o$figure)) fd$figure <- o$figure
       # a figure that is its own code and nothing of the designer's has no
       # design
       if (!(code_content && identical(names(fd), "layers"))) figures[[id]] <- fd
@@ -362,33 +538,23 @@ tfl_sheets_from_spec <- function(study, outputs) {
     note(NA_character_, "options", paste0(
       "defaults.yml options: (", paste(names(s$options), collapse = ", "), ") is not kept: no sheet or column holds it"))
   }
-  if (length(s$styles)) {
-    note(NA_character_, "styles", paste0(
-      "defaults.yml styles: (", paste(names(s$styles), collapse = ", "), ") is not kept: no sheet or column holds it"))
-  }
   for (id in names(outs)) {
-    if (length(outs[[id]]$style)) {
-      note(id, "style", paste0("style: ", paste(unlist(outs[[id]]$style), collapse = ", "),
-                               " is not kept: no sheet or column holds it; the report no longer picks its look"))
+    st <- outs[[id]]$style
+    if (length(st) && !(is.character(st) && length(st) == 1L && (st %in% names(s$styles) || st == dflt))) {
+      note(id, "style", paste0("style: ", paste(unlist(st), collapse = ", "),
+                               " is a built-in configuration or not the study's: no sheet or column holds it"))
     }
   }
-  # the layers' code lists have no sheet of their own (a report's own are
-  # its rows): they stay in the YAML
-  # (in the YAML they stay; a study written from the sheets has not got them,
-  # and a report that reads the variable is then made without the list: its
-  # ARD program loses the set_levels() step -- the values' order and labels, #689)
-  cl_said <- function(cl, whose, file) paste0(
-    whose, " code lists (", file, ": ", paste(names(cl), collapse = ", "), ") stay in YAML, not on the sheets: ",
-    "a study written from the sheets has not got them, so a report that reads one of these variables ",
-    "is made without the list and its ARD program does not set the values' order and labels")
-  if (length(s$defaults$codelists)) {
-    note(NA_character_, "codelists", cl_said(s$defaults$codelists, "the defaults'", "defaults.yml"))
+  # (the study's own lists, by name, and its ADaM metadata: no sheet holds them)
+  if (length(s$codelists)) {
+    note(NA_character_, "codelists", paste0(
+      "the study's code lists (defaults.yml: ", paste(names(s$codelists), collapse = ", "),
+      ") stay in YAML, not on the sheets: a study written from the sheets has not got them"))
   }
-  for (nm in names(s$patterns)) {
-    if (length(s$patterns[[nm]]$codelists)) {
-      note(paste0("@", nm), "codelists", cl_said(s$patterns[[nm]]$codelists, "a pattern's",
-                                                  paste0("patterns/", nm, ".yml")))
-    }
+  if (nrow(s$adam_meta$variables %||% data.frame())) {
+    note(NA_character_, "adam_meta", paste0(
+      "the study's ADaM metadata (defaults.yml adam_meta:) stays in YAML, not on the sheets: ",
+      "a study written from the sheets has not got it, so study$adam has no levels from it"))
   }
   # the setup code on the planner sheet's study row
   planner <- c(list(list(output_id = NA_character_, description = "(every report)",
@@ -398,12 +564,15 @@ tfl_sheets_from_spec <- function(study, outputs) {
   ard$objects <- .rows_df(objs, .ard_spec_sheets$objects)
   ard$analysis_data <- .rows_df(adata, c("output_id", .ard_spec_sheets$analysis_data))
   ard$analyses <- .rows_df(analyses, .ard_spec_sheets$analyses)
+  ard$conditions <- .rows_df(cond_rows, .ard_spec_sheets$conditions)
+  ard$ards <- .rows_df(ards_rows, .ard_spec_sheets$ards)
 
   # the table and report sheets as data frames (the study sheet from study.yml's settings)
   table <- list()
   settings <- s$study$settings %||% list()
   # every report's file and program go back to the report sheet's study row
   fp <- settings[intersect(c("file", "program"), names(settings))]
+  # (the default style is the default rows' page configuration; its name stays a study row)
   settings <- settings[setdiff(names(settings), c("file", "program"))]
   table$study <- data.frame(key = as.character(names(settings)), value = vapply(settings, cell, ""), stringsAsFactors = FALSE)
   for (sh in c(names(.ard_spec_schema()), .ard_spec_pattern_sheets)) {
@@ -482,6 +651,10 @@ tfl_sheets_from_spec <- function(study, outputs) {
                       listing_cols = .rows_df(listing_cols, .listing_sheets$listing_cols),
                       figures = .rows_df(fig_rows, c("output_id", "datasets", "ard"))),
        figures = figures, study = s$study,
+       templates = .rows_df(trows, c("output_id", "kind", "label", "population", "template", "by",
+                                     "where", "args")),
+       template_rows = .rows_df(tparam_rows, c("output_id", "param", "value", "label")),
+       template_maps = .rows_df(tmap_rows, c("output_id", "param")),
        not_converted = if (length(nc)) do.call(rbind, nc) else
          data.frame(output = character(), part = character(), reason = character(), stringsAsFactors = FALSE))
 }
@@ -515,6 +688,56 @@ tfl_sheets_from_spec <- function(study, outputs) {
   }
   if (is.logical(v)) v <- ifelse(v, "TRUE", "FALSE")
   paste(as.character(v), collapse = " | ")
+}
+
+# An item's rows (its conditions: a data frame or a list of maps; its
+# ards: a list of maps) as sheet rows: output_id, analysis_id, row, then
+# the row's cells (`cell`); a row's own analysis_id as row_analysis_id
+.item_rows_out <- function(rows, output_id, analysis_id, cell = .sheet_cell) {
+  if (is.null(rows) || !length(rows)) return(list())
+  if (is.data.frame(rows)) {
+    rows <- lapply(seq_len(nrow(rows)), function(k) lapply(rows, function(v) {
+      e <- v[[k]]
+      if (is.list(v) && !inherits(e, "tfl_r")) unlist(e) else e
+    }))
+  }
+  if (!is.list(rows) || !is.null(names(rows))) return(list())
+  lapply(seq_along(rows), function(k) {
+    m <- lapply(rows[[k]], cell)
+    if (!is.null(m$analysis_id)) { m$row_analysis_id <- m$analysis_id; m$analysis_id <- NULL }
+    c(list(output_id = output_id, analysis_id = analysis_id, row = as.character(k)), m)
+  })
+}
+
+# An item's levels (a map: a variable, its levels) as a cell, `VAR = expr |
+# ...`: a text "a" (or several, c("a", "b")) as R, an !r as written
+.levels_cell <- function(lv) {
+  rhs <- vapply(lv, function(v) {
+    if (inherits(v, "tfl_r")) return(as.character(unclass(v)))
+    v <- as.character(unlist(v))
+    paste(deparse(if (length(v) == 1L) v[[1L]] else v), collapse = "")
+  }, "")
+  paste(sprintf("%s = %s", names(lv), rhs), collapse = " | ")
+}
+
+# The levels cell as the map it was: a text or several as text, else !r
+.levels_map <- function(x) {
+  parts <- .split_bar(x)
+  if (!length(parts)) return(NULL)
+  out <- list()
+  for (p in parts) {
+    v <- trimws(sub("=.*$", "", p))
+    rhs <- trimws(sub("^[^=]*=", "", p))
+    e <- tryCatch(str2lang(rhs), error = function(e) NULL)
+    val <- if (is.character(e) && length(e) == 1L) {
+      e
+    } else if (is.call(e) && identical(e[[1L]], as.name("c")) &&
+               all(vapply(as.list(e)[-1L], is.character, NA))) {
+      as.list(vapply(as.list(e)[-1L], identity, ""))
+    } else tfl_r(rhs)
+    out[v] <- list(val)
+  }
+  out
 }
 
 # rows (named lists of cells) as a data frame of text with the columns

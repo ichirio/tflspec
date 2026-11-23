@@ -39,7 +39,7 @@ test_that("lab_abnormal on a data without PARAMN: the parameters in their own or
   expect_false("PARAMN" %in% names(adlb))
   d <- ep_study(withr::local_tempdir(), c("adsl", "adlb"))
   f <- file.path(d, "spec", "outputs", "T-LA.yml")
-  tfl_write_output(tfl_output("T-LA", "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("T-LA", "table", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = "lab_abnormal",
                                               args = list(levels = c("LOW", "HIGH")))), f)
   r <- ep_run_child(d, "T-LA")
@@ -57,10 +57,11 @@ test_that("lab_abnormal on a data without PARAMN: the parameters in their own or
   expect_identical(nrow(a), nrow(r$ard))
 })
 
-test_that("param_change writes the same step for PARAM and AVISIT", {
-  x <- tfl_template_expand("param_change", list(population = "SAF", data = "ADVS"))
+test_that("param_change writes the same step for PARAMCD and AVISIT", {
+  x <- tfl_template_expand("param_change", list(population = "SAF", data = "ADVS", by = "TRT01A"))
   dv <- as.character(x$ard$analysis_data[[2L]]$derive)
-  expect_match(dv, "PARAM = reorder_by(PARAM, PARAMN)", fixed = TRUE)
+  # (the ARD's by is the code, PARAMCD; its text is plan_labels()', canon 1.42)
+  expect_match(dv, "PARAMCD = reorder_by(PARAMCD, PARAMN)", fixed = TRUE)
   expect_match(dv, "AVISIT = reorder_by(AVISIT, AVISITN)", fixed = TRUE)
 })
 
@@ -80,7 +81,7 @@ test_that("ancova: the differences by emmeans' trt.vs.ctrl, adjusted as `adjust`
   skip_if_not_installed("emmeans")
   d <- ep_study(withr::local_tempdir(), c("adsl", "advs"))
   f <- file.path(d, "spec", "outputs", "T-AN.yml")
-  tfl_write_output(tfl_output("T-AN", "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("T-AN", "table", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = "ancova", args = list(
                                 data = "ADVS", param = "SYSBP", visit = "CYCLE 2 DAY 1"))), f)
   r <- ep_run_child(d, "T-AN")
@@ -97,14 +98,14 @@ test_that("a denominator's by column the subjects' data lacks (AESEV): the recor
   d <- ep_study(withr::local_tempdir(), c("adsl", "adae"))
   f <- file.path(d, "spec", "outputs", "T-AE.yml")
   tfl_write_output(tfl_output(
-    "T-AE", "table", population = "SAF", extends = "defaults", label = "TEAE by severity",
+    "T-AE", "table", common = list(population = "SAF"), extends = "defaults", label = "TEAE by severity",
     ard = list(
       analysis_data = list(
         list(id = "adsl_saf", from = "ADSL", population = "SAF"),
-        list(id = "adae_saf", from = "ADAE", subjects = "adsl_saf",
+        list(id = "adae_saf", from = "ADAE", subjects_in = "adsl_saf",
              where = tfl_r("TRTEMFL == \"Y\""))),
       analyses = list(
-        list(id = "GROUPN", method = "categorical", data = "adsl_saf", variables = "TRT01A"),
+        list(id = "BIGN", method = "categorical", data = "adsl_saf", variables = "TRT01A"),
         list(id = "TEAE", method = "hierarchical", data = "adae_saf",
              by = c("TRT01A", "AESEV"), variables = c("AEBODSYS", "AEDECOD"),
              denominator = "adsl_saf", args = "over_variables = TRUE"))),
@@ -114,9 +115,9 @@ test_that("a denominator's by column the subjects' data lacks (AESEV): the recor
                                                label = "AEDECOD")))), f)
   r <- ep_run_child(d, "T-AE")
   # the join takes from ADSL only what it has; AESEV is dropped from nothing
-  expect_true(any(grepl("select(-any_of(intersect(c(\"TRT01A\", \"AESEV\"), names(adsl_saf))))",
+  expect_true(any(grepl("select(-any_of(names(select(adsl_saf, any_of(c(\"TRT01A\", \"AESEV\"))))))",
                         r$code, fixed = TRUE)))
-  expect_true(any(grepl("select(adsl_saf, USUBJID, any_of(c(\"TRT01A\", \"AESEV\")))",
+  expect_true(any(grepl("select(adsl_saf, USUBJID, TRT01A, any_of(\"AESEV\"))",
                         r$code, fixed = TRUE)))
   expect_false(is.null(r$ard), info = paste(r$out, collapse = "\n"))
   expect_false(any(grepl("doesn't exist", r$out)))

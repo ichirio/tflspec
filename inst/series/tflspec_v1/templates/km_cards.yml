@@ -1,0 +1,102 @@
+# tflspec_v1/templates/km_cards.yml
+# KM curves as a code SPEC figure: the data are the figure's steps (the
+# fit a named step, survfit2()) and the content is ggsurvfit's cards, one
+# `+` chain -- no figure content function (no `figure:` key).  The look is
+# the study's figure style (theme_tfl(), scale_colour_tfl()) and the
+# built-in KM values on the cards.
+template: km_cards
+label: KM curves (cards)
+kind: figure
+params:
+  by:
+    type: column
+    input: pick
+    choices: vars(ADTTE)
+    required: true
+    step: data
+    tier: required
+    description: The group variable; one curve a group.
+  param:
+    type: string
+    input: pick
+    choices: levels(PARAMCD)
+    required: true
+    step: data
+    tier: required
+    description: The parameter (PARAMCD) whose time to event is drawn.
+  time_unit:
+    type: enum[days|months]
+    input: pick
+    choices: fixed
+    default: !series time_unit
+    step: data
+    tier: usual
+    description: The unit of the time axis; months divides the days by days_per_month.
+  days_per_month:
+    type: number
+    input: text
+    default: !series days_per_month
+    step: data
+    tier: other
+    description: The days in a month, for time_unit months.
+  x_breaks:
+    type: list<number>
+    input: text
+    step: content
+    tier: usual
+    description: The breaks of the time axis (and the times of the number at risk); none for ggplot2's.
+  risk_table:
+    type: logical
+    input: pick
+    choices: fixed
+    default: true
+    step: content
+    tier: usual
+    description: The number of subjects at risk under the curves.
+  legend:
+    type: enum[inside|bottom|none]
+    input: pick
+    choices: fixed
+    default: bottom
+    step: content
+    tier: other
+    description: Where the legend goes (inside at the top right, bottom); none for no legend.
+derive:
+  population: {value: !series population_efficacy}
+  population_flag: {value: "{population}FL"}
+  x_label: {if: "{time_unit}", is: months, then: Time (Months), else: Time (Days)}
+  risk_item: {if: "{risk_table}", then: {risktable_stats: n.risk, times: "{x_breaks}"}}
+  legend_inside: {if: "{legend}", is: inside, then: [0.98, 0.98]}
+  legend_corner: {if: "{legend}", is: inside, then: [1, 1]}
+  legend_box: {if: "{legend}", is: inside, then: !r 'element_rect(colour = "black", fill = "white", linewidth = 0.3)'}
+extends: !series extends
+style: !series style
+data:
+  source: code
+  steps:
+    - {step: read, dataset: ADTTE}
+    - {step: param, value: "{param}"}
+    - {step: flag, variable: "{population_flag}"}
+    - step: derive
+      variable: AVAL
+      expr: !r 'AVAL / c(days = 1, months = {days_per_month})[["{time_unit}"]]'
+    - {step: survfit, name: fit, time: AVAL, censor: CNSR, by: "{by}"}
+content:
+  - ggsurvfit: {x: fit, linewidth: 0.3}
+  - add_censor_mark: {shape: 3, size: 3, stroke: 0.6}
+  - scale_colour_tfl: {palette: treatment}
+  - scale_x_continuous: {breaks: "{x_breaks}"}
+  - scale_y_continuous: {breaks: !r 'seq(0, 1, by = 0.2)'}
+  - coord_cartesian: {ylim: [0, 1]}
+  - labs: {x: "{x_label}", "y": Survival Probability}
+  - theme_tfl: {}
+  - theme:
+      legend.position: "{legend}"
+      legend.position.inside: "{legend_inside}"
+      legend.justification: "{legend_corner}"
+      legend.background: "{legend_box}"
+      legend.title: !r element_blank()
+  - add_risktable: "{risk_item}"
+page:
+  titles: ~
+  footnotes: ~

@@ -22,12 +22,15 @@ variables its analyses read (\code{by}, \code{strata}, \code{variables}, and the
 names in \code{args}, \code{code} and \code{post}) count: the program writes them at
 its head (\code{cl_sex <- c(F = "Female", M = "Male")}) and puts them on
 the data the analyses read (\code{set_levels(SEX = cl_sex)}): each column a
-factor in the list's order, its values the labels (a value without one
-stays itself) -- the ARD holds \code{"Female"}, and counts a level no record
-has (\code{n = 0}).  A value the list does not have (not NA) stops the
-program.  An analysis's \code{where} on such a column is written in its
-labels: one that names a value whose label differs stops here.  In the
-study's program, each report's part reads its data again with its own.
+factor of the codes in the list's order -- the ARD holds \code{"F"}, not
+\code{"Female"}, and counts a level no record has (\code{n = 0}).  The factor is
+made after the analysis's filter, and its levels are narrowed to the
+values the filter's simple conditions leave.  A value the list does not
+have (not NA) stops the program.  An analysis's \code{where} on such a column
+is written in codes: a label stops it here (write \code{"F"} for
+\code{"Female"}).  The labels are applied by the report's table plan
+(\code{plan_labels}), not in the ARD.  In the study's program, each report's
+part reads its data again with its own.
 \code{NULL} (default): the data as read.}
 }
 \value{

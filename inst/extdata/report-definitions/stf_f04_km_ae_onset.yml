@@ -12,7 +12,8 @@
 id: F-STF-04
 kind: figure
 label: Kaplan-Meier Plot of Time to Onset of the Adverse Event of Interest, Safety Population
-population: SAF
+common:
+  population: SAF
 extends: defaults
 data:
   steps:

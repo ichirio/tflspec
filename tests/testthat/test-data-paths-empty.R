@@ -12,7 +12,7 @@ ed_study <- function(d) {
 
 ed_shift <- function(d, where) {
   f <- file.path(d, "spec", "outputs", "T-ED.yml")
-  tfl_write_output(tfl_output("T-ED", "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("T-ED", "table", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = "shift",
                                               args = list(population = "SAF", where = where))), f)
   st <- tfl_read_study_spec(d)
@@ -27,10 +27,12 @@ test_that("a template whose where selects no record: the report, dataset, set an
   skip_if_not_installed("dplyr")
   d <- withr_tempdir()
   data <- ed_study(d)
-  w <- 'PARAMCD %in% c("ALT", "HGB") & ONTRTFL == "Y" & is.na(ABLFL)'
+  # (a blank is NA in study$adam: the flag cannot be both)
+  w <- 'PARAMCD %in% c("ALT", "HGB") & ONTRTFL == "Y" & is.na(ABLFL) & ABLFL == "Y"'
   # no record passes it (counted from the file, not from the code)
   lb <- data$adlb
-  expect_identical(sum(lb$PARAMCD %in% c("ALT", "HGB") & lb$ONTRTFL == "Y" & is.na(lb$ABLFL)), 0L)
+  expect_identical(sum(lb$PARAMCD %in% c("ALT", "HGB") & lb$ONTRTFL == "Y" & lb$ABLFL == "Y" &
+                         lb$ABLFL == ""), 0L)
   e <- ed_shift(d, w)
   expect_s3_class(e, "tflspec_empty_data")
   msg <- conditionMessage(e)
@@ -38,12 +40,12 @@ test_that("a template whose where selects no record: the report, dataset, set an
   expect_match(msg, "dataset ADLB", fixed = TRUE)
   expect_match(msg, "analysis set SAF", fixed = TRUE)
   expect_match(msg, w, fixed = TRUE)
-  # ... said for is.na(): a transport file's blank is "", not NA
-  expect_match(msg, "holds \"\" for no value", fixed = TRUE)
+  # (no hint about blanks: is.na() finds them in study$adam)
+  expect_false(grepl("transport file", msg, fixed = TRUE))
   # the error it stopped with comes after
   expect_match(msg, "\nThe build stopped with: .+")
-  # != "Y" selects the baseline-free records: it builds
-  ok <- ed_shift(d, 'PARAMCD %in% c("ALT", "HGB") & ONTRTFL == "Y" & ABLFL != "Y"')
+  # is.na() selects the baseline-free records: it builds
+  ok <- ed_shift(d, 'PARAMCD %in% c("ALT", "HGB") & ONTRTFL == "Y" & is.na(ABLFL)')
   expect_false(inherits(ok, "error"))
   expect_gt(NROW(ok), 0L)
 })

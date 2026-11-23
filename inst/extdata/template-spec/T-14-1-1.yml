@@ -1,12 +1,12 @@
 id: T-14-1-1
 kind: table
 label: Demographic characteristics
-population: SAF
+common:
+  population: SAF
 extends: defaults
 template:
   name: demog
   args:
-    population: SAF
     by: TRT01A
     continuous: AGE
     labels:

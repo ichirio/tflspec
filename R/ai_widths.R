@@ -189,7 +189,7 @@
 }
 
 # A fingerprint of a report as the widths are made from it: resolved over
-# its layers (a layer's code list counts), the widths of its plan_columns
+# its layers, the widths of its plan_columns
 # left out (so it is the same before and after they are written), as the
 # text its file would hold.  NULL when it cannot be resolved.
 .ai_widths_print <- function(o, st) {
@@ -278,7 +278,7 @@
   # when it was built alone
   # (`sheets`: the study's, when the caller has read them; else read here, once)
   if (length(need) && is.null(sheets)) {
-    sheets <- tryCatch(tfl_sheets_from_yaml("."), error = function(e) NULL)
+    sheets <- tryCatch(tfl_sheets_from_yaml(".", templates = "expand"), error = function(e) NULL)
   }
   batch <- .ai_build_ard_split(st, vapply(outs[need], function(o) o$id, ""), sheets = sheets)
   for (k in seq_along(todo)) {

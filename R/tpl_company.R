@@ -45,17 +45,23 @@
 #'   [tfl_test_templates()] runs it with, beside the defaults; `NULL` none.
 #' @param ai `TRUE` to list it in the AI requests that answer with
 #'   templates ([tfl_ai_prepare()]`(templates = TRUE)`).
+#' @param extends The `extends` its reports take when they write none:
+#'   files for every step, `"none"`, or a list by step (`list(content =
+#'   "none")`); `NULL`: a template not yet migrated.
+#' @param extends_fixed The steps whose `extends` the template fixes:
+#'   another value stops.
 #' @return `name`, invisibly.
 #' @examples
 #' tfl_template("my_ages", kind = "table", layout = "summary",
 #'   params = list(tfl_param("population", "SAF", doc = "the analysis set's id")),
 #'   body = function(a, ctx) tfl_template_expand("summary",
-#'     list(population = a$population, continuous = "AGE"),
+#'     list(population = a$population, by = "TRT01A", continuous = "AGE"),
 #'     codelists = ctx$codelists, population = ctx$population))
 #' tfl_templates()[, c("name", "package")]
 #' @export
 tfl_template <- function(name, kind = c("table", "figure", "listing"), layout, params,
-                         body, label = NULL, call = NULL, example = NULL, ai = FALSE) {
+                         body, label = NULL, call = NULL, example = NULL, ai = FALSE,
+                         extends = NULL, extends_fixed = character()) {
   fn <- "tfl_template()"
   if (!is.character(name) || length(name) != 1L || !grepl("^[A-Za-z][A-Za-z0-9_.]*$", name)) {
     .ard_stop(sprintf("%s: `name` is one name of letters, digits, '_' and '.'.", fn))
@@ -77,7 +83,7 @@ tfl_template <- function(name, kind = c("table", "figure", "listing"), layout, p
     message(sprintf("%s: %s's template %s replaces %s's.", fn, pkg, name, old$package %||% "tflspec"))
   }
   .tfl_template(name, kind, layout, params, body, label = label, call = call, package = pkg,
-                example = example, ai = ai)
+                example = example, ai = ai, extends = extends, extends_fixed = extends_fixed)
   invisible(name)
 }
 
@@ -115,6 +121,9 @@ tfl_template <- function(name, kind = c("table", "figure", "listing"), layout, p
 #'   defaults and the study standard's values (`tfl_param(study = )`), as
 #'   the look of a figure's report type takes the figure style standard's;
 #'   a report changes that with its own items (`+`) or `plot:`.
+#' @param key Parameters of `from` that are `"key"` in the variant: they
+#'   have a default but stay on top of its input form (the tier of
+#'   [tfl_param()]); `NULL`: each keeps `from`'s tier.
 #' @return `name`, invisibly.
 #' @examples
 #' tfl_template_variant("demog_age_sex", from = "demog",
@@ -122,7 +131,7 @@ tfl_template <- function(name, kind = c("table", "figure", "listing"), layout, p
 #' tfl_template_params("demog_age_sex")$categorical$default
 #' @export
 tfl_template_variant <- function(name, from, defaults = list(), label = NULL, example = NULL,
-                                 ai = NULL, hide = NULL) {
+                                 ai = NULL, hide = NULL, key = NULL) {
   fn <- "tfl_template_variant()"
   if (!is.character(name) || length(name) != 1L || !grepl("^[A-Za-z][A-Za-z0-9_.]*$", name)) {
     .ard_stop(sprintf("%s: `name` is one name of letters, digits, '_' and '.'.", fn))
@@ -136,6 +145,11 @@ tfl_template_variant <- function(name, from, defaults = list(), label = NULL, ex
     .ard_stop(sprintf("%s: template %s has no parameter %s; its parameters: %s.", fn, from,
                       paste(sQuote(unknown, FALSE), collapse = ", "),
                       paste(names(src$params), collapse = ", ")))
+  }
+  unknown <- setdiff(key, names(src$params))
+  if (length(unknown)) {
+    .ard_stop(sprintf("%s: template %s has no parameter %s to make key.", fn, from,
+                      paste(sQuote(unknown, FALSE), collapse = ", ")))
   }
   unknown <- setdiff(hide, names(src$params))
   if (length(unknown)) {
@@ -157,7 +171,7 @@ tfl_template_variant <- function(name, from, defaults = list(), label = NULL, ex
     from <- keep
   }
   assign(name, list(name = name, from = from, defaults = defaults, label = label,
-                    package = pkg, example = example, ai = ai, hide = hide),
+                    package = pkg, example = example, ai = ai, hide = hide, key = key),
          envir = .tpl_registry)
   invisible(name)
 }
@@ -172,12 +186,14 @@ tfl_template_variant <- function(name, from, defaults = list(), label = NULL, ex
   params <- src$params
   for (k in names(v$defaults)) {
     params[[k]]$default <- v$defaults[[k]]
-    # (a parameter only variants show, `missing_row`)
-    if (isTRUE(params[[k]]$variant_only) && !k %in% v$hide) params[[k]]$hidden <- NULL
+    # (the doc a parameter keeps for the variants that give it a default)
+    if (!is.null(params[[k]]$variant_doc)) params[[k]]$doc <- params[[k]]$variant_doc
     if (!is.null(v$defaults[[k]])) params[[k]]$required <- FALSE
   }
   # (hidden: not its arguments; a variant of it keeps them hidden)
   for (k in v$hide) params[[k]]$hidden <- TRUE
+  # (key: its tier here; a variant of it keeps it)
+  for (k in v$key) params[[k]]$tier <- "key"
   root <- src$root %||% src$name
   list(name = v$name, kind = src$kind, layout = src$layout, params = params,
        body = src$body, label = v$label %||% src$label, call = src$call,
@@ -195,14 +211,21 @@ tfl_template_variant <- function(name, from, defaults = list(), label = NULL, ex
 #'
 #' @param name The template's name.
 #' @return A named list of [tfl_param()]; change one's `default` and pass
-#'   them to [tfl_template()].
+#'   them to [tfl_template()].  Each has `unset`: what `!unset` does to it
+#'   (`"omit"`, `"stop"` or `"step_off"`), `NA` for a template not yet migrated.
 #' @examples
 #' p <- tfl_template_params("demog")
 #' names(p)
 #' p$cells$default
 #' @export
 tfl_template_params <- function(name) {
-  .tpl_get(name, "tfl_template_params()")$params
+  t <- .tpl_get(name, "tfl_template_params()")
+  # `unset` (what `!unset` does to the parameter) is stated for a migrated
+  # template only; NA for the others (`!unset` leaves the argument out)
+  lapply(t$params, function(p) {
+    if (!.tpl_layered(t$name)) p["unset"] <- list(NA_character_)
+    p
+  })
 }
 
 #' Run a template: its table plan
@@ -227,7 +250,7 @@ tfl_template_params <- function(name) {
 #'   saf <- adsl[adsl$SAFFL == "Y", ]
 #'   ard <- cards::bind_ard(cards::ard_tabulate(saf, variables = TRT01A),
 #'                          cards::ard_summary(saf, by = TRT01A, variables = AGE))
-#'   plan <- tfl_template_run("summary", ard, population = "SAF", continuous = "AGE")
+#'   plan <- tfl_template_run("summary", ard, population = "SAF", by = "TRT01A", continuous = "AGE")
 #' }
 #' @export
 tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
@@ -364,17 +387,19 @@ tfl_test_templates <- function(names = NULL) {
 # An example of each tflspec template's parameters: what a company's
 # package tests its wrapped templates with
 .tpl_examples <- list(
-  demog = list(population = "SAF"),
-  stf_t02_demog = list(population = "SAF"),
-  summary = list(population = "SAF", continuous = "AGE"),
-  disposition = list(population = "SAF"),
+  demog = list(population = "SAF", by = "TRT01A", continuous = "AGE",
+               categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC")),
+  stf_t02_demog = list(population = "SAF", by = "TRT01A", continuous = "AGE",
+                       categorical = c("SEX", "AGEGR1", "RACE", "ETHNIC", "COUNTRY")),
+  summary = list(population = "SAF", by = "TRT01A", continuous = "AGE"),
+  disposition = list(population = "SAF", by = "TRT01A", categorical = "EOSSTT"),
   hierarchical = list(population = "SAF", hierarchy = c("AEBODSYS", "AEDECOD")),
   ae_soc_pt = list(population = "SAF"),
   ae_ser_soc_pt = list(population = "SAF"),
   ae_disc_soc_pt = list(population = "SAF"),
   ae_pt_freq = list(population = "SAF", min_pct = 5),
   ae_max_grade = list(population = "SAF", grade_levels = c("MILD", "MODERATE", "SEVERE")),
-  ae_overview = list(population = "SAF"),
+  ae_overview = list(population = "SAF", by = "TRT01A"),
   shift = list(population = "SAF", data_id = "adlb_shift", by_levels = c("Drug X", "Control")),
   lab_shift = list(population = "SAF", visit = "CYCLE 2 DAY 1", params = c("ALT", "AST")),
   listing = list(data = "ADAE", columns = list(list(vars = "USUBJID", label = "Subject"))),
@@ -388,8 +413,11 @@ tfl_test_templates <- function(names = NULL) {
   waterfall = list(param = "SUMDIAM", where = "AVISIT == \"WEEK 12\""),
   orr = list(),
   stat_block = list(variable = "RESP", cells = list(N = "{N}", "ORR (%)" = "{n} ({estimate:.1f%})")),
-  param_change = list(population = "SAF", data = "ADLB", params = c("ALT", "AST"),
-                      where = "ANL01FL == \"Y\""),
+  param_change = list(population = "SAF", by = "TRT01A", data = "ADLB", params = c("ALT", "AST"),
+                      where = "ANL01FL == \"Y\"",
+                      # (the parameters' text: the report's, outside the ARD, canon 1.42)
+                      param_labels = list(ALT = "Alanine Aminotransferase (U/L)",
+                                          AST = "Aspartate Aminotransferase (U/L)")),
   ae_eair = list(population = "SAF"),
   ancova = list(population = "SAF", data = "ADVS", param = "SYSBP", visit = "CYCLE 2 DAY 1"),
   lab_abnormal = list(population = "SAF", levels = c("LOW", "HIGH"), where = "ONTRTFL == \"Y\""))
@@ -528,7 +556,7 @@ tfl_use_company_templates <- function(path, package = basename(path),
     "# header, the label column, the blank rows, the widths, the style).",
     "content:",
     "  - normalize_ard: {}",
-    "  - plan_cells: {default: \"{n:.0f} ({p:.1f%})\"}",
+    "  - plan_cells: {default: [!r \"n == 0 ~ '0'\", \"{n:.0f} ({p:.1f%})\"], na: \"-\"}",
     "  - plan_digits: {rounding: sas}",
     "  - plan_stub: {name: row_label, heading: \"\", before: true}",
     "  - plan_blanks: {where: between_groups, first: true, last: true}"))

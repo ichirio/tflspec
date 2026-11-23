@@ -10,7 +10,7 @@ sr_study <- function(rounding = "sas") {
   st
 }
 sr_output <- function(content = list()) {
-  tfl_output("T-9", "table", population = "SAF", content = c(list(
+  tfl_output("T-9", "table", common = list(population = "SAF"), content = c(list(
     tfl_item("table_plan", list(cols = "TRT01A")),
     tfl_item("plan_digits", list(AGE = 0))), content))
 }
@@ -119,8 +119,7 @@ test_that("a YAML study's ARD setup carries its rounding", {
     writeLines(c("outputs:", "  - id: T-1", "    kind: table"), file.path(dir, "spec", "toc.yml"))
     writeLines(c("id: T-1", "kind: table", "extends: none", "ard:", "  analyses:",
                  "    - id: AGE", "      method: continuous", "      population: SAF",
-                 "      by: [ARM]", "      variables: [AGE]", "data:", "  source: ard",
-                 "  object: ard", "content:", "  - table_plan: {cols: ARM}"),
+                 "      by: [ARM]", "      variables: [AGE]", "content:", "  - table_plan: {cols: ARM}"),
                file.path(dir, "spec", "outputs", "T-1.yml"))
     st <- tfl_read_study_spec(dir)
     expect_identical(tflspec:::.study_rounding(st), v)
@@ -158,4 +157,14 @@ test_that("an in-process run sets cards' rounding and puts the options back", {
   d <- exact_dir(exact_data())
   suppressMessages(tfl_build_ard(sp, dir = d, save = FALSE))
   expect_null(getOption("cards.round_type"))
+})
+
+test_that("the sheets' setup writes the rounding and cards' in one options() call, as the YAML route", {
+  for (v in c("sas", "r")) {
+    setup <- tfl_report_setup_code(tfl_table_spec(study = c(rounding = v)))
+    hit <- grep("rtfreporter.rounding", setup, value = TRUE, fixed = TRUE)
+    expect_length(hit, 1L)
+    expect_match(hit, "cards.round_type", fixed = TRUE)
+    expect_length(grep("cards.round_type", setup, fixed = TRUE), 1L)
+  }
 })

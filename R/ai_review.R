@@ -522,7 +522,7 @@
       add(r)
     }
   }
-  b <- tryCatch(suppressMessages(tfl_sheets_from_yaml(dir)), error = function(e) {
+  b <- tryCatch(suppressMessages(tfl_sheets_from_yaml(dir, templates = "expand")), error = function(e) {
     add(.ai_rv("S01", sheet = "spec", args = conditionMessage(e), cat = cat))
     NULL
   })

@@ -8,13 +8,13 @@ The table template \code{shift}, layout \code{shift}. Its program is one call, \
 }
 \section{Parameters}{
 \tabular{llllll}{
-   Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab required \tab call \tab report: population, required \tab output.population \tab the analysis set's id (SAF) \cr
+   Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
+   \code{population} \tab required \tab call \tab report: population, required \tab output.common.population \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
    \code{by} \tab other \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the column variable \cr
    \code{data} \tab other \tab call \tab ADLB \tab  \tab the dataset of records \cr
    \code{where} \tab other \tab call \tab  \tab  \tab the records kept (R): the visit, the parameters \cr
-   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<population> \cr
+   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_sub \cr
    \code{analysis_id} \tab other \tab call \tab SHIFT \tab  \tab the analysis's id \cr
    \code{param} \tab other \tab call \tab PARAMCD \tab  \tab the parameter's variable (a block of rows each) \cr
    \code{baseline} \tab other \tab call \tab BNRIND \tab  \tab the category at baseline (the rows) \cr
@@ -30,9 +30,10 @@ The table template \code{shift}, layout \code{shift}. Its program is one call, \
    \code{percent_of} \tab other \tab call \tab total \tab  \tab what a cell's \{p\} is of, set apart from the header N ('header_n'): "total" (default) the Total row -- the arm's subjects with both a baseline and a category after baseline for the parameter, so the Total is 100\%; "row" the subjects of its baseline category \cr
    \code{missing_label} \tab other \tab call \tab  \tab  \tab the row of the subjects with no baseline category, counted in the Total and in the \% denominator; NULL (default): those subjects are left out of the table, not in any row or N \cr
    \code{total_label} \tab other \tab call \tab Total \tab  \tab the row of all the subjects; NULL: none \cr
-   \code{param_page} \tab other \tab call \tab TRUE \tab  \tab TRUE: a page a parameter, named in the titles by 'param_heading' \cr
-   \code{param_heading} \tab other \tab call \tab Parameter: \{value\} \tab  \tab a parameter's page name ('\{value\}': the parameter); the last title line, or where the title line '\{PAGE_HEADING\}' is \cr
-   \code{header_n} \tab other \tab call \tab set \tab  \tab the arm headings' N, set apart from the \% denominator ('percent_of'): "set" (default): the arm's subjects in the analysis set (with 'subset'); "tested": the page's subjects with a baseline and a post-baseline category (needs 'param_page'); "none": no N \cr
+   \code{page_by} \tab other \tab call \tab PARAMCD \tab  \tab the variable a page a value is cut by: the parameter's (the default), named in the titles by 'page_heading'; unset: no page a value, one table, the parameter a row heading \cr
+   \code{page_heading} \tab other \tab call \tab Parameter: \{value\} \tab  \tab a parameter's page name ('\{value\}': the parameter); the last title line, or where the title line '\{PAGE_HEADING\}' is; used with 'page_by' \cr
+   \code{header_n} \tab other \tab call \tab set \tab  \tab the arm headings' N, set apart from the \% denominator ('percent_of'): "set" (default): the arm's subjects in the analysis set (with 'subset'); "tested": the page's subjects with a baseline and a post-baseline category (needs 'page_by'); "none": no N \cr
+   \code{split} \tab other \tab call \tab none \tab plan_paginate_rows.split \tab how a page break is placed (plan_paginate_rows(split = )): "none" one page; "group_safe" whole groups to a page; "group_force" a cut every 'max_rows' rows, a group continued on the next page; "rows" and "by_value" are cut by position or by value (they need their own arguments, a 'plan_paginate_rows' item) \cr
 }
 }
 

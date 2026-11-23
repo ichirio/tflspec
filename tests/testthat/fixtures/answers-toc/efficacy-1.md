@@ -6,15 +6,14 @@ outputs:
   - id: T-14-2-1
     kind: table
     label: Best Overall Response and Objective Response Rate
-    population: ITT
+    common: {population: ITT}
     extends: [defaults]
+    data:
+      - {id: adrs_bor, from: ADRS, population: ITT, where: !r PARAMCD == "BOR", derive: !r 'RESP = AVALC %in% c("CR", "PR")'}
     ard:
-      analysis_data:
-        - {id: adrs_bor, from: ADRS, population: ITT, where: !r PARAMCD == "BOR", derive: !r 'RESP = AVALC %in% c("CR", "PR")'}
       analyses:
         - {id: BOR, method: categorical, data: adrs_bor, by: [TRT01P], variables: [AVALC]}
         - {id: ORR, method: proportion_ci, data: adrs_bor, by: [TRT01P], variables: [RESP], args: !r method = "clopper-pearson"}
-    data: {source: ard}
     codelists:
       AVALC:
         - {value: CR, label: Complete response (CR)}

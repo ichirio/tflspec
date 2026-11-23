@@ -1,6 +1,6 @@
 #' How the generated programs name folders and packages
 #'
-#' Two options make the code tflspec writes fit a study's setup file (such
+#' Three options make the code tflspec writes fit a study's setup file (such
 #' as tflplanner's `programs/study_setup.R`), which defines the study's
 #' folders as variables and attaches the packages every program uses.
 #'
@@ -16,9 +16,37 @@
 #'   code: a string or a comment keeps what it says), and an ARD program
 #'   does not write `library(cards)` itself.  A package not listed keeps
 #'   its prefix (`cardx::`).
+#' * `tflspec.study_setup`: `TRUE` when the study's setup file sets the
+#'   study-wide options and reads the study's input data -- today the
+#'   rounding, `rtfreporter.rounding` and `cards.round_type`, the study's
+#'   code lists by name (`study$codelists`) and its ADaM metadata
+#'   (`study$adam_meta`), and the data catalog's datasets read when
+#'   first used, in two environments: `study$adam_org` (as the file has
+#'   them, with the `derive`) and `study$adam` (blanks as `NA`, and the
+#'   levels of the code lists adam_meta maps to their variables unless
+#'   study.yml's `settings: adam_levels` is `none`), and one object per dataset (`adsl`) that is its
+#'   `study$adam`'s: the programs always read `study$adam`,
+#'   written by [tfl_study_setup_code()].  The ARD setup
+#'   ([tfl_ard_code()]) and the report setup ([tfl_report_setup_code()])
+#'   then do not write the rounding again; their other options stay.  The
+#'   ARD, listing and figure programs do not read the files: a dataset's
+#'   line becomes its steps on the object (`adsl <- adsl |> order_levels(...)`),
+#'   and none when it has no step.  A report's
+#'   `plan_digits(rounding = )` that is the study's is left out of its
+#'   program either way.  tflspec's own runs of a program ([tfl_build_ard()]
+#'   and the like) do not use the option: they read the files themselves,
+#'   with the blanks as `NA` (`blank_as_na()`) and the levels of the code
+#'   lists the study's ADaM metadata maps (`set_levels(SEX =
+#'   adam_codes("CL.SEX"))`, after the program's own `study$adam_meta`), as
+#'   `study$adam` has them.
 #'
-#' Unset (the default), the code is as it has always been: literal paths
-#' and `pkg::` on every call.  The functions that write code read them:
+#' Unset or `FALSE` (the default), the code is as it has always been:
+#' literal paths, `pkg::` on every call, the rounding in each setup; a
+#' program reads each dataset itself, with `blank_as_na()` after its
+#' `derive` (a blank text value is `NA`, as in `study$adam`) and, for a YAML
+#' study under `settings: adam_levels: define_xml` (or `define_spec`), the levels of the code
+#' lists its ADaM metadata maps to the dataset's variables (the program
+#' writes the rows it uses as `study$adam_meta` first).  The functions that write code read them:
 #' [tfl_ard_code()], [tfl_build_ard()], [tfl_table_code()],
 #' [tfl_report_code()], [tfl_report_setup_code()], [tfl_listing_code()],
 #' [tfl_read_data_code()], [tfl_fig_design_code()] and

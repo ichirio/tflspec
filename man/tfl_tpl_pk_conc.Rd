@@ -8,8 +8,8 @@ The table template \code{pk_conc}, layout \code{listing_summary}. Its program is
 }
 \section{Parameters}{
 \tabular{llllll}{
-   Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab required \tab call \tab report: population, required \tab output.population \tab the analysis set's id (SAF) \cr
+   Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
+   \code{population} \tab required \tab call \tab report: population, required \tab output.common.population \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
    \code{data} \tab other \tab call \tab ADPC \tab  \tab the dataset of concentrations \cr
    \code{where} \tab other \tab call \tab  \tab  \tab the records kept (R), e.g. ANL01FL == "Y" \cr
@@ -28,7 +28,8 @@ The table template \code{pk_conc}, layout \code{listing_summary}. Its program is
    \code{summary_label} \tab other \tab call \tab Summary Statistics \tab  \tab the summary's heading row \cr
    \code{stats} \tab other \tab call \tab N = \{N:.0f\}; Mean = \{mean:.4s\}; SD = \{sd:.5s\}; SE = \{se:.... \tab  \tab the summary's rows: label = cell \cr
    \code{split_at} \tab other \tab call \tab  \tab  \tab the time point that starts a second block of columns (each block its pages, the group's first); NULL: one \cr
-   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<population> \cr
+   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_sub \cr
+   \code{split} \tab other \tab call \tab none \tab plan_paginate_rows.split \tab how a page break is placed (plan_paginate_rows(split = )): "none" one page; "group_safe" whole groups to a page; "group_force" a cut every 'max_rows' rows, a group continued on the next page; "rows" and "by_value" are cut by position or by value (they need their own arguments, a 'plan_paginate_rows' item) \cr
 }
 }
 

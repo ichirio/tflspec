@@ -24,7 +24,7 @@ rts_study <- function(files = list(), study = NULL, env = parent.frame()) {
 }
 
 rts_table <- function(id = "T-1", extends = "defaults", ...) {
-  c(paste0("id: ", id), "kind: table", "label: One", "population: SAF",
+  c(paste0("id: ", id), "kind: table", "label: One", "common: {population: SAF}",
     paste0("extends: [", paste(extends, collapse = ", "), "]"), ...,
     "content:", "  - table_plan: {cols: TRT01A, rows: {group: variable}}")
 }
@@ -65,7 +65,7 @@ test_that("a study that lost nothing says nothing, and its list is the converter
 # -- item 2: a figure written as items -------------------------------------------
 
 rts_fig <- function(id = "F-1", top = NULL, data_extra = NULL) {
-  c(paste0("id: ", id), "kind: figure", "label: Fig one", "population: SAF", "extends: none", top,
+  c(paste0("id: ", id), "kind: figure", "label: Fig one", "common: {population: SAF}", "extends: none", top,
     "data:", data_extra, "  steps:", "    - {step: read, dataset: ADTTE}", "    - {step: param, value: PFS}",
     "content:", "  - ggplot: {data: data, mapping: {x: AVAL, y: AGE}}", "  - geom_point: {size: 2}",
     "  - scale_x_continuous: {limits: !r 'c(0, 10)'}", "  - labs: {x: Time}")
@@ -109,21 +109,25 @@ test_that("what a figure of items has no place for is named in the notes, by rep
 
 # -- item 3: options:, styles:, style: have no place on the sheets -------------------
 
-test_that("defaults.yml options:, styles: and a report's style: are named in the notes", {
+test_that("defaults.yml options: and a built-in style: are named in the notes; a study's own style: is kept", {
   d <- rts_study(list(
     "defaults.yml" = c("options:", "  rtfreporter.png_device: ragg", "styles:", "  compact:",
                        "    page: {rtf_style: {font_size_half_points: 16}}", "content: []"),
-    "outputs/T-1.yml" = rts_table("T-1", "defaults", "style: compact")))
+    "outputs/T-1.yml" = rts_table("T-1", "defaults", "style: compact"),
+    "outputs/T-2.yml" = rts_table("T-2", "defaults", "style: tfl_small")))
   x <- rts_trip(d)
   nc <- x$sh$not_converted
   expect_match(nc$reason[nc$part == "options"], "rtfreporter.png_device", fixed = TRUE)
-  expect_match(nc$reason[nc$part == "styles"], "compact", fixed = TRUE)
-  expect_identical(nc$output[nc$part == "style"], "T-1")
+  expect_identical(nc$output[nc$part == "style"], "T-2")
+  expect_false("styles" %in% nc$part)
   # and they reach the person: the file, one message
-  expect_true(all(c("options", "styles", "style") %in% vapply(x$nc, function(e) e$sheet, "")))
-  expect_identical(sum(grepl("3 parts", x$msgs, fixed = TRUE)), 1L)
-  # what the sheets cannot hold is gone from the YAML: said, not hidden
-  expect_null(tfl_read_outputs(x$to)[["T-1"]]$style)
+  expect_true(all(c("options", "style") %in% vapply(x$nc, function(e) e$sheet, "")))
+  expect_identical(sum(grepl("2 parts", x$msgs, fixed = TRUE)), 1L)
+  # the study's own style: goes through the sheets (the pattern cell), a built-in one is gone: said, not hidden
+  outs <- tfl_read_outputs(x$to)
+  expect_identical(outs[["T-1"]]$style, "compact")
+  expect_null(outs[["T-2"]]$style)
+  expect_identical(x$sh$table$report$pattern[x$sh$table$report$output_id %in% "T-1"], "@compact")
 })
 
 test_that("a study with none of them has no such note", {
@@ -131,23 +135,14 @@ test_that("a study with none of them has no such note", {
   expect_false(any(x$sh$not_converted$part %in% c("options", "styles", "style")))
 })
 
-# -- item 4: code lists of the defaults and of patterns ------------------------------
+# -- item 4: the study's code lists -------------------------------------------------
 
-# the sample study with its report's code list moved to the defaults (and a
-# pattern with a list of its own)
+# the sample study (its report keeps its own TRT01A list; the study's lists,
+# defaults.yml's, reach no report and no pattern holds one)
 rts_cl_study <- function(env = parent.frame()) {
   d <- withr::local_tempdir(.local_envir = env)
   file.copy(list.files(system.file("extdata", "spec-yaml", package = "tflspec"), full.names = TRUE),
             d, recursive = TRUE)
-  f <- file.path(d, "outputs", "T-14-1-1.yml")
-  l <- readLines(f)
-  i <- grep("^codelists:", l)
-  j <- i + 1L
-  while (grepl("^ ", l[j])) j <- j + 1L
-  writeLines(l[-(i:(j - 1L))], f)
-  writeLines(c(readLines(file.path(d, "defaults.yml")), l[i:(j - 1L)]), file.path(d, "defaults.yml"))
-  dir.create(file.path(d, "patterns"))
-  writeLines(c("codelists:", "  SEX: [F, M]"), file.path(d, "patterns", "p.yml"))
   writeLines(c("datasets:", "  - dataset: ADSL", "    level: ADaM", "    path: adam/adsl.xpt",
                "populations:", "  - id: SAF", "    dataset: ADSL", '    where: !r SAFFL == "Y"',
                "    label: Safety Population"), file.path(d, "data.yml"))
@@ -155,20 +150,20 @@ rts_cl_study <- function(env = parent.frame()) {
   d
 }
 
-test_that("the defaults' and a pattern's code lists are named in the notes, and reach the file", {
+test_that("the study's code lists and ADaM metadata are named in the notes, and reach the file", {
   d <- rts_cl_study()
   x <- rts_trip(d)
   nc <- x$sh$not_converted
   n <- nc[nc$part == "codelists", ]
-  expect_identical(nrow(n), 2L)
-  expect_match(n$reason[is.na(n$output)], "defaults.yml: TRT01A", fixed = TRUE)
-  expect_match(n$reason[n$output %in% "@p"], "patterns/p.yml: SEX", fixed = TRUE)
+  expect_identical(nrow(n), 1L)
+  expect_match(n$reason[is.na(n$output)], "defaults.yml: SEX, AGEGR1", fixed = TRUE)
+  expect_identical(sum(nc$part == "adam_meta"), 1L)
   written <- x$nc[vapply(x$nc, function(e) identical(e$sheet, "codelists"), NA)]
-  expect_length(written, 2L)
-  expect_true(any(grepl("1 part|2 parts", x$msgs)))
+  expect_length(written, 1L)
+  expect_true(any(grepl("[0-9]+ parts?", x$msgs)))
 })
 
-test_that("a program differs when an analysis reads the variable the defaults' list is for", {
+test_that("a report's own code list makes the round trip: its program is the same", {
   skip_if_not_installed("cards")
   d <- rts_cl_study()
   x <- rts_trip(d)
@@ -176,20 +171,17 @@ test_that("a program differs when an analysis reads the variable the defaults' l
     paste(tfl_ard_code(tfl_read_study_spec(dir), output_id = "T-14-1-1", save = FALSE), collapse = "\n")
   }
   before <- ard(d)
-  after <- ard(x$to)
-  # the list sets TRT01A's values, order and labels in the ARD's data ...
-  expect_match(before, "set_levels(TRT01A = cl_trt01a)", fixed = TRUE)
+  expect_match(before, "set_levels(TRT01A = cl_trt01a", fixed = TRUE)
   expect_match(before, "Drug X 200 mg", fixed = TRUE)
-  # ... and the study written from the sheets has not got it
-  expect_false(grepl("set_levels(TRT01A", after, fixed = TRUE))
-  expect_false(grepl("Drug X 200 mg", after, fixed = TRUE))
+  expect_match(ard(x$to), "set_levels(TRT01A = cl_trt01a", fixed = TRUE)
+  expect_match(ard(x$to), "Drug X 200 mg", fixed = TRUE)
 })
 
 # -- item 5: what stopped the whole conversion ---------------------------------------
 
 test_that("a pattern with content items no longer stops the conversion: dropped, named", {
   for (cs in list(c("content:", "  - plan_cells: {categorical: '{n}'}"),
-                  c("content:", "  - plan_footnotes: {pages: [Note]}", "page:", "  tokens: {A: b}"))) {
+                  c("content:", "  - plan_footnotes: {pages: [Note]}"))) {
     d <- rts_study(list("patterns/p.yml" = cs,
                         "outputs/T-1.yml" = rts_table(extends = c("defaults", "patterns/p"))))
     x <- rts_trip(d)
@@ -202,10 +194,6 @@ test_that("a pattern with content items no longer stops the conversion: dropped,
     expect_true("patterns/p" %in% back$extends)
     expect_length(tfl_read_study_spec(x$to)$patterns$p$content, 0L)
   }
-  # a pattern with page parts only says nothing
-  d <- rts_study(list("patterns/p.yml" = c("page:", "  tokens: {A: b}"),
-                      "outputs/T-1.yml" = rts_table(extends = c("defaults", "patterns/p"))))
-  expect_false(any(rts_trip(d)$sh$not_converted$part %in% "content"))
 })
 
 test_that("a study.yml settings: key the sheet does not read is kept, not a stop", {
@@ -271,15 +259,20 @@ rts_flat_study <- function(env = parent.frame()) {
                    "objects:", "  - {id: n_saf, code: !r 200L, label: Subjects of the safety set}",
                    "groups:", "  - id: AGEG", "    label: Age group", "    levels:",
                    "      - {level: Young, where: !r AGE < 65}", "      - {level: Old, where: !r AGE >= 65}"),
-    "defaults.yml" = c("page:", "  header:", "    1: {left: A, row_height_twips: 360}",
-                       "    2: {left: B, right: C}", "  footer:", "    1: {left: F, row_height_twips: 240}",
-                       "  titles:", "    1: {center: T, row_height_twips: 400}",
-                       "  footnotes:", "    1: {left: N, row_height_twips: 200}",
-                       "  rtf_document:", "    watermark: {fn: rtf_watermark, args: {text: DRAFT, angle: 30.0}}",
+    "defaults.yml" = c("styles:", "  std:", "    page:",
+                       "      header:", "        1: {left: A, row_height_twips: 360}",
+                       "        2: {left: B, right: C}", "      footer:", "        1: {left: F, row_height_twips: 240}",
+                       "      titles:", "        1: {center: T, row_height_twips: 400}",
+                       "      footnotes:", "        1: {left: N, row_height_twips: 200}",
+                       "      rtf_document:", "        watermark: {fn: rtf_watermark, args: {text: DRAFT, angle: 30.0}}",
                        "content: []"),
     "outputs/T-1.yml" = rts_table(),
     "outputs/T-2.yml" = c(rts_table("T-2")[1:5], "page:", "  titles:", "    1: {center: Own, row_height_twips: 500}",
-                          rts_table("T-2")[-(1:5)])), env = env)
+                          rts_table("T-2")[-(1:5)])),
+    study = c("study_id: MIN-1", "title: minimal", "settings:", "  rounding: sas",
+              "  output_path: output/tfl", "  program_dir: programs/tfl",
+              "  file: '{output_id}.rtf'", "  style: std", "keys:", "  id: USUBJID"),
+    env = env)
 }
 
 # a study's YAML files as parsed lists, the tags kept
@@ -306,10 +299,11 @@ test_that("an unedited write and import changes nothing: the lines' heights stay
   expect_identical(rts_parsed(d), before)
   # the heights are there
   y <- yaml::read_yaml(file.path(d, "spec", "defaults.yml"), handlers = .yaml_handlers())
-  expect_identical(y$page$header[["1"]]$row_height_twips, 360L)
-  expect_identical(y$page$titles[["1"]]$row_height_twips, 400L)
-  expect_identical(y$page$footnotes[["1"]]$row_height_twips, 200L)
-  expect_identical(y$page$footer[["1"]]$row_height_twips, 240L)
+  pg <- y$styles$std$page
+  expect_identical(pg$header[["1"]]$row_height_twips, 360L)
+  expect_identical(pg$titles[["1"]]$row_height_twips, 400L)
+  expect_identical(pg$footnotes[["1"]]$row_height_twips, 200L)
+  expect_identical(pg$footer[["1"]]$row_height_twips, 240L)
 })
 
 test_that("an edit to a line's text keeps the line's height", {
@@ -326,8 +320,8 @@ test_that("an edit to a line's text keeps the line's height", {
   r <- tfl_import_spec_xlsx(d, xl, write = TRUE)
   expect_identical(r$changes$to[r$changes$sheet == "header"], "left=A (edited); row_height_twips=360")
   y <- yaml::read_yaml(file.path(d, "spec", "defaults.yml"), handlers = .yaml_handlers())
-  expect_identical(y$page$header[["1"]]$left, "A (edited)")
-  expect_identical(y$page$header[["1"]]$row_height_twips, 360L)
+  expect_identical(y$styles$std$page$header[["1"]]$left, "A (edited)")
+  expect_identical(y$styles$std$page$header[["1"]]$row_height_twips, 360L)
 })
 
 test_that("an edit to the records or objects sheet is said, per sheet, and not taken in", {

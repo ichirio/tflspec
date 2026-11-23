@@ -1,0 +1,106 @@
+# tflspec_v1/templates/forest_hr.yml
+template: forest_hr
+label: Forest plot, hazard ratio by subgroup
+figure: forest_hr
+params:
+  by:
+    type: column
+    input: pick
+    choices: vars(adsl_sub)
+    required: true
+    step: analysis
+    tier: required
+    description: The treatment variable compared.
+  ref:
+    type: level
+    input: pick
+    choices: levels(by)
+    default: ~
+    step: data
+    tier: usual
+    description: The reference arm; empty for the first in the code list.
+  comparison:
+    type: string
+    input: pick
+    choices: levels(by)
+    default: ~
+    step: analysis
+    tier: usual
+    description: The arm compared against the reference
+  conditions:
+    type: rows<subgroup,subgroup_lvl,where>
+    input: table
+    columns: params
+    default: []
+    step: analysis
+    tier: usual
+    description: The subgroup rows, one a subgroup level, after the ALL row.
+  subgroup_vars:
+    type: list<column>
+    input: pick
+    choices: vars(adsl_sub)
+    ordered: true
+    default: []
+    step: data
+    tier: usual
+    description: The subject-level variables the subgroup conditions read, joined from adsl_sub.
+  time:
+    type: column
+    input: pick
+    choices: vars(adtte_sub)
+    default: !series time
+    step: analysis
+    tier: other
+    description: The column of the time to event.
+  censor:
+    type: column
+    input: pick
+    choices: vars(adtte_sub)
+    default: !series censor
+    step: analysis
+    tier: other
+    description: The censoring column (1 censored, 0 event).
+  formats:
+    type: map<string,number|string>
+    input: table
+    columns: {key: {label: {en: "Statistic", ja: "統計量"}}, value: {label: {en: "Format", ja: "書式"}}}
+    choices: stats
+    free: true
+    default: !series formats
+    step: analysis
+    tier: other
+    description: The decimals (or the format) of each statistic.
+extends: !series extends
+style: !series style
+data:
+  - id: adsl_sub
+    from: ADSL
+    population: !series population_efficacy
+  - id: adtte_sub
+    from: ADTTE
+    subjects_in: adsl_sub
+    add: ["{by}", "{subgroup_vars}"]
+    where: !r PARAMCD == "OS"
+    derive: !r '{by} = stats::relevel(factor({by}), ref = c(intersect("{ref}", {by}), levels(factor({by})))[1])'
+analysis:
+  - id: BIGN
+    label: Subjects per group
+    method: categorical
+    data: adsl_sub
+    variables: ["{by}"]
+    formats: "{formats}"
+  - id: HR
+    label: Hazard ratio, overall and in each subgroup level
+    method: regression
+    data: adtte_sub
+    params: [subgroup, subgroup_lvl, where]
+    conditions:
+      - {subgroup: ALL, subgroup_lvl: ALL, where: !r TRUE}
+      - "{conditions}"
+    where: !r "{where}"
+    args: !r formula = ggsurvfit::Surv_CNSR({time}, {censor}) ~ {by}, method = "coxph", package = "survival", exponentiate = TRUE
+    post: !r dplyr::mutate(group1 = "subgroup", group1_level = list("{subgroup}"), group2 = "subgroup_lvl", group2_level = list("{subgroup_lvl}"))
+    formats: "{formats}"
+page:
+  titles: ~
+  footnotes: ~

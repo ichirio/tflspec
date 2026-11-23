@@ -65,13 +65,13 @@ test_that("the reporting event is written as CDISC's Excel template", {
   expect_identical(c(sex$groupingId1, sex$groupingId2),
                    c("AG_ADSL_TRT01A", "AG_ADSL_SEX"))
   expect_identical(sex$referencedAnalysisOperations_analysisId2,
-                   "An_DM_GROUPN_TRT01A")
+                   "An_DM_CAT_SEX_NONMISS")
   # the hierarchy's deepest level has three groupings
   expect_identical(an$groupingId3[an$id == "An_AE_TEAE_L2"],
                    "AG_ADAE_AEDECOD")
   # one row per operation
   m <- read_sheet(f, "AnalysisMethods")
-  expect_identical(m$operation_label[m$id == "Mth_categorical"], c("n", "p"))
+  expect_identical(m$operation_label[m$id == "Mth_categorical_NONMISS"], c("n", "p"))
   # the list of contents: outputs at level 1, analyses at level 2
   lc <- read_sheet(f, "MainListOfContents")
   expect_identical(lc$listItem_outputId[lc$listItem_level == "1"],

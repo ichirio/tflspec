@@ -16,7 +16,7 @@ ad_spec <- function(analysis_data, analyses, check = TRUE) {
 
 ad_rows <- function() ad_df(
   output_id = "T1",
-  data_id = c("adsl_saf", "adae_teae", "adae_ser", "adae_subj"),
+  data_id = c("adsl_sub", "adae_teae", "adae_ser", "adae_subj"),
   from = c("ADSL", "ADAE", "adae_teae", "adae_teae"),
   population_id = c("SAF", "SAF", NA, NA),
   where = c(NA, "TRTEMFL == \"Y\"", "AESER == \"Y\"", NA),
@@ -26,16 +26,16 @@ ad_rows <- function() ad_df(
 
 an_rows <- function() ad_df(
   output_id = c("T1", "T1", "T1", "T2"),
-  analysis_id = c("GROUPN", "AE", "SER", "OLD"),
+  analysis_id = c("BIGN", "AE", "SER", "OLD"),
   method = c("cards::ard_tabulate", "cards::ard_stack_hierarchical",
              "cards::ard_tabulate", "cards::ard_tabulate"),
-  data = c("adsl_saf", "adae_teae", "adae_ser", NA),
+  data = c("adsl_sub", "adae_teae", "adae_ser", NA),
   dataset = c(NA, NA, NA, "ADAE"),
   population_id = c(NA, NA, NA, "SAF"),
   where = c(NA, NA, "AESEV == \"SEVERE\"", "TRTEMFL == \"Y\""),
   by = c(NA, "TRT01A", "TRT01A", "TRTA"),
   variables = c("TRT01A", "AEBODSYS | AEDECOD", "AGEGR1", "AESEV"),
-  denominator = c(NA, "adsl_saf", "adae_subj", NA))
+  denominator = c(NA, "adsl_sub", "adae_subj", NA))
 
 test_that("the analysis data is made once, in order, for what a report reads", {
   x <- ad_spec(ad_rows(), an_rows())
@@ -43,12 +43,13 @@ test_that("the analysis data is made once, in order, for what a report reads", {
   # in the sheet's order; the population itself when the data is its dataset
   # (a data made in one statement: its condition, derive, one row per ...)
   # (the population's columns replace one of the same name)
-  at <- match(c("adsl_saf <- adsl_sub",
+  at <- match(c("adsl_sub2 <- filter(adsl, SAFFL == \"Y\")",
                 paste0("adae_teae <- adae |>\n",
-                       "  select(-any_of(intersect(c(\"TRT01A\", \"AGEGR1\"), names(adsl_sub)))) |>\n",
+                       "  select(-any_of(c(\"TRT01A\", \"AGEGR1\"))) |>\n",
                        "  inner_join(\n",
-                       "    select(adsl_sub, USUBJID, any_of(c(\"TRT01A\", \"AGEGR1\"))),\n",
-                       "    by = \"USUBJID\"\n",
+                       "    select(adsl_sub2, USUBJID, TRT01A, AGEGR1),\n",
+                       "    by = \"USUBJID\",\n",
+                       "    relationship = \"many-to-one\"\n",
                        "  ) |>\n",
                        "  filter(TRTEMFL == \"Y\")"),
                 "adae_ser <- adae_teae |>\n  filter(AESER == \"Y\") |>\n  mutate(SER = 1)",
@@ -61,7 +62,7 @@ test_that("the analysis data is made once, in order, for what a report reads", {
   expect_true(any(grepl("ard_ser <- adae_sub |>\n  mutate(\n    across(where(is.character), ~ na_if(.x, \"\")),\n    across(any_of(\"AGEGR1\") & where(is.factor), droplevels)\n  ) |>\n  ard_tabulate(",
                         code, fixed = TRUE)))
   expect_true(any(grepl("denominator = adae_subj,", code, fixed = TRUE)))
-  expect_true(any(grepl("denominator = adsl_saf,", code, fixed = TRUE)))
+  expect_true(any(grepl("denominator = adsl_sub,", code, fixed = TRUE)))
   # formatted in the call (cards::ard_tabulate() takes fmt_fun)
   expect_true(any(grepl("  apply_fmt_fun() |>\n  tag_ard(report_id, \"SER\", population = \"SAF\")",
                         code, fixed = TRUE)))
@@ -74,7 +75,7 @@ test_that("the analysis data is made once, in order, for what a report reads", {
   saveRDS(cards::ADSL, file.path(dir, "adsl.rds"))
   saveRDS(cards::ADAE, file.path(dir, "adae.rds"))
   a <- tfl_build_ard(x, dir = dir, save = FALSE)
-  expect_setequal(unique(a$analysis_id), c("GROUPN", "AE", "SER", "OLD"))
+  expect_setequal(unique(a$analysis_id), c("BIGN", "AE", "SER", "OLD"))
   expect_identical(unique(a$population_id), "SAF")
   # the denominator: the safety set's subjects per group
   saf <- cards::ADSL[cards::ADSL$SAFFL == "Y", ]
@@ -171,7 +172,7 @@ test_that("a report's own subjects, the columns kept, factors of derived columns
   ad <- ad_df(
     output_id = "T1",
     data_id = c("adsl_old", "adae_old"), from = c("ADSL", "ADAE"),
-    population_id = c("SAF", NA), subjects = c(NA, "adsl_old"),
+    population_id = c("SAF", NA), subjects_in = c(NA, "adsl_old"),
     where = c("AGE >= 65", "TRTEMFL == \"Y\""), add = c(NA, "TRT01A"),
     derive = c("OLD = ifelse(AGE >= 75, \"75+\", \"65-74\")", NA),
     keep = c(NA, "TRT01A | AEBODSYS | AEDECOD"))
@@ -188,17 +189,22 @@ test_that("a report's own subjects, the columns kept, factors of derived columns
   # its records
   expect_true(any(code == paste0(
     "adae_old <- adae |>\n",
-    "  select(-any_of(intersect(\"TRT01A\", names(adsl_old)))) |>\n",
-    "  inner_join(select(adsl_old, USUBJID, any_of(\"TRT01A\")), by = \"USUBJID\") |>\n",
+    "  select(-any_of(\"TRT01A\")) |>\n",
+    "  inner_join(\n",
+    "    select(adsl_old, USUBJID, TRT01A),\n",
+    "    by = \"USUBJID\",\n",
+    "    relationship = \"many-to-one\"\n",
+    "  ) |>\n",
     "  filter(TRTEMFL == \"Y\") |>\n",
     "  select(USUBJID, TRT01A, AEBODSYS, AEDECOD) |>\n",
     "  set_levels(OLD = cl_old)")))
   # the derived column a factor: the report's own code list rows count
   # (the analysis set it is made from, used for nothing else: in it, its
-  # condition and the report's in one filter())
+  # condition and the report's: two filter() calls)
   expect_true(any(code == paste0(
     "adsl_old <- adsl |>\n",
-    "  filter(SAFFL == \"Y\", AGE >= 65) |>\n",
+    "  filter(SAFFL == \"Y\") |>\n",
+    "  filter(AGE >= 65) |>\n",
     "  mutate(OLD = ifelse(AGE >= 75, \"75+\", \"65-74\")) |>\n",
     "  set_levels(OLD = cl_old)")))
   expect_true("cl_old <- c(\"75+\", \"65-74\")" %in% code)
@@ -215,12 +221,12 @@ test_that("a report's own subjects, the columns kept, factors of derived columns
   # checks
   d <- ad; d$population_id[2L] <- "SAF"
   expect_error(ad_spec(d, an), "not both", fixed = TRUE)
-  d <- ad; d$subjects[2L] <- "adae_old"
+  d <- ad; d$subjects_in[2L] <- "adae_old"
   expect_error(ad_spec(d, an), "is not an analysis data above it", fixed = TRUE)
   # ARS: the subjects' own condition has no place
   x$analyses$purpose <- "PRIMARY OUTCOME MEASURE"
   un <- tfl_ars_unmapped(tfl_ars(x))
-  expect_true("analysis_data$subjects" %in% un$item)
+  expect_true("analysis_data$subjects_in" %in% un$item)
 
   skip_if_not_installed("cards")
   dir <- withr_tempdir()
@@ -241,11 +247,12 @@ test_that("a data written as R (`code`): made by it, checked, in the fingerprint
   d$code[3L] <- "out <- adae_teae[adae_teae$AESER == \"Y\", ]\nout$SER <- 1\nout"
   x <- ad_spec(d, an_rows())
   code <- tfl_ard_code(x, output_id = "T1", save = FALSE, part = "body")
-  expect_true(any(code == paste0("adae_ser <- local({\n  out <- adae_teae[adae_teae$AESER == \"Y\", ]\n",
-                                 "  out$SER <- 1\n  out\n})")))
+  expect_true(any(code == "out <- adae_teae[adae_teae$AESER == \"Y\", ]"))
+  expect_true(any(code == "adae_ser <- out"))
+  expect_false(any(grepl("local(", code, fixed = TRUE)))
   # in the sheet's order, after what it reads
   expect_lt(grep("^adae_teae <- adae", code),
-            grep("^adae_ser <- local", code))
+            grep("^adae_ser <- out", code))
   # checked: R, and the columns that make a data left blank
   bad <- d; bad$code[3L] <- "subset(adae_teae,"
   expect_error(ad_spec(bad, an_rows()), "`code` does not read as R", fixed = TRUE)
@@ -271,26 +278,26 @@ test_that("a data written as R (`code`): made by it, checked, in the fingerprint
 
 
 test_that("an analysis data is a report's: the same name, another meaning elsewhere", {
-  # T1's adsl_saf is the safety set; T2's is the safety set over 65
-  ad <- ad_df(output_id = c("T1", "T2"), data_id = "adsl_saf", from = "ADSL",
+  # T1's adsl_sub is the safety set; T2's is the safety set over 65
+  ad <- ad_df(output_id = c("T1", "T2"), data_id = "adsl_sub", from = "ADSL",
               population_id = "SAF", where = c(NA, "AGE >= 65"))
   an <- ad_df(output_id = c("T1", "T2"), analysis_id = "AGE",
-              method = "cards::ard_summary", data = "adsl_saf", variables = "AGE")
+              method = "cards::ard_summary", data = "adsl_sub", variables = "AGE")
   x <- ad_spec(ad, an)
   c1 <- tfl_ard_code(x, output_id = "T1", save = FALSE, part = "body")
   c2 <- tfl_ard_code(x, output_id = "T2", save = FALSE, part = "body")
-  expect_true(any(grepl("^adsl_saf <- filter\\(adsl, SAFFL == ", c1)))
+  expect_true(any(grepl("^adsl_sub <- filter\\(adsl, SAFFL == ", c1)))
   expect_false(any(grepl("AGE >= 65", c1, fixed = TRUE)))
   expect_true(any(grepl("AGE >= 65", c2, fixed = TRUE)))
-  # the study's program: one part a report, each making its own adsl_saf
+  # the study's program: one part a report, each making its own adsl_sub
   all <- tfl_ard_code(x, save = FALSE, part = "body")
   expect_identical(sum(all == "# ---- T1 ----"), 1L)
   expect_identical(sum(all == "# ---- T2 ----"), 1L)
-  expect_identical(sum(grepl("^adsl_saf <- ", all)), 2L)
+  expect_identical(sum(grepl("^adsl_sub <- ", all)), 2L)
   expect_lt(which(all == "# ---- T1 ----"), which(all == "# ---- T2 ----"))
   expect_identical(sum(all == "ards <- list()"), 1L)
   expect_silent(parse(text = all))
-  # the fingerprints: each report's own rows; T2's changes when its adsl_saf does
+  # the fingerprints: each report's own rows; T2's changes when its adsl_sub does
   h1 <- tfl_ard_spec_hash(x, "T1")
   h2 <- tfl_ard_spec_hash(x, "T2")
   y <- x
@@ -300,25 +307,25 @@ test_that("an analysis data is a report's: the same name, another meaning elsewh
 })
 
 test_that("a report's analysis data name only its own rows; a blank output_id is an error", {
-  ad <- ad_df(output_id = c("T1", "T2"), data_id = c("adsl_saf", "adae_teae"),
+  ad <- ad_df(output_id = c("T1", "T2"), data_id = c("adsl_sub", "adae_teae"),
               from = c("ADSL", "ADAE"), population_id = c("SAF", NA),
-              subjects = c(NA, "adsl_saf"), where = c(NA, "TRTEMFL == \"Y\""))
+              subjects_in = c(NA, "adsl_sub"), where = c(NA, "TRTEMFL == \"Y\""))
   an <- ad_df(output_id = "T2", analysis_id = "AE", method = "cards::ard_tabulate",
               data = "adae_teae", variables = "AEDECOD")
-  expect_error(ad_spec(ad, an), "`subjects` adsl_saf is not an analysis data above it in the report",
+  expect_error(ad_spec(ad, an), "`subjects_in` adsl_sub is not an analysis data above it in the report",
                fixed = TRUE)
   # an analysis reads another report's data
-  ad2 <- ad_df(output_id = "T1", data_id = "adsl_saf", from = "ADSL", population_id = "SAF")
+  ad2 <- ad_df(output_id = "T1", data_id = "adsl_sub", from = "ADSL", population_id = "SAF")
   an2 <- ad_df(output_id = "T2", analysis_id = "AGE", method = "cards::ard_summary",
-               data = "adsl_saf", variables = "AGE")
-  expect_error(ad_spec(ad2, an2), "data adsl_saf is not an analysis data of T2 (another report's",
+               data = "adsl_sub", variables = "AGE")
+  expect_error(ad_spec(ad2, an2), "data adsl_sub is not an analysis data of T2 (another report's",
                fixed = TRUE)
   # the same name twice in a report
-  ad3 <- ad_df(output_id = "T1", data_id = c("adsl_saf", "adsl_saf"), from = "ADSL",
+  ad3 <- ad_df(output_id = "T1", data_id = c("adsl_sub", "adsl_sub"), from = "ADSL",
                population_id = "SAF")
   expect_error(ad_spec(ad3, an_rows()[1L, ]), "`data_id` repeated in the report", fixed = TRUE)
   # no report: said, with what to do
-  ad4 <- ad_df(output_id = NA_character_, data_id = "adsl_saf", from = "ADSL", population_id = "SAF")
+  ad4 <- ad_df(output_id = NA_character_, data_id = "adsl_sub", from = "ADSL", population_id = "SAF")
   expect_error(ad_spec(ad4, an_rows()[1L, ]), "`output_id` is blank", fixed = TRUE)
 })
 
@@ -356,4 +363,96 @@ test_that("asked twice, the fingerprint, the analysis data sheet and the code li
   expect_identical(lv$SEX, c(M = "Male", F = "Female"))
   expect_identical(.codelist_levels(cl, "T1"), lv)
   expect_error(.codelist_levels(bad, "T1"), "output_id")
+})
+
+test_that("a data is made from, population, subjects_in, where, derive, keep, distinct, in that order", {
+  ad <- ad_df(
+    output_id = "T1", data_id = c("adsl_sub", "adae_x"), from = c("ADSL", "ADAE"),
+    population_id = c("SAF", NA), subjects_in = c(NA, "adsl_sub"),
+    where = c(NA, "TRTEMFL == \"Y\""),
+    derive = c(NA, "SERF = AESER == \"Y\""),
+    keep = c(NA, "AEDECOD | SERF"), distinct = c(NA, "USUBJID | SERF"))
+  an <- ad_df(output_id = "T1", analysis_id = "AE", method = "cards::ard_tabulate",
+              data = "adae_x", variables = "SERF")
+  code <- tfl_ard_code(ad_spec(ad, an), output_id = "T1", save = FALSE, part = "body")
+  i <- grep("^adae_x <-", code)
+  expect_length(i, 1L)
+  txt <- strsplit(code[i], "
+", fixed = TRUE)[[1L]]
+  pos <- function(p) grep(p, txt, fixed = TRUE)[1L]
+  # the derived column is made before the columns are kept, and kept
+  keep_at <- grep("select(USUBJID", txt, fixed = TRUE)
+  expect_length(keep_at, 1L)
+  expect_true(pos("filter(") < pos("mutate("))
+  expect_true(pos("mutate(") < keep_at)
+  expect_true(keep_at < pos("distinct("))
+  expect_match(txt[keep_at], "SERF", fixed = TRUE)
+})
+
+test_that("an analysis_data sheet with a filled label column stops, an empty one is dropped", {
+  ad <- ad_rows()
+  ad$label <- c("Safety set", NA, NA, NA)
+  expect_error(ad_spec(ad, an_rows()),
+               "T1: data row `adsl_sub`: `label` is no longer a column of the analysis_data sheet",
+               fixed = TRUE)
+  ad$label <- c("", NA, " ", NA)
+  x <- ad_spec(ad, an_rows())
+  expect_false("label" %in% names(x$analysis_data))
+  expect_identical(names(.adata_sheet(x)), .ard_spec_sheets$analysis_data)
+  expect_false("label" %in% .ard_spec_sheets$analysis_data)
+})
+
+test_that("then: R piped onto the end of a data after its keys; read as R; not with code", {
+  d <- ad_rows()
+  d$then <- c(NA, NA, "dplyr::arrange(USUBJID) |> dplyr::slice_head(n = 1, by = USUBJID)", NA)
+  x <- ad_spec(d, an_rows())
+  code <- tfl_ard_code(x, output_id = "T1", save = FALSE, part = "body")
+  i <- grep("^adae_ser <- adae_teae", code)
+  expect_length(i, 1L)
+  # after the row's own steps, a step each, as written
+  at <- vapply(c("AESER == \"Y\"", "SER = 1", "arrange(USUBJID)", "slice_head(n = 1, by = USUBJID)"),
+               function(s) regexpr(s, code[i], fixed = TRUE)[[1L]], 1L)
+  expect_true(all(at > 0L))
+  expect_false(is.unsorted(at))
+  expect_match(code[i], "arrange\\(USUBJID\\) \\|>\n  (dplyr::)?slice_head\\(")
+  # a row of only a then: its one step piped onto the data it is made from
+  d1 <- ad_rows()
+  d1$where[3L] <- NA
+  d1$derive[3L] <- NA
+  d1$then <- c(NA, NA, "(\\(z) z[z$AESER == \"Y\", ])()", NA)
+  code1 <- tfl_ard_code(ad_spec(d1, an_rows()), output_id = "T1", save = FALSE, part = "body")
+  expect_true(any(grepl("^adae_ser <- adae_teae \\|> \\(", code1)))
+  # checked: R, and not with code (code makes the whole data)
+  bad <- d
+  bad$then[3L] <- "dplyr::filter("
+  expect_error(ad_spec(bad, an_rows()), "`then` does not read as R", fixed = TRUE)
+  bad <- d
+  bad$where[3L] <- NA
+  bad$derive[3L] <- NA
+  bad$code <- c(NA, NA, "adae_teae", NA)
+  expect_error(ad_spec(bad, an_rows()), "`code` makes the data itself; `then`", fixed = TRUE)
+  # a then blank in every row keeps the fingerprint; a then counts
+  plain <- ad_spec(ad_rows(), an_rows())
+  blank <- ad_rows()
+  blank$then <- NA_character_
+  expect_identical(tfl_ard_spec_hash(ad_spec(blank, an_rows()), "T1"), tfl_ard_spec_hash(plain, "T1"))
+  expect_false(identical(tfl_ard_spec_hash(x, "T1"), tfl_ard_spec_hash(plain, "T1")))
+
+  skip_if_not_installed("cards")
+  skip_if_not_installed("dplyr", "1.1.0")
+  dir <- tempfile("then-ard")
+  dir.create(dir)
+  on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+  saveRDS(cards::ADSL, file.path(dir, "adsl.rds"))
+  saveRDS(cards::ADAE, file.path(dir, "adae.rds"))
+  a <- tfl_build_ard(x, dir = dir, output_id = "T1", save = FALSE)
+  # SER counts a record a subject now: its n the subjects with a serious AE
+  ser <- a[a$analysis_id == "SER" & a$stat_name == "n", ]
+  adae <- cards::ADAE
+  adsl <- cards::ADSL
+  teae <- adae[adae$TRTEMFL == "Y" & adae$USUBJID %in% adsl$USUBJID[adsl$SAFFL == "Y"], ]
+  first <- teae[teae$AESER == "Y", ]
+  first <- first[order(first$USUBJID), ]
+  first <- first[!duplicated(first$USUBJID) & first$AESEV == "SEVERE", ]
+  expect_identical(sum(as.integer(unlist(ser$stat))), nrow(first))
 })

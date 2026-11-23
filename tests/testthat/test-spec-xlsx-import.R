@@ -32,8 +32,8 @@ test_that("edited rows update their items by key; new rows add; the rest is unto
   expect_true(any(r$changes$sheet == "codelists" & r$changes$to == "Ctrl"))
   # the files: the defaults' token, the report's title, analyses, footnote, code list
   s <- tfl_read_study_spec(d)
-  expect_identical(s$defaults$page$tokens$COMPANY, "Acme Pharma")
-  expect_identical(s$defaults$page$header[["1"]]$right, "DRAFT")   # untouched
+  expect_identical(s$study$tokens$COMPANY, "Acme Pharma")
+  expect_identical(s$study$tokens$STATUS, "DRAFT")   # untouched
   o <- tfl_read_outputs(d)[["T-14-1-1"]]
   expect_identical(o$page$titles[["2"]]$center, "Demographics (edited)")
   expect_identical(o$page$footnotes[["2"]]$left, "New note.")
@@ -42,7 +42,7 @@ test_that("edited rows update their items by key; new rows add; the rest is unto
   # what the workbook cannot hold is as it was
   expect_identical(vapply(o$content, `[[`, "", "fn")[6L], "plan_cell_style")
   expect_s3_class(o$content[[6L]]$args$where, "tfl_r")
-  expect_identical(o$ard$analyses[[2L]]$statistic$AGE[[2L]], "mean")
+  expect_identical(o$ard$analyses[[2L]]$statistics[[2L]], "mean")
   # the same workbook again: nothing changes
   r2 <- tfl_import_spec_xlsx(d, f)
   expect_identical(nrow(r2$changes), 0L)

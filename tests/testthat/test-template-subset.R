@@ -25,7 +25,7 @@ test_that("every table and figure template takes subset; a records template wher
   # (km_table and stat_block read the report's own ARD: no data of their own)
   own <- setdiff(t$name[t$package == "tflspec"], c("km_table", "stat_block"))
   expect_true(all(vapply(own, has, NA, p = "subset")))
-  expect_true(all(vapply(setdiff(own, c("demog", "disposition", "summary")), has, NA,
+  expect_true(all(vapply(setdiff(own, c("demog", "stf_t02_demog", "disposition", "summary")), has, NA,
                          p = "where")))
   p <- tflspec:::.tpl_get("ae_soc_pt", "test")$params
   expect_identical(vapply(p[c("population", "subset", "where")], `[[`, "", "group"),
@@ -50,35 +50,38 @@ test_that("expanded: subset on the set's ADSL; a records data takes its subjects
   x <- tfl_template_expand("ae_soc_pt", list(population = "SAF", subset = "PART == \"Part 1\""))
   d <- x$ard$analysis_data
   expect_identical(as.character(d[[1L]]$where), "PART == \"Part 1\"")
-  expect_identical(d[[2L]]$subjects, "adsl_saf")
+  expect_identical(d[[2L]]$subjects, "adsl_sub")
   # a records data of the set itself: an ADSL data of the set first
   y <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "WEEK 2",
                                              params = "ALT", subset = "PART == \"Part 1\"",
                                              where = "ANL01FL == \"Y\""))
   d <- y$ard$analysis_data
-  expect_identical(vapply(d, `[[`, "", "id"), c("adsl_saf", "adlb_saf", "adlb_saf_den"))
+  expect_identical(vapply(d, `[[`, "", "id"), c("adsl_sub", "adlb_sub", "adlb_total", "adlb_den"))
   expect_identical(as.character(d[[1L]]$where), "PART == \"Part 1\"")
   # (its code keeps a subject once: it reads the subset's subjects)
-  expect_match(d[[2L]]$code, "dplyr::select(adsl_saf, USUBJID, TRT01A)", fixed = TRUE)
+  expect_match(d[[2L]]$code, "dplyr::select(adsl_sub, USUBJID, TRT01A)", fixed = TRUE)
   expect_match(d[[2L]]$code, "& ANL01FL == \"Y\")", fixed = TRUE)
   # (the page N's data set reads the set's records, so the subset's subjects)
-  expect_identical(d[[3L]]$from, "adlb_saf")
-  expect_match(d[[3L]]$code, "dplyr::filter(adlb_saf, BNRIND == \"Total\")", fixed = TRUE)
+  expect_identical(d[[3L]]$from, "ADLB")
+  expect_match(d[[3L]]$code, "dplyr::bind_rows(adlb_sub, dplyr::mutate(adlb_sub, BNRIND = \"Total\"))",
+               fixed = TRUE)
+  expect_identical(d[[4L]]$from, "adlb_sub")
   # every record: a records data of the set takes the subjects
   y <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "WEEK 2",
                                              params = "ALT", subset = "PART == \"Part 1\"",
                                              where = "ANL01FL == \"Y\"", worst = NULL,
                                              header_n = "tested"))
   d <- y$ard$analysis_data
-  expect_identical(vapply(d, `[[`, "", "id"), c("adsl_saf", "adlb_saf", "adlb_saf_den"))
+  expect_identical(vapply(d, `[[`, "", "id"), c("adsl_sub", "adlb_sub", "adlb_den"))
   expect_null(d[[2L]]$population)
-  expect_identical(d[[2L]]$subjects, "adsl_saf")
+  expect_identical(d[[2L]]$subjects, "adsl_sub")
   expect_match(as.character(d[[2L]]$where), "& ANL01FL == \"Y\"$")
   # (the page N's data set reads the set's records, so the subset's subjects)
-  expect_identical(d[[3L]]$from, "adlb_saf")
-  expect_match(d[[3L]]$code, "dplyr::distinct(adlb_saf, USUBJID", fixed = TRUE)
+  expect_identical(d[[3L]]$from, "adlb_sub")
+  expect_match(d[[3L]]$code, "dplyr::distinct(adlb_sub, USUBJID", fixed = TRUE)
   # an "or" in brackets
-  z <- tfl_template_expand("demog", list(population = "SAF", subset = "PART == \"A\" | AGE > 70"))
+  z <- tfl_template_expand("demog", list(population = "SAF", by = "TRT01A", continuous = "AGE",
+                                         subset = "PART == \"A\" | AGE > 70"))
   expect_identical(as.character(z$ard$analysis_data[[1L]]$where), "PART == \"A\" | AGE > 70")
   # a figure: the set's semi join keeps them too; none given: one of its own
   f <- tfl_template_expand("km", list(param = "PFS", by = "TRT01A", subset = "PART == \"Part 1\""))
@@ -111,7 +114,7 @@ test_that("in a study: a listing of ADAE (no PART) with subset lists Part 1's su
   st <- tfl_read_study_spec(d)
   ro <- tfl_resolve_output(tfl_read_output(f), st)
   # the program as the sheets write it: the listing's rows, its rework
-  sh <- suppressMessages(tfl_sheets_from_spec(st, list(`L-9-1` = ro)))
+  sh <- suppressMessages(tfl_sheets_from_spec(st, list(`L-9-1` = ro), templates = "expand"))
   rework <- stats::na.omit(sh$planner$process_code[sh$planner$output_id == "L-9-1"])
   code <- tfl_listing_code(tfl_listing_spec(sh$listing, check = FALSE), "L-9-1",
                            sh$ard$datasets, rework = rework, part = "data")
@@ -137,23 +140,26 @@ test_that("in a study: demog and ae_soc_pt of Part 1's subjects; N and counts th
   haven::write_xpt(tflspec:::.ai_chr(sl), file.path(d, "adam", "adsl.xpt"))
   haven::write_xpt(tflspec:::.ai_chr(adae), file.path(d, "adam", "adae.xpt"))
   tfl_ai_study_init(d, adam = "adam", study_id = "SUB-1")
+  dm <- list(by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX"))
   sub <- list(subset = "PART == \"Part 1\"")
   outs <- list(
-    tfl_output("T-9-1", "table", population = "SAF", label = "Demographics, Part 1",
-               extends = "defaults", template = list(name = "demog", args = sub)),
-    tfl_output("T-9-2", "table", population = "SAF", label = "TEAEs, Part 1",
+    tfl_output("T-9-1", "table", common = list(population = "SAF"), label = "Demographics, Part 1",
+               extends = "defaults", template = list(name = "demog", args = c(dm, sub))),
+    tfl_output("T-9-2", "table", common = list(population = "SAF"), label = "TEAEs, Part 1",
                extends = "defaults", template = list(name = "ae_soc_pt", args = sub)),
     # the same set's name in another report, every subject: its own
-    tfl_output("T-9-3", "table", population = "SAF", label = "Demographics",
-               extends = "defaults", template = list(name = "demog")))
+    tfl_output("T-9-3", "table", common = list(population = "SAF"), label = "Demographics",
+               extends = "defaults", template = list(name = "demog", args = dm)))
   for (o in outs) tfl_write_output(o, file.path(d, "spec", "outputs", paste0(o$id, ".yml")))
   st <- tfl_read_study_spec(d)
   code <- paste(tfl_ard_code(st, output_id = "T-9-2", save = FALSE, part = "body"),
                 collapse = "\n")
-  # the denominator: the analysis set and the subset in one filter(); the
+  # the denominator: the analysis set and the subset, two filter() calls; the
   # target subjects, then the target records
-  expect_match(code, "adsl_saf <- filter(adsl, SAFFL == \"Y\", PART == \"Part 1\")", fixed = TRUE)
-  expect_match(code, paste0("  inner_join(select(adsl_saf, USUBJID, any_of(\"TRT01A\")), by = \"USUBJID\") |>\n",
+  expect_match(code, paste0("adsl_sub <- adsl |>\n  filter(SAFFL == \"Y\") |>\n",
+                            "  filter(PART == \"Part 1\")"), fixed = TRUE)
+  expect_match(code, paste0("    select(adsl_sub, USUBJID, TRT01A),\n    by = \"USUBJID\",\n",
+                            "    relationship = \"many-to-one\"\n  ) |>\n",
                             "  filter(TRTEMFL == \"Y\")"), fixed = TRUE)
   ard <- suppressMessages(tfl_build_ard(st, dir = d, save = FALSE))
   saf <- sl[sl$SAFFL == "Y", ]
@@ -163,9 +169,9 @@ test_that("in a study: demog and ae_soc_pt of Part 1's subjects; N and counts th
              a$stat_name == "n", ]
     stats::setNames(unlist(r$stat), as.character(unlist(r$variable_level)))
   }
-  expect_identical(as.integer(n_of(ard, "T-9-1", "GROUPN")[c("Drug X", "Control")]),
+  expect_identical(as.integer(n_of(ard, "T-9-1", "BIGN")[c("Drug X", "Control")]),
                    as.integer(table(p1$TRT01A)[c("Drug X", "Control")]))
-  expect_identical(as.integer(n_of(ard, "T-9-3", "GROUPN")[c("Drug X", "Control")]),
+  expect_identical(as.integer(n_of(ard, "T-9-3", "BIGN")[c("Drug X", "Control")]),
                    as.integer(table(saf$TRT01A)[c("Drug X", "Control")]))
   # the AE table: Part 1's subjects with a TEAE, over Part 1's N
   te <- adae[adae$TRTEMFL == "Y" & adae$USUBJID %in% p1$USUBJID, ]
@@ -207,7 +213,7 @@ test_that("a figure (km) of Part 1's subjects: A = B = the template SPEC", {
   sl <- subset_adsl()
   haven::write_xpt(tflspec:::.ai_chr(sl), file.path(d, "adam", "adsl.xpt"))
   data$adsl <- as.data.frame(haven::read_xpt(file.path(d, "adam", "adsl.xpt")))
-  o <- tfl_output("F-9-2", "figure", population = "SAF", label = "KM curves, Part 1",
+  o <- tfl_output("F-9-2", "figure", common = list(population = "SAF"), label = "KM curves, Part 1",
                   extends = "defaults",
                   template = list(name = "km",
                                   args = list(param = "PFS", by = "TRT01A", risk_table = FALSE,

@@ -66,7 +66,10 @@ tfl_write_ars_json <- function(ars, path, pretty = TRUE) {
 #' SAP's decision, so [tfl_ars()] leaves it blank when the spec does), each
 #' id is used once in its class, and each reference (`methodId`,
 #' `analysisSetId`, `dataSubsetId`, `groupingId`, an operation, an output or
-#' analysis of the list of contents) names something that is there.  With
+#' analysis of the list of contents) names something that is there, and each
+#' sub-clause of an analysis set's or data subset's `compoundExpression`
+#' carries its `level` and `order` and a `subClauseId` naming a set / subset
+#' (or its own `condition` or `compoundExpression`).  With
 #' `schema = TRUE` and the jsonvalidate package installed, the JSON is
 #' also checked against CDISC's JSON Schema for ARS v1.0
 #' (`system.file("ars", "ars_ldm.json", package = "tflspec")`).
@@ -126,6 +129,35 @@ tfl_check_ars <- function(ars, schema = TRUE, profile = NULL) {
     dup(k, cls)
     for (z in re[[k]]) need(z, paste(cls, z$id), c("id", "name", "level",
                                                     "order"))
+  }
+  # a compound expression's sub-clauses: each its level and order, and a
+  # subClauseId naming a set / subset of the class, or its own condition or
+  # compoundExpression (#511: what the JSON Schema says, without jsonvalidate)
+  subs_ids <- list(analysisSets = ids_of("analysisSets"),
+                   dataSubsets = ids_of("dataSubsets"))
+  clauses <- function(ce, part, k) {
+    for (j in seq_along(ce$whereClauses)) {
+      w <- ce$whereClauses[[j]]
+      at <- sprintf("%s whereClauses[%d]", part, j)
+      need(w, at, c("level", "order"))
+      if (!is.null(w$subClauseId)) {
+        if (!w$subClauseId %in% subs_ids[[k]]) {
+          add(at, "subClauseId", sprintf("no %s %s",
+                                         if (k == "analysisSets") "analysis set" else "data subset",
+                                         w$subClauseId))
+        }
+      } else if (is.null(w$condition) && is.null(w$compoundExpression)) {
+        add(at, "subClauseId",
+            "a sub-clause holds a subClauseId, a condition or a compoundExpression")
+      }
+      if (!is.null(w$compoundExpression)) clauses(w$compoundExpression, at, k)
+    }
+  }
+  for (k in names(subs_ids)) {
+    cls <- if (k == "analysisSets") "AnalysisSet" else "DataSubset"
+    for (z in re[[k]]) {
+      if (!is.null(z$compoundExpression)) clauses(z$compoundExpression, paste(cls, z$id), k)
+    }
   }
   dup("analysisGroupings", "AnalysisGrouping")
   for (g in re$analysisGroupings) {

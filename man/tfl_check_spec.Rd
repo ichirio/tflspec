@@ -20,8 +20,9 @@ above only.}
 }
 \value{
 A data frame, one row a problem: \code{output_id} (\code{NA} for the
-study's ARD definition as a whole), \code{part} (\code{"file"}, \code{"ard"},
-\code{"content"}, \code{"program"}, \code{"figure"}, \code{"build"}), \code{item} (the file, the
+study's ARD definition as a whole and the study's own rows), \code{part}
+(\code{"file"}, \code{"study"}, \code{"ard"}, \code{"content"}, \code{"program"}, \code{"figure"},
+\code{"build"}), \code{item} (the file, the
 analysis, the function and argument, or the figure's part and
 field), \code{level} (\code{"error"}, \code{"warning"}, \code{"note"}, \code{"check"}) and
 \code{message}.  Its attributes: \code{versions}, a data frame of the key
@@ -63,7 +64,13 @@ content items against the schema and the installed rtfreporter
 (\code{\link[=tfl_schema_check]{tfl_schema_check()}}, the items of an appended part too; its code
 written, \code{\link[=tfl_content_code]{tfl_content_code()}}), and a figure's design against the
 installed ggplot2 and the version it is written for
-(\code{\link[=tfl_check_fig_design]{tfl_check_fig_design()}}).  The packages' installed versions come with
+(\code{\link[=tfl_check_fig_design]{tfl_check_fig_design()}}), and the names its fields give
+(\code{\link[=tfl_output_objects]{tfl_output_objects()}}): a field that names an object made below it,
+a figure's field that names an object nothing above its content makes
+(\code{wrap_plots}'s \code{plots}, \code{ggsurvfit}'s \code{x}, a \code{data} or a \code{fit}), and a
+name given twice in a report or that is a study dataset's or a
+function's are errors (\code{part} \code{"names"} for the last two); an object
+the report names and nothing uses is a note.  The packages' installed versions come with
 it, as an attribute.  A GUI's check button and the AI's run call it.
 }
 \examples{
@@ -75,7 +82,7 @@ if (requireNamespace("haven", quietly = TRUE)) {
   haven::write_xpt(as.data.frame(lapply(adsl, chr)), file.path(d, "adam", "adsl.xpt"))
   tfl_ai_study_init(d, adam = "adam", study_id = "EX-1")
   tfl_write_output(
-    tfl_output("T-DM", "table", population = "SAF",
+    tfl_output("T-DM", "table", common = list(population = "SAF"),
                template = list(name = "demog", args = list(population = "SAF"))),
     file.path(d, "spec", "outputs", "T-DM.yml"))
   p <- tfl_check_spec(d)

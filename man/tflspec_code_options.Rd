@@ -4,7 +4,7 @@
 \alias{tflspec_code_options}
 \title{How the generated programs name folders and packages}
 \description{
-Two options make the code tflspec writes fit a study's setup file (such
+Three options make the code tflspec writes fit a study's setup file (such
 as tflplanner's \code{programs/study_setup.R}), which defines the study's
 folders as variables and attaches the packages every program uses.
 }
@@ -21,10 +21,37 @@ in the program, the code of the spec it carries included (only the
 code: a string or a comment keeps what it says), and an ARD program
 does not write \code{library(cards)} itself.  A package not listed keeps
 its prefix (\verb{cardx::}).
+\item \code{tflspec.study_setup}: \code{TRUE} when the study's setup file sets the
+study-wide options and reads the study's input data -- today the
+rounding, \code{rtfreporter.rounding} and \code{cards.round_type}, the study's
+code lists by name (\code{study$codelists}) and its ADaM metadata
+(\code{study$adam_meta}), and the data catalog's datasets read when
+first used, in two environments: \code{study$adam_org} (as the file has
+them, with the \code{derive}) and \code{study$adam} (blanks as \code{NA}, and the
+levels of the code lists adam_meta maps to their variables unless
+study.yml's \code{settings: adam_levels} is \code{none}), and one object per dataset (\code{adsl}) that is its
+\code{study$adam}'s: the programs always read \code{study$adam},
+written by \code{\link[=tfl_study_setup_code]{tfl_study_setup_code()}}.  The ARD setup
+(\code{\link[=tfl_ard_code]{tfl_ard_code()}}) and the report setup (\code{\link[=tfl_report_setup_code]{tfl_report_setup_code()}})
+then do not write the rounding again; their other options stay.  The
+ARD, listing and figure programs do not read the files: a dataset's
+line becomes its steps on the object (\code{adsl <- adsl |> order_levels(...)}),
+and none when it has no step.  A report's
+\code{plan_digits(rounding = )} that is the study's is left out of its
+program either way.  tflspec's own runs of a program (\code{\link[=tfl_build_ard]{tfl_build_ard()}}
+and the like) do not use the option: they read the files themselves,
+with the blanks as \code{NA} (\code{blank_as_na()}) and the levels of the code
+lists the study's ADaM metadata maps (\code{set_levels(SEX = adam_codes("CL.SEX"))}, after the program's own \code{study$adam_meta}), as
+\code{study$adam} has them.
 }
 
-Unset (the default), the code is as it has always been: literal paths
-and \verb{pkg::} on every call.  The functions that write code read them:
+Unset or \code{FALSE} (the default), the code is as it has always been:
+literal paths, \verb{pkg::} on every call, the rounding in each setup; a
+program reads each dataset itself, with \code{blank_as_na()} after its
+\code{derive} (a blank text value is \code{NA}, as in \code{study$adam}) and, for a YAML
+study under \code{settings: adam_levels: define_xml} (or \code{define_spec}), the levels of the code
+lists its ADaM metadata maps to the dataset's variables (the program
+writes the rows it uses as \code{study$adam_meta} first).  The functions that write code read them:
 \code{\link[=tfl_ard_code]{tfl_ard_code()}}, \code{\link[=tfl_build_ard]{tfl_build_ard()}}, \code{\link[=tfl_table_code]{tfl_table_code()}},
 \code{\link[=tfl_report_code]{tfl_report_code()}}, \code{\link[=tfl_report_setup_code]{tfl_report_setup_code()}}, \code{\link[=tfl_listing_code]{tfl_listing_code()}},
 \code{\link[=tfl_read_data_code]{tfl_read_data_code()}}, \code{\link[=tfl_fig_design_code]{tfl_fig_design_code()}} and

@@ -189,6 +189,8 @@ test_that("a dataset the catalog has not stops the program, saying so", {
   expect_error(eval(str2lang(code)),
                "tflspec: dataset ADAE is not in the data catalog.", fixed = TRUE)
   expect_true("adsl <- readRDS(\"data/adsl.rds\")" %in% tfl_read_data_code(cat, "ADSL"))
+  # (the blanks as NA, as the study's study$adam has them)
+  expect_identical(utils::tail(tfl_read_data_code(cat, "ADSL"), 1L), "adsl <- blank_as_na(adsl)")
 })
 
 test_that("an .rda (or .RData) file holding one dataset is read, in the code and by tfl_read_adam()", {
@@ -198,6 +200,8 @@ test_that("an .rda (or .RData) file holding one dataset is read, in the code and
   cat <- data.frame(dataset = "ADSL", path = file.path(d, "adsl.rda"), derive = NA)
   code <- tfl_read_data_code(cat, "ADSL")
   e <- new.env()
+  # (the program's blank_as_na() is a study helper)
+  eval(parse(text = tfl_helpers_code()), envir = e)
   eval(parse(text = code), envir = e)
   expect_identical(e$adsl, adsl)
   file.copy(file.path(d, "adsl.rda"), file.path(d, "adae.RData"))

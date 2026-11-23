@@ -22,15 +22,15 @@
             if (is.null(p$where)) "every subject" else paste0("`", as.character(p$where), "`"))
   }, "")
   ds <- vapply(st$data$datasets %||% list(), function(d) d$dataset %||% "", "")
-  tok <- .page_output_tokens_used(st$defaults$page %||% list())
-  cls <- names(st$defaults$codelists %||% list())
+  tok <- .page_output_tokens_used(.page_config_flat(list(page = .study_default_page(st))))
+  cls <- names(st$codelists %||% list())
   c("# This study's facts",
     "",
     "Read-only: the person's study as it is now (its analysis sets, datasets and",
     "defaults, outside this folder: do not open them); tflspec writes this file",
     "again when they change.",
     "",
-    "## The analysis sets (a report's `population:` is the id)",
+    "## The analysis sets (a report's `common: population` is the id)",
     "",
     "| id | label | the subjects |",
     "|---|---|---|",
@@ -56,7 +56,9 @@
     "## The study's code lists",
     "",
     if (length(cls)) {
-      c("These variables have one already; a draft writes its own only when the shell differs:",
+      c("The study keeps these lists, by name (spec/defaults.yml codelists:). No layer gives a",
+        "report a list (a pattern holds none); a draft names one where it uses it",
+        "(`!r study$codelists$SEX`), or writes its own `codelists:` for a variable it lists:",
         "", paste0("- ", cls))
     } else "None.")
 }
@@ -196,7 +198,7 @@
   in_ai <- grepl("(^|/)ai/", f)
   in_ai && (b %in% c("AGENTS.md", "agent_prompt.md", "templates.md") ||
               grepl("^instructions-.*[.]md$", b) ||
-              grepl("(^|/)ai/(requests|repairs)/[^/]+[.]md$", f) ||
+              grepl("(^|/)ai/(requests|repairs|ars)/[^/]+[.]md$", f) ||
               grepl("(^|/)ai/[.]github/", f))
 }
 

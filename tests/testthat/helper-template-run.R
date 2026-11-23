@@ -32,12 +32,16 @@ tsr_without <- c("km_table", "stat_block")
 tsr_output <- function(nm, use = nm) {
   tp <- tfl_templates()
   own <- if (any(vapply(tflspec:::.tpl_get(nm, "test")$params, function(p) isTRUE(p$hidden) &&
-                          identical(p$stage, "data"), NA))) {
+                          identical(p$step, "data"), NA))) {
     list(steps = list(list(step = "read", dataset = "ADTTE"), list(step = "param", value = "PFS")))
   }
-  tfl_output(paste0("X-", gsub("_", "-", nm)), tp$kind[tp$name == nm], population = "SAF",
-             label = nm, template = list(name = use, args = utils::modifyList(
-               tflspec:::.tpl_examples[[nm]], tsr_args[[nm]] %||% list(), keep.null = FALSE)),
+  args <- utils::modifyList(
+    tflspec:::.tpl_examples[[nm]], tsr_args[[nm]] %||% list(), keep.null = FALSE)
+  # (demog, stf_t02_demog, summary and disposition take the analysis set from
+  # the report's `population:`)
+  if (nm %in% c("demog", "stf_t02_demog", "summary", "disposition")) args$population <- NULL
+  tfl_output(paste0("X-", gsub("_", "-", nm)), tp$kind[tp$name == nm], common = list(population = "SAF"),
+             label = nm, template = list(name = use, args = args),
              data = own)
 }
 

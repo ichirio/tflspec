@@ -186,15 +186,73 @@ test_that("drop_empty_groups(): a group with N = 0 and nothing else loses its ro
   expect_identical(nrow(e$drop_empty_groups(no_group)), 1L)
 })
 
-test_that("set_levels() on a column that holds the list's labels already keeps them (a data made from another)", {
+test_that("keep_min_pct(): the terms of a percentage of subjects or more, in any / all / the Total column", {
+  skip_if_not_installed("cards")
+  e <- helper_env()
+  saf <- adsl[adsl$SAFFL == "Y", ]
+  ae <- adae[adae$SAFFL == "Y" & adae$TRTEMFL == "Y", ]
+  stack <- function(...) cards::ard_stack_hierarchical(ae, variables = c(AEBODSYS, AEDECOD), ...,
+                                                      denominator = saf, id = USUBJID, over_variables = TRUE)
+  # (the arms' ARD with the Total column bound under it, as a template's program makes it)
+  ard <- dplyr::bind_rows(stack(by = TRT01A), stack())
+  lv <- function(x) vapply(x, function(v) if (length(v)) as.character(v[[1L]]) else NA_character_, "")
+  # a term's percentage in each column: the Total's rows have no `by` group
+  # (the term's SOC is group1), an arm's have TRT01A as group1 (its SOC group2)
+  pct <- function(by) {
+    r <- ard[ard$variable %in% "AEDECOD" & ard$stat_name == "p" &
+               (ard$group1 %in% "TRT01A") == by, ]
+    split(unlist(r$stat), lv(r$variable_level))
+  }
+  arm <- pct(TRUE)
+  tot <- pct(FALSE)
+  pts <- function(x) sort(unique(lv(x$variable_level[x$variable %in% "AEDECOD"])))
+  soc <- function(x) sort(unique(lv(x$variable_level[x$variable %in% "AEBODSYS"])))
+  expect_gt(length(arm), 10L)
+  for (pct_ in c(5, 20, 40)) {
+    p <- pct_ / 100
+    k_any <- e$keep_min_pct(ard, pct_)
+    expect_identical(pts(k_any), sort(names(arm)[vapply(arm, function(v) any(v >= p), NA)]))
+    expect_identical(pts(e$keep_min_pct(ard, pct_, "all")),
+                     sort(names(arm)[vapply(arm, function(v) all(v >= p), NA)]))
+    expect_identical(pts(e$keep_min_pct(ard, pct_, "total")),
+                     sort(names(tot)[vapply(tot, function(v) v >= p, NA)]))
+  }
+  # a term keeps its rows in every column, the Total's too; what is not a term stays
+  k <- e$keep_min_pct(ard, 20)
+  kept <- pts(k)
+  expect_gt(nrow(k[k$variable %in% "AEDECOD" & !k$group1 %in% "TRT01A", ]), 0L)
+  expect_identical(sum(k$variable %in% "AEDECOD"), sum(ard$variable %in% "AEDECOD" &
+    lv(ard$variable_level) %in% kept))
+  expect_identical(sum(!k$context %in% "hierarchical" | startsWith(k$variable, "..")),
+                   sum(!ard$context %in% "hierarchical" | startsWith(ard$variable, "..")))
+  # a SOC stays when a term below it passes (not on its own percentage)
+  under <- k$variable %in% "AEDECOD" & k$group1 %in% "TRT01A"
+  expect_identical(soc(k), sort(unique(lv(k$group2_level[under]))))
+  r <- ard[ard$variable %in% "AEBODSYS" & ard$stat_name == "p" & ard$group1 %in% "TRT01A", ]
+  soc_arm <- split(unlist(r$stat), lv(r$variable_level))
+  own <- names(soc_arm)[vapply(soc_arm, function(v) any(v >= 0.2), NA)]
+  expect_gt(length(setdiff(own, soc(k))), 0L)
+  # "total" on an ARD with no Total column stops, naming the way out;
+  # no records, nothing to drop
+  expect_error(e$keep_min_pct(stack(by = TRT01A), 5, "total"), "Total column.*\"any\"")
+  expect_identical(e$keep_min_pct(ard[0L, ], 5), ard[0L, ])
+})
+
+test_that("set_levels() makes a factor of the codes: no labels, and a data made from another keeps them", {
   e <- new.env()
   sys.source(system.file("helpers", "study_helpers.R", package = "tflspec"), envir = e)
   cl <- c(LOW = "Low", NORMAL = "Normal", HIGH = "High")
   d <- data.frame(WORST = c("HIGH", "LOW", NA), stringsAsFactors = FALSE)
   once <- e$set_levels(d, WORST = cl)
-  expect_identical(levels(once$WORST), c("Low", "Normal", "High"))
+  expect_identical(levels(once$WORST), c("LOW", "NORMAL", "HIGH"))
+  expect_identical(as.character(once$WORST), c("HIGH", "LOW", NA))
   twice <- e$set_levels(once, WORST = cl)
   expect_identical(twice$WORST, once$WORST)
+  # a list without names: the values themselves; a narrowed list: its levels only
+  expect_identical(levels(e$set_levels(d, WORST = names(cl))$WORST), c("LOW", "NORMAL", "HIGH"))
+  expect_identical(levels(e$set_levels(d, WORST = cl[c("LOW", "HIGH")])$WORST), c("LOW", "HIGH"))
+  # a label is no code: it stops
+  expect_error(e$set_levels(data.frame(WORST = "High"), WORST = cl), "WORST has values its code list does not")
   expect_error(e$set_levels(data.frame(WORST = "Mid"), WORST = cl), "WORST has values its code list does not")
 })
 
@@ -204,12 +262,12 @@ test_that("set_levels(): a blank text value is missing, not a value the list lac
   cl <- c(LOW = "Low", NORMAL = "Normal", HIGH = "High")
   d <- data.frame(WORST = c("HIGH", "", NA, "  ", "LOW"), stringsAsFactors = FALSE)
   r <- e$set_levels(d, WORST = cl)
-  expect_identical(levels(r$WORST), c("Low", "Normal", "High"))
+  expect_identical(levels(r$WORST), c("LOW", "NORMAL", "HIGH"))
   expect_identical(is.na(r$WORST), c(FALSE, TRUE, TRUE, TRUE, FALSE))
-  expect_identical(as.character(r$WORST[c(1L, 5L)]), c("High", "Low"))
+  expect_identical(as.character(r$WORST[c(1L, 5L)]), c("HIGH", "LOW"))
   expect_error(e$set_levels(data.frame(WORST = c("", "Mid")), WORST = cl),
                "WORST has values its code list does not: \"Mid\"", fixed = TRUE)
-  # a factor with the labels already still works, its blank staying missing
+  # a factor with the codes already still works, its blank staying missing
   f <- e$set_levels(r, WORST = cl)
   expect_identical(f$WORST, r$WORST)
 })

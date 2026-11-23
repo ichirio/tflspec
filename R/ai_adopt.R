@@ -389,7 +389,7 @@ tfl_ai_adopted_diff <- function(study_dir = ".", output_id = NULL) {
                   error = function(e) NULL)
     e <- list(id = id, kind = o$kind %||% "table")
     if (!is.null(o) && !is.na(o$label %||% NA)) e$label <- o$label
-    if (!is.null(o) && !is.na(o$population %||% NA)) e$population <- o$population
+    if (!is.null(o) && !is.na(.out_population(o))) e$population <- .out_population(o)
     b <- base_key(id)
     near <- which(vapply(toc, function(x) identical(base_key(x$id %||% ""), b), NA))
     if (!is.na(b) && length(near)) {

@@ -103,7 +103,7 @@ test_that("a listing as an object: its records read and laid out, beside a table
                      file.path(d, "adam", paste0(x, ".xpt")))
   }
   invisible(tfl_ai_study_init(d, adam = "adam", study_id = "XYZ"))
-  m <- tfl_output("M-9", "table", label = "AEs and their listing", population = "SAF")
+  m <- tfl_output("M-9", "table", label = "AEs and their listing", common = list(population = "SAF"))
   m$ard <- list(analyses = list(list(id = "AE", method = "categorical", dataset = "ADAE",
                                      population = "SAF", by = list("TRT01A"),
                                      variables = list("AESEV"))))

@@ -94,9 +94,9 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
     "  - id: T-14-1-1",
     "    kind: table",
     "    label: Demographic and Baseline Characteristics",
-    "    population: SAF",
+    "    common: {population: SAF}",
     "    extends: [defaults]",
-    "    template: {name: demog, args: {categorical: [AGEGR1, SEX, RACE]}}",
+    "    template: {name: demog, args: {by: TRT01A, continuous: AGE, categorical: [AGEGR1, SEX, RACE]}}",
     "    page: {titles: {\"1\": {center: Table 14.1.1}}}",
     "assumptions: []"), "table")
   ai_drafts_from_answer(d, aitpl_answer(
@@ -105,7 +105,7 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
     "  - id: T-14-3-1",
     "    kind: table",
     "    label: Treatment-Emergent Adverse Events by System Organ Class and Preferred Term",
-    "    population: SAF",
+    "    common: {population: SAF}",
     "    extends: [defaults]",
     "    template: {name: ae_soc_pt}",
     "    content:",
@@ -118,11 +118,11 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
     "  - id: T-14-3-5",
     "    kind: table",
     "    label: Laboratory values and change from baseline",
-    "    population: SAF",
+    "    common: {population: SAF}",
     "    extends: [defaults]",
     "    template:",
     "      name: param_change",
-    "      args: {data: ADLB, params: [ALT, AST], visits: [CYCLE 2 DAY 1], param_order: ~, colour: red}",
+    "      args: {data: ADLB, by: TRT01A, params: [ALT, AST], visits: [CYCLE 2 DAY 1], param_order: ~, colour: red}",
     "    page: {titles: {\"1\": {center: Table 14.3.5}}}",
     "assumptions: []"), "table")
   ai_drafts_from_answer(d, aitpl_answer(
@@ -175,12 +175,11 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
     "  - id: T-14-2-1",
     "    kind: table",
     "    label: Sex by arm",
-    "    population: ITT",
+    "    common: {population: ITT}",
     "    extends: [defaults]",
     "    ard:",
     "      analyses:",
     "        - {id: SEX, method: categorical, dataset: ADSL, population: ITT, by: [TRT01A], variables: [SEX]}",
-    "    data: {source: ard}",
     "    content:",
     "      - table_plan: {cols: TRT01A, rows: {group: variable}}",
     "    page: {titles: {\"1\": {center: Table 14.2.1}}}",
@@ -277,7 +276,7 @@ test_that("tfl_ai_compare(): a study without templates; no answer; a repair coun
     "outputs:",
     "  - id: T-14-1-1",
     "    kind: table",
-    "    population: SAF",
+    "    common: {population: SAF}",
     "    template: {name: demo}",
     "assumptions: []"), "table")
   for (i in 1:2) suppressMessages(tfl_ai_collect_answers(d))
@@ -393,7 +392,7 @@ aitpl_shift_answer <- function(template = "shift", args = "levels: [Low, Normal,
     "  - id: T-14-3-4",
     "    kind: table",
     "    label: Shift table",
-    "    population: SAF",
+    "    common: {population: SAF}",
     if (codelists) cl,
     paste0("    extends: ", extends),
     "    template:",
@@ -488,58 +487,37 @@ test_that("shift, lab_shift: a draft with `post_header` passes the kit check; th
   expect_match(.ai_tpl_notes$lab_shift, "`post_header`", fixed = TRUE)
 })
 
-# a draft's levels covered by the code lists of the layers it extends (#647)
-aitpl_layer_study <- function(defaults = NULL, pattern = NULL, env = parent.frame()) {
+# a draft's levels covered by its own code lists only: no layer gives a
+# report a list, the study's (defaults.yml codelists:) are study$codelists
+# (#647, canon 2026-11-17)
+aitpl_layer_study <- function(defaults = NULL, env = parent.frame()) {
   d <- withr::local_tempdir(.local_envir = env)
   dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)
   writeLines("study_id: CL-1", file.path(d, "study.yml"))
   writeLines(c("content: []", if (length(defaults)) c("codelists:", paste0("  ", defaults))),
              file.path(d, "spec", "defaults.yml"))
-  if (length(pattern)) {
-    dir.create(file.path(d, "spec", "patterns"))
-    writeLines(c("codelists:", paste0("  ", pattern)), file.path(d, "spec", "patterns", "pp.yml"))
-  }
   d
 }
 aitpl_layer_lists <- paste0(c("ANRIND", "BNRIND"),
   ": [{value: LOW, label: Low}, {value: NORMAL, label: Normal}, {value: HIGH, label: High}]")
 
-test_that("shift: `levels` covered by the code lists of the layers the draft extends pass (#647)", {
+test_that("shift: `levels` are covered by the draft's own code lists, not the study's (#647)", {
   skip_on_cran()
+  # the study's own lists (defaults.yml codelists:) are no layer's: not the draft's
   d <- aitpl_layer_study(defaults = aitpl_layer_lists)
-  expect_identical(nrow(aitpl_shift_check(extends = "defaults", study_dir = d)), 0L)
-  # a pattern's, the draft extending it
-  dp <- aitpl_layer_study(pattern = aitpl_layer_lists)
-  expect_identical(nrow(aitpl_shift_check(extends = "[patterns/pp, defaults]", study_dir = dp)), 0L)
-  # not a layer the draft extends: not its lists
-  p <- aitpl_shift_check(extends = "none", study_dir = d)
-  expect_identical(p$severity, "error")
-  p <- aitpl_shift_check(extends = "defaults", study_dir = dp)
-  expect_identical(p$severity, "error")
-  # lab_shift: the same lists
-  expect_identical(nrow(aitpl_shift_check("lab_shift", c("visit: Week 4", "params: [ALT]", "levels: [Low, Normal, High]"),
-                                          extends = "defaults", study_dir = d)), 0L)
-})
-
-test_that("shift: `levels` the layers' lists do not cover are the same error as with the report's own list (#647)", {
-  skip_on_cran()
-  d <- aitpl_layer_study(defaults = aitpl_layer_lists)
-  own <- aitpl_shift_check(args = "levels: [Low, Normal, Extreme]", codelists = TRUE)
-  layer <- aitpl_shift_check(args = "levels: [Low, Normal, Extreme]", extends = "defaults", study_dir = d)
-  expect_identical(layer$severity, own$severity)
-  expect_identical(layer$problem, own$problem)
-  # one column's list only (the other column's has none): the error of the own lists
-  one <- aitpl_layer_study(defaults = aitpl_layer_lists[1])
-  p <- aitpl_shift_check(extends = "defaults", study_dir = one)
+  for (ext in c("defaults", "none")) {
+    p <- aitpl_shift_check(extends = ext, study_dir = d)
+    expect_identical(p$severity, "error", info = ext)
+  }
+  # the draft's own lists: covered, whatever it extends
+  expect_identical(nrow(aitpl_shift_check(codelists = TRUE, extends = "defaults", study_dir = d)), 0L)
+  # one column's own list only: the error of the other column
+  p <- aitpl_shift_check(codelists = TRUE, cl_vars = "ANRIND", extends = "defaults", study_dir = d)
   expect_identical(p$severity, "error")
   expect_match(p$problem, "both ANRIND and BNRIND", fixed = TRUE)
-  # the draft's own list of one column and the layer's of the other: both are the report's
-  mix <- aitpl_shift_check(codelists = TRUE, cl_vars = "ANRIND", extends = "defaults",
-                           study_dir = aitpl_layer_study(defaults = aitpl_layer_lists[2]))
-  expect_identical(nrow(mix), 0L)
 })
 
-test_that("shift: a draft that extends and a study that cannot be read leave the check out (#647)", {
+test_that("shift: a study that cannot be read does not stop the check of the draft's own lists (#647)", {
   skip_on_cran()
   d <- aitpl_layer_study(defaults = aitpl_layer_lists)
   ctx <- tfl_ai_context("table", outputs = "T-14-3-4", study_dir = d,
@@ -547,16 +525,13 @@ test_that("shift: a draft that extends and a study that cannot be read leave the
   # (read when the context was made; not readable when the answer is checked)
   writeLines("codelists: [", file.path(d, "spec", "defaults.yml"))
   expect_error(tfl_read_study_spec(d))
-  chk <- function(extends) {
-    p <- tfl_ai_check(aitpl_shift_answer(extends = extends), ctx)
+  chk <- function(extends, codelists = FALSE) {
+    p <- tfl_ai_check(aitpl_shift_answer(extends = extends, codelists = codelists), ctx)
     p[grepl("template args (levels|worst)", p$where), , drop = FALSE]
   }
-  expect_identical(nrow(chk("defaults")), 0L)
-  # a draft that extends nothing needs no study: its own lists are all
+  expect_identical(chk("defaults")$severity, "error")
   expect_identical(chk("none")$severity, "error")
-  # no study in the context: the same
-  ctx$study_dir <- NULL
-  expect_identical(nrow(chk("defaults")), 0L)
+  expect_identical(nrow(chk("defaults", codelists = TRUE)), 0L)
 })
 
 test_that("templates.md never cuts a default, and names the km settings that are not parameters", {
@@ -593,7 +568,7 @@ test_that("templates.md never cuts a default, and names the km settings that are
   d <- tempfile()
   on.exit(unlink(d, recursive = TRUE))
   tplfig_study(d, c("adsl", "adtte"), "AIT-1")
-  o <- tfl_output("F-9-ait", "figure", population = "SAF", label = "KM", extends = "defaults",
+  o <- tfl_output("F-9-ait", "figure", common = list(population = "SAF"), label = "KM", extends = "defaults",
                   data = list(steps = list(list(step = "read", dataset = "ADTTE"),
                                            list(step = "param", value = "PFS"))),
                   template = list(name = "km_survival", args = list(by = "TRT01A")))

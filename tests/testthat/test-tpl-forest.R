@@ -41,7 +41,7 @@ test_that("in a study: the ARD built; A (the call, the layout) = B (the design) 
   d <- tempfile()
   on.exit(unlink(d, recursive = TRUE))
   data <- tplfig_study(d, c("adsl", "adtte"), "FR-1")
-  o <- tfl_output("F-9-1", "figure", population = "SAF", label = "Forest",
+  o <- tfl_output("F-9-1", "figure", common = list(population = "SAF"), label = "Forest",
                   extends = "defaults",
                   template = list(name = "forest_hr",
                                   args = list(param = "PFS", population = "SAF",
@@ -101,13 +101,12 @@ test_that("ref: the reference arm is put first by a relevel; comparison only sho
   # comparison does not reorder the arms (the data step is the blank arm made missing only)
   y <- tfl_template_expand("forest_hr", list(param = "OS", population = "ITT", group = "TRT01P",
                                              comparison = "Drug X"))
-  expect_false(grepl("factor(", unclass(y$ard$analysis_data[[1L]]$derive), fixed = TRUE))
+  expect_null(y$ard$analysis_data[[1L]]$derive)
   expect_error(tfl_template_expand("forest_hr", list(param = "OS", population = "ITT",
                                                      ref = "Drug X", comparison = "Drug X")),
                "`comparison` is the reference arm")
-  # (no ref: only the blank arm made missing)
-  expect_identical(as.vector(unclass(tfl_template_expand("forest_hr", list(param = "OS", population = "ITT"))$ard$analysis_data[[1L]]$derive)),
-                   "TRT01A = replace(TRT01A, !is.na(TRT01A) & as.character(TRT01A) == \"\", NA)")
+  # (no ref: no derive step; a blank arm is NA already)
+  expect_null(tfl_template_expand("forest_hr", list(param = "OS", population = "ITT"))$ard$analysis_data[[1L]]$derive)
   skip_on_cran()
   fr_skip()
   skip_if_not_installed("haven")
@@ -115,7 +114,7 @@ test_that("ref: the reference arm is put first by a relevel; comparison only sho
   on.exit(unlink(d, recursive = TRUE))
   data <- tplfig_study(d, c("adsl", "adtte"), "FR-2")
   # (the bundled data's arms: Drug X first, TRT01PN 1)
-  o <- tfl_output("F-9-2", "figure", population = "SAF", label = "Forest", extends = "defaults",
+  o <- tfl_output("F-9-2", "figure", common = list(population = "SAF"), label = "Forest", extends = "defaults",
                   template = list(name = "forest_hr", args = list(
                     param = "OS", population = "SAF", group = "TRT01P", subgroups = "SEX",
                     ref = "Control", comparison = "Drug X")))
@@ -160,7 +159,7 @@ test_that("n_by_arm: each arm's events / subjects, a column each; the call's loo
   d <- tempfile()
   on.exit(unlink(d, recursive = TRUE))
   data <- tplfig_study(d, c("adsl", "adtte"), "FR-3")
-  o <- tfl_output("F-9-3", "figure", population = "SAF", label = "Forest", extends = "defaults",
+  o <- tfl_output("F-9-3", "figure", common = list(population = "SAF"), label = "Forest", extends = "defaults",
                   template = list(name = "forest_hr", args = list(
                     param = "PFS", population = "SAF", subgroups = "SEX",
                     favours = c("Drug X", "Control"), n_by_arm = c("Control", "Drug X"))))
@@ -242,7 +241,8 @@ fr_hr <- function(ref = NULL) {
                                                subgroups = "SEX"),
                                           if (!is.null(ref)) list(ref = ref)))
   d <- fr_data()
-  for (e in strsplit(as.character(unclass(x$ard$analysis_data[[1L]]$derive)), " | ", fixed = TRUE)[[1L]]) {
+  der <- x$ard$analysis_data[[1L]]$derive
+  if (!is.null(der)) for (e in strsplit(as.character(unclass(der)), " | ", fixed = TRUE)[[1L]]) {
     d <- eval(parse(text = sprintf("dplyr::mutate(d, %s)", e)))
   }
   ard <- suppressWarnings(eval(parse(text = x$ard$analyses[[1L]]$code), list(data = d)))

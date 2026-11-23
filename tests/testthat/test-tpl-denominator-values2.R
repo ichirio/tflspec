@@ -9,10 +9,10 @@ d2_codelists <- list(TRT01A = c("Drug X", "Control"), TRT01P = c("Drug X", "Cont
 
 d2_expand <- function(name, args = list(), ...) {
   base <- switch(name,
-    summary = list(population = "SAF", categorical = "SEX"),
-    demog = list(population = "SAF"),
-    disposition = list(population = "SAF"),
-    ae_overview = list(population = "SAF"),
+    summary = list(population = "SAF", by = "TRT01A", categorical = "SEX"),
+    demog = list(population = "SAF", by = "TRT01A", categorical = "SEX"),
+    disposition = list(population = "SAF", by = "TRT01A", categorical = "EOSSTT"),
+    ae_overview = list(population = "SAF", by = "TRT01A"),
     orr = list(population = "ITT"))
   tfl_template_expand(name, c(base, args, list(...)), codelists = d2_codelists, population = d2_pops)
 }
@@ -26,11 +26,12 @@ d2_all_msg <- function(tpl, by = "TRT01A") {
 
 # ---- summary, demog, disposition: expansions ----
 
-test_that("summary family: no denominator is today's analysis; the parameter has its documentation", {
+test_that("summary family: no denominator is the analysis set, passed explicitly; the parameter has its documentation", {
   for (tpl in c("summary", "disposition")) {
     x <- d2_expand(tpl)
     cat <- d2_an(x, if (tpl == "disposition") "DISP" else "CAT")
-    expect_false("denominator" %in% names(cat), info = tpl)
+    # (canon 1.38: the analysis set, not cards' "column")
+    expect_identical(cat$denominator, "adsl_sub", info = tpl)
     expect_identical(d2_expand(tpl, denominator = NULL), x, info = tpl)
     a <- tfl_tpl_args(tpl)
     expect_true("denominator" %in% a$param, info = tpl)
@@ -65,23 +66,23 @@ test_that("summary family: a number, numbers by arm, an analysis data's id", {
                      c("Drug X" = 10L, Control = 8L), info = tpl)
     # another analysis set: the template makes its adsl_<id>, narrowed by subset
     x <- d2_expand(tpl, denominator = "adsl_itt", subset = "SEX == \"F\"")
-    expect_identical(d2_ids(x)[1:2], c("adsl_saf", "adsl_itt"), info = tpl)
-    expect_identical(d2_an(x, cat)$denominator, "adsl_itt", info = tpl)
+    expect_identical(d2_ids(x)[1:2], c("adsl_sub", "adsl_den"), info = tpl)
+    expect_identical(d2_an(x, cat)$denominator, "adsl_den", info = tpl)
     expect_identical(x$ard$analysis_data[[2L]]$population, "ITT", info = tpl)
     for (k in 1:2) {
       expect_match(as.character(x$ard$analysis_data[[k]]$where), "SEX", fixed = TRUE, info = tpl)
     }
     # (the set's own id is kept: it counts every subject of the set, cards' column
     # only those with a value)
-    y <- d2_expand(tpl, denominator = "adsl_saf")
-    expect_identical(d2_an(y, cat)$denominator, "adsl_saf", info = tpl)
+    y <- d2_expand(tpl, denominator = "adsl_sub")
+    expect_identical(d2_an(y, cat)$denominator, "adsl_sub", info = tpl)
     expect_identical(d2_ids(y), d2_ids(d2_expand(tpl)), info = tpl)
     # (a report's own analysis data: its `ard:` makes it)
     z <- d2_expand(tpl, denominator = "adsl_part")
     expect_identical(d2_ids(z), d2_ids(d2_expand(tpl)), info = tpl)
     expect_identical(d2_an(z, cat)$denominator, "adsl_part", info = tpl)
-    # the header N is the study standard's: the same GROUPN
-    expect_identical(d2_an(x, "GROUPN"), d2_an(d2_expand(tpl), "GROUPN"), info = tpl)
+    # the header N is the study standard's: the same BIGN
+    expect_identical(d2_an(x, "BIGN"), d2_an(d2_expand(tpl), "BIGN"), info = tpl)
   }
 })
 
@@ -91,14 +92,10 @@ test_that("summary on records: \"data\" stops until id exists; the default is th
                       "are of records and \"data\" is a base of subjects, so a percentage could pass ",
                       "100%; leave it out (the records kept), or give a number, numbers named by the ",
                       "values of TRT01A, or an analysis data's id."), fixed = TRUE)
-  # (the default is the records: cards' column)
-  expect_false("denominator" %in% names(d2_an(d2_expand("summary", data = "ADAE",
-                                                         categorical = "AESEV"), "CAT")))
-  # a stack: the number and the data id go to its categorical analysis
-  s <- d2_expand("summary", stack = TRUE, denominator = "adsl_itt")
-  expect_identical(d2_an(s, "CAT")$denominator, "adsl_itt")
-  s <- d2_expand("summary", stack = TRUE, denominator = 20)
-  expect_identical(d2_an(s, "CAT")$denominator, 20L)
+  # (the default is the records kept, passed explicitly: canon 1.38)
+  r <- d2_expand("summary", data = "ADAE", categorical = "AESEV")
+  expect_identical(d2_an(r, "CAT")$denominator, "adae_sub")
+  expect_true(startsWith(d2_an(r, "CAT")$data, "adae_sub"))
 })
 
 # ---- summary family: refusals ----
@@ -109,15 +106,10 @@ test_that("summary family: \"data\" on ADSL, a stack by arm, no categorical", {
                  sprintf(paste0("%s: denominator = \"data\" is for a `data` other than ADSL (the ",
                                 "subjects with a record kept): ADSL is already one row a subject, the ",
                                 "analysis set. Leave it out, or give a number, numbers named by the ",
-                                "values of TRT01A, or an analysis data's id (adsl_saf counts every ",
+                                "values of TRT01A, or an analysis data's id (adsl_sub counts every ",
                                 "subject of the set)."), tpl), fixed = TRUE, info = tpl)
   }
-  expect_error(d2_expand("summary", stack = TRUE, denominator = c("Drug X" = 10, Control = 8)),
-               paste0("summary: denominator named by the values of TRT01A is not supported with ",
-                      "stack = TRUE (the stack counts its variables in one call, without a column ",
-                      "variable of their own): use stack = FALSE, one number, or an analysis data's id."),
-               fixed = TRUE)
-  expect_error(tfl_template_expand("summary", list(population = "SAF", continuous = "AGE",
+  expect_error(tfl_template_expand("summary", list(population = "SAF", by = "TRT01A", continuous = "AGE",
                                                     denominator = 20)),
                paste0("summary: denominator is the base of the categorical variables' percentages, ",
                       "and the table has none: give `categorical`, or leave denominator out."),
@@ -146,8 +138,9 @@ test_that("summary family: the checks of D2a's denominator", {
 
 test_that("ae_overview: the default is the analysis set; each form goes to every flag", {
   x <- d2_expand("ae_overview")
-  expect_true(all(vapply(d2_flag_dens(x), is.null, NA)))
-  expect_identical(d2_expand("ae_overview", denominator = "adsl_saf"), x)
+  # (passed explicitly, canon 1.38)
+  expect_true(all(vapply(d2_flag_dens(x), identical, NA, "adsl_sub")))
+  expect_identical(d2_expand("ae_overview", denominator = "adsl_sub"), x)
   expect_identical(d2_expand("ae_overview", denominator = NULL), x)
   a <- tfl_tpl_args("ae_overview")
   expect_identical(a$doc[a$param == "denominator"], tfl_tpl_args("ae_soc_pt")$doc[
@@ -158,13 +151,13 @@ test_that("ae_overview: the default is the analysis set; each form goes to every
   expect_identical(d2_expand("ae_overview", denominator = "20"), one)
   v <- d2_expand("ae_overview", denominator = c("Drug X" = 10, Control = 8))
   expect_true(all(vapply(d2_flag_dens(v), identical, NA, c("Drug X" = 10L, Control = 8L))))
-  # (the header N is the same GROUPN on the set)
-  expect_identical(d2_an(one, "GROUPN"), d2_an(x, "GROUPN"))
-  expect_identical(d2_an(v, "GROUPN"), d2_an(x, "GROUPN"))
+  # (the header N is the same BIGN on the set)
+  expect_identical(d2_an(one, "BIGN"), d2_an(x, "BIGN"))
+  expect_identical(d2_an(v, "BIGN"), d2_an(x, "BIGN"))
   # another analysis set, narrowed by subset
   i <- d2_expand("ae_overview", denominator = "adsl_itt", subset = "SEX == \"F\"")
-  expect_identical(d2_ids(i)[1:3], c("adsl_saf", "adsl_itt", "adae_saf"))
-  expect_true(all(vapply(d2_flag_dens(i), identical, NA, "adsl_itt")))
+  expect_identical(d2_ids(i)[1:3], c("adsl_sub", "adsl_den", "adae_sub"))
+  expect_true(all(vapply(d2_flag_dens(i), identical, NA, "adsl_den")))
   expect_identical(i$ard$analysis_data[[2L]]$population, "ITT")
   for (k in 1:2) expect_match(as.character(i$ard$analysis_data[[k]]$where), "SEX", fixed = TRUE)
   # a report's own analysis data
@@ -173,27 +166,27 @@ test_that("ae_overview: the default is the analysis set; each form goes to every
   expect_true(all(vapply(d2_flag_dens(p), identical, NA, "adsl_part")))
   # "data": the subjects with an event kept
   d <- d2_expand("ae_overview", denominator = "data")
-  expect_identical(d2_ids(d), c("adsl_saf", "adae_saf", "adae_saf_den"))
+  expect_identical(d2_ids(d), c("adsl_sub", "adae_sub", "adae_den"))
   expect_identical(as.character(d$ard$analysis_data[[3L]]$code),
-                   "dplyr::distinct(adae_saf, USUBJID, TRT01A)")
-  expect_true(all(vapply(d2_flag_dens(d), identical, NA, "adae_saf_den")))
+                   "dplyr::distinct(adae_sub, USUBJID, TRT01A)")
+  expect_true(all(vapply(d2_flag_dens(d), identical, NA, "adae_den")))
 })
 
 test_that("ae_overview: header_n \"denominator\" counts the arms' N from the data of the percentages", {
-  gn <- function(...) d2_an(d2_expand("ae_overview", ...), "GROUPN")$data
+  gn <- function(...) d2_an(d2_expand("ae_overview", ...), "BIGN")$data
   # (header_n \"set\", the default: the analysis set whatever the denominator is)
   for (v in list(NULL, 20, c("Drug X" = 10, Control = 8), "adsl_itt", "data")) {
-    expect_identical(gn(denominator = v), "adsl_saf")
-    expect_identical(gn(denominator = v, header_n = "set"), "adsl_saf")
+    expect_identical(gn(denominator = v), "adsl_sub")
+    expect_identical(gn(denominator = v, header_n = "set"), "adsl_sub")
   }
-  expect_identical(gn(header_n = "denominator"), "adsl_saf")
-  expect_identical(gn(denominator = "adsl_saf", header_n = "denominator"), "adsl_saf")
-  expect_identical(gn(denominator = "adsl_itt", header_n = "denominator"), "adsl_itt")
+  expect_identical(gn(header_n = "denominator"), "adsl_sub")
+  expect_identical(gn(denominator = "adsl_sub", header_n = "denominator"), "adsl_sub")
+  expect_identical(gn(denominator = "adsl_itt", header_n = "denominator"), "adsl_den")
   expect_identical(gn(denominator = "adsl_part", header_n = "denominator"), "adsl_part")
-  expect_identical(gn(denominator = "data", header_n = "denominator"), "adae_saf_den")
+  expect_identical(gn(denominator = "data", header_n = "denominator"), "adae_den")
   # "none": no N, the denominator as it is
   n <- d2_expand("ae_overview", denominator = "data", header_n = "none")
-  expect_false("GROUPN" %in% vapply(n$ard$analyses, function(a) a$id, ""))
+  expect_false("BIGN" %in% vapply(n$ard$analyses, function(a) a$id, ""))
   expect_true(all(vapply(d2_flag_dens(d2_expand("ae_overview", denominator = 20, header_n = "none")),
                          identical, NA, 20L)))
   # a number has no data to count from
@@ -231,7 +224,7 @@ test_that("a single number with total = TRUE stops; numbers by arm and a data id
   for (tpl in c("summary", "hierarchical", "ae_soc_pt", "ae_ser_soc_pt",
                 "ae_disc_soc_pt")) {
     a <- c(list(population = "SAF", total = TRUE),
-           if (tpl == "summary") list(categorical = "SEX"),
+           if (tpl == "summary") list(by = "TRT01A", categorical = "SEX"),
            if (tpl == "hierarchical") hier)
     ex <- function(den) tfl_template_expand(tpl, c(a, list(denominator = den)), codelists = d2_codelists,
                                             population = d2_pops)
@@ -321,8 +314,16 @@ d2_report <- function(s, name, args, own = NULL) {
   f <- file.path(s$dir, "spec", "outputs", "T-DV.yml")
   pop <- args$population %||% "SAF"
   args$population <- NULL
-  tfl_write_output(tfl_output("T-DV", "table", population = pop, extends = "defaults",
-                              template = list(name = name, args = c(list(population = pop), args)),
+  # (`by` is required, no default; disposition's status variable too)
+  if (name %in% c("summary", "disposition", "ae_overview") && is.null(args$by)) args$by <- "TRT01A"
+  if (name == "disposition" && is.null(args$categorical)) args$categorical <- "EOSSTT"
+  tfl_write_output(tfl_output("T-DV", "table", common = list(population = pop), extends = "defaults",
+                              template = list(name = name, args = c(
+                                # (demog, summary and disposition take the analysis set from the
+                                # report's `population:`)
+                                if (!name %in% c("demog", "stf_t02_demog", "summary", "disposition")) {
+                                  list(population = pop)
+                                }, args)),
                               ard = own), f)
   st <- tfl_read_study_spec(s$dir)
   ard <- suppressMessages(tfl_build_ard(st, output_id = "T-DV", dir = s$dir, save = FALSE))
@@ -352,15 +353,17 @@ test_that("an analysis data the report does not have stops, naming what it has",
   d2_skip()
   s <- d2_study(withr::local_tempdir())
   st <- tfl_read_study_spec(s$dir)
-  have <- list(summary = "adsl_saf", ae_overview = "adsl_saf, adae_saf")
+  have <- list(summary = "adsl_sub, adsl_miss", ae_overview = "adsl_sub, adae_sub")
   for (tpl in names(have)) {
-    o <- tfl_output("T-DV", "table", population = "SAF", extends = "defaults",
-                    template = list(name = tpl, args = c(list(population = "SAF", denominator = "adsl_zzz"),
-                                                         if (tpl == "summary") list(categorical = "SEX"))))
+    o <- tfl_output("T-DV", "table", common = list(population = "SAF"), extends = "defaults",
+                    template = list(name = tpl, args = c(
+                      if (tpl != "summary") list(population = "SAF"),
+                      list(by = "TRT01A", denominator = "adsl_zzz"),
+                      if (tpl == "summary") list(categorical = "SEX"))))
     expect_error(tfl_resolve_output(o, st),
                  sprintf(paste0("T-DV: template %s: denominator \"adsl_zzz\" is not an analysis data ",
-                                "of the report (%s). The template makes adsl_saf and the other ",
-                                "analysis sets' adsl_<id>; the report's own come from its `ard:`."),
+                                "of the report (%s). The template makes adsl_sub and, for another ",
+                                "analysis set, adsl_<id> (the object adsl_den); the report's own come from its `ard:`."),
                          tpl, have[[tpl]]), fixed = TRUE, info = tpl)
     # (a number, an analysis set of the study, the records' subjects: no complaint)
     for (v in list(5, "adsl_itt", if (tpl == "ae_overview") "data")) {
@@ -386,7 +389,7 @@ d2_by_hand <- function(s) {
        fem = vapply(arms, function(a) sum(saf$TRT01A == a & saf$SEX == "F"), 0L))
 }
 d2_own <- list(analysis_data = list(list(
-  id = "adsl_female", label = "Safety set, women", from = "ADSL", population = "SAF",
+  id = "adsl_female", from = "ADSL", population = "SAF",
   where = tfl_r("SEX == \"F\""))))
 
 test_that("hand counts of the fixture: the checks below rest on them", {
@@ -426,12 +429,12 @@ test_that("summary, demog on ADSL: n (%) of each denominator, the header's N not
     for (nm in names(forms)) {
       f <- forms[[nm]]
       a <- c(list(denominator = f$den), if (tpl == "summary") list(categorical = "SEX"),
-             if (tpl == "demog") list(categorical = "SEX", continuous = "AGE"))
+             if (tpl == "demog") list(by = "TRT01A", categorical = "SEX", continuous = "AGE"))
       r <- d2_report(s, tpl, a, own = if (nm == "own") d2_own)
       info <- paste(tpl, nm)
       for (arm in h$arms) {
         # (the header's N: the set's, whatever the denominator)
-        expect_equal(d2_cells(r$ard, "TRT01A", arm, "", analysis = "GROUPN")[["n"]], h$set[[arm]],
+        expect_equal(d2_cells(r$ard, "TRT01A", arm, "", analysis = "BIGN")[["n"]], h$set[[arm]],
                      info = paste(info, arm))
         for (v in c("F", "M")) {
           c1 <- d2_cells(r$ard, "SEX", v, arm)
@@ -443,7 +446,7 @@ test_that("summary, demog on ADSL: n (%) of each denominator, the header's N not
   }
 })
 
-test_that("summary, disposition on ADSL: the set's own id counts the subjects with no value", {
+test_that("summary, disposition on ADSL: the analysis set counts the subjects with no value (a Missing row)", {
   d2_skip()
   s <- d2_study(withr::local_tempdir())
   h <- d2_by_hand(s)
@@ -452,9 +455,10 @@ test_that("summary, disposition on ADSL: the set's own id counts the subjects wi
   for (tpl in c("disposition", "summary")) {
     base <- if (tpl == "summary") list(categorical = "EOSSTT") else list()
     cat <- if (tpl == "summary") "CAT" else "DISP"
-    forms <- c(list(default = list(den = NULL, N = c("Drug X" = 4L, Control = 4L))),
+    # (the default: the analysis set, canon 1.38 -- no longer cards' column)
+    forms <- c(list(default = list(den = NULL, N = h$set)),
                d2_forms(h)[c("one", "vec", "itt", "own")],
-               list(setid = list(den = "adsl_saf", N = h$set)))
+               list(setid = list(den = "adsl_sub", N = h$set)))
     for (nm in names(forms)) {
       f <- forms[[nm]]
       r <- d2_report(s, tpl, c(base, if (!is.null(f$den)) list(denominator = f$den)),
@@ -468,11 +472,13 @@ test_that("summary, disposition on ADSL: the set's own id counts the subjects wi
       }
     }
   }
-  # the set's own id and cards' column differ, as the missing are in the first only
+  # the default is the set's own id: the subject with no status is in a Missing row
+  # (missing_row, canon 1.31, row 361), so the percentages add up to 100
   r1 <- d2_report(s, "disposition", list())
-  r2 <- d2_report(s, "disposition", list(denominator = "adsl_saf"))
-  expect_equal(d2_cells(r1$ard, "EOSSTT", "COMPLETED", "Drug X")[["p"]], 3 / 4)
+  r2 <- d2_report(s, "disposition", list(denominator = "adsl_sub"))
+  expect_equal(d2_cells(r1$ard, "EOSSTT", "COMPLETED", "Drug X")[["p"]], 3 / 5)
   expect_equal(d2_cells(r2$ard, "EOSSTT", "COMPLETED", "Drug X")[["p"]], 3 / 5)
+  expect_equal(d2_cells(r1$ard, "EOSSTT", "Missing", "Drug X")[["n"]], 1)
 })
 
 test_that("summary on records: n of the records over each denominator", {
@@ -489,7 +495,7 @@ test_that("summary on records: n of the records over each denominator", {
                                    if (!is.null(f$den)) list(denominator = f$den)),
                    own = if (nm == "own") d2_own)
     for (arm in h$arms) {
-      expect_equal(d2_cells(r$ard, "TRT01A", arm, "", analysis = "GROUPN")[["n"]], h$set[[arm]],
+      expect_equal(d2_cells(r$ard, "TRT01A", arm, "", analysis = "BIGN")[["n"]], h$set[[arm]],
                    info = paste(nm, arm))
       for (v in c("MILD", "MODERATE", "SEVERE")) {
         c1 <- d2_cells(r$ard, "AESEV", v, arm)
@@ -500,20 +506,18 @@ test_that("summary on records: n of the records over each denominator", {
   }
 })
 
-test_that("a Total column and a stack take a number and an analysis data", {
+test_that("a Total column takes a number and an analysis data", {
   d2_skip()
   s <- d2_study(withr::local_tempdir())
   h <- d2_by_hand(s)
-  for (stk in c(FALSE, TRUE)) {
-    r <- d2_report(s, "summary", list(categorical = "SEX", stack = stk, denominator = "adsl_itt"))
-    for (arm in h$arms) {
-      c1 <- d2_cells(r$ard, "SEX", "F", arm)
-      n <- sum(h$saf$TRT01A == arm & h$saf$SEX == "F")
-      expect_equal(c(c1[["n"]], c1[["p"]]), c(n, n / 6), info = paste(stk, arm))
-    }
-    r <- d2_report(s, "summary", list(categorical = "SEX", stack = stk, denominator = 20))
-    expect_equal(d2_cells(r$ard, "SEX", "M", "Control")[["p"]], 1 / 20, info = stk)
+  r <- d2_report(s, "summary", list(categorical = "SEX", denominator = "adsl_itt"))
+  for (arm in h$arms) {
+    c1 <- d2_cells(r$ard, "SEX", "F", arm)
+    n <- sum(h$saf$TRT01A == arm & h$saf$SEX == "F")
+    expect_equal(c(c1[["n"]], c1[["p"]]), c(n, n / 6), info = arm)
   }
+  r <- d2_report(s, "summary", list(categorical = "SEX", denominator = 20))
+  expect_equal(d2_cells(r$ard, "SEX", "M", "Control")[["p"]], 1 / 20)
   # a Total column: the total's base is the numbers' sum (a vector), as cards counts it
   r <- d2_report(s, "summary", list(categorical = "SEX", total = TRUE,
                                     denominator = c("Drug X" = 7, Control = 8)))
@@ -559,7 +563,7 @@ test_that("ae_overview: n (%) of each denominator, and the header's N", {
     # (the header's N is the percentages' N)
     for (arm in h$arms) {
       expect_equal(d2_cells(r$ard, "ANY", "TRUE", arm)[["N"]],
-                   d2_cells(r$ard, "TRT01A", arm, "", analysis = "GROUPN")[["n"]],
+                   d2_cells(r$ard, "TRT01A", arm, "", analysis = "BIGN")[["n"]],
                    info = paste(nm, arm))
     }
   }
@@ -584,16 +588,16 @@ test_that("the program: a number, a named vector, a data id, the records' subjec
     expect_match(c1(20), "denominator = 20L", fixed = TRUE, info = tpl[[1L]])
     expect_match(c1(vec), paste0("denominator = data.frame(TRT01A = rep(c(\"Drug X\", \"Control\"), ",
                                  "c(7L, 8L)), USUBJID = seq_len(15L))"), fixed = TRUE, info = tpl[[1L]])
-    expect_match(c1("adsl_itt"), "denominator = adsl_itt", fixed = TRUE, info = tpl[[1L]])
-    expect_match(c1("adsl_itt"), "adsl_itt <- filter(adsl, ITTFL == \"Y\")", fixed = TRUE,
+    expect_match(c1("adsl_itt"), "denominator = adsl_den", fixed = TRUE, info = tpl[[1L]])
+    expect_match(c1("adsl_itt"), "adsl_den <- filter(adsl, ITTFL == \"Y\")", fixed = TRUE,
                  info = tpl[[1L]])
   }
-  expect_match(code("ae_overview", "data"), "adae_saf_den <- distinct(adae_saf, USUBJID, TRT01A)",
+  expect_match(code("ae_overview", "data"), "adae_den <- distinct(adae_sub, USUBJID, TRT01A)",
                fixed = TRUE)
-  expect_match(code("ae_overview", "data"), "denominator = adae_saf_den", fixed = TRUE)
-  # (no denominator: the program has none)
+  expect_match(code("ae_overview", "data"), "denominator = adae_den", fixed = TRUE)
+  # (no denominator: the analysis set's, written in the program all the same, canon 1.38)
   body <- function(x) substring(x, regexpr("# ---- analysis data ----", x, fixed = TRUE))
-  expect_false(grepl("denominator", body(d2_report(s, "ae_overview", list())$code), fixed = TRUE))
-  expect_false(grepl("denominator", body(d2_report(s, "summary", list(categorical = "SEX"))$code),
-                     fixed = TRUE))
+  expect_match(body(d2_report(s, "ae_overview", list())$code), "denominator = adsl_sub", fixed = TRUE)
+  expect_match(body(d2_report(s, "summary", list(categorical = "SEX"))$code), "denominator = adsl_sub",
+               fixed = TRUE)
 })

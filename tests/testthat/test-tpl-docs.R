@@ -55,7 +55,8 @@ test_that(".tpl_rd(): the roxygen tags of a page", {
   r <- .tpl_rd("demog")
   expect_identical(r[2L], "@name tfl_tpl_demog")
   expect_match(r[1L], "^@title Demographics: the template demog$")
-  expect_true(any(grepl("tfl_tpl(ard, \"demog\", population = \"SAF\")", r, fixed = TRUE)))
+  # (the example call names `by` and the variables: they are required)
+  expect_true(any(grepl("tfl_tpl(ard, \"demog\", ", r, fixed = TRUE) & grepl("by = \"TRT01A\", continuous = ", r, fixed = TRUE)))
   tbl <- r[startsWith(r, "@section Parameters:")]
   # (the tag's line, the table's head and its rule, a row a parameter)
   expect_length(strsplit(tbl, "\n", fixed = TRUE)[[1L]], 3L + nrow(tfl_tpl_args("demog")))

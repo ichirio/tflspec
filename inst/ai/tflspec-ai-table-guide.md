@@ -115,7 +115,9 @@ every request would repeat written once (`ai/instructions-table.md`,
 holds), `AGENTS.md` and `.github/copilot-instructions.md` (at the study root, and
 again in `ai/`; short: read `ai/AGENTS.md`, which is the one the agent
 follows), `run.R`, `ai/decisions.md` and `ai/agent_prompt.md` (its
-one message). A figure of the TOC is a request of its own (`figure-1.md` ...):
+one message). `ars = TRUE` adds the ARS guide, `ai/ars/` (a simple and a
+compound data subset worked, a fictional reporting event, `tfl_check_ars()`
+as the check), for an agent asked for a CDISC ARS reporting event. A figure of the TOC is a request of its own (`figure-1.md` ...):
 its shell, and a figure report to draft. The steps one at a time:
 `tfl_ai_study_init()`, `tfl_ai_adam_summary()`, `tfl_ai_read_shell()`,
 `tfl_ai_write_requests()`.

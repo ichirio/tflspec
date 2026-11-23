@@ -317,11 +317,12 @@ tfl_ars_to_specs <- function(ars, table = FALSE) {
       own <- if (startsWith(aid, pre)) substring(aid, nchar(pre) + 1L) else aid
       tfl_made <- !identical(own, aid)
       # the subject count tfl_ars() added for a percentage's denominator
-      if (tfl_made && grepl("^GROUPN_", own) &&
-          sub("_[0-9]+$", "", sub("^GROUPN_", "", own)) %in%
-          c(if (length(gv)) paste(gv, collapse = "_") else "ALL")) {
+      if (tfl_made && grepl("^BIGN(_[0-9]+)?$", own) &&
+          identical(a$description, .ars_added_bign)) {
         next
       }
+      # the non-missing count tfl_ars() added for a percentage's denominator
+      if (tfl_made && grepl("_NONMISS$", own)) next
       if (is.na(mm$method)) {
         miss(tag, "method", sprintf(
           "method %s: tflspec has no keyword for what it computes",

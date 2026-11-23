@@ -19,20 +19,21 @@
             doc = "only the subjects normal at baseline, in n and in the N"),
   tfl_param("baseline", "BNRIND", doc = "the category at baseline"),
   tfl_param("baseline_value", "NORMAL", doc = "the value of `baseline` that is normal"),
-  tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<population>"),
+  tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_sub"),
   tfl_param("heading", "Parameter / Category", doc = "the label column's heading"),
   tfl_param("header_n", "set", type = "choice", choices = c("set", "tested", "none"), doc = paste(
     "the arm headings' N, set apart from the cells' N (a parameter's subjects with a value):",
     "\"set\" (default): the arm's subjects in the analysis set (with `subset`);",
     "\"tested\": the arm's subjects with a record kept (after `where`, `params` and",
     "`baseline_normal`), one N for all the parameters; \"none\": no N.  \"denominator\" is",
-    "not one N here, the cells' N differs by parameter"))
+    "not one N here, the cells' N differs by parameter")),
+  .tpl_split_param("group_safe")
 )
 
 .tpl_la_body <- function(a, ctx) {
   pop <- a$population
-  subj <- paste0("adsl_", tolower(pop))
-  set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(pop))
+  subj <- .tpl_subj_id()
+  set <- .tpl_set_id(a)
   ct <- a$category
   lv <- a$levels %||% .tpl_levels(ct, ctx$codelists)[[ct]]
   cum <- isTRUE(a$cumulative)
@@ -48,29 +49,28 @@
   where <- c(a$where, if (length(a$params)) sprintf("PARAMCD %%in%% %s", q(a$params)),
              if (isTRUE(a$baseline_normal)) sprintf("%s == \"%s\"", a$baseline, a$baseline_value))
   keys <- paste(c("USUBJID", a$by, "PARAM"), collapse = ", ")
-  per <- function(suffix, label, ..., from = set) Filter(Negate(is.null), list(
-    id = paste0(set, suffix), label = label, from = from, ...))
+  per <- function(suffix, ..., from = set) Filter(Negate(is.null), list(
+    id = .tpl_noun_id(a, sub("^_", "", suffix)), from = from, ...))
   # each subject once in a category of a parameter; cumulative: in every
   # level up to their worst
   # (code over two lines: the program lays it out a call a line)
   cats <- if (cum) list(
-    per("_worst", "each subject's worst level of each parameter", code = sprintf(
+    per("_worst", code = sprintf(
       "dplyr::summarise(dplyr::filter(%s, %s %%in%% %s),\n  worst = max(match(%s, %s)), .by = c(%s))",
       set, ct, q(lv), ct, q(lv), keys)),
-    per("_cat", "each subject in every level up to their worst", from = paste0(set, "_worst"),
+    per("_cat", from = .tpl_noun_id(a, "worst"),
         code = sprintf(paste0(
-          "dplyr::filter(dplyr::cross_join(%s_worst, data.frame(%s = factor(%s, levels = %s))),",
-          "\n  as.integer(%s) <= worst)"), set, ct, q(lv), q(lv), ct))
+          "dplyr::filter(dplyr::cross_join(%s, data.frame(%s = factor(%s, levels = %s))),",
+          "\n  as.integer(%s) <= worst)"), .tpl_noun_id(a, "worst"), ct, q(lv), q(lv), ct))
   ) else list(
-    per("_cat", "each subject once in each category",
+    per("_cat",
         where = if (length(lv)) tfl_r(sprintf("%s %%in%% %s", ct, q(lv))),
         derive = if (length(lv)) tfl_r(sprintf("%s = factor(%s, levels = %s)", ct, ct, q(lv))),
         distinct = paste(c("USUBJID", a$by, "PARAM", ct), collapse = " | ")))
   sets <- Filter(Negate(is.null), c(list(
-    list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
-         population = pop),
+    list(id = subj, from = "ADSL", population = pop),
     Filter(Negate(is.null), list(
-      id = set, from = a$data, subjects = subj,
+      id = set, from = a$data, subjects_in = subj,
       where = if (length(where)) tfl_r(.tpl_and_all(where)),
       # every parameter analysed a level (in its order): its rows even with
       # no subject in a category (0/N)
@@ -78,19 +78,19 @@
         sprintf("PARAM = reorder_by(PARAM, %s)", a$param_order) else
           "PARAM = factor(PARAM)"))),
     # the N
-    per("_n", "the subjects with a value of each parameter",
+    per("_n",
         code = sprintf("dplyr::distinct(%s, %s)", set, keys)),
     # the header N ("tested"): the arm's subjects with a record kept
-    if (identical(hn, "tested")) per("_tested", "the subjects with a record kept",
+    if (identical(hn, "tested")) per("_tested",
         code = sprintf("dplyr::distinct(%s, %s)", set,
                        paste(c("USUBJID", a$by), collapse = ", ")))), cats))
   analyses <- list(
     if (!identical(hn, "none")) list(
-      id = "GROUPN", method = "categorical",
-      data = if (identical(hn, "tested")) paste0(set, "_tested") else subj,
+      id = "BIGN", method = "categorical",
+      data = if (identical(hn, "tested")) .tpl_noun_id(a, "tested") else subj,
       variables = a$by, purpose = "PRIMARY OUTCOME MEASURE"),
-    list(id = "ABNORMAL", method = "categorical", data = paste0(set, "_cat"),
-         by = c(a$by, "PARAM"), variables = ct, denominator = paste0(set, "_n"),
+    list(id = "ABNORMAL", method = "categorical", data = .tpl_noun_id(a, "cat"),
+         by = c(a$by, "PARAM"), variables = ct, denominator = .tpl_noun_id(a, "n"),
          purpose = "PRIMARY OUTCOME MEASURE"))
   analyses <- Filter(Negate(is.null), analyses)
   content <- c(
@@ -101,7 +101,8 @@
          tfl_item("plan_col_header", list(header = list(
            list(line = "1", cols = "row_label", text = .tpl_lines(a$heading)),
            list(line = "1", cols = ".values", span = "each", text = if (identical(hn, "none")) "{col}" else "{col}\n(N={n})")))),
-         tfl_item("plan_paginate_rows", list(max_rows = 30L, split = "group_safe"))))
+         tfl_item("plan_paginate_rows", list(
+           max_rows = 30L, split = .tpl_choice(a, "split", .tpl_split_choices, "lab_abnormal")))))
   list(ard = list(analysis_data = sets, analyses = analyses),
        data = list(source = "ard", object = "ard"), content = content)
 }

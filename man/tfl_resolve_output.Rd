@@ -24,8 +24,14 @@ The \code{tfl_output}, resolved (attribute \code{resolved} = \code{TRUE}).
 }
 \description{
 \code{tfl_resolve_output()} puts a report's own file over the layers its
-\code{extends} names (\code{defaults}, \verb{patterns/<name>}), nearest last.  Maps
-(\code{page}'s lines by number, \code{tokens}, \code{codelists}, a call's arguments)
+\code{extends} names (\code{defaults}, \verb{patterns/<name>}), nearest last.  The
+page has no file layer: it is the report's page configuration (its style
+set, \verb{style:}) under the template's and the report's own \verb{page:}, with
+the study's \verb{tokens:} (\code{study.yml}) under the report's tokens; a band
+prints the configuration's \code{first} lines, then the body lines (the
+report's, by number), then the configuration's \code{last} lines, and the
+resolved \verb{page:} holds each band's lines in that order.  Maps
+(\code{tokens}, \code{codelists}, a call's arguments)
 merge by key, and an \code{\link[=tfl_unset]{tfl_unset()}} removes the key.  In \code{content}, the
 report's items of one function replace every item of that function in
 the layers below, in the place the first of them had; a function the
@@ -35,12 +41,17 @@ report has goes after them.  The \code{content} of \code{defaults} is a table's
 parts (\code{page}, \code{codelists}), not its content.  A pattern's content
 (\verb{patterns/<name>}, chosen report by report) layers onto any kind.
 \code{extends: none} uses no layer.  The report's style (\code{style: compact}, a
-set of \code{defaults.yml}'s \verb{styles:}; \code{standard} when it names none) is the
+set of \code{defaults.yml}'s \verb{styles:}, or a built-in one; the study's
+\code{settings.style}, else \code{tfl_standard}, when it names none) is the
 nearest layer below its own: the look it picks, content and page.  A
 template SPEC (\verb{template: \{name, args\}}) puts the template's items
 (\code{\link[=tfl_template_expand]{tfl_template_expand()}}, marked \verb{template:<name>}) between the layers
-and the report's own -- its look (plan_style, the widths, the rows a
-page ...) under the study's layers, which say the look and win -- and
+and the report's own -- for a template whose set holds its \code{extends}
+(\code{\link[=tfl_template]{tfl_template()}}), all of them over the style set its \code{style} names
+and the files each step of \code{extends} names (\code{\link[=tfl_output_extends]{tfl_output_extends()}}),
+with what a parameter's stop value turns off (\code{\link[=tfl_param]{tfl_param()}}\verb{(maps_to = )}) taken out of those; for a template not yet migrated, its look
+(plan_style, the widths, the rows a page ...) under the study's layers,
+which say the look and win -- and
 its \verb{ard:} under the report's (an entry of the report's replaces the
 template's of the same id); a template parameter that says where its
 study default is takes it from the layers when the SPEC does not give

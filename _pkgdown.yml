@@ -32,6 +32,10 @@ navbar:
           href: articles/table-spec.html
         - text: "Reports: headers, footers, titles, footnotes and tokens"
           href: articles/reports.html
+        - text: "Writing a SPEC: data lines, analyses, study data and figures"
+          href: articles/spec-rules.html
+        - text: "Series base templates"
+          href: articles/series-templates.html
         - text: -------
         - text: "Listings, figures and ARS"
         - text: "Listings"
@@ -56,6 +60,8 @@ articles:
       - articles/ard-spec
       - articles/table-spec
       - articles/reports
+      - articles/spec-rules
+      - articles/series-templates
   - title: Listings, figures and ARS
     navbar: Listings, figures and ARS
     contents:
@@ -163,9 +169,14 @@ reference:
       - tfl_read_study_spec
       - tfl_read_output
       - tfl_resolve_output
+      - tfl_styles
       - tfl_run_output
       - tfl_output_contents
-      - tfl_output_data_names
+      - tfl_output_objects
+      - tfl_output_object_uses
+      - tfl_output_rename
+      - tfl_default_name
+      - tfl_output_name_check
       - tfl_code_refs
       - tfl_write_study_part
       - tfl_item_code
@@ -257,6 +268,18 @@ reference:
       - tfl_template_run
       - tfl_test_templates
       - tfl_use_company_templates
+  - title: Template SPEC, series
+    desc: >
+      A series is a versioned folder of template SPECs (`tflspec_v1`, ...)
+      with its common values in `series.yml`.  A study copies the series and
+      the templates its reports use into `spec/series/<series>/`, reads only
+      its copy and changes it there; a source's changes are copied again only
+      for the templates chosen.
+    contents:
+      - tfl_series_dir
+      - tfl_series_list
+      - tfl_copy_templates
+      - tfl_series_values_set
   - title: Template SPEC, a template's help
     desc: >
       A template's parameters by tier (required, usual, other): the value
@@ -278,6 +301,7 @@ reference:
       - tfl_report
       - tfl_report_code
       - tfl_report_setup_code
+      - tfl_study_setup_code
       - tfl_report_tokens
       - tfl_report_overwrite
       - tfl_report_path
@@ -306,6 +330,14 @@ reference:
       - tfl_fig_compat
       - tfl_fig_data_name
       - tfl_r
+  - subtitle: Figure content functions
+    desc: >
+      The ggplot a figure template names in its `figure:` key, drawn from
+      what the template's analysis makes (a model, the ARD).
+    contents:
+      - tfl_figure_fn
+      - km_curves
+      - forest_hr
   - subtitle: Figure style
     desc: Every look-and-feel value of a study's figures, in one place.
     contents:

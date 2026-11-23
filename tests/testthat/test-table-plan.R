@@ -824,14 +824,14 @@ test_that("cell styles convert in a plan with no plan_style()", {
   expect_identical(nrow(sp$style), 0L)
 })
 
-test_that("the codelists sheet: the values' place, as the ARD has them (plan_levels)", {
+test_that("the codelists sheet: the values' place (plan_levels) and text (plan_labels), the ARD holding the codes", {
   skip_if_not_installed("cards")
   skip_if(utils::packageVersion("rtfreporter") < "0.8.2.9004")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
-  # the ARD program puts the code lists' labels on the data (set_levels())
-  adsl$SEX <- c(F = "Female", M = "Male")[as.character(adsl$SEX)]
-  adsl$AGEGR1 <- ifelse(adsl$AGEGR1 == "<65", "Under 65", as.character(adsl$AGEGR1))
+  # the ARD holds the codes (set_levels() makes factors of them): "F", "<65"
+  adsl$SEX <- as.character(adsl$SEX)
+  adsl$AGEGR1 <- as.character(adsl$AGEGR1)
   ard <- cards::ard_stack(adsl, .by = TRT,
     cards::ard_categorical(variables = c(SEX, AGEGR1), statistic = ~ c("n", "p")))
   d <- suppressMessages(rtfreporter::normalize_ard(ard))
@@ -839,7 +839,7 @@ test_that("the codelists sheet: the values' place, as the ARD has them (plan_lev
     tables = data.frame(output_id = "T1", cols = "TRT", rows = "group = variable"),
     variables = data.frame(output_id = NA, variable = c("SEX", "AGEGR1"),
                            label = c("Sex", "Age group"), order = c("1", "2"),
-                           levels = c(NA, "Under 65 | 65-80 | >80")),
+                           levels = c(NA, "<65 | 65-80 | >80")),
     codelists = data.frame(output_id = "T1", variable = c("SEX", "SEX", "AGEGR1"),
                            value = c("F", "M", "<65"),
                            label = c("Female", "Male", "Under 65"),
@@ -850,17 +850,23 @@ test_that("the codelists sheet: the values' place, as the ARD has them (plan_lev
     if (is.data.frame(x)) x else if (inherits(x, "rtftable")) x$data else x[[1L]]$data
   }
   x <- page(suppressMessages(tfl_table_plan(d, sp, output_id = "T1")))
-  # the code list's order, of the ARD's values (its labels); the variables
-  # sheet's levels win
+  # the code list's order of the ARD's codes, the text from plan_labels();
+  # the variables sheet's levels win
   expect_identical(as.character(x$label),
                    c("Male", "Female", "Under 65", "65-80", ">80"))
   expect_identical(unique(as.character(x$group)), c("Sex", "Age group"))
   code <- tfl_table_code(sp, output_id = "T1")
-  # the levels as code lists at the head, plan_levels() naming them
-  expect_true('cl_sex <- c("Male", "Female")' %in% code)
-  expect_true(any(grepl("SEX = cl_sex", code, fixed = TRUE)))
-  # plan_labels(): the variables' headings only -- the values' text is the ARD's
-  expect_true(any(grepl('plan_labels(variable = c(SEX = "Sex", AGEGR1 = "Age group"))', code, fixed = TRUE)))
+  # the code lists at the head, each code named by its label, plan_levels()
+  # naming the codes and plan_labels() the labels (one call, the variables'
+  # headings with them)
+  expect_true('cl_sex <- c(M = "Male", F = "Female")' %in% code)
+  expect_true(any(grepl("SEX = names(cl_sex)", code, fixed = TRUE)))
+  pl <- paste(code, collapse = "
+")
+  expect_match(pl, 'variable = c(SEX = "Sex", AGEGR1 = "Age group")', fixed = TRUE)
+  expect_match(pl, 'SEX = c(M = "Male", F = "Female")', fixed = TRUE)
+  expect_match(pl, 'AGEGR1 = c("<65" = "Under 65")', fixed = TRUE)
+  expect_identical(lengths(regmatches(pl, gregexpr("plan_labels(", pl, fixed = TRUE))), 1L)
   e <- new.env()
   e$data <- d
   suppressMessages(eval(parse(text = code), envir = e))

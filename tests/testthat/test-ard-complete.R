@@ -34,23 +34,26 @@ test_that("complete_hierarchy() counts a code list's values no subject has as 0,
                         variables = "AESOC | AEDECOD", post = "complete_hierarchy()"))
   cl <- hier_cl()
   code <- paste(tfl_ard_code(sp, part = "body", codelists = cl), collapse = "\n")
-  # written in full: the row's variables, the code lists' under (as in the ARD)
+  # written in full: the row's variables, the code lists' under (as in the
+  # ARD: the codes)
   expect_match(code, "complete_hierarchy(", fixed = TRUE)
   expect_match(code, "variables = c(\"AESOC\", \"AEDECOD\")", fixed = TRUE)
-  expect_match(code, "under = list(AEDECOD = c(\"Vision blurred\" = \"Eye disorders\"))", fixed = TRUE)
+  expect_match(code, "under = list(AEDECOD = c(\"VISION BLURRED\" = \"EYE DISORDERS\"))", fixed = TRUE)
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, codelists = cl))
   soc <- ard[ard$variable == "AESOC" & ard$stat_name == "n", ]
-  # every SOC of the list, Eye disorders 0 in each arm
+  # every SOC of the list, the eye disorders 0 in each arm (the codes: the
+  # label "Eye disorders" is the table plan's)
   expect_setequal(unique(lvl(soc$variable_level)),
-                  c("GASTROINTESTINAL DISORDERS", "Eye disorders",
+                  c("GASTROINTESTINAL DISORDERS", "EYE DISORDERS",
                     "SKIN AND SUBCUTANEOUS TISSUE DISORDERS"))
-  eye <- soc[lvl(soc$variable_level) == "Eye disorders", ]
+  expect_false("Eye disorders" %in% lvl(ard$variable_level))
+  eye <- soc[lvl(soc$variable_level) == "EYE DISORDERS", ]
   expect_identical(nrow(eye), 3L)
   expect_true(all(unlist(eye$stat) == 0))
-  expect_identical(levels(eye$variable_level[[1L]])[2L], "Eye disorders")
-  # the PT under it: 0 under Eye disorders, N the arm's
-  pt <- ard[ard$variable == "AEDECOD" & lvl(ard$variable_level) == "Vision blurred", ]
-  expect_true(all(lvl(pt$group2_level) == "Eye disorders"))
+  expect_identical(levels(eye$variable_level[[1L]])[2L], "EYE DISORDERS")
+  # the PT under it: 0 under the eye disorders, N the arm's
+  pt <- ard[ard$variable == "AEDECOD" & lvl(ard$variable_level) == "VISION BLURRED", ]
+  expect_true(all(lvl(pt$group2_level) == "EYE DISORDERS"))
   expect_true(all(unlist(pt$stat[pt$stat_name == "n"]) == 0))
   N <- unlist(ard$stat[ard$variable == "AESOC" & ard$stat_name == "N" &
                          lvl(ard$variable_level) == "GASTROINTESTINAL DISORDERS"])
@@ -61,16 +64,16 @@ test_that("complete_hierarchy() counts a code list's values no subject has as 0,
   # a value with no `under` is not added, and the program says so
   sp_msg <- tryCatch(tfl_build_ard(sp, dir = dir, save = FALSE, codelists = hier_cl(under = FALSE)),
                      message = function(m) conditionMessage(m))
-  expect_match(paste(sp_msg, collapse = ""), "VISION BLURRED|Vision blurred")
+  expect_match(paste(sp_msg, collapse = ""), "VISION BLURRED")
   a2 <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, codelists = hier_cl(under = FALSE)))
-  expect_false("Vision blurred" %in% lvl(a2$variable_level))
-  expect_true("Eye disorders" %in% lvl(a2$variable_level))   # the outer value: no under needed
+  expect_false("VISION BLURRED" %in% lvl(a2$variable_level))
+  expect_true("EYE DISORDERS" %in% lvl(a2$variable_level))   # the outer value: no under needed
 
   # without the step: the values some subject has, as before
   sp0 <- exact_spec(list(method = "hierarchical", population_id = "SAF",
                          dataset = "ADAE", by = "TRTA", variables = "AESOC | AEDECOD"))
   a0 <- suppressMessages(tfl_build_ard(sp0, dir = dir, save = FALSE, codelists = cl))
-  expect_false(any(c("Eye disorders", "Vision blurred") %in% lvl(a0$variable_level)))
+  expect_false(any(c("EYE DISORDERS", "VISION BLURRED") %in% lvl(a0$variable_level)))
   # a step that gives its own arguments keeps them
   sp1 <- exact_spec(list(method = "hierarchical", population_id = "SAF",
                          dataset = "ADAE", by = "TRTA", variables = "AESOC | AEDECOD",

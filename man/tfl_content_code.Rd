@@ -37,13 +37,20 @@ Operator); \code{NULL} follows \code{getOption("rtfreporter.ard_pipe")}, else
 \item{template}{For a resolved template report (\verb{template: \{name, args\}}, \code{\link[=tfl_resolve_output]{tfl_resolve_output()}}): \code{"call"} (default) writes the
 template's call, \verb{plan <- tpl_<name>(ard, ...)} with the arguments its
 SPEC gives and the study's defaults it took, then the study's and the
-report's own lines after it, each marked; \code{"items"} writes the items
+report's own lines after it, each marked (a template whose set has its
+\code{extends}, demog: the study's items in the call's \verb{study =}, only the
+report's own after it); \code{"items"} writes the items
 it stands for, as for any report (and so does \code{"call"}, with a message,
 when the call cannot say the report's own table roles, data or
 normalization).  A figure's template (\code{km_survival}): its data steps
 written out, then \verb{content <- tfl_tpl(<data>, "<name>", ...)} and the
 report's own items \code{+}-ed after it; \code{"items"} (or a report that
-replaces one of the template's layers) writes its design.}
+replaces one of the template's layers) writes its design.  A figure
+of a series template (\verb{<series>/<template>}, resolved by
+\code{\link[=tfl_template_resolve]{tfl_template_resolve()}}) whose template names its content in \verb{figure:}
+(\code{km_curves}, \code{forest_hr}): \code{content <- tflspec::km_curves(km_fit = km_fit, ard = ard, params = list(...))} -- the function \code{\link[=tfl_figure_fn]{tfl_figure_fn()}}
+finds, with the report's resolved arguments, one a line (the model
+\code{km_fit} written before it).}
 
 \item{study}{The study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}) or its folder; for a listing
 of records (\code{data: {source: dataset}}) the code starts with its data

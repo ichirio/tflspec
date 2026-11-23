@@ -40,39 +40,39 @@ tv_rtfs <- function(o, ard, s) {
 }
 
 test_that("a variant: from's parameters and types, its own defaults; listed with its from", {
-  on.exit(tv_drop("demog_as"))
-  tfl_template_variant("demog_as", from = "demog",
+  on.exit(tv_drop("sum_as"))
+  tfl_template_variant("sum_as", from = "summary",
                        defaults = list(continuous = "AGE", categorical = c("AGEGR1", "SEX")))
-  p <- tfl_template_params("demog_as")
-  expect_identical(names(p), names(tfl_template_params("demog")))
+  p <- tfl_template_params("sum_as")
+  expect_identical(names(p), names(tfl_template_params("summary")))
   expect_identical(p$categorical$default, c("AGEGR1", "SEX"))
   expect_identical(p$categorical$type, "vars")
   tt <- tfl_templates()
-  expect_identical(tt$from[tt$name == "demog_as"], "demog")
-  # demog itself: summary's parameters with its own defaults
-  expect_identical(tt$from[tt$name == "demog"], "summary")
-  expect_identical(tt$call[tt$name == "demog_as"], "tfl_tpl")
-  expect_identical(nrow(tfl_test_templates("demog_as")), 0L)
-  expect_error(tfl_template_variant("x", from = "demog", defaults = list(colour = 1)),
+  expect_identical(tt$from[tt$name == "sum_as"], "summary")
+  # demog is a template of its own, no variant of summary
+  expect_true(is.na(tt$from[tt$name == "demog"]))
+  expect_identical(tt$call[tt$name == "sum_as"], "tfl_tpl")
+  expect_identical(nrow(tfl_test_templates("sum_as")), 0L)
+  expect_error(tfl_template_variant("x", from = "summary", defaults = list(colour = 1)),
                "no parameter 'colour'")
   expect_error(tfl_template_variant("x", from = "nope"), "no template")
   # a default given makes a required parameter optional
-  tfl_template_variant("demog_as", from = "demog", defaults = list(population = "SAF")) |>
+  tfl_template_variant("sum_as", from = "summary", defaults = list(population = "SAF")) |>
     expect_message("replaces")
-  expect_false(tfl_template_params("demog_as")$population$required)
+  expect_false(tfl_template_params("sum_as")$population$required)
 })
 
 test_that("from as it is now: a fix to it reaches the variant", {
   on.exit({
-    tv_drop("demog_as", "tv_base")
+    tv_drop("sum_as", "tv_base")
   })
-  d <- .tpl_get("demog", "test")
+  d <- .tpl_get("summary", "test")
   suppressMessages(tfl_template("tv_base", "table", "summary", params = d$params, body = d$body))
-  tfl_template_variant("demog_as", from = "tv_base", defaults = list(continuous = "AGE"))
+  tfl_template_variant("sum_as", from = "tv_base", defaults = list(continuous = "AGE"))
   p <- d$params
   p$heading <- tfl_param("heading", "X", type = "text")
   suppressMessages(tfl_template("tv_base", "table", "summary", params = p, body = d$body))
-  expect_true("heading" %in% names(tfl_template_params("demog_as")))
+  expect_true("heading" %in% names(tfl_template_params("sum_as")))
 })
 
 test_that("the same name: the variant replaces from, and reads the one it replaced", {
@@ -85,12 +85,12 @@ test_that("the same name: the variant replaces from, and reads the one it replac
                                       defaults = list(continuous = "AGE")), "replaces")
   expect_identical(tfl_template_params("summary")$continuous$default, "AGE")
   expect_identical(tfl_templates()$from[tfl_templates()$name == "summary"], "summary")
-  x <- tfl_template_expand("summary", list(population = "SAF"))
+  x <- tfl_template_expand("summary", list(by = "TRT01A", population = "SAF"))
   expect_identical(x$ard$analyses[[2L]]$variables, "AGE")
 })
 
 test_that("first to last: the report's argument, the study's default, the variant's, from's", {
-  on.exit(tv_drop("demog_as"))
+  on.exit(tv_drop("sum_as"))
   # the sample study, with default continuous cells
   d <- tempfile()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -99,50 +99,48 @@ test_that("first to last: the report's argument, the study's default, the varian
             d, recursive = TRUE)
   f <- file.path(d, "defaults.yml")
   y <- readLines(f)
-  y <- sub("- plan_cells: {categorical: \"{n:.0f} ({p:.1f%})\"}",
-           "- plan_cells: {categorical: \"{n:.0f} ({p:.1f%})\", continuous: {n: \"{N:.0f}\"}}",
-           y, fixed = TRUE)
+  y <- sub("na: \"-\"}", "na: \"-\", continuous: {n: \"{N:.0f}\"}}", y, fixed = TRUE)
   writeLines(y, f)
   s <- tfl_read_study_spec(d)
   vc <- list(n = "{N:.0f}", Mean = "{mean:.2f}")
-  tfl_template_variant("demog_as", from = "demog",
-                       defaults = list(categorical = "SEX", cells = vc))
+  tfl_template_variant("sum_as", from = "summary",
+                       defaults = list(by = "TRT01A", categorical = "SEX", cells = vc))
   cells_of <- function(args) {
-    o <- tfl_output("T-9", "table", population = "SAF",
-                    template = list(name = "demog_as", args = args))
+    o <- tfl_output("T-9", "table", common = list(population = "SAF"),
+                    template = list(name = "sum_as", args = args))
     ro <- tfl_resolve_output(o, s)
     pc <- Filter(function(it) identical(it$fn, "plan_cells"), ro$content)
     list(cells = pc[[1L]]$args$continuous,
          cat = Filter(function(a) identical(a$id, "CAT"), ro$ard$analyses)[[1L]]$variables)
   }
   # the study's defaults have plan_cells(continuous = ): over the variant's
-  r <- cells_of(list(population = "SAF"))
+  r <- cells_of(list())
   expect_identical(r$cells, list(n = "{N:.0f}"))
   # the variant's over from's (no study default for categorical)
   expect_identical(r$cat, "SEX")
   # the report's over all of them
   own <- list(n = "{N:.0f}")
-  r2 <- cells_of(list(population = "SAF", cells = own, categorical = "RACE"))
+  r2 <- cells_of(list(cells = own, categorical = "RACE"))
   expect_identical(r2$cells, own)
   expect_identical(r2$cat, "RACE")
 })
 
-test_that("demog: the YAML's template:, A and B make the same RTF; A calls tpl_demog()", {
+test_that("summary variant: the YAML's template:, A and B make the same RTF; A calls tfl_tpl()", {
   skip_if_not_installed("cards")
-  on.exit(tv_drop("demog_as"))
-  tv_variant("demog_as", from = "demog",
-             defaults = list(continuous = "AGE", categorical = c("AGEGR1", "SEX")))
+  on.exit(tv_drop("sum_as"))
+  tv_variant("sum_as", from = "summary",
+             defaults = list(by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX")))
   s <- tv_study()
   saf <- adsl[adsl$SAFFL == "Y", ]
   ard <- cards::bind_ard(cards::ard_tabulate(saf, variables = TRT01A),
                          cards::ard_summary(saf, by = TRT01A, variables = AGE),
                          cards::ard_tabulate(saf, by = TRT01A, variables = c(AGEGR1, SEX)))
-  o <- tfl_output("T-9", "table", population = "SAF", label = "Demographics",
-                  template = list(name = "demog_as", args = list(population = "SAF")))
+  o <- tfl_output("T-9", "table", common = list(population = "SAF"), label = "Demographics",
+                  template = list(name = "sum_as", args = list()))
   r <- tv_rtfs(o, ard, s)
-  expect_match(r$code, "# template demog_as: a variant of demog", fixed = TRUE, all = FALSE)
+  expect_match(r$code, "# template sum_as: a variant of summary", fixed = TRUE, all = FALSE)
   # (a variant of a session or a company: its root called, its defaults written)
-  expect_match(paste(r$code, collapse = "\n"), "plan <- tflspec::tfl_tpl(\n  ard,\n  \"demog\",", fixed = TRUE)
+  expect_match(paste(r$code, collapse = "\n"), "plan <- tflspec::tfl_tpl(\n  ard,\n  \"summary\",", fixed = TRUE)
   expect_match(paste(r$code, collapse = "\n"), "categorical = c(\"AGEGR1\", \"SEX\")",
                fixed = TRUE)
   expect_identical(r$a, r$yaml)
@@ -159,7 +157,7 @@ test_that("ae_soc_pt: the YAML's template:, A and B make the same RTF", {
   ae <- adae[adae$USUBJID %in% saf$USUBJID, ]
   ard <- cards::ard_stack_hierarchical(ae, variables = c(AEBODSYS, AEDECOD), by = TRT01A,
                                        denominator = saf, id = USUBJID, over_variables = TRUE)
-  o <- tfl_output("T-9", "table", population = "SAF", label = "AEs",
+  o <- tfl_output("T-9", "table", common = list(population = "SAF"), label = "AEs",
                   template = list(name = "ae_soc_pt_all", args = list(population = "SAF")))
   r <- tv_rtfs(o, ard, s)
   expect_match(paste(r$code, collapse = "\n"), "plan <- tflspec::tfl_tpl(\n  ard,\n  \"hierarchical\",", fixed = TRUE)

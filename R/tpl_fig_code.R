@@ -3,13 +3,13 @@
 # A figure template is called as a table's is: tfl_tpl(<data>, "<name>", ...)
 # on the data the program made (its data steps: the dataset read, the
 # analysis set's subjects, the parameter), a ggplot back.  The arguments
-# of the data steps (tfl_param(stage = "data")) are the program's, not the
+# of the data steps (tfl_param(step = "data")) are the program's, not the
 # call's.  (The figures' former functions, tpl_mean_se() ..., stay.)
 
-# Parameters the data step takes (stage "data"); the rest the call's
+# Parameters the data step takes (step "data"); the rest the call's
 .tpl_fig_data_stage <- function(params, names = c("population", "subset", "data", "where")) {
   lapply(params, function(p) {
-    if (p$name %in% names) p$stage <- "data"
+    if (p$name %in% names) p$step <- "data"
     p
   })
 }
@@ -59,7 +59,7 @@
     args$plot <- NULL
   }
   data_stage <- names(args)[vapply(names(args), function(k) {
-    identical(t$params[[k]]$stage, "data")
+    identical(t$params[[k]]$step, "data")
   }, NA)]
   if (length(data_stage)) {
     .ard_stop(sprintf(paste0("%s: %s's %s: the program's data step's (the data `x` is made ",
@@ -67,7 +67,7 @@
                       fn, t$name, paste(sQuote(data_stage, FALSE), collapse = ", ")))
   }
   # (the data step's parameters: not needed by the call)
-  for (k in names(t$params)) if (identical(t$params[[k]]$stage, "data")) t$params[[k]]$required <- FALSE
+  for (k in names(t$params)) if (identical(t$params[[k]]$step, "data")) t$params[[k]]$required <- FALSE
   a <- .tpl_args(t, args, fn)
   root <- t$root %||% t$name
   draw <- .tpl_fig_draws[[root]]
@@ -86,7 +86,7 @@
 # template's call on the data -- tfl_tpl(<data>, "<name>", ...): the fit,
 # the layers and the settings are the call's -- with the report's own
 # items `+`-ed after it, each the design's piece for it (a layer, a
-# figure-wide call).  The call's arguments: the call's parameters (stage
+# figure-wide call).  The call's arguments: the call's parameters (step
 # "call") the report or the study standard gives; the report's own
 # settings (`plot:`) the arguments of the same name, the rest `plot =`.
 .content_fig_tpl_code <- function(output, name = "content") {
@@ -108,7 +108,7 @@
   }
   keep <- if (generic) {
     names(args)[vapply(names(args), function(k) {
-      !is.null(t$params[[k]]) && !identical(t$params[[k]]$stage, "data") && k != "plot"
+      !is.null(t$params[[k]]) && !identical(t$params[[k]]$step, "data") && k != "plot"
     }, NA)]
   } else {
     fun <- get(t$call, envir = asNamespace(t$package %||% "tflspec"), mode = "function")
@@ -222,4 +222,78 @@
   c(.fig_plus_chain("p", c(call, terms)),
     unlist(lapply(own, function(o) c(paste("#", o$label %||% "the report's own code"), o$stmt))),
     sprintf("%s <- p", name))
+}
+
+# ---- a series template's figure: the content function's call ----------------------
+
+# A figure report resolved from a series template (tfl_template_resolve():
+# its `template` attribute is the template's name, `<series>/<template>`)
+# whose template names its content in `figure:` (km_curves, forest_hr): the
+# program calls that function (.fig_content_table(), tfl_figure_fn()) with
+# the report's resolved arguments -- the model object when the function
+# takes one (km_fit, made from the data the program's data part made), the
+# ARD (`ard`) and the appearance `params` -- into `content`.  NULL when the
+# report is not one.
+.content_fig_series_code <- function(output, name = "content") {
+  if (is.null(output$figure)) return(NULL)
+  tp <- attr(output, "template")
+  key <- tryCatch(.fig_content_key(output), error = function(e) .ard_stop(conditionMessage(e)))
+  if (length(output$content)) {
+    .ard_stop(sprintf("%s: a report with `figure:` has no `content:` (the figure content is the call).",
+                      output$id))
+  }
+  fig <- key$name
+  e <- .fig_content_table()[[fig]]
+  args <- key$args
+  # the model: its call with the template's arguments (a required one the
+  # report did not give is the resolve's stop, not here)
+  model <- NULL
+  if (!is.null(e$model)) {
+    call <- e$model$call
+    for (k in names(args)) {
+      v <- args[[k]]
+      if (is.character(v) && length(v) == 1L) call <- gsub(paste0("{", k, "}"), v, call, fixed = TRUE)
+    }
+    left <- regmatches(call, gregexpr("[{][A-Za-z_.]+[}]", call))[[1L]]
+    if (length(left)) {
+      .ard_stop(sprintf("%s: figure %s needs %s in its `args`.", output$id %||% "report", fig,
+                        paste(gsub("[{}]", "", unique(left)), collapse = ", ")))
+    }
+    model <- .fig_series_model_lines(e$model$arg, call)
+  }
+  given <- Filter(Negate(is.null), args[intersect(e$params, names(args))])
+  params <- if (length(given)) {
+    c("  params = list(",
+      paste0("    ", names(given), " = ", vapply(given, .fig_arg_code, ""),
+             c(rep(",", length(given) - 1L), "")),
+      "  )")
+  }
+  fn <- paste0("tflspec::", e$fn)
+  call_args <- c(if (!is.null(e$model)) paste0("  ", e$model$arg, " = ", e$model$arg),
+                 "  ard = ard")
+  # (a comma after each argument but the last)
+  n_comma <- length(call_args) - if (length(params)) 0L else 1L
+  call_args <- paste0(call_args, c(rep(",", n_comma), rep("", length(call_args) - n_comma)))
+  code <- c(if (is.character(tp)) sprintf("# template %s: the figure content %s()", tp, e$fn)
+            else sprintf("# the figure content %s()", e$fn),
+            model,
+            sprintf("%s <- %s(", name, fn),
+            call_args, params,
+            ")")
+  .fig_code_out(code, character(), character(), character(), ard = TRUE)
+}
+
+# `km_fit <- ggsurvfit::survfit2(a, b)` as `km_fit <- f(` one argument a
+# line `)`: the call's top-level arguments split
+.fig_series_model_lines <- function(name, call) {
+  ex <- str2lang(call)
+  fn <- paste(deparse(ex[[1L]]), collapse = "")
+  a <- as.list(ex)[-1L]
+  txt <- vapply(seq_along(a), function(i) {
+    v <- paste(deparse(a[[i]], width.cutoff = 500L), collapse = " ")
+    if (nzchar(names(a)[i] %||% "")) paste(names(a)[i], "=", v) else v
+  }, "")
+  c(sprintf("%s <- %s(", name, fn),
+    paste0("  ", txt, c(rep(",", length(txt) - 1L), "")),
+    ")")
 }

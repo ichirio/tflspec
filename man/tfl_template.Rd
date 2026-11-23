@@ -13,7 +13,9 @@ tfl_template(
   label = NULL,
   call = NULL,
   example = NULL,
-  ai = FALSE
+  ai = FALSE,
+  extends = NULL,
+  extends_fixed = character()
 )
 }
 \arguments{
@@ -44,6 +46,12 @@ them make.}
 
 \item{ai}{\code{TRUE} to list it in the AI requests that answer with
 templates (\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}\code{(templates = TRUE)}).}
+
+\item{extends}{The \code{extends} its reports take when they write none:
+files for every step, \code{"none"}, or a list by step (\code{list(content = "none")}); \code{NULL}: a template not yet migrated.}
+
+\item{extends_fixed}{The steps whose \code{extends} the template fixes:
+another value stops.}
 }
 \value{
 \code{name}, invisibly.
@@ -70,7 +78,7 @@ template's purpose and scope.
 tfl_template("my_ages", kind = "table", layout = "summary",
   params = list(tfl_param("population", "SAF", doc = "the analysis set's id")),
   body = function(a, ctx) tfl_template_expand("summary",
-    list(population = a$population, continuous = "AGE"),
+    list(population = a$population, by = "TRT01A", continuous = "AGE"),
     codelists = ctx$codelists, population = ctx$population))
 tfl_templates()[, c("name", "package")]
 }

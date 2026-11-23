@@ -8,7 +8,7 @@ The table template \code{km_table}, layout \code{km_table}. Its program is one c
 }
 \section{Parameters}{
 \tabular{llllll}{
-   Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
+   Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
    \code{by} \tab other \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the column variable \cr
    \code{by_levels} \tab other \tab call \tab  \tab  \tab its values in order; NULL: its code list's \cr
    \code{median_label} \tab other \tab call \tab Median (95\% CI) \tab  \tab the median's row \cr

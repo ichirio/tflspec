@@ -8,15 +8,14 @@ The table template \code{ae_pt_freq}, layout \code{hierarchical}. Its program is
 }
 \section{Parameters}{
 \tabular{llllll}{
-   Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab required \tab call \tab report: population, required \tab output.population \tab the analysis set's id (SAF) \cr
+   Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
+   \code{population} \tab required \tab call \tab report: population, required \tab output.common.population \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
-   \code{term} \tab other \tab call \tab AEDECOD \tab  \tab the term variable (the PT) \cr
+   \code{term} \tab key \tab call \tab AEDECOD \tab  \tab the term variable (the PT) \cr
    \code{by} \tab other \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the column variable \cr
    \code{data} \tab other \tab call \tab ADAE \tab  \tab the dataset of records \cr
    \code{where} \tab other \tab call \tab TRTEMFL == "Y" \tab  \tab the records kept (R) \cr
-   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<population> \cr
-   \code{data_label} \tab other \tab call \tab Treatment-emergent AEs of the safety set \tab  \tab the analysis data's label \cr
+   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_sub \cr
    \code{analysis_id} \tab other \tab call \tab TEAE_PT \tab  \tab the analysis's id \cr
    \code{analysis_label} \tab other \tab call \tab TEAE by PT \tab  \tab the analysis's label \cr
    \code{overall} \tab other \tab call \tab Any TEAE \tab  \tab the any-record row's label; NULL: none \cr
@@ -26,6 +25,7 @@ The table template \code{ae_pt_freq}, layout \code{hierarchical}. Its program is
    \code{heading} \tab other \tab call \tab Preferred Term \tab  \tab the label column's heading \cr
    \code{denominator} \tab other \tab call \tab  \tab  \tab the percentages' denominator: NULL (default): the analysis set's subjects; "data": the subjects with a record kept; a number: that many subjects in every column; numbers named by the values of 'by' ('c("Drug X" = 60, "Control" = 55)'): that many in each column; the id of an analysis data ('adsl_itt', or one of the report's own): its subjects in each column \cr
    \code{header_n} \tab other \tab call \tab denominator \tab  \tab the arm headings' N: "denominator" (default): the arm's subjects the percentages are of ('denominator'); "set": the same, when 'denominator' is NULL (the analysis set); "tested": the same, when 'denominator' is "data" (the records' subjects); a header N apart from the denominator is not supported yet; "none": no N \cr
+   \code{split} \tab other \tab call \tab group_safe \tab plan_paginate_rows.split \tab how a page break is placed (plan_paginate_rows(split = )): "none" one page; "group_safe" whole groups to a page; "group_force" a cut every 'max_rows' rows, a group continued on the next page; "rows" and "by_value" are cut by position or by value (they need their own arguments, a 'plan_paginate_rows' item) \cr
 }
 }
 

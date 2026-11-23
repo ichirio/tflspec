@@ -148,7 +148,7 @@
     from <- if (!is.na(tt$from[i])) sprintf("; variant of %s", tt$from[i]) else ""
     pkg <- if (!identical(tt$package[i], "tflspec")) sprintf("; %s's", tt$package[i]) else ""
     # (a template whose data stage is the report's: the rule beside it)
-    own <- any(vapply(t$params %||% list(), function(p) isTRUE(p$hidden) && identical(p$stage, "data"), NA))
+    own <- any(vapply(t$params %||% list(), function(p) isTRUE(p$hidden) && identical(p$step, "data"), NA))
     out <- c(out, sprintf("- `%s`: %s (%s, layout %s%s%s)%s", tt$name[i], .ai_tpl_description(t),
                           tt$kind[i], tt$layout[i], from, pkg,
                           if (own) paste0(" -- own data: the report writes `data` steps `read`, the analysis ",
@@ -189,7 +189,7 @@
       tgt <- if (identical(x$group, "target") || (is.null(x$group) && x$name %in% target)) " [target]" else ""
       val <- .ai_tpl_value(x$default)
       # (a parameter that refers to the study standard: its key and fallback)
-      if (is.character(x$study) && !startsWith(x$study, "output.")) {
+      if (is.character(x$study) && !startsWith(x$study[1L], "output.")) {
         val <- .tpl_ref_text(x$study, if (is.null(x$default)) NA_character_ else val, x$required)
       }
       long <- nchar(val) > .ai_tpl_long
@@ -223,7 +223,7 @@
                   "* required, (its type), = its default, and what it is. A parameter left",
                   "out takes its default, or the study standard's value where it says",
                   "`study: <key>, else <fallback>` (`no fallback`: left unset): it is not written again.",
-                  "`!unset` (a default, or a value you write): leave the argument out of the call.")
+                  "`!unset` (a default, or a value you write): leave the argument out of the call; for a flag (TRUE / FALSE) it is FALSE, the step off.")
           }, "",
           .ai_templates_list(kinds, short = short)), collapse = "\n")
 }
@@ -264,7 +264,7 @@
                     "* required, (its type), = its default, and what it is. A parameter left",
                     "out takes its default, or the study standard's value where it says",
                     "`study: <key>, else <fallback>` (`no fallback`: left unset): it is not written again.",
-                    "`!unset` (a default, or a value you write): leave the argument out of the call."), "",
+                    "`!unset` (a default, or a value you write): leave the argument out of the call; for a flag (TRUE / FALSE) it is FALSE, the step off."), "",
               .ai_templates_list(kinds[[task]]), "")
           }))), collapse = "\n")
 }
@@ -478,18 +478,10 @@
   p
 }
 
-# A draft report's code lists as its build has them: its own over the ones
-# of the layers it extends (per variable, as tfl_report_codelists() gives
-# them).  NULL when the draft extends something and the study cannot be
-# read (or cannot give the layers): they are not known, so a check on
-# them is left out.
+# A draft report's code lists as its build has them: its own (no layer
+# gives a report a list)
 .ai_draft_codelists <- function(o, study) {
-  own <- o$codelists %||% list()
-  if (!length(o$extends) || identical(o$extends, "none")) return(.codelists_norm(own))
-  if (is.null(study)) return(NULL)
-  below <- tryCatch(.layers_below(o, study)$acc$codelists, error = function(e) NULL)
-  if (is.null(below)) return(NULL)
-  .codelists_norm(.merge_map(below, own) %||% list())
+  .codelists_norm(o$codelists %||% list())
 }
 
 # A template report as the items it stands for (its own after them): as
@@ -500,8 +492,8 @@
   tp <- o$template
   args <- tp$args %||% list()
   if (is.null(args$population) && "population" %in% names(tfl_template_params(tp$name)) &&
-      !is.na(o$population %||% NA)) {
-    args$population <- o$population
+      !is.na(.out_population(o))) {
+    args$population <- .out_population(o)
   }
   x <- tfl_template_expand(tp$name, args)
   o$ard <- x$ard
@@ -554,7 +546,7 @@
     tfl_item(l$layer, l[setdiff(names(l), "layer")])
   })
   o <- tfl_output(id, kind = "figure", label = if (length(ttl)) ttl[1L] else NA_character_,
-                  population = if (length(pop)) pop else NA_character_,
+                  common = list(population = if (length(pop)) pop else NA_character_),
                   template = list(name = tp$name, args = tp$args %||% list()), content = content,
                   data = if (length(design$data)) list(steps = design$data) else NULL,
                   page = if (length(ttl)) list(titles = as.list(ttl)) else list())
@@ -615,7 +607,7 @@
     i <- match(r, have)
     if (is.na(i)) .ard_stop(sprintf("%s reads %s, which spec/data.yml does not list.", o$id, r))
     .data_file_must_exist(r, ds[[i]]$path, ".")
-    data[[tolower(r)]] <- .ai_read_dataset(ds[[i]]$path)
+    data[[tolower(r)]] <- .ai_read_adam(ds[[i]]$path, r, st)
   }
   if (length(o$ard$analyses %||% list())) {
     data$ard <- suppressMessages(tfl_build_ard(st, dir = ".", output_id = o$id, save = FALSE))

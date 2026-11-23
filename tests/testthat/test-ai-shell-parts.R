@@ -69,12 +69,12 @@ sheet_parts_book <- function(f) {
 }
 
 test_that("an answer in parts: what the request asked for, not a report too many", {
-  pr <- .ai_check_table(list(outputs = list(`t.15.1.5.1.a` = tfl_output("t.15.1.5.1.a", "table", population = "SAF"),
-                                             `t.15.1.5.1.b` = tfl_output("t.15.1.5.1.b", "table", population = "SAF"))),
+  pr <- .ai_check_table(list(outputs = list(`t.15.1.5.1.a` = tfl_output("t.15.1.5.1.a", "table", common = list(population = "SAF")),
+                                             `t.15.1.5.1.b` = tfl_output("t.15.1.5.1.b", "table", common = list(population = "SAF")))),
                         list(outputs = "t.15.1.5.1"))
   expect_false(any(grepl("has no report|was not asked for", pr$problem)))
   # another report's parts still are not asked for
-  pr2 <- .ai_check_table(list(outputs = list(`t.15.1.6.1.a` = tfl_output("t.15.1.6.1.a", "table", population = "SAF"))), list(outputs = "t.15.1.5.1"))
+  pr2 <- .ai_check_table(list(outputs = list(`t.15.1.6.1.a` = tfl_output("t.15.1.6.1.a", "table", common = list(population = "SAF")))), list(outputs = "t.15.1.5.1"))
   expect_true(any(grepl("was not asked for", pr2$problem)))
 })
 

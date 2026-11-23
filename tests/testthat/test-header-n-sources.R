@@ -38,15 +38,19 @@ hn_base <- list(
   lab_abnormal = list(levels = c("LOW", "HIGH"), where = "ONTRTFL == \"Y\""),
   lab_shift = list(visit = "CYCLE 2 DAY 1", params = c("ALT", "AST")),
   shift = list(data_id = "adlb_shift", by_levels = c("Drug X", "Control")),
-  param_change = list(data = "ADLB", params = c("ALT", "AST"), where = "ONTRTFL == \"Y\""),
+  param_change = list(by = "TRT01A", data = "ADLB", params = c("ALT", "AST"), where = "ONTRTFL == \"Y\""),
   ancova = list(data = "ADVS", param = "SYSBP", visit = "CYCLE 2 DAY 1"),
-  summary = list(continuous = "AGE"))
+  summary = list(by = "TRT01A", continuous = "AGE"),
+  disposition = list(by = "TRT01A", categorical = "EOSSTT"),
+  ae_overview = list(by = "TRT01A"),
+  demog = list(by = "TRT01A", continuous = "AGE", categorical = c("AGEGR1", "SEX")),
+  stf_t02_demog = list(by = "TRT01A", continuous = "AGE", categorical = c("SEX", "AGEGR1")))
 
 # the report: its template built to the table step; NULL, or what stopped it
 hn_try <- function(tpl, ..., pop = "SAF") {
   args <- utils::modifyList(as.list(hn_base[[tpl]]), list(...))
   d <- hn_study()
-  o <- tfl_output("T-1", "table", population = pop, label = "T-1", extends = "defaults",
+  o <- tfl_output("T-1", "table", common = list(population = pop), label = "T-1", extends = "defaults",
                   template = list(name = tpl, args = args))
   tfl_write_output(o, file.path(d, "spec", "outputs", "T-1.yml"))
   owd <- setwd(d)
@@ -75,13 +79,12 @@ test_that("every table template, as its example: no two counts for one column", 
   }
 })
 
-test_that("total = TRUE and stack = TRUE: the Total column and the stacked layer add no count", {
+test_that("total = TRUE: the Total column adds no count", {
   hn_skip()
   for (tpl in c("demog", "summary", "hierarchical", "ae_soc_pt")) {
     hn_expect_ok(tpl, total = TRUE, label = paste(tpl, "total"))
   }
   hn_expect_ok("stf_t02_demog", total = FALSE, label = "stf_t02_demog total = FALSE")
-  hn_expect_ok("demog", stack = TRUE, total = TRUE, label = "demog stack total")
 })
 
 test_that("subset: the same subjects in every analysis", {
@@ -142,9 +145,9 @@ test_that("the check itself: two tabulations of one arm over different subjects 
   hn_skip()
   adsl <- tflspec::adsl
   everyone <- cards::ard_tabulate(adsl, variables = TRT01A)
-  everyone$analysis_id <- "GROUPN_ALL"
+  everyone$analysis_id <- "BIGN_ALL"
   women <- cards::ard_tabulate(adsl[adsl$SEX == "F", ], variables = TRT01A)
-  women$analysis_id <- "GROUPN_F"
+  women$analysis_id <- "BIGN_F"
   body <- cards::ard_summary(adsl, by = TRT01A, variables = AGE,
                              statistic = ~ cards::continuous_summary_fns("mean"))
   ard <- dplyr::bind_rows(everyone, women, body)

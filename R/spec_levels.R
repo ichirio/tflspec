@@ -1,7 +1,8 @@
 # plan_levels() where the ARD already says it (the owner, 2026-10-18): a
 # report's code lists are applied when its ARD is made (set_levels() in the
-# ARD program: each listed column a factor in its list's order, its values
-# the list's labels), and cards keeps a factor's order in the ARD, which
+# ARD program: each listed column a factor in its list's order, its levels
+# the list's codes -- the labels are plan_labels()'), and cards keeps a
+# factor's order in the ARD, which
 # normalize_ard() keeps in the table.  So a plan_levels() entry that says
 # a code list again, or the variables in the ARD's own order, says nothing
 # the table does not already have: the program leaves it out, and so does
@@ -26,11 +27,11 @@
   startsWith(call, "cards::") || identical(call, "(subjects)")
 }
 
-# A code list's values as the ARD has them (its labels, else its values);
-# a list of the values themselves as it is
+# A code list's values as the ARD has them: its codes; a list of the values
+# themselves (no labels) as it is
 .cl_values <- function(cl) {
-  if (is.character(cl)) return(unname(cl))
-  vapply(cl, function(r) as.character(r$label %||% r$value), "")
+  if (is.character(cl)) return(if (is.null(names(cl))) unname(cl) else names(cl))
+  vapply(cl, function(r) as.character(r$value), "")
 }
 
 # `keys`: only these keys may go (NULL: any); `variables = FALSE`: the

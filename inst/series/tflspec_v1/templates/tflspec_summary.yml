@@ -1,0 +1,225 @@
+# tflspec_v1/templates/tflspec_summary.yml
+# Purpose: To generate summary tables that display categorical and/or
+# descriptive statistics such as in Demography, baseline Characteristics,
+# analysis population, summary of result by visits ...
+# (user 2026-11-17).  The same processing definition as demog (its data:,
+# analysis: and content: as demog writes them; canon 1.25: one definition
+# plus its own full set of defaults, no link to demog).  Not DM-specific:
+# the label, and the analysis set is a param (population).  This first
+# version reads one ADSL-like row; a summary by visit is not in it yet.
+template: tflspec_summary
+label: Summary
+params:
+  population:
+    type: string
+    input: pick
+    choices: populations
+    default: !series population_safety
+    step: data
+    tier: usual
+    description: The analysis set adsl_sub keeps (data.yml's populations).
+  by:
+    type: list<column>
+    input: pick
+    choices: vars(adsl_sub)
+    required: true
+    step: analysis
+    tier: required
+    description: The column variable(s); the groups across.
+  continuous:
+    type: list<column>
+    input: pick
+    choices: vars(adsl_sub)
+    ordered: true
+    step: analysis
+    tier: usual
+    description: The continuous variables, in the order of the rows (this or categorical).
+  categorical:
+    type: list<column>
+    input: pick
+    choices: vars(adsl_sub)
+    ordered: true
+    step: analysis
+    tier: usual
+    description: The categorical variables, in the order of the rows (this or continuous).
+  total:
+    type: logical
+    input: pick
+    choices: fixed
+    default: !series total
+    step: analysis
+    tier: usual
+    description: A Total column from the overall rows.
+  missing_row:
+    type: logical
+    input: pick
+    choices: fixed
+    default: true
+    step: analysis
+    tier: usual
+    description: A row for the missing values of a categorical variable.
+  missing_label:
+    type: string
+    input: text
+    default: !series missing_label
+    step: analysis
+    tier: other
+    description: The label of the missing row.
+  denominator:
+    type: string
+    input: pick
+    choices: report_data
+    default: adsl_sub
+    step: analysis
+    tier: usual
+    description: The data row whose subjects are the group Ns (BIGN) and the
+      percentages' denominator; both come from the one BIGN item.
+  analysis_ids:
+    type: map<column,string>
+    input: table
+    columns: {key: {label: {en: "Variable", ja: "変数"}}, value: {label: {en: "Analysis ID", ja: "解析 ID"}}}
+    choices: vars(adsl_sub)
+    default: ~
+    step: analysis
+    tier: other
+    description: An analysis id for each variable; empty for the variable's name.
+  formats:
+    type: map<string,number|string>
+    input: table
+    columns: {key: {label: {en: "Statistic", ja: "統計量"}}, value: {label: {en: "Format", ja: "書式"}}}
+    choices: stats
+    free: true
+    default: !series formats
+    step: analysis
+    tier: usual
+    description: The decimals (or the format) of each statistic; VAR:stat for one variable.
+  labels:
+    type: map<column,string>
+    input: table
+    columns: {key: {label: {en: "Variable", ja: "変数"}}, value: {label: {en: "Label", ja: "ラベル"}}}
+    choices: vars(adsl_sub)
+    default: ~
+    step: content
+    tier: usual
+    description: The row label of each variable; empty for the variable's label.
+  value_labels:
+    type: map<column,r>
+    input: table
+    columns: {key: {label: {en: "Variable", ja: "変数"}}, value: {label: {en: "Value labels", ja: "値のラベル"}}}
+    choices: vars(adsl_sub)
+    default: ~
+    step: content
+    tier: other
+    description: "The label of each value of a variable, code to text ({SEX:
+      {F: Female}}) or a study list (!r study$codelists$SEX); empty for the
+      code list's labels.  It goes with labels
+      in one plan_labels, a variable's heading kept."
+  nest:
+    type: map<column,map<column,string>>
+    input: table
+    columns: {key: {label: {en: "Nested variable", ja: "入れ子の変数"}}, value: {label: {en: "Under", ja: "親"}, columns: {key: {label: {en: "Parent variable", ja: "親の変数"}}, value: {label: {en: "Level", ja: "水準"}}}}}
+    choices: vars(adsl_sub)
+    default: ~
+    step: content
+    tier: other
+    description: "A variable's rows under one level of another, {nested variable:
+      {parent variable: level}}.  Write the level as the table shows it (the
+      code list's label, not the code).  Empty for no nesting."
+  cells:
+    type: map<string,string>
+    input: table
+    columns: {key: {label: {en: "Statistic", ja: "統計量"}}, value: {label: {en: "Text", ja: "テキスト"}}}
+    ordered: true
+    default:
+      "n": "{N}"
+      Mean (SD): "{mean} ({sd})"
+      Median: "{median}"
+      Min, Max: "{min}, {max}"
+    step: content
+    tier: usual
+    description: The rows of a continuous variable, label to cell template, in order.
+  count_cell:
+    type: string
+    input: text
+    default: ~
+    step: content
+    tier: usual
+    description: The cell template of a categorical count; empty for the
+      study's, the plan_cells of its defaults.yml (an n (%) template has no
+      default of its own, canon 2026-11-16).
+  col_header:
+    type: list<map<string,string>>
+    input: table
+    columns:
+      row_label:
+        label: {en: "Row labels", ja: "行ラベル"}
+        type: string
+        input: text
+        description: The text over the row labels' column.
+      .values:
+        label: {en: "Value columns", ja: "値の列"}
+        type: string
+        input: text
+        description: "The text over each value column ({col} the column's value)."
+    default: ~
+    step: content
+    tier: other
+    description: "The column header lines, each a map of cell texts ({row_label:
+      '', .values: '{col}'}); empty for the study's, the plan_col_header of its
+      defaults.yml (the arm name line and the (N={n}) line there)."
+  max_rows:
+    type: number
+    input: text
+    default: !series max_rows
+    step: content
+    tier: other
+    description: The most rows a page holds.
+extends: !series extends
+style: !series style
+data:
+  - id: adsl_sub
+    from: ADSL
+    population: "{population}"
+analysis:
+  - id: BIGN
+    label: Subjects per group
+    method: categorical
+    data: "{denominator}"
+    variables: ["{by}"]
+    formats: "{formats}"
+  - id: CONT
+    analyses: {per: variable, ids: "{analysis_ids}"}
+    label: Continuous
+    method: continuous
+    data: adsl_sub
+    by: ["{by}"]
+    overall: "{total}"
+    variables: "{continuous}"
+    statistics: [N, mean, sd, median, min, max]
+    formats: "{formats}"
+  - id: CAT
+    analyses: {per: variable, ids: "{analysis_ids}"}
+    label: Categorical
+    method: categorical
+    data: adsl_sub
+    by: ["{by}"]
+    overall: "{total}"
+    variables: "{categorical}"
+    # (N, the analysis's own denominator, stays in the ARD: canon 2026-11-16)
+    statistics: [n, N, p]
+    denominator: BIGN
+    missing_row: "{missing_row}"
+    missing_label: "{missing_label}"
+    formats: "{formats}"
+content:
+  - table_plan: {cols: "{by}", rows: {group: variable}}
+  - plan_labels: "{labels}"
+  - plan_nest: "{nest}"
+  - plan_cells:
+      continuous: "{cells}"
+      categorical: "{count_cell}"
+  - plan_col_header: {lines: "{col_header}"}
+  - plan_paginate_rows: {max_rows: "{max_rows}", split: group_safe}
+page:
+  titles: ~
+  footnotes: ~

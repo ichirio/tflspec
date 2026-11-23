@@ -88,7 +88,7 @@ test_that("the requests: a sheet each, the TOC items with no shell one; what the
 })
 
 test_that("a sheet's answer: its ids the AI's; one no TOC item has, said; none, said", {
-  o <- function(id) tfl_output(id, "table", population = "SAF")
+  o <- function(id) tfl_output(id, "table", common = list(population = "SAF"))
   ctx <- list(sheet_mode = TRUE, toc_keys = tflspec:::.ai_id_key(c("Table 15.1.4.2", "Table 15.3.1")))
   pr <- .ai_check_table(list(outputs = list(`Table-15.1.4.2.a` = o("Table-15.1.4.2.a"))), ctx)
   # (the report files are empty here: only what the ids say is looked at)

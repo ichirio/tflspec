@@ -5,13 +5,18 @@
 # the fingerprint of what was built).
 # Base R, cards and dplyr only: the programs run without tflspec.
 
-# The code lists on a data: each listed column a factor, in its list's
-# order, each value as the list has it in the ARD (a list without names:
-# the values themselves).  A value its list does not have stops the
-# program and says which (a missing value does not: it stays missing).  A
-# blank text value (an XPT holds a missing text as a blank, whitespace
-# only too) is a missing value: it becomes NA, is not reported, and is not
-# a level, as in order_levels().
+# The code lists on a data: each listed column a factor whose levels are
+# the CODES, in its list's order (a list with names: the names, the codes
+# the data holds; a list without: the values themselves).  No labels are
+# applied: the ARD holds what the ADaM data holds, and a code list's text
+# reaches a table through the table plan (plan_labels()).  A level with no
+# record stays, counted 0.  A list may be narrowed to the levels the data's
+# filter leaves (cl_paramcd[c("ALT", "AST")]): set_levels() is the step
+# after that filter.  A value its list does not have stops the program and
+# says which (a missing value does not: it stays missing).  A blank text
+# value (an XPT holds a missing text as a blank, whitespace only too) is a
+# missing value: it becomes NA, is not reported, and is not a level, as in
+# order_levels().
 #   set_levels(adsl, SEX = c(F = "Female", M = "Male"), TRT01A = cl_trt01a)
 set_levels <- function(data, ...) {
   lists <- list(...)
@@ -20,17 +25,58 @@ set_levels <- function(data, ...) {
     values <- if (is.null(names(cl))) unname(cl) else names(cl)
     x <- as.character(data[[v]])
     x[!is.na(x) & !nzchar(trimws(x))] <- NA
-    # (a column the list was put on already -- a data made from another --
-    # holds the labels: those are the values they label)
-    lab <- unname(cl)
-    done <- !is.na(x) & !x %in% values & x %in% lab
-    x[done] <- values[match(x[done], lab)]
     unknown <- setdiff(unique(x[!is.na(x)]), values)
     if (length(unknown)) {
       stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
                    v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
     }
-    data[[v]] <- factor(x, levels = values, labels = unname(cl))
+    data[[v]] <- factor(x, levels = values)
+  }
+  data
+}
+
+# The codes of one code list of the study's ADaM metadata (study$adam_meta,
+# the define's shape: its `codelists` table, a value a row, `codelist` the
+# list's OID), in the list's order -- by `order`, then `rank`, then as the
+# table has them -- for set_levels().  A list the metadata does not have
+# stops the program.
+#   set_levels(adsl, SEX = adam_codes("CL.SEX"))
+adam_codes <- function(codelist, meta = study$adam_meta) {
+  cl <- meta$codelists
+  rows <- cl[!is.na(cl$codelist) & cl$codelist == codelist, , drop = FALSE]
+  n <- nrow(rows)
+  if (!n) stop(sprintf("The ADaM metadata has no code list %s.", codelist), call. = FALSE)
+  col <- function(cn) if (cn %in% names(rows)) rows[[cn]] else rep(NA, n)
+  as.character(rows$value[order(col("order"), col("rank"), seq_len(n))])
+}
+
+# A blank is missing: every character column's "" becomes NA, and so does a
+# factor's (the "" level is dropped, the other levels and their order kept).
+# Other types stay.  study$adam is the ADaM as read with this done, so a
+# program tests a blank with is.na(), not == "" or nzchar().
+#   blank_as_na(adsl)
+# A missing value as a level of its own (a categorical variable's missing
+# row): NA becomes `label`, the last level; the other levels and their
+# order kept.  cards counts no NA, so the row needs a level.
+#   missing_level(SEX, "Missing")
+missing_level <- function(x, label = "Missing") {
+  lv <- if (is.factor(x)) levels(x) else sort(unique(as.character(x[!is.na(x)])))
+  x <- as.character(x)
+  x[is.na(x)] <- label
+  factor(x, levels = unique(c(lv, label)))
+}
+
+blank_as_na <- function(data) {
+  for (v in names(data)) {
+    x <- data[[v]]
+    if (is.character(x)) {
+      x[!is.na(x) & x == ""] <- NA
+    } else if (is.factor(x) && any(levels(x) == "")) {
+      x <- factor(as.character(x), levels = setdiff(levels(x), ""), ordered = is.ordered(x))
+    } else {
+      next
+    }
+    data[[v]] <- x
   }
   data
 }
@@ -160,6 +206,104 @@ tag_ard <- function(ard, report_id, analysis_id, population = NA_character_,
         population_id = population, ard, stringsAsFactors = FALSE)
 }
 
+# One report's items into one ARD: the tagged ARDs of its items (tag_ard()),
+# bound as they are, never a row lost (dplyr::bind_rows(); cards::bind_ard()
+# does not count output_id / analysis_id in a row's key, and drops the later
+# item's rows).  The columns in the order the ARD is read in: the ids
+# (output_id, analysis_id, population_id), the groups in number order
+# (group1, group1_level, group2, ... -- items with different numbers of
+# groups get the one order), variable, variable_level, context, stat_name,
+# stat_label, stat, fmt_fun, warning, error, then any other.  The class
+# card stays.  A row's key is every column but analysis_id and the
+# statistic's value columns (stat, stat_label, stat_fmt, fmt_fun, fmt_fn,
+# warning, error): the ids, every group and its level, variable,
+# variable_level, context, stat_name, and any other column a wrapper adds
+# (`pairwise`); a *_level is compared as text, NULL as missing.  Two rows
+# of one item with the same key stop the program (the same ard_tabulate()
+# written twice, two conditions that are the same); rows of different items with the same key, analysis_id left
+# out, give a warning and are all kept.
+#   ard <- bind_items(ard_dm, ard_lab)
+bind_items <- function(...) {
+  items <- list(...)
+  if (length(items) == 1L && is.list(items[[1L]]) && !is.data.frame(items[[1L]])) {
+    items <- items[[1L]]
+  }
+  items <- Filter(Negate(is.null), items)
+  ard <- dplyr::bind_rows(items)
+  if (!"analysis_id" %in% names(ard)) {
+    stop("bind_items(): the ARDs have no analysis_id: tag each one with tag_ard().", call. = FALSE)
+  }
+  if (all(vapply(items, inherits, NA, what = "card")) && !inherits(ard, "card")) {
+    class(ard) <- c("card", class(ard))
+  }
+  # the columns in order
+  nm <- names(ard)
+  ids <- intersect(c("output_id", "analysis_id", "population_id"), nm)
+  gn <- sort(unique(as.integer(gsub("[^0-9]", "",
+                                   grep("^group[0-9]+(_level)?$", nm, value = TRUE)))))
+  groups <- intersect(as.vector(rbind(paste0("group", gn), paste0("group", gn, "_level"))), nm)
+  stats <- intersect(c("variable", "variable_level", "context", "stat_name", "stat_label",
+                       "stat", "fmt_fun", "warning", "error"), nm)
+  ard <- ard[, c(ids, groups, stats, setdiff(nm, c(ids, groups, stats))), drop = FALSE]
+  # the key of a row: values as text, a missing one (or a NULL) apart
+  as_key <- function(x) {
+    z <- if (is.list(x)) {
+      vapply(x, function(e) if (is.null(e) || !length(e)) NA_character_ else
+        paste(as.character(e), collapse = ","), "")
+    } else as.character(x)
+    z[is.na(z)] <- "\001NA"
+    z
+  }
+  kc <- setdiff(names(ard), c("analysis_id", "stat", "stat_label", "stat_fmt", "fmt_fun",
+                              "fmt_fn", "warning", "error"))
+  key <- do.call(paste, c(lapply(ard[kc], as_key), sep = "\002"))
+  aid <- as.character(ard$analysis_id)
+  # what a row is called in a message: its variable and statistic
+  what <- paste0(as_key(ard$variable), " ", as_key(ard$stat_name))
+  what <- gsub("\001NA", "NA", what, fixed = TRUE)
+  more <- function(x, n = 3L) {
+    x <- unique(x)
+    paste0(paste(utils::head(x, n), collapse = ", "),
+           if (length(x) > n) sprintf(" and %d more", length(x) - n))
+  }
+  # one item: the same key twice is an error
+  dup <- duplicated(paste(aid, key, sep = "\003")) | duplicated(paste(aid, key, sep = "\003"), fromLast = TRUE)
+  if (any(dup)) {
+    msgs <- vapply(unique(aid[dup]), function(a) {
+      i <- which(dup & aid == a)
+      sprintf("item %s: %d rows with the same key (%s)", a, length(i), more(what[i]))
+    }, "")
+    stop(sprintf(paste0("bind_items(): a statistic twice in one item -- %s.  Each statistic of an ",
+                        "item is one row: remove the repeated analysis or condition."),
+                 paste(msgs, collapse = "; ")), call. = FALSE)
+  }
+  # two items: the same key is a warning, the rows stay
+  multi <- tapply(aid, key, function(a) length(unique(a)) > 1L)
+  rows <- which(key %in% names(multi)[multi])
+  if (length(rows)) {
+    pairs <- list()
+    for (k in unique(key[rows])) {
+      i <- which(key == k)
+      ids_k <- unique(aid[i])
+      same <- length(unique(as_key(ard$stat[i]))) == 1L
+      for (p in utils::combn(ids_k, 2L, simplify = FALSE)) {
+        pk <- paste(p, collapse = "\003")
+        pairs[[pk]] <- rbind(pairs[[pk]], data.frame(
+          what = what[i[1L]], same = same, stringsAsFactors = FALSE))
+      }
+    }
+    for (pk in names(pairs)) {
+      p <- strsplit(pk, "\003", fixed = TRUE)[[1L]]
+      d <- pairs[[pk]]
+      warning(sprintf(
+        "bind_items(): items %s and %s both have %d statistic(s) with the same key: %s (%s); all rows kept.",
+        p[1L], p[2L], nrow(d), more(d$what),
+        if (all(d$same)) "the same values" else "values differ in some"), call. = FALSE)
+    }
+  }
+  ard
+}
+
 # A p-value as text: <0.001, else 3 decimals
 fmt_pvalue <- function(x) ifelse(x < 0.001, "<0.001", sprintf("%.3f", x))
 
@@ -219,6 +363,62 @@ drop_empty_groups <- function(ard) {
   }, NA)
   empty <- unique(key[n0])
   ard[!key %in% empty, , drop = FALSE]
+}
+
+# The terms of a nested count (cards::ard_stack_hierarchical()) that `pct`
+# % of subjects or more have, the other terms' rows dropped: in `met_in`
+# "any" column (each arm, and the Total column when the ARD has one),
+# "all" of them, or the "total" column alone (an ARD with no Total column
+# stops).  The last level's rows (the PT) stand on their own percentage;
+# a level above it (the SOC) stays when a term below it does.  The overall
+# row and the by variable's counts stay.  (cards::filter_ard_hierarchical()
+# drops the Total column's rows.)
+#   ard |> keep_min_pct(5)
+#   ard |> keep_min_pct(10, "all")
+keep_min_pct <- function(ard, pct, met_in = c("any", "all", "total")) {
+  met_in <- match.arg(met_in)
+  one <- function(x) vapply(x, function(v)
+    if (length(v) && !is.na(v[[1L]])) as.character(v[[1L]]) else NA_character_, "")
+  term <- ard$context %in% "hierarchical" & !startsWith(as.character(ard$variable), "..")
+  vars <- unique(as.character(ard$variable[term]))
+  if (!any(term)) return(ard)
+  gk <- grep("^group[0-9]+$", names(ard), value = TRUE)
+  g <- lapply(gk, function(k) as.character(ard[[k]]))
+  gl <- lapply(gk, function(k) one(ard[[paste0(k, "_level")]]))
+  # a row's path (the levels it sits under, then its own) and its column (the
+  # by group's level; none: the Total column)
+  path <- rep("", nrow(ard))
+  column <- rep("", nrow(ard))
+  depth <- integer(nrow(ard))
+  for (k in seq_along(gk)) {
+    above <- g[[k]] %in% vars
+    path[above] <- paste0(path[above], gl[[k]][above], "\r")
+    depth <- depth + above
+    by <- !is.na(g[[k]]) & !above
+    column[by] <- gl[[k]][by]
+  }
+  path <- paste0(path, one(ard$variable_level))
+  depth <- depth + 1L
+  n <- length(vars)
+  p <- vapply(ard$stat, function(s) if (length(s)) suppressWarnings(as.numeric(s[[1L]])) else NA_real_, 0)
+  at <- term & ard$stat_name %in% "p" & !is.na(p)
+  if (met_in == "total" && any(at) && !any(at & column == "")) {
+    stop("keep_min_pct(): met_in = \"total\" needs the Total column, and the ARD has none: ",
+         "add the Total column (ard_stack_hierarchical(overall = TRUE)), or use met_in = \"any\".",
+         call. = FALSE)
+  }
+  # (the last level: its own percentage)
+  own <- at & depth == n
+  pass <- vapply(split(seq_len(nrow(ard))[own], path[own]), function(i) {
+    v <- if (met_in == "total") p[i][column[i] == ""] else p[i]
+    if (!length(v)) return(FALSE)
+    if (met_in == "all") all(v >= pct / 100) else any(v >= pct / 100)
+  }, NA)
+  kept <- names(pass)[pass]
+  # (a level above: when a term below it stays)
+  up <- unique(path[term & depth < n])
+  kept <- c(kept, up[vapply(up, function(u) any(startsWith(kept, paste0(u, "\r"))), NA)])
+  ard[!term | path %in% kept, , drop = FALSE]
 }
 
 # An ARD's columns in their code lists' order: the rows of a listed

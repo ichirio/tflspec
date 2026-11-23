@@ -90,8 +90,9 @@ the page: \code{\link[=tfl_fig_page_size]{tfl_fig_page_size()}}).}
 \code{codelists} sheet, or a data frame with \code{output_id}, \code{variable},
 \code{value}, \code{label}, \code{order}): the rows of \code{plot_id} are put on the
 figure's data, last of its data steps -- each listed column a factor
-in its list's order, its values as the list has them (\verb{cl_<variable>}
-and \code{set_levels()}, see \code{\link[=tfl_helpers_code]{tfl_helpers_code()}}).  The arms
+in its list's order, its codes (\verb{cl_<variable>} and \code{set_levels()}, see
+\code{\link[=tfl_helpers_code]{tfl_helpers_code()}}); a list with labels also gives the legend of the
+colour variable its labels (\verb{labels = cl_<variable>} in the scales).  The arms
 are first put in their numeric order by \code{order_levels()} (\code{TRT01P} by
 \code{TRT01PN}), first step of each dataset read (see \code{order_arms}); a code
 list wins.

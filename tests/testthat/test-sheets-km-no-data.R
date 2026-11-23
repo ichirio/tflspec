@@ -2,7 +2,7 @@
 # to sheets, that report named in a warning and kept as it is; resolving it
 # still stops
 
-test_that("a KM type report with no data: steps: the sheets with a warning; its run stops", {
+test_that("a KM type report with no data: steps: expanding the sheets warns; its run stops", {
   d <- tempfile()
   on.exit(unlink(d, recursive = TRUE))
   dir.create(d)
@@ -10,11 +10,11 @@ test_that("a KM type report with no data: steps: the sheets with a warning; its 
                        full.names = TRUE), d, recursive = TRUE)
   s <- tfl_read_study_spec(d)
   outs <- tfl_read_outputs(d)
-  o <- tfl_output("F-9", "figure", population = "SAF",
+  o <- tfl_output("F-9", "figure", common = list(population = "SAF"),
                   template = list(name = "km_survival", args = list(by = "TRT01A")))
   expect_error(tfl_resolve_output(o, s), "says its data in its own `data:` steps")
   sh <- NULL
-  expect_warning(sh <- tfl_sheets_from_spec(s, c(outs, list(`F-9` = o))),
+  expect_warning(sh <- tfl_sheets_from_spec(s, c(outs, list(`F-9` = o)), templates = "expand"),
                  "F-9: kept as it is", fixed = TRUE)
   # the other reports are there, and F-9 with its template
   expect_true(all(names(outs) %in% unlist(lapply(sh, function(b) lapply(b, function(x)

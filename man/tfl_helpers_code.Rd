@@ -11,28 +11,35 @@ The code, one element per line.
 }
 \description{
 The R code of the functions the programs tflspec writes call:
-\code{set_levels()} (the code lists on a data: each listed column a factor in
-the list's order, its values as the list has them in the ARD; a value
-not listed stops the program), \code{reorder_by()} (a column in another's
+\code{blank_as_na()} (a character column's \code{""}, and a factor's, as \code{NA}: what
+\code{study$adam} holds), \code{set_levels()} (the code lists on a data: each listed column a factor of
+the codes in the list's order, as the ARD holds them, no labels; a value
+not listed stops the program), \code{adam_codes()} (the codes of one code list
+of the study's ADaM metadata, \code{study$adam_meta}, by its OID, in the list's
+order: what \code{set_levels(SEX = adam_codes("CL.SEX"))} puts on a dataset;
+a list the metadata does not have stops the program), \code{reorder_by()} (a column in another's
 order when the data has it: \code{PARAM} by \code{PARAMN}), \code{order_levels()} (the arm
 variables and the categories it names as factors, set in the data step
 before the ARD: each in its code list's order, else its numeric pair's
 -- \code{TRT01A} by \code{TRT01AN}, \code{SEX} by \code{SEXN}, \code{RACE} by \code{RACEN} --, else
-as it is, which the ARD sorts: cards orders text by \code{order(x, method = "radix")},
-the C locale's byte order; a factor already in the data keeps
+as it is, which the ARD sorts: cards orders text by \code{order(x, method = "radix")}, the C locale's byte order; a factor already in the data keeps
 its levels; a blank is missing, not a level; \code{from = adsl} orders a
 records data's arm, which has no number of its own, by the matching arm
 and number of ADSL, the records' values kept and a value ADSL lacks
 last; a value with two numbers there is an error), \code{order_arms()} (the arm
 variables alone: \code{order_levels()} with no categories), \code{tag_ard()} (the report, analysis and
-analysis set in front of an analysis's ARD), \code{fmt_ard()} and
+analysis set in front of an analysis's ARD), \code{bind_items()} (a report's items into one
+ARD: no row lost, the columns in order, a statistic twice in one item an error, the
+same statistic in two items a warning), \code{fmt_ard()} and
 \code{fmt_pvalue()} (formats after a call), \code{keep_stats()} (only the
 statistics asked for), \code{ard_hierarchical_or_none()} (nested counts,
 and the ARD of no records: the overall row 0), \code{complete_hierarchy()} (a
 nested count's code-list values no subject has, counted 0),
 \code{drop_empty_groups()} (the rows of a group no record fell in -- the
 baseline visit in a change's records, whose level a code list put back
--- so its cells stay empty), \code{relevel_ard()} (an ARD's
+-- so its cells stay empty), \code{keep_min_pct()} (a nested count's terms that
+a percentage of subjects or more have, in any, every or the Total column;
+the other terms' rows dropped), \code{relevel_ard()} (an ARD's
 columns in their code lists' order, after an analysis that is not
 cards'), \code{save_ard()} (one report's rows into the
 study ARD, and what was built in \code{ard_status.csv}), and what a figure

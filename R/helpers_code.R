@@ -1,9 +1,13 @@
 #' The functions a study's generated programs call
 #'
 #' The R code of the functions the programs tflspec writes call:
-#' `set_levels()` (the code lists on a data: each listed column a factor in
-#' the list's order, its values as the list has them in the ARD; a value
-#' not listed stops the program), `reorder_by()` (a column in another's
+#' `blank_as_na()` (a character column's `""`, and a factor's, as `NA`: what
+#' `study$adam` holds), `set_levels()` (the code lists on a data: each listed column a factor of
+#' the codes in the list's order, as the ARD holds them, no labels; a value
+#' not listed stops the program), `adam_codes()` (the codes of one code list
+#' of the study's ADaM metadata, `study$adam_meta`, by its OID, in the list's
+#' order: what `set_levels(SEX = adam_codes("CL.SEX"))` puts on a dataset;
+#' a list the metadata does not have stops the program), `reorder_by()` (a column in another's
 #' order when the data has it: `PARAM` by `PARAMN`), `order_levels()` (the arm
 #' variables and the categories it names as factors, set in the data step
 #' before the ARD: each in its code list's order, else its numeric pair's
@@ -15,14 +19,18 @@
 #' and number of ADSL, the records' values kept and a value ADSL lacks
 #' last; a value with two numbers there is an error), `order_arms()` (the arm
 #' variables alone: `order_levels()` with no categories), `tag_ard()` (the report, analysis and
-#' analysis set in front of an analysis's ARD), `fmt_ard()` and
+#' analysis set in front of an analysis's ARD), `bind_items()` (a report's items into one
+#' ARD: no row lost, the columns in order, a statistic twice in one item an error, the
+#' same statistic in two items a warning), `fmt_ard()` and
 #' `fmt_pvalue()` (formats after a call), `keep_stats()` (only the
 #' statistics asked for), `ard_hierarchical_or_none()` (nested counts,
 #' and the ARD of no records: the overall row 0), `complete_hierarchy()` (a
 #' nested count's code-list values no subject has, counted 0),
 #' `drop_empty_groups()` (the rows of a group no record fell in -- the
 #' baseline visit in a change's records, whose level a code list put back
-#' -- so its cells stay empty), `relevel_ard()` (an ARD's
+#' -- so its cells stay empty), `keep_min_pct()` (a nested count's terms that
+#' a percentage of subjects or more have, in any, every or the Total column;
+#' the other terms' rows dropped), `relevel_ard()` (an ARD's
 #' columns in their code lists' order, after an analysis that is not
 #' cards'), `save_ard()` (one report's rows into the
 #' study ARD, and what was built in `ard_status.csv`), and what a figure

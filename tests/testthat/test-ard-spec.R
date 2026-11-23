@@ -50,7 +50,7 @@ test_that("the definition becomes code and the code the study ARD", {
   saveRDS(cards::ADSL, file.path(dir, "adsl.rds"))
   saveRDS(cards::ADAE, file.path(dir, "adae.rds"))
   x <- toy_spec(spec_df(
-    list(output_id = "DM", analysis_id = "GROUPN", method = "categorical",
+    list(output_id = "DM", analysis_id = "BIGN", method = "categorical",
          population_id = "SAF", variables = "TRT01A"),
     list(output_id = "DM", analysis_id = "AGE", method = "continuous",
          population_id = "SAF", by = "TRT01A", variables = "AGE",
@@ -73,7 +73,11 @@ test_that("the definition becomes code and the code the study ARD", {
   # program's data, by its name
   expect_true(any(code ==
     paste0("adae_sub <- adae |>\n",
-           "  semi_join(select(adsl_sub, USUBJID), by = \"USUBJID\") |>\n",
+           "  inner_join(\n",
+           "    select(adsl_sub, USUBJID),\n",
+           "    by = \"USUBJID\",\n",
+           "    relationship = \"many-to-one\"\n",
+           "  ) |>\n",
            "  filter(TRTEMFL == \"Y\")")))
   expect_true(any(grepl("adsl_sub[adsl_sub$TRT01A != \"Placebo\", ]", code, fixed = TRUE)))
   expect_false(any(grepl("local(", code, fixed = TRUE)))
@@ -87,7 +91,7 @@ test_that("the definition becomes code and the code the study ARD", {
   expect_false("output_id" %in% names(dm))
   expect_setequal(unique(dm$stat_name), c("n", "N", "p", "mean", "sd"))
   # the population's subjects only
-  n <- a$stat[a$output_id == "DM" & a$analysis_id == "GROUPN" &
+  n <- a$stat[a$output_id == "DM" & a$analysis_id == "BIGN" &
                 a$stat_name == "N"][[1L]]
   expect_equal(n, sum(cards::ADSL$SAFFL == "Y"))
   expect_true(any(a$variable[a$output_id == "AE"] == "AEDECOD"))
@@ -101,7 +105,7 @@ test_that("the definition becomes code and the code the study ARD", {
 
 test_that("a workbook reads back as written", {
   skip_if_not_installed("cards")
-  x <- toy_spec(spec_df(list(output_id = "DM", analysis_id = "GROUPN",
+  x <- toy_spec(spec_df(list(output_id = "DM", analysis_id = "BIGN",
                              method = "categorical", population_id = "SAF",
                              variables = "TRT01A")))
   f <- file.path(withr_tempdir(), "ard_spec.xlsx")
@@ -222,7 +226,7 @@ test_that("an analysis with no dataset and no population still writes its code",
                              method = "custom", code = "cards::ard_total_n(adsl)")))
   code <- tfl_ard_code(x)
   expect_silent(parse(text = code))
-  expect_true(any(grepl("ard_a <- ard_total_n(adsl) |>", code, fixed = TRUE)))
+  expect_true(any(grepl(".ard_a <- ard_total_n(adsl) |>", code, fixed = TRUE)))
 })
 
 test_that("a keyword's function name is the keyword's analysis", {

@@ -26,7 +26,7 @@ test_that("own data steps come before the template's call steps; the same figure
   st <- tfl_read_study_spec(d)
   args <- list(by = "TRT01A", time_unit = "weeks", x_max = 52, x_step = 4, y_type = "risk")
   # the template's own data step (the layout km's; its types take the report's)
-  o1 <- tfl_output("F-9-tpl", "figure", population = "SAF", label = "KM", extends = "defaults",
+  o1 <- tfl_output("F-9-tpl", "figure", common = list(population = "SAF"), label = "KM", extends = "defaults",
                    template = list(name = "km", args = c(args, list(param = "TTDISC"))))
   r1 <- tfl_resolve_output(o1, st)
   n_call <- attr(r1, "template")$call_steps
@@ -34,7 +34,7 @@ test_that("own data steps come before the template's call steps; the same figure
   steps <- r1$data$steps
   own_steps <- utils::head(steps, length(steps) - n_call)
   # the same data stage, said by the report
-  o2 <- tfl_output("F-9-own", "figure", population = "SAF", label = "KM", extends = "defaults",
+  o2 <- tfl_output("F-9-own", "figure", common = list(population = "SAF"), label = "KM", extends = "defaults",
                    template = list(name = "km", args = args),
                    data = list(steps = own_steps))
   r2 <- tfl_resolve_output(o2, st)

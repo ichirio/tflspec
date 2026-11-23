@@ -51,11 +51,11 @@ test_that("an ARD spec is its eight sheets; the catalogs only on request", {
   tfl_write_ard_spec(a, f)
   expect_identical(readxl::excel_sheets(f),
                    c("study", "datasets", "populations", "records", "objects", "groups", "analysis_data",
-                     "analyses"))
+                     "analyses", "conditions", "ards"))
   tfl_write_ard_spec(a, f, catalogs = TRUE)
   expect_identical(readxl::excel_sheets(f),
                    c("study", "datasets", "populations", "records", "objects", "groups", "analysis_data",
-                     "analyses", "_methods", "_statistics"))
+                     "analyses", "conditions", "ards", "_methods", "_statistics"))
 })
 
 test_that("the column help is a comment on each header cell", {

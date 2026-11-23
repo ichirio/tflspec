@@ -1,0 +1,50 @@
+# tflspec_v1/series.yml: the series's one common file.  A template reads a
+# value here only where it writes `!series <key>`.  A study reads its own
+# copy (spec/series/tflspec_v1/series.yml, tfl_copy_templates()) and changes
+# a value there.  descriptions: says what each value means (one line of
+# English a key, for a screen that shows them).
+name: tflspec_v1
+label: tflspec templates
+released: 2026-11-17
+needs: tflspec (>= 0.x)
+fixes: []
+values:
+  extends: [defaults]
+  style: tfl_standard
+  style_listing: tfl_small
+  population_safety: SAF
+  population_efficacy: FAS
+  formats: {N: 0, mean: 2, sd: 3, median: 1, min: 0, max: 0, p: "xx.x%", "AGE:mean": 1, "AGE:sd": 2}
+  total: false
+  total_label: Total
+  missing_label: Missing
+  sd_missing: "-"
+  any_row_label: "Subjects with at least one event"
+  empty_text: "No records were reported."
+  count_cell: "{n} ({p:.1f%})"
+  max_rows: 30
+  conf_level: 0.95
+  time: AVAL
+  censor: CNSR
+  time_unit: months
+  days_per_month: 30.4375
+descriptions:
+  extends: "The SPEC files a report made from these templates builds on ([defaults]: the study's spec/defaults.yml)."
+  style: "The style of the Tables and Figures: one of the study's (defaults.yml styles:) or a built-in one (tfl_styles())."
+  style_listing: "The style of the Listings: one of the study's (defaults.yml styles:) or a built-in one (tfl_styles())."
+  population_safety: "The analysis set of the safety reports."
+  population_efficacy: "The analysis set of the efficacy reports."
+  formats: "The decimals (a number) or the format of each statistic; AGE:mean is that variable's own. p: \"xx.x%\": % means ×100; no % sign is printed (e.g. 34.5)."
+  total: "Whether the tables have a Total column (all the groups together)."
+  total_label: "The heading of the Total column."
+  missing_label: "The row label of a categorical variable's missing values."
+  sd_missing: "What stands for the SD when there is none (a group of one); \"\" for the mean alone."
+  any_row_label: "The label of the first row: the subjects with at least one event."
+  empty_text: "The text of a Table or Listing that has no records."
+  count_cell: "The cell of a count and its percent; % means ×100; no % sign is printed (e.g. 12 (34.5))."
+  max_rows: "The most rows a page holds."
+  conf_level: "The level of the confidence intervals (0.95: 95%)."
+  time: "The column of the time to event."
+  censor: "The censoring column (1 censored, 0 event)."
+  time_unit: "The unit of the time axis; months divides the days by days_per_month."
+  days_per_month: "The days in a month, for time_unit months."

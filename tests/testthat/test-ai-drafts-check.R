@@ -53,7 +53,7 @@ test_that("an analysis data made by code may name its population: the set's subj
   d <- dc_study(withr::local_tempdir())
   o <- tfl_read_output(dc_draft(d, "T-14-3-1"))
   o$ard$analysis_data <- list(list(
-    id = "ae_first", label = "each subject's first AE", from = "ADAE", population = "SAF",
+    id = "ae_first", from = "ADAE", population = "SAF",
     code = tfl_r("dplyr::slice_head(dplyr::group_by(dplyr::filter(adae, USUBJID %in% adsl_sub$USUBJID, TRTEMFL == \"Y\"), USUBJID), n = 1)")))
   o$ard$analyses <- list(list(id = "AE1", method = "categorical", data = "ae_first", by = list("TRT01A"),
                               variables = list("AESEV"), denominator = "column"))
@@ -81,7 +81,7 @@ test_that("the set a code reads as <dataset>_sub stays an object when another da
   # code's adsl_sub keeps the set an object of its own
   o$ard$analysis_data <- list(
     list(id = "adsl_saf", from = "ADSL", population = "SAF", derive = tfl_r("TRTA = TRT01A"), keep = list("TRTA")),
-    list(id = "ae_first", label = "each subject's first AE", from = "ADAE", population = "SAF",
+    list(id = "ae_first", from = "ADAE", population = "SAF",
          code = tfl_r("dplyr::slice_head(dplyr::group_by(dplyr::filter(adae, USUBJID %in% adsl_sub$USUBJID, TRTEMFL == \"Y\"), USUBJID), n = 1)")))
   o$ard$analyses <- list(
     list(id = "N", method = "categorical", data = "adsl_saf", by = list(), variables = list("TRTA"), statistics = list("n")),
@@ -133,17 +133,18 @@ test_that("a figure's draft keeps its own file through the check: its page, its 
   expect_true(r$reports$status[r$reports$output_id == "F-14-2-2"] %in% c("ok", "warning"))
   back <- tfl_read_output(f)
   expect_identical(back$page$titles[["2"]]$center, "Kaplan-Meier Plot of Overall Survival")
-  # the footer line moved below the study's own (spec/defaults.yml: line 1)
-  expect_identical(names(back$page$footer), "2")
-  expect_identical(back$page$footer[["2"]]$left, "CI = confidence interval.")
+  # the footer line is a body line: the study's configuration prints its own
+  # lines below it, so nothing is moved
+  expect_identical(names(back$page$footer), "1")
+  expect_identical(back$page$footer[["1"]]$left, "CI = confidence interval.")
   # a table's footer lines too, once: the second check leaves them
   t <- tfl_read_output(dc_draft(d, "T-14-1-1"))
   t$page$footer <- list("1" = list(left = "Age at informed consent."), "2" = list(left = "Fictional data."))
   tfl_write_output(t, dc_draft(d, "T-14-1-1"))
   suppressMessages(tfl_ai_collect_answers(d))
-  expect_identical(names(tfl_read_output(dc_draft(d, "T-14-1-1"))$page$footer), c("2", "3"))
+  expect_identical(names(tfl_read_output(dc_draft(d, "T-14-1-1"))$page$footer), c("1", "2"))
   suppressMessages(tfl_ai_collect_answers(d))
-  expect_identical(names(tfl_read_output(dc_draft(d, "T-14-1-1"))$page$footer), c("2", "3"))
+  expect_identical(names(tfl_read_output(dc_draft(d, "T-14-1-1"))$page$footer), c("1", "2"))
 })
 
 test_that("a page line with a key that is no cell (an unquoted comma): an error that says to quote", {

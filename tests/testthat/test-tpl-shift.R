@@ -17,7 +17,7 @@ sh_study <- function(root) {
 
 sh_report <- function(d, args, codelists = list()) {
   f <- file.path(d, "spec", "outputs", "T-SH.yml")
-  tfl_write_output(tfl_output("T-SH", "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("T-SH", "table", common = list(population = "SAF"), extends = "defaults",
                               codelists = codelists, template = list(name = "shift", args = args)), f)
   st <- tfl_read_study_spec(d)
   ard <- suppressMessages(tfl_build_ard(st, output_id = "T-SH", dir = d, save = FALSE))
@@ -40,7 +40,7 @@ test_that("shift: percent_of total -- each arm's body rows add to 100% of its To
   d <- sh_study(withr::local_tempdir())
   args <- list(population = "SAF", where = 'PARAMCD %in% c("ALT", "HGB")',
                percent_of = "total", missing_label = "Missing",
-               cell = "{n} ({p:.1f%}%)", param_page = FALSE)
+               cell = "{n} ({p:.1f%}%)", page_by = FALSE)
   r <- sh_report(d, args)
   t <- as.data.frame(suppressMessages(rtfreporter::plan_apply(r$plan, "table")))
   t[] <- lapply(t, function(v) if (is.factor(v)) as.character(v) else v)
@@ -76,12 +76,12 @@ test_that("shift: percent_of total -- each arm's body rows add to 100% of its To
 test_that("shift: worst_by gives a parameter its own order from the worst", {
   x <- tfl_template_expand("shift", list(population = "SAF",
                                          worst_by = list(HGB = c("LOW", "HIGH", "NORMAL"))))
-  code <- as.character(x$ard$analysis_data[[1L]]$code)
+  code <- as.character(x$ard$analysis_data[[2L]]$code)
   expect_match(code, 'PARAMCD == "HGB" ~ match(ANRIND, c("LOW", "HIGH", "NORMAL"))', fixed = TRUE)
   expect_match(code, 'TRUE ~ match(ANRIND, c("HIGH", "LOW", "NORMAL"))', fixed = TRUE)
   # a text of the order, as a sheet holds it
   y <- tfl_template_expand("shift", list(population = "SAF", worst_by = list(HGB = "LOW, HIGH, NORMAL")))
-  expect_identical(as.character(y$ard$analysis_data[[1L]]$code), code)
+  expect_identical(as.character(y$ard$analysis_data[[2L]]$code), code)
   # run on the records: a subject both LOW and HIGH for HGB is LOW, for ALT HIGH
   skip_if_not_installed("dplyr")
   lb <- data.frame(USUBJID = c("S1", "S1", "S1", "S1"), PARAMCD = c("HGB", "HGB", "ALT", "ALT"),
@@ -100,28 +100,35 @@ test_that("shift: worst_by gives a parameter its own order from the worst", {
                                                  percent_of = "total")), "give `worst`")
 })
 
-test_that("shift: the rows are in the code list's labels, Missing and Total last", {
+test_that("shift: the rows are the code list's codes, Missing and Total last; the labels are plan_labels()", {
   rows <- function(...) lapply(list(...), function(v) list(value = v[1L], label = v[2L]))
   lv <- function(cl, ...) {
     x <- tfl_template_expand("shift", list(population = "SAF", ...), codelists = cl)
     Filter(function(it) it$fn == "plan_levels", x$content)[[1L]]$args
   }
   cl <- rows(c("LOW", "Low"), c("NORMAL", "Normal"), c("HIGH", "High"))
-  # codes in `levels`, labels in the ARD: the table's values are the labels
+  # codes in `levels`, codes in the ARD: the plan's values are the codes
   # (no Missing row by default: a subject with no baseline is left out)
   a0 <- lv(list(BNRIND = cl, ANRIND = cl))
-  expect_identical(a0$BNRIND, c("Low", "Normal", "High", "Total"))
+  expect_identical(a0$BNRIND, c("LOW", "NORMAL", "HIGH", "Total"))
   a <- lv(list(BNRIND = cl, ANRIND = cl), missing_label = "Missing")
-  expect_identical(a$BNRIND, c("Low", "Normal", "High", "Missing", "Total"))
-  expect_identical(a$.label, c("Low", "Normal", "High"))
+  expect_identical(a$BNRIND, c("LOW", "NORMAL", "HIGH", "Missing", "Total"))
+  expect_identical(a$.label, c("LOW", "NORMAL", "HIGH"))
+  # the labels are the plan's text of the codes, one plan_labels()
+  x <- tfl_template_expand("shift", list(population = "SAF", missing_label = "Missing"),
+                           codelists = list(BNRIND = cl, ANRIND = cl))
+  pl <- Filter(function(it) it$fn == "plan_labels", x$content)
+  expect_length(pl, 1L)
+  expect_identical(pl[[1L]]$args$BNRIND, c(LOW = "Low", NORMAL = "Normal", HIGH = "High"))
+  expect_identical(pl[[1L]]$args$ANRIND, c(LOW = "Low", NORMAL = "Normal", HIGH = "High"))
   # named codes (a program's `c(LOW = "Low")`) the same
   nm <- c(LOW = "Low", NORMAL = "Normal", HIGH = "High")
   expect_identical(lv(list(BNRIND = nm, ANRIND = nm), missing_label = "Missing")$BNRIND, a$BNRIND)
-  # no code list, or `levels` given as the labels: as they are
+  # no code list: as they are; `levels` are codes
   expect_identical(lv(NULL, missing_label = "Missing")$BNRIND,
                    c("LOW", "NORMAL", "HIGH", "Missing", "Total"))
   expect_identical(lv(NULL)$BNRIND, c("LOW", "NORMAL", "HIGH", "Total"))
-  y <- tfl_template_expand("shift", list(population = "SAF", levels = c("Low", "Normal", "High"),
+  y <- tfl_template_expand("shift", list(population = "SAF", levels = c("LOW", "NORMAL", "HIGH"),
                                          missing_label = "Missing"),
                            codelists = list(BNRIND = cl, ANRIND = cl))
   expect_identical(Filter(function(it) it$fn == "plan_levels", y$content)[[1L]]$args$BNRIND,
@@ -139,7 +146,7 @@ test_that("shift: built with a code list on the categories, the rows run Low ...
   cl <- rows(c("LOW", "Low"), c("NORMAL", "Normal"), c("HIGH", "High"))
   # (Missing and Total are still listed: the analysis data holds them)
   r <- sh_report(d, list(population = "SAF", where = 'PARAMCD %in% c("ALT", "HGB")',
-                         param_page = FALSE, missing_label = "Missing"),
+                         page_by = FALSE, missing_label = "Missing"),
                  codelists = list(BNRIND = c(cl, rows(c("Missing", "Missing"), c("Total", "Total"))),
                                   ANRIND = cl))
   t <- as.data.frame(suppressMessages(rtfreporter::plan_apply(r$plan, "table")))
@@ -174,7 +181,7 @@ sn_study <- function(root, drop = TRUE) {
 
 sn_report <- function(d, args) {
   f <- file.path(d, "spec", "outputs", "T-SN.yml")
-  tfl_write_output(tfl_output("T-SN", "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("T-SN", "table", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = "lab_shift",
                                               args = c(list(population = "SAF",
                                                             visit = "CYCLE 2 DAY 1",
@@ -259,14 +266,14 @@ test_that("shift: a parameter with fewer subjects shows its own N on its own pag
   expect_true(grepl("Control (N=75)", txt, fixed = TRUE))
 })
 
-test_that("shift: header_n = 'none' shows no N; param_page = FALSE shows the set's N (#630)", {
+test_that("shift: header_n = 'none' shows no N; page_by = FALSE shows the set's N (#630)", {
   sn_skip()
   d <- sn_study(withr::local_tempdir())
   p <- sn_report(d, list(header_n = "none"))
   pg <- suppressMessages(rtfreporter::plan_apply(p, "pages"))
   for (g in pg) expect_false(any(grepl("N=", sn_hdr1(g), fixed = TRUE)))
   # (one page of several parameters has no tested N, but the set's N is one an arm)
-  p <- sn_report(d, list(param_page = FALSE))
+  p <- sn_report(d, list(page_by = FALSE))
   pg <- suppressMessages(rtfreporter::plan_apply(p, "pages"))
   saf <- tflspec::adsl[tflspec::adsl$SAFFL == "Y", ]
   for (g in pg) {
@@ -275,30 +282,30 @@ test_that("shift: header_n = 'none' shows no N; param_page = FALSE shows the set
                                                 sum(saf$TRT01A == "Control"))))
   }
   # ("tested" is a page's parameter's N: without the page it stops, not no N)
-  expect_error(suppressWarnings(sn_report(d, list(param_page = FALSE, header_n = "tested"))),
-               "header_n = \"tested\" needs param_page = TRUE", fixed = TRUE)
+  expect_error(suppressWarnings(sn_report(d, list(page_by = FALSE, header_n = "tested"))),
+               "header_n = \"tested\" needs page_by", fixed = TRUE)
   pg <- suppressMessages(rtfreporter::plan_apply(sn_report(d, list(header_n = "none")), "pages"))
   expect_identical(names(pg), c("Parameter: ALT", "Parameter: AST"))
   expect_identical(sn_hdr1(pg[[1L]]), c("", "Drug X", "Control"))
-  # the N's analysis is there only when it is shown: the set's GROUPN (default,
-  # with or without param_page), or the tested subjects' (only with param_page)
+  # the N's analysis is there only when it is shown: the set's BIGN (default,
+  # with or without page_by), or the tested subjects' (only with page_by)
   x <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "V", params = "ALT"))
-  expect_identical(vapply(x$ard$analyses, `[[`, "", "id"), c("SHIFT", "GROUPN"))
-  expect_identical(x$ard$analyses[[2L]]$data, "adsl_saf")
+  expect_identical(vapply(x$ard$analyses, `[[`, "", "id"), c("SHIFT", "BIGN"))
+  expect_identical(x$ard$analyses[[2L]]$data, "adsl_sub")
   y <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "V", params = "ALT",
                                              header_n = "none"))
   expect_length(y$ard$analyses, 1L)
   z <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "V", params = "ALT",
-                                             param_page = FALSE))
-  expect_identical(vapply(z$ard$analyses, `[[`, "", "id"), c("SHIFT", "GROUPN"))
+                                             page_by = FALSE))
+  expect_identical(vapply(z$ard$analyses, `[[`, "", "id"), c("SHIFT", "BIGN"))
   t1 <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "V", params = "ALT",
                                               header_n = "tested"))
   expect_identical(vapply(t1$ard$analyses, `[[`, "", "id"), c("SHIFT", "SHIFT_N"))
   # (the tested N is a page's parameter's: without the page it stops, not no N)
   expect_error(tfl_template_expand("lab_shift", list(population = "SAF", visit = "V",
                                                      params = "ALT", header_n = "tested",
-                                                     param_page = FALSE)),
-               "lab_shift: header_n = \"tested\" needs param_page = TRUE", fixed = TRUE)
+                                                     page_by = FALSE)),
+               "lab_shift: header_n = \"tested\" needs page_by", fixed = TRUE)
   # FALSE and TRUE are not values: an error naming the values
   expect_error(tfl_template_expand("shift", list(population = "SAF", header_n = FALSE)),
                "\"set\".*\"tested\".*\"none\"")
@@ -311,8 +318,8 @@ test_that("shift: header_n = 'none' shows no N; param_page = FALSE shows the set
 # the report with code lists whose codes differ from the labels, and the
 # program it writes run by a child R
 sh_codelist_program <- function(d, cl, extra, rscript) {
-  paged <- is.null(extra$param_page)
-  info <- if (paged) "default" else "param_page = FALSE"
+  paged <- is.null(extra$page_by)
+  info <- if (paged) "default" else "page_by = FALSE"
   args <- c(list(population = "SAF", where = 'PARAMCD %in% c("ALT", "HGB")',
                  levels = c("LOW", "NORMAL", "HIGH"), missing_label = "Missing"), extra)
   r <- sh_report(d, args, codelists = list(BNRIND = cl, ANRIND = cl))
@@ -364,10 +371,10 @@ test_that("shift: Missing and Total need not be in the code list; the program ma
   has <- suppressWarnings(system2(rscript, c("-e", shQuote("cat(requireNamespace('tflspec', quietly = TRUE))")),
                                   stdout = TRUE, stderr = FALSE))
   skip_if_not(identical(utils::tail(has, 1L), "TRUE"), "tflspec is not installed where a child R looks")
-  # param_page = FALSE, and the default (a page a parameter, each with its N)
-  for (pp in list(list(param_page = FALSE), list())) {
+  # page_by = FALSE, and the default (a page a parameter, each with its N)
+  for (pp in list(list(page_by = FALSE), list())) {
     # (the page N needs rtfreporter#898, as the #630 tests do)
-    if (is.null(pp$param_page)) sn_skip()
+    if (is.null(pp$page_by)) sn_skip()
     sh_codelist_program(d, cl, pp, rscript)
   }
 })
@@ -401,7 +408,7 @@ ph_report <- function(d, name, args, codelists = list()) {
             else list(where = 'PARAMCD == "HGB" & AVISIT == "CYCLE 2 DAY 1"'),
             args)
   f <- file.path(d, "spec", "outputs", "T-PH.yml")
-  tfl_write_output(tfl_output("T-PH", "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("T-PH", "table", common = list(population = "SAF"), extends = "defaults",
                               codelists = codelists, template = list(name = name, args = args)), f)
   st <- tfl_read_study_spec(d)
   ard <- suppressMessages(tfl_build_ard(st, output_id = "T-PH", dir = d, save = FALSE))
@@ -518,26 +525,27 @@ test_that("shift, lab_shift: post_header leaves the ARD and its program unchange
 test_that("shift: a where with | is its own argument of the filter (no brackets needed)", {
   w <- "ONTRTFL == \"Y\" | ABLFL == \"Y\""
   x <- tfl_template_expand("shift", list(population = "SAF", where = w))
-  code <- strsplit(as.character(x$ard$analysis_data[[1L]]$code), "
+  code <- strsplit(as.character(x$ard$analysis_data[[2L]]$code), "
 ", fixed = TRUE)[[1L]]
-  f <- parse(text = grep("dplyr::filter(d,", code, fixed = TRUE, value = TRUE))[[1L]][[3L]]
-  args <- as.list(f)[-(1:2)]
+  f <- parse(text = sub(" [|]>$", "", grep("dplyr::filter(", code, fixed = TRUE, value = TRUE)))[[1L]]
+  args <- as.list(f)[-1L]
   # (ABLFL, the post-baseline category, the baseline category -- a missing
   # baseline is out by default -- and the where)
   expect_length(args, 4L)
   expect_identical(deparse(args[[4L]]), w)
   # with a Missing row, no baseline filter: as before
   y <- tfl_template_expand("shift", list(population = "SAF", where = w, missing_label = "Missing"))
-  code2 <- strsplit(as.character(y$ard$analysis_data[[1L]]$code), "
+  code2 <- strsplit(as.character(y$ard$analysis_data[[2L]]$code), "
 ", fixed = TRUE)[[1L]]
-  f2 <- parse(text = grep("dplyr::filter(d,", code2, fixed = TRUE, value = TRUE))[[1L]][[3L]]
-  expect_length(as.list(f2)[-(1:2)], 3L)
+  f2 <- parse(text = sub(" [|]>$", "", grep("dplyr::filter(", code2, fixed = TRUE, value = TRUE)))[[1L]]
+  expect_length(as.list(f2)[-1L], 3L)
 })
 
 test_that("a heading of two lines: one header text with a line break, as the hierarchical tables write it", {
   two <- c("Line one", "Line two")
   code_of <- function(name, args) {
-    x <- tfl_template_expand(name, c(list(population = "SAF"), args))
+    x <- tfl_template_expand(name, c(list(population = "SAF"),
+                                     if (name == "ae_overview") list(by = "TRT01A"), args))
     o <- tfl_output("T-1", "table", data = x$data, content = x$content)
     suppressMessages(tfl_content_code(o, pipe = "|>"))
   }
@@ -626,7 +634,7 @@ sd_study <- function(root) {
 
 sd_report <- function(d, args) {
   f <- file.path(d, "spec", "outputs", "T-SD.yml")
-  tfl_write_output(tfl_output("T-SD", "table", population = "SAF", extends = "defaults",
+  tfl_write_output(tfl_output("T-SD", "table", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = "shift",
                                               args = c(list(population = "SAF",
                                                             cell = "{n} ({p:.1f%})"), args))),
@@ -668,8 +676,8 @@ test_that("shift: the defaults -- a missing baseline is out, % of the tested, he
   expect_equal(sd_stat(x$ard, "HIGH", "HIGH", "n"), 3)
   expect_identical(x$table[["Drug X____HIGH"]][x$table$BNRIND == "NORMAL"], "2 (9.5)")
   expect_identical(x$table[["Drug X____LOW"]][x$table$BNRIND == "Total"], "1 (4.8)")
-  # the header N is the analysis set's, counted apart from the %: GROUPN
-  g <- x$ard[x$ard$analysis_id == "GROUPN" & x$ard$stat_name == "n", ]
+  # the header N is the analysis set's, counted apart from the %: BIGN
+  g <- x$ard[x$ard$analysis_id == "BIGN" & x$ard$stat_name == "n", ]
   expect_equal(as.numeric(unlist(g$stat)), 25)
   # missing_label = "Missing" (opt-in): a Missing row, in the Total and the denominator
   m <- sd_report(d, list(missing_label = "Missing"))

@@ -29,7 +29,13 @@
 #' ([tfl_schema_check()], the items of an appended part too; its code
 #' written, [tfl_content_code()]), and a figure's design against the
 #' installed ggplot2 and the version it is written for
-#' ([tfl_check_fig_design()]).  The packages' installed versions come with
+#' ([tfl_check_fig_design()]), and the names its fields give
+#' ([tfl_output_objects()]): a field that names an object made below it,
+#' a figure's field that names an object nothing above its content makes
+#' (`wrap_plots`'s `plots`, `ggsurvfit`'s `x`, a `data` or a `fit`), and a
+#' name given twice in a report or that is a study dataset's or a
+#' function's are errors (`part` `"names"` for the last two); an object
+#' the report names and nothing uses is a note.  The packages' installed versions come with
 #' it, as an attribute.  A GUI's check button and the AI's run call it.
 #'
 #' @param study A study read with [tfl_read_study_spec()], or its folder.
@@ -41,8 +47,9 @@
 #'   `"build"`.  A few seconds a report.  `FALSE` (default): the checks
 #'   above only.
 #' @return A data frame, one row a problem: `output_id` (`NA` for the
-#'   study's ARD definition as a whole), `part` (`"file"`, `"ard"`,
-#'   `"content"`, `"program"`, `"figure"`, `"build"`), `item` (the file, the
+#'   study's ARD definition as a whole and the study's own rows), `part`
+#'   (`"file"`, `"study"`, `"ard"`, `"content"`, `"program"`, `"figure"`,
+#'   `"build"`), `item` (the file, the
 #'   analysis, the function and argument, or the figure's part and
 #'   field), `level` (`"error"`, `"warning"`, `"note"`, `"check"`) and
 #'   `message`.  Its attributes: `versions`, a data frame of the key
@@ -59,7 +66,7 @@
 #'   haven::write_xpt(as.data.frame(lapply(adsl, chr)), file.path(d, "adam", "adsl.xpt"))
 #'   tfl_ai_study_init(d, adam = "adam", study_id = "EX-1")
 #'   tfl_write_output(
-#'     tfl_output("T-DM", "table", population = "SAF",
+#'     tfl_output("T-DM", "table", common = list(population = "SAF"),
 #'                template = list(name = "demog", args = list(population = "SAF"))),
 #'     file.path(d, "spec", "outputs", "T-DM.yml"))
 #'   p <- tfl_check_spec(d)
@@ -105,9 +112,36 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
                       paste(sQuote(miss), collapse = ", ")))
   }
   kinds <- vapply(outs, function(o) o$kind %||% "table", "")
+  # (the study's datasets: no object of a report takes one's name)
+  study_ds <- .obj_study_datasets(study)
 
+  # what the user wrote and a study's R fields hold: a test for a blank text,
+  # where study$adam has NA (a template's own rows are not the user's: left out)
+  blank_note <- function(output_id, msg) {
+    at <- regmatches(msg, regexec("^(.*?) / ([^:]+): (.*)$", msg, perl = TRUE))[[1L]]
+    add(output_id = output_id, part = "ard", item = paste(at[2L], "/", at[3L]), level = "note",
+        message = at[4L])
+  }
+  if (is.null(output_id)) {
+    dd <- study$data %||% list()
+    for (m in c(.blank_entry_notes(dd$populations, c("where", "derive")),
+                .blank_entry_notes(dd$records, "where"),
+                .blank_entry_notes(dd$datasets, "derive", function(e) as.character(e$dataset %||% NA)[1L]))) {
+      blank_note(NA_character_, m)
+    }
+    # a study code list named like an ADaM column adam_meta does not map:
+    # study$adam has no levels of it (the name is not a mapping)
+    for (w in .study_list_unmapped(study)) {
+      add(output_id = NA_character_, part = "study", item = paste0("codelists: ", w$list),
+          level = "warning", message = w$message)
+    }
+  }
   for (id in setdiff(ids, bad)) {
     o <- outs[[id]]
+    for (m in c(.blank_entry_notes(o$ard$analysis_data, c("where", "derive", "code", "then")),
+                .blank_entry_notes(o$ard$analyses, c("where", "post", "code")))) {
+      blank_note(id, m)
+    }
     # its ARD definition, written as its program: the definition's problems
     # are errors; what the installed packages do not know, notes; a program
     # that cannot be written otherwise, a warning
@@ -147,13 +181,14 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
     }
     # its own titles under a study header that prints the label, the title
     # and the population from the report's keys: printed twice (#518)
-    if (length(.page_args(o$page$titles)) && ("defaults" %in% (o$extends %||% "defaults"))) {
-      tok <- .page_output_tokens_used(study$defaults$page %||% list())
+    if (length(.page_args(o$page$titles))) {
+      cfg <- tryCatch(.report_style(o, study)$set, error = function(e) NULL)
+      tok <- .page_output_tokens_used(.page_config_flat(cfg))
       if (length(tok)) {
         add(output_id = id, part = "page", item = "titles", level = "warning",
             message = sprintf(paste0("the study's header prints the report's label, title and population ",
                                      "already (%s): `page: titles` prints them twice. Remove `page: titles`; ",
-                                     "`label:` and `population:` fill the header."),
+                                     "`label:` and `common: population` fill the header."),
                               paste0("{", tok, "}", collapse = ", ")))
       }
     }
@@ -165,7 +200,19 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
     }
     # the report as written: what stops the build far from its cause
     rows[[length(rows) + 1L]] <- .check_static_rows(o, id)
+    # the names its fields give: a figure's that nothing above makes, a
+    # table's named block (R/object_list.R)
+    rows[[length(rows) + 1L]] <- .check_object_rows(ro, id, study_ds)
     if (inherits(ro$content, "tfl_r")) next
+    # a figure's content key (`figure: {name, args}`): its name is one of the
+    # table's (.fig_content_table()), its program is written
+    if (identical(ro$kind, "figure") && !is.null(ro$figure)) {
+      r <- tryCatch(suppressMessages(suppressWarnings(tfl_content_code(ro))), error = function(e) e)
+      if (inherits(r, "error")) {
+        add(output_id = id, part = "figure", item = "figure", level = "error", message = one(r))
+      }
+      next
+    }
     if (identical(ro$kind, "figure") && !.fig_new_content(ro$content)) {
       bad_design <- function(e) {
         data.frame(part = "", field = "", problem = conditionMessage(e), stringsAsFactors = FALSE)
@@ -175,7 +222,7 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
       # its plot settings joined) is checked as it checks it, so a draft it
       # would refuse is an error here
       pd <- tryCatch(suppressWarnings(
-        tfl_sheets_from_spec(study, stats::setNames(list(o), id))$figures[[id]]),
+        tfl_sheets_from_spec(study, stats::setNames(list(o), id), templates = "expand")$figures[[id]]),
         error = function(e) NULL)
       if (is.list(pd) && length(Filter(length, pd))) {
         p <- unique(rbind(p, tryCatch(tfl_check_fig_design(structure(pd, class = "tfl_fig_design")),

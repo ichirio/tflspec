@@ -50,33 +50,34 @@
   tfl_param("split_at", NULL, doc = paste(
     "the time point that starts a second block of columns (each block its",
     "pages, the group's first); NULL: one")),
-  tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<population>")
+  tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_sub"),
+  .tpl_split_param("none")
 )
 
 .tpl_pk_body <- function(a, ctx) {
   pop <- a$population
-  subj <- paste0("adsl_", tolower(pop))
-  set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(pop))
+  subj <- .tpl_subj_id()
+  set <- .tpl_set_id(a)
   tm <- a$time
   q <- function(x) sprintf("\"%s\"", gsub("\"", "\\\"", x, fixed = TRUE))
   order <- if (length(a$time_order)) sprintf("%s = reorder_by(%s, %s)", tm, tm, a$time_order)
-  # a BLQ record is -Inf in the listing's value (its cell prints blq_label);
+  # a BLQ record is -Inf in the listing's value (its cell prints blq_label;
+  # the test is TRUE only: a blank flag is NA in study$adam);
   # a missing value or an absent time point is empty
-  blq_value <- sprintf("%s = ifelse(%s, -Inf, %s)", a$value, a$blq, a$value)
+  blq_value <- sprintf("%s = ifelse((%s) %%in%% TRUE, -Inf, %s)", a$value, a$blq, a$value)
   # the listing's records (a BLQ one -Inf: it prints `blq_label`) and the
   # summary's (the values)
-  rec <- function(id, label, where, derive) Filter(Negate(is.null), list(
-    id = id, label = label, from = a$data, subjects = subj,
+  rec <- function(id, where, derive) Filter(Negate(is.null), list(
+    id = id, from = a$data, subjects_in = subj,
     where = if (length(where)) tfl_r(.tpl_and_all(where)),
     derive = if (length(derive)) tfl_r(paste(derive, collapse = " | "))))
   sets <- list(
-    list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
-         population = pop),
-    rec(set, "the subjects' concentrations", a$where,
+    list(id = subj, from = "ADSL", population = pop),
+    rec(set, a$where,
         c(order, if (length(a$blq)) blq_value)),
-    rec(paste0(set, "_s"), "the concentrations summarised",
+    rec(.tpl_noun_id(a, "summ"),
         c(a$where, sprintf("!is.na(%s)", a$value)), order))
-  analyses <- list(list(id = "CONC", method = "continuous", data = paste0(set, "_s"),
+  analyses <- list(list(id = "CONC", method = "continuous", data = .tpl_noun_id(a, "summ"),
                         by = c(a$by, tm), variables = a$value,
                         args = tfl_r(.tpl_pk_statistic)))
   summary <- list(
@@ -103,8 +104,9 @@
            lines = list(list(row_label = "", .values = a$time_heading),
                         list(row_label = a$subject_heading, .values = "{col}")),
            span = tfl_r("list(c(.values = \"one\"), c(.values = \"each\"))"))),
-         tfl_item("plan_paginate_rows", list(page_by = a$by, heading = heading,
-                                             heading_at = "title")),
+         tfl_item("plan_paginate_rows", list(
+           split = .tpl_choice(a, "split", .tpl_split_choices, "pk_conc"),
+           page_by = a$by, heading = heading, heading_at = "title")),
          tfl_item("plan_columns", list(decimal = ".values"))),
     if (length(a$split_at)) list(tfl_item("plan_paginate_cols", list(
       at = a$split_at, order = "down"))))

@@ -36,7 +36,9 @@ and \code{set_levels()}, see \code{\link[=tfl_helpers_code]{tfl_helpers_code()}}
 factor in its list's order (it sorts so), its values as the list has
 them.  Before them the arms are put in their numeric order by
 \code{order_levels()} (\code{TRT01A} by \code{TRT01AN}; a list wins), so a sort on
-an arm sorts so.}
+an arm sorts so.  The columns are factors of the codes, in the list's
+order (for sorting); a label, when the display needs one, goes in the
+listing's \code{rework} code, e.g. \code{SEX = unname(cl_sex[as.character(SEX)])}.}
 
 \item{part}{\code{"all"} (the whole of it), \code{"data"} (the data, up to its
 order: what a report's content step of its own code reads as \code{data})
