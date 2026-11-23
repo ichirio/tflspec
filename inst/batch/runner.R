@@ -20,9 +20,16 @@
 # so the tests that source this file can catch it instead of ending R)
 .batch_quit <- function(status) quit(save = "no", status = status)
 
+# R's message prefixes, in English and Japanese (Error: U+30A8 U+30E9 U+30FC;
+# Warning: U+8B66 U+544A; "Warning messages:" is U+8B66 U+544A U+30E1 U+30C3
+# U+30BB U+30FC U+30B8 and a colon)
+.batch_re_error <- "^(Error|エラー)"
+.batch_re_warning <- "^(Warning|警告)"
+.batch_re_warnings <- "^(Warning messages:|警告メッセージ:)"
+
 # the issue lines of an R CMD BATCH log: ^Error lines, ^Warning lines (the
 # numbered lines under "Warning messages:" one each), and "There were N
-# warnings" as N rows.  A data frame: level, text.
+# warnings" as N rows (English and Japanese).  A data frame: level, text.
 .batch_log_issues <- function(lines) {
   lv <- character()
   tx <- character()
@@ -33,9 +40,9 @@
   n <- length(lines)
   for (i in seq_len(n)) {
     l <- lines[i]
-    if (grepl("^Error", l)) {
+    if (grepl(.batch_re_error, l)) {
       add("error", l)
-    } else if (grepl("^Warning messages:", l)) {
+    } else if (grepl(.batch_re_warnings, l)) {
       k <- i + 1L
       got <- 0L
       while (k <= n && grepl("^[0-9]+: ", lines[k])) {
@@ -44,11 +51,17 @@
         k <- k + 1L
       }
       if (!got) add("warning", l)
-    } else if (grepl("^Warning", l)) {
-      add("warning", l)
     } else if (grepl("^There w(ere|as) [0-9]+", l)) {
       N <- as.integer(sub("^There w(?:ere|as) ([0-9]+).*$", "\\1", l, perl = TRUE))
       for (j in seq_len(N)) add("warning", l)
+    } else if (grepl(.batch_re_warning, l)) {
+      # (the Japanese count line starts with the word for warning and holds
+      # the number and warnings(): N rows, as the English one)
+      N <- 1L
+      if (!grepl("^Warning", l) && grepl("[0-9]+.*warnings[(][)]", l)) {
+        N <- as.integer(sub("^[^0-9]*([0-9]+).*$", "\\1", l))
+      }
+      for (j in seq_len(max(N, 1L, na.rm = TRUE))) add("warning", l)
     }
   }
   data.frame(level = lv, text = tx, stringsAsFactors = FALSE)
@@ -83,7 +96,7 @@
     errs <- .batch_section(lines, "Errors:")
     warns <- .batch_section(lines, "Warnings:")
     if (!identical(rc, 0L) && !length(errs) && file.exists(err)) {
-      e <- grep("^Error", readLines(err, warn = FALSE), value = TRUE)
+      e <- grep(.batch_re_error, readLines(err, warn = FALSE), value = TRUE)
       if (length(e)) errs <- e[length(e)]
     }
     if (file.exists(err) && !file.size(err)) unlink(err)
@@ -94,7 +107,6 @@
                   c("CMD", "BATCH", "--no-save", "--no-restore", "--quiet",
                     shQuote(prog), shQuote(log)))
     lines <- if (file.exists(log)) readLines(log, warn = FALSE) else character()
-    errs <- grep("^Error", lines, value = TRUE)
     iss <- .batch_log_issues(lines)
     errs <- iss$text[iss$level == "error"]
     warns <- iss$text[iss$level == "warning"]
@@ -109,6 +121,7 @@
                   md5 = unname(tools::md5sum(prog)), log = log,
                   stringsAsFactors = FALSE)
   attr(r, "issues") <- iss
+  attr(r, "rc") <- rc
   r
 }
 
@@ -159,13 +172,19 @@
 .batch_bad_literal <- function(s) {
   if (is.na(s) || nchar(s) < 2L || grepl("\n", s, fixed = TRUE)) return("")
   q <- gsub("\\\\", "/", s)
-  if (startsWith(s, "\\\\") || (startsWith(s, "/") && !grepl("^/\\s", s)) ||
-      grepl("^[A-Za-z]:(/|$)", q) || grepl("^~(/|$)", q)) {
+  # an absolute path needs a path shape: /dir/, //server/, C:/, ~/ (so "/$",
+  # "/N", "/100 PY", "N:" and two backslashes are not paths)
+  if (grepl("^/[^/[:space:]]+/", q) || grepl("^//[^/]+/", q) ||
+      grepl("^[A-Za-z]:/", q) || grepl("^~/", q)) {
     return("an absolute path")
   }
-  if (".." %in% strsplit(s, "/", fixed = TRUE)[[1L]]) return("a path with a .. segment")
-  n <- .batch_norm(s)
-  for (d in .batch_data_dirs) {
+  # a .. segment counts only in a string that holds a separator (the string
+  # ".." alone is a prefix, as in study_helpers.R)
+  if (grepl("/", q, fixed = TRUE) && ".." %in% strsplit(q, "/", fixed = TRUE)[[1L]]) {
+    return("a path with a .. segment")
+  }
+  n <- tolower(gsub("/+", "/", .batch_norm(s)))
+  for (d in tolower(unname(.batch_data_dirs))) {
     if (identical(n, d) || startsWith(n, paste0(d, "/"))) {
       return("a path in a data folder (it bypasses the data root)")
     }
@@ -222,7 +241,10 @@
       out <- c(out, sprintf("%s: cannot be read as R code, so it cannot be checked for paths.", f))
       next
     }
-    pd <- pd[pd$token == "STR_CONST", , drop = FALSE]
+    # a line that ends in the comment `# tfl: not a path` is not scanned
+    marked <- pd$line1[pd$token == "COMMENT" &
+                         grepl("^#\\s*tfl:\\s*not a path\\s*$", pd$text)]
+    pd <- pd[pd$token == "STR_CONST" & !pd$line1 %in% marked, , drop = FALSE]
     for (i in seq_len(nrow(pd))) {
       v <- tryCatch(parse(text = pd$text[i], keep.source = FALSE)[[1L]],
                     error = function(e) NA_character_)
@@ -230,7 +252,8 @@
       why <- .batch_bad_literal(v)
       if (nzchar(why)) {
         out <- c(out, sprintf(paste0("%s:%d: the string %s is %s; a run touches only its batch ",
-                                     "folder and the data root."),
+                                     "folder and the data root. If it is not a path, end the ",
+                                     "line with the comment  # tfl: not a path"),
                               f, pd$line1[i], substr(pd$text[i], 1L, 60L), why))
       }
     }

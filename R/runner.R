@@ -47,23 +47,41 @@
 #'   data-folder variable (`path_adam`) the generated code reads it through,
 #'   or `""` when no variable maps it.  A path of `data` that no variable maps
 #'   stops the run, except the files of `input/ard/`.  `character()` for none.
-#' * `data_dirs` -- the study's data folders (`c("data/adam", "data/sdtm",
-#'   "data/other")`), copied with `--data`; a string in the study's code that
-#'   starts with one stops the run (it bypasses the data root).
+#' * `data_dirs` -- a named character vector: the layout key -> the study's data
+#'   folder (`c(adam = "data/adam", sdtm = "data/sdtm", other = "data/other")`),
+#'   copied with `--data`; a string in the study's code that starts with one
+#'   stops the run (it bypasses the data root).  The names are used in the
+#'   message for a data path that no folder maps.
 #' * `sources` -- the files the study's keys `source` name; each must lie
 #'   inside `programs/`, `spec/` or `input/`.  `character()` for none.
-#' * `check_code` -- the study's own code files (`company_setup.R`,
-#'   `study_user.R`, `study_helpers.R`, `programs/ard/functions/*.R`) the
-#'   runner scans before the run: a string that is an absolute path (`/`,
-#'   `\`, `C:`, `~`) or has a `..` segment stops the run, naming file and
-#'   line.  The scan cannot prove there is no such path (`paste()` and
-#'   `getOption()` escape it).
+#' * `check_code` -- the study's own code files that the user writes
+#'   (`company_setup.R`, `study_user.R`, `programs/ard/functions/*.R`; not the
+#'   generated `study_helpers.R`) the runner scans before the run.  What is
+#'   scanned: the string constants of the code.  What stops the run, naming
+#'   file and line: a string with the shape of an absolute path (`/dir/`,
+#'   `//server/`, `C:/`, `~/`, either slash), a string that holds a separator
+#'   and a `..` segment (`"../x"`), or a string that starts with a data folder
+#'   (case and repeated slashes ignored).  Other strings (`"/N"`, `"N:"`, `".."`
+#'   alone) pass.  A line that is not a path is marked by ending it with the
+#'   comment `# tfl: not a path`; that line is not scanned.  The scan cannot
+#'   prove there is no such path (`paste()` and `getOption()` escape it).
 #' * `kind` -- `"run"` (an official run) or `"preview"`.  batch.txt records it;
 #'   only a `"run"` ends in `Verified : yes`.
 #' * `paths` -- a named list with optional elements `data` (a named character
 #'   vector, dataset -> file; a preview reads these outside the study),
 #'   `company_setup`, `study_user` and `output` (strings); `list()` when not
-#'   used.  A `kind` of `"run"` takes none.
+#'   used.  A `kind` of `"run"` takes none.  `company_setup`, `study_user` and
+#'   `output` are checked and written but used by the preview (a later
+#'   change); the runner reads only `data` today.
+#'
+#' The end record.  A program's `status` is `ERROR` when its exit status is
+#' not 0, or when it has an error-level issue from any source (a log line, an
+#' error stored in the ARD, a condition of class error, a declared output
+#' not made).  An `ERROR` program with no error issue gets one, from the log,
+#' "the program ended with status N; see <log>".  The log patterns match R's
+#' own prefixes in English and Japanese.  `errors` in run.csv, `Errors :` and
+#' `N of M program(s) without error` in batch.txt follow the same rule, and
+#' the runner ends with status 1 when any program is `ERROR`.
 #'
 #' @param manifest The named list above.  A missing or wrong element stops
 #'   with a message that names it.
@@ -78,7 +96,7 @@
 #'   needs = list(), unresolved = character(), sets = list(),
 #'   outputs = list(`programs/tfl/t1.R` = "output/tfl/t1.rtf"),
 #'   support = list(ard = character(), tfl = character(), all = character()),
-#'   data = list(), data_vars = character(), data_dirs = "data/adam",
+#'   data = list(), data_vars = character(), data_dirs = c(adam = "data/adam"),
 #'   sources = character(), check_code = character(), kind = "run",
 #'   paths = list())
 #' head(tfl_runner_code(m), 8)
@@ -149,7 +167,7 @@ tfl_runner_code <- function(manifest) {
     "# a catalog path -> the data-folder variable that reads it (\"\": none)",
     paste0(".batch_data_vars <- ", vec(unname(m$data_vars), names(m$data_vars))),
     "# the data folders: copied with --data; no string of the code may start with one",
-    paste0(".batch_data_dirs <- ", inline(m$data_dirs)),
+    paste0(".batch_data_dirs <- ", vec(unname(m$data_dirs), names(m$data_dirs))),
     "# the files the study's keys `source` name: inside programs/, spec/ or input/",
     paste0(".batch_sources <- ", inline(m$sources)),
     "# the study's own code, scanned for paths outside the folder",
@@ -220,7 +238,8 @@ tfl_runner_file <- function() {
   named_chr("report_ids")
   named_chr("unresolved")
   named_chr("data_vars")
-  for (f in c("data_dirs", "sources", "check_code")) {
+  named_chr("data_dirs")
+  for (f in c("sources", "check_code")) {
     if (!is_chr(m[[f]])) bad(f, "must be a character vector.")
   }
   if (!is_str(m$kind) || !m$kind %in% c("run", "preview")) {
