@@ -43,12 +43,14 @@ params:
   formats:
     type: map<string,number|string>
     input: table
+    columns: {key: {label: {en: "Statistic", ja: "統計量"}}, value: {label: {en: "Format", ja: "書式"}}}
     choices: stats
     free: true
     default: !series formats
     step: analysis
     tier: usual
     description: The decimals (or the format) of each statistic.
+      A report's names go over the series' formats; `!unset` removes one.
 extends: !series extends
 style: !series style
 data:

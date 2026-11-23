@@ -15,13 +15,14 @@
 }
 
 # A report on a series template (`<series>/<template>`) as its code SPEC:
-# what tfl_template_resolve() makes of it with the study's study.yml values,
+# what tfl_template_resolve() makes of it with the study's study.yml values
+# and its copies of the series,
 # a plain report from there (none of the old registry's template marks);
 # any other report as it is.  The old registry knows no series name.
 .series_as_code <- function(output, study) {
   ts <- .tpl_spec_of(output)
   if (is.null(ts) || !grepl("/", ts$name, fixed = TRUE)) return(output)
-  out <- tfl_template_resolve(.output_to_list(output), study = study$study %||% list())
+  out <- tfl_template_resolve(.output_to_list(output), study = .tr_study_of(study))
   attr(out, "template") <- attr(out, "args") <- attr(out, "origins") <- NULL
   out
 }

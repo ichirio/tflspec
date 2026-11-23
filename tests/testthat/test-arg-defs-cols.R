@@ -272,9 +272,12 @@ test_that("a bad tier, unset, group, member_of, passes_to or label stops", {
 })
 
 test_that("input r: written in a definition it comes through; r types take it", {
+  # (the field contract, 2026-11-22: no name decides the input -- a where
+  # that is a condition says input: condition)
   d <- .arg_table(list(a = list(type = "string", input = "r"), b = list(type = "r"),
-                       where = list(type = "r"), c = list(type = "string")), "content", "f")
-  expect_identical(d$input, c("r", "r", "condition", "text"))
+                       where = list(type = "r"), w2 = list(type = "r", input = "condition"),
+                       c = list(type = "string")), "content", "f")
+  expect_identical(d$input, c("r", "r", "r", "condition", "text"))
   expect_error(.arg_table(list(a = list(input = "code")), "content", "f"),
                "input \"code\" is not one of pick, text, condition, table, r")
   dr <- tfl_arg_defs(fn = "data")

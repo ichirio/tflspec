@@ -34,7 +34,7 @@
 #' @param dataset The dataset to read.
 #' @param adam_meta The study's ADaM metadata whose levels the read puts on
 #'   (an ARD definition's `adam_meta`, which a YAML study's carries under
-#'   `settings: adam_levels: codelists`); `NULL` (default): none.
+#'   `settings: adam_levels: define_xml` or `define_spec`); `NULL` (default): none.
 #' @return The code, one element per line.  A dataset the catalog does not
 #'   have gives a `stop()` line, so the program says so when it runs.
 #' @export

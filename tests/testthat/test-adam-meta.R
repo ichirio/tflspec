@@ -107,7 +107,8 @@ test_that("the package's sample keeps code lists by name and an adam_meta", {
 
 # A study on the package's ADSL (factors as text) whose adam_meta maps ADSL.SEX
 # to a list with a code no subject has (U); a report counts SEX by ARM
-amt_run_study <- function(levels = NULL, env = parent.frame()) {
+# (levels: define_xml, the file applied; tfl_ai_study_init() writes none)
+amt_run_study <- function(levels = "define_xml", env = parent.frame()) {
   skip_if_not_installed("haven")
   d <- withr_tempdir(env)
   dir.create(file.path(d, "adam"))
@@ -187,7 +188,7 @@ test_that("adam_levels: none -- the own read has no levels; nor has a study with
   expect_false("study <- list()" %in% code)
   ard <- suppressMessages(tfl_build_ard(st, dir = d, output_id = "T-AM", save = FALSE))
   expect_identical(amt_sex(ard), c("F", "M"))
-  # the fingerprint: under codelists adam_meta counts, under none it does not
+  # the fingerprint: under define_xml adam_meta counts, under none it does not
   st2 <- tfl_read_study_spec(amt_run_study())
   h <- function(s) grep("definition = ", tfl_ard_code(s, "T-AM", save = TRUE, part = "body"), value = TRUE)
   expect_false(identical(h(st), h(st2)))

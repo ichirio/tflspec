@@ -1,5 +1,5 @@
 # ---- data ------------------------------------------------------------------
-adsl_fas <- adsl |>
+adsl_sub <- adsl |>
   order_levels() |>
   filter(FASFL == "Y") |>
   left_join(
@@ -14,12 +14,12 @@ adsl_fas <- adsl |>
   mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03) |>
   mutate(BOR = factor(BOR, levels = c("CR", "PR", "SD", "PD", "NE")))
 
-ongoing <- adsl_fas |>
+ongoing <- adsl_sub |>
   filter(EOSSTT == "ONGOING")
 
 assess <- adrs |>
   filter(PARAMCD == "OVR" & !is.na(ADY)) |>
-  inner_join(adsl_fas |> select(USUBJID, Y_ID), by = "USUBJID") |>
+  inner_join(adsl_sub |> select(USUBJID, Y_ID), by = "USUBJID") |>
   mutate(ADY = ADY / days_per_month)
 
 # ---- plot ------------------------------------------------------------------
@@ -28,7 +28,7 @@ pal <- tfl_colours("response_light")
 
 plot <- ggplot() +
   geom_segment(
-    data = adsl_fas,
+    data = adsl_sub,
     aes(x = X0, y = Y_ID, xend = TRTDURD, yend = Y_ID, colour = BOR),
     linewidth = 1.2
   ) +
@@ -45,7 +45,7 @@ plot <- ggplot() +
     size = 1.5
   ) +
   geom_point(
-    data = adsl_fas,
+    data = adsl_sub,
     aes(x = DTHADY, y = Y_ID),
     shape = 17,
     size = 2.5,

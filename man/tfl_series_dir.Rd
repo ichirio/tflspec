@@ -27,18 +27,20 @@ empty if the series has none), \code{path}
 \description{
 A series is a versioned folder of template SPECs (\code{tflspec_v1},
 \code{acme_v1}, ...): \code{series.yml} (\code{name}, \code{label}, \code{released}, \code{needs},
-\code{fixes}, and the values its templates read with \verb{!series K} under
-\verb{values:}), \verb{templates/<name>.yml} and \verb{styles/<name>.yml}.  A report SPEC
-names a template as \code{template: name: tflspec_v1/demog}, and a study
-changes a series's values in \code{study.yml}:
+\code{fixes}, the values its templates read with \verb{!series K} under \verb{values:},
+and, optionally, what each value means under \verb{descriptions:} (a value's
+key and one line of English, for a screen that shows the values),
+\verb{templates/<name>.yml} and \verb{styles/<name>.yml}.  A report SPEC
+names a template as \code{template: name: tflspec_v1/demog}.
 }
 \details{
-\if{html}{\out{<div class="sourceCode yaml">}}\preformatted{series_settings:
-  tflspec_v1:
-    max_rows: 25
-}\if{html}{\out{</div>}}
+These folders are the sources (the company's and tflspec's own).  A
+study does not read them: it copies the \code{series.yml} and the templates
+its reports use into \verb{<study>/spec/series/<series>/}
+(\code{\link[=tfl_copy_templates]{tfl_copy_templates()}}) and reads its copy, and it changes a value in
+its copy's \verb{values:} (\code{\link[=tfl_series_values_set]{tfl_series_values_set()}}).
 
-\code{tfl_series_dir()} finds the folder of a series.  It looks in \code{dir}, then
+\code{tfl_series_dir()} finds the source folder of a series.  It looks in \code{dir}, then
 \code{getOption("tflspec.series_dir")}, then
 \code{file.path(tools::R_user_dir("tflplanner", "data"), "standards", "series")},
 then the series that come with tflspec (\code{system.file("series", package = "tflspec")}); the first folder that holds \verb{<series>/series.yml} wins.
@@ -56,5 +58,5 @@ tfl_series_read("demo_v1", dir = d)$descriptions
 unlink(d, recursive = TRUE)
 }
 \seealso{
-\code{\link[=tfl_pin_series]{tfl_pin_series()}}
+\code{\link[=tfl_series_list]{tfl_series_list()}}, \code{\link[=tfl_copy_templates]{tfl_copy_templates()}}
 }

@@ -44,7 +44,7 @@
 #' literal paths, `pkg::` on every call, the rounding in each setup; a
 #' program reads each dataset itself, with `blank_as_na()` after its
 #' `derive` (a blank text value is `NA`, as in `study$adam`) and, for a YAML
-#' study under `settings: adam_levels: codelists`, the levels of the code
+#' study under `settings: adam_levels: define_xml` (or `define_spec`), the levels of the code
 #' lists its ADaM metadata maps to the dataset's variables (the program
 #' writes the rows it uses as `study$adam_meta` first).  The functions that write code read them:
 #' [tfl_ard_code()], [tfl_build_ard()], [tfl_table_code()],

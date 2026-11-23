@@ -122,7 +122,7 @@
 # A figure's dataset as its program reads it: study$adam's, the blanks as
 # NA (blank_as_na(), the study helper: a character column's "" and a
 # factor's "" level), then the levels of the code lists the study's
-# adam_meta maps to `dataset`'s variables (adam_levels: codelists)
+# adam_meta maps to `dataset`'s variables (adam_levels: define_xml | define_spec)
 .ai_read_adam <- function(path, dataset = NULL, study = NULL) {
   d <- .ai_read_dataset(path)
   for (v in names(d)) {
