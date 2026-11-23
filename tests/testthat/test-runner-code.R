@@ -132,7 +132,9 @@ test_that("the runner file is base R", {
   pkg <- unique(pd$text[pd$token == "SYMBOL_PACKAGE"])
   expect_true(all(pkg %in% c("utils", "tools", "stats")), info = toString(pkg))
   calls <- pd$text[pd$token == "SYMBOL_FUNCTION_CALL"]
-  expect_false(any(calls %in% c("library", "require", "loadNamespace")))
+  # (loadNamespace() only in session_info.txt: the versions of the packages
+  # the run's programs used, read after they ran)
+  expect_false(any(calls %in% c("library", "require")))
   # requireNamespace() only asks whether an optional engine is there (logrx)
   rn <- grep("requireNamespace(", readLines(tfl_runner_file()), fixed = TRUE, value = TRUE)
   expect_true(all(grepl("requireNamespace(\"logrx\"", rn, fixed = TRUE)), info = toString(rn))
