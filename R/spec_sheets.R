@@ -140,6 +140,11 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       for (i in seq_len(nrow(d))) add(sh, as.list(d[i, , drop = FALSE]))
     }
     for (x in said$notes) note(id, "content", x)
+    # (what does not come back from the sheets even as YAML: said aloud, by
+    # report and verb)
+    for (x in said$unkept) {
+      warning(sprintf("%s: %s", if (is.na(id)) "defaults" else id, x), call. = FALSE)
+    }
   }
   norm_rows <- list()
   more_rows <- list()

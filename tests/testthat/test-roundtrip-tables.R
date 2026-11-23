@@ -81,11 +81,36 @@ rt_canon <- function(x) {
   }
   x
 }
-rt_key <- function(items) {
-  vapply(items, function(it) paste(it$fn, paste(deparse(rt_canon(it$args)), collapse = " ")), "")
+rt_key <- function(items, sorted = FALSE) {
+  vapply(items, function(it) {
+    a <- rt_canon(it$args)
+    # (sorted: the named arguments by name, as the sheets may give them back)
+    if (sorted && length(a)) {
+      nm <- names(a) %||% rep("", length(a))
+      a <- a[order(nzchar(nm), nm)]
+    }
+    paste(it$fn, paste(deparse(a), collapse = " "))
+  }, "")
 }
 
 rt_report <- function(d, id) suppressMessages(tfl_read_outputs(d))[[id]]
+
+# a program with each call's named arguments in one order, and its
+# statements too: the sheets give a call's named arguments back in their own
+# order, which is the same call (and plan_levels()' code lists, at the head,
+# follow its arguments)
+rt_sorted <- function(code) {
+  srt <- function(e) {
+    if (!is.call(e)) return(e)
+    a <- as.list(e)
+    args <- lapply(a[-1L], function(x) if (missing(x)) x else srt(x))
+    nm <- names(args) %||% rep("", length(args))
+    o <- order(nzchar(nm), nm)
+    as.call(c(list(srt(a[[1L]])), args[o]))
+  }
+  ex <- parse(text = code, keep.source = FALSE)
+  sort(vapply(ex, function(e) paste(deparse(srt(e)), collapse = "\n"), ""))
+}
 
 rt_code <- function(d, id) {
   out <- tfl_resolve_output(rt_report(d, id), tfl_read_study_spec(d))
@@ -182,7 +207,9 @@ test_that("a cell edited after writing still takes effect next to content_more",
 
 # ---- every table and listing template ----------------------------------------
 # Expanded with its example arguments, written to YAML and read back (the
-# form a study keeps it in), then through the sheets.  Two differences
+# form a study keeps it in), then through the sheets.  The program is the
+# same but for the order of a call's named arguments (the shift tables'
+# plan_levels() come back in the sheets' order).  Two differences
 # belong to the issue's other tables and are left out of the program's
 # comparison: a records table's data (pk_conc, "Data of a table") and a
 # report's own `style:` (stf_t02_demog, "Shared files").
@@ -210,12 +237,26 @@ test_that("every table and listing template comes back as it was expanded", {
     to <- withr::local_tempdir()
     suppressMessages(suppressWarnings(tfl_yaml_from_sheets(sh, to, overwrite = TRUE)))
     b <- suppressMessages(suppressWarnings(tfl_read_outputs(to)))[["X-1"]]
-    expect_setequal(rt_key(b$content), rt_key(e$content))
+    expect_setequal(rt_key(b$content, sorted = TRUE), rt_key(e$content, sorted = TRUE))
     expect_identical(length(b$content), length(e$content), info = nm)
     expect_false(any(grepl("does not come back", sh$not_converted$reason, fixed = TRUE)), info = nm)
     if (nm %in% names(rt_open)) next
     expect_identical(rt_canon(b$data), rt_canon(e$data), info = nm)
     code <- function(x, st) suppressMessages(tfl_content_code(tfl_resolve_output(x, st), pipe = "|>"))
-    expect_identical(code(b, tfl_read_study_spec(to)), code(e, s), info = nm)
+    expect_identical(rt_sorted(code(b, tfl_read_study_spec(to))), rt_sorted(code(e, s)), info = nm)
   }
+})
+
+test_that("what does not come back even as YAML is said, by report and verb", {
+  # (a bridge that writes an item the report does not have: the check reads
+  # it back and says so, it is not taken silently)
+  extra <- function(items, id) {
+    tflspec:::.plan_sheets_from_content(c(items, list(tfl_item("plan_total", list(label = "All")))), id)
+  }
+  r <- tflspec:::.sheets_said(list(rt_head), list(), "T-1", extra)
+  expect_match(r$unkept, "plan_total(): the sheets give it", fixed = TRUE)
+  expect_true(all(r$unkept %in% r$notes))
+  # (the package's bridge: nothing to say for a plain table)
+  r <- tflspec:::.sheets_said(list(rt_head), list(), "T-1", tflspec:::.plan_sheets_from_content)
+  expect_length(r$unkept, 0L)
 })

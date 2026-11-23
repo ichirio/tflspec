@@ -13,13 +13,15 @@
 # that come back stay on the sheets; read back, the two are one item again.
 # An item that still does not come back (its unnamed arguments, an argument
 # the sheets make up) is kept whole.  What cannot be made right is said, by
-# report and verb.
+# report and verb.  Named arguments are compared by name: read back, they
+# may stand in the sheets' order, which is the same call.
 
 # The sheets of a table's items and what goes to content_more.  `items` the
 # items without normalize_ard() (`nz`, which the bridge reads for its
 # stack), `id` the report (NA: the defaults), `bridge` the bridge.  Returns
-# list(sp, more, notes): the bridge's sheets, the items for content_more,
-# and the bridge's notes with the check's.
+# list(sp, more, notes, unkept): the bridge's sheets, the items for
+# content_more, the bridge's notes with the check's, and the check's alone
+# (what does not come back even kept as YAML: the caller says it aloud).
 .sheets_said <- function(items, nz, id, bridge) {
   oid <- if (is.na(id)) NULL else id
   n <- length(items)
@@ -31,6 +33,7 @@
     if (length(held[[i]])) it$args <- it$args[!names(it$args) %in% held[[i]]]
     it
   }
+  notes <- character()
   repeat {
     keep <- which(!whole)
     sp <- list()
@@ -84,10 +87,9 @@
     held <- chk$held
     whole <- chk$whole
   }
-  notes <- c(attr(sp, "not_converted") %||% character(),
-             if (is.null(back)) "its items could not be read back from the sheets: kept whole, as YAML"
-             else notes)
-  list(sp = sp, more = more, notes = notes)
+  unkept <- if (is.null(back)) "its items could not be read back from the sheets: kept whole, as YAML" else notes
+  list(sp = sp, more = more, notes = c(attr(sp, "not_converted") %||% character(), unkept),
+       unkept = unkept)
 }
 
 # The items the converter reads from these sheets and content_more
@@ -144,6 +146,15 @@
     nm <- names(a) %||% rep("", length(a))
     if (named) a[nzchar(nm)] else unname(a[!nzchar(nm)])
   }
+  # (each side as the program writes it: plan_cells() in the variables'
+  # order, whatever the item's, .content_table_pipeline())
+  prog <- function(x) {
+    if (!length(x)) return(x)
+    tryCatch(.content_cells_order(x, vapply(x, function(it) .schema_fn_name(it$fn), "")),
+             error = function(e) x)
+  }
+  items <- prog(items)
+  back <- prog(back)
   fi <- fn_of(items)
   fb <- fn_of(back)
   # (a table_plan() the defaults do not write, read back with nothing in it)
@@ -166,13 +177,9 @@
         .sheets_code(fn, na[k]), if (k %in% names(nb)) .sheets_code(fn, nb[k]) else NA_character_), NA)]
       extra <- setdiff(names(nb), names(na))
       pos_same <- identical(.sheets_code(fn, part(a, FALSE)), .sheets_code(fn, part(b, FALSE)))
-      # (all of them back, in another order: the program writes them in the
-      # item's order, so from the first out of place they are the rest, put
-      # after the others when read back)
-      if (!length(bad) && !length(extra) && pos_same && !identical(names(na), names(nb))) {
-        at <- which(names(na) != names(nb))[1L]
-        bad <- names(na)[seq.int(at, length(na))]
-      }
+      # (all of them back, in another order, is the same: named arguments in
+      # the sheets' order are the same call; a builder's edit adds its
+      # argument last, and that is no reason to take the item off the sheets)
       if (!length(bad) && !length(extra) && pos_same) next
       if (gone[io]) {
         notes <- c(notes, .sheets_note(fn, names(na)))

@@ -2,10 +2,8 @@
 # sheet has a column for: what the columns can say stays on the sheets' rows,
 # and the tables row's content_more holds only the rest (#689).  Each case
 # goes YAML -> sheets -> YAML, in memory and through a workbook, and the
-# table it builds is the original's.  The rest is put after the arguments
-# the columns say when read back, so a case writes those first, in the
-# order the sheets give them; an argument that comes back in another form
-# (header `lines`, read as header rows) is the rest too.
+# table it builds is the original's.  An argument that comes back in
+# another form (header `lines`, read as header rows) is the rest too.
 
 trc_head <- tfl_item("table_plan", list(cols = "ARM", rows = list(group = "variable")))
 trc_cf <- tfl_r("function(x) paste0(x, '!')")
@@ -114,7 +112,7 @@ trc_route <- function(d, route, env = parent.frame()) {
 trc_cases <- list(
   columns_all = list(
     content = list(trc_head, tfl_item("plan_columns", list(
-      widths = list(group = 2, label = 3, .values = 2), decimal = ".values", row_title = "group",
+      row_title = "group", decimal = ".values", widths = list(group = 2, label = 3, .values = 2),
       auto_width = FALSE, sep = "____", cell_format = trc_cf))),
     cells = function(sh) {
       expect_identical(trc_col(sh, "columns", "rel_width", "column"),
@@ -127,8 +125,8 @@ trc_cases <- list(
     rest = list(plan_columns = "cell_format")),
   columns_twips = list(
     content = list(trc_head, tfl_item("plan_columns", list(
-      decimal = ".values", row_title = "group", auto_width = FALSE, sep = "____",
-      column_widths_twips = list(1000L, 2000L, 1500L, 1500L)))),
+      row_title = "group", decimal = ".values", column_widths_twips = list(1000L, 2000L, 1500L, 1500L),
+      auto_width = FALSE, sep = "____"))),
     cells = function(sh) {
       expect_identical(trc_col(sh, "columns", "row_title", "column")[["group"]], "TRUE")
       expect_identical(trc_col(sh, "columns", "decimal_split", "column")[[".values"]], "TRUE")
@@ -139,7 +137,7 @@ trc_cases <- list(
     rest = list(plan_columns = "column_widths_twips")),
   widths_by_position = list(
     content = list(trc_head, tfl_item("plan_columns", list(
-      decimal = ".values", row_title = "group", widths = list(2, 3, 2, 2)))),
+      widths = list(2, 3, 2, 2), row_title = "group", decimal = ".values"))),
     cells = function(sh) {
       expect_identical(trc_col(sh, "columns", "row_title", "column")[["group"]], "TRUE")
       expect_identical(trc_col(sh, "columns", "decimal_split", "column")[[".values"]], "TRUE")
@@ -148,7 +146,7 @@ trc_cases <- list(
     rest = list(plan_columns = "widths")),
   row_title_by_position = list(
     content = list(trc_head, tfl_item("plan_columns", list(
-      decimal = ".values", sep = "____", row_title = list(1L)))),
+      row_title = list(1L), decimal = ".values", sep = "____"))),
     cells = function(sh) {
       expect_identical(trc_col(sh, "columns", "decimal_split", "column")[[".values"]], "TRUE")
       expect_false(any(trc_col(sh, "columns", "row_title") %in% "TRUE"))
@@ -202,10 +200,10 @@ trc_cases <- list(
     content = list(trc_head, tfl_item("plan_col_header", list(span = "ARM"))),
     cells = function(sh) expect_false(any(sh$table$col_header$output_id %in% "T-1")),
     rest = list(plan_col_header = "span")),
-  align_header_sep = list(
-    content = list(trc_head, tfl_item("plan_col_header", list(col_header_align = "left", header_sep = " / "))),
+  span_with_align = list(
+    content = list(trc_head, tfl_item("plan_col_header", list(span = "ARM", col_header_align = "left"))),
     cells = function(sh) expect_identical(trc_col(sh, "style", "col_header_align"), "left"),
-    rest = list(plan_col_header = "header_sep")),
+    rest = list(plan_col_header = "span")),
   labels_twice = list(
     content = list(trc_head, tfl_item("plan_labels", list(
       variable = list(AGE = "Age (years)", BMIBL = "BMI"), AGE = "Age at baseline"))),
@@ -340,18 +338,23 @@ test_that("an item with nothing the sheets can say goes whole, as before", {
   }
 })
 
-test_that("an item with a text a cell would not keep goes whole, so that nothing it says changes", {
+test_that("a text a cell would not keep is the item's rest, so that nothing it says changes", {
   skip_if_not_installed("cards")
-  for (it in list(tfl_item("plan_columns", list(sep = " / ", row_title = "group", cell_format = trc_cf)),
-                  tfl_item("plan_col_header", list(
-                    header = list(list(line = 1L, cols = "label", text = "  Category")), header_sep = " / ")),
-                  tfl_item("plan_labels", list(variable = list(AGE = "Age "), SEX = list(F = "Female", M = "Male"))))) {
+  # (the sheets are read back as a workbook gives them, trimmed: a text with
+  # a blank at an end does not come back, and is kept as written)
+  items <- list(tfl_item("plan_columns", list(sep = " / ", row_title = "group", cell_format = trc_cf)),
+                tfl_item("plan_col_header", list(
+                  header = list(list(line = 1L, cols = "label", text = "  Category")), header_sep = " / ")),
+                tfl_item("plan_labels", list(variable = list(AGE = "Age "), SEX = list(F = "Female", M = "Male"))))
+  want <- list(c("sep", "cell_format"), c("header", "header_sep"), c("variable", "SEX"))
+  for (k in seq_along(items)) {
+    it <- items[[k]]
     keyed <- identical(it$fn, "plan_labels")
     d <- trc_study(list(if (keyed) trc_head_keyed else trc_head, it))
     sh <- tfl_sheets_from_yaml(d)
     rest <- trc_rest(sh)
     expect_identical(vapply(rest, function(x) x$fn, ""), it$fn, info = it$fn)
-    expect_identical(names(rest[[1L]]$args), names(it$args), info = it$fn)
+    expect_identical(names(rest[[1L]]$args), want[[k]], info = it$fn)
     expect_identical(trc_args(trc_trip(d, sh)$to, it$fn)[[1L]], trc_args(d, it$fn)[[1L]], info = it$fn)
   }
 })
