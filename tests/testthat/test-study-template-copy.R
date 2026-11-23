@@ -182,6 +182,49 @@ test_that("tfl_recopy_templates() copies again, warning when the study's edits a
   expect_error(tfl_recopy_templates(st, "acme_v1/ae"), "is not copied into the study")
 })
 
+test_that("tfl_recopy_templates() keeps the old copy in spec/.backup/ and the warning names it", {
+  root <- stc_root()
+  on.exit(unlink(root, recursive = TRUE), add = TRUE)
+  src <- stc_source(root)
+  st <- stc_study(root)
+  tfl_copy_templates(st, "acme_v1/demog", dir = src)
+  f <- stc_copy(st, "templates", "demog.yml")
+  cat("# the study's note\n", file = f, append = TRUE)
+  old <- readLines(f)
+  cat("# a source fix\n", file = file.path(src, "acme_v1", "templates", "demog.yml"), append = TRUE)
+  w <- NULL
+  withCallingHandlers(tfl_recopy_templates(st, "acme_v1/demog"),
+                      warning = function(c) {
+                        w <<- conditionMessage(c)
+                        invokeRestart("muffleWarning")
+                      })
+  kept <- list.files(file.path(st, "spec", ".backup"), "demog[.]yml$", recursive = TRUE,
+                     full.names = TRUE)
+  expect_length(kept, 1L)
+  expect_true(grepl("series/acme_v1/templates/demog.yml$", kept))
+  expect_identical(readLines(kept), old)
+  expect_true(grepl("kept in .*spec/[.]backup/.*series/acme_v1/templates/demog[.]yml[.]", w))
+  # a second recopy in the same second does not replace the first backup
+  cat("# a second note\n", file = f, append = TRUE)
+  old2 <- readLines(f)
+  suppressWarnings(tfl_recopy_templates(st, "acme_v1/demog"))
+  kept2 <- list.files(file.path(st, "spec", ".backup"), "demog[.]yml$", recursive = TRUE,
+                      full.names = TRUE)
+  expect_length(kept2, 2L)
+  expect_identical(readLines(kept), old)
+  expect_true(any(vapply(kept2, function(k) identical(readLines(k), old2), NA)))
+})
+
+test_that("tfl_recopy_templates() of an identical copy makes no backup", {
+  root <- stc_root()
+  on.exit(unlink(root, recursive = TRUE), add = TRUE)
+  src <- stc_source(root)
+  st <- stc_study(root)
+  tfl_copy_templates(st, "acme_v1/demog", dir = src)
+  expect_warning(tfl_recopy_templates(st, "acme_v1/demog"), NA)
+  expect_false(dir.exists(file.path(st, "spec", ".backup")))
+})
+
 test_that("tfl_series_values_set() writes values: in the study's copy, keeping the rest", {
   root <- stc_root()
   on.exit(unlink(root, recursive = TRUE), add = TRUE)

@@ -46,7 +46,7 @@ default for a type \code{r}, \code{formula} or \code{guard}, \code{condition} fo
 \item{required}{\code{TRUE} for an argument that has no default and must be
 given.}
 \item{default}{(a list column) the default as written; a tagged value
-(\verb{!series K}, \verb{!study K}, \verb{!fixed v}, \code{!r}) is a \code{tfl_tagged} object.
+(\verb{!series K}, \verb{!study K}, \verb{!study {key: K, fallback: V}}, \verb{!fixed v}, \code{!r}) is a \code{tfl_tagged} object.
 It is resolved for a study by \code{\link[=tfl_template_resolve]{tfl_template_resolve()}}.  A schema
 function's argument with no default written takes the function's own
 default when that is one \code{TRUE} or \code{FALSE} and the argument's type is
