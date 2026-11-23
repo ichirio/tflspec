@@ -743,8 +743,12 @@
     in_study <- file.exists(file.path(sr, "study.yml"))
     if (in_study && .batch_is_abs(sr)) {
       # (an absolute study path: in place only when this folder lies in it)
-      in_study <- startsWith(normalizePath(getwd(), winslash = "/"),
-                             paste0(normalizePath(sr, winslash = "/"), "/"))
+      # (Windows paths ignore case: "C:/Study" is "c:/study")
+      np <- function(p) {
+        p <- normalizePath(p, winslash = "/", mustWork = FALSE)
+        if (.Platform$OS.type == "windows") tolower(p) else p
+      }
+      in_study <- startsWith(np(getwd()), paste0(np(sr), "/"))
     }
     if (in_study) {
       stop("Official results cannot be overwritten: copy this folder elsewhere and run it there.",
