@@ -324,12 +324,14 @@ test_that("demog's value_labels: the study's lists by name, for the columns the 
   lab <- Filter(function(it) identical(it$fn, "plan_labels"), o$content)
   expect_length(lab, 1L)
   a <- lab[[1L]]$args
-  expect_identical(names(a), c("SEX", "AGEGR1"))
-  expect_identical(as.character(unclass(a$SEX)), 'c(SEX = "Sex, n (%)", study$codelists$SEX)')
+  # (the heading under `variable`, as every path writes it: tflspec#856)
+  expect_identical(names(a), c("variable", "SEX", "AGEGR1"))
+  expect_identical(a$variable, list(SEX = "Sex, n (%)"))
+  expect_identical(as.character(unclass(a$SEX)), "study$codelists$SEX")
   expect_identical(as.character(unclass(a$AGEGR1)), "study$codelists$AGEGR1")
   # a report's own map wins; an empty one: no value labels
   r$template$content$value_labels <- list()
   o <- tfl_template_resolve(r)
   lab <- Filter(function(it) identical(it$fn, "plan_labels"), o$content)
-  expect_identical(lab[[1L]]$args, list(SEX = "Sex, n (%)"))
+  expect_identical(lab[[1L]]$args, list(variable = list(SEX = "Sex, n (%)")))
 })
