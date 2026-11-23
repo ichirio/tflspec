@@ -2303,7 +2303,7 @@
   # (an analysis_id column: the row's own id, else the per rule's)
   if ("analysis_id" %in% names(cond)) {
     cond$analysis_id[is.na(cond$analysis_id)] <- ""
-    p <- c(p, "analysis_id")
+    p <- unique(c(p, "analysis_id"))
   }
   tab <- paste0(name, "_conditions")
   fun <- paste0(name, "_one")

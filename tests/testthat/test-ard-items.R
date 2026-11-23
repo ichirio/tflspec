@@ -121,6 +121,17 @@ test_that("analyses per columns: a condition row's id from its data, or the row'
                fixed = TRUE)
 })
 
+test_that("condition rows with no params: the analysis_id column is one argument, not two", {
+  cond <- data.frame(sexv = c("F", "M"), analysis_id = c("", "MEN"), stringsAsFactors = FALSE)
+  sp <- item_spec(
+    list(method = "categorical", population_id = "SAF", by = "TRTA", variables = "RACE"),
+    list(conditions = list(cond), where = "SEX == \"{sexv}\""))
+  txt <- paste(tfl_ard_code(sp, output_id = "T", save = FALSE), collapse = "\n")
+  expect_match(txt, "function(sexv, analysis_id) {", fixed = TRUE)
+  expect_match(txt, "~sexv, ~analysis_id,", fixed = TRUE)
+  expect_no_match(txt, "analysis_id, analysis_id", fixed = TRUE)
+})
+
 test_that("a condition row's own analysis_id: the generated program runs, each row its id", {
   skip_if_not_installed("cards")
   adam <- exact_data()
