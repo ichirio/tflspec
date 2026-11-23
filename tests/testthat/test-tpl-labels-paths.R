@@ -39,8 +39,8 @@ tlp_labels <- function(x) {
 # The report `tpl` (its `template:`) in the study `d`, both ways: `a` the
 # YAML route's resolved report, `b` the code SPEC tfl_template_to_spec()
 # makes, written and read back and resolved; `b_spec` that code SPEC
-tlp_both <- function(d, id, tpl) {
-  o <- tfl_output(id, "table", common = list(population = "SAF"), template = tpl)
+tlp_both <- function(d, id, tpl, codelists = list()) {
+  o <- tfl_output(id, "table", common = list(population = "SAF"), template = tpl, codelists = codelists)
   f <- file.path(d, "spec", "outputs", paste0(id, ".yml"))
   tfl_write_output(o, f)
   invisible(tfl_copy_templates(d))
@@ -125,13 +125,19 @@ test_that("a series template's labels: the sheets write the planner's plan_label
   skip_on_cran()
   skip_if_not_installed("haven")
   d <- tlp_study(withr::local_tempdir())
+  # (the report's code list of the arms: its labels after the headings, as
+  # the sheets write them -- the twin of tflplanner#711)
+  arms <- list(TRT01A = list(list(value = "Drug X", label = "Drug X 200 mg"),
+                             list(value = "Control", label = "Control 100 mg")))
   for (nm in c("tflspec_v1/demog", "tflspec_v1/tflspec_summary")) {
     id <- paste0("T-", gsub("[^A-Za-z0-9]", "-", nm))
-    x <- tlp_both(d, id, tlp_cases[[nm]]$tpl)
+    x <- tlp_both(d, id, tlp_cases[[nm]]$tpl, codelists = arms)
     sh <- suppressWarnings(tfl_sheets_from_spec(x$study, stats::setNames(list(tfl_read_output(x$file)), id),
                                                 templates = "expand"))
-    expect_identical(tlp_block(tfl_table_code(sh$table, id)),
-                     tlp_block(suppressMessages(tfl_content_code(x$b))), info = nm)
+    cb <- tlp_block(suppressMessages(tfl_content_code(x$b)))
+    expect_identical(tlp_block(tfl_table_code(sh$table, id)), cb, info = nm)
+    expect_identical(match("TRT01A = c(\"Drug X\" = \"Drug X 200 mg\", Control = \"Control 100 mg\"),", cb), 3L,
+                     info = paste(cb, collapse = " "))
     unlink(x$file)
   }
 })
