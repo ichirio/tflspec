@@ -5,7 +5,7 @@
 \alias{tfl_bign_drop}
 \title{BIGN: the column headings' N, apart from the table's rows}
 \usage{
-tfl_bign_values(ard, labels = NULL)
+tfl_bign_values(ard, labels = NULL, total = NULL)
 
 tfl_bign_drop(ard)
 }
@@ -18,6 +18,10 @@ found and nothing changes.}
 character vector, code = label, as its \code{plan_labels()} entry): the
 numbers are named as the columns are.  \code{NULL}: the codes.}
 }
+\item{total}{The Total column's heading, when the table has one
+(\code{plan_total()}'s label, "Total" when it gives none): its N is the
+groups' sum, under that name.  \code{NULL} (default): no Total column.}
+
 \value{
 \code{tfl_bign_values()}: \code{list(n = )}, the n of each group named by
 its value (one unnamed number when BIGN has no group), for
@@ -38,5 +42,6 @@ ard <- data.frame(analysis_id = c("BIGN", "BIGN", "SEX"),
                   variable_level = I(list("Drug X", "Control", "F")),
                   stat_name = c("n", "n", "n"), stat = I(list(80, 78, 41)))
 tfl_bign_values(ard, labels = c("Drug X" = "Drug X 200 mg"))
+tfl_bign_values(ard, total = "Total")
 nrow(tfl_bign_drop(ard))
 }

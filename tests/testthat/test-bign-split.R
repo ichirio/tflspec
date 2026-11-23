@@ -95,3 +95,39 @@ test_that("with data steps, the BIGN lines stand after them, just before the tab
   expect_identical(code[i + 2L], "data <- tflspec::tfl_bign_drop(data)")
   expect_true(startsWith(code[i + 4L], "plan <-") || startsWith(code[i + 3L], "plan <-"))
 })
+
+test_that("a Total column's N: the groups' sum, under plan_total()'s heading", {
+  # two groups and a Total (its default heading)
+  expect_identical(tfl_bign_values(bs_ard(), total = "Total"),
+                   list(n = c(`Drug A` = 12, `Drug B` = 18, Total = 30)))
+  # no Total column: as before
+  expect_identical(tfl_bign_values(bs_ard()), list(n = c(`Drug A` = 12, `Drug B` = 18)))
+  # one unnamed number (no group): no Total to add
+  one <- bs_ard()[1L, ]
+  one$variable_level <- I(list(NULL))
+  expect_identical(tfl_bign_values(one, total = "Total"), list(n = 12))
+  # the reader: the last label and direction plan_total() gives
+  tot <- function(...) tfl_item("plan_total", list(...))
+  expect_null(tflspec:::.bign_total(bs_out("{col} (N={n})")$content))
+  expect_identical(tflspec:::.bign_total(list(tot())), "Total")
+  expect_identical(tflspec:::.bign_total(list(tot(label = "All Subjects"))), "All Subjects")
+  expect_identical(tflspec:::.bign_total(list(tot(label = "A"), tot(position = "first"))), "A")
+  expect_identical(tflspec:::.bign_total(list(tot(label = "A"), tot(label = "B"))), "B")
+  expect_null(tflspec:::.bign_total(list(tot(direction = "rows"))))
+  expect_identical(tflspec:::.bign_total(list(tot(direction = "both"))), "Total")
+})
+
+test_that("a custom Total heading: the program and the run give its N", {
+  o <- bs_out("{col} (N={n})")
+  o$content <- c(o$content, list(tfl_item("plan_total", list(label = "All Subjects"))))
+  code <- tfl_content_code(o)
+  expect_true(any(grepl("total = \"All Subjects\"", code, fixed = TRUE)))
+  env <- new.env()
+  assign("ard", bs_ard(), envir = env)
+  assign("data", bs_ard(), envir = env)
+  b <- grep("^bign <- ", code, value = TRUE)
+  expect_length(b, 1L)
+  eval(parse(text = b), env)
+  expect_identical(get("bign", env),
+                   list(n = c(`Drug A` = 12, `Drug B` = 18, `All Subjects` = 30)))
+})

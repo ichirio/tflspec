@@ -490,7 +490,8 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   items <- .bign_header_items(items, tfl_r("bign"))
   used <- isTRUE(attr(items, "used"))
   attr(items, "used") <- NULL
-  c(.bign_code(data, n = used, labels = .bign_labels(items, .bign_var(items))),
+  c(.bign_code(data, n = used, labels = .bign_labels(items, .bign_var(items)),
+               total = .bign_total(items)),
     .content_table_code(items, data = data, plan = plan, pipe = pipe))
 }
 
@@ -1515,6 +1516,27 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   n
 }
 
+# The Total column's heading when the content makes one: its plan_total()
+# items' label and direction, the last given of each (as the layers
+# merge them), the label "Total" when none gives it.  NULL when there is
+# no plan_total(), when it totals rows only, or when its label is not one
+# text.  Its N is the groups' sum (tfl_bign_values(total = )).
+.bign_total <- function(content) {
+  hit <- FALSE
+  label <- NULL
+  dir <- NULL
+  val <- function(x) if (inherits(x, "tfl_unset")) NULL else unlist(x)
+  for (it in content) {
+    if (!identical(.schema_fn_name(it$fn), "plan_total")) next
+    hit <- TRUE
+    if ("label" %in% names(it$args)) label <- val(it$args$label)
+    if ("direction" %in% names(it$args)) dir <- val(it$args$direction)
+  }
+  if (!hit || identical(as.character(dir), "rows")) return(NULL)
+  if (is.null(label)) return("Total")
+  if (is.character(label) && length(label) == 1L && !is.na(label) && nzchar(label)) label else NULL
+}
+
 # The ARD without BIGN's rows
 .bign_drop <- function(ard) {
   if (!"analysis_id" %in% names(ard)) return(ard)
@@ -1524,13 +1546,14 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 # The same, as the program's lines on its ARD object `obj`: `bign`, the
 # header's values, when a heading reads it, then the ARD without BIGN's
 # rows
-.bign_code <- function(obj, n = TRUE, labels = NULL) {
+.bign_code <- function(obj, n = TRUE, labels = NULL, total = NULL) {
   lab <- if (inherits(labels, "tfl_r")) as.character(labels)
          else if (!is.null(labels)) paste(deparse(labels, width.cutoff = 500L), collapse = "")
   .drop_attached_ns(c(
     "# BIGN: the column headings' N, apart from the table's rows",
-    if (n) sprintf("bign <- tflspec::tfl_bign_values(%s%s)", obj,
-                   if (is.null(lab)) "" else paste0(", labels = ", lab)),
+    if (n) sprintf("bign <- tflspec::tfl_bign_values(%s%s%s)", obj,
+                   if (is.null(lab)) "" else paste0(", labels = ", lab),
+                   if (is.null(total)) "" else paste0(", total = ", encodeString(total, quote = "\""))),
     sprintf("%s <- tflspec::tfl_bign_drop(%s)", obj, obj),
     ""))
 }
@@ -1551,6 +1574,9 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 #' @param labels The labels the table's column variable takes (a named
 #'   character vector, code = label, as its `plan_labels()` entry): the
 #'   numbers are named as the columns are.  `NULL`: the codes.
+#' @param total The Total column's heading, when the table has one
+#'   (`plan_total()`'s label, "Total" when it gives none): its N is the
+#'   groups' sum, under that name.  `NULL` (default): no Total column.
 #' @return `tfl_bign_values()`: `list(n = )`, the n of each group named by
 #'   its value (one unnamed number when BIGN has no group), for
 #'   `plan_col_header(values = )`; `NULL` when the ARD has no BIGN row.
@@ -1560,12 +1586,18 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 #'                   variable_level = I(list("Drug X", "Control", "F")),
 #'                   stat_name = c("n", "n", "n"), stat = I(list(80, 78, 41)))
 #' tfl_bign_values(ard, labels = c("Drug X" = "Drug X 200 mg"))
+#' tfl_bign_values(ard, total = "Total")
 #' nrow(tfl_bign_drop(ard))
 #' @export
-tfl_bign_values <- function(ard, labels = NULL) {
+tfl_bign_values <- function(ard, labels = NULL, total = NULL) {
   n <- .bign_n(ard)
   if (is.null(n)) return(NULL)
-  list(n = .bign_relabel(n, labels))
+  n <- .bign_relabel(n, labels)
+  if (is.character(total) && length(total) == 1L && !is.na(total) && nzchar(total) &&
+      !is.null(names(n)) && !total %in% names(n)) {
+    n <- c(n, stats::setNames(sum(n), total))
+  }
+  list(n = n)
 }
 
 #' @rdname tfl_bign_values
@@ -1631,7 +1663,8 @@ tfl_content_run <- function(output, data) {
   if (identical(output$kind, "table")) output$content <- .levels_prune(output$content, output)
   # BIGN's rows: the headings' N, not the table's (.bign_applies())
   if (.bign_applies(output)) {
-    v <- tfl_bign_values(data, labels = .bign_labels(output$content, .bign_var(output$content)))
+    v <- tfl_bign_values(data, labels = .bign_labels(output$content, .bign_var(output$content)),
+                         total = .bign_total(output$content))
     data <- tfl_bign_drop(data)
     if (!is.null(v)) output$content <- .bign_header_items(output$content, v)
   }
@@ -1870,7 +1903,8 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
     attr(output$content, "used") <- NULL
   }
   bign_pre <- function(obj) if (bign) .bign_code(obj, n = bign_n,
-                                                   labels = .bign_labels(output$content, .bign_var(output$content)))
+                                                   labels = .bign_labels(output$content, .bign_var(output$content)),
+                                                   total = .bign_total(output$content))
   # the object the pipe starts from: the output's own name for it, else
   # the ARD when the content normalizes it, else the normalized data
   # the data's steps (`data.steps`, the Rework, the old process_code): R
