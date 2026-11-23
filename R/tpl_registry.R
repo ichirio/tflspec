@@ -444,8 +444,9 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   if (any(unset)) out[unset] <- list(NULL)
   miss <- vapply(t$params, function(p) p$required && is.null(out[[p$name]]), NA)
   if (any(miss)) {
-    .ard_stop(sprintf("%s: template %s needs %s.", fn, t$name,
-                      paste(sQuote(names(miss)[miss], FALSE), collapse = ", ")))
+    .tpl_args_missing_stop(sprintf("%s: template %s needs %s.", fn, t$name,
+                                   paste(sQuote(names(miss)[miss], FALSE), collapse = ", ")),
+                           t$name, names(miss)[miss])
   }
   attr(out, "unset") <- names(unset)[unset]
   out
