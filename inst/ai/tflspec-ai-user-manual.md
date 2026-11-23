@@ -984,12 +984,14 @@ back): rename the value or choose another separator.
 `tfl_read_outputs` `tfl_resolve_output` `tfl_run_output` `tfl_output_contents` `tfl_output_extends` `tfl_study_value` `tfl_styles` `tfl_output_objects` `tfl_output_object_uses` `tfl_output_rename` `tfl_default_name` `tfl_output_name_check` `tfl_code_refs` `tfl_write_study_part` `tfl_item_code`
 `tfl_item_written` `tfl_item_own` `tfl_convert_sheets_to_yaml`
 `tfl_yaml_from_sheets` `tfl_sheets_from_yaml` `tfl_sheets_from_spec` `tfl_report_codelists` `tfl_write_spec_xlsx`
-`tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_check_spec` `tfl_check_build` `tfl_check_reports` `tfl_check_fix_text` `tfl_data_code` `tfl_schema_help` `tfl_ai_decisions_read` `tfl_ai_decisions_write` `tfl_ai_confirm` `tfl_content_code` `tfl_content_run`
+`tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_check_spec` `tfl_check_build` `tfl_check_reports` `tfl_check_fix_text` `tfl_data_code` `tfl_schema_help` `tfl_ai_decisions_read` `tfl_ai_decisions_write` `tfl_ai_confirm` `tfl_content_code` `tfl_content_run` `tfl_bign_values` `tfl_bign_drop`
 `tfl_ai_unpack` `tfl_args_to_r` `tfl_args_from_r` `tfl_fig_content_from_design`
 
 **Manual:** `tflspec_ai_manual` `tfl_adam_metadata` `tfl_ai_review`
 
 **The functions the generated programs call (their code):** `tfl_helpers_code`
+
+**Official runs (the base-R runner a study's batch.R is made of):** `tfl_runner_file` `tfl_runner_code`
 
 **Template SPEC (prototype):** `tfl_tpl` `tfl_tpl_args` `tfl_tpl_help` `tfl_templates` `tfl_template_expand` `tfl_template_to_spec` `tfl_template_routes` `tfl_template` `tfl_param` `tfl_template_params` `tfl_template_variant` `tfl_template_run` `tfl_test_templates` `tfl_use_company_templates` `tfl_template_resolve` `tfl_arg_defs` `tfl_series_list`
 `tpl_demog` `tpl_summary` `tpl_disposition` `tpl_ae_soc_pt` `tpl_ae_pt_freq` `tpl_ae_max_grade` `tpl_hierarchical`
