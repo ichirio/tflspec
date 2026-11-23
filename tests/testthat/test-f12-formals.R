@@ -5,7 +5,7 @@
 # it is filled.  A new rtfreporter argument the schema does not say fails here.
 
 f12_not_cards <- c("plan_apply", "plan_header_tokens", "plan_n_candidates", "plan_layers",
-                   "plan_template")
+                   "plan_template", "plan_is_empty")
 # the gaps there are today: one filled must come off this list (none since
 # 2026-11-22: plan_total direction, plan_cell_style row, plan_titles and
 # plan_footnotes border added)
