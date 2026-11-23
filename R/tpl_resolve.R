@@ -547,6 +547,19 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
 
 .tr_item <- function(it, env, template) {
   shadow <- as.character(unlist(it$params))
+  # (a param is the row's function's argument, written bare inside
+  # dplyr::filter() and dplyr::mutate(): a name the ARD has itself -- a
+  # cards column, analysis_id, output_id, population_id -- would read the
+  # column instead, so it stops; so do data and ard, the function's own
+  # names for its rows and its result)
+  own <- shadow[.ard_own_name(shadow) | shadow %in% c("data", "ard")]
+  if (length(own)) {
+    stop("template ", template, ": item ", it$id %||% "?", ": params: ",
+         paste(own, collapse = ", "), " is a name the ARD uses itself (",
+         "a cards column, analysis_id, output_id or population_id) or the ",
+         "row function's own (data, ard); ",
+         "give the param another name.", call. = FALSE)
+  }
   cond <- it$conditions
   it$conditions <- NULL
   an <- it$analyses
