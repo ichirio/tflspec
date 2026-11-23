@@ -1311,10 +1311,7 @@
     # each analysis's ARD under a name of its own: .ard_<id>
     top <- rows[is.na(par[rows])]
     fun_names <- .ard_fun_names()
-    ard_names <- make.unique(c(taken, fun_names,
-                               paste0(".ard_", gsub("[^a-z0-9]+", "_",
-                                                   tolower(a$analysis_id[top])))),
-                             sep = "_")[-seq_along(c(taken, fun_names))]
+    ard_names <- .ard_item_names(a$analysis_id[top], c(taken, fun_names))
     avoid <- c(taken, ard_names, paste0(ard_names, "_conditions"), paste0(ard_names, "_one"),
                "ard", "ards", "report_id", if (length(lv)) .cl_name(names(lv)),
                .ard_helper_names)
@@ -1336,7 +1333,7 @@
       }
       lines <- if (.item_type(r) == "model") {
         # a model: its call under its own name, not an ARD's
-        mn <- make.unique(c(avoid, make.names(tolower(r$analysis_id))), sep = "_")[length(avoid) + 1L]
+        mn <- .ard_model_name(r$analysis_id, avoid)
         avoid <- c(avoid, mn)
         .ard_model_lines(r, dname, mn)
       } else if (!is.null(cond)) {
@@ -2001,6 +1998,18 @@
   if (is.null(v) || is.list(v) || !length(v) || is.na(v[1L]) ||
       !nzchar(trimws(v[1L]))) return(NA_character_)
   as.character(v[1L])
+}
+
+# The R names the program gives the report's items (one builder: the ARD
+# program and tfl_output_objects() both call these).  An ARD or a value
+# item: .ard_<its id, lower case, other characters _>, made unique against
+# `taken` (_1, _2 ...); a model item: its id, lower case.
+.ard_item_names <- function(ids, taken = character()) {
+  nm <- make.unique(c(taken, paste0(".ard_", gsub("[^a-z0-9]+", "_", tolower(ids)))), sep = "_")
+  if (length(taken)) nm[-seq_along(taken)] else nm
+}
+.ard_model_name <- function(id, avoid = character()) {
+  make.unique(c(avoid, make.names(tolower(id))), sep = "_")[length(avoid) + 1L]
 }
 
 # An item's type: "ard" (the default), "model" or "value"; only an ARD is

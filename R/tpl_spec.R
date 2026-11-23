@@ -542,7 +542,8 @@
 #' `from = "template:<name>"`.  The report is then a code SPEC: later
 #' changes of the template do not reach it.  A series template
 #' (`<series>/<template>`) is written out by [tfl_template_resolve()], with
-#' the study's `study.yml` values.
+#' the study's `study.yml` values and its copies of the series
+#' ([tfl_copy_templates()]).
 #'
 #' @param output A `tfl_output` as read from its file ([tfl_read_output()]).
 #' @param study Its study ([tfl_read_study_spec()]).
@@ -564,7 +565,7 @@ tfl_template_to_spec <- function(output, study) {
   # a series template (`<series>/<template>`): the code SPEC is what
   # tfl_template_resolve() makes of it, with the study's settings
   if (grepl("/", output$template$name, fixed = TRUE)) {
-    out <- tfl_template_resolve(.output_to_list(output), study = study$study %||% list())
+    out <- tfl_template_resolve(.output_to_list(output), study = .tr_study_of(study))
     # a figure template's content: the report's `figure: {name, args}`
     if (!is.null(out$figure)) out$figure <- .fig_content_key(out)
     return(out)
