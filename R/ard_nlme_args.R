@@ -184,3 +184,13 @@
   }
   out
 }
+
+# Whether a cardx function tidies its model with broom.helpers'
+# tidy_plus_plus(): the catalog's passed-on arguments say so
+# (inst/ard/passed_args.csv, `passed_to`), as they do for ard_regression()
+# and ard_regression_basic()
+.tidies_with_broom_helpers <- function(call) {
+  d <- .ard_catalog_rows("passed_args.csv", "tflspec.ard_passed_args",
+                         c("call", "arg"))
+  any(d$call == call & d$passed_to == "broom.helpers::tidy_plus_plus")
+}

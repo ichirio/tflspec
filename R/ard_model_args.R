@@ -315,7 +315,7 @@ tfl_ard_model_args <- function(method, package = "base") {
       out <- c(out, .model_call_problems(
         tag, key, xa, sprintf("%s(x = %s())", fn, sub("^.*::", "", key)),
         cardx_sets = FALSE),
-        if (startsWith(fn, "ard_regression")) .nlme_tidy_problem(tag, fn, key, given))
+        if (.tidies_with_broom_helpers(call)) .nlme_tidy_problem(tag, fn, key, given))
     }
   }
   out
