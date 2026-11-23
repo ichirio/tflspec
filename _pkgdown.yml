@@ -127,6 +127,8 @@ reference:
       - tfl_helpers_code
       - tfl_runner_code
       - tfl_runner_file
+      - tfl_run_index
+      - tfl_latest_run
   - title: Data, analysis data and populations
     desc: >
       The `datasets`, `populations` and `analysis_data` sheets of the ARD
