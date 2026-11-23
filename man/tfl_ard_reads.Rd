@@ -11,18 +11,25 @@ tfl_ard_reads(study, outputs = NULL)
 (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}).}
 
 \item{outputs}{The reports, a named list of \code{tfl_output} (by id): what is
-on screen and not yet saved.  \code{NULL} (default) reads the study's report
-files (\code{\link[=tfl_read_outputs]{tfl_read_outputs()}}); a file that cannot be read is a row with
-its reason.}
+on screen and not yet saved.  The caller passes every report of the
+study: a report that is not in the list is not looked at, and a
+source that names it is "source report not found".  \code{NULL} (default)
+reads the study's report files (\code{\link[=tfl_read_outputs]{tfl_read_outputs()}}); a file that
+cannot be read is a row with its reason.}
 }
 \value{
 A data frame, one row per read: \code{report} (the output id), \code{reads}
 (the id whose ARD it reads; \code{NA} when that cannot be worked out),
 \code{kind} (\code{"own"} or \code{"source"}, a figure's ARD source) and \code{reason}
 (\code{NA} when worked out; otherwise \code{"no source"} -- the design reads an
-ARD and no source is chosen --, \code{"source not in analyses"},
-\code{"source report not found"}, \code{"file not read: <message>"} or
-\code{"lookup failed: <message>"}).  A report that reads none has no row.
+ARD and no source is chosen --, \code{"source not understood: <value>"}
+-- the source is none of \code{own}, \verb{table:<id>} and \verb{import:<file>} --,
+\code{"source not in analyses"}, \code{"source report not found"},
+\code{"source lookup failed"} -- the source report's analyses could not be
+worked out --, \code{"ref analysis: <ref>"} -- an analysis that refers to
+another report's analysis (\code{ref}), not yet worked out --,
+\code{"file not read: <message>"} or \code{"lookup failed: <message>"}).  A
+report that reads none has no row.
 }
 \description{
 Works out, from the study's SPEC, whose ARD each report reads, so that a
@@ -32,8 +39,9 @@ run builds those ARD before the report:
 template's) reads its own ARD;
 \item a figure whose ARD source (\verb{page: report: ard_source:}) is \code{own} or
 \verb{table:<id>} reads that report's ARD; one with no source but a
-template or a \verb{figure:} content key and analyses of its own reads its
-own ARD; \verb{import:<file>} reads an ARD taken in, no report's.
+template (\verb{template: \{name: ...\}}) or a \verb{figure:} content key and
+analyses of its own reads its own ARD; \verb{import:<file>} reads an ARD
+taken in, no report's.
 }
 }
 \details{
