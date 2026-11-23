@@ -134,8 +134,11 @@
 #' @return The function's entry (`package`, `description`, `dots`, `args`;
 #'   `rank`, its place in the recommended order, and `stage`, `"mapping"`,
 #'   `"finishing"` or `"output"`; `formals`, the function's own arguments
-#'   but the data's (`x`, `plan`, `.plan`, `data`, `mapping`), and
-#'   `required`, those of them with no default value),
+#'   but the data's (`x`, `plan`, `.plan`, `data`, `mapping`, `ard`), and
+#'   `required`, those of them with no default value; `data_args`, the
+#'   data's arguments the function has, a card never shows them;
+#'   `formal_defaults`, the formals whose default is a literal constant,
+#'   by name),
 #'   or the whole schema, a list by function; `NULL` for a function the
 #'   schema does not have.
 #' @examples
@@ -190,21 +193,30 @@ tfl_schema <- function(fn = NULL) {
   .schema_add_formals(ent, nm)
 }
 
-# The function's own formals, the data's arguments left out (`x`, `plan`,
-# `.plan`, `data`, `mapping`), and `required`: those with no default value
-# (`...` is never required).  From the installed package; none when it is
-# not installed or has no such function.
-.schema_data_args <- c("x", "plan", ".plan", "data", "mapping")
+# The function's own formals, the data's arguments left out, and `required`:
+# those with no default value (`...` is never required).  `data_args`: which
+# of the formals are the data's (`.schema_data_args`: `x`, `plan`, `.plan`,
+# `data`, `mapping`, `ard`), the ones a card never shows.  `formal_defaults`:
+# the formals whose default is a literal constant (one TRUE/FALSE, one
+# number, one string, or NULL), by name; a call, a symbol or no default gives
+# none.  From the installed package; none when it is not installed or has no
+# such function.
+.schema_data_args <- c("x", "plan", ".plan", "data", "mapping", "ard")
 .schema_add_formals <- function(ent, nm) {
   pkg <- ent$package %||% "rtfreporter"
   f <- if (requireNamespace(pkg, quietly = TRUE)) {
     tryCatch(formals(getExportedValue(pkg, nm)), error = function(e) NULL)
   }
   if (is.null(f)) return(ent)
+  ent$data_args <- intersect(names(f), .schema_data_args)
   f <- f[setdiff(names(f), .schema_data_args)]
   ent$formals <- names(f)
   ent$required <- names(f)[vapply(f, function(v) is.symbol(v) && !nzchar(as.character(v)), NA) &
                              names(f) != "..."]
+  lit <- vapply(f, function(v) {
+    is.null(v) || (is.atomic(v) && length(v) == 1L && !is.na(v))
+  }, NA) & names(f) != "..."
+  ent$formal_defaults <- f[lit]
   ent
 }
 

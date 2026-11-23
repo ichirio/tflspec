@@ -1,5 +1,6 @@
 # A pull request into next, labelled automerge (or tflplanner-check for a
-# pair PR merged by hand): tflplanner's next, its full test suite, with
+# pair PR merged by hand): tflplanner's next (or the pair's own pull
+# request, `pair: ichirio/tflplanner#<n>` in the body), its full suite, with
 # this pull request's tflspec installed. It replaces running tflplanner's
 # tests on a local PC before a tflspec change goes in (the user's decision
 # of 2026-11-22: the full regression once in CI before the merge, only the
@@ -14,17 +15,23 @@ name: tflplanner-suite
 permissions:
   contents: read
 
-concurrency:
-  group: tflplanner-suite-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
-
 jobs:
   tests:
+    # a label event runs only for the two labels (another label starts no
+    # run); other events, when the pull request has one of them already
     if: >-
-      contains(github.event.pull_request.labels.*.name, 'automerge') ||
-      contains(github.event.pull_request.labels.*.name, 'tflplanner-check')
+      (github.event.action == 'labeled' &&
+       (github.event.label.name == 'automerge' || github.event.label.name == 'tflplanner-check')) ||
+      (github.event.action != 'labeled' &&
+       (contains(github.event.pull_request.labels.*.name, 'automerge') ||
+        contains(github.event.pull_request.labels.*.name, 'tflplanner-check')))
     runs-on: ubuntu-latest
-    name: tflplanner next with this tflspec
+    # (named tests...: automerge.sh asks for the head's tests runs)
+    name: "tests: tflplanner with this tflspec"
+    # (in the job, not the workflow: a run whose job is skipped cancels nothing)
+    concurrency:
+      group: tflplanner-suite-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
@@ -35,11 +42,26 @@ jobs:
         with:
           path: tflspec
 
+      # a pair (tflplanner's code changes too): the PR body says
+      # `pair: ichirio/tflplanner#<n>`, and that pull request's head is
+      # tested; otherwise tflplanner's next
+      - name: Which tflplanner
+        id: pair
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          n=$(printf '%s' "$BODY" | grep -oE 'pair: *ichirio/tflplanner#[0-9]+' | head -n 1 | grep -oE '[0-9]+$' || true)
+          if [ -n "$n" ]; then echo "ref=refs/pull/$n/head" >> "$GITHUB_OUTPUT"; else echo "ref=next" >> "$GITHUB_OUTPUT"; fi
+          echo "tflplanner: ${n:+pull request #$n}${n:-next}"
+
       - uses: actions/checkout@v4
         with:
           repository: ichirio/tflplanner
-          ref: next
+          ref: ${{ steps.pair.outputs.ref }}
           path: tflplanner
+
+      - name: The tflplanner tested
+        run: git -C tflplanner log -1 --format='tflplanner %H %s'
 
       - uses: r-lib/actions/setup-pandoc@v2
 

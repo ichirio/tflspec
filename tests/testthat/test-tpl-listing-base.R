@@ -41,6 +41,7 @@ lstb_report <- function(id, more = character(), where = "TRTEMFL == \"Y\" & AESE
 lstb_run <- function(d, id, lines) {
   f <- file.path(d, "spec", "outputs", paste0(id, ".yml"))
   writeLines(lines, f)
+  invisible(tfl_copy_templates(d))
   st <- tfl_read_study_spec(d)
   tfl_write_output(tfl_template_to_spec(tfl_read_output(f), st), f)
   rtf <- tfl_run_output(id, dir = d)
