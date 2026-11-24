@@ -1,0 +1,75 @@
+# The fictional study's defaults (the golden test of the setup programs)
+content:
+  - normalize_ard: {}
+  - plan_digits:
+      rounding: r
+codelists:
+  SEX:
+    - {value: F, label: Female}
+    - {value: M, label: Male}
+  ARM:
+    - {value: EXM, label: Examplumab 150 mg}
+    - {value: PBO, label: Placebo}
+adam_meta:
+  variables:
+  - dataset: ADSL
+    variable: SEX
+    codelist: CL.SEX
+  - dataset: ADAE
+    variable: AESEV
+    codelist: CL.AESEV
+  codelists:
+  - codelist: CL.SEX
+    name: Sex
+    value: F
+    decode: Female
+    order: 1
+  - codelist: CL.SEX
+    name: Sex
+    value: M
+    decode: Male
+    order: 2
+  - codelist: CL.AESEV
+    name: Severity
+    value: MILD
+    order: 1
+  - codelist: CL.AESEV
+    name: Severity
+    value: MODERATE
+    order: 2
+  - codelist: CL.AESEV
+    name: Severity
+    value: SEVERE
+    order: 3
+styles:
+  house:
+    page:
+      header:
+        first:
+          '1':
+            left: '{COMPANY}'
+            right: '{STATUS}'
+          '2':
+            left: 'Protocol: {STUDY_ID}'
+            right: Page {PAGE} of {TOTAL_PAGES}
+          '3':
+            center: '{OUTPUT_LABEL}'
+          '4':
+            center: '{OUTPUT_TITLE}'
+      footer:
+        last:
+          '99':
+            left: '{PROGRAM}       Run on: {DATETIME}'
+      rtf_document:
+        font_table: Arial
+      rtf_style:
+        font_size_half_points: 18
+  wide:
+    page:
+      header:
+        first:
+          '1':
+            left: '{COMPANY} -- {ANALYSIS_TYPE}'
+            right: Page {PAGE} of {TOTAL_PAGES}
+      rtf_page:
+        orientation: landscape
