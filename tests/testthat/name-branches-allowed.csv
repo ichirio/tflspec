@@ -32,6 +32,7 @@
 "object_list.R","identical(fn, """,5,"schema item or arg def (F1-F3, (c) 11-26)"
 "schema.R","identical(fn, """,3,"schema item or arg def (F1-F3, (c) 11-26)"
 "schema.R","startsWith(fn, """,2,"the step from arg defs (F3 11-24, (c) 11-26)"
+"setup_values.R","nm %in% c(""",1,"stays: R's own library() / require() calls in the setup files, not an argument"
 "spec_code.R","a ""plan_/fig_/tfl_"" literal",2,"schema item or arg def (F1-F3, (c) 11-26)"
 "spec_code.R","fn %in% c(""",2,"schema item or arg def (F1-F3, (c) 11-26)"
 "spec_code.R","identical(fn, """,2,"schema item or arg def (F1-F3, (c) 11-26)"
