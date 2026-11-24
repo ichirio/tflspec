@@ -1,8 +1,9 @@
 # The functions a study's generated programs call: the code lists on a
 # data, the ids in front of an analysis's ARD, the formats after a call,
 # the statistics asked for, one report's rows into the study ARD and back
-# out of it, and a figure's reading of an ARD (one statistic, statistics as
-# a data frame, the fingerprint of what was built).
+# out of it, a table's BIGN (the headings' N) apart from its rows, and a
+# figure's reading of an ARD (one statistic, statistics as a data frame,
+# the fingerprint of what was built).
 # Base R, cards and dplyr only: the programs run without tflspec.
 
 # The code lists on a data: each listed column a factor whose levels are
@@ -589,6 +590,43 @@ complete_hierarchy <- function(ard, variables, under = list(), when_none = FALSE
   out <- dplyr::bind_rows(ard, added)
   class(out) <- class(ard)
   out
+}
+
+# BIGN: the column headings' N, apart from the table's rows.  The ARD
+# program tags them with analysis_id "BIGN" (tag_ard()).  bign_values()
+# gives their n for plan_col_header(values = ): each group's, named by its
+# value -- or by its label, `labels` being code = label as the table's
+# plan_labels() entry -- with `total` (a Total column's heading) as their
+# sum; one unnamed number when BIGN has no group; NULL when the ARD has no
+# BIGN row (or no analysis_id).  bign_drop() leaves the table's rows.  So a
+# report program runs without tflspec (tflspec's tfl_bign_values() and
+# tfl_bign_drop() are these two).
+#   bign <- bign_values(ard, labels = c(A = "Drug A"), total = "Total")
+#   ard <- bign_drop(ard)
+bign_values <- function(ard, labels = NULL, total = NULL) {
+  if (!all(c("analysis_id", "stat_name", "stat") %in% names(ard))) return(NULL)
+  b <- ard[as.character(ard$analysis_id) %in% "BIGN" &
+             as.character(ard$stat_name) %in% "n", , drop = FALSE]
+  if (!nrow(b)) return(NULL)
+  lv <- if ("variable_level" %in% names(b)) b$variable_level else rep(list(NULL), nrow(b))
+  nm <- vapply(lv, function(x) if (length(x) && !is.na(x[[1L]])) as.character(x[[1L]]) else "", "")
+  n <- stats::setNames(as.numeric(unlist(b$stat)), nm)
+  if (all(!nzchar(nm))) return(list(n = unname(n[1L])))
+  n <- n[nzchar(nm)]
+  labels <- unlist(labels)
+  if (is.character(labels) && !is.null(names(labels))) {
+    hit <- names(n) %in% names(labels)
+    names(n)[hit] <- unname(labels[names(n)[hit]])
+  }
+  if (is.character(total) && length(total) == 1L && !is.na(total) && nzchar(total) &&
+        !total %in% names(n)) {
+    n <- c(n, stats::setNames(sum(n), total))
+  }
+  list(n = n)
+}
+bign_drop <- function(ard) {
+  if (!"analysis_id" %in% names(ard)) return(ard)
+  ard[!as.character(ard$analysis_id) %in% "BIGN", , drop = FALSE]
 }
 
 # One statistic of an ARD, as text: the row of the analysis, the variable

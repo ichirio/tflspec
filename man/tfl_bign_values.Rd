@@ -17,10 +17,11 @@ found and nothing changes.}
 \item{labels}{The labels the table's column variable takes (a named
 character vector, code = label, as its \code{plan_labels()} entry): the
 numbers are named as the columns are.  \code{NULL}: the codes.}
-}
+
 \item{total}{The Total column's heading, when the table has one
 (\code{plan_total()}'s label, "Total" when it gives none): its N is the
 groups' sum, under that name.  \code{NULL} (default): no Total column.}
+}
 
 \value{
 \code{tfl_bign_values()}: \code{list(n = )}, the n of each group named by
@@ -33,9 +34,11 @@ A report's ARD holds the subjects of each group as the rows of its
 \code{BIGN} analysis (\code{analysis_id == "BIGN"}): they are the column
 headings' N, not the table's cells.  tflspec takes them out before the
 table is made and gives their numbers to rtfreporter apart, as
-\code{plan_col_header(values = )}; rtfreporter reads no \code{analysis_id}.  The
-program of a table made from an ARD calls these two, and so does
-\code{\link[=tfl_content_run]{tfl_content_run()}}.
+\code{plan_col_header(values = )}; rtfreporter reads no \code{analysis_id}.
+\code{\link[=tfl_content_run]{tfl_content_run()}} calls these two.  They are the study helpers
+\code{bign_values()} and \code{bign_drop()} (\code{\link[=tfl_helpers_code]{tfl_helpers_code()}}): the program of
+a table made from an ARD calls those, so it runs without tflspec, and
+the rule is written once.
 }
 \examples{
 ard <- data.frame(analysis_id = c("BIGN", "BIGN", "SEX"),
