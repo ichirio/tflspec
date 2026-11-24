@@ -732,7 +732,13 @@ save_ard <- function(ard, report_id, definition = NA_character_,
     dplyr::bind_rows(old[old$output_id != report_id, , drop = FALSE], ard)
   tmp <- paste0(path, ".tmp")
   saveRDS(new, tmp)
-  file.rename(tmp, path)
+  # (a file open elsewhere -- common on Windows -- is not replaced: stop
+  # before ard_status.csv says it was built)
+  if (!file.rename(tmp, path)) {
+    unlink(tmp)
+    stop(sprintf("%s: could not replace %s (is it open in another program?); ", report_id, path),
+         "the study ARD was not changed.", call. = FALSE)
+  }
   sf <- file.path(dirname(path), "ard_status.csv")
   row <- data.frame(output_id = report_id, definition = definition,
                     built = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),

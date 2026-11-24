@@ -537,11 +537,55 @@
   unname(tools::md5sum(tmp))
 }
 
+# The versions study.yml's `packages:` names (the ones the study was saved
+# with), read in base R from its block of "  name: version" lines: a named
+# character vector (none: character())
+.batch_study_packages <- function(f = "study.yml") {
+  out <- character()
+  if (!file.exists(f)) return(out)
+  x <- readLines(f, warn = FALSE, encoding = "UTF-8")
+  i <- grep("^packages:[[:space:]]*$", x)
+  if (length(i) != 1L) return(out)
+  re <- "^[[:space:]]+([A-Za-z][A-Za-z0-9.]*):[[:space:]]*['\"]?([^'\"[:space:]]*)['\"]?[[:space:]]*$"
+  for (l in x[-seq_len(i)]) {
+    if (!grepl("^[[:space:]]", l)) break
+    m <- regmatches(l, regexec(re, l))[[1L]]
+    if (length(m) == 3L) out[[m[2L]]] <- m[3L]
+  }
+  out
+}
+
+# study.yml's packages against the versions installed where the run runs
+# (the libraries of .libPaths(): the programs' R processes get the same):
+# package, study (study.yml's), installed (NA: not installed), same
+.batch_packages_check <- function(f = "study.yml") {
+  want <- .batch_study_packages(f)
+  pk <- if (length(want)) names(want) else character()
+  have <- vapply(pk, function(p) {
+    v <- suppressWarnings(utils::packageDescription(p, fields = "Version"))
+    if (is.character(v) && length(v) == 1L && !is.na(v)) v else NA_character_
+  }, "", USE.NAMES = FALSE)
+  data.frame(package = pk, study = unname(want), installed = have,
+             same = !is.na(have) & have == unname(want),
+             stringsAsFactors = FALSE)
+}
+
+# The differences of .batch_packages_check(), one text ("" when none)
+.batch_packages_differ <- function(chk) {
+  d <- chk[!chk$same, , drop = FALSE]
+  if (!nrow(d)) return("")
+  paste(sprintf("%s %s (study.yml %s)", d$package,
+                ifelse(is.na(d$installed), "not installed", d$installed), d$study),
+        collapse = ", ")
+}
+
 # The packages the run's programs name (library(), require(), pkg::), with
-# the versions installed here, and sessionInfo() once they are loaded:
-# session_info.txt.  The study's renv.lock is in the batch folder, as the
-# record.  Never the end of a run: what cannot be read is said in the file.
-.batch_session_info <- function(progs) {
+# the versions installed here, the library paths, study.yml's packages
+# against those installed (`pkg_check`: .batch_packages_check()), and
+# sessionInfo() once they are loaded: session_info.txt.  The study's
+# renv.lock is in the batch folder, as the record.  Never the end of a run:
+# what cannot be read is said in the file.
+.batch_session_info <- function(progs, pkg_check = .batch_packages_check()) {
   ver <- tryCatch({
     # the R files only (the support files are workbooks too)
     progs <- progs[grepl("[.][Rr]$", progs) & file.exists(progs)]
@@ -565,6 +609,18 @@
     sprintf("%-24s %s", c("package", names(ver)), c("version", ver)),
     if (!is.null(attr(ver, "note"))) paste("(the programs could not be read:",
                                            attr(ver, "note"), ")"),
+    "",
+    "Library paths (.libPaths()):",
+    paste(" ", .libPaths()),
+    "",
+    "study.yml's packages against those installed:",
+    if (nrow(pkg_check)) trimws(sprintf("%-24s %-16s %-16s %s",
+                                 c("package", pkg_check$package),
+                                 c("study.yml", pkg_check$study),
+                                 c("installed", ifelse(is.na(pkg_check$installed),
+                                                       "(not installed)", pkg_check$installed)),
+                                 c("", ifelse(pkg_check$same, "", "DIFFERS"))), "right")
+    else "  (study.yml names no packages)",
     "",
     utils::capture.output(print(utils::sessionInfo()))),
     "session_info.txt")
@@ -723,9 +779,11 @@
 #   data_read.csv  the data files each program read: size and md5 as the
 #              run started (every run, kept data or not)
 #   inputs.csv     the imported ARDs the programs read
-#   session_info.txt  the R and package versions
+#   session_info.txt  the R and package versions, the library paths, and
+#              study.yml's packages against those installed
 #   batch.txt  the study, the md5 of its spec, who, where, when, which R,
-#              what was kept; "Verified : yes" last
+#              whether the packages are study.yml's (a difference: a
+#              warning, the run goes on), what was kept; "Verified : yes" last
 # A first run comes from the stage (.batch_staged is set).  An entry file run
 # by hand runs again: it stops inside a study's runs/, elsewhere it clears
 # the outputs, keeps the first run.csv as run_1.csv, uses run_args.txt when
@@ -799,6 +857,14 @@
   Sys.setenv(R_LIBS = paste(.libPaths(), collapse = .Platform$path.sep))
   on.exit(if (is.na(libs)) Sys.unsetenv("R_LIBS") else Sys.setenv(R_LIBS = libs),
           add = TRUE)
+  # study.yml's package versions against those installed here: a difference
+  # is a warning, the run goes on (session_info.txt and batch.txt say it)
+  pkg_check <- .batch_packages_check()
+  pkg_differ <- .batch_packages_differ(pkg_check)
+  if (nzchar(pkg_differ)) {
+    warning("The installed packages are not study.yml's: ", pkg_differ, ".",
+            call. = FALSE, immediate. = TRUE)
+  }
   dir.create(file.path("output", "ard"), recursive = TRUE, showWarnings = FALSE)
   dir.create(file.path("output", "tfl"), recursive = TRUE, showWarnings = FALSE)
   selected <- plan$selected
@@ -950,7 +1016,7 @@
   man <- NULL
   if (identical(root, ".")) man <- .batch_keep_data(result$program, root)
   progs_all <- unique(c(result$program, unlist(.batch_support[c(parts, "all")])))
-  .batch_session_info(progs_all)
+  .batch_session_info(progs_all, pkg_check)
   .batch_inputs(result$program)
   result <- cbind(result[1:2], output_id = oid, result[-(1:2)],
                   stringsAsFactors = FALSE)
@@ -978,6 +1044,8 @@
       sum(man$size) / 1024^2) else "not kept"),
     paste("Session  :", if (file.exists("renv.lock"))
       "session_info.txt and renv.lock" else "session_info.txt"),
+    paste("Packages :", if (!nrow(pkg_check)) "study.yml names none" else
+      if (nzchar(pkg_differ)) paste("not study.yml's:", pkg_differ) else "as study.yml"),
     paste("Excluded :", if (length(excluded))
       paste(excluded, collapse = ", ") else "none"),
     paste("Result   :", sum(result$status == "OK"), "of", nrow(result),
