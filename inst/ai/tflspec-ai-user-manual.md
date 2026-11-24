@@ -1013,7 +1013,7 @@ back): rename the value or choose another separator.
 `tfl_ai_write_requests` `tfl_ai_collect_answers` `tfl_ai_adopt` `tfl_ai_adopted_diff` `tfl_ai_style_prompt` `tfl_ai_style_read` `tfl_ai_style_diff` `tfl_ai_style_adopt` `tfl_ai_reference_build` `tfl_rtf_style_scan` `tfl_rtf_style_tables` `tfl_ai_migrate` `tfl_ai_outputs` `tfl_ai_assumptions` `tfl_ai_study_init`
 `tfl_ai_prepare` `tfl_ai_prepare_settings` `tfl_ai_refresh_agents` `tfl_ai_sample_study` `tfl_ai_requests` `tfl_fill_widths` `tfl_ai_run` `tfl_ai_compare`
 
-**ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`
+**ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec` `tfl_formats`
 `tfl_ard_spec_template` `tfl_ard_code` `tfl_ard_data_names` `tfl_build_ard` `tfl_ard_for`
 `tfl_ard_spec_hash` `tfl_ard_methods` `tfl_ard_as_custom` `tfl_ard_statistics`
 `tfl_ard_functions` `tfl_ard_args` `tfl_ard_model_args` `tfl_ard_reads` `tfl_write_ard` `tfl_read_ard` `tfl_check_ard` `tfl_check_ard_function` `tfl_ard_function_template` `tfl_ard_function_info` `tfl_ard_conditions`

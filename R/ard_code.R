@@ -321,9 +321,13 @@
 # A format of the spec as R that cards' fmt_fun takes: an integer is that
 # many decimals (cards::label_round(d)), xx.x% a proportion as a percent,
 # xx.x*1000 the value times 1000 (a rate per 1,000), pvalue the program's
-# fmt_pvalue()
+# fmt_pvalue(), 4s that many significant digits (rtfreporter's fmt_signif(),
+# the rule a table's {mean:.4s} prints by)
 .fmt_r <- function(f) {
   if (identical(f, "pvalue")) return("fmt_pvalue")
+  if (grepl("^[1-9][0-9]*s$", f)) {
+    return(sprintf("function(x) rtfreporter::fmt_signif(x, %sL)", sub("s$", "", f)))
+  }
   scale <- if (endsWith(f, "%")) "100" else if (grepl("*", f, fixed = TRUE)) {
     sub("^[^*]*[*]", "", f)
   }
@@ -422,6 +426,27 @@
   } else "fmt_default"
   .cl("fmt_ard", c(list(formats),
                             if (length(skip)) list(skip = .cl("c", .q(skip)))))
+}
+
+# An analysis's formats split into those of its statistics and variables
+# (`mean`, `AGE:sd`) and a parameter's own (`AUC:mean`, canon 2026-11-18):
+# a key `X:stat` is the parameter X's when the analysis's by has PARAMCD
+# and X is not one of its variables, else the variable X's.  A parameter's
+# own is a step after the format step, a statistic and parameter each,
+# cards::update_ard_fmt_fun(stat_names = "mean", fmt_fun = 2L, filter =
+# group2_level == "AUC") (its group the place of PARAMCD in by); the ARD is
+# formatted again after them (.post_fmt_split()).  `fmt`: the rest;
+# `steps`: those steps, as text.
+.fmt_param_split <- function(fmt, r) {
+  pos <- match("PARAMCD", .split_bar(r$by))
+  key <- ifelse(grepl(":", names(fmt), fixed = TRUE), sub(":.*$", "", names(fmt)), NA)
+  par <- !is.na(pos) & !is.na(key) & !key %in% .split_bar(r$variables)
+  if (!any(par)) return(list(fmt = fmt, steps = list()))
+  p <- fmt[par]
+  steps <- lapply(seq_along(p), function(i) sprintf(
+    "cards::update_ard_fmt_fun(stat_names = %s, fmt_fun = %s, filter = group%d_level == %s)",
+    .q(sub("^[^:]*:", "", names(p)[i])), .fmt_r(p[[i]]), pos, .q(key[par][i])))
+  list(fmt = fmt[!par], steps = steps)
 }
 
 # A `post` step that sets statistics' formats (cards::update_ard_fmt_fun():
@@ -1574,6 +1599,9 @@
   fmt <- c(if (!is.na(k)) .parse_formats(keys$formats[k]),
            .parse_formats(r$formats))
   fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
+  # (a parameter's own formats: steps after the format step)
+  pf <- .fmt_param_split(fmt, r)
+  fmt <- pf$fmt
   # the formats in the call (fmt_fun), when the function takes them and
   # nothing changes the ARD after it; else after it (fmt_ard())
   fmt_fun <- .call_fmt_fun(r, keys, given, fmt)
@@ -1597,7 +1625,7 @@
   keep <- if (!kind %in% c("continuous", "categorical", "missing") &&
               !identical(call_fn, "(subjects)"))
     .split_bar(r$statistics)
-  ps <- .post_fmt_split(.post_steps(x, r))
+  ps <- .post_fmt_split(c(.post_steps(x, r), pf$steps))
   steps <- c(ps$before,
              if (length(keep)) list(.cl("keep_stats", list(.cl("c", .q(keep))))),
              list(.fmt_step(fmt, !is.null(fmt_fun))), ps$after, .relevel_step(x, r),
@@ -1891,6 +1919,8 @@
   fmt <- c(if (!is.na(k)) .parse_formats(keys$formats[k]),
            .parse_formats(r$formats))
   fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
+  pf <- .fmt_param_split(fmt, r)
+  fmt <- pf$fmt
   fmt_fun <- .call_fmt_fun(r, keys, given, fmt)
   lv <- attr(x, "levels")[[r$output_id]]
   node <- .analysis_node(r, keys, subj, has, den, data = data,
@@ -1901,7 +1931,7 @@
   keep <- if (!kind %in% c("continuous", "categorical", "missing") &&
               !identical(call_fn, "(subjects)"))
     .split_bar(r$statistics)
-  ps <- .post_fmt_split(.post_steps(x, r))
+  ps <- .post_fmt_split(c(.post_steps(x, r), pf$steps))
   steps <- c(ps$before,
              if (length(keep)) list(.cl("keep_stats", list(.cl("c", .q(keep))))),
              list(.fmt_step(fmt, !is.null(fmt_fun))), ps$after, .relevel_step(x, r),
