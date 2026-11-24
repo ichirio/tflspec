@@ -3,13 +3,11 @@
 # field is "not given" (the template's default); "(none)" is !unset.
 # Fictional study settings only.
 
-lg_study <- function() list(settings = list(rounding = "sas", output_path = "output/tfl"))
-
-# an ae_soc_pt report; `content` the report's content: arguments
-lg_ae <- function(content = list()) {
-  list(id = "T-9", kind = "table", label = "TEAEs by SOC / PT",
-       template = c(list(name = "tflspec_v1/ae_soc_pt", analysis = list(by = "TRT01A")),
-                    if (length(content)) list(content = content)))
+# a tflspec_hierarchy report on ADAE; `...` more arguments (heading = ...)
+lg_hier <- function(...) {
+  list(id = "X", kind = "table", label = "Records by hierarchy", template = c(list(
+    name = "tflspec_v1/tflspec_hierarchy", from = "ADAE", by = "TRT01A",
+    hierarchy = c("AEBODSYS", "AEDECOD")), list(...)))
 }
 
 lg_fns <- function(o) vapply(o$content, function(it) .schema_fn_name(it$fn), "")
@@ -20,68 +18,72 @@ lg_keys <- function(o) {
   as.character(unlist(o$content[[k[[1L]]]]$args$keys))
 }
 
-lg_msg <- "Leave sort out for the template's default, or write !unset for none."
+lg_msg <- "Leave heading out for the template's default, or write !unset for none."
 
-test_that("ae_soc_pt: sort given empty, with an empty entry or as a map stops", {
+test_that("tflspec_hierarchy: heading given empty, with an empty entry or as a map stops", {
   bad <- list(
     blank = list(value = "", why = "an empty entry"),
     blank_in_list = list(value = list(""), why = "an empty entry"),
+    blank_line = list(value = c("Body system", ""), why = "an empty entry"),
     empty_list = list(value = list(), why = "an empty list"),
     empty_chr = list(value = character(0), why = "an empty list"),
-    na_entry = list(value = c("label", NA), why = "an NA entry"),
+    na_entry = list(value = c("Body system", NA), why = "an NA entry"),
     map = list(value = list(a = ""), why = "a map"),
-    map_of_lines = list(value = list(`- .overall` = "", `- group1` = "", `- label` = ""),
-                        why = "a map"))
+    map_of_lines = list(value = list(`- Body system` = "", `- Term` = ""), why = "a map"))
   for (nm in names(bad)) {
     b <- bad[[nm]]
-    content <- list(sort = b$value)
-    expect_error(tfl_template_resolve(lg_ae(content), study = lg_study()),
-                 "tflspec_v1/ae_soc_pt's sort is a list (list<string>); the report gives",
+    err <- tryCatch(tfl_template_resolve(lg_hier(heading = b$value)), error = conditionMessage)
+    expect_true(is.character(err), info = nm)
+    expect_match(err, "tflspec_v1/tflspec_hierarchy's heading is a list (list<string>); the report gives",
                  fixed = TRUE, info = nm)
-    expect_error(tfl_template_resolve(lg_ae(content), study = lg_study()), b$why,
-                 fixed = TRUE, info = nm)
-    expect_error(tfl_template_resolve(lg_ae(content), study = lg_study()), lg_msg,
-                 fixed = TRUE, info = nm)
+    expect_match(err, b$why, fixed = TRUE, info = nm)
+    expect_match(err, lg_msg, fixed = TRUE, info = nm)
   }
 })
 
-test_that("ae_soc_pt: the map the add-report dialog wrote, read from YAML, stops", {
+test_that("tflspec_hierarchy: the map a rows field writes, read from YAML, stops", {
   f <- tempfile(fileext = ".yml")
   on.exit(unlink(f))
-  writeLines(c("id: T-9", "kind: table", "label: TEAEs by SOC / PT",
-               "template:", "  name: tflspec_v1/ae_soc_pt", "  analysis:", "    by: TRT01A",
-               "  content:",
-               "    sort: {'- .overall': '', '- group1': '', '- .depth': '', '- -n': '', '- label': ''}"),
-             f)
-  expect_error(tfl_template_resolve(.series_read_yaml(f), study = lg_study()),
+  writeLines(c("id: X", "kind: table", "label: Records by hierarchy",
+               "template:", "  name: tflspec_v1/tflspec_hierarchy", "  from: ADAE",
+               "  analysis:", "    by: [TRT01A]", "    hierarchy: [AEBODSYS, AEDECOD]",
+               "  content:", "    heading: {'- Body system': '', '- Term': ''}"), f)
+  expect_error(tfl_template_resolve(.series_read_yaml(f)),
                "the report gives a map (name: value)", fixed = TRUE)
 })
 
-test_that("ae_soc_pt: sort left out is the template's default; !unset is none; keys given are used", {
-  o <- tfl_template_resolve(lg_ae(), study = lg_study())
-  expect_identical(lg_keys(o), c(".overall", "group1", ".depth", "-n", "label"))
-  expect_identical(attr(o, "origins")[["sort"]], "template")
-  # !unset: no keys, so no plan_sort (as before this guard)
-  u <- tfl_template_resolve(lg_ae(list(sort = tfl_unset())), study = lg_study())
-  expect_null(lg_keys(u))
-  # a sequence of keys, as a list or a character vector
-  for (v in list(list("label", "-n"), c("label", "-n"))) {
-    g <- tfl_template_resolve(lg_ae(list(sort = v)), study = lg_study())
-    expect_identical(lg_keys(g), c("label", "-n"))
+test_that("tflspec_hierarchy: heading left out is the default; !unset is none; plan_sort keys as before", {
+  keys <- c(".overall", "-n@group1", "group1", ".depth", "-n", "label")
+  o <- tfl_template_resolve(lg_hier())
+  expect_null(attr(o, "args")$heading)
+  expect_identical(attr(o, "origins")[["heading"]], "template")
+  expect_identical(lg_keys(o), keys)
+  u <- tfl_template_resolve(lg_hier(heading = tfl_unset()))
+  expect_null(attr(u, "args")$heading)
+  expect_identical(lg_keys(u), keys)
+  # a sequence of lines, as a list or a character vector
+  for (v in list(list("Body system", "  Term"), c("Body system", "  Term"))) {
+    g <- tfl_template_resolve(lg_hier(heading = v))
+    expect_identical(as.character(unlist(attr(g, "args")$heading)), c("Body system", "  Term"))
+    expect_identical(attr(g, "origins")[["heading"]], "report")
+    expect_identical(lg_keys(g), keys)
   }
 })
 
-test_that("other list arguments: tflspec_hierarchy heading, km_cards x_breaks", {
-  hier <- function(heading) {
+test_that("tflspec_hierarchy: a required list argument (hierarchy, by) is checked too", {
+  hier <- function(by, hierarchy) {
     list(id = "X", kind = "table", template = list(
-      name = "tflspec_v1/tflspec_hierarchy", from = "ADAE", by = "TRT01A",
-      hierarchy = c("AEBODSYS", "AEDECOD"), heading = heading))
+      name = "tflspec_v1/tflspec_hierarchy", from = "ADAE", by = by, hierarchy = hierarchy))
   }
-  expect_error(tfl_template_resolve(hier(list(""))),
-               "tflspec_v1/tflspec_hierarchy's heading is a list (list<string>); the report gives an empty entry",
+  expect_error(tfl_template_resolve(hier("TRT01A", list(""))),
+               "tflspec_v1/tflspec_hierarchy's hierarchy is a list (list<column>); the report gives an empty entry",
                fixed = TRUE)
-  expect_error(tfl_template_resolve(hier(c(`Body system` = ""))),
-               "Leave heading out for the template's default, or write !unset for none.", fixed = TRUE)
+  expect_error(tfl_template_resolve(hier(c(arm = "TRT01A"), "AEDECOD")),
+               "tflspec_v1/tflspec_hierarchy's by is a list (list<column>); the report gives a map",
+               fixed = TRUE)
+})
+
+test_that("km_cards: x_breaks as a map, empty or with an NA entry stops", {
   kmc <- function(x_breaks) {
     list(id = "F-9", kind = "figure", label = "Kaplan-Meier", template = list(
       name = "tflspec_v1/km_cards", data = list(by = "TRT01P", param = "OS"),
@@ -94,6 +96,8 @@ test_that("other list arguments: tflspec_hierarchy heading, km_cards x_breaks", 
                fixed = TRUE)
   expect_error(tfl_template_resolve(kmc(list()), study = kst), "an empty list", fixed = TRUE)
   expect_error(tfl_template_resolve(kmc(list(0, NA)), study = kst), "an NA entry", fixed = TRUE)
+  expect_error(tfl_template_resolve(kmc(""), study = kst),
+               "Leave x_breaks out for the template's default, or write !unset for none.", fixed = TRUE)
 })
 
 test_that(".tr_list_value(): only a report's value of a list type is checked", {
