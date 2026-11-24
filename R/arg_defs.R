@@ -33,15 +33,16 @@
 #   sort_keys     plan_sort's per-level sort keys
 .arg_editors <- c("roles", "cells", "header_lines", "digits", "levels", "sort_keys")
 
-# the closed list of choice sources (15 words, canon 11-14 and the
-# figure_style word of 2026-11-18).  An entry writes one with what it
+# the closed list of choice sources (16 words, canon 11-14, the
+# figure_style word of 2026-11-18 and objects(<kind>), B-2).  An entry writes one with what it
 # depends on in brackets ("vars(adsl_sub)", "levels(SEX)",
 # "from_args(continuous, categorical)", "figure_style(palette)"); several
 # separated by ", " give the list's groups in that order
 # ("report_data, study_data").
 .arg_choice_sources <- c("vars", "levels", "codelist", "populations", "report_data",
                          "study_data", "ard", "columns", "study_info", "tokens",
-                         "stats", "fixed", "styles", "from_args", "figure_style")
+                         "stats", "fixed", "styles", "from_args", "figure_style",
+                         "objects")
 
 # what figure_style(<kind>) lists: the study's figure style's colours in
 # their order, or its marker shapes
@@ -104,6 +105,16 @@
     stop(sprintf("%s: %s: write figure_style(<kind>), the kind one of %s.", where,
                  paste(encodeString(fs_bad, quote = "\""), collapse = ", "),
                  paste(.arg_figure_style_kinds, collapse = ", ")), call. = FALSE)
+  }
+  # objects(<kind>): the objects made above and the study's datasets, of
+  # one kind -- a word of tfl_fn_defs()' `returns` (B-2: one closed list)
+  ob <- entries[words == "objects"]
+  ob_kind <- sub("^objects[(]\\s*(.*?)\\s*[)]$", "\\1", ob, perl = TRUE)
+  ob_bad <- ob[!grepl("^objects[(].*[)]$", ob) | !ob_kind %in% .fn_def_returns]
+  if (length(ob_bad)) {
+    stop(sprintf("%s: %s: write objects(<kind>), the kind one of %s.", where,
+                 paste(encodeString(ob_bad, quote = "\""), collapse = ", "),
+                 paste(.fn_def_returns, collapse = ", ")), call. = FALSE)
   }
   if (length(bad)) {
     stop(sprintf("%s: unknown choice source %s; the sources are %s.", where,
@@ -763,7 +774,9 @@
 #'       `study_info`, `tokens`, `stats`, `fixed`, `styles`,
 #'       `from_args(<arg>, ...)`, `figure_style(<palette|marker>)` (the
 #'       study's figure style's colours in their order, or its marker
-#'       shapes).  Another word stops.}
+#'       shapes), `objects(<kind>)` (the objects made above and the
+#'       study's datasets, of one kind of [tfl_fn_defs()]' `returns`).
+#'       Another word stops.}
 #'     \item{values}{(a list column) the fixed values (`fixed`, an `enum`).
 #'       `values:` writes each as a value or `{value: , label: {en: , ja: }}`.}
 #'     \item{value_labels}{(a list column) the values' labels, a data frame

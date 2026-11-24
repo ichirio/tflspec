@@ -66,7 +66,9 @@ the closed words \verb{vars(<data>)}, \verb{levels(<var>)}, \verb{codelist(<name
 \code{study_info}, \code{tokens}, \code{stats}, \code{fixed}, \code{styles},
 \verb{from_args(<arg>, ...)}, \verb{figure_style(<palette|marker>)} (the
 study's figure style's colours in their order, or its marker
-shapes).  Another word stops.}
+shapes), \verb{objects(<kind>)} (the objects made above and the
+study's datasets, of one kind of \code{\link[=tfl_fn_defs]{tfl_fn_defs()}}' \code{returns}).
+Another word stops.}
 \item{values}{(a list column) the fixed values (\code{fixed}, an \code{enum}).
 \verb{values:} writes each as a value or \verb{\{value: , label: \{en: , ja: \}\}}.}
 \item{value_labels}{(a list column) the values' labels, a data frame

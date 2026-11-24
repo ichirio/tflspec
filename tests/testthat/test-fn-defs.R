@@ -135,3 +135,17 @@ test_that("tfl_arg_defs(fn = ) carries the function's row as the attribute fn", 
   expect_null(attr(tfl_arg_defs(fn = "rtf_page"), "fn"))
   expect_null(attr(tfl_arg_defs(template = "tflspec_v1/demog"), "fn"))
 })
+
+test_that("objects(<kind>) is a choice word, its kind one of the returns words (B-2)", {
+  expect_identical(length(.arg_choice_sources), 16L)
+  expect_true("objects" %in% .arg_choice_sources)
+  for (k in .fn_def_returns) expect_silent(.arg_check_choices(sprintf("objects(%s)", k), "x"))
+  expect_silent(.arg_check_choices("objects(ard), study_data", "x"))
+  d <- .arg_table(list(x = list(type = "string", input = "pick", choices = "objects(plot)")),
+                  "content", "f")
+  expect_identical(d$choices[[1L]], "objects(plot)")
+  expect_error(.arg_check_choices("objects(ggplot)", "x"), "objects\\(<kind>\\)")
+  expect_error(.arg_check_choices("objects", "x"), "objects\\(<kind>\\)")
+  # (the same words as tfl_fn_defs()' returns: one closed list)
+  expect_true(all(tfl_fn_defs()$returns %in% .fn_def_returns))
+})
