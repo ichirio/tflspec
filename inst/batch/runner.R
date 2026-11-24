@@ -4,6 +4,12 @@
 
 .rscript <- file.path(R.home("bin"), "Rscript")
 
+# A program's R reads neither the user's .Rprofile nor .Renviron (B2, the
+# user's decision 2026-11-24): the same programs give the same results
+# whoever runs them.  The library paths come from this R (R_LIBS, set by
+# run_batch()); a company's Rprofile.site still applies.
+.batch_r_flags <- c("--no-init-file", "--no-environ")
+
 # logrx's "Errors:" / "Warnings:" section: the tab-indented lines under it
 .batch_section <- function(lines, head) {
   i <- match(head, lines)
@@ -90,7 +96,7 @@
     # what R says on stderr is kept beside the log: an error that stops the
     # program before logrx can log it (a package too old) is only there
     err <- sub("[.]log$", ".err", log)
-    rc <- system2(.rscript, c("-e", shQuote(expr)), stdout = FALSE,
+    rc <- system2(.rscript, c(.batch_r_flags, "-e", shQuote(expr)), stdout = FALSE,
                   stderr = err)
     lines <- if (file.exists(log)) readLines(log, warn = FALSE) else character()
     errs <- .batch_section(lines, "Errors:")
@@ -104,7 +110,7 @@
                       text = c(errs, warns), stringsAsFactors = FALSE)
   } else {
     rc <- system2(file.path(R.home("bin"), "R"),
-                  c("CMD", "BATCH", "--no-save", "--no-restore", "--quiet",
+                  c("CMD", "BATCH", "--no-save", "--no-restore", .batch_r_flags, "--quiet",
                     shQuote(prog), shQuote(log)))
     lines <- if (file.exists(log)) readLines(log, warn = FALSE) else character()
     iss <- .batch_log_issues(lines)
@@ -565,6 +571,9 @@
     sprintf("%-24s %s", c("package", names(ver)), c("version", ver)),
     if (!is.null(attr(ver, "note"))) paste("(the programs could not be read:",
                                            attr(ver, "note"), ")"),
+    "",
+    "The library paths the programs' R used (R_LIBS; no .Rprofile, no .Renviron):",
+    paste0("  ", .libPaths()),
     "",
     utils::capture.output(print(utils::sessionInfo()))),
     "session_info.txt")
