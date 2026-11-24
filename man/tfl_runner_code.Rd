@@ -28,7 +28,13 @@ the study's.  The data are read through the data root (\code{run_paths.R}).  The
 folder holds three entry files (\code{autoexec_all.R}, \code{autoexec_ard.R},
 \code{autoexec_report.R}) that run it again elsewhere (never in place in a
 study's \verb{runs/}) and, at the end, \code{issues.csv} and a \code{batch.txt} ending
-in \verb{Verified : yes}.  A path outside the study that a run would read
+in \verb{Verified : yes}.  A study with no \code{renv.lock} gets one in the folder
+at the first run's end: the packages the programs name and what they
+need, at the versions installed, with where each came from (a GitHub
+package's commit), so \code{renv::restore()} installs them where the folder
+is run again; tflspec is in it only when a program calls it.  A study's
+own \code{renv.lock} is copied as it is, and a package the programs use that
+it lacks is a warning in \code{issues.csv}.  A path outside the study that a run would read
 stops it before any folder is made.  \code{tfl_runner_file()} is the path of the runner file shipped with
 tflspec.  \code{tfl_runner_code()} returns the code of a study's \code{batch.R}
 without its banner and without the call that starts a run (whoever

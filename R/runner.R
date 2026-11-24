@@ -9,7 +9,13 @@
 #' folder holds three entry files (`autoexec_all.R`, `autoexec_ard.R`,
 #' `autoexec_report.R`) that run it again elsewhere (never in place in a
 #' study's `runs/`) and, at the end, `issues.csv` and a `batch.txt` ending
-#' in `Verified : yes`.  A path outside the study that a run would read
+#' in `Verified : yes`.  A study with no `renv.lock` gets one in the folder
+#' at the first run's end: the packages the programs name and what they
+#' need, at the versions installed, with where each came from (a GitHub
+#' package's commit), so `renv::restore()` installs them where the folder
+#' is run again; tflspec is in it only when a program calls it.  A study's
+#' own `renv.lock` is copied as it is, and a package the programs use that
+#' it lacks is a warning in `issues.csv`.  A path outside the study that a run would read
 #' stops it before any folder is made.  `tfl_runner_file()` is the path of the runner file shipped with
 #' tflspec.  `tfl_runner_code()` returns the code of a study's `batch.R`
 #' without its banner and without the call that starts a run (whoever
