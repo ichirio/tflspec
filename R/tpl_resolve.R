@@ -160,6 +160,7 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
     if (inherits(val, "tfl_unset")) val <- NULL
     if (!is.null(val)) attr(val, "fixed") <- attr(val, "origin") <- attr(val, "origins") <- NULL
     .tr_one_value(val, defs$type[[i]], defs$values[[i]], p, o, template, who)
+    .tr_list_value(val, defs$type[[i]], p, o, template, who)
     if (is.null(val) && isTRUE(defs$required[[i]])) missing <- c(missing, p)
     env[p] <- list(val)
     origins[[p]] <- o
@@ -470,6 +471,41 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
          call. = FALSE)
   }
   invisible()
+}
+
+# An argument of a list type (list<...>, alone or beside other members) the
+# report gives: an empty field is "not given" (the argument left out, the
+# template's default) and "(none)" is !unset, so a given list is never empty,
+# has no "" or NA entry, and is not a map where only sequences are declared
+# (a map of "" is what a field read as "name | text" rows gives).  A value
+# from the template, the series or the study is not checked here; R code
+# (!r) and other tagged values are not either.
+.tr_list_value <- function(val, type, p, origin, template, who) {
+  if (is.null(val) || is.na(type) || !identical(origin, "report") || is.object(val)) {
+    return(invisible())
+  }
+  m <- .type_members(type)
+  if (!any(startsWith(m, "list<"))) return(invisible())
+  seq_only <- !any(grepl("^(map|vec|rows|call|step)<", m))
+  blank <- function(e) {
+    is.null(e) || (is.atomic(e) && !is.object(e) &&
+                     (!length(e) || (length(e) == 1L && (is.na(e) || identical(as.character(e), "")))))
+  }
+  entries <- if (is.list(val)) val else as.list(val)
+  why <- if (!length(val)) {
+    "an empty list"
+  } else if (seq_only && any(nzchar(names(val) %||% ""))) {
+    "a map (name: value)"
+  } else if (any(vapply(entries, function(e) is.atomic(e) && length(e) == 1L && !is.object(e) &&
+                          is.na(e), NA))) {
+    "an NA entry"
+  } else if (any(vapply(entries, blank, NA))) {
+    "an empty entry (\"\")"
+  }
+  if (is.null(why)) return(invisible())
+  stop(who, ": ", template, "'s ", p, " is a list (", type, "); the report gives ", why,
+       ". Leave ", p, " out for the template's default, or write !unset for none.",
+       call. = FALSE)
 }
 
 # A map as read (a named list, not a tagged value); an empty list is one too
