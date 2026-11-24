@@ -768,6 +768,7 @@
 
 # a JSON string
 .batch_json <- function(x) {
+  if (!length(x)) return(character())
   x <- gsub("\\", "\\\\", enc2utf8(as.character(x)), fixed = TRUE)
   x <- gsub("\"", "\\\"", x, fixed = TRUE)
   x <- gsub("\n", "\\n", x, fixed = TRUE)
