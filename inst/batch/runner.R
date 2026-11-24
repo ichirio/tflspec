@@ -726,7 +726,10 @@
                                          perl = TRUE, useBytes = TRUE)))
   # and those the code needs beyond what it names (cardx::ard_regression():
   # broom.helpers), from tflspec's table in the head of this file
-  pkgs <- sort(unique(c(lib, ns, .batch_pkgs_in_code(code))))
+  pkgs <- unique(c(lib, ns, .batch_pkgs_in_code(code)))
+  # and those a named package uses when installed (ragg draws rtfreporter's
+  # PNGs): listed only when installed here, as the run used them
+  pkgs <- sort(unique(c(pkgs, unname(.batch_pkg_uses[names(.batch_pkg_uses) %in% pkgs]))))
   pkgs[vapply(pkgs, function(p) nzchar(system.file(package = p)), NA)]
 }
 

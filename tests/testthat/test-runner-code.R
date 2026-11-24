@@ -274,6 +274,7 @@ test_that("tfl_runner_code(): the head carries tflspec's table of the packages c
   eval(parse(text = code[seq_len(which(code == "")[[1L]])]), env)
   expect_identical(env$.batch_code_pkgs, tflspec:::.code_pkgs)
   expect_identical(env$.batch_ard_fn_pkgs, tflspec:::.ard_fn_pkgs)
+  expect_identical(env$.batch_pkg_uses, tflspec:::.pkg_uses)
   x <- c("cox <- survival::coxph(f, data = d)", "cardx::ard_regression(cox, exponentiate = TRUE)",
          "cardx::ard_emmeans_mean_difference(d)", "fit(package = 'mmrm')", "my_ard_survival_x(d)")
   for (one in c(x, paste(x, collapse = "\n"))) {

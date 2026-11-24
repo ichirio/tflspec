@@ -29,6 +29,15 @@
   ard_survival_ = "survival", ard_survival_ = "broom"
 )
 
+# The packages a package uses when they are installed, and that change its
+# output (not needed: without them it still runs, differently).  The
+# runner's renv.lock lists one when the package is named and it is installed
+# where the run is, so a copy run elsewhere makes the same files:
+# rtfreporter and ggplot2::ggsave() draw a plot's PNG with ragg when it is
+# installed, with grDevices::png() when not.  Not a need: tflplanner never
+# asks for them.
+.pkg_uses <- c(rtfreporter = "ragg", ggplot2 = "ragg")
+
 # The packages a piece of code (or a method name) calls
 .pkgs_in_code <- function(code, code_pkgs = .code_pkgs, ard_fn_pkgs = .ard_fn_pkgs) {
   code <- paste(as.character(unlist(code)), collapse = "\n")
@@ -53,5 +62,8 @@
     paste0(".batch_code_pkgs <- c(", paste(q(.code_pkgs), collapse = ", "), ")"),
     paste0(".batch_ard_fn_pkgs <- c(",
            paste(paste(names(.ard_fn_pkgs), "=", q(.ard_fn_pkgs)), collapse = ", "), ")"),
+    "# and those a named package uses when installed, which change its output",
+    paste0(".batch_pkg_uses <- c(",
+           paste(paste(names(.pkg_uses), "=", q(.pkg_uses)), collapse = ", "), ")"),
     fn)
 }
