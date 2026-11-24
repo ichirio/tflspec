@@ -33,6 +33,28 @@
 # the kinds of a report's objects a person names, and the stage results
 .obj_kinds <- c("data", "object", "ard", "model", "value", "plot")
 .obj_result_kinds <- c("ard", "plan", "content", "doc")
+# a name read from a step written as R, but for the step's result (`unknown`:
+# the kinds of tfl_fn_defs()' `returns`, and this one for what R makes)
+.obj_unknown_kind <- "unknown"
+
+# The step's final object, the one the next step reads, by the report's kind
+# (canon 1748456): a step written as R must make it.  Data steps have none.
+# (A step's `analysis: !r` has no key in the SPEC yet: OBJECTS.md B-10.)
+.obj_final <- c(analysis = "ard", table = "plan", listing = "plan", figure = "content")
+
+# The calls that make a name the reader cannot see (assign(), `<<-` and `->>`,
+# ...): a step written as R that has one has names that cannot be checked
+.obj_hidden_assign <- c("assign", "<<-", "list2env", "delayedAssign", "makeActiveBinding",
+                        "source", "sys.source")
+
+# The kind an object made by process calls has: `returns` of its last call
+# in tfl_fn_defs() (`step`'s functions), else `fallback`
+.obj_returns_kind <- function(fn, step, fallback) {
+  if (is.null(fn) || length(fn) != 1L || is.na(fn)) return(fallback)
+  d <- tfl_fn_defs(step)
+  r <- d$returns[match(.schema_fn_name(fn), d$fn)]
+  if (!length(r) || is.na(r) || !r %in% setdiff(.fn_def_returns, .obj_unknown_kind)) fallback else r
+}
 
 # an entry's field as one text, or NA
 .obj_chr <- function(x) {
@@ -200,7 +222,12 @@
   top <- which(vapply(an, function(e) is.na(.obj_chr(e$parent)), NA))
   a_ids <- vapply(an, function(e) .obj_chr(e$id), "")
   types <- vapply(an, function(e) .obj_chr(e$type), "")
+  # (a `type:` the item writes is its kind; else the kind its method's
+  # function gives, `returns`)
+  typed <- !is.na(types)
   types[is.na(types)] <- "ard"
+  calls <- tfl_ard_methods()
+  a_fn <- .schema_fn_name(calls$call[match(vapply(an, function(e) .obj_chr(e$method), ""), calls$method)])
   a_pos <- rep(NA_integer_, length(an))
   if (length(top)) {
     pops <- unique(stats::na.omit(vapply(c(data, an), function(e) .obj_chr(e$population), "")))
@@ -220,7 +247,8 @@
       }
       w <- sprintf("analysis[%d]", i)
       # (the item's name is its stage's default, from its id: no name key yet)
-      row(NA_character_, a_ids[i], cn, "analysis", types[i], w, isTRUE(e$fixed), .obj_chr(e$data),
+      kd <- if (typed[i]) types[i] else .obj_returns_kind(a_fn[i], "analysis", types[i])
+      row(NA_character_, a_ids[i], cn, "analysis", kd, w, isTRUE(e$fixed), .obj_chr(e$data),
           "default")
       a_pos[i] <- length(rows)
     }
@@ -265,8 +293,11 @@
       r_at("content", cw, "content", c(content = txt))
       # a step written as R: its top-level assignments are its objects
       # (canon 1748456); the stage's result is the row below
-      for (nm in setdiff(.obj_r_assigned(txt), "content")) {
-        row(p$object, nm, nm, "content", "object", paste0(cw, " (R)"), FALSE)
+      # (kind `unknown` and not changeable: a name read from R is picked,
+      # not renamed -- the R is edited; the step's final object is the
+      # result row below)
+      for (nm in setdiff(.obj_r_assigned(txt), .obj_final_of(p$kind))) {
+        row(p$object, nm, nm, "content", .obj_unknown_kind, paste0(cw, " (R)"), TRUE)
       }
     } else {
       is_plot <- vapply(ct, inherits, NA, "tfl_plot")
@@ -300,7 +331,9 @@
         # figure's plot today; when tables take named blocks, list them here)
         if (is_plot[i] && !identical(p$kind, "figure")) next
         if (is_plot[i]) {
-          row(p$object, it$fn, if (one) "content" else .fig_plot_name(it$fn), "content", "plot", w, FALSE)
+          lastfn <- if (length(it$items)) it$items[[length(it$items)]]$fn else NULL
+          row(p$object, it$fn, if (one) "content" else .fig_plot_name(it$fn), "content",
+              .obj_returns_kind(lastfn, "content", "plot"), w, FALSE)
           for (k in seq_along(it$items)) {
             item_uses(it$items[[k]], sprintf("%s[%d]", w, k), it$fn)
           }
@@ -310,7 +343,7 @@
       }
     }
     if (is.na(p$object)) {
-      res <- if (inherits(ct, "tfl_r") || identical(p$kind, "figure")) "content" else "plan"
+      res <- .obj_final_of(p$kind)
       row(NA_character_, NA_character_, res, "content", res, "content", FALSE, name_source = "default")
     }
   }
@@ -384,20 +417,28 @@
 }
 
 # The names a step written as R assigns at its top level (`x <- ...`,
-# `x = ...`, `... -> x`), in order; attribute `assign`: TRUE when it calls
-# assign() (names not seen); NULL when it does not parse
+# `x = ...`, `... -> x`), in order; attribute `assign`: the calls that make
+# names not seen (.obj_hidden_assign: assign(), `<<-` and `->>`, ...) it has,
+# character(0) for none; NULL when it does not parse
 .obj_r_assigned <- function(code) {
   e <- tryCatch(parse(text = code, keep.source = FALSE), error = function(e) NULL)
   if (is.null(e)) return(NULL)
   out <- character()
   for (x in as.list(e)) {
-    if (is.call(x) && as.character(x[[1L]])[1L] %in% c("<-", "=", "<<-") && is.symbol(x[[2L]])) {
+    if (is.call(x) && as.character(x[[1L]])[1L] %in% c("<-", "=") && is.symbol(x[[2L]])) {
       out <- c(out, as.character(x[[2L]]))
     } else if (is.call(x) && identical(as.character(x[[1L]])[1L], "->") && is.symbol(x[[3L]])) {
       out <- c(out, as.character(x[[3L]]))
     }
   }
-  structure(unique(out), assign = "assign" %in% all.names(e))
+  structure(unique(out), assign = intersect(.obj_hidden_assign, all.names(e)))
+}
+
+# The step's final object by the report's kind (a figure's `content`, a
+# table's or listing's `plan`; any other: `plan`)
+.obj_final_of <- function(kind) {
+  k <- unname(.obj_final[kind])
+  if (length(k) != 1L || is.na(k)) "plan" else k
 }
 
 .obj_empty <- function() {
@@ -437,13 +478,16 @@
 #'   `km`, an ARD item's default name, `ard`); `id` (an analysis item's id,
 #'   the ARS analysis id; else `NA`); `stage` (`data`, `analysis`,
 #'   `content`, `page`); `kind` (`data`, `object`, `ard`, `model`, `value`,
-#'   `plot`, and the stage results `ard`, `plan`, `content`, `doc`);
+#'   `plot`, and the stage results `ard`, `plan`, `content`, `doc`; an object
+#'   made by process calls has the `returns` of its last call
+#'   ([tfl_fn_defs()]) when that is known; a name read from a step written as
+#'   R is `unknown`, but the step's final object);
 #'   `where` (the stage and the position: `data[2]`, `analysis[1]`,
 #'   `content[3]`, `data.steps[2]`); `name_source` (`written`: the SPEC
 #'   writes the name; `default`: the stage's default -- an analysis item's
 #'   from its id, a stage's result); `changeable` (`FALSE`: the report
 #'   cannot rename it -- the template defines it, it is a stage's result,
-#'   the program makes it); `used` (something names it or reads it; a
+#'   the program makes it, a name read from a step written as R); `used` (something names it or reads it; a
 #'   stage's result and an ARD item count as used); `from` (what it is made
 #'   from: a dataset or a data above, an item's `data`, `NA`); `used_by`
 #'   (the items that name it or whose R reads it, ` | ` between them).  Its
@@ -604,6 +648,9 @@ tfl_output_rename <- function(output, old, new, study = NULL) {
   r <- ob[k, ]
   if (identical(old, new)) return(structure(output, r_uses = x$uses[0L, , drop = FALSE]))
   if (isTRUE(r$fixed)) {
+    if (grepl(" (R)", r$where, fixed = TRUE)) {
+      .ard_stop(sprintf("%s: %s is a name the step's R makes: edit the R to change it.", who, old))
+    }
     .ard_stop(sprintf("%s: %s is %s's name: the report cannot change it.", who, old,
                       if (r$stage == "data" && !is.na(r$spec_name)) "the template" else "the program"))
   }
@@ -875,20 +922,26 @@ tfl_output_name_check <- function(output, study = NULL) {
     add(part = "names", item = nm, level = "error", message = sprintf(
       "`%s` (%s) is %s: name the object otherwise", nm, ob$where[k], what))
   }
-  # a step written as R: its result is assigned; assign()'s names cannot be
-  # checked (canon 1748456)
+  # a step written as R: its final object is made (a stop: the next step
+  # reads it); the names assign() and the like make cannot be checked
+  # (canon 1748456)
   for (pp in .obj_parts(o)) {
     if (!inherits(pp$content, "tfl_r")) next
-    nm <- .obj_r_assigned(paste(as.character(pp$content), collapse = "\n"))
+    nm <- .obj_r_assigned(paste(as.character(pp$content), collapse = "
+"))
     if (is.null(nm)) next
     at <- if (is.na(pp$object)) "content" else paste0(pp$object, ": content")
-    if (!"content" %in% nm && !isTRUE(attr(nm, "assign"))) {
-      add(part = "names", item = at, level = "note", message = paste0(
-        "the content written as R assigns no `content` at its top level: the page reads `content`"))
+    fin <- .obj_final_of(pp$kind)
+    hid <- attr(nm, "assign")
+    if (!fin %in% nm && !length(hid)) {
+      add(part = "names", item = at, level = "stop", message = sprintf(
+        "the content written as R makes no `%s` at its top level: it is the step's result, the next step reads it",
+        fin))
     }
-    if (isTRUE(attr(nm, "assign"))) {
-      add(part = "names", item = at, level = "note", message = paste0(
-        "the content written as R calls assign(): the names it makes cannot be checked"))
+    if (length(hid)) {
+      add(part = "names", item = at, level = "note", message = sprintf(
+        "the content written as R uses %s: the names it makes cannot be checked",
+        paste0(hid, ifelse(grepl("^[A-Za-z]", hid), "()", ""), collapse = ", ")))
     }
   }
   # 11) a name nothing uses (not the template's, not a stage's result; a

@@ -233,21 +233,74 @@ test_that("check: a figure's name nothing above makes; a name below, twice, a da
   expect_identical(p$level, "note")
 })
 
-test_that("a content written as R: its top-level names are its objects; its result is checked", {
+test_that("a content written as R: its names are unknown and fixed; its final object is checked", {
   t1 <- oo_table()
   t1$content <- tfl_r("tab <- table_plan(ard)
-content <- tab |> plan_cells()")
+plan <- tab |> plan_cells()")
   x <- tfl_output_objects(t1)
-  expect_identical(x$name[x$stage == "content"], c("tab", "content"))
+  expect_identical(x$name[x$stage == "content"], c("tab", "plan"))
   expect_identical(x$used_by[x$name == "tab"], "content")
+  # a name read from R: unknown and not changeable; the final object has the step's kind
+  expect_identical(x$kind[x$name == "tab"], "unknown")
+  expect_false(x$changeable[x$name == "tab"])
+  expect_identical(x$kind[x$name == "plan"], "plan")
+  expect_error(tfl_output_rename(t1, "tab", "tab2"), "edit the R")
   expect_identical(nrow(tflspec:::.check_object_rows(t1, "T-1")), 0L)
-  t1$content <- tfl_r("plan <- table_plan(ard)")
+  # no final object (plan for a table or a listing): a stop
+  t1$content <- tfl_r("content <- table_plan(ard)")
   p <- tflspec:::.check_object_rows(t1, "T-1")
-  expect_true(any(grepl("assigns no `content`", p$message, fixed = TRUE)))
-  t1$content <- tfl_r("assign('content', table_plan(ard))")
-  p <- tflspec:::.check_object_rows(t1, "T-1")
-  expect_identical(p$level, "note")
-  expect_match(p$message, "cannot be checked", fixed = TRUE)
+  expect_identical(p$level, "stop")
+  expect_match(p$message, "makes no `plan`", fixed = TRUE)
+  t1$kind <- "listing"
+  expect_identical(tflspec:::.check_object_rows(t1, "T-1")$level, "stop")
+  # a figure's final object is `content`
+  f1 <- oo_figure()
+  f1$content <- tfl_r("km <- ggplot2::ggplot()")
+  p <- tflspec:::.check_object_rows(f1, "F-1")
+  expect_identical(p$level[p$level == "stop"], "stop")
+  expect_match(p$message[p$level == "stop"], "makes no `content`", fixed = TRUE)
+  f1$content <- tfl_r("content <- ggplot2::ggplot()")
+  expect_false(any(tflspec:::.check_object_rows(f1, "F-1")$level == "stop"))
+  x <- tfl_output_objects(f1)
+  expect_identical(x$kind[x$name == "content" & x$stage == "content"], "content")
+})
+
+test_that("a content written as R: the calls that hide names are one note, no stop", {
+  hid <- c("assign('plan', 1)", "plan <<- 1", "2 ->> plan", "list2env(list(plan = 1), environment())",
+           "delayedAssign('plan', 1)", "makeActiveBinding('plan', function() 1, environment())",
+           "source('a.R')", "sys.source('a.R', environment())")
+  want <- c("assign", "<<-", "<<-", "list2env", "delayedAssign", "makeActiveBinding", "source", "sys.source")
+  for (i in seq_along(hid)) {
+    t1 <- oo_table()
+    t1$content <- tfl_r(hid[i])
+    p <- tflspec:::.check_object_rows(t1, "T-1")
+    expect_identical(p$level, "note", info = hid[i])
+    expect_match(p$message, "cannot be checked", fixed = TRUE, info = hid[i])
+    expect_identical(attr(tflspec:::.obj_r_assigned(hid[i]), "assign"), want[i], info = hid[i])
+  }
+  # `<<-` makes no name that is read; a plain top-level assign is not hidden
+  expect_identical(as.character(tflspec:::.obj_r_assigned("a <<- 1
+b <- 2")), "b")
+  expect_identical(attr(tflspec:::.obj_r_assigned("b <- 2"), "assign"), character())
+})
+
+test_that("an object's kind is the `returns` of its last call, else the rule it had", {
+  rk <- tflspec:::.obj_returns_kind
+  expect_identical(rk("table_plan", "content", "x"), "plan")
+  expect_identical(rk("not_a_function", "content", "plot"), "plot")
+  expect_identical(rk(".r", "content", "plot"), "plot")
+  expect_identical(rk(NULL, "content", "plot"), "plot")
+  d <- tfl_fn_defs("content")
+  x <- tfl_output_objects(oo_figure())
+  for (nm in c("km", "risk")) {
+    last <- c(km = "labs", risk = "tfl_risk_panel")[[nm]]
+    r <- d$returns[d$fn == last]
+    expect_identical(x$kind[x$name == nm], if (length(r) && r != "unknown") r else "plot")
+  }
+  # a `type:` an item writes is its kind
+  y <- tfl_output_objects(oo_table())
+  expect_identical(y$kind[which(y$id == "KM_FIT")], "model")
+  expect_identical(y$kind[which(y$id == "AE")], "ard")
 })
 
 test_that("a study's report: the program's own data, what reads it, the ARD program's names", {
