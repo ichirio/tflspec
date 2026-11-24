@@ -56,14 +56,9 @@ tlp_both <- function(d, id, tpl, codelists = list()) {
 }
 
 # Each template with a labels argument (series and the package's own), its
-# arguments and the heading the program says
+# arguments and the heading the program says (the series' demog left
+# tflspec_v1, canon 2026-11-24: tflspec_summary is its basic template)
 tlp_cases <- list(
-  "tflspec_v1/demog" = list(
-    tpl = list(name = "tflspec_v1/demog",
-               analysis = list(by = "TRT01A", continuous = "AGE", categorical = c("SEX", "RACE")),
-               content = list(labels = list(AGE = "Age (years)", SEX = "Sex, n (%)", RACE = "Race"),
-                              value_labels = list(SEX = list(F = "Female", M = "Male")))),
-    line = "variable = c(AGE = \"Age (years)\", SEX = \"Sex, n (%)\", RACE = \"Race\"),"),
   "tflspec_v1/tflspec_summary" = list(
     tpl = list(name = "tflspec_v1/tflspec_summary",
                analysis = list(by = "TRT01A", continuous = "AGE", categorical = "SEX"),
@@ -129,7 +124,7 @@ test_that("a series template's labels: the sheets write the planner's plan_label
   # the sheets write them -- the twin of tflplanner#711)
   arms <- list(TRT01A = list(list(value = "Drug X", label = "Drug X 200 mg"),
                              list(value = "Control", label = "Control 100 mg")))
-  for (nm in c("tflspec_v1/demog", "tflspec_v1/tflspec_summary")) {
+  for (nm in "tflspec_v1/tflspec_summary") {
     id <- paste0("T-", gsub("[^A-Za-z0-9]", "-", nm))
     x <- tlp_both(d, id, tlp_cases[[nm]]$tpl, codelists = arms)
     sh <- suppressWarnings(tfl_sheets_from_spec(x$study, stats::setNames(list(tfl_read_output(x$file)), id),
@@ -172,7 +167,7 @@ test_that("the generated program runs: the plan of a tiny made-up ADSL, its head
                      TRT01A = rep(c("Drug A", "Placebo"), 3), AGE = c(34, 51, 47, 62, 29, 58),
                      SEX = c("F", "M", "M", "F", "F", "M"), SAFFL = "Y", stringsAsFactors = FALSE)
   d <- tlp_study(withr::local_tempdir(), adsl = adsl)
-  tpl <- list(name = "tflspec_v1/demog",
+  tpl <- list(name = "tflspec_v1/tflspec_summary",
               analysis = list(by = "TRT01A", continuous = "AGE", categorical = "SEX"),
               content = list(labels = list(AGE = "Age (years)", SEX = "Sex, n (%)"),
                              value_labels = list(SEX = list(F = "Female", M = "Male"))))
