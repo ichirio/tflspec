@@ -54,7 +54,8 @@ test_that("every template of the series reads, with valid new columns", {
       n <- n + 1L
     }
   }
-  expect_gte(n, 11L)
+  # the basic templates left after the purpose templates were retired (2026-11-24)
+  expect_gte(n, 7L)
 })
 
 test_that("tier key comes from the function's visible: list and main: true", {
