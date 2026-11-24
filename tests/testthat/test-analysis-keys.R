@@ -1,6 +1,6 @@
 # An analysis item's `name:` and `from:` (OBJECTS.md B-4, item 2): reading,
-# the object list, the rename, the checks, and the stop at the ARD program
-# (no writer before B-5).
+# the object list, the rename, the checks, and the ARD program (the writers
+# are B-5's: test-b5-writers.R).
 
 ak_read <- function(lines) {
   f <- tempfile(fileext = ".yml")
@@ -114,7 +114,7 @@ ak_code <- function(d, a) {
     error = function(e) paste("ERROR:", conditionMessage(e)))
 }
 
-test_that("the ARD program stops for `name:` / `from:`; an item without them is unchanged", {
+test_that("the ARD program writes `name:` / `from:` (B-5); an item without them is unchanged", {
   skip_on_cran()
   skip_if_not_installed("haven")
   root <- tempfile("tflspec-ak")
@@ -127,10 +127,8 @@ test_that("the ARD program stops for `name:` / `from:`; an item without them is 
   expect_false(startsWith(plain, "ERROR:"))
   # the same text twice: nothing changed by the reader
   expect_identical(ak_code(d, base), plain)
-  for (extra in list(list(name = "walk_ard"), list(from = "adsl_sub"))) {
-    a <- c(base[setdiff(names(base), if ("from" %in% names(extra)) "data")], extra)
-    msg <- ak_code(d, a)
-    expect_match(msg, "^ERROR: `name:` / `from:` on an analysis item \\(WALK\\) is not written into the ARD program yet: it comes with B-5",
-                 fixed = FALSE)
-  }
+  nm <- ak_code(d, c(base, list(name = "walk_ard")))
+  expect_match(nm, "\nwalk_ard <- adsl_sub |>\n  ard_summary(", fixed = TRUE)
+  fr <- ak_code(d, c(base[setdiff(names(base), "data")], list(from = "adsl_sub")))
+  expect_match(fr, "\n.ard_walk <- adsl_sub |>\n  ard_summary(", fixed = TRUE)
 })

@@ -1228,8 +1228,14 @@
     own <- is.na(dcol[rows])
     take_of <- lapply(split(seq_along(rows)[own], grp[own]), function(k)
       unique(unlist(lapply(rows[k], function(i) .den_needs(a[i, ], keys)))))
+    # the items' own names (`name:`) and inputs (`from:`)
+    given_nm <- .item_names_given(a)
+    from_of <- .item_froms_given(a)
+    for (i in rows) .ard_from_check(a[i, , drop = FALSE])
     data_name <- vapply(rows, function(i) {
       r <- a[i, ]
+      # an item with `from:` reads that object (the pipe), no data of its own
+      if (!is.na(from_of[i])) return(from_of[[i]])
       # on an analysis data: it, or its records the analysis's condition keeps
       if (!is.na(dcol[i])) {
         if (is.na(r$where)) return(dcol[i])
@@ -1294,8 +1300,11 @@
       nm
     }, "")
     names(data_name) <- as.character(rows)
+    # (an item's `from:` is an object, not data the program makes: no data
+    # of its own, as an item with no dataset)
     dn <- data.frame(output_id = o, analysis_id = a$analysis_id[rows],
-                     data = unname(data_name), stringsAsFactors = FALSE)
+                     data = ifelse(is.na(from_of[rows]), unname(data_name), "NULL"),
+                     stringsAsFactors = FALSE)
     if (several) {
       # the report's part, its code lists put on what its analyses read
       # once the analyses are written (below), as in one report's program
@@ -1311,7 +1320,7 @@
     # each analysis's ARD under a name of its own: .ard_<id>
     top <- rows[is.na(par[rows])]
     fun_names <- .ard_fun_names()
-    ard_names <- .ard_item_names(a$analysis_id[top], c(taken, fun_names))
+    ard_names <- .ard_item_names(a$analysis_id[top], c(taken, fun_names), given = given_nm[top])
     avoid <- c(taken, ard_names, paste0(ard_names, "_conditions"), paste0(ard_names, "_one"),
                "ard", "ards", "report_id", if (length(lv)) .cl_name(names(lv)),
                .ard_helper_names)
@@ -1333,9 +1342,9 @@
       }
       lines <- if (.item_type(r) == "model") {
         # a model: its call under its own name, not an ARD's
-        mn <- .ard_model_name(r$analysis_id, avoid)
+        mn <- if (!is.na(given_nm[i])) given_nm[i] else .ard_model_name(r$analysis_id, avoid)
         avoid <- c(avoid, mn)
-        .ard_model_lines(r, dname, mn)
+        .ard_model_lines(r, dname, mn, from = !is.na(from_of[i]))
       } else if (!is.null(cond)) {
         # condition rows: the analysis once in each (purrr::pmap); a param
         # in the call's arguments or its post steps the function's argument
@@ -2003,10 +2012,48 @@
 # The R names the program gives the report's items (one builder: the ARD
 # program and tfl_output_objects() both call these).  An ARD or a value
 # item: .ard_<its id, lower case, other characters _>, made unique against
-# `taken` (_1, _2 ...); a model item: its id, lower case.
-.ard_item_names <- function(ids, taken = character()) {
-  nm <- make.unique(c(taken, paste0(".ard_", gsub("[^a-z0-9]+", "_", tolower(ids)))), sep = "_")
-  if (length(taken)) nm[-seq_along(taken)] else nm
+# `taken` (_1, _2 ...); a model item: its id, lower case.  `given`: the
+# names the items write (`name:`, NA for none), used as they are; the others
+# get the default, made unique against them too (B-5: the program and
+# tfl_output_objects() read the names here, so they cannot differ).
+.ard_item_names <- function(ids, taken = character(), given = NULL) {
+  if (is.null(given)) given <- rep(NA_character_, length(ids))
+  have <- !is.na(given)
+  taken <- c(taken, given[have])
+  nm <- make.unique(c(taken, paste0(".ard_", gsub("[^a-z0-9]+", "_", tolower(ids[!have])))), sep = "_")
+  given[!have] <- if (length(taken)) nm[-seq_along(taken)] else nm
+  given
+}
+
+# The items' own names (`name:`) and inputs (`from:`) of the analyses
+# `a`, NA where an item has none (a sheet without the columns: none)
+.item_names_given <- function(a) {
+  vapply(seq_len(nrow(a)), function(i) .item_cell(a[i, , drop = FALSE], "name"), "")
+}
+.item_froms_given <- function(a) {
+  vapply(seq_len(nrow(a)), function(i) .item_cell(a[i, , drop = FALSE], "from"), "")
+}
+
+# An item with `from:` takes its input from that object (the pipe), not
+# from a dataset it makes itself; it has no parent (a nested item is a part
+# of its parent's call: no object of its own).  Stops on what it cannot say.
+.ard_from_check <- function(r) {
+  who <- sprintf("analysis item %s", r$analysis_id)
+  if (!is.na(.item_cell(r, "parent")) &&
+      (!is.na(.item_cell(r, "from")) || !is.na(.item_cell(r, "name")))) {
+    .ard_stop(sprintf(paste0("`name:` / `from:` on a nested item (%s, in %s) cannot be written: ",
+                             "it is a part of its parent's call, not an object of its own; ",
+                             "put them on the parent."), r$analysis_id, r$parent))
+  }
+  if (is.na(.item_cell(r, "from"))) return(invisible())
+  own <- c("data", "dataset", "records", "where")
+  bad <- own[!vapply(own, function(k) is.na(.item_cell(r, k)), NA)]
+  if (length(bad)) {
+    .ard_stop(sprintf(paste0("%s has `from:` and `%s`: `from:` is its input (the pipe), so it makes ",
+                             "no data of its own; drop one of them."),
+                      who, paste(bad, collapse = "`, `")))
+  }
+  invisible()
 }
 .ard_model_name <- function(id, avoid = character()) {
   make.unique(c(avoid, make.names(tolower(id))), sep = "_")[length(avoid) + 1L]
@@ -2233,9 +2280,14 @@
 
 # A model item (type: model): its call under its own name, not bound into
 # the ARD; the call's `data` the item's data
-.ard_model_lines <- function(r, data, name) {
+.ard_model_lines <- function(r, data, name, from = FALSE) {
   args <- .item_cell(r, "args")
   args <- if (is.na(args)) character() else trimws(args)
+  if (from) {
+    # `name <- from |> method(args)`: the pipe fills the first argument
+    return(c(sprintf("# %s: a model, kept as %s (not in the ARD)", r$analysis_id, name),
+             .pipe_code(name, data, list(sprintf("%s(%s)", r$method, paste(args, collapse = ", "))))))
+  }
   if (!length(args) || !grepl("\\bdata\\s*=", args)) {
     args <- paste(c(args, paste0("data = ", data)), collapse = ", ")
   } else {

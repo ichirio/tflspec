@@ -58,7 +58,10 @@
                # a template's item: its type, the params its condition rows
                # give, its own columns and how its analyses are named
                "type", "params", "derive", "levels", "missing_row", "missing_label",
-               "analysis_per"),
+               "analysis_per",
+               # the item's R name (blank: .ard_<id>) and its input object
+               # (the pipe: `name <- from |> method(...)`; blank: its data)
+               "name", "from"),
   # an item's condition rows (an item with params): a row a run, in `row`
   # order; then a column a param, the items' params together (a cell blank
   # where an item has no such param), and row_analysis_id, a row's own id
