@@ -644,7 +644,7 @@ tfl_schema_check <- function(item) {
   out <- list()
   # (a string that is no condition stops in plan_filter and in a formula's
   # slot; elsewhere -- facet_wrap(facets = "PARAM") -- it is written as before)
-  strict <- identical(.schema_fn_name(fn), "plan_filter")
+  strict <- .schema_strict_r(fn)
   for (a in names(args)) {
     v <- args[[a]]
     if (inherits(v, "tfl_unset")) {

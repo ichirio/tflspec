@@ -68,6 +68,16 @@ test_that("a string in a slot of only R stops when it is no neutral condition", 
   # a quote inside is doubled, as YAML's single quotes write it
   expect_error(rt_read(c("  - plan_filter: {where: \"grepl('x', A)\"}")),
                "`!r 'grepl(''x'', A)'`", fixed = TRUE)
+  # a formula's slot (plan_cell_style's where)
+  expect_error(rt_read(c("  - plan_cell_style: {where: 'between(p, 0, 1)', bold: true}")),
+               "plan_cell_style(where = ) takes R", fixed = TRUE)
+})
+
+test_that("an `r` slot that writes a string keeps it, as the code writes it", {
+  o <- rt_read(c("  - plan_columns: {cell_format: right_align}",
+                 "  - plan_paginate_cols: {col_header: Continued}"))
+  expect_identical(o$content[[1]]$args$cell_format, "right_align")
+  expect_identical(o$content[[2]]$args$col_header, "Continued")
 })
 
 test_that("a type with a member of text keeps a plain string", {
@@ -96,6 +106,11 @@ test_that("the rule reads the type only", {
   expect_false(lost(g, ty("template|list<guard|template>")))
   expect_false(lost(g, ty("string|r")))
   expect_false(lost(list(tfl_r(g), "{n}"), ty("list<guard|template>")))
+  # an `r` takes a string but in a strict slot of only R; a formula never
+  expect_false(lost("right_align", ty("r")))
+  expect_false(lost("abc", ty("list<number>|r")))
+  expect_true(lost("f(x)", ty("list<r>|r"), strict = TRUE))
+  expect_true(lost("f(x)", ty("formula")))
   # a value no member fits, as R or not, is the check's (tfl_schema_check())
   expect_false(lost(list(a = 1), ty("guard")))
   expect_false(lost(NULL, ty("guard")))
