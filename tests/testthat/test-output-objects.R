@@ -236,31 +236,29 @@ test_that("check: a figure's name nothing above makes; a name below, twice, a da
 test_that("a content written as R: its names are unknown and fixed; its final object is checked", {
   t1 <- oo_table()
   t1$content <- tfl_r("tab <- table_plan(ard)
-plan <- tab |> plan_cells()")
+content <- tab |> plan_cells()")
   x <- tfl_output_objects(t1)
-  expect_identical(x$name[x$stage == "content"], c("tab", "plan"))
+  expect_identical(x$name[x$stage == "content"], c("tab", "content"))
   expect_identical(x$used_by[x$name == "tab"], "content")
   # a name read from R: unknown and not changeable; the final object has the step's kind
   expect_identical(x$kind[x$name == "tab"], "unknown")
   expect_false(x$changeable[x$name == "tab"])
-  expect_identical(x$kind[x$name == "plan"], "plan")
+  expect_identical(x$kind[x$name == "content"], "content")
   expect_error(tfl_output_rename(t1, "tab", "tab2"), "edit the R")
   expect_identical(nrow(tflspec:::.check_object_rows(t1, "T-1")), 0L)
-  # no final object (plan for a table or a listing): a stop
-  t1$content <- tfl_r("content <- table_plan(ard)")
-  p <- tflspec:::.check_object_rows(t1, "T-1")
-  expect_identical(p$level, "stop")
-  expect_match(p$message, "makes no `plan`", fixed = TRUE)
-  t1$kind <- "listing"
-  expect_identical(tflspec:::.check_object_rows(t1, "T-1")$level, "stop")
-  # a figure's final object is `content`
+  # no `content` (the final object of R content, whatever the kind): an error
+  for (k in c("table", "listing", "figure")) {
+    t1$kind <- k
+    t1$content <- tfl_r("plan <- table_plan(ard)")
+    p <- tflspec:::.check_object_rows(t1, "T-1")
+    expect_identical(p$level[p$part == "names"], "error", info = k)
+    expect_match(p$message[p$part == "names"], "makes no `content`", fixed = TRUE)
+    x <- tfl_output_objects(t1)
+    expect_identical(x$kind[x$name == "plan" & x$stage == "content"], "unknown")
+  }
   f1 <- oo_figure()
-  f1$content <- tfl_r("km <- ggplot2::ggplot()")
-  p <- tflspec:::.check_object_rows(f1, "F-1")
-  expect_identical(p$level[p$level == "stop"], "stop")
-  expect_match(p$message[p$level == "stop"], "makes no `content`", fixed = TRUE)
   f1$content <- tfl_r("content <- ggplot2::ggplot()")
-  expect_false(any(tflspec:::.check_object_rows(f1, "F-1")$level == "stop"))
+  expect_false(any(tflspec:::.check_object_rows(f1, "F-1")$level == "error"))
   x <- tfl_output_objects(f1)
   expect_identical(x$kind[x$name == "content" & x$stage == "content"], "content")
 })

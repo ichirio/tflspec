@@ -38,9 +38,13 @@
 .obj_unknown_kind <- "unknown"
 
 # The step's final object, the one the next step reads, by the report's kind
-# (canon 1748456): a step written as R must make it.  Data steps have none.
-# (A step's `analysis: !r` has no key in the SPEC yet: OBJECTS.md B-10.)
+# (canon 1748456).  A step written as R must make it.  Data steps have none.
+# The card form's (`.obj_final`) and the R form's (`.obj_r_final`): a content
+# written as R leaves `content` for every kind (.content_own_run() reads it);
+# a table's or listing's card-form content is the `plan`.  `analysis` is
+# unused for now: the SPEC has no `analysis: !r` yet (OBJECTS.md B-10).
 .obj_final <- c(analysis = "ard", table = "plan", listing = "plan", figure = "content")
+.obj_r_final <- c(analysis = "ard", table = "content", listing = "content", figure = "content")
 
 # The calls that make a name the reader cannot see (assign(), `<<-` and `->>`,
 # ...): a step written as R that has one has names that cannot be checked
@@ -296,7 +300,7 @@
       # (kind `unknown` and not changeable: a name read from R is picked,
       # not renamed -- the R is edited; the step's final object is the
       # result row below)
-      for (nm in setdiff(.obj_r_assigned(txt), .obj_final_of(p$kind))) {
+      for (nm in setdiff(.obj_r_assigned(txt), .obj_final_of(p$kind, TRUE))) {
         row(p$object, nm, nm, "content", .obj_unknown_kind, paste0(cw, " (R)"), TRUE)
       }
     } else {
@@ -343,7 +347,7 @@
       }
     }
     if (is.na(p$object)) {
-      res <- .obj_final_of(p$kind)
+      res <- .obj_final_of(p$kind, inherits(ct, "tfl_r"))
       row(NA_character_, NA_character_, res, "content", res, "content", FALSE, name_source = "default")
     }
   }
@@ -434,11 +438,12 @@
   structure(unique(out), assign = intersect(.obj_hidden_assign, all.names(e)))
 }
 
-# The step's final object by the report's kind (a figure's `content`, a
-# table's or listing's `plan`; any other: `plan`)
-.obj_final_of <- function(kind) {
-  k <- unname(.obj_final[kind])
-  if (length(k) != 1L || is.na(k)) "plan" else k
+# The step's final object by the report's kind: of the card form (a table's
+# or listing's `plan`, a figure's `content`; any other: `plan`), or of a
+# content written as R (`content`)
+.obj_final_of <- function(kind, r = FALSE) {
+  k <- unname((if (r) .obj_r_final else .obj_final)[kind])
+  if (length(k) != 1L || is.na(k)) if (r) "content" else "plan" else k
 }
 
 .obj_empty <- function() {
@@ -922,7 +927,7 @@ tfl_output_name_check <- function(output, study = NULL) {
     add(part = "names", item = nm, level = "error", message = sprintf(
       "`%s` (%s) is %s: name the object otherwise", nm, ob$where[k], what))
   }
-  # a step written as R: its final object is made (a stop: the next step
+  # a step written as R: its final object is made (an error: the next step
   # reads it); the names assign() and the like make cannot be checked
   # (canon 1748456)
   for (pp in .obj_parts(o)) {
@@ -931,10 +936,10 @@ tfl_output_name_check <- function(output, study = NULL) {
 "))
     if (is.null(nm)) next
     at <- if (is.na(pp$object)) "content" else paste0(pp$object, ": content")
-    fin <- .obj_final_of(pp$kind)
+    fin <- .obj_final_of(pp$kind, TRUE)
     hid <- attr(nm, "assign")
     if (!fin %in% nm && !length(hid)) {
-      add(part = "names", item = at, level = "stop", message = sprintf(
+      add(part = "names", item = at, level = "error", message = sprintf(
         "the content written as R makes no `%s` at its top level: it is the step's result, the next step reads it",
         fin))
     }
