@@ -1311,10 +1311,7 @@
     # each analysis's ARD under a name of its own: .ard_<id>
     top <- rows[is.na(par[rows])]
     fun_names <- .ard_fun_names()
-    ard_names <- make.unique(c(taken, fun_names,
-                               paste0(".ard_", gsub("[^a-z0-9]+", "_",
-                                                   tolower(a$analysis_id[top])))),
-                             sep = "_")[-seq_along(c(taken, fun_names))]
+    ard_names <- .ard_item_names(a$analysis_id[top], c(taken, fun_names))
     avoid <- c(taken, ard_names, paste0(ard_names, "_conditions"), paste0(ard_names, "_one"),
                "ard", "ards", "report_id", if (length(lv)) .cl_name(names(lv)),
                .ard_helper_names)
@@ -1336,7 +1333,7 @@
       }
       lines <- if (.item_type(r) == "model") {
         # a model: its call under its own name, not an ARD's
-        mn <- make.unique(c(avoid, make.names(tolower(r$analysis_id))), sep = "_")[length(avoid) + 1L]
+        mn <- .ard_model_name(r$analysis_id, avoid)
         avoid <- c(avoid, mn)
         .ard_model_lines(r, dname, mn)
       } else if (!is.null(cond)) {
@@ -1503,7 +1500,7 @@
   syms <- unique(unlist(lapply(rest, function(l)
     tryCatch(all.names(parse(text = l, keep.source = FALSE)),
              error = function(e) character()))))
-  # a data that is another under a name of its own (`adsl_saf <- pop_saf`,
+  # a data that is another under a name of its own (`adsl_sub <- pop_saf`,
   # the study's program keeps pop_* for every report): what it names is
   # read too -- it has no step of its own to put the code lists on
   alias <- "^([A-Za-z.][A-Za-z0-9._]*) <- ([A-Za-z.][A-Za-z0-9._]*)$"
@@ -1639,16 +1636,16 @@
   .ard_call_lines(.ard_analysis_call(x, r, keys, subj, data = data), r, data, name)
 }
 
-# An analysis data that is an analysis set and nothing else (`adsl_saf <-
+# An analysis data that is an analysis set and nothing else (`adsl_sub <-
 # pop_saf`), when the set is used for nothing else in the program: made
 # once, under the data's name, where the analysis data are
-# (`adsl_saf <- adsl |> dplyr::filter(SAFFL == "Y") |> ...`), and no pop_saf.
+# (`adsl_sub <- adsl |> dplyr::filter(SAFFL == "Y") |> ...`), and no pop_saf.
 .pop_as_adata <- function(code, data_ids) {
   rx <- "^([A-Za-z.][A-Za-z0-9._]*) <- (pop_[A-Za-z0-9._]+)$"
-  # (or the set's subjects narrowed further: `adsl_saf <- pop_saf |>
+  # (or the set's subjects narrowed further: `adsl_sub <- pop_saf |>
   # filter(PART == "Part 1")`, the set's own steps then these)
   rx_pipe <- "^([A-Za-z.][A-Za-z0-9._]*) <- (pop_[A-Za-z0-9._]+) \\|>\n"
-  # (one step, in one call: `adsl_saf <- filter(pop_saf, PART == "Part 1")`)
+  # (one step, in one call: `adsl_sub <- filter(pop_saf, PART == "Part 1")`)
   rx_call <- paste0("^([A-Za-z.][A-Za-z0-9._]*) <- ([A-Za-z_.][A-Za-z0-9._:]*)",
                     "\\((pop_[A-Za-z0-9._]+), (.*)\\)$")
   one <- grepl(rx_call, code) & !grepl("\n", code, fixed = TRUE)
@@ -2003,6 +2000,18 @@
   as.character(v[1L])
 }
 
+# The R names the program gives the report's items (one builder: the ARD
+# program and tfl_output_objects() both call these).  An ARD or a value
+# item: .ard_<its id, lower case, other characters _>, made unique against
+# `taken` (_1, _2 ...); a model item: its id, lower case.
+.ard_item_names <- function(ids, taken = character()) {
+  nm <- make.unique(c(taken, paste0(".ard_", gsub("[^a-z0-9]+", "_", tolower(ids)))), sep = "_")
+  if (length(taken)) nm[-seq_along(taken)] else nm
+}
+.ard_model_name <- function(id, avoid = character()) {
+  make.unique(c(avoid, make.names(tolower(id))), sep = "_")[length(avoid) + 1L]
+}
+
 # An item's type: "ard" (the default), "model" or "value"; only an ARD is
 # bound into the report's (bind_items())
 .item_type <- function(r) {
@@ -2085,7 +2094,9 @@
     .item_id_given(sprintf("toupper(paste(%s, sep = \"_\"))",
                            paste(sprintf("unique(data$%s)", per), collapse = ", ")), rule$ids)
   } else .q(r$analysis_id)
-  if (own) rule <- sprintf("if (nzchar(analysis_id)) analysis_id else %s", rule)
+  # (the function's argument, .env$: inside mutate() a bare analysis_id is
+  # the ARD's own column, which tag_ard() has added, one value a row)
+  if (own) rule <- sprintf("if (nzchar(.env$analysis_id)) .env$analysis_id else %s", rule)
   sprintf("  ard <- dplyr::mutate(ard, analysis_id = %s)", rule)
 }
 
@@ -2292,7 +2303,7 @@
   # (an analysis_id column: the row's own id, else the per rule's)
   if ("analysis_id" %in% names(cond)) {
     cond$analysis_id[is.na(cond$analysis_id)] <- ""
-    p <- c(p, "analysis_id")
+    p <- unique(c(p, "analysis_id"))
   }
   tab <- paste0(name, "_conditions")
   fun <- paste0(name, "_one")

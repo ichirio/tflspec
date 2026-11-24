@@ -18,7 +18,7 @@
 #  `population_id`) and may name one as its `denominator`.  The analysis
 #  data is a report's (`output_id`): its name means one thing in that
 #  report, and another report may give the same name another meaning (an
-#  adsl_saf of a Phase I table and of a Phase II table).  A report's rows
+#  adsl_sub of a Phase I table and of a Phase II table).  A report's rows
 #  name only its own rows and the study's datasets.
 # ============================================================================
 
@@ -211,11 +211,13 @@
       add_d(i, "data_id", sprintf("%s: `data_id` is blank", tag(i)))
       next
     }
-    if (!.adata_name_ok(id)) {
+    # (the report's one name check, R/object_list.R)
+    np <- .obj_name_problem(id, "data", others = taken)
+    if (identical(np, "rule")) {
       add_d(i, "data_id", sprintf(paste(
         "%s: `data_id` is the data's name in the ARD program -- a lower-case",
         "letter first, then letters, digits, _ or ."), tag(i)))
-    } else if (id %in% taken) {
+    } else if (!is.na(np)) {
       add_d(i, "data_id", sprintf(
         "%s: `data_id` is the name of another object of the ARD program (a dataset, pop_<population>, data, population, ard ...)",
         tag(i)))

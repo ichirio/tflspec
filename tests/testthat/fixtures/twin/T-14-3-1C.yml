@@ -11,31 +11,31 @@ common:
 extends:
   - defaults
 data:
-  - id: adsl_saf
+  - id: adsl_sub
     from: ADSL
-  - id: adae_saf
+  - id: adae_sub
     from: ADAE
-    subjects_in: adsl_saf
+    subjects_in: adsl_sub
     where: !r TRTEMFL == "Y"
 ard:
   analyses:
     - id: BIGN
       label: Subjects per group
       method: categorical
-      data: adsl_saf
+      data: adsl_sub
       variables:
         - TRT01A
     - id: AE
       analysis_per: level
       label: TEAE by SOC / PT
       method: hierarchical
-      data: adae_saf
+      data: adae_sub
       by:
         - TRT01A
       variables:
         - AEBODSYS
         - AEDECOD
-      denominator: adsl_saf
+      denominator: adsl_sub
       args: !r over_variables = TRUE
       purpose: PRIMARY OUTCOME MEASURE
 codelists:

@@ -112,7 +112,9 @@ test_that("the percentages' denominator is BIGN and the items say how analysis i
   expect_true(isTRUE(tl$params$columns$required))
   expect_identical(tl$params$columns$type, "rows<vars,label,width,collapse_repeats>")
   expect_identical(tl$params$by_break$default, "page")
-  expect_identical(tl$style, "style_listing")
+  # the study's style, else the series's style_listing (canon e023312)
+  expect_identical(tl$style, list(key = "settings.style", fallback = "style_listing"))
+  expect_identical(ts[["listing.yml"]]$style, tl$style)
   cmp <- ts[["forest_hr.yml"]]$params$comparison
   expect_identical(cmp$type, "string")
   expect_identical(cmp$input, "pick")

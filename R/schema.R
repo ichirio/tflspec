@@ -134,8 +134,11 @@
 #' @return The function's entry (`package`, `description`, `dots`, `args`;
 #'   `rank`, its place in the recommended order, and `stage`, `"mapping"`,
 #'   `"finishing"` or `"output"`; `formals`, the function's own arguments
-#'   but the data's (`x`, `plan`, `.plan`, `data`, `mapping`), and
-#'   `required`, those of them with no default value),
+#'   but the data's (`x`, `plan`, `.plan`, `data`, `mapping`, `ard`), and
+#'   `required`, those of them with no default value; `data_args`, the
+#'   data's arguments the function has, a card never shows them;
+#'   `formal_defaults`, the formals whose default is a literal constant,
+#'   by name),
 #'   or the whole schema, a list by function; `NULL` for a function the
 #'   schema does not have.
 #' @examples
@@ -190,21 +193,30 @@ tfl_schema <- function(fn = NULL) {
   .schema_add_formals(ent, nm)
 }
 
-# The function's own formals, the data's arguments left out (`x`, `plan`,
-# `.plan`, `data`, `mapping`), and `required`: those with no default value
-# (`...` is never required).  From the installed package; none when it is
-# not installed or has no such function.
-.schema_data_args <- c("x", "plan", ".plan", "data", "mapping")
+# The function's own formals, the data's arguments left out, and `required`:
+# those with no default value (`...` is never required).  `data_args`: which
+# of the formals are the data's (`.schema_data_args`: `x`, `plan`, `.plan`,
+# `data`, `mapping`, `ard`), the ones a card never shows.  `formal_defaults`:
+# the formals whose default is a literal constant (one TRUE/FALSE, one
+# number, one string, or NULL), by name; a call, a symbol or no default gives
+# none.  From the installed package; none when it is not installed or has no
+# such function.
+.schema_data_args <- c("x", "plan", ".plan", "data", "mapping", "ard")
 .schema_add_formals <- function(ent, nm) {
   pkg <- ent$package %||% "rtfreporter"
   f <- if (requireNamespace(pkg, quietly = TRUE)) {
     tryCatch(formals(getExportedValue(pkg, nm)), error = function(e) NULL)
   }
   if (is.null(f)) return(ent)
+  ent$data_args <- intersect(names(f), .schema_data_args)
   f <- f[setdiff(names(f), .schema_data_args)]
   ent$formals <- names(f)
   ent$required <- names(f)[vapply(f, function(v) is.symbol(v) && !nzchar(as.character(v)), NA) &
                              names(f) != "..."]
+  lit <- vapply(f, function(v) {
+    is.null(v) || (is.atomic(v) && length(v) == 1L && !is.na(v))
+  }, NA) & names(f) != "..."
+  ent$formal_defaults <- f[lit]
   ent
 }
 
@@ -214,8 +226,20 @@ tfl_schema <- function(fn = NULL) {
 # ---- the type notation -------------------------------------------------------
 
 # "list<vec<string, number>>|string" -> a parsed type: list(kind, args), the
-# alternatives of a `|` as kind "either"
+# alternatives of a `|` as kind "either" (each text parsed once: a code
+# writer asks for the same types again and again)
 .schema_type <- function(txt) {
+  if (!is.character(txt) || length(txt) != 1L || is.na(txt)) return(.schema_type_parse(txt))
+  key <- paste0("t:", txt)
+  hit <- .schema_cache$types[[key]]
+  if (!is.null(hit)) return(hit)
+  if (is.null(.schema_cache$types)) .schema_cache$types <- new.env(hash = TRUE, parent = emptyenv())
+  out <- .schema_type_parse(txt)
+  assign(key, out, envir = .schema_cache$types)
+  out
+}
+
+.schema_type_parse <- function(txt) {
   txt <- trimws(txt)
   alts <- .schema_split(txt, "|")
   if (length(alts) > 1L) {
@@ -533,12 +557,15 @@ tfl_schema_check <- function(item) {
   if (k == "call") {
     if (inherits(v, "cell_rows")) return("cell_rows" %in% unlist(ty$args))
     # the call written as R (`!r cell_rows("1" = "{n}")`, what a template's
-    # items hold)
+    # items hold), by its function's name with or without its package
+    # (`!r rtfreporter::rtf_border(top = "single")`)
     if (inherits(v, "tfl_r")) {
       e <- tryCatch(str2lang(paste(as.character(unclass(v)), collapse = "\n")),
                     error = function(err) NULL)
-      return(is.call(e) && is.name(e[[1L]]) &&
-               .schema_call_named(as.character(e[[1L]]), unlist(ty$args)))
+      if (!is.call(e)) return(FALSE)
+      f <- e[[1L]]
+      if (is.call(f) && identical(f[[1L]], as.name("::")) && length(f) == 3L) f <- f[[3L]]
+      return(is.name(f) && .schema_call_named(as.character(f), unlist(ty$args)))
     }
     if (!inherits(v, c("tfl_call", "tfl_spec_call"))) return(FALSE)
     f <- if (inherits(v, "tfl_call")) v$fn else v$fun

@@ -36,7 +36,8 @@ differ, trust the package, not this file, and fetch the matching copy with
    with `library(rtfreporter)`.
 3. **Every tflspec function is `tfl_*`** (and `tflspec_ai_manual()`).
    The functions the generated programs call as they run (`blank_as_na()`, `set_levels()`,
-   `tag_ard()`, `bind_items()`, `fmt_ard()`, `keep_stats()`, `fmt_pvalue()`, `save_ard()`)
+   `tag_ard()`, `bind_items()`, `fmt_ard()`, `keep_stats()`, `fmt_pvalue()`, `save_ard()`,
+   `read_ard()`)
    are not tflspec's exports: `tfl_helpers_code()` gives their code, which a
    study keeps in a file of its own (tflplanner: `programs/study_helpers.R`),
    so the programs run without tflspec.
@@ -164,6 +165,12 @@ warning); the rds stays the record. An ARD made elsewhere: `report$ard_source`
 test that could not run, a statistic that stopped or warned): cards keeps
 going and leaves the message in the `error` / `warning` column.
 
+To read another report's ARD in your own code (a program's `code` step, a
+figure's own data), call the study helper `read_ard("<output id>")`: that
+report's rows of the study ARD (`output/ard/ard.rds`). Do not write
+`readRDS()` and a filter: an id with no rows gives an empty table without a
+word, while `read_ard()` stops and names the ARD program to run first.
+
 ---
 ## 4. Function map — what to call for what
 
@@ -239,7 +246,7 @@ generate_rtfreport(tfl_report(o, content = plan, study = st), "T-1.rtf")
 **study.yml** — `study_id`, `title`; `settings:` the table and report
 study keys (`rounding`: `sas` / `r`; `program_dir`; `program` and
 `file`, each report's program and RTF file, `{output_id}.R` /
-`{output_id}.rtf`; `adam_levels`: `codelists`, the default, puts on
+`{output_id}.rtf`; `adam_levels`: `define_xml` or `define_spec` puts on
 `study$adam` the levels of the code lists the study's ADaM metadata maps to
 each dataset's variables (`spec/defaults.yml` `adam_meta:`, a define's
 tables: `variables` with each variable's code list OID, `codelists` a value
@@ -279,7 +286,7 @@ sections follow this order.
 | `codelists` | the report's own, by variable, a list of `{value, label}` in the order printed (the `codelists` sheet); a nested count's inner value may say `under:` (its parent's value, for `complete_hierarchy()`).  No layer gives a report a list: the study's lists (`spec/defaults.yml` `codelists:`, by name) are named where used, in R: `plan_labels: {SEX: !r study$codelists$SEX}` (the template `tflspec_v1/demog` does so by default, its `value_labels`; a list the study has not got is left out) |
 | `content` | the report, a list of items, each one call: `- plan_cells: {categorical: '{n} ({p:.1f%})'}`.  A table's items are rtfreporter's `normalize_ard()`, `table_plan()` and `plan_*()` verbs; a listing's `plan_listing()` (its columns `listing_col()` calls); a figure's the calls of its plot -- `ggplot`, `geom_*`, `scale_*`, `labs`, `theme` ..., and `tfl_image` last (§7.1).  Or `content: !r ...`, the report's own R |
 | `page` | the document: `titles`, `footnotes`, `header`, `footer` (maps by line number: `'1': {center: Table 14.1.1}`), `tokens`, and rtfreporter's calls by name (`rtf_page: {orientation: landscape}`, `rtf_tables: {auto_section: true}`, `rtf_document: {watermark: DRAFT}`); where a table's page names print is better said in its content, `plan_paginate_group: {heading_at: section}` -- a page's `rtf_tables: {auto_section: }` given wins |
-| `template` | a template SPEC, `{name: km_survival, args: {...}}` (`tfl_templates()`; a catalog alias runs its template as itself, `{name: stf_t14_ae_soc_pt}`, and a report keeps the name it was written with -- `tfl_templates(source = "FDA STF IG v2")` / `"PhUSE CSS"` / `"CDISC ARS"` lists a collection's every item with its alias and template; FDA STF Figures 1, 4, 13: `km_cumulative`, its data stage in `data:` steps, samples in `extdata/report-definitions/`); a figure designer's preset is a name (`km_simple` ...), the designer's `plot`, `plots`, `compose` its old form (§7) |
+| `template` | a template SPEC, `{name: km_survival, args: {...}}` (`tfl_templates()`; a catalog alias runs its template as itself, `{name: stf_t14_ae_soc_pt}`, and a report keeps the name it was written with -- `tfl_templates(source = "FDA STF IG v2")` / `"PhUSE CSS"` / `"CDISC ARS"` lists a collection's every item with its alias and template; FDA STF Figures 1, 4, 13: `km_cumulative`, its data step in `data:` steps, samples in `extdata/report-definitions/`); a figure designer's preset is a name (`km_simple` ...), the designer's `plot`, `plots`, `compose` its old form (§7).  A series template, `{name: tflspec_v1/demog, analysis: {...}}`, is read from the study's own copy only: `tfl_copy_templates(<study>)` copies the series and the templates the reports name into `spec/series/<series>/` (a report on a template not copied stops, naming the call); the study changes a template in its copy, and a series value in the copy's `series.yml` `values:` (`tfl_series_values_set()`) |
 | `figure` | a figure report's content as one function of tflspec, `{name: forest_hr, args: {comparison: Drug X}}` -- `name` one of `km_curves`, `forest_hr` (`tfl_figure_fn()`), `args` the function's `params` (and, for `km_curves`, the model's `by`, `time`, `censor`); `tfl_content_code(report)` writes the call, `ard` its ARD.  A figure with `figure:` has no `content:`.  `tfl_template_to_spec()` writes it for a series figure template |
 
 **An item's keys are the function's arguments** (§A.2's tables say which
@@ -452,6 +459,15 @@ content:
   `tfl_image` is the last item.  The code is each plot as `p_<name>`, then
   `content <- wrap_plots(p_km, p_risk, ...)`; one plot is `content`.  A
   `position_dodge()` said twice is written once as `pd`.
+  `wrap_plots`'s `plots` names only the figure's plots, and an object
+  argument (`x`, `data`, `fit`) only an object above the content (a data
+  row, a data step's name, an analysis item): another name is an error
+  of `tfl_check_spec()`, as is a field that names an object made below
+  it, a name given twice, or a dataset's or a function's name; an object
+  made and not used is a note.  `tfl_output_objects(report)` lists a
+  report's objects with their R names; `tfl_default_name(report, "plot")`
+  names a new one (`plot_1`, `model_1`; a data row `<dataset>_sub`, then
+  `_sub2`).
 - `tfl_image: {width_in, height_in, dpi, format, file}` is the image:
   its size on the page (inches, or `fit` -- the page's body; left out: the
   page's `rtf_figures` size, else the figure's own 6.5 x 4.5 in) and its
@@ -972,22 +988,24 @@ back): rename the value or choose another separator.
 
 **Spec files (YAML, one file a report):** `tfl_output` `tfl_item` `tfl_plot` `tfl_call` `tfl_r`
 `tfl_unset` `tfl_read_output` `tfl_write_output` `tfl_read_study_spec`
-`tfl_read_outputs` `tfl_resolve_output` `tfl_run_output` `tfl_output_contents` `tfl_output_extends` `tfl_study_value` `tfl_styles` `tfl_output_data_names` `tfl_code_refs` `tfl_write_study_part` `tfl_item_code`
+`tfl_read_outputs` `tfl_resolve_output` `tfl_run_output` `tfl_output_contents` `tfl_output_extends` `tfl_study_value` `tfl_styles` `tfl_output_objects` `tfl_output_object_uses` `tfl_output_rename` `tfl_default_name` `tfl_output_name_check` `tfl_code_refs` `tfl_write_study_part` `tfl_item_code`
 `tfl_item_written` `tfl_item_own` `tfl_convert_sheets_to_yaml`
 `tfl_yaml_from_sheets` `tfl_sheets_from_yaml` `tfl_sheets_from_spec` `tfl_report_codelists` `tfl_write_spec_xlsx`
-`tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_check_spec` `tfl_check_build` `tfl_check_reports` `tfl_check_fix_text` `tfl_data_code` `tfl_schema_help` `tfl_ai_decisions_read` `tfl_ai_decisions_write` `tfl_ai_confirm` `tfl_content_code` `tfl_content_run`
+`tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_check_spec` `tfl_check_build` `tfl_check_reports` `tfl_check_fix_text` `tfl_data_code` `tfl_schema_help` `tfl_ai_decisions_read` `tfl_ai_decisions_write` `tfl_ai_confirm` `tfl_content_code` `tfl_content_run` `tfl_bign_values` `tfl_bign_drop`
 `tfl_ai_unpack` `tfl_args_to_r` `tfl_args_from_r` `tfl_fig_content_from_design`
 
 **Manual:** `tflspec_ai_manual` `tfl_adam_metadata` `tfl_ai_review`
 
 **The functions the generated programs call (their code):** `tfl_helpers_code`
 
-**Template SPEC (prototype):** `tfl_tpl` `tfl_tpl_args` `tfl_tpl_help` `tfl_templates` `tfl_template_expand` `tfl_template_to_spec` `tfl_template_routes` `tfl_template` `tfl_param` `tfl_template_params` `tfl_template_variant` `tfl_template_run` `tfl_test_templates` `tfl_use_company_templates` `tfl_template_resolve` `tfl_arg_defs` `tfl_fn_defs` `tfl_object_defs` `tfl_series_list` `tfl_series_settings` `tfl_series_settings_set`
+**Official runs (the base-R runner a study's batch.R is made of; its run folders):** `tfl_runner_file` `tfl_runner_code` `tfl_run_index` `tfl_latest_run`
+
+**Template SPEC (prototype):** `tfl_tpl` `tfl_tpl_args` `tfl_tpl_help` `tfl_templates` `tfl_template_expand` `tfl_template_to_spec` `tfl_template_routes` `tfl_template` `tfl_param` `tfl_template_params` `tfl_template_variant` `tfl_template_run` `tfl_test_templates` `tfl_use_company_templates` `tfl_template_resolve` `tfl_arg_defs` `tfl_fn_defs` `tfl_object_defs` `tfl_series_list`
 `tpl_demog` `tpl_summary` `tpl_disposition` `tpl_ae_soc_pt` `tpl_ae_pt_freq` `tpl_ae_max_grade` `tpl_hierarchical`
 `tpl_shift` `tpl_lab_shift` `tpl_listing` `tpl_km_table` `tpl_param_change` `tpl_pk_conc` `tpl_lab_abnormal` `tpl_ae_eair` `tpl_ancova` `tpl_mean_se` `tpl_mean_ci` `tpl_waterfall` `tpl_forest_hr` `tpl_forest_layout` `tpl_orr` `tpl_stat_block` `tpl_ae_overview`
 `tfl_read_template_sheets` `tfl_write_template_yaml`
 
-**Template SPEC, series (versioned folders of templates; study.yml `series_settings:`, spec/series.lock):** `tfl_series_dir` `tfl_series_read` `tfl_pin_series` `tfl_series_check_lock`
+**Template SPEC, series (versioned folders of templates; a study copies the series and the templates its reports use into `spec/series/<series>/` and reads only its copy):** `tfl_series_dir` `tfl_series_read` `tfl_copy_templates` `tfl_template_status` `tfl_template_diff` `tfl_recopy_templates` `tfl_series_values_set`
 
 **AI-assisted drafting:** `tfl_ai_tasks` `tfl_ai_context` `tfl_ai_schema`
 `tfl_ai_prompt` `tfl_ai_parse` `tfl_ai_check` `tfl_ai_repair_prompt`
@@ -998,7 +1016,7 @@ back): rename the value or choose another separator.
 **ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`
 `tfl_ard_spec_template` `tfl_ard_code` `tfl_ard_data_names` `tfl_build_ard` `tfl_ard_for`
 `tfl_ard_spec_hash` `tfl_ard_methods` `tfl_ard_as_custom` `tfl_ard_statistics`
-`tfl_ard_functions` `tfl_ard_args` `tfl_ard_model_args` `tfl_write_ard` `tfl_read_ard` `tfl_check_ard` `tfl_check_ard_function` `tfl_ard_function_template` `tfl_ard_function_info` `tfl_ard_conditions`
+`tfl_ard_functions` `tfl_ard_args` `tfl_ard_model_args` `tfl_ard_reads` `tfl_write_ard` `tfl_read_ard` `tfl_check_ard` `tfl_check_ard_function` `tfl_ard_function_template` `tfl_ard_function_info` `tfl_ard_conditions`
 
 **CDISC ARS:** `tfl_ars` `tfl_write_ars_json` `tfl_check_ars`
 `tfl_ars_unmapped` `tfl_ars_ard` `tfl_read_ars_json` `tfl_ars_to_specs`
@@ -1214,7 +1232,7 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
   cannot say it; the definition keeps the code, the program is never edited.
 - In `args` and `code`, `data` is the analysis data and `population` the
   analysis set's subjects; the program writes them as the data's own names
-  (`adtte_ttde`, `adsl_sub`), and a `custom` analysis's last expression is
+  (`adtte_sub`, `adsl_sub`), and a `custom` analysis's last expression is
   its ARD (`local()` only when its code defines a function or assigns a
   name the program has).
 - A function that takes a **formula** (`cardx::ard_survival_survdiff`,
@@ -1288,7 +1306,7 @@ sp$ard; sp$report; sp$table       # fill sp$ard$datasets$path before running
 `tfl_table_spec_template(ard)` (scaffolds `tables` / `variables` / `cells`
 from an ARD). A workbook may be split over several files; a sheet is said
 once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `r`;
-`output_path`; `program_dir`; `adam_levels`: `codelists` / `none`).
+`output_path`; `program_dir`; `adam_levels`: `define_xml` / `define_spec` / `none`, the default).
 
 **tables** (one row a table) — the roles and the table-wide layers:
 

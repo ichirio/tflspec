@@ -32,7 +32,15 @@ invisible(tfl_ai_study_init(study, adam = "adam", study_id = "RULES-1"))
 outputs <- file.path(study, "spec", "outputs")
 ```
 
-Most examples name a template of the `tflspec_v1` series. One helper
+Most examples name a template of the `tflspec_v1` series. A study reads
+its own copy of a template, so the study copies the ones it uses first
+(`tfl_copy_templates()`, into `spec/series/tflspec_v1/`).
+
+```{r}
+invisible(tfl_copy_templates(study, paste0("tflspec_v1/",
+  c("demog", "lab_tox_shift", "ae_soc_pt", "km_simple", "forest_hr"))))
+```
+ One helper
 does the same steps for each report. It fills the template in
 (`tfl_template_resolve()`), saves the report in the study, and returns
 the ARD program (`tfl_ard_code()`) and the ARD it makes

@@ -4,7 +4,7 @@
 \alias{tfl_arg_defs}
 \title{The definitions of the arguments a card takes}
 \usage{
-tfl_arg_defs(fn = NULL, template = NULL)
+tfl_arg_defs(fn = NULL, template = NULL, study_dir = NULL)
 }
 \arguments{
 \item{fn}{A function of the schema (\code{"plan_cells"}), or \code{"data"} (the keys
@@ -13,6 +13,10 @@ of a \verb{data:} row) or \code{"analysis"} (the keys of an analysis item).}
 \item{template}{A template, \code{"<series>/<template>"} (\code{"tflspec_v1/demog"}).
 Its file is found in the series folders: the option \code{tflspec.series_dir},
 tflplanner's home \verb{standards/series/}, the series tflspec ships.}
+
+\item{study_dir}{A study folder: the template is read from the study's
+copy (\code{\link[=tfl_copy_templates]{tfl_copy_templates()}}) instead, a template of the study's own
+(copied with \code{as}) too.  \code{NULL} (default) for the series folders.}
 }
 \value{
 A data frame, one row an argument in the definition's order (the
@@ -45,8 +49,11 @@ default for a type \code{r}, \code{formula} or \code{guard}, \code{condition} fo
 \item{required}{\code{TRUE} for an argument that has no default and must be
 given.}
 \item{default}{(a list column) the default as written; a tagged value
-(\verb{!series K}, \verb{!study K}, \verb{!fixed v}, \code{!r}) is a \code{tfl_tagged} object.
-It is resolved for a study by \code{\link[=tfl_template_resolve]{tfl_template_resolve()}}.}
+(\verb{!series K}, \verb{!study K}, \verb{!study {key: K, fallback: V}}, \verb{!fixed v}, \code{!r}) is a \code{tfl_tagged} object.
+It is resolved for a study by \code{\link[=tfl_template_resolve]{tfl_template_resolve()}}.  A schema
+function's argument with no default written takes the function's own
+default when that is one \code{TRUE} or \code{FALSE} and the argument's type is
+a logical kind; any other formal default gives none.}
 \item{default_kind}{\code{value}, \code{study}, \code{series}, \code{unset} or \code{fixed};
 \code{NA} when there is no default.}
 \item{unset}{what "(none)" (\code{!unset}) does, from \verb{unset:} (the words
@@ -74,7 +81,11 @@ params go (an item's conditions: \code{"params"}, \code{where}, an optional
 \code{analysis_id}).  A named column's definition also has \code{label_en},
 \code{label_ja}, \code{help_en}, \code{help_ja}, from its own \verb{label:} / \verb{help:}
 or the argument's \verb{labels:} map (column: label).  A \verb{map<K, V>}'s
-two columns are written \verb{columns: \{key: \{label: \}, value: \{label: \}\}}.}
+two columns are written \verb{columns: \{key: \{label: \}, value: \{label: \}\}};
+a value that is itself a map has its own \verb{columns:} (the same form).}
+\item{new_row}{(a list column) a table's values for a row the user
+adds, by column (\verb{new_row: \{key: subgroup\}}); \code{NULL} when none.  Each
+name must be one of the argument's \verb{columns:}.}
 \item{fixed_rows}{(a list column) a template's table param: the rows
 the template writes with fixed values next to its \code{"{name}"} (the
 ALL row of forest_hr's conditions), a data frame whose attribute
@@ -91,10 +102,25 @@ one or several; empty for none.}
 \item{member_of}{the list argument it is a member of (written
 \verb{member_of:}, after its parent); \code{NA} otherwise.}
 \item{description}{one line.}
+\item{editor}{the tflplanner special editor the definition names, from
+\verb{editor:}: one of \code{roles}, \code{cells}, \code{header_lines}, \code{digits},
+\code{levels}, \code{sort_keys} (the closed list kept here); \code{NA} when none (the
+planner draws the field from \code{input} and \code{type}).  A row with an
+editor still has its \code{input}, the value form for the CUI and the AI
+kit.  A schema function's \verb{dots:} may write it too (the \code{...} row).}
+\item{dots_style}{the \code{...} row only: \code{named} (the item's other keys are
+the entries, by name) or \code{positional} (the entries are the value of
+the one key \code{dots_key}), from the \verb{dots:} entry's \verb{style:}; \code{NA} on
+every other row.}
+\item{dots_key}{the \code{...} row only: the key of positional dots
+(\code{plan_sort}: \code{keys}); \code{NA} for named dots and on other rows.}
+\item{dots_map}{the \code{...} row only: \code{TRUE} when R code may also give
+the entries as one named vector (\code{plan_labels(c(AGE = "Age"))});
+\code{NA} on other rows.}
 }
 
 A definition stops, saying what to write, for an unknown \code{tier} or
-\code{unset} word, a \code{group} not in \verb{groups:}, a \code{member_of} that is not
+\code{unset} or \code{editor} word, a \code{group} not in \verb{groups:}, a \code{member_of} that is not
 another argument, a malformed \code{passes_to}, a label or help that is
 neither a text nor \verb{\{en: , ja: \}}, and a choice word outside the 15.
 }

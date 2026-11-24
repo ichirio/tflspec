@@ -99,8 +99,8 @@ test_that("in a study: tfl_run_output() builds a table of a listing and its summ
     data = list(source = "dataset", dataset = "ADLB", population = "SAF", where = tfl_r(keep)),
     ard = list(
       analysis_data = list(
-        list(id = "adsl_saf", from = "ADSL", population = "SAF"),
-        list(id = "adlb_alt", from = "ADLB", subjects_in = "adsl_saf", where = tfl_r(keep))),
+        list(id = "adsl_sub", from = "ADSL", population = "SAF"),
+        list(id = "adlb_alt", from = "ADLB", subjects_in = "adsl_sub", where = tfl_r(keep))),
       analyses = list(list(id = "ALT", method = "continuous", data = "adlb_alt",
                            by = "AVISIT", variables = "AVAL", statistics = "N | mean"))),
     content = list(

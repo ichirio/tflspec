@@ -30,6 +30,14 @@
 #' data, and replaces the template's row of its id.  The result is a plain
 #' code SPEC, as [tfl_read_output()] reads one.
 #'
+#' A report's value replaces the default, but for an argument of a map type
+#' whose default is the series' (`!series K`, such as `formats`): the
+#' report's map is put over the series' map name by name.  A name the report
+#' writes replaces the series' value of that name (a map value merges into
+#' the series' map of that name, in the same way), a name whose value is
+#' `!unset` is removed, and the names the report does not write keep the
+#' series' values.
+#'
 #' An analysis item's `analyses:` (`per`, `ids`) says its analyses: `per:
 #' variable` one a variable (its id the variable's entry in `ids`, else the
 #' variable's name); `per: level` or `per: [columns]` one row whose
@@ -85,16 +93,26 @@
 #' An operation inside `then`/`else` is not worked out: derive a name for it
 #' and write `"{name}"`.
 #'
+#' A study reads its own copy of the series and the template
+#' (`<study>/spec/series/<series>/`, [tfl_copy_templates()]) and nothing
+#' else: a template it has not copied stops, with the call that copies it.
+#' Only a study given without its folder (`study.yml` read as a list, or
+#' `NULL`) reads the source folders ([tfl_series_dir()]).  A `study.yml`
+#' with `series_settings:` stops: a study's series values are in its copy
+#' of `series.yml` ([tfl_series_values_set()]).
+#'
 #' @param report A report SPEC (a list, as read) or its file.
 #' @param template A template, `"<series>/<template>"`; default the report's
 #'   `template: name:`.
-#' @param study The study: its `study.yml` read as a list (`settings:`,
-#'   `series_settings:`), the file, or the study folder; `NULL` for none.
+#' @param study The study: the study folder, its `study.yml` file, or
+#'   `study.yml` read as a list (`settings:`; with attribute `"study_dir"`,
+#'   the study folder, it reads that study's copies); `NULL` for none.
 #' @return A `tfl_output` (the report as a code SPEC).  Its attribute
 #'   `"args"` holds the template's arguments as used, and `"origins"` where
-#'   each came from (`"report"`, `"template"`, `"series"`, `"study"`,
-#'   `"fixed"`).
-#' @seealso [tfl_arg_defs()], [tfl_series_dir()]
+#'   each came from (`"report"`, `"template"`, `"series"` -- a `!series`
+#'   value, from the study's copy of `series.yml` --, `"study"` -- a
+#'   `!study` value, from `study.yml`, or its fallback's origin --, `"fixed"`).
+#' @seealso [tfl_arg_defs()], [tfl_copy_templates()], [tfl_series_dir()]
 #' @export
 tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   who <- "tfl_template_resolve()"
@@ -106,12 +124,13 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   study <- .tr_study(study, who)
   template <- template %||% report$template$name
   if (is.null(template)) stop(who, ": the report names no template (template: name:).", call. = FALSE)
-  tf <- .template_file(template)
-  series <- tfl_series_read(sub("/.*$", "", template), dir = dirname(dirname(dirname(tf))))
+  study_dir <- attr(study, "study_dir")
+  tf <- .template_file(template, study_dir)
+  series <- .tr_series(template, tf, study_dir, who)
   tpl <- .series_resolve(.series_read_yaml(tf), series, study, template)
   torig <- attr(tpl, "origins")
   report <- .series_resolve(report, series, study, template, origin = "report")
-  defs <- tfl_arg_defs(template = template)
+  defs <- tfl_arg_defs(template = template, study_dir = study_dir)
 
   given <- .tr_given(report$template, defs$name, template, who)
   env <- list()
@@ -126,6 +145,13 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
              call. = FALSE)
       }
       val <- given[[p]]
+      # a map whose default is the series' (!series K) or the study's
+      # (!study K, with or without a fallback): the report's names
+      # over that map, the rest as the series has them (canon e023312)
+      if (defs$default_kind[[i]] %in% c("series", "study") && startsWith(defs$type[[i]], "map<") &&
+          .tr_is_map(val)) {
+        val <- .tr_merge_map(def, val)
+      }
       o <- "report"
     } else {
       val <- def
@@ -195,20 +221,28 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   # !r study$codelists$X, as demog's default)
   cenv <- env
   if ("value_labels" %in% names(env)) {
-    cenv["labels"] <- list(.tr_merge_labels(env$labels, env$value_labels, template))
+    keys <- .tr_plan_keys(.tr_fill(tpl$content %||% list(), env))
+    cenv["labels"] <- list(.tr_merge_labels(env$labels, env$value_labels, template, keys))
   }
   content <- .tr_fill(tpl$content %||% list(), cenv)
   # (the plan_labels items as one; a reference to a study list for a column
   # no analysis reads left out)
   cols <- unique(as.character(unlist(lapply(items, function(a) c(a$variables, a$by)))))
   content <- .tr_labels_join(content, cols)
+  # (a variable's heading under `variable`, as every path writes it)
+  content <- .tr_labels_args(content)
   if (is.list(report$content)) content <- c(content, report$content)
   page <- .tr_fill(tpl$page %||% list(), env)
   for (k in names(report$page)) page[k] <- list(report$page[[k]])
+  # the style: the report's, else the template's; `!unset` (a study's
+  # `settings.style: !unset` read by the template's `!study`) is no style,
+  # so the report gets the study's default as a report without one does
+  style <- report$style %||% tpl$style
+  if (inherits(style, "tfl_unset")) style <- NULL
 
   y <- list(id = report$id, kind = report$kind %||% tpl$kind %||% "table",
             label = report$label %||% tpl$label, common = report$common,
-            extends = report$extends %||% tpl$extends, style = report$style %||% tpl$style,
+            extends = report$extends %||% tpl$extends, style = style,
             figure = tpl$figure, data = rows,
             ard = if (length(items)) c(if (identical(kind, "figure")) list(analysis_data = rows),
                                        list(analyses = items)),
@@ -368,15 +402,45 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   TRUE
 }
 
-# the study as a list: a list as given, study.yml, or a folder that holds it
+# The study as a list: a list as given, study.yml, or a folder that holds
+# it.  Read from a file or a folder, it has attribute "study_dir" (the
+# study folder: the series are read from its copies).  A study.yml with
+# series_settings: stops (.series_settings_gone()).
 .tr_study <- function(study, who) {
-  if (is.null(study) || is.list(study)) return(study)
+  if (is.null(study)) return(study)
+  if (is.list(study)) {
+    .series_settings_gone(study, attr(study, "study_dir"))
+    return(study)
+  }
   if (!is.character(study) || length(study) != 1L) {
     stop(who, ": `study` is study.yml read as a list, the file or the study folder.", call. = FALSE)
   }
-  f <- if (dir.exists(study)) file.path(study, "study.yml") else study
+  is_dir <- dir.exists(study)
+  f <- if (is_dir) file.path(study, "study.yml") else study
+  sd <- normalizePath(if (is_dir) study else dirname(study), winslash = "/", mustWork = FALSE)
   if (!file.exists(f)) stop(who, ": no file ", f, call. = FALSE)
-  .series_read_yaml(f) %||% list()
+  out <- .series_read_yaml(f) %||% list()
+  .series_settings_gone(out, sd)
+  structure(out, study_dir = sd)
+}
+
+# A study spec's study.yml as .tr_study() gives it: with its folder, so
+# that its series are read from its copies
+.tr_study_of <- function(study) {
+  structure(study$study %||% list(), study_dir = study$dir)
+}
+
+# The series of a template file `tf`: the study's copy of series.yml (next
+# to the copied template) when `study_dir` is given, else the source's.
+.tr_series <- function(template, tf, study_dir, who) {
+  s <- sub("/.*$", "", template)
+  if (is.null(study_dir)) return(tfl_series_read(s, dir = dirname(dirname(dirname(tf)))))
+  path <- dirname(dirname(tf))
+  if (!file.exists(file.path(path, "series.yml"))) {
+    stop(who, ": series ", s, " is not copied into the study (no ", file.path(path, "series.yml"),
+         "): ", .study_copy_hint(study_dir, template), ".", call. = FALSE)
+  }
+  .series_read_at(path, s, who)
 }
 
 # where a param's default came from (the first value under its path)
@@ -408,6 +472,32 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   invisible()
 }
 
+# A map as read (a named list, not a tagged value); an empty list is one too
+.tr_is_map <- function(x) {
+  is.list(x) && !is.object(x) && (!length(x) || .series_is_map(x))
+}
+
+# `over` put over `base` name by name (canon e023312): a name `over` writes
+# replaces the base's, a map value merges into the base's map of that name,
+# and `!unset` removes the name; the base's other names stay.  Nothing left
+# is NULL (as `!unset` for the whole argument); a map inside left empty
+# drops its name.
+.tr_merge_map <- function(base, over) {
+  out <- if (.tr_is_map(base)) base else list()
+  attributes(out) <- if (length(out)) list(names = names(out))
+  for (k in names(over)) {
+    v <- over[[k]]
+    if (inherits(v, "tfl_unset")) {
+      out[[k]] <- NULL
+    } else if (.tr_is_map(v)) {
+      out[[k]] <- .tr_merge_map(out[[k]], v)
+    } else {
+      out[k] <- list(v)
+    }
+  }
+  if (length(out)) out
+}
+
 # The report's arguments: `template:` without `name`, its step sections
 # (data, analysis, content, page) and a flat `args:` read as one map
 .tr_given <- function(t, names_ok, template, who) {
@@ -437,12 +527,14 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
 #                   ids after them as ids:VALUE=ID,...
 #   no per          one analysis, the item's id
 # labels ({variable: heading}) and value_labels ({variable: {code: text}}) as
-# one map for plan_labels(): a variable in both keeps its heading, written
-# under its own name in front of its values (the heading a value_labels entry
+# one map for plan_labels(): a variable in both keeps its heading -- under
+# `variable` for a table whose rows are `variable` (`keys`, the table's cols
+# and rows: .plan_labels_args()), else (and for a key column) written under
+# its own name in front of its values (the heading a value_labels entry
 # gives itself under that name wins)
-.tr_merge_labels <- function(labels, value_labels, template) {
+.tr_merge_labels <- function(labels, value_labels, template, keys = character()) {
   if (is.null(value_labels)) return(labels)
-  out <- as.list(labels)
+  out <- .plan_labels_args(labels, keys)
   for (v in names(value_labels)) {
     vl <- value_labels[[v]]
     if (is.null(vl) || inherits(vl, "tfl_unset")) next
@@ -464,8 +556,94 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   if (length(out)) out else NULL
 }
 
+# A template's labels map ({name: text or value labels}) as plan_labels()'
+# arguments: the one rule every template takes (tfl_template_resolve(), the
+# registry's demog), so a report's program says the same call whichever way
+# it is made (tflspec#856) -- the call the sheets write too (spec_code.R:
+# the variables' headings under `variable`).  For a table whose rows are
+# `variable` (`keys`: its cols and rows), every variable's heading goes
+# under `variable`, first, after any `variable` entry the map has: one text
+# named by a variable, and a value-labels map's entry under its own
+# variable's name (`SEX: {SEX: Sex, F: Female}`).  rtfreporter reads the
+# headings from that one entry once it is there, so none may stay outside
+# it.  A key column's heading and the value labels (a named text, a list of
+# them, a reference to a study list) stay under their own name, in order;
+# a table without `variable` keeps the map as it is.
+.plan_labels_args <- function(labels, keys = character()) {
+  if (!length(labels)) return(list())
+  labels <- as.list(labels)
+  if (!"variable" %in% keys) return(labels)
+  nm <- names(labels) %||% rep("", length(labels))
+  plain <- function(x) !inherits(x, c("tfl_r", "tfl_unset", "tfl_call"))
+  # (a `variable` entry in R cannot take more names: the map as it is)
+  if (!plain(labels[["variable"]])) return(labels)
+  var <- if (!is.null(labels[["variable"]])) as.list(labels[["variable"]]) else list()
+  rest <- list()
+  for (i in seq_along(labels)) {
+    v <- nm[i]
+    x <- labels[[i]]
+    if (identical(v, "variable")) next
+    if (!nzchar(v) || v %in% keys || !plain(x)) {
+      rest <- c(rest, stats::setNames(list(x), v))
+      next
+    }
+    if (is.character(x) && length(x) == 1L && !is.na(x) && is.null(names(x))) {
+      var[[v]] <- x
+      next
+    }
+    # (a value-labels map with the variable's own heading in it)
+    xn <- names(x)
+    if (!is.null(xn) && v %in% xn && (is.character(x) || is.list(x))) {
+      h <- x[[match(v, xn)]]
+      if (is.character(h) && length(h) == 1L && !is.na(h)) {
+        var[[v]] <- h
+        x <- x[xn != v]
+      }
+    }
+    if (length(x)) rest <- c(rest, stats::setNames(list(x), v))
+  }
+  if (!length(var)) return(rest)
+  c(list(variable = var), rest)
+}
+
+# The table's keys (its table_plan item's cols and rows) in a template's
+# content as its file writes it (`- table_plan: {cols, rows}`)
+.tr_plan_keys <- function(content) {
+  first <- function(it) if (is.list(it) && length(it) == 1L && !is.null(names(it))) names(it) else ""
+  tp <- match("table_plan", vapply(content, first, ""))
+  if (is.na(tp) || !is.list(content[[tp]]$table_plan)) return(character())
+  as.character(unlist(content[[tp]]$table_plan[c("cols", "rows")], use.names = FALSE))
+}
+
+# The template's plan_labels items in plan_labels()' arguments
+# (.plan_labels_args()), with the table's keys
+.tr_labels_args <- function(content) {
+  keys <- .tr_plan_keys(content)
+  if (!"variable" %in% keys) return(content)
+  for (k in seq_along(content)) {
+    it <- content[[k]]
+    if (!is.list(it) || !identical(names(it), "plan_labels")) next
+    a <- it$plan_labels
+    if (is.list(a) && !is.null(names(a))) content[[k]] <- list(plan_labels = .plan_labels_args(a, keys))
+  }
+  content
+}
+
 .tr_item <- function(it, env, template) {
   shadow <- as.character(unlist(it$params))
+  # (a param is the row's function's argument, written bare inside
+  # dplyr::filter() and dplyr::mutate(): a name the ARD has itself -- a
+  # cards column, analysis_id, output_id, population_id -- would read the
+  # column instead, so it stops; so do data and ard, the function's own
+  # names for its rows and its result)
+  own <- shadow[.ard_own_name(shadow) | shadow %in% c("data", "ard")]
+  if (length(own)) {
+    stop("template ", template, ": item ", it$id %||% "?", ": params: ",
+         paste(own, collapse = ", "), " is a name the ARD uses itself (",
+         "a cards column, analysis_id, output_id or population_id) or the ",
+         "row function's own (data, ard); ",
+         "give the param another name.", call. = FALSE)
+  }
   cond <- it$conditions
   it$conditions <- NULL
   an <- it$analyses

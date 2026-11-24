@@ -28,9 +28,9 @@ test_that("an argument cards does not have, a function it does not have, an item
   skip_if_not_installed("cards")
   d <- cs_study()
   an <- function(id, method, args = NULL) Filter(Negate(is.null), list(
-    id = id, method = method, data = "adsl_saf", by = "TRT01A", variables = "AGE", args = args))
+    id = id, method = method, data = "adsl_sub", by = "TRT01A", variables = "AGE", args = args))
   o <- tfl_output("T-AGE", "table", common = list(population = "SAF"), label = "Age",
-    ard = list(analysis_data = list(list(id = "adsl_saf", from = "ADSL", population = "SAF")),
+    ard = list(analysis_data = list(list(id = "adsl_sub", from = "ADSL", population = "SAF")),
                analyses = list(an("AGE", "cards::ard_summary", "nope = 1"))),
     content = list(tfl_item("table_plan", list(cols = "TRT01A", nope = 2))))
   tfl_write_output(o, file.path(d, "spec", "outputs", "T-AGE.yml"))

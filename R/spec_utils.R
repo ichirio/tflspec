@@ -8,6 +8,15 @@
 
 .ard_stop <- function(...) stop(..., call. = FALSE)
 
+# A template's required arguments left empty: the error a GUI reads as data
+# (`cnd$template`, its name; `cnd$args`, the arguments; `cnd$any`, TRUE when
+# one of them is enough, FALSE when each is needed), its message unchanged
+.tpl_args_missing_stop <- function(message, template, args, any = FALSE) {
+  stop(structure(class = c("tflspec_template_args_missing", "error", "condition"),
+                 list(message = message, call = NULL, template = template,
+                      args = as.character(args), any = isTRUE(any))))
+}
+
 .ard_need <- function(pkg, what) {
   if (!requireNamespace(pkg, quietly = TRUE)) {
     .ard_stop(sprintf("%s needs the '%s' package (install it, or see ?%s).",

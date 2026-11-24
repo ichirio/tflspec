@@ -57,7 +57,7 @@ test_that("resolved: the template's items between the study's layers and the rep
   expect_identical(vapply(ro$ard$analyses, `[[`, "", "id"), c("BIGN", "CONT", "CAT"))
   expect_identical(ro$data$source, "ard")
   # the report's own ard: entry replaces the template's of the same id
-  own_ard <- list(analyses = list(list(id = "CAT", method = "categorical", data = "adsl_saf",
+  own_ard <- list(analyses = list(list(id = "CAT", method = "categorical", data = "adsl_sub",
                                        by = "TRT01A", variables = "SEX")))
   o2 <- ts_output(); o2$ard <- own_ard
   ro2 <- tfl_resolve_output(o2, s)

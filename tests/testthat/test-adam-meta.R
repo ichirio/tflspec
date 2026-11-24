@@ -107,7 +107,8 @@ test_that("the package's sample keeps code lists by name and an adam_meta", {
 
 # A study on the package's ADSL (factors as text) whose adam_meta maps ADSL.SEX
 # to a list with a code no subject has (U); a report counts SEX by ARM
-amt_run_study <- function(levels = NULL, env = parent.frame()) {
+# (levels: define_xml, the file applied; tfl_ai_study_init() writes none)
+amt_run_study <- function(levels = "define_xml", env = parent.frame()) {
   skip_if_not_installed("haven")
   d <- withr_tempdir(env)
   dir.create(file.path(d, "adam"))
@@ -187,7 +188,7 @@ test_that("adam_levels: none -- the own read has no levels; nor has a study with
   expect_false("study <- list()" %in% code)
   ard <- suppressMessages(tfl_build_ard(st, dir = d, output_id = "T-AM", save = FALSE))
   expect_identical(amt_sex(ard), c("F", "M"))
-  # the fingerprint: under codelists adam_meta counts, under none it does not
+  # the fingerprint: under define_xml adam_meta counts, under none it does not
   st2 <- tfl_read_study_spec(amt_run_study())
   h <- function(s) grep("definition = ", tfl_ard_code(s, "T-AM", save = TRUE, part = "body"), value = TRUE)
   expect_false(identical(h(st), h(st2)))
@@ -323,12 +324,14 @@ test_that("demog's value_labels: the study's lists by name, for the columns the 
   lab <- Filter(function(it) identical(it$fn, "plan_labels"), o$content)
   expect_length(lab, 1L)
   a <- lab[[1L]]$args
-  expect_identical(names(a), c("SEX", "AGEGR1"))
-  expect_identical(as.character(unclass(a$SEX)), 'c(SEX = "Sex, n (%)", study$codelists$SEX)')
+  # (the heading under `variable`, as every path writes it: tflspec#856)
+  expect_identical(names(a), c("variable", "SEX", "AGEGR1"))
+  expect_identical(a$variable, list(SEX = "Sex, n (%)"))
+  expect_identical(as.character(unclass(a$SEX)), "study$codelists$SEX")
   expect_identical(as.character(unclass(a$AGEGR1)), "study$codelists$AGEGR1")
   # a report's own map wins; an empty one: no value labels
   r$template$content$value_labels <- list()
   o <- tfl_template_resolve(r)
   lab <- Filter(function(it) identical(it$fn, "plan_labels"), o$content)
-  expect_identical(lab[[1L]]$args, list(SEX = "Sex, n (%)"))
+  expect_identical(lab[[1L]]$args, list(variable = list(SEX = "Sex, n (%)")))
 })

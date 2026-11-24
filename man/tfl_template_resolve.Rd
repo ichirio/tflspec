@@ -12,14 +12,16 @@ tfl_template_resolve(report, template = NULL, study = NULL)
 \item{template}{A template, \code{"<series>/<template>"}; default the report's
 \verb{template: name:}.}
 
-\item{study}{The study: its \code{study.yml} read as a list (\verb{settings:},
-\verb{series_settings:}), the file, or the study folder; \code{NULL} for none.}
+\item{study}{The study: the study folder, its \code{study.yml} file, or
+\code{study.yml} read as a list (\verb{settings:}; with attribute \code{"study_dir"},
+the study folder, it reads that study's copies); \code{NULL} for none.}
 }
 \value{
 A \code{tfl_output} (the report as a code SPEC).  Its attribute
 \code{"args"} holds the template's arguments as used, and \code{"origins"} where
-each came from (\code{"report"}, \code{"template"}, \code{"series"}, \code{"study"},
-\code{"fixed"}).
+each came from (\code{"report"}, \code{"template"}, \code{"series"} -- a \code{!series}
+value, from the study's copy of \code{series.yml} --, \code{"study"} -- a
+\code{!study} value, from \code{study.yml}, or its fallback's origin --, \code{"fixed"}).
 }
 \description{
 Reads the report's template (\verb{template: name: <series>/<template>}), puts
@@ -33,6 +35,14 @@ data, and replaces the template's row of its id.  The result is a plain
 code SPEC, as \code{\link[=tfl_read_output]{tfl_read_output()}} reads one.
 }
 \details{
+A report's value replaces the default, but for an argument of a map type
+whose default is the series' (\verb{!series K}, such as \code{formats}): the
+report's map is put over the series' map name by name.  A name the report
+writes replaces the series' value of that name (a map value merges into
+the series' map of that name, in the same way), a name whose value is
+\code{!unset} is removed, and the names the report does not write keep the
+series' values.
+
 An analysis item's \verb{analyses:} (\code{per}, \code{ids}) says its analyses: \code{per: variable} one a variable (its id the variable's entry in \code{ids}, else the
 variable's name); \code{per: level} or \verb{per: [columns]} one row whose
 \code{analysis_per} tells the generator how to name the analyses; no \code{per}
@@ -83,9 +93,17 @@ item has two keys: \verb{fail:} (one \verb{derive:} operation, as above) and
 order once \verb{derive:} is; when an item's \code{fail} is something (the \verb{if:}
 rule), resolving stops with \verb{<template>: <message>}.  An unknown key, a
 missing \code{fail} or \code{message}, or a \verb{check:} that is not a list stops too.
-An operation inside \code{then}/\code{else} is not worked out: derive a name for it
+An operation inside \code{then}/\verb{else} is not worked out: derive a name for it
 and write \code{"{name}"}.
+
+A study reads its own copy of the series and the template
+(\verb{<study>/spec/series/<series>/}, \code{\link[=tfl_copy_templates]{tfl_copy_templates()}}) and nothing
+else: a template it has not copied stops, with the call that copies it.
+Only a study given without its folder (\code{study.yml} read as a list, or
+\code{NULL}) reads the source folders (\code{\link[=tfl_series_dir]{tfl_series_dir()}}).  A \code{study.yml}
+with \verb{series_settings:} stops: a study's series values are in its copy
+of \code{series.yml} (\code{\link[=tfl_series_values_set]{tfl_series_values_set()}}).
 }
 \seealso{
-\code{\link[=tfl_arg_defs]{tfl_arg_defs()}}, \code{\link[=tfl_series_dir]{tfl_series_dir()}}
+\code{\link[=tfl_arg_defs]{tfl_arg_defs()}}, \code{\link[=tfl_copy_templates]{tfl_copy_templates()}}, \code{\link[=tfl_series_dir]{tfl_series_dir()}}
 }
