@@ -143,7 +143,7 @@ test_that("a series.yml with !study under values: stops", {
 
 # ---- end to end: a template default with a fallback --------------------------
 
-# a study with its copy of tflspec_v1/demog whose `formats` default is the
+# a study with its copy of tflspec_v1/tflspec_summary whose `formats` default is the
 # fallback form; `formats` is the study.yml settings: formats (a YAML flow map), or NULL
 sf_study <- function(root, formats = NULL) {
   st <- file.path(root, "STUDY-SF")
@@ -151,8 +151,8 @@ sf_study <- function(root, formats = NULL) {
   writeLines(c("study_id: STUDY-SF", "settings:", "  rounding: sas",
                if (!is.null(formats)) paste0("  formats: ", formats)),
              file.path(st, "study.yml"))
-  tfl_copy_templates(st, "tflspec_v1/demog")
-  f <- file.path(st, "spec", "series", "tflspec_v1", "templates", "demog.yml")
+  tfl_copy_templates(st, "tflspec_v1/tflspec_summary")
+  f <- file.path(st, "spec", "series", "tflspec_v1", "templates", "tflspec_summary.yml")
   ln <- readLines(f, warn = FALSE)
   at <- which(trimws(ln) == "default: !series formats")
   stopifnot(length(at) == 1L)
@@ -165,7 +165,7 @@ sf_study <- function(root, formats = NULL) {
 sf_report <- function(formats = NULL) {
   f <- tempfile(fileext = ".yml")
   writeLines(c("id: T-SF-1", "kind: table", "label: Fictional demographics",
-               "template:", "  name: tflspec_v1/demog", "  analysis:", "    by: TRT01A",
+               "template:", "  name: tflspec_v1/tflspec_summary", "  analysis:", "    by: TRT01A",
                "    continuous: [AGE]", "    categorical: [SEX]", formats), f)
   f
 }

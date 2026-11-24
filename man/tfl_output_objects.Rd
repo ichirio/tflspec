@@ -22,13 +22,16 @@ object of a report with \verb{contents:}, else \code{NA}); \code{name} (\code{ad
 \code{km}, an ARD item's default name, \code{ard}); \code{id} (an analysis item's id,
 the ARS analysis id; else \code{NA}); \code{stage} (\code{data}, \code{analysis},
 \code{content}, \code{page}); \code{kind} (\code{data}, \code{object}, \code{ard}, \code{model}, \code{value},
-\code{plot}, and the stage results \code{ard}, \code{plan}, \code{content}, \code{doc});
+\code{plot}, and the stage results \code{ard}, \code{plan}, \code{content}, \code{doc}; an object
+made by process calls has the \code{returns} of its last call
+(\code{\link[=tfl_fn_defs]{tfl_fn_defs()}}) when that is known; a name read from a step written as
+R is \code{unknown}, but the step's final object);
 \code{where} (the stage and the position: \code{data[2]}, \code{analysis[1]},
 \code{content[3]}, \code{data.steps[2]}); \code{name_source} (\code{written}: the SPEC
 writes the name; \code{default}: the stage's default -- an analysis item's
 from its id, a stage's result); \code{changeable} (\code{FALSE}: the report
 cannot rename it -- the template defines it, it is a stage's result,
-the program makes it); \code{used} (something names it or reads it; a
+the program makes it, a name read from a step written as R); \code{used} (something names it or reads it; a
 stage's result and an ARD item count as used); \code{from} (what it is made
 from: a dataset or a data above, an item's \code{data}, \code{NA}); \code{used_by}
 (the items that name it or whose R reads it, \code{|} between them).  Its

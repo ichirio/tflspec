@@ -1,6 +1,6 @@
 # A report's map argument over the series' map, name by name (canon
 # e023312): tfl_template_resolve() on fictional reports of the tflspec_v1
-# series.
+# series (mm_demog(): demog's arguments on tflspec_summary).
 
 mm_report <- function(text) {
   f <- tempfile(fileext = ".yml")
@@ -11,7 +11,7 @@ mm_report <- function(text) {
 
 mm_demog <- function(formats = NULL) {
   mm_report(c("id: T-MM-1", "kind: table", "label: Fictional demographics",
-              "template:", "  name: tflspec_v1/demog", "  analysis:", "    by: TRT01A",
+              "template:", "  name: tflspec_v1/tflspec_summary", "  analysis:", "    by: TRT01A",
               "    continuous: [AGE]", "    categorical: [SEX]", formats))
 }
 
@@ -48,7 +48,7 @@ mm_study <- function(root, v1_formats = NULL, v2_formats = NULL) {
   st <- file.path(root, "STUDY-MM")
   dir.create(st)
   writeLines(c("study_id: STUDY-MM", "settings:", "  rounding: sas"), file.path(st, "study.yml"))
-  tfl_copy_templates(st, "tflspec_v1/demog")
+  tfl_copy_templates(st, "tflspec_v1/tflspec_summary")
   if (!is.null(v1_formats)) tfl_series_values_set(st, "tflspec_v1", list(formats = v1_formats))
   if (!is.null(v2_formats)) {
     src <- file.path(root, "src")
@@ -57,7 +57,7 @@ mm_study <- function(root, v1_formats = NULL, v2_formats = NULL) {
     file.rename(file.path(src, "tflspec_v1"), file.path(src, "tflspec_v2"))
     f <- file.path(src, "tflspec_v2", "series.yml")
     writeLines(sub("^name: tflspec_v1$", "name: tflspec_v2", readLines(f)), f)
-    tfl_copy_templates(st, "tflspec_v2/demog", dir = src)
+    tfl_copy_templates(st, "tflspec_v2/tflspec_summary", dir = src)
     tfl_series_values_set(st, "tflspec_v2", list(formats = v2_formats))
   }
   st
@@ -92,7 +92,7 @@ test_that("two series in one study: each report gets its own series' digits", {
   st <- mm_study(root, v1_formats = list(N = 0L, mean = 2L, sd = 3L, min = 0L),
                  v2_formats = list(N = 0L, mean = 1L, sd = 2L, min = 1L))
   r2 <- mm_demog(c("    formats: {sd: 4}"))
-  r2$template$name <- "tflspec_v2/demog"
+  r2$template$name <- "tflspec_v2/tflspec_summary"
   a <- attr(tfl_template_resolve(mm_demog(c("    formats: {mean: 3}")), study = st), "args")$formats
   b <- attr(tfl_template_resolve(r2, study = st), "args")$formats
   # the name each report writes, and its own series for the rest
@@ -104,7 +104,7 @@ test_that("two series in one study: each report gets its own series' digits", {
   expect_identical(a2, a)
   expect_identical(b2, b)
   u2 <- mm_demog()
-  u2$template$name <- "tflspec_v2/demog"
+  u2$template$name <- "tflspec_v2/tflspec_summary"
   expect_identical(attr(tfl_template_resolve(u2, study = st), "args")$formats,
                    list(N = 0L, mean = 1L, sd = 2L, min = 1L))
   expect_identical(attr(tfl_template_resolve(mm_demog(), study = st), "args")$formats,
@@ -129,8 +129,11 @@ test_that("a name removed with !unset takes the catalog's format in the ARD call
 })
 
 test_that("a list argument is still replaced whole", {
+  # (ae_soc_pt's sort, a list with a default; ae_soc_pt left tflspec_v1,
+  # canon 2026-11-24: its copy in the test series)
+  local_test_series()
   r <- mm_report(c("id: T-MM-2", "kind: table", "label: Fictional AEs",
-                   "template:", "  name: tflspec_v1/ae_soc_pt", "  analysis:", "    by: TRT01A",
+                   "template:", "  name: tflspec_test/ae_soc_pt", "  analysis:", "    by: TRT01A",
                    "    sort: [label]"))
   out <- tfl_template_resolve(r)
   expect_identical(unlist(attr(out, "args")$sort), "label")
