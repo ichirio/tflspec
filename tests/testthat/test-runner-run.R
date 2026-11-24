@@ -851,3 +851,91 @@ test_that("the stamp leaves out study.yml's updated: line, and nothing else of i
   writeLines(c(base, "updated: 2026-11-24 18:30:00", "tokens: {A: b}"), y)
   expect_false(identical(tfl_spec_stamp(s), a))
 })
+
+test_that("a study without renv.lock: the run writes one, the packages the programs name and what they need", {
+  skip_on_cran()
+  s <- rr_study()
+  on.exit(unlink(s, recursive = TRUE))
+  # a report program that names a package (yaml), and a comment and a
+  # string that name others: only the call counts
+  rr_set(s, "tfl/U.R", c("# ggplot2::ggplot() in a comment is not a use",
+                         "x <- yaml::as.yaml(list(a = 1))",
+                         "writeLines('u', 'output/tfl/U.rtf')"))
+  r <- rr_study_run(s)
+  expect_identical(r$status, 0L, info = r$text)
+  b <- rr_runs(s)
+  expect_false(file.exists(file.path(s, "renv.lock")))
+  lock <- jsonlite::fromJSON(file.path(b, "renv.lock"), simplifyVector = FALSE)
+  expect_identical(lock$R$Version, paste(R.version$major, R.version$minor, sep = "."))
+  expect_identical(lock$R$Repositories[[1L]]$Name, "CRAN")
+  y <- lock$Packages$yaml
+  expect_identical(y$Package, "yaml")
+  expect_identical(y$Version, as.character(utils::packageVersion("yaml")))
+  expect_true(y$Source %in% c("Repository", "GitHub", "unknown"))
+  # nothing the programs do not name; no base package; not the runner's own
+  # mentions (tflspec, logrx)
+  expect_false(any(c("ggplot2", "tflspec", "logrx", "utils", "tools") %in% names(lock$Packages)))
+  bt <- readLines(file.path(b, "batch.txt"))
+  expect_true("Session  : session_info.txt and renv.lock" %in% bt)
+  # a re-run of the folder elsewhere keeps the lockfile as it is
+  before <- unname(tools::md5sum(file.path(b, "renv.lock")))
+  b2 <- file.path(tempfile("handed"), basename(b))
+  dir.create(dirname(b2))
+  on.exit(unlink(dirname(b2), recursive = TRUE), add = TRUE)
+  file.copy(b, dirname(b2), recursive = TRUE)
+  rr_set(b2, "tfl/U.R", c("x <- jsonlite::toJSON(1)", "writeLines('u', 'output/tfl/U.rtf')"))
+  r2 <- rr_rscript(b2, "autoexec_all.R", paste0("--data-root=", s))
+  expect_identical(r2$status, 0L, info = r2$text)
+  expect_identical(unname(tools::md5sum(file.path(b2, "renv.lock"))), before)
+})
+
+test_that("a study's own renv.lock is copied as it is; a package it lacks is a warning, not a stop", {
+  skip_on_cran()
+  s <- rr_study()
+  on.exit(unlink(s, recursive = TRUE))
+  rr_set(s, "tfl/U.R", c("x <- yaml::as.yaml(list(a = 1))",
+                         "writeLines('u', 'output/tfl/U.rtf')"))
+  own <- c("{", "  \"R\": {\"Version\": \"4.6.1\", \"Repositories\": []},",
+           "  \"Packages\": {",
+           "    \"cards\": {\"Package\": \"cards\", \"Version\": \"0.9.0\", \"Source\": \"Repository\"}",
+           "  }", "}")
+  writeLines(own, file.path(s, "renv.lock"))
+  r <- rr_study_run(s)
+  expect_identical(r$status, 0L, info = r$text)
+  b <- rr_runs(s)
+  expect_identical(readLines(file.path(b, "renv.lock")), own)
+  iss <- rr_read(b, "issues.csv")
+  w <- iss[iss$source == "renv", , drop = FALSE]
+  expect_identical(nrow(w), 1L)
+  expect_identical(w$level, "warning")
+  expect_identical(w$program, "renv.lock")
+  expect_match(w$text, "renv.lock (the study's) does not list yaml", fixed = TRUE)
+  expect_true("Warnings : 1" %in% readLines(file.path(b, "batch.txt")))
+  # the study's file is not touched
+  expect_identical(readLines(file.path(s, "renv.lock")), own)
+})
+
+test_that("a lockfile entry: GitHub keeps its Remote* fields (RemoteSha), a repository its name, a local install is unknown", {
+  e <- rr_env()
+  entry <- function(d) {
+    txt <- c("{", "\"x\": {", e$.batch_lock_entry(d), "}", "}")
+    jsonlite::fromJSON(paste(txt, collapse = "\n"), simplifyVector = FALSE)$x
+  }
+  gh <- entry(c(Package = "tflspec", Version = "0.0.25.9000", Imports = "yaml (>= 2.3.5),\n    utils",
+                RemoteType = "github", RemoteHost = "api.github.com", RemoteUsername = "ichirio",
+                RemoteRepo = "tflspec", RemoteRef = "next", RemoteSha = "abc123"))
+  expect_identical(gh$Source, "GitHub")
+  expect_identical(gh$RemoteSha, "abc123")
+  expect_identical(gh$RemoteRepo, "tflspec")
+  # (not utils: base packages come with R)
+  expect_identical(unlist(gh$Requirements), "yaml")
+  cr <- entry(c(Package = "yaml", Version = "2.3.10", Repository = "CRAN", Depends = "R (>= 3.6)"))
+  expect_identical(cr$Source, "Repository")
+  expect_identical(cr$Repository, "CRAN")
+  expect_length(cr$Requirements, 0L)
+  lo <- entry(c(Package = "mine", Version = "1.0"))
+  expect_identical(lo$Source, "unknown")
+  # JSON strings: quotes, backslashes, new lines
+  s <- paste0("a \"q\" b", "\\", "c\nd")
+  expect_identical(jsonlite::fromJSON(e$.batch_json(s)), s)
+})

@@ -709,24 +709,187 @@
   unname(tools::md5sum(tmp))
 }
 
+# The packages the run's programs name (library(), require(), pkg::) that
+# are installed here.  The runner itself (programs/batch.R) is not read: its
+# messages name tflspec functions, which no program calls.
+.batch_program_pkgs <- function(progs) {
+  # the R files only (the support files are workbooks too)
+  progs <- progs[grepl("[.][Rr]$", progs) & file.exists(progs) &
+                   progs != file.path("programs", "batch.R")]
+  code <- unlist(lapply(progs, readLines, warn = FALSE, encoding = "UTF-8"))
+  code <- sub("#.*$", "", code, useBytes = TRUE)
+  lib <- unlist(regmatches(code, gregexpr(
+    "(library|require|requireNamespace)\\(\\s*['\"]?[A-Za-z][A-Za-z0-9.]*", code,
+    perl = TRUE, useBytes = TRUE)))
+  lib <- sub("^.*\\(\\s*['\"]?", "", lib, useBytes = TRUE)
+  ns <- unlist(regmatches(code, gregexpr("[A-Za-z][A-Za-z0-9.]*(?=:::?)", code,
+                                         perl = TRUE, useBytes = TRUE)))
+  pkgs <- sort(unique(c(lib, ns)))
+  pkgs[vapply(pkgs, function(p) nzchar(system.file(package = p)), NA)]
+}
+
+# An installed package's DESCRIPTION, as a named character vector (NULL when
+# it is not installed)
+.batch_desc <- function(p) {
+  f <- system.file("DESCRIPTION", package = p)
+  if (!nzchar(f)) return(NULL)
+  d <- read.dcf(f)
+  stats::setNames(as.character(d[1L, ]), colnames(d))
+}
+
+# the packages a DESCRIPTION needs to load: Depends, Imports, LinkingTo
+.batch_desc_needs <- function(d) {
+  x <- d[intersect(c("Depends", "Imports", "LinkingTo"), names(d))]
+  x <- unlist(strsplit(x[!is.na(x)], ",", fixed = TRUE))
+  x <- trimws(sub("[(].*$", "", x))
+  x <- sort(unique(setdiff(x[nzchar(x)], "R")))
+  # (not R's base packages: they come with R)
+  x[!vapply(x, function(p) identical(unname(.batch_desc(p)["Priority"]), "base"), NA)]
+}
+
+# `pkgs` and what they need, installed here, without R's base packages:
+# a list of DESCRIPTIONs, by name
+.batch_pkg_closure <- function(pkgs) {
+  out <- list()
+  todo <- pkgs
+  while (length(todo)) {
+    p <- todo[[1L]]
+    todo <- todo[-1L]
+    if (!is.null(out[[p]])) next
+    d <- .batch_desc(p)
+    if (is.null(d) || identical(unname(d["Priority"]), "base")) next
+    # (a package not installed here is not in the lockfile: the run would have
+    # failed to load it)
+    out[[p]] <- d
+    todo <- c(todo, setdiff(.batch_desc_needs(d), names(out)))
+  }
+  out[sort(names(out))]
+}
+
+# a JSON string
+.batch_json <- function(x) {
+  x <- gsub("\\", "\\\\", enc2utf8(as.character(x)), fixed = TRUE)
+  x <- gsub("\"", "\\\"", x, fixed = TRUE)
+  x <- gsub("\n", "\\n", x, fixed = TRUE)
+  x <- gsub("\r", "\\r", x, fixed = TRUE)
+  x <- gsub("\t", "\\t", x, fixed = TRUE)
+  paste0("\"", x, "\"")
+}
+
+# One package of the lockfile: where renv::restore() installs it from.  A
+# package from GitHub (GitLab, Bitbucket) keeps its Remote* fields
+# (RemoteSha: the commit); one from a repository its Repository.  One
+# installed from a local folder has no source renv can use: "unknown".
+.batch_lock_entry <- function(d) {
+  rt <- tolower(unname(d["RemoteType"]))
+  remote <- c(github = "GitHub", gitlab = "GitLab", bitbucket = "Bitbucket")
+  f <- c(Package = unname(d["Package"]), Version = unname(d["Version"]))
+  if (!is.na(rt) && rt %in% names(remote)) {
+    f["Source"] <- remote[[rt]]
+    keep <- grep("^Remote", names(d), value = TRUE)
+    keep <- keep[!is.na(d[keep])]
+    f <- c(f, d[keep])
+  } else if (!is.na(d["Repository"])) {
+    f["Source"] <- "Repository"
+    f["Repository"] <- unname(d["Repository"])
+  } else {
+    f["Source"] <- "unknown"
+  }
+  need <- .batch_desc_needs(d)
+  c(paste0("      ", .batch_json(names(f)), ": ", .batch_json(f), ","),
+    paste0("      \"Requirements\": [",
+           paste(.batch_json(need), collapse = ", "), "]"))
+}
+
+# The run's renv.lock, when the study has none: the packages the programs
+# name and what they need, at the versions installed here, in renv's
+# lockfile form (renv::restore() installs them).  Returns the packages with
+# no source renv can install from.
+.batch_write_lock <- function(pkgs) {
+  ds <- .batch_pkg_closure(pkgs)
+  cran <- unname(getOption("repos")["CRAN"])
+  if (is.null(cran) || is.na(cran) || !nzchar(cran) || cran == "@CRAN@") {
+    cran <- "https://cloud.r-project.org"
+  }
+  urls <- unique(vapply(ds, function(d) {
+    r <- unname(d["Repository"])
+    if (!is.na(r) && grepl("^https?://", r)) r else NA_character_
+  }, ""))
+  urls <- urls[!is.na(urls)]
+  repos <- c(paste0("      {\"Name\": \"CRAN\", \"URL\": ", .batch_json(cran), "}"),
+             if (length(urls)) paste0("      {\"Name\": ", .batch_json(urls), ", \"URL\": ",
+                                      .batch_json(urls), "}"))
+  ent <- lapply(names(ds), function(p) {
+    c(paste0("    ", .batch_json(p), ": {"), .batch_lock_entry(ds[[p]]), "    }")
+  })
+  # (a comma after each repository and package but the last)
+  comma <- function(blocks) {
+    n <- length(blocks)
+    if (n > 1L) for (i in seq_len(n - 1L)) {
+      b <- blocks[[i]]
+      b[length(b)] <- paste0(b[length(b)], ",")
+      blocks[[i]] <- b
+    }
+    unlist(blocks)
+  }
+  writeLines(enc2utf8(c(
+    "{",
+    "  \"R\": {",
+    paste0("    \"Version\": ", .batch_json(paste(R.version$major, R.version$minor, sep = ".")), ","),
+    "    \"Repositories\": [",
+    comma(as.list(repos)),
+    "    ]",
+    "  },",
+    "  \"Packages\": {",
+    comma(ent),
+    "  }",
+    "}")), "renv.lock", useBytes = TRUE)
+  names(ds)[vapply(ds, function(d) {
+    rt <- tolower(unname(d["RemoteType"]))
+    !(!is.na(rt) && rt %in% c("github", "gitlab", "bitbucket")) && is.na(d["Repository"])
+  }, NA)]
+}
+
+# the packages a renv.lock lists (its "Package" fields)
+.batch_lock_pkgs <- function(f = "renv.lock") {
+  x <- paste(readLines(f, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
+  m <- regmatches(x, gregexpr("\"Package\"\\s*:\\s*\"[^\"]+\"", x))[[1L]]
+  unique(sub("^.*\"([^\"]+)\"$", "\\1", m))
+}
+
+# The record of the packages, at the end of the first run (a re-run keeps the
+# folder's renv.lock): the study's renv.lock, copied in at the stage, checked
+# for the packages the programs need; or, with none, one written from what is
+# installed here.  Returns the problems, as text (none: character()).
+.batch_lock <- function(pkgs, rerun) {
+  if (rerun) return(character())
+  tryCatch({
+    if (file.exists("renv.lock")) {
+      miss <- setdiff(names(.batch_pkg_closure(pkgs)), .batch_lock_pkgs())
+      if (length(miss)) {
+        return(paste0("renv.lock (the study's) does not list ", paste(miss, collapse = ", "),
+                      ", which the programs use: renv::restore() will not install ",
+                      if (length(miss) > 1L) "them" else "it", "."))
+      }
+      return(character())
+    }
+    unknown <- .batch_write_lock(pkgs)
+    if (length(unknown)) {
+      paste0("renv.lock: ", paste(unknown, collapse = ", "), " ",
+             if (length(unknown) > 1L) "were" else "was",
+             " installed from a local folder; renv::restore() cannot install ",
+             if (length(unknown) > 1L) "them" else "it", " (install from GitHub or a repository).")
+    } else character()
+  }, error = function(e) paste("renv.lock could not be made:", conditionMessage(e)))
+}
+
 # The packages the run's programs name (library(), require(), pkg::), with
 # the versions installed here, and sessionInfo() once they are loaded:
 # session_info.txt.  The study's renv.lock is in the batch folder, as the
 # record.  Never the end of a run: what cannot be read is said in the file.
 .batch_session_info <- function(progs) {
   ver <- tryCatch({
-    # the R files only (the support files are workbooks too)
-    progs <- progs[grepl("[.][Rr]$", progs) & file.exists(progs)]
-    code <- unlist(lapply(progs, readLines, warn = FALSE, encoding = "UTF-8"))
-    code <- sub("#.*$", "", code, useBytes = TRUE)
-    lib <- unlist(regmatches(code, gregexpr(
-      "(library|require|requireNamespace)\\(\\s*['\"]?[A-Za-z][A-Za-z0-9.]*", code,
-      perl = TRUE, useBytes = TRUE)))
-    lib <- sub("^.*\\(\\s*['\"]?", "", lib, useBytes = TRUE)
-    ns <- unlist(regmatches(code, gregexpr("[A-Za-z][A-Za-z0-9.]*(?=:::?)", code,
-                                           perl = TRUE, useBytes = TRUE)))
-    pkgs <- sort(unique(c(lib, ns)))
-    pkgs <- pkgs[vapply(pkgs, function(p) nzchar(system.file(package = p)), NA)]
+    pkgs <- .batch_program_pkgs(progs)
     for (p in pkgs) try(suppressPackageStartupMessages(loadNamespace(p)), silent = TRUE)
     vapply(pkgs, function(p) as.character(utils::packageVersion(p)), "")
   }, error = function(e) structure(character(), note = conditionMessage(e)))
@@ -924,7 +1087,10 @@
 # of `parts` ("ard", "tfl"), each logged, and what the run made:
 #   logs/      one log per program (logrx; R CMD BATCH without logrx)
 #   output/    the ARD the run made, the reports it made
-#   programs/, spec/, input/, study.yml, renv.lock  the study as copied
+#   programs/, spec/, input/, study.yml  the study as copied
+#   renv.lock    the study's, copied; or, when it has none, written at the
+#                first run's end: the packages the programs name and what
+#                they need, at the versions installed (renv::restore())
 #   data/      with --data: the data folders as copied
 #   run_paths.R, run_args.txt, autoexec_*.R  how the folder runs again
 #   snapshot.csv   the copied files: path, size, md5
@@ -1156,6 +1322,11 @@
       if (!nzchar(result$note[k])) result$note[k] <- txt
     }
   }
+  progs_all <- unique(c(result$program, unlist(.batch_support[c(parts, "all")])))
+  # the packages, for renv::restore(): renv.lock (a problem is a warning)
+  add_issues("renv.lock", NA_character_, "warning", "renv",
+             .batch_lock(tryCatch(.batch_program_pkgs(progs_all),
+                                  error = function(e) character()), rerun))
   # errors and warnings: as issues.csv has them
   result$errors <- vapply(result$program, function(p)
     sum(issues$program == p & issues$level == "error"), 1L, USE.NAMES = FALSE)
@@ -1165,7 +1336,6 @@
   n_warn <- sum(issues$level == "warning")
   man <- NULL
   if (identical(root, ".")) man <- .batch_keep_data(result$program, root)
-  progs_all <- unique(c(result$program, unlist(.batch_support[c(parts, "all")])))
   .batch_session_info(progs_all)
   .batch_inputs(result$program)
   result <- cbind(result[1:2], output_id = oid, result[-(1:2)],
