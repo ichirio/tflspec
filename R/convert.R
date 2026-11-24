@@ -87,7 +87,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   # style sheet (where it is blank)
   if (!is.null(sheets$table)) sheets$table <- .conv_font_to_style(sheets$table)
   sp <- sheets$table
-  plan <- sheets$planner
+  plan <- .conv_planner_cols(sheets$planner)
   ard <- sheets$ard
   lf <- sheets$listing
   figs <- sheets$figures %||% list()
@@ -435,15 +435,23 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   tfl_read_ard_spec(path)
 }
 
+# A planner sheet's columns are all optional: one that is absent is read as
+# NA, wherever the sheet comes from (a workbook, or the app's sheets).
+.conv_planner_cols <- function(d) {
+  if (is.null(d)) return(NULL)
+  for (cn in c("output_id", "description", "setup_code", "process_code", "section",
+               "population", "datasets", "batches")) if (!cn %in% names(d)) d[[cn]] <- rep(NA_character_, nrow(d))
+  d
+}
+
 # tflplanner's own sheet of the report workbook (the report list, the setup
 # code): not a spec sheet, read as it is
 .conv_read_planner_sheet <- function(books) {
   for (f in books) {
     sh <- intersect(c("_tflplanner", "_rtfplanner"), readxl::excel_sheets(f))
     if (length(sh)) {
-      d <- as.data.frame(readxl::read_excel(f, sh[1L], col_types = "text"), stringsAsFactors = FALSE)
-      for (cn in c("output_id", "description", "setup_code", "process_code", "section",
-                   "population", "datasets", "batches")) if (!cn %in% names(d)) d[[cn]] <- NA_character_
+      d <- .conv_planner_cols(as.data.frame(readxl::read_excel(f, sh[1L], col_types = "text"),
+                                            stringsAsFactors = FALSE))
       d$output_id <- trimws(d$output_id)
       return(d)
     }
