@@ -4,12 +4,14 @@
 rr_manifest <- function() {
   list(
     root = "runs", ard = "output/ard/ard.rds", study = "S-1", spec = "spec",
+    spec_md5 = "x",
     programs = list(ard = "programs/ard/A.R",
                     tfl = c("programs/tfl/T.R", "programs/tfl/U.R")),
     ard_outputs = c(A.R = "T-1"),
     report_ids = c(`programs/tfl/T.R` = "T-1", `programs/tfl/U.R` = "T-2"),
     needs = list(`programs/tfl/T.R` = "T-1"),
-    unresolved = character(), sets = list(),
+    unresolved = character(),
+    runs = list(rr_def("Main", c("T-1", "T-2"))),
     outputs = list(`programs/tfl/T.R` = "output/tfl/T.rtf",
                    `programs/tfl/U.R` = "output/tfl/U.rtf"),
     support = list(ard = character(), tfl = character(), all = character()),
@@ -18,6 +20,11 @@ rr_manifest <- function() {
     data_dirs = c(adam = "data/adam", sdtm = "data/sdtm", other = "data/other"),
     sources = character(), check_code = "programs/company_setup.R",
     kind = "run", paths = list())
+}
+
+# a run definition as the manifest holds it
+rr_def <- function(name, reports, mode = "all", copy_data = FALSE, problem = "") {
+  list(name = name, reports = reports, mode = mode, copy_data = copy_data, problem = problem)
 }
 
 # a fake study (fictional data): an ARD program, two report programs, one
@@ -45,6 +52,8 @@ rr_study <- function(m = rr_manifest()) {
              file.path(s, "programs", "tfl", "T.R"))
   writeLines("writeLines('u', 'output/tfl/U.rtf')",
              file.path(s, "programs", "tfl", "U.R"))
+  # the stamp of the spec the programs were made from
+  m$spec_md5 <- tfl_spec_stamp(s)
   rr_write_batch(s, m)
   s
 }
@@ -91,11 +100,11 @@ rr_set <- function(s, program, lines) {
 
 rr_read <- function(...) utils::read.csv(file.path(...), colClasses = "character")
 
-rr_refused <- function(m, pattern, setup = function(s) NULL) {
+rr_refused <- function(m, pattern, setup = function(s) NULL, args = character()) {
   s <- rr_study(m)
   on.exit(unlink(s, recursive = TRUE))
   setup(s)
-  r <- rr_rscript(s, "programs/autoexec_all.R")
+  r <- rr_rscript(s, "programs/autoexec_all.R", args)
   expect_true(r$status != 0L, info = pattern)
   expect_match(r$text, pattern, info = r$text)
   # nothing was made
@@ -104,8 +113,8 @@ rr_refused <- function(m, pattern, setup = function(s) NULL) {
 }
 
 # the first run of the fake study
-rr_first_run <- function(args = character(), env = character()) {
-  s <- rr_study()
+rr_first_run <- function(args = character(), env = character(), m = rr_manifest()) {
+  s <- rr_study(m)
   r <- rr_rscript(s, "programs/autoexec_all.R", args, env)
   list(s = s, r = r, batch = rr_runs(s))
 }
@@ -139,6 +148,18 @@ test_that("a run keeps everything in its batch folder", {
   expect_true("Warnings : 0" %in% bt)
   expect_true("Data root : ../.." %in% bt)
   expect_identical(utils::tail(bt, 1L), "Verified : yes")
+  # the start record's lines come first: the definition, the mode, the kind,
+  # the start, the log engine (R CMD BATCH by default, said)
+  expect_identical(bt[1:3], c("Run      : Main", "Mode     : all", "Kind     : run"))
+  expect_match(bt[[4L]], "^Started  : [0-9]{4}-[0-9]{2}-[0-9]{2} ")
+  expect_identical(bt[[5L]], "Logs     : R CMD BATCH")
+  expect_false(any(grepl("^Batch set", bt)))
+  # the folder is batch_<date>-<time>_<definition>
+  expect_match(basename(b), "^batch_[0-9]{8}-[0-9]{6}_Main$")
+  expect_identical(readLines(file.path(b, "run_args.txt")), "--run=Main")
+  expect_true(file.exists(file.path(b, "run_definition.yml")))
+  # the stamp is the one tflspec computes, from the same function
+  expect_true(paste("Spec     :", tfl_spec_stamp(x$s)) %in% bt)
   r <- utils::read.csv(file.path(b, "run.csv"), colClasses = "character")
   expect_true(all(r$status == "OK"))
   expect_identical(r$empty[r$part == "ard"], "")
@@ -230,12 +251,14 @@ test_that("the entry file of a batch folder refuses to run in place", {
 
 test_that("a batch folder runs again elsewhere, with its selection, and is never official", {
   skip_on_cran()
-  # the first run selects T-1 only (not the report T-2)
-  x <- rr_first_run("T-1")
+  # the first run is the definition One: T-1 only (not the report T-2)
+  m <- rr_manifest()
+  m$runs <- list(rr_def("Main", c("T-1", "T-2")), rr_def("One", "T-1"))
+  x <- rr_first_run("--run=One", m = m)
   on.exit(unlink(x$s, recursive = TRUE))
   expect_identical(x$r$status, 0L, info = x$r$text)
   expect_false(file.exists(file.path(x$batch, "output", "tfl", "U.rtf")))
-  expect_identical(readLines(file.path(x$batch, "run_args.txt")), "T-1")
+  expect_identical(readLines(file.path(x$batch, "run_args.txt")), "--run=One")
   el <- tempfile("else")
   dir.create(el)
   on.exit(unlink(el, recursive = TRUE), add = TRUE)
@@ -490,22 +513,27 @@ test_that("two stages in one second: the second folder gets _2", {
   t0 <- Sys.time()
   # the folder names of the next seconds are taken
   for (i in -2:60) {
-    dir.create(file.path(s, "runs", paste0(format(t0 + i, "%Y%m%d_%H%M%S"), "_all")),
+    dir.create(file.path(s, "runs", paste0("batch_", format(t0 + i, "%Y%m%d-%H%M%S"), "_Main")),
                recursive = TRUE)
   }
   r <- rr_rscript(s, "programs/autoexec_all.R")
   expect_identical(r$status, 0L, info = r$text)
-  expect_match(r$text, "Batch folder: .*_all_2")
+  expect_match(r$text, "Batch folder: .*_Main_2")
   d <- rr_runs(s)
   made <- d[file.exists(file.path(d, "batch.txt"))]
   expect_length(made, 1L)
-  expect_match(basename(made), "_all_2$")
+  expect_match(basename(made), "_Main_2$")
+  # the list tells the definition from the name: Main, not Main_2
+  l <- tfl_list_runs(s)
+  expect_identical(l$definition[l$run == basename(made)], "Main")
 })
 
 test_that("an md5 mismatch after the copy removes the batch folder", {
   skip_on_cran()
   s <- rr_study()
-  e <- rr_env()
+  m <- rr_manifest()
+  m$spec_md5 <- tfl_spec_stamp(s)
+  e <- rr_env(m)
   e$.batch_quit <- function(status) stop("quit ", status, call. = FALSE)
   # something is saved while the copy is made
   e$file.copy <- function(from, to, ...) {
@@ -654,4 +682,271 @@ test_that("a reports-only run again needs the folder's ARD and drops stale condi
   expect_match(r$text, "No ARD in this batch folder: run autoexec_ard.R or autoexec_all.R first.",
                fixed = TRUE)
   expect_identical(rr_tree(file.path(b2, "output")), tree)
+})
+
+# ---- run definitions (G4 slice B1): --run, the folder, the start record, the stamp ----
+
+test_that("two definitions and no --run: the run stops, listing the names", {
+  skip_on_cran()
+  m <- rr_manifest()
+  m$runs <- list(rr_def("Main", c("T-1", "T-2")), rr_def("One", "T-1"))
+  rr_refused(m, "several run definitions; say which with --run=<name>:\n  Main\n  One")
+})
+
+test_that("no definition and no --run: the message says how to make one", {
+  skip_on_cran()
+  m <- rr_manifest()
+  m$runs <- list()
+  rr_refused(m, "the study has no run definition.*spec/runs.yml")
+})
+
+test_that("--run=<name> and --run <name> start the definition; the name is exact", {
+  skip_on_cran()
+  m <- rr_manifest()
+  m$runs <- list(rr_def("Main", c("T-1", "T-2")), rr_def("One", "T-1"))
+  x <- rr_first_run(c("--run", "One"), m = m)
+  on.exit(unlink(x$s, recursive = TRUE))
+  expect_identical(x$r$status, 0L, info = x$r$text)
+  expect_match(basename(x$batch), "_One$")
+  expect_true("Run      : One" %in% readLines(file.path(x$batch, "batch.txt")))
+  # the other spelling
+  x2 <- rr_first_run("--run=Main", m = m)
+  on.exit(unlink(x2$s, recursive = TRUE), add = TRUE)
+  expect_identical(x2$r$status, 0L, info = x2$r$text)
+  expect_match(basename(x2$batch), "_Main$")
+  # a name that differs in case is not the definition: the message names the near one
+  rr_refused(m, "no run definition named 'main'.*\n  Names are exact: did you mean 'Main'", args = "--run=main")
+  rr_refused(m, "no run definition named 'Nine'", args = "--run=Nine")
+  rr_refused(m, "--run needs the definition's name", args = "--run")
+  rr_refused(m, "--run is given twice", args = c("--run=One", "--run=Main"))
+})
+
+test_that("--batch is refused, with no alias", {
+  skip_on_cran()
+  rr_refused(rr_manifest(), "--batch is gone: use --run=<name>", args = "--batch=Main")
+  rr_refused(rr_manifest(), "--batch is gone: use --run=<name>", args = c("--batch", "Main"))
+})
+
+test_that("an official run takes no names and no --exclude", {
+  skip_on_cran()
+  rr_refused(rr_manifest(), "takes no names and no --exclude", args = "T-1")
+  rr_refused(rr_manifest(), "takes no names and no --exclude", args = "--exclude=T-2")
+  rr_refused(rr_manifest(), "takes no names and no --exclude", args = c("--run=Main", "T-1"))
+})
+
+test_that("a definition with a problem is refused, with its text", {
+  skip_on_cran()
+  m <- rr_manifest()
+  m$runs <- list(rr_def("Main", c("T-1", "T-2"), problem = "T-2 reads the ARD of T-9, which the definition does not select"))
+  rr_refused(m, "the run definition 'Main' has a problem[.]\n  T-2 reads the ARD of T-9")
+  # an option the runner does not take
+  m$runs <- list(rr_def("Main", c("T-1", "T-2"), mode = "weird"))
+  rr_refused(m, "mode 'weird' is not one of: all, ard")
+})
+
+test_that("a name that breaks the rule is refused before any folder is made", {
+  skip_on_cran()
+  for (nm in c("a b", "../x", "Final.", "1st", strrep("a", 41L), "")) {
+    m <- rr_manifest()
+    m$runs <- list(rr_def(nm, c("T-1", "T-2")))
+    rr_refused(m, "breaks the rule: ASCII letters, digits, _ and -")
+  }
+})
+
+test_that("a listed id with no program is refused, not 'the rest runs'", {
+  skip_on_cran()
+  m <- rr_manifest()
+  m$runs <- list(rr_def("Main", c("T-1", "T-77")))
+  rr_refused(m, "no program for T-77")
+})
+
+test_that("mode ard runs the ARD part only; copy_data keeps the data", {
+  skip_on_cran()
+  m <- rr_manifest()
+  m$runs <- list(rr_def("Ard", c("T-1", "T-2"), mode = "ard"))
+  x <- rr_first_run(m = m)
+  on.exit(unlink(x$s, recursive = TRUE))
+  expect_identical(x$r$status, 0L, info = x$r$text)
+  bt <- readLines(file.path(x$batch, "batch.txt"))
+  expect_true("Mode     : ard" %in% bt)
+  expect_identical(unique(rr_read(x$batch, "run.csv")$part), "ard")
+  expect_false(file.exists(file.path(x$batch, "output", "tfl", "T.rtf")))
+  m$runs <- list(rr_def("Keep", c("T-1", "T-2"), copy_data = TRUE))
+  y <- rr_first_run(m = m)
+  on.exit(unlink(y$s, recursive = TRUE), add = TRUE)
+  expect_identical(y$r$status, 0L, info = y$r$text)
+  expect_true(file.exists(file.path(y$batch, "data", "adam", "x.csv")))
+  expect_identical(readLines(file.path(y$batch, "run_paths.R"))[1L], ".tfl_data_root <- \".\"")
+})
+
+test_that("the stamp: a spec that changed since the programs were made is refused", {
+  skip_on_cran()
+  pat <- "programs/batch.R is older than the spec: save the study \\(tflplanner\\) or regenerate the programs"
+  # a spec file edited, a file added by hand (runs.yml), study.yml edited
+  rr_refused(rr_manifest(), pat, setup = function(s) writeLines("a: 2", file.path(s, "spec", "s.yml")))
+  rr_refused(rr_manifest(), pat, setup = function(s) writeLines("runs: []", file.path(s, "spec", "runs.yml")))
+  rr_refused(rr_manifest(), pat, setup = function(s) {
+    writeLines(c("study_id: S-1", "tokens: {A: b}"), file.path(s, "study.yml"))
+  })
+  # what a save leaves out does not count: the programs, dot names, editor files
+  s <- rr_study()
+  on.exit(unlink(s, recursive = TRUE))
+  writeLines("x", file.path(s, "programs", "tfl", "U.R"))
+  writeLines("x", file.path(s, "spec", "s.yml~"))
+  dir.create(file.path(s, "spec", ".backup"))
+  writeLines("x", file.path(s, "spec", ".backup", "old.yml"))
+  r <- rr_rscript(s, "programs/autoexec_all.R")
+  expect_identical(r$status, 0L, info = r$text)
+})
+
+test_that("the stamp is the same in a copy of the study, and hashes bytes", {
+  s <- rr_study()
+  on.exit(unlink(s, recursive = TRUE))
+  a <- tfl_spec_stamp(s)
+  expect_match(a, "^[0-9a-f]{32}$")
+  s2 <- tempfile("copy")
+  dir.create(s2)
+  on.exit(unlink(s2, recursive = TRUE), add = TRUE)
+  file.copy(file.path(s, c("study.yml", "spec")), s2, recursive = TRUE)
+  expect_identical(tfl_spec_stamp(s2), a)
+  # bytes, not lines: the same text with LF and with CRLF is two stamps
+  writeBin(c(charToRaw("a: 1"), as.raw(10L)), file.path(s2, "spec", "s.yml"))
+  lf <- tfl_spec_stamp(s2)
+  writeBin(c(charToRaw("a: 1"), as.raw(c(13L, 10L))), file.path(s2, "spec", "s.yml"))
+  expect_false(identical(tfl_spec_stamp(s2), lf))
+  # nothing to hash
+  e <- tempfile("none")
+  dir.create(e)
+  on.exit(unlink(e, recursive = TRUE), add = TRUE)
+  expect_identical(tfl_spec_stamp(e), "none")
+})
+
+test_that("the start record is there before any program runs", {
+  skip_on_cran()
+  s <- rr_study()
+  on.exit(unlink(s, recursive = TRUE))
+  rr_set(s, "ard/A.R", c(
+    "dir.create('output/ard', recursive = TRUE, showWarnings = FALSE)",
+    "saveRDS(data.frame(output_id = 'T-1'), 'output/ard/ard.rds')",
+    paste("writeLines(c(readLines('batch.txt')[1:3], file.exists('run_definition.yml'),",
+          "readLines('run_args.txt')), 'output/ard/seen.txt')")))
+  r <- rr_rscript(s, "programs/autoexec_all.R")
+  expect_identical(r$status, 0L, info = r$text)
+  b <- rr_runs(s)
+  expect_identical(readLines(file.path(b, "output", "ard", "seen.txt")),
+                   c("Run      : Main", "Mode     : all", "Kind     : run", "TRUE", "--run=Main"))
+  # run_definition.yml: the resolved definition and the stamp
+  d <- readLines(file.path(b, "run_definition.yml"))
+  expect_true("name: \"Main\"" %in% d)
+  expect_true("  - \"T-1\"" %in% d)
+  expect_true(paste0("stamp: \"", tfl_spec_stamp(s), "\"") %in% d)
+})
+
+test_that("a run definition written beside a folder reads back", {
+  e <- rr_env()
+  d <- rr_def("One", c("T-1", "a\"b"), mode = "ard", copy_data = TRUE)
+  f <- tempfile()
+  writeLines(e$.batch_definition_lines(d), f)
+  r <- e$.batch_read_definition(f)
+  expect_identical(r$name, "One")
+  expect_identical(r$reports, c("T-1", "a\"b"))
+  expect_identical(r$mode, "ard")
+  expect_true(r$copy_data)
+  expect_identical(r$stamp, "x")
+  expect_null(e$.batch_read_definition(tempfile()))
+})
+
+test_that("a preview takes no --run; its folder is preview_<date>-<time>", {
+  skip_on_cran()
+  m <- rr_manifest()
+  m$kind <- "preview"
+  m$runs <- list()
+  s <- rr_study(m)
+  on.exit(unlink(s, recursive = TRUE))
+  r <- rr_rscript(s, "programs/autoexec_all.R", "--run=Main")
+  expect_true(r$status != 0L)
+  expect_match(r$text, "A preview takes no --run.", fixed = TRUE)
+  expect_length(rr_runs(s), 0L)
+  r <- rr_rscript(s, "programs/autoexec_all.R")
+  expect_identical(r$status, 0L, info = r$text)
+  b <- rr_runs(s)
+  expect_match(basename(b), "^preview_[0-9]{8}-[0-9]{6}$")
+  bt <- readLines(file.path(b, "batch.txt"))
+  expect_identical(bt[1:3], c("Run      : none", "Mode     : all", "Kind     : preview"))
+  # a preview is not tied to the saved spec
+  writeLines("a: 2", file.path(s, "spec", "s.yml"))
+  expect_identical(rr_rscript(s, "programs/autoexec_all.R")$status, 0L)
+})
+
+test_that("the study's autoexec_ard.R takes no --run and, with none, is not a definition's run", {
+  skip_on_cran()
+  s <- rr_study()
+  on.exit(unlink(s, recursive = TRUE))
+  r <- rr_rscript(s, "programs/autoexec_ard.R", "--run=Main")
+  expect_true(r$status != 0L)
+  expect_match(r$text, "not official runs", fixed = TRUE)
+  expect_length(rr_runs(s), 0L)
+  r <- rr_rscript(s, "programs/autoexec_ard.R")
+  expect_identical(r$status, 0L, info = r$text)
+  b <- rr_runs(s)
+  expect_match(basename(b), "^batch_[0-9]{8}-[0-9]{6}_ard$")
+  expect_identical(readLines(file.path(b, "batch.txt"))[1:2], c("Run      : none", "Mode     : ard"))
+})
+
+test_that("logrx is used only when asked for", {
+  skip_on_cran()
+  s <- rr_study()
+  on.exit(unlink(s, recursive = TRUE))
+  if (requireNamespace("logrx", quietly = TRUE)) {
+    # (installed: the default run still says R CMD BATCH)
+    r <- rr_rscript(s, "programs/autoexec_all.R")
+    expect_identical(r$status, 0L, info = r$text)
+    expect_true("Logs     : R CMD BATCH" %in% readLines(file.path(rr_runs(s), "batch.txt")))
+  } else {
+    r <- rr_rscript(s, "programs/autoexec_all.R", "--logrx")
+    expect_true(r$status != 0L)
+    expect_match(r$text, "--logrx needs the logrx package", fixed = TRUE)
+    expect_length(rr_runs(s), 0L)
+  }
+})
+
+test_that("tfl_run_study(): the same refusal text as a hand Rscript, and the same run", {
+  skip_on_cran()
+  # a definition with a problem
+  m <- rr_manifest()
+  m$runs <- list(rr_def("Main", c("T-1", "T-2"), problem = "the study has no report T-9"))
+  s <- rr_study(m)
+  on.exit(unlink(s, recursive = TRUE))
+  hand <- rr_rscript(s, "programs/autoexec_all.R", "--run=Main")
+  err <- tryCatch(tfl_run_study(s, "Main"), error = function(e) conditionMessage(e))
+  expect_true(hand$status != 0L)
+  expect_match(err, "has a problem", fixed = TRUE)
+  expect_true(grepl(hand$text, err, fixed = TRUE), info = paste(hand$text, "|", err))
+  expect_length(rr_runs(s), 0L)
+  # stale programs
+  s2 <- rr_study()
+  on.exit(unlink(s2, recursive = TRUE), add = TRUE)
+  writeLines("a: 2", file.path(s2, "spec", "s.yml"))
+  hand <- rr_rscript(s2, "programs/autoexec_all.R", "--run=Main")
+  err <- tryCatch(tfl_run_study(s2, "Main"), error = function(e) conditionMessage(e))
+  expect_match(err, "older than the spec", fixed = TRUE)
+  expect_true(grepl(hand$text, err, fixed = TRUE), info = paste(hand$text, "|", err))
+  # the run itself: the folder it returns, the same run.csv as by hand
+  s3 <- rr_study()
+  on.exit(unlink(s3, recursive = TRUE), add = TRUE)
+  hand <- rr_rscript(s3, "programs/autoexec_all.R", "--run=Main")
+  expect_identical(hand$status, 0L, info = hand$text)
+  b <- suppressMessages(utils::capture.output(res <- tfl_run_study(s3, "Main")))
+  expect_true(dir.exists(res))
+  expect_match(basename(res), "^batch_[0-9]{8}-[0-9]{6}_Main(_2)?$")
+  runs <- rr_runs(s3)
+  expect_length(runs, 2L)
+  keep <- c("part", "program", "output_id", "status")
+  a <- rr_read(runs[basename(runs) != basename(res)][[1L]], "run.csv")[keep]
+  c2 <- rr_read(res, "run.csv")[keep]
+  expect_identical(a, c2)
+  # each is in the list, under its definition
+  l <- tfl_list_runs(s3)
+  expect_identical(l$definition, c("Main", "Main"))
+  expect_true(all(l$verified))
 })

@@ -22,7 +22,8 @@ above only.}
 A data frame, one row a problem: \code{output_id} (\code{NA} for the
 study's ARD definition as a whole and the study's own rows), \code{part}
 (\code{"file"}, \code{"study"}, \code{"ard"}, \code{"content"}, \code{"program"}, \code{"figure"},
-\code{"build"}), \code{item} (the file, the
+\code{"build"}, \code{"runs"}: the study's run definitions, \code{\link[=tfl_check_runs]{tfl_check_runs()}}),
+\code{item} (the file, the
 analysis, the function and argument, or the figure's part and
 field), \code{level} (\code{"error"}, \code{"warning"}, \code{"note"}, \code{"check"}) and
 \code{message}.  Its attributes: \code{versions}, a data frame of the key

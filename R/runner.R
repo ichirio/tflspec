@@ -2,7 +2,7 @@
 #'
 #' The code of the runner a study's official runs use: base R, so the
 #' study's programs run without tflspec.  It makes a batch folder
-#' `runs/<date>_<time>_<what>/`, copies the study's `programs/`, `spec/`,
+#' `runs/batch_<date>-<time>_<definition>/`, copies the study's `programs/`, `spec/`,
 #' `input/`, `study.yml` and `renv.lock` into it, and runs the programs there:
 #' what they make lands in the folder's own `output/` and `logs/`, never in
 #' the study's.  The data are read through the data root (`run_paths.R`).  The
@@ -23,8 +23,10 @@
 #' * `ard` -- the study ARD file the ARD programs make (a string).
 #' * `study` -- the study's id (study.yml's `study_id`), written into each
 #'   run's batch.txt: [tfl_run_index()] counts only the runs of its study.
-#' * `spec` -- the study's spec folder (a string), whose md5 batch.txt
-#'   records.
+#' * `spec` -- the study's spec folder (a string).
+#' * `spec_md5` -- the stamp of the spec the programs were made from (a
+#'   string, [tfl_spec_stamp()]): the runner refuses an official run when the
+#'   spec's stamp is another.  batch.txt records it as `Spec`.
 #' * `programs` -- a list `list(ard = , tfl = )` of the programs, each a
 #'   character vector of paths, in the order they run.
 #' * `ard_outputs` -- a named character vector: the ARD program's file name
@@ -36,8 +38,15 @@
 #' * `unresolved` -- a named character vector: a report program -> why the
 #'   ARD it reads cannot be worked out (a run that selects it does not
 #'   start).  `character()` for none.
-#' * `sets` -- a named list: the name of a batch -> a character vector of
-#'   its outputs.  `list()` for none.
+#' * `runs` -- an unnamed list of the study's run definitions, each a list
+#'   `list(name = , reports = , mode = , copy_data = , problem = )`: the name,
+#'   the output ids it selects (resolved: `all` expanded), `mode` (`"all"`
+#'   or `"ard"`), `copy_data` (`TRUE` or `FALSE`) and `problem` (`""`, or why
+#'   the definition cannot run: the text of [tfl_check_runs()]).  The runner
+#'   starts an official run with `--run=<name>` (or, when the study has one
+#'   definition, with no argument), refuses a definition whose `problem` is
+#'   not `""`, a name that breaks the name rule, and a listed id with no
+#'   program.  `list()` for none.
 #' * `outputs` -- a named list: a report program -> the files it makes.
 #' * `support` -- a list `list(ard = , tfl = , all = )` of character vectors:
 #'   the files kept with the code of a run.
@@ -91,9 +100,12 @@
 #' @examples
 #' m <- list(
 #'   root = "runs", ard = "output/ard/ard.rds", study = "S-1", spec = "spec",
+#'   spec_md5 = "0123456789abcdef0123456789abcdef",
 #'   programs = list(ard = "programs/ard/ard_t1.R", tfl = "programs/tfl/t1.R"),
 #'   ard_outputs = c(ard_t1.R = "T-1"), report_ids = c(`programs/tfl/t1.R` = "T-1"),
-#'   needs = list(), unresolved = character(), sets = list(),
+#'   needs = list(), unresolved = character(),
+#'   runs = list(list(name = "Main", reports = c("T-1", "T-2"), mode = "all",
+#'                    copy_data = FALSE, problem = "")),
 #'   outputs = list(`programs/tfl/t1.R` = "output/tfl/t1.rtf"),
 #'   support = list(ard = character(), tfl = character(), all = character()),
 #'   data = list(), data_vars = character(), data_dirs = c(adam = "data/adam"),
@@ -129,6 +141,15 @@ tfl_runner_code <- function(manifest) {
     paste0("list(\n", paste0("  ", bq(names(l)), " = ", vapply(l, one, ""),
                              collapse = ",\n"), ")")
   }
+  runs_code <- if (!length(m$runs)) "list()" else {
+    one <- vapply(m$runs, function(e) {
+      paste0("  list(name = ", q(e$name), ", reports = ", inline(e$reports),
+             ", mode = ", q(e$mode), ", copy_data = ",
+             if (isTRUE(e$copy_data)) "TRUE" else "FALSE",
+             ", problem = ", q(e$problem), ")")
+    }, "")
+    paste0("list(\n", paste(one, collapse = ",\n"), ")")
+  }
   paths_code <- if (!length(m$paths)) "list()" else {
     one <- vapply(names(m$paths), function(k) {
       if (identical(k, "data")) vec(unname(m$paths$data), names(m$paths$data), indent = "    ")
@@ -141,6 +162,8 @@ tfl_runner_code <- function(manifest) {
     paste0(".batch_ard  <- ", q(m$ard)),
     paste0(".batch_study <- ", q(m$study)),
     paste0(".batch_spec <- ", q(m$spec)),
+    "# the stamp of the spec these programs were made from (tfl_spec_stamp())",
+    paste0(".batch_stamp <- ", q(m$spec_md5)),
     paste0(".batch_programs <- ", vlist(ard = m$programs$ard,
                                         tfl = m$programs$tfl)),
     "# the output each ARD program makes",
@@ -155,8 +178,9 @@ tfl_runner_code <- function(manifest) {
     "# a report program -> why the ARD it reads cannot be worked out (a run",
     "# that selects it does not start)",
     paste0(".batch_unresolved <- ", vec(unname(m$unresolved), names(m$unresolved))),
-    "# the named batches (the report list's `batches`): name -> outputs",
-    paste0(".batch_sets <- ", nlist(m$sets, inline)),
+    "# the run definitions (spec/runs.yml): name, the reports it selects, its options,",
+    "# and `problem` (\"\", or why it cannot run)",
+    paste0(".batch_runs <- ", runs_code),
     "# what each report program makes",
     paste0(".batch_outputs <- ", nlist(m$outputs, inline)),
     "# kept with the code of a run",
@@ -188,8 +212,8 @@ tfl_runner_file <- function() {
 
 # The manifest tfl_runner_code() takes: every field there, of its type, and the
 # names agreeing with each other.  Stops with a message naming the field.
-.runner_fields <- c("root", "ard", "study", "spec", "programs", "ard_outputs", "report_ids",
-                    "needs", "unresolved", "sets", "outputs", "support", "data",
+.runner_fields <- c("root", "ard", "study", "spec", "spec_md5", "programs", "ard_outputs", "report_ids",
+                    "needs", "unresolved", "runs", "outputs", "support", "data",
                     "data_vars", "data_dirs", "sources", "check_code", "kind", "paths")
 
 .runner_check <- function(manifest) {
@@ -209,7 +233,7 @@ tfl_runner_file <- function() {
   extra <- setdiff(names(manifest), .runner_fields)
   if (length(extra)) bad(extra[[1L]], "is not a field of the manifest.")
   m <- manifest
-  for (f in c("root", "ard", "study", "spec")) {
+  for (f in c("root", "ard", "study", "spec", "spec_md5")) {
     if (!is_str(m[[f]])) bad(f, "must be one non-empty string.")
   }
   p <- m$programs
@@ -262,7 +286,30 @@ tfl_runner_file <- function() {
     bad("paths", "must be list() for a kind of \"run\".")
   }
   named_lst("needs")
-  named_lst("sets")
+  # the run definitions: the shape only (what is wrong with one is `problem`,
+  # which the runner prints)
+  r <- m$runs
+  if (!is.list(r) || is.data.frame(r) || !is.null(names(r))) {
+    bad("runs", "must be an unnamed list of definitions.")
+  }
+  flds <- c("name", "reports", "mode", "copy_data", "problem")
+  for (i in seq_along(r)) {
+    e <- r[[i]]
+    if (!is.list(e) || is.data.frame(e) || is.null(names(e)) || anyDuplicated(names(e)) ||
+        !setequal(names(e), flds)) {
+      bad("runs", paste0("entry ", i, " must be a named list with ",
+                         paste(flds, collapse = ", "), "."))
+    }
+    for (f in c("name", "mode", "problem")) {
+      if (!is_chr(e[[f]]) || length(e[[f]]) != 1L) {
+        bad("runs", paste0("entry ", i, ": `", f, "` must be one text."))
+      }
+    }
+    if (!is_chr(e$reports)) bad("runs", paste0("entry ", i, ": `reports` must be a character vector."))
+    if (!is.logical(e$copy_data) || length(e$copy_data) != 1L || is.na(e$copy_data)) {
+      bad("runs", paste0("entry ", i, ": `copy_data` must be TRUE or FALSE."))
+    }
+  }
   named_lst("outputs")
   named_lst("data")
   s <- m$support

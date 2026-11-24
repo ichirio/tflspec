@@ -265,42 +265,182 @@
   out
 }
 
-# The run's selection: the parts, the names / --exclude / --batch, checked,
-# and the programs selected.  A selected report that reads the ARD of one the
-# run does not make stops it, before anything is made (have_ard: the ARD of
-# the batch folder is there, as in a reports-only run again).
-.batch_plan <- function(parts, args = character(), have_ard = FALSE) {
+# What stops a run, said once: to the screen and to stderr, then the run ends.
+# Every entry (a hand Rscript, tfl_run_study(), the Runs tab) prints this text.
+.batch_refuse <- function(...) {
+  msg <- c(...)
+  cat(msg, sep = "\n")
+  message(paste(msg, collapse = "\n"))
+  .batch_quit(1L)
+  stop(paste(msg, collapse = "\n"), call. = FALSE)
+}
+
+# The name rule of a run definition: ASCII letters, digits, _ and -; starts
+# with a letter; at most 40 characters (tflspec's tfl_check_runs() holds the
+# same pattern, and a test compares them).  The folder's name is made of it.
+.batch_name_rx <- "^[A-Za-z][A-Za-z0-9_-]{0,39}\\z"
+
+# The run definition a first run starts from: `run` (--run=<name>, exact), or
+# the only one the study has.  Refused, before anything is made: none, several
+# and no --run, an unknown name, a definition with a problem, a name that
+# breaks the rule, an option that is not one, a listed report with no program.
+.batch_pick_run <- function(run) {
+  runs <- .batch_runs
+  nms <- vapply(runs, function(r) r$name, "")
+  if (is.null(run)) {
+    if (!length(runs)) {
+      .batch_refuse("The run was not started: the study has no run definition.",
+                    paste0("  Save one (tflplanner's Runs tab), or write it in spec/runs.yml and ",
+                           "regenerate the programs; then start again with --run=<name>."))
+    }
+    if (length(runs) > 1L) {
+      .batch_refuse("The run was not started: the study has several run definitions; say which with --run=<name>:",
+                    paste0("  ", nms))
+    }
+    i <- 1L
+  } else {
+    i <- which(nms == run)
+    if (!length(i)) {
+      near <- nms[tolower(nms) == tolower(run)]
+      .batch_refuse(sprintf("The run was not started: no run definition named '%s'.", run),
+                    if (length(near)) sprintf("  Names are exact: did you mean '%s'?", near[[1L]]),
+                    if (length(nms)) paste0("  The study's: ", paste(nms, collapse = ", ")))
+    }
+    if (length(i) > 1L) {
+      .batch_refuse(sprintf("The run was not started: two run definitions are named '%s'.", run))
+    }
+  }
+  d <- runs[[i]]
+  bad <- character()
+  if (nzchar(d$problem)) bad <- c(bad, d$problem)
+  if (!grepl(.batch_name_rx, d$name, perl = TRUE)) {
+    bad <- c(bad, sprintf(paste0("the name '%s' breaks the rule: ASCII letters, digits, _ and -; ",
+                                 "it starts with a letter; at most 40 characters"), d$name))
+  }
+  if (!d$mode %in% c("all", "ard")) {
+    bad <- c(bad, sprintf("mode '%s' is not one of: all, ard", d$mode))
+  }
+  gone <- setdiff(d$reports, c(.batch_ard_outputs, .batch_report_ids))
+  if (length(gone)) {
+    bad <- c(bad, paste0("no program for ", paste(gone, collapse = ", "),
+                         " (save the study to write the programs)"))
+  }
+  if (length(bad)) {
+    .batch_refuse(sprintf("The run was not started: the run definition '%s' has a problem.", d$name),
+                  paste0("  ", bad))
+  }
+  d
+}
+
+# A run definition written beside a batch folder's results (run_definition.yml,
+# one the stage wrote): name, mode, copy_data, stamp, reports.  NULL when
+# there is no file.
+.batch_read_definition <- function(f) {
+  if (!file.exists(f)) return(NULL)
+  x <- readLines(f, warn = FALSE, encoding = "UTF-8")
+  val <- function(s) {
+    s <- trimws(s)
+    if (nchar(s) >= 2L && startsWith(s, "\"") && endsWith(s, "\"")) {
+      s <- gsub("\\\\(.)", "\\1", substr(s, 2L, nchar(s) - 1L))
+    }
+    s
+  }
+  one <- function(key) {
+    v <- grep(paste0("^", key, ":"), x, value = TRUE)
+    if (length(v)) val(sub(paste0("^", key, ":"), "", v[[1L]])) else NA_character_
+  }
+  i <- match("reports:", x)
+  ids <- if (is.na(i)) character() else {
+    r <- x[-seq_len(i)]
+    r <- r[startsWith(r, "  - ")]
+    vapply(r, function(l) val(substring(l, 5L)), "", USE.NAMES = FALSE)
+  }
+  list(name = one("name"), mode = one("mode"),
+       copy_data = identical(one("copy_data"), "true"), stamp = one("stamp"),
+       reports = ids)
+}
+
+# the lines of run_definition.yml: the resolved definition and the stamp
+.batch_definition_lines <- function(d) {
+  q <- function(x) encodeString(x, quote = "\"")
+  c(paste0("name: ", q(d$name)),
+    paste0("mode: ", d$mode),
+    paste0("copy_data: ", if (isTRUE(d$copy_data)) "true" else "false"),
+    paste0("stamp: ", q(.batch_stamp)),
+    "reports:",
+    paste0("  - ", q(d$reports)))
+}
+
+# The definition a run again of a batch folder uses: the folder's own
+# run_definition.yml (the study's list is not looked at), else the manifest's
+.batch_rerun_definition <- function(run) {
+  d <- .batch_read_definition("run_definition.yml")
+  if (!is.null(d) && identical(d$name, run)) return(d)
+  hit <- Filter(function(r) identical(r$name, run), .batch_runs)
+  if (length(hit)) return(hit[[1L]])
+  .batch_refuse(sprintf("No run definition named '%s' in this batch folder.", run))
+}
+
+# The run's selection: the parts, the run definition (--run=<name>) or the
+# names / --exclude of a run again, checked, and the programs selected.  A
+# selected report that reads the ARD of one the run does not make stops it,
+# before anything is made (have_ard: the ARD of the batch folder is there, as
+# in a reports-only run again).  `first`: the run from the study (the stage);
+# otherwise a run again in a batch folder, which is never official.
+.batch_plan <- function(parts, args = character(), have_ard = FALSE, first = TRUE) {
   data <- "--data" %in% args
+  logrx <- "--logrx" %in% args
   ex_args <- grep("^--exclude=", args, value = TRUE)
   exclude <- sub("^--exclude=", "", ex_args)
   args <- args[!grepl("^--data-root=", args)]
-  # a named batch: --batch Topline, or --batch=Topline
-  set <- NULL
-  b <- match("--batch", args)
+  if (any(args == "--batch" | grepl("^--batch=", args))) {
+    .batch_refuse("--batch is gone: use --run=<name> (a run definition).")
+  }
+  # the run definition: --run=<name>, or --run <name>
+  run <- NULL
+  r <- grep("^--run=", args)
+  if (length(r) > 1L || (length(r) && "--run" %in% args) ||
+      sum(args == "--run") > 1L) {
+    .batch_refuse("--run is given twice: a run starts from one definition.")
+  }
+  if (length(r)) {
+    run <- sub("^--run=", "", args[r])
+    args <- args[-r]
+  }
+  b <- match("--run", args)
   if (!is.na(b)) {
-    set <- args[b + 1L]
+    if (b == length(args)) .batch_refuse("--run needs the definition's name: --run=<name>.")
+    run <- args[b + 1L]
     args <- args[-c(b, b + 1L)]
   }
-  b <- grep("^--batch=", args)
-  if (length(b)) {
-    set <- sub("^--batch=", "", args[b[1L]])
-    args <- args[-b]
+  if (!is.null(run) && !nzchar(run)) {
+    .batch_refuse("--run needs the definition's name: --run=<name>.")
   }
-  if (!is.null(set)) {
-    if (is.na(set) || !set %in% names(.batch_sets)) {
-      stop("No batch named '", set, "': the study's are ",
-           paste(names(.batch_sets), collapse = ", "), ".")
+  only <- setdiff(args, c("--no-code", "--data", "--logrx", ex_args))
+  # the parts: an official run starts from autoexec_all.R and the definition's
+  # `mode` decides them; the study's autoexec_ard.R and autoexec_report.R are
+  # not official runs (they take no --run)
+  def <- NULL
+  if (first && identical(.batch_kind, "run")) {
+    official <- identical(parts, c("ard", "tfl"))
+    if (!is.null(run) && !official) {
+      .batch_refuse(paste0("The run was not started: --run goes with programs/autoexec_all.R; ",
+                           "the study's autoexec_ard.R and autoexec_report.R are not official runs."))
     }
-    # its reports without a program to run (not saved yet, or none of the
-    # parts run): said, and run what there is
-    progs_of <- c(.batch_ard_outputs, .batch_report_ids)
-    gone <- setdiff(.batch_sets[[set]], progs_of)
-    if (length(gone)) {
-      message("Batch '", set, "': no program for ", paste(gone, collapse = ", "),
-              " (save the study to write them); the rest runs.")
+    if (official) {
+      if (length(only) || length(exclude)) {
+        .batch_refuse(paste0("The run was not started: an official run takes no names and no ",
+                             "--exclude (a run definition says what it runs)."),
+                      "  Save a definition with these reports, and start it with --run=<name>.")
+      }
+      def <- .batch_pick_run(run)
+      parts <- if (identical(def$mode, "ard")) "ard" else c("ard", "tfl")
     }
+  } else if (first) {
+    if (!is.null(run)) .batch_refuse("A preview takes no --run.")
+  } else if (!is.null(run)) {
+    def <- .batch_rerun_definition(run)
   }
-  only <- setdiff(args, c("--no-code", "--data", ex_args))
   # the ARD is made before the reports, whatever order `parts` came in
   if (!length(parts) || !all(parts %in% c("ard", "tfl"))) {
     stop("parts must be \"ard\", \"tfl\", or both (not ",
@@ -345,8 +485,9 @@
   only_ids <- resolve(only)
   exclude_ids <- resolve(exclude)
   excluded <- character()
-  # the programs of a part the run selects (the outputs named, the batch's,
-  # less those excluded); `track`: the ones left out are kept for the record
+  # the programs of a part the run selects (the outputs named, the
+  # definition's reports, less those excluded); `track`: the ones left out
+  # are kept for the record
   select <- function(part, track = FALSE) {
     progs <- .batch_programs[[part]]
     of <- id_of(part, progs)
@@ -354,8 +495,8 @@
       progs <- progs[!is.na(of) & of %in% only_ids]
       of <- id_of(part, progs)
     }
-    if (!is.null(set)) {
-      keep <- !is.na(of) & of %in% .batch_sets[[set]]
+    if (!is.null(def)) {
+      keep <- !is.na(of) & of %in% def$reports
       if (track) excluded <<- c(excluded, progs[!keep])
       progs <- progs[keep]
       of <- id_of(part, progs)
@@ -398,11 +539,11 @@
     message(paste(msg, collapse = "\n"))
     .batch_quit(1L)
   }
-  what <- if (length(parts) > 1L) "all" else
+  what <- if (!is.null(def)) def$mode else if (length(parts) > 1L) "all" else
     c(ard = "ard", tfl = "report")[[parts]]
-  if (!is.null(set)) what <- paste0(what, "_", gsub("[^A-Za-z0-9._-]", "_", set))
-  list(parts = parts, only = only, set = set, selected = selected,
-       excluded = excluded, data = data, what = what)
+  list(parts = parts, only = only, def = def, selected = selected,
+       excluded = excluded, data = data || isTRUE(def$copy_data), what = what,
+       logrx = logrx)
 }
 
 # run_paths.R: where the data and the study are, seen from the batch folder
@@ -520,20 +661,24 @@
                    "inputs.csv", row.names = FALSE)
 }
 
-# One md5 of the study's spec folder (each file's path and md5, in path
-# order), for the record and to tell two runs' specs apart.  Not a freshness
-# test.  Left out: spec/.backup/ and editor temporary files (~, .tmp).
+# One md5 of what the programs were made from: study.yml and every file of
+# the spec folder as the copy takes it (.batch_walk(): the run definitions'
+# file spec/runs.yml included; no dot names, no editor files), each file's
+# path and md5 in path order.  The stamp: batch.R holds the one of the spec
+# it was made from (.batch_stamp), the stage refuses a run when the spec's is
+# another, and batch.txt records it as "Spec".  Bytes are hashed (writeBin:
+# writeLines would give CRLF on Windows), so Windows and Linux agree.
+# tflspec's tfl_spec_stamp() evaluates this function from this file.
 .batch_spec_md5 <- function() {
-  if (!dir.exists(.batch_spec)) return("none")
-  # (the same files as the copy: .batch_walk(); radix: the same order in
-  # every locale, so the same md5 on every machine)
-  f <- substring(.batch_walk(.batch_spec), nchar(.batch_spec) + 2L)
-  f <- sort(f, method = "radix")
+  f <- c(if (file.exists("study.yml")) "study.yml",
+         if (dir.exists(.batch_spec)) .batch_walk(.batch_spec))
   if (!length(f)) return("none")
+  # (radix: the same order in every locale, so the same md5 on every machine)
+  f <- sort(unique(f), method = "radix")
+  txt <- paste0(f, " ", unname(tools::md5sum(f)), "\n", collapse = "")
   tmp <- tempfile()
   on.exit(unlink(tmp))
-  writeLines(paste(f, tools::md5sum(file.path(.batch_spec, f))), tmp,
-             useBytes = TRUE)
+  writeBin(charToRaw(enc2utf8(txt)), tmp)
   unname(tools::md5sum(tmp))
 }
 
@@ -615,6 +760,29 @@
   }
 }
 
+# The first lines of batch.txt, written when the run starts (before any
+# program) and again at its end: the definition it runs, what it makes, the
+# kind, the start, the log engine (R CMD BATCH unless --logrx), the folder
+.batch_head <- function(plan, batch) {
+  c(paste("Run      :", if (!is.null(plan$def)) plan$def$name else "none"),
+    paste("Mode     :", plan$what),
+    paste("Kind     :", .batch_kind),
+    paste("Started  :", format(plan$started, "%Y-%m-%d %H:%M:%S")),
+    paste("Logs     :", if (identical(plan$engine, "logrx")) "logrx" else "R CMD BATCH"),
+    paste("Batch    :", batch),
+    paste("Study    :", .batch_study))
+}
+
+# the log engine: R CMD BATCH, always, unless --logrx asks for logrx (the
+# same definition then gives the same logs on every machine)
+.batch_engine <- function(logrx) {
+  if (!isTRUE(logrx)) return("batch")
+  if (!requireNamespace("logrx", quietly = TRUE)) {
+    .batch_refuse("--logrx needs the logrx package: it is not installed.")
+  }
+  "logrx"
+}
+
 # The stage: in the study folder, check the paths, make the batch folder,
 # copy what the programs need, check the copy, write the entry files, and
 # run in the folder.  Nothing is made when a check stops it; a failure after
@@ -624,8 +792,15 @@
     stop("Run it from the study folder (the one with study.yml).")
   }
   args <- args[!grepl("^--data-root=", args)]
+  # the programs must be made from the spec as it is now (a preview is not an
+  # official run: it is not tied to the saved spec)
+  if (identical(.batch_kind, "run") && !identical(.batch_stamp, .batch_spec_md5())) {
+    .batch_refuse(paste0("programs/batch.R is older than the spec: save the study (tflplanner) ",
+                         "or regenerate the programs."))
+  }
   plan <- .batch_plan(parts, args, have_ard = FALSE)
   if (!length(unlist(plan$selected))) stop("Nothing to run.")
+  plan$engine <- .batch_engine(plan$logrx)
   problems <- .batch_check_paths(plan$selected)
   if (length(problems)) {
     msg <- c("The run was not started: it would read or write outside its batch folder.",
@@ -636,8 +811,13 @@
     stop("The run was not started.")
   }
   started <- Sys.time()
-  base <- file.path(.batch_root, paste0(format(started, "%Y%m%d_%H%M%S"), "_",
-                                        plan$what))
+  plan$started <- started
+  stamp <- format(started, "%Y%m%d-%H%M%S")
+  # batch_<date>-<time>_<definition>; a study's autoexec_ard.R / autoexec_report.R
+  # (no definition) name the part; a preview is preview_<date>-<time>
+  folder <- if (identical(.batch_kind, "preview")) paste0("preview_", stamp) else
+    paste0("batch_", stamp, "_", if (!is.null(plan$def)) plan$def$name else plan$what)
+  base <- file.path(.batch_root, folder)
   dir.create(.batch_root, recursive = TRUE, showWarnings = FALSE)
   # the folder is taken by dir.create() itself, which fails when it exists: a
   # run started in the same second as another gets _2, _3
@@ -683,7 +863,13 @@
     } else {
       writeLines(.batch_paths_lines(if (plan$data) "." else study_root, study_root),
                  file.path(dir, "run_paths.R"))
-      writeLines(args, file.path(dir, "run_args.txt"))
+      # the start record, before any program: what runs, from which definition
+      writeLines(if (!is.null(plan$def)) paste0("--run=", plan$def$name) else args,
+                 file.path(dir, "run_args.txt"))
+      if (!is.null(plan$def)) {
+        writeLines(.batch_definition_lines(plan$def), file.path(dir, "run_definition.yml"))
+      }
+      writeLines(.batch_head(plan, basename(dir)), file.path(dir, "batch.txt"))
       for (e in c(all = "all", ard = "ard", report = "report")) {
         p <- switch(e, all = "c(\"ard\", \"tfl\")", ard = "\"ard\"", report = "\"tfl\"")
         writeLines(c(paste0("# Entry file of this batch folder: run it from here (",
@@ -729,11 +915,12 @@
 # A first run comes from the stage (.batch_staged is set).  An entry file run
 # by hand runs again: it stops inside a study's runs/, elsewhere it clears
 # the outputs, keeps the first run.csv as run_1.csv, uses run_args.txt when
-# no names are given, and notes "Re-run".  `args`: --data (the stage);
-# --data-root=<dir> (a re-run: where the data are); program or output
-# names to run only those; --exclude=<name> (again for another) to leave a
-# program out; --batch <name> (or --batch=<name>) to run a named batch of
-# `.batch_sets`; --no-code is accepted and does nothing.
+# no names are given, and notes "Re-run".  `args`: --run=<name> (the run
+# definition; a re-run reads the folder's run_definition.yml); --data (a hand
+# choice: copy the data); --logrx; --data-root=<dir> (a re-run: where the data
+# are); program or output names to run only those and --exclude=<name> to
+# leave a program out (a re-run only: an official run takes neither);
+# --no-code is accepted and does nothing.
 .batch_execute <- function(parts, args = character(), plan = NULL) {
   staged <- isTRUE(get0(".batch_staged", envir = .batch_env(), inherits = FALSE))
   rerun <- !staged
@@ -767,7 +954,11 @@
     stop("No ARD in this batch folder: run autoexec_ard.R or autoexec_all.R first.",
          call. = FALSE)
   }
-  if (is.null(plan)) plan <- .batch_plan(parts, args, have_ard = file.exists(.batch_ard))
+  if (is.null(plan)) {
+    plan <- .batch_plan(parts, args, have_ard = file.exists(.batch_ard), first = FALSE)
+    plan$engine <- .batch_engine(plan$logrx)
+    plan$started <- Sys.time()
+  }
   parts <- plan$parts
   # (checked before anything is cleared)
   if (!length(unlist(plan$selected[parts]))) stop("Nothing to run.")
@@ -804,10 +995,8 @@
   selected <- plan$selected
   excluded <- plan$excluded
   only <- plan$only
-  set <- plan$set
-  started <- Sys.time()
-  engine <- if (requireNamespace("logrx", quietly = TRUE)) "logrx" else "batch"
-  if (engine == "batch") message("logrx is not installed: the logs are R CMD BATCH's.")
+  engine <- plan$engine
+  started <- plan$started
   # the data and the spec as the run starts
   .batch_data_read(unlist(selected[parts], use.names = FALSE), root)
   spec_md5 <- .batch_spec_md5()
@@ -960,19 +1149,14 @@
   # the end record, written last
   now <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
   writeLines(c(
-    paste("Batch    :", basename(getwd())),
-    paste("Kind     :", .batch_kind),
-    paste("Study    :", .batch_study),
+    .batch_head(plan, basename(getwd())),
     paste("Spec     :", spec_md5),
     paste("Runs     :", paste(parts, collapse = ", "),
           if (length(only)) paste0("(", paste(only, collapse = ", "), ")")),
-    paste("Batch set :", if (is.null(set)) "none" else set),
-    paste("Started  :", format(started, "%Y-%m-%d %H:%M:%S")),
     paste("Finished :", now),
     paste("User     :", Sys.info()[["user"]]),
     paste("Machine  :", Sys.info()[["nodename"]]),
     paste("R        :", R.version.string),
-    paste("Logs     :", if (engine == "logrx") "logrx" else "R CMD BATCH"),
     paste("Data     :", if (!is.null(man)) sprintf(
       "kept (data/, %d file(s), %.1f MB; data_manifest.csv)", nrow(man),
       sum(man$size) / 1024^2) else "not kept"),

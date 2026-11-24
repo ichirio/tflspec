@@ -49,7 +49,8 @@
 #' @return A data frame, one row a problem: `output_id` (`NA` for the
 #'   study's ARD definition as a whole and the study's own rows), `part`
 #'   (`"file"`, `"study"`, `"ard"`, `"content"`, `"program"`, `"figure"`,
-#'   `"build"`), `item` (the file, the
+#'   `"build"`, `"runs"`: the study's run definitions, [tfl_check_runs()]),
+#'   `item` (the file, the
 #'   analysis, the function and argument, or the figure's part and
 #'   field), `level` (`"error"`, `"warning"`, `"note"`, `"check"`) and
 #'   `message`.  Its attributes: `versions`, a data frame of the key
@@ -114,6 +115,13 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
   kinds <- vapply(outs, function(o) o$kind %||% "table", "")
   # (the study's datasets: no object of a report takes one's name)
   study_ds <- .obj_study_datasets(study)
+  # `all` is the word a run definition's `reports: all` uses: no report is
+  # named so
+  if ("all" %in% names(outs)) {
+    add(output_id = "all", part = "file", item = "all", level = "error",
+        message = paste("the output id `all` is not allowed: a run definition's",
+                        "`reports: all` means every report. Rename the report."))
+  }
 
   # what the user wrote and a study's R fields hold: a test for a blank text,
   # where study$adam has NA (a template's own rows are not the user's: left out)
@@ -275,6 +283,18 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
         add(output_id = id, part = "program", item = "content", level = "warning",
             message = paste("the report's code cannot be written:", one(r)))
       }
+    }
+  }
+  # the study's run definitions (spec/runs.yml; an older study's sets, moved)
+  if (is.null(output_id) && !is.null(study$dir)) {
+    rr <- tryCatch(tfl_check_runs(tfl_read_runs(study$dir), study),
+                   error = function(e) NULL)
+    if (!is.null(rr) && nrow(rr)) {
+      add(output_id = NA_character_, part = "runs",
+          item = ifelse(nzchar(rr$definition),
+                        ifelse(nzchar(rr$field), paste0(rr$definition, "$", rr$field), rr$definition),
+                        rr$field),
+          level = rr$level, message = rr$problem)
     }
   }
   out <- do.call(rbind, rows)

@@ -7,6 +7,7 @@ runner_manifest <- function() {
     ard = "output/ard/ard.rds",
     study = "S-1",
     spec = "spec",
+    spec_md5 = "0123456789abcdef0123456789abcdef",
     programs = list(
       ard = c("programs/ard/ard_t_demo.R", "programs/ard/ard_t_ae.R"),
       tfl = c("programs/tfl/t_demo.R", "programs/tfl/t_ae.R")),
@@ -15,7 +16,10 @@ runner_manifest <- function() {
                    `programs/tfl/t_ae.R` = "T-2"),
     needs = list(`programs/tfl/t_ae.R` = "T-1"),
     unresolved = c(`programs/tfl/t_demo.R` = "no source"),
-    sets = list(main = c("T-1", "T-2")),
+    runs = list(list(name = "main", reports = c("T-1", "T-2"), mode = "all",
+                     copy_data = FALSE, problem = ""),
+                list(name = "Ard-only", reports = "T-1", mode = "ard",
+                     copy_data = TRUE, problem = "T-1: no source")),
     outputs = list(`programs/tfl/t_demo.R` = "output/tfl/t_demo.rtf",
                    `programs/tfl/t_ae.R` = c("output/tfl/t_ae.rtf",
                                              "output/tfl/t_ae.pdf")),
@@ -50,8 +54,9 @@ test_that("tfl_runner_code(): the head, then the runner's lines", {
   expect_identical(head_lines[[3L]], ".batch_ard  <- \"output/ard/ard.rds\"")
   expect_identical(head_lines[[4L]], ".batch_study <- \"S-1\"")
   expect_identical(head_lines[[5L]], ".batch_spec <- \"spec\"")
+  expect_true(".batch_stamp <- \"0123456789abcdef0123456789abcdef\"" %in% head_lines)
   expect_identical(head_lines[[n]], "")
-  for (nm in c("programs", "ard_outputs", "report_ids", "needs", "unresolved", "sets",
+  for (nm in c("programs", "ard_outputs", "report_ids", "needs", "unresolved", "runs",
                "outputs", "support", "data", "data_vars", "data_dirs", "sources",
                "check_code", "kind", "paths")) {
     expect_true(any(startsWith(head_lines, paste0(".batch_", nm, " <- "))), nm)
@@ -72,7 +77,8 @@ test_that("tfl_runner_code(): the head is the values, as R", {
   expect_identical(env$.batch_report_ids, m$report_ids)
   expect_identical(env$.batch_needs, m$needs)
   expect_identical(env$.batch_unresolved, m$unresolved)
-  expect_identical(env$.batch_sets, m$sets)
+  expect_identical(env$.batch_runs, m$runs)
+  expect_identical(env$.batch_stamp, m$spec_md5)
   expect_identical(env$.batch_outputs, m$outputs)
   expect_identical(env$.batch_support, m$support)
   expect_identical(env$.batch_data, m$data)
@@ -123,22 +129,23 @@ test_that("tfl_runner_code(): a study with no programs still gives the head", {
   m$report_ids <- character()
   m$needs <- list()
   m$unresolved <- character()
-  m$sets <- list()
+  m$runs <- list()
   m$outputs <- list()
   m$data <- list()
   code <- tfl_runner_code(m)
   expect_true(".batch_report_ids <- character()" %in% code)
   expect_true(".batch_needs <- list()" %in% code)
+  expect_true(".batch_runs <- list()" %in% code)
 })
 
 test_that("tfl_runner_code(): an empty element stays character()", {
   m <- runner_manifest()
-  m$sets$none <- character()
+  m$runs[[1L]]$reports <- character()
   m$outputs[["programs/tfl/t_demo.R"]] <- character()
   code <- tfl_runner_code(m)
   env <- new.env()
   eval(parse(text = code[seq_len(which(code == "")[[1L]])]), env)
-  expect_identical(env$.batch_sets, m$sets)
+  expect_identical(env$.batch_runs, m$runs)
   expect_identical(env$.batch_outputs, m$outputs)
   expect_identical(env$.batch_data, m$data)
 })
@@ -165,9 +172,9 @@ test_that("tfl_runner_code(): a field of the wrong type stops, naming it", {
     root = 1, ard = c("a", "b"), study = character(), spec = NA_character_, programs = list(ard = "a"),
     ard_outputs = c("T-1"), report_ids = list("T-1"), needs = "T-1",
     unresolved = c("x"),
-    sets = list("T-1"), outputs = c(a = "b"), support = list(ard = "a"),
+    runs = list("T-1"), outputs = c(a = "b"), support = list(ard = "a"),
     data = 1, data_vars = c("path_adam"), data_dirs = 1, sources = NA_character_,
-    check_code = list("a"), kind = "x", paths = "a")
+    check_code = list("a"), kind = "x", paths = "a", spec_md5 = 1)
   for (f in names(wrong)) {
     m <- runner_manifest()
     m[[f]] <- wrong[[f]]
@@ -226,4 +233,37 @@ test_that("tfl_runner_code(): data_dirs is named by the layout keys", {
   m <- runner_manifest()
   m$data_dirs <- c("data/adam", "data/sdtm")
   expect_error(tfl_runner_code(m), "manifest[$]data_dirs`")
+})
+
+test_that("tfl_runner_code(): the run definitions are checked for their shape only", {
+  bad <- function(f, value, i = 1L) {
+    m <- runner_manifest()
+    m$runs[[i]][[f]] <- value
+    m
+  }
+  # a definition with a problem is not a bad manifest: the runner refuses it
+  expect_no_error(tfl_runner_code(bad("problem", "the study has no report T-9")))
+  expect_no_error(tfl_runner_code(bad("mode", "weird")))
+  expect_error(tfl_runner_code(bad("name", c("a", "b"))), "manifest[$]runs`.*name")
+  expect_error(tfl_runner_code(bad("name", NA_character_)), "manifest[$]runs`.*name")
+  expect_error(tfl_runner_code(bad("reports", 1)), "manifest[$]runs`.*reports")
+  expect_error(tfl_runner_code(bad("reports", NA_character_)), "manifest[$]runs`.*reports")
+  expect_error(tfl_runner_code(bad("mode", NULL)), "manifest[$]runs`.*entry 1")
+  expect_error(tfl_runner_code(bad("copy_data", NA)), "manifest[$]runs`.*copy_data")
+  expect_error(tfl_runner_code(bad("copy_data", "TRUE")), "manifest[$]runs`.*copy_data")
+  expect_error(tfl_runner_code(bad("problem", NA_character_)), "manifest[$]runs`.*problem")
+  expect_error(tfl_runner_code(bad("extra", "x")), "manifest[$]runs`.*entry 1")
+  m <- runner_manifest()
+  m$runs <- c(a = m$runs[1L])
+  expect_error(tfl_runner_code(m), "manifest[$]runs`.*unnamed list")
+  m <- runner_manifest()
+  m$runs <- data.frame(name = "a")
+  expect_error(tfl_runner_code(m), "manifest[$]runs`")
+  # a name that needs quoting is written as R
+  m <- runner_manifest()
+  m$runs[[1L]]$name <- "a\"b\\c"
+  code <- tfl_runner_code(m)
+  env <- new.env()
+  eval(parse(text = code[seq_len(which(code == "")[[1L]])]), env)
+  expect_identical(env$.batch_runs[[1L]]$name, "a\"b\\c")
 })
