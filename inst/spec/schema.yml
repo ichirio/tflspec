@@ -95,9 +95,46 @@ plan_sort:
   description: The row order, key by key.
   dots: {style: positional, key: keys, type: "list<string>|logical", description: "The keys to sort by, most important first; a minus for descending; false for the data's order.", example: [".overall", "-n@SOC", "SOC", ".depth", "-n", "PT"]}
   args:
-    stat: {editor: sort_keys, label: {en: "Statistic counted", ja: "数える統計量"}, type: stat, description: The statistic a key sorts by.}
+    stat: {label: {en: "Statistic counted", ja: "数える統計量"}, type: stat, description: The statistic a key sorts by.}
     keep: {label: {en: "Print the sort columns", ja: "並べ替えの列を印刷"}, help: "FALSE: the columns the order is read from (the sort keys) are not printed, with no plan_hide() for them. Blank (TRUE): they are printed as they are. e.g. FALSE", type: logical, default: true}
-    keys: {editor: sort_keys, label: {en: "Order", ja: "並び順"}}
+    # the keys as Rows (the field type map 2026-11-24, section 3 row 6): one
+    # row a key, written in the SPEC as the key text by the serializer
+    # sort_keys (R/arg_rows.R): "-n@group1[Total]" = by n, desc, level
+    # group1, column Total; false (the data's order) is the switch
+    keys:
+      label: {en: "Order", ja: "並び順"}
+      type: "rows<by,direction,level,column>|list<string>|logical"
+      input: table
+      serializer: sort_keys
+      false_label: {en: "Keep the data's order", ja: "データの順のまま（並べ替えない）"}
+      help: {en: "The rows' order, key by key: the top row first, a tie goes to the next row. A statistic's level: the count of that level's own row carried to the rows under it (blank: the row's own); its column: the count in that column (blank: all columns together).", ja: "表の行を、どの順に並べるか。上の行の基準ほど優先し、同じ値の行は次の行の基準で並べます。統計量の「件数を見る階層」はその階層の行の件数で下の行もまとめて並べます（空: その行自身の件数）。「件数を見る列」はその列の件数で並べます（空: 全部の列の合計）。"}
+      columns:
+        by:
+          label: {en: "Sort by", ja: "並べる基準"}
+          type: string
+          input: pick
+          choices: "fixed, columns(row_keys), stats"
+          values:
+            - {value: .overall, label: {en: "The overall row (any event)", ja: "「全体」の行（1 件以上発現）"}}
+            - {value: .depth, label: {en: "A level's own row above the rows under it", ja: "上の階層の行を、その下の行より上に"}}
+        direction:
+          label: {en: "Direction", ja: "向き"}
+          type: "enum[asc|desc]"
+          input: pick
+          values:
+            - {value: asc, label: {en: "Ascending (A to Z, smallest first)", ja: "昇順（A から・少ない順）"}}
+            - {value: desc, label: {en: "Descending (Z to A, largest first)", ja: "降順（Z から・多い順）"}}
+        level:
+          label: {en: "Level counted", ja: "件数を見る階層"}
+          type: string
+          input: pick
+          choices: "columns(row_groups)"
+        column:
+          label: {en: "Column counted", ja: "件数を見る列"}
+          type: string
+          input: pick
+          choices: "columns(spread)"
+      new_row: {direction: asc}
 
 plan_digits:
   package: rtfreporter

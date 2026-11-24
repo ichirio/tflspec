@@ -1,7 +1,8 @@
 cols <- c("name", "label_en", "label_ja", "help_en", "help_ja", "step", "group", "input", "type",
           "required", "default", "default_kind", "unset", "choices", "values", "value_labels",
           "free", "ordered", "columns", "new_row", "fixed_rows", "tier", "passes_to", "member_of",
-          "description", "editor", "dots_style", "dots_key", "dots_map")
+          "description", "editor", "serializer", "false_label_en", "false_label_ja",
+          "dots_style", "dots_key", "dots_map")
 
 test_that("tfl_arg_defs() takes fn or template, one of them", {
   expect_error(tfl_arg_defs(), "one of them")
@@ -214,7 +215,7 @@ test_that("a union's input: the first member that is not r, the exceptions writt
     c("plan_listing", "wrap", "pick"),            # logical|string
     c("tfl_image", "width_in", "text"),           # number|enum[fit]
     c("rtf_figures", "width_twips", "text"),      # integer|enum[fit]
-    c("plan_sort", "keys", "text"),               # list<string>|logical (the dots' type)
+    c("plan_sort", "keys", "table"),              # rows<..>|list<string>|logical (written)
     c("scale_x_continuous", "breaks", "text"),    # list<number>|call<..>|r
     c("ggplot", "data", "text"),                  # object|r (drawn by the type)
     c("plan_cell_style", "color", "text"),        # colour|r|map<..> (the colour field)
@@ -451,7 +452,6 @@ test_that("the editor words are used, each with an input, and sit where tflplann
             plan_cells.value = "cells", plan_cells.categorical = "cells",
             plan_cells.continuous = "cells", plan_cells.default = "cells",
             plan_col_header.header = "header_lines", plan_col_header.values = "header_lines",
-            plan_sort.keys = "sort_keys", plan_sort.stat = "sort_keys",
             plan_digits.... = "digits", plan_levels.... = "levels")
   expect_identical(got[order(names(got))], want[order(names(want))])
   # an argument without one: NA
@@ -461,7 +461,7 @@ test_that("the editor words are used, each with an input, and sit where tflplann
 
 test_that("an unknown editor word is an error naming the allowed words", {
   expect_error(tflspec:::.arg_row("x", list(type = "string", editor = "wizard"), "content", "fn"),
-               "editor \"wizard\" is not one of roles, cells, header_lines, digits, levels, sort_keys")
+               "editor \"wizard\" is not one of roles, cells, header_lines, digits, levels")
   expect_error(tflspec:::.arg_row("x", list(type = "string", editor = c("roles", "cells")),
                                   "content", "fn"), "is not one of roles")
   r <- tflspec:::.arg_row("x", list(type = "string", editor = "cells"), "content", "fn")

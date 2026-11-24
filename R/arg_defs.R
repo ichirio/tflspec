@@ -30,8 +30,9 @@
 #   header_lines  plan_col_header's header lines
 #   digits        plan_digits' decimals per variable and statistic
 #   levels        plan_levels' ordered values per variable
-#   sort_keys     plan_sort's per-level sort keys
-.arg_editors <- c("roles", "cells", "header_lines", "digits", "levels", "sort_keys")
+# (plan_sort's keys left the list: they are Rows, their text form the
+# `serializer:` sort_keys, R/arg_rows.R)
+.arg_editors <- c("roles", "cells", "header_lines", "digits", "levels")
 
 # the closed list of choice sources (15 words, canon 11-14 and the
 # figure_style word of 2026-11-18).  An entry writes one with what it
@@ -322,6 +323,13 @@
     cd$label_ja <- l[["ja"]]
     cd$help_en <- if (is.na(h[["en"]])) as.character(cd[["description"]] %||% NA_character_) else h[["en"]]
     cd$help_ja <- h[["ja"]]
+    # (its fixed values, each a value or {value: , label: {en: , ja: }}: the
+    # values, and their labels as a data frame value, label_en, label_ja)
+    if (!is.null(cd[["values"]])) {
+      vl <- .arg_values(cd, as.character(cd[["type"]] %||% "string"), w)
+      cd$values <- vl$values
+      cd$value_labels <- vl$labels
+    }
     # a map's value that is itself a map has its own key / value columns
     if (is.list(cd[["columns"]])) cd$columns <- .arg_columns(cd[["columns"]], NULL, w)
     cols[[k]] <- cd
@@ -344,6 +352,18 @@
          call. = FALSE)
   }
   nr
+}
+
+# A definition's `serializer:` word: one of .arg_serializers (R/arg_rows.R),
+# NA when it writes none
+.arg_serializer_word <- function(x, where) {
+  if (is.null(x)) return(NA_character_)
+  if (!is.character(x) || length(x) != 1L || !x %in% .arg_serializers) {
+    stop(sprintf("%s: serializer %s is not one of %s.", where,
+                 encodeString(paste(as.character(x), collapse = ", "), quote = "\""),
+                 paste(.arg_serializers, collapse = ", ")), call. = FALSE)
+  }
+  x
 }
 
 # A passes_to as written (`passes_to:`, or `maps_to:` in a template, the
@@ -488,6 +508,12 @@
   row$member_of <- member_of
   row$description <- description
   row$editor <- editor
+  # (a Rows argument kept as text in the SPEC: its text form, R/arg_rows.R;
+  # and the label of the switch that writes its type's `false`)
+  row$serializer <- .arg_serializer_word(d[["serializer"]], where_arg)
+  fl <- .arg_en_ja(d[["false_label"]], where_arg, "false_label")
+  row$false_label_en <- fl[["en"]]
+  row$false_label_ja <- fl[["ja"]]
   # the `...` row only (from .arg_schema_dots()): how the dots' entries are
   # written; NA on every other row
   row$dots_style <- as.character(d[["dots_style"]] %||% NA_character_)
@@ -798,10 +824,17 @@
 #'     \item{description}{one line.}
 #'     \item{editor}{the tflplanner special editor the definition names, from
 #'       `editor:`: one of `roles`, `cells`, `header_lines`, `digits`,
-#'       `levels`, `sort_keys` (the closed list kept here); `NA` when none (the
+#'       `levels` (the closed list kept here); `NA` when none (the
 #'       planner draws the field from `input` and `type`).  A row with an
 #'       editor still has its `input`, the value form for the CUI and the AI
 #'       kit.  A schema function's `dots:` may write it too (the `...` row).}
+#'     \item{serializer}{a table (Rows) argument the SPEC keeps as text: the
+#'       text form's name, from `serializer:` (`sort_keys`, plan_sort()'s
+#'       keys; [tfl_rows_read()] and [tfl_rows_write()] turn the value into
+#'       its rows and back); `NA` for the rest.}
+#'     \item{false_label_en, false_label_ja}{a Rows argument whose type also
+#'       takes `false`: the label of the switch that writes it (plan_sort's
+#'       keys: the data's order), from `false_label:`; `NA` for the rest.}
 #'     \item{dots_style}{the `...` row only: `named` (the item's other keys are
 #'       the entries, by name) or `positional` (the entries are the value of
 #'       the one key `dots_key`), from the `dots:` entry's `style:`; `NA` on

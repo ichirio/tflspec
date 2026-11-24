@@ -149,6 +149,9 @@ as_special <- list(
                                     list(source = "dataset", dataset = "ADAE")),
   plan_append.content = function() list(
     list(tfl_item("table_plan", list(cols = "TRT01A")))),
+  # (the sort keys as the SPEC writes them: their text, as the dots' type
+  # list<string>|logical gave them before the keys were Rows)
+  plan_sort.keys = function() list(c("Text A", "Text B"), TRUE),
   plan_col_header.header = function() list(
     data.frame(line = c(1L, 1L), cols = c("Drug X", "Control"), text = c("A", "B"),
                stringsAsFactors = FALSE)),

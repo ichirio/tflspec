@@ -101,10 +101,17 @@ one or several; empty for none.}
 \item{description}{one line.}
 \item{editor}{the tflplanner special editor the definition names, from
 \verb{editor:}: one of \code{roles}, \code{cells}, \code{header_lines}, \code{digits},
-\code{levels}, \code{sort_keys} (the closed list kept here); \code{NA} when none (the
+\code{levels} (the closed list kept here); \code{NA} when none (the
 planner draws the field from \code{input} and \code{type}).  A row with an
 editor still has its \code{input}, the value form for the CUI and the AI
 kit.  A schema function's \verb{dots:} may write it too (the \code{...} row).}
+\item{serializer}{a table (Rows) argument the SPEC keeps as text: the
+text form's name, from \verb{serializer:} (\code{sort_keys}, plan_sort()'s
+keys; \code{\link[=tfl_rows_read]{tfl_rows_read()}} and \code{\link[=tfl_rows_write]{tfl_rows_write()}} turn the value into
+its rows and back); \code{NA} for the rest.}
+\item{false_label_en, false_label_ja}{a Rows argument whose type also
+takes \code{false}: the label of the switch that writes it (plan_sort's
+keys: the data's order), from \verb{false_label:}; \code{NA} for the rest.}
 \item{dots_style}{the \code{...} row only: \code{named} (the item's other keys are
 the entries, by name) or \code{positional} (the entries are the value of
 the one key \code{dots_key}), from the \verb{dots:} entry's \verb{style:}; \code{NA} on

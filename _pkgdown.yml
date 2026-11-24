@@ -186,6 +186,7 @@ reference:
       - tfl_write_study_part
       - tfl_item_code
       - tfl_schema
+      - tfl_rows_read
       - tfl_args_to_r
       - tfl_schema_check
       - tfl_check_spec
