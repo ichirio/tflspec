@@ -41,7 +41,7 @@
     put(.ard_prog_cache$code[[id]], .ard_program_name(id))
   }
   keep <- c(.rp_ard_setup_file, vapply(ids, .ard_program_name, ""))
-  for (f in setdiff(list.files(dir, "\.[Rr]$"), keep)) {
+  for (f in setdiff(list.files(dir, "\\.[Rr]$"), keep)) {
     p <- file.path(dir, f)
     have <- readLines(p, warn = FALSE, encoding = "UTF-8")
     chk <- sub("^#  Checksum   : *", "",
