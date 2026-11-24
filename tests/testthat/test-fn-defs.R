@@ -98,7 +98,9 @@ test_that("a schema entry's join, first_arg_name and returns win over the rules"
   methods <- data.frame(method = "zz_count", label = "Zz counts", call = "zzpkg::ard_zz_count",
                         stringsAsFactors = FALSE)
   schema <- list(
-    plan_zz_mark = list(package = "zzpkg", label = list(en = "Zz mark", ja = "Zz")),
+    # (an rtfreporter function that is not a figure's builds the plan;
+    # zz_tail, of another package, says nothing: unknown)
+    plan_zz_mark = list(package = "rtfreporter", label = list(en = "Zz mark", ja = "Zz")),
     zz_layer = list(package = "zzpkg", figure = "layer"),
     zz_head = list(package = "zzpkg", figure = "compose", join = "|>", first_arg_name = "pieces",
                    returns = "object"),

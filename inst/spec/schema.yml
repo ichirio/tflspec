@@ -442,6 +442,7 @@ plan_listing:
 
 listing_col:
   package: rtfreporter
+  returns: value
   description: One column of a listing.
   args:
     vars: {type: "list<column>", description: "The variable(s) the column prints; several stack (or flow) in one cell."}
@@ -505,6 +506,7 @@ rtf_border_line:
 
 normalize_ard:
   package: rtfreporter
+  returns: data
   rank: 10
   stage: mapping
   label: {en: "Normalize the ARD", ja: "ARD の正規化"}
@@ -528,6 +530,7 @@ rtf_col_header:
 
 cell_rows:
   package: rtfreporter
+  returns: value
   dots: {style: named, type: "template|list<guard|template>", description: "A cell's lines, by the label of the row each sits on."}
 
 # ---- the ARD's analyses: cards and cardx calls -------------------------------
@@ -822,6 +825,7 @@ rtf_footnotes:
 
 generate_rtfreport:
   package: rtfreporter
+  returns: doc
   description: Writing the report's RTF file.
   args:
     overwrite: {type: logical, description: "FALSE: a report's file already there is not written over (an error); blank: TRUE."}

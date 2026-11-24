@@ -20,6 +20,9 @@
 # the arrangement of the plots (B-11): a plot, the first call of its object
 .fn_def_plot_fns <- c("tfl_arrange")
 
+# a card whose name is not its function's: the function of its row
+.fn_def_card_fns <- c(data = "data_row")
+
 .fn_def_cache <- new.env(parent = emptyenv())
 
 # the step names, for a step argument; NULL is every step
@@ -108,10 +111,12 @@
       if (method && is.na(label[["ja"]]) && is.na(label[["en"]])) {
         label[["en"]] <- m_label[match(fn, m_fn)]
       }
+      # (an rtfreporter function that is not a figure's builds the plan;
+      # one that gives something else says so: schema `returns:`)
       returns <- .fn_def_key(ent, "returns", .fn_def_returns, fn) %||%
-        (if (startsWith(fn, "plan_") || identical(fn, "table_plan")) "plan"
-         else if (identical(kind, "plot") || fn %in% .fn_def_plot_fns || identical(join, "+")) "plot"
+        (if (identical(kind, "plot") || fn %in% .fn_def_plot_fns || identical(join, "+")) "plot"
          else if (method) "ard"
+         else if (identical(pkg, "rtfreporter") && is.null(kind)) "plan"
          else "unknown")
       first <- .fn_def_key(ent, "first_arg_name", NULL, fn) %||%
         (if (identical(join, "+")) NA_character_
@@ -195,7 +200,7 @@ tfl_fn_defs <- function(step = NULL) {
 # attribute "fn"); a data row card is the data_row function.  NULL when
 # there is none.
 .fn_def_row <- function(fn) {
-  nm <- if (identical(fn, "data")) "data_row" else .schema_fn_name(fn)
+  nm <- if (fn %in% names(.fn_def_card_fns)) .fn_def_card_fns[[fn]] else .schema_fn_name(fn)
   d <- tfl_fn_defs()
   row <- d[d$fn == nm, , drop = FALSE]
   if (!nrow(row)) return(NULL)
