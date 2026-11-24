@@ -35,9 +35,9 @@ a run of the ARD only answers for the ARD.
 }
 \details{
 A run counts when its \code{batch.txt} says it finished and names this study
-(study.yml's \code{study_id}), has the line \verb{Verified : yes} (the runner writes
+(study.yml's \code{study_id}), has the line \code{Verified : yes} (the runner writes
 it last, after \code{issues.csv}, so the run's end record is whole) and
-\verb{Kind : run}, and has no \verb{Re-run :} line, and its \code{run.csv} has the
+\code{Kind : run}, and has no \verb{Re-run :} line, and its \code{run.csv} has the
 \code{output_id} column.  So a run still going, a run folder of another study
 put under \verb{runs/}, the runs of an older runner, a preview, and a batch
 folder that was run again (even when it is copied back into \verb{runs/}) do not

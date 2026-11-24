@@ -35,7 +35,7 @@ The colours, the censor mark and the theme are the figure style
 standard's (\code{\link[=tfl_fig_style]{tfl_fig_style()}}).
 }
 \examples{
-\dontshow{if (requireNamespace("ggsurvfit", quietly = TRUE) && requireNamespace("cards", quietly = TRUE)) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (requireNamespace("ggsurvfit", quietly = TRUE) && requireNamespace("cards", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 adtte <- data.frame(AVAL = c(5, 8, 12, 20, 3, 9, 15, 30), CNSR = c(0, 1, 0, 0, 0, 0, 1, 1),
                     ARM = rep(c("A", "B"), each = 4))
 fit <- ggsurvfit::survfit2(ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ ARM, data = adtte)

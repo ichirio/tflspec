@@ -46,7 +46,7 @@ default for a type \code{r}, \code{formula} or \code{guard}, \code{condition} fo
 \item{required}{\code{TRUE} for an argument that has no default and must be
 given.}
 \item{default}{(a list column) the default as written; a tagged value
-(\verb{!series K}, \verb{!study K}, \verb{!study {key: K, fallback: V}}, \verb{!fixed v}, \code{!r}) is a \code{tfl_tagged} object.
+(\verb{!series K}, \verb{!study K}, \verb{!study \{key: K, fallback: V\}}, \verb{!fixed v}, \code{!r}) is a \code{tfl_tagged} object.
 It is resolved for a study by \code{\link[=tfl_template_resolve]{tfl_template_resolve()}}.  A schema
 function's argument with no default written takes the function's own
 default when that is one \code{TRUE} or \code{FALSE} and the argument's type is
@@ -81,7 +81,7 @@ or the argument's \verb{labels:} map (column: label).  A \verb{map<K, V>}'s
 two columns are written \verb{columns: \{key: \{label: \}, value: \{label: \}\}};
 a value that is itself a map has its own \verb{columns:} (the same form).}
 \item{new_row}{(a list column) a table's values for a row the user
-adds, by column (\verb{new_row: \{key: subgroup\}}); \code{NULL} when none.  Each
+adds, by column (\code{new_row: {key: subgroup}}); \code{NULL} when none.  Each
 name must be one of the argument's \verb{columns:}.}
 \item{fixed_rows}{(a list column) a template's table param: the rows
 the template writes with fixed values next to its \code{"{name}"} (the
