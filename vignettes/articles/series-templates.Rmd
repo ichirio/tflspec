@@ -359,7 +359,7 @@ changes only the names it writes. With the series's `formats` above,
 
 ```yaml
 template:
-  name: tflspec_v1/demog
+  name: tflspec_v1/tflspec_summary
   analysis:
     formats: {mean: 3, "AGE:sd": !unset}
 ```
