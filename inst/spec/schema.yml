@@ -488,21 +488,21 @@ plan_after:
 rtf_border:
   package: rtfreporter
   args:
-    all: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The four outer edges at once; a side named wins over it."}
-    top: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>"}
-    bottom: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>"}
-    left: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>"}
-    right: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>"}
-    inside_h: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The rules between the rows."}
-    inside_v: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The rules between the cells."}
+    all: {main: true, label: {en: "All four edges", ja: "外枠の 4 辺"}, type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The four outer edges at once (top, bottom, left, right); a side named wins over it. TRUE the default line, a style word, or rtf_border_line() for its own weight and colour."}
+    top: {main: true, label: {en: "Top", ja: "上"}, type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The line of this edge: TRUE the default line, a style word, or rtf_border_line() for its own weight and colour; blank: not drawn unless `all` draws it."}
+    bottom: {main: true, label: {en: "Bottom", ja: "下"}, type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The line of this edge: TRUE the default line, a style word, or rtf_border_line() for its own weight and colour; blank: not drawn unless `all` draws it."}
+    left: {main: true, label: {en: "Left", ja: "左"}, type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The line of this edge: TRUE the default line, a style word, or rtf_border_line() for its own weight and colour; blank: not drawn unless `all` draws it."}
+    right: {main: true, label: {en: "Right", ja: "右"}, type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The line of this edge: TRUE the default line, a style word, or rtf_border_line() for its own weight and colour; blank: not drawn unless `all` draws it."}
+    inside_h: {main: true, label: {en: "Inside, between rows", ja: "内側の横線"}, type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The rules between the rows: TRUE the default line, a style word, or rtf_border_line() for its own weight and colour; blank: none."}
+    inside_v: {main: true, label: {en: "Inside, between columns", ja: "内側の縦線"}, type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The rules between the cells: TRUE the default line, a style word, or rtf_border_line() for its own weight and colour; blank: none."}
 
 rtf_border_line:
   package: rtfreporter
   description: "One side of a border with a look of its own: {fn: rtf_border_line, args: {style: double, width: 30, color: \"#003366\"}}."
   args:
-    style: {type: "enum[single|double|thick|dash|dot|none]", description: "The line's style (default single); none removes an inherited rule."}
-    width: {type: integer, description: "The line's weight in twips (default 15, about 0.5 pt)."}
-    color: {type: string, description: "The line's colour as a hex string, e.g. \"#003366\" (default black)."}
+    style: {main: true, label: {en: "Line style", ja: "線の種類"}, type: "enum[single|double|thick|dash|dot|none]", description: "The line's style (default single); none removes an inherited rule."}
+    width: {main: true, label: {en: "Weight (twips)", ja: "太さ（twip）"}, type: integer, description: "The line's weight in twips (default 15, about 0.5 pt)."}
+    color: {main: true, label: {en: "Colour", ja: "色"}, type: string, description: "The line's colour as a hex string, e.g. \"#003366\" (default black)."}
 
 normalize_ard:
   package: rtfreporter
@@ -767,13 +767,13 @@ rtf_watermark:
   package: rtfreporter
   description: The watermark's look, as rtf_document(watermark = ) takes it.
   args:
-    text: {type: string, description: The word drawn behind every page.}
-    font_size_half_points: {type: integer}
-    color: {type: string, description: "A hex colour, \"#C8C8C8\"."}
-    angle: {type: number, description: "Degrees; -45 (the default) rises to the right."}
-    font: {type: string}
-    width_in: {type: number}
-    height_in: {type: number}
+    text: {main: true, label: {en: "Text", ja: "文字"}, type: string, description: The word drawn behind every page.}
+    font_size_half_points: {main: true, label: {en: "Font size (half points)", ja: "文字の大きさ（half-point）"}, type: integer}
+    color: {main: true, label: {en: "Colour", ja: "色"}, type: string, description: "A hex colour, \"#C8C8C8\"."}
+    angle: {main: true, label: {en: "Angle", ja: "角度"}, type: number, description: "Degrees; -45 (the default) rises to the right."}
+    font: {main: true, label: {en: "Font", ja: "フォント"}, type: string}
+    width_in: {main: true, label: {en: "Width (inches)", ja: "幅（インチ）"}, type: number}
+    height_in: {main: true, label: {en: "Height (inches)", ja: "高さ（インチ）"}, type: number}
 
 rtf_tables:
   package: rtfreporter
