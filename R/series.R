@@ -33,12 +33,17 @@
   invisible(series)
 }
 
-# the folders a series is looked for in, in order
+# the folders a series is looked for in, in order.  While a program's text
+# is made (.with_code_context()) the tflplanner home is not one of them: the
+# series folders are then a value, the context's `series_dir`.
 .series_search_dirs <- function(dir = NULL) {
   c(dir,
     getOption("tflspec.series_dir"),
-    file.path(tools::R_user_dir("tflplanner", "data"), "standards", "series"),
+    if (!.in_code_context()) .series_home_dir(),
     system.file("series", package = "tflspec"))
+}
+.series_home_dir <- function() {
+  file.path(tools::R_user_dir("tflplanner", "data"), "standards", "series")
 }
 
 #' Series of templates
@@ -65,7 +70,8 @@
 #'
 #' `tfl_series_dir()` finds the source folder of a series.  It looks in `dir`, then
 #' `getOption("tflspec.series_dir")`, then
-#' `file.path(tools::R_user_dir("tflplanner", "data"), "standards", "series")`,
+#' `file.path(tools::R_user_dir("tflplanner", "data"), "standards", "series")`
+#' (not while a study's program is made: its series are a value then),
 #' then the series that come with tflspec (`system.file("series", package =
 #' "tflspec")`); the first folder that holds `<series>/series.yml` wins.
 #' `tfl_series_read()` reads its `series.yml`.
@@ -106,7 +112,8 @@ tfl_series_dir <- function(series, dir = NULL) {
 # with source "dir", "option", "user" or "package"; NULL when none has it.
 .series_find <- function(series, dir = NULL) {
   opt <- getOption("tflspec.series_dir")
-  src <- c(rep("dir", length(dir)), rep("option", length(opt)), "user", "package")
+  src <- c(rep("dir", length(dir)), rep("option", length(opt)),
+           if (!.in_code_context()) "user", "package")
   dirs <- .series_search_dirs(dir)
   for (i in seq_along(dirs)) {
     d <- dirs[[i]]
