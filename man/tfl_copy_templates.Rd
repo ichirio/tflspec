@@ -7,7 +7,13 @@
 \alias{tfl_recopy_templates}
 \title{Copy the templates a study uses into the study}
 \usage{
-tfl_copy_templates(study_dir, templates = NULL, as = NULL, dir = NULL)
+tfl_copy_templates(
+  study_dir,
+  templates = NULL,
+  as = NULL,
+  dir = NULL,
+  series = NULL
+)
 
 tfl_template_status(study_dir, dir = NULL)
 
@@ -20,13 +26,17 @@ tfl_recopy_templates(study_dir, templates)
 
 \item{templates}{Template ids, \code{"<series>/<name>"}.  \code{NULL}
 (\code{tfl_copy_templates()}): every template the report SPECs
-(\verb{spec/outputs/*.yml}) name that the study has not copied yet.}
+(\verb{spec/outputs/*.yml}) name that the study has not copied yet; with
+\code{series}, none.}
 
-\item{as}{A new name for the copy (one template only): a template of this
-study only.}
+\item{as}{A new name for the copy (one template only, not with
+\code{series}): a template of this study only.}
 
 \item{dir}{A folder (or folders) of series, looked in first for the
 source, as \code{\link[=tfl_series_dir]{tfl_series_dir()}} does.}
+
+\item{series}{Series names (\code{"tflspec_v1"}): each is copied whole, its
+\code{series.yml} and all its templates.  \code{NULL}: none.}
 
 \item{template}{One template id, \code{"<series>/<name>"}.}
 }
@@ -61,6 +71,13 @@ or \code{option}, and tflspec's version for the package's series), when, and
 its md5.  It never overwrites a file the study has.
 }
 \details{
+With \code{series}, it copies each series named whole: its \code{series.yml} and
+every template in its \verb{templates/} folder, from the same source and with
+the same record as one template.  Files the study has already are kept
+as they are (\code{"present"}).  \code{series} and \code{templates} together copy both
+(each file once); with \code{series} and no \code{templates}, no other template is
+copied.  \code{\link[=tfl_series_templates]{tfl_series_templates()}} lists what a study has copied.
+
 The study changes a template by editing its copy, and a series's values
 in its copy's \verb{values:} (\code{\link[=tfl_series_values_set]{tfl_series_values_set()}}).  A report SPEC
 still names a template as \code{template: name: tflspec_v1/demog}; a report
@@ -84,6 +101,9 @@ tfl_copy_templates(study)[, c("series", "template", "status")]
 tfl_copy_templates(study, "tflspec_v1/demog", as = "demog_wide")$status
 tfl_template_status(study)[, c("template", "status")]
 
+# a whole series; the files the study has already are kept
+table(tfl_copy_templates(study, series = "tflspec_v1")$status)
+
 # the study edits its copy; the copy now differs from the source
 f <- file.path(study, "spec", "series", "tflspec_v1", "templates", "demog.yml")
 writeLines(c(readLines(f), "# the study's note"), f)
@@ -93,6 +113,6 @@ suppressWarnings(tfl_recopy_templates(study, "tflspec_v1/demog"))$status
 unlink(study, recursive = TRUE)
 }
 \seealso{
-\code{\link[=tfl_series_values_set]{tfl_series_values_set()}}, \code{\link[=tfl_template_resolve]{tfl_template_resolve()}},
-\code{\link[=tfl_series_list]{tfl_series_list()}}
+\code{\link[=tfl_series_templates]{tfl_series_templates()}}, \code{\link[=tfl_series_values_set]{tfl_series_values_set()}},
+\code{\link[=tfl_template_resolve]{tfl_template_resolve()}}, \code{\link[=tfl_series_list]{tfl_series_list()}}
 }
