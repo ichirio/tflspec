@@ -367,6 +367,10 @@ tfl_read_output <- function(path) {
     # (a multi-report file is named as its author likes)
   }
   who <- paste0("tfl_read_output(): ", y$id)
+  # (the report named in a value's message: .r_tag_stop())
+  old_id <- .spec_read$id
+  .spec_read$id <- y$id
+  on.exit(.spec_read$id <- old_id, add = TRUE)
   # (the old places, each with a line saying where it moved)
   if (!is.null(y$population)) stop(who, ": ", .common_old_line, call. = FALSE)
   common <- .common_in(y$common, who)
@@ -645,10 +649,13 @@ tfl_read_output <- function(path) {
     if (identical(.schema_fn_name(names(el)), .spec_part$fn)) {
       return(tfl_item(names(el), .part_in(args), "own"))
     }
-    return(tfl_item(names(el), .rounding_check(names(el), .logical_strict(names(el), .neutral_in(names(el), .calls_in(args)))), "own"))
+    # (R whose `!r` tag was lost stops: R/spec_r_tags.R)
+    args <- .r_tag_check(names(el), .neutral_in(names(el), .calls_in(args)))
+    return(tfl_item(names(el), .rounding_check(names(el), .logical_strict(names(el), args)), "own"))
   }
   if (is.list(el) && !is.null(el$fn)) {
-    return(tfl_item(el$fn, .neutral_in(el$fn, .calls_in(el$args %||% list())), el$from %||% "own"))
+    args <- .r_tag_check(el$fn, .neutral_in(el$fn, .calls_in(el$args %||% list())))
+    return(tfl_item(el$fn, args, el$from %||% "own"))
   }
   stop("A content item is `- fn: {args}`.", call. = FALSE)
 }

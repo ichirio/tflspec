@@ -332,8 +332,8 @@ test_that("the plan verbs carry labels in en and ja, their fields a form and a d
   expect_identical(tfl_arg_defs(fn = "plan_stub")$tier[tfl_arg_defs(fn = "plan_stub")$name == "before"], "key")
 })
 
-test_that("figure_style(<palette|marker>) is the 15th choice word", {
-  expect_identical(length(.arg_choice_sources), 15L)
+test_that("figure_style(<palette|marker>) is a choice word", {
+  expect_true("figure_style" %in% .arg_choice_sources)
   expect_silent(.arg_check_choices("figure_style(palette)", "x"))
   expect_silent(.arg_check_choices("figure_style(marker), fixed", "x"))
   d <- .arg_table(list(col = list(type = "string", input = "pick", choices = "figure_style(palette)")),

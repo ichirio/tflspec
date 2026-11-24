@@ -50,6 +50,10 @@
 # `usual` (most tables: offered first) or `other` (added when wanted).  It
 # changes nothing in a spec or its code.
 #
+# `join:`, `first_arg_name:` and `returns:` say what tfl_fn_defs() derives
+# otherwise (the join `|>` or `+`, the argument the pipe fills, what the
+# function gives); written only where the rule is wrong for the function.
+#
 # `print: unnamed` writes an argument without its name in the code
 # (plan_col_header()'s header, as a person writes it); its value is the
 # same by position.
@@ -438,6 +442,7 @@ plan_listing:
 
 listing_col:
   package: rtfreporter
+  returns: value
   description: One column of a listing.
   args:
     vars: {type: "list<column>", description: "The variable(s) the column prints; several stack (or flow) in one cell."}
@@ -501,6 +506,7 @@ rtf_border_line:
 
 normalize_ard:
   package: rtfreporter
+  returns: data
   rank: 10
   stage: mapping
   label: {en: "Normalize the ARD", ja: "ARD の正規化"}
@@ -524,6 +530,7 @@ rtf_col_header:
 
 cell_rows:
   package: rtfreporter
+  returns: value
   dots: {style: named, type: "template|list<guard|template>", description: "A cell's lines, by the label of the row each sits on."}
 
 # ---- the ARD's analyses: cards and cardx calls -------------------------------
@@ -573,6 +580,7 @@ ard_tabulate_value:
 ard_hierarchical:
   package: cards
   description: Counts in a hierarchy (SOC and PT).
+  returns: ard
   args:
     variables: {type: "list<column>", choices: vars}
     by: {type: "list<column>|column", choices: vars}
@@ -817,6 +825,7 @@ rtf_footnotes:
 
 generate_rtfreport:
   package: rtfreporter
+  returns: doc
   description: Writing the report's RTF file.
   args:
     overwrite: {type: logical, description: "FALSE: a report's file already there is not written over (an error); blank: TRUE."}
@@ -4586,7 +4595,7 @@ scale_size_binned_area:
   figure: scale
   rank: 387
   stage: finishing
-  label: {en: Sizes (binned, by area), ja: 大きさ（区間、面積比例）}
+  label: {en: "Sizes (binned, by area)", ja: 大きさ（区間、面積比例）}
   visible: [max_size, n.breaks, name]
 
 scale_radius:
@@ -5331,6 +5340,11 @@ wrap_plots:
   figure: compose
   rank: 850
   stage: output
+  # the arrangement: the first call of its object, the plots its first
+  # argument (tfl_fn_defs(); B-11)
+  join: "|>"
+  first_arg_name: plots
+  returns: plot
   label: {en: Arrangement, ja: 配置}
   visible: [plots, ncol, nrow, heights, widths, guides]
   args:
