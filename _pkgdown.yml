@@ -130,6 +130,10 @@ reference:
       - tfl_runner_file
       - tfl_run_index
       - tfl_latest_run
+      - tfl_read_runs
+      - tfl_run_study
+      - tfl_spec_stamp
+      - tfl_list_runs
   - title: Data, analysis data and populations
     desc: >
       The `datasets`, `populations` and `analysis_data` sheets of the ARD

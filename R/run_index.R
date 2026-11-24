@@ -73,16 +73,31 @@ tfl_latest_run <- function(study_dir, report_id, part = c("tfl", "ard")) {
 
 .as_time <- function(x) as.POSIXct(x, format = "%Y-%m-%d %H:%M:%S")
 
-# one batch folder's rows, or NULL when it does not count
-.run_index_one <- function(path, run, study_id) {
+# One batch folder, read once: batch.txt's lines and run.csv.  The one
+# reader under tfl_run_index() and tfl_list_runs() (no second batch.txt
+# parser).
+.run_folder <- function(path) {
   bt <- file.path(path, "batch.txt")
   csv <- file.path(path, "run.csv")
-  if (!file.exists(bt) || !file.exists(csv)) return(NULL)
-  lines <- readLines(bt, warn = FALSE, encoding = "UTF-8")
-  field <- function(key) {
-    v <- grep(paste0("^", key, "\\s*:"), lines, value = TRUE)
-    if (length(v)) trimws(sub("^[^:]*:", "", v[[1L]])) else NA_character_
-  }
+  list(path = path, run = basename(path),
+       has_batch = file.exists(bt), has_csv = file.exists(csv),
+       lines = if (file.exists(bt)) readLines(bt, warn = FALSE, encoding = "UTF-8") else character(),
+       csv = if (file.exists(csv)) tryCatch(utils::read.csv(csv, colClasses = "character"),
+                                            error = function(e) NULL))
+}
+
+# a batch.txt field ("Finished :"): its value, `NA` when absent
+.run_field <- function(lines, key) {
+  v <- grep(paste0("^", key, "\\s*:"), lines, value = TRUE)
+  if (length(v)) trimws(sub("^[^:]*:", "", v[[1L]])) else NA_character_
+}
+
+# one batch folder's rows, or NULL when it does not count
+.run_index_one <- function(path, run, study_id) {
+  fo <- .run_folder(path)
+  if (!fo$has_batch || !fo$has_csv) return(NULL)
+  lines <- fo$lines
+  field <- function(key) .run_field(lines, key)
   fin <- field("Finished")
   if (is.na(fin) || !identical(field("Study"), study_id)) return(NULL)
   # the end record: verified, an official run, never a run again
@@ -91,8 +106,7 @@ tfl_latest_run <- function(study_dir, report_id, part = c("tfl", "ard")) {
   }
   kind <- field("Kind")
   if (!is.na(kind) && !identical(kind, "run")) return(NULL)
-  r <- tryCatch(utils::read.csv(csv, colClasses = "character"),
-                error = function(e) NULL)
+  r <- fo$csv
   need <- c("part", "program", "output_id", "status", "md5")
   if (is.null(r) || !nrow(r) || !all(need %in% names(r))) return(NULL)
   data.frame(run = run, started = .as_time(field("Started")),

@@ -401,3 +401,15 @@ test_that("a quoted page cell and a written \n mean in the YAML what they mean i
   expect_true(any(grepl("  Indented", rs, fixed = TRUE)))
   expect_identical(ry, rs)
 })
+
+test_that("a planner sheet without an optional column reads it as NA (no batches column from the app)", {
+  d <- tflspec:::.conv_planner_cols(data.frame(output_id = c("T-1", "T-2"), description = c("a", "b"),
+                                               stringsAsFactors = FALSE))
+  expect_true(all(c("batches", "datasets", "population", "section", "process_code") %in% names(d)))
+  expect_identical(d$batches, c(NA_character_, NA_character_))
+  expect_identical(d$description, c("a", "b"))
+  expect_null(tflspec:::.conv_planner_cols(NULL))
+  d0 <- tflspec:::.conv_planner_cols(data.frame(output_id = character(0)))
+  expect_identical(nrow(d0), 0L)
+  expect_identical(d0$batches, character(0))
+})

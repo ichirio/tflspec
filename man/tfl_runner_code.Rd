@@ -21,18 +21,25 @@ installed with it).
 \description{
 The code of the runner a study's official runs use: base R, so the
 study's programs run without tflspec.  It makes a batch folder
-\verb{runs/<date>_<time>_<what>/}, copies the study's \verb{programs/}, \verb{spec/},
+\verb{runs/batch_<date>-<time>_<definition>/}, copies the study's \verb{programs/}, \verb{spec/},
 \verb{input/}, \code{study.yml} and \code{renv.lock} into it, and runs the programs there:
 what they make lands in the folder's own \verb{output/} and \verb{logs/}, never in
 the study's.  The data are read through the data root (\code{run_paths.R}).  The
 folder holds three entry files (\code{autoexec_all.R}, \code{autoexec_ard.R},
 \code{autoexec_report.R}) that run it again elsewhere (never in place in a
 study's \verb{runs/}) and, at the end, \code{issues.csv} and a \code{batch.txt} ending
-in \verb{Verified : yes}.  A path outside the study that a run would read
+in \verb{Verified : yes}.  A study with no \code{renv.lock} gets one in the folder
+at the first run's end: the packages the programs name and what they
+need, at the versions installed, with where each came from (a GitHub
+package's commit), so \code{renv::restore()} installs them where the folder
+is run again; tflspec is in it only when a program calls it.  A study's
+own \code{renv.lock} is copied as it is, and a package the programs use that
+it lacks is a warning in \code{issues.csv}.  A path outside the study that a run would read
 stops it before any folder is made.  \code{tfl_runner_file()} is the path of the runner file shipped with
 tflspec.  \code{tfl_runner_code()} returns the code of a study's \code{batch.R}
-without its banner and without the call that starts a run (the program
-that sources the runner adds it, as it differs between the autoexec files):
+without its banner and without the call that starts a run (whoever
+starts the run adds it: \code{tfl_run_command()} in the study, the batch folder's
+\verb{autoexec_*.R} files):
 the lists of the study's programs, written as R, then the runner's lines.
 }
 \details{
@@ -43,8 +50,10 @@ vectors are never \code{NA}.
 \item \code{ard} -- the study ARD file the ARD programs make (a string).
 \item \code{study} -- the study's id (study.yml's \code{study_id}), written into each
 run's batch.txt: \code{\link[=tfl_run_index]{tfl_run_index()}} counts only the runs of its study.
-\item \code{spec} -- the study's spec folder (a string), whose md5 batch.txt
-records.
+\item \code{spec} -- the study's spec folder (a string).
+\item \code{spec_md5} -- the stamp of the spec the programs were made from (a
+string, \code{\link[=tfl_spec_stamp]{tfl_spec_stamp()}}): the runner refuses an official run when the
+spec's stamp is another.  batch.txt records it as \code{Spec}.
 \item \code{programs} -- a list \code{list(ard = , tfl = )} of the programs, each a
 character vector of paths, in the order they run.
 \item \code{ard_outputs} -- a named character vector: the ARD program's file name
@@ -56,8 +65,15 @@ reports whose ARD it reads.  \code{list()} for none.
 \item \code{unresolved} -- a named character vector: a report program -> why the
 ARD it reads cannot be worked out (a run that selects it does not
 start).  \code{character()} for none.
-\item \code{sets} -- a named list: the name of a batch -> a character vector of
-its outputs.  \code{list()} for none.
+\item \code{runs} -- an unnamed list of the study's run definitions, each a list
+\code{list(name = , reports = , mode = , copy_data = , problem = )}: the name,
+the output ids it selects (resolved: \code{all} expanded), \code{mode} (\code{"all"}
+or \code{"ard"}), \code{copy_data} (\code{TRUE} or \code{FALSE}) and \code{problem} (\code{""}, or why
+the definition cannot run: the text of \code{\link[=tfl_check_runs]{tfl_check_runs()}}).  The runner
+starts an official run with \verb{--run=<name>} (or, when the study has one
+definition, with no argument), refuses a definition whose \code{problem} is not
+\code{""}, a name that breaks the name rule, and a listed id with no
+program.  \code{list()} for none.
 \item \code{outputs} -- a named list: a report program -> the files it makes.
 \item \code{support} -- a list \code{list(ard = , tfl = , all = )} of character vectors:
 the files kept with the code of a run.
@@ -107,9 +123,12 @@ the runner ends with status 1 when any program is \code{ERROR}.
 \examples{
 m <- list(
   root = "runs", ard = "output/ard/ard.rds", study = "S-1", spec = "spec",
+  spec_md5 = "0123456789abcdef0123456789abcdef",
   programs = list(ard = "programs/ard/ard_t1.R", tfl = "programs/tfl/t1.R"),
   ard_outputs = c(ard_t1.R = "T-1"), report_ids = c(`programs/tfl/t1.R` = "T-1"),
-  needs = list(), unresolved = character(), sets = list(),
+  needs = list(), unresolved = character(),
+  runs = list(list(name = "Main", reports = c("T-1", "T-2"), mode = "all",
+                   copy_data = FALSE, problem = "")),
   outputs = list(`programs/tfl/t1.R` = "output/tfl/t1.rtf"),
   support = list(ard = character(), tfl = character(), all = character()),
   data = list(), data_vars = character(), data_dirs = c(adam = "data/adam"),
