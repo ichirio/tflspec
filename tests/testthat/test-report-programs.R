@@ -11,11 +11,19 @@
 
 prog_fx <- function(...) test_path("fixtures", "programs-family", ...)
 
+# an ARD program's fingerprint (save_ard(definition = )) is the md5 of
+# printed values and of the study's files, which can differ between
+# platforms: it is masked here, and the test below checks it against
+# tfl_ard_spec_hash() on the platform the tests run on
+prog_fx_mask_hash <- function(txt) {
+  gsub('definition = "[0-9a-f]{32}"', 'definition = "<hash>"', txt)
+}
+
 # a program's text as it is written (writeLines(): a line an element), its
-# Generated line masked
+# Generated line and its fingerprint masked
 prog_fx_text <- function(code) {
   code <- sub("^(#  Generated  :).*$", "\\1 <masked>", code)
-  paste0(paste(enc2utf8(code), collapse = "\n"), "\n")
+  prog_fx_mask_hash(paste0(paste(enc2utf8(code), collapse = "\n"), "\n"))
 }
 
 # a fixture's text, its line ends as \n whatever the checkout made them;
@@ -25,7 +33,7 @@ prog_fx_read <- function(study, key) {
   if (!file.exists(f)) return(NULL)
   txt <- rawToChar(readBin(f, "raw", file.size(f)))
   Encoding(txt) <- "UTF-8"
-  gsub("\r\n", "\n", txt, fixed = TRUE)
+  prog_fx_mask_hash(gsub("\r\n", "\n", txt, fixed = TRUE))
 }
 
 prog_fx_studies <- function() sub("\\.rds$", "", list.files(prog_fx("in"), "\\.rds$"))
@@ -97,6 +105,18 @@ test_that("the report and ARD programs are tflplanner's, byte for byte (golden f
   }
   # (every report a program, a few hundred files in all)
   expect_gt(n, 100L)
+})
+
+test_that("an ARD program's fingerprint is tfl_ard_spec_hash() of its report", {
+  x <- prog_fx_inputs("sample")
+  dir <- if (is.character(x$ard$dir)) x$ard$dir else "."
+  for (id in x$ard$ids) {
+    code <- prog_fx_ard(x, id)
+    got <- regmatches(code, regexpr('(?<=definition = ")[0-9a-f]{32}', code, perl = TRUE))
+    expect_identical(got, tfl_ard_spec_hash(x$ard$spec, id, dir = dir,
+                                            codelists = x$ard$codelists),
+                     label = id)
+  }
 })
 
 test_that("the fixtures hold every kind of report and of ARD program", {
