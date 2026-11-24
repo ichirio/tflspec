@@ -10,7 +10,7 @@ tfl_arg_defs(fn = NULL, template = NULL, study_dir = NULL)
 \item{fn}{A function of the schema (\code{"plan_cells"}), or \code{"data"} (the keys
 of a \verb{data:} row) or \code{"analysis"} (the keys of an analysis item).}
 
-\item{template}{A template, \code{"<series>/<template>"} (\code{"tflspec_v1/demog"}).
+\item{template}{A template, \code{"<series>/<template>"} (\code{"tflspec_v1/tflspec_summary"}).
 Its file is found in the series folders: the option \code{tflspec.series_dir},
 tflplanner's home \verb{standards/series/}, the series tflspec ships.}
 

@@ -2,7 +2,9 @@
 # same ARD and the same RTF.  The twins are fixtures/twin/: T-14-1-1T / C
 # (DM: tflspec's inst/extdata/spec-yaml/outputs/T-14-1-1.yml, with the
 # canon analysis ids) and T-14-3-1T / C (AE: tflplanner's SAMPLE-01
-# T-14-3-1, with the canon ids).  Both go through the app's path: T written
+# T-14-3-1, with the canon ids).  T is on the basic templates,
+# tflspec_summary and tflspec_hierarchy (the purpose templates demog and
+# ae_soc_pt left tflspec_v1, canon 2026-11-24).  Both go through the app's path: T written
 # as the code SPEC tfl_template_to_spec() makes of it, then for each
 # tfl_build_ard() and tfl_run_output() (the ARD built, the content run, the
 # RTF written).  What may differ: the output id and the run's date and
@@ -128,25 +130,27 @@ test_that("AE: the template SPEC and the code SPEC give the same ARD", {
   r <- twin_build("T-14-3-1", d)
   expect_identical(unique(r$ard$C$analysis_id), c("BIGN", "AE_ANY", "AE_L1", "AE_L2"))
   expect_identical(twin_ard(r$ard$T), twin_ard(r$ard$C))
-  # (T has no content cards of its own: the template's content, its
-  # defaults the code SPEC's cards, and max_rows 22, gives C's RTF)
+  # (T's one content card of its own, plan_sort, gives C's row order; the
+  # template's content, its defaults the code SPEC's cards, and max_rows
+  # 22, give C's RTF)
   expect_identical(twin_rtf(r$rtf$T, "T-14-3-1T"), twin_rtf(r$rtf$C, "T-14-3-1C"))
 })
 
-test_that("tflspec_summary: DM's arguments give demog's ARD", {
+test_that("tflspec_summary: DM's arguments give demog's ARD (demog from the test series)", {
   twin_skip()
+  local_test_series()
   d <- twin_study(file.path(tempdir(), "twin-summary"),
                   system.file("extdata", "spec-yaml", "defaults.yml", package = "tflspec"),
                   style = FALSE)
   on.exit(unlink(d, recursive = TRUE))
   out <- file.path(d, "spec", "outputs")
   x <- readLines(twin_fx("T-14-1-1T.yml"))
-  y <- sub("^id: T-14-1-1T$", "id: T-14-1-1S", x)
-  y <- sub("^  name: tflspec_v1/demog$", "  name: tflspec_v1/tflspec_summary", y)
+  y <- sub("^id: T-14-1-1T$", "id: T-14-1-1D", x)
+  y <- sub("^  name: tflspec_v1/tflspec_summary$", "  name: tflspec_test/demog", y)
   expect_identical(sum(y != x), 2L)
-  ids <- c(demog = "T-14-1-1T", summary = "T-14-1-1S")
+  ids <- c(demog = "T-14-1-1D", summary = "T-14-1-1T")
   writeLines(x, file.path(out, "T-14-1-1T.yml"))
-  writeLines(y, file.path(out, "T-14-1-1S.yml"))
+  writeLines(y, file.path(out, "T-14-1-1D.yml"))
   invisible(tfl_copy_templates(d))
   st <- tfl_read_study_spec(d)
   for (id in ids) {
@@ -169,7 +173,6 @@ test_that("tflspec_summary: a report's filter on adsl_sub reaches BIGN (header N
   on.exit(unlink(d, recursive = TRUE))
   x <- readLines(twin_fx("T-14-1-1T.yml"))
   x <- sub("^id: T-14-1-1T$", "id: T-14-1-1F", x)
-  x <- sub("^  name: tflspec_v1/demog$", "  name: tflspec_v1/tflspec_summary", x)
   x <- append(x, c("data:", "  - id: adsl_sub", "    where: !r SEX == \"F\""),
               after = match("codelists:", x) - 1L)
   f <- file.path(d, "spec", "outputs", "T-14-1-1F.yml")
