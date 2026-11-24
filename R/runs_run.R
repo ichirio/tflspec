@@ -13,19 +13,25 @@
 #'   both ids (select that report too: its RTF is made as well); and every
 #'   row of [tfl_check_runs()] for the definition is a problem.
 #' * `tfl_run_command()` is the command that starts an official run, from the
-#'   study folder: the Rscript, `programs/autoexec_all.R` and `--run=<name>`;
+#'   study folder: `Rscript -e "source('programs/batch.R'); run_batch(c('ard', 'tfl'), commandArgs(TRUE))" --run=<name>`;
 #'   the attribute `"wd"` is the folder to start it in.  A different choice
 #'   of data or options is a different saved definition.
 #' * `tfl_run_study()` is the one official entry from R.  It first checks the
 #'   programs ([tfl_programs_problem()]), then runs the command in the
 #'   foreground and returns the batch folder.  A run the runner refuses (a
 #'   definition with a problem, an unresolved read, programs older than the
-#'   spec) stops with the runner's own text, the same text a hand-run
-#'   `Rscript programs/autoexec_all.R --run=<name>` prints.
+#'   spec) stops with the runner's own text.
 #' * `tfl_programs_problem()` says whether `programs/batch.R` can start a run:
 #'   `""`, or why not (no programs; programs made before run definitions,
 #'   which hold `sets` and no stamp: regenerate the programs).  Whether the
 #'   programs are older than the spec is the runner's check ([tfl_spec_stamp()]).
+#'
+#' A study has no entry file of its own: an official run starts only from
+#' `tfl_run_study()` (or tflplanner's Run button, which uses
+#' `tfl_run_command()`).  A batch folder holds `autoexec_all.R`,
+#' `autoexec_ard.R` and `autoexec_report.R`, which run it again without
+#' tflspec, after the folder is handed over (copied outside the study's
+#' `runs/`).
 #'
 #' @param study_dir The study folder (the one with study.yml).
 #' @param name The definition's name, exactly as written.
@@ -99,7 +105,8 @@ tfl_run_command <- function(study_dir, name) {
     stop("tfl_run_command(): `name` is the definition's name, one text.", call. = FALSE)
   }
   structure(c(file.path(R.home("bin"), "Rscript"),
-              file.path("programs", "autoexec_all.R"),
+              "-e",
+              "source('programs/batch.R'); run_batch(c('ard', 'tfl'), commandArgs(TRUE))",
               paste0("--run=", name)),
             wd = normalizePath(study_dir, winslash = "/", mustWork = FALSE))
 }
@@ -108,9 +115,6 @@ tfl_run_command <- function(study_dir, name) {
 #' @export
 tfl_programs_problem <- function(study_dir) {
   regen <- "save the study (tflplanner) or regenerate the programs"
-  if (!file.exists(file.path(study_dir, "programs", "autoexec_all.R"))) {
-    return(paste0("programs/autoexec_all.R is missing: ", regen, "."))
-  }
   f <- file.path(study_dir, "programs", "batch.R")
   if (!file.exists(f)) return(paste0("programs/batch.R is missing: ", regen, "."))
   code <- readLines(f, warn = FALSE, encoding = "UTF-8")

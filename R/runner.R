@@ -12,8 +12,9 @@
 #' in `Verified : yes`.  A path outside the study that a run would read
 #' stops it before any folder is made.  `tfl_runner_file()` is the path of the runner file shipped with
 #' tflspec.  `tfl_runner_code()` returns the code of a study's `batch.R`
-#' without its banner and without the call that starts a run (the program
-#' that sources the runner adds it, as it differs between the autoexec files):
+#' without its banner and without the call that starts a run (whoever
+#' starts the run adds it: `tfl_run_command()` in the study, the batch folder's
+#' `autoexec_*.R` files):
 #' the lists of the study's programs, written as R, then the runner's lines.
 #'
 #' The manifest is a named list; every element is required.  Character

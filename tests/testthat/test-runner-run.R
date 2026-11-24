@@ -99,7 +99,7 @@ test_that("a declared output that is not made turns the program into an error", 
   m$outputs[["programs/tfl/U.R"]] <- c("output/tfl/U.rtf", "output/tfl/gone.rtf")
   s <- rr_study(m)
   on.exit(unlink(s, recursive = TRUE))
-  r <- rr_rscript(s, "programs/autoexec_all.R")
+  r <- rr_study_run(s)
   expect_true(r$status != 0L)
   b <- rr_runs(s)
   expect_length(b, 1L)
@@ -208,7 +208,7 @@ test_that("issues.csv folds in the conditions a program wrote", {
                "  message = c('w', 'e', 'm')), 'logs/conditions/T-2.csv', row.names = FALSE)",
                "writeLines('u', 'output/tfl/U.rtf')"),
              file.path(s, "programs", "tfl", "U.R"))
-  r <- rr_rscript(s, "programs/autoexec_all.R")
+  r <- rr_study_run(s)
   # (an error-level condition makes the program ERROR: the run ends with status 1)
   expect_identical(r$status, 1L, info = r$text)
   b <- rr_runs(s)
@@ -310,7 +310,7 @@ test_that("a failing report is an ERROR with an issue; the run ends with status 
   s <- rr_study()
   on.exit(unlink(s, recursive = TRUE))
   rr_set(s, "tfl/U.R", "stop('x')")
-  r <- rr_rscript(s, "programs/autoexec_all.R")
+  r <- rr_study_run(s)
   expect_identical(r$status, 1L, info = r$text)
   b <- rr_runs(s)
   run <- rr_read(b, "run.csv")
@@ -332,7 +332,7 @@ test_that("a failed ARD program: its reports are 'not run'", {
   s <- rr_study()
   on.exit(unlink(s, recursive = TRUE))
   rr_set(s, "ard/A.R", "stop('x')")
-  r <- rr_rscript(s, "programs/autoexec_all.R")
+  r <- rr_study_run(s)
   expect_identical(r$status, 1L, info = r$text)
   b <- rr_runs(s)
   run <- rr_read(b, "run.csv")
@@ -351,7 +351,7 @@ test_that("an exit with a status and no Error line is an ERROR with the fallback
   s <- rr_study()
   on.exit(unlink(s, recursive = TRUE))
   rr_set(s, "tfl/U.R", "quit(save = 'no', status = 2)")
-  r <- rr_rscript(s, "programs/autoexec_all.R")
+  r <- rr_study_run(s)
   expect_identical(r$status, 1L, info = r$text)
   b <- rr_runs(s)
   run <- rr_read(b, "run.csv")
@@ -398,7 +398,7 @@ test_that("two stages in one second: the second folder gets _2", {
     dir.create(file.path(s, "runs", paste0("batch_", format(t0 + i, "%Y%m%d-%H%M%S"), "_Main")),
                recursive = TRUE)
   }
-  r <- rr_rscript(s, "programs/autoexec_all.R")
+  r <- rr_study_run(s)
   expect_identical(r$status, 0L, info = r$text)
   expect_match(r$text, "Batch folder: .*_Main_2")
   d <- rr_runs(s)
@@ -462,7 +462,7 @@ test_that("a preview: no Verified, its own data files, not in the run index", {
   rr_set(s, "tfl/T.R", c(sprintf("x <- read.csv('%s')", d),
                          "dir.create('output/tfl', recursive = TRUE, showWarnings = FALSE)",
                          "writeLines(as.character(nrow(x)), 'output/tfl/T.rtf')"))
-  r <- rr_rscript(s, "programs/autoexec_all.R")
+  r <- rr_study_run(s)
   expect_identical(r$status, 0L, info = r$text)
   b <- list.dirs(file.path(s, "prev"), recursive = FALSE)
   expect_length(b, 1L)
@@ -491,7 +491,7 @@ test_that("an empty report: run.csv says TRUE and issues.csv notes 'no rows'", {
     "writeLines('u', 'output/tfl/U.rtf')",
     "write.csv(data.frame(output_id = c('T-1', 'T-2'), empty = c('FALSE', 'TRUE')),",
     "          'output/tfl/report_status.csv', row.names = FALSE)"))
-  r <- rr_rscript(s, "programs/autoexec_all.R")
+  r <- rr_study_run(s)
   expect_identical(r$status, 0L, info = r$text)
   b <- rr_runs(s)
   run <- rr_read(b, "run.csv")
@@ -513,7 +513,7 @@ test_that("a missing or malformed conditions file is skipped", {
     "writeLines('not,a \"csv', 'logs/conditions/T-2.csv')",
     "writeLines(c('a,b', '1,2'), 'logs/conditions/T-3.csv')",
     "writeLines('u', 'output/tfl/U.rtf')"))
-  r <- rr_rscript(s, "programs/autoexec_all.R")
+  r <- rr_study_run(s)
   expect_identical(r$status, 0L, info = r$text)
   b <- rr_runs(s)
   expect_identical(nrow(rr_read(b, "issues.csv")), 0L)
@@ -525,7 +525,7 @@ test_that("a runs root two levels deep: the data are found and running in place 
   m$root <- "output/runs"
   s <- rr_study(m)
   on.exit(unlink(s, recursive = TRUE))
-  r <- rr_rscript(s, "programs/autoexec_all.R")
+  r <- rr_study_run(s)
   expect_identical(r$status, 0L, info = r$text)
   b <- list.dirs(file.path(s, "output", "runs"), recursive = FALSE)
   expect_length(b, 1L)
@@ -678,7 +678,7 @@ test_that("the stamp: a spec that changed since the programs were made is refuse
   writeLines("x", file.path(s, "spec", "s.yml~"))
   dir.create(file.path(s, "spec", ".backup"))
   writeLines("x", file.path(s, "spec", ".backup", "old.yml"))
-  r <- rr_rscript(s, "programs/autoexec_all.R")
+  r <- rr_study_run(s)
   expect_identical(r$status, 0L, info = r$text)
 })
 
@@ -713,7 +713,7 @@ test_that("the start record is there before any program runs", {
     "saveRDS(data.frame(output_id = 'T-1'), 'output/ard/ard.rds')",
     paste("writeLines(c(readLines('batch.txt')[1:3], file.exists('run_definition.yml'),",
           "readLines('run_args.txt')), 'output/ard/seen.txt')")))
-  r <- rr_rscript(s, "programs/autoexec_all.R")
+  r <- rr_study_run(s)
   expect_identical(r$status, 0L, info = r$text)
   b <- rr_runs(s)
   expect_identical(readLines(file.path(b, "output", "ard", "seen.txt")),
@@ -746,11 +746,11 @@ test_that("a preview takes no --run; its folder is preview_<date>-<time>", {
   m$runs <- list()
   s <- rr_study(m)
   on.exit(unlink(s, recursive = TRUE))
-  r <- rr_rscript(s, "programs/autoexec_all.R", "--run=Main")
+  r <- rr_study_run(s, "--run=Main")
   expect_true(r$status != 0L)
   expect_match(r$text, "A preview takes no --run.", fixed = TRUE)
   expect_length(rr_runs(s), 0L)
-  r <- rr_rscript(s, "programs/autoexec_all.R")
+  r <- rr_study_run(s)
   expect_identical(r$status, 0L, info = r$text)
   b <- rr_runs(s)
   expect_match(basename(b), "^preview_[0-9]{8}-[0-9]{6}$")
@@ -758,22 +758,22 @@ test_that("a preview takes no --run; its folder is preview_<date>-<time>", {
   expect_identical(bt[1:3], c("Run      : none", "Mode     : all", "Kind     : preview"))
   # a preview is not tied to the saved spec
   writeLines("a: 2", file.path(s, "spec", "s.yml"))
-  expect_identical(rr_rscript(s, "programs/autoexec_all.R")$status, 0L)
+  expect_identical(rr_study_run(s)$status, 0L)
 })
 
-test_that("the study's autoexec_ard.R takes no --run and, with none, is not a definition's run", {
+test_that("a run in the study is always a definition's run: the parts alone are refused", {
   skip_on_cran()
   s <- rr_study()
   on.exit(unlink(s, recursive = TRUE))
-  r <- rr_rscript(s, "programs/autoexec_ard.R", "--run=Main")
+  msg <- "a run in the study starts from a run definition"
+  r <- rr_study_run(s, parts = "'ard'")
   expect_true(r$status != 0L)
-  expect_match(r$text, "not official runs", fixed = TRUE)
+  expect_match(r$text, msg, fixed = TRUE)
+  r <- rr_study_run(s, "--run=Main", parts = "'tfl'")
+  expect_true(r$status != 0L)
+  expect_match(r$text, msg, fixed = TRUE)
   expect_length(rr_runs(s), 0L)
-  r <- rr_rscript(s, "programs/autoexec_ard.R")
-  expect_identical(r$status, 0L, info = r$text)
-  b <- rr_runs(s)
-  expect_match(basename(b), "^batch_[0-9]{8}-[0-9]{6}_ard$")
-  expect_identical(readLines(file.path(b, "batch.txt"))[1:2], c("Run      : none", "Mode     : ard"))
+  expect_false(dir.exists(file.path(s, "output")))
 })
 
 test_that("logrx is used only when asked for", {
@@ -782,11 +782,11 @@ test_that("logrx is used only when asked for", {
   on.exit(unlink(s, recursive = TRUE))
   if (requireNamespace("logrx", quietly = TRUE)) {
     # (installed: the default run still says R CMD BATCH)
-    r <- rr_rscript(s, "programs/autoexec_all.R")
+    r <- rr_study_run(s)
     expect_identical(r$status, 0L, info = r$text)
     expect_true("Logs     : R CMD BATCH" %in% readLines(file.path(rr_runs(s), "batch.txt")))
   } else {
-    r <- rr_rscript(s, "programs/autoexec_all.R", "--logrx")
+    r <- rr_study_run(s, "--logrx")
     expect_true(r$status != 0L)
     expect_match(r$text, "--logrx needs the logrx package", fixed = TRUE)
     expect_length(rr_runs(s), 0L)
@@ -800,7 +800,7 @@ test_that("tfl_run_study(): the same refusal text as a hand Rscript, and the sam
   m$runs <- list(rr_def("Main", c("T-1", "T-2"), problem = "the study has no report T-9"))
   s <- rr_study(m)
   on.exit(unlink(s, recursive = TRUE))
-  hand <- rr_rscript(s, "programs/autoexec_all.R", "--run=Main")
+  hand <- rr_study_run(s, "--run=Main")
   err <- tryCatch(tfl_run_study(s, "Main"), error = function(e) conditionMessage(e))
   expect_true(hand$status != 0L)
   expect_match(err, "has a problem", fixed = TRUE)
@@ -810,14 +810,14 @@ test_that("tfl_run_study(): the same refusal text as a hand Rscript, and the sam
   s2 <- rr_study()
   on.exit(unlink(s2, recursive = TRUE), add = TRUE)
   writeLines("a: 2", file.path(s2, "spec", "s.yml"))
-  hand <- rr_rscript(s2, "programs/autoexec_all.R", "--run=Main")
+  hand <- rr_study_run(s2, "--run=Main")
   err <- tryCatch(tfl_run_study(s2, "Main"), error = function(e) conditionMessage(e))
   expect_match(err, "older than the spec", fixed = TRUE)
   expect_true(grepl(hand$text, err, fixed = TRUE), info = paste(hand$text, "|", err))
   # the run itself: the folder it returns, the same run.csv as by hand
   s3 <- rr_study()
   on.exit(unlink(s3, recursive = TRUE), add = TRUE)
-  hand <- rr_rscript(s3, "programs/autoexec_all.R", "--run=Main")
+  hand <- rr_study_run(s3, "--run=Main")
   expect_identical(hand$status, 0L, info = hand$text)
   b <- suppressMessages(utils::capture.output(res <- tfl_run_study(s3, "Main")))
   expect_true(dir.exists(res))

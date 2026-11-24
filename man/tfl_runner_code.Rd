@@ -31,8 +31,9 @@ study's \verb{runs/}) and, at the end, \code{issues.csv} and a \code{batch.txt} 
 in \verb{Verified : yes}.  A path outside the study that a run would read
 stops it before any folder is made.  \code{tfl_runner_file()} is the path of the runner file shipped with
 tflspec.  \code{tfl_runner_code()} returns the code of a study's \code{batch.R}
-without its banner and without the call that starts a run (the program
-that sources the runner adds it, as it differs between the autoexec files):
+without its banner and without the call that starts a run (whoever
+starts the run adds it: \code{tfl_run_command()} in the study, the batch folder's
+\verb{autoexec_*.R} files):
 the lists of the study's programs, written as R, then the runner's lines.
 }
 \details{

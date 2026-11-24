@@ -61,12 +61,6 @@ rr_study <- function(m = rr_manifest()) {
 
 rr_write_batch <- function(s, m) {
   writeLines(tfl_runner_code(m), file.path(s, "programs", "batch.R"))
-  parts <- c(all = "c(\"ard\", \"tfl\")", ard = "\"ard\"", report = "\"tfl\"")
-  for (n in names(parts)) {
-    writeLines(c("source(\"programs/batch.R\")",
-                 paste0("run_batch(", parts[[n]], ", commandArgs(TRUE))")),
-               file.path(s, "programs", paste0("autoexec_", n, ".R")))
-  }
 }
 
 # Rscript <script> <args> in `wd`: the output lines and the exit status
@@ -78,6 +72,21 @@ rr_rscript <- function(wd, script, args = character(), env = character()) {
     stdout = TRUE, stderr = TRUE, env = env))
   st <- attr(out, "status")
   list(status = if (is.null(st)) 0L else st, text = paste(out, collapse = "\n"))
+}
+
+# the study's official run, as tfl_run_command() starts it (the runner called with
+# `parts`, then the arguments): the output lines and the exit status
+rr_study_run <- function(s, args = character(), env = character(),
+                         parts = "c('ard', 'tfl')") {
+  old <- setwd(s)
+  on.exit(setwd(old))
+  expr <- paste0("source('programs/batch.R'); run_batch(", parts, ", commandArgs(TRUE))")
+  out <- suppressWarnings(system2(
+    file.path(R.home("bin"), "Rscript"), c("-e", shQuote(expr), shQuote(args)),
+    stdout = TRUE, stderr = TRUE, env = env))
+  st <- attr(out, "status")
+  list(status = if (is.null(st)) 0L else st, text = paste(out, collapse = "
+"))
 }
 
 rr_runs <- function(s) list.dirs(file.path(s, "runs"), recursive = FALSE)
@@ -105,7 +114,7 @@ rr_refused <- function(m, pattern, setup = function(s) NULL, args = character())
   s <- rr_study(m)
   on.exit(unlink(s, recursive = TRUE))
   setup(s)
-  r <- rr_rscript(s, "programs/autoexec_all.R", args)
+  r <- rr_study_run(s, args)
   expect_true(r$status != 0L, info = pattern)
   expect_match(r$text, pattern, info = r$text)
   # nothing was made
@@ -116,6 +125,6 @@ rr_refused <- function(m, pattern, setup = function(s) NULL, args = character())
 # the first run of the fake study
 rr_first_run <- function(args = character(), env = character(), m = rr_manifest()) {
   s <- rr_study(m)
-  r <- rr_rscript(s, "programs/autoexec_all.R", args, env)
+  r <- rr_study_run(s, args, env)
   list(s = s, r = r, batch = rr_runs(s))
 }

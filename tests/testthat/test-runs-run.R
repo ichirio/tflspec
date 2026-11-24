@@ -85,7 +85,9 @@ test_that("tfl_resolve_run() on an old study (sets not written yet) gives the mi
 test_that("tfl_run_command(): the command from the study folder, with --run=<name>", {
   d <- tempfile()
   cmd <- tfl_run_command(d, "Topline")
-  expect_identical(cmd[-1L], c("programs/autoexec_all.R", "--run=Topline"))
+  expect_identical(cmd[-1L], c(
+    "-e", "source('programs/batch.R'); run_batch(c('ard', 'tfl'), commandArgs(TRUE))",
+    "--run=Topline"))
   expect_identical(basename(cmd[[1L]]), basename(file.path(R.home("bin"), "Rscript")))
   expect_identical(attr(cmd, "wd"), normalizePath(d, winslash = "/", mustWork = FALSE))
   expect_error(tfl_run_command(d, ""), "name")
@@ -99,8 +101,6 @@ test_that("tfl_programs_problem(): programs made before the run definitions say 
   d <- tempfile("prog")
   dir.create(file.path(d, "programs"), recursive = TRUE)
   on.exit(unlink(d, recursive = TRUE))
-  expect_match(tfl_programs_problem(d), "autoexec_all.R is missing")
-  writeLines("run_batch(c('ard', 'tfl'))", file.path(d, "programs", "autoexec_all.R"))
   expect_match(tfl_programs_problem(d), "batch.R is missing")
   # an old batch.R: `sets`, no stamp
   writeLines(c(".batch_root <- \"runs\"", ".batch_sets <- list()"), file.path(d, "programs", "batch.R"))
@@ -109,6 +109,8 @@ test_that("tfl_programs_problem(): programs made before the run definitions say 
   # one with a stamp and runs
   m <- rr_manifest()
   writeLines(tfl_runner_code(m), file.path(d, "programs", "batch.R"))
+  # (no study-level autoexec file is needed)
+  expect_false(file.exists(file.path(d, "programs", "autoexec_all.R")))
   expect_identical(tfl_programs_problem(d), "")
   # a stamp and no runs is old too
   code <- tfl_runner_code(m)

@@ -40,20 +40,26 @@ reads the ARD of one the definition does not select is a problem naming
 both ids (select that report too: its RTF is made as well); and every
 row of \code{\link[=tfl_check_runs]{tfl_check_runs()}} for the definition is a problem.
 \item \code{tfl_run_command()} is the command that starts an official run, from the
-study folder: the Rscript, \verb{programs/autoexec_all.R} and \verb{--run=<name>};
+study folder: \verb{Rscript -e "source('programs/batch.R'); run_batch(c('ard', 'tfl'), commandArgs(TRUE))" --run=<name>};
 the attribute \code{"wd"} is the folder to start it in.  A different choice
 of data or options is a different saved definition.
 \item \code{tfl_run_study()} is the one official entry from R.  It first checks the
 programs (\code{\link[=tfl_programs_problem]{tfl_programs_problem()}}), then runs the command in the
 foreground and returns the batch folder.  A run the runner refuses (a
 definition with a problem, an unresolved read, programs older than the
-spec) stops with the runner's own text, the same text a hand-run
-\verb{Rscript programs/autoexec_all.R --run=<name>} prints.
+spec) stops with the runner's own text.
 \item \code{tfl_programs_problem()} says whether \code{programs/batch.R} can start a run:
 \code{""}, or why not (no programs; programs made before run definitions,
 which hold \code{sets} and no stamp: regenerate the programs).  Whether the
 programs are older than the spec is the runner's check (\code{\link[=tfl_spec_stamp]{tfl_spec_stamp()}}).
 }
+
+A study has no entry file of its own: an official run starts only from
+\code{tfl_run_study()} (or tflplanner's Run button, which uses
+\code{tfl_run_command()}).  A batch folder holds \code{autoexec_all.R},
+\code{autoexec_ard.R} and \code{autoexec_report.R}, which run it again without
+tflspec, after the folder is handed over (copied outside the study's
+\code{runs/}).
 }
 \examples{
 tfl_run_command(tempdir(), "Topline")

@@ -417,25 +417,23 @@
     .batch_refuse("--run needs the definition's name: --run=<name>.")
   }
   only <- setdiff(args, c("--no-code", "--data", "--logrx", ex_args))
-  # the parts: an official run starts from autoexec_all.R and the definition's
-  # `mode` decides them; the study's autoexec_ard.R and autoexec_report.R are
-  # not official runs (they take no --run)
+  # the parts: a run in the study is always a definition's run (it starts from
+  # tfl_run_study() or the Run button, with both parts) and the definition's
+  # `mode` decides them
   def <- NULL
   if (first && identical(.batch_kind, "run")) {
-    official <- identical(parts, c("ard", "tfl"))
-    if (!is.null(run) && !official) {
-      .batch_refuse(paste0("The run was not started: --run goes with programs/autoexec_all.R; ",
-                           "the study's autoexec_ard.R and autoexec_report.R are not official runs."))
+    if (!identical(parts, c("ard", "tfl"))) {
+      .batch_refuse(paste0("The run was not started: a run in the study starts from a run ",
+                           "definition: tflspec::tfl_run_study(<study>, \"<name>\") or ",
+                           "tflplanner's Run button."))
     }
-    if (official) {
-      if (length(only) || length(exclude)) {
-        .batch_refuse(paste0("The run was not started: an official run takes no names and no ",
-                             "--exclude (a run definition says what it runs)."),
-                      "  Save a definition with these reports, and start it with --run=<name>.")
-      }
-      def <- .batch_pick_run(run)
-      parts <- if (identical(def$mode, "ard")) "ard" else c("ard", "tfl")
+    if (length(only) || length(exclude)) {
+      .batch_refuse(paste0("The run was not started: an official run takes no names and no ",
+                           "--exclude (a run definition says what it runs)."),
+                    "  Save a definition with these reports, and start it with --run=<name>.")
     }
+    def <- .batch_pick_run(run)
+    parts <- if (identical(def$mode, "ard")) "ard" else c("ard", "tfl")
   } else if (first) {
     if (!is.null(run)) .batch_refuse("A preview takes no --run.")
   } else if (!is.null(run)) {
@@ -842,8 +840,8 @@
   started <- Sys.time()
   plan$started <- started
   stamp <- format(started, "%Y%m%d-%H%M%S")
-  # batch_<date>-<time>_<definition>; a study's autoexec_ard.R / autoexec_report.R
-  # (no definition) name the part; a preview is preview_<date>-<time>
+  # batch_<date>-<time>_<definition>; a run without a definition (a batch
+  # folder's autoexec_ard.R / autoexec_report.R) names the part; a preview is preview_<date>-<time>
   folder <- if (identical(.batch_kind, "preview")) paste0("preview_", stamp) else
     paste0("batch_", stamp, "_", if (!is.null(plan$def)) plan$def$name else plan$what)
   base <- file.path(.batch_root, folder)
