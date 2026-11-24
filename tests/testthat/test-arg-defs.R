@@ -151,7 +151,7 @@ test_that("a template's params: are read the same way, tags kept", {
   expect_error(tfl_arg_defs(template = "Test/demog"), "lower case")
 })
 
-test_that("a choice source outside the 15 words stops", {
+test_that("a choice source outside the closed words stops", {
   expect_error(.arg_check_choices("vars(adsl_sub), datasets", "x"), "unknown choice source")
   expect_silent(.arg_check_choices("from_args(continuous, categorical), report_data", "x"))
   expect_identical(.arg_choice_words("from_args(continuous, categorical), report_data"),

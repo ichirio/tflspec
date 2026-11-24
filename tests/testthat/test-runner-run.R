@@ -701,7 +701,7 @@ test_that("a run records the library paths and warns, not stops, on a version st
 "))
   expect_true("Verified : yes" %in% bt)
   si <- readLines(file.path(b, "session_info.txt"))
-  expect_true("Library paths (.libPaths()):" %in% si)
+  expect_true(any(startsWith(si, "The library paths the programs' R used")))
   expect_true(any(grepl("^utils +[0-9.]+ +[0-9.]+$", si)), info = paste(si, collapse = "
 "))
   expect_true(any(grepl("^stats +0[.]0[.]1 +[0-9.]+ +DIFFERS$", si)), info = paste(si, collapse = "
@@ -718,4 +718,26 @@ test_that("a study whose study.yml names no packages: batch.txt says so", {
   expect_identical(x$r$status, 0L, info = x$r$text)
   expect_true("Packages : study.yml names none" %in% readLines(file.path(x$batch, "batch.txt")))
   expect_true("  (study.yml names no packages)" %in% readLines(file.path(x$batch, "session_info.txt")))
+})
+
+test_that("a program's R reads no .Rprofile, no .Renviron (B2); the run records its libraries", {
+  skip_on_cran()
+  s <- rr_study()
+  prof <- tempfile("rprofile", fileext = ".R")
+  on.exit(unlink(c(s, prof), recursive = TRUE))
+  # a user's profile that would change what a program gives
+  writeLines("options(tfl.seen = 'profile')", prof)
+  rr_set(s, "tfl/U.R", c("dir.create('output/tfl', recursive = TRUE, showWarnings = FALSE)",
+                         "writeLines(getOption('tfl.seen', 'none'), 'output/tfl/U.rtf')"))
+  r <- rr_rscript(s, "programs/autoexec_all.R", env = paste0("R_PROFILE_USER=", prof))
+  expect_identical(r$status, 0L, info = r$text)
+  b <- rr_runs(s)
+  expect_identical(readLines(file.path(b, "output", "tfl", "U.rtf")), "none")
+  si <- readLines(file.path(b, "session_info.txt"))
+  expect_true(any(startsWith(si, "The library paths the programs' R used")))
+  # both ways of running a program take the flags (logrx's Rscript, R CMD BATCH)
+  code <- tfl_runner_code(rr_manifest())
+  flags <- '.batch_r_flags <- c("--no-init-file", "--no-environ")'
+  expect_true(any(grepl(flags, code, fixed = TRUE)))
+  expect_identical(sum(grepl(".batch_r_flags,", code, fixed = TRUE)), 2L)
 })
