@@ -21,8 +21,15 @@ installed with it).
 \description{
 The code of the runner a study's official runs use: base R, so the
 study's programs run without tflspec.  It makes a batch folder
-\verb{runs/<date>_<time>_<what>/} with the logs, what the run made and the code
-it ran.  \code{tfl_runner_file()} is the path of the runner file shipped with
+\verb{runs/<date>_<time>_<what>/}, copies the study's \verb{programs/}, \verb{spec/},
+\verb{input/}, \code{study.yml} and \code{renv.lock} into it, and runs the programs there:
+what they make lands in the folder's own \verb{output/} and \verb{logs/}, never in
+the study's.  The data are read through the data root (\code{run_paths.R}).  The
+folder holds three entry files (\code{autoexec_all.R}, \code{autoexec_ard.R},
+\code{autoexec_report.R}) that run it again elsewhere (never in place in a
+study's \verb{runs/}) and, at the end, \code{issues.csv} and a \code{batch.txt} ending
+in \verb{Verified : yes}.  A path outside the study that a run would read
+stops it before any folder is made.  \code{tfl_runner_file()} is the path of the runner file shipped with
 tflspec.  \code{tfl_runner_code()} returns the code of a study's \code{batch.R}
 without its banner and without the call that starts a run (the program
 that sources the runner adds it, as it differs between the autoexec files):
@@ -56,7 +63,46 @@ its outputs.  \code{list()} for none.
 the files kept with the code of a run.
 \item \code{data} -- a named list: a program -> the data files it reads.  \code{list()}
 for none.
+\item \code{data_vars} -- a named character vector: a data catalog path -> the
+data-folder variable (\code{path_adam}) the generated code reads it through,
+or \code{""} when no variable maps it.  A path of \code{data} that no variable maps
+stops the run, except the files of \verb{input/ard/}.  \code{character()} for none.
+\item \code{data_dirs} -- a named character vector: the layout key -> the study's data
+folder (\code{c(adam = "data/adam", sdtm = "data/sdtm", other = "data/other")}),
+copied with \code{--data}; a string in the study's code that starts with one
+stops the run (it bypasses the data root).  The names are used in the
+message for a data path that no folder maps.
+\item \code{sources} -- the files the study's keys \code{source} name; each must lie
+inside \verb{programs/}, \verb{spec/} or \verb{input/}.  \code{character()} for none.
+\item \code{check_code} -- the study's own code files that the user writes
+(\code{company_setup.R}, \code{study_user.R}, \verb{programs/ard/functions/*.R}; not the
+generated \code{study_helpers.R}) the runner scans before the run.  What is
+scanned: the string constants of the code.  What stops the run, naming
+file and line: a string with the shape of an absolute path (\verb{/dir/},
+\verb{//server/}, \verb{C:/}, \verb{~/}, either slash), a string that holds a separator
+and a \code{..} segment (\code{"../x"}), or a string that starts with a data folder
+(case and repeated slashes ignored).  Other strings (\code{"/N"}, \code{"N:"}, \code{".."}
+alone) pass.  A line that is not a path is marked by ending it with the
+comment \verb{# tfl: not a path}; that line is not scanned.  The scan cannot
+prove there is no such path (\code{paste()} and \code{getOption()} escape it).
+\item \code{kind} -- \code{"run"} (an official run) or \code{"preview"}.  batch.txt records it;
+only a \code{"run"} ends in \verb{Verified : yes}.
+\item \code{paths} -- a named list with optional elements \code{data} (a named character
+vector, dataset -> file; a preview reads these outside the study),
+\code{company_setup}, \code{study_user} and \code{output} (strings); \code{list()} when not
+used.  A \code{kind} of \code{"run"} takes none.  \code{company_setup}, \code{study_user} and
+\code{output} are checked and written but used by the preview (a later
+change); the runner reads only \code{data} today.
 }
+
+The end record.  A program's \code{status} is \code{ERROR} when its exit status is
+not 0, or when it has an error-level issue from any source (a log line, an
+error stored in the ARD, a condition of class error, a declared output
+not made).  An \code{ERROR} program with no error issue gets one, from the log,
+"the program ended with status N; see <log>".  The log patterns match R's
+own prefixes in English and Japanese.  \code{errors} in run.csv, \verb{Errors :} and
+\verb{N of M program(s) without error} in batch.txt follow the same rule, and
+the runner ends with status 1 when any program is \code{ERROR}.
 }
 \examples{
 m <- list(
@@ -66,6 +112,8 @@ m <- list(
   needs = list(), unresolved = character(), sets = list(),
   outputs = list(`programs/tfl/t1.R` = "output/tfl/t1.rtf"),
   support = list(ard = character(), tfl = character(), all = character()),
-  data = list())
+  data = list(), data_vars = character(), data_dirs = c(adam = "data/adam"),
+  sources = character(), check_code = character(), kind = "run",
+  paths = list())
 head(tfl_runner_code(m), 8)
 }

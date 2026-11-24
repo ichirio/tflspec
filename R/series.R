@@ -57,6 +57,12 @@
 #' ([tfl_copy_templates()]) and reads its copy, and it changes a value in
 #' its copy's `values:` ([tfl_series_values_set()]).
 #'
+#' A template's default may read the study first: the listing templates of
+#' `tflspec_v1` write `style: !study {key: settings.style, fallback: !series
+#' style_listing}`, so a listing's style is the study's `settings.style`,
+#' else the series's `style_listing` (`tfl_small`).  A series's `values:`
+#' hold no `!study` (the series is the study's fallback).
+#'
 #' `tfl_series_dir()` finds the source folder of a series.  It looks in `dir`, then
 #' `getOption("tflspec.series_dir")`, then
 #' `file.path(tools::R_user_dir("tflplanner", "data"), "standards", "series")`,

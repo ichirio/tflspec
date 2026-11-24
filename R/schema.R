@@ -226,20 +226,20 @@ tfl_schema <- function(fn = NULL) {
 # ---- the type notation -------------------------------------------------------
 
 # "list<vec<string, number>>|string" -> a parsed type: list(kind, args), the
-# alternatives of a `|` as kind "either"
-# (a type's text read once a session: the same few texts are read for every
-# argument of every item, and the reading is a pure function of the text)
-.schema_type_memo <- new.env(parent = emptyenv())
+# alternatives of a `|` as kind "either" (each text parsed once: a code
+# writer asks for the same types again and again)
 .schema_type <- function(txt) {
-  if (!is.character(txt) || length(txt) != 1L || is.na(txt) || !nzchar(txt)) return(.schema_type_read(txt))
-  got <- .schema_type_memo[[txt]]
-  if (is.null(got)) {
-    got <- .schema_type_read(txt)
-    assign(txt, got, envir = .schema_type_memo)
-  }
-  got
+  if (!is.character(txt) || length(txt) != 1L || is.na(txt)) return(.schema_type_parse(txt))
+  key <- paste0("t:", txt)
+  hit <- .schema_cache$types[[key]]
+  if (!is.null(hit)) return(hit)
+  if (is.null(.schema_cache$types)) .schema_cache$types <- new.env(hash = TRUE, parent = emptyenv())
+  out <- .schema_type_parse(txt)
+  assign(key, out, envir = .schema_cache$types)
+  out
 }
-.schema_type_read <- function(txt) {
+
+.schema_type_parse <- function(txt) {
   txt <- trimws(txt)
   alts <- .schema_split(txt, "|")
   if (length(alts) > 1L) {

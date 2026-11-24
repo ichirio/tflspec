@@ -23,7 +23,13 @@ runner_manifest <- function() {
                    tfl = c("programs/tfl/setup.R", "spec/study.yml"),
                    all = character()),
     data = list(`programs/ard/ard_t_demo.R` = "data/adsl.csv",
-                `programs/ard/ard_t_ae.R` = character()))
+                `programs/ard/ard_t_ae.R` = character()),
+    data_vars = c(`data/adsl.csv` = "path_adam"),
+    data_dirs = c(adam = "data/adam", sdtm = "data/sdtm", other = "data/other"),
+    sources = "programs/ard/functions/f.R",
+    check_code = c("programs/company_setup.R", "programs/study_user.R"),
+    kind = "run",
+    paths = list())
 }
 
 test_that("tfl_runner_file() is the shipped runner", {
@@ -46,7 +52,8 @@ test_that("tfl_runner_code(): the head, then the runner's lines", {
   expect_identical(head_lines[[5L]], ".batch_spec <- \"spec\"")
   expect_identical(head_lines[[n]], "")
   for (nm in c("programs", "ard_outputs", "report_ids", "needs", "unresolved", "sets",
-               "outputs", "support", "data")) {
+               "outputs", "support", "data", "data_vars", "data_dirs", "sources",
+               "check_code", "kind", "paths")) {
     expect_true(any(startsWith(head_lines, paste0(".batch_", nm, " <- "))), nm)
   }
   # no call line: the caller adds it
@@ -69,6 +76,44 @@ test_that("tfl_runner_code(): the head is the values, as R", {
   expect_identical(env$.batch_outputs, m$outputs)
   expect_identical(env$.batch_support, m$support)
   expect_identical(env$.batch_data, m$data)
+  expect_identical(env$.batch_data_vars, m$data_vars)
+  expect_identical(env$.batch_data_dirs, m$data_dirs)
+  expect_identical(env$.batch_sources, m$sources)
+  expect_identical(env$.batch_check_code, m$check_code)
+  expect_identical(env$.batch_kind, "run")
+  expect_identical(env$.batch_paths, list())
+})
+
+test_that("tfl_runner_code(): a preview's paths are written as R", {
+  m <- runner_manifest()
+  m$kind <- "preview"
+  m$paths <- list(data = c(ADSL = "C:/x/adsl.rds"), output = "C:/x/out")
+  code <- tfl_runner_code(m)
+  env <- new.env()
+  eval(parse(text = code[seq_len(which(code == "")[[1L]])]), env)
+  expect_identical(env$.batch_kind, "preview")
+  expect_identical(env$.batch_paths, m$paths)
+  m$paths <- list(data = character())
+  code <- tfl_runner_code(m)
+  eval(parse(text = code[seq_len(which(code == "")[[1L]])]), env)
+  expect_identical(env$.batch_paths, m$paths)
+})
+
+test_that("tfl_runner_code(): kind and paths are checked", {
+  m <- runner_manifest()
+  m$kind <- "other"
+  expect_error(tfl_runner_code(m), "manifest[$]kind`")
+  m <- runner_manifest()
+  m$paths <- list(data = c(ADSL = "a.rds"))
+  expect_error(tfl_runner_code(m), "manifest[$]paths`.*run")
+  m$kind <- "preview"
+  expect_no_error(tfl_runner_code(m))
+  m$paths <- list(data = "a.rds")
+  expect_error(tfl_runner_code(m), "manifest[$]paths`.*named")
+  m$paths <- list(elsewhere = "a")
+  expect_error(tfl_runner_code(m), "manifest[$]paths`")
+  m$paths <- list(output = c("a", "b"))
+  expect_error(tfl_runner_code(m), "manifest[$]paths`.*output")
 })
 
 test_that("tfl_runner_code(): a study with no programs still gives the head", {
@@ -121,7 +166,8 @@ test_that("tfl_runner_code(): a field of the wrong type stops, naming it", {
     ard_outputs = c("T-1"), report_ids = list("T-1"), needs = "T-1",
     unresolved = c("x"),
     sets = list("T-1"), outputs = c(a = "b"), support = list(ard = "a"),
-    data = 1)
+    data = 1, data_vars = c("path_adam"), data_dirs = 1, sources = NA_character_,
+    check_code = list("a"), kind = "x", paths = "a")
   for (f in names(wrong)) {
     m <- runner_manifest()
     m[[f]] <- wrong[[f]]
@@ -174,4 +220,10 @@ test_that("the runner file is base R", {
 
 test_that("tfl_runner_code() parses", {
   expect_no_error(parse(text = tfl_runner_code(runner_manifest())))
+})
+
+test_that("tfl_runner_code(): data_dirs is named by the layout keys", {
+  m <- runner_manifest()
+  m$data_dirs <- c("data/adam", "data/sdtm")
+  expect_error(tfl_runner_code(m), "manifest[$]data_dirs`")
 })

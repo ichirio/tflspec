@@ -819,7 +819,22 @@ tfl_write_output <- function(x, path) {
     if (x$fn %in% c("listing_col", "rtfreporter::listing_col")) out$args <- .seqs_out(out$args, .seq_keys$listing_col)
     return(out)
   }
-  if (!is.list(x) || inherits(x, c("tfl_r", "tfl_unset"))) return(x)
+  if (inherits(x, c("tfl_r", "tfl_unset"))) return(x)
+  # a data frame (a rows<...> value) is its rows, each a map of its cells
+  # (NA ones left out), as the reader reads it; the YAML writer would write
+  # its columns
+  if (is.data.frame(x)) {
+    return(lapply(seq_len(nrow(x)), function(i) {
+      r <- lapply(as.list(x[i, , drop = FALSE]), function(v) {
+        if (is.list(v)) v[[1L]] else if (is.factor(v)) as.character(v) else v
+      })
+      .calls_out(r[!vapply(r, function(v) length(v) == 1L && is.atomic(v) && is.na(v), NA)])
+    }))
+  }
+  # a named vector is a map (`rows = c(AGE = "AGE")`: {AGE: AGE}); the YAML
+  # writer would drop its names
+  if (is.atomic(x) && !is.object(x) && length(names(x))) return(as.list(x))
+  if (!is.list(x)) return(x)
   x[] <- lapply(x, .calls_out)
   x
 }
@@ -896,7 +911,8 @@ tfl_write_output <- function(x, path) {
 # which the YAML reader folds into a character vector) as tfl_r, a
 # figure's step maps as they are
 .data_steps_in <- function(data) {
-  if (is.null(data) || is.null(data$steps)) return(data)
+  # (`data: !unset`, a part's data the layers below give: as it is)
+  if (!is.list(data) || is.null(data$steps)) return(data)
   st <- data$steps
   if (inherits(st, "tfl_r")) st <- list(st)
   else if (is.character(st)) st <- lapply(st, tfl_r)

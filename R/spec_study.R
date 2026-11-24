@@ -672,11 +672,16 @@ tfl_output_extends <- function(output, step = NULL) {
 
 # an !unset with nothing under it: gone (a report may unset a key no layer set)
 .drop_unset <- function(x) {
-  # (an object -- an rtf_border, a tfl_call -- is a value; `[` would drop its class)
+  # (a call's own arguments too: rtf_border(top = !unset), listing_col(width = !unset))
+  if (inherits(x, "tfl_call")) {
+    if (length(x$args)) x$args <- .drop_unset(x$args)
+    return(x)
+  }
+  # (an object -- an rtf_border, a tfl_r -- is a value; `[` would drop its class)
   if (!is.list(x) || is.object(x) || !length(x)) return(x)
   keep <- !vapply(x, inherits, NA, "tfl_unset")
   x <- x[keep]
-  if (.is_map(x)) x[] <- lapply(x, .drop_unset)
+  if (length(x)) x[] <- lapply(x, .drop_unset)
   x
 }
 

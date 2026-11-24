@@ -7,9 +7,13 @@
 #' a run of the ARD only answers for the ARD.
 #'
 #' A run counts when its `batch.txt` says it finished and names this study
-#' (study.yml's `study_id`), and its `run.csv` has the `output_id` column.
-#' So a run still going, a run folder of another study put under `runs/`,
-#' and the runs of an older runner do not count.
+#' (study.yml's `study_id`), has the line `Verified : yes` (the runner writes
+#' it last, after `issues.csv`, so the run's end record is whole) and
+#' `Kind : run`, and has no `Re-run :` line, and its `run.csv` has the
+#' `output_id` column.  So a run still going, a run folder of another study
+#' put under `runs/`, the runs of an older runner, a preview, and a batch
+#' folder that was run again (even when it is copied back into `runs/`) do not
+#' count.
 #'
 #' @param study_dir The study folder (the one with study.yml).
 #' @param report_id Output ids.
@@ -81,6 +85,12 @@ tfl_latest_run <- function(study_dir, report_id, part = c("tfl", "ard")) {
   }
   fin <- field("Finished")
   if (is.na(fin) || !identical(field("Study"), study_id)) return(NULL)
+  # the end record: verified, an official run, never a run again
+  if (!identical(field("Verified"), "yes") || any(grepl("^Re-run\\s*:", lines))) {
+    return(NULL)
+  }
+  kind <- field("Kind")
+  if (!is.na(kind) && !identical(kind, "run")) return(NULL)
   r <- tryCatch(utils::read.csv(csv, colClasses = "character"),
                 error = function(e) NULL)
   need <- c("part", "program", "output_id", "status", "md5")
