@@ -232,10 +232,10 @@ test_that("tfl_compare_runs(): inputs by md5, results by bytes; the programs, no
   d <- tempfile("cmp")
   dir.create(d)
   on.exit(unlink(d, recursive = TRUE))
-  a <- make_run(d, "a", "x", files = c(`programs/p.R` = "1", `output/tfl/T.rtf` = "same",
+  a <- make_run(d, "a", "x", files = list(`programs/p.R` = "1", `output/tfl/T.rtf` = "same",
                                        `output/tfl/U.rtf` = "old", `output/tfl/G.rtf` = "gone",
                                        `data_manifest.csv` = c("path,md5", "d.csv,aaa")))
-  b <- make_run(d, "b", "x", files = c(`programs/p.R` = "2", `programs/q.R` = "new",
+  b <- make_run(d, "b", "x", files = list(`programs/p.R` = "2", `programs/q.R` = "new",
                                        `output/tfl/T.rtf` = "same", `output/tfl/U.rtf` = "new",
                                        `output/tfl/N.rtf` = "n",
                                        `data_manifest.csv` = c("path,md5", "d.csv,aaa")))
