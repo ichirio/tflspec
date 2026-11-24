@@ -310,3 +310,27 @@ test_that("tag_ard() refuses what is not a cards ARD (a custom analysis's plain 
   ok <- e$tag_ard(data.frame(variable = "x", stat_name = "n", stat = 1), "T", "A")
   expect_identical(ok$output_id, "T")
 })
+
+test_that("save_ard(): a file it cannot replace stops it before ard_status.csv says built", {
+  # the shipped text has the check
+  expect_true(any(grepl("if (!file.rename(tmp, path)) {", tfl_helpers_code(), fixed = TRUE)))
+  e <- helper_env()
+  d <- tempfile("ardsave")
+  on.exit(unlink(d, recursive = TRUE))
+  path <- file.path(d, "ard.rds")
+  a1 <- data.frame(output_id = "T-1", stat = 1)
+  expect_output(e$save_ard(a1, "T-1", path = path, sources = NULL), "T-1: 1 rows into")
+  expect_identical(readRDS(path), a1)
+  st <- utils::read.csv(file.path(d, "ard_status.csv"), colClasses = "character")
+  expect_identical(st$output_id, "T-1")
+  # the file open in another program (Windows): file.rename() gives FALSE
+  e$file.rename <- function(from, to) FALSE
+  a2 <- data.frame(output_id = "T-2", stat = 2)
+  expect_error(e$save_ard(a2, "T-2", path = path, sources = NULL),
+               "T-2: could not replace .*ard[.]rds .*the study ARD was not changed")
+  # the study ARD, its status and the folder as they were
+  expect_identical(readRDS(path), a1)
+  expect_false(file.exists(paste0(path, ".tmp")))
+  st <- utils::read.csv(file.path(d, "ard_status.csv"), colClasses = "character")
+  expect_identical(st$output_id, "T-1")
+})

@@ -656,6 +656,70 @@ test_that("a reports-only run again needs the folder's ARD and drops stale condi
   expect_identical(rr_tree(file.path(b2, "output")), tree)
 })
 
+# ---- study.yml's package versions (B2 of the sample-01 review) ---------------
+
+test_that("study.yml's packages are read in base R and checked against those installed", {
+  e <- rr_env()
+  d <- tempfile("rrpkg")
+  dir.create(d)
+  on.exit(unlink(d, recursive = TRUE))
+  f <- file.path(d, "study.yml")
+  uv <- as.character(utils::packageVersion("utils"))
+  writeLines(c("study_id: S-1", "packages:", paste0("  utils: ", uv),
+               "  stats: '0.0.1'", "  notapkg.xyz: \"1.0\"", "settings:", "  style: standard"), f)
+  expect_identical(e$.batch_study_packages(f),
+                   c(utils = uv, stats = "0.0.1", notapkg.xyz = "1.0"))
+  chk <- e$.batch_packages_check(f)
+  expect_identical(chk$package, c("utils", "stats", "notapkg.xyz"))
+  expect_identical(chk$installed[1:2], c(uv, as.character(utils::packageVersion("stats"))))
+  expect_true(is.na(chk$installed[3L]))
+  expect_identical(chk$same, c(TRUE, FALSE, FALSE))
+  expect_identical(e$.batch_packages_differ(chk),
+                   paste0("stats ", as.character(utils::packageVersion("stats")),
+                          " (study.yml 0.0.1), notapkg.xyz not installed (study.yml 1.0)"))
+  # none listed, or no study.yml: nothing to check
+  writeLines("study_id: S-1", f)
+  expect_identical(nrow(e$.batch_packages_check(f)), 0L)
+  expect_identical(e$.batch_packages_differ(e$.batch_packages_check(f)), "")
+  expect_identical(e$.batch_study_packages(file.path(d, "none.yml")), character())
+})
+
+test_that("a run records the library paths and warns, not stops, on a version study.yml does not have", {
+  skip_on_cran()
+  s <- rr_study()
+  on.exit(unlink(s, recursive = TRUE))
+  uv <- as.character(utils::packageVersion("utils"))
+  writeLines(c("study_id: S-1", "packages:", paste0("  utils: ", uv), "  stats: 0.0.1"),
+             file.path(s, "study.yml"))
+  r <- rr_rscript(s, "programs/autoexec_all.R")
+  expect_identical(r$status, 0L, info = r$text)
+  expect_match(r$text, "The installed packages are not study.yml's: stats ", fixed = TRUE)
+  b <- rr_runs(s)
+  bt <- readLines(file.path(b, "batch.txt"))
+  expect_true(any(grepl("^Packages : not study.yml's: stats .* [(]study.yml 0.0.1[)]$", bt)),
+              info = paste(bt, collapse = "
+"))
+  expect_true("Verified : yes" %in% bt)
+  si <- readLines(file.path(b, "session_info.txt"))
+  expect_true(any(startsWith(si, "The library paths the programs' R used")))
+  expect_true(any(grepl("^utils +[0-9.]+ +[0-9.]+$", si)), info = paste(si, collapse = "
+"))
+  expect_true(any(grepl("^stats +0[.]0[.]1 +[0-9.]+ +DIFFERS$", si)), info = paste(si, collapse = "
+"))
+  # the run is an OK run all the same
+  run <- rr_read(b, "run.csv")
+  expect_true(all(run$status == "OK"))
+})
+
+test_that("a study whose study.yml names no packages: batch.txt says so", {
+  skip_on_cran()
+  x <- rr_first_run()
+  on.exit(unlink(x$s, recursive = TRUE))
+  expect_identical(x$r$status, 0L, info = x$r$text)
+  expect_true("Packages : study.yml names none" %in% readLines(file.path(x$batch, "batch.txt")))
+  expect_true("  (study.yml names no packages)" %in% readLines(file.path(x$batch, "session_info.txt")))
+})
+
 test_that("a program's R reads no .Rprofile, no .Renviron (B2); the run records its libraries", {
   skip_on_cran()
   s <- rr_study()
