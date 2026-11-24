@@ -234,10 +234,15 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   if (is.list(report$content)) content <- c(content, report$content)
   page <- .tr_fill(tpl$page %||% list(), env)
   for (k in names(report$page)) page[k] <- list(report$page[[k]])
+  # the style: the report's, else the template's; `!unset` (a study's
+  # `settings.style: !unset` read by the template's `!study`) is no style,
+  # so the report gets the study's default as a report without one does
+  style <- report$style %||% tpl$style
+  if (inherits(style, "tfl_unset")) style <- NULL
 
   y <- list(id = report$id, kind = report$kind %||% tpl$kind %||% "table",
             label = report$label %||% tpl$label, common = report$common,
-            extends = report$extends %||% tpl$extends, style = report$style %||% tpl$style,
+            extends = report$extends %||% tpl$extends, style = style,
             figure = tpl$figure, data = rows,
             ard = if (length(items)) c(if (identical(kind, "figure")) list(analysis_data = rows),
                                        list(analyses = items)),

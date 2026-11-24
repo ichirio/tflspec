@@ -40,6 +40,11 @@ its reports use into \verb{<study>/spec/series/<series>/}
 (\code{\link[=tfl_copy_templates]{tfl_copy_templates()}}) and reads its copy, and it changes a value in
 its copy's \verb{values:} (\code{\link[=tfl_series_values_set]{tfl_series_values_set()}}).
 
+A template's default may read the study first: the listing templates of
+\code{tflspec_v1} write \verb{style: !study \{key: settings.style, fallback: !series style_listing\}}, so a listing's style is the study's \code{settings.style},
+else the series's \code{style_listing} (\code{tfl_small}).  A series's \verb{values:}
+hold no \code{!study} (the series is the study's fallback).
+
 \code{tfl_series_dir()} finds the source folder of a series.  It looks in \code{dir}, then
 \code{getOption("tflspec.series_dir")}, then
 \code{file.path(tools::R_user_dir("tflplanner", "data"), "standards", "series")},
