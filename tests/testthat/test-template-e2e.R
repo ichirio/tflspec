@@ -1,4 +1,8 @@
-# The seven tflspec_v1 templates end to end: a report SPEC of each resolved
+# The seven series templates end to end -- tflspec_v1's km_simple and
+# forest_hr, and the purpose templates that left it (canon 2026-11-24), kept
+# for their engine coverage in the test series tflspec_test
+# (local_test_series(), helper-series.R; the report builders below set it
+# for the calling test): a report SPEC of each resolved
 # (tfl_template_resolve()), written into a study made from the package's
 # datasets (fictional), its ARD program made and run (tfl_ard_code(),
 # tfl_build_ard()).  The checks are the analyses' ids, one BIGN per report
@@ -17,30 +21,31 @@ e2e_rd <- function(text) {
 e2e_settings <- list(settings = list(rounding = "sas"))
 
 e2e_reports <- function() {
+  local_test_series(parent.frame())
   list(
     demog = e2e_rd(c(
       "id: T-1", "kind: table", "label: Demographics",
-      "template:", "  name: tflspec_v1/demog",
+      "template:", "  name: tflspec_test/demog",
       "  analysis:", "    by: TRT01A", "    continuous: [AGE]", "    categorical: [AGEGR1, SEX]")),
     ae = e2e_rd(c(
       "id: T-2", "kind: table", "label: Adverse events",
-      "template:", "  name: tflspec_v1/ae_soc_pt", "  analysis:", "    by: TRT01A")),
+      "template:", "  name: tflspec_test/ae_soc_pt", "  analysis:", "    by: TRT01A")),
     orr = e2e_rd(c(
       "id: T-3", "kind: table", "label: Response",
       "data:", "  - id: adsl_sub", "    population: ITT",
       "  - id: adrs_sub", "    where: !r PARAMCD == \"BOR\"",
-      "template:", "  name: tflspec_v1/orr_subgroup", "  data:", "    subgroup_vars: [SEX]",
+      "template:", "  name: tflspec_test/orr_subgroup", "  data:", "    subgroup_vars: [SEX]",
       "  analysis:", "    by: TRT01A", "    category: AVALC", "    responder: CR",
       "    conditions:", "      - {subgroup: SEX, subgroup_lvl: F, where: !r SEX == \"F\"}")),
     lab = e2e_rd(c(
       "id: T-4", "kind: table", "label: Lab shift",
-      "template:", "  name: tflspec_v1/lab_tox_shift", "  analysis:", "    by: TRT01A",
+      "template:", "  name: tflspec_test/lab_tox_shift", "  analysis:", "    by: TRT01A",
       "    conditions:", "      - {tox_dir: High, param: Alanine Aminotransferase (U/L)}",
       "      - {tox_dir: Low, param: Hemoglobin (g/L)}")),
     listing = e2e_rd(c(
       "id: L-1", "kind: listing", "label: Severe adverse events",
       "data:", "  - id: lst_sub", "    where: !r AESEV == \"SEVERE\"",
-      "template:", "  name: tflspec_v1/listing", "  data:", "    from: ADAE")),
+      "template:", "  name: tflspec_test/listing", "  data:", "    from: ADAE")),
     km = e2e_rd(c(
       "id: F-1", "kind: figure", "label: Kaplan-Meier",
       "data:", "  - id: adsl_sub", "    population: ITT",
@@ -102,12 +107,13 @@ e2e_worst_subjects <- function(adlb, saf, paramcd) {
 # An ADaM with no worst record: record_where TRUE, and the template's
 # adlb_sub row given a then that picks each subject's worst record
 e2e_lab_then <- function() {
+  local_test_series(parent.frame())
   e2e_rd(c(
     "id: T-5", "kind: table", "label: Lab shift, the worst record by then",
     "data:", "  - id: adlb_sub",
     paste0("    then: !r 'dplyr::filter(AVISIT != \"WORST POST-BASELINE\", !ABLFL %in% \"Y\") |> ",
            "dplyr::slice_max(ATOXGRH, n = 1, with_ties = FALSE, by = c(USUBJID, PARAMCD))'"),
-    "template:", "  name: tflspec_v1/lab_tox_shift", "  data:", "    record_where: !r TRUE",
+    "template:", "  name: tflspec_test/lab_tox_shift", "  data:", "    record_where: !r TRUE",
     "  analysis:", "    by: TRT01A",
     "    conditions:", "      - {tox_dir: High, param: Alanine Aminotransferase (U/L)}"))
 }
@@ -313,19 +319,20 @@ test_that("a condition row's key that is not one of the item's params stops, nam
 # blocks here; the flat `args:` is read by tfl_template_resolve() too.)
 
 e2e_planner_reports <- function() {
+  local_test_series(parent.frame())
   list(
-    demog = c("id: T-11", "kind: table", "label: Demographics", "template:", "  name: tflspec_v1/demog",
+    demog = c("id: T-11", "kind: table", "label: Demographics", "template:", "  name: tflspec_test/demog",
               "  analysis:", "    by: TRT01A", "    continuous: [AGE]", "    categorical: [SEX, RACE]",
               "    analysis_ids: {AGE: AGE_STATS}"),
-    ae = c("id: T-12", "kind: table", "label: Adverse events", "template:", "  name: tflspec_v1/ae_soc_pt",
+    ae = c("id: T-12", "kind: table", "label: Adverse events", "template:", "  name: tflspec_test/ae_soc_pt",
            "  analysis:", "    by: TRT01A", "    min_pct: 5"),
     # (the category left at its default, AVALCAT1)
     orr = c("id: T-13", "kind: table", "label: Response",
             "data:", "  - id: adsl_sub", "    population: ITT",
-            "template:", "  name: tflspec_v1/orr_subgroup", "  data:", "    subgroup_vars: [SEX]",
+            "template:", "  name: tflspec_test/orr_subgroup", "  data:", "    subgroup_vars: [SEX]",
             "  analysis:", "    by: TRT01A", "    conf_level: 0.9",
             "    conditions:", "      - {subgroup: SEX, subgroup_lvl: F, where: !r SEX == \"F\"}"),
-    lab = c("id: T-14", "kind: table", "label: Lab shift", "template:", "  name: tflspec_v1/lab_tox_shift",
+    lab = c("id: T-14", "kind: table", "label: Lab shift", "template:", "  name: tflspec_test/lab_tox_shift",
             "  analysis:", "    by: TRT01A", "    formats: {n: 0, p: xx.xx%}",
             "    conditions:", "      - {tox_dir: High, param: Alanine Aminotransferase (U/L)}",
             "      - {tox_dir: Low, param: Hemoglobin (g/L)}"),

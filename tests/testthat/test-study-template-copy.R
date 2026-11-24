@@ -86,7 +86,7 @@ test_that("tfl_copy_templates() of the package's series records its version", {
   on.exit(unlink(root, recursive = TRUE), add = TRUE)
   st <- file.path(root, "STUDY-P")
   dir.create(st)
-  r <- tfl_copy_templates(st, "tflspec_v1/demog")
+  r <- tfl_copy_templates(st, "tflspec_v1/tflspec_summary")
   expect_identical(r$status, c("copied", "copied"))
   cp <- yaml::read_yaml(file.path(st, "spec", "series", "tflspec_v1", "copied.yml"))
   expect_identical(cp[["series.yml"]]$from$source, "package")
@@ -271,33 +271,33 @@ test_that("a study reads its own copy only; a template not copied stops with the
   writeLines(c("study_id: STUDY-R", "settings:", "  rounding: sas"), file.path(st, "study.yml"))
   rep <- yaml::yaml.load(paste(c(
     "id: T-1", "kind: table",
-    "template:", "  name: tflspec_v1/demog", "  analysis:", "    by: TRT01A",
+    "template:", "  name: tflspec_v1/tflspec_summary", "  analysis:", "    by: TRT01A",
     "    continuous: [AGE]", "    categorical: [SEX]"), collapse = "\n"),
     handlers = tflspec:::.series_handlers())
-  expect_error(tfl_template_resolve(rep, study = st), "tflspec_v1/demog is not copied into the study")
+  expect_error(tfl_template_resolve(rep, study = st), "tflspec_v1/tflspec_summary is not copied into the study")
   expect_error(tfl_template_resolve(rep, study = st),
-               paste0("tfl_copy_templates(\"", normalizePath(st, winslash = "/"), "\", \"tflspec_v1/demog\")"),
+               paste0("tfl_copy_templates(\"", normalizePath(st, winslash = "/"), "\", \"tflspec_v1/tflspec_summary\")"),
                fixed = TRUE)
-  tfl_copy_templates(st, "tflspec_v1/demog")
+  tfl_copy_templates(st, "tflspec_v1/tflspec_summary")
   tfl_series_values_set(st, "tflspec_v1", list(max_rows = 25L))
-  f <- file.path(st, "spec", "series", "tflspec_v1", "templates", "demog.yml")
+  f <- file.path(st, "spec", "series", "tflspec_v1", "templates", "tflspec_summary.yml")
   x <- readLines(f)
-  x[x == "label: Demographics"] <- "label: Demographics of STUDY-R"
+  x[x == "label: Summary"] <- "label: Summary of STUDY-R"
   writeLines(x, f)
   for (s in list(st, file.path(st, "study.yml"))) {
     out <- tfl_template_resolve(rep, study = s)
     expect_identical(attr(out, "args")$max_rows, 25L)
     expect_identical(attr(out, "origins")[["max_rows"]], "series")
-    expect_identical(out$label, "Demographics of STUDY-R")
+    expect_identical(out$label, "Summary of STUDY-R")
   }
   # a study given as a list, without its folder: the package's series
   expect_identical(attr(tfl_template_resolve(rep, study = list()), "args")$max_rows, 30L)
   # a template of the study only (as)
-  tfl_copy_templates(st, "tflspec_v1/demog", as = "demog_wide")
-  rep$template$name <- "tflspec_v1/demog_wide"
-  expect_identical(attr(tfl_template_resolve(rep, study = st), "template"), "tflspec_v1/demog_wide")
-  expect_true("by" %in% tfl_arg_defs(template = "tflspec_v1/demog_wide", study_dir = st)$name)
-  expect_error(tfl_arg_defs(template = "tflspec_v1/demog_wide"), "no file")
+  tfl_copy_templates(st, "tflspec_v1/tflspec_summary", as = "summary_wide")
+  rep$template$name <- "tflspec_v1/summary_wide"
+  expect_identical(attr(tfl_template_resolve(rep, study = st), "template"), "tflspec_v1/summary_wide")
+  expect_true("by" %in% tfl_arg_defs(template = "tflspec_v1/summary_wide", study_dir = st)$name)
+  expect_error(tfl_arg_defs(template = "tflspec_v1/summary_wide"), "no file")
   # the series.yml copy gone: no fall-back to the source
   unlink(file.path(st, "spec", "series", "tflspec_v1", "series.yml"))
   expect_error(tfl_template_resolve(rep, study = st), "series tflspec_v1 is not copied into the study")
@@ -313,7 +313,7 @@ test_that("study.yml series_settings: stops, naming the series and where the val
   msg <- "tflspec_v1: move these values into .*spec/series/tflspec_v1/series.yml values: \\(tfl_series_values_set\\(\\)\\), after tfl_copy_templates\\(\\)"
   expect_error(tfl_read_study_spec(st), msg)
   expect_error(tfl_read_study_spec(st), "acme_v1: move these values")
-  rep <- list(id = "T-1", kind = "table", template = list(name = "tflspec_v1/demog"))
+  rep <- list(id = "T-1", kind = "table", template = list(name = "tflspec_v1/tflspec_summary"))
   expect_error(tfl_template_resolve(rep, study = st), msg)
   expect_error(tfl_template_resolve(rep, study = list(series_settings = list(tflspec_v1 = list(a = 1)))),
                "<study>/spec/series/tflspec_v1/series.yml")
