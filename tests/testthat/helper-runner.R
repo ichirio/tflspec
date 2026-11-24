@@ -85,8 +85,7 @@ rr_study_run <- function(s, args = character(), env = character(),
     file.path(R.home("bin"), "Rscript"), c("-e", shQuote(expr), shQuote(args)),
     stdout = TRUE, stderr = TRUE, env = env))
   st <- attr(out, "status")
-  list(status = if (is.null(st)) 0L else st, text = paste(out, collapse = "
-"))
+  list(status = if (is.null(st)) 0L else st, text = paste(out, collapse = "\n"))
 }
 
 rr_runs <- function(s) list.dirs(file.path(s, "runs"), recursive = FALSE)

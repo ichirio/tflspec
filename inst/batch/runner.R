@@ -840,8 +840,8 @@
   started <- Sys.time()
   plan$started <- started
   stamp <- format(started, "%Y%m%d-%H%M%S")
-  # batch_<date>-<time>_<definition>; a run without a definition (a batch
-  # folder's autoexec_ard.R / autoexec_report.R) names the part; a preview is preview_<date>-<time>
+  # batch_<date>-<time>_<definition> (a run in the study always has one; the
+  # part names a folder only as a fallback); a preview is preview_<date>-<time>
   folder <- if (identical(.batch_kind, "preview")) paste0("preview_", stamp) else
     paste0("batch_", stamp, "_", if (!is.null(plan$def)) plan$def$name else plan$what)
   base <- file.path(.batch_root, folder)
