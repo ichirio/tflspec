@@ -13,7 +13,7 @@
 #'   both ids (select that report too: its RTF is made as well); and every
 #'   row of [tfl_check_runs()] for the definition is a problem.
 #' * `tfl_run_command()` is the command that starts an official run, from the
-#'   study folder: `Rscript -e "source('programs/batch.R'); run_batch(c('ard', 'tfl'), commandArgs(TRUE))" --run=<name>`;
+#'   study folder: `Rscript --no-init-file --no-environ -e "source('programs/batch.R'); run_batch(c('ard', 'tfl'), commandArgs(TRUE))" --run=<name>`;
 #'   the attribute `"wd"` is the folder to start it in.  A different choice
 #'   of data or options is a different saved definition.
 #' * `tfl_run_study()` is the one official entry from R.  It first checks the
@@ -104,8 +104,11 @@ tfl_run_command <- function(study_dir, name) {
   if (!is.character(name) || length(name) != 1L || is.na(name) || !nzchar(name)) {
     stop("tfl_run_command(): `name` is the definition's name, one text.", call. = FALSE)
   }
+  # (no profile and no .Renviron of the user or the site: what a run does
+  # does not depend on the machine's start-up files -- B2, the user
+  # 2026-11-24, 「読まない」)
   structure(c(file.path(R.home("bin"), "Rscript"),
-              "-e",
+              "--no-init-file", "--no-environ", "-e",
               "source('programs/batch.R'); run_batch(c('ard', 'tfl'), commandArgs(TRUE))",
               paste0("--run=", name)),
             wd = normalizePath(study_dir, winslash = "/", mustWork = FALSE))

@@ -40,7 +40,7 @@ reads the ARD of one the definition does not select is a problem naming
 both ids (select that report too: its RTF is made as well); and every
 row of \code{\link[=tfl_check_runs]{tfl_check_runs()}} for the definition is a problem.
 \item \code{tfl_run_command()} is the command that starts an official run, from the
-study folder: \verb{Rscript -e "source('programs/batch.R'); run_batch(c('ard', 'tfl'), commandArgs(TRUE))" --run=<name>};
+study folder: \verb{Rscript --no-init-file --no-environ -e "source('programs/batch.R'); run_batch(c('ard', 'tfl'), commandArgs(TRUE))" --run=<name>};
 the attribute \code{"wd"} is the folder to start it in.  A different choice
 of data or options is a different saved definition.
 \item \code{tfl_run_study()} is the one official entry from R.  It first checks the

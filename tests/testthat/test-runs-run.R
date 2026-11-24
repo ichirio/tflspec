@@ -86,6 +86,7 @@ test_that("tfl_run_command(): the command from the study folder, with --run=<nam
   d <- tempfile()
   cmd <- tfl_run_command(d, "Topline")
   expect_identical(cmd[-1L], c(
+    "--no-init-file", "--no-environ",
     "-e", "source('programs/batch.R'); run_batch(c('ard', 'tfl'), commandArgs(TRUE))",
     "--run=Topline"))
   expect_identical(basename(cmd[[1L]]), basename(file.path(R.home("bin"), "Rscript")))
