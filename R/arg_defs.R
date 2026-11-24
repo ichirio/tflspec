@@ -899,6 +899,8 @@ tfl_arg_defs <- function(fn = NULL, template = NULL, study_dir = NULL) {
   d <- list(type = dots$type %||% "string", description = dots$description %||% "")
   if (!is.null(dots$input)) d$input <- dots$input
   if (!is.null(dots$choices)) d$choices <- dots$choices
+  if (!is.null(dots$values)) d$values <- dots$values
+  if (isTRUE(dots$free)) d$free <- TRUE
   if (!is.null(dots$label)) d$label <- dots$label
   if (!is.null(dots$editor)) d$editor <- dots$editor
   d$dots_style <- dots$style %||% NA_character_
