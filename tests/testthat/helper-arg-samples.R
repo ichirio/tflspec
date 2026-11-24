@@ -190,21 +190,22 @@ as_special <- list(
     if (identical(def$type, "column")) list("TRT01P") else list("TRT01P", c("TRT01A", "SEX"))
   },
   # (a table whose own table_plan has the columns TRT01A; tflspec_shift's
-  # header spans one by column)
-  `tflspec_v1/lab_tox_shift.by` = function() list("TRT01A"),
-  `tflspec_v1/orr_subgroup.by` = function() list("TRT01A"),
+  # header spans one by column.  tflspec_test/: the test series'
+  # templates, helper-series.R)
+  `tflspec_test/lab_tox_shift.by` = function() list("TRT01A"),
+  `tflspec_test/orr_subgroup.by` = function() list("TRT01A"),
   `tflspec_v1/tflspec_shift.by` = function() list("TRT01P"),
   `tflspec_v1/tflspec_hierarchy.analysis_ids` = function() list(list(ANY = "ANY_AE", L2 = "PT"), tfl_unset()),
   `tflspec_v1/forest_hr.comparison` = function() list("Drug X", "Control", tfl_unset()),
   `tflspec_v1/forest_hr.ref` = function() list("Control", "Drug X", tfl_unset()),
   `tflspec_v1/km_cards.param` = function() list("OS"),
-  `tflspec_v1/lab_tox_shift.conditions` = function() list(list(
+  `tflspec_test/lab_tox_shift.conditions` = function() list(list(
     list(tox_dir = "High", param = "Bilirubin (umol/L)"))),
-  `tflspec_v1/listing.from` = function() list("ADLB"),
-  `tflspec_v1/listing.columns` = function() list(c("USUBJID", "AESEV"), tfl_unset()),
-  `tflspec_v1/listing.by` = function() list("AESEV", tfl_unset()),
-  `tflspec_v1/orr_subgroup.category` = function() list("AVALC", tfl_unset()),
-  `tflspec_v1/orr_subgroup.responder` = function() list("Non-response", tfl_unset()),
+  `tflspec_test/listing.from` = function() list("ADLB"),
+  `tflspec_test/listing.columns` = function() list(c("USUBJID", "AESEV"), tfl_unset()),
+  `tflspec_test/listing.by` = function() list("AESEV", tfl_unset()),
+  `tflspec_test/orr_subgroup.category` = function() list("AVALC", tfl_unset()),
+  `tflspec_test/orr_subgroup.responder` = function() list("Non-response", tfl_unset()),
   `tflspec_v1/tflspec_hierarchy.from` = function() list("ADLB"),
   `tflspec_v1/tflspec_hierarchy.hierarchy` = function() list(c("AESOC", "AEDECOD")),
   `tflspec_v1/tflspec_listing.from` = function() list("ADLB"),

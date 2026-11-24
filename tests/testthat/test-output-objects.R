@@ -140,7 +140,7 @@ test_that("a rename rewrites the fields that name it, lists the R that reads it"
 test_that("a template report: the template's rows are fixed, the report's own are not", {
   out <- oo_read(c(
     "id: T-3", "kind: table", "label: DM",
-    "template:", "  name: tflspec_v1/demog", "  args: {continuous: [AGE]}",
+    "template:", "  name: tflspec_v1/tflspec_summary", "  args: {continuous: [AGE]}",
     "data:", "  - id: adsl_sub", "    where: AGE > 1",
     "  - id: adsl_old", "    from: adsl_sub", "    where: AGE >= 65"))
   x <- tfl_output_objects(out)

@@ -29,7 +29,7 @@ study's value from there.
 \examples{
 study <- tempfile("study")
 dir.create(study)
-invisible(tfl_copy_templates(study, "tflspec_v1/ae_soc_pt"))
+invisible(tfl_copy_templates(study, "tflspec_v1/tflspec_hierarchy"))
 tfl_series_values_set(study, "tflspec_v1",
                       list(any_row_label = "Subjects with at least one TEAE"))
 f <- file.path(study, "spec", "series", "tflspec_v1", "series.yml")
