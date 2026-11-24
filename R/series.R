@@ -54,7 +54,7 @@
 #' and, optionally, what each value means under `descriptions:` (a value's
 #' key and one line of English, for a screen that shows the values),
 #' `templates/<name>.yml` and `styles/<name>.yml`.  A report SPEC
-#' names a template as `template: name: tflspec_v1/demog`.
+#' names a template as `template: name: tflspec_v1/tflspec_summary`.
 #'
 #' These folders are the sources (the company's and tflspec's own).  A
 #' study does not read them: it copies the `series.yml` and the templates

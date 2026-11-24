@@ -31,7 +31,7 @@ A series is a versioned folder of template SPECs (\code{tflspec_v1},
 and, optionally, what each value means under \verb{descriptions:} (a value's
 key and one line of English, for a screen that shows the values),
 \verb{templates/<name>.yml} and \verb{styles/<name>.yml}.  A report SPEC
-names a template as \code{template: name: tflspec_v1/demog}.
+names a template as \code{template: name: tflspec_v1/tflspec_summary}.
 }
 \details{
 These folders are the sources (the company's and tflspec's own).  A
