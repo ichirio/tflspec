@@ -949,7 +949,7 @@ test_that("a program's R reads no .Rprofile, no .Renviron (B2); the run records 
   writeLines("options(tfl.seen = 'profile')", prof)
   rr_set(s, "tfl/U.R", c("dir.create('output/tfl', recursive = TRUE, showWarnings = FALSE)",
                          "writeLines(getOption('tfl.seen', 'none'), 'output/tfl/U.rtf')"))
-  r <- rr_rscript(s, "programs/autoexec_all.R", env = paste0("R_PROFILE_USER=", prof))
+  r <- rr_study_run(s, env = paste0("R_PROFILE_USER=", prof))
   expect_identical(r$status, 0L, info = r$text)
   b <- rr_runs(s)
   expect_identical(readLines(file.path(b, "output", "tfl", "U.rtf")), "none")
