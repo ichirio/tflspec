@@ -450,7 +450,9 @@ tfl_read_output <- function(path) {
 .yaml_known_keys <- list(
   ard = c("analyses", "objects", "data", "analysis_data"),
   analysis = c("id", setdiff(.ard_spec_sheets$analyses, c("output_id", "analysis_id")),
-               "population", "conditions", "ards", "analysis_ids", "ref", "note"),
+               "population", "conditions", "ards", "analysis_ids", "ref", "note",
+               # the item's R name (default `.ard_<id>`) and its input (the pipe)
+               "name", "from"),
   data = c("id", setdiff(.ard_spec_sheets$analysis_data, c("output_id", "data_id")),
            "population", "subjects_in", "arrange", "note")
 )
