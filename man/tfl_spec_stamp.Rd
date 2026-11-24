@@ -15,7 +15,8 @@ tfl_spec_stamp(study_dir, spec = "spec")
 One string; \code{"none"} when the study has neither file.
 }
 \description{
-One md5 of what the study's programs were made from: \code{study.yml}, and every
+One md5 of what the study's programs were made from: \code{study.yml} (its
+\code{updated:} line, the time of a save, left out), and every
 file of the spec folder as the runner's copy takes it (the run definitions
 file \code{spec/runs.yml} included; no dot names, no editor files).  Bytes are
 hashed, so Windows and Linux agree.  The runner's \code{batch.R} holds the stamp

@@ -669,13 +669,42 @@
 # another, and batch.txt records it as "Spec".  Bytes are hashed (writeBin:
 # writeLines would give CRLF on Windows), so Windows and Linux agree.
 # tflspec's tfl_spec_stamp() evaluates this function from this file.
+# study.yml's bytes, its `updated:` line left out (lines split at LF, each
+# kept as it is, CR included, so the same file gives the same bytes anywhere)
+.batch_study_yml_bytes <- function() {
+  x <- readBin("study.yml", "raw", file.size("study.yml"))
+  if (!length(x)) return(x)
+  lf <- which(x == as.raw(10L))
+  ends <- c(lf, if (!length(lf) || lf[length(lf)] < length(x)) length(x))
+  starts <- c(1L, utils::head(ends, -1L) + 1L)
+  pre <- charToRaw("updated:")
+  keep <- vapply(seq_along(starts), function(i) {
+    ends[i] - starts[i] + 1L < length(pre) ||
+      !identical(x[starts[i]:(starts[i] + length(pre) - 1L)], pre)
+  }, logical(1L))
+  unlist(lapply(which(keep), function(i) x[starts[i]:ends[i]]))
+}
+
+# the md5 of some bytes
+.batch_md5_bytes <- function(bytes) {
+  tmp <- tempfile()
+  on.exit(unlink(tmp))
+  writeBin(as.raw(bytes), tmp)
+  unname(tools::md5sum(tmp))
+}
+
 .batch_spec_md5 <- function() {
   f <- c(if (file.exists("study.yml")) "study.yml",
          if (dir.exists(.batch_spec)) .batch_walk(.batch_spec))
   if (!length(f)) return("none")
   # (radix: the same order in every locale, so the same md5 on every machine)
   f <- sort(unique(f), method = "radix")
-  txt <- paste0(f, " ", unname(tools::md5sum(f)), "\n", collapse = "")
+  md5 <- unname(tools::md5sum(f))
+  # study.yml without its `updated:` line: the time of a save is not what the
+  # programs are made from, so a save that changes nothing else keeps the stamp
+  i <- which(f == "study.yml")
+  if (length(i)) md5[i] <- .batch_md5_bytes(.batch_study_yml_bytes())
+  txt <- paste0(f, " ", md5, "\n", collapse = "")
   tmp <- tempfile()
   on.exit(unlink(tmp))
   writeBin(charToRaw(enc2utf8(txt)), tmp)

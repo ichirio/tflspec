@@ -162,7 +162,8 @@ tfl_run_study <- function(study_dir, name) {
 
 #' The stamp of a study's spec
 #'
-#' One md5 of what the study's programs were made from: `study.yml`, and every
+#' One md5 of what the study's programs were made from: `study.yml` (its
+#' `updated:` line, the time of a save, left out), and every
 #' file of the spec folder as the runner's copy takes it (the run definitions
 #' file `spec/runs.yml` included; no dot names, no editor files).  Bytes are
 #' hashed, so Windows and Linux agree.  The runner's `batch.R` holds the stamp

@@ -833,3 +833,21 @@ test_that("tfl_run_study(): the same refusal text as a hand Rscript, and the sam
   expect_identical(l$definition, c("Main", "Main"))
   expect_true(all(l$verified))
 })
+
+test_that("the stamp leaves out study.yml's updated: line, and nothing else of it", {
+  s <- rr_study()
+  on.exit(unlink(s, recursive = TRUE))
+  y <- file.path(s, "study.yml")
+  base <- readLines(y)
+  writeLines(c(base, "updated: 2026-01-01 10:00:00"), y)
+  a <- tfl_spec_stamp(s)
+  # a save at another time: the same stamp
+  writeLines(c(base, "updated: 2026-11-24 18:30:00"), y)
+  expect_identical(tfl_spec_stamp(s), a)
+  # a key that only starts like it is another line
+  writeLines(c(base, "updated: 2026-11-24 18:30:00", "updated_by: x"), y)
+  expect_false(identical(tfl_spec_stamp(s), a))
+  # another change: another stamp
+  writeLines(c(base, "updated: 2026-11-24 18:30:00", "tokens: {A: b}"), y)
+  expect_false(identical(tfl_spec_stamp(s), a))
+})
