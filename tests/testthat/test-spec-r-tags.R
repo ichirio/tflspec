@@ -50,6 +50,11 @@ test_that("a guard read as a quoted string into a guard-only argument stops", {
   # `{fn:, args:}` form
   expect_error(rt_read(c("  - fn: plan_zero", "    args: {zero: 'n == 0 ~ \"0\"'}")),
                "plan_zero(zero = )", fixed = TRUE)
+  # an item whose map is itself a call (`- call: {fn:, args:}`): checked as that call
+  expect_error(rt_read(c("  - call: {fn: plan_zero, args: {zero: 'n == 0 ~ \"0\"'}}")),
+               "plan_zero(zero = )", fixed = TRUE)
+  o <- rt_read(c("  - call: {fn: survfit2, package: ggsurvfit, args: {formula: !r 'y ~ x'}}"))
+  expect_s3_class(o$content[[1]]$args, "tfl_call")
   # a quote inside is doubled, as YAML's single quotes write it
   expect_error(rt_read(c("  - plan_zero:", "      zero: \"A == 'x' ~ 'y'\"")),
                "`!r 'A == ''x'' ~ ''y'''`", fixed = TRUE)

@@ -18,14 +18,22 @@
 # (The schema file's own entry: a guard is only there, and tfl_schema()'s
 # formals are not needed.)
 .r_tag_check <- function(fn, args) {
-  ent <- .schema_all(figure = FALSE)[[.schema_fn_name(fn)]]
-  if (is.list(ent)) {
+  # (an item whose map is itself `{fn:, args:}`, `- call: {fn: survfit2,
+  # ...}`: its arguments are that call, checked as it)
+  if (inherits(args, "tfl_call")) {
+    .r_tag_check(args$fn, args$args %||% list())
+    return(args)
+  }
+  ent <- if (is.character(fn) && length(fn) == 1L && !is.na(fn)) {
+    .schema_all(figure = FALSE)[[.schema_fn_name(fn)]]
+  }
+  if (is.list(ent) && is.list(args)) {
     for (a in setdiff(names(args), "")) {
       ty <- .schema_arg_type(ent, a)
       if (!is.null(ty) && .r_tag_lost(args[[a]], ty)) .r_tag_stop(fn, a, args[[a]])
     }
   }
-  for (cl in .r_tag_calls(unname(args))) .r_tag_check(cl$fn, cl$args %||% list())
+  for (cl in .r_tag_calls(args)) .r_tag_check(cl$fn, cl$args %||% list())
   args
 }
 
