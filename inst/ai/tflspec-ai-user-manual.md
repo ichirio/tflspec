@@ -1000,7 +1000,7 @@ back): rename the value or choose another separator.
 
 **Official runs (the base-R runner a study's batch.R is made of; its run folders):** `tfl_runner_file` `tfl_runner_code` `tfl_run_index` `tfl_latest_run`
 
-**A study's folders and its programs' files (what the study's program generator reads as values):** `tfl_study_layout` `tfl_study_program_files` `tfl_setup_values` `tfl_setup_program` `tfl_builtin_standards`
+**A study's folders and its programs' files (what the study's program generator reads as values):** `tfl_study_layout` `tfl_study_program_files` `tfl_setup_values` `tfl_setup_program` `tfl_report_program` `tfl_ard_program` `tfl_builtin_standards`
 
 **Template SPEC (prototype):** `tfl_tpl` `tfl_tpl_args` `tfl_tpl_help` `tfl_templates` `tfl_template_expand` `tfl_template_to_spec` `tfl_template_routes` `tfl_template` `tfl_param` `tfl_template_params` `tfl_template_variant` `tfl_template_run` `tfl_test_templates` `tfl_use_company_templates` `tfl_template_resolve` `tfl_arg_defs` `tfl_series_list`
 `tpl_demog` `tpl_summary` `tpl_disposition` `tpl_ae_soc_pt` `tpl_ae_pt_freq` `tpl_ae_max_grade` `tpl_hierarchical`
