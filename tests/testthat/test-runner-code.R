@@ -267,3 +267,17 @@ test_that("tfl_runner_code(): the run definitions are checked for their shape on
   eval(parse(text = code[seq_len(which(code == "")[[1L]])]), env)
   expect_identical(env$.batch_runs[[1L]]$name, "a\"b\\c")
 })
+
+test_that("tfl_runner_code(): the head carries tflspec's table of the packages code needs", {
+  code <- tfl_runner_code(runner_manifest())
+  env <- new.env()
+  eval(parse(text = code[seq_len(which(code == "")[[1L]])]), env)
+  expect_identical(env$.batch_code_pkgs, tflspec:::.code_pkgs)
+  expect_identical(env$.batch_ard_fn_pkgs, tflspec:::.ard_fn_pkgs)
+  x <- c("cox <- survival::coxph(f, data = d)", "cardx::ard_regression(cox, exponentiate = TRUE)",
+         "cardx::ard_emmeans_mean_difference(d)", "fit(package = 'mmrm')", "my_ard_survival_x(d)")
+  for (one in c(x, paste(x, collapse = "\n"))) {
+    expect_identical(env$.batch_pkgs_in_code(one), tflspec:::.pkgs_in_code(one))
+  }
+  expect_identical(env$.batch_pkgs_in_code(x[[2L]]), "broom.helpers")
+})

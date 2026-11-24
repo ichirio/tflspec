@@ -724,7 +724,9 @@
   lib <- sub("^.*\\(\\s*['\"]?", "", lib, useBytes = TRUE)
   ns <- unlist(regmatches(code, gregexpr("[A-Za-z][A-Za-z0-9.]*(?=:::?)", code,
                                          perl = TRUE, useBytes = TRUE)))
-  pkgs <- sort(unique(c(lib, ns)))
+  # and those the code needs beyond what it names (cardx::ard_regression():
+  # broom.helpers), from tflspec's table in the head of this file
+  pkgs <- sort(unique(c(lib, ns, .batch_pkgs_in_code(code))))
   pkgs[vapply(pkgs, function(p) nzchar(system.file(package = p)), NA)]
 }
 

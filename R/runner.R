@@ -207,6 +207,7 @@ tfl_runner_code <- function(manifest) {
     paste0(".batch_kind <- ", q(m$kind)),
     "# a preview's files outside the study (data, company_setup, study_user, output)",
     paste0(".batch_paths <- ", paths_code),
+    .runner_pkg_lines(),
     "",
     readLines(tfl_runner_file(), warn = FALSE, encoding = "UTF-8"))
 }
