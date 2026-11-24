@@ -61,7 +61,7 @@ test_that("tfl_content_code(): the content runs as the plan the code writes", {
     tfl_item("plan_cells", list(categorical = "{n} ({p:.1f%})")),
     tfl_item("plan_sort", list(keys = "-n"))))
   code <- tfl_content_code(out, pipe = "|>")
-  env <- new.env()
+  env <- study_env()
   env$data <- data
   eval(parse(text = c("library(rtfreporter)", code)), env)
   expect_s3_class(env$plan, "table_plan")
@@ -169,7 +169,7 @@ test_that("a Rework comes after normalize_ard() and before the plan, as written,
                                 "plan <- table_plan(data, cols = \"ARM\", rows = c(group = \"variable\")) |>"))
   ard <- cards::ard_stack(cards::ADSL, .by = ARM,
                           cards::ard_tabulate(variables = c(SEX, RACE)))
-  env <- new.env()
+  env <- study_env()
   env$ard <- ard
   eval(parse(text = c("library(rtfreporter)", code)), env)
   pages <- function(p) suppressMessages(rtfreporter::plan_apply(p, "table"))
@@ -232,7 +232,7 @@ test_that("a Rework keeps the content's normalize_ard() arguments; with none, `d
                content = content)
   }
   run_code <- function(o) {
-    env <- new.env()
+    env <- study_env()
     env$ard <- ard
     eval(parse(text = c("library(rtfreporter)", tfl_content_code(o, pipe = "|>"))), env)
     env$plan
@@ -309,7 +309,7 @@ test_that("an old-style Rework (it normalizes itself) builds the table it built 
                       data = list(source = "ard", object = "ard", steps = list(tfl_r(st[k]))),
                       content = items)
       expect_identical(pages(tfl_content_run(o, ard)), expected[[k]])
-      env <- new.env()
+      env <- study_env()
       env$ard <- ard
       eval(parse(text = c("library(rtfreporter)", tfl_content_code(o, pipe = "|>"))), env)
       expect_identical(pages(env$plan), expected[[k]])
@@ -353,7 +353,7 @@ test_that("a Rework starts from the output's own object name", {
       tfl_item("table_plan", list(cols = "ARM", rows = list(group = "variable")))))
   code <- no_bign(tfl_content_code(out, pipe = "|>"))
   expect_identical(code[1L], "data <- ard_t1 |> normalize_ard()")
-  env <- new.env()
+  env <- study_env()
   env$ard_t1 <- ard
   eval(parse(text = c("library(rtfreporter)", code)), env)
   pages <- function(p) suppressMessages(rtfreporter::plan_apply(p, "table"))
@@ -535,7 +535,7 @@ test_that("plan_digits() by a row key's value: the schema takes both forms, the 
                                  PARAMCD = list(ALT = list(mean = 1, sd = 2), BILI = 3)))))
   code <- paste(tfl_content_code(out, pipe = "|>"), collapse = "\n")
   expect_match(code, "PARAMCD = list(ALT = c(mean = 1, sd = 2), BILI = 3)", fixed = TRUE)
-  env <- new.env()
+  env <- study_env()
   env$data <- data
   eval(parse(text = c("library(rtfreporter)", code)), env)
   t <- tryCatch(as.data.frame(suppressMessages(rtfreporter::plan_apply(env$plan, "table"))),
@@ -566,7 +566,7 @@ test_that("plan_empty(): the schema checks it, places it with the mapping, and i
   code <- tfl_content_code(out, pipe = "|>")
   expect_match(paste(code, collapse = "\n"),
                "plan_empty(text = \"No events.\", position = \"replace\")", fixed = TRUE)
-  env <- new.env()
+  env <- study_env()
   env$data <- rtfreporter::normalize_ard(ard)
   eval(parse(text = c("library(rtfreporter)", code)), env)
   expect_s3_class(env$plan, "table_plan")

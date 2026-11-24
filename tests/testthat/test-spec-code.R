@@ -32,7 +32,7 @@ sc_plan <- function(d) {
 
 # run the written code with `data` bound, give the plan
 sc_run <- function(code, d, name = "plan") {
-  env <- new.env(parent = asNamespace("tflspec"))
+  env <- study_env(asNamespace("tflspec"))
   env$data <- d
   suppressMessages(eval(parse(text = code), env))
   get(name, envir = env)
@@ -140,7 +140,7 @@ test_that("tfl_report_code() writes the document tfl_report() makes", {
     sp <- suppressMessages(tflspec:::.ard_spec_scope(sc_rep_spec(), id))
     code <- tfl_report_code(sp, content = "pages")
     expect_match(code[1L], "^doc <- rtf_document\\(", label = id)
-    env <- new.env(parent = asNamespace("tflspec"))
+    env <- study_env(asNamespace("tflspec"))
     env$pages <- pages
     eval(parse(text = code), env)
     expect_identical(sc_render(env$doc), sc_render(tfl_report(sp, content = pages)),
@@ -179,7 +179,7 @@ test_that("a table and its report, written out, make the report the objects make
   rsp <- suppressMessages(tflspec:::.ard_spec_scope(sc_rep_spec(), "T1"))
   code <- c(tfl_table_code(tsp, data = "data", pipe = "|>", normalize = FALSE),
             tfl_report_code(rsp, content = "plan"))
-  env <- new.env(parent = asNamespace("tflspec"))
+  env <- study_env(asNamespace("tflspec"))
   env$data <- d
   suppressMessages(eval(parse(text = code), env))
   by_objects <- tfl_report(rsp, content = tfl_table_plan(d, tsp) |>

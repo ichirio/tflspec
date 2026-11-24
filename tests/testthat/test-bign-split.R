@@ -125,7 +125,7 @@ test_that("a custom Total heading: the program and the run give its N", {
   o$content <- c(o$content, list(tfl_item("plan_total", list(label = "All Subjects"))))
   code <- tfl_content_code(o)
   expect_true(any(grepl("total = \"All Subjects\"", code, fixed = TRUE)))
-  env <- new.env()
+  env <- study_env()
   assign("ard", bs_ard(), envir = env)
   assign("data", bs_ard(), envir = env)
   b <- grep("^bign <- ", code, value = TRUE)
