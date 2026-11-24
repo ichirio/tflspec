@@ -932,8 +932,7 @@ tfl_output_name_check <- function(output, study = NULL) {
   # (canon 1748456)
   for (pp in .obj_parts(o)) {
     if (!inherits(pp$content, "tfl_r")) next
-    nm <- .obj_r_assigned(paste(as.character(pp$content), collapse = "
-"))
+    nm <- .obj_r_assigned(paste(as.character(pp$content), collapse = "\n"))
     if (is.null(nm)) next
     at <- if (is.na(pp$object)) "content" else paste0(pp$object, ": content")
     fin <- .obj_final_of(pp$kind, TRUE)
