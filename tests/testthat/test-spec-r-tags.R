@@ -1,5 +1,5 @@
-# R whose `!r` tag was lost stops in the reader (#893, R/spec_r_tags.R):
-# the schema's type decides, never the text.
+# A guard whose `!r` tag was lost stops in the reader (#893,
+# R/spec_r_tags.R): the schema's type decides, never the text.
 
 # a report file of these content lines, read
 rt_read <- function(lines) {
@@ -25,21 +25,20 @@ test_that("a guard chain read with `!r` is a tfl_r", {
 })
 
 test_that("a guard read as a quoted string into a guard-only argument stops", {
-  real <- tfl_schema
-  local_mocked_bindings(tfl_schema = function(fn = NULL) {
-    if (identical(fn, "plan_zero")) {
-      return(list(package = "rtfreporter",
-                  args = list(zero = list(type = "guard"), cells = list(type = "list<guard>"),
-                              text = list(type = "template|guard"))))
-    }
-    real(fn)
+  # (the schema has no argument of guards alone: one is added here)
+  real <- .schema_all
+  local_mocked_bindings(.schema_all = function(figure = TRUE) {
+    c(real(figure), list(plan_zero = list(
+      package = "rtfreporter",
+      args = list(zero = list(type = "guard"), cells = list(type = "list<guard>"),
+                  text = list(type = "template|guard")))))
   })
   # with the tag: read
   o <- rt_read(c("  - plan_zero:", "      zero: !r 'n == 0 ~ \"0\"'"))
   expect_identical(o$content[[1]]$args$zero, tfl_r("n == 0 ~ \"0\""))
   # quoted: stops, naming the argument, the report and how to write it
   e <- expect_error(rt_read(c("  - plan_zero:", "      zero: 'n == 0 ~ \"0\"'")),
-                    "plan_zero(zero = ) takes R", fixed = TRUE)
+                    "plan_zero(zero = ) takes R here (a guard)", fixed = TRUE)
   expect_match(conditionMessage(e), "T-9-1", fixed = TRUE)
   expect_match(conditionMessage(e), "`!r 'n == 0 ~ \"0\"'`", fixed = TRUE)
   # written without the tag (a plain scalar): the same
@@ -47,30 +46,31 @@ test_that("a guard read as a quoted string into a guard-only argument stops", {
   # a list of guards, one of them untagged
   expect_error(rt_read(c("  - plan_zero:",
                          "      cells: [!r 'n == 0 ~ \"0\"', 'p < 0.001 ~ \"<0.1%\"']")),
-               "plan_zero(cells = ) takes R", fixed = TRUE)
-  # `{fn:, args:}` form, and a value under a call
+               "plan_zero(cells = ) takes R here", fixed = TRUE)
+  # `{fn:, args:}` form
   expect_error(rt_read(c("  - fn: plan_zero", "    args: {zero: 'n == 0 ~ \"0\"'}")),
                "plan_zero(zero = )", fixed = TRUE)
+  # a quote inside is doubled, as YAML's single quotes write it
+  expect_error(rt_read(c("  - plan_zero:", "      zero: \"A == 'x' ~ 'y'\"")),
+               "`!r 'A == ''x'' ~ ''y'''`", fixed = TRUE)
   # template|guard: a string is a template, read as it is
   o <- rt_read(c("  - plan_zero:", "      text: 'n == 0 ~ \"0\"'"))
   expect_identical(o$content[[1]]$args$text, "n == 0 ~ \"0\"")
 })
 
-test_that("a string in a slot of only R stops when it is no neutral condition", {
+test_that("a string in a slot of only R opens as written; the check says what it is", {
   # plan_filter's where (list<r>|r): a neutral string is read as R
   o <- rt_read(c("  - plan_filter: {where: p > 0.05}"))
   expect_s3_class(o$content[[1]]$args$where, "tfl_r")
-  e <- expect_error(rt_read(c("  - plan_filter: {where: 'between(AGE, 18, 65)'}")),
-                    "plan_filter(where = ) takes R", fixed = TRUE)
-  expect_match(conditionMessage(e), "`!r 'between(AGE, 18, 65)'`", fixed = TRUE)
+  # any other string as written (tflplanner opens it; the check refuses it)
+  o <- rt_read(c("  - plan_filter: {where: 'between(AGE, 18, 65)'}"))
+  expect_identical(o$content[[1]]$args$where, "between(AGE, 18, 65)")
+  expect_match(tfl_schema_check(o$content[[1]])$message, "not a neutral condition", fixed = TRUE)
   o <- rt_read(c("  - plan_filter: {where: !r 'between(AGE, 18, 65)'}"))
   expect_identical(o$content[[1]]$args$where, tfl_r("between(AGE, 18, 65)"))
-  # a quote inside is doubled, as YAML's single quotes write it
-  expect_error(rt_read(c("  - plan_filter: {where: \"grepl('x', A)\"}")),
-               "`!r 'grepl(''x'', A)'`", fixed = TRUE)
   # a formula's slot (plan_cell_style's where)
-  expect_error(rt_read(c("  - plan_cell_style: {where: 'between(p, 0, 1)', bold: true}")),
-               "plan_cell_style(where = ) takes R", fixed = TRUE)
+  o <- rt_read(c("  - plan_cell_style: {where: 'between(p, 0, 1)', bold: true}"))
+  expect_identical(o$content[[1]]$args$where, "between(p, 0, 1)")
 })
 
 test_that("an `r` slot that writes a string keeps it, as the code writes it", {
@@ -95,8 +95,8 @@ test_that("a type with a member of text keeps a plain string", {
 })
 
 test_that("the rule reads the type only", {
-  ty <- function(t) tflspec:::.schema_type(t)
-  lost <- tflspec:::.r_tag_lost
+  ty <- function(t) .schema_type(t)
+  lost <- .r_tag_lost
   g <- "n == 0 ~ \"0\""
   expect_true(lost(g, ty("guard")))
   expect_true(lost(list(tfl_r(g), g), ty("list<guard>")))
@@ -104,13 +104,14 @@ test_that("the rule reads the type only", {
   expect_false(lost(tfl_r(g), ty("guard")))
   expect_false(lost(g, ty("template|guard")))
   expect_false(lost(g, ty("template|list<guard|template>")))
-  expect_false(lost(g, ty("string|r")))
   expect_false(lost(list(tfl_r(g), "{n}"), ty("list<guard|template>")))
-  # an `r` takes a string but in a strict slot of only R; a formula never
+  # a type with no guard: the reader keeps its strings (r, formula)
   expect_false(lost("right_align", ty("r")))
+  expect_false(lost("f(x)", ty("list<r>|r")))
+  expect_false(lost("f(x)", ty("formula")))
   expect_false(lost("abc", ty("list<number>|r")))
-  expect_true(lost("f(x)", ty("list<r>|r"), strict = TRUE))
-  expect_true(lost("f(x)", ty("formula")))
+  # a guard beside an r: the string is taken by the r
+  expect_false(lost(g, ty("guard|r")))
   # a value no member fits, as R or not, is the check's (tfl_schema_check())
   expect_false(lost(list(a = 1), ty("guard")))
   expect_false(lost(NULL, ty("guard")))

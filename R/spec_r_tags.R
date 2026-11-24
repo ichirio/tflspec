@@ -1,52 +1,48 @@
 # R that lost its `!r` tag (#893).  The reader keeps R as tfl_r(): the
 # `!r` tag, or a neutral condition in a slot of only R (R/neutral.R).  A
-# string left where the code can take it only as R is R whose tag was lost
-# (written without it, or quoted): rtfreporter would get the code as text,
-# and the cell would print it.  The reader stops there, naming the
-# argument, the report and how to write it.
+# string left where the type takes it only as a guard (`cond ~ "text"`) is R
+# whose tag was lost (written without it, or quoted): rtfreporter would get
+# the code as a template, and the cell would print it.  The reader stops
+# there, naming the argument, the report and how to write it.
 #
 # The schema's type alone decides, never the text: the value does not fit
-# the type as written, and it fits once its strings are R.  Only R fits a
-# string at a `guard`, and at an `r` or `formula` of a slot of only R that
-# writes no string (plan_filter's conditions, a formula: the strict slots
-# of .schema_value_to_r()).  Elsewhere an `r` takes a string, as the code
-# writes it (facet_wrap(facets = "PARAM"), plan_columns(cell_format =
-# "right_align")), and a type with a member of text keeps it
-# (`template|list<guard|template>`, `string|r`, `column|guard`): a
-# template is a string.
-
-# The functions whose slots of only R take no string but a neutral
-# condition (.schema_to_r(), .r_tag_check())
-.schema_strict_r <- function(fn) identical(.schema_fn_name(fn), "plan_filter")
+# the type as written, and it fits once its strings are R.  A type with a
+# member that takes the string as text keeps it (`template|list<guard|
+# template>`, `column|guard`: a template, a column is a string).  An `r` or
+# a `formula` keeps a string as it did: the reader opens it as written (the
+# GUI shows it), the check says what it is (.schema_fits(), R/neutral.R) and
+# the code writes it or stops (.schema_value_to_r()).
 
 # The arguments of one item (`fn`), as read; each `{fn:, args:}` inside a
 # value by its own function's types.  Stops at the first R without its tag.
+# (The schema file's own entry: a guard is only there, and tfl_schema()'s
+# formals are not needed.)
 .r_tag_check <- function(fn, args) {
-  ent <- tryCatch(tfl_schema(fn), error = function(e) NULL)
-  if (is.null(ent)) return(args)
-  for (a in setdiff(names(args), "")) {
-    v <- args[[a]]
-    ty <- .schema_arg_type(ent, a)
-    if (!is.null(ty) && .r_tag_lost(v, ty, .schema_strict_r(fn))) .r_tag_stop(fn, a, v)
+  ent <- .schema_all(figure = FALSE)[[.schema_fn_name(fn)]]
+  if (is.list(ent)) {
+    for (a in setdiff(names(args), "")) {
+      ty <- .schema_arg_type(ent, a)
+      if (!is.null(ty) && .r_tag_lost(args[[a]], ty)) .r_tag_stop(fn, a, args[[a]])
+    }
   }
   for (cl in .r_tag_calls(unname(args))) .r_tag_check(cl$fn, cl$args %||% list())
   args
 }
 
 # TRUE when `v` holds a string that only R fits: `v` does not have the type
-# `ty` as it is, and has it with each of its strings as `!r`.  `strict`: the
-# function's slots of only R take no string (.schema_strict_r())
-.r_tag_lost <- function(v, ty, strict = FALSE) {
-  if (!length(.r_tag_texts(v))) return(FALSE)
-  nx <- .schema_pure_r(ty)
-  # an `r` takes a string, as the code writes it, but in a strict slot
-  if (!(nx && (strict || .schema_has(ty, "formula")))) ty <- .r_tag_text_r(ty)
-  !.schema_ok(v, ty, nx) && .schema_ok(.r_tag_all(v), ty, nx)
+# `ty` as it is, and has it with each of its strings as `!r` (an `r` or a
+# `formula` member taking a string as well)
+.r_tag_lost <- function(v, ty) {
+  if (!.schema_has(ty, "guard") || !length(.r_tag_texts(v))) return(FALSE)
+  ty <- .r_tag_text_r(ty)
+  !.schema_ok(v, ty) && .schema_ok(.r_tag_all(v), ty)
 }
 
-# the type with each `r` member as `r|string`
+# the type with each `r` and `formula` member as `r|string`
 .r_tag_text_r <- function(ty) {
-  if (identical(ty$kind, "r")) return(list(kind = "either", args = list(ty, list(kind = "string", args = list()))))
+  if (ty$kind %in% c("r", "formula")) {
+    return(list(kind = "either", args = list(ty, list(kind = "string", args = list()))))
+  }
   if (ty$kind %in% c("either", "list", "vec", "map")) ty$args <- lapply(ty$args, .r_tag_text_r)
   ty
 }
@@ -87,8 +83,8 @@
   id <- .spec_read$id
   if (!is.null(id)) where <- paste0(where, ": ", id)
   stop(sprintf(paste0(
-    "%s: %s(%s = ) takes R, but \"%s\" was read as text (its `!r` tag was lost: ",
-    "written without it, or quoted).  Write it as `!r '%s'`, as a guard is ",
+    "%s: %s(%s = ) takes R here (a guard), but \"%s\" was read as text (its `!r` tag ",
+    "was lost: written without it, or quoted).  Write it as `!r '%s'`, as a guard is ",
     "written: `!r 'n == 0 ~ \"0\"'`."),
     where, .schema_fn_name(fn), a, s, gsub("'", "''", s, fixed = TRUE)), call. = FALSE)
 }
