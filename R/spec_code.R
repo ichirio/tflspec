@@ -55,13 +55,45 @@
     return(stats::as.formula(paste("~", x$text), env = globalenv()))
   }
   if (inherits(x, "tfl_spec_call")) {
-    f <- .spec_fun(x$fun)
-    return(do.call(f, lapply(x$args, .spec_eval, env = env)))
+    return(.spec_apply(.spec_fun(x$fun), x$args, env = env))
   }
   if (is.list(x) && !is.object(x)) {
     return(lapply(x, .spec_eval, env = env))
   }
   x
+}
+
+# A step run: `f` on its arguments (`first`, the plan or the data, before
+# them), each .spec_eval()'d.  The call is evaluated in .spec_run_env(), so
+# an R value among them (`!r rtf_border(top = "single")`, a language object
+# here) runs as the program runs it.  The one way every argument of every
+# verb is run: tfl_table_plan() (the app's preview), tfl_content_run(), a
+# call inside a value.
+.spec_apply <- function(f, args, first = NULL, env = emptyenv()) {
+  a <- lapply(args, .spec_eval, env = env)
+  if (!is.null(first)) a <- c(list(first), a)
+  do.call(f, a, envir = .spec_run_env())
+}
+
+# Where a step's R is evaluated: with rtfreporter's and tflspec's exports in
+# reach -- the program attaches rtfreporter and writes their functions
+# bare (.schema_call_fun()) -- over the global environment, not tflspec's
+# namespace (where rtfreporter's functions are not found).  Made once for
+# the namespaces loaded.
+.spec_run_cache <- new.env(parent = emptyenv())
+.spec_run_env <- function() {
+  ns <- lapply(c("tflspec", "rtfreporter"), asNamespace)
+  if (!is.null(.spec_run_cache$env) && identical(.spec_run_cache$ns, ns)) {
+    return(.spec_run_cache$env)
+  }
+  e <- globalenv()
+  for (n in ns) {
+    x <- mget(getNamespaceExports(n), envir = n, inherits = TRUE, ifnotfound = list(NULL))
+    e <- list2env(Filter(Negate(is.null), x), parent = e)
+  }
+  .spec_run_cache$ns <- ns
+  .spec_run_cache$env <- e
+  e
 }
 
 # an argument name as it can be written: bare, or quoted
@@ -849,6 +881,18 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   vars
 }
 
+# Does a sheet's row hold a value no cell says as it is -- an R expression
+# or call (.spec_expr(), .spec_call(), a formula, a function) -- anywhere in
+# it?  .plan_sheets_from_content() writes its rows as text (`txt()`).
+.bridge_holds_r <- function(x) {
+  if (inherits(x, c("tfl_spec_expr", "tfl_spec_call", "tfl_spec_sym", "tfl_spec_formula")) ||
+      is.language(x) || is.function(x)) {
+    return(TRUE)
+  }
+  if (is.list(x)) return(any(vapply(x, .bridge_holds_r, NA)))
+  FALSE
+}
+
 # Whether an item's arguments (those the sheets say) hold a text a cell does
 # not keep: a blank, or a blank at either end (a separator " / ", a heading
 # "  Total"), which the sheets read trimmed.  The item with a rest then goes
@@ -1328,6 +1372,19 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
         if (!is.null(named[["sep"]])) tb$sep <- named[["sep"]]
       },
       miss(fn, "a verb no sheet holds"))
+    # an R value the branch put on a sheet as it is (plan_style(border =
+    # rtf_border(...)), a call or an expression of any verb's argument): a
+    # cell would hold its text, read back as a string -- not the call the
+    # program runs.  The sheets are as before the item, and the item goes
+    # whole to content_more, run as the program runs it (tfl_table_plan())
+    if (!cur %in% lost_at && .bridge_holds_r(list(tb, study, vars, cells, lay, sty, cols,
+                                                  cstyles, hdr, codes))) {
+      tb <- snap[[1L]]; study <- snap[[2L]]; vars <- snap[[3L]]; cells <- snap[[4L]]
+      lay <- snap[[5L]]; sty <- snap[[6L]]; cols <- snap[[7L]]; cstyles <- snap[[8L]]
+      hdr <- snap[[9L]]; codes <- snap[[10L]]; labelled <- snap[[11L]]
+      miss(fn, "an R value (a call or an expression) a sheet's cell would hold as text")
+      next
+    }
     # the item's rest: with a part the sheets say it is kept beside it; with
     # nothing else the sheets say, the item goes whole as before
     if (length(ra) && !cur %in% lost_at) {
@@ -1651,7 +1708,7 @@ tfl_content_run <- function(output, data) {
     assign(obj, data, envir = env)
     x <- data
     for (cl in .content_calls(sp$pre)) {
-      x <- do.call(.spec_fun(cl$fun), c(list(x), lapply(cl$args, .spec_eval, env = emptyenv())))
+      x <- .spec_apply(.spec_fun(cl$fun), cl$args, first = x)
     }
     assign("data", x, envir = env)
     eval(parse(text = steps), env)
@@ -1713,8 +1770,7 @@ tfl_content_run <- function(output, data) {
   }
   x <- data
   run <- function(cl, first) {
-    f <- .spec_fun(cl$fun)
-    do.call(f, c(list(first), lapply(cl$args, .spec_eval, env = penv)))
+    .spec_apply(.spec_fun(cl$fun), cl$args, first = first, env = penv)
   }
   for (cl in pl$pre) x <- run(cl, x)
   p <- run(pl$head, x)
@@ -2128,12 +2184,25 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
       if (length(other) > 1L) "are" else "is",
       paste(.plan_role_names, collapse = ", ")))
   }
+  # the items, with the ones the sheets cannot say (the tables row's
+  # content_more: an R value, a verb no sheet holds) each in its place, as
+  # tfl_table_code() writes them -- the app's preview is the program's plan,
+  # not the sheets' part of it.  normalize_ard() is the data's: `data` comes
+  # normalized
+  base <- .plan_content_items(sp)
+  items <- .plan_content_more(base, sp$tables)
+  items <- Filter(function(it) !identical(it$fn, "normalize_ard"), items)
+  if (length(items) && identical(items[[1L]]$fn, "table_plan")) {
+    # (a table_plan() the tables row cannot say, whole in content_more: its roles)
+    if (!identical(items[[1L]], base[[1L]])) {
+      roles <- lapply(.content_calls(items[1L])[[1L]]$args, .spec_eval, env = emptyenv())
+    }
+    items <- items[-1L]
+  }
   for (r in names(dots)) if (!is.null(dots[[r]])) roles[[r]] <- dots[[r]]
-  p <- do.call(rtfreporter::table_plan, c(list(data), roles))
-  items <- .plan_content_items(sp)[-1L]
+  p <- do.call(rtfreporter::table_plan, c(list(data), roles), envir = .spec_run_env())
   for (st in .content_calls(items)) {
-    f <- .spec_fun(st$fun)
-    p <- do.call(f, c(list(p), lapply(st$args, .spec_eval, env = emptyenv())))
+    p <- .spec_apply(.spec_fun(st$fun), st$args, first = p)
   }
   p
 }
