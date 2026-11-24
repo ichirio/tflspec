@@ -10,7 +10,7 @@
 #    tfl_arg_defs(fn = "plan_cells")             a schema function's args
 #    tfl_arg_defs(fn = "data")                   the keys of a data: row
 #    tfl_arg_defs(fn = "analysis")               the keys of an analysis item
-#    tfl_arg_defs(template = "tflspec_v1/demog") a template's params:
+#    tfl_arg_defs(template = "tflspec_v1/tflspec_summary") a template's params:
 # ============================================================================
 
 # the 5 input forms: pick (choose from a list; one or several follows the
@@ -659,7 +659,7 @@
 # tflplanner's home standards/series/, the package's own series).
 .template_file <- function(template, study_dir = NULL) {
   if (!is.character(template) || length(template) != 1L || !grepl("^[^/]+/[^/]+$", template)) {
-    stop(sprintf("template %s: write <series>/<template>, e.g. \"tflspec_v1/demog\".",
+    stop(sprintf("template %s: write <series>/<template>, e.g. \"tflspec_v1/tflspec_summary\".",
                  encodeString(as.character(template)[1L], quote = "\"")), call. = FALSE)
   }
   parts <- strsplit(template, "/", fixed = TRUE)[[1L]]
@@ -670,8 +670,10 @@
   if (!is.null(study_dir)) {
     f <- file.path(.study_series_root(study_dir), parts[1L], "templates", paste0(parts[2L], ".yml"))
     if (file.exists(f)) return(f)
+    # (a retired template: its replacement, not a copy that cannot be made)
+    note <- .series_retired_note(template)
     stop(sprintf("template %s is not copied into the study (no %s): %s.", template, f,
-                 .study_copy_hint(study_dir, template)), call. = FALSE)
+                 if (nzchar(note)) note else .study_copy_hint(study_dir, template)), call. = FALSE)
   }
   dirs <- .series_search_dirs()
   dirs <- dirs[nzchar(dirs)]
@@ -679,9 +681,11 @@
     f <- file.path(d, parts[1L], "templates", paste0(parts[2L], ".yml"))
     if (file.exists(f)) return(f)
   }
-  stop(sprintf("template %s: no file %s in the series folders (%s).", template,
+  note <- .series_retired_note(template)
+  stop(sprintf("template %s: no file %s in the series folders (%s).%s", template,
                file.path(parts[1L], "templates", paste0(parts[2L], ".yml")),
-               paste(dirs, collapse = ", ")), call. = FALSE)
+               paste(dirs, collapse = ", "), if (nzchar(note)) paste0(" ", note, ".") else ""),
+       call. = FALSE)
 }
 
 # The `groups:` of the series a template file belongs to (its folder's
@@ -709,7 +713,7 @@
 #'
 #' @param fn A function of the schema (`"plan_cells"`), or `"data"` (the keys
 #'   of a `data:` row) or `"analysis"` (the keys of an analysis item).
-#' @param template A template, `"<series>/<template>"` (`"tflspec_v1/demog"`).
+#' @param template A template, `"<series>/<template>"` (`"tflspec_v1/tflspec_summary"`).
 #'   Its file is found in the series folders: the option `tflspec.series_dir`,
 #'   tflplanner's home `standards/series/`, the series tflspec ships.
 #' @param study_dir A study folder: the template is read from the study's

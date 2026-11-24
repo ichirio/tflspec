@@ -5,7 +5,7 @@ cols <- c("name", "label_en", "label_ja", "help_en", "help_ja", "step", "group",
 
 test_that("tfl_arg_defs() takes fn or template, one of them", {
   expect_error(tfl_arg_defs(), "one of them")
-  expect_error(tfl_arg_defs(fn = "data", template = "tflspec_v1/demog"), "one of them")
+  expect_error(tfl_arg_defs(fn = "data", template = "tflspec_v1/tflspec_summary"), "one of them")
 })
 
 test_that("the data row's and the analysis item's keys are defined", {

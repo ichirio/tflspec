@@ -1,9 +1,11 @@
-# T-14-1-1 written as a template SPEC: tflspec_v1/demog with the arguments
-# that give the code SPEC's report (T-14-1-1C, tflspec's
+# T-14-1-1 written as a template SPEC: tflspec_v1/tflspec_summary with the
+# arguments that give the code SPEC's report (T-14-1-1C, tflspec's
 # inst/extdata/spec-yaml/outputs/T-14-1-1.yml with the canon ids).  The
 # decimals are the series' formats (AGE:mean 1, AGE:sd 2, median 1, N, min,
-# max 0: the code SPEC's plan_digits); the code SPEC's last card
-# (plan_cell_style) is the report's own content, after the template's.
+# max 0: the code SPEC's plan_digits); the values' text is the study's code
+# lists by name (value_labels, the map the retired demog template had as
+# its default); the code SPEC's last card (plan_cell_style) is the report's
+# own content, after the template's.
 id: T-14-1-1T
 kind: table
 label: Demographics
@@ -15,7 +17,7 @@ codelists:
     - {value: Drug X, label: Drug X 200 mg}
     - {value: Control, label: Control 100 mg}
 template:
-  name: tflspec_v1/demog
+  name: tflspec_v1/tflspec_summary
   analysis:
     by: [TRT01A]
     continuous: [AGE]
@@ -23,6 +25,11 @@ template:
     missing_row: false
   content:
     labels: {AGE: "Age (years)", AGEGR1: "Age group, n (%)", SEX: "Sex, n (%)", RACE: "Race, n (%)", ECOGBL: "Baseline ECOG, n (%)"}
+    value_labels:
+      SEX: !r study$codelists$SEX
+      RACE: !r study$codelists$RACE
+      ETHNIC: !r study$codelists$ETHNIC
+      AGEGR1: !r study$codelists$AGEGR1
     cells:
       n: "{N}"
       Mean (SD): "{mean} ({sd})"

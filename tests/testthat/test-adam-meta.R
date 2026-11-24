@@ -316,8 +316,10 @@ test_that("study$codelists references: left out when the study has not the list,
 })
 
 test_that("demog's value_labels: the study's lists by name, for the columns the report shows", {
+  # (demog left tflspec_v1, canon 2026-11-24: its copy in the test series)
+  local_test_series()
   r <- list(id = "T-DM", kind = "table", common = list(population = "SAF"),
-            template = list(name = "tflspec_v1/demog",
+            template = list(name = "tflspec_test/demog",
                             analysis = list(by = list("TRT01A"), categorical = list("SEX", "AGEGR1")),
                             content = list(labels = list(SEX = "Sex, n (%)"))))
   o <- tfl_template_resolve(r)

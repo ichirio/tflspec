@@ -52,8 +52,8 @@ codelists:
     - {value: Control, label: Control 100 mg}
 content:
   - table_plan: {cols: TRT01A, rows: {group: variable}}
-  # (the value labels: the study's code lists by name, as tflspec_v1/demog's
-  # value_labels default names them)
+  # (the value labels: the study's code lists by name, as T-14-1-1T's
+  # value_labels names them)
   - plan_labels:
       AGE: Age (years)
       AGEGR1: !r c(AGEGR1 = "Age group, n (%)", study$codelists$AGEGR1)
