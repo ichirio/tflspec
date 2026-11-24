@@ -133,7 +133,7 @@ test_that("tflspec_hierarchy: empty_text prints when no record is left; none whe
   r <- tfl_template_resolve(
     list(id = "X", kind = "table", template = list(
       name = "tflspec_v1/tflspec_hierarchy", from = "ADAE", by = "TRT01A",
-      hierarchy = "AEDECOD", empty_text = NULL)))
+      hierarchy = "AEDECOD", empty_text = tfl_unset())))
   expect_false("plan_empty" %in% vapply(r$content, function(i) i$fn, ""))
   y <- tfl_template_resolve(
     list(id = "X", kind = "table", template = list(

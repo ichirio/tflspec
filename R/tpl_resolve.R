@@ -38,6 +38,13 @@
 #' `!unset` is removed, and the names the report does not write keep the
 #' series' values.
 #'
+#' An argument the report writes `~` (YAML null) is not given: the
+#' default applies, as when it is left out.  None (the argument not
+#' passed) is `!unset`; `NULL` itself is `!r NULL`.  A list argument
+#' (`list<...>`) the report gives is never empty, has no `""` or `NA`
+#' entry, and is not a map where a sequence is declared: such a value
+#' stops, naming the argument.
+#'
 #' An analysis item's `analyses:` (`per`, `ids`) says its analyses: `per:
 #' variable` one a variable (its id the variable's entry in `ids`, else the
 #' variable's name); `per: level` or `per: [columns]` one row whose
@@ -553,7 +560,10 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
     stop(who, ": ", template, " has no argument ", paste(bad, collapse = ", "),
          " (its arguments: ", paste(names_ok, collapse = ", "), ").", call. = FALSE)
   }
-  out
+  # (an argument written `~`, YAML null, is not given: the template's default,
+  # as when it is left out.  None -- not passed -- is `!unset`; NULL itself
+  # is `!r NULL`.  Canon 2026-11-24, the 318 distinction kept)
+  out[!vapply(out, is.null, NA)]
 }
 
 # One analysis item as its analyses (canon fc7bd00).  `analyses: {per, ids}`:

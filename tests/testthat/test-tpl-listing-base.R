@@ -88,7 +88,7 @@ test_that("tflspec_listing resolves: no analysis, the rows' add and arrange, one
   expect_length(r0$ard$analysis_data[[2L]]$add, 0L)
   # empty_text "" or unset: no plan_empty
   expect_false("plan_empty" %in% lstb_fns(lstb_resolve(empty_text = "")))
-  expect_false("plan_empty" %in% lstb_fns(lstb_resolve(empty_text = NULL)))
+  expect_false("plan_empty" %in% lstb_fns(lstb_resolve(empty_text = tfl_unset())))
 })
 
 test_that("tflspec_listing: by divides the listing, by page or by block", {
