@@ -337,15 +337,18 @@
   .sheet_mark(if (length(v) && !identical(v, "")) v)
 }
 
-# An argument's shape, by verb (NULL: none): a span given line by line,
-# each line's cells named ("a | b"), or "" for a line's one value
+# An argument's shape, by verb and argument (.sheet_shapes; NULL: none)
 .sheet_shape <- function(fn, name, value) {
-  if (identical(.schema_fn_name(fn), "plan_col_header") && identical(name, "span") &&
-      is.list(value) && !inherits(value, c("tfl_r", "tfl_call"))) {
-    return(vapply(value, function(x) if (is.null(names(x))) "" else paste(names(x), collapse = " | "), ""))
-  }
-  NULL
+  f <- .sheet_shapes[[.schema_fn_name(fn)]][[name]]
+  if (is.null(f)) NULL else f(value)
 }
+# (a span given line by line: each line's cells named "a | b", or "" for a
+# line's one value)
+.sheet_shapes <- list(
+  plan_col_header = list(span = function(value) {
+    if (!is.list(value) || inherits(value, c("tfl_r", "tfl_call"))) return(NULL)
+    vapply(value, function(x) if (is.null(names(x))) "" else paste(names(x), collapse = " | "), "")
+  }))
 
 # The forms the bridge writes in another argument, read back as written,
 # by verb: function(args, marked, shapes) gives the sheets' item's
