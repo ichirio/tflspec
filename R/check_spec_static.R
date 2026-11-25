@@ -22,15 +22,20 @@
   if (!identical(o$kind, "figure") && !identical(o$kind, "listing")) return(rows[[1L]])
   d <- if (is.list(o$data)) o$data else list()
   # (Q3) subjects' records -- a dataset, an analysis data, the report's code
-  # -- and no analysis set on the data (canon 11-15).  Until `common` goes,
-  # its `population` and `population_label` (all subjects) still count
+  # -- and no analysis set on the data (canon 11-15): on the data, or on
+  # its analysis data rows (the report's own ARD's, a template's rows).
+  # Until `common` goes, its `population` and `population_label` (all
+  # subjects) still count
   reads <- !is.null(d$dataset) || !is.null(d$data) ||
     (as.character(d$source %||% "ard")[1L] %in% c("dataset", "code"))
-  if (reads && all(is.na(unlist(.data_population(d, o)))) &&
+  data_rows <- c(if (is.list(o$ard$analysis_data)) o$ard$analysis_data,
+                 if (is.list(d) && is.null(names(d))) d)
+  row_sets <- unlist(lapply(data_rows, function(a) if (is.list(a)) a$population))
+  if (reads && all(is.na(unlist(.data_population(d, o)))) && !length(stats::na.omit(row_sets)) &&
       is.na(.na_scalar(o$common$population_label))) {
     add(part = "data", item = "data$population", level = "warning", message = paste0(
       "the ", o$kind, " reads subjects' records and has no analysis set: write `population:` on its ",
-      "data (a population of spec/data.yml)"))
+      "data or its analysis data rows (a population of spec/data.yml)"))
   }
   do.call(rbind, rows)
 }

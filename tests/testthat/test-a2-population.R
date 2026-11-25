@@ -177,6 +177,17 @@ test_that("a figure or listing of subjects' records with no analysis set: a warn
                                                                             dataset = "ADAE")), "T-1")), 0L)
 })
 
+test_that("Q3: a set on the analysis data rows counts (canon 11-15)", {
+  f <- list(kind = "figure", data = list(source = "code"),
+            ard = list(analysis_data = list(list(id = "adtte_sub", from = "ADTTE", population = "SAF"),
+                                            list(id = "adsl_sub", from = "ADSL", population = "SAF"))))
+  r <- .check_static_rows(f, "F-1")
+  expect_false(any(r$item %in% "data$population"))
+  f$ard$analysis_data <- lapply(f$ard$analysis_data, function(a) { a$population <- NULL; a })
+  r <- .check_static_rows(f, "F-1")
+  expect_true(any(r$item %in% "data$population"))
+})
+
 test_that("the page's analysis set line reads the data's set (canon 11-15)", {
   st <- list(data = list(populations = list(list(id = "SAF", label = "Safety Analysis Set"),
                                             list(id = "FAS", label = "Full Analysis Set"))))
