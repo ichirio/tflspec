@@ -239,12 +239,20 @@ tfl_ai_check <- function(answer, context = NULL, adam = NULL) {
       "to; if the shell names one the TOC does not, ask it in a question -- do not guess"),
       "warning")
   }
-  # a step that keeps the set's rows by a variable of its condition (the
-  # one rule, tfl_check_spec()'s too: .fig_pop_keep_steps())
-  hits <- .fig_pop_keep_steps(steps, if (is.list(pop)) pop$where)
-  for (i in seq_len(nrow(hits))) {
-    p <- .ai_problem(p, sprintf("data[%d] %s", hits$index[i], hits$step[i]),
-                     .fig_pop_keep_text(hits$vars[i]))
+  # a step that keeps the set's rows by a variable of its condition
+  pop_vars <- if (is.list(pop) && !is.null(pop$where)) .ai_r_names(pop$where)
+  keeps <- c(flag = "variable", filter = "expr")
+  for (k in seq_along(steps)) {
+    if (!kind[k] %in% names(keeps) || !length(pop_vars)) next
+    v <- as.character(unlist(steps[[k]][[keeps[[kind[k]]]]]))[1L]
+    used <- if (!is.na(v %||% NA)) .ai_r_names(v)
+    hit <- intersect(used, pop_vars)
+    if (!length(hit)) next
+    p <- .ai_problem(p, sprintf("data[%d] %s", k, kind[k]), sprintf(paste(
+      "keeps the rows of the analysis set by the records' own %s: the set is the report's",
+      "(its data's `population:`), whose subjects the program joins the records to -- remove",
+      "the step (a `flag` step is for a record flag, ANL01FL)"),
+      paste(hit, collapse = ", ")))
   }
   # a dataset of parameters: kept to the shell's, or the figure by it
   bds <- if (!is.null(context$datasets)) {
