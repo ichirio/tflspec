@@ -140,13 +140,19 @@ test_that("a listing's analysis set: its own, else the report's -- the sheets an
   ls <- b$listing$listings
   expect_identical(ls$population_id[match(c("L-1", "L-2"), ls$output_id)], c("SAF", "SAF"))
   expect_true(is.na(ls$population_id[ls$output_id == "L-3"]))
-  # back to YAML: the set is on the data (canon 11-15)
+  # the planner's population column: the data's set, else `common`'s
+  pl <- b$planner
+  expect_identical(pl$population[match(c("L-1", "L-2"), pl$output_id)], c("SAF", "SAF"))
+  expect_false(identical(pl$population[match("L-3", pl$output_id)], "SAF"))
+  # back to YAML: the set is on the data, not in `common` (canon 11-15)
   to <- file.path(d, "back")
   invisible(suppressWarnings(tfl_yaml_from_sheets(b, to)))
   back <- tfl_read_outputs(to)
   expect_identical(back[["L-1"]]$data$population, "SAF")
-  expect_identical(back[["L-1"]]$common$population, "SAF")
+  expect_null(back[["L-1"]]$common$population)
   expect_identical(back[["L-2"]]$data$population, "SAF")
+  expect_null(back[["L-2"]]$common$population)
+  expect_null(back[["L-3"]]$data$population)
 })
 
 test_that("a figure or listing of subjects' records with no analysis set: a warning (R5, Q3)", {
@@ -169,4 +175,19 @@ test_that("a figure or listing of subjects' records with no analysis set: a warn
   expect_identical(nrow(.check_static_rows(list(kind = "figure", template = "km_simple"), "F-2")), 0L)
   expect_identical(nrow(.check_static_rows(list(kind = "table", data = list(source = "dataset",
                                                                             dataset = "ADAE")), "T-1")), 0L)
+})
+
+test_that("the page's analysis set line reads the data's set (canon 11-15)", {
+  st <- list(data = list(populations = list(list(id = "SAF", label = "Safety Analysis Set"),
+                                            list(id = "FAS", label = "Full Analysis Set"))))
+  fig <- list(kind = "figure", data = list(population = "SAF", source = "code"))
+  expect_identical(.page_own_tokens(fig, st)$OUTPUT_POPULATION, "Safety Analysis Set")
+  # the data's set wins over `common` (read only until it goes)
+  fig$common <- list(population = "FAS")
+  expect_identical(.page_own_tokens(fig, st)$OUTPUT_POPULATION, "Safety Analysis Set")
+  fig$data$population <- NULL
+  expect_identical(.page_own_tokens(fig, st)$OUTPUT_POPULATION, "Full Analysis Set")
+  # a report's data entries (a list of rows): the subjects row's set
+  tab <- list(kind = "table", data = list(list(id = "adsl_sub", from = "ADSL", population = "FAS")))
+  expect_identical(.page_own_tokens(tab, st)$OUTPUT_POPULATION, "Full Analysis Set")
 })

@@ -370,11 +370,12 @@
   })
 }
 
-# The report's analysis set: `common: population`, else (a report built from a
-# template has none) the one set its subjects data entries name; NA for none
-# or for several
+# The report's analysis set: its data's own `population` (canon 11-15: the
+# set is the data's; `common: population` read until `common` goes), else
+# (a report built from a template has none) the one set its subjects data
+# entries name; NA for none or for several
 .out_population_or_data <- function(output) {
-  pop <- .out_population(output)
+  pop <- .na_scalar(.data_population(if (is.list(output$data)) output$data, output))
   if (!is.na(pop)) return(pop)
   # (a resolved report has them as its ARD's analysis_data, a file's as `data:`)
   d <- c(if (is.list(output$data)) output$data, if (is.list(output$ard$analysis_data)) output$ard$analysis_data)
