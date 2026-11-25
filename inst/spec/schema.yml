@@ -361,7 +361,7 @@ plan_cell_style:
     header: {main: true, label: {en: "The column header", ja: "列見出し"}, help: "TRUE: the column header is styled (not the body). e.g. TRUE", type: logical}
     where: {input: condition, main: true, label: {en: "Rows styled", ja: "書式を付ける行（条件）"}, type: formula, description: "The rows it applies to, R over the table's columns: `!r \"p > 0.5\"`."}
     indent_twips: {label: {en: "Indent (twips)", ja: "字下げ（twips）"}, help: "The left indent of the chosen cells' text in twips (not the header's). e.g. 240", type: integer}
-    border: {label: {en: "Borders", ja: "罫線"}, help: "The chosen cells' borders, as R (rtf_border()). e.g. rtf_border(bottom = \"single\")", type: "call<rtf_border>"}
+    border: {label: {en: "Borders", ja: "罫線"}, help: "The chosen cells' borders (rtf_border()). e.g. rtf_border(bottom = \"single\")", type: "call<rtf_border>"}
     row: {label: {en: "Header rows", ja: "見出しの行"}, help: "With the column header: the header rows styled, 1 the top row (the last the column labels). Blank: every header row. e.g. 1", type: "list<integer>"}
     bold: {main: true, label: {en: "Bold", ja: "太字"}, type: "enum[TRUE|FALSE]|logical", help: "TRUE: the chosen cells in bold; FALSE: not. Blank: as they are. e.g. TRUE"}
     italic: {main: true, label: {en: "Italic", ja: "斜体"}, type: "enum[TRUE|FALSE]|logical", help: "TRUE: the chosen cells in italics; FALSE: not. Blank: as they are. e.g. TRUE"}
@@ -464,7 +464,7 @@ plan_titles:
   dots: {style: positional, key: titles, type: "list<string>", label: {en: "Titles", ja: "タイトル"}, description: "The title lines over the table, one entry a line, the same on every page. Give this or Pages, not both. e.g. Table 14.1.1"}
   args:
     pages: {label: {en: "Pages", ja: "ページ"}, help: "One block of titles for each page, when the pages do not share one: one entry a page. Give this or Titles, not both. e.g. list(\"Page A\", \"Page B\")", type: "list<string>", input: text}
-    border: {label: {en: "Borders", ja: "罫線"}, help: "The title block's borders on every page of this table, as R (rtf_border()): top above the first row, bottom below the last. Blank: none. e.g. rtf_border(bottom = TRUE)", type: "call<rtf_border>"}
+    border: {label: {en: "Borders", ja: "罫線"}, help: "The title block's borders on every page of this table (rtf_border()): top above the first row, bottom below the last. Blank: none. e.g. rtf_border(bottom = TRUE)", type: "call<rtf_border>"}
 
 plan_footnotes:
   package: rtfreporter
@@ -475,7 +475,7 @@ plan_footnotes:
   dots: {style: positional, key: footnotes, type: "list<string>", label: {en: "Footnotes", ja: "脚注"}, description: "The footnote lines under the table, one entry a line, the same on every page. Give this or Pages, not both. e.g. n (%)"}
   args:
     pages: {label: {en: "Pages", ja: "ページ"}, help: "One block of footnotes for each page, when the pages do not share one: one entry a page. Give this or Footnotes, not both. e.g. list(\"Note A\", \"Note B\")", type: "list<string>", input: text}
-    border: {label: {en: "Borders", ja: "罫線"}, help: "The footnote block's borders on every page of this table, as R (rtf_border()): top above the first row, bottom below the last. Blank: none. e.g. rtf_border(bottom = TRUE)", type: "call<rtf_border>"}
+    border: {label: {en: "Borders", ja: "罫線"}, help: "The footnote block's borders on every page of this table (rtf_border()): top above the first row, bottom below the last. Blank: none. e.g. rtf_border(bottom = TRUE)", type: "call<rtf_border>"}
 
 plan_after:
   package: rtfreporter
