@@ -1,0 +1,82 @@
+id: T-14-2-1
+kind: table
+label: 'Systolic blood pressure: change from baseline at week 24 (cycle 9 day 1)'
+common:
+  population: SAF
+extends:
+  - defaults
+data:
+  - id: adsl_saf
+    from: ADSL
+  - id: advs_saf_sysbp
+    from: ADVS
+    subjects_in: adsl_saf
+    where: !r PARAMCD == "SYSBP" & AVISIT == "CYCLE 9 DAY 1"
+ard:
+  analyses:
+    - id: BIGN
+      method: categorical
+      data: adsl_saf
+      variables:
+        - TRT01A
+      purpose: PRIMARY OUTCOME MEASURE
+    - id: SYSBP
+      label: SYSBP at week 24
+      method: continuous
+      data: advs_saf_sysbp
+      by:
+        - TRT01A
+      variables:
+        - BASE
+        - AVAL
+        - CHG
+      statistics:
+        - 'N'
+        - mean
+        - sd
+        - se
+        - mean_lcl
+        - mean_ucl
+        - median
+        - min
+        - max
+      purpose: PRIMARY OUTCOME MEASURE
+codelists:
+  TRT01A:
+    - value: Drug X
+    - value: Control
+content:
+  - table_plan:
+      cols: TRT01A
+      rows:
+        group: variable
+  - plan_cells:
+      continuous:
+        'n': '{N:.0f}'
+        Mean (SD): '{mean:.1f} ({sd:.2f})'
+        SE: '{se:.2f}'
+        95% CI of the mean: '{mean_lcl:.1f}, {mean_ucl:.1f}'
+        Median: '{median:.1f}'
+        Min, Max: '{min:.0f}, {max:.0f}'
+  - plan_labels:
+      variable:
+        BASE: Baseline (mmHg)
+        AVAL: Week 24, cycle 9 day 1 (mmHg)
+        CHG: Change from baseline (mmHg)
+  - plan_paginate_rows:
+      max_rows: 30
+      split: group_safe
+page:
+  footer:
+    '1':
+      left: SD = Standard Deviation; SE = Standard Error; CI = Confidence Interval
+        (t distribution).
+    '2':
+      left: Systolic blood pressure on day 1 of each 21-day cycle; week 24 is cycle
+        9 day 1.
+  tokens:
+    OUTPUT_TITLE: 'Systolic Blood Pressure (mmHg): Change from Baseline at Week 24
+      (Cycle 9 Day 1)'
+    OUTPUT_POPULATION: Safety Analysis Set
+note: 'SYSBP at Week 24: baseline, value, change'
+
