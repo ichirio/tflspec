@@ -38,7 +38,7 @@ its own copy of a template, so the study copies the ones it uses first
 
 ```{r}
 invisible(tfl_copy_templates(study, paste0("tflspec_v1/",
-  c("demog", "lab_tox_shift", "ae_soc_pt", "km_simple", "forest_hr"))))
+  c("tflspec_summary", "tflspec_shift", "tflspec_hierarchy", "km_simple", "forest_hr"))))
 ```
  One helper
 does the same steps for each report. It fills the template in
@@ -107,7 +107,7 @@ data:
     from: ADSL
     code: !r 'adsl |> dplyr::filter(SAFFL == "Y", AGE >= 18)'
 template:
-  name: tflspec_v1/demog
+  name: tflspec_v1/tflspec_summary
   analysis:
     by: TRT01A
     continuous: [AGE]
@@ -123,35 +123,30 @@ cat(section(dm$code, "data"), sep = "\n")
 The template's line had `population: SAF`. The report's line replaced
 it, so the program has only the report's R.
 
-### The Lab template's `record_where`
+### The shift template's `rec_sub` line
 
-The `tflspec_v1/lab_tox_shift` template counts each subject's worst
-record of a lab test. It does not compute the worst record. It keeps the
-records its param `record_where` keeps, in the `adlb_sub` line's
-`where`. The default is `AVISIT == "WORST POST-BASELINE"`: the ADaM's own
-worst record.
+The `tflspec_v1/tflspec_shift` template counts the subjects of a lab
+test by the normal range indicator at baseline (`BNRIND`) and after it
+(`ANRIND`). It does not choose the records. The report's `rec_sub` line
+does: `where:` keeps the records to choose from, and `then:` picks one
+record a subject and test.
 
-For an ADaM with no worst record, set `record_where` to the records to
-choose from, and pick the worst one with `then:` on the template's
-`adlb_sub` line. The report line has no `code:`, so it is merged key by
-key: the template's `from`, `subjects` and `add` stay.
+Here the worst record is the first of High, Low and Normal. The report
+line has no `code:`, so it is merged key by key: the template's `from`,
+`subjects_in` and `add` stay.
 
 ```{cat, engine.opts = list(file = file.path(tempdir(), "T-4.yml"), lang = "yaml")}
 id: T-4
 kind: table
-label: Shift in toxicity grade, baseline to worst
+label: Shift in normal range indicator, baseline to worst
 data:
-  - id: adlb_sub
-    then: !r 'dplyr::slice_max(dplyr::coalesce(ATOXGRH, ATOXGRL), n = 1, with_ties = FALSE, by = c(USUBJID, PARAMCD))'
+  - id: rec_sub
+    where: !r PARAMCD %in% c("ALT", "HGB") & AVISIT != "WORST POST-BASELINE" & is.na(ABLFL)
+    then: !r 'dplyr::arrange(match(ANRIND, c("HIGH", "LOW", "NORMAL"))) |> dplyr::distinct(USUBJID, PARAMCD, .keep_all = TRUE)'
 template:
-  name: tflspec_v1/lab_tox_shift
-  data:
-    record_where: !r AVISIT != "WORST POST-BASELINE" & is.na(ABLFL)
+  name: tflspec_v1/tflspec_shift
   analysis:
     by: TRT01A
-    conditions:
-      - {tox_dir: High, param: Alanine Aminotransferase (U/L)}
-      - {tox_dir: Low, param: Hemoglobin (g/L)}
 ```
 
 ```{r, message = FALSE, opts.label = "code"}
@@ -159,11 +154,9 @@ lab <- ard_program(file.path(tempdir(), "T-4.yml"))
 cat(section(lab$code, "data"), sep = "\n")
 ```
 
-The `filter()` comes from `record_where`; the `slice_max()` is the
-`then:`, last. The grades are in `ATOXGRH` for an upper limit test and in
-`ATOXGRL` for a lower limit test, so `dplyr::coalesce()` takes the one
-the test has. (`is.na(ABLFL)` and not `ABLFL != "Y"`: the programs read
-blanks as `NA`. See part 3.)
+The `filter()` comes from `where:`; the `arrange()` and `distinct()` are
+the `then:`, last. (`is.na(ABLFL)` and not `ABLFL != "Y"`: the programs
+read blanks as `NA`. See part 3.)
 
 ## 2. Analysis items
 
@@ -176,8 +169,8 @@ says how many analyses it makes, and their ids (`analysis_id`):
 |---|---|---|
 | no `per` | one | the item's `id` |
 | `per: variable` | one a variable | the variable's name, or its entry in `ids` |
-| `per: level` | one a depth of a hierarchy | `<id>_ANY`, `<id>_L1`, `<id>_L2` ... |
-| `per: [columns]` | one a condition row | the columns' values joined by `_`, upper case |
+| `per: level` | one a depth of a hierarchy | `<id>_ANY`, `<id>_L1`, `<id>_L2` ... (`id_prefix: ""`: `ANY`, `L1` ...) |
+| `per: [columns]` | one a value of the columns | the columns' values joined by `_`, upper case |
 
 `ids` gives an analysis its own id. In the demographics template it is
 the param `analysis_ids` (above, `{AGE: AGE_STATS}`):
@@ -187,7 +180,7 @@ tpl <- function(name) {
   readLines(system.file("series", "tflspec_v1", "templates", paste0(name, ".yml"),
                         package = "tflspec"))
 }
-x <- tpl("demog")
+x <- tpl("tflspec_summary")
 cat(x[grep("id: CONT", x, fixed = TRUE) + 0:1], sep = "\n")
 ```
 
@@ -195,40 +188,47 @@ cat(x[grep("id: CONT", x, fixed = TRUE) + 0:1], sep = "\n")
 unique(dm$ard$analysis_id)
 ```
 
-The adverse event template counts by depth. `AE_ANY` is any event,
-`AE_L1` the body systems, `AE_L2` the preferred terms:
+The hierarchy template counts by depth. `ANY` is any record, `L1` the
+first level (here the body systems), `L2` the second (the preferred
+terms):
 
 ```{r, echo = FALSE, comment = ""}
-x <- tpl("ae_soc_pt")
-cat(x[grep("id: AE$", x) + 0:1], sep = "\n")
+x <- tpl("tflspec_hierarchy")
+cat(x[grep("id: HIER$", x) + 0:1], sep = "\n")
 ```
 
 ```{cat, engine.opts = list(file = file.path(tempdir(), "T-2.yml"), lang = "yaml")}
 id: T-2
 kind: table
 label: Treatment-emergent adverse events
+data:
+  - id: rec_sub
+    where: !r TRTEMFL == "Y"
 template:
-  name: tflspec_v1/ae_soc_pt
+  name: tflspec_v1/tflspec_hierarchy
+  data:
+    from: ADAE
   analysis:
     by: TRT01A
+    hierarchy: [AEBODSYS, AEDECOD]
 ```
 
 ```{r, message = FALSE, opts.label = "code"}
 ae <- ard_program(file.path(tempdir(), "T-2.yml"))
 code <- section(ae$code, "analyses")
-cat(code[grep("^# AE: each depth", code):length(code)], sep = "\n")
+cat(code[grep("^# HIER: each depth", code):length(code)], sep = "\n")
 ```
 
 ```{r}
 unique(ae$ard$analysis_id)
 ```
 
-The Lab template makes one analysis a condition row: a test and a
-direction. Its id is `<PARAMCD>_<TOX_DIR>`, from the data's own
-`PARAMCD` and the row's `tox_dir`:
+The shift template makes one analysis a test: a value of `PARAMCD`. Its
+id is the value (`ALT`, `HGB`), or the value's entry in the param
+`analysis_ids`:
 
 ```{r, echo = FALSE, comment = ""}
-x <- tpl("lab_tox_shift")
+x <- tpl("tflspec_shift")
 cat(x[grep("id: SHIFT", x, fixed = TRUE) + 0:1], sep = "\n")
 ```
 
@@ -236,8 +236,8 @@ cat(x[grep("id: SHIFT", x, fixed = TRUE) + 0:1], sep = "\n")
 unique(lab$ard$analysis_id)
 ```
 
-A condition row may give its own `analysis_id`. That id is then used
-instead.
+On an item with condition rows (`conditions:`), a row may give its own
+`analysis_id`. That id is then used instead.
 
 ### BIGN
 
@@ -247,7 +247,7 @@ templates write it first, on the data their `denominator` param names
 (`adsl_sub` by default):
 
 ```{r, echo = FALSE, comment = ""}
-x <- tpl("ae_soc_pt")
+x <- tpl("tflspec_hierarchy")
 i <- grep("id: BIGN", x, fixed = TRUE)
 cat(x[i:(i + 5L)], sep = "\n")
 ```
@@ -280,7 +280,7 @@ The generated ARD, listing and figure programs always read `study$adam`.
 `study$adam_org` is there for a program a person writes on the data as
 the file has it. A program run without the setup file reads the files
 itself, in the same way (blanks as `NA`, then the levels). Here is the
-Lab report's program from part 1:
+shift report's program from part 1:
 
 ```{r, opts.label = "code"}
 cat(section(lab$code, "input data"), sep = "\n")

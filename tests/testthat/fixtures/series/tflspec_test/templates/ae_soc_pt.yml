@@ -1,4 +1,6 @@
-# tflspec_v1/templates/ae_soc_pt.yml
+# tflspec_test/templates/ae_soc_pt.yml: a test-only copy (tests/testthat/fixtures,
+# local_test_series()).  This purpose template left the shipped tflspec_v1
+# series (canon 2026-11-24); kept here for the engine coverage only it has.
 template: ae_soc_pt
 label: Adverse events by SOC and PT
 params:

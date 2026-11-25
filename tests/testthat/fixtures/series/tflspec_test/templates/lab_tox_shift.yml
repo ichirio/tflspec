@@ -1,4 +1,6 @@
-# tflspec_v1/templates/lab_tox_shift.yml
+# tflspec_test/templates/lab_tox_shift.yml: a test-only copy (tests/testthat/fixtures,
+# local_test_series()).  This purpose template left the shipped tflspec_v1
+# series (canon 2026-11-24); kept here for the engine coverage only it has.
 template: lab_tox_shift
 label: Shift in toxicity grade, baseline to worst, in each direction
 params:
