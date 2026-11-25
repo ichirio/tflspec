@@ -125,11 +125,18 @@ test_that("what defines a figure: the report's analysis set, never a step, and i
   p <- tfl_ai_check(ai_fig(at3("- {step: flag, variable: FASFL}")), ctx)
   expect_identical(p$where, "data[3] flag")
   expect_identical(p$severity, "error")
-  expect_match(p$problem, "keeps the rows of the analysis set by the records' own FASFL", fixed = TRUE)
-  expect_match(p$problem, "its data's `population:`", fixed = TRUE)
+  # (the one rule and message of tfl_check_spec(): .step_keeps_population())
+  expect_match(p$problem, "step 3 (`flag: FASFL`) keeps the rows of population FAS by the records' own FASFL",
+               fixed = TRUE)
+  expect_match(p$problem, "its data's `population:` (FAS)", fixed = TRUE)
+  expect_identical(p$problem,
+                   .step_keeps_population_text(3L, .step_keeps_population(
+                     list(step = "flag", variable = "FASFL"),
+                     list(list(id = "FAS", where = "FASFL == \"Y\""))), "FAS"))
   p <- tfl_ai_check(ai_fig(at3("- {step: filter, expr: 'FASFL == \"Y\" & AVAL > 0'}")), ctx)
   expect_identical(p$where, "data[3] filter")
   expect_identical(p$severity, "error")
+  expect_match(p$problem, "keeps the rows of population FAS by the records' own FASFL", fixed = TRUE)
   # a record flag stays: no problem
   expect_identical(nrow(tfl_ai_check(ai_fig(at3("- {step: flag, variable: ANL01FL}")), ctx)), 0L)
   # the report names no analysis set: a warning to ask it, not a step to add

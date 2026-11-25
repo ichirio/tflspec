@@ -191,7 +191,7 @@ test_that("a figure or listing of subjects' records with no analysis set: a warn
                                                                             dataset = "ADAE")), "T-1", st)), 0L)
 })
 
-test_that("a step that keeps a population's rows by the records' flag: a warning, the set is the report's (R5, Q4)", {
+test_that("a step that keeps a population's rows by the records' flag: an error, the set is the report's (R5, Q4)", {
   st <- a2_study()
   f <- list(kind = "figure", common = list(population = "SAF"), data = list(source = "code", steps = list(
     list(step = "read", dataset = "ADTTE"),
@@ -200,10 +200,14 @@ test_that("a step that keeps a population's rows by the records' flag: a warning
     list(step = "flag", variable = "ANL01FL"),
     list(step = "filter", expr = "AVAL > 0 & SAFFL == \"Y\""))))
   p <- .check_static_rows(f, "F-1", st)
-  expect_identical(p$level, c("warning", "warning"))
+  # (one level and one message with the AI's check: .step_keeps_population())
+  expect_identical(p$level, c("error", "error"))
   expect_identical(p$item, c("data$steps[3]", "data$steps[5]"))
   expect_match(p$message[1L], "step 3 (`flag: SAFFL`) keeps the rows of population SAF", fixed = TRUE)
   expect_match(p$message[1L], "its data's `population:` (SAF)", fixed = TRUE)
+  saf <- Filter(function(x) identical(x$id, "SAF"), st$data$populations)
+  expect_identical(p$message[1L], .step_keeps_population_text(
+    3L, .step_keeps_population(list(step = "flag", variable = "SAFFL"), saf), "SAF"))
   # no report set: the message says which to write (and Q3 says it has none)
   f$common <- NULL
   p2 <- .check_static_rows(f, "F-1", st)
