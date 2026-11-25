@@ -268,6 +268,15 @@ test_that("param_change: a cell with n < 3 prints its mean with the parameter's 
   # n >= 3: the same parameter's digits, as before
   expect_identical(ms$B[ms$param == "ALT"], "1.23 (2.346)")
   expect_identical(ms$B[ms$param == "BILI"], "1.2 (2.35)")
+  # no digits by PARAMCD: the row's own chain still takes the plan's digits
+  digits1 <- tfl_item("plan_digits", list(continuous = list(mean = 1L, sd = 2L)))
+  o1 <- tfl_output("T", "table", data = list(source = "ard"),
+                   content = list(tfl_item("table_plan", list(cols = "ARM", rows = list(param = "PARAMCD"))),
+                                  cells, digits1))
+  tb1 <- as.data.frame(rtfreporter::plan_apply(suppressMessages(tfl_content_run(o1, ard)), "table"))
+  ms1 <- tb1[tb1$label == "Mean (SD)", ]
+  expect_identical(ms1$A[ms1$param == "ALT"], "8.0 (-)")
+  expect_identical(ms1$B[ms1$param == "ALT"], "1.2 (2.35)")
 })
 
 test_that("the arm and its N over its two columns", {
