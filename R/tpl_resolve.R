@@ -199,6 +199,11 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
     r[!vapply(r, function(v) inherits(v, "tfl_unset"), NA)]
   })
   rows <- lapply(rows, .derive_map_in)
+  # (a figure's data map: a key filled with no value is no key -- its
+  # `population: "{population}"` with no set is no set)
+  if (!is.null(names(rows))) {
+    rows <- rows[!vapply(rows, function(v) is.null(v) || inherits(v, "tfl_unset"), NA)]
+  }
 
   items <- list()
   for (it in tpl$analysis %||% list()) {
