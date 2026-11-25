@@ -381,8 +381,8 @@
   d <- c(if (is.list(output$data)) output$data, if (is.list(output$ard$analysis_data)) output$ard$analysis_data)
   if (!length(d)) return(NA_character_)
   v <- unlist(lapply(d, function(a) {
-    if (.entry_is_subjects(a) && is.character(a$population) && length(a$population) == 1L &&
-          !is.na(a$population) && nzchar(a$population)) a$population
+    p <- a[["population"]]
+    if (.entry_is_subjects(a) && is.character(p) && length(p) == 1L && !is.na(p) && nzchar(p)) p
   }))
   v <- unique(v)
   if (length(v) == 1L) v else NA_character_

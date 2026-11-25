@@ -589,7 +589,7 @@ tfl_template_to_spec <- function(output, study) {
   # definition does not repeat it (the code SPEC's `data:` says what the
   # report adds to the set)
   if (output$kind %in% c("table", "listing")) {
-    pop <- .na_scalar(as.character(e$args$population %||% output$common$population %||% NA))
+    pop <- .na_scalar(as.character(e$args[["population"]] %||% output[["common"]][["population"]] %||% NA))
     if (!is.na(pop)) {
       output$common <- .common_in(c(list(population = pop), output$common[setdiff(names(output$common), "population")]),
                                   paste0("tfl_template_to_spec(): ", output$id))

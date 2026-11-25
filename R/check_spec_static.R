@@ -30,7 +30,7 @@
     (as.character(d$source %||% "ard")[1L] %in% c("dataset", "code"))
   data_rows <- c(if (is.list(o$ard$analysis_data)) o$ard$analysis_data,
                  if (is.list(d) && is.null(names(d))) d)
-  row_sets <- unlist(lapply(data_rows, function(a) if (is.list(a)) a$population))
+  row_sets <- unlist(lapply(data_rows, function(a) if (is.list(a)) a[["population"]]))
   if (reads && all(is.na(unlist(.data_population(d, o)))) && !length(stats::na.omit(row_sets)) &&
       is.na(.na_scalar(o$common$population_label))) {
     add(part = "data", item = "data$population", level = "warning", message = paste0(

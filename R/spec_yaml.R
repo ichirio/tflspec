@@ -372,7 +372,7 @@ tfl_read_output <- function(path) {
   .spec_read$id <- y$id
   on.exit(.spec_read$id <- old_id, add = TRUE)
   # (the old places, each with a line saying where it moved)
-  if (!is.null(y$population)) stop(who, ": ", .common_old_line, call. = FALSE)
+  if (!is.null(y[["population"]])) stop(who, ": ", .common_old_line, call. = FALSE)
   common <- .common_in(y$common, who)
   .yaml_keys_check(y)
   y <- .data_list_in(y, who)
@@ -493,7 +493,8 @@ tfl_read_output <- function(path) {
 }
 
 # The report's analysis set (NA when it has none)
-.out_population <- function(o) .na_scalar(o$common$population)
+# (`[[`: a `$` would read `population_label` when the set is not written)
+.out_population <- function(o) .na_scalar(o[["common"]][["population"]])
 
 # The analysis set of a report's data (a listing's, a records part's): the
 # data's own `population` (canon 11-15: the set lives on the data); the

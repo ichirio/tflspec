@@ -962,6 +962,9 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   # the report's ARD analyses and their analysis data, whatever its kind (a
   # figure's hazard ratios too): its ard: section, the ARD stage's
   ard_part <- NULL
+  # the planner's analysis set goes on the report's data when the data reads
+  # subjects' records (a listing's or a figure's), else on `common` (below)
+  pop_on_data <- is.list(data) && isTRUE(data$source %in% c("dataset", "code"))
   if (!is.null(ard)) {
     ob <- ard$objects
     if (!is.null(ob) && nrow(ob)) {
@@ -973,8 +976,10 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if (!is.null(ad$output_id)) ad <- ad[!is.na(ad$output_id) & ad$output_id == id, , drop = FALSE]
     if (nrow(ad)) ard_part$analysis_data <- .conv_rows(ad, note, id, "analysis_data", r_cols = c("where", "derive", "code", "then"),
                                                     list_cols = c("add", "arrange", "keep", "distinct"), rename = c(data_id = "id", population_id = "population"))
-    # (the report's subjects definition has no set of its own: `common: population`)
-    if (!is.null(ard_part$analysis_data)) {
+    # (the report's subjects definition has no set of its own: `common: population`;
+    # a set that goes on the report's data (below) keeps it on the row: the ARD
+    # program reads the row's set, not the data's)
+    if (!is.null(ard_part$analysis_data) && !pop_on_data) {
       ard_part$analysis_data <- lapply(ard_part$analysis_data, .entry_pop_strip, entry$population %||% NA_character_,
                                       .pop_from(ard$populations, entry$population))
     }
@@ -1033,8 +1038,8 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   # the set is the data's; the data's own wins); a table's stays in
   # `common` until `common` goes
   common <- list()
-  if (is.list(data) && isTRUE(data$source %in% c("dataset", "code"))) {
-    if (is.null(data$population) && !is.null(entry$population)) data$population <- entry$population
+  if (pop_on_data) {
+    if (is.null(data[["population"]]) && !is.null(entry$population)) data$population <- entry$population
   } else {
     common$population <- entry$population
   }

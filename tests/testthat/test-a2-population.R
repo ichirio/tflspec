@@ -202,3 +202,46 @@ test_that("the page's analysis set line reads the data's set (canon 11-15)", {
   tab <- list(kind = "table", data = list(list(id = "adsl_sub", from = "ADSL", population = "FAS")))
   expect_identical(.page_own_tokens(tab, st)$OUTPUT_POPULATION, "Full Analysis Set")
 })
+
+test_that("a figure's set on its data: the sheets keep its subjects row's set (canon 11-15)", {
+  d <- withr::local_tempdir()
+  dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)
+  writeLines(c("datasets:", "  - dataset: ADSL", "    path: data/adsl.rds",
+               "populations:", "  - id: SAF", "    dataset: ADSL", "    where: !r SAFFL == \"Y\""),
+             file.path(d, "spec", "data.yml"))
+  f <- tfl_output("F-1", "figure", content = tfl_r("df <- adsl_saf"))
+  f$data <- list(source = "code", population = "SAF")
+  f$ard <- list(analysis_data = list(list(id = "adsl_saf", from = "ADSL", population = "SAF")),
+                analyses = list(list(id = "N", method = "categorical", data = "adsl_saf",
+                                     variables = list("TRT01A"))))
+  tfl_write_output(f, file.path(d, "spec", "outputs", "F-1.yml"))
+  b <- tfl_sheets_from_yaml(d)
+  to <- file.path(d, "back")
+  invisible(suppressWarnings(tfl_yaml_from_sheets(b, to)))
+  back <- tfl_read_outputs(to)[["F-1"]]
+  # the ARD program reads the row's set: it stays on the row
+  ad <- back$ard$analysis_data
+  expect_identical(ad[[match("adsl_saf", vapply(ad, function(a) a$id, ""))]]$population, "SAF")
+  expect_identical(back$data$population, "SAF")
+  expect_null(back$common[["population"]])
+})
+
+test_that("a report with only a population text has no analysis set (no `$` partial match)", {
+  o <- tfl_output("L-1", "listing", common = list(population_label = "All subjects"))
+  expect_true(is.na(.out_population(o)))
+  expect_true(is.na(.data_population(list(source = "dataset", dataset = "ADAE"), o)))
+  d <- withr::local_tempdir()
+  dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)
+  writeLines(c("datasets:", "  - dataset: ADAE", "    path: data/adae.rds"), file.path(d, "spec", "data.yml"))
+  o$content <- list(tfl_item("plan_listing", list(cols = list(tfl_call("listing_col", list(vars = "USUBJID"))))))
+  o$data <- list(source = "dataset", dataset = "ADAE")
+  tfl_write_output(o, file.path(d, "spec", "outputs", "L-1.yml"))
+  b <- tfl_sheets_from_yaml(d)
+  expect_true(is.na(b$listing$listings$population_id[b$listing$listings$output_id == "L-1"]))
+  expect_false(identical(b$planner$population[match("L-1", b$planner$output_id)], "All subjects"))
+  to <- file.path(d, "back")
+  invisible(suppressWarnings(tfl_yaml_from_sheets(b, to)))
+  back <- tfl_read_outputs(to)[["L-1"]]
+  expect_null(back$data[["population"]])
+  expect_identical(back$common$population_label, "All subjects")
+})
