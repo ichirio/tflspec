@@ -6,6 +6,13 @@
 # was built).
 # Base R, cards and dplyr only: the programs run without tflspec.
 
+# A code list's codes, in its order: its names when it has names (code ->
+# label), else its values (a list of the values themselves).  What the data
+# and the ARD hold; the labels reach a table only through plan_labels().
+# (No helper is named cl_*: that is the code lists' own names, cl_<var>.)
+#   codelist_codes(c(F = "Female", M = "Male"))  # c("F", "M")
+codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+
 # The code lists on a data: each listed column a factor whose levels are
 # the CODES, in its list's order (a list with names: the names, the codes
 # the data holds; a list without: the values themselves).  No labels are
@@ -22,8 +29,7 @@
 set_levels <- function(data, ...) {
   lists <- list(...)
   for (v in intersect(names(lists), names(data))) {
-    cl <- lists[[v]]
-    values <- if (is.null(names(cl))) unname(cl) else names(cl)
+    values <- codelist_codes(lists[[v]])
     x <- as.character(data[[v]])
     x[!is.na(x) & !nzchar(trimws(x))] <- NA
     unknown <- setdiff(unique(x[!is.na(x)]), values)
@@ -468,8 +474,9 @@ keep_min_pct <- function(ard, pct, met_in = c("any", "all", "total")) {
 
 # An ARD's columns in their code lists' order: the rows of a listed
 # variable (as `variable` or a group) get its list's levels (as the ARD has
-# them, the labels).  For what does not keep its data's factor order --
-# cardx's survfit makes the arms' factor again, in alphabetical order.
+# them, the codes: codelist_codes(), what set_levels() gives the data).  For
+# what does not keep its data's factor order -- cardx's survfit makes the
+# arms' factor again, in alphabetical order.
 # Values and rows are as they were; a value the list does not have stays.
 #   relevel_ard(ard, TRT01A = cl_trt01a)
 relevel_ard <- function(ard, ...) {
@@ -480,7 +487,7 @@ relevel_ard <- function(ard, ...) {
     kl <- if (k == "variable") "variable_level" else paste0(k, "_level")
     if (!kl %in% names(ard)) next
     for (v in intersect(names(lists), unique(ard[[k]]))) {
-      levs <- unname(lists[[v]])
+      levs <- codelist_codes(lists[[v]])
       on <- which(ard[[k]] %in% v)
       ard[[kl]][on] <- lapply(ard[[kl]][on], function(x) {
         if (length(x) != 1L || is.na(x) || !as.character(x) %in% levs) return(x)
