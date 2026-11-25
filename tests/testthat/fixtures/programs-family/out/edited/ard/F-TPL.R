@@ -21,7 +21,7 @@ adtte <- order_levels(adtte, from = adsl)
 adsl_sub <- filter(adsl, SAFFL == "Y")
 
 # adtte_saf_pfs: the records. ADTTE of the subjects of adsl_sub, SEX, AGEGR1
-# from ADSL; where
+# from ADSL
 adtte_saf_pfs <- adtte |>
   select(-any_of(c("SEX", "AGEGR1"))) |>
   inner_join(
