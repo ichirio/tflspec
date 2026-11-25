@@ -1251,7 +1251,7 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
   `cardx::ard_regression`, `cardx::ard_stats_aov`) leaves `by` and
   `variables` blank and gets `formula = ...` in `args`.
   `cardx::ard_survival_survfit` takes `y` as **text**
-  (`y = "survival::Surv(AVAL, 1 - CNSR)"`) and the groups in `variables`.
+  (`y = "survival::Surv(AVAL, CNSR == 0)"`) and the groups in `variables`.
 - For CIs, tests and models, `statistics` chooses which of the results to
   **keep** (`estimate | conf.low | conf.high`); for `continuous`,
   `categorical` and `missing` it says what to compute.
@@ -1270,10 +1270,10 @@ columns not given are blank):
 km  <- list(output_id = "T-14-2-2", analysis_id = "KM", population_id = "SAF",
             dataset = "ADTTE", method = "cardx::ard_survival_survfit",
             variables = "TRTA",
-            args = 'y = "survival::Surv(AVAL, 1 - CNSR)", times = c(30, 90)')
+            args = 'y = "survival::Surv(AVAL, CNSR == 0)", times = c(30, 90)')
 cox <- list(output_id = "T-14-2-2", analysis_id = "HR", population_id = "SAF",
             dataset = "ADTTE", method = "cardx::ard_regression",
-            args = 'formula = survival::Surv(AVAL, 1 - CNSR) ~ TRTA, method = "coxph", package = "survival"')
+            args = 'formula = survival::Surv(AVAL, CNSR == 0) ~ TRTA, method = "coxph", package = "survival"')
 ```
 
 #### A.1.1 CDISC ARS — writing and reading the analyses as the standard
