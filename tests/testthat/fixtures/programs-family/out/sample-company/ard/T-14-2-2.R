@@ -25,7 +25,7 @@ adtte <- order_levels(adtte, from = adsl)
 adsl_saf <- adsl |>
   filter(SAFFL == "Y") |>
   set_levels(TRT01A = cl_trt01a)
-# adtte_saf_ttskin: the records. ADTTE of the subjects of adsl_saf; where
+# adtte_saf_ttskin: the records. ADTTE of the subjects of adsl_saf
 adtte_saf_ttskin <- adtte |>
   inner_join(
     select(adsl_saf, USUBJID),

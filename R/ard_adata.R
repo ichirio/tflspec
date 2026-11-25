@@ -431,10 +431,11 @@
     }
     what <- switch(kind,
       subjects = paste0("the subjects. ", lab_pop, if (!is.null(whr)) "; subset"),
-      records = sprintf("the records. %s of the subjects of %s%s%s",
+      # (its condition is the filter line below: no "where" of its own, which
+      # ended the comment with nothing after it)
+      records = sprintf("the records. %s of the subjects of %s%s",
                         toupper(if (from_data) .adata_dataset(ad, id) %||% src else r$from),
-                        pop, if (length(take)) sprintf(", %s from ADSL", paste(take, collapse = ", ")) else "",
-                        if (!is.null(whr)) "; where" else ""),
+                        pop, if (length(take)) sprintf(", %s from ADSL", paste(take, collapse = ", ")) else ""),
       made = if (id %in% dens) "the denominator." else sprintf("made from %s.", src))
     out <- c(out, .adata_comment(id, what))
     # what follows the rows: the columns added, derived, the columns kept,
