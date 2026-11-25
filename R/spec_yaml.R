@@ -587,6 +587,16 @@ tfl_read_output <- function(path) {
           paste0("`", keys, "`", collapse = " and "))
 }
 
+# The ids of a study's analysis sets (`data`: its data.yml as read):
+# character(0) when data.yml names none; NULL when the study has no data
+# catalog (no data.yml, or an empty one): its sets are not known, and no set
+# is checked against them (.pop_unknown_text())
+.study_set_ids <- function(data) {
+  if (!length(data)) return(NULL)
+  ids <- vapply(data[["populations"]] %||% list(), function(p) .na_scalar(unlist(p[["id"]])), "")
+  ids[!is.na(ids)]
+}
+
 # A set that is none of the study's analysis sets (`pops`: the ids of
 # data.yml `populations:`, character(0) when it names none; NULL when the
 # study is not known): the line that says so, NULL when it is one or when
