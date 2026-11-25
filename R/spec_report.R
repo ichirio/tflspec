@@ -370,9 +370,12 @@
   })
 }
 
-# The report's analysis set, one id (.report_population(): its data's, its
-# subjects entries', its `common:`); NA for none or for several
-.out_population_or_data <- function(output) .na_scalar(.report_population(output))
+# The report's analysis set, one id: the one reader's (.data_population(),
+# .report_population(): its data's own, its subjects entries', its
+# `common:` until `common` goes -- canon 11-15); NA for none or for several
+.out_population_or_data <- function(output) {
+  .na_scalar(.data_population(if (is.list(output$data)) output$data, output))
+}
 
 # a function's arguments as page: says them: a map, unset ones gone
 # The report's own values for the bands' tokens besides its id and label:

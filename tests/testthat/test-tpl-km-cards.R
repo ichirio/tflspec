@@ -78,6 +78,14 @@ test_that("km_cards' program is the card chain, ggsurvfit() + ... + add_risktabl
   expect_true(any(grepl("Time (Days)", code3, fixed = TRUE)))
 })
 
+test_that("km_cards' x label follows each of the four time units", {
+  for (u in c("days", "weeks", "months", "years")) {
+    o <- tfl_template_resolve(kmc_report(paste0("    time_unit: ", u)), study = kmc_study)
+    code <- tfl_content_code(o)
+    expect_true(any(grepl(paste0("Time (", tools::toTitleCase(u), ")"), code, fixed = TRUE)), info = u)
+  }
+})
+
 test_that("km_cards' figure builds on the package's sample data", {
   skip_on_cran()
   skip_if_not_installed("ggsurvfit")

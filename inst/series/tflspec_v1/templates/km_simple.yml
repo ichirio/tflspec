@@ -12,7 +12,7 @@ params:
     tier: required
     description: The group variable; one curve a group.
   time_unit:
-    type: enum[days|months]
+    type: enum[days|weeks|months|years]
     input: pick
     choices: fixed
     default: !series time_unit
@@ -27,7 +27,7 @@ params:
     unset: stop
     step: analysis
     tier: other
-    description: The column of the time to event.
+    description: The column of the time to event. AVAL is converted from its unit, AVALU, by tte_time(); another column is used as it is (in the axis's unit already).
   censor:
     type: column
     input: pick
