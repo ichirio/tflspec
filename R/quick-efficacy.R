@@ -91,6 +91,8 @@ tfl_fig_forest <- function(adam = NULL, style = c("hr", "or", "estimates"), para
              "}"),
       paste0("est_df <- bind_rows(rows) |>\n",
              "  mutate(\n",
+             "    # (numbers even when every model failed: rounding takes no NA logical)\n",
+             "    across(c(est, lcl, ucl), as.numeric),\n",
              "    # not estimable (e.g. no events / all responders in a subgroup): no point, \"NE\"\n",
              "    ok  = is.finite(est) & is.finite(lcl) & is.finite(ucl) & lcl > 0 & ucl < 1000,\n",
              "    # (rounded as the tables are: options(rtfreporter.rounding))\n",
