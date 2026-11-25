@@ -322,14 +322,15 @@ test_that("a figure's set written in one place comes back in that place (Codex 4
   expect_null(back[["F-3"]]$common[["population"]])
 })
 
-test_that("a template report keeps its set through the sheets, where its template reads it (Codex 4)", {
+test_that("a template report keeps its set through the sheets, as its template's set argument (Codex 4, A2-T)", {
   l <- tfl_output("L-9", "listing", label = "Records", common = list(population = "SAF"),
                   template = list(name = "tflspec_v1/tflspec_listing", args = list(from = "ADVS")))
   r <- a2_back(a2_dir(list(l)))
   expect_identical(r$sheets$planner$population[match("L-9", r$sheets$planner$output_id)], "SAF")
   back <- r$back[["L-9"]]
   expect_identical(back$template$name, "tflspec_v1/tflspec_listing")
-  expect_identical(back$common[["population"]], "SAF")
+  expect_identical(back$template$args[["population"]], "SAF")
+  expect_null(back$common[["population"]])
 })
 
 test_that("the sheets take the data's set over the TOC's line; the check says the TOC's (Codex 3A)", {

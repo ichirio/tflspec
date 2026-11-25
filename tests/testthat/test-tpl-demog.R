@@ -171,21 +171,29 @@ test_that("continuous_statistics, categorical_statistics, stack and where are go
   }
 })
 
-test_that("population is not a template parameter: the report's `population:` drives the analysis set", {
-  for (n in c("demog", "stf_t02_demog")) {
-    expect_true(tflspec:::.tpl_registry[[n]]$params$population$hidden)
-    expect_false("population" %in% names(tflspec:::.tpl_shown(tflspec:::.tpl_registry[[n]]$params)))
-    expect_false("population" %in% tfl_templates()$params[tfl_templates()$name == n])
+test_that("population is a shown data-step parameter, the template's set (A2-T Q2)", {
+  for (n in c("demog", "stf_t02_demog", "summary", "disposition")) {
+    p <- tflspec:::.tpl_get(n, "test")$params$population
+    expect_false(isTRUE(p$hidden), info = n)
+    expect_identical(p$step, "data", info = n)
+    expect_identical(p$choices, "populations", info = n)
+    expect_identical(tflspec:::.tpl_set_param(n), "population", info = n)
   }
   s <- b1_study()
+  # (the set from `common: population` until it goes: the argument filled, not a study default)
   o <- tfl_output("T-9", "table", common = list(population = "SAF"),
                   template = list(name = "demog", args = b1_args()[-1L]))
   r <- tfl_resolve_output(o, s)
   expect_identical(r$ard$analysis_data[[1L]]$population, "SAF")
-  expect_true("population" %in% attr(r, "template")$study)
-  # written in the template SPEC it stops, naming the report's field
-  o2 <- tfl_output("T-9", "table", common = list(population = "SAF"), template = list(name = "demog", args = b1_args()))
-  expect_error(tfl_resolve_output(o2, s), "the report's `common: population`")
+  expect_false("population" %in% attr(r, "template")$study)
+  # written as the argument: the same report
+  o2 <- tfl_output("T-9", "table", template = list(name = "demog", args = b1_args()))
+  r2 <- tfl_resolve_output(o2, s)
+  expect_identical(r2$ard, r$ard)
+  expect_identical(r2$content, r$content)
+  # the argument and another `common: population`: written twice
+  o3 <- tfl_output("T-9", "table", common = list(population = "ITT"), template = list(name = "demog", args = b1_args()))
+  expect_error(tfl_resolve_output(o3, s), "the set is written twice")
 })
 
 test_that("formats: the default is the active statistics catalog's (a company catalog's digits)", {
