@@ -10,7 +10,7 @@ tfl_arg_defs(fn = NULL, template = NULL, study_dir = NULL)
 \item{fn}{A function of the schema (\code{"plan_cells"}), or \code{"data"} (the keys
 of a \verb{data:} row) or \code{"analysis"} (the keys of an analysis item).}
 
-\item{template}{A template, \code{"<series>/<template>"} (\code{"tflspec_v1/demog"}).
+\item{template}{A template, \code{"<series>/<template>"} (\code{"tflspec_v1/tflspec_summary"}).
 Its file is found in the series folders: the option \code{tflspec.series_dir},
 tflplanner's home \verb{standards/series/}, the series tflspec ships.}
 
@@ -25,7 +25,10 @@ row \code{...}, of the dots' type.  Its attribute \code{"groups"} is the card's
 groups in their order, a data frame \code{id}, \code{label_en}, \code{label_ja} from
 the function's \verb{groups:} list or, for a template, its series'
 \code{series.yml} (a template's own \verb{groups:} replaces it), entries \verb{\{id: , label: \{en: , ja: \}\}}; no rows when none is written (one unnamed
-group).  The columns:
+group).  For \code{fn}, its attribute \code{"fn"} is the function's one-row data
+frame of \code{\link[=tfl_fn_defs]{tfl_fn_defs()}} (its join, the argument the pipe fills, what
+it gives; \code{"data"} is the \code{data_row} row), \code{NULL} when it has none.
+The columns:
 \describe{
 \item{name}{the argument.}
 \item{label_en, label_ja}{its label, from \verb{label: \{en: , ja: \}}; a
@@ -63,7 +66,9 @@ the closed words \verb{vars(<data>)}, \verb{levels(<var>)}, \verb{codelist(<name
 \code{study_info}, \code{tokens}, \code{stats}, \code{fixed}, \code{styles},
 \verb{from_args(<arg>, ...)}, \verb{figure_style(<palette|marker>)} (the
 study's figure style's colours in their order, or its marker
-shapes).  Another word stops.}
+shapes), \verb{objects(<kind>)} (the objects made above and the
+study's datasets, of one kind of \code{\link[=tfl_fn_defs]{tfl_fn_defs()}}' \code{returns}).
+Another word stops.}
 \item{values}{(a list column) the fixed values (\code{fixed}, an \code{enum}).
 \verb{values:} writes each as a value or \verb{\{value: , label: \{en: , ja: \}\}}.}
 \item{value_labels}{(a list column) the values' labels, a data frame

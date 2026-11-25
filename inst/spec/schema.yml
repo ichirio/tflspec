@@ -50,6 +50,10 @@
 # `usual` (most tables: offered first) or `other` (added when wanted).  It
 # changes nothing in a spec or its code.
 #
+# `join:`, `first_arg_name:` and `returns:` say what tfl_fn_defs() derives
+# otherwise (the join `|>` or `+`, the argument the pipe fills, what the
+# function gives); written only where the rule is wrong for the function.
+#
 # `print: unnamed` writes an argument without its name in the code
 # (plan_col_header()'s header, as a person writes it); its value is the
 # same by position.
@@ -324,7 +328,7 @@ plan_style:
     border_last_row: {label: {en: "Last row's border", ja: "最後の行の罫線"}, help: "The rule under the table's last row (the foot of the table). e.g. \"bottom\"", type: "call<rtf_border>"}
     border_group: {label: {en: "Row group's border", ja: "行グループの罫線"}, help: "The rule under the last row of each row group. Blank: none. e.g. \"bottom\"", type: "call<rtf_border>"}
     align_count_pct: {main: true, label: {en: "Align n (%)", ja: "n (%) を揃える"}, type: "logical", help: "TRUE: the n and the (%) of a count cell line up from row to row. e.g. TRUE"}
-    border: {main: true, label: {en: "Borders", ja: "罫線"}, type: "string|call<rtf_border>", help: "The table's borders: \"tfl\" (rules over and under the header and under the last row) or \"none\"; another style as a border ({fn: rtf_border, args: {all: true, inside_h: true}}). Blank: tfl. e.g. \"none\""}
+    border: {main: true, label: {en: "Borders", ja: "罫線"}, type: "enum[tfl|none]|call<rtf_border>", help: "The table's borders: \"tfl\" (rules over and under the header and under the last row) or \"none\"; another style as a border ({fn: rtf_border, args: {all: true, inside_h: true}}). Blank: tfl. e.g. \"none\""}
     font_size_half_points: {main: true, label: {en: "Font size (half points)", ja: "文字の大きさ（半ポイント）"}, type: "integer", help: "The table's font size in half points (18 = 9 pt). Blank: the document's. e.g. 16"}
     font: {input: table, label: {en: "Font", ja: "フォント"}, help: "The table's font. Blank: the document's font. e.g. \"Arial\"", type: "string|vec<enum[latin|east_asian|complex|hansi], string>", columns: {key: {label: {en: "Part", ja: "部分"}, type: "enum[latin|east_asian|complex|hansi]", input: pick}, value: {label: {en: "Font", ja: "フォント"}, type: string, input: text}}}
     row_height_exact: {label: {en: "Exact row height", ja: "行の高さを固定"}, help: "TRUE: the rows' height is exact (a longer text is cut); FALSE: it is the least height (a row grows). e.g. TRUE", type: "logical"}
@@ -438,6 +442,7 @@ plan_listing:
 
 listing_col:
   package: rtfreporter
+  returns: value
   description: One column of a listing.
   args:
     vars: {type: "list<column>", description: "The variable(s) the column prints; several stack (or flow) in one cell."}
@@ -483,24 +488,25 @@ plan_after:
 rtf_border:
   package: rtfreporter
   args:
-    all: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The four outer edges at once; a side named wins over it."}
-    top: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>"}
-    bottom: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>"}
-    left: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>"}
-    right: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>"}
-    inside_h: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The rules between the rows."}
-    inside_v: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The rules between the cells."}
+    all: {main: true, label: {en: "All four edges", ja: "外枠の 4 辺"}, type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The four outer edges at once (top, bottom, left, right); a side named wins over it. TRUE the default line, a style word, or rtf_border_line() for its own weight and colour."}
+    top: {main: true, label: {en: "Top", ja: "上"}, type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The line of this edge: TRUE the default line, a style word, or rtf_border_line() for its own weight and colour; blank: not drawn unless `all` draws it."}
+    bottom: {main: true, label: {en: "Bottom", ja: "下"}, type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The line of this edge: TRUE the default line, a style word, or rtf_border_line() for its own weight and colour; blank: not drawn unless `all` draws it."}
+    left: {main: true, label: {en: "Left", ja: "左"}, type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The line of this edge: TRUE the default line, a style word, or rtf_border_line() for its own weight and colour; blank: not drawn unless `all` draws it."}
+    right: {main: true, label: {en: "Right", ja: "右"}, type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The line of this edge: TRUE the default line, a style word, or rtf_border_line() for its own weight and colour; blank: not drawn unless `all` draws it."}
+    inside_h: {main: true, label: {en: "Inside, between rows", ja: "内側の横線"}, type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The rules between the rows: TRUE the default line, a style word, or rtf_border_line() for its own weight and colour; blank: none."}
+    inside_v: {main: true, label: {en: "Inside, between columns", ja: "内側の縦線"}, type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The rules between the cells: TRUE the default line, a style word, or rtf_border_line() for its own weight and colour; blank: none."}
 
 rtf_border_line:
   package: rtfreporter
   description: "One side of a border with a look of its own: {fn: rtf_border_line, args: {style: double, width: 30, color: \"#003366\"}}."
   args:
-    style: {type: "enum[single|double|thick|dash|dot|none]", description: "The line's style (default single); none removes an inherited rule."}
-    width: {type: integer, description: "The line's weight in twips (default 15, about 0.5 pt)."}
-    color: {type: string, description: "The line's colour as a hex string, e.g. \"#003366\" (default black)."}
+    style: {main: true, label: {en: "Line style", ja: "線の種類"}, type: "enum[single|double|thick|dash|dot|none]", description: "The line's style (default single); none removes an inherited rule."}
+    width: {main: true, label: {en: "Weight (twips)", ja: "太さ（twip）"}, type: integer, description: "The line's weight in twips (default 15, about 0.5 pt)."}
+    color: {main: true, label: {en: "Colour", ja: "色"}, type: string, description: "The line's colour as a hex string, e.g. \"#003366\" (default black)."}
 
 normalize_ard:
   package: rtfreporter
+  returns: data
   rank: 10
   stage: mapping
   label: {en: "Normalize the ARD", ja: "ARD の正規化"}
@@ -524,6 +530,7 @@ rtf_col_header:
 
 cell_rows:
   package: rtfreporter
+  returns: value
   dots: {style: named, type: "template|list<guard|template>", description: "A cell's lines, by the label of the row each sits on."}
 
 # ---- the ARD's analyses: cards and cardx calls -------------------------------
@@ -573,6 +580,7 @@ ard_tabulate_value:
 ard_hierarchical:
   package: cards
   description: Counts in a hierarchy (SOC and PT).
+  returns: ard
   args:
     variables: {type: "list<column>", choices: vars}
     by: {type: "list<column>|column", choices: vars}
@@ -759,13 +767,13 @@ rtf_watermark:
   package: rtfreporter
   description: The watermark's look, as rtf_document(watermark = ) takes it.
   args:
-    text: {type: string, description: The word drawn behind every page.}
-    font_size_half_points: {type: integer}
-    color: {type: string, description: "A hex colour, \"#C8C8C8\"."}
-    angle: {type: number, description: "Degrees; -45 (the default) rises to the right."}
-    font: {type: string}
-    width_in: {type: number}
-    height_in: {type: number}
+    text: {main: true, label: {en: "Text", ja: "文字"}, type: string, description: The word drawn behind every page.}
+    font_size_half_points: {main: true, label: {en: "Font size (half points)", ja: "文字の大きさ（half-point）"}, type: integer}
+    color: {main: true, label: {en: "Colour", ja: "色"}, type: string, description: "A hex colour, \"#C8C8C8\"."}
+    angle: {main: true, label: {en: "Angle", ja: "角度"}, type: number, description: "Degrees; -45 (the default) rises to the right."}
+    font: {main: true, label: {en: "Font", ja: "フォント"}, type: string}
+    width_in: {main: true, label: {en: "Width (inches)", ja: "幅（インチ）"}, type: number}
+    height_in: {main: true, label: {en: "Height (inches)", ja: "高さ（インチ）"}, type: number}
 
 rtf_tables:
   package: rtfreporter
@@ -817,6 +825,7 @@ rtf_footnotes:
 
 generate_rtfreport:
   package: rtfreporter
+  returns: doc
   description: Writing the report's RTF file.
   args:
     overwrite: {type: logical, description: "FALSE: a report's file already there is not written over (an error); blank: TRUE."}
@@ -4586,7 +4595,7 @@ scale_size_binned_area:
   figure: scale
   rank: 387
   stage: finishing
-  label: {en: Sizes (binned, by area), ja: 大きさ（区間、面積比例）}
+  label: {en: "Sizes (binned, by area)", ja: 大きさ（区間、面積比例）}
   visible: [max_size, n.breaks, name]
 
 scale_radius:
@@ -5331,6 +5340,11 @@ wrap_plots:
   figure: compose
   rank: 850
   stage: output
+  # the arrangement: the first call of its object, the plots its first
+  # argument (tfl_fn_defs(); B-11)
+  join: "|>"
+  first_arg_name: plots
+  returns: plot
   label: {en: Arrangement, ja: 配置}
   visible: [plots, ncol, nrow, heights, widths, guides]
   args:

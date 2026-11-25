@@ -557,12 +557,15 @@ tfl_schema_check <- function(item) {
   if (k == "call") {
     if (inherits(v, "cell_rows")) return("cell_rows" %in% unlist(ty$args))
     # the call written as R (`!r cell_rows("1" = "{n}")`, what a template's
-    # items hold)
+    # items hold), by its function's name with or without its package
+    # (`!r rtfreporter::rtf_border(top = "single")`)
     if (inherits(v, "tfl_r")) {
       e <- tryCatch(str2lang(paste(as.character(unclass(v)), collapse = "\n")),
                     error = function(err) NULL)
-      return(is.call(e) && is.name(e[[1L]]) &&
-               .schema_call_named(as.character(e[[1L]]), unlist(ty$args)))
+      if (!is.call(e)) return(FALSE)
+      f <- e[[1L]]
+      if (is.call(f) && identical(f[[1L]], as.name("::")) && length(f) == 3L) f <- f[[3L]]
+      return(is.name(f) && .schema_call_named(as.character(f), unlist(ty$args)))
     }
     if (!inherits(v, c("tfl_call", "tfl_spec_call"))) return(FALSE)
     f <- if (inherits(v, "tfl_call")) v$fn else v$fun
