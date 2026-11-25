@@ -351,7 +351,8 @@ test_that("the study standard reaches demog through its references; other verbs 
   r <- tfl_resolve_output(o, s)
   tp <- attr(r, "template")
   # the fixture's defaults.yml: the heading lines, the stub, the blank rows, the rule, the cell
-  expect_setequal(tp$study, c("population", "count_cell", "col_header", "stub_name", "stub_before", "blanks",
+  # (the analysis set is no study reference: the report's, A2-T)
+  expect_setequal(tp$study, c("count_cell", "col_header", "stub_name", "stub_before", "blanks",
                               "blanks_first", "blanks_last", "blanks_counted", "border_header"))
   expect_identical(tp$args$blanks, "between_groups")
   expect_identical(vapply(tp$args$count_cell, as.character, ""), c("n == 0 ~ '0'", "{n:.0f} ({p:.1f%})"))
@@ -369,7 +370,7 @@ test_that("the study standard reaches demog through its references; other verbs 
   r2 <- tfl_resolve_output(o, s2)
   expect_setequal(vapply(r2$content, `[[`, "", "fn"),
                   c("normalize_ard", "table_plan", "plan_cells", "plan_labels", "plan_paginate_rows"))
-  expect_length(attr(r2, "template")$study, 1L)
+  expect_length(attr(r2, "template")$study, 0L)
   # the report's value wins over the study's reference
   o3 <- b1_out("demog", c(b1_args()[-1L], list(blanks = FALSE)))
   b <- Filter(function(it) it$fn == "plan_blanks", tfl_resolve_output(o3, s)$content)[[1L]]$args
@@ -405,7 +406,8 @@ test_that("tfl_tpl_args(): where each demog value comes from", {
   b <- tfl_tpl_args("demog")
   # (max_rows refers to the study (canon 1.29): with none, its fallback)
   expect_identical(b$layer[b$param == "max_rows"], "fallback")
-  expect_false("population" %in% b$param)
+  # (the analysis set: a shown parameter, the report's, A2-T Q2)
+  expect_true("population" %in% b$param)
 })
 
 test_that("style: demog follows settings.style, stf_t02_demog is fixed; a built-in name is always the built-in", {
@@ -503,7 +505,7 @@ test_that("stf_t02_demog: the FDA look as its own defaults; it runs", {
   # the study's look does not reach it: its look is fixed
   s <- b1_study()
   tp <- attr(tfl_resolve_output(b1_out("stf_t02_demog", b1_fda()[-1L]), s), "template")
-  expect_setequal(tp$study, "population")
+  expect_length(tp$study, 0L)
   r <- b1_run(d, b1_out("stf_t02_demog", b1_fda()[-1L],
                         codelists = list(TRT01A = list(list(value = "Drug X", label = "Drug X"),
                                                        list(value = "Control", label = "Control")))))

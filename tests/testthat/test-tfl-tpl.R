@@ -67,7 +67,9 @@ test_that("the layouts' parameters: what a report changes, the look too (summary
     "heading", "sort",
     "min_pct", "min_pct_in", "count_cell", "denominator", "total", "header_n", "split")))
   # every parameter's step: an argument of the call, unless it says "data"
-  expect_true(all(vapply(p, `[[`, "", "step") == "call"))
+  # (the analysis set: the data's, A2-T Q2)
+  expect_identical(p$population$step, "data")
+  expect_true(all(vapply(p[setdiff(names(p), "population")], `[[`, "", "step") == "call"))
   expect_identical(tfl_param("x", step = "data")$step, "data")
   expect_error(tfl_param("x", step = "plot"), "should be one of")
   # the look is a parameter with a default (canon 1.2, 1.23)

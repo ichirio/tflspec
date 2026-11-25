@@ -539,16 +539,18 @@ tfl_read_output <- function(path) {
 # and the report's set in one cell; `tp` its TOC line's set, `tpl` its
 # template SPEC): the report's set as its data says it (.report_set()), else
 # the TOC's line.  A report whose set lives on its data (a listing's, a
-# figure's: .set_on_data()) takes this column back onto its data, so there
-# the TOC's line is not written (the report carries no set, .report_set()
-# reads its rows too): the sheets add no set to a report.  NA when none
+# figure's: .set_on_data()) takes this column back onto its data map, so
+# there it is the set the map says (.rows_set(): a set its subjects rows
+# carry stays on them, written once), and the TOC's line only when the
+# report carries that set already (.report_set(): the sheets add no set to
+# a report).  NA when none
 .planner_set <- function(o, tp, tpl = NULL) {
-  rs <- .report_set(o)
-  if (!is.na(rs)) return(rs)
-  tp <- .na_scalar(unlist(tp))
   d <- o[["data"]]
   on_data <- is.null(tpl) && .set_on_data(o[["kind"]], if (is.list(d) && !is.null(names(d))) d)
-  if (on_data) NA_character_ else tp
+  rs <- if (on_data) .rows_set(o) else .report_set(o)
+  if (!is.na(rs)) return(rs)
+  tp <- .na_scalar(unlist(tp))
+  if (on_data && !identical(.report_set(o), tp)) NA_character_ else tp
 }
 
 # The report's analysis set as its data says it (A2-T, R/report_set.R): a

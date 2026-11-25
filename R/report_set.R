@@ -72,7 +72,7 @@
 .tpl_set_param_of <- function(t, hidden = FALSE) {
   ps <- Filter(function(p) is.list(p) && (hidden || !isTRUE(p$hidden)) &&
                  identical(as.character(unlist(p$choices)), "populations"), t$params %||% list())
-  nm <- vapply(ps, function(p) as.character(p$name), "")
+  nm <- vapply(ps, function(p) as.character(p$name), "", USE.NAMES = FALSE)
   if (length(nm) == 1L) nm else NA_character_
 }
 
