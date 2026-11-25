@@ -13,7 +13,7 @@
 #  - (A2, R5) a figure or listing that reads subjects' records with no
 #    analysis set: a warning; a data step that keeps rows by a variable of a
 #    study population's condition (`flag: SAFFL` on the records): a warning,
-#    the analysis set is the report's `common: population`.
+#    the analysis set is the report's, its data's `population:`.
 # ============================================================================
 
 # The variables each study population's condition reads (`populations:` of
@@ -42,7 +42,6 @@
   add <- function(...) rows[[length(rows) + 1L]] <<- .check_rows(output_id = id, ...)
   if (!identical(o$kind, "figure") && !identical(o$kind, "listing")) return(rows[[1L]])
   d <- if (is.list(o$data)) o$data else list()
-  rp <- .out_population(o)
   # (Q3) subjects' records -- a dataset, an analysis data, the report's code
   # -- and no analysis set: neither the report's nor the data's, nor the
   # text of one that shows all subjects (`common: population_label`)
@@ -56,7 +55,9 @@
       "`common: population_label`"))
   }
   # (Q4) a step that keeps the rows of a population by the records' own
-  # columns (the subjects outside it, and a record's own arm, stay)
+  # columns (the subjects outside it, and a record's own arm, stay); the
+  # report's set by the one reader (its data's, its entries', `common:`)
+  rp <- .na_scalar(.report_population(o))
   pv <- .check_pop_vars(pops)
   steps <- if (is.list(d$steps)) d$steps else list()
   for (k in seq_along(steps)) {
@@ -69,11 +70,11 @@
     if (!length(hit)) next
     add(part = "data", item = sprintf("data$steps[%d]", k), level = "warning", message = sprintf(paste0(
       "step %d (`%s: %s`) keeps the rows of population %s by the records' own %s: the analysis set is ",
-      "the report's `common: population`%s (its subjects from their dataset, the records joined to ",
+      "the report's, its data's `population:`%s (its subjects from their dataset, the records joined to ",
       "them); remove the step%s (a `flag` step is for a record flag, ANL01FL)"),
       k, s$step[1L], v, paste(hit, collapse = " / "), paste(intersect(used, unlist(pv[hit])), collapse = ", "),
       if (!is.na(rp)) sprintf(" (%s)", rp) else "",
-      if (is.na(rp)) sprintf(" and write `common: population: %s`", hit[1L]) else ""))
+      if (is.na(rp)) sprintf(" and write `data: {population: %s}`", hit[1L]) else ""))
   }
   do.call(rbind, rows)
 }

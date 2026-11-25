@@ -1,5 +1,6 @@
 # A2 (one population rule), GT's part: a figure of a report with an analysis
-# set (`common: population`) reads the records of its subjects only -- the
+# set (its data's `population:`; `common: population` until it goes; one
+# reader, .report_population()) reads the records of its subjects only -- the
 # subjects made once by the report's data part (.fig_subjects_part(), the
 # ARD programs' .ard_data_part()), every dataset the figure reads joined to
 # them (.subjects_join()).  No step keeps a population: a `flag` step is a
@@ -90,11 +91,39 @@ test_that("a design's read of the report's analysis data: made by the data part,
   expect_false(grepl("inner_join(", a2f_flat(r$code), fixed = TRUE))
 })
 
-test_that("a report's analysis set: its planner's, else its spec's `common: population`", {
+test_that("one reader of a report's analysis set: its data's, its subjects entries', its `common:`", {
+  subj <- function(pop) list(id = "adsl_sub", from = "ADSL", population = pop)
+  o <- list(kind = "figure", common = list(population = "C"),
+            data = list(source = "code", population = "D"),
+            ard = list(analysis_data = list(subj("E"))))
+  # the data map's own first, then the subjects entries, then `common:`
+  expect_identical(.report_population(o), "D")
+  o$data$population <- NULL
+  expect_identical(.report_population(o), "E")
+  o$ard$analysis_data <- list()
+  expect_identical(.report_population(o), "C")
+  o$common <- NULL
+  expect_true(is.na(.report_population(o)))
+  # a table's flat `data:` rows: its subjects entry (a records entry is not one)
+  t <- list(kind = "table", data = list(subj("SAF"), list(id = "adae_sub", from = "ADAE",
+                                                           subjects_in = "adsl_sub")))
+  expect_identical(.report_population(t), "SAF")
+  # entries naming several sets: none of them, `common:` (A2: one set a report)
+  t$data <- list(subj("SAF"), list(id = "adsl_itt", from = "ADSL", population = "ITT"))
+  t$common <- list(population = "C")
+  expect_identical(.report_population(t), "C")
+  # (for the entries themselves: the data's, else `common:`)
+  t$data <- list(subj("SAF"))
+  expect_identical(.report_population(t, entries = FALSE), "C")
+  # a records part's own map, and the thin readers on the one rule
+  expect_identical(.data_population(list(population = "PKS"), t), "PKS")
+  expect_identical(.data_population(list(dataset = "ADAE"), t), "SAF")
+  expect_identical(.out_population_or_data(t), "SAF")
+  # the report programs': its spec's, by the same reader
+  expect_identical(.rp_population(list(report = list(
+    spec_output = list(data = list(source = "code", population = "SAF"))))), "SAF")
   expect_identical(.rp_population(list(report = list(
     spec_output = list(common = list(population = "SAF"))))), "SAF")
-  expect_identical(.rp_population(list(report = list(
-    population = "ITT", spec_output = list(common = list(population = "SAF"))))), "ITT")
   expect_true(is.na(.rp_population(list(report = list(id = "F-1")))))
 })
 
@@ -115,7 +144,17 @@ a2f_prog <- function(x, r) {
   strsplit(paste(code, collapse = "\n"), "\n", fixed = TRUE)[[1L]]
 }
 
-a2f_head <- "# the report's subjects: its analysis set (common: population)"
+# a report of the fixture with its analysis set on its data (the canon's
+# place), or in `common:` (until it goes)
+a2f_pop <- function(r, pop, where = c("data", "common")) {
+  where <- match.arg(where)
+  r$spec_output <- if (where == "data") {
+    list(id = r$id, kind = "figure", data = list(source = "code", population = pop))
+  } else list(id = r$id, kind = "figure", common = list(population = pop))
+  r
+}
+
+a2f_head <- "# the report's subjects: its analysis set (its data's population)"
 
 test_that("a designed figure's program: the subjects in its data part, its reads joined to them", {
   x <- a2f_fx()
@@ -123,32 +162,28 @@ test_that("a designed figure's program: the subjects in its data part, its reads
   before <- a2f_prog(x, r)
   expect_false(any(startsWith(before, a2f_head)))
   expect_false(grepl(a2f_join("adsl_sub"), a2f_flat(before), fixed = TRUE))
-  r$population <- "SAF"
-  p <- a2f_prog(x, r)
+  p <- a2f_prog(x, a2f_pop(r, "SAF"))
   expect_true(any(startsWith(p, a2f_head)))
   i_sub <- which(startsWith(p, "adsl_sub <- "))
   i_rec <- which(startsWith(p, "adtte_sub <- adtte |>"))
   expect_length(i_sub, 1L)
   expect_lt(i_sub, i_rec[1L])
   expect_match(a2f_flat(p), a2f_join("adsl_sub"), fixed = TRUE)
+  # the set in `common:` (until it goes): the same subjects, the same join
+  expect_identical(a2f_prog(x, a2f_pop(r, "SAF", "common")), p)
   # a set the ARD definition does not define: as with none
-  r$population <- "NOPE"
-  expect_identical(a2f_prog(x, r), before)
+  expect_identical(a2f_prog(x, a2f_pop(r, "NOPE")), before)
 })
 
 test_that("a figure of its own code: the subjects made before your code (Q5)", {
   x <- a2f_fx()
-  r <- x$reports[["F-91"]]
-  r$population <- "SAF"
-  p <- a2f_prog(x, r)
+  p <- a2f_prog(x, a2f_pop(x$reports[["F-91"]], "SAF"))
   at <- which(startsWith(p, a2f_head))
   expect_length(at, 1L)
   expect_lt(at, which(startsWith(p, "# your code: leaves"))[1L])
   expect_true(any(startsWith(p, "adsl_sub <- ")))
   # a figure with no design yet: the same, before the plot to write
-  r <- x$reports[["F-94"]]
-  r$population <- "SAF"
-  p <- a2f_prog(x, r)
+  p <- a2f_prog(x, a2f_pop(x$reports[["F-94"]], "SAF"))
   at <- which(startsWith(p, a2f_head))
   expect_length(at, 1L)
   expect_lt(at, which(startsWith(p, "# ---- the plot (ggplot2), written by hand"))[1L])
@@ -158,6 +193,5 @@ test_that("a figure of a `figure:` key: its data part is its ARD definition's, a
   x <- a2f_fx()
   r <- x$reports[["F-9"]]
   before <- a2f_prog(x, r)
-  r$population <- "SAF"
-  expect_identical(a2f_prog(x, r), before)
+  expect_identical(a2f_prog(x, a2f_pop(r, "SAF")), before)
 })

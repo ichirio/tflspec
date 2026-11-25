@@ -15,16 +15,17 @@
 .ai_fig_output <- function(design, id, ctx) {
   if (inherits(design, "tfl_ai_tpl_figure")) return(.ai_tpl_fig_output(design, id, ctx))
   y <- unclass(design)
-  data <- list(source = "code")
+  # (the report's analysis set on its data, `data: {population: ITT}`: the
+  # program joins the records the steps read to its subjects, A2)
+  pop <- ctx$population$id
+  data <- c(list(source = "code"), if (length(pop)) list(population = pop))
   if (length(y$data)) data$steps <- y$data
   if (length(y$stats)) data$stats <- y$stats
   content <- lapply(y$layers %||% list(), function(l) {
     tfl_item(l$layer %||% "layer", l[setdiff(names(l), "layer")])
   })
   ttl <- ctx$titles %||% character()
-  pop <- ctx$population$id
   o <- tfl_output(id, kind = "figure", label = if (length(ttl)) ttl[1L] else NA_character_,
-                  common = list(population = if (length(pop)) pop else NA_character_),
                   data = data, content = content,
                   page = if (length(ttl)) list(titles = as.list(ttl)) else list())
   for (k in c("template", "ggplot2_version", "plot", "plots", "compose")) {
@@ -72,7 +73,7 @@
             fd[setdiff(names(fd), c("data", "stats", "plot", "layers"))])
   args <- args[names(args) %in% names(formals(tfl_fig_design))]
   design <- do.call(tfl_fig_design, args)
-  # the report's subjects (its analysis set, `common: population`), made as
+  # the report's subjects (its analysis set, its data's `population:`), made as
   # its program's data part makes them; the datasets it reads joined to them
   sj <- .ai_fig_subjects(st, id, sh)
   if (!is.null(sj)) attr(design, "subjects") <- sj$subjects
@@ -112,7 +113,7 @@
 # the report has none or the study's ARD definition cannot be made
 .ai_fig_subjects <- function(st, id, sh) {
   o <- tfl_read_outputs(".", skip_bad = TRUE)[[id]]
-  pop <- if (!is.null(o)) .out_population(o) else NA_character_
+  pop <- if (!is.null(o)) .na_scalar(.report_population(o)) else NA_character_
   if (is.na(pop)) return(NULL)
   x <- tryCatch(.ard_spec_of_study(st, output_id = id, sheets = sh)$spec,
                 error = function(e) NULL)

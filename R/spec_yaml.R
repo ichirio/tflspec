@@ -495,10 +495,31 @@ tfl_read_output <- function(path) {
 # The report's analysis set (NA when it has none)
 .out_population <- function(o) .na_scalar(o$common$population)
 
-# The analysis set of a report's data (a listing's, a records part's): its own
-# `population`, else the report's `common: population` (NA when none) -- one
-# rule, the sheets' and the YAML's alike (A2 Q7)
-.data_population <- function(data, o) data[["population"]] %||% .out_population(o)
+# The report's analysis set, the one reader (A2; template canon 11-15 (1):
+# the population lives on the report's data): the data map's own
+# `population` (a listing's, a code figure's `data: {population: SAF}`),
+# else the one set its subjects entries name (`data:` / `ard:
+# analysis_data:`), else `common: population` -- until `common` goes.
+# `data`: the map to read (a records part's; the report's own by default);
+# `entries = FALSE` when the set is wanted for the entries themselves (a
+# subjects entry given the report's set).  Its own value as given; else one
+# id (entries naming several: none of them); NA when none
+.report_population <- function(o, data = o$data, entries = TRUE) {
+  own <- if (is.list(data) && !is.null(names(data))) data[["population"]]
+  if (!is.null(own) && !all(is.na(unlist(own)))) return(own)
+  ents <- if (entries) c(if (is.list(o$data) && is.null(names(o$data))) o$data,
+                         if (is.list(o$ard$analysis_data)) o$ard$analysis_data)
+  v <- unique(unlist(lapply(ents, function(a) {
+    if (.entry_is_subjects(a)) .na_scalar(unlist(a$population))
+  })))
+  v <- v[!is.na(v)]
+  if (length(v) == 1L) return(v)
+  .out_population(o)
+}
+
+# The analysis set of a report's data (a listing's, a records part's): the
+# one reader's, of that data (A2 Q7: the sheets' and the YAML's alike)
+.data_population <- function(data, o) .report_population(o, data)
 
 # The report's subjects definition (`from: ADSL`, or from the dataset its
 # analysis set is defined on: data.yml `populations:`; no `subjects_in`, no code)

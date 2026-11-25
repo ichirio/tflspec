@@ -190,11 +190,17 @@ test_that("a step that keeps a population's rows by the records' flag: a warning
   expect_identical(p$level, c("warning", "warning"))
   expect_identical(p$item, c("data$steps[3]", "data$steps[5]"))
   expect_match(p$message[1L], "step 3 (`flag: SAFFL`) keeps the rows of population SAF", fixed = TRUE)
-  expect_match(p$message[1L], "`common: population` (SAF)", fixed = TRUE)
+  expect_match(p$message[1L], "its data's `population:` (SAF)", fixed = TRUE)
   # no report set: the message says which to write (and Q3 says it has none)
   f$common <- NULL
   p2 <- .check_static_rows(f, "F-1", st)
-  expect_true(any(grepl("write `common: population: SAF`", p2$message, fixed = TRUE)))
+  expect_true(any(grepl("write `data: {population: SAF}`", p2$message, fixed = TRUE)))
+  # the set on its data (the canon's place): the same, the set named
+  f$data$population <- "SAF"
+  p3 <- .check_static_rows(f, "F-1", st)
+  expect_identical(p3$item, c("data$steps[3]", "data$steps[5]"))
+  expect_match(p3$message[1L], "its data's `population:` (SAF)", fixed = TRUE)
+  f$data$population <- NULL
   # (a record flag, a population with no condition, no study: nothing)
   f$common <- list(population = "SAF")
   f$data$steps <- f$data$steps[c(1L, 2L, 4L)]

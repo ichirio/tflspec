@@ -5,13 +5,12 @@ extends:
   - defaults
 data:
   source: code
+  population: SAF
   steps:
     - step: read
       dataset: ADTTE
     - step: param
       value: TTSKIN
-    - step: flag
-      variable: SAFFL
     - step: time_unit
       variable: AVAL
       unit: days

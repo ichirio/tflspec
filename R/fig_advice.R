@@ -192,7 +192,7 @@
                                     .fix("add_step", step = list(step = "read", dataset = "ADSL"), first = TRUE))
   },
   pop = function(d, ctx) {
-    # (A2) the analysis set is the report's `common: population`: its
+    # (A2) the analysis set is the report's, its data's `population`: its
     # program makes the subjects and joins the records the design reads to
     # them -- no step keeps it.  A flag step keeps a record flag (ANL01FL);
     # one on a population's flag is the report check's problem
@@ -201,7 +201,7 @@
     if (length(i)) {
       .adv("pop", "info", "data", paste(
         "Step %d keeps the rows whose %s is \"Y\": right for a record flag (ANL01FL ...).",
-        "A population is the report's analysis set (`common: population`), not a step:",
+        "A population is the report's analysis set (its data's `population:`), not a step:",
         "its subjects are made once and the records joined to them."),
         args = list(i[1L], .fv(d$data[[i[1L]]], "variable", "flag")))
     }

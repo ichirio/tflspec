@@ -370,22 +370,9 @@
   })
 }
 
-# The report's analysis set: `common: population`, else (a report built from a
-# template has none) the one set its subjects data entries name; NA for none
-# or for several
-.out_population_or_data <- function(output) {
-  pop <- .out_population(output)
-  if (!is.na(pop)) return(pop)
-  # (a resolved report has them as its ARD's analysis_data, a file's as `data:`)
-  d <- c(if (is.list(output$data)) output$data, if (is.list(output$ard$analysis_data)) output$ard$analysis_data)
-  if (!length(d)) return(NA_character_)
-  v <- unlist(lapply(d, function(a) {
-    if (.entry_is_subjects(a) && is.character(a$population) && length(a$population) == 1L &&
-          !is.na(a$population) && nzchar(a$population)) a$population
-  }))
-  v <- unique(v)
-  if (length(v) == 1L) v else NA_character_
-}
+# The report's analysis set, one id (.report_population(): its data's, its
+# subjects entries', its `common:`); NA for none or for several
+.out_population_or_data <- function(output) .na_scalar(.report_population(output))
 
 # a function's arguments as page: says them: a map, unset ones gone
 # The report's own values for the bands' tokens besides its id and label:

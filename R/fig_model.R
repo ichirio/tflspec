@@ -1012,7 +1012,7 @@ tfl_read_fig_design <- function(path) {
 }
 
 # ---- a report's subjects (A2: one population rule) -------------------------
-# A figure of a report with an analysis set (`common: population`) reads the
+# A figure of a report with an analysis set (its data's `population:`) reads the
 # records of its subjects only, as the ARD programs' analysis data do: the
 # subjects made once by the report's data part (.ard_data_part(): the object
 # <dataset>_sub), every dataset the design reads joined to them.  No step
@@ -1033,11 +1033,13 @@ tfl_read_fig_design <- function(path) {
   obj <- unname(attr(made, "renamed")[paste0("pop_", .r_name(pop))])
   if (!length(obj) || is.na(obj)) {
     # (no object of its own: the analysis data that is the set itself --
-    # .pop_as_adata() made the set under its name -- or, a set with no
-    # condition, its dataset as it is: .pop_identity())
+    # .pop_as_adata() made the set under its name: the report's subjects
+    # row, `{id: adsl_sub, from: ADSL, population: SAF}`, made here -- or,
+    # a set with no condition, its dataset as it is: .pop_identity())
     ad <- .adata_of(.adata_sheet(x), output_id)
     na <- function(v) if (is.null(v)) rep(TRUE, nrow(ad)) else is.na(v)
-    same <- ad$data_id[ad$data_id %in% data & toupper(ad$from) %in% toupper(ds) &
+    made_ids <- sub(" <- .*$", "", grep("^[A-Za-z.][A-Za-z0-9._]* <- ", unlist(made), value = TRUE))
+    same <- ad$data_id[ad$data_id %in% made_ids & toupper(ad$from) %in% toupper(ds) &
                          ad$population_id %in% pop & na(ad$subjects_in) & na(ad$where) &
                          na(ad$code)]
     plain <- is.na(pops$where[k]) && is.na(pops$derive[k] %||% NA)
@@ -2440,7 +2442,7 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
 #'   (joined from ADSL when `join_adsl`).
 #' @param pop The analysis set, by its id or its flag: no step of the
 #'   design keeps it.  A figure's subjects are its report's analysis set
-#'   (`common: population`): its program makes them and joins every dataset
+#'   (its data's `population:`): its program makes them and joins every dataset
 #'   the design reads to them.  `forest_hr` names its own analysis data's
 #'   set by it ([tfl_fig_forest_analyses()]); a whole-script template passes
 #'   it to its type's function.

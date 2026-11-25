@@ -1,17 +1,16 @@
-An example: Kaplan-Meier curves of progression-free survival by arm, with a dashed line at the median (`spec/outputs/F-14-2-1.yml`).  The `data` steps are the data stage only -- `read`, `param` (the analysis set is the report's `common: population`, never a step); the template makes the time unit and the fit (`survfit`): never write those, and never leave `data.steps` out.  `plot:` changes the template's settings as a designed figure's `plot:` does (axis titles, limits and steps, the legend); `layers` adds to its layers.
+An example: Kaplan-Meier curves of progression-free survival by arm, with a dashed line at the median (`spec/outputs/F-14-2-1.yml`).  The `data` steps are the data stage only -- `read`, `param` (the analysis set is the report's, `population:` on its data, never a step); the template makes the time unit and the fit (`survfit`): never write those, and never leave `data.steps` out.  `plot:` changes the template's settings as a designed figure's `plot:` does (axis titles, limits and steps, the legend); `layers` adds to its layers.
 
 ```yaml
 id: F-14-2-1
 kind: figure
 label: "Kaplan-Meier Plot of Progression-Free Survival"
-common:
-  population: SAF
 extends: [defaults]
 template:
   name: km_survival
   args: {by: TRT01A, time_unit: months, median_line: false, pvalue: false}
 data:
   source: code
+  population: SAF
   steps:
     - {step: read, dataset: ADTTE}
     - {step: param, value: PFS}

@@ -25,9 +25,11 @@
 # place of the preset's flag; `call_steps` the steps the call makes
 .tpl_fig_body_of <- function(f, a, ctx) {
   steps <- Filter(function(s) !identical(s$step, "flag"), f$steps)
+  pop_step <- NULL
   if (!is.null(a$population)) {
     at <- match("read", vapply(steps, `[[`, "", "step"))
     steps <- append(steps, .tpl_population_step(a$population, ctx$population), at)
+    pop_step <- at + 1L
   }
   # the records kept besides the parameter (`where`): after it
   if (!is.null(a$where)) {
@@ -35,8 +37,10 @@
     at <- match("param", kinds, nomatch = match("read", kinds, nomatch = 0L))
     steps <- append(steps, list(list(step = "filter", expr = a$where)), at)
   }
+  # (`pop_step`: where the analysis set's step is, for a report whose own
+  # steps are the data stage: .tpl_compose_data() keeps it)
   list(data = list(source = "code", steps = c(steps, f$stats)), content = f$content,
-       plot = f$plot, call_steps = length(f$stats))
+       plot = f$plot, call_steps = length(f$stats), pop_step = pop_step)
 }
 
 # The settings `over` over a template's `base`. The `add` lists join (the

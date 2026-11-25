@@ -213,7 +213,7 @@ tfl_ai_check <- function(answer, context = NULL, adam = NULL) {
 # dataset of parameters (PARAMCD), the shell's parameter (a param step, a
 # condition on PARAMCD) -- or the figure is by the parameter (PARAM in a
 # layer or the plot: a facet, a colour).  The analysis set is the report's
-# (`common: population`, the context's `population`: A2): its program
+# (its data's `population:`, the context's `population`: A2): its program
 # joins the records the figure reads to its subjects, so a figure that
 # reads a dataset with no set is no report -- a warning, the set to be
 # asked, not guessed -- and a step that keeps the set's rows by the
@@ -235,7 +235,7 @@ tfl_ai_check <- function(answer, context = NULL, adam = NULL) {
   if (!is.null(context) && recs && !length(pop)) {
     p <- .ai_problem(p, "data", paste(
       "reads subjects' records and the report has no analysis set: it is the report's",
-      "(`common: population`, its TOC row's), whose subjects the program joins the records",
+      "(its data's `population:`, its TOC row's), whose subjects the program joins the records",
       "to; if the shell names one the TOC does not, ask it in a question -- do not guess"),
       "warning")
   }
@@ -250,7 +250,7 @@ tfl_ai_check <- function(answer, context = NULL, adam = NULL) {
     if (!length(hit)) next
     p <- .ai_problem(p, sprintf("data[%d] %s", k, kind[k]), sprintf(paste(
       "keeps the rows of the analysis set by the records' own %s: the set is the report's",
-      "(`common: population`), whose subjects the program joins the records to -- remove",
+      "(its data's `population:`), whose subjects the program joins the records to -- remove",
       "the step (a `flag` step is for a record flag, ANL01FL)"),
       paste(hit, collapse = ", ")))
   }

@@ -130,7 +130,11 @@
   }
   switch(root,
     output = {
-      v <- down(output, path)
+      # (the report's analysis set: the one reader's -- its data's
+      # `population`, its subjects entries', its `common:`, A2)
+      v <- if (identical(path, c("common", "population")) && is.list(output)) {
+        .report_population(output)
+      } else down(output, path)
       # (none when the report names none: NA is tfl_output()'s "not given")
       if (length(v) == 1L && !is.na(v)) v
     },
@@ -663,6 +667,16 @@ tfl_template_to_spec <- function(output, study) {
       id, name, paste(dup, collapse = " and "), if (length(dup) > 1L) "s" else "",
       paste(unique(kind(call)), collapse = ", "), paste(dup, collapse = ", "),
       paste(dup, collapse = ", ")))
+  }
+  # the template's analysis set (its `population`, the report's set): kept
+  # after the report's read -- the report's data stage writes no step for
+  # it (A2) -- unless the report wrote the same step
+  k <- x$pop_step
+  if (length(k) == 1L && k <= length(x$data$steps)) {
+    ps <- x$data$steps[[k]]
+    if (!any(vapply(data$steps, identical, NA, ps))) {
+      data$steps <- append(data$steps, list(ps), match("read", kind(data$steps), nomatch = 0L))
+    }
   }
   data$steps <- c(data$steps, call)
   data

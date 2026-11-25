@@ -45,7 +45,7 @@ tfl_fig_template(
 
 \item{pop}{The analysis set, by its id or its flag: no step of the
 design keeps it.  A figure's subjects are its report's analysis set
-(\verb{common: population}): its program makes them and joins every dataset
+(its data's \verb{population:}): its program makes them and joins every dataset
 the design reads to them.  \code{forest_hr} names its own analysis data's
 set by it (\code{\link[=tfl_fig_forest_analyses]{tfl_fig_forest_analyses()}}); a whole-script template passes
 it to its type's function.}

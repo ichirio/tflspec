@@ -333,7 +333,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     planner[[length(planner) + 1L]] <- list(
       output_id = id, description = cell(e$label %||% o$label), setup_code = NA_character_,
       process_code = .first_r_step(o$data$steps),
-      section = cell(e$section), population = cell(e$population %||% .out_population(o)),
+      section = cell(e$section), population = cell(e$population %||% .na_scalar(.report_population(o))),
       datasets = cell(e$datasets %||% .records_dataset(o)), batches = cell(e$sets))
     if (!is.null(.records_dataset(o)) && !is.null(o$data$where)) {
       note(id, "data", "a records table's where (its dataset's condition) stays in YAML")
@@ -395,7 +395,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     # a template report: its name and arguments on the templates sheet, and
     # that is all of the template; the items are made again from them
     if (!is.null(tpl)) {
-      enc <- .tpl_sheets_encode(id, o$kind, .na_scalar(o$label), tpl, .out_population(o))
+      enc <- .tpl_sheets_encode(id, o$kind, .na_scalar(o$label), tpl, .na_scalar(.report_population(o)))
       trows[[length(trows) + 1L]] <- enc$row
       tparam_rows <- c(tparam_rows, enc$rows)
       # (its condition rows: the conditions sheet's, analysis_id blank)
@@ -428,8 +428,10 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
         ard = if (isTRUE(o$data$ard)) "TRUE" else NA_character_)
     }
     # the report's ARD analyses and analysis data, whatever its kind
+    # (its analysis set by the one reader: its data's, else `common:`)
+    rpop <- .na_scalar(.report_population(o, entries = FALSE))
     for (a in o$ard$analysis_data %||% list()) {
-      a <- .entry_pop_inject(a, .out_population(o), .pop_from(s$data$populations, .out_population(o)))
+      a <- .entry_pop_inject(a, rpop, .pop_from(s$data$populations, rpop))
       m <- lapply(a, cell); m$data_id <- m$id; m$id <- NULL
       if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
       adata[[length(adata) + 1L]] <- c(list(output_id = id), m)

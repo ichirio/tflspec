@@ -384,11 +384,12 @@
                                                  .setup_file_names[["fig_setup"]]), quote = "\"")))
 }
 
-# The report's analysis set (A2 R1): its `common: population` (the
-# planner's `population` when it gives one); NA when it has none
+# The report's analysis set (A2 R1): its spec's, by the one reader
+# (.report_population(): its data's `population`, its subjects entries',
+# its `common:`); NA when it has none
 .rp_population <- function(ctx) {
   r <- ctx$report
-  .na_scalar(r$population %||% .out_population(r$spec_output %||% list()))
+  .na_scalar(.report_population(r$spec_output %||% r$output %||% list()))
 }
 
 # A figure's subjects (A2 R1, R4): the subjects of the report's analysis set,
@@ -414,7 +415,7 @@
 # ... its lines in the program: the subjects (and the analysis data) made
 .rp_fig_subjects_lines <- function(sj, data = character()) {
   if (is.null(sj)) return(NULL)
-  c(paste0("# the report's subjects: its analysis set (common: population)",
+  c(paste0("# the report's subjects: its analysis set (its data's population)",
            if (length(data)) ", and its analysis data (its ARD definition)"),
     sj$code, "")
 }
@@ -998,10 +999,6 @@
 #'   tokens as the program writes them, or `NULL` (no SPEC: the study's
 #'   sheets); `spec_output`: the report in the study's spec as it is;
 #'   `template_listing`: a listing made from a template;
-#' * `population`: the report's analysis set (a population of the ARD
-#'   definition), or `NULL`: its spec's `common: population`.  A figure's
-#'   program makes its subjects in its data part and joins every dataset
-#'   its design reads to them;
 #' * `listing`: `NULL`, or `list(own = )` when the listing sheets define it
 #'   (`own`: it starts from its analysis data or analysis set);
 #' * a figure's: `design` ([tfl_fig_design()], or `NULL`), `ard_source`
