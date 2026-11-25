@@ -1005,8 +1005,6 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if (!is.null(ad$output_id)) ad <- ad[!is.na(ad$output_id) & ad$output_id == id, , drop = FALSE]
     if (nrow(ad)) ard_part$analysis_data <- .conv_rows(ad, note, id, "analysis_data", r_cols = c("where", "derive", "code", "then"),
                                                     list_cols = c("add", "arrange", "keep", "distinct"), rename = c(data_id = "id", population_id = "population"))
-    # (the subjects rows keep their set, as the sheet has it: the ARD program
-    # reads the row's set; A2-T)
     an <- ard$analyses[!is.na(ard$analyses$output_id) & ard$analyses$output_id == id, , drop = FALSE]
     if (nrow(an)) {
       ard_part$analyses <- .conv_rows(an, note, id, "analyses", r_cols = c("where", "args", "post", "code", "derive"),
@@ -1084,6 +1082,14 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if (is.null(data[["population"]]) && !is.null(entry$population)) {
       data <- c(data %||% list(), list(population = entry$population))
     }
+  }
+  # (the report's subjects definition has no set of its own: the report's,
+  # which the sheets wrote on it, .rows_set() -- its data's, else `common`'s;
+  # one rule both ways, so that a row follows the report's set)
+  if (!is.null(ard_part$analysis_data)) {
+    rset <- .rows_set(list(data = data, common = common))
+    ard_part$analysis_data <- lapply(ard_part$analysis_data, .entry_pop_strip, rset,
+                                    .pop_from(ard$populations, rset))
   }
   for (k in c("treatment", "population_label")) {
     if (nrow(rrow) && k %in% names(rrow) && !is.na(rrow[[k]][1L]) && nzchar(rrow[[k]][1L])) common[[k]] <- rrow[[k]][1L]
