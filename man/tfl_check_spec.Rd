@@ -4,7 +4,7 @@
 \alias{tfl_check_spec}
 \title{Check a study's SPEC against the packages installed: one call}
 \usage{
-tfl_check_spec(study, output_id = NULL, build = FALSE)
+tfl_check_spec(study, output_id = NULL, build = FALSE, adam = TRUE)
 }
 \arguments{
 \item{study}{A study read with \code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}, or its folder.}
@@ -17,6 +17,21 @@ listing or figure object made, no RTF -- so that a report with no
 row can be made; one that cannot has an \code{error} row, \code{part}
 \code{"build"}.  A few seconds a report.  \code{FALSE} (default): the checks
 above only.}
+
+\item{adam}{Where the data for the data check come from.  \code{TRUE}
+(default): the study's own datasets, from the paths of \code{spec/data.yml}
+(from the study folder), read as the study's program reads them and
+only when needed: a study with no \code{!=} condition reads no data, and a
+dataset is read once.  \code{FALSE} (or \code{NULL}): no data check.  Or the ADaM
+data as \code{\link[=tfl_check_fig_design]{tfl_check_fig_design()}}'s \code{adam} takes it (\code{\link[=tfl_read_adam]{tfl_read_adam()}}: a
+folder or a named list of data frames).  The check: a condition of the
+ARD definition (a \code{where} of the populations, records, analysis data or
+analyses) that holds \code{var != value} is looked at in the dataset it
+applies to: where \code{var} has NA there, the condition drops those rows (a
+filter keeps only TRUE), and a \code{warning} row (\code{part} \code{"ard"}) gives the
+count and the form that keeps them, \code{!var \%in\% value}.  No study
+folder, a dataset whose file is not there or is not listed, or a
+variable not in the dataset: no row.  The generated code is not changed.}
 }
 \value{
 A data frame, one row a problem: \code{output_id} (\code{NA} for the
@@ -43,7 +58,8 @@ value the schema does not have, an analysis the ARD definition
 refuses): the report cannot be copied into the study;
 \item \code{warning}: the SPEC reads, but a program that runs cannot be written
 from it (the ARD program or the table's code stops; a content
-function the installed rtfreporter does not have yet);
+function the installed rtfreporter does not have yet; with \code{adam}, a
+\code{!=} condition that drops the rows where its variable is NA);
 \item \code{note}: the program is written all the same -- an argument the
 installed cards / cardx does not know, a version to look at.
 }
