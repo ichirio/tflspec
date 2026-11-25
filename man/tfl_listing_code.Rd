@@ -25,7 +25,7 @@ tfl_listing_code(
 
 \item{rework}{Code run on \code{data} before it is sorted, or \code{NULL}.  One
 expression is written as it is; code of several runs in a scope of its
-own, \verb{data <- local(\{ ...; data \})}, so only \code{data} comes out of it.}
+own, \code{data <- local({ ...; data })}, so only \code{data} comes out of it.}
 
 \item{type}{The listing type when the listing's \code{type} is blank (one of
 rtfreporter's \code{listing_spec()} types).}
