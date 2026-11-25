@@ -11,21 +11,24 @@
 # The define's codes of a column: the code lists of values adam_meta maps
 # `variable` to in `datasets` (the ones the report reads; in any dataset
 # when none is known) and their codes, a code of any of them counting (a
-# dictionary's list has no values); NULL when it maps none there
+# dictionary's list has no values); NULL when it maps none there.  The
+# mapping is the programs' (.adam_meta_vars(), whose set_levels() put the
+# levels on).
 .define_codes_of <- function(meta, variable, datasets = NULL) {
-  v <- meta$variables
-  if (is.null(v) || !nrow(v)) return(NULL)
-  keep <- v$variable %in% variable & !is.na(v$codelist) & v$codelist %in% meta$codelists$codelist
-  if (length(datasets)) keep <- keep & toupper(v$dataset) %in% toupper(datasets)
-  if (!any(keep)) return(NULL)
-  cls <- unique(v$codelist[keep])
-  list(codelists = cls, where = unique(paste0(v$dataset[keep], ".", v$variable[keep])),
+  if (!length(datasets)) datasets <- meta$variables$dataset
+  v <- .adam_meta_vars(meta, datasets)
+  v <- v[v$variable %in% variable, , drop = FALSE]
+  if (!nrow(v)) return(NULL)
+  cls <- unique(v$codelist)
+  list(codelists = cls, where = unique(paste0(v$dataset, ".", v$variable)),
        codes = unique(unlist(lapply(cls, .adam_codes, meta = meta), use.names = FALSE)))
 }
 
 # The datasets a report reads: the `from` of its data definitions (one that
-# names another definition is not a dataset) and its analyses' `dataset`;
-# none when it says none
+# names another definition is not a dataset), its analyses' `dataset` and a
+# listing's records (`data: {source: dataset, dataset: ...}`); none when it
+# says none.  `o` is the report resolved (.define_codes_report()): a
+# template's data rows are there, not in the report as written.
 .report_datasets <- function(o) {
   one <- function(e, key) {
     x <- if (is.list(e)) e[[key]] else NULL
@@ -34,9 +37,23 @@
   defs <- o$ard$analysis_data
   defs <- if (is.list(defs) && is.null(names(defs))) defs else list()
   ids <- vapply(defs, one, "", key = "id")
-  ds <- c(vapply(defs, one, "", key = "from"), vapply(o$ard$analyses %||% list(), one, "", key = "dataset"))
+  m <- o$data
+  rec <- if (is.list(m) && !is.null(names(m)) &&
+             identical(as.character(m$source %||% "dataset"), "dataset")) one(m, "dataset")
+  ds <- c(vapply(defs, one, "", key = "from"), vapply(o$ard$analyses %||% list(), one, "", key = "dataset"),
+          rec)
   ds <- unique(ds[!is.na(ds) & nzchar(ds)])
   ds[!ds %in% ids]
+}
+
+# A report as its program reads its data: resolved (tfl_resolve_output():
+# a template expanded, its data rows and analyses put in), so its datasets
+# are its own and not every dataset's; the report as written when it cannot
+# be resolved (that is an error of its own in tfl_check_spec())
+.define_codes_report <- function(o, study) {
+  r <- tryCatch(suppressWarnings(suppressMessages(tfl_resolve_output(o, study))),
+                error = function(e) NULL)
+  if (inherits(r, "tfl_output")) r else o
 }
 
 # The codes of a report's code list written in place (a list of {value,
@@ -62,7 +79,7 @@
   rows <- list(.check_rows())
   for (id in names(outs)) {
     cls <- outs[[id]]$codelists %||% list()
-    ds <- if (length(cls)) .report_datasets(outs[[id]])
+    ds <- if (length(cls)) .report_datasets(.define_codes_report(outs[[id]], study))
     for (var in names(cls)) {
       codes <- .inplace_codes(cls[[var]])
       def <- if (length(codes)) .define_codes_of(meta, var, ds)

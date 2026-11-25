@@ -110,6 +110,75 @@ test_that("two datasets map a column to different lists: the report's datasets' 
   expect_identical(nrow(dc_rows(d)), 0L)
 })
 
+# a study whose adam_meta maps ANRIND to CL.LB in ADLB and to CL.VS in ADVS
+dc_two_lists <- function(env = parent.frame()) {
+  d <- withr_tempdir(env)
+  dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)
+  writeLines(c(
+    "adam_meta:",
+    "  variables:",
+    "    - {dataset: ADLB, variable: ANRIND, codelist: CL.LB}",
+    "    - {dataset: ADVS, variable: ANRIND, codelist: CL.VS}",
+    "  codelists:",
+    "    - {codelist: CL.LB, value: HIGH}",
+    "    - {codelist: CL.LB, value: LOW}",
+    "    - {codelist: CL.LB, value: NORMAL}",
+    "    - {codelist: CL.VS, value: ABNORMAL}"), file.path(d, "spec", "defaults.yml"))
+  d
+}
+
+test_that("a template report: its own dataset's list (the template's data rows), not every dataset's", {
+  d <- dc_two_lists()
+  writeLines(c("study_id: DC-1", "settings:", "  rounding: sas"), file.path(d, "study.yml"))
+  suppressMessages(tfl_copy_templates(d, "tflspec_v1/tflspec_shift"))
+  f <- file.path(d, "spec", "outputs", "T-SH.yml")
+  # a shift table on ADLB (the template's `from` default) whose list has
+  # ABNORMAL, a code of ADVS's list only
+  writeLines(c("id: T-SH", "kind: table", "label: Shift",
+               "template:", "  name: tflspec_v1/tflspec_shift",
+               "  data:", "    from: ADLB",
+               "  analysis:", "    by: [TRT01A]",
+               "codelists:", "  ANRIND: [HIGH, ABNORMAL]"), f)
+  # (the report as written names no dataset; resolved, the template's rows
+  # read ADLB)
+  o <- tfl_read_output(f)
+  expect_identical(.report_datasets(o), character())
+  expect_true("ADLB" %in% .report_datasets(.define_codes_report(o, tfl_read_study_spec(d))))
+  w <- dc_rows(d)
+  expect_identical(nrow(w), 1L)
+  expect_identical(w$output_id, "T-SH")
+  expect_match(w$message, "has the code \"ABNORMAL\", which the define's code list CL.LB does not", fixed = TRUE)
+  expect_match(w$message, "adam_meta maps ADLB.ANRIND to it", fixed = TRUE)
+})
+
+test_that("a listing's records map (data: {source: dataset}): that dataset's list", {
+  d <- dc_two_lists()
+  writeLines(c("id: L-CL", "kind: listing", "extends: none",
+               "data: {source: dataset, dataset: ADVS}",
+               "codelists:", "  ANRIND: [HIGH, ABNORMAL]",
+               "content: []"), file.path(d, "spec", "outputs", "L-CL.yml"))
+  w <- dc_rows(d)
+  expect_identical(nrow(w), 1L)
+  expect_match(w$message, "has the code \"HIGH\", which the define's code list CL.VS does not", fixed = TRUE)
+})
+
+test_that("a column mapped to a list with no rows in adam_meta: codelists: gives no row", {
+  # (today: a study file cannot map a column to such a list -- the study
+  # read stops -- and the check, given one, finds no codes to compare)
+  meta <- list(
+    variables = data.frame(dataset = "ADSL", variable = "SEX", codelist = "CL.NONE",
+                           stringsAsFactors = FALSE),
+    codelists = data.frame(codelist = "CL.SEX", value = "F", stringsAsFactors = FALSE))
+  expect_null(.define_codes_of(meta, "SEX", "ADSL"))
+  outs <- list(`T-CL` = list(id = "T-CL", codelists = list(SEX = c("F", "X")),
+                             ard = list(analysis_data = list(list(id = "a", from = "ADSL")))))
+  expect_identical(nrow(.check_define_code_rows(list(adam_meta = meta), outs)), 0L)
+  d <- dc_study("SEX: [F, X]", meta = FALSE,
+                study_lists = c("adam_meta:", "  variables:",
+                                "    - {dataset: ADSL, variable: SEX, codelist: CL.NONE}"))
+  expect_error(suppressMessages(tfl_check_spec(d, adam = FALSE)), "which codelists: does not have")
+})
+
 test_that("the define's codes of a column, by the datasets; a list written in place", {
   meta <- list(
     variables = data.frame(dataset = c("ADLB", "ADVS"), variable = "AVALC",
@@ -128,6 +197,9 @@ test_that("the define's codes of a column, by the datasets; a list written in pl
                        analyses = list(list(id = "X", dataset = "ADVS"), list(id = "Y", data = "b"))))
   expect_identical(.report_datasets(o), c("ADLB", "ADVS"))
   expect_identical(.report_datasets(list()), character())
+  # (a listing's records map; a table's rework map is not a dataset)
+  expect_identical(.report_datasets(list(data = list(source = "dataset", dataset = "ADAE"))), "ADAE")
+  expect_identical(.report_datasets(list(data = list(source = "ard", steps = list()))), character())
   expect_identical(.inplace_codes(list(list(value = "A", label = "a"), list(value = "B"))), c("A", "B"))
   expect_identical(.inplace_codes(c(F = "Female")), "F")
   # (a map is not a list written in place)
