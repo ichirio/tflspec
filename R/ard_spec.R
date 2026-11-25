@@ -1079,7 +1079,8 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #' variable's own (`BMIBL:sd=3`) with its own list.  An integer is
 #' that many decimals, `xx.x%` is `label_round(1, scale = 100)`,
 #' `xx.x*1000` is `label_round(1, scale = 1000)` and
-#' `pvalue` the program's `fmt_pvalue()` (`<0.001` or 3 decimals);
+#' `pvalue` the program's `fmt_pvalue()` (`<0.001`, or 3 decimals by the
+#' study's rounding);
 #' `cards::apply_fmt_fun()` then fills `stat_fmt`.  What takes no `fmt_fun`
 #' gets the same formats after the call, from `fmt_ard()`: cardx's tests, CIs
 #' and models, `cards::ard_stack_hierarchical()`, a study's own function,
