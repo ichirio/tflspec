@@ -111,7 +111,7 @@
     }
     out$data_yml <- .ai_data_yml_names(rd("data.yml"))
     out$defaults_yml <- rd("defaults.yml")
-    out$populations <- vapply(st$data$populations %||% list(), function(p) p$id %||% "", "")
+    out$populations <- .study_set_ids(st$data)
     out$patterns <- names(st$patterns)
   }
   if (!is.null(given$examples)) {

@@ -66,9 +66,7 @@
 .check_set_rows <- function(o, id, study) {
   rows <- list(.check_rows())
   add <- function(...) rows[[length(rows) + 1L]] <<- .check_rows(output_id = id, ...)
-  # (character(0) when data.yml names none: then every set is unknown)
-  pops <- vapply(study$data$populations %||% list(), function(p) .na_scalar(unlist(p[["id"]])), "")
-  pops <- pops[!is.na(pops)]
+  pops <- .study_set_ids(study$data)
   d <- o[["data"]]
   map <- if (is.list(d) && !is.null(names(d))) d
   both <- .data_both(map[["data"]], map[["dataset"]], map[["population"]])

@@ -397,6 +397,10 @@ test_that("a report's set that is none of data.yml's: an error (Codex 8C)", {
                "'X' is not an analysis set of spec/data.yml (it names none: register the set under `populations:`)",
                fixed = TRUE)
   expect_null(.pop_unknown_text("X", NULL))
+  # (a study with no data catalog, no data.yml: its sets are not known)
+  expect_null(.study_set_ids(list()))
+  expect_identical(.study_set_ids(list(datasets = list(list(dataset = "ADAE")))), character())
+  expect_identical(.study_set_ids(list(populations = list(list(id = "SAF"), list(id = "")))), "SAF")
   st0 <- list(data = list(datasets = list(list(dataset = "ADAE"))))
   l <- list(kind = "listing", data = list(source = "dataset", dataset = "ADAE", population = "flag:SAFFL"))
   p <- .check_set_rows(l, "L-1", st0)
