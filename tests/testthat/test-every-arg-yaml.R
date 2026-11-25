@@ -82,37 +82,25 @@ ea_allow <- c(
   rtf_figures.space_before = "rtfreporter takes it only with page_break: false (.page_flow_args())",
   generate_rtfreport.overwrite = "the run writes the RTF (tfl_runner_code()), not the report's code",
   analysis.params = "params name the conditions' columns: with no conditions they change nothing",
-  `analysis.overall=FALSE` = "FALSE is what an analysis with no overall does"
+  `analysis.overall=FALSE` = "FALSE is what an analysis with no overall does",
+  `data.subjects_in="none"` = "none keeps all: what a row with no subjects_in does (#927)"
 )
+
+# Arguments named as an analysis's own key (its id, its method): YAML cannot
+# write them as keys of the analysis -- the key is the analysis's own -- so
+# they go in its `args:` (R), tested in test-ard-yaml-keys.R; not walked
+ea_own_key <- c("ard_hierarchical.id", "ard_stack_hierarchical.id", "ard_categorical_ci.method")
 
 # Cases a GitHub issue holds (each skipped with its number): `fn.arg` for
 # every value, `fn.arg=!unset` or `fn.arg=<value>` for one
 ea_issues <- c(
-  # the cards / cardx arguments of an analysis never reach the ARD program
-  as_tag("tflspec#924", c(
-    paste0("ard_summary.", c("statistic", "fmt_fun", "stat_label")),
-    paste0("ard_tabulate.", c("statistic", "fmt_fun", "stat_label")),
-    paste0("ard_tabulate_value.", c("value", "statistic", "fmt_fun", "stat_label")),
-    paste0("ard_hierarchical.", c("id", "statistic", "fmt_fun", "stat_label")),
-    paste0("ard_stack_hierarchical.", c("id", "include", "statistic", "over_variables",
-                                        "attributes", "total_n", "shuffle")),
-    "continuous_summary_fns.summaries", "ard_missing.statistic",
-    paste0("ard_stack.", c(".by", ".overall", ".missing", ".attributes", ".total_n", ".shuffle", "...")),
-    paste0("ard_strata.", c(".by", ".strata", ".f")),
-    paste0("ard_categorical_ci.", c("method", "conf.level", "value")),
-    paste0(c("ard_stats_t_test", "ard_stats_wilcox_test", "ard_stats_fisher_test"), ".conf.level"),
-    "ard_stats_oneway_test.formula")),
-  # an analysis's maps (formats, derive, analysis_ids) never reach the ARD
-  analysis.formats = "tflspec#925", analysis.derive = "tflspec#925",
-  analysis.analysis_ids = "tflspec#925",
   # !unset in a data row or an analysis stops the ARD program
   as_tag("tflspec#926", paste0(c(
     paste0("data.", c("population", "subjects_in", "derive", "arrange", "add")),
     paste0("analysis.", c("statistics", "denominator", "overall", "formats", "post")),
     paste0(c("ard_tabulate", "ard_tabulate_value", "ard_hierarchical", "ard_stack_hierarchical",
              "ard_categorical_ci"), ".denominator"),
-    "ard_stack_hierarchical.overall"), "=!unset")),
-  `data.subjects_in="none"` = "tflspec#927"
+    "ard_stack_hierarchical.overall"), "=!unset"))
 )
 
 # the issue a walk's row is held by, or NA
@@ -314,7 +302,8 @@ test_that("every code-SPEC argument survives the YAML file and reaches the code"
   first_only <- identical(Sys.getenv("CI"), "true")
   for (fn in ea_fns()) {
     r <- ea_walk_fn(d, outs, fn, first_only = first_only)
-    p <- ea_problems(r[is.na(ea_issue_of(r)), , drop = FALSE])
+    p <- ea_problems(r[is.na(ea_issue_of(r)) & !paste(r$fn, r$arg, sep = ".") %in% ea_own_key, ,
+                       drop = FALSE])
     expect(length(p) == 0L, paste(c(paste0(fn, ":"), p), collapse = "\n  "))
   }
 })
