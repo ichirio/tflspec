@@ -1028,7 +1028,16 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     tr <- sp$tables[!is.na(sp$tables$output_id) & sp$tables$output_id == id, , drop = FALSE]
     if (nrow(tr) && !is.na(tr$note[1L]) && nzchar(trimws(tr$note[1L]))) tr$note[1L]
   }
-  common <- list(population = entry$population)
+  # the report's analysis set (the planner's column): on its data when the
+  # data reads subjects' records, a listing's or a figure's (canon 11-15:
+  # the set is the data's; the data's own wins); a table's stays in
+  # `common` until `common` goes
+  common <- list()
+  if (is.list(data) && isTRUE(data$source %in% c("dataset", "code"))) {
+    if (is.null(data$population) && !is.null(entry$population)) data$population <- entry$population
+  } else {
+    common$population <- entry$population
+  }
   for (k in c("treatment", "population_label")) {
     if (nrow(rrow) && k %in% names(rrow) && !is.na(rrow[[k]][1L]) && nzchar(rrow[[k]][1L])) common[[k]] <- rrow[[k]][1L]
   }
