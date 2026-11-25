@@ -9,7 +9,10 @@
 #    same piece added as a layer: an error, one of the two;
 #  - a KM figure's time axis label with no unit: a warning;
 #  - a listing whose columns all carry a width: a note, the widths to look
-#    at (a narrow subject id breaks every record over lines).
+#    at (a narrow subject id breaks every record over lines);
+#  - plan_digits() by the values of a variable no analysis groups its rows
+#    by (`PARAM` where the ARD is by `PARAMCD`): an error, the variables it
+#    may name (.check_digit_key_rows(), on the report resolved).
 # ============================================================================
 
 # Every text in a report's content and template arguments, with where it is
@@ -104,4 +107,41 @@
     }
   }
   do.call(rbind, rows)
+}
+
+# plan_digits() by a row key's value (`PARAMCD: {ALT: 1, BILI: {mean: 2}}`):
+# rtfreporter reaches a value through a column of the ARD, and the ARD's row
+# columns are its analyses' `by` (and `strata`).  A key given values (a map
+# whose names are not statistics) that is none of those -- `PARAM` where the
+# analyses are by `PARAMCD`, as param_change's and shift's are -- matches
+# nothing and stops the build: an error here, with the variables it may name.
+# `ro` is the report resolved (a template's analyses with the report's).  Not
+# judged where the ARD's columns cannot be known: no analyses, a report that
+# reads a data frame of its own, or an analysis written as code.
+.check_digit_key_rows <- function(ro, id) {
+  an <- ro$ard$analyses
+  if (!identical(ro$kind %||% "table", "table") || !length(an) || !is.list(an) ||
+      inherits(an, "tfl_r") || !is.list(ro$content) || inherits(ro$content, "tfl_r") ||
+      !identical((if (is.list(ro$data)) ro$data$source) %||% "ard", "ard")) return(NULL)
+  coded <- vapply(an, function(a) !is.list(a) || identical(a$method, "custom") || !is.null(a$code), NA)
+  if (any(coded)) return(NULL)
+  cols <- function(f) unique(unlist(lapply(an, function(a) lapply(unlist(a[[f]]), .split_bar))))
+  keys <- setdiff(c(cols("by"), cols("strata")), "")
+  vars <- cols("variables")
+  stats <- tfl_ard_statistics()$statistic
+  out <- list()
+  for (it in Filter(function(i) is.list(i) && identical(i$fn, "plan_digits"), ro$content)) {
+    for (k in setdiff(names(it$args), c("", "default", ".rows", "rounding", keys, vars))) {
+      v <- it$args[[k]]
+      if (!is.list(v) || is.null(names(v)) || all(names(v) %in% stats)) next
+      out[[length(out) + 1L]] <- .check_rows(
+        output_id = id, part = "content", item = sprintf("plan_digits(%s)", k), level = "error",
+        message = sprintf(paste0(
+          "plan_digits(%s = ) gives digits by a value of %s, but no analysis groups its rows by %s, ",
+          "so it matches nothing and the build stops. Key the digits by a variable of the analyses' ",
+          "`by` (%s), each value as the data holds it, the code: `<variable>: {<code>: 1}`"),
+          k, k, k, if (length(keys)) paste(keys, collapse = ", ") else "none"))
+    }
+  }
+  do.call(rbind, out)
 }

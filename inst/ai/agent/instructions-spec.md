@@ -272,27 +272,30 @@ needs that variable in `by`.
   With the template `ae_soc_pt` / `ae_ser_soc_pt`, the same list as its
   `sort` argument.
 - **Digits that differ by parameter** (a lab table: ALT one decimal, BILI
-  three): on the `param_change` template, `plan_digits` by the parameter
-  as the table holds it -- `PARAM`, the label `ai/adam_summary.md` lists:
-  `plan_digits: {PARAM: {"Alanine Aminotransferase (U/L)": {mean: 1, sd:
-  2, median: 1, min: 0, max: 0}, "Bilirubin (umol/L)": {mean: 2, sd: 3,
-  median: 2, min: 1, max: 1}}}` -- a parameter it leaves out keeps the
-  template's (one decimal, the SD two); its cells are written without
-  digits, so leave them as they are.  A code SPEC's own cells: guarded
-  cell templates, one a parameter, the last one for the
-  rest -- `plan_cells: {continuous: [!r 'PARAMCD == "ALT" ~ "{mean:.1f}
-  ({sd:.2f})"', !r 'PARAMCD == "BILI" ~ "{mean:.3f} ({sd:.4f})"', "{mean:.2f}
-  ({sd:.3f})"]}` (a guard is `<row key> == "<value>" ~ "<template>"`, as
-  `!r`).  The same list under one row's label when only that row differs:
-  `continuous: {"Mean (SD)": [!r '...', "..."], Median: "{median:.1f}"}`
-  (not the label as an entry of its own: `plan_cells: {"Mean (SD)":
-  [...]}` is refused).  A guard compares the value as the table has it: a
-  key with a code list holds the label (`PARAMCD == "Bilirubin (umol/L)"`,
-  not `"BILI"`), and a table by parameter (`param_change`, a shift) holds
-  `PARAM`, the label `ai/adam_summary.md` lists -- `PARAM == "Alanine
-  Aminotransferase (U/L)"`; a guard on the code (`PARAMCD == "ALT"`)
-  matches nothing and every row takes the last template.  `plan_digits`
-  by a value gives digits only to a cell written without them (`{mean}
+  three): by the parameter as the ARD holds it -- the variable the
+  analyses' `by` names, each value its code as the data has it, not the
+  label a code list or `param_labels` prints.  On the `param_change`
+  template, its `formats` argument by the parameter's code (`PARAMCD`):
+  `formats: {ALT: {mean: 1, sd: 2, median: 1, min: 0, max: 0}, BILI:
+  {mean: 2, sd: 3, median: 2, min: 1, max: 1}}` -- a parameter it leaves
+  out keeps the template's (one decimal, the SD two); its cells are
+  written without digits, so leave them as they are.  The same as an
+  item, on a template or a code SPEC: `plan_digits: {PARAMCD: {ALT: {mean:
+  1, sd: 2}, BILI: {mean: 2, sd: 3}}}`, the key a variable of the
+  analyses' `by` (`PARAM: {...}` matches nothing when the analyses are by
+  `PARAMCD`, as `param_change`'s and `shift`'s are, and stops the build).
+  A code SPEC's own cells: guarded cell templates, one a parameter, the
+  last one for the rest -- `plan_cells: {continuous: [!r 'PARAMCD ==
+  "ALT" ~ "{mean:.1f} ({sd:.2f})"', !r 'PARAMCD == "BILI" ~ "{mean:.3f}
+  ({sd:.4f})"', "{mean:.2f} ({sd:.3f})"]}` (a guard is `<row key> ==
+  "<value>" ~ "<template>"`, as `!r`).  The same list under one row's
+  label when only that row differs: `continuous: {"Mean (SD)": [!r '...',
+  "..."], Median: "{median:.1f}"}` (not the label as an entry of its own:
+  `plan_cells: {"Mean (SD)": [...]}` is refused).  A guard compares the
+  value as the ARD holds it: the code, with a code list too (`PARAMCD ==
+  "BILI"`, not `"Bilirubin (umol/L)"`); a guard on the label matches
+  nothing and every row takes the last template.  `plan_digits` by a
+  value gives digits only to a cell written without them (`{mean}
   ({sd})`), as `param_change`'s are; a cell with its own (`{mean:.1f}`)
   keeps them.
 - **Every row the shell shows** (Race's Multiple, ECOG 0 to 3): each
@@ -331,8 +334,13 @@ Group: {RENALGR}"`.
   `pvalue`; `"<0.001"` for small values: `p: [!r 'p.value < 0.001 ~
   "<0.001"', "{p.value:.3f}"]`).  The methods: `fisher`, `chisq`
   (categorical), `ttest` (two arms), `wilcox`, `kruskal`, `oneway`
-  (continuous, any number of arms).  The p-value goes on the variable's
-  first row; a p-value the shell puts on a row of its own is a question.
+  (continuous, any number of arms).  A method whose note says "by and
+  variables blank" (`oneway`, `aov`, `anova`, `lsmeans_diff`,
+  `regression` ...) takes a formula or a model in `args` instead, and no
+  `by` or `variables`: `{id: P_AGE, method: oneway, dataset: ADSL,
+  population: SAF, args: !r 'formula = AGE ~ TRT01A'}`.  The p-value goes
+  on the variable's first row; a p-value the shell puts on a row of its
+  own is a question.
 - **The arms in their order**: the data's order (TRT01AN beside TRT01A)
   is the program's default; write a code list (`codelists: {TRT01A:
   [...]}`) only when the shell's order or labels differ from the data's.

@@ -156,6 +156,35 @@ test_that("the digits: plan_digits(), the same as fixed cells; a parameter's own
                "whole numbers of decimals")
 })
 
+test_that("a report's plan_digits() by parameter: keyed by PARAMCD and its codes, as `formats`", {
+  # (the AI kit's instructions said PARAM and its label: the build stopped,
+  # plan_digits() names PARAM, which matched nothing)
+  pc_skip()
+  x <- tfl_template_expand("param_change", pc_args)
+  ard <- rtfreporter::normalize_ard(pc_ard(x))
+  db <- list(ALT = list(mean = 2, sd = 3, min = 0, max = 0))
+  run <- function(...) {
+    pc_tab(suppressMessages(tfl_content_run(
+      tfl_output("T-1", "table", content = c(x$content, list(tfl_item("plan_digits", list(...))))),
+      ard)))
+  }
+  t <- pc_tab(do.call(tpl_param_change, c(list(pc_ard(x)), pc_args, list(formats = db))))
+  if (identical(t, pc_tab(do.call(tpl_param_change, c(list(pc_ard(x)), pc_args))))) {
+    skip("rtfreporter without digits by a row key's value (#794)")
+  }
+  expect_identical(run(PARAMCD = db), t)
+  alt <- "Alanine Aminotransferase (U/L)"
+  expect_error(run(PARAM = stats::setNames(db, alt)), "names .PARAM., which matched nothing")
+  # tfl_check_spec()'s look at the report: the same key, an error before the build
+  ro <- list(kind = "table", ard = x$ard,
+             content = c(x$content, list(tfl_item("plan_digits", list(PARAM = stats::setNames(db, alt))))))
+  p <- .check_digit_key_rows(ro, "T-1")
+  expect_identical(p$level, "error")
+  expect_match(p$message, "(TRT01A, PARAMCD, AVISIT)", fixed = TRUE)
+  ro$content[[length(ro$content)]]$args <- list(PARAMCD = db)
+  expect_null(.check_digit_key_rows(ro, "T-1"))
+})
+
 pc_n1_args <- list(population = "SAF", by = "TRT01A", data = "ADLB", params = "ALT", param_order = NULL,
                    visits = c("CYCLE 17 DAY 1", "CYCLE 18 DAY 1", "CYCLE 20 DAY 1"))
 # the Mean (SD) row of the Control columns, a visit a cell: n = 2, n = 1, n = 0

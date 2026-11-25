@@ -203,6 +203,8 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
     # the names its fields give: a figure's that nothing above makes, a
     # table's named block (R/object_list.R)
     rows[[length(rows) + 1L]] <- .check_object_rows(ro, id, study_ds)
+    # digits by a value of a variable the ARD does not group its rows by
+    rows[[length(rows) + 1L]] <- .check_digit_key_rows(ro, id)
     if (inherits(ro$content, "tfl_r")) next
     # a figure's content key (`figure: {name, args}`): its name is one of the
     # table's (.fig_content_table()), its program is written

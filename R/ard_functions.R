@@ -349,3 +349,35 @@ tfl_ard_args <- function(call) {
   if (arg %in% names(m)) return(m[[arg]])
   if (identical(kind, "data")) "data" else "args"
 }
+
+# Whether an analysis row's method analyses the row's `variables`, from the
+# function catalog (functions.csv's `shape`, args.csv's arguments), so the
+# AI kit's check, the methods' notes and the code the row writes agree:
+#   "required"  its function takes the data's columns as `variables`
+#               (shape `variables`; an argument the `variables` column
+#               fills, as a Kaplan-Meier fit's arms or the one column
+#               ard_pairwise() compares), or the catalog does not describe
+#               it (a study's own function, the subject count);
+#   "none"      what it analyses is in `args`: a formula
+#               (cardx::ard_stats_oneway_test(formula = )), a model
+#               (cardx::ard_car_anova(x = )), columns of its own
+#               (cardx::ard_incidence_rate(time = )) or the data alone
+#               (cards::ard_total_n()) -- the call is written without
+#               `variables`, and its note says "variables blank";
+#   NA          a `custom` row's code, or a row that runs the analyses
+#               under it (ard_stack(), ard_strata()): not judged here.
+.method_variables <- function(m, keys = tfl_ard_methods()) {
+  if (!is.character(m) || length(m) != 1L || is.na(m) || !nzchar(m)) return(NA_character_)
+  k <- .method_key(m, keys)
+  call <- if (is.na(k)) m else keys$call[k]
+  if (identical(call, "(code)")) return(NA_character_)
+  fns <- .ard_catalog_rows("functions.csv", "tflspec.ard_functions", "call")
+  shape <- fns$shape[match(call, fns$call)]
+  args <- .ard_catalog_rows("args.csv", "tflspec.ard_args", c("call", "arg"))
+  own <- args$arg[args$call == call]
+  fills <- vapply(own, .ard_arg_column, "", kind = "", call = call)
+  if ("variables" %in% fills) return("required")
+  if (identical(shape, "wrapper")) return(NA_character_)
+  if (shape %in% c("formula", "model", "columns", "data")) return("none")
+  "required"
+}
