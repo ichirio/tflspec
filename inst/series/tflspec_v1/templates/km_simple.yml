@@ -12,7 +12,7 @@ params:
     tier: required
     description: The group variable; one curve a group.
   time_unit:
-    type: enum[days|months]
+    type: enum[days|weeks|months|years]
     input: pick
     choices: fixed
     default: !series time_unit

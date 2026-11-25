@@ -25,7 +25,7 @@ params:
     tier: required
     description: The parameter (PARAMCD) whose time to event is drawn.
   time_unit:
-    type: enum[days|months]
+    type: enum[days|weeks|months|years]
     input: pick
     choices: fixed
     default: !series time_unit
@@ -57,7 +57,11 @@ params:
 derive:
   population: {value: !series population_efficacy}
   population_flag: {value: "{population}FL"}
-  x_label: {if: "{time_unit}", is: months, then: Time (Months), else: Time (Days)}
+  x_label_days: {if: "{time_unit}", is: days, then: Time (Days)}
+  x_label_weeks: {if: "{time_unit}", is: weeks, then: Time (Weeks)}
+  x_label_months: {if: "{time_unit}", is: months, then: Time (Months)}
+  x_label_years: {if: "{time_unit}", is: years, then: Time (Years)}
+  x_label: {last: ["{x_label_days}", "{x_label_weeks}", "{x_label_months}", "{x_label_years}"]}
   risk_item: {if: "{risk_table}", then: {risktable_stats: n.risk, times: "{x_breaks}"}}
   legend_inside: {if: "{legend}", is: inside, then: [0.98, 0.98]}
   legend_corner: {if: "{legend}", is: inside, then: [1, 1]}

@@ -207,3 +207,18 @@ test_that("every \"{x}\" in data and analysis names a param or a condition colum
     }
   }
 })
+
+test_that("every series template's time_unit enum is the quick figures' pp_time_units", {
+  # one list of time units: quick.R's pp_time_units, the KM template's
+  # choices and the series templates' enums (a fourth place to drift)
+  want <- names(tflspec:::pp_time_units)
+  seen <- 0L
+  for (nm in names(series_templates())) {
+    ty <- series_templates()[[nm]]$params$time_unit$type
+    if (is.null(ty)) next
+    seen <- seen + 1L
+    got <- strsplit(sub("^enum\\[(.*)\\]$", "\\1", ty), "|", fixed = TRUE)[[1L]]
+    expect_identical(got, want, info = nm)
+  }
+  expect_gte(seen, 2L)
+})
