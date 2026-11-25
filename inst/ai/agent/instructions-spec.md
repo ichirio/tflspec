@@ -181,10 +181,13 @@ ard:
 A figure from a template with its own data (`km_survival`,
 `km_cumulative`): the template by `name` and `args`, and its data as
 `steps` under `data` (never a bare list) -- the data stage only: `read`,
-the analysis set (`flag`, or a semi `join` on ADSL), `param`.  **Not the
-template's own steps**: no `survfit`, no `time_unit` -- the template
-makes them, and the check refuses a draft that writes them.  Never drop
-`data.steps` either: without them the figure would be of every record.
+`param` (and a record condition the shell names).  **Not the template's
+own steps**: no `survfit`, no `time_unit` -- the template makes them, and
+the check refuses a draft that writes them.  Never drop `data.steps`
+either: without them the figure would be of every parameter.  The
+analysis set is the report's `common: population`, never a step: the
+program joins the records to its subjects (the check names a `flag`
+step on the set's flag, `ITTFL`; `flag` is for a record flag, `ANL01FL`).
 
 ```yaml
 id: F-14-2-2
@@ -200,7 +203,6 @@ data:
   source: code
   steps:
     - {step: read, dataset: ADTTE}
-    - {step: flag, variable: ITTFL}
     - {step: param, value: OS}
 plot: {x_label: "Time (Months)", y_label: "Survival Probability"}
 page:
@@ -398,7 +400,8 @@ Group: {RENALGR}"`.
 |---|---|
 | `{left: MedDRA version 27.0, fictional dictionary.}` | `{left: "MedDRA version 27.0, fictional dictionary."}` -- a comma, a colon or `#` in a text: quote it |
 | `label: Shift Table of Laboratory Values: Baseline versus Worst` | `label: "Shift Table of Laboratory Values: Baseline versus Worst"` -- `: ` inside a value is a YAML error; quote every free text |
-| `template: {name: km_survival, ...}` with `data.steps` holding `survfit`, or with no `data.steps` | the data stage only: `read`, the analysis set, `param` -- the template makes `time_unit` and `survfit` |
+| `template: {name: km_survival, ...}` with `data.steps` holding `survfit`, or with no `data.steps` | the data stage only: `read`, `param` -- the template makes `time_unit` and `survfit` |
+| a figure's `{step: flag, variable: SAFFL}` (or a condition on the set's flag) | `common: {population: SAF}` -- the analysis set is the report's; the program joins the records to its subjects |
 | `where: !r TRTEMFL == "Y"` (works, but needs no tag) | `where: TRTEMFL == "Y"` -- a condition is written bare (names, numbers, strings, `== != < <= > >=`, `& \| !`, `%in% c(...)`, `is.na()`, parentheses); R beyond that (`between()`) carries `!r` |
 | `data: [{step: read, dataset: ADTTE}, ...]` | `data: {source: code, steps: [{step: read, dataset: ADTTE}, ...]}` |
 | an analysis with `data: lb_worst` **and** `population: SAF` | one of the two: `data` alone, or `dataset` with `population` |
@@ -431,5 +434,6 @@ Group: {RENALGR}"`.
 8. `ai:` is the last top-level key: `assumptions` (each with `from` when
    from a decision) and `confirm`.
 9. A template with its own data (`km_survival`, `km_cumulative`) has
-   `data.steps` of `read`, the analysis set and `param` -- and none of the
-   template's own steps (`survfit`, `time_unit`).
+   `data.steps` of `read` and `param` -- and none of the template's own
+   steps (`survfit`, `time_unit`).  A figure's analysis set is its
+   `common: population`, never a `flag` step on the set's flag.

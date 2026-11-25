@@ -84,6 +84,10 @@ the name its program gives its ARD (\code{"ard"});
 tokens as the program writes them, or \code{NULL} (no SPEC: the study's
 sheets); \code{spec_output}: the report in the study's spec as it is;
 \code{template_listing}: a listing made from a template;
+\item \code{population}: the report's analysis set (a population of the ARD
+definition), or \code{NULL}: its spec's \verb{common: population}.  A figure's
+program makes its subjects in its data part and joins every dataset
+its design reads to them;
 \item \code{listing}: \code{NULL}, or \code{list(own = )} when the listing sheets define it
 (\code{own}: it starts from its analysis data or analysis set);
 \item a figure's: \code{design} (\code{\link[=tfl_fig_design]{tfl_fig_design()}}, or \code{NULL}), \code{ard_source}

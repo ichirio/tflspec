@@ -209,12 +209,16 @@ tfl_ai_check <- function(answer, context = NULL, adam = NULL) {
   rbind(p, .ai_fig_required(design$data, design[c("layers", "plot", "plots")], context))
 }
 
-# What defines a figure, as a table's (10/24): its data steps keep the
-# analysis set (a flag step, or a condition on the set's flag) and, for a
+# What defines a figure, as a table's (10/24): its analysis set and, for a
 # dataset of parameters (PARAMCD), the shell's parameter (a param step, a
 # condition on PARAMCD) -- or the figure is by the parameter (PARAM in a
-# layer or the plot: a facet, a colour).  Without them it is no report: an
-# error, to be asked, not guessed.
+# layer or the plot: a facet, a colour).  The analysis set is the report's
+# (`common: population`, the context's `population`: A2): its program
+# joins the records the figure reads to its subjects, so a figure that
+# reads a dataset with no set is no report -- a warning, the set to be
+# asked, not guessed -- and a step that keeps the set's rows by the
+# records' own columns (a variable of its condition: `flag: SAFFL`) is an
+# error, the step to be removed.
 .ai_fig_required <- function(steps, rest = list(), context = NULL) {
   p <- .ai_problems()
   steps <- Filter(is.list, steps %||% list())
@@ -222,17 +226,33 @@ tfl_ai_check <- function(answer, context = NULL, adam = NULL) {
   txt <- function(x) paste(unlist(lapply(x, function(v) as.character(unlist(v)))), collapse = " ")
   kind <- vapply(steps, function(s) as.character(s$step %||% ""), "")
   reads <- toupper(unlist(lapply(steps[kind %in% c("read", "join")], function(s) s$dataset)))
-  # the analysis set: a flag step, or its flag in a condition
-  pop_vars <- if (!is.null(context$population$where)) .ai_r_names(context$population$where)
-  pop_rx <- paste0("\\b(", paste(unique(c(pop_vars, "SAFFL", "FASFL", "ITTFL", "MITTFL", "PPROTFL",
-                                           "PPSFL", "RANDFL", "ENRLFL", "EFFFL", "PKFL")),
-                                collapse = "|"), ")\\b")
   conds <- txt(lapply(steps[!kind %in% c("read", "survfit", "summary", "summary_by")], function(s)
     s[intersect(names(s), c("expr", "where", "variable", "code"))]))
-  if (!"flag" %in% kind && !grepl(pop_rx, conds, perl = TRUE)) {
+  # the analysis set: the report's (the context's), read by nothing else
+  # (an id, a label or a condition: a set the report names)
+  pop <- context$population
+  recs <- any(vapply(steps[kind == "read"], function(s) !is.null(s$dataset) && is.null(s$data), NA))
+  if (!is.null(context) && recs && !length(pop)) {
     p <- .ai_problem(p, "data", paste(
-      "keeps no analysis set: add the shell's (`{step: flag, variable: <its flag, FASFL ...>}`);",
-      "if the shell does not say it, ask it in a question -- do not guess"))
+      "reads subjects' records and the report has no analysis set: it is the report's",
+      "(`common: population`, its TOC row's), whose subjects the program joins the records",
+      "to; if the shell names one the TOC does not, ask it in a question -- do not guess"),
+      "warning")
+  }
+  # a step that keeps the set's rows by a variable of its condition
+  pop_vars <- if (is.list(pop) && !is.null(pop$where)) .ai_r_names(pop$where)
+  keeps <- c(flag = "variable", filter = "expr")
+  for (k in seq_along(steps)) {
+    if (!kind[k] %in% names(keeps) || !length(pop_vars)) next
+    v <- as.character(unlist(steps[[k]][[keeps[[kind[k]]]]]))[1L]
+    used <- if (!is.na(v %||% NA)) .ai_r_names(v)
+    hit <- intersect(used, pop_vars)
+    if (!length(hit)) next
+    p <- .ai_problem(p, sprintf("data[%d] %s", k, kind[k]), sprintf(paste(
+      "keeps the rows of the analysis set by the records' own %s: the set is the report's",
+      "(`common: population`), whose subjects the program joins the records to -- remove",
+      "the step (a `flag` step is for a record flag, ANL01FL)"),
+      paste(hit, collapse = ", ")))
   }
   # a dataset of parameters: kept to the shell's, or the figure by it
   bds <- if (!is.null(context$datasets)) {

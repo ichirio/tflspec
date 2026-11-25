@@ -9,7 +9,9 @@ test_that("templates get little advice; a bare design gets the usual", {
     plot = list(colour_by = "TRT01P", legend = "none"),
     layers = list(list(layer = "km_curve")))
   a <- tfl_fig_advice(bare, adam)
-  expect_true(all(c("km_risk", "km_censor", "km_unit", "legend_none", "pop") %in% a$rule))
+  expect_true(all(c("km_risk", "km_censor", "km_unit", "legend_none") %in% a$rule))
+  # (no flag step: the analysis set is the report's, nothing to advise)
+  expect_false("pop" %in% a$rule)
   expect_true(all(a$level %in% c("info", "warning")))
 })
 
@@ -26,7 +28,7 @@ test_that("fixes make the change they name", {
   kinds <- vapply(d$layers, `[[`, "", "layer")
   expect_equal(kinds, c("km_curve", "censor_mark", "risk_table"))
   # the data steps before the fit (the named step), which stays last
-  expect_equal(vapply(d$data, `[[`, "", "step"), c("read", "param", "time_unit", "flag", "survfit"))
+  expect_equal(vapply(d$data, `[[`, "", "step"), c("read", "param", "time_unit", "survfit"))
   expect_equal(d$plot$legend, "bottom")
   # the fixed design draws, and the advice is now only the axis
   expect_equal(nrow(tfl_check_fig_design(d, adam)), 0L)
@@ -96,4 +98,21 @@ test_that("own colours or a palette with no 'Colours by' are said to do nothing"
   expect_identical(nrow(rule(mk(list()))), 0L)
   # a colour that cannot be read is no advice (the design's code says so)
   expect_identical(nrow(rule(mk(list(colours = "Drug B")))), 0L)
+})
+
+test_that("a flag step on a design: advice that the analysis set is the report's, no fix (A2)", {
+  adam <- tfl_example_adam()
+  d <- tfl_fig_design(
+    data = list(list(step = "read", dataset = "ADTTE"), list(step = "param", value = "OS"),
+                list(step = "flag", variable = "FASFL")),
+    stats = list(list(step = "survfit", name = "fit", time = "AVAL", censor = "CNSR", by = "TRT01P")),
+    plot = list(colour_by = "TRT01P", legend = "bottom"),
+    layers = list(list(layer = "km_curve")))
+  a <- tfl_fig_advice(d, adam)
+  p <- a[a$rule == "pop", ]
+  expect_identical(nrow(p), 1L)
+  expect_identical(p$level, "info")
+  expect_match(p$message, "Step 3 keeps the rows whose FASFL", fixed = TRUE)
+  expect_match(p$message, "`common: population`", fixed = TRUE)
+  expect_null(p$fix[[1L]])
 })

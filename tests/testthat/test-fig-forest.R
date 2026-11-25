@@ -75,7 +75,7 @@ test_that("the forest template is in parts, with its analyses, and its design ch
   an <- attr(d, "analyses")
   expect_identical(an$analyses$analysis_id, c("HR", "HR_SEX", "HR_AGEGR1"))
   # (the statistics steps are data steps of the design: ard_stats, then the code)
-  expect_identical(vapply(d$data, `[[`, "", "step"), c("read", "param", "flag", "ard_stats", "code"))
+  expect_identical(vapply(d$data, `[[`, "", "step"), c("read", "param", "ard_stats", "code"))
   expect_identical(vapply(d$layers, `[[`, "", "layer"), c("vline", "errorbar_h", "point", "text_column"))
   pr <- tfl_check_fig_design(d)
   expect_equal(nrow(pr), 0L)

@@ -3,10 +3,17 @@
 # range, breaks and break labels.  Data, not pixels: the same under any
 # graphics device, and a change of ggplot2's drawing does not count.
 
-fx_run <- function(design, adam) {
+# (`pop`: the report's analysis set, by its flag on ADSL -- its subjects
+# made as a report program's data part makes them, adsl_sub, and the
+# records the design reads joined to them: a template keeps no set itself)
+fx_run <- function(design, adam, pop = NULL) {
+  if (!is.null(pop)) {
+    attr(design, "subjects") <- list(object = "adsl_sub", dataset = "ADSL", id = "USUBJID")
+  }
   code <- tfl_fig_design_code(design, "t")
   e <- new.env()
   for (n in names(adam)) assign(tolower(n), adam[[n]], envir = e)
+  if (!is.null(pop)) e$adsl_sub <- adam$ADSL[adam$ADSL[[pop]] %in% "Y", ]
   dir <- tempfile("fig")
   dir.create(dir)
   owd <- setwd(dir)
@@ -56,15 +63,15 @@ test_that("four templates' scripts make the figures written by hand", {
   cases <- list(
     km_risk_table = list(tfl_fig_template("km_risk_table", param = os,
                                           group = "TRT01P"),
-                         hand$km_risk_table(adam, os)),
+                         hand$km_risk_table(adam, os), "FASFL"),
     waterfall_response = list(tfl_fig_template("waterfall_response"),
-                              hand$waterfall_response(adam)),
+                              hand$waterfall_response(adam), "FASFL"),
     mean_se = list(tfl_fig_template("mean_se", param = lb),
-                   hand$mean_se(adam, lb)),
+                   hand$mean_se(adam, lb), "SAFFL"),
     box_by_visit = list(tfl_fig_template("box_by_visit"),
-                        hand$box_by_visit(adam)))
+                        hand$box_by_visit(adam), "SAFFL"))
   for (nm in names(cases)) {
-    e <- fx_run(cases[[nm]][[1L]], adam)
+    e <- fx_run(cases[[nm]][[1L]], adam, pop = cases[[nm]][[3L]])
     want <- cases[[nm]][[2L]]
     for (g in names(want)) {
       # the figure's chain goes into `fig` (a whole-script figure keeps

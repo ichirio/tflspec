@@ -225,9 +225,10 @@ test_that("the draft check and tfl_check_spec() report a plot: key that does not
   ctx_study$study_dir <- d
   for (cx in list(ctx, ctx_study)) {
     expect_no_warning(q <- suppressMessages(tfl_ai_check(ans, cx)))
-    expect_identical(q$where[q$severity == "warning"], "plot censor_size")
-    expect_match(q$problem[q$severity == "warning"], "^plot: censor_size has no effect in template km_survival: ")
-    # (the draft keeps no analysis set, which is another problem: not about plot:)
+    w <- q$severity == "warning" & q$where != "data"
+    expect_identical(q$where[w], "plot censor_size")
+    expect_match(q$problem[w], "^plot: censor_size has no effect in template km_survival: ")
+    # (the context names no analysis set, a warning of its own at `data`: not about plot:)
     expect_false(any(q$severity == "error" & grepl("^plot", q$where)))
   }
 })

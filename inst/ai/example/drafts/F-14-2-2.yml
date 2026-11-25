@@ -12,8 +12,6 @@ data:
       dataset: ADTTE
     - step: param
       value: OS
-    - step: flag
-      variable: ITTFL
     - step: survfit
       name: fit
       time: AVAL

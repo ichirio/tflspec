@@ -72,9 +72,14 @@
             fd[setdiff(names(fd), c("data", "stats", "plot", "layers"))])
   args <- args[names(args) %in% names(formals(tfl_fig_design))]
   design <- do.call(tfl_fig_design, args)
+  # the report's subjects (its analysis set, `common: population`), made as
+  # its program's data part makes them; the datasets it reads joined to them
+  sj <- .ai_fig_subjects(st, id, sh)
+  if (!is.null(sj)) attr(design, "subjects") <- sj$subjects
   code <- tfl_fig_design_code(design, id, setup = TRUE, save = TRUE, name = "fig",
                               codelists = .ai_fig_codelists(st, id, sh$table$codelists))
-  reads <- unique(toupper(attr(code, "reads") %||% character()))
+  reads <- unique(toupper(c(attr(code, "reads") %||% character(),
+                            if (!is.null(sj)) sj$subjects$dataset)))
   # (its packages around it, none attached)
   env <- new.env(parent = .fig_pkg_env(attr(code, "libs")))
   ds <- st$data$datasets %||% list()
@@ -91,7 +96,7 @@
               sprintf('file.path("%s", "%s.png")', out_dir, id), code, fixed = TRUE)
   # after the study's figure setup (theme_tfl(), the palettes, the days in
   # a month), as the program runs after programs/tfl/fig_setup.R
-  code <- c(tfl_fig_setup_code(), .fig_strip_library(code))
+  code <- c(tfl_fig_setup_code(), if (!is.null(sj)) sj$code, .fig_strip_library(code))
   # (the study's helpers: set_levels() of the code lists, order_levels() of the arms)
   if (any(grepl("set_levels(", code, fixed = TRUE)) ||
       any(grepl("order_levels(", code, fixed = TRUE))) eval(parse(text = tfl_helpers_code()), env)
@@ -99,6 +104,22 @@
   fig <- get("fig", envir = env, inherits = FALSE)
   .ai_fig_nothing_drawn(fig, id)
   list(plot = fig, png = file.path(out_dir, paste0(id, ".png")))
+}
+
+# A drawn figure's subjects (A2): its report's analysis set made as the
+# program's data part makes it (.fig_subjects_part()), from the datasets the
+# draw reads (the study's setup has read them: no file read here); NULL when
+# the report has none or the study's ARD definition cannot be made
+.ai_fig_subjects <- function(st, id, sh) {
+  o <- tfl_read_outputs(".", skip_bad = TRUE)[[id]]
+  pop <- if (!is.null(o)) .out_population(o) else NA_character_
+  if (is.na(pop)) return(NULL)
+  x <- tryCatch(.ard_spec_of_study(st, output_id = id, sheets = sh)$spec,
+                error = function(e) NULL)
+  if (is.null(x)) return(NULL)
+  old <- options(tflspec.study_setup = TRUE)
+  on.exit(options(old), add = TRUE)
+  .fig_subjects_part(x, id, pop)
 }
 
 # A figure that draws nothing -- its data empty after its steps (a

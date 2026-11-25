@@ -108,7 +108,6 @@ test_that("tfl_content_run(): a dataset the figure reads and the data do not hol
   o <- tfl_output("F-9", "figure", extends = "none",
                   template = list(name = "km_survival", args = list(by = "TRT01A")),
                   data = list(steps = list(list(step = "read", dataset = "ADTTE"),
-                                           list(step = "flag", variable = "FASFL"),
                                            list(step = "param", value = "PFS"))))
   ro <- tfl_resolve_output(o, s)
   expect_error(tfl_content_run(ro, list()), "the figure reads ADTTE, not among the data given (none)", fixed = TRUE)

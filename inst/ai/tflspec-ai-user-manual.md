@@ -493,8 +493,7 @@ object each data step reads (`in`) and leaves (`out`).
 template: km_risk_table
 data:                                   # one ordered list of steps
 - {step: read, dataset: ADTTE}          # -> df
-- {step: param, value: OS}
-- {step: flag, variable: FASFL}
+- {step: param, value: OS}              # the analysis set: the report's common: population, no step
 - {step: survfit, name: fit, time: AVAL, censor: CNSR, by: TRT01A}   # -> fit
 plot: {x_label: Time (Months), colour_by: TRT01A, legend: inside}
 layers:                                 # what is drawn, in order

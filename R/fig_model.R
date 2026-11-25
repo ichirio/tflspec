@@ -733,10 +733,14 @@ tfl_read_fig_design <- function(path) {
 # which the steps after it change; and the datasets it reads.  The
 # figure's code lists go on `df`, last of its steps before the first
 # named object (each listed column a factor in its list's order).
+# `subjects`: the report's subjects (A2), list(object, dataset, id) of
+# .fig_subjects_part(): a read of a dataset is the records of its subjects
+# (joined to them, .fig_subjects_join()), a read of their own dataset the
+# subjects themselves; NULL (a design on its own) reads the dataset as it is.
 .fig_named_steps <- c("survfit", "summary", "summary_by", "rate", "count", "subset",
                       "ard_stats", "function")
 
-.fig_steps_code <- function(steps, levels = NULL, order = FALSE) {
+.fig_steps_code <- function(steps, levels = NULL, order = FALSE, subjects = NULL) {
   out <- character()
   pipe <- character()
   reads <- character()
@@ -829,11 +833,18 @@ tfl_read_fig_design <- function(path) {
         } else {
           ds <- toupper(v("dataset"))
           reads <- c(reads, ds)
-          # the arms in their numeric order (TRT01P by TRT01PN), first of
-          # the pipe -- before any filter or fit (the study's helper
-          # order_levels(); the code lists, set later, win)
-          pipe <- c(pp_ds_name(ds), if (order) .order_levels_step(
-            NULL, if (adsl_joined && ds != "ADSL") pp_ds_name("ADSL")))
+          pipe <- if (!is.null(subjects) && identical(ds, toupper(subjects$dataset))) {
+            # the report's subjects themselves (made, in order, by the data part)
+            subjects$object
+          } else {
+            # the arms in their numeric order (TRT01P by TRT01PN), first of
+            # the pipe -- before any filter or fit (the study's helper
+            # order_levels(); the code lists, set later, win); then, in a
+            # report with an analysis set, its subjects' records only
+            c(pp_ds_name(ds), if (order) .order_levels_step(
+              NULL, if (adsl_joined && ds != "ADSL") pp_ds_name("ADSL")),
+              if (!is.null(subjects)) .fig_subjects_join(subjects))
+          }
         }
       },
       join = {
@@ -965,6 +976,52 @@ tfl_read_fig_design <- function(path) {
 .fig_read_data <- function(s) {
   d <- s[["data"]]
   if (is.character(d) && length(d) == 1L && !is.na(d) && nzchar(trimws(d))) trimws(d)
+}
+
+# ---- a report's subjects (A2: one population rule) -------------------------
+# A figure of a report with an analysis set (`common: population`) reads the
+# records of its subjects only, as the ARD programs' analysis data do: the
+# subjects made once by the report's data part (.ard_data_part(): the object
+# <dataset>_sub), every dataset the design reads joined to them.  No step
+# keeps a population (a `flag` step is for a record flag, ANL01FL).
+
+# The subjects of the analysis set `pop` of report `output_id`, as the data
+# part of its program makes them, with its analysis data `data` (the ARD
+# definition `x`): list(code = <the data part's lines>, subjects =
+# list(object, dataset, id)).  NULL when the report has no analysis set or
+# the definition does not define it.
+.fig_subjects_part <- function(x, output_id, pop, data = character()) {
+  pop <- .na_scalar(pop)
+  pops <- x$populations
+  if (is.na(pop) || is.null(pops) || !pop %in% pops$population_id) return(NULL)
+  k <- match(pop, pops$population_id)
+  ds <- pops$dataset[k]
+  made <- .ard_data_part(x, output_id, data = data, population_id = pop)
+  obj <- unname(attr(made, "renamed")[paste0("pop_", .r_name(pop))])
+  if (!length(obj) || is.na(obj)) {
+    # (no object of its own: the analysis data that is the set itself --
+    # .pop_as_adata() made the set under its name -- or, a set with no
+    # condition, its dataset as it is: .pop_identity())
+    ad <- .adata_of(.adata_sheet(x), output_id)
+    na <- function(v) if (is.null(v)) rep(TRUE, nrow(ad)) else is.na(v)
+    same <- ad$data_id[ad$data_id %in% data & toupper(ad$from) %in% toupper(ds) &
+                         ad$population_id %in% pop & na(ad$subjects_in) & na(ad$where) &
+                         na(ad$code)]
+    plain <- is.na(pops$where[k]) && is.na(pops$derive[k] %||% NA)
+    obj <- if (length(same)) same[1L] else if (plain) .r_name(ds) else NA_character_
+  }
+  if (is.na(obj)) return(NULL)
+  list(code = made, subjects = list(object = obj, dataset = ds,
+                                    id = .study_value(x, "id", "USUBJID")))
+}
+
+# The join that keeps a records dataset's rows of the report's subjects:
+# the ARD programs' (.subjects_join(), no column taken), laid out as a step
+# of the figure's pipe
+.fig_subjects_join <- function(subjects) {
+  # (dplyr is the figure's: attached by its setup, or its library() line)
+  j <- gsub("dplyr::", "", .subjects_join(subjects$object, subjects$id), fixed = TRUE)
+  gsub("\n", "\n  ", .lay(.step_cl(j[[length(j)]]), lead = 2L), fixed = TRUE)
 }
 
 .fig_stats_code <- function(steps, src = "df") {
@@ -1528,12 +1585,14 @@ tfl_read_fig_design <- function(path) {
 # section (the steps, the axis breaks, a panel's data), the plot section
 # (the palette, the chain into `name`, the panels under it); `patch`: the
 # figure is itself a patchwork (panels below it); `risktable`: a
-# ggsurvfit with add_risktable (a patchwork once built).
+# ggsurvfit with add_risktable (a patchwork once built).  The design's
+# attribute `subjects` (a report program's, .fig_subjects_part()): its
+# reads are the records of the report's subjects.
 .fig_design_body <- function(design, gg, setup = FALSE, name = "fig",
                              levels = NULL, codelists_head = TRUE,
                              order = isTRUE(setup) || length(levels) > 0L) {
   plot <- design$plot
-  d <- .fig_steps_code(design$data, levels, order = order)
+  d <- .fig_steps_code(design$data, levels, order = order, subjects = attr(design, "subjects"))
   head <- if (length(levels) && codelists_head) .codelists_head(levels)
   layers <- design$layers
   # the arms' shapes and line types, when the standard has them
@@ -2334,8 +2393,14 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
 #' `tfl_fig_templates()`; see [tfl_fig_schema()] for the arguments).
 #'
 #' @param template One of `tfl_fig_templates()$template`.
-#' @param data,param,pop,group The dataset, its PARAMCD, the analysis set
-#'   flag and the group variable (joined from ADSL when `join_adsl`).
+#' @param data,param,group The dataset, its PARAMCD and the group variable
+#'   (joined from ADSL when `join_adsl`).
+#' @param pop The analysis set, by its id or its flag: no step of the
+#'   design keeps it.  A figure's subjects are its report's analysis set
+#'   (`common: population`): its program makes them and joins every dataset
+#'   the design reads to them.  `forest_hr` names its own analysis data's
+#'   set by it ([tfl_fig_forest_analyses()]); a whole-script template passes
+#'   it to its type's function.
 #' @param time,censor,time_unit KM: the time, the censor variable, the axis's
 #'   unit.  PK: `time` is the nominal time.
 #' @param value,visit,visit_label The value and the visit (number and
@@ -2347,9 +2412,8 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
 #' @param category,responders Bar: the category variable, and the values
 #'   counted as response.
 #' @param id,duration Swimmer: the subject and the bar's length (days).
-#' @param join_adsl Join `group` (and `pop`) from ADSL (`TRUE` for the
-#'   longitudinal kinds; KM, waterfall and swimmer read them from their own
-#'   dataset).
+#' @param join_adsl Join `group` from ADSL (`TRUE` for the longitudinal
+#'   kinds; KM, waterfall and swimmer read it from their own dataset).
 #' @param title The figure's title.
 #' @param subgroups For `forest_hr`: the subgroup variables (of the
 #'   population's data), one string with `,` between them; each has its
@@ -2427,7 +2491,6 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
   }
   read <- function(ds) list(step = "read", dataset = ds)
   keep_param <- function(p) list(step = "param", value = p)
-  keep_pop <- function(p) if (!is.null(p)) list(step = "flag", variable = p)
   join_step <- function(vars, ds = "ADSL") if (length(vars)) list(step = "join", dataset = ds, vars = paste(vars, collapse = ", "))
   bor_join <- function() list(step = "join", dataset = response_data,
                               where = sprintf("PARAMCD == %s", q(response)), vars = "BOR = AVALC")
@@ -2437,13 +2500,13 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
   switch(kind,
     km = {
       single <- template == "km_single_arm"
-      data <- data %||% "ADTTE"; param <- param %||% "OS"; pop <- pop %||% "FASFL"
+      data <- data %||% "ADTTE"; param <- param %||% "OS"
       time <- time %||% "AVAL"
       group <- if (single) NULL else group %||% "TRT01P"
       tfl_fig_design(
         template = template,
-        data = drop(list(read(data), if (isTRUE(join_adsl)) join_step(c(group, pop)),
-                         keep_param(param), keep_pop(pop),
+        data = drop(list(read(data), if (isTRUE(join_adsl)) join_step(group),
+                         keep_param(param),
                          list(step = "time_unit", variable = time, unit = time_unit))),
         stats = list(list(step = "survfit", name = "fit", time = time, censor = censor, by = group)),
         plot = plot_of(x_label = sprintf("Time (%s)", tools::toTitleCase(time_unit)),
@@ -2478,8 +2541,8 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
                                     subgroups = sub, time = time, censor = censor, ref = ref)
       d <- tfl_fig_design(
         template = template,
-        data = drop(list(read(data), if (join) join_step(c(group, pop)),
-                         keep_param(param), keep_pop(pop))),
+        data = drop(list(read(data), if (join) join_step(group),
+                         keep_param(param))),
         stats = list(
           list(step = "ard_stats", name = "est",
                analysis_id = paste(an$analyses$analysis_id, collapse = ", "),
@@ -2509,12 +2572,12 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
       d
     },
     waterfall = {
-      data <- data %||% "ADTR"; param <- param %||% "BPCHG"; pop <- pop %||% "FASFL"
+      data <- data %||% "ADTR"; param <- param %||% "BPCHG"
       value <- value %||% "AVAL"
       resp <- template == "waterfall_response"
       tfl_fig_design(
         template = template,
-        data = drop(list(read(data), keep_param(param), keep_pop(pop),
+        data = drop(list(read(data), keep_param(param),
                          if (resp) bor_join(),
                          list(step = "filter", expr = sprintf("!is.na(%s)", value)),
                          list(step = "rank", by = value, descending = TRUE, variable = "INDEX"),
@@ -2530,14 +2593,14 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
           list(layer = "ref_label", y = "20, -30", label = "{y}%")))
     },
     swimmer = {
-      data <- data %||% "ADSL"; pop <- pop %||% "FASFL"
+      data <- data %||% "ADSL"
       resp <- template != "swimmer_bar"
       assess <- template %in% c("swimmer_assessment", "swimmer_full")
       full <- template == "swimmer_full"
       div <- .fig_units[[time_unit]]
       tfl_fig_design(
         template = template,
-        data = drop(list(read(data), keep_pop(pop),
+        data = drop(list(read(data),
                          if (resp) bor_join(),
                          list(step = "filter", expr = sprintf("!is.na(%s)", duration)),
                          if (div != 1) list(step = "time_unit", variable = duration, unit = time_unit),
@@ -2569,13 +2632,12 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
       param <- param %||% if (spider) "SDIAM" else "ALT"
       value <- value %||% if (spider) "PCHG" else "AVAL"
       x <- x %||% if (spider) "ADY" else visit_label
-      pop <- pop %||% if (spider) "FASFL" else "SAFFL"
       group <- if (spider) NULL else group %||% "TRT01A"
       join <- join_adsl %||% !spider
       div <- if (spider) .fig_units[[time_unit]] else 1
       tfl_fig_design(
         template = template,
-        data = drop(list(read(data), keep_param(param), if (join) join_step(c(group, pop)), keep_pop(pop),
+        data = drop(list(read(data), keep_param(param), if (join) join_step(group),
                          if (spider) bor_join(),
                          list(step = "filter", expr = sprintf("!is.na(%s) & !is.na(%s)", value, x)),
                          if (spider && div != 1) list(step = "time_unit", variable = x, unit = time_unit),
@@ -2596,12 +2658,12 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
           if (!spider) list(layer = "line", data = "sm", x = visit_label, y = "mean", colour = group, linewidth = 1.2))))
     },
     bar = {
-      data <- data %||% "ADRS"; param <- param %||% "BOR"; pop <- pop %||% "FASFL"; group <- group %||% "TRT01P"
+      data <- data %||% "ADRS"; param <- param %||% "BOR"; group <- group %||% "TRT01P"
       join <- join_adsl %||% TRUE
       style <- sub("^bar_", "", template)
       tfl_fig_design(
         template = template,
-        data = drop(list(read(data), keep_param(param), if (join) join_step(c(group, pop)), keep_pop(pop))),
+        data = drop(list(read(data), keep_param(param), if (join) join_step(group))),
         stats = list(switch(style,
           rate_ci = list(step = "rate", name = "rt", category = category, responders = responders, by = group),
           list(step = "count", name = "ct", category = category, by = group,
@@ -2629,7 +2691,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
                  vjust = -0.3, position = "position_dodge(width = 0.75)"))))
     },
     mean = {
-      data <- data %||% "ADLB"; param <- param %||% "ALT"; pop <- pop %||% "SAFFL"; group <- group %||% "TRT01A"
+      data <- data %||% "ADLB"; param <- param %||% "ALT"; group <- group %||% "TRT01A"
       value <- value %||% "AVAL"
       join <- join_adsl %||% TRUE
       iv <- switch(template, mean_sd = "sd", mean_ci = "ci", "se")
@@ -2637,7 +2699,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
                      " ", if (value == "AVAL") "" else paste0(value, " of "), param)
       tfl_fig_design(
         template = template,
-        data = drop(list(read(data), keep_param(param), if (join) join_step(c(group, pop)), keep_pop(pop),
+        data = drop(list(read(data), keep_param(param), if (join) join_step(group),
                          list(step = "filter", expr = sprintf("!is.na(%s) & !is.na(%s)", value, visit)),
                          list(step = "levels", variable = visit_label, order_by = visit))),
         stats = list(list(step = "summary", name = "sm", value = value,
@@ -2652,14 +2714,14 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
           if (template == "mean_se_n") list(layer = "n_table", data = "sm", x = visit_label, group = group))))
     },
     box = {
-      data <- data %||% "ADLB"; param <- param %||% "ALT"; pop <- pop %||% "SAFFL"; group <- group %||% "TRT01A"
+      data <- data %||% "ADLB"; param <- param %||% "ALT"; group <- group %||% "TRT01A"
       style <- sub("^box_", "", template)
       value <- value %||% if (style == "change") "CHG" else "AVAL"
       join <- join_adsl %||% TRUE
       one <- style == "by_group"
       tfl_fig_design(
         template = template,
-        data = drop(list(read(data), keep_param(param), if (join) join_step(c(group, pop)), keep_pop(pop),
+        data = drop(list(read(data), keep_param(param), if (join) join_step(group),
                          list(step = "filter", expr = sprintf("!is.na(%s)", value)),
                          if (style == "change") list(step = "filter", expr = sprintf("%s > 0", visit)),
                          if (one) list(step = "filter", expr = if (!is.null(at_visit)) sprintf("%s == %s", visit_label, q(at_visit))
@@ -2682,13 +2744,13 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
                group = if (!one) group, shape = "plus", size = if (one) 3 else 2, dodge = !one))))
     },
     scatter = {
-      data <- data %||% "ADLB"; param <- param %||% "ALT"; pop <- pop %||% "SAFFL"; group <- group %||% "TRT01A"
+      data <- data %||% "ADLB"; param <- param %||% "ALT"; group <- group %||% "TRT01A"
       shift <- template == "scatter_shift"
       x <- x %||% "BASE"; y <- y %||% if (shift) "AVAL" else "CHG"
       join <- join_adsl %||% TRUE
       tfl_fig_design(
         template = template,
-        data = drop(list(read(data), keep_param(param), if (join) join_step(c(group, pop)), keep_pop(pop),
+        data = drop(list(read(data), keep_param(param), if (join) join_step(group),
                          list(step = "filter", expr = sprintf("%s > 0 & !is.na(%s) & !is.na(%s)", visit, x, y)),
                          list(step = "filter", expr = if (!is.null(at_visit)) sprintf("%s == %s", visit_label, q(at_visit))
                                                       else sprintf("%s == max(%s)", visit, visit)))),
@@ -2702,14 +2764,14 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
           if (!shift) list(layer = "smooth", data = "df", x = x, y = y, colour = group, method = "lm", se = FALSE))))
     },
     pk = {
-      data <- data %||% "ADPC"; pop <- pop %||% "SAFFL"; group <- group %||% "TRT01A"
+      data <- data %||% "ADPC"; group <- group %||% "TRT01A"
       value <- value %||% "AVAL"; time <- time %||% "NFRLT"
       join <- join_adsl %||% TRUE
       style <- sub("^pk_", "", template)
       log_y <- style != "mean"
       tfl_fig_design(
         template = template,
-        data = drop(list(read(data), if (!is.null(param)) keep_param(param), if (join) join_step(c(group, pop)), keep_pop(pop),
+        data = drop(list(read(data), if (!is.null(param)) keep_param(param), if (join) join_step(group),
                          list(step = "filter", expr = sprintf("!is.na(%s)", value)),
                          if (log_y) list(step = "filter", expr = sprintf("%s > 0", value)))),
         stats = if (style != "individual") list(list(step = "summary", name = "sm", value = value,

@@ -384,13 +384,49 @@
                                                  .setup_file_names[["fig_setup"]]), quote = "\"")))
 }
 
+# The report's analysis set (A2 R1): its `common: population` (the
+# planner's `population` when it gives one); NA when it has none
+.rp_population <- function(ctx) {
+  r <- ctx$report
+  .na_scalar(r$population %||% .out_population(r$spec_output %||% list()))
+}
+
+# A figure's subjects (A2 R1, R4): the subjects of the report's analysis set,
+# made once by the program's data part as the ARD programs make them
+# (.fig_subjects_part(): the object <dataset>_sub), with the report's
+# analysis data `data`; the records the figure reads are joined to them.
+# list(code, subjects); NULL when the report has no analysis set
+.rp_fig_subjects <- function(ctx, data = character()) {
+  pop <- .rp_population(ctx)
+  if (is.na(pop) || is.null(ctx$shared$ard)) return(NULL)
+  x <- .as_spec(ctx$shared$ard, "ard", "tfl_report_program")
+  # (written as tfl_ard_code(part = "data") writes it: for its setup, which
+  # attaches cards and dplyr)
+  user <- .attached()
+  old <- options(tflspec.user_attached = user,
+                 tflspec.attached = union(user, c(.ard_pkgs, .ard_base_pkgs)))
+  on.exit(options(old), add = TRUE)
+  sj <- .fig_subjects_part(x, ctx$report$id, pop, data = data)
+  if (!is.null(sj)) sj$code <- .drop_attached_ns(sj$code)
+  sj
+}
+
+# ... its lines in the program: the subjects (and the analysis data) made
+.rp_fig_subjects_lines <- function(sj, data = character()) {
+  if (is.null(sj)) return(NULL)
+  c(paste0("# the report's subjects: its analysis set (common: population)",
+           if (length(data)) ", and its analysis data (its ARD definition)"),
+    sj$code, "")
+}
+
 # the part of a figure's program between its setup and its report: a
 # figure with no design and no code of its own yet -- its datasets read,
-# the company's plot template or a TODO
+# the report's subjects, the company's plot template or a TODO
 .rp_figure_lines <- function(ctx) {
   r <- ctx$report
   ds <- r$datasets
   if (!length(ds)) return(NULL)
+  sj <- .rp_fig_subjects(ctx)
   tpl <- .rp_fill_template(ctx, "figure_plot")
   plot <- c(
     if (!is.na(tpl)) .rp_code_block(tpl) else c(
@@ -402,6 +438,7 @@
   c(c(paste0("# the data: ", paste(ds, collapse = ", "), " (data catalog)"),
       unlist(lapply(ds, function(d) .rp_read_dataset_lines(ctx, d))),
       ""),
+    .rp_fig_subjects_lines(sj),
     "# the figure style of the company standards, and the figure checks",
     sprintf("source(%s)", encodeString(setup, quote = "\"")),
     "",
@@ -514,12 +551,30 @@
     call)
 }
 
+# What a design's read steps read (each figure's of a composed one): the
+# datasets, and the report's analysis data (by data_id)
+.rp_fig_design_reads <- function(design) {
+  steps <- c(design$data, unlist(lapply(design$plots %||% list(), function(p) p$data),
+                                 recursive = FALSE))
+  reads <- Filter(function(s) is.list(s) && identical(s$step, "read"), steps)
+  data <- unlist(lapply(reads, .fig_read_data))
+  ds <- unlist(lapply(reads, function(s) if (is.null(.fig_read_data(s))) .fv(s, "dataset", "read")))
+  list(datasets = unique(toupper(ds)), data = unique(as.character(data)))
+}
+
 # A designed figure's data and plot sections, as its program has them
 # (#293): `# ---- data ----` -- the code lists, the datasets read, the
 # steps' pipes -- and `# ---- plot ----` -- the palette, the chain into
 # `plot` -- then the figure checks and its size on the page
 .rp_fig_design_plot <- function(ctx, design, codelists) {
   r <- ctx$report
+  if (!inherits(design, "tfl_fig_design")) design <- .fig_design_from_list(design)
+  # a report with an analysis set: its subjects made in the data part, the
+  # datasets the design reads joined to them (A2: no step keeps a
+  # population); the analysis data its reads name made with them
+  reads_of <- .rp_fig_design_reads(design)
+  sj <- if (length(reads_of$datasets)) .rp_fig_subjects(ctx, data = reads_of$data)
+  if (!is.null(sj)) attr(design, "subjects") <- sj$subjects
   code <- tfl_fig_design_code(design, r$id, setup = TRUE, save = FALSE, name = "plot",
                               codelists = codelists)
   reads <- attr(code, "reads") %||% character()
@@ -531,7 +586,9 @@
   # the report's analysis data its reads name: made first, as its ARD
   # definition says (the ARD code's data part)
   adata <- attr(code, "data") %||% character()
-  if (length(adata)) {
+  if (!is.null(sj)) {
+    read <- c(read, .rp_fig_subjects_lines(sj, adata))
+  } else if (length(adata)) {
     read <- c(read, "# the report's analysis data (its ARD definition)",
               .rp_ard_code(ctx, ctx$shared$ard, output_id = r$id, part = "data", data = adata),
               "")
@@ -564,18 +621,23 @@
        plot = utils::tail(lines, length(lines) - at + 1L))
 }
 
-# The datasets the report registers, read; and a figure's ARD as `ard`
-# when its source gives one
+# The datasets the report registers, read; a figure's subjects (its
+# analysis set's, with its analysis data: the code reads them by name, A2
+# Q5); and a figure's ARD as `ard` when its source gives one
 .rp_code_inputs <- function(ctx) {
   r <- ctx$report
   ds <- r$datasets
-  ard <- if (identical(r$type, "figure") && !identical(r$ard_source$kind, "none")) {
+  fig <- identical(r$type, "figure")
+  adata <- if (fig) as.character(r$adata$ids %||% character())
+  sj <- if (fig) .rp_fig_subjects(ctx, data = adata)
+  ard <- if (fig && !identical(r$ard_source$kind, "none")) {
     a <- .rp_fig_ard_lines(ctx)
     if (length(a)) a
   }
   c(if (length(ds)) c(
       paste0("# the report's data: ", paste(ds, collapse = ", "), " (data catalog)"),
       unlist(lapply(ds, function(d) .rp_read_dataset_lines(ctx, d))), ""),
+    .rp_fig_subjects_lines(sj, adata),
     ard)
 }
 
@@ -936,6 +998,10 @@
 #'   tokens as the program writes them, or `NULL` (no SPEC: the study's
 #'   sheets); `spec_output`: the report in the study's spec as it is;
 #'   `template_listing`: a listing made from a template;
+#' * `population`: the report's analysis set (a population of the ARD
+#'   definition), or `NULL`: its spec's `common: population`.  A figure's
+#'   program makes its subjects in its data part and joins every dataset
+#'   its design reads to them;
 #' * `listing`: `NULL`, or `list(own = )` when the listing sheets define it
 #'   (`own`: it starts from its analysis data or analysis set);
 #' * a figure's: `design` ([tfl_fig_design()], or `NULL`), `ard_source`

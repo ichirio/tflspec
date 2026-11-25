@@ -13,12 +13,18 @@ ai_fig <- function(..., id = "F-14-2-1") {
             ..., "assumptions: []")
 }
 
+# a figure's context: its report's analysis set (`common: population`), which
+# no step of the answer keeps
+ai_fig_ctx <- function(...) {
+  tfl_ai_context("figure", output_id = "F-14-2-1",
+                 population = list(id = "FAS", where = 'FASFL == "Y"'), ...)
+}
+
 ai_km <- c(
   "template: km_simple",
   "data:",
   "- {step: read, dataset: ADTTE}",
   "- {step: param, value: OS}",
-  "- {step: flag, variable: FASFL}",
   "- {step: survfit, name: fit, time: AVAL, censor: CNSR, by: TRT01P}",
   "layers:",
   "- {layer: km_curve}"
@@ -80,8 +86,7 @@ test_that("the parse problems come first and an unread answer is not checked", {
 
 test_that("a good figure answer has no problems, with the data too", {
   a <- ai_fig(ai_km)
-  ctx <- tfl_ai_context("figure", output_id = "F-14-2-1",
-                        datasets = tfl_example_adam()["ADTTE"])
+  ctx <- ai_fig_ctx(datasets = tfl_example_adam()["ADTTE"])
   expect_identical(nrow(tfl_ai_check(a, ctx)), 0L)
   expect_identical(nrow(tfl_ai_check(a, ctx, adam = tfl_example_adam())), 0L)
 })
@@ -89,7 +94,7 @@ test_that("a good figure answer has no problems, with the data too", {
 test_that("a figure's problems keep tfl_check_fig_design()'s part and field", {
   bad <- sub("- {layer: km_curve}", "- {layer: km_curve, colour: red}", ai_km,
              fixed = TRUE)
-  p <- tfl_ai_check(ai_fig(bad), tfl_ai_context("figure", output_id = "F-14-2-1"))
+  p <- tfl_ai_check(ai_fig(bad), ai_fig_ctx())
   expect_identical(p$where, "layers[1] km_curve field colour")
   expect_identical(p$problem, "is not a field of km_curve")
   expect_identical(p$severity, "error")
@@ -101,7 +106,7 @@ test_that("a figure's problems keep tfl_check_fig_design()'s part and field", {
 })
 
 test_that("a figure for another report, a PARAMCD the data lacks", {
-  ctx <- tfl_ai_context("figure", output_id = "F-14-2-1")
+  ctx <- ai_fig_ctx()
   p <- tfl_ai_check(ai_fig(ai_km, id = "F-14-2-9"), ctx)
   expect_identical(p$where, "tflspec_ai")
   expect_match(p$problem, "for F-14-2-9; the prompt asked for F-14-2-1")
@@ -112,25 +117,39 @@ test_that("a figure for another report, a PARAMCD the data lacks", {
   expect_identical(p$problem, "no PARAMCD TTDE")
 })
 
-test_that("what defines a figure: its analysis set and parameter, or an error to ask", {
-  ctx <- tfl_ai_context("figure", output_id = "F-14-2-1",
-                        datasets = tfl_example_adam()["ADTTE"])
-  # no analysis set kept
-  p <- tfl_ai_check(ai_fig(ai_km[!grepl("flag", ai_km)]), ctx)
+test_that("what defines a figure: the report's analysis set, never a step, and its parameter (A2)", {
+  ctx <- ai_fig_ctx(datasets = tfl_example_adam()["ADTTE"])
+  at3 <- function(step) append(ai_km, step, after = 4L)
+  # a step that keeps the set by its flag, or by a condition on it: an error
+  # on that step (the program joins the records to the report's subjects)
+  p <- tfl_ai_check(ai_fig(at3("- {step: flag, variable: FASFL}")), ctx)
+  expect_identical(p$where, "data[3] flag")
+  expect_identical(p$severity, "error")
+  expect_match(p$problem, "keeps the rows of the analysis set by the records' own FASFL", fixed = TRUE)
+  expect_match(p$problem, "`common: population`", fixed = TRUE)
+  p <- tfl_ai_check(ai_fig(at3("- {step: filter, expr: 'FASFL == \"Y\" & AVAL > 0'}")), ctx)
+  expect_identical(p$where, "data[3] filter")
+  expect_identical(p$severity, "error")
+  # a record flag stays: no problem
+  expect_identical(nrow(tfl_ai_check(ai_fig(at3("- {step: flag, variable: ANL01FL}")), ctx)), 0L)
+  # the report names no analysis set: a warning to ask it, not a step to add
+  ctx0 <- tfl_ai_context("figure", output_id = "F-14-2-1",
+                         datasets = tfl_example_adam()["ADTTE"])
+  p <- tfl_ai_check(ai_fig(ai_km), ctx0)
   expect_identical(p$where, "data")
-  expect_match(p$problem, "keeps no analysis set")
-  # kept by a condition on its flag: fine
-  cond <- sub("- {step: flag, variable: FASFL}", "- {step: filter, expr: 'FASFL == \"Y\"'}",
-              ai_km, fixed = TRUE)
-  expect_identical(nrow(tfl_ai_check(ai_fig(cond), ctx)), 0L)
+  expect_identical(p$severity, "warning")
+  expect_match(p$problem, "the report has no analysis set")
+  # (a set by its label only is a set the report names)
+  ctx1 <- tfl_ai_context("figure", output_id = "F-14-2-1", population = "Full Analysis Set",
+                         datasets = tfl_example_adam()["ADTTE"])
+  expect_identical(nrow(tfl_ai_check(ai_fig(ai_km), ctx1)), 0L)
   # a dataset of parameters with no parameter kept
   p <- tfl_ai_check(ai_fig(ai_km[!grepl("param", ai_km)]), ctx)
   expect_match(p$problem, "reads ADTTE, a dataset of parameters")
 })
 
 test_that("a template or a dataset outside the context is a warning", {
-  ctx <- tfl_ai_context("figure", output_id = "F-14-2-1",
-                        templates = c("km_risk_table", "km_ci"),
+  ctx <- ai_fig_ctx(templates = c("km_risk_table", "km_ci"),
                         datasets = data.frame(dataset = "ADSL", variable = "USUBJID"))
   p <- tfl_ai_check(ai_fig(ai_km), ctx)
   expect_identical(p$where, c("template", "data[1] read field dataset"))

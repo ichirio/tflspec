@@ -192,13 +192,18 @@
                                     .fix("add_step", step = list(step = "read", dataset = "ADSL"), first = TRUE))
   },
   pop = function(d, ctx) {
-    if (.has_step(d, "read") && !.has_step(d, "flag") && !.has_step(d, "code")) {
-      # the flag the data has: the usual ones first, else any *FL
-      have <- grep("FL$", ctx$vars %||% character(), value = TRUE)
-      flag <- c(intersect(c("FASFL", "SAFFL", "ITTFL", "PPROTFL"), have), have, "SAFFL")[1L]
-      .adv("pop", "info", "data",
-           "No population: every row of the dataset is used. Keep the population's flag (FASFL, SAFFL ...).",
-           .fix("add_step", step = list(step = "flag", variable = flag)))
+    # (A2) the analysis set is the report's `common: population`: its
+    # program makes the subjects and joins the records the design reads to
+    # them -- no step keeps it.  A flag step keeps a record flag (ANL01FL);
+    # one on a population's flag is the report check's problem
+    # (tfl_check_spec(): the study's populations say which)
+    i <- .step_i(d, "flag")
+    if (length(i)) {
+      .adv("pop", "info", "data", paste(
+        "Step %d keeps the rows whose %s is \"Y\": right for a record flag (ANL01FL ...).",
+        "A population is the report's analysis set (`common: population`), not a step:",
+        "its subjects are made once and the records joined to them."),
+        args = list(i[1L], .fv(d$data[[i[1L]]], "variable", "flag")))
     }
   },
   # ---- ggplot2 3.5 / 4.0 (fig_compat.R)
