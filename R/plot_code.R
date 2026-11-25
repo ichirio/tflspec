@@ -88,6 +88,8 @@ pp_plot_code1 <- function(spec, pid, adam) {
     "",
     paste0("library(", libs, ")"),
     if (ctx$type == "km") "library(survival)",
+    if (length(needs <- .fig_script_needs(g$data, libs = libs)))
+      sprintf("# also needs: %s (called as pkg::fn)", paste(needs, collapse = ", ")),
     .fig_script_head(g$data),
     "",
     section("data"),

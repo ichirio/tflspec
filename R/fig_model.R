@@ -1857,6 +1857,7 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
   }
   b <- .fig_design_body(design, gg, setup = setup, name = name, levels = lv,
                         order = order)
+  b$needs <- .fig_script_needs(c(b$step1, b$step2), b$needs, b$libs, setup)
   code <- c(
     # a script of its own says what it is and attaches its packages; with
     # the study's setup, the program around it does both
@@ -1974,15 +1975,8 @@ tfl_fig_data_name <- function(design) {
 # need to be installed, not attached
 .fig_helper_used <- function(code) {
   defs <- .study_helper_defs()
-  fns <- names(defs)
-  used <- .helpers_called(code, fns)
-  repeat {
-    more <- union(used, .helpers_called(unlist(defs[used]), fns))
-    if (length(more) == length(used)) break
-    used <- more
-  }
+  used <- .fig_helpers_carried(code)
   if (!length(used)) return(character())
-  used <- intersect(fns, used)
   one <- function(f) {
     l <- defs[[f]]
     c(paste0("if (!exists(\"", f, "\")) ", l[1L]), l[-1L])
@@ -1991,6 +1985,41 @@ tfl_fig_data_name <- function(design) {
                 if (length(used) > 1L) "s" else "", paste0(used, "()", collapse = ", "),
                 if (length(used) > 1L) "them" else "it"),
     unlist(lapply(used, one)))
+}
+
+# the study helpers a script's code carries, in the helper file's order: the
+# ones it calls and the ones those call
+.fig_helpers_carried <- function(code) {
+  defs <- .study_helper_defs()
+  fns <- names(defs)
+  used <- .helpers_called(code, fns)
+  repeat {
+    more <- union(used, .helpers_called(unlist(defs[used]), fns))
+    if (length(more) == length(used)) break
+    used <- more
+  }
+  intersect(fns, used)
+}
+
+# The packages a script of its own needs installed, for its "# also needs"
+# line: `needs` (what its code calls as pkg::fn) and what the helpers it
+# carries call (fmt_num() calls rtfreporter::round_num()), without the
+# packages it attaches (`libs`) and the base ones.  Read from the parse of the
+# helpers' code, not its text: a comment's `pkg::` is not a call.  With the
+# study's setup, or in a program, the helpers are not carried: `needs` as is.
+.fig_script_needs <- function(code, needs = character(), libs = character(),
+                              setup = FALSE) {
+  carry <- !(isTRUE(setup) || isTRUE(getOption("tflspec.fig_in_program")))
+  used <- if (carry) .fig_helpers_carried(code) else character()
+  pk <- character()
+  if (length(used)) {
+    src <- unlist(.study_helper_defs()[used])
+    pd <- utils::getParseData(parse(text = src, keep.source = TRUE))
+    pk <- unique(pd$text[pd$token == "SYMBOL_PACKAGE"])
+  }
+  base <- c("base", "stats", "utils", "tools", "methods", "grDevices", "graphics")
+  needs <- unique(c(needs, setdiff(pk, c(base, libs))))
+  needs
 }
 
 # The head of a figure script, the one rule every figure writer follows:

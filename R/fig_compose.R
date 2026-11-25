@@ -96,6 +96,8 @@
       keep,
       "")
   }
+  needs <- .fig_script_needs(unlist(lapply(bodies, function(b) c(b$step1, b$step2))),
+                             needs, libs, setup)
   code <- c(
     if (!setup) c(
       sprintf("# %s: composed figure (%s)", plot_id, paste(nms, collapse = ", ")),

@@ -441,3 +441,28 @@ test_that("a report's content code carries no study helper: the program's setup 
   on.exit(options(old), add = TRUE)
   expect_length(tflspec:::.fig_script_head(code), 0L)
 })
+
+test_that("a script of its own names the packages its carried helpers call", {
+  needs_line <- function(code) grep("^# also needs:", code, value = TRUE)
+  # fmt_num() calls rtfreporter::round_num(): the script needs rtfreporter
+  own <- tfl_fig_design_code(tfl_fig_template("bar_rate_ci"), "F1")
+  expect_true(any(grepl("rtfreporter", needs_line(own))))
+  expect_true("rtfreporter" %in% attr(own, "needs"))
+  # the helpers' own base packages and the attached ones are not named
+  nl <- needs_line(own)
+  expect_false(grepl("\b(stats|utils|tools|base|ggplot2)\b", nl))
+  # what carries fmt_num() carries its need (fmt_pvalue(), ard_value())
+  for (f in c("fmt_pvalue(p)", "ard_value(a, 1)")) {
+    expect_true("rtfreporter" %in% tflspec:::.fig_script_needs(paste0("x <- ", f)), info = f)
+  }
+  # a comment's pkg:: is not a call; a script with no helper adds none
+  expect_length(tflspec:::.fig_script_needs("x <- 1 # rtfreporter::round_num"), 0L)
+  expect_identical(tflspec:::.fig_script_needs("x <- 1", needs = "ggtext"), "ggtext")
+  # a package the script attaches is not named twice
+  expect_false("rtfreporter" %in% tflspec:::.fig_script_needs("fmt_num(x, 1)", libs = "rtfreporter"))
+  # with the study's setup, nothing changes
+  st <- tfl_fig_design_code(tfl_fig_template("bar_rate_ci"), "F1", setup = TRUE)
+  expect_length(needs_line(st), 0L)
+  expect_false("rtfreporter" %in% attr(st, "needs"))
+  expect_identical(tflspec:::.fig_script_needs("fmt_num(x, 1)", setup = TRUE), character())
+})
