@@ -155,20 +155,17 @@
 .content_fig_run <- function(output, data) {
   if (is.data.frame(data)) data <- list(df = data)
   .fig_reads_given(output, data)
-  new <- .fig_new_content(output$content)
   code <- .content_fig_code_out(output)
   # the packages it calls: their exports around it, none attached
   env <- new.env(parent = .fig_pkg_env(attr(code, "libs")))
   for (n in names(data)) assign(n, data[[n]], envir = env)
-  # a figure of items runs after the study's figure setup (theme_tfl(),
-  # scale_colour_tfl(), tfl_colours()), as its program does
-  if (new) .fig_setup_eval(env)
-  # (the study's helpers: the ARD's readers, and any the code calls --
-  # set_levels() of the code lists, order_levels() of the arms, tte_time() of
-  # a time to event, fmt_num() of a number)
-  if (!is.null(data$ard) || .calls_helper(code)) {
-    eval(parse(text = tfl_helpers_code()), env)
-  }
+  # the content is a part of the report's program, run after the study's
+  # setup, and carries nothing of it (.fig_script_head()): the setup's
+  # helpers (the ARD's readers, order_levels(), tte_time(), fmt_num() ...)
+  # and figure setup (theme_tfl() ..., the days_per_* constants) first,
+  # as its program has them -- a figure of items, a template's design, a
+  # designer's design alike
+  .study_setup_eval(env)
   eval(parse(text = .fig_strip_library(code)), env)
   get("content", envir = env, inherits = FALSE)
 }
