@@ -27,7 +27,11 @@ its levels; a blank is missing, not a level; \code{from = adsl} orders a
 records data's arm, which has no number of its own, by the matching arm
 and number of ADSL, the records' values kept and a value ADSL lacks
 last; a value with two numbers there is an error), \code{order_arms()} (the arm
-variables alone: \code{order_levels()} with no categories), \code{tag_ard()} (the report, analysis and
+variables alone: \code{order_levels()} with no categories), \code{tte_time()} (a
+time to event in one unit, days, weeks, months or years: AVAL from its
+unit AVALU, DAYS when the data has none; two units in the data stop the
+program; the days in a month etc. the study's \code{days_per_month} etc. when
+set, else \code{\link[=tfl_time_unit_days]{tfl_time_unit_days()}}), \code{tag_ard()} (the report, analysis and
 analysis set in front of an analysis's ARD), \code{bind_items()} (a report's items into one
 ARD: no row lost, the columns in order, a statistic twice in one item an error, the
 same statistic in two items a warning), \code{fmt_ard()} and
