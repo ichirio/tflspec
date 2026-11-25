@@ -13,7 +13,7 @@ tfl_tpl_args(name, study = NULL, population = NULL)
 study's spec folder; \code{NULL} for none (the \code{study} column is then
 \code{NA}).  Its \code{defaults.yml} content is where a parameter's
 \code{"<verb>.<argument>"} source is read, \code{study.yml}'s \verb{settings:} the
-\code{"settings.<name>"} ones (\code{"settings.sd_missing"}).}
+\code{"settings.<name>"} ones (\code{"settings.treatment"} for the \code{by}).}
 
 \item{population}{The report's analysis set: the value of the
 parameters taken from the report's \code{common: population}

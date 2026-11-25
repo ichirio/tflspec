@@ -102,7 +102,7 @@
 #'   study's spec folder; `NULL` for none (the `study` column is then
 #'   `NA`).  Its `defaults.yml` content is where a parameter's
 #'   `"<verb>.<argument>"` source is read, `study.yml`'s `settings:` the
-#'   `"settings.<name>"` ones (`"settings.sd_missing"`).
+#'   `"settings.<name>"` ones (`"settings.treatment"` for the `by`).
 #' @param population The report's analysis set: the value of the
 #'   parameters taken from the report's `common: population`
 #'   (`"output.common.population"`); `NULL` for none.

@@ -286,7 +286,7 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
 }
 
 # What is wrong with a template's definition: a parameter with no type, the
-# analysis set with no study source, no `subset` / `where`,
+# analysis set or the treatment with no study source, no `subset` / `where`,
 # or a body that stops with its example (the template's example, `example =`
 # of tfl_template(), tflspec's own examples, and its parameters' defaults).
 # One row a finding; no rows: none.  (The look as a parameter is no finding:
@@ -306,9 +306,10 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
   for (p in t$params) if (isTRUE(p$guessed)) {
     row(p$name, NA_character_, NA_character_, sprintf("no type (guessed: %s)", p$type))
   }
-  # the analysis set, not read from the report
-  for (p in t$params) if (.tpl_study_kind(p) && is.null(p$study)) {
-    row(p$name, NA_character_, NA_character_, "no study source (population)")
+  # the analysis set or the treatment, not read from the study standard
+  # (but a treatment the report must write: .tpl_report_writes())
+  for (p in t$params) if (.tpl_study_kind(p) && is.null(p$study) && !.tpl_report_writes(p)) {
+    row(p$name, NA_character_, NA_character_, "no study source (population / treatment)")
   }
   if (inherits(x0, "error")) {
     row(NA_character_, NA_character_, NA_character_, paste("not checked:", conditionMessage(x0)))
@@ -342,10 +343,13 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
   unique(c(setdiff(from, ids), x$data$dataset, reads))
 }
 
-# A parameter that is the analysis set, by its name.  (The treatment is
-# not a study source: `by` / `group` are the report's, canon 1.15.)
+# A parameter that is the analysis set or the treatment: by its name, or a
+# treatment variable as its default
 .tpl_study_kind <- function(p) {
-  !isTRUE(p$no_study) && p$name %in% c(names(.tpl_study_by_name), "pop")
+  !isTRUE(p$no_study) &&
+    (p$name %in% c(names(.tpl_study_by_name), "pop", "arm", "trt", "treatment") ||
+       any(as.character(unlist(p$default)) %in% c("TRT01A", "TRT01P", "TRTA", "TRTP", "ARM",
+                                                  "ACTARM")))
 }
 
 #' Test templates: each has its types, its study sources and its standard pair
@@ -353,10 +357,9 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
 #' Runs each template's body with its example and lists what is wrong
 #' with its definition: a parameter with no type ([tfl_param()]'s `type`,
 #' nor tflspec's for its name): an input form guesses its field from the
-#' default; and the analysis set not read from the report (no `study =`):
-#' it is the report's `common: population`, not each template's (the
-#' treatment is not a study value: `by` and `group` are the report's to
-#' write).  So is a template of data of its own without `subset`,
+#' default; and the analysis set or the treatment not read from the study
+#' standard (no `study =`).  A study's value of them is the study's, not
+#' each report's.  So is a template of data of its own without `subset`,
 #' and one of records data without `where` ([tfl_templates()]: the standard
 #' pair).  A parameter that is the look (the rows a page, column widths,
 #' the digits, the blank rows, the style) is not listed: the look is a
@@ -366,7 +369,7 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
 #'
 #' @param names The templates; `NULL`: every one registered.
 #' @return A data frame, one row a finding: a parameter with no type (`"no type (guessed: <type>)"`),
-#'   one with no study source (`"no study source (population)"`),
+#'   one with no study source (`"no study source (population / treatment)"`),
 #'   a template without the standard pair (`"no subset"`, `"no where (a
 #'   records template)"`)
 #'   or a template whose run stopped (`"not checked: ..."`):

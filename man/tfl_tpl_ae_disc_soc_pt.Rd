@@ -14,7 +14,7 @@ The table template \code{ae_disc_soc_pt}, layout \code{hierarchical}: a variant 
    \code{hierarchy} \tab key \tab call \tab AEBODSYS, AEDECOD \tab  \tab the levels, outer first \cr
    \code{data} \tab other \tab call \tab ADAE \tab  \tab the dataset of records \cr
    \code{where} \tab usual \tab call \tab TRTEMFL == "Y" & AEACN == "DRUG WITHDRAWN" \tab  \tab the records kept (R) \cr
-   \code{by} \tab usual \tab call \tab TRT01A \tab  \tab the column variable \cr
+   \code{by} \tab usual \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the column variable \cr
    \code{any_row} \tab usual \tab call \tab TRUE \tab  \tab TRUE: the row of the subjects with any record, first \cr
    \code{any_row_label} \tab other \tab call \tab Subjects with at least one AE leading to treatment discon... \tab  \tab that row's label \cr
    \code{heading} \tab usual \tab call \tab System Organ Class,    Preferred Term \tab  \tab the label column's heading, a line a level \cr

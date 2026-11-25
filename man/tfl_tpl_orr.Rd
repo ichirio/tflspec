@@ -11,7 +11,7 @@ The table template \code{orr}, layout \code{stat_block}. Its program is one call
    Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
    \code{population} \tab other \tab call \tab report: common.population, else ITT \tab output.common.population \tab the analysis set's id \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
-   \code{by} \tab other \tab call \tab TRT01P \tab  \tab the column variable \cr
+   \code{by} \tab other \tab call \tab study: settings.treatment, else TRT01P \tab settings.treatment \tab the column variable \cr
    \code{by_levels} \tab other \tab call \tab  \tab  \tab its values in order; NULL: its code list's \cr
    \code{data} \tab other \tab call \tab ADRS \tab  \tab the response dataset \cr
    \code{param} \tab other \tab call \tab BOR \tab  \tab the PARAMCD of the best overall response \cr

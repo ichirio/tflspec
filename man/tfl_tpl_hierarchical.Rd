@@ -14,7 +14,7 @@ The table template \code{hierarchical}, layout \code{hierarchical}. Its program 
    \code{hierarchy} \tab required \tab call \tab  \tab  \tab the levels, outer first \cr
    \code{data} \tab other \tab call \tab ADAE \tab  \tab the dataset of records \cr
    \code{where} \tab usual \tab call \tab  \tab  \tab the records kept (R) \cr
-   \code{by} \tab usual \tab call \tab TRT01A \tab  \tab the column variable \cr
+   \code{by} \tab usual \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the column variable \cr
    \code{any_row} \tab usual \tab call \tab FALSE \tab  \tab TRUE: the row of the subjects with any record, first \cr
    \code{any_row_label} \tab other \tab call \tab Any event \tab  \tab that row's label \cr
    \code{heading} \tab usual \tab call \tab System Organ Class,    Preferred Term \tab  \tab the label column's heading, a line a level \cr

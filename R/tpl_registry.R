@@ -284,13 +284,25 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
 # none given stays none
 .tpl_lines <- function(x) if (length(x)) paste(x, collapse = "\n")
 
-# A parameter's study reference by its name: the analysis set is the
-# report's (`common: population`; a parameter's own `study =` wins).  The
-# treatment is none: `by` and `group` are the report's to write, never a
-# value the study fills in -- study.yml's settings.treatment is the
-# planner's suggestion only (canon 1.14, 1.15); a required one not written
-# stops.  One reader reads them and every other key: .tpl_study_read().
-.tpl_study_by_name <- c(population = "output.common.population")
+# A parameter's study reference by its name, until each family drops it:
+# the analysis set is the report's (`common: population`), the treatment the study's
+# (a parameter's own `study =` wins).  (`by` and `group` are required with
+# no reference in the new design, canon 1.14; each family's batch drops the
+# fill, so this table is the last per-name rule.)  One reader reads them
+# and every other key: .tpl_study_read().
+.tpl_study_by_name <- c(population = "output.common.population", by = "settings.treatment",
+                        group = "settings.treatment")
+
+# A treatment argument the report must write: `by` / `group` required with
+# no default (a figure's group and km's by, canon 1.14).  The study's
+# settings.treatment does not fill it (it is the planner's suggestion,
+# canon 1.15): not written, it stops.  (A table template's `by` with a
+# declared default still reads settings.treatment until its family's
+# batch decides it -- A2-T.)
+.tpl_report_writes <- function(p) {
+  identical(unname(.tpl_study_by_name[p$name]), "settings.treatment") &&
+    isTRUE(p$required) && is.null(p$default)
+}
 
 # A parameter's type filled in: as declared, by its name, else from its
 # default (a company's template that says none: `guessed`, which
@@ -303,7 +315,8 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     p$study <- NULL
     p$no_study <- TRUE
   }
-  if (is.null(p$study) && !isTRUE(p$no_study) && p$name %in% names(.tpl_study_by_name)) {
+  if (is.null(p$study) && !isTRUE(p$no_study) && p$name %in% names(.tpl_study_by_name) &&
+      !.tpl_report_writes(p)) {
     p$study <- .tpl_study_by_name[[p$name]]
   }
   by_name <- .tpl_param_kinds[[p$name]]
@@ -1999,8 +2012,8 @@ tpl_lab_shift <- function(ard, population, ..., codelists = NULL) {
       "which subjects (R, on ADSL): a listing has no analysis set, so ADSL's",
       "subjects it keeps (a semi join)")),
     tfl_param("sort", NULL, type = "vars", multiple = TRUE, doc = "the records' order (variables)"),
-    # (`study = FALSE`: a listing's `by` is no study value -- nor is any
-    # template's `by`, canon 1.15 -- whatever a name rule says later)
+    # (`study = FALSE`: a listing's `by` is not the study's treatment, which
+    # the name `by` takes in the tables' templates)
     tfl_param("by", NULL, type = "vars", multiple = TRUE, study = FALSE, doc = paste(
       "the variables that divide the listing (`by_break`); the records are ordered",
       "by them first, then by `sort`")),

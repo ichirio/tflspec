@@ -45,26 +45,13 @@ test_that("the report's population: the template's population, written in its pr
                "takes the analysis set from the report's `common: population`")
 })
 
-test_that("study.yml's settings: treatment is no template's value: by / group are the report's (canon 1.15)", {
+test_that("study.yml's settings: treatment: the templates' by", {
   s <- ss_study("TRT01P")
-  # (its default, not the study's treatment; the report writes its own)
   ro <- ss_resolve("ae_soc_pt", list(), s)
-  expect_identical(ss_an(ro, "AE")$by, "TRT01A")
-  expect_false("by" %in% attr(ro, "template")$study)
-  ro <- ss_resolve("ae_soc_pt", list(by = "TRT01P"), s)
   expect_identical(ss_an(ro, "AE")$by, "TRT01P")
-  # no template's by or group reads it
-  for (nm in tfl_templates()$name) {
-    ps <- tryCatch(tfl_template_params(nm), error = function(e) NULL)
-    for (k in c("by", "group")) expect_null(ps[[k]]$study, info = paste(nm, k))
-  }
-  # a required one not written stops, the study's treatment or not
-  km <- function(args) tfl_resolve_output(tfl_output("F-9", "figure", common = list(population = "SAF"),
-                                                     template = list(name = "km", args = args)), s)
-  expect_error(km(list(param = "PFS")), "needs 'by'")
-  fo <- function(args) tfl_resolve_output(tfl_output("F-9", "figure", common = list(population = "SAF"),
-                                                     template = list(name = "forest_hr", args = args)), s)
-  expect_error(fo(list(param = "PFS", population = "SAF")), "needs 'group'")
+  # the report's own by wins
+  ro <- suppressMessages(ss_resolve("ae_soc_pt", list(by = "SEX"), s))
+  expect_identical(ss_an(ro, "AE")$by, "SEX")
   # demog, summary, disposition, ae_overview, param_change: `by` is required, never the
   # study's treatment (canon 1.14)
   for (nm in c("summary", "disposition", "ae_overview", "param_change")) {
@@ -75,6 +62,19 @@ test_that("study.yml's settings: treatment is no template's value: by / group ar
   ro <- ss_resolve("demog", list(continuous = "AGE", by = "TRT01A"), s)
   expect_identical(ss_an(ro, "CONT")$by, "TRT01A")
   expect_null(tfl_template_params("demog")$by$study)
+  # a required treatment argument with no default (a figure's group, km's
+  # by) is the report's to write: the study's treatment does not fill it,
+  # and not written it stops (canon 1.14, 1.15)
+  for (nm in c("forest_hr", "mean_se", "mean_ci")) {
+    expect_null(tfl_template_params(nm)$group$study, info = nm)
+  }
+  expect_null(tfl_template_params("km")$by$study)
+  fig <- function(name, args) tfl_resolve_output(tfl_output("F-9", "figure", common = list(population = "SAF"),
+                                                            template = list(name = name, args = args)), s)
+  expect_error(fig("forest_hr", list(param = "PFS", population = "SAF")), "needs 'group'")
+  expect_error(fig("km", list(param = "PFS")), "needs 'by'")
+  # (a table template's `by` with a default: the study's treatment, as before)
+  expect_identical(ss_an(ss_resolve("ae_soc_pt", list(), ss_study("TRT01P")), "AE")$by, "TRT01P")
 })
 
 test_that("study.yml's settings: sd_missing: what prints for a missing SD; the report's argument wins (#673)", {
@@ -107,35 +107,25 @@ test_that("study.yml's settings: sd_missing: what prints for a missing SD; the r
 
 test_that("first to last: the report's argument, the study standard, the variant's, from's", {
   on.exit(rm("demog_arm", envir = .tpl_registry))
+  # (a template whose `by` still reads the study's treatment)
   tfl_template_variant("demog_arm", from = "ae_soc_pt", defaults = list(by = "ARM"))
-  # the variant's default over from's; the study's treatment is no layer
-  # of `by` (canon 1.15)
+  # the study's treatment over the variant's default
   ro <- ss_resolve("demog_arm", list(), ss_study("TRT01P"))
-  expect_identical(ss_an(ro, "AE")$by, "ARM")
+  expect_identical(ss_an(ro, "AE")$by, "TRT01P")
+  # no study setting: the variant's
   ro <- ss_resolve("demog_arm", list(), ss_study(NULL))
   expect_identical(ss_an(ro, "AE")$by, "ARM")
-  # the report's argument over the variant's
-  ro <- suppressMessages(ss_resolve("demog_arm", list(by = "SEX"), ss_study("TRT01P")))
-  expect_identical(ss_an(ro, "AE")$by, "SEX")
-  # the study standard's layer, by a parameter that reads one (settings.sd_missing)
-  s <- ss_study(NULL)
-  s$study$settings$sd_missing <- "NA"
-  expect_identical(attr(ss_resolve("demog", list(by = "TRT01A", continuous = "AGE"), s), "template")$args$sd_missing,
-                   "NA")
 })
 
-test_that("tfl_test_templates(): the analysis set with no study source; the treatment is none", {
+test_that("tfl_test_templates(): the analysis set or the treatment with no study source", {
   expect_false(any(grepl("no study source", tfl_test_templates()$status)))
   d <- .tpl_get("summary", "test")
-  p <- c(d$params, list(tfl_param("pop", "SAF", type = "text", study = NULL),
-                        tfl_param("arm", "ARM", type = "vars", study = NULL)))
+  p <- c(d$params, list(tfl_param("arm", "ARM", type = "vars", study = NULL)))
   suppressMessages(tfl_template("ss_arm", "table", "summary", params = p, body = d$body,
                                 example = list(population = "SAF")))
   on.exit(rm("ss_arm", envir = .tpl_registry))
   r <- tfl_test_templates("ss_arm")
-  expect_identical(r$status[r$param %in% "pop"], "no study source (population)")
-  # (the treatment: the report's to write, no study source wanted, canon 1.15)
-  expect_false("arm" %in% r$param)
+  expect_identical(r$status[r$param %in% "arm"], "no study source (population / treatment)")
   # (summary's `by` reads no study value: canon 1.14)
   expect_null(tfl_template_params("ss_arm")$by$study)
 })

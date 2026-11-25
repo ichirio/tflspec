@@ -157,9 +157,8 @@ test_that("`by` is not filled from the study's treatment", {
   for (n in c("summary", "disposition", "ae_overview", "param_change")) {
     expect_null(tfl_template_params(n)$by$study, info = n)
   }
-  # nor any other template: the treatment is the planner's suggestion,
-  # never a value the study fills in (canon 1.15)
-  expect_null(tflspec:::.tpl_get("ae_soc_pt", "t")$params$by$study)
+  # other templates still take it (their batches are later)
+  expect_identical(tflspec:::.tpl_get("ae_soc_pt", "t")$params$by$study, "settings.treatment")
 })
 
 test_that("continuous_statistics, categorical_statistics, stack and where are gone: the plain unknown-parameter error", {
