@@ -1,0 +1,3 @@
+# The golden fixtures keep the bytes they were made with: an ARD
+# program's fingerprint reads the md5 of the study's own files.
+tests/testthat/fixtures/programs-family/** -text

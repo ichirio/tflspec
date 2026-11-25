@@ -7,7 +7,9 @@
 # program generator therefore sets every one of them from its own
 # arguments, and unsets the rest, while it makes the text, and puts them
 # back as they were afterwards (after an error too): what a session has set
-# (an app, a user's .Rprofile, an earlier run) never reaches the text.
+# (an app, a user's .Rprofile, an earlier run) never reaches the text, and
+# neither does a home: the template series are the context's folders and
+# tflspec's own (G5-1b).
 
 # The options a maker reads, by the name a context gives them
 .code_context_options <- c(
@@ -48,6 +50,17 @@
   names(set) <- unname(.code_context_options)
   for (k in nm) set[.code_context_options[[k]]] <- list(context[[k]])
   old <- options(c(set, .code_context_base))
-  on.exit(options(old), add = TRUE)
+  was <- .code_context_state$active
+  .code_context_state$active <- TRUE
+  on.exit({
+    options(old)
+    .code_context_state$active <- was
+  }, add = TRUE)
   expr
 }
+
+# Inside a context: a program's text is being made.  The template series are
+# then looked for only where the context says (its `series_dir`) and in
+# tflspec's own, never in the tflplanner home (.series_search_dirs()).
+.code_context_state <- new.env(parent = emptyenv())
+.in_code_context <- function() isTRUE(.code_context_state$active)
