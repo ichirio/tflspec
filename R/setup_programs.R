@@ -367,10 +367,12 @@ tfl_setup_program <- function(file, meta = list(), study = NULL, standards = lis
 # The small function a report program ends with, written in
 # report_setup.R: what was made, and with which study setup, into
 # output/tfl/report_status.csv (tflplanner reads it: a report made with
-# another study setup than the one there now is outdated).  The study
-# setup's fingerprint: the md5s of company_setup.R, study_setup.R and
-# study_user.R joined by "+" (those that are there), then "|" and
-# report_setup.R's.
+# another study setup than the one there now is outdated), and -- a
+# listing says it -- whether the report has no rows (`empty`: "TRUE",
+# "FALSE", "" not said; the official run's batch.R notes an empty
+# report).  The study setup's fingerprint: the md5s of company_setup.R,
+# study_setup.R and study_user.R joined by "+" (those that are there),
+# then "|" and report_setup.R's.
 .setup_record_report <- function(layout) {
   p <- .setup_paths(layout)
   q <- function(x) paste(encodeString(x, quote = "\""), collapse = ", ")
@@ -382,8 +384,9 @@ tfl_setup_program <- function(file, meta = list(), study = NULL, standards = lis
                   q(p[c("company_setup", "study_setup", "study_user")]),
                   q(p[["report_setup"]]), q(p[["report_setup"]]))
   c("# what was made, with which study setup, and -- a figure printing an",
-    "# ARD's numbers -- from which definition of that ARD (tflplanner reads it)",
-    "record_report <- function(output_id, ard = \"\") {",
+    "# ARD's numbers -- from which definition of that ARD (tflplanner reads it);",
+    "# `empty`: TRUE when the report has no rows (the official run notes it)",
+    "record_report <- function(output_id, ard = \"\", empty = NA) {",
     paste0("  sf <- ", encodeString(sf, quote = "\"")),
     # the study setup's fingerprint on a line of its own
     paste0("  setup <- ", hash),
@@ -391,6 +394,7 @@ tfl_setup_program <- function(file, meta = list(), study = NULL, standards = lis
     "                    built = format(Sys.time(), \"%Y-%m-%d %H:%M:%S\"),",
     "                    setup = setup,",
     "                    ard = ard,",
+    "                    empty = if (isTRUE(empty)) \"TRUE\" else if (isFALSE(empty)) \"FALSE\" else \"\",",
     "                    stringsAsFactors = FALSE)",
     "  dir.create(dirname(sf), recursive = TRUE, showWarnings = FALSE)",
     "  st <- if (file.exists(sf)) utils::read.csv(sf, colClasses = \"character\")",
