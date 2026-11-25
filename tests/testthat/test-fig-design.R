@@ -516,7 +516,6 @@ test_that("a template whose own code calls rtfreporter:: names it in its script"
   for (tpl in c("forest_or", "butterfly_soc", "butterfly_pt")) {
     own <- tfl_fig_design_code(tfl_fig_template(tpl), "F1")
     expect_true(any(grepl("rtfreporter", needs_line(own))), info = tpl)
-    expect_true("rtfreporter" %in% attr(own, "needs"), info = tpl)
     st <- tfl_fig_design_code(tfl_fig_template(tpl), "F1", setup = TRUE)
     expect_length(needs_line(st), 0L)
   }

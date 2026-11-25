@@ -1850,6 +1850,12 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
   whole <- Filter(function(l) identical(l$layer, "figure"), design$layers)
   if (length(whole)) {
     w <- whole[[1L]]
+    # with the study's setup the script is the program's part, as a report's
+    # content is: the same rule for its head and its needs line
+    if (isTRUE(setup)) {
+      old <- options(tflspec.fig_in_program = TRUE)
+      on.exit(options(old), add = TRUE)
+    }
     fn <- getExportedValue("tflspec", .fig_fun(w$type))
     args <- lapply(w$args %||% list(), function(v) if (is.list(v)) unlist(v) else v)
     return(.drop_attached_ns(do.call(fn, c(list(style = w$style %||% NULL,
