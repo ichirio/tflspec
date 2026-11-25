@@ -742,6 +742,8 @@ tfl_plot <- function(name, items = list(), from = "own", input = NULL, form = c(
     libs <- c(libs, "patchwork")
     body <- c(body, .fig_compose_lines(name, plots, parts$compose))
   }
+  # (what a code step does not keep, read after it: stopped)
+  .fig_kept_check(d, c(pre, body))
   code <- c(
     section("data"),
     head, d$code,

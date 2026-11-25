@@ -351,20 +351,18 @@
 }
 
 # The lines that make the analysis data `ids` (in their order); `levels`:
-# the code lists, each data made factors again (.derive_steps()); `avoid`:
-# the program's names, which a data's own code does not assign; `reads`:
+# the code lists, each data made factors again (.derive_steps()); `reads`:
 # each data's columns the analyses read (kept whatever `keep` says); `dens`:
 # the data an analysis divides by (the denominators)
-.adata_lines <- function(x, ids, subj, levels = NULL, avoid = character(),
+.adata_lines <- function(x, ids, subj, levels = NULL,
                          reads = list(), needs = list(), dens = character()) {
   ad <- .adata_sheet(x)
   out <- character()
   lv <- if (length(levels)) .levels_step
   for (id in ids) {
     r <- ad[match(id, ad$data_id), ]
-    # written as R: its value is the data.  What comes before its last
-    # expression stays as it is, the last is the data (.code_as_program()); R
-    # that assigns a name the program has runs in local()
+    # written as R: its value is the data (.code_piece(): one expression as
+    # it is, else in a scope of its own, so what else it assigns stays there)
     if (!is.na(r$code %||% NA)) {
       # what it is, from its keys, above it
       out <- c(out, .adata_comment(id, if (!is.na(r$from %||% NA))
@@ -374,13 +372,7 @@
       # already: none after it -- a level its code adds, demog's Missing,
       # stays)
       lv_c <- if (!(r$from %||% NA) %in% ad$data_id) lv
-      made <- .code_as_program(code, id, list(lv_c), c(avoid, ids))
-      if (is.null(made)) {
-        made <- c(sprintf("%s <- local({\n%s\n})", id,
-                          paste0("  ", strsplit(code, "\n", fixed = TRUE)[[1L]],
-                                 collapse = "\n")),
-                  if (length(lv_c)) .make_code(id, id, lv_c))
-      }
+      made <- .code_piece(code, id, "last", steps = list(lv_c))
       out <- c(out, made)
       next
     }

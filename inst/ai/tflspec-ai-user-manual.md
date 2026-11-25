@@ -517,7 +517,12 @@ analyses do, and the figure starts from it.
   -- a row of the ARD definition, no line of the script.  Any step may
   say the object it reads (`in`) and the one it leaves (`out`): `filter`
   with `out: df_ev` makes `df_ev <- df |> filter(...)` and keeps `df`; a
-  `survfit` with `in: df_ev` fits it.  Unset, a read makes `df` (then
+  `survfit` with `in: df_ev` fits it.  A `code` step runs in a scope of
+  its own and keeps one object: its `out` (`{step: code, out: est, code:
+  ...}` is written `est <- local({ ...; est })`); one expression that
+  assigns one name (`x_breaks <- ...`) is written as it is and keeps it.
+  A later line that reads another object the step made stops the program's
+  writing: give it `out:`, or a code step of its own.  Unset, a read makes `df` (then
   `df2`, `df3`), a step on rows changes the object above it, a named step
   reads `df`.  A design written
   before 0.0.24.9074 (`data:` and `stats:`, `data_code` / `stats_code`)
@@ -1234,8 +1239,14 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
 - In `args` and `code`, `data` is the analysis data and `population` the
   analysis set's subjects; the program writes them as the data's own names
   (`adtte_sub`, `adsl_sub`), and a `custom` analysis's last expression is
-  its ARD (`local()` only when its code defines a function or assigns a
-  name the program has).
+  its ARD.  SPEC code runs only in its own step: one expression is written
+  as it is; code of several expressions (or one that assigns a name) is
+  written as it is inside `local({ data <- adtte_sub; ... })`, its result
+  the analysis's ARD, so `data$TRT01A <- ...` or a model made there changes
+  no other analysis's data.  The same for an analysis data's `code`, a
+  Rework / own data code / a listing's rework (`data <- local({ ...; data
+  })`), a figure's `code` step (it keeps its `out`) and `layer_code` (it
+  keeps `p`); the whole `content: !r` stays as it is.
 - A function that takes a **formula** (`cardx::ard_survival_survdiff`,
   `cardx::ard_regression`, `cardx::ard_stats_aov`) leaves `by` and
   `variables` blank and gets `formula = ...` in `args`.
