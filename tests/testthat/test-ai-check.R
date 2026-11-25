@@ -126,7 +126,7 @@ test_that("what defines a figure: the report's analysis set, never a step, and i
   expect_identical(p$where, "data[3] flag")
   expect_identical(p$severity, "error")
   expect_match(p$problem, "keeps the rows of the analysis set by the records' own FASFL", fixed = TRUE)
-  expect_match(p$problem, "`common: population`", fixed = TRUE)
+  expect_match(p$problem, "its data's `population:`", fixed = TRUE)
   p <- tfl_ai_check(ai_fig(at3("- {step: filter, expr: 'FASFL == \"Y\" & AVAL > 0'}")), ctx)
   expect_identical(p$where, "data[3] filter")
   expect_identical(p$severity, "error")

@@ -44,20 +44,26 @@ adtte_saf_ttskin <- adtte |>
   tag_ard(report_id, "BIGN", population = "SAF")
 
 # KM: Kaplan-Meier estimates
-fit <- survival::survfit(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = adtte_saf_ttskin)
-.ard_km <- bind_ard(
-  cardx::ard_survival_survfit(fit, probs = 0.5),
-  cardx::ard_survival_survfit(fit, times = c(0, 30, 60, 90, 120, 150, 180)),
-  .quiet = TRUE
-) |>
+.ard_km <- local({
+  data <- adtte_saf_ttskin
+  fit <- survival::survfit(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = data)
+  bind_ard(
+    cardx::ard_survival_survfit(fit, probs = 0.5),
+    cardx::ard_survival_survfit(fit, times = c(0, 30, 60, 90, 120, 150, 180)),
+    .quiet = TRUE
+  )
+}) |>
   fmt_ard(fmt_default) |>
   relevel_ard(TRT01A = cl_trt01a) |>
   tag_ard(report_id, "KM", population = "SAF")
 
 # HR: Hazard ratio vs control (Cox), not printed in the table
-adtte_saf_ttskin$TRT01A <- relevel(factor(adtte_saf_ttskin$TRT01A), ref = "Control")
-cox <- survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = adtte_saf_ttskin)
-.ard_hr <- cardx::ard_regression(cox, exponentiate = TRUE) |>
+.ard_hr <- local({
+  data <- adtte_saf_ttskin
+  data$TRT01A <- relevel(factor(data$TRT01A), ref = "Control")
+  cox <- survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = data)
+  cardx::ard_regression(cox, exponentiate = TRUE)
+}) |>
   fmt_ard(fmt_default) |>
   relevel_ard(TRT01A = cl_trt01a) |>
   tag_ard(report_id, "HR", population = "SAF")

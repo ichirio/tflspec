@@ -37,7 +37,7 @@ test_that("the set of the subjects entries: one distinct value only", {
   expect_true(is.na(tflspec:::.out_population_or_data(list(data = list(ent())))))
   expect_true(is.na(tflspec:::.out_population_or_data(
     list(data = list(list(id = "adae_sub", from = "ADAE", population = "SAF"))))))
-  # `common: population` still first
+  # the subjects entries before the old `common: population` (A2: the set lives on the data)
   expect_identical(tflspec:::.out_population_or_data(
-    list(common = list(population = "ITT"), data = list(ent(population = "SAF")))), "ITT")
+    list(common = list(population = "ITT"), data = list(ent(population = "SAF")))), "SAF")
 })

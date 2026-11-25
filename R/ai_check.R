@@ -231,7 +231,7 @@ tfl_ai_check <- function(answer, context = NULL, adam = NULL) {
   # the analysis set: the report's (the context's), read by nothing else
   # (an id, a label or a condition: a set the report names)
   pop <- context$population
-  recs <- any(vapply(steps[kind == "read"], function(s) !is.null(s$dataset) && is.null(s$data), NA))
+  recs <- any(vapply(steps[kind == "read"], function(s) !is.null(s[["dataset"]]) && is.null(s[["data"]]), NA))
   if (!is.null(context) && recs && !length(pop)) {
     p <- .ai_problem(p, "data", paste(
       "reads subjects' records and the report has no analysis set: it is the report's",

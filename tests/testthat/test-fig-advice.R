@@ -113,6 +113,6 @@ test_that("a flag step on a design: advice that the analysis set is the report's
   expect_identical(nrow(p), 1L)
   expect_identical(p$level, "info")
   expect_match(p$message, "Step 3 keeps the rows whose FASFL", fixed = TRUE)
-  expect_match(p$message, "`common: population`", fixed = TRUE)
+  expect_match(p$message, "its data's `population:`", fixed = TRUE)
   expect_null(p$fix[[1L]])
 })

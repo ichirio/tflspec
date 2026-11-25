@@ -333,7 +333,11 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     planner[[length(planner) + 1L]] <- list(
       output_id = id, description = cell(e$label %||% o$label), setup_code = NA_character_,
       process_code = .first_r_step(o$data$steps),
-      section = cell(e$section), population = cell(e$population %||% .na_scalar(.report_population(o))),
+      # (a listing's own set has a column of its own, the listings sheet's
+      # population_id: the planner's is the report's, read without it)
+      section = cell(e$section),
+      population = cell(e$population %||% .na_scalar(
+        .report_population(o, data = if (identical(o$kind, "listing")) NULL else o$data))),
       datasets = cell(e$datasets %||% .records_dataset(o)), batches = cell(e$sets))
     if (!is.null(.records_dataset(o)) && !is.null(o$data$where)) {
       note(id, "data", "a records table's where (its dataset's condition) stays in YAML")

@@ -20,7 +20,7 @@
       # Input data frames: adtte
       
       adtte_sub <- adtte |>
-        filter(PARAMCD == "OS", FASFL == "Y")
+        filter(PARAMCD == "OS")
       
       # AVAL in months, from each record's unit, AVALU (days when the data has no AVALU)
       adtte_sub <- adtte_sub |>
@@ -147,7 +147,7 @@
       # Input data frames: adtte
       
       adtte_sub <- adtte |>
-        filter(PARAMCD == "OS", FASFL == "Y")
+        filter(PARAMCD == "OS")
       
       # AVAL in months, from each record's unit, AVALU (days when the data has no AVALU)
       adtte_sub <- adtte_sub |>
@@ -240,7 +240,7 @@
       # Input data frames: adtte
       
       adtte_sub <- adtte |>
-        filter(PARAMCD == "OS", FASFL == "Y")
+        filter(PARAMCD == "OS")
       
       # AVAL in months, from each record's unit, AVALU (days when the data has no AVALU)
       adtte_sub <- adtte_sub |>
@@ -370,7 +370,7 @@
       # Input data frames: adtte
       
       adtte_sub <- adtte |>
-        filter(PARAMCD == "OS", FASFL == "Y")
+        filter(PARAMCD == "OS")
       
       # AVAL in months, from each record's unit, AVALU (days when the data has no AVALU)
       adtte_sub <- adtte_sub |>
@@ -482,7 +482,7 @@
       # Input data frames: adtr, adrs
       
       adtr_sub <- adtr |>
-        filter(PARAMCD == "BPCHG", FASFL == "Y") |>
+        filter(PARAMCD == "BPCHG") |>
         left_join(
           adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
           by = "USUBJID"
@@ -581,7 +581,7 @@
       # Input data frames: adtr
       
       adtr_sub <- adtr |>
-        filter(PARAMCD == "BPCHG", FASFL == "Y", !is.na(AVAL)) |>
+        filter(PARAMCD == "BPCHG", !is.na(AVAL)) |>
         arrange(desc(AVAL)) |>
         mutate(INDEX = row_number())
       
@@ -661,7 +661,7 @@
       # Input data frames: adsl
       
       adsl_sub <- adsl |>
-        filter(FASFL == "Y", !is.na(TRTDURD)) |>
+        filter(!is.na(TRTDURD)) |>
         # days -> months
         mutate(TRTDURD = TRTDURD / days_per_month) |>
         mutate(X0 = 0) |>
@@ -735,7 +735,6 @@
       # Input data frames: adsl, adrs
       
       adsl_sub <- adsl |>
-        filter(FASFL == "Y") |>
         left_join(
           adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
           by = "USUBJID"
@@ -825,7 +824,6 @@
       # Input data frames: adsl, adrs
       
       adsl_sub <- adsl |>
-        filter(FASFL == "Y") |>
         left_join(
           adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
           by = "USUBJID"
@@ -926,7 +924,6 @@
       # Input data frames: adsl, adrs
       
       adsl_sub <- adsl |>
-        filter(FASFL == "Y") |>
         left_join(
           adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
           by = "USUBJID"
@@ -1034,7 +1031,7 @@
       # Input data frames: adtr, adrs
       
       adtr_sub <- adtr |>
-        filter(PARAMCD == "SDIAM", FASFL == "Y") |>
+        filter(PARAMCD == "SDIAM") |>
         left_join(
           adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
           by = "USUBJID"
@@ -1128,10 +1125,9 @@
       adrs_sub <- adrs |>
         filter(PARAMCD == "BOR") |>
         left_join(
-          adsl |> select(USUBJID, TRT01P, FASFL),
+          adsl |> select(USUBJID, TRT01P),
           by = "USUBJID"
-        ) |>
-        filter(FASFL == "Y")
+        )
       
       rt <- adrs_sub |>
         group_by(TRT01P) |>
@@ -1213,10 +1209,9 @@
       adrs_sub <- adrs |>
         filter(PARAMCD == "BOR") |>
         left_join(
-          adsl |> select(USUBJID, TRT01P, FASFL),
+          adsl |> select(USUBJID, TRT01P),
           by = "USUBJID"
-        ) |>
-        filter(FASFL == "Y")
+        )
       
       ct <- adrs_sub |>
         count(TRT01P, AVALC) |>
@@ -1300,10 +1295,9 @@
       adrs_sub <- adrs |>
         filter(PARAMCD == "BOR") |>
         left_join(
-          adsl |> select(USUBJID, TRT01P, FASFL),
+          adsl |> select(USUBJID, TRT01P),
           by = "USUBJID"
-        ) |>
-        filter(FASFL == "Y")
+        )
       
       ct <- adrs_sub |>
         count(TRT01P, AVALC) |>
@@ -1381,10 +1375,10 @@
       adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", !is.na(AVAL) & !is.na(AVISITN)) |>
+        filter(!is.na(AVAL) & !is.na(AVISITN)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
       sm <- adlb_sub |>
@@ -1470,10 +1464,10 @@
       adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", !is.na(AVAL) & !is.na(AVISITN)) |>
+        filter(!is.na(AVAL) & !is.na(AVISITN)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
       sm <- adlb_sub |>
@@ -1559,10 +1553,10 @@
       adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", !is.na(AVAL) & !is.na(AVISITN)) |>
+        filter(!is.na(AVAL) & !is.na(AVISITN)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
       sm <- adlb_sub |>
@@ -1649,10 +1643,10 @@
       adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", !is.na(AVAL) & !is.na(AVISITN)) |>
+        filter(!is.na(AVAL) & !is.na(AVISITN)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
       sm <- adlb_sub |>
@@ -1758,10 +1752,10 @@
       adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", !is.na(AVAL) & !is.na(AVISIT)) |>
+        filter(!is.na(AVAL) & !is.na(AVISIT)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
       sm <- adlb_sub |>
@@ -1838,10 +1832,10 @@
       adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", !is.na(AVAL)) |>
+        filter(!is.na(AVAL)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
       sg <- adlb_sub |>
@@ -1922,10 +1916,10 @@
       adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", !is.na(AVAL), AVISITN == max(AVISITN))
+        filter(!is.na(AVAL), AVISITN == max(AVISITN))
       
       sg <- adlb_sub |>
         filter(!is.na(AVAL)) |>
@@ -2006,10 +2000,10 @@
       adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", !is.na(CHG), AVISITN > 0) |>
+        filter(!is.na(CHG), AVISITN > 0) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
       sg <- adlb_sub |>
@@ -2092,10 +2086,10 @@
       adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", AVISITN > 0 & !is.na(BASE) & !is.na(AVAL), AVISITN == max(AVISITN))
+        filter(AVISITN > 0 & !is.na(BASE) & !is.na(AVAL), AVISITN == max(AVISITN))
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
@@ -2169,10 +2163,10 @@
       adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", AVISITN > 0 & !is.na(BASE) & !is.na(CHG), AVISITN == max(AVISITN))
+        filter(AVISITN > 0 & !is.na(BASE) & !is.na(CHG), AVISITN == max(AVISITN))
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
@@ -2251,10 +2245,10 @@
       
       adpc_sub <- adpc |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", !is.na(AVAL))
+        filter(!is.na(AVAL))
       
       sm <- adpc_sub |>
         filter(!is.na(AVAL)) |>
@@ -2340,10 +2334,10 @@
       
       adpc_sub <- adpc |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", !is.na(AVAL), AVAL > 0)
+        filter(!is.na(AVAL), AVAL > 0)
       
       sm <- adpc_sub |>
         filter(!is.na(AVAL)) |>
@@ -2431,10 +2425,10 @@
       
       adpc_sub <- adpc |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", !is.na(AVAL), AVAL > 0)
+        filter(!is.na(AVAL), AVAL > 0)
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
@@ -2508,7 +2502,7 @@
       # Input ARD: ard (read with ard_value() / ard_stats(), tfl_helpers_code())
       
       adtte_sub <- adtte |>
-        filter(PARAMCD == "OS", FASFL == "Y")
+        filter(PARAMCD == "OS")
       
       est <- ard_stats(
         ard,

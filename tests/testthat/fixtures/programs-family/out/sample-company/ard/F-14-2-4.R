@@ -40,8 +40,11 @@ adtte_saf_ttskin <- adtte |>
 
 # ---- analyses ----
 # HR: Hazard ratio, all subjects
-cox <- survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = adtte_saf_ttskin)
-.ard_hr <- cardx::ard_regression(cox, exponentiate = TRUE) |>
+.ard_hr <- local({
+  data <- adtte_saf_ttskin
+  cox <- survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = data)
+  cardx::ard_regression(cox, exponentiate = TRUE)
+}) |>
   fmt_ard(fmt_default) |>
   relevel_ard(TRT01A = cl_trt01a) |>
   tag_ard(report_id, "HR", population = "SAF")

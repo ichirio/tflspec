@@ -1,7 +1,7 @@
 # ---- data ------------------------------------------------------------------
 adtte_sub <- adtte |>
   order_levels() |>
-  filter(PARAMCD == "TTDE", SAFFL == "Y")
+  filter(PARAMCD == "TTDE")
 
 est <- ard_stats(
   ard,
