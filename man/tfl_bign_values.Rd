@@ -22,7 +22,6 @@ numbers are named as the columns are.  \code{NULL}: the codes.}
 (\code{plan_total()}'s label, "Total" when it gives none): its N is the
 groups' sum, under that name.  \code{NULL} (default): no Total column.}
 }
-
 \value{
 \code{tfl_bign_values()}: \code{list(n = )}, the n of each group named by
 its value (one unnamed number when BIGN has no group), for

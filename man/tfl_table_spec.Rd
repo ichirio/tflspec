@@ -355,7 +355,7 @@ whose column key \code{KEY} has that value (\code{variable = n}).}
 \item{\code{span}}{Blank: one cell over all of \code{cols}.  \code{each}: one cell
 per column.  A column key (\code{TRTA}): one cell per value of that
 key, over its columns --- an arm's spanner, however many arms.}
-\item{\code{text}}{The label.  A line break is Alt+Enter or \verb{\\\\n}.  The
+\item{\code{text}}{The label.  A line break is Alt+Enter or \verb{\\n}.  The
 tokens of \code{\link[rtfreporter:plan_col_header]{rtfreporter::plan_col_header()}} work: \code{{col}} (the column's own
 value), \code{{col1}}, \code{{col2}} (its keys, outermost first), \code{{n}} (the
 population of what the cell stands for: its column, or over an

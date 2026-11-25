@@ -28,7 +28,7 @@ the study's.  The data are read through the data root (\code{run_paths.R}).  The
 folder holds three entry files (\code{autoexec_all.R}, \code{autoexec_ard.R},
 \code{autoexec_report.R}) that run it again elsewhere (never in place in a
 study's \verb{runs/}) and, at the end, \code{issues.csv} and a \code{batch.txt} ending
-in \verb{Verified : yes}.  A path outside the study that a run would read
+in \code{Verified : yes}.  A path outside the study that a run would read
 stops it before any folder is made.  \code{tfl_runner_file()} is the path of the runner file shipped with
 tflspec.  \code{tfl_runner_code()} returns the code of a study's \code{batch.R}
 without its banner and without the call that starts a run (the program
@@ -86,7 +86,7 @@ alone) pass.  A line that is not a path is marked by ending it with the
 comment \verb{# tfl: not a path}; that line is not scanned.  The scan cannot
 prove there is no such path (\code{paste()} and \code{getOption()} escape it).
 \item \code{kind} -- \code{"run"} (an official run) or \code{"preview"}.  batch.txt records it;
-only a \code{"run"} ends in \verb{Verified : yes}.
+only a \code{"run"} ends in \code{Verified : yes}.
 \item \code{paths} -- a named list with optional elements \code{data} (a named character
 vector, dataset -> file; a preview reads these outside the study),
 \code{company_setup}, \code{study_user} and \code{output} (strings); \code{list()} when not
@@ -99,7 +99,7 @@ The end record.  A program's \code{status} is \code{ERROR} when its exit status 
 not 0, or when it has an error-level issue from any source (a log line, an
 error stored in the ARD, a condition of class error, a declared output
 not made).  An \code{ERROR} program with no error issue gets one, from the log,
-"the program ended with status N; see <log>".  The log patterns match R's
+"the program ended with status N; see \if{html}{\out{<log>}}".  The log patterns match R's
 own prefixes in English and Japanese.  \code{errors} in run.csv, \verb{Errors :} and
 \verb{N of M program(s) without error} in batch.txt follow the same rule, and
 the runner ends with status 1 when any program is \code{ERROR}.

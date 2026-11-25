@@ -21,7 +21,7 @@ study's spec folder; \code{NULL} for none (the \code{study} column is then
 \code{"settings.<name>"} ones (\code{"settings.treatment"} for the \code{by}).}
 
 \item{population}{The report's analysis set: the value of the
-parameters taken from the report's \verb{population:}
+parameters taken from the report's \code{common: population}
 (\code{"output.common.population"}); \code{NULL} for none.}
 
 \item{tier}{The tiers to print: \code{"required"}, \code{"key"}, \code{"usual"}, \code{"other"}
