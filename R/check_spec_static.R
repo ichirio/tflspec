@@ -49,10 +49,9 @@
     (as.character(d$source %||% "ard")[1L] %in% c("dataset", "code"))
   if (reads && all(is.na(unlist(.data_population(d, o)))) &&
       is.na(.na_scalar(o$common$population_label))) {
-    add(part = "data", item = "common$population", level = "warning", message = paste0(
-      "the ", o$kind, " reads subjects' records and has no analysis set: write `common: population` ",
-      "(a population of spec/data.yml), whose subjects the records are joined to; for all subjects, ",
-      "`common: population_label`"))
+    add(part = "data", item = "data$population", level = "warning", message = paste0(
+      "the ", o$kind, " reads subjects' records and has no analysis set: write `population:` on its ",
+      "data (a population of spec/data.yml)"))
   }
   # (Q4) a step that keeps the rows of a population by the records' own
   # columns (the subjects outside it, and a record's own arm, stay); the

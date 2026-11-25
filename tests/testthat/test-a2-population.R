@@ -140,11 +140,11 @@ test_that("a listing's analysis set: its own, else the report's -- the sheets an
   ls <- b$listing$listings
   expect_identical(ls$population_id[match(c("L-1", "L-2"), ls$output_id)], c("SAF", "SAF"))
   expect_true(is.na(ls$population_id[ls$output_id == "L-3"]))
-  # back to YAML: the report's set stays the report's (no copy in `data`)
+  # back to YAML: the set is on the data (canon 11-15)
   to <- file.path(d, "back")
   invisible(suppressWarnings(tfl_yaml_from_sheets(b, to)))
   back <- tfl_read_outputs(to)
-  expect_null(back[["L-1"]]$data$population)
+  expect_identical(back[["L-1"]]$data$population, "SAF")
   expect_identical(back[["L-1"]]$common$population, "SAF")
   expect_identical(back[["L-2"]]$data$population, "SAF")
 })
@@ -160,8 +160,8 @@ test_that("a figure or listing of subjects' records with no analysis set: a warn
   l <- list(kind = "listing", data = list(source = "dataset", dataset = "ADAE"))
   p <- .check_static_rows(l, "L-1", st)
   expect_identical(p$level, "warning")
-  expect_identical(p$item, "common$population")
-  expect_match(p$message, "has no analysis set: write `common: population`", fixed = TRUE)
+  expect_identical(p$item, "data$population")
+  expect_match(p$message, "has no analysis set: write `population:` on its data", fixed = TRUE)
   # the report's set, the data's own, or the text of all subjects: quiet
   for (o in list(c(l, list(common = list(population = "SAF"))),
                  c(l, list(common = list(population_label = "All subjects"))),
