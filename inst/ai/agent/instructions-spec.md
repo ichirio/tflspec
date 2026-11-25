@@ -67,7 +67,11 @@ report's skeleton and nothing of its look:
   and `shift` have it -- and each arm heads one value column, not a Value
   and a Change column under it), write this
   one item, nothing more of the header: `plan_col_header: {header: [{line:
-  "1", cols: .values, span: each, text: "{col}\n(N={n})"}]}`;
+  "1", cols: .values, span: each, text: "{col}\n(N={n})"}]}`.  The N is
+  the report's `BIGN` analysis: when the report has none, add it (`id:
+  BIGN`, `method: categorical`, `data:` the report's subjects data,
+  `variables: [<the column variable>]`); without it the header prints
+  `N=NA` and `tfl_check_spec()` warns;
 - a `data:` definition that `code` makes may name its `population`: the
   set's subjects are made first and are in reach as `<dataset>_sub`
   (`adsl_sub`); its other fields (`where`, `add`, `derive` ...) stay blank.
