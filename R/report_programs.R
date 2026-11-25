@@ -396,10 +396,17 @@
 # made once by the program's data part as the ARD programs make them
 # (.fig_subjects_part(): the object <dataset>_sub), with the report's
 # analysis data `data`; the records the figure reads are joined to them.
-# list(code, subjects); NULL when the report has no analysis set
+# list(code, subjects); NULL only when the report has no analysis set.  A
+# set whose subjects cannot be made (none of the study's, no ARD definition)
+# is a stop() line saying so, and no subjects: never every subject drawn
+# (.fig_subjects_part())
 .rp_fig_subjects <- function(ctx, data = character()) {
   pop <- .rp_population(ctx)
-  if (is.na(pop) || is.null(ctx$shared$ard)) return(NULL)
+  if (is.na(pop)) return(NULL)
+  id <- ctx$report$id
+  stop_line <- function(msg) list(code = sprintf("stop(%s)", encodeString(msg, quote = """)),
+                                  subjects = NULL)
+  if (is.null(ctx$shared$ard)) return(stop_line(.fig_subjects_no_ard(id, pop)))
   x <- .as_spec(ctx$shared$ard, "ard", "tfl_report_program")
   # (written as tfl_ard_code(part = "data") writes it: for its setup, which
   # attaches cards and dplyr)
@@ -407,8 +414,9 @@
   old <- options(tflspec.user_attached = user,
                  tflspec.attached = union(user, c(.ard_pkgs, .ard_base_pkgs)))
   on.exit(options(old), add = TRUE)
-  sj <- .fig_subjects_part(x, ctx$report$id, pop, data = data)
-  if (!is.null(sj)) sj$code <- .drop_attached_ns(sj$code)
+  sj <- tryCatch(.fig_subjects_part(x, id, pop, data = data),
+                 tfl_fig_subjects = function(e) stop_line(conditionMessage(e)))
+  if (!is.null(sj$subjects)) sj$code <- .drop_attached_ns(sj$code)
   sj
 }
 

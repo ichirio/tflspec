@@ -1021,12 +1021,16 @@ tfl_read_fig_design <- function(path) {
 # The subjects of the analysis set `pop` of report `output_id`, as the data
 # part of its program makes them, with its analysis data `data` (the ARD
 # definition `x`): list(code = <the data part's lines>, subjects =
-# list(object, dataset, id)).  NULL when the report has no analysis set or
-# the definition does not define it.
+# list(object, dataset, id)).  NULL only when the report has no analysis
+# set.  A set the study does not define, or whose subjects cannot be made,
+# stops (no figure of every subject: the rule of the template's analysis
+# set, .tpl_population_step(), and of the ARD programs).
 .fig_subjects_part <- function(x, output_id, pop, data = character()) {
   pop <- .na_scalar(pop)
+  if (is.na(pop)) return(NULL)
   pops <- x$populations
-  if (is.na(pop) || is.null(pops) || !pop %in% pops$population_id) return(NULL)
+  ids <- if (!is.null(pops)) as.character(pops$population_id) else character()
+  if (!pop %in% ids) .fig_subjects_stop(.fig_subjects_unknown(output_id, pop, ids))
   k <- match(pop, pops$population_id)
   ds <- pops$dataset[k]
   made <- .ard_data_part(x, output_id, data = data, population_id = pop)
@@ -1045,9 +1049,39 @@ tfl_read_fig_design <- function(path) {
     plain <- is.na(pops$where[k]) && is.na(pops$derive[k] %||% NA)
     obj <- if (length(same)) same[1L] else if (plain) .r_name(ds) else NA_character_
   }
-  if (is.na(obj)) return(NULL)
+  if (is.na(obj)) {
+    .fig_subjects_stop(sprintf(paste0("%s: the subjects of analysis set %s are not made by its ARD ",
+                                      "definition (no object of them); the figure would draw every ",
+                                      "subject."), output_id, pop))
+  }
   list(code = made, subjects = list(object = obj, dataset = ds,
                                     id = .study_value(x, "id", "USUBJID")))
+}
+
+# The message of a report's analysis set `pop` that is none of the study's
+# (`ids`: data.yml `populations:`, as its ARD definition has them): the
+# shared text (.pop_unknown_text()), or, a study that defines none, that
+.fig_subjects_unknown <- function(output_id, pop, ids) {
+  m <- .pop_unknown_text(pop, ids) %||%
+    sprintf("%s is not an analysis set: spec/data.yml defines none", sQuote(pop, FALSE))
+  sprintf("%s: the report's analysis set: %s; the figure would draw every subject.", output_id, m)
+}
+
+# ... and of a report's set whose subjects have no ARD definition to be
+# made from (none, or one that cannot be made: `why`)
+.fig_subjects_no_ard <- function(output_id, pop, why = NULL) {
+  sprintf(paste0("%s: the report's analysis set %s: its subjects are made from the study's ARD ",
+                 "definition, %s; the figure would draw every subject."),
+          output_id, pop,
+          if (is.null(why)) "and the study has none" else paste0("which cannot be made (", why, ")"))
+}
+
+# A figure's subjects that cannot be made stop with the message (class
+# `tfl_fig_subjects`: a report program writes it as its stop() line,
+# .rp_fig_subjects(); the AI's draw stops with it)
+.fig_subjects_stop <- function(msg) {
+  stop(structure(class = c("tfl_fig_subjects", "error", "condition"),
+                 list(message = msg, call = NULL)))
 }
 
 # The join that keeps a records dataset's rows of the report's subjects:

@@ -31,10 +31,20 @@ a2f_join <- function(obj) {
 
 test_that("a report's subjects: its analysis set's, made by the data part (R1, R4)", {
   x <- a2f_spec()
-  # no analysis set, or one the definition does not define: none
+  # no analysis set: none
   expect_null(.fig_subjects_part(x, "F-1", NA))
   expect_null(.fig_subjects_part(x, "F-1", NULL))
-  expect_null(.fig_subjects_part(x, "F-1", "NOPE"))
+  # a set the study does not define: it stops, naming the set and the
+  # study's sets (never every subject drawn: .tpl_population_step()'s rule)
+  e <- tryCatch(.fig_subjects_part(x, "F-1", "NOPE"), error = identity)
+  expect_s3_class(e, "tfl_fig_subjects")
+  expect_match(conditionMessage(e), "F-1: the report's analysis set: 'NOPE' is not an analysis set",
+               fixed = TRUE)
+  expect_match(conditionMessage(e), "(SAF, ENR, PKS)", fixed = TRUE)
+  # (a study that defines none: the same stop)
+  x0 <- x
+  x0$populations <- NULL
+  expect_error(.fig_subjects_part(x0, "F-1", "SAF"), "spec/data.yml defines none", fixed = TRUE)
   # a set of ADSL with a condition: <dataset>_sub, as the ARD programs name it
   sj <- .fig_subjects_part(x, "F-1", "SAF")
   expect_identical(sj$subjects, list(object = "adsl_sub", dataset = "ADSL", id = "USUBJID"))
@@ -172,8 +182,23 @@ test_that("a designed figure's program: the subjects in its data part, its reads
   expect_match(a2f_flat(p), a2f_join("adsl_sub"), fixed = TRUE)
   # the set in `common:` (until it goes): the same subjects, the same join
   expect_identical(a2f_prog(x, a2f_pop(r, "SAF", "common")), p)
-  # a set the ARD definition does not define: as with none
-  expect_identical(a2f_prog(x, a2f_pop(r, "NOPE")), before)
+  # a set the study does not define: no subjects, no join -- the program
+  # stops there, naming the set and the study's sets (must-fix 1)
+  p0 <- a2f_prog(x, a2f_pop(r, "NOPE"))
+  at <- which(startsWith(p0, a2f_head))
+  expect_length(at, 1L)
+  expect_true(startsWith(p0[at + 1L],
+                         "stop(\"F-14-2-3: the report's analysis set: 'NOPE' is not an analysis set"))
+  expect_match(p0[at + 1L], "spec/data.yml (SAF", fixed = TRUE)
+  expect_false(grepl("inner_join(select(", a2f_flat(p0), fixed = TRUE))
+  expect_lt(at, which(startsWith(p0, "# ---- plot"))[1L])
+  # no ARD definition to make the subjects from: the same, said so
+  sj <- .rp_fig_subjects(list(report = list(id = "F-1", spec_output = list(
+    data = list(source = "code", population = "SAF"))), shared = list()))
+  expect_null(sj$subjects)
+  expect_true(startsWith(sj$code, "stop(\"F-1: the report's analysis set SAF: its subjects are made from"))
+  # no set: nothing
+  expect_null(.rp_fig_subjects(list(report = list(id = "F-1"), shared = list())))
 })
 
 test_that("a figure of its own code: the subjects made before your code (Q5)", {
