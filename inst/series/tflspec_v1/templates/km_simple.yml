@@ -27,7 +27,7 @@ params:
     unset: stop
     step: analysis
     tier: other
-    description: The column of the time to event.
+    description: The column of the time to event. AVAL is converted from its unit, AVALU, by tte_time(); another column is used as it is (in the axis's unit already).
   censor:
     type: column
     input: pick
