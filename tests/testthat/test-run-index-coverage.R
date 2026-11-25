@@ -180,6 +180,22 @@ test_that("tfl_latest_run(): the answer has the columns, and the run's folder, t
   expect_identical(r$finished, tfl_run_index(s)$finished)
 })
 
+test_that("tfl_latest_run(): a run.csv row with no status, part or output id makes no report", {
+  s <- ricv_study()
+  ricv_run(s, "r_old", rows = rbind(ricv_rows(id = "T-1"), ricv_rows(id = "T-2")),
+           lines = ricv_good(started = "2026-11-18 10:00:00"))
+  # (NA in run.csv: written as NA, read back as NA)
+  rows <- rbind(ricv_rows(id = "T-1"), ricv_rows(id = "T-2"), ricv_rows(id = "T-3"))
+  rows$status[1L] <- NA
+  rows$part[2L] <- NA
+  rows$output_id[3L] <- NA
+  ricv_run(s, "r_new", rows = rows, lines = ricv_good(started = "2026-11-19 10:00:00"))
+  r <- tfl_latest_run(s, c("T-1", "T-2", NA))
+  expect_identical(r$output_id, c("T-1", "T-2", NA))
+  expect_identical(r$run, c("r_old", "r_old", NA))
+  expect_identical(r$md5, c("0a1b", "0a1b", NA))
+})
+
 test_that("tfl_latest_run(): a report asked for twice is answered twice", {
   s <- ricv_study()
   ricv_run(s, "r1")

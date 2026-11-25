@@ -59,8 +59,10 @@ tfl_latest_run <- function(study_dir, report_id, part = c("tfl", "ard")) {
   part <- match.arg(part)
   report_id <- as.character(report_id)
   idx <- tfl_run_index(study_dir)
-  idx <- idx[idx$part == part & idx$status == "OK" & nzchar(idx$output_id), ,
-             drop = FALSE]
+  # (a row with no part, status or output id -- NA in run.csv -- makes nothing)
+  ok <- which(idx$part == part & idx$status == "OK" &
+                !is.na(idx$output_id) & nzchar(idx$output_id))
+  idx <- idx[ok, , drop = FALSE]
   # (newest first, so the first match is the latest)
   i <- match(report_id, idx$output_id)
   data.frame(output_id = report_id, run = idx$run[i], path = idx$path[i],
