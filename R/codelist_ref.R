@@ -30,8 +30,17 @@
     one <- vapply(as.list(l$codes), function(k) is.atomic(k) && length(k) == 1L && !is.na(k), NA)
     if (!length(one) || !all(one)) bad("`codes` is a list of the list's codes.")
     out$codes <- as.list(as.character(unlist(l$codes, use.names = FALSE)))
+    dup <- .cl_codes_dup(out$codes)
+    if (!is.null(dup)) bad(paste0("`codes` has \"", dup, "\" twice (a code is a level once)."))
   }
   out
+}
+
+# the first code a pick has twice, else NULL
+.cl_codes_dup <- function(codes) {
+  codes <- unlist(codes, use.names = FALSE)
+  k <- anyDuplicated(codes)
+  if (k) codes[[k]]
 }
 
 # A reference's rows: its codes, each {value, label} with the study's label
@@ -94,10 +103,19 @@
   }
   cell
 }
-.cl_ref_from_cell <- function(cell) {
+# (`where`: the report and the variable, for the error: a cell with no list
+# name, or a code picked twice, would be written as a file the reader refuses)
+.cl_ref_from_cell <- function(cell, where = NULL) {
   out <- list(list = trimws(sub(":.*$", "", cell)))
   codes <- if (grepl(":", cell, fixed = TRUE)) .conv_split(sub("^[^:]*:", "", cell))
   if (length(codes)) out$codes <- as.list(codes)
+  bad <- function(why) {
+    stop(if (!is.null(where)) paste0(where, ": "), "the codelists sheet's `list` cell \"", cell, "\" ", why,
+         " It is the study's list (`SEX`), or the list and the codes picked (`SEX: F | M`).", call. = FALSE)
+  }
+  if (!nzchar(out$list)) bad("names no list.")
+  dup <- .cl_codes_dup(out$codes)
+  if (!is.null(dup)) bad(paste0("picks \"", dup, "\" twice (a code is a level once)."))
   out
 }
 
@@ -133,8 +151,60 @@
     lab <- lab[k]
   }
   lab <- ifelse(is.na(lab) | !nzchar(trimws(lab)), val, lab)
+  # (a reference has no parent codes: an `under` cell is an edit too)
+  un <- rows[["under"]]
   !identical(val, vapply(want, function(r) r$value, "")) ||
-    !identical(lab, vapply(want, function(r) r$label, ""))
+    !identical(lab, vapply(want, function(r) r$label, "")) ||
+    (!is.null(un) && any(!is.na(un) & nzchar(trimws(as.character(un)))))
+}
+
+# The one source of a reference's codes where rows reach a program: the
+# rows of each report's variable that have a `list` cell are made again from
+# the study's list (.cl_ref_rows()), never taken as the sheet has them.
+# `rows`: code list rows (`output_id`, `variable`, `value`, `label`, ...,
+# `list`); `study_cl`: the study's lists (study$codelists), NULL when they
+# are not known.  A list or code the study has not got: `unknown = "stop"`
+# (a program is written: the error names the report, the variable and the
+# list), `"drop"` (the variable's rows left out: the sheets are read, not a
+# program written).  With no study lists, the rows are as written, unless
+# they have no code (a reference the study has not got): that stops (or is
+# left out) the same way.
+.cl_rows_from_study <- function(rows, study_cl, what, unknown = c("stop", "drop")) {
+  unknown <- match.arg(unknown)
+  if (!is.data.frame(rows) || !nrow(rows) || is.null(rows[["list"]])) return(rows)
+  lc <- trimws(as.character(rows[["list"]]))
+  if (!any(!is.na(lc) & nzchar(lc))) return(rows)
+  oid <- if (is.null(rows[["output_id"]])) rep(NA_character_, nrow(rows)) else as.character(rows[["output_id"]])
+  key <- paste(oid, rows[["variable"]], sep = " / ")
+  out <- lapply(unique(key), function(k) {
+    g <- rows[key == k, , drop = FALSE]
+    cell <- .cl_list_cell(g)
+    if (is.null(cell)) return(g)
+    id <- oid[key == k][1L]
+    v <- g[["variable"]][1L]
+    where <- sprintf("%s: report %s, the code list of %s", what, id, v)
+    if (is.null(study_cl)) {
+      if (!anyNA(g[["value"]])) return(g)
+      if (unknown == "drop") return(g[0L, , drop = FALSE])
+      stop(where, " refers to the study's list in its `list` cell \"", cell, "\", and the sheets have no code ",
+           "of it: the study has not got that list or code (spec/defaults.yml `codelists:`).", call. = FALSE)
+    }
+    ref <- .cl_ref_from_cell(cell, sprintf("report %s, variable %s", id, v))
+    rr <- if (unknown == "stop") .cl_ref_rows(ref, v, study_cl, id, what) else
+      tryCatch(.cl_ref_rows(ref, v, study_cl, id, what), error = function(e) NULL)
+    if (is.null(rr)) return(g[0L, , drop = FALSE])
+    new <- g[rep(1L, length(rr)), , drop = FALSE]
+    new[["value"]] <- vapply(rr, function(r) r$value, "")
+    if (!is.null(new[["label"]])) new[["label"]] <- vapply(rr, function(r) r$label, "")
+    if (!is.null(new[["order"]])) {
+      new[["order"]] <- if (is.numeric(g[["order"]])) seq_along(rr) else as.character(seq_along(rr))
+    }
+    if (!is.null(new[["under"]])) new[["under"]] <- rep(g[["under"]][NA_integer_], length(rr))
+    new
+  })
+  res <- do.call(rbind, out)
+  rownames(res) <- NULL
+  res
 }
 
 # ---- the study's lists on the sheets ------------------------------------------
@@ -143,6 +213,15 @@
 # a code a row -- the list's name, the code, its label (blank: the list has
 # none), its place
 .study_codelists_columns <- c("name", "value", "label", "order")
+
+# The study's lists (study$codelists, by name: named by the code when they
+# have labels) as defaults.yml's `codelists:` has them
+.study_codelists_out <- function(cl) {
+  lapply(cl %||% list(), function(x) {
+    if (is.null(names(x))) return(as.list(as.character(x)))
+    lapply(seq_along(x), function(i) list(value = names(x)[[i]], label = as.character(x[[i]])))
+  })
+}
 
 # The sheet back as defaults.yml's `codelists:`, each list in its order
 # (`order`, else the rows'): `{value, label}` rows, or the codes alone when

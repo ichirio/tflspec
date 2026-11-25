@@ -49,7 +49,9 @@ setup code), \code{ard} (the ARD sheets), \code{listing} (\code{listings},
 map arguments, which the sheets do not hold, are taken from its file
 already in \code{to}, else named in a warning and a note), \code{study_codelists}
 (the study's code lists, written to \code{spec/defaults.yml} \verb{codelists:},
-each in its \code{order}), \code{not_converted} (\code{\link[=tfl_sheets_from_yaml]{tfl_sheets_from_yaml()}}'s notes
+each in its \code{order}; without it, the lists of the \code{spec/defaults.yml}
+already in \code{to}, else the lists the reports refer to named in a warning
+and a note), \code{not_converted} (\code{\link[=tfl_sheets_from_yaml]{tfl_sheets_from_yaml()}}'s notes
 on what the sheets could not hold: listed in \verb{_not_converted.yml} too,
 with one message saying how many).  What the app holds, or what the
 workbooks read as.}

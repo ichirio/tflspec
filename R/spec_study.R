@@ -989,7 +989,10 @@ tfl_output_extends <- function(output, step = NULL) {
 #'
 #' Writes the study-level file of one part of a [tfl_read_study_spec()]
 #' result -- what a builder changes for the whole study (the rounding of
-#' every table, a pattern) -- in the form the reader reads.
+#' every table, a pattern) -- in the form the reader reads.  For
+#' `"defaults"`, the blocks of `spec/defaults.yml` that are not layers
+#' (`codelists:`, `adam_meta:`, `figure_style:`, `options:`) are kept as the
+#' study's own file has them.
 #'
 #' @param study A `tfl_study_spec`.
 #' @param part `"defaults"`, `"patterns"` (one, by `name`),
@@ -1025,7 +1028,7 @@ tfl_write_study_part <- function(study, part = c("defaults", "patterns", "data",
     defaults = {
       y <- layer_out(study$defaults)
       if (length(study$styles)) y$styles <- lapply(study$styles, layer_out)
-      y
+      c(y, .defaults_kept_blocks(study, names(y)))
     },
     patterns = {
       if (is.null(name) || is.null(study$patterns[[name]])) {
@@ -1045,6 +1048,24 @@ tfl_write_study_part <- function(study, part = c("defaults", "patterns", "data",
   writeLines(yaml::as.yaml(y, indent.mapping.sequence = TRUE, handlers = .yaml_out_handlers()),
              path, useBytes = TRUE)
   invisible(path)
+}
+
+# The blocks of defaults.yml that tfl_write_study_part(, "defaults") does not
+# write from the layers (`own`: the ones it wrote) -- the study's code lists,
+# its ADaM metadata, figure_style:, options:, any other -- kept as the
+# study's own spec/defaults.yml has them; with no such file, the ones the
+# study holds as written (its code lists, figure_style:, options:)
+.defaults_kept_blocks <- function(study, own) {
+  f <- if (!is.null(study$dir)) file.path(.spec_dir(study$dir), "defaults.yml")
+  if (!is.null(f) && file.exists(f)) {
+    raw <- yaml::read_yaml(f, handlers = .yaml_handlers()) %||% list()
+    return(raw[setdiff(names(raw), c("content", "page", "data", "styles", own))])
+  }
+  out <- list()
+  if (length(study$codelists)) out$codelists <- .study_codelists_out(study$codelists)
+  if (length(study$figure_style)) out$figure_style <- study$figure_style
+  if (length(study$options)) out$options <- study$options
+  out[setdiff(names(out), own)]
 }
 
 # A table's normalize_ard() without `overall`, of a report whose hierarchy

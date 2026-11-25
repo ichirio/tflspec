@@ -218,23 +218,24 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
       # a reference to the study's list (the `list` cell): the reference, as
       # the cell says it; its rows are the study's, not read back
       lc <- .cl_list_cell(pv)
+      cw <- paste0("tfl_import_spec_xlsx(): report ", id, ", variable ", v)
       was <- y$codelists[[v]]
       was_cell <- if (.cl_is_ref(was)) .cl_ref_cell(.cl_ref_norm(was, v, id))
       if (!is.null(lc) || !is.null(was_cell)) {
-        to_cell <- if (!is.null(lc)) .cl_ref_cell(.cl_ref_from_cell(lc))
+        to_cell <- if (!is.null(lc)) .cl_ref_cell(.cl_ref_from_cell(lc, cw))
         if (!identical(was_cell, to_cell)) {
           st$changes[[length(st$changes) + 1L]] <- data.frame(sheet = "codelists", key = paste(id, v, sep = " / "),
                                                             column = "list", from = was_cell %||% NA_character_,
                                                             to = to_cell %||% NA_character_, stringsAsFactors = FALSE)
         }
         if (!is.null(lc)) {
-          if (!identical(was_cell, to_cell)) y$codelists[[v]] <- .cl_ref_from_cell(lc)
+          if (!identical(was_cell, to_cell)) y$codelists[[v]] <- .cl_ref_from_cell(lc, cw)
           # (its rows edited: not read back, said and listed in `ignored`; the
           # rows were written from the reference the file had)
           if (is.null(study_cl)) {
             study_cl <<- tryCatch(tfl_read_study_spec(dir)$codelists %||% list(), error = function(e) list())
           }
-          base <- if (!is.null(was_cell)) .cl_ref_norm(was, v, id) else .cl_ref_from_cell(lc)
+          base <- if (!is.null(was_cell)) .cl_ref_norm(was, v, id) else .cl_ref_from_cell(lc, cw)
           want <- tryCatch(.cl_ref_rows(base, v, study_cl, id, "tfl_import_spec_xlsx()"), error = function(e) NULL)
           if (!is.null(want) && .cl_ref_rows_edited(pv, want)) {
             st$ignored <- c(st$ignored, paste0("codelists: ", id, " / ", v))

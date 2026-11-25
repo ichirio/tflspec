@@ -174,7 +174,10 @@
 #' @param rows The reports' own code list rows (the sheets' `codelists`,
 #'   a template's lists among them), when the caller has them: the sheets are
 #'   then not made again.  The result keeps the columns of `rows`, and a row
-#'   of a report not in `outputs` stays.  `NULL` (default): made from
+#'   of a report not in `outputs` stays.  The rows of a variable with a
+#'   `list` cell (a reference to one of the study's lists) are made again
+#'   from the study's list, whatever their codes and labels say; a list or code
+#'   the study has not got stops.  `NULL` (default): made from
 #'   `outputs`.
 #' @return A data frame of the sheets' `codelists` rows (`output_id`,
 #'   `variable`, `value`, `label`, `order`, `under`, `list`: a reference to
@@ -219,11 +222,15 @@ tfl_report_codelists <- function(study, outputs = NULL, rows = NULL) {
     outputs <- outputs[ids %in% output_id]
     ids <- ids[ids %in% output_id]
   }
-  # (a reference to a list or code the study has not got: the sheets keep
-  # its cell with no code; the programs written from these rows stop here)
+  # (a report's reference with no rows here: the study must have it all the
+  # same; rows with no `list` cell are a list written in place -- a
+  # template's code SPEC that adds codes to a reference -- and are the list)
   for (o in outputs) {
     for (v in names(o$codelists)) {
-      if (.cl_is_ref(o$codelists[[v]])) .cl_ref_rows(o$codelists[[v]], v, study$codelists, o$id, "tfl_report_codelists()")
+      ref <- o$codelists[[v]]
+      if (.cl_is_ref(ref) && !any(!is.na(own$output_id) & own$output_id == o$id & own$variable %in% v)) {
+        .cl_ref_rows(ref, v, study$codelists %||% list(), o$id, "tfl_report_codelists()")
+      }
     }
   }
   # (each report's own rows; no layer gives a list)
@@ -232,5 +239,8 @@ tfl_report_codelists <- function(study, outputs = NULL, rows = NULL) {
   rest <- own[!own$output_id %in% ids_all & (is.null(output_id) | own$output_id %in% output_id), , drop = FALSE]
   out <- do.call(rbind, c(list(own[0L, , drop = FALSE]), made, list(rest)))
   rownames(out) <- NULL
-  out
+  # (a reference's rows are the study's list's, whatever the rows given
+  # say; a list or code the study has not got stops, naming it: the sheets
+  # keep its cell with no code, the programs written from these rows stop)
+  .cl_rows_from_study(out, study$codelists %||% list(), "tfl_report_codelists()")
 }

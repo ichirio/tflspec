@@ -84,7 +84,8 @@ test_that("a reference writes the programs a list written in place writes, byte 
   expect_match(ard, "cl_sex <- c(F = \"Female\", M = \"Male\")", fixed = TRUE)
   # (AGEGR1: the codes picked, in the order written)
   expect_match(ard, "cl_agegr1 <- c\\([^\n]*>=65 years[^\n]*<65 years")
-  expect_match(ard, "set_levels(", fixed = TRUE)
+  # (set_levels() puts SEX's list on: not the in-place TRT01A's alone)
+  expect_match(ard, "set_levels\\([^()]*(\\([^()]*\\)[^()]*)*SEX = cl_sex", perl = TRUE)
   # (the analysis that is not cards': its ARD in the lists' order, by and variables)
   expect_match(ard, "relevel_ard\\([^)]*SEX = cl_sex")
   expect_match(paste(refs$content, collapse = "\n"), "Female", fixed = TRUE)
@@ -267,4 +268,132 @@ test_that("a template that adds codes to a reference: the code SPEC writes the l
   })
   expect_identical(cs2$codelists$SEX, list(list = "SEX"))
   expect_false(any(grepl("adds codes", msgs, fixed = TRUE)))
+})
+
+test_that("a reference's rows reach a program from the study's list, never as the sheet has them", {
+  d <- clr_study(clr_refs)
+  st <- tfl_read_study_spec(d)
+  cl <- tfl_sheets_from_yaml(d)$table$codelists
+  cl$label[cl$variable == "SEX" & cl$value == "F"] <- "Woman"
+  cl$under[cl$variable == "SEX"] <- "X"
+  rows <- tfl_report_codelists(st, rows = cl)
+  sex <- rows[rows$variable == "SEX", ]
+  expect_identical(sex$label, c("Female", "Male"))
+  expect_true(all(is.na(sex$under)))
+  # (a cell naming a list the study has not got: the program stops)
+  bad <- cl
+  bad$list[bad$variable == "SEX"] <- "GENDER"
+  expect_error(tfl_report_codelists(st, rows = bad),
+               "report T-14-1-1, the code list of SEX refers to the study's list GENDER", fixed = TRUE)
+  # the helper: made again from the study; with no study lists, rows of no
+  # code stop (a program) or are left out (the sheets read back)
+  r <- data.frame(output_id = "T-1", variable = "SEX", value = "F", label = "Woman", order = "1",
+                  under = NA_character_, list = "SEX: M", stringsAsFactors = FALSE)
+  got <- tflspec:::.cl_rows_from_study(r, st$codelists, "x")
+  expect_identical(got$value, "M")
+  expect_identical(got$label, "Male")
+  expect_identical(got$list, "SEX: M")
+  r$value <- NA_character_
+  r$list <- "GENDER"
+  expect_error(tflspec:::.cl_rows_from_study(r, NULL, "tfl_table_code()"),
+               "report T-1, the code list of SEX refers to the study's list in its `list` cell \"GENDER\"", fixed = TRUE)
+  expect_identical(nrow(tflspec:::.cl_rows_from_study(r, NULL, "x", "drop")), 0L)
+  expect_identical(nrow(tflspec:::.cl_rows_from_study(r, st$codelists, "x", "drop")), 0L)
+  expect_error(tflspec:::.cl_rows_from_study(r, st$codelists, "x"), "refers to the study's list GENDER", fixed = TRUE)
+})
+
+test_that("sheets -> YAML says when a reference's rows were edited (not read back), and not otherwise", {
+  d <- clr_study(clr_refs)
+  sh <- tfl_sheets_from_yaml(d)
+  r0 <- suppressWarnings(suppressMessages(tfl_yaml_from_sheets(sh, withr::local_tempdir())))
+  expect_false(any(grepl("the rows of a reference", r0$not_converted$reason, fixed = TRUE)))
+  ed <- sh
+  k <- ed$table$codelists$variable == "SEX" & ed$table$codelists$value == "F"
+  ed$table$codelists$label[k] <- "Woman"
+  to <- withr::local_tempdir()
+  r1 <- suppressWarnings(suppressMessages(tfl_yaml_from_sheets(ed, to)))
+  hit <- grepl("the rows of a reference to the study's list SEX are the study's codes", r1$not_converted$reason,
+               fixed = TRUE)
+  expect_identical(sum(hit), 1L)
+  expect_identical(r1$not_converted$output[hit], "T-14-1-1")
+  expect_identical(tfl_read_outputs(to)[["T-14-1-1"]]$codelists$SEX, list(list = "SEX"))
+})
+
+test_that("sheets without study_codelists: the lists of the defaults.yml written over, else said", {
+  d <- clr_study(clr_refs)
+  sh <- tfl_sheets_from_yaml(d)
+  st0 <- tfl_read_study_spec(d)
+  no <- sh
+  no$study_codelists <- NULL
+  expect_false("study_codelists" %in% names(no))
+  warns <- function(expr) {
+    w <- character()
+    withCallingHandlers(suppressMessages(expr), warning = function(x) {
+      w <<- c(w, conditionMessage(x))
+      invokeRestart("muffleWarning")
+    })
+    w
+  }
+  # (a fresh folder: nothing to take them from -- said, named)
+  to <- withr::local_tempdir()
+  w <- warns(tfl_yaml_from_sheets(no, to))
+  expect_true(any(grepl("none of the study's lists the reports refer to: SEX, AGEGR1", w, fixed = TRUE)))
+  nc <- yaml::read_yaml(file.path(to, "spec", "_not_converted.yml"))$not_converted
+  expect_true(any(vapply(nc, function(e) identical(e$sheet, "study_codelists"), NA)))
+  # (written over a study that has them: kept, nothing said)
+  to2 <- withr::local_tempdir()
+  warns(tfl_yaml_from_sheets(sh, to2))
+  w2 <- warns(tfl_yaml_from_sheets(no, to2, overwrite = TRUE))
+  expect_false(any(grepl("the reports refer to", w2, fixed = TRUE)))
+  expect_identical(tfl_read_study_spec(to2)$codelists, st0$codelists)
+})
+
+test_that("a `list` cell with no list name, or a code picked twice, stops before a file the reader refuses", {
+  expect_error(tflspec:::.cl_ref_from_cell(": F | M", "report T-1, variable SEX"),
+               "report T-1, variable SEX: the codelists sheet's `list` cell \": F | M\" names no list.", fixed = TRUE)
+  expect_error(tflspec:::.cl_ref_from_cell("SEX: F | F"), "picks \"F\" twice", fixed = TRUE)
+  d <- clr_study(clr_refs)
+  sh <- tfl_sheets_from_yaml(d)
+  sh$table$codelists$list[sh$table$codelists$variable == "SEX"] <- ": F | M"
+  expect_error(suppressWarnings(suppressMessages(tfl_yaml_from_sheets(sh, withr::local_tempdir()))),
+               "report T-14-1-1, variable SEX: the codelists sheet's `list` cell \": F | M\" names no list", fixed = TRUE)
+  clr_put(d, c(clr_trt, "SEX: {list: SEX, codes: [F, F]}"))
+  expect_error(tfl_read_outputs(d), "T-14-1-1: codelists: SEX: `codes` has \"F\" twice", fixed = TRUE)
+})
+
+test_that("tfl_write_study_part(, \"defaults\") keeps the blocks that are not layers (code lists, ADaM metadata)", {
+  d <- clr_study(clr_refs)
+  s <- tfl_read_study_spec(d)
+  tfl_write_study_part(s, "defaults")
+  s2 <- tfl_read_study_spec(d)
+  expect_identical(s2$codelists, s$codelists)
+  expect_identical(s2$adam_meta, s$adam_meta)
+  ro <- tfl_resolve_output(tfl_read_outputs(d)[["T-14-1-1"]], s2)
+  expect_identical(ro$codelists$SEX[[1L]]$label, "Female")
+  # (no study file: the study's own lists, as written)
+  s0 <- s
+  s0$dir <- NULL
+  f <- withr::local_tempfile(fileext = ".yml")
+  tfl_write_study_part(s0, "defaults", f)
+  expect_identical(yaml::read_yaml(f)$codelists$SEX,
+                   list(list(value = "F", label = "Female"), list(value = "M", label = "Male")))
+})
+
+test_that("the study_codelists sheet: codes alone, rows out of order, a list no report uses, labels not ASCII", {
+  d0 <- data.frame(name = c("B", "A", "A", "U"), value = c("x", "M", "F", "1"),
+                   label = c(NA, "Male", "\u5973\u6027", NA), order = c("1", "2", "1", "1"),
+                   stringsAsFactors = FALSE)
+  got <- tflspec:::.conv_study_codelists(d0)
+  expect_identical(names(got), c("B", "A", "U"))
+  expect_identical(got$B, list("x"))
+  expect_identical(got$U, list("1"))
+  expect_identical(got$A, list(list(value = "F", label = "\u5973\u6027"), list(value = "M", label = "Male")))
+  st <- tflspec:::.study_codelists_read(got)
+  expect_identical(tflspec:::.study_codelists_out(st)$A, got$A)
+  want <- tflspec:::.cl_ref_rows(list(list = "A"), "SEX", st, "T-1", "x")
+  same <- data.frame(value = c("F", "M"), label = c("\u5973\u6027", "Male"), order = c("1", "2"),
+                     stringsAsFactors = FALSE)
+  expect_false(tflspec:::.cl_ref_rows_edited(same, want))
+  same$label[1L] <- "Female"
+  expect_true(tflspec:::.cl_ref_rows_edited(same, want))
 })
