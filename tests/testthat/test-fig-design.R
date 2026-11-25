@@ -450,13 +450,24 @@ test_that("a script of its own names the packages its carried helpers call", {
   expect_true("rtfreporter" %in% attr(own, "needs"))
   # the helpers' own base packages and the attached ones are not named
   nl <- needs_line(own)
-  expect_false(grepl("\b(stats|utils|tools|base|ggplot2)\b", nl))
+  expect_length(nl, 1L)
+  expect_false(grepl("\\b(stats|utils|tools|base|ggplot2)\\b", nl))
   # what carries fmt_num() carries its need (fmt_pvalue(), ard_value())
   for (f in c("fmt_pvalue(p)", "ard_value(a, 1)")) {
     expect_true("rtfreporter" %in% tflspec:::.fig_script_needs(paste0("x <- ", f)), info = f)
   }
-  # a comment's pkg:: is not a call; a script with no helper adds none
+  # a pkg:: in the program's own comment adds nothing: no helper is carried
   expect_length(tflspec:::.fig_script_needs("x <- 1 # rtfreporter::round_num"), 0L)
+  expect_length(tflspec:::.fig_script_needs("order_arms(d) # rtfreporter::round_num"), 0L)
+  # a carried helper names exactly the packages its code calls with pkg::
+  # (fmt_num() calls rtfreporter::round_num() and nothing else)
+  expect_identical(tflspec:::.fig_script_needs("fmt_num(x, 1)"), "rtfreporter")
+  # tag_ard() calls dplyr::mutate(); the cards:: of the comment above it in
+  # the helper file (cards::ard_stack()) and the ard_summary() of its error
+  # text are not calls
+  expect_identical(tflspec:::.fig_script_needs("tag_ard(a, 'R', 'A')"), "dplyr")
+  # a helper that calls no other package needs none (order_arms() -> order_levels())
+  expect_identical(tflspec:::.fig_script_needs("order_arms(d)"), character())
   expect_identical(tflspec:::.fig_script_needs("x <- 1", needs = "ggtext"), "ggtext")
   # a package the script attaches is not named twice
   expect_false("rtfreporter" %in% tflspec:::.fig_script_needs("fmt_num(x, 1)", libs = "rtfreporter"))
@@ -465,4 +476,22 @@ test_that("a script of its own names the packages its carried helpers call", {
   expect_length(needs_line(st), 0L)
   expect_false("rtfreporter" %in% attr(st, "needs"))
   expect_identical(tflspec:::.fig_script_needs("fmt_num(x, 1)", setup = TRUE), character())
+})
+
+test_that("the in-program option works end to end: a report's content code has no helper definitions (A3)", {
+  expect_null(getOption("tflspec.fig_in_program"))
+  design <- tfl_fig_template("bar_rate_ci")
+  # outside a program the design's own script carries the helper it calls
+  own <- tfl_fig_design_code(design, "F1")
+  expect_true(any(grepl("if (!exists(\"fmt_num\")) ", own, fixed = TRUE)))
+  out <- list(id = "F1", template = "bar_rate_ci")
+  code <- tflspec:::.content_fig_code_out(out)
+  # the program's setup has the helpers: no definition lines, and the option is back
+  expect_false(any(grepl("if (!exists(", code, fixed = TRUE)))
+  expect_null(getOption("tflspec.fig_in_program"))
+  # with the option set, the needs line adds no helper package
+  old <- options(tflspec.fig_in_program = TRUE)
+  on.exit(options(old), add = TRUE)
+  expect_identical(tflspec:::.fig_script_needs("fmt_num(x, 1)"), character())
+  expect_identical(tflspec:::.fig_script_needs("fmt_num(x, 1)", needs = "ggtext"), "ggtext")
 })
