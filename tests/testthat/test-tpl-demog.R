@@ -108,6 +108,23 @@ test_that("the standalone templates equal what the variants gave: defaults and t
   for (k in c("order", "total", "data")) expect_identical(new_stf[[k]]$default, old_stf[[k]]$default, info = k)
 })
 
+test_that("a required argument left empty is a classed error a GUI reads (template, args)", {
+  for (n in c("demog", "stf_t02_demog")) {
+    e <- tryCatch(tfl_template_expand(n, list(population = "SAF", by = "TRT01A")), error = identity)
+    expect_s3_class(e, "tflspec_template_args_missing")
+    expect_identical(e$template, n)
+    expect_identical(e$args, c("continuous", "categorical"))
+    expect_true(e$any)
+    expect_match(conditionMessage(e), "give `continuous` or `categorical`")
+    e <- tryCatch(tfl_template_expand(n, list(population = "SAF", continuous = "AGE")), error = identity)
+    expect_s3_class(e, "tflspec_template_args_missing")
+    expect_identical(e$template, n)
+    expect_identical(e$args, "by")
+    expect_false(e$any)
+    expect_match(conditionMessage(e), "needs 'by'")
+  }
+})
+
 test_that("the variables and `by` are required: the plain required-argument error", {
   for (n in c("demog", "stf_t02_demog")) {
     expect_error(tfl_template_expand(n, list(population = "SAF", by = "TRT01A")),

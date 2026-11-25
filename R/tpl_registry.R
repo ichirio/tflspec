@@ -444,8 +444,9 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   if (any(unset)) out[unset] <- list(NULL)
   miss <- vapply(t$params, function(p) p$required && is.null(out[[p$name]]), NA)
   if (any(miss)) {
-    .ard_stop(sprintf("%s: template %s needs %s.", fn, t$name,
-                      paste(sQuote(names(miss)[miss], FALSE), collapse = ", ")))
+    .tpl_args_missing_stop(sprintf("%s: template %s needs %s.", fn, t$name,
+                                   paste(sQuote(names(miss)[miss], FALSE), collapse = ", ")),
+                           t$name, names(miss)[miss])
   }
   attr(out, "unset") <- names(unset)[unset]
   out
@@ -689,10 +690,14 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
   at <- match("plan_labels", fn)
   if (is.na(at)) return(.insert_by_rank(content, tfl_item("plan_labels", dict)))
   args <- content[[at]]$args
+  # (a code list's entry the item has not got: after the headings, before
+  # the item's own entries -- the order the sheets write them in, tflspec#856)
+  after <- if (identical(names(args)[1L], "variable")) 1L else length(args)
   for (v in names(dict)) {
     own <- args[[v]]
     if (is.null(own)) {
-      args[[v]] <- dict[[v]]
+      args <- append(args, stats::setNames(list(dict[[v]]), v), after = after)
+      after <- after + 1L
     } else if (is.character(own) || (is.list(own) && all(vapply(own, is.character, NA)))) {
       # (the text it has wins; the form it has stays)
       # (one unnamed text is the variable's own heading: keyed by its name)

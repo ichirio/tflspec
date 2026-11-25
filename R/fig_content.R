@@ -1221,7 +1221,7 @@ tfl_fig_content_from_design <- function(design) {
   xb <- grep("^x_breaks <- ", b$step1, value = TRUE)
   if (length(xb)) steps <- c(steps, list(list(step = "code", label = "the x axis's breaks", code = xb)))
   env <- new.env(parent = globalenv())
-  eval(parse(text = tfl_fig_setup_code()), env)
+  .fig_setup_eval(env)
   ex <- parse(text = b$step2, keep.source = FALSE)
   subs <- list()
   main <- NULL

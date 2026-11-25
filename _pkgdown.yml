@@ -103,6 +103,7 @@ reference:
       - tfl_build_ard
       - tfl_ard_for
       - tfl_ard_spec_hash
+      - tfl_ard_reads
   - subtitle: Methods, statistics and functions of one's own
     desc: >
       What a `method` may name: the keywords, any cards / cardx function
@@ -125,6 +126,10 @@ reference:
       tflspec.
     contents:
       - tfl_helpers_code
+      - tfl_runner_code
+      - tfl_runner_file
+      - tfl_run_index
+      - tfl_latest_run
   - title: Data, analysis data and populations
     desc: >
       The `datasets`, `populations` and `analysis_data` sheets of the ARD

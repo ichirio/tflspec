@@ -1,5 +1,5 @@
 # A report built from a series template has no `common: population`; its
-# analysis set is on its subjects data entry (demog's adsl_sub), and the
+# analysis set is on its subjects data entry (tflspec_summary's adsl_sub), and the
 # header's {OUTPUT_POPULATION} prints that set's label (data.yml's)
 
 test_that("a template report's {OUTPUT_POPULATION} is its subjects entry's set label", {
@@ -10,7 +10,7 @@ test_that("a template report's {OUTPUT_POPULATION} is its subjects entry's set l
   tplfig_study(file.path(d, "s"), "adsl", id = "OP-1")
   sd <- file.path(d, "s")
   o <- tfl_output("T-DM", "table", label = "Demographics",
-                  template = list(name = "tflspec_v1/demog",
+                  template = list(name = "tflspec_v1/tflspec_summary",
                                   args = list(by = "TRT01A", continuous = "AGE")))
   tfl_write_output(o, file.path(sd, "spec", "outputs", "T-DM.yml"))
   invisible(tfl_copy_templates(sd))

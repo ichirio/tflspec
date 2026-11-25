@@ -320,6 +320,19 @@ cat(readLines(system.file("series", "tflspec_v1", "series.yml", package = "tflsp
     sep = "\n")
 ```
 
+A template may read the study before the series. The two listing
+templates write their style as
+
+```yaml
+style: !study {key: settings.style, fallback: !series style_listing}
+```
+
+so a listing's style is the study's `settings.style` (`study.yml`),
+and the series's `style_listing` (`tfl_small` above) only when the
+study has none. The header and the footnotes of the study's style reach
+the listings too. A series's `values:` hold no `!study`: the series is
+the study's fallback.
+
 A study changes them in its own copy of `series.yml`
 (`spec/series/tflspec_v1/series.yml`), under `values:`. It may edit the
 file, or let `tfl_series_values_set()` write the values (the rest of the
@@ -346,7 +359,7 @@ changes only the names it writes. With the series's `formats` above,
 
 ```yaml
 template:
-  name: tflspec_v1/demog
+  name: tflspec_v1/tflspec_summary
   analysis:
     formats: {mean: 3, "AGE:sd": !unset}
 ```

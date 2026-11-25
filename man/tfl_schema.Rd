@@ -69,7 +69,7 @@ warns with the theme setting it is now.
 The types, in a short notation: \code{string}, \code{integer}, \code{number} (a
 number written as arithmetic of numbers, \verb{!r 1/5}, is one; numbers so
 written, \verb{!r 2^(-2:2)}, are a \verb{list<number>}; texts built of constants,
-\verb{!r paste0("W", seq(0, 24, by = 4))} or \verb{!r sprintf("Day \%d", 1:10)},
+\verb{!r paste0("W", seq(0, 24, by = 4))} or \verb{!r sprintf("Day \\\%d", 1:10)},
 are a \verb{list<string>}, kept as written and judged by the check: one that
 does not evaluate is an error),
 \code{logical}, \code{enum[a|b]}, \code{column}, \code{stat}, \code{template}, \code{r} (\code{!r}),
@@ -80,7 +80,7 @@ does not evaluate is an error),
 discrete scale's \code{limits: rev}, a facet's \code{labeller: label_both}, a
 scale's \code{labels: abs} or \code{labels: scales::percent}), \code{tilde}
 (a formula as its text, \code{y ~ x} or \code{~ . / 7}, written as the formula),
-\code{lambda} (a function written out as its text, \code{function(y) mean(y) - sd(y)} or \code{\\(x) paste0(x, "\%")}, written as the function: a summary's
+\code{lambda} (a function written out as its text, \code{function(y) mean(y) - sd(y)} or \verb{\\(x) paste0(x, "\\\%")}, written as the function: a summary's
 \code{fun.min}, a scale's \code{labels}; a lambda or a formula is written as code
 where the type also takes text),
 \code{date} (a date as its text, \code{2024-01-01}; a sequence of them, \code{NA} an
@@ -91,7 +91,7 @@ not a level of a discrete axis),
 \code{math} (a plotmath expression as its text, \code{10^.x}, written bare:
 \code{scales::label_math(10^.x)}); a title in plotmath, of \code{labs()}, a
 scale's \code{name} or a guide's \code{title}, is the call R writes, its
-expression as its text: \code{{fn: expression, args: {expr: AUC[0 - 24] ~ (ng/mL)}}} written \code{expression(AUC[0 - 24] ~ (ng/mL))} (\code{quote()},
+expression as its text: \verb{\{fn: expression, args: \{expr: AUC[0 - 24] ~ (ng/mL)\}\}} written \code{expression(AUC[0 - 24] ~ (ng/mL))} (\code{quote()},
 \code{bquote()} likewise),
 \code{call} and \verb{call<fn>} (\verb{\{fn:, args:\}}; \verb{call<label_*>} takes any
 function whose name the pattern matches, of any package:
@@ -101,19 +101,19 @@ function whose name the pattern matches, of any package:
 \code{scales}, their arguments typed (\code{accuracy}, \code{suffix},
 \code{style_positive}, \code{base}, \code{width} ...); base R's that clinical figures write as
 a value are typed where they fit: \code{seq()} for breaks,
-\code{{fn: seq, args: {from: 0, to: 52, by: 4}}} written \code{seq(0, 52, by = 4)};
+\verb{\{fn: seq, args: \{from: 0, to: 52, by: 4\}\}} written \code{seq(0, 52, by = 4)};
 \code{alpha()} for a colour; grDevices' palettes, \code{hcl.colors()} ...,
 \code{RColorBrewer::brewer.pal()} and viridisLite's \code{viridis()} ..., for a
 scale's colours; \code{data.frame()} of constants for a layer's \code{data}
 (reference lines with a legend), its columns of one length, and
-\code{subset()} for a layer's rows of a data by its name, \code{{fn: subset, args: {x: km, subset: censored}}} written \code{subset(km, censored)} (read from
+\code{subset()} for a layer's rows of a data by its name, \verb{\{fn: subset, args: \{x: km, subset: censored\}\}} written \code{subset(km, censored)} (read from
 \code{km[km$censored, ]} and \code{dplyr::filter(km, censored)} too); a glm's
 family in \code{method.args}, \code{{family: binomial}} written bare or
-\code{{fn: binomial, args: {link: probit}}}; grid's grobs for
+\verb{\{fn: binomial, args: \{link: probit\}\}}; grid's grobs for
 \code{annotation_custom()}'s and \code{guide_custom()}'s \code{grob} -- \code{textGrob()},
 \code{rectGrob()}, \code{roundrectGrob()}, \code{circleGrob()}, \code{linesGrob()},
 \code{segmentsGrob()}, \code{pointsGrob()}, \code{polygonGrob()} ... and \code{gpar()}, of
-the kind \code{grob}, their arguments typed: \code{{fn: grid::textGrob, args: {label: Favours drug, x: 0.25, gp: {fn: grid::gpar, args: {fontsize: 9}}}}} written \code{grid::textGrob("Favours drug", x = 0.25, gp = grid::gpar(fontsize = 9))}), \verb{list<T>} (a sequence), \verb{vec<K, V>} (a map that is a
+the kind \code{grob}, their arguments typed: \verb{\{fn: grid::textGrob, args: \{label: Favours drug, x: 0.25, gp: \{fn: grid::gpar, args: \{fontsize: 9\}\}\}\}} written \code{grid::textGrob("Favours drug", x = 0.25, gp = grid::gpar(fontsize = 9))}), \verb{list<T>} (a sequence), \verb{vec<K, V>} (a map that is a
 named vector in R), \verb{map<K, V>} (a map that is a named list),
 \verb{rows<f1, f2, ...>} (a sequence of maps that is a data frame) and \code{T|U}
 (either).
@@ -144,7 +144,7 @@ a call of \code{factor()}, \code{as.factor()}, \code{ordered()}, \code{as.numeri
 \code{number()} / \code{comma()} / \code{pvalue()}, forcats' \code{fct_rev()} /
 \code{fct_reorder()} / \code{fct_relevel()} / \code{fct_inorder()} / \code{fct_infreq()} or
 \code{stringr::str_wrap()} (by \code{pkg::fn} or bare), or of the arithmetic or a comparison (\code{<},
-\code{<=}, \code{==}, \code{!=}, \verb{\%in\%}, \code{!}, \code{&}, \code{|}), of columns, constants, their
+\code{<=}, \code{==}, \code{!=}, \code{\%in\%}, \code{!}, \code{&}, \code{|}), of columns, constants, their
 arithmetic and \code{c()}, \code{sum()}, \code{max()}, \code{min()}, \code{mean()}, \code{median()},
 \code{length()}, \code{alpha()}, \code{pmin()}, \code{pmax()}, \code{cumsum()}, \code{[},
 \code{duplicated()}, \code{unique()}, \code{rank()}, \code{sd()}, \code{var()}, \code{quantile()},

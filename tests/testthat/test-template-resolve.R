@@ -1,5 +1,7 @@
-# tfl_template_resolve(): the 7 SAMPLE-01 reports of the tflspec_v1 series
-# (fictional study) as code SPECs.
+# tfl_template_resolve(): the 7 SAMPLE-01 reports (fictional study) as code
+# SPECs -- tflspec_v1's km_simple and forest_hr, and the purpose templates
+# that left it (canon 2026-11-24) from the test series tflspec_test
+# (local_test_series(); tr_reports() sets it for the calling test).
 
 # (a study given as a list, without its folder: the package's series read;
 # a study's own copies: test-study-template-copy.R)
@@ -15,19 +17,20 @@ tr_report <- function(text) {
 }
 
 tr_reports <- function() {
+  local_test_series(parent.frame())
   list(
     demog = tr_report(c(
       "id: T-14-1-1", "kind: table", "label: Demographic characteristics",
-      "template:", "  name: tflspec_v1/demog", "  analysis:", "    by: TRT01A",
+      "template:", "  name: tflspec_test/demog", "  analysis:", "    by: TRT01A",
       "    continuous: [AGE]", "    categorical: [AGEGR1, SEX, RACE, ETHNIC]")),
     ae = tr_report(c(
       "id: T-14-3-1", "kind: table", "label: TEAEs by SOC / PT",
-      "template:", "  name: tflspec_v1/ae_soc_pt", "  analysis:", "    by: TRT01A")),
+      "template:", "  name: tflspec_test/ae_soc_pt", "  analysis:", "    by: TRT01A")),
     lab = tr_report(c(
       "id: T-14-4-1", "kind: table", "label: Shift in chemistry toxicity grade",
       "data:", "  - id: adlb_sub",
       "    where: !r APHASE == \"P2\" & PARCAT1 == \"CHEMISTRY\"",
-      "template:", "  name: tflspec_v1/lab_tox_shift", "  analysis:", "    by: TRT01A",
+      "template:", "  name: tflspec_test/lab_tox_shift", "  analysis:", "    by: TRT01A",
       "    conditions:", "      - {tox_dir: Low, param: Albumin (g/L)}",
       "      - {tox_dir: High, param: Creatinine (umol/L)}",
       "      - {tox_dir: High, param: Sodium (mmol/L), analysis_id: NA_HIGH2}")),
@@ -36,7 +39,7 @@ tr_reports <- function() {
       "data:", "  - id: adsl_sub", "    from: ADSLX", "    population: none",
       "    where: !r TRT01AN == 1", "  - id: adrs_sub",
       "    where: !r PARAMCD == \"BORC\"",
-      "template:", "  name: tflspec_v1/orr_subgroup", "  data:", "    subgroup_vars: [BRCA, AGEGR1]",
+      "template:", "  name: tflspec_test/orr_subgroup", "  data:", "    subgroup_vars: [BRCA, AGEGR1]",
       "  analysis:", "    by: TR01AG1",
       "    conditions:",
       "      - {subgroup: BRCA, subgroup_lvl: POSITIVE, where: !r BRCA == \"POSITIVE\"}",
@@ -47,7 +50,7 @@ tr_reports <- function() {
       "data:", "  - id: adsl_sub", "    from: ADSLX", "    population: SAFX",
       "  - id: lst_sub", "    from: ADAE", "    where: !r AESEV == \"SEVERE\"",
       "    arrange: [TRT01AN, USUBJID, ASTDT]",
-      "template:", "  name: tflspec_v1/listing", "  data:", "    from: ADAE",
+      "template:", "  name: tflspec_test/listing", "  data:", "    from: ADAE",
       "  content:", "    columns: [USUBJID, AEDECOD, AESEV]")),
     km = tr_report(c(
       "id: F-14-2-3", "kind: figure", "label: KM curves",
@@ -292,7 +295,7 @@ test_that("tflspec_summary: nest, value_labels and col_header are optional steps
   expect_identical(fns(h), c("table_plan", "plan_cells", "plan_col_header", "plan_paginate_rows"))
 })
 
-test_that("tflspec_summary: labels and value_labels are one plan_labels, a heading kept", {
+test_that("tflspec_summary: labels and value_labels are one plan_labels, every heading under variable", {
   sm <- tr_reports()$demog
   sm$template$name <- "tflspec_v1/tflspec_summary"
   fns <- function(o) vapply(o$content, function(it) it$fn, "")
@@ -302,22 +305,25 @@ test_that("tflspec_summary: labels and value_labels are one plan_labels, a headi
   b <- tfl_template_resolve(sm, study = tr_study())
   expect_identical(sum(fns(b) == "plan_labels"), 1L)
   expect_identical(lab(b), list(SEX = list(F = "Female", M = "Male")))
-  # both, a variable in each: one entry, its heading first, then its values;
-  # a variable only in labels is a heading, only in value_labels its values
+  # both, a variable in each: the headings under `variable` (as the sheets
+  # write them, tflspec#856), first; the values by variable
   sm$template$content <- list(
     labels = list(SEX = "Sex, n (%)", RACE = "Race"),
     value_labels = list(SEX = list(F = "Female", M = "Male"), AGEGR1 = list(`<65` = "Under 65")))
   b <- tfl_template_resolve(sm, study = tr_study())
   expect_identical(sum(fns(b) == "plan_labels"), 1L)
-  expect_identical(lab(b), list(SEX = list(SEX = "Sex, n (%)", F = "Female", M = "Male"),
-                                RACE = "Race", AGEGR1 = list(`<65` = "Under 65")))
+  expect_identical(lab(b), list(variable = list(SEX = "Sex, n (%)", RACE = "Race"),
+                                SEX = list(F = "Female", M = "Male"),
+                                AGEGR1 = list(`<65` = "Under 65")))
   # the heading a value_labels entry gives under the variable's own name wins
   sm$template$content$value_labels$SEX <- list(SEX = "Sex", F = "Female")
-  expect_identical(lab(tfl_template_resolve(sm, study = tr_study()))$SEX,
-                   list(SEX = "Sex", F = "Female"))
-  # labels alone, as before
+  b <- lab(tfl_template_resolve(sm, study = tr_study()))
+  expect_identical(b$variable$SEX, "Sex")
+  expect_identical(b$SEX, list(F = "Female"))
+  # labels alone
   sm$template$content <- list(labels = list(SEX = "Sex, n (%)"))
-  expect_identical(lab(tfl_template_resolve(sm, study = tr_study())), list(SEX = "Sex, n (%)"))
+  expect_identical(lab(tfl_template_resolve(sm, study = tr_study())),
+                   list(variable = list(SEX = "Sex, n (%)")))
   # a value_labels entry is a map of codes
   sm$template$content <- list(value_labels = list(SEX = "Female"))
   expect_error(tfl_template_resolve(sm, study = tr_study()), "value_labels: SEX is a map")

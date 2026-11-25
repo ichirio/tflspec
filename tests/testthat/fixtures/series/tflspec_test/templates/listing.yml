@@ -1,4 +1,6 @@
-# tflspec_v1/templates/listing.yml
+# tflspec_test/templates/listing.yml: a test-only copy (tests/testthat/fixtures,
+# local_test_series()).  This purpose template left the shipped tflspec_v1
+# series (canon 2026-11-24); kept here for the engine coverage only it has.
 template: listing
 label: Listing of records
 params:
@@ -37,7 +39,7 @@ params:
     description: The decimals (or the format) of the header N statistics.
       A report's names go over the series' formats; `!unset` removes one.
 extends: !series extends
-style: !series style_listing
+style: !study {key: settings.style, fallback: !series style_listing}
 data:
   - id: adsl_sub
     from: ADSL

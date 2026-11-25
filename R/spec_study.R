@@ -32,8 +32,8 @@
 #' * `codelists:` the study's code lists for display, by name (`SEX: [{value:
 #'   F, label: Female}, ...]`; the lists of value-level metadata too).  A
 #'   report or a template refers to one by its name, in R (a content
-#'   argument `!r study$codelists$SEX`; the `tflspec_v1/demog` template's
-#'   `value_labels` default names `SEX`, `RACE`, `ETHNIC` and `AGEGR1` so); a
+#'   argument `!r study$codelists$SEX`, as a `tflspec_v1/tflspec_summary`
+#'   report's `value_labels` names `SEX`, `RACE`, `ETHNIC` and `AGEGR1`); a
 #'   reference to a list the study has not got is left out when the report is
 #'   resolved.  No list reaches a report through `extends:`: a report's code
 #'   lists are its own (`codelists:` in its file), and a pattern's
@@ -672,11 +672,16 @@ tfl_output_extends <- function(output, step = NULL) {
 
 # an !unset with nothing under it: gone (a report may unset a key no layer set)
 .drop_unset <- function(x) {
-  # (an object -- an rtf_border, a tfl_call -- is a value; `[` would drop its class)
+  # (a call's own arguments too: rtf_border(top = !unset), listing_col(width = !unset))
+  if (inherits(x, "tfl_call")) {
+    if (length(x$args)) x$args <- .drop_unset(x$args)
+    return(x)
+  }
+  # (an object -- an rtf_border, a tfl_r -- is a value; `[` would drop its class)
   if (!is.list(x) || is.object(x) || !length(x)) return(x)
   keep <- !vapply(x, inherits, NA, "tfl_unset")
   x <- x[keep]
-  if (.is_map(x)) x[] <- lapply(x, .drop_unset)
+  if (length(x)) x[] <- lapply(x, .drop_unset)
   x
 }
 
@@ -1050,8 +1055,8 @@ tfl_write_study_part <- function(study, part = c("defaults", "patterns", "data",
   })
 }
 
-# A listing with no page size pages at the rows a page the `listing` template
-# has (.listing_rows_a_page): a plan_listing and no plan_paginate_rows or
+# A listing with no page size pages at the rows a page the retired `listing`
+# template had (.listing_rows_a_page): a plan_listing and no plan_paginate_rows or
 # plan_paginate_group among the resolved items (the report's, a template's or
 # a pattern's say it; the study's defaults do not reach a listing) gets
 # plan_paginate_rows(max_rows) last, from the "defaults".  Built and written
