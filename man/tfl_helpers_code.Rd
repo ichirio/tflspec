@@ -27,11 +27,17 @@ its levels; a blank is missing, not a level; \code{from = adsl} orders a
 records data's arm, which has no number of its own, by the matching arm
 and number of ADSL, the records' values kept and a value ADSL lacks
 last; a value with two numbers there is an error), \code{order_arms()} (the arm
-variables alone: \code{order_levels()} with no categories), \code{tag_ard()} (the report, analysis and
+variables alone: \code{order_levels()} with no categories), \code{tte_time()} (a
+time to event in one unit, days, weeks, months or years: AVAL from its
+unit AVALU, DAYS when the data has none; two units in the data stop the
+program; the days in a month etc. the study's \code{days_per_month} etc. when
+set, else \code{\link[=tfl_time_unit_days]{tfl_time_unit_days()}}), \code{tag_ard()} (the report, analysis and
 analysis set in front of an analysis's ARD), \code{bind_items()} (a report's items into one
 ARD: no row lost, the columns in order, a statistic twice in one item an error, the
 same statistic in two items a warning), \code{fmt_ard()} and
-\code{fmt_pvalue()} (formats after a call), \code{keep_stats()} (only the
+\code{fmt_pvalue()} (formats after a call), \code{fmt_num()} (a number as text
+with the decimals asked for, rounded by the study's rule: what a table
+cell \verb{\{x:.2f\}} prints), \code{keep_stats()} (only the
 statistics asked for), \code{ard_hierarchical_or_none()} (nested counts,
 and the ARD of no records: the overall row 0), \code{complete_hierarchy()} (a
 nested count's code-list values no subject has, counted 0),
@@ -47,8 +53,10 @@ report's rows of the study ARD; none, or no study ARD, stops the program,
 naming the ARD program to run first), and what a figure
 reads an ARD with: \code{ard_value()} (one statistic, as text),
 \code{ard_stats()} (statistics as a data frame) and \code{ard_fingerprint()} (the
-fingerprint \code{ard_status.csv} recorded for a report).  Base R, cards and
-dplyr only: a study writes them once into a file of its own (tflplanner:
+fingerprint \code{ard_status.csv} recorded for a report).  Base R, cards,
+dplyr and rtfreporter's \code{round_num()} (the study's rounding,
+\code{options(rtfreporter.rounding)}): a study writes them once into a file
+of its own (tflplanner:
 \code{programs/study_helpers.R}, sourced by its setup) and its programs run
 without tflspec.  \code{\link[=tfl_ard_code]{tfl_ard_code()}}'s whole program (\code{part = "all"})
 carries them itself.

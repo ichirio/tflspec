@@ -9,7 +9,8 @@
 #'   refuses): the report cannot be copied into the study;
 #' * `warning`: the SPEC reads, but a program that runs cannot be written
 #'   from it (the ARD program or the table's code stops; a content
-#'   function the installed rtfreporter does not have yet);
+#'   function the installed rtfreporter does not have yet; with `adam`, a
+#'   `!=` condition that drops the rows where its variable is NA);
 #' * `note`: the program is written all the same -- an argument the
 #'   installed cards / cardx does not know, a version to look at.
 #'
@@ -38,6 +39,12 @@
 #' the report names and nothing uses is a note.  The packages' installed versions come with
 #' it, as an attribute.  A GUI's check button and the AI's run call it.
 #'
+#' A table's column header N: a header text with `{n}` (and no `values` of
+#' its own) takes each column's N from the report's `BIGN` analysis.  A
+#' report with no `BIGN`, or whose `BIGN` counts by no column variable of
+#' the table, is a `warning` (`part` `"content"`, item
+#' `"plan_col_header(header)"`): its header would print `N=NA`.
+#'
 #' @param study A study read with [tfl_read_study_spec()], or its folder.
 #' @param output_id The reports to check; `NULL` for every report.
 #' @param build `TRUE`: each report the checks above pass is also built
@@ -46,6 +53,20 @@
 #'   row can be made; one that cannot has an `error` row, `part`
 #'   `"build"`.  A few seconds a report.  `FALSE` (default): the checks
 #'   above only.
+#' @param adam Where the data for the data check come from.  `TRUE`
+#'   (default): the study's own datasets, from the paths of `spec/data.yml`
+#'   (from the study folder), read as the study's program reads them and
+#'   only when needed: a study with no `!=` condition reads no data, and a
+#'   dataset is read once.  `FALSE` (or `NULL`): no data check.  Or the ADaM
+#'   data as [tfl_check_fig_design()]'s `adam` takes it ([tfl_read_adam()]: a
+#'   folder or a named list of data frames).  The check: a condition of the
+#'   ARD definition (a `where` of the populations, records, analysis data or
+#'   analyses) that holds `var != value` is looked at in the dataset it
+#'   applies to: where `var` has NA there, the condition drops those rows (a
+#'   filter keeps only TRUE), and a `warning` row (`part` `"ard"`) gives the
+#'   count and the form that keeps them, `!var %in% value`.  No study
+#'   folder, a dataset whose file is not there or is not listed, or a
+#'   variable not in the dataset: no row.  The generated code is not changed.
 #' @return A data frame, one row a problem: `output_id` (`NA` for the
 #'   study's ARD definition as a whole and the study's own rows), `part`
 #'   (`"file"`, `"study"`, `"ard"`, `"content"`, `"program"`, `"figure"`,
@@ -77,7 +98,7 @@
 #' @seealso [tfl_check_reports()], [tfl_check_fix_text()], [tfl_ard_spec()],
 #'   [tfl_schema_check()], [tfl_check_fig_design()]
 #' @export
-tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
+tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) {
   if (is.character(study) && length(study) == 1L) study <- tfl_read_study_spec(study)
   if (!inherits(study, "tfl_study_spec")) {
     .ard_stop("tfl_check_spec(): `study` is a study read with tfl_read_study_spec(), or its folder.")
@@ -203,6 +224,8 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
     # the names its fields give: a figure's that nothing above makes, a
     # table's named block (R/object_list.R)
     rows[[length(rows) + 1L]] <- .check_object_rows(ro, id, study_ds)
+    # a column header's N with no BIGN to take it from (R/check_spec_header_n.R)
+    rows[[length(rows) + 1L]] <- .check_header_n_rows(ro, id)
     if (inherits(ro$content, "tfl_r")) next
     # a figure's content key (`figure: {name, args}`): its name is one of the
     # table's (.fig_content_table()), its program is written
@@ -277,6 +300,8 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
       }
     }
   }
+  # (with the study's data: a `!=` that drops the rows where the variable is NA)
+  rows[[length(rows) + 1L]] <- .check_ne_na_rows(study, adam, setdiff(ids, bad), is.null(output_id))
   out <- do.call(rbind, rows)
   out <- out[is.na(out$output_id) | out$output_id %in% ids, , drop = FALSE]
   if (isTRUE(build) && !is.null(study$dir)) {

@@ -1074,7 +1074,8 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #' variable's own (`BMIBL:sd=3`) with its own list.  An integer is
 #' that many decimals, `xx.x%` is `label_round(1, scale = 100)`,
 #' `xx.x*1000` is `label_round(1, scale = 1000)` and
-#' `pvalue` the program's `fmt_pvalue()` (`<0.001` or 3 decimals);
+#' `pvalue` the program's `fmt_pvalue()` (`<0.001`, or 3 decimals by the
+#' study's rounding);
 #' `cards::apply_fmt_fun()` then fills `stat_fmt`.  What takes no `fmt_fun`
 #' gets the same formats after the call, from `fmt_ard()`: cardx's tests, CIs
 #' and models, `cards::ard_stack_hierarchical()`, a study's own function,
@@ -1303,11 +1304,12 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
                                                   .ard_read_vars(a))))
                    utils::capture.output(print(un)),
                  # an analysis whose ARD relevel_ard() puts in the lists'
-                 # order (an ARD made before it is made again)
+                 # order (an ARD made before it is made again; ": codes"
+                 # since it matches a named list's codes, not its labels)
                  if (length(lv) && any(vapply(seq_len(nrow(a)), function(i)
                    !.ard_keeps_order(a[i, , drop = FALSE]) &&
                      any(names(lv) %in% .ard_read_vars(a[i, , drop = FALSE])), NA)))
-                   "relevel_ard"),
+                   "relevel_ard: codes"),
                collapse = "\n")
   # (md5sum() reads a file: one file of the session's, written over each
   # time -- a file made and deleted for every report made a study's open

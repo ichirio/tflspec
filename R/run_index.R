@@ -6,7 +6,8 @@
 #' without error.  A run that failed still answers for the reports it made;
 #' a run of the ARD only answers for the ARD.
 #'
-#' A run counts when its `batch.txt` says it finished and names this study
+#' A run counts when its `batch.txt` says when it finished (a `Finished :`
+#' time that reads as year-month-day hour:minute:second) and names this study
 #' (study.yml's `study_id`), has the line `Verified : yes` (the runner writes
 #' it last, after `issues.csv`, so the run's end record is whole) and
 #' `Kind : run`, and has no `Re-run :` line, and its `run.csv` has the
@@ -58,8 +59,10 @@ tfl_latest_run <- function(study_dir, report_id, part = c("tfl", "ard")) {
   part <- match.arg(part)
   report_id <- as.character(report_id)
   idx <- tfl_run_index(study_dir)
-  idx <- idx[idx$part == part & idx$status == "OK" & nzchar(idx$output_id), ,
-             drop = FALSE]
+  # (a row with no part, status or output id -- NA in run.csv -- makes nothing)
+  ok <- which(idx$part == part & idx$status == "OK" &
+                !is.na(idx$output_id) & nzchar(idx$output_id))
+  idx <- idx[ok, , drop = FALSE]
   # (newest first, so the first match is the latest)
   i <- match(report_id, idx$output_id)
   data.frame(output_id = report_id, run = idx$run[i], path = idx$path[i],
@@ -83,20 +86,20 @@ tfl_latest_run <- function(study_dir, report_id, part = c("tfl", "ard")) {
     v <- grep(paste0("^", key, "\\s*:"), lines, value = TRUE)
     if (length(v)) trimws(sub("^[^:]*:", "", v[[1L]])) else NA_character_
   }
-  fin <- field("Finished")
+  # (finished: a Finished time that reads; an empty or broken one is not)
+  fin <- .as_time(field("Finished"))
   if (is.na(fin) || !identical(field("Study"), study_id)) return(NULL)
   # the end record: verified, an official run, never a run again
-  if (!identical(field("Verified"), "yes") || any(grepl("^Re-run\\s*:", lines))) {
+  if (!identical(field("Verified"), "yes") || !identical(field("Kind"), "run") ||
+      any(grepl("^Re-run\\s*:", lines))) {
     return(NULL)
   }
-  kind <- field("Kind")
-  if (!is.na(kind) && !identical(kind, "run")) return(NULL)
   r <- tryCatch(utils::read.csv(csv, colClasses = "character"),
                 error = function(e) NULL)
   need <- c("part", "program", "output_id", "status", "md5")
   if (is.null(r) || !nrow(r) || !all(need %in% names(r))) return(NULL)
   data.frame(run = run, started = .as_time(field("Started")),
-             finished = .as_time(fin), r[need],
+             finished = fin, r[need],
              path = normalizePath(path, winslash = "/", mustWork = FALSE),
              stringsAsFactors = FALSE)
 }

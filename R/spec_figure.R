@@ -378,6 +378,19 @@
 .schema_gg_generic <- paste0("r|call|string|number|logical|list<string|number|logical>|",
                              "map<string, string|number|logical>")
 
+# The names a layer's `position` takes (the same as the yaml geoms' own `values:`):
+# a bare call is a pick of these, the function's arguments the detail
+.fig_position_values <- list(
+  list(value = "dodge", label = list(en = "Side by side", ja = "\u6a2a\u306b\u4e26\u3079\u308b")),
+  list(value = "dodge2", label = list(en = "Side by side (with padding)", ja = "\u6a2a\u306b\u4e26\u3079\u308b\uff08\u9593\u9694\u4ed8\u304d\uff09")),
+  list(value = "stack", label = list(en = "Stacked", ja = "\u7a4d\u307f\u4e0a\u3052")),
+  list(value = "fill", label = list(en = "Stacked to 100%", ja = "100% \u7a4d\u307f\u4e0a\u3052")),
+  list(value = "identity", label = list(en = "As they are", ja = "\u305d\u306e\u307e\u307e")),
+  list(value = "jitter", label = list(en = "Jittered", ja = "\u3070\u3089\u3059")),
+  list(value = "jitterdodge", label = list(en = "Jittered side by side", ja = "\u6a2a\u306b\u4e26\u3079\u3066\u3070\u3089\u3059")),
+  list(value = "nudge", label = list(en = "Nudged", ja = "\u305a\u3089\u3059"))
+)
+
 .fig_gg_args <- function() {
   if (is.null(.fig_registry$gg_args)) {
     .fig_registry$gg_args <- utils::read.csv(
@@ -651,6 +664,9 @@
     if (!is.null(old$type) && !identical(old$type, .schema_gg_generic)) next
     new <- list(type = g$type[i], label = list(en = g$en[i], ja = g$ja[i]))
     if (!is.na(g$help[i])) new$description <- g$help[i]
+    if (identical(kind, "layer") && identical(a, "position") && identical(g$type[i], "call|string|r")) {
+      new$values <- .fig_position_values
+    }
     ent$args[[a]] <- c(new, old[setdiff(names(old), names(new))])
   }
   # a theme setting of one side or axis (axis.text.x.top, legend.key.spacing.y)
