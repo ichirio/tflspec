@@ -74,6 +74,8 @@ tfl_helpers_code <- function() {
 # from their setup
 .calls_helper <- function(code, fns = .study_helper_fns()) {
   if (!length(fns) || !length(code)) return(FALSE)
-  pat <- paste0("(^|[^A-Za-z0-9._])(", paste(fns, collapse = "|"), ")\\(")
+  # (a name's dots are dots, not any character)
+  pat <- paste0("(^|[^A-Za-z0-9._])(", paste(gsub(".", "\\.", fns, fixed = TRUE), collapse = "|"),
+                ")\\(")
   any(grepl(pat, code, perl = TRUE))
 }

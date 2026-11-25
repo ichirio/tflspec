@@ -1967,19 +1967,31 @@ tfl_fig_data_name <- function(design) {
 
 # the study helpers a script of its own carries when its code calls them:
 # each stands alone (base R; fmt_num() rounds by rtfreporter's round_num())
-.fig_script_helpers <- c("tte_time", "fmt_num")
+.fig_script_helpers <- c("tte_time", "fmt_num", "fmt_pvalue")
 
 # a script of its own: the study helpers its code calls (.fig_script_helpers),
-# each defined unless the study's setup has it (a study's programs get them
-# from programs/study_helpers.R, sourced by their setup)
+# and the ones those call (fmt_pvalue() calls fmt_num()), each defined unless
+# the study's setup has it (a study's programs get them from
+# programs/study_helpers.R, sourced by their setup)
 .fig_helper_used <- function(code) {
-  used <- Filter(function(f) .calls_helper(code, f), .fig_script_helpers)
-  if (!length(used)) return(character())
   h <- tfl_helpers_code()
-  one <- function(f) {
+  lines_of <- function(f) {
     a <- grep(paste0("^", f, " <- function"), h)[1L]
     b <- a - 1L + which(h[a:length(h)] == "}")[1L]
-    c(paste0("if (!exists(\"", f, "\")) ", h[a]), h[seq(a + 1L, b)])
+    h[a:b]
+  }
+  calls <- function(txt) Filter(function(f) .calls_helper(txt, f), .fig_script_helpers)
+  used <- calls(code)
+  repeat {
+    more <- union(used, calls(unlist(lapply(used, lines_of))))
+    if (length(more) == length(used)) break
+    used <- more
+  }
+  if (!length(used)) return(character())
+  used <- intersect(.fig_script_helpers, used)
+  one <- function(f) {
+    l <- lines_of(f)
+    c(paste0("if (!exists(\"", f, "\")) ", l[1L]), l[-1L])
   }
   c("", sprintf("# the study helper%s %s (tfl_helpers_code()), unless the study's setup has %s",
                 if (length(used) > 1L) "s" else "", paste0(used, "()", collapse = ", "),

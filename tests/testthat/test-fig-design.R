@@ -232,6 +232,10 @@ test_that("a number a figure prints is fmt_num(): the study's rounding, as a tab
   forest <- paste(tfl_fig_design_code(fr, "F1", setup = TRUE, save = FALSE), collapse = "\n")
   expect_match(forest, 'txt = ifelse(ok, paste0(fmt_num(estimate, 2), " (", fmt_num(conf.low, 2),', fixed = TRUE)
   expect_false(grepl("%.2f", forest, fixed = TRUE))
+  # the programs are R that parses
+  for (prog in list(rate, count, forest, paste(own, collapse = "\n"))) {
+    expect_no_error(parse(text = prog))
+  }
   # the script's own fmt_num() is the study helper's: 1/8 is 12.5%, "13" under "sas"
   a <- grep('^if [(]!exists[(]"fmt_num"[)][)]', own)
   b <- a - 1L + which(own[a:length(own)] == "}")[1L]
@@ -245,6 +249,12 @@ test_that("a number a figure prints is fmt_num(): the study's rounding, as a tab
   both <- tflspec:::.fig_helper_used(c("df |> tte_time(\"months\")", "lab <- fmt_num(x, 1)"))
   expect_identical(both[2L], "# the study helpers tte_time(), fmt_num() (tfl_helpers_code()), unless the study's setup has them")
   expect_identical(sum(grepl("^if [(]!exists", both)), 2L)
+  # a helper a used helper calls comes with it: fmt_pvalue() needs fmt_num()
+  pv <- tflspec:::.fig_helper_used("lab <- fmt_pvalue(p)")
+  expect_identical(sum(grepl('^if [(]!exists[(]"(fmt_num|fmt_pvalue)"', pv)), 2L)
+  e2 <- new.env(parent = globalenv())
+  eval(parse(text = pv), e2)
+  expect_identical(e2$fmt_pvalue(c(0.0004, 0.0125)), c("<0.001", "0.013"))
   # a name that only ends with a helper's is not a call of it
   expect_length(tflspec:::.fig_helper_used("my_fmt_num(x, 1)"), 0L)
   expect_true(tflspec:::.calls_helper("lab <- fmt_num(x, 1)"))

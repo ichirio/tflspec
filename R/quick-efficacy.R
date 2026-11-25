@@ -36,6 +36,8 @@ tfl_fig_forest <- function(adam = NULL, style = c("hr", "or", "estimates"), para
       "#   label (text on the y axis), est, lcl, ucl (NA for heading rows) and optionally n",
       "est_df <- est_df |>",
       paste0("  mutate(\n",
+             "    # (numbers even when a column is all NA: rounding takes no NA logical)\n",
+             "    across(c(est, lcl, ucl), as.numeric),\n",
              "    y = rev(seq_len(n())),\n",
              "    # (rounded as the tables are: options(rtfreporter.rounding))\n",
              "    txt = ifelse(is.na(est), \"\", sprintf(\"%.2f (%.2f, %.2f)\",\n",
