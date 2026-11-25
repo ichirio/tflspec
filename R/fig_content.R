@@ -677,6 +677,14 @@ tfl_plot <- function(name, items = list(), from = "own", input = NULL, form = c(
 # tfl_colours()).  Returns the lines, with the attributes of
 # tfl_fig_design_code()'s (reads, libs, needs, ard).
 .fig_content_code <- function(output, name = "content") {
+  # a content object that pipes from an object (`from:`) has no writer yet
+  # (OBJECTS.md B-5): it stops, it is never dropped
+  for (it in output$content) {
+    if (inherits(it, "tfl_plot") && !is.null(it[["input"]])) {
+      .ard_stop(sprintf(paste0("`from:` on a content object (%s) is not written into the program yet: ",
+                               "it comes with B-5 (the writers of the object cards)."), it$fn))
+    }
+  }
   parts <- .fig_split_content(output$content)
   lv <- .codelist_levels(.codelists_rows(output$codelists, output$id), output$id)
   d <- .fig_steps_code(output$data$steps %||% list(), lv, order = TRUE)
