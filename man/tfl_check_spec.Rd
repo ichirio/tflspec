@@ -94,6 +94,11 @@ its own) takes each column's N from the report's \code{BIGN} analysis.  A
 report with no \code{BIGN}, or whose \code{BIGN} counts by no column variable of
 the table, is a \code{warning} (\code{part} \code{"content"}, item
 \code{"plan_col_header(header)"}): its header would print \code{N=NA}.
+
+A report's \verb{!r} value (outside its \verb{ard:}, which the ARD check reads)
+that does not read as R is an \code{error}: \code{part} the report's key it is
+under, \code{item} its place (\code{"content$plan_filter$args$where"}), the
+parser's message.  It is read, not run.
 }
 \examples{
 if (requireNamespace("haven", quietly = TRUE)) {
