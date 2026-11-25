@@ -226,3 +226,81 @@ test_that("a figure of a `figure:` key: its data part is its ARD definition's, a
   before <- a2f_prog(x, r)
   expect_identical(a2f_prog(x, a2f_pop(r, "SAF")), before)
 })
+
+# ---- a figure made in a session (canon 11-15: every way applies the set) ----
+
+test_that("a figure made in a session applies its report's set: tfl_content_code(), tfl_content_run(), tfl_run_output()", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("withr")
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  # half the subjects out of the safety set
+  adsl <- tflspec::adsl
+  adsl$SAFFL <- ifelse(seq_len(nrow(adsl)) %% 2L == 0L, "Y", "N")
+  saf <- adsl$USUBJID[adsl$SAFFL == "Y"]
+  adtte <- tflspec::adtte
+  expect_true(any(!unique(adtte$USUBJID[adtte$PARAMCD == "OS"]) %in% saf))
+  haven::write_xpt(.ai_chr(adsl), file.path(d, "adam", "adsl.xpt"))
+  haven::write_xpt(.ai_chr(adtte), file.path(d, "adam", "adtte.xpt"))
+  invisible(tfl_ai_study_init(d, adam = "adam", study_id = "XYZ"))
+  out <- file.path(d, "spec", "outputs")
+  dir.create(out, recursive = TRUE, showWarnings = FALSE)
+  # a designed figure of ADTTE's OS records, its analysis set on its data
+  f <- tfl_output("F-1", "figure",
+                  content = list(tfl_item("point", list(data = "df", x = "AVAL", y = "AVAL"))))
+  f$data <- list(source = "code", population = "SAF",
+                 steps = list(list(step = "read", dataset = "ADTTE"),
+                              list(step = "param", value = "OS")))
+  tfl_write_output(f, file.path(out, "F-1.yml"))
+  st <- tfl_read_study_spec(d)
+  ro <- tfl_resolve_output(tfl_read_outputs(d)[["F-1"]], st)
+  ids_of <- function(p) {
+    unique(unlist(c(list(if (is.data.frame(p$data)) p$data$USUBJID),
+                    lapply(p$layers, function(l) if (is.data.frame(l$data)) l$data$USUBJID))))
+  }
+  # tfl_content_code(): the subjects part first (the program's), the read joined to it
+  code <- tfl_content_code(ro, study = st)
+  expect_identical(code[[1L]], a2f_head)
+  expect_true(any(grepl("^adsl_sub <- ", code)))
+  expect_match(a2f_flat(code), a2f_join("adsl_sub"), fixed = TRUE)
+  # (with no study: its stop() line, never every subject)
+  code0 <- tfl_content_code(ro)
+  expect_identical(code0[[1L]], a2f_head)
+  expect_true(startsWith(code0[[2L]], "stop(\"F-1: the report's analysis set SAF: its subjects are made"))
+  expect_match(code0[[2L]], "give tfl_content_code() the study", fixed = TRUE)
+  expect_false(grepl("inner_join(select(", a2f_flat(code0), fixed = TRUE))
+  # tfl_content_run(): only the set's subjects drawn
+  data <- .contents_fig_data(ro, st, d)
+  p <- tfl_content_run(ro, data, study = st)
+  ids <- ids_of(p)
+  expect_true(length(ids) > 0L)
+  expect_true(all(ids %in% saf))
+  # (with no study: an error, never every subject)
+  e <- tryCatch(tfl_content_run(ro, data), error = identity)
+  expect_s3_class(e, "tfl_fig_subjects")
+  expect_match(conditionMessage(e), "give tfl_content_run() the study", fixed = TRUE)
+  # tfl_run_output(): its content as tfl_run_output() makes it, then its RTF
+  p2 <- withr::with_dir(d, .output_build_content(tfl_read_outputs(d)[["F-1"]], st))
+  expect_identical(sort(ids_of(p2)), sort(ids))
+  expect_true(file.exists(tfl_run_output("F-1", d)))
+  # a set the study does not define: each of the three stops (item 2's rule)
+  f$data$population <- "NOPE"
+  tfl_write_output(f, file.path(out, "F-1.yml"))
+  ro <- tfl_resolve_output(tfl_read_outputs(d)[["F-1"]], st)
+  code <- tfl_content_code(ro, study = st)
+  expect_true(startsWith(code[[2L]], "stop(\"F-1: the report's analysis set"))
+  expect_match(code[[2L]], "NOPE", fixed = TRUE)
+  expect_false(grepl("inner_join(select(", a2f_flat(code), fixed = TRUE))
+  e <- tryCatch(tfl_content_run(ro, data, study = st), error = identity)
+  expect_s3_class(e, "tfl_fig_subjects")
+  expect_match(conditionMessage(e), "NOPE", fixed = TRUE)
+  expect_error(tfl_run_output("F-1", d), "NOPE", fixed = TRUE)
+  # no set: as before, every record its steps keep, no study needed
+  f$data$population <- NULL
+  tfl_write_output(f, file.path(out, "F-1.yml"))
+  ro <- tfl_resolve_output(tfl_read_outputs(d)[["F-1"]], st)
+  expect_false(identical(tfl_content_code(ro)[[1L]], a2f_head))
+  expect_true(any(!ids_of(tfl_content_run(ro, data)) %in% saf))
+})

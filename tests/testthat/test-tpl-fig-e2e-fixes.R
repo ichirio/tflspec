@@ -103,7 +103,7 @@ test_that("a report with several objects lets a figure's warnings through too", 
   # the figure object, as the report's `contents:` runs it
   data <- tflspec:::.contents_fig_data(one, st, d)
   w <- character()
-  withCallingHandlers(tfl_content_run(one, data),
+  withCallingHandlers(tfl_content_run(one, data, study = st),
                       warning = function(x) {
                         w <<- c(w, conditionMessage(x))
                         invokeRestart("muffleWarning")
@@ -327,7 +327,7 @@ test_that("waterfall in a study: `where` is the report's own reduction; several 
   st <- tfl_read_study_spec(d)
   ro <- tfl_resolve_output(tfl_read_output(file.path(d, "spec", "outputs", "F-1.yml")), st)
   w <- character()
-  p <- withCallingHandlers(tfl_content_run(ro, tflspec:::.contents_fig_data(ro, st, d)),
+  p <- withCallingHandlers(tfl_content_run(ro, tflspec:::.contents_fig_data(ro, st, d), study = st),
                            warning = function(x) {
                              w <<- c(w, conditionMessage(x))
                              invokeRestart("muffleWarning")

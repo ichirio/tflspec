@@ -1686,6 +1686,13 @@ tfl_bign_drop <- function(ard) .bign_drop(ard)
 #'   the steps start from `data`.  For a figure, a
 #'   named list of the objects its code reads: the datasets by their names
 #'   in lower case (`adtte`), and `ard`.
+#' @param study For a figure with an analysis set (its data's
+#'   `population:`) that reads a dataset: the study ([tfl_read_study_spec()])
+#'   or its folder.  The set's subjects are made as the report's program
+#'   makes them (its data part, from the study's files) and every dataset
+#'   the figure reads is joined to them.  Such a figure given no study, or
+#'   a set the study does not define, is an error: never a figure of every
+#'   subject.
 #' @return For a table, the [rtfreporter::table_plan()]; for a figure, the
 #'   ggplot.
 #' @examples
@@ -1701,12 +1708,12 @@ tfl_bign_drop <- function(ard) .bign_drop(ard)
 #' }
 #' @seealso [tfl_content_code()]
 #' @export
-tfl_content_run <- function(output, data) {
+tfl_content_run <- function(output, data, study = NULL) {
   if (!inherits(output, "tfl_output")) {
     .ard_stop("tfl_content_run(): `output` is a report, tfl_output().")
   }
   if (inherits(output$content, "tfl_r")) return(.content_own_run(output, data))
-  if (identical(output$kind, "figure")) return(.content_fig_run(output, data))
+  if (identical(output$kind, "figure")) return(.content_fig_run(output, data, study))
   if (!output$kind %in% c("table", "listing")) {
     .ard_stop(sprintf(paste0("tfl_content_run(): a %s's content is not run ",
                              "yet; tables, listings and figures, for now."), output$kind))
@@ -1886,6 +1893,11 @@ tfl_content_run <- function(output, data) {
 #'   of records (`data: {source: dataset}`) the code starts with its data
 #'   part, as [tfl_listing_code()] `part = "data"` writes it (the dataset
 #'   read, its condition, code lists and order).  `NULL`: the content only.
+#'   A figure with an analysis set (its data's `population:`) that reads a
+#'   dataset starts with the set's subjects, made as the report's program
+#'   makes them, and every dataset it reads is joined to them; with no
+#'   study (or a set the study does not define) it starts with a `stop()`
+#'   line saying so: never a figure of every subject.
 #' @return The code, one element a line.
 #' @examples
 #' out <- tfl_output("T-1", "table", content = list(
@@ -1924,13 +1936,21 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
     # (a series template's: its `figure:` content function's call)
     series <- .content_fig_series_code(output)
     if (!is.null(series) && identical(match.arg(template), "call")) return(series)
+    # the report's subjects (its analysis set), made as its program's data
+    # part makes them, its reads joined to them; a set they cannot be made
+    # for: its stop() line (as the program's), no subjects (canon 11-15)
+    sj <- tryCatch(.fig_session_subjects(output, study, "tfl_content_code()"),
+                   tfl_fig_subjects = function(e) list(
+                     code = sprintf("stop(%s)", encodeString(conditionMessage(e), quote = "\"")),
+                     subjects = NULL))
+    attr(output, "fig_subjects") <- sj$subjects
     if (is.list(tp) && identical(match.arg(template), "call")) {
-      if (isTRUE(tp$ok)) return(.content_fig_tpl_code(output))
+      if (isTRUE(tp$ok)) return(.fig_code_with_subjects(.content_fig_tpl_code(output), sj))
       message(sprintf(paste0("%s: the template's call cannot say this report's own data or ",
                              "a layer of the template it replaces; its design is written."),
                       output$id))
     }
-    return(.content_fig_code(output))
+    return(.fig_code_with_subjects(.content_fig_code(output), sj))
   }
   if (!output$kind %in% c("table", "listing")) {
     .ard_stop(sprintf(paste0("tfl_content_code(): a %s's content is not written ",

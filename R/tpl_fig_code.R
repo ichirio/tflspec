@@ -96,7 +96,8 @@
   n_call <- tp$call_steps
   data_steps <- steps[seq_len(length(steps) - n_call)]
   lv <- .codelist_levels(.codelists_rows(output$codelists, output$id), output$id)
-  d <- .fig_steps_code(data_steps, lv, order = TRUE)
+  # (the report's subjects, when made: its reads joined to them)
+  d <- .fig_steps_code(data_steps, lv, order = TRUE, subjects = attr(output, "fig_subjects"))
   generic <- identical(t$call, "tfl_tpl")
   args <- tp$args
   called <- tp$name

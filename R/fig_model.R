@@ -1097,6 +1097,77 @@ tfl_read_fig_design <- function(path) {
                  list(message = msg, call = NULL)))
 }
 
+# ... and of a report's set in a session's call given no study to make its
+# subjects from (`fn`: the call)
+.fig_subjects_no_study <- function(output_id, pop, fn) {
+  sprintf(paste0("%s: the report's analysis set %s: its subjects are made from the study's ARD ",
+                 "definition: give %s the study (`study =`); the figure would draw every subject."),
+          output_id, pop, fn)
+}
+
+# A figure report's subjects wherever it is made -- its program, the AI's
+# draw, tfl_content_code(), tfl_content_run(), tfl_run_output() (canon
+# 11-15: every way a figure is made applies the report's set): the
+# subjects part its program writes (.fig_subjects_part()), from the
+# study's ARD definition (`sheets`: the study's, when the caller has them).
+# NULL only when the report has no analysis set; a set whose subjects
+# cannot be made -- none of the study's, no study, no ARD definition --
+# stops (class `tfl_fig_subjects`).  `fn`: the call, for the message.
+.fig_output_subjects <- function(output, study, fn, data = character(), sheets = NULL) {
+  pop <- .out_population_or_data(output)
+  if (is.na(pop)) return(NULL)
+  id <- output$id
+  if (is.null(study)) .fig_subjects_stop(.fig_subjects_no_study(id, pop, fn))
+  if (is.character(study)) study <- tfl_read_study_spec(study)
+  x <- tryCatch(.ard_spec_of_study(study, output_id = id, sheets = sheets)$spec,
+                error = function(e) .fig_subjects_stop(.fig_subjects_no_ard(id, pop, conditionMessage(e))))
+  if (is.null(x)) .fig_subjects_stop(.fig_subjects_no_ard(id, pop))
+  .fig_subjects_part(x, id, pop, data = data)
+}
+
+# The datasets a figure report's read steps read (its analysis data, `data:`,
+# not among them): those the subjects' join applies to
+.fig_output_reads <- function(output) {
+  steps <- c(output$data$steps %||% list(),
+             unlist(lapply(output$plots %||% list(), function(p) p$data), recursive = FALSE))
+  unique(toupper(unlist(lapply(steps, function(s) {
+    if (is.list(s) && identical(s$step, "read") && is.null(.fig_read_data(s))) s$dataset
+  }))))
+}
+
+# A figure report's subjects in a session (tfl_content_code(),
+# tfl_content_run()): .fig_output_subjects(), for a figure that reads a
+# dataset (as the program makes them: .rp_fig_design_plot()); NULL for one
+# that reads none (its ARD, its analysis data) and for a `figure:` key's
+# (its data is its ARD definition's, the set in it)
+.fig_session_subjects <- function(output, study, fn) {
+  if (!is.null(output$figure) || !length(.fig_output_reads(output))) return(NULL)
+  .fig_output_subjects(output, study, fn)
+}
+
+# The subjects made in a session's environment `env`: their code (the data
+# part's, its own reads of the study's files) run in the study folder,
+# with the study's helpers (set_levels(), order_levels())
+.fig_subjects_eval <- function(sj, env, study, output_id) {
+  eval(parse(text = tfl_helpers_code()), env)
+  wd <- setwd(study$dir)
+  on.exit(setwd(wd), add = TRUE)
+  .eval_study_code(sj$code, env, study, ".", output_id = output_id)
+  invisible(env)
+}
+
+# A figure's code with its subjects part first (`sj`: .fig_output_subjects()'s,
+# or a stop() line with no subjects), the code's attributes kept
+.fig_code_with_subjects <- function(code, sj) {
+  if (is.null(sj)) return(code)
+  at <- attributes(code)
+  out <- c("# the report's subjects: its analysis set (its data's population)",
+           as.character(unlist(sj$code)), "", as.character(code))
+  at$names <- NULL
+  attributes(out) <- at
+  out
+}
+
 # The join that keeps a records dataset's rows of the report's subjects:
 # the ARD programs' (.subjects_join(), no column taken), laid out as a step
 # of the figure's pipe

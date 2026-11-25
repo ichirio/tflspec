@@ -615,7 +615,8 @@
   if (length(o$ard$analyses %||% list())) {
     data$ard <- suppressMessages(tfl_build_ard(st, dir = ".", output_id = o$id, save = FALSE))
   }
-  fig <- suppressMessages(suppressWarnings(tfl_content_run(o, data)))
+  # (its subjects: the report's analysis set, made from the study, A2)
+  fig <- suppressMessages(suppressWarnings(tfl_content_run(o, data, study = st)))
   .ai_fig_nothing_drawn(fig, o$id)
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
   png <- file.path(out_dir, paste0(o$id, ".png"))
