@@ -151,17 +151,20 @@
   } else {
     list()
   }
-  # the analysis set is the report's `common: population`: a template argument that
-  # differs from it is a conflict (the one equal to it, or with no report
-  # `common: population`, is used and not said)
+  # the analysis set is the report's (the one reader: its data's
+  # `population:`, `common:` until it goes, its subjects rows'): a template
+  # argument that differs from it is a conflict -- two sets for one report,
+  # the header's and the build's (the one equal to it, or with no report
+  # set, is used and not said)
   if ("population" %in% names(args) && is.list(tpl) && is.character(tpl$name) &&
       !is.null(tryCatch(.tpl_get(tpl$name, "tfl_check_spec()")$params$population,
                         error = function(e) NULL))) {
-    rp <- .out_population(o)
-    if (length(rp) == 1L && !is.na(rp) && !identical(as.character(args$population), as.character(rp))) {
+    rp <- .out_population_or_data(o)
+    if (!is.na(rp) && !identical(as.character(args$population)[1L], rp)) {
       add(part = "template", item = "population", level = "warning", message = sprintf(paste0(
-        "template argument `population` (%s) differs from the report's `common: population` (%s): the report is built ",
-        "with the template's; make the report's `common: population` the one to use and remove the template's"),
+        "template argument `population` (%s) differs from the report's analysis set (%s: its data's ",
+        "`population:`, else `common: population`): write the set once, on the report's data, and ",
+        "remove the template's"),
         args$population[1L], rp))
     }
   }

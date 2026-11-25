@@ -3,9 +3,10 @@
 #
 # A figure template expands to the design form, as a designed report has
 # it: its data steps, the layers as the content's items, the figure's
-# settings (`plot:`).  The analysis set's subjects are a semi join after
-# the read (data.yml's definition), in place of the preset's flag.  The
-# data's last steps -- the statistics, the fit, the bars' order -- are its
+# settings (`plot:`).  The analysis set is the data's `population:` (A2,
+# one rule): the report program makes its subjects and joins the records
+# to them, as for every figure; no step keeps it, and the preset's flag
+# step is dropped.  The data's last steps -- the statistics, the fit, the bars' order -- are its
 # call's (`call_steps`): the program (A) writes the steps before them as
 # plain dplyr, then `content <- tpl_<name>(<data>, ...)` and the report's
 # own items `+`-ed after it.
@@ -21,26 +22,22 @@
        content = lapply(f$layers, function(l) tfl_item(l$layer, l[setdiff(names(l), "layer")])))
 }
 
-# The template's body from its design: the analysis set's subjects in
-# place of the preset's flag; `call_steps` the steps the call makes
+# The template's body from its design: the analysis set on the data (its
+# `population`, the report's set: one value, applied once by the program's
+# join), the preset's flag step dropped; `call_steps` the steps the call
+# makes
 .tpl_fig_body_of <- function(f, a, ctx) {
   steps <- Filter(function(s) !identical(s$step, "flag"), f$steps)
-  pop_step <- NULL
-  if (!is.null(a$population)) {
-    at <- match("read", vapply(steps, `[[`, "", "step"))
-    steps <- append(steps, .tpl_population_step(a$population, ctx$population), at)
-    pop_step <- at + 1L
-  }
+  if (!is.null(a$population)) .tpl_population_check(a$population, ctx$population)
   # the records kept besides the parameter (`where`): after it
   if (!is.null(a$where)) {
     kinds <- vapply(steps, `[[`, "", "step")
     at <- match("param", kinds, nomatch = match("read", kinds, nomatch = 0L))
     steps <- append(steps, list(list(step = "filter", expr = a$where)), at)
   }
-  # (`pop_step`: where the analysis set's step is, for a report whose own
-  # steps are the data stage: .tpl_compose_data() keeps it)
-  list(data = list(source = "code", steps = c(steps, f$stats)), content = f$content,
-       plot = f$plot, call_steps = length(f$stats), pop_step = pop_step)
+  data <- c(list(source = "code"), if (!is.null(a$population)) list(population = a$population),
+            list(steps = c(steps, f$stats)))
+  list(data = data, content = f$content, plot = f$plot, call_steps = length(f$stats))
 }
 
 # The settings `over` over a template's `base`. The `add` lists join (the

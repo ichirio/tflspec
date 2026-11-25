@@ -1024,7 +1024,7 @@ tfl_read_fig_design <- function(path) {
 # list(object, dataset, id)).  NULL only when the report has no analysis
 # set.  A set the study does not define, or whose subjects cannot be made,
 # stops (no figure of every subject: the rule of the template's analysis
-# set, .tpl_population_step(), and of the ARD programs).
+# set, .tpl_population_check(), and of the ARD programs).
 .fig_subjects_part <- function(x, output_id, pop, data = character()) {
   pop <- .na_scalar(pop)
   if (is.na(pop)) return(NULL)

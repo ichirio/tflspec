@@ -662,21 +662,17 @@ tfl_template_to_spec <- function(output, study) {
   if (length(dup)) {
     .ard_stop(sprintf(paste0(
       "%s uses template %s, which makes its own %s step%s (%s); `data.steps` writes %s too. ",
-      "Keep the data stage (read, the analysis set, param, filter, derive) and remove %s; ",
+      "Keep the data stage (read, param, filter, derive; the analysis set is the data's ",
+      "`population:`) and remove %s; ",
       "keep plot and layers."),
       id, name, paste(dup, collapse = " and "), if (length(dup) > 1L) "s" else "",
       paste(unique(kind(call)), collapse = ", "), paste(dup, collapse = ", "),
       paste(dup, collapse = ", ")))
   }
-  # the template's analysis set (its `population`, the report's set): kept
-  # after the report's read -- the report's data stage writes no step for
-  # it (A2) -- unless the report wrote the same step
-  k <- x$pop_step
-  if (length(k) == 1L && k <= length(x$data$steps)) {
-    ps <- x$data$steps[[k]]
-    if (!any(vapply(data$steps, identical, NA, ps))) {
-      data$steps <- append(data$steps, list(ps), match("read", kind(data$steps), nomatch = 0L))
-    }
+  # (the analysis set is the data's `population:`, the template's and the
+  # report's one value: no step of it, A2)
+  if (is.null(data[["population"]]) && !is.null(x$data[["population"]])) {
+    data$population <- x$data[["population"]]
   }
   data$steps <- c(data$steps, call)
   data

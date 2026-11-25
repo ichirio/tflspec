@@ -265,23 +265,18 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     k("columns", "list", TRUE, fields = c("vars", "label", "width", "collapse_repeats")))
 })
 
-# A figure's data step keeping an analysis set's subjects: a semi join of
-# its dataset's records (data.yml's definition: dataset, where), so any
-# where works, whatever the figure's data has
-.tpl_population_step <- function(id, populations) {
-  # as a table's analysis data: an analysis set the study does not
-  # define stops (no figure of the wrong subjects)
+# A figure template's analysis set (its `population`, written on its
+# data: the report program joins the records to its subjects, A2): as a
+# table's analysis data, an analysis set the study does not define stops
+# (no figure of the wrong subjects)
+.tpl_population_check <- function(id, populations) {
   def <- Filter(function(p) identical(p$id, id), populations %||% list())
   if (!length(def)) {
     .ard_stop(sprintf("template: population %s is not in `populations` (data.yml: %s).",
                       id, paste(vapply(populations %||% list(), `[[`, "", "id"),
                                 collapse = ", ")))
   }
-  def <- def[[1L]]
-  w <- def$where
-  list(Filter(Negate(is.null), list(
-    step = "join", dataset = def$dataset %||% "ADSL",
-    where = if (!is.null(w)) as.character(w), by = "USUBJID", how = "semi")))
+  invisible(TRUE)
 }
 
 # A parameter of several lines (a heading) as the one text of a header cell:

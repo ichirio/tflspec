@@ -6,11 +6,12 @@ test_that("mean_se / mean_ci: the design form; the summary the call's step", {
     st <- vapply(x$data$steps, `[[`, "", "step")
     # (the call's: the records with an empty group or visit left out, those
     # with no value, the summary)
-    expect_identical(st, c("read", "join", "param", "filter", "levels", "filter", "filter", "summary"), info = nm)
+    # (the analysis set is the data's, no step: the program joins the records to its subjects, A2)
+    expect_identical(st, c("read", "param", "filter", "levels", "filter", "filter", "summary"), info = nm)
     expect_identical(x$call_steps, 3L)
-    expect_identical(x$data$steps[[2L]]$how, "semi")
+    expect_identical(x$data$population, "SAF")
     expect_identical(vapply(x$content, `[[`, "", "fn"), c("line", "point", "errorbar"))
-    expect_identical(x$data$steps[[8L]]$interval, sub("mean_", "", nm))
+    expect_identical(x$data$steps[[7L]]$interval, sub("mean_", "", nm))
   }
   expect_identical(tfl_template_params("mean_se")$value$type, "vars")
 })
@@ -43,7 +44,9 @@ test_that("in a study: A (the data steps, the call) = B (the design) = the templ
     # (a visit with one record: no SD, its interval NaN -- the preset's)
     x <- suppressWarnings(tplfig_check(o, d, data))
     txt <- paste(x$a, collapse = "\n")
-    expect_match(txt, "semi_join(", fixed = TRUE)
+    # (no step keeps the set: the report's data says it, A2)
+    expect_false(grepl("semi_join(", txt, fixed = TRUE))
+    expect_identical(x$ro$data$population, "SAF")
     expect_match(txt, "filter(PARAMCD == \"SYSBP\", ", fixed = TRUE)
     expect_match(txt, sprintf(paste0("content <- tflspec::tfl_tpl(advs_sub, \"%s\", param = \"SYSBP\", ",
                                      "value = CHG) +"), nm), fixed = TRUE)

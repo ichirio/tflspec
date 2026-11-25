@@ -35,7 +35,7 @@ test_that("a report's subjects: its analysis set's, made by the data part (R1, R
   expect_null(.fig_subjects_part(x, "F-1", NA))
   expect_null(.fig_subjects_part(x, "F-1", NULL))
   # a set the study does not define: it stops, naming the set and the
-  # study's sets (never every subject drawn: .tpl_population_step()'s rule)
+  # study's sets (never every subject drawn: .tpl_population_check()'s rule)
   e <- tryCatch(.fig_subjects_part(x, "F-1", "NOPE"), error = identity)
   expect_s3_class(e, "tfl_fig_subjects")
   expect_match(conditionMessage(e), "F-1: the report's analysis set: 'NOPE' is not an analysis set",
