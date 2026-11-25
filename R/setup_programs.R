@@ -53,17 +53,23 @@
 
 #' tflspec's built-in company inputs
 #'
-#' The company's inputs the study's setup programs read when a company has
-#' none of its own: `about` (the standards' name, version, owner and date,
-#' which a new study's `company_setup.R` names) and `setup_code` (the lines
+#' The company's inputs the study's programs read when a company has none
+#' of its own: `about` (the standards' name, version, owner and date,
+#' which a new study's `company_setup.R` names), `setup_code` (the lines
 #' of R a new study's `company_setup.R` starts with, one a row, each with a
 #' note: the packages every program uses, `options(warn = 1)` and the days
-#' in a week, a month and a year, [tfl_time_unit_days()]).  The figure
-#' style's are [tfl_fig_style()].
+#' in a week, a month and a year, [tfl_time_unit_days()]) and
+#' `code_templates` (the code a report program writes where the report says
+#' none: `table_data` takes a table's rows of the study ARD, `table_process`
+#' normalizes them, `figure_plot` is a figure's plot before it is written,
+#' `setup` the code every report of a new study runs first, blank here).
+#' The figure style's are [tfl_fig_style()], the ARD catalogs'
+#' [tfl_ard_statistics()] and [tfl_ard_methods()].
 #'
-#' @return A list of two data frames: `about` (`key`, `value`) and
-#'   `setup_code` (`code`, `note`).
-#' @seealso [tfl_setup_program()]
+#' @return A list of three data frames: `about` (`key`, `value`),
+#'   `setup_code` (`code`, `note`) and `code_templates` (`name`, `code`,
+#'   `note`).
+#' @seealso [tfl_setup_program()], [tfl_report_program()]
 #' @examples
 #' tfl_builtin_standards()$setup_code$code
 #' @keywords internal
@@ -86,6 +92,33 @@ tfl_builtin_standards <- function() {
                "warnings are printed as they happen: a run's log shows where",
                "the days in a week, a month, a year: a figure's time unit divides by them",
                NA, NA),
+      stringsAsFactors = FALSE),
+    # (a template's {OUTPUT_ID}, {ARD}, {ARD_PROGRAM}, {PROGRAM} and
+    # {STUDY_ID} stand for the report's: tfl_report_program())
+    code_templates = data.frame(
+      name = c("table_data", "table_process", "figure_plot", "setup"),
+      code = c(paste(
+        "# this report's rows of the study ARD (made by {ARD_PROGRAM})",
+        "ard <- readRDS(\"{ARD}\") |>",
+        "  dplyr::filter(output_id == report_id) |>",
+        "  dplyr::select(-c(output_id, analysis_id, population_id))",
+        "if (!nrow(ard)) {",
+        "  stop(\"The study ARD has no rows for \", report_id, \": run {ARD_PROGRAM} first.\")",
+        "}",
+        sep = "\n"),
+        "data <- normalize_ard(ard)",
+        paste(
+        "# TODO: the plot (ggplot2), in the figure style of the company standards, e.g.",
+        "#   plot <- ggplot2::ggplot(adsl, ggplot2::aes(AGE, fill = TRT01A)) +",
+        "#     ggplot2::geom_histogram() + scale_fill_tfl(\"treatment\", levels(adsl$TRT01A)) +",
+        "#     theme_tfl()",
+        sep = "\n"),
+        NA),
+      note = c(
+        "a table's data code when it has none: its rows of the study ARD",
+        "a table's normalization when it has none: after table_data",
+        "a figure's plot before it is written (a stop() follows it)",
+        "the setup code every report of a new study runs first (blank: none)"),
       stringsAsFactors = FALSE))
 }
 
