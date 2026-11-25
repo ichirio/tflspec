@@ -37,7 +37,15 @@
 #'   reference to a list the study has not got is left out when the report is
 #'   resolved.  No list reaches a report through `extends:`: a report's code
 #'   lists are its own (`codelists:` in its file), and a pattern's
-#'   `codelists:` stops the read.
+#'   `codelists:` stops the read.  A report's list of a variable is written
+#'   in place (`SEX: [{value: F, label: Female}, ...]`) or names one of the
+#'   study's lists: `SEX: {list: SEX}` (all its codes, in its order) or `SEX:
+#'   {list: SEX, codes: [M, F]}` (those codes, in the order written).  The
+#'   labels are the study's list's, and the programs are written as from the
+#'   same list written in place ([tfl_resolve_output()]); a list the study
+#'   has not got, or a code its list has not got, stops there, naming the
+#'   report, the variable and the list.  The sheets keep the reference in the
+#'   codelists sheet's `list` column ([tfl_sheets_from_yaml()]).
 #' * `adam_meta:` the ADaM metadata in the shape [tfl_read_define()] gives
 #'   (until a define is read): each part a list of rows, `variables: [{dataset:
 #'   ADSL, variable: SEX, codelist: CL.SEX}, ...]` (the code list's OID) and
@@ -264,6 +272,11 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   if (!inherits(study, "tfl_study_spec")) stop("tfl_resolve_output(): `study` is a tfl_study_spec.", call. = FALSE)
   # a series template (`<series>/<template>`): its code SPEC, resolved as
   # any report from there
+  # (a code list that refers to the study's, `{list: SEX}`: its rows, the
+  # study's codes and labels, as a list written in place has them -- before
+  # a template reads the report's lists)
+  output$codelists <- .codelists_refs(output$codelists, study$codelists, output$id,
+                                      "tfl_resolve_output()")
   output <- .series_as_code(output, study)
   # (a template with an `extends` in its set: the style its `style`
   # parameter names, resolved first)

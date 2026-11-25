@@ -84,7 +84,16 @@ tfl_write_spec_xlsx <- function(dir, path) {
       }
     }
     for (v in names(o$codelists)) {
-      add_rows("codelists", lapply(o$codelists[[v]], function(e) c(list(output_id = id, variable = v), e)))
+      l <- o$codelists[[v]]
+      # (a reference to the study's list: its rows, the study's codes and
+      # labels, each with the reference in its `list` cell, which an import reads)
+      if (.cl_is_ref(l)) {
+        lc <- .cl_ref_cell(l)
+        add_rows("codelists", lapply(.cl_ref_rows(l, v, s$codelists, id, "tfl_write_spec_xlsx()"), function(e)
+          c(list(output_id = id, variable = v), e, list(list = lc))))
+      } else {
+        add_rows("codelists", lapply(l, function(e) c(list(output_id = id, variable = v), e)))
+      }
     }
     .flat_page(o$page, id, add_rows, note)
     if (o$kind == "listing") {

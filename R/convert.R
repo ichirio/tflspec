@@ -752,10 +752,18 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   page
 }
 
-.conv_codelists <- function(d) {
+# (`refs = FALSE`: a reference's rows as they are, the values a program gets)
+.conv_codelists <- function(d, refs = TRUE) {
   out <- list()
   for (v in unique(d$variable)) {
     r <- d[d$variable == v, , drop = FALSE]
+    # (a reference to the study's list, its `list` cell: the reference as
+    # written; its rows are the study's codes and labels, not read back)
+    lc <- if (refs) .cl_list_cell(r)
+    if (!is.null(lc)) {
+      out[[v]] <- .cl_ref_from_cell(lc)
+      next
+    }
     if (!is.null(r$order)) r <- r[order(suppressWarnings(as.numeric(r$order)), na.last = TRUE), , drop = FALSE]
     out[[v]] <- lapply(seq_len(nrow(r)), function(i) {
       m <- list(value = r$value[i])

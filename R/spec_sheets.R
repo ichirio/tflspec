@@ -387,10 +387,16 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       if (!is.null(o$data$object) && !identical(o$data$object, "ard")) rr$ard_object <- cell(o$data$object)
     }
     add("report", rr)
-    for (v in names(o$codelists)) for (i in seq_along(o$codelists[[v]])) {
-      cl <- o$codelists[[v]][[i]]
-      add("codelists", list(output_id = id, variable = v, value = cell(cl$value), label = cell(cl$label), order = as.character(i),
-                            under = cell(cl$under)))
+    # (a reference to the study's list: its rows as the programs get them,
+    # each with the reference in its `list` cell, which is what is read back)
+    for (v in names(o$codelists)) {
+      ref <- if (.cl_is_ref(o$codelists[[v]])) o$codelists[[v]]
+      vrows <- if (is.null(ref)) o$codelists[[v]] else .cl_ref_rows(ref, v, s$codelists, id, "tfl_sheets_from_spec()")
+      for (i in seq_along(vrows)) {
+        cl <- vrows[[i]]
+        add("codelists", list(output_id = id, variable = v, value = cell(cl$value), label = cell(cl$label), order = as.character(i),
+                              under = cell(cl$under), list = if (!is.null(ref)) .cl_ref_cell(ref) else NA_character_))
+      }
     }
     # a template report: its name and arguments on the templates sheet, and
     # that is all of the template; the items are made again from them

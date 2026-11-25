@@ -208,7 +208,26 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
     y <- get_file(rel)
     for (v in unique(part$variable)) {
       pv <- part[part$variable == v, , drop = FALSE]
-      rows <- y$codelists[[v]] %||% list()
+      # a reference to the study's list (the `list` cell): the reference, as
+      # the cell says it; its rows are the study's, not read back
+      lc <- .cl_list_cell(pv)
+      was <- y$codelists[[v]]
+      was_cell <- if (.cl_is_ref(was)) .cl_ref_cell(.cl_ref_norm(was, v, id))
+      if (!is.null(lc) || !is.null(was_cell)) {
+        to_cell <- if (!is.null(lc)) .cl_ref_cell(.cl_ref_from_cell(lc))
+        if (!identical(was_cell, to_cell)) {
+          st$changes[[length(st$changes) + 1L]] <- data.frame(sheet = "codelists", key = paste(id, v, sep = " / "),
+                                                            column = "list", from = was_cell %||% NA_character_,
+                                                            to = to_cell %||% NA_character_, stringsAsFactors = FALSE)
+        }
+        if (!is.null(lc)) {
+          if (!identical(was_cell, to_cell)) y$codelists[[v]] <- .cl_ref_from_cell(lc)
+          next
+        }
+        # (the reference taken off: the rows, written in place)
+        was <- NULL
+      }
+      rows <- was %||% list()
       for (i in seq_len(nrow(pv))) {
         j <- .find_row(rows, list("value"), pv$value[i])
         m <- list(value = pv$value[i])

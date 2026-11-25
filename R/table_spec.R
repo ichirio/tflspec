@@ -212,8 +212,9 @@
                   "show_keys", "keep_where", "keep_any", "keep_parents", "content_more"),
     variables = c("output_id", "variable", "label", "order", "levels",
                   "empty_levels", "under"),
-    # the study's code list: a value's text and place
-    codelists = c("output_id", "variable", "value", "label", "order", "under"),
+    # the study's code list: a value's text and place (`list`: the study's
+    # list a report's refers to, R/codelist_ref.R)
+    codelists = c("output_id", "variable", "value", "label", "order", "under", "list"),
     cells     = c("output_id", "variable", "context", "row", "when",
                   "template", "digits", "signif"),
     # the statistics' decimals: every analysis variable's (variable blank),

@@ -114,7 +114,7 @@
     cl <- cl[!is.na(cl$output_id) & cl$output_id %in% output_id, , drop = FALSE]
   }
   output <- list(ard = list(analyses = analyses),
-                 codelists = if (!is.null(cl) && nrow(cl)) .conv_codelists(cl))
+                 codelists = if (!is.null(cl) && nrow(cl)) .conv_codelists(cl, refs = FALSE))
   if (!isTRUE(own)) return(.levels_prune(items, output))
   v <- sp$variables
   said <- if (!is.null(v$levels)) unique(v$variable[!is.na(v$levels) & nzchar(trimws(v$levels))])

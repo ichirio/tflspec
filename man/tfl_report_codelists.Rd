@@ -21,7 +21,9 @@ of a report not in \code{outputs} stays.  \code{NULL} (default): made from
 }
 \value{
 A data frame of the sheets' \code{codelists} rows (\code{output_id},
-\code{variable}, \code{value}, \code{label}, \code{order}, \code{under}), the reports in the
+\code{variable}, \code{value}, \code{label}, \code{order}, \code{under}, \code{list}: a reference to
+one of the study's lists as its rows, the study's codes and labels,
+\code{list} naming it), the reports in the
 TOC's order; every row has its report (no \code{NA} \code{output_id}), and zero
 rows when no report has a list.  \code{\link[=tfl_ard_code]{tfl_ard_code()}} and \code{\link[=tfl_build_ard]{tfl_build_ard()}}
 write a study's ARD with these.

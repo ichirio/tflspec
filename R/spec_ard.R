@@ -177,7 +177,9 @@
 #'   of a report not in `outputs` stays.  `NULL` (default): made from
 #'   `outputs`.
 #' @return A data frame of the sheets' `codelists` rows (`output_id`,
-#'   `variable`, `value`, `label`, `order`, `under`), the reports in the
+#'   `variable`, `value`, `label`, `order`, `under`, `list`: a reference to
+#'   one of the study's lists as its rows, the study's codes and labels,
+#'   `list` naming it), the reports in the
 #'   TOC's order; every row has its report (no `NA` `output_id`), and zero
 #'   rows when no report has a list.  [tfl_ard_code()] and [tfl_build_ard()]
 #'   write a study's ARD with these.

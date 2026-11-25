@@ -1459,7 +1459,8 @@ rtf_footer:
       value the list does not have stops the program. Every row names its report in
       `output_id` (a blank one is an error: copy the rows into each report that uses
       them). A variable''s `levels` on the variables sheet, when given, is the order
-      in the table instead; a variable''s heading is the variables sheet''s `label`.'
+      in the table instead; a variable''s heading is the variables sheet''s `label`.
+      A report''s list may be one of the study''s lists, named in `list`.'
     columns:
       - column: variable
         description: The variable (an analysis variable or a column key).
@@ -1481,6 +1482,15 @@ rtf_footer:
           in the analysis''s `post` shows it with 0 counts when no subject has it; blank:
           none (an outer value is shown without it).'
         example: EYE DISORDERS
+      - column: list
+        description: 'The study''s code list (spec/defaults.yml `codelists:`) the report''s
+          list of this variable is: its name, all its codes in its order (`{list: SEX}`
+          in the report''s file); or its name, a colon and the codes taken, in the order
+          wanted (`SEX: M | F`, `{list: SEX, codes: [M, F]}`). The rows then show the
+          study''s codes and labels and are not read back: change this cell or the study''s
+          list. A name or a code the study''s list has not got is an error. Blank: the
+          rows are the list.'
+        example: SEX
   - sheet: cells
     description: 'Table: one row a line of a cell (plan_cells()). Rows with the same
       variable / context / row are one chain, tried top down. With stats = rows, a
