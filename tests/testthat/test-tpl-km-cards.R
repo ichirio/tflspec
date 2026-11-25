@@ -22,12 +22,13 @@ test_that("km_cards resolves: its data the figure's steps filled in, its content
   expect_null(o$figure)
   expect_null(o$ard)
   steps <- o$data$steps
-  expect_identical(vapply(steps, `[[`, "", "step"), c("read", "param", "flag", "time_unit", "survfit"))
+  # (the analysis set is the data's, the series' efficacy set: no step keeps it)
+  expect_identical(o$data$population, "FAS")
+  expect_identical(vapply(steps, `[[`, "", "step"), c("read", "param", "time_unit", "survfit"))
   expect_identical(steps[[2L]]$value, "OS")
-  expect_identical(steps[[3L]]$variable, "FASFL")
-  expect_identical(steps[[5L]]$by, "TRT01P")
-  expect_identical(steps[[4L]]$variable, "AVAL")
-  expect_identical(steps[[4L]]$unit, "months")
+  expect_identical(steps[[4L]]$by, "TRT01P")
+  expect_identical(steps[[3L]]$variable, "AVAL")
+  expect_identical(steps[[3L]]$unit, "months")
   expect_identical(kmc_fns(o), c("ggsurvfit", "add_censor_mark", "scale_colour_tfl", "scale_y_continuous",
                                  "coord_cartesian", "labs", "theme_tfl", "theme", "add_risktable"))
   # each card passes the schema
@@ -48,7 +49,8 @@ test_that("km_cards' program is the card chain, ggsurvfit() + ... + add_risktabl
   o <- tfl_template_resolve(kmc_report(), study = kmc_study)
   code <- tfl_content_code(o)
   expect_true(any(grepl("fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P", code, fixed = TRUE)))
-  expect_true(any(grepl("filter(PARAMCD == \"OS\", FASFL == \"Y\")", code, fixed = TRUE)))
+  expect_true(any(grepl("filter(PARAMCD == \"OS\")", code, fixed = TRUE)))
+  expect_false(any(grepl("FASFL", code, fixed = TRUE)))
   expect_true(any(grepl("tte_time(\"months\")", code, fixed = TRUE)))
   expect_true(any(code == "content <- ggsurvfit(x = fit, linewidth = 0.3) +"))
   expect_true(any(code == "  add_censor_mark(shape = 3, size = 3, stroke = 0.6) +"))
@@ -84,6 +86,18 @@ test_that("km_cards' x label follows each of the four time units", {
     code <- tfl_content_code(o)
     expect_true(any(grepl(paste0("Time (", tools::toTitleCase(u), ")"), code, fixed = TRUE)), info = u)
   }
+})
+
+test_that("km_cards' set is its data's: the records joined to the set's subjects, no flag step (A2)", {
+  o <- tfl_template_resolve(kmc_report(), study = kmc_study)
+  expect_identical(.report_population(o), "FAS")
+  # the program's read of ADTTE: the records of the subjects the data part
+  # makes (adsl_sub), as every A2 figure's
+  subj <- list(object = "adsl_sub", dataset = "ADSL", id = "USUBJID")
+  r <- .fig_steps_code(o$data$steps, subjects = subj)
+  txt <- gsub("\\s+", " ", paste(unlist(r$code), collapse = "\n"))
+  expect_match(txt, "inner_join(select(adsl_sub, USUBJID), by = \"USUBJID\"", fixed = TRUE)
+  expect_false(grepl("FASFL", txt, fixed = TRUE))
 })
 
 test_that("km_cards' figure builds on the package's sample data", {
