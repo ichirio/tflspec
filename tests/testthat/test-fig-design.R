@@ -512,7 +512,7 @@ test_that("a script of its own names every package its own code calls as pkg::fn
 })
 
 test_that("a template whose own code calls rtfreporter:: names it in its script", {
-  needs_line <- function(code) grep("^# also needs:", code, value = TRUE)
+  needs_line <- function(code) grep("^# also needs:", unlist(strsplit(code, "\n", fixed = TRUE)), value = TRUE)
   for (tpl in c("forest_or", "butterfly_soc", "butterfly_pt")) {
     own <- tfl_fig_design_code(tfl_fig_template(tpl), "F1")
     expect_true(any(grepl("rtfreporter", needs_line(own))), info = tpl)
