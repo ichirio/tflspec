@@ -84,7 +84,8 @@ test_that("km_cards' set is its data's: the records joined to the set's subjects
   # makes (adsl_sub), as every A2 figure's
   subj <- list(object = "adsl_sub", dataset = "ADSL", id = "USUBJID")
   r <- .fig_steps_code(o$data$steps, subjects = subj)
-  txt <- gsub("\\s+", " ", paste(unlist(r$code), collapse = "\n"))
+  # (one line, however the writer breaks a long call: no space after a "(")
+  txt <- gsub("\\(\\s+", "(", gsub("\\s+", " ", paste(unlist(r$code), collapse = "\n")))
   expect_match(txt, "inner_join(select(adsl_sub, USUBJID), by = \"USUBJID\"", fixed = TRUE)
   expect_false(grepl("FASFL", txt, fixed = TRUE))
 })
