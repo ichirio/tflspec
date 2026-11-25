@@ -16,7 +16,10 @@ files, read as \code{\link[=tfl_sheets_from_yaml]{tfl_sheets_from_yaml()}} reads
 \item{rows}{The reports' own code list rows (the sheets' \code{codelists},
 a template's lists among them), when the caller has them: the sheets are
 then not made again.  The result keeps the columns of \code{rows}, and a row
-of a report not in \code{outputs} stays.  \code{NULL} (default): made from
+of a report not in \code{outputs} stays.  The rows of a variable with a
+\code{list} cell (a reference to one of the study's lists) are made again
+from the study's list, whatever their codes and labels say; a list or code
+the study has not got stops.  \code{NULL} (default): made from
 \code{outputs}.}
 }
 \value{

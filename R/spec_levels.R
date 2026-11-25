@@ -95,7 +95,15 @@
 # `own`: a report's own items (.plan_content_from_sheets(own = TRUE)):
 # only the orders its code lists give go (a `levels` cell and the variables'
 # `order` are what the report says, and stay).
-.levels_prune_sheets <- function(items, sp, ard_spec, output_id, own = FALSE) {
+#
+# A reference's rows (a `list` cell) are the study's list's
+# (.cl_rows_from_study(), `study_cl`: the study's lists when known, the
+# `study_codelists` attribute tfl_yaml_from_sheets() puts on the table
+# sheets); a list or code the study has not got stops a program
+# (tfl_table_code()), and is left out when the sheets are read back
+# (`own`: the conversion, which keeps the cell).
+.levels_prune_sheets <- function(items, sp, ard_spec, output_id, own = FALSE,
+                                 study_cl = attr(sp, "study_codelists")) {
   if (is.null(ard_spec) || length(output_id) != 1L || is.na(output_id)) return(items)
   an <- ard_spec$analyses
   an <- an[!is.na(an$output_id) & an$output_id %in% output_id, , drop = FALSE]
@@ -112,6 +120,7 @@
   cl <- sp$codelists
   if (!is.null(cl) && nrow(cl)) {
     cl <- cl[!is.na(cl$output_id) & cl$output_id %in% output_id, , drop = FALSE]
+    cl <- .cl_rows_from_study(cl, study_cl, "tfl_table_code()", if (isTRUE(own)) "drop" else "stop")
   }
   output <- list(ard = list(analyses = analyses),
                  codelists = if (!is.null(cl) && nrow(cl)) .conv_codelists(cl, refs = FALSE))
