@@ -31,6 +31,7 @@ params:
     input: pick
     choices: vars(adtte_sub)
     default: !series time
+    unset: stop
     step: analysis
     tier: other
     description: The column of the time to event.
@@ -39,6 +40,7 @@ params:
     input: pick
     choices: vars(adtte_sub)
     default: !series censor
+    unset: stop
     step: analysis
     tier: other
     description: The censoring column (1 censored, 0 event).

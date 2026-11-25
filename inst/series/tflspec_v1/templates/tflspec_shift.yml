@@ -49,6 +49,7 @@ params:
     input: pick
     choices: study_data
     default: ADLB
+    unset: stop
     step: data
     tier: usual
     description: The dataset of the records (the data row rec_sub's from).

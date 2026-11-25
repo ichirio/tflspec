@@ -330,8 +330,9 @@
   cat <- a$categorical
   tn <- ctx$template$name %||% "demog"
   if (!length(cont) && !length(cat)) {
-    .ard_stop(sprintf(paste0("template %s: give `continuous` or `categorical`, or both ",
-                             "(the analysis variables are required: they differ in each study's shell)."), tn))
+    .tpl_args_missing_stop(sprintf(paste0("template %s: give `continuous` or `categorical`, or both ",
+                                          "(the analysis variables are required: they differ in each study's shell)."), tn),
+                           tn, c("continuous", "categorical"), any = TRUE)
   }
   # a value the template fixes (canon 1.30) is no parameter of it (a call
   # that passes the fixed value itself on, as a company's template built on
@@ -480,7 +481,8 @@
     if (length(cells)) list(tfl_item("plan_cells", cells)),
     if (length(ord)) list(tfl_item("plan_levels", ord)),
     if (length(a$labels) && length(intersect(vars, names(a$labels)))) list(tfl_item(
-      "plan_labels", list(variable = as.list(a$labels[intersect(vars, names(a$labels))])))),
+      "plan_labels", .plan_labels_args(a$labels[intersect(vars, names(a$labels))],
+                                       c(a$by, "variable")))),
     if (isTRUE(a[["total"]])) list(tfl_item("plan_total", nn(list(
       label = a$total_label, position = "last")))),
     if (!is.null(hdr)) list(hdr),

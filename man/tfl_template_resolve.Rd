@@ -21,7 +21,7 @@ A \code{tfl_output} (the report as a code SPEC).  Its attribute
 \code{"args"} holds the template's arguments as used, and \code{"origins"} where
 each came from (\code{"report"}, \code{"template"}, \code{"series"} -- a \code{!series}
 value, from the study's copy of \code{series.yml} --, \code{"study"} -- a
-\code{!study} value, from \code{study.yml} --, \code{"fixed"}).
+\code{!study} value, from \code{study.yml}, or its fallback's origin --, \code{"fixed"}).
 }
 \description{
 Reads the report's template (\verb{template: name: <series>/<template>}), puts

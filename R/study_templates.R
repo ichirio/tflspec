@@ -9,9 +9,9 @@
 #
 # copied.yml, by the file's path in the series folder:
 #
-#   templates/demog.yml:
+#   templates/tflspec_summary.yml:
 #     from: {folder: <source>/tflspec_v1, source: package, version: 0.1.0,
-#            template: demog}
+#            template: tflspec_summary}
 #     at: 2026-11-19 10:00:00
 #     md5: 3f9c1a...
 #
@@ -45,7 +45,7 @@
 .study_tpl_id <- function(id, fn) {
   if (!is.character(id) || length(id) != 1L || is.na(id) || !grepl("^[^/]+/[^/]+$", id)) {
     stop(fn, ": template ", encodeString(as.character(id)[1L], quote = "\""),
-         ": write <series>/<name>, e.g. \"tflspec_v1/demog\".", call. = FALSE)
+         ": write <series>/<name>, e.g. \"tflspec_v1/tflspec_summary\".", call. = FALSE)
   }
   s <- sub("/.*$", "", id)
   t <- sub("^.*/", "", id)
@@ -92,7 +92,7 @@
   file.path(folder, "templates", paste0(entry$from$template %||% .copied_key_name(key), ".yml"))
 }
 
-# "templates/demog.yml" -> "demog"
+# "templates/tflspec_summary.yml" -> "tflspec_summary"
 .copied_key_name <- function(key) sub("^templates/(.*)[.]yml$", "\\1", key)
 
 # The source of a study's series now: `dir` first, then the folder it was
@@ -114,6 +114,29 @@
   if (identical(src$source, "package")) fr$version <- as.character(utils::packageVersion("tflspec"))
   if (!is.null(template)) fr$template <- template
   list(from = fr, at = format(Sys.time(), "%Y-%m-%d %H:%M:%S"), md5 = .series_md5(to))
+}
+
+# Keeps the study's file `to` before `from` is copied over it: in
+# <spec>/.backup/<yyyymmdd-HHMMSS>/<its path under spec/> (tflplanner's
+# naming; a second one in the same second gets -2, -3, ...), so a later
+# backup never replaces an earlier one.  Gives the kept file's path, or NULL
+# when there is no `to` or its content is the same as `from`'s.
+.copied_backup <- function(from, to, spec_dir) {
+  if (!file.exists(to) || identical(.series_md5(to), .series_md5(from))) return(NULL)
+  rel <- substr(to, nchar(spec_dir) + 2L, nchar(to))
+  base <- file.path(spec_dir, ".backup", format(Sys.time(), "%Y%m%d-%H%M%S"))
+  dir <- base
+  n <- 1L
+  while (file.exists(file.path(dir, rel))) {
+    n <- n + 1L
+    dir <- paste0(base, "-", n)
+  }
+  kept <- file.path(dir, rel)
+  dir.create(dirname(kept), recursive = TRUE, showWarnings = FALSE)
+  if (!isTRUE(file.copy(to, kept, copy.date = TRUE))) {
+    stop("cannot keep ", to, " in ", kept, " before copying over it.", call. = FALSE)
+  }
+  kept
 }
 
 .copied_row <- function(series, template, file, from, md5, status) {
@@ -152,15 +175,18 @@
 #'
 #' The study changes a template by editing its copy, and a series's values
 #' in its copy's `values:` ([tfl_series_values_set()]).  A report SPEC
-#' still names a template as `template: name: tflspec_v1/demog`; a report
-#' that names a template the study has not copied stops, with the call
-#' that copies it.  With `as`, a template is copied under a new name: a
-#' template of this study only (`copied.yml` keeps the original's name).
+#' still names a template as `template: name: tflspec_v1/tflspec_summary`; a
+#' report that names a template the study has not copied stops, with the
+#' call that copies it (a template retired from the series, such as
+#' `tflspec_v1/demog`, with the template to use instead).  With `as`, a
+#' template is copied under a new name: a template of this study only
+#' (`copied.yml` keeps the original's name).
 #'
 #' When a source changes, `tfl_template_status()` lists each copied file's
 #' state, `tfl_template_diff()` shows a copy's lines against its source,
 #' and `tfl_recopy_templates()` copies the chosen templates again (the
-#' study's own edits of them are lost, with a warning).
+#' study's own edits of them are replaced, with a warning; the file as it
+#' was is kept under `spec/.backup/`).
 #'
 #' @param study_dir The study folder (holds `study.yml` and `spec/`).
 #' @param templates Template ids, `"<series>/<name>"`.  `NULL`
@@ -192,19 +218,19 @@
 #' @examples
 #' study <- tempfile("study")
 #' dir.create(file.path(study, "spec", "outputs"), recursive = TRUE)
-#' writeLines(c("id: T-1", "kind: table", "template:", "  name: tflspec_v1/demog",
+#' writeLines(c("id: T-1", "kind: table", "template:", "  name: tflspec_v1/tflspec_summary",
 #'              "  analysis: {by: TRT01A, continuous: [AGE]}"),
 #'            file.path(study, "spec", "outputs", "T-1.yml"))
 #' tfl_copy_templates(study)[, c("series", "template", "status")]
-#' tfl_copy_templates(study, "tflspec_v1/demog", as = "demog_wide")$status
+#' tfl_copy_templates(study, "tflspec_v1/tflspec_summary", as = "summary_wide")$status
 #' tfl_template_status(study)[, c("template", "status")]
 #'
 #' # the study edits its copy; the copy now differs from the source
-#' f <- file.path(study, "spec", "series", "tflspec_v1", "templates", "demog.yml")
+#' f <- file.path(study, "spec", "series", "tflspec_v1", "templates", "tflspec_summary.yml")
 #' writeLines(c(readLines(f), "# the study's note"), f)
 #' tfl_template_status(study)$status
-#' tail(tfl_template_diff(study, "tflspec_v1/demog"), 2)
-#' suppressWarnings(tfl_recopy_templates(study, "tflspec_v1/demog"))$status
+#' tail(tfl_template_diff(study, "tflspec_v1/tflspec_summary"), 2)
+#' suppressWarnings(tfl_recopy_templates(study, "tflspec_v1/tflspec_summary"))$status
 #' unlink(study, recursive = TRUE)
 #' @export
 tfl_copy_templates <- function(study_dir, templates = NULL, as = NULL, dir = NULL) {
@@ -269,7 +295,9 @@ tfl_copy_templates <- function(study_dir, templates = NULL, as = NULL, dir = NUL
       sc <- source_of()
       from <- file.path(sc$path, "templates", paste0(t, ".yml"))
       if (!file.exists(from)) {
-        stop(fn, ": no template ", s, "/", t, " in series ", s, " (no ", from, ").", call. = FALSE)
+        note <- .series_retired_note(paste0(s, "/", t))
+        stop(fn, ": no template ", s, "/", t, " in series ", s, " (no ", from, ").",
+             if (nzchar(note)) paste0(" ", note, "."), call. = FALSE)
       }
       entries[[key]] <- .copied_copy(from, dest, sc, template = t)
       rows[[length(rows) + 1L]] <- .copied_row(s, to, dest, from, entries[[key]]$md5, "copied")
@@ -330,8 +358,10 @@ tfl_template_status <- function(study_dir, dir = NULL) {
   source <- if (is.null(src)) NA_character_ else
     file.path(src$path, "templates", paste0(entries[[key]]$from$template %||% p[["template"]], ".yml"))
   if (is.na(source) || !file.exists(source)) {
+    note <- .series_retired_note(paste0(p[["series"]], "/", entries[[key]]$from$template %||% p[["template"]]))
     stop(fn, ": the source of template ", template, " is missing (",
-         .copied_from_file(entries[[key]], key), ").", call. = FALSE)
+         .copied_from_file(entries[[key]], key), ").",
+         if (nzchar(note)) paste0(" ", note, "."), call. = FALSE)
   }
   list(series = p[["series"]], template = p[["template"]], key = key, root = root,
        entries = entries, copy = copy, source = source, src = src)
@@ -394,9 +424,10 @@ tfl_recopy_templates <- function(study_dir, templates) {
     x <- .study_copied_tpl(study_dir, id, fn)
     e <- x$entries[[x$key]]
     st <- .copied_state(x$copy, x$source, as.character(e$md5 %||% NA_character_))
-    if (st %in% c("study_changed", "both_changed")) {
+    kept <- .copied_backup(x$source, x$copy, dirname(x$root))
+    if (st %in% c("study_changed", "both_changed") && !is.null(kept)) {
       warning(fn, ": ", id, ": the study's edits of ", x$copy, " are lost (copied again from ",
-              x$source, ").", call. = FALSE)
+              x$source, "); the file as it was is kept in ", kept, ".", call. = FALSE)
     }
     entries <- x$entries
     entries[[x$key]] <- .copied_copy(x$source, x$copy, x$src, template = e$from$template %||% x$template)
@@ -427,7 +458,7 @@ tfl_recopy_templates <- function(study_dir, templates) {
 #' @examples
 #' study <- tempfile("study")
 #' dir.create(study)
-#' invisible(tfl_copy_templates(study, "tflspec_v1/ae_soc_pt"))
+#' invisible(tfl_copy_templates(study, "tflspec_v1/tflspec_hierarchy"))
 #' tfl_series_values_set(study, "tflspec_v1",
 #'                       list(any_row_label = "Subjects with at least one TEAE"))
 #' f <- file.path(study, "spec", "series", "tflspec_v1", "series.yml")

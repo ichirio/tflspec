@@ -83,8 +83,9 @@
                                          "layout", "wrap")]
   opts <- Filter(Negate(is.null), opts)
   spec <- do.call(rtfreporter::listing_spec, c(list(cols), opts))
-  ard <- if (!is.null(sheets)) .ard_spec_of_study(st, output_id = ro$id, sheets = sheets)$spec
-  recs <- suppressMessages(suppressWarnings(as.data.frame(.listing_data_of(ro, st, ".", ard = ard))))
+  s <- if (!is.null(sheets)) .ard_spec_of_study(st, output_id = ro$id, sheets = sheets)
+  recs <- suppressMessages(suppressWarnings(as.data.frame(
+    .listing_data_of(ro, st, ".", ard = s$spec, codelists = s$codelists))))
   if (!nrow(recs)) stop("the listing's data has no records", call. = FALSE)
   gone <- setdiff(unique(unlist(lapply(all_cols, function(cl) cl$vars))), names(recs))
   if (length(gone)) {

@@ -55,13 +55,45 @@
     return(stats::as.formula(paste("~", x$text), env = globalenv()))
   }
   if (inherits(x, "tfl_spec_call")) {
-    f <- .spec_fun(x$fun)
-    return(do.call(f, lapply(x$args, .spec_eval, env = env)))
+    return(.spec_apply(.spec_fun(x$fun), x$args, env = env))
   }
   if (is.list(x) && !is.object(x)) {
     return(lapply(x, .spec_eval, env = env))
   }
   x
+}
+
+# A step run: `f` on its arguments (`first`, the plan or the data, before
+# them), each .spec_eval()'d.  The call is evaluated in .spec_run_env(), so
+# an R value among them (`!r rtf_border(top = "single")`, a language object
+# here) runs as the program runs it.  The one way every argument of every
+# verb is run: tfl_table_plan() (the app's preview), tfl_content_run(), a
+# call inside a value.
+.spec_apply <- function(f, args, first = NULL, env = emptyenv()) {
+  a <- lapply(args, .spec_eval, env = env)
+  if (!is.null(first)) a <- c(list(first), a)
+  do.call(f, a, envir = .spec_run_env())
+}
+
+# Where a step's R is evaluated: with rtfreporter's and tflspec's exports in
+# reach -- the program attaches rtfreporter and writes their functions
+# bare (.schema_call_fun()) -- over the global environment, not tflspec's
+# namespace (where rtfreporter's functions are not found).  Made once for
+# the namespaces loaded.
+.spec_run_cache <- new.env(parent = emptyenv())
+.spec_run_env <- function() {
+  ns <- lapply(c("tflspec", "rtfreporter"), asNamespace)
+  if (!is.null(.spec_run_cache$env) && identical(.spec_run_cache$ns, ns)) {
+    return(.spec_run_cache$env)
+  }
+  e <- globalenv()
+  for (n in ns) {
+    x <- mget(getNamespaceExports(n), envir = n, inherits = TRUE, ifnotfound = list(NULL))
+    e <- list2env(Filter(Negate(is.null), x), parent = e)
+  }
+  .spec_run_cache$ns <- ns
+  .spec_run_cache$env <- e
+  e
 }
 
 # an argument name as it can be written: bare, or quoted
@@ -484,8 +516,17 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
     # (.levels_prune()); not when the program's data part makes the data
     items <- c(nz, .levels_prune_sheets(items, sp, ard_spec, id))
   }
-  .content_table_code(items, data = data, plan = plan, pipe = pipe)
+  # BIGN's rows: the headings' N, not the table's -- the rule
+  # tfl_content_code() follows (.bign_applies()): a workbook's report and
+  # its spec file's write the same lines
+  items <- .bign_header_items(items, tfl_r("bign"))
+  used <- isTRUE(attr(items, "used"))
+  attr(items, "used") <- NULL
+  c(.bign_code(data, n = used, labels = .bign_labels(items, .bign_var(items)),
+               total = .bign_total(items)),
+    .content_table_code(items, data = data, plan = plan, pipe = pipe))
 }
+
 
 # A table's content -- its items, in order (tfl_item()) -- as the program:
 # `plan <- data |> table_plan(...) |> plan_*() ...`, the code lists of
@@ -819,6 +860,18 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   }
   for (i in seq_along(seq_v)) vars[[seq_v[i]]]$order <- i
   vars
+}
+
+# Does a sheet's row hold a value no cell says as it is -- an R expression
+# or call (.spec_expr(), .spec_call(), a formula, a function) -- anywhere in
+# it?  .plan_sheets_from_content() writes its rows as text (`txt()`).
+.bridge_holds_r <- function(x) {
+  if (inherits(x, c("tfl_spec_expr", "tfl_spec_call", "tfl_spec_sym", "tfl_spec_formula")) ||
+      is.language(x) || is.function(x)) {
+    return(TRUE)
+  }
+  if (is.list(x)) return(any(vapply(x, .bridge_holds_r, NA)))
+  FALSE
 }
 
 # The arguments of an item that .plan_sheets_from_content() has no place
@@ -1353,6 +1406,19 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
         if (!is.null(named$sep)) tb$sep <- named$sep
       },
       miss(fn, "a verb no sheet holds"))
+    # an R value the branch put on a sheet as it is (plan_style(border =
+    # rtf_border(...)), a call or an expression of any verb's argument): a
+    # cell would hold its text, read back as a string -- not the call the
+    # program runs.  The sheets are as before the item, and the item goes
+    # whole to content_more, run as the program runs it (tfl_table_plan())
+    if (!cur %in% lost_at && .bridge_holds_r(list(tb, study, vars, cells, lay, sty, cols,
+                                                  cstyles, hdr, codes))) {
+      tb <- snap[[1L]]; study <- snap[[2L]]; vars <- snap[[3L]]; cells <- snap[[4L]]
+      lay <- snap[[5L]]; sty <- snap[[6L]]; cols <- snap[[7L]]; cstyles <- snap[[8L]]
+      hdr <- snap[[9L]]; codes <- snap[[10L]]; labelled <- snap[[11L]]
+      miss(fn, "an R value (a call or an expression) a sheet's cell would hold as text")
+      next
+    }
     # the item's rest: with a part the sheets say it is kept beside it; with
     # nothing else the sheets say, the item goes whole as before
     if (length(ra) && !cur %in% lost_at) {
@@ -1412,6 +1478,190 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   sp
 }
 
+# ---- BIGN: the column headings' N, apart from the table ---------------------
+# tflspec picks a report's rows by output_id and tells its analyses apart
+# by analysis_id; BIGN's rows (the subjects of each group, the headings'
+# N, canon 23a41ff) are not the table's.  The table is made from the other
+# rows, and BIGN's numbers go to rtfreporter apart, as
+# plan_col_header(values = list(n = )): rtfreporter reads neither
+# output_id nor analysis_id (the user's rule, 2026-11-21; rtfreporter#1103,
+# BIGN's rows among a shift table's made a page of their own).
+.bign_id <- "BIGN"
+
+# Does the BIGN rule apply to the report?  Every table made from an ARD
+# (not a table of records): the program splits BIGN's rows off whatever
+# the ARD holds, so the rule does not hang on how the spec was read (a
+# spec file, a workbook, a planner's copy) -- tfl_bign_values() and
+# tfl_bign_drop() find no BIGN row and change nothing
+.bign_applies <- function(output) {
+  identical(output$kind, "table") && !identical(output$data$source, "dataset")
+}
+
+# A header text's population token: {n}, {n1}, {n:Placebo}
+.bign_token_re <- "[{]n[0-9]*(:[^}]*)?[}]"
+
+# The content with `value` as the values of each plan_col_header() whose
+# text says {n} and that gives none; attr "used": whether one took it
+.bign_header_items <- function(content, value) {
+  used <- FALSE
+  out <- lapply(content, function(it) {
+    if (!identical(.schema_fn_name(it$fn), "plan_col_header") || !is.null(it$args$values)) return(it)
+    txt <- as.character(unlist(list(it$args$header, it$args$lines), use.names = FALSE))
+    if (!any(grepl(.bign_token_re, txt))) return(it)
+    it$args$values <- value
+    used <<- TRUE
+    it
+  })
+  attr(out, "used") <- used
+  out
+}
+
+# BIGN's n of each group (the by variable's values, as the table's column
+# keys), one unnamed number for a BIGN with no by; NULL when the ARD has
+# none
+.bign_n <- function(ard) {
+  if (!all(c("analysis_id", "stat_name", "stat") %in% names(ard))) return(NULL)
+  b <- ard[as.character(ard$analysis_id) %in% .bign_id &
+             as.character(ard$stat_name) %in% "n", , drop = FALSE]
+  if (!nrow(b)) return(NULL)
+  lv <- if ("variable_level" %in% names(b)) b$variable_level else rep(list(NULL), nrow(b))
+  nm <- vapply(lv, function(x) if (length(x) && !is.na(x[[1L]])) as.character(x[[1L]]) else "", "")
+  n <- stats::setNames(as.numeric(unlist(b$stat)), nm)
+  if (all(!nzchar(nm))) unname(n[1L]) else n[nzchar(nm)]
+}
+
+# BIGN's variable: the table's column variable (the first of
+# table_plan(cols = ), as the content says it), whose values name the
+# columns the header's N goes under; NULL when the content has none
+.bign_var <- function(content) {
+  for (it in content) {
+    if (!identical(.schema_fn_name(it$fn), "table_plan")) next
+    v <- as.character(unlist(it$args$cols, use.names = FALSE))
+    v <- trimws(unlist(strsplit(v, "|", fixed = TRUE)))
+    v <- v[nzchar(v)]
+    if (length(v)) return(v[[1L]])
+  }
+  NULL
+}
+
+# The labels the content gives the values of `var` (its plan_labels()
+# entry: the code lists' labels .tpl_labels_items() added, or the
+# report's own): the column keys the header's N goes under are these,
+# so BIGN's n is named by them too.  A character vector code = label, or
+# the entry's R (tfl_r) as it is; NULL when there is none
+.bign_labels <- function(content, var) {
+  if (is.null(var) || is.na(var)) return(NULL)
+  for (it in content) {
+    if (!identical(.schema_fn_name(it$fn), "plan_labels")) next
+    v <- it$args[[var]]
+    if (inherits(v, "tfl_r")) return(v)
+    v <- unlist(v)
+    if (is.character(v) && !is.null(names(v))) {
+      v <- v[nzchar(names(v)) & names(v) != var]
+      if (length(v)) return(v)
+    }
+  }
+  NULL
+}
+
+# n named by the labels (a value with no label keeps its own)
+.bign_relabel <- function(n, labels) {
+  labels <- unlist(labels)
+  if (is.null(n) || is.null(names(n)) || !is.character(labels) || is.null(names(labels))) return(n)
+  hit <- names(n) %in% names(labels)
+  names(n)[hit] <- unname(labels[names(n)[hit]])
+  n
+}
+
+# The Total column's heading when the content makes one: its plan_total()
+# items' label and direction, the last given of each (as the layers
+# merge them), the label "Total" when none gives it.  NULL when there is
+# no plan_total(), when it totals rows only, or when its label is not one
+# text.  Its N is the groups' sum (tfl_bign_values(total = )).
+.bign_total <- function(content) {
+  hit <- FALSE
+  label <- NULL
+  dir <- NULL
+  val <- function(x) if (inherits(x, "tfl_unset")) NULL else unlist(x)
+  for (it in content) {
+    if (!identical(.schema_fn_name(it$fn), "plan_total")) next
+    hit <- TRUE
+    if ("label" %in% names(it$args)) label <- val(it$args$label)
+    if ("direction" %in% names(it$args)) dir <- val(it$args$direction)
+  }
+  if (!hit || identical(as.character(dir), "rows")) return(NULL)
+  if (is.null(label)) return("Total")
+  if (is.character(label) && length(label) == 1L && !is.na(label) && nzchar(label)) label else NULL
+}
+
+# The ARD without BIGN's rows
+.bign_drop <- function(ard) {
+  if (!"analysis_id" %in% names(ard)) return(ard)
+  ard[!as.character(ard$analysis_id) %in% .bign_id, , drop = FALSE]
+}
+
+# The same, as the program's lines on its ARD object `obj`: `bign`, the
+# header's values, when a heading reads it, then the ARD without BIGN's
+# rows
+.bign_code <- function(obj, n = TRUE, labels = NULL, total = NULL) {
+  lab <- if (inherits(labels, "tfl_r")) as.character(labels)
+         else if (!is.null(labels)) paste(deparse(labels, width.cutoff = 500L), collapse = "")
+  .drop_attached_ns(c(
+    "# BIGN: the column headings' N, apart from the table's rows",
+    if (n) sprintf("bign <- tflspec::tfl_bign_values(%s%s%s)", obj,
+                   if (is.null(lab)) "" else paste0(", labels = ", lab),
+                   if (is.null(total)) "" else paste0(", total = ", encodeString(total, quote = "\""))),
+    sprintf("%s <- tflspec::tfl_bign_drop(%s)", obj, obj),
+    ""))
+}
+
+#' BIGN: the column headings' N, apart from the table's rows
+#'
+#' A report's ARD holds the subjects of each group as the rows of its
+#' `BIGN` analysis (`analysis_id == "BIGN"`): they are the column
+#' headings' N, not the table's cells.  tflspec takes them out before the
+#' table is made and gives their numbers to rtfreporter apart, as
+#' `plan_col_header(values = )`; rtfreporter reads no `analysis_id`.  The
+#' program of a table made from an ARD calls these two, and so does
+#' [tfl_content_run()].
+#'
+#' @param ard An ARD (a data frame with `analysis_id`, `stat_name` and
+#'   `stat`).  Without those columns, or with no BIGN row, nothing is
+#'   found and nothing changes.
+#' @param labels The labels the table's column variable takes (a named
+#'   character vector, code = label, as its `plan_labels()` entry): the
+#'   numbers are named as the columns are.  `NULL`: the codes.
+#' @param total The Total column's heading, when the table has one
+#'   (`plan_total()`'s label, "Total" when it gives none): its N is the
+#'   groups' sum, under that name.  `NULL` (default): no Total column.
+#' @return `tfl_bign_values()`: `list(n = )`, the n of each group named by
+#'   its value (one unnamed number when BIGN has no group), for
+#'   `plan_col_header(values = )`; `NULL` when the ARD has no BIGN row.
+#'   `tfl_bign_drop()`: the ARD without its BIGN rows.
+#' @examples
+#' ard <- data.frame(analysis_id = c("BIGN", "BIGN", "SEX"),
+#'                   variable_level = I(list("Drug X", "Control", "F")),
+#'                   stat_name = c("n", "n", "n"), stat = I(list(80, 78, 41)))
+#' tfl_bign_values(ard, labels = c("Drug X" = "Drug X 200 mg"))
+#' tfl_bign_values(ard, total = "Total")
+#' nrow(tfl_bign_drop(ard))
+#' @export
+tfl_bign_values <- function(ard, labels = NULL, total = NULL) {
+  n <- .bign_n(ard)
+  if (is.null(n)) return(NULL)
+  n <- .bign_relabel(n, labels)
+  if (is.character(total) && length(total) == 1L && !is.na(total) && nzchar(total) &&
+      !is.null(names(n)) && !total %in% names(n)) {
+    n <- c(n, stats::setNames(sum(n), total))
+  }
+  list(n = n)
+}
+
+#' @rdname tfl_bign_values
+#' @export
+tfl_bign_drop <- function(ard) .bign_drop(ard)
+
+
 #' Make a report's content, from its spec file, without its code
 #'
 #' Runs what [tfl_content_code()] writes: the same items, in the same order,
@@ -1468,6 +1718,13 @@ tfl_content_run <- function(output, data) {
   }
   # plan_levels() the ARD already says: left out, as the program does
   if (identical(output$kind, "table")) output$content <- .levels_prune(output$content, output)
+  # BIGN's rows: the headings' N, not the table's (.bign_applies())
+  if (.bign_applies(output)) {
+    v <- tfl_bign_values(data, labels = .bign_labels(output$content, .bign_var(output$content)),
+                         total = .bign_total(output$content))
+    data <- tfl_bign_drop(data)
+    if (!is.null(v)) output$content <- .bign_header_items(output$content, v)
+  }
   # a table of records (its data a dataset: a table_plan(value = ) with
   # its parts) has no ARD to normalize
   if (identical(output$data$source, "dataset")) output$content <- .content_drop_data_steps(output$content)
@@ -1485,7 +1742,7 @@ tfl_content_run <- function(output, data) {
     assign(obj, data, envir = env)
     x <- data
     for (cl in .content_calls(sp$pre)) {
-      x <- do.call(.spec_fun(cl$fun), c(list(x), lapply(cl$args, .spec_eval, env = emptyenv())))
+      x <- .spec_apply(.spec_fun(cl$fun), cl$args, first = x)
     }
     assign("data", x, envir = env)
     eval(parse(text = steps), env)
@@ -1547,8 +1804,7 @@ tfl_content_run <- function(output, data) {
   }
   x <- data
   run <- function(cl, first) {
-    f <- .spec_fun(cl$fun)
-    do.call(f, c(list(first), lapply(cl$args, .spec_eval, env = penv)))
+    .spec_apply(.spec_fun(cl$fun), cl$args, first = first, env = penv)
   }
   for (cl in pl$pre) x <- run(cl, x)
   p <- run(pl$head, x)
@@ -1692,6 +1948,19 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
     message(sprintf(paste0("%s: the template's call cannot say this report's own data, table ",
                            "roles or normalize_ard() arguments; its items are written."), output$id))
   }
+  # BIGN's rows: the headings' N, not the table's (.bign_applies()); the
+  # lines that take them out go just before the table, on the object it
+  # reads (after the data's steps: normalize_ard() keeps BIGN's rows), as
+  # tfl_table_code() writes them, so a program's data part never has them
+  bign <- .bign_applies(output)
+  if (bign) {
+    output$content <- .bign_header_items(output$content, tfl_r("bign"))
+    bign_n <- isTRUE(attr(output$content, "used"))
+    attr(output$content, "used") <- NULL
+  }
+  bign_pre <- function(obj) if (bign) .bign_code(obj, n = bign_n,
+                                                   labels = .bign_labels(output$content, .bign_var(output$content)),
+                                                   total = .bign_total(output$content))
   # the object the pipe starts from: the output's own name for it, else
   # the ARD when the content normalizes it, else the normalized data
   # the data's steps (`data.steps`, the Rework, the old process_code): R
@@ -1704,7 +1973,7 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
     sp <- .content_rework_split(output$content)
     return(c(.drop_attached_ns(
                .content_rework_normalize_code(sp$pre, output$data$object %||% "ard", pipe)),
-             steps, "",
+             steps, "", bign_pre(data %||% "data"),
              .content_table_code(sp$rest, data = data %||% "data",
                                  plan = plan, pipe = pipe, kind = output$kind)))
   }
@@ -1720,7 +1989,8 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
                                    kind = output$kind)))
     }
     # the steps make the data: no normalize_ard() of the defaults after them
-    return(c(steps, "", .content_table_code(.content_drop_data_steps(output$content),
+    return(c(steps, "", bign_pre(data %||% "data"),
+             .content_table_code(.content_drop_data_steps(output$content),
                                             data = data %||% "data",
                                             plan = plan, pipe = pipe, kind = output$kind)))
   }
@@ -1732,7 +2002,7 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
   # a listing of records: its data part first, the sheets' writer's
   recs <- if (!is.null(study) && identical(output$kind, "listing") &&
               identical(output$data$source, "dataset")) .content_listing_data(output, study)
-  c(recs, if (length(recs)) "",
+  c(recs, if (length(recs)) "", bign_pre(data),
     .content_table_code(output$content, data = data, plan = plan, pipe = pipe,
                         kind = output$kind))
 }
@@ -1741,8 +2011,8 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
 # "data"), the one writer both paths share (R/spec_parts.R)
 .content_listing_data <- function(output, study) {
   if (is.character(study) && length(study) == 1L) study <- tfl_read_study_spec(study)
-  spec <- .ard_spec_of_study(study, output_id = output$id)$spec
-  .records_code(output, output$data, "data", spec)
+  s <- .ard_spec_of_study(study, output_id = output$id)
+  .records_code(output, output$data, "data", s$spec, s$codelists)
 }
 
 # A listing's labels as the sheets write them (.listing_label(): a
@@ -1948,12 +2218,25 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
       if (length(other) > 1L) "are" else "is",
       paste(.plan_role_names, collapse = ", ")))
   }
+  # the items, with the ones the sheets cannot say (the tables row's
+  # content_more: an R value, a verb no sheet holds) each in its place, as
+  # tfl_table_code() writes them -- the app's preview is the program's plan,
+  # not the sheets' part of it.  normalize_ard() is the data's: `data` comes
+  # normalized
+  base <- .plan_content_items(sp)
+  items <- .plan_content_more(base, sp$tables)
+  items <- Filter(function(it) !identical(it$fn, "normalize_ard"), items)
+  if (length(items) && identical(items[[1L]]$fn, "table_plan")) {
+    # (a table_plan() the tables row cannot say, whole in content_more: its roles)
+    if (!identical(items[[1L]], base[[1L]])) {
+      roles <- lapply(.content_calls(items[1L])[[1L]]$args, .spec_eval, env = emptyenv())
+    }
+    items <- items[-1L]
+  }
   for (r in names(dots)) if (!is.null(dots[[r]])) roles[[r]] <- dots[[r]]
-  p <- do.call(rtfreporter::table_plan, c(list(data), roles))
-  items <- .plan_content_items(sp)[-1L]
+  p <- do.call(rtfreporter::table_plan, c(list(data), roles), envir = .spec_run_env())
   for (st in .content_calls(items)) {
-    f <- .spec_fun(st$fun)
-    p <- do.call(f, c(list(p), lapply(st$args, .spec_eval, env = emptyenv())))
+    p <- .spec_apply(.spec_fun(st$fun), st$args, first = p)
   }
   p
 }

@@ -367,6 +367,10 @@ tfl_read_output <- function(path) {
     # (a multi-report file is named as its author likes)
   }
   who <- paste0("tfl_read_output(): ", y$id)
+  # (the report named in a value's message: .r_tag_stop())
+  old_id <- .spec_read$id
+  .spec_read$id <- y$id
+  on.exit(.spec_read$id <- old_id, add = TRUE)
   # (the old places, each with a line saying where it moved)
   if (!is.null(y$population)) stop(who, ": ", .common_old_line, call. = FALSE)
   common <- .common_in(y$common, who)
@@ -645,10 +649,13 @@ tfl_read_output <- function(path) {
     if (identical(.schema_fn_name(names(el)), .spec_part$fn)) {
       return(tfl_item(names(el), .part_in(args), "own"))
     }
-    return(tfl_item(names(el), .rounding_check(names(el), .logical_strict(names(el), .neutral_in(names(el), .calls_in(args)))), "own"))
+    # (R whose `!r` tag was lost stops: R/spec_r_tags.R)
+    args <- .r_tag_check(names(el), .neutral_in(names(el), .calls_in(args)))
+    return(tfl_item(names(el), .rounding_check(names(el), .logical_strict(names(el), args)), "own"))
   }
   if (is.list(el) && !is.null(el$fn)) {
-    return(tfl_item(el$fn, .neutral_in(el$fn, .calls_in(el$args %||% list())), el$from %||% "own"))
+    args <- .r_tag_check(el$fn, .neutral_in(el$fn, .calls_in(el$args %||% list())))
+    return(tfl_item(el$fn, args, el$from %||% "own"))
   }
   stop("A content item is `- fn: {args}`.", call. = FALSE)
 }
@@ -819,7 +826,22 @@ tfl_write_output <- function(x, path) {
     if (x$fn %in% c("listing_col", "rtfreporter::listing_col")) out$args <- .seqs_out(out$args, .seq_keys$listing_col)
     return(out)
   }
-  if (!is.list(x) || inherits(x, c("tfl_r", "tfl_unset"))) return(x)
+  if (inherits(x, c("tfl_r", "tfl_unset"))) return(x)
+  # a data frame (a rows<...> value) is its rows, each a map of its cells
+  # (NA ones left out), as the reader reads it; the YAML writer would write
+  # its columns
+  if (is.data.frame(x)) {
+    return(lapply(seq_len(nrow(x)), function(i) {
+      r <- lapply(as.list(x[i, , drop = FALSE]), function(v) {
+        if (is.list(v)) v[[1L]] else if (is.factor(v)) as.character(v) else v
+      })
+      .calls_out(r[!vapply(r, function(v) length(v) == 1L && is.atomic(v) && is.na(v), NA)])
+    }))
+  }
+  # a named vector is a map (`rows = c(AGE = "AGE")`: {AGE: AGE}); the YAML
+  # writer would drop its names
+  if (is.atomic(x) && !is.object(x) && length(names(x))) return(as.list(x))
+  if (!is.list(x)) return(x)
   x[] <- lapply(x, .calls_out)
   x
 }
@@ -896,7 +918,8 @@ tfl_write_output <- function(x, path) {
 # which the YAML reader folds into a character vector) as tfl_r, a
 # figure's step maps as they are
 .data_steps_in <- function(data) {
-  if (is.null(data) || is.null(data$steps)) return(data)
+  # (`data: !unset`, a part's data the layers below give: as it is)
+  if (!is.list(data) || is.null(data$steps)) return(data)
   st <- data$steps
   if (inherits(st, "tfl_r")) st <- list(st)
   else if (is.character(st)) st <- lapply(st, tfl_r)

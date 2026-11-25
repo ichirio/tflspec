@@ -2094,7 +2094,9 @@
     .item_id_given(sprintf("toupper(paste(%s, sep = \"_\"))",
                            paste(sprintf("unique(data$%s)", per), collapse = ", ")), rule$ids)
   } else .q(r$analysis_id)
-  if (own) rule <- sprintf("if (nzchar(analysis_id)) analysis_id else %s", rule)
+  # (the function's argument, .env$: inside mutate() a bare analysis_id is
+  # the ARD's own column, which tag_ard() has added, one value a row)
+  if (own) rule <- sprintf("if (nzchar(.env$analysis_id)) .env$analysis_id else %s", rule)
   sprintf("  ard <- dplyr::mutate(ard, analysis_id = %s)", rule)
 }
 
@@ -2301,7 +2303,7 @@
   # (an analysis_id column: the row's own id, else the per rule's)
   if ("analysis_id" %in% names(cond)) {
     cond$analysis_id[is.na(cond$analysis_id)] <- ""
-    p <- c(p, "analysis_id")
+    p <- unique(c(p, "analysis_id"))
   }
   tab <- paste0(name, "_conditions")
   fun <- paste0(name, "_one")

@@ -55,7 +55,9 @@
   # "{output_id}.R"), in the study's program folder; with none, the
   # report's ID is rtfreporter's last resort (program_fallback)
   entry <- .page_toc_entry(study, id)
-  prog <- .ard_spec_fill_id(entry[["program"]] %||% study$study$settings[["program"]], id)
+  # (the page's own rtf_document: program / program_fallback first)
+  prog <- .ard_spec_fill_id(doc_a[["program"]] %||% entry[["program"]] %||%
+                              study$study$settings[["program"]], id)
   dir <- study$study$settings$program_dir %||% NA_character_
   in_dir <- function(p) {
     if (is.null(p) || is.na(dir)) return(p)
@@ -76,7 +78,8 @@
                         color_table = if (length(doc_a$color_table))
                           as.character(unlist(doc_a$color_table)),
                         program = in_dir(prog),
-                        program_fallback = if (is.null(prog) && !is.na(id)) in_dir(id),
+                        program_fallback = if (is.null(prog) && !is.na(id))
+                          in_dir(doc_a[["program_fallback"]] %||% id),
                         tokens = doc_tokens,
                         file = file))
   hdr <- .page_section_band(pg, "header", tokens, split)

@@ -162,7 +162,7 @@
   for (n in names(data)) assign(n, data[[n]], envir = env)
   # a figure of items runs after the study's figure setup (theme_tfl(),
   # scale_colour_tfl(), tfl_colours()), as its program does
-  if (new) eval(parse(text = tfl_fig_setup_code()), env)
+  if (new) .fig_setup_eval(env)
   # (the study's helpers: the ARD's readers, and set_levels() of the code
   # lists and order_levels() of the arms)
   if (!is.null(data$ard) || any(grepl("set_levels(", code, fixed = TRUE)) ||

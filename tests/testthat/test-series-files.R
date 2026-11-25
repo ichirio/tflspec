@@ -14,8 +14,10 @@ series_read <- function(f) {
   yaml::read_yaml(f, handlers = series_tag_handlers())
 }
 
-series_templates <- function() {
-  fs <- list.files(file.path(series_dir(), "templates"), "[.]yml$",
+# (the shipped series' templates; `dir` another series folder: the test
+# series of the purpose templates that left tflspec_v1, canon 2026-11-24)
+series_templates <- function(dir = series_dir()) {
+  fs <- list.files(file.path(dir, "templates"), "[.]yml$",
                    full.names = TRUE)
   stats::setNames(lapply(fs, series_read), basename(fs))
 }
@@ -51,7 +53,7 @@ test_that("every file in the tflspec_v1 series folder parses", {
 test_that("every template has its keys, a BIGN item and ids on its items", {
   skip_if(!nzchar(series_dir()), "the series folder is not installed")
   ts <- series_templates()
-  expect_length(ts, 12L)
+  expect_length(ts, 7L)
   # (a listing counts nothing: tflspec_listing has no analysis step; nor
   # does km_cards, its figure drawn from the data's steps)
   no_analysis <- c("tflspec_listing.yml", "km_cards.yml")
@@ -75,7 +77,10 @@ test_that("every template has its keys, a BIGN item and ids on its items", {
 
 test_that("the percentages' denominator is BIGN and the items say how analysis ids are made", {
   skip_if(!nzchar(series_dir()), "the series folder is not installed")
-  ts <- series_templates()
+  # (the shipped templates and the test series' ones: demog, ae_soc_pt,
+  # lab_tox_shift, orr_subgroup, listing)
+  ts <- c(series_templates(), series_templates(test_path("fixtures", "series", "tflspec_test")))
+  expect_length(ts, 12L)
   for (nm in c("demog", "ae_soc_pt", "lab_tox_shift", "tflspec_shift")) {
     a <- ts[[paste0(nm, ".yml")]]$analysis
     ids <- vapply(a, function(x) x$id, character(1))
@@ -112,7 +117,9 @@ test_that("the percentages' denominator is BIGN and the items say how analysis i
   expect_true(isTRUE(tl$params$columns$required))
   expect_identical(tl$params$columns$type, "rows<vars,label,width,collapse_repeats>")
   expect_identical(tl$params$by_break$default, "page")
-  expect_identical(tl$style, "style_listing")
+  # the study's style, else the series's style_listing (canon e023312)
+  expect_identical(tl$style, list(key = "settings.style", fallback = "style_listing"))
+  expect_identical(ts[["listing.yml"]]$style, tl$style)
   cmp <- ts[["forest_hr.yml"]]$params$comparison
   expect_identical(cmp$type, "string")
   expect_identical(cmp$input, "pick")
