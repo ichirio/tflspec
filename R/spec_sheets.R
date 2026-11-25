@@ -477,7 +477,9 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     } else if (o$kind == "listing") {
       lr <- list(output_id = id)
       for (k in c("dataset", "data", "where", "sort")) if (!is.null(o$data[[k]])) lr[[k]] <- cell(o$data[[k]])
-      if (!is.null(o$data$population)) lr$population_id <- cell(o$data$population)
+      # (its analysis set: its own, else the report's, .data_population())
+      pop <- .data_population(o$data, o)
+      if (!all(is.na(unlist(pop)))) lr$population_id <- cell(pop)
       # what the listing sheets' columns cannot say is kept as YAML: the
       # items in the listing's content_more, a column's other arguments in
       # its row's more (read back by .conv_output(): nothing lost)

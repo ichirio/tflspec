@@ -857,7 +857,10 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     data <- list(source = "dataset")
     if (nrow(lr)) {
       for (k in c("dataset", "data")) if (!is.na(lr[[k]][1L] %||% NA)) data[[k]] <- lr[[k]][1L]
-      if (!is.na(lr$population_id[1L] %||% NA)) data$population <- lr$population_id[1L]
+      # (its analysis set, unless it is the report's: .data_population() reads
+      # that one from `common: population`)
+      lp <- lr$population_id[1L] %||% NA
+      if (!is.na(lp) && !identical(lp, entry$population)) data$population <- lp
       if (!is.na(lr$where[1L])) { data$where <- tfl_r(gsub("\r\n?", "\n", lr$where[1L])); note(id, "listings", 1, "where", "kept as R text (!r)", lr$where[1L]) }
       if (!is.na(lr$sort[1L])) data$sort <- as.list(.conv_split(lr$sort[1L]))
     }

@@ -9,8 +9,74 @@
 #    same piece added as a layer: an error, one of the two;
 #  - a KM figure's time axis label with no unit: a warning;
 #  - a listing whose columns all carry a width: a note, the widths to look
-#    at (a narrow subject id breaks every record over lines).
+#    at (a narrow subject id breaks every record over lines);
+#  - (A2, R5) a figure or listing that reads subjects' records with no
+#    analysis set: a warning; a data step that keeps rows by a variable of a
+#    study population's condition (`flag: SAFFL` on the records): a warning,
+#    the analysis set is the report's `common: population`.
 # ============================================================================
+
+# The variables each study population's condition reads (`populations:` of
+# spec/data.yml: a list of maps, `id` and `where`), by its id; a population
+# with no condition reads none
+.check_pop_vars <- function(pops) {
+  out <- list()
+  for (p in pops) {
+    if (!is.list(p) || is.null(p$id)) next
+    w <- .na_scalar(unlist(p$where))
+    v <- if (!is.na(w)) tryCatch(all.vars(str2lang(w)), error = function(e) character())
+    if (length(v)) out[[as.character(p$id)[1L]]] <- v
+  }
+  out
+}
+
+# The data steps that keep rows by a condition (the figure design's pieces,
+# R/fig_model.R) and the field each one's condition is in: a flag step its
+# variable, a filter its R
+.check_row_keeps <- c(flag = "variable", filter = "expr")
+
+# A2 R5: the analysis set of a figure or listing (`o`, as written) and of
+# its data steps: the rows of the check's frame (.check_rows())
+.check_population_rows <- function(o, id, pops) {
+  rows <- list(.check_rows())
+  add <- function(...) rows[[length(rows) + 1L]] <<- .check_rows(output_id = id, ...)
+  if (!identical(o$kind, "figure") && !identical(o$kind, "listing")) return(rows[[1L]])
+  d <- if (is.list(o$data)) o$data else list()
+  rp <- .out_population(o)
+  # (Q3) subjects' records -- a dataset, an analysis data, the report's code
+  # -- and no analysis set: neither the report's nor the data's, nor the
+  # text of one that shows all subjects (`common: population_label`)
+  reads <- !is.null(d$dataset) || !is.null(d$data) ||
+    (as.character(d$source %||% "ard")[1L] %in% c("dataset", "code"))
+  if (reads && all(is.na(unlist(.data_population(d, o)))) &&
+      is.na(.na_scalar(o$common$population_label))) {
+    add(part = "data", item = "common$population", level = "warning", message = paste0(
+      "the ", o$kind, " reads subjects' records and has no analysis set: write `common: population` ",
+      "(a population of spec/data.yml), whose subjects the records are joined to; for all subjects, ",
+      "`common: population_label`"))
+  }
+  # (Q4) a step that keeps the rows of a population by the records' own
+  # columns (the subjects outside it, and a record's own arm, stay)
+  pv <- .check_pop_vars(pops)
+  steps <- if (is.list(d$steps)) d$steps else list()
+  for (k in seq_along(steps)) {
+    s <- steps[[k]]
+    if (!is.list(s) || !is.character(s$step) || !s$step[1L] %in% names(.check_row_keeps)) next
+    v <- .na_scalar(unlist(s[[.check_row_keeps[[s$step[1L]]]]]))
+    if (is.na(v)) next
+    used <- tryCatch(all.vars(str2lang(v)), error = function(e) character())
+    hit <- names(pv)[vapply(pv, function(p) any(used %in% p), NA)]
+    if (!length(hit)) next
+    add(part = "data", item = sprintf("data$steps[%d]", k), level = "warning", message = sprintf(paste0(
+      "step %d (`%s: %s`) keeps the rows of population %s by the records' own %s: the analysis set is ",
+      "the report's `common: population`%s (its subjects from their dataset, the records joined to ",
+      "them); remove the step%s (a `flag` step is for a record flag, ANL01FL)"),
+      k, s$step[1L], v, paste(hit, collapse = " / "), paste(intersect(used, unlist(pv[hit])), collapse = ", "),
+      if (!is.na(rp)) sprintf(" (%s)", rp) else "",
+      if (is.na(rp)) sprintf(" and write `common: population: %s`", hit[1L]) else ""))
+  }
+  do.call(rbind, rows)
+}
 
 # Every text in a report's content and template arguments, with where it is
 .check_texts <- function(x, at = character()) {
@@ -33,7 +99,7 @@
   c(own, unlist(lapply(unclass(x), .check_items, fns = fns), recursive = FALSE))
 }
 
-.check_static_rows <- function(o, id) {
+.check_static_rows <- function(o, id, study = NULL) {
   rows <- list(.check_rows())
   add <- function(...) rows[[length(rows) + 1L]] <<- .check_rows(output_id = id, ...)
   # (a template by name alone, `template: km_simple`, or with its arguments)
@@ -103,5 +169,7 @@
         "(a subject id on one line), or leave the widths to the default"))
     }
   }
+  # a figure's or listing's analysis set (A2 R5)
+  rows[[length(rows) + 1L]] <- .check_population_rows(o, id, study$data$populations)
   do.call(rbind, rows)
 }

@@ -10,7 +10,8 @@
 #' * `warning`: the SPEC reads, but a program that runs cannot be written
 #'   from it (the ARD program or the table's code stops; a content
 #'   function the installed rtfreporter does not have yet; with `adam`, a
-#'   `!=` condition that drops the rows where its variable is NA);
+#'   `!=` condition that drops the rows where its variable is NA, and a
+#'   table whose header N and counts give a subject different groups);
 #' * `note`: the program is written all the same -- an argument the
 #'   installed cards / cardx does not know, a version to look at.
 #'
@@ -61,6 +62,13 @@
 #'   count and the form that keeps them, `!var %in% value`.  No study
 #'   folder, a dataset whose file is not there or is not listed, or a
 #'   variable not in the dataset: no row.  The generated code is not changed.
+#'   The same data check a table's header N (its `BIGN` analysis, from
+#'   whatever data or population it names) against its counts: an analysis
+#'   that groups by BIGN's variable and reads another dataset, whose data
+#'   does not take the variable from the subjects (`add`), gives a `warning`
+#'   row when the two data carry the variable and its value differs for a
+#'   subject (the subject counted under one group in the N, another in the
+#'   rows).  Only the datasets of such tables are read.
 #' @return A data frame, one row a problem: `output_id` (`NA` for the
 #'   study's ARD definition as a whole and the study's own rows), `part`
 #'   (`"file"`, `"study"`, `"ard"`, `"content"`, `"program"`, `"figure"`,
@@ -214,7 +222,7 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
           level = "check", message = paste0("to confirm: ", cf$why))
     }
     # the report as written: what stops the build far from its cause
-    rows[[length(rows) + 1L]] <- .check_static_rows(o, id)
+    rows[[length(rows) + 1L]] <- .check_static_rows(o, id, study)
     # the names its fields give: a figure's that nothing above makes, a
     # table's named block (R/object_list.R)
     rows[[length(rows) + 1L]] <- .check_object_rows(ro, id, study_ds)
@@ -294,6 +302,9 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
   }
   # (with the study's data: a `!=` that drops the rows where the variable is NA)
   rows[[length(rows) + 1L]] <- .check_ne_na_rows(study, adam, setdiff(ids, bad), is.null(output_id))
+  # (and a table's header N and its counts: a column variable of two data that
+  # differs for a subject, R/check_spec_n.R)
+  rows[[length(rows) + 1L]] <- .check_n_rows(study, adam, setdiff(ids, bad))
   out <- do.call(rbind, rows)
   out <- out[is.na(out$output_id) | out$output_id %in% ids, , drop = FALSE]
   if (isTRUE(build) && !is.null(study$dir)) {
