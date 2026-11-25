@@ -1965,32 +1965,26 @@ tfl_fig_data_name <- function(design) {
   if (length(used)) c("", .fig_unit_guard(used)) else character()
 }
 
-# the study helpers a script of its own carries when its code calls them:
-# each stands alone (base R; fmt_num() rounds by rtfreporter's round_num())
-.fig_script_helpers <- c("tte_time", "fmt_num", "fmt_pvalue")
-
-# a script of its own: the study helpers its code calls (.fig_script_helpers),
-# and the ones those call (fmt_pvalue() calls fmt_num()), each defined unless
-# the study's setup has it (a study's programs get them from
-# programs/study_helpers.R, sourced by their setup)
+# a script of its own: every study helper its code calls, and the ones
+# those call (order_arms() calls order_levels(), which calls set_levels();
+# fmt_pvalue() calls fmt_num()), in the helper file's order, each defined
+# unless the study's setup has it (a study's programs get them from
+# programs/study_helpers.R, sourced by their setup).  A helper calls other
+# packages as pkg::fn (rtfreporter::round_num(), dplyr::, cards::): they
+# need to be installed, not attached
 .fig_helper_used <- function(code) {
-  h <- tfl_helpers_code()
-  lines_of <- function(f) {
-    a <- grep(paste0("^", f, " <- function"), h)[1L]
-    b <- a - 1L + which(h[a:length(h)] == "}")[1L]
-    h[a:b]
-  }
-  calls <- function(txt) Filter(function(f) .calls_helper(txt, f), .fig_script_helpers)
-  used <- calls(code)
+  defs <- .study_helper_defs()
+  fns <- names(defs)
+  used <- .helpers_called(code, fns)
   repeat {
-    more <- union(used, calls(unlist(lapply(used, lines_of))))
+    more <- union(used, .helpers_called(unlist(defs[used]), fns))
     if (length(more) == length(used)) break
     used <- more
   }
   if (!length(used)) return(character())
-  used <- intersect(.fig_script_helpers, used)
+  used <- intersect(fns, used)
   one <- function(f) {
-    l <- lines_of(f)
+    l <- defs[[f]]
     c(paste0("if (!exists(\"", f, "\")) ", l[1L]), l[-1L])
   }
   c("", sprintf("# the study helper%s %s (tfl_helpers_code()), unless the study's setup has %s",

@@ -257,8 +257,64 @@ test_that("a number a figure prints is fmt_num(): the study's rounding, as a tab
   expect_identical(e2$fmt_pvalue(c(0.0004, 0.0125)), c("<0.001", "0.013"))
   # a name that only ends with a helper's is not a call of it
   expect_length(tflspec:::.fig_helper_used("my_fmt_num(x, 1)"), 0L)
+  # nor is a comment or a string that names one (the ARD figure's "# Input
+  # ARD" line; bind_items()'s message naming tag_ard())
+  expect_length(tflspec:::.fig_helper_used(c("# read with ard_value() / ard_stats()",
+                                             "msg <- \"fmt_num(x, 1)\"")), 0L)
+  bi <- tflspec:::.fig_helper_used("ard <- bind_items(a, b)")
+  expect_identical(sum(grepl("^if [(]!exists", bi)), 1L)
+  # every helper of the study's file, not a fixed few: the ones it calls
+  # with it, in the file's order (order_arms(), one line, calls
+  # order_levels(), which calls set_levels())
+  arms <- tflspec:::.fig_helper_used("adsl <- adsl |> order_arms()")
+  expect_identical(arms[2L], paste("# the study helpers set_levels(), order_levels(), order_arms()",
+                                   "(tfl_helpers_code()), unless the study's setup has them"))
+  expect_identical(sum(grepl("^if [(]!exists", arms)), 3L)
+  # each one's whole definition, as the file has it
+  h <- new.env(parent = globalenv())
+  eval(parse(text = tfl_helpers_code()), h)
+  fns <- tflspec:::.study_helper_fns()
+  expect_true(all(c("set_levels", "order_levels", "order_arms", "tte_time", "fmt_num",
+                    "fmt_pvalue", "ard_value", "ard_stats", "read_ard") %in% fns))
+  expect_setequal(fns, ls(h, all.names = TRUE))
+  for (f in fns) {
+    one <- tflspec:::.fig_helper_used(sprintf("y <- %s(x)", f))
+    e3 <- new.env(parent = globalenv())
+    # (the guard off: a function of that name elsewhere would skip it)
+    eval(parse(text = sub("^if [(]!exists[(]\"[^\"]+\"[)][)] ", "", one)), e3)
+    expect_true(f %in% ls(e3, all.names = TRUE), info = f)
+    expect_true(all(ls(e3, all.names = TRUE) %in% fns), info = f)
+    for (g in ls(e3, all.names = TRUE)) expect_identical(deparse(e3[[g]]), deparse(h[[g]]), info = g)
+  }
   expect_true(tflspec:::.calls_helper("lab <- fmt_num(x, 1)"))
   expect_false(tflspec:::.calls_helper("lab <- sprintf(\"%.1f\", x)"))
+})
+
+test_that("a script of its own carries every study helper it calls: the arms' order_levels() (A3)", {
+  lines <- function(x) unlist(strsplit(paste(as.character(x), collapse = "\n"), "\n", fixed = TRUE))
+  d <- tfl_fig_template("mean_se", group = "TRT01P")
+  own <- lines(tfl_fig_design_code(d, "F1", save = FALSE, name = "fig", order_arms = TRUE))
+  def <- function(f) sum(grepl(sprintf('^if [(]!exists[(]"%s"[)][)] %s <- function', f, f), own))
+  expect_true(any(grepl("order_levels(", own, fixed = TRUE)))
+  # order_levels() once, and set_levels(), which it calls
+  expect_identical(def("order_levels"), 1L)
+  expect_identical(def("set_levels"), 1L)
+  expect_identical(sum(startsWith(own, "# the study helper")), 1L)
+  expect_no_error(parse(text = own))
+  # a study's program: its setup has them, none defined
+  prog <- lines(tfl_fig_design_code(d, "F1", setup = TRUE, save = FALSE, name = "fig"))
+  expect_false(any(grepl("^if [(]!exists", prog)))
+  # it runs alone: no study helpers but its own
+  skip_if_not_installed("ggplot2")
+  e <- new.env(parent = globalenv())
+  for (n in names(adam <- tfl_example_adam())) assign(tolower(n), adam[[n]], envir = e)
+  pdf(NULL)
+  on.exit(dev.off(), add = TRUE)
+  suppressMessages(eval(parse(text = own), envir = e))
+  expect_true(is.function(e$order_levels))
+  # (ADSL's arm by its number, TRT01PN)
+  expect_identical(levels(e$adlb_sub$TRT01P), c("Drug A", "Drug B"))
+  expect_s3_class(e$fig, "ggplot")
 })
 
 test_that("a time's unit is a named constant of the setup, never a column", {
