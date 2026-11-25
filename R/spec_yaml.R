@@ -495,9 +495,10 @@ tfl_read_output <- function(path) {
 # The report's analysis set (NA when it has none)
 .out_population <- function(o) .na_scalar(o$common$population)
 
-# The analysis set of a report's data (a listing's, a records part's): its own
-# `population`, else the report's `common: population` (NA when none) -- one
-# rule, the sheets' and the YAML's alike (A2 Q7)
+# The analysis set of a report's data (a listing's, a records part's): the
+# data's own `population` (canon 11-15: the set lives on the data); the
+# report's `common: population` is read only until `common` goes (NA when
+# none) -- one rule, the sheets' and the YAML's alike (A2 Q7)
 .data_population <- function(data, o) data[["population"]] %||% .out_population(o)
 
 # The report's subjects definition (`from: ADSL`, or from the dataset its

@@ -222,7 +222,7 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
           level = "check", message = paste0("to confirm: ", cf$why))
     }
     # the report as written: what stops the build far from its cause
-    rows[[length(rows) + 1L]] <- .check_static_rows(o, id, study)
+    rows[[length(rows) + 1L]] <- .check_static_rows(o, id)
     # the names its fields give: a figure's that nothing above makes, a
     # table's named block (R/object_list.R)
     rows[[length(rows) + 1L]] <- .check_object_rows(ro, id, study_ds)
