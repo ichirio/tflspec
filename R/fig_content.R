@@ -756,7 +756,14 @@ tfl_plot <- function(name, items = list(), from = "own", input = NULL, form = c(
   code <- .fig_rename_df(code, tfl_fig_data_name(design_like))
   code <- .fig_tidy_names(code)
   needs <- setdiff(unique(needs), c("ggplot2", "ggsurvfit", "patchwork"))
-  .fig_code_out(c(.fig_units_used(code), code), d$reads, unique(libs), needs, ard = ard)
+  # no head (.fig_script_head() is a script of its own's): the content is
+  # a part of the report's program, run after the study's setup, whose
+  # programs/study_helpers.R and figure setup define the helpers it calls
+  # (tte_time(), fmt_num(), order_levels() ...) and the days_per_* constants
+  # -- tfl_content_run() evaluates both first too; it calls order_levels()
+  # of the arms, and its items may call the setup's theme_tfl(), which no
+  # head carries
+  .fig_code_out(code, d$reads, unique(libs), needs, ard = ard)
 }
 
 # `target <- a +` then each term on its line

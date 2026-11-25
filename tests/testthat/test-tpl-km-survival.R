@@ -279,3 +279,31 @@ test_that("a report's own layer_code with a template: statements on p after the 
   expect_false(any(b == "p <- ggplot() +"))
   expect_false(inherits(tryCatch(parse(text = b), error = function(e) e), "error"))
 })
+
+test_that("a template's call is its report program's part: the study helpers its code calls, none defined (A3)", {
+  km_skip()
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  dir.create(d)
+  file.copy(list.files(system.file("extdata", "spec-yaml", package = "tflspec"),
+                       full.names = TRUE), d, recursive = TRUE)
+  s <- tfl_read_study_spec(d)
+  own <- tfl_item("layer_code", list(label = "a number", code = paste(
+    "txt <- fmt_num(0.5, 2)",
+    "p <- p + ggplot2::annotate('text', x = 1, y = 0.1, label = paste(txt, fmt_num(0.25, 1)))",
+    sep = "\n")))
+  o <- tfl_output("F-9", "figure",
+                  data = list(steps = list(list(step = "read", dataset = "ADTTE"),
+                                           list(step = "param", value = "PFS"))),
+                  template = list(name = "km_survival", args = list(by = "TRT01A")),
+                  content = list(own))
+  ro <- tfl_resolve_output(o, s)
+  # the program with the template's call (A): after the study's setup, which
+  # has fmt_num() (no head: .fig_script_head() is a script of its own's)
+  a <- unlist(strsplit(as.character(tfl_content_code(ro)), "\n", fixed = TRUE))
+  expect_true(any(startsWith(a, "p <- tflspec::tfl_tpl(")))
+  expect_true(any(grepl("fmt_num(0.25, 1)", a, fixed = TRUE)))
+  expect_false(any(grepl("^if [(]!exists", a)))
+  expect_false(any(grepl("fmt_num <- function", a, fixed = TRUE)))
+  expect_no_error(parse(text = a))
+})

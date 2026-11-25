@@ -88,7 +88,7 @@ pp_plot_code1 <- function(spec, pid, adam) {
     "",
     paste0("library(", libs, ")"),
     if (ctx$type == "km") "library(survival)",
-    .fig_helper_used(g$data),
+    .fig_script_head(g$data),
     "",
     section("data"),
     pp_load_lines(ctx),

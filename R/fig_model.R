@@ -1870,7 +1870,7 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
       if (length(b$needs)) sprintf("# also needs: %s (called as pkg::fn)", paste(b$needs, collapse = ", "))),
     if (setup && gg$explicit) sprintf("# Written for ggplot2 %s", gg$version),
     if (length(b$guard)) c("", b$guard),
-    if (!setup) c(.fig_units_used(c(b$step1, b$step2)), .fig_helper_used(c(b$step1, b$step2))),
+    .fig_script_head(c(b$step1, b$step2), setup),
     "",
     section("data"),
     b$step1,
@@ -1997,6 +1997,16 @@ tfl_fig_data_name <- function(design) {
                 if (length(used) > 1L) "s" else "", paste0(used, "()", collapse = ", "),
                 if (length(used) > 1L) "them" else "it"),
     unlist(lapply(used, one)))
+}
+
+# The head of a figure script, the one rule every figure writer follows:
+# what its code uses of the study's setup -- the time-unit constants
+# (.fig_units_used()) and the study helpers (.fig_helper_used()) -- each
+# defined unless the setup has it.  `setup = TRUE`: the script is a study
+# program's part, after the study's setup, which has them all: none.
+.fig_script_head <- function(code, setup = FALSE) {
+  if (isTRUE(setup)) return(character())
+  c(.fig_units_used(code), .fig_helper_used(code))
 }
 
 #' Whether a figure's design reads an ARD
