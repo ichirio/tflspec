@@ -263,19 +263,40 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
 
 # ---- the Rd page -----------------------------------------------------------------
 
-# Rd text: markdown's and Rd's specials escaped in a table cell
+# A table cell of a template page, from a definition's text: the page is
+# roxygen markdown (a pipe table) turned into Rd, so the text must come out
+# of both as written.  A code span stays one (roxygen writes it as \code or
+# \verb, escaped); one holding a | cannot sit in a table cell, so it is
+# written as quoted text.  The rest: a backslash escape where roxygen keeps it
+# for Rd (\ { } [ ] |), an HTML entity where it does not (& < * ~, an _ at a
+# word's edge and a lone backtick; an entity's { or } would reach the Rd
+# unescaped); roxygen escapes % itself.
 .tpl_rd_cell <- function(x) {
   x <- ifelse(is.na(x), "", x)
-  x <- gsub("\\", "\\\\", x, fixed = TRUE)
-  x <- gsub("|", "\\|", x, fixed = TRUE)
-  x <- gsub("{", "\\{", x, fixed = TRUE)
-  x <- gsub("}", "\\}", x, fixed = TRUE)
-  x <- gsub("`", "'", x, fixed = TRUE)
-  x <- gsub("[", "\\[", x, fixed = TRUE)
-  x <- gsub("]", "\\]", x, fixed = TRUE)
-  # a <name> placeholder is not an HTML tag (the HTML manual check)
+  x <- gsub("[\r\n]+", " ", x)
+  vapply(x, .tpl_md_text, "", USE.NAMES = FALSE)
+}
+
+.tpl_md_text <- function(s) {
+  at <- gregexpr("`[^`]+`", s)
+  code <- regmatches(s, at)[[1L]]
+  text <- regmatches(s, at, invert = TRUE)[[1L]]
+  code <- vapply(code, function(k) {
+    if (grepl("|", k, fixed = TRUE)) paste0("'", .tpl_md_plain(substr(k, 2L, nchar(k) - 1L)), "'") else k
+  }, "", USE.NAMES = FALSE)
+  paste0(c(rbind(.tpl_md_plain(text), c(code, ""))), collapse = "")
+}
+
+.tpl_md_plain <- function(x) {
+  x <- gsub("&", "&amp;", x, fixed = TRUE)
+  x <- gsub("([\\\\{}|\\[\\]])", "\\\\\\1", x, perl = TRUE)
+  # (a <name> placeholder is not an HTML tag: the HTML manual check)
   x <- gsub("<", "&lt;", x, fixed = TRUE)
-  gsub("\n", " ", x, fixed = TRUE)
+  x <- gsub("*", "&#42;", x, fixed = TRUE)
+  # (an _ inside a word, plan_cells, is never emphasis)
+  x <- gsub("(?<![[:alnum:]])_|_(?![[:alnum:]])", "&#95;", x, perl = TRUE)
+  x <- gsub("~", "&#126;", x, fixed = TRUE)
+  gsub("`", "&#96;", x, fixed = TRUE)
 }
 
 # An example call's arguments as R text
@@ -339,7 +360,8 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
 .tpl_rd_aliases <- function(name) {
   a <- .tpl_aliases_of(name)
   if (!nrow(a)) return(NULL)
-  rows <- sprintf("| `%s` | %s | %s | %s |", a$alias, a$source, a$item, .tpl_rd_cell(a$title))
+  rows <- sprintf("| `%s` | %s | %s | %s |", a$alias, .tpl_rd_cell(a$source),
+                  .tpl_rd_cell(a$item), .tpl_rd_cell(a$title))
   paste0("@section Aliases:\n",
          "The same template by the names of other collections' items: each runs it as ",
          "itself (`tfl_tpl(x, \"", a$alias[1L], "\", ...)`).\n\n",

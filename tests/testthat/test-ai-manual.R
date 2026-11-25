@@ -190,9 +190,9 @@ test_that("the manual's survival and model rows run as written, to the hand-writ
   data <- dplyr::filter(adam$ADTTE,
                         USUBJID %in% dplyr::filter(adam$ADSL, SAFFL == "Y")$USUBJID)
   hand <- list(
-    KM = cardx::ard_survival_survfit(data, y = "survival::Surv(AVAL, 1 - CNSR)",
+    KM = cardx::ard_survival_survfit(data, y = "survival::Surv(AVAL, CNSR == 0)",
                                      variables = TRTA, times = c(30, 90)),
-    HR = cardx::ard_regression(data, formula = survival::Surv(AVAL, 1 - CNSR) ~ TRTA,
+    HR = cardx::ard_regression(data, formula = survival::Surv(AVAL, CNSR == 0) ~ TRTA,
                                method = "coxph", package = "survival"))
   for (r in list(e$km, e$cox)) {
     r$output_id <- "T"

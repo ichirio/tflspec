@@ -310,3 +310,94 @@ test_that("tag_ard() refuses what is not a cards ARD (a custom analysis's plain 
   ok <- e$tag_ard(data.frame(variable = "x", stat_name = "n", stat = 1), "T", "A")
   expect_identical(ok$output_id, "T")
 })
+
+# fictional time-to-event records, one parameter
+tte_data <- function(aval, unit) {
+  data.frame(USUBJID = sprintf("S-%02d", seq_along(aval)), PARAMCD = "OS",
+             AVAL = aval, AVALU = unit, CNSR = c(0, 1, 2)[seq_along(aval)])
+}
+
+test_that("tte_time() converts AVAL from its AVALU to the unit asked for", {
+  e <- helper_env()
+  d <- e$tte_time(tte_data(c(1, 2, 0.5), "MONTHS"), "days")
+  expect_equal(d$AVAL, c(1, 2, 0.5) * 30.4375)
+  expect_identical(d$AVALU, rep("DAYS", 3))
+  # the other columns as they were (CNSR is not touched)
+  expect_identical(d$CNSR, c(0, 1, 2))
+  expect_identical(d$USUBJID, c("S-01", "S-02", "S-03"))
+  m <- e$tte_time(tte_data(c(30.4375, 365.25), "DAYS"), "months")
+  expect_equal(m$AVAL, c(1, 12))
+  expect_identical(m$AVALU, c("MONTHS", "MONTHS"))
+  expect_equal(e$tte_time(tte_data(c(14, 7), "DAYS"), "weeks")$AVAL, c(2, 1))
+  expect_equal(e$tte_time(tte_data(2, "WEEKS"), "days")$AVAL, 14)
+  expect_equal(e$tte_time(tte_data(c(12, 6), "MONTHS"), "years")$AVAL, c(1, 0.5))
+  expect_equal(e$tte_time(tte_data(1, "YEARS"), "days")$AVAL, 365.25)
+  # the unit asked for in any case; the same unit leaves AVAL as it is
+  i <- tte_data(c(5L, 9L), "DAYS")
+  expect_identical(e$tte_time(i, "DAYS")$AVAL, c(5L, 9L))
+  expect_identical(e$tte_time(i)$AVALU, c("DAYS", "DAYS"))
+})
+
+test_that("tte_time(): AVALU in any case, none is DAYS, an empty data passes", {
+  e <- helper_env()
+  low <- e$tte_time(tte_data(c(1, 3), c("months", "Months")), "days")
+  expect_equal(low$AVAL, c(1, 3) * 30.4375)
+  expect_identical(low$AVALU, c("DAYS", "DAYS"))
+  f <- tte_data(2, "MONTHS")
+  f$AVALU <- factor(f$AVALU)
+  expect_equal(e$tte_time(f)$AVAL, 2 * 30.4375)
+  # no AVALU column: the times are days
+  no <- tte_data(c(61, 30), "DAYS")
+  no$AVALU <- NULL
+  r <- e$tte_time(no, "weeks")
+  expect_equal(r$AVAL, c(61, 30) / 7)
+  expect_identical(r$AVALU, c("WEEKS", "WEEKS"))
+  # an empty data: as it is, whatever its unit column
+  empty <- tte_data(c(1, 2), c("DAYS", "MONTHS"))[0, ]
+  expect_identical(e$tte_time(empty, "months"), empty)
+})
+
+test_that("tte_time() stops on two units, an unknown or a missing unit", {
+  e <- helper_env()
+  expect_error(e$tte_time(tte_data(c(1, 30), c("MONTHS", "DAYS"))),
+               "two or more units (AVALU DAYS, MONTHS)", fixed = TRUE)
+  expect_error(e$tte_time(tte_data(c(1, 30), c("MONTHS", "HOURS"))),
+               "AVALU HOURS is not DAYS, WEEKS, MONTHS or YEARS", fixed = TRUE)
+  expect_error(e$tte_time(tte_data(c(1, 30), c("MONTHS", NA))),
+               "AVALU is missing on 1 record(s)", fixed = TRUE)
+  expect_error(e$tte_time(tte_data(c(1, 30), c("", " "))),
+               "AVALU is missing on 2 record(s)", fixed = TRUE)
+  expect_error(e$tte_time(data.frame(AVALU = "DAYS")), "the data has no AVAL", fixed = TRUE)
+  for (u in list("hours", NA_character_, c("days", "months"), character())) {
+    expect_error(e$tte_time(tte_data(1, "DAYS"), u),
+                 "the unit must be one of days, weeks, months, years", info = toString(u))
+  }
+})
+
+test_that("tte_time(): the study's days_per_* win; else tfl_time_unit_days()", {
+  e <- helper_env()
+  one <- function(unit) e$tte_time(tte_data(1, unit), "days")$AVAL
+  d <- tfl_time_unit_days()
+  expect_identical(c(days_per_week = one("WEEKS"), days_per_month = one("MONTHS"),
+                     days_per_year = one("YEARS")), d)
+  # the study's setup sets one: it is used, the others stay
+  e$days_per_month <- 30
+  expect_identical(one("MONTHS"), 30)
+  expect_identical(e$tte_time(tte_data(60, "DAYS"), "months")$AVAL, 2)
+  expect_identical(one("YEARS"), d[["days_per_year"]])
+  # a function of that name is not a number of days
+  e$days_per_week <- function() 5
+  expect_identical(one("WEEKS"), d[["days_per_week"]])
+})
+
+test_that(".tte_surv() writes the event as CNSR == 0, and the method help says it", {
+  expect_identical(tflspec:::.tte_surv("AVAL", "CNSR"), "survival::Surv(AVAL, CNSR == 0)")
+  expect_identical(tflspec:::.tte_surv("time", "cens"), "survival::Surv(time, cens == 0)")
+  m <- tfl_ard_methods()
+  note <- m$note[m$method %in% c("km", "logrank", "regression", "km_diff")]
+  expect_length(note, 4L)
+  expect_true(all(grepl("survival::Surv(AVAL, CNSR == 0)", note, fixed = TRUE)))
+  expect_false(any(grepl("1 - CNSR", m$note, fixed = TRUE)))
+  # the helper is one a program calls by name
+  expect_true("tte_time" %in% tflspec:::.ard_helper_names)
+})

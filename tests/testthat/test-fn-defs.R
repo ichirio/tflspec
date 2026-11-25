@@ -135,7 +135,7 @@ test_that("tfl_arg_defs(fn = ) carries the function's row as the attribute fn", 
   expect_identical(attr(tfl_arg_defs(fn = "data"), "fn")$fn, "data_row")
   expect_null(attr(tfl_arg_defs(fn = "analysis"), "fn"))
   expect_null(attr(tfl_arg_defs(fn = "rtf_page"), "fn"))
-  expect_null(attr(tfl_arg_defs(template = "tflspec_v1/demog"), "fn"))
+  expect_null(attr(tfl_arg_defs(template = "tflspec_v1/tflspec_summary"), "fn"))
 })
 
 test_that("objects(<kind>) is a choice word, its kind one of the returns words (B-2)", {
