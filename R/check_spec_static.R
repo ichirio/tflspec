@@ -52,7 +52,8 @@
 .check_set_rows <- function(o, id, study) {
   rows <- list(.check_rows())
   add <- function(...) rows[[length(rows) + 1L]] <<- .check_rows(output_id = id, ...)
-  pops <- unlist(lapply(study$data$populations %||% list(), function(p) .na_scalar(unlist(p$id))))
+  # (character(0) when data.yml names none: then every set is unknown)
+  pops <- vapply(study$data$populations %||% list(), function(p) .na_scalar(unlist(p[["id"]])), "")
   pops <- pops[!is.na(pops)]
   d <- o[["data"]]
   map <- if (is.list(d) && !is.null(names(d))) d
@@ -65,14 +66,40 @@
     if (!is.null(m)) add(part = "data", item = "data$population", level = "error",
                          message = paste("the report's analysis set:", m))
   }
+  # the page's set (.out_population_or_data()) is one its rows carry, as the
+  # ARD program reads them (a subjects row with none takes the report's,
+  # .rows_set()): else the page names a set its numbers are not of
+  op <- .out_population_or_data(o)
+  rs <- .rows_set(o)
+  data_rows <- lapply(.data_rows(o), function(a) {
+    .entry_pop_inject(a, rs, .pop_from(study$data$populations %||% list(), rs))
+  })
+  # (an analysis of a dataset and a set, no analysis data, carries its own)
+  carriers <- c(data_rows, Filter(is.list, o[["ard"]][["analyses"]] %||% list()))
+  row_sets <- unique(stats::na.omit(vapply(carriers, function(a) .na_scalar(unlist(a[["population"]])), "")))
+  if (!is.na(op) && length(data_rows) && !op %in% row_sets) {
+    add(part = "data", item = "data$population", level = "warning", message = sprintf(paste0(
+      "the page names analysis set %s and no data row of the report carries it (%s): the numbers are ",
+      "not of that set. Give the report's subjects row (`from: ADSL`, no `subjects_in`) no set of its ",
+      "own, or the set %s"), op,
+      if (length(row_sets)) paste("its rows' sets:", paste(row_sets, collapse = ", ")) else "its rows name none",
+      op))
+  }
   toc <- Filter(function(e) identical(e$id, id), study$toc$outputs %||% list())
   tp <- if (length(toc)) .na_scalar(unlist(toc[[1L]][["population"]])) else NA_character_
-  op <- .out_population_or_data(o)
   if (!is.na(tp) && !is.na(op) && !identical(tp, op)) {
     add(part = "data", item = "toc$population", level = "warning", message = sprintf(paste0(
       "the TOC says analysis set %s and the report's data %s: the data's is the report's set (the ",
       "sheets and the page take it); write %s in the TOC, or the set the report means on its data"),
       tp, op, op))
+  }
+  # a TOC line of a report whose set lives on its data (.planner_set()) and
+  # which names none: the sheets keep the data as it is, not the TOC's line
+  if (!is.na(tp) && is.na(op) && is.na(.planner_set(o, tp, tryCatch(.tpl_spec_of(o), error = function(e) NULL)))) {
+    add(part = "data", item = "toc$population", level = "warning", message = sprintf(paste0(
+      "the TOC says analysis set %s and the report's data names none: the report reads all subjects, and ",
+      "the sheets do not keep the TOC's line; write `population: %s` on its data, or remove it from the TOC"),
+      tp, tp))
   }
   do.call(rbind, rows)
 }

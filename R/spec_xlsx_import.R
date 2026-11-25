@@ -353,7 +353,9 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
   if (identical(sheet, "analysis_data") && y$kind %in% c("table", "listing") &&
       (is.null(y$data) || is.null(names(y$data)))) {
     path_in <- "data"
-    pop <- y[["common"]][["population"]]
+    # (the set the sheets wrote on it, .rows_set(), of the report as read:
+    # its place map under `ard: data:` is its data map)
+    pop <- .rows_set(list(data = y[["ard"]][["data"]], common = y[["common"]]))
   }
   if (is.null(content_fn)) rows <- .get_in(y, path_in) %||% list()
   else rows <- lapply(Filter(function(it) is.list(it) && identical(names(it), content_fn), y$content %||% list()), function(it) it[[1L]])
@@ -364,7 +366,7 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
       v <- .conv_cell(part[[cn]][i], cn, r_cols, list_cols, function(...) NULL, NA, sheet, i)
       if (!is.null(v)) m[[cn]] <- v
     }
-    if (length(pop)) m <- .entry_pop_strip(m, pop, .pop_from(get_file("data.yml")$populations, pop))
+    if (length(pop) && !is.na(pop)) m <- .entry_pop_strip(m, pop, .pop_from(get_file("data.yml")$populations, pop))
     kv <- .flat_text(m[[key_col]])
     j <- .find_row(rows, list(key_col), kv)
     key <- paste(id, kv, sep = " / ")
