@@ -80,14 +80,55 @@ test_that("km_cards' program is the card chain, ggsurvfit() + ... + add_risktabl
 test_that("km_cards' set is its data's: the records joined to the set's subjects, no flag step (A2)", {
   o <- tfl_template_resolve(kmc_report(), study = kmc_study)
   expect_identical(.out_population_or_data(o), "FAS")
-  # the program's read of ADTTE: the records of the subjects the data part
-  # makes (adsl_sub), as every A2 figure's
-  subj <- list(object = "adsl_sub", dataset = "ADSL", id = "USUBJID")
-  r <- .fig_steps_code(o$data$steps, subjects = subj)
+  # the subjects as the report program makes them, from a study's
+  # populations (.fig_subjects_part()), and the program's read of ADTTE
+  # joined to them, as every A2 figure's
+  x <- tfl_ard_spec(list(
+    datasets = data.frame(dataset = c("ADSL", "ADTTE"), path = c("adsl.rds", "adtte.rds")),
+    populations = data.frame(population_id = c("FAS", "SAF"), dataset = "ADSL",
+                             where = c("FASFL == \"Y\"", "SAFFL == \"Y\"")),
+    analyses = data.frame(output_id = "T-1", analysis_id = "A1", method = "categorical",
+                          dataset = "ADSL", population_id = "SAF", by = "TRT01A",
+                          variables = "SEX")))
+  sj <- .fig_subjects_part(x, "F-9", .out_population_or_data(o))
+  expect_identical(sj$subjects$object, "adsl_sub")
+  expect_match(paste(unlist(sj$code), collapse = "\n"), "FASFL == \"Y\"", fixed = TRUE)
+  r <- .fig_steps_code(o$data$steps, subjects = sj$subjects)
   # (one line, however the writer breaks a long call: no space after a "(")
   txt <- gsub("\\(\\s+", "(", gsub("\\s+", " ", paste(unlist(r$code), collapse = "\n")))
   expect_match(txt, "inner_join(select(adsl_sub, USUBJID), by = \"USUBJID\"", fixed = TRUE)
   expect_false(grepl("FASFL", txt, fixed = TRUE))
+})
+
+test_that("km_cards' set: the argument population -- its default, a value, the report's data map (A2)", {
+  # the default: the series' efficacy set, an argument as any other
+  o <- tfl_template_resolve(kmc_report(), study = kmc_study)
+  expect_identical(o$data$population, "FAS")
+  expect_identical(attr(o, "args")$population, "FAS")
+  expect_identical(attr(o, "origins")[["population"]], "series")
+  # a value given as the template's argument
+  o <- tfl_template_resolve(kmc_report("    population: SAF"), study = kmc_study)
+  expect_identical(o$data$population, "SAF")
+  expect_identical(attr(o, "origins")[["population"]], "report")
+  # the canon's place, the report's data map: the argument's value
+  rep <- kmc_report()
+  rep$data <- list(population = "SAF")
+  o <- tfl_template_resolve(rep, study = kmc_study)
+  expect_identical(o$data$population, "SAF")
+  expect_identical(.out_population_or_data(o), "SAF")
+  expect_identical(attr(o, "origins")[["population"]], "report")
+  # `common: population` (until it goes): the same
+  rep <- kmc_report()
+  rep$common <- list(population = "SAF")
+  expect_identical(tfl_template_resolve(rep, study = kmc_study)$data$population, "SAF")
+  # the set given twice, two values: it stops
+  rep <- kmc_report("    population: ITT")
+  rep$data <- list(population = "SAF")
+  expect_error(tfl_template_resolve(rep, study = kmc_study), "write it once, on the report's data")
+  # a data map says the set only
+  rep <- kmc_report()
+  rep$data <- list(population = "SAF", source = "code")
+  expect_error(tfl_template_resolve(rep, study = kmc_study), "says its analysis set only")
 })
 
 test_that("km_cards' figure builds on the package's sample data", {

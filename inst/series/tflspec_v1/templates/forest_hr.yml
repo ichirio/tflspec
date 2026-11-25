@@ -3,6 +3,14 @@ template: forest_hr
 label: Forest plot, hazard ratio by subgroup
 figure: forest_hr
 params:
+  population:
+    type: string
+    input: pick
+    choices: populations
+    default: !series population_efficacy
+    step: data
+    tier: usual
+    description: The analysis set adsl_sub keeps (data.yml's populations).
   by:
     type: column
     input: pick
@@ -71,8 +79,6 @@ params:
     tier: other
     description: The decimals (or the format) of each statistic.
       A report's names go over the series' formats; `!unset` removes one.
-derive:
-  population: {value: !series population_efficacy}
 extends: !series extends
 style: !series style
 data:
