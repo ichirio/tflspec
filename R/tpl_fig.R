@@ -314,6 +314,16 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
   as.character(rlang::eval_tidy(q))
 }
 
+# the axis's labels step after the rows' code step; a design's data with no
+# code step: at the end
+.forest_add_y_labels <- function(data) {
+  k <- which(vapply(data, function(st) identical(st$step, "code"), NA))[1L]
+  if (is.na(k)) k <- length(data)
+  append(data, list(list(
+    step = "code", label = "the axis's labels, the subgroups' headings bold",
+    out = "y_labels", code = .forest_y_labels_code())), after = k)
+}
+
 .tpl_forest_design <- function(group = "TRT01A", subgroups = c("SEX", "AGEGR1"),
                                comparison = NULL, look = list(), ref = NULL) {
   if (!is.null(ref) && identical(ref[1L], comparison[1L])) {
@@ -338,10 +348,7 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
   # from the rows by a code step of their own -- a code step keeps its `out`
   # only (est), and the plot reads both
   if (isTRUE(look$bold_headings) && length(subgroups) > 0L) {
-    k <- which(vapply(d$data, function(st) identical(st$step, "code"), NA))[1L]
-    d$data <- append(d$data, list(list(
-      step = "code", label = "the axis's labels, the subgroups' headings bold",
-      out = "y_labels", code = .forest_y_labels_code())), after = k)
+    d$data <- .forest_add_y_labels(d$data)
   }
   # the ARD read and the rows made: all the call's (no data steps)
   keep <- vapply(d$data, function(st) st$step %in% c("ard_stats", "code"), NA)

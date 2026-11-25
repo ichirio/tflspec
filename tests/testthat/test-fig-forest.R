@@ -113,6 +113,12 @@ test_that("the forest template is in parts, with its analyses, and its design ch
   expect_false(grepl("y_labels", bold[[2L]]$code, fixed = TRUE))
   expect_length(steps("SEX", FALSE), 2L)
   expect_length(steps(character(), TRUE), 2L)
+  # data with no code step: the y_labels step is added at the end, not an error
+  d <- .tpl_forest_design("TRT01P", "SEX", look = list(bold_headings = FALSE))
+  no_code <- Filter(function(st) !identical(st$step, "code"), d$stats)
+  added <- .forest_add_y_labels(no_code)
+  expect_length(added, length(no_code) + 1L)
+  expect_identical(added[[length(added)]]$out, "y_labels")
 })
 
 test_that("text_column: its columns, a panel at the right; not with one below", {
