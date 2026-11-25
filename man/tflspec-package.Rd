@@ -24,6 +24,11 @@ Useful links:
 \author{
 \strong{Maintainer}: Yoichi Masui \email{ichi.r.pro@gmail.com} [copyright holder]
 
+Authors:
+\itemize{
+  \item Yoichi Masui \email{ichi.r.pro@gmail.com} [copyright holder]
+}
+
 Other contributors:
 \itemize{
   \item CDISC (JSON Schema of the ARS model, inst/ars/ars_ldm.json (MIT)) [copyright holder]

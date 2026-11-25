@@ -71,7 +71,7 @@ open end, written \code{as.Date(c("2024-01-01", NA))}),
 function whose name the pattern matches, of any package:
 \code{{fn: scales::label_percent}}; base R's that clinical figures write as
 a value are typed where they fit: \code{seq()} for breaks,
-\code{{fn: seq, args: {from: 0, to: 52, by: 4}}} written \code{seq(0, 52, by = 4)};
+\verb{\{fn: seq, args: \{from: 0, to: 52, by: 4\}\}} written \code{seq(0, 52, by = 4)};
 \code{alpha()} for a colour; grDevices' palettes, \code{hcl.colors()} ..., for a
 scale's colours), \verb{list<T>} (a sequence), \verb{vec<K, V>} (a map that is a
 named vector in R), \verb{map<K, V>} (a map that is a named list),
@@ -101,7 +101,7 @@ a call of \code{factor()}, \code{as.factor()}, \code{ordered()}, \code{as.numeri
 \code{log1p()}, \code{round()}, \code{after_stat()}, \code{after_scale()}, \code{stage()},
 \code{ifelse()}, \code{cut()}, \code{is.na()}, \code{nchar()}, \code{toupper()} / \code{tolower()},
 \code{substr()} or \code{trimws()}, or of the arithmetic or a comparison (\code{<},
-\code{<=}, \code{==}, \code{!=}, \verb{\%in\%}, \code{!}, \code{&}, \code{|}), of columns, constants, their
+\code{<=}, \code{==}, \code{!=}, \code{\%in\%}, \code{!}, \code{&}, \code{|}), of columns, constants, their
 arithmetic and \code{c()}, \code{sum()}, \code{max()}, \code{min()}, \code{mean()}, \code{median()},
 \code{length()}, \code{alpha()}, \code{pmin()}, \code{pmax()}, \code{cumsum()}, \code{[},
 \code{duplicated()}, \code{unique()}, \code{rank()} (\code{x: factor(AVISITN)},

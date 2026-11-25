@@ -39,7 +39,10 @@ report's skeleton and nothing of its look:
   row for one shell that covers several reports often has only the common
   part of the title, without Part 1 or Part 2.)  `label` stays the TOC's
   title.  When the two differ, say so in an assumption; it is not a
-  question.  And the shell's footnotes:
+  question.  A line the study's general conventions ask of every output
+  (a third line with the analysis set) is written when this shell leaves
+  it out, as the other shells write it: an assumption, `item: titles`,
+  `from:` the conventions' section.  And the shell's footnotes:
   {{footnotes_at}}
   A footnote is the shell's text as it is: never reworded, none added.  A
   footnote of a statistic the table does not show (`SD = Standard
@@ -75,9 +78,11 @@ report's skeleton and nothing of its look:
 Not in a draft, ever: header rows (`plan_col_header`, but the N under the
 arm above), pages (`plan_paginate_*`), blank rows, borders, fonts,
 `plan_style`.  The study's defaults and the person's builder do those.
-The column widths are in every table and listing draft: `plan_columns:
-{widths: {...}}` for a table, `width:` for a listing column (ai/AGENTS.md,
-step 5).  A figure has no column widths: write none.
+The column widths are in every table and listing draft, each from a
+basis (the shell's proportions, else the content; ai/AGENTS.md, step 5):
+for a table a `plan_columns` item in `content:`, `- plan_columns:
+{widths: {...}}` -- never a template argument; `width:` for a listing
+column.  A figure has no column widths: write none.
 A zero count the SAP or the standard prints as `0`: a guarded list (a
 guard sees the cell's statistics), a template's `count_cell: [!r 'n == 0
 ~ "0"', "{n} ({p:.1f%}%)"]` or a code SPEC's `plan_cells: {categorical:
@@ -227,10 +232,13 @@ it to these rules (every agent of tflspec#512 tripped on them):
 
 `data` (a table's or listing's flat list of definitions), one item each: `id`, `from` (a dataset of
 `spec/data.yml`, or an analysis data above it), `population`, `subjects_in`,
-`where`, `add`, `derive`, `keep`, `distinct`, `code` -- no other key (a data has no
+`where`, `add`, `derive`, `arrange`, `keep`, `distinct`, `code` -- no other key (a data has no
 `label`: its `id` names it; a note is a YAML comment).
 `population` and `subjects_in` are one or the other; with `code`, only `id`,
 `from` and `population`.
+`arrange` is the rows' order, a list of columns (of the data so far, after `derive`),
+`-COL` for descending (`arrange: [USUBJID, -ASTDT]`): write a listing's sort here, in
+the data, not in `code`; `distinct` then keeps the first row in that order.
 
 `ard.analyses`, one item each: `id`, `method`, then **either** `data`
 (an analysis data's id of this report) **or** `dataset` with
@@ -322,9 +330,10 @@ Group: {RENALGR}"`.
   `analyses: [..., {id: P_SEX, method: fisher, dataset: ADSL, population:
   SAF, by: [TRT01A], variables: [SEX]}, {id: P_AGE, method: kruskal,
   dataset: ADSL, population: SAF, by: [TRT01A], variables: [AGE]}]` and
-  `plan_compare: {p: "{p.value:.3f}"}` (the column's name is yours: `p`,
-  `pvalue`; `"<0.001"` for small values: `p: [!r 'p.value < 0.001 ~
-  "<0.001"', "{p.value:.3f}"]`).  The methods: `fisher`, `chisq`
+  `plan_compare: {p: [!r 'p.value < 0.001 ~ "<0.001"', "{p.value:.3f}"]}`
+  (the column's name is yours: `p`, `pvalue`; the p-value `<0.001` below
+  0.001, else 3 decimals -- write it so, never `"{p.value:.3f}"` alone,
+  which prints `0.000`).  The methods: `fisher`, `chisq`
   (categorical), `ttest` (two arms), `wilcox`, `kruskal`, `oneway`
   (continuous, any number of arms).  The p-value goes on the variable's
   first row; a p-value the shell puts on a row of its own is a question.
@@ -391,6 +400,32 @@ Group: {RENALGR}"`.
   heading's line breaks as the shell's, `"Start Date\n(Study
   Day)"`; a mark after a term with its space, `paste0(AEDECOD, " #")`; a
   missing date blank, `ifelse(is.na(ASTDT), "", format(ASTDT, ...))`.
+
+## SAS and R: missing values first
+
+Shells and SAPs are often written in SAS.  R treats a missing value
+otherwise, and a condition copied as it is can keep no record.
+
+- **A blank is `NA`.**  The setup reads every blank text value of the
+  ADaM (SAS's `''`) as `NA` (`dplyr::na_if(x, "")`): a flag is `"Y"` or
+  `NA`.  `x == ""` finds nothing; SAS `missing(x)` and `x = ''` are
+  `is.na(x)`.
+- **A comparison with `NA` is `NA`, and a `where` drops the row.**
+  SAS `ABLFL ne 'Y'` keeps the blanks; R `ABLFL != "Y"` drops them, and
+  keeps no record when ABLFL is blank on every other row.  Write
+  `!ABLFL %in% "Y"`.  SAS `x not in ('A', 'B')` is `!x %in% c("A",
+  "B")`; `in` is `%in%` (`%in%` is never `NA`: a missing value is simply
+  not in the list).
+- **A missing number.**  SAS takes it as smaller than every number
+  (`AVAL < 5` keeps it); R's `AVAL < 5` is `NA` and drops it.  Keep the
+  SAS meaning only when the shell means it: `is.na(AVAL) | AVAL < 5`.
+- **Sorting.**  SAS sorts missing values first; `dplyr::arrange()` puts
+  `NA` last and `sort()` drops it.  A shell's order is written as an
+  order (a code list, a `sort`), not left to the data.
+- **Counting.**  `sum(x == "Y")`, `mean(AVAL)` and `max(AVAL)` are `NA`
+  when one value is; `table()` leaves `NA` out.  In your own code write
+  `sum(x %in% "Y")`, `mean(AVAL, na.rm = TRUE)`.  A template counts its
+  missing values itself (the Missing row, `missing_row`).
 
 ## Easy mistakes (the check refuses these)
 
