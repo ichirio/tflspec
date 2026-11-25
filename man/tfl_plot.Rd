@@ -4,18 +4,36 @@
 \alias{tfl_plot}
 \title{A plot of a figure's content: its name and its items}
 \usage{
-tfl_plot(name, items = list(), from = "own")
+tfl_plot(
+  name,
+  items = list(),
+  from = "own",
+  input = NULL,
+  form = c("short", "map")
+)
 }
 \arguments{
 \item{name}{The plot's name (\code{km}; the code calls it \code{p_km}).}
 
 \item{items}{Its items (\code{\link[=tfl_item]{tfl_item()}}), the plot's first item first.}
 
-\item{from}{Where it came from, as an item's.}
+\item{from}{Where it came from, as an item's: \code{"own"} or the template
+(the provenance).  It is not the object the plot pipes from: that is
+\code{input}.}
+
+\item{input}{The object the plot's calls pipe from (a content object's
+From), one object name, or \code{NULL} for none.  In a report file it is
+the key \verb{from:} of the map form \verb{\{name, from, calls\}}; the R object
+calls it \code{input} because its field \code{from} already means the
+provenance.}
+
+\item{form}{\code{"short"} (\verb{- km: [calls]}, the default) or \code{"map"}
+(\verb{\{name, from, calls\}}): the form a report file read it in, and
+writes it back in.}
 }
 \value{
 A \code{tfl_plot}: a \code{\link[=tfl_item]{tfl_item()}} whose \code{fn} is the name, with
-\code{items}.
+\code{items}, \code{input} (when there is one) and \code{form}.
 }
 \description{
 A figure of several plots (KM curves and the number at risk under them,

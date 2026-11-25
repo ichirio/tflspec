@@ -338,6 +338,8 @@
           lastfn <- if (length(it$items)) it$items[[length(it$items)]]$fn else NULL
           row(p$object, it$fn, if (one) "content" else .fig_plot_name(it$fn), "content",
               .obj_returns_kind(lastfn, "content", "plot"), w, FALSE)
+          # a content object's From (`from:`) is a use of that name
+          use(.obj_chr(it[["input"]]), "content", w, it$fn, "from", "ref")
           for (k in seq_along(it$items)) {
             item_uses(it$items[[k]], sprintf("%s[%d]", w, k), it$fn)
           }
@@ -721,6 +723,7 @@ tfl_output_rename <- function(output, old, new, study = NULL) {
     lapply(items, function(it) {
       if (inherits(it, "tfl_plot")) {
         if (identical(r$kind, "plot") && identical(it$fn, old)) it$fn <- new
+        if (!is.null(it[["input"]])) it$input <- swap(it$input)
         it$items <- rn_items(it$items)
         return(it)
       }
@@ -975,6 +978,17 @@ tfl_output_name_check <- function(output, study = NULL) {
     u <- u[grepl(pre, u$where), , drop = FALSE]
     for (i in seq_len(nrow(u))) {
       fn <- sub("^.*\\$", "", u$item[i])
+      # a content object's From: an object made above, or a study dataset
+      # (made below: rule 5 above)
+      if (identical(u$arg[i], "from")) {
+        if (!u$name[i] %in% c(known, plots, datasets, .r_name(datasets))) {
+          add(part = "content", item = sprintf("%s%s(from)", at, u$item[i]), level = "error",
+              message = sprintf(paste0("the content object `%s` takes its `from:` `%s`, which nothing above ",
+                                       "it makes: name an object made above it or a study dataset"),
+                                u$item[i], u$name[i]))
+        }
+        next
+      }
       if (identical(u$arg[i], "plots") && identical(fn, "wrap_plots")) {
         if (!u$name[i] %in% plots) {
           add(part = "content", item = paste0(at, "wrap_plots(plots)"), level = "error",
@@ -991,6 +1005,22 @@ tfl_output_name_check <- function(output, study = NULL) {
                                    "(its data, data steps or analysis items: %s): name one of them"),
                             fn, u$arg[i], u$name[i],
                             paste(setdiff(known, c("df", "ard")), collapse = ", ")))
+    }
+    # B-7: a content object that pipes from an object (`from:`) has no call
+    # that writes the argument the pipe fills (`first_arg_name`)
+    fd <- NULL
+    for (it in ct[is_plot]) {
+      if (is.null(it[["input"]])) next
+      if (is.null(fd)) fd <- tfl_fn_defs()
+      for (cl in it$items) {
+        first <- fd$first_arg_name[match(.schema_fn_name(cl$fn %||% ""), fd$fn)]
+        if (length(first) != 1L || is.na(first) || !first %in% names(cl$args)) next
+        add(part = "content", item = sprintf("%s%s$%s", at, it$fn, .schema_fn_name(cl$fn)),
+            level = "error", message = sprintf(
+              paste0("the value and the pipe disagree: `%s` takes its input `from: %s` and also writes ",
+                     "`%s` in %s(): the pipe fills `%s`; drop one of them"),
+              it$fn, it[["input"]], first, .schema_fn_name(cl$fn), first))
+      }
     }
   }
   do.call(rbind, rows)
