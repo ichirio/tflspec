@@ -18,7 +18,11 @@
 #' records data's arm, which has no number of its own, by the matching arm
 #' and number of ADSL, the records' values kept and a value ADSL lacks
 #' last; a value with two numbers there is an error), `order_arms()` (the arm
-#' variables alone: `order_levels()` with no categories), `tag_ard()` (the report, analysis and
+#' variables alone: `order_levels()` with no categories), `tte_time()` (a
+#' time to event in one unit, days, weeks, months or years: AVAL from its
+#' unit AVALU, DAYS when the data has none; two units in the data stop the
+#' program; the days in a month etc. the study's `days_per_month` etc. when
+#' set, else [tfl_time_unit_days()]), `tag_ard()` (the report, analysis and
 #' analysis set in front of an analysis's ARD), `bind_items()` (a report's items into one
 #' ARD: no row lost, the columns in order, a statistic twice in one item an error, the
 #' same statistic in two items a warning), `fmt_ard()` and

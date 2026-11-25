@@ -28,9 +28,6 @@ tflplanner names a data by.}
 
 \item{group}{The treatment variable; its first level is the reference.}
 
-\item{ref}{The reference arm, put first by a relevel in the analysis
-data's \code{derive}; \code{NULL}: the first level (none derived).}
-
 \item{subgroups}{The subgroup variables (of the population's data), a
 character vector or one string with \verb{,} between them.}
 
@@ -38,6 +35,9 @@ character vector or one string with \verb{,} between them.}
 
 \item{id}{The analysis id of the overall estimate; a subgroup's is
 \verb{<id>_<variable>}.}
+
+\item{ref}{The reference arm, put first by a relevel in the analysis
+data's \code{derive}; \code{NULL}: the first level (none derived).}
 }
 \value{
 A list of two data frames, \code{analysis_data} and \code{analyses}, with
