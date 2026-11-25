@@ -60,3 +60,20 @@ tfl_helpers_code <- function() {
   readLines(system.file("helpers", "study_helpers.R", package = "tflspec"),
             encoding = "UTF-8")
 }
+
+# The functions the study helpers define, by name
+.study_helper_fns <- function() {
+  h <- grep("^[A-Za-z][A-Za-z0-9_.]* <- function", tfl_helpers_code(), value = TRUE)
+  sub(" <- function.*$", "", h)
+}
+
+# Whether `code` calls one of the functions `fns` (its name, then "("; not
+# a longer name that ends with it).  By default the study helpers: code run
+# in the session that calls one (set_levels(), tte_time(), fmt_num() ...)
+# gets them first, eval(tfl_helpers_code()), as a study's programs get them
+# from their setup
+.calls_helper <- function(code, fns = .study_helper_fns()) {
+  if (!length(fns) || !length(code)) return(FALSE)
+  pat <- paste0("(^|[^A-Za-z0-9._])(", paste(fns, collapse = "|"), ")\\(")
+  any(grepl(pat, code, perl = TRUE))
+}

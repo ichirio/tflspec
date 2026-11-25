@@ -1089,7 +1089,7 @@ tfl_read_fig_design <- function(path) {
           "    rate  = 100 * x / n,\n",
           "    lcl   = 100 * mapply(function(x, n) binom.test(x, n)$conf.int[1], x, n),\n",
           "    ucl   = 100 * mapply(function(x, n) binom.test(x, n)$conf.int[2], x, n),\n",
-          "    label = sprintf(\"%.1f%%\\n(%d/%d)\", rate, x, n)\n",
+          "    label = paste0(fmt_num(rate, 1), \"%\\n(\", x, \"/\", n, \")\")\n",
           "  )"), "")
       },
       count = {
@@ -1099,7 +1099,7 @@ tfl_read_fig_design <- function(path) {
         out <- c(out, paste0(v("name"), " <- ", src, " |>\n",
           sprintf("  count(%s, %s) |>\n", paste(by, collapse = ", "), cat),
           sprintf("  group_by(%s) |>\n", paste(by, collapse = ", ")),
-          "  mutate(pct = 100 * n / sum(n), label = sprintf(\"%.0f%%\", pct)) |>\n",
+          "  mutate(pct = 100 * n / sum(n), label = paste0(fmt_num(pct, 0), \"%\")) |>\n",
           "  ungroup()",
           if (length(lv)) sprintf(" |>\n  mutate(%s = factor(%s, levels = unique(c(intersect(%s, %s), sort(%s)))))",
                                   cat, cat, vec_code(lv), cat, cat)), "")
@@ -1965,16 +1965,26 @@ tfl_fig_data_name <- function(design) {
   if (length(used)) c("", .fig_unit_guard(used)) else character()
 }
 
-# a script of its own: the study helper tte_time() its code calls, defined
-# unless the study's setup has it (a study's programs get it from
-# programs/study_helpers.R, sourced by their setup)
+# the study helpers a script of its own carries when its code calls them:
+# each stands alone (base R; fmt_num() rounds by rtfreporter's round_num())
+.fig_script_helpers <- c("tte_time", "fmt_num")
+
+# a script of its own: the study helpers its code calls (.fig_script_helpers),
+# each defined unless the study's setup has it (a study's programs get them
+# from programs/study_helpers.R, sourced by their setup)
 .fig_helper_used <- function(code) {
-  if (!any(grepl("tte_time(", code, fixed = TRUE))) return(character())
+  used <- Filter(function(f) .calls_helper(code, f), .fig_script_helpers)
+  if (!length(used)) return(character())
   h <- tfl_helpers_code()
-  a <- grep("^tte_time <- function", h)[1L]
-  b <- a - 1L + which(h[a:length(h)] == "}")[1L]
-  c("", "# the study helper tte_time() (tfl_helpers_code()), unless the study's setup has it",
-    paste0("if (!exists(\"tte_time\")) ", h[a]), h[seq(a + 1L, b)])
+  one <- function(f) {
+    a <- grep(paste0("^", f, " <- function"), h)[1L]
+    b <- a - 1L + which(h[a:length(h)] == "}")[1L]
+    c(paste0("if (!exists(\"", f, "\")) ", h[a]), h[seq(a + 1L, b)])
+  }
+  c("", sprintf("# the study helper%s %s (tfl_helpers_code()), unless the study's setup has %s",
+                if (length(used) > 1L) "s" else "", paste0(used, "()", collapse = ", "),
+                if (length(used) > 1L) "them" else "it"),
+    unlist(lapply(used, one)))
 }
 
 #' Whether a figure's design reads an ARD
@@ -2907,8 +2917,8 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
     sprintf("    level = %s,", lvl),
     "    ok = is.finite(estimate) & is.finite(conf.low) & is.finite(conf.high) &",
     "      conf.high < 1000,",
-    "    txt = ifelse(ok, sprintf(\"%.2f (%.2f, %.2f)\", estimate, conf.low, conf.high),",
-    "                 \"NE\"),",
+    "    txt = ifelse(ok, paste0(fmt_num(estimate, 2), \" (\", fmt_num(conf.low, 2),",
+    "                            \", \", fmt_num(conf.high, 2), \")\"), \"NE\"),",
     "    across(c(estimate, conf.low, conf.high), ~ ifelse(ok, .x, NA))",
     "  )",
     if (length(subgroups)) c(

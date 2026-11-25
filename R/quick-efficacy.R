@@ -35,7 +35,13 @@ tfl_fig_forest <- function(adam = NULL, style = c("hr", "or", "estimates"), para
       "# est_df: one row per line of the plot, with columns",
       "#   label (text on the y axis), est, lcl, ucl (NA for heading rows) and optionally n",
       "est_df <- est_df |>",
-      "  mutate(y = rev(seq_len(n())), txt = ifelse(is.na(est), \"\", sprintf(\"%.2f (%.2f, %.2f)\", est, lcl, ucl)))")
+      paste0("  mutate(\n",
+             "    y = rev(seq_len(n())),\n",
+             "    # (rounded as the tables are: options(rtfreporter.rounding))\n",
+             "    txt = ifelse(is.na(est), \"\", sprintf(\"%.2f (%.2f, %.2f)\",\n",
+             "      rtfreporter::round_num(est, 2), rtfreporter::round_num(lcl, 2),\n",
+             "      rtfreporter::round_num(ucl, 2)))\n",
+             "  )"))
     x_lab <- "Estimate (95% CI)"
     ref <- 1
     libs <- c("dplyr", "ggplot2", "patchwork")
@@ -87,7 +93,10 @@ tfl_fig_forest <- function(adam = NULL, style = c("hr", "or", "estimates"), para
              "  mutate(\n",
              "    # not estimable (e.g. no events / all responders in a subgroup): no point, \"NE\"\n",
              "    ok  = is.finite(est) & is.finite(lcl) & is.finite(ucl) & lcl > 0 & ucl < 1000,\n",
-             "    txt = ifelse(head, \"\", ifelse(ok, sprintf(\"%.2f (%.2f, %.2f)\", est, lcl, ucl), \"NE\")),\n",
+             "    # (rounded as the tables are: options(rtfreporter.rounding))\n",
+             "    txt = ifelse(head, \"\", ifelse(ok, sprintf(\"%.2f (%.2f, %.2f)\",\n",
+             "      rtfreporter::round_num(est, 2), rtfreporter::round_num(lcl, 2),\n",
+             "      rtfreporter::round_num(ucl, 2)), \"NE\")),\n",
              "    across(c(est, lcl, ucl), ~ ifelse(ok, .x, NA)),\n",
              "    y   = rev(seq_len(n()))\n",
              "  )"))
@@ -169,7 +178,7 @@ tfl_fig_bar <- function(adam = NULL, style = c("rate_ci", "stacked", "dodged"), 
       sprintf("ggplot(rate_df, aes(x = %s, y = rate, fill = %s))", group, group),
       "geom_col(width = 0.6)",
       "geom_errorbar(aes(ymin = lcl, ymax = ucl), width = 0.15)",
-      'geom_text(aes(y = ucl, label = sprintf("%.1f%%\\n(%d/%d)", rate, x, n)), vjust = -0.3, size = 3)',
+      'geom_text(aes(y = ucl, label = sprintf("%.1f%%\\n(%d/%d)", rtfreporter::round_num(rate, 1), x, n)), vjust = -0.3, size = 3)',
       "scale_fill_manual(values = pal)",
       "scale_y_continuous(limits = c(0, 110), breaks = seq(0, 100, 20), expand = expansion(mult = c(0, 0.02)))",
       sprintf("labs(x = NULL, y = %s%s)", q(sprintf("Response rate (%%) with 95%% CI [%s]", paste(responders, collapse = "+"))),
@@ -192,7 +201,7 @@ tfl_fig_bar <- function(adam = NULL, style = c("rate_ci", "stacked", "dodged"), 
       plus_code("p", c(list(
         sprintf("ggplot(pct_df, aes(x = %s, y = pct, fill = %s))", group, category),
         'geom_col(width = 0.6, colour = "white")',
-        'geom_text(aes(label = ifelse(pct >= 5, sprintf("%.0f%%", pct), "")), position = position_stack(vjust = 0.5), size = 3)',
+        'geom_text(aes(label = ifelse(pct >= 5, sprintf("%.0f%%", rtfreporter::round_num(pct, 0)), "")), position = position_stack(vjust = 0.5), size = 3)',
         "scale_fill_manual(values = pal, breaks = names(pal))",
         "scale_y_continuous(expand = expansion(mult = c(0, 0.02)))",
         sprintf("labs(x = NULL, y = \"Subjects (%%)\"%s)", if (!is.null(title)) paste0(", title = ", q(title)) else "")),
@@ -201,7 +210,7 @@ tfl_fig_bar <- function(adam = NULL, style = c("rate_ci", "stacked", "dodged"), 
       plus_code("p", c(list(
         sprintf("ggplot(pct_df, aes(x = %s, y = pct, fill = %s))", category, group),
         "geom_col(width = 0.7, position = position_dodge(width = 0.75))",
-        'geom_text(aes(label = sprintf("%.0f", pct)), position = position_dodge(width = 0.75), vjust = -0.3, size = 2.8)',
+        'geom_text(aes(label = sprintf("%.0f", rtfreporter::round_num(pct, 0))), position = position_dodge(width = 0.75), vjust = -0.3, size = 2.8)',
         "scale_fill_manual(values = pal)",
         "scale_y_continuous(expand = expansion(mult = c(0, 0.08)))",
         sprintf("labs(x = %s, y = \"Subjects (%%)\"%s)", q(lab), if (!is.null(title)) paste0(", title = ", q(title)) else "")),

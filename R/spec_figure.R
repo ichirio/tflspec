@@ -160,11 +160,10 @@
   # a figure of items runs after the study's figure setup (theme_tfl(),
   # scale_colour_tfl(), tfl_colours()), as its program does
   if (new) .fig_setup_eval(env)
-  # (the study's helpers: the ARD's readers, and set_levels() of the code
-  # lists, order_levels() of the arms and tte_time() of a time to event)
-  if (!is.null(data$ard) || any(grepl("set_levels(", code, fixed = TRUE)) ||
-      any(grepl("order_levels(", code, fixed = TRUE)) ||
-      any(grepl("tte_time(", code, fixed = TRUE))) {
+  # (the study's helpers: the ARD's readers, and any the code calls --
+  # set_levels() of the code lists, order_levels() of the arms, tte_time() of
+  # a time to event, fmt_num() of a number)
+  if (!is.null(data$ard) || .calls_helper(code)) {
     eval(parse(text = tfl_helpers_code()), env)
   }
   eval(parse(text = .fig_strip_library(code)), env)

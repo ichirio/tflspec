@@ -145,7 +145,7 @@ test_that("the new statistics and settings write what they say", {
   d <- tfl_fig_template("bar_rate_ci")
   code <- paste(tfl_fig_design_code(d), collapse = "\n")
   expect_match(code, "binom.test", fixed = TRUE)
-  expect_match(code, 'label = sprintf("%.1f%%', fixed = TRUE)
+  expect_match(code, 'label = paste0(fmt_num(rate, 1), "%\\n(', fixed = TRUE)
   d <- tfl_fig_template("pk_individual")
   code <- paste(tfl_fig_design_code(d), collapse = "\n")
   expect_match(code, "scale_y_log10()", fixed = TRUE)
@@ -212,6 +212,43 @@ test_that("a report program's figure: no save, its own name, the study's palette
   suppressPackageStartupMessages(eval(parse(text = part), e))
   expect_s3_class(e$plot, "ggplot")
   expect_identical(unname(e$pal), unname(e$tfl_colours("treatment", c("A", "B"))))
+})
+
+test_that("a number a figure prints is fmt_num(): the study's rounding, as a table's", {
+  # (A3) the rate, count and forest steps; a study's program has fmt_num()
+  # from its setup, a script of its own defines it (unless the setup has)
+  for (t in c("bar_rate_ci", "bar_stacked")) {
+    prog <- paste(tfl_fig_design_code(tfl_fig_template(t), "F1", setup = TRUE), collapse = "\n")
+    expect_false(grepl("fmt_num <- function", prog, fixed = TRUE), info = t)
+    own <- strsplit(paste(tfl_fig_design_code(tfl_fig_template(t), "F1"), collapse = "\n"), "\n")[[1]]
+    expect_identical(sum(grepl('^if [(]!exists[(]"fmt_num"[)][)] fmt_num <- function', own)), 1L, info = t)
+  }
+  rate <- paste(tfl_fig_design_code(tfl_fig_template("bar_rate_ci"), "F1", setup = TRUE), collapse = "\n")
+  expect_match(rate, 'label = paste0(fmt_num(rate, 1), "%\\n(", x, "/", n, ")")', fixed = TRUE)
+  count <- paste(tfl_fig_design_code(tfl_fig_template("bar_stacked"), "F1", setup = TRUE), collapse = "\n")
+  expect_match(count, 'label = paste0(fmt_num(pct, 0), "%")', fixed = TRUE)
+  fr <- tfl_fig_template("forest_hr", data = "ADTTE", param = "TTDE", pop = "SAFFL", group = "TRT01A",
+                         subgroups = "SEX, AGEGR1", comparison = "Xanomeline High Dose")
+  forest <- paste(tfl_fig_design_code(fr, "F1", setup = TRUE, save = FALSE), collapse = "\n")
+  expect_match(forest, 'txt = ifelse(ok, paste0(fmt_num(estimate, 2), " (", fmt_num(conf.low, 2),', fixed = TRUE)
+  expect_false(grepl("%.2f", forest, fixed = TRUE))
+  # the script's own fmt_num() is the study helper's: 1/8 is 12.5%, "13" under "sas"
+  a <- grep('^if [(]!exists[(]"fmt_num"[)][)]', own)
+  b <- a - 1L + which(own[a:length(own)] == "}")[1L]
+  e <- new.env(parent = globalenv())
+  eval(parse(text = own[a:b]), e)
+  old <- options(rtfreporter.rounding = "sas")
+  on.exit(options(old), add = TRUE)
+  expect_identical(e$fmt_num(100 * 1 / 8, 0), "13")
+  expect_identical(e$fmt_num(NA, 1), "NE")
+  # a time to event's helper and fmt_num() together: one comment, both defined
+  both <- tflspec:::.fig_helper_used(c("df |> tte_time(\"months\")", "lab <- fmt_num(x, 1)"))
+  expect_identical(both[2L], "# the study helpers tte_time(), fmt_num() (tfl_helpers_code()), unless the study's setup has them")
+  expect_identical(sum(grepl("^if [(]!exists", both)), 2L)
+  # a name that only ends with a helper's is not a call of it
+  expect_length(tflspec:::.fig_helper_used("my_fmt_num(x, 1)"), 0L)
+  expect_true(tflspec:::.calls_helper("lab <- fmt_num(x, 1)"))
+  expect_false(tflspec:::.calls_helper("lab <- sprintf(\"%.1f\", x)"))
 })
 
 test_that("a time's unit is a named constant of the setup, never a column", {
