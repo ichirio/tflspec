@@ -113,6 +113,8 @@
 
 # The keywords an analysis's `method` may name, and the call each stands for.
 .ard_methods_builtin <- function() {
+  # the event as every writer writes it
+  s <- .tte_surv("AVAL", "CNSR")
   d <- data.frame(
     method = c("continuous", "categorical", "dichotomous", "missing",
                "hierarchical", "max", "subjects", "total_n",
@@ -187,17 +189,17 @@
       "difference in proportions between the two `by` groups, with its CI; variables = a logical / 0-1 response",
       "LS means of a model by arm, e.g. ANCOVA (args: formula = CHG ~ TRT01P + BASE, method = \"lm\", response_type = \"continuous\"); by and variables blank",
       "differences in LS means between arms, with CI and p-value (args as for lsmeans); by and variables blank",
-      "Kaplan-Meier survival at times, or quantiles of the time to event (args: y = \"survival::Surv(AVAL, 1 - CNSR)\", times = c(6, 12) or probs = 0.5); variables = the arm",
-      "log-rank test between arms (args: formula = survival::Surv(AVAL, 1 - CNSR) ~ TRT01P); by and variables blank",
+      sprintf("Kaplan-Meier survival at times, or quantiles of the time to event (args: y = \"%s\", times = c(6, 12) or probs = 0.5); variables = the arm", s),
+      sprintf("log-rank test between arms (args: formula = %s ~ TRT01P); by and variables blank", s),
       "subjects with an abnormal post-baseline value, by baseline (args: postbaseline = ANRIND, baseline = BNRIND, id = USUBJID); variables blank",
       "events per person-time with CI (args: time = <person-time column>, count = <events column>, id = USUBJID); variables blank",
-      "a model's estimates with CI, e.g. a Cox model's hazard ratio (args: formula = survival::Surv(AVAL, 1 - CNSR) ~ TRTA, method = \"coxph\", package = \"survival\", exponentiate = TRUE) or a logistic model's odds ratio (method = \"glm\", method.args = list(family = binomial), exponentiate = TRUE); by and variables blank",
+      sprintf("a model's estimates with CI, e.g. a Cox model's hazard ratio (args: formula = %s ~ TRTA, method = \"coxph\", package = \"survival\", exponentiate = TRUE) or a logistic model's odds ratio (method = \"glm\", method.args = list(family = binomial), exponentiate = TRUE); by and variables blank", s),
       "a model's ANOVA table, type II or III (args: x = lm(CHG ~ TRTA + BASE, data = data), type = \"III\"); by and variables blank",
       "Kruskal-Wallis test across the `by` groups (two or more)",
       "paired t test between the two `by` levels (e.g. two visits) of each subject (args: id = USUBJID)",
       "Wilcoxon signed-rank test between the two `by` levels of each subject (args: id = USUBJID)",
       "McNemar's test of variables x by, paired data (one record a subject, e.g. a baseline and a post-baseline response)",
-      "differences in Kaplan-Meier survival between the arms at times, with CI (args: x = survival::survfit(survival::Surv(AVAL, 1 - CNSR) ~ TRTA, data = data), times = c(6, 12)); by and variables blank",
+      sprintf("differences in Kaplan-Meier survival between the arms at times, with CI (args: x = survival::survfit(%s ~ TRTA, data = data), times = c(6, 12)); by and variables blank", s),
       "any R code in `code`; data and population are bound"),
     stringsAsFactors = FALSE)
   # since 2026-11-03: AE event counts and the one-sample, balance, rate and

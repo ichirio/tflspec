@@ -38,6 +38,40 @@ test_that("relevel_ard() puts a column's levels in its code list's order, values
   expect_identical(levels(env$relevel_ard(tab, SEX = c("M", "F"))$variable_level[[1L]]), c("M", "F"))
 })
 
+test_that("relevel_ard() with a code list of labels (code -> label) uses its codes, as set_levels() does", {
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("survival")
+  env <- new.env()
+  eval(parse(text = tfl_helpers_code()), envir = env)
+  # the codes are the names; the labels differ from them
+  expect_identical(env$codelist_codes(c(F = "Female", M = "Male")), c("F", "M"))
+  expect_identical(env$codelist_codes(c("Placebo", "Drug A")), c("Placebo", "Drug A"))
+  # (no helper in the code lists' names, cl_<var>: a column VALUES's list
+  # would hide it)
+  fns <- ls(env)[vapply(ls(env), function(n) is.function(env[[n]]), NA)]
+  expect_false(any(startsWith(fns, "cl_")))
+  adtte <- as.data.frame(cards::ADTTE)
+  arms <- c("Xanomeline Low Dose", "Placebo", "Xanomeline High Dose")
+  cl_trta <- stats::setNames(c("Drug X low", "Control", "Drug X high"), arms)
+  adtte <- env$set_levels(adtte, TRTA = cl_trta)
+  expect_identical(levels(adtte$TRTA), arms)
+  fit <- survival::survfit(survival::Surv(AVAL, 1 - CNSR) ~ TRTA, data = adtte)
+  ard <- cardx::ard_survival_survfit(fit, times = c(30, 60))
+  arm_rows <- which(ard$group1 %in% "TRTA")
+  # the ARD holds the codes, its factor alphabetical
+  expect_identical(levels(ard$group1_level[[arm_rows[1L]]]), sort(arms))
+  out <- env$relevel_ard(ard, TRTA = cl_trta)
+  expect_true(all(vapply(out$group1_level[arm_rows], function(x) identical(levels(x), arms), NA)))
+  # the same as the list of its codes alone; values and rows as they were
+  expect_identical(out, env$relevel_ard(ard, TRTA = arms))
+  expect_identical(lvl(out$group1_level), lvl(ard$group1_level))
+  expect_identical(out$stat, ard$stat)
+  # a variable's own rows (variable_level): the codes, in the list's order
+  tab <- cards::ard_tabulate(data.frame(SEX = c("M", "F", "F")), variables = SEX)
+  expect_identical(levels(env$relevel_ard(tab, SEX = c(M = "Male", F = "Female"))$variable_level[[1L]]),
+                   c("M", "F"))
+})
+
 test_that("the ARD program puts relevel_ard() after an analysis that is not cards', on the code lists' columns it reads", {
   skip_on_cran()
   skip_if_not_installed("cardx")
@@ -56,6 +90,15 @@ test_that("the ARD program puts relevel_ard() after an analysis that is not card
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, codelists = cl))
   k <- which(ard$group1 %in% "TRTA")[1L]
   expect_identical(levels(ard$group1_level[[k]]), arms)
+  # a code list with labels that differ from the codes: the ARD keeps the
+  # codes, in the list's order
+  cl_lab <- cbind(cl, label = c("Drug X low", "Control", "Drug X high"))
+  code_lab <- paste(tfl_ard_code(sp, part = "body", codelists = cl_lab), collapse = "\n")
+  expect_match(code_lab, "relevel_ard(TRTA = cl_trta)", fixed = TRUE)
+  ard_lab <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, codelists = cl_lab))
+  rows_lab <- which(ard_lab$group1 %in% "TRTA")
+  expect_true(all(vapply(ard_lab$group1_level[rows_lab], function(x) identical(levels(x), arms), NA)))
+  expect_setequal(unique(lvl(ard_lab$group1_level[rows_lab])), arms)
   # without the code list: no step
   expect_false(grepl("relevel_ard", paste(tfl_ard_code(sp, part = "body"), collapse = "\n"), fixed = TRUE))
   # a cards analysis keeps the data's order itself: no step
