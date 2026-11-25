@@ -146,12 +146,16 @@
     titles_rule = .ai_titles_text(s$titles_in_header)))
 }
 
-# The titles: the shell's (the TOC's when the shell has none for the report), as `page: titles` -- unless the study standard's
-# header prints the label, the title and the population from the report's
+# The titles: the shell's (the TOC's when the shell has none for the report), as `page: titles`, plus a
+# line the study's general conventions ask of every output that the shell leaves out (tflspec#960) --
+# unless the study standard's header prints the label, the title and the population from the report's
 # `label:` and `common: population` (its tokens): then none, or they print twice
 .ai_titles_text <- function(tokens) {
   if (!length(tokens)) return(paste0("`page: titles`, from the shell (the TOC's title only when none for this ",
-                                  "report can be read from the shell; an assumption when it differs from `label`);"))
+                                  "report can be read from the shell; an assumption when it differs from `label`), ",
+                                  "plus each line the study's general conventions ask of every output and this ",
+                                  "shell leaves out (a population line, written as the other shells write it): an assumption, ",
+                                  "`item: titles`, `from:` the conventions' section;"))
   sprintf(paste0("**no `page: titles`**: the study's header prints the report's label, title ",
                  "and population itself (%s) from `label:` and `common: population` -- write those two ",
                  "keys (the title as the shell shows it, in `label:`), and no titles, or they print twice;"),
