@@ -1,7 +1,8 @@
 pp_time_mutate <- function(ctx, vars) {
   unit <- pp_opt(ctx, "time_unit")
   if (!unit %in% names(pp_time_divisor)) stop("Unknown time_unit: ", unit, call. = FALSE)
-  if (unit == "as_is" || !length(vars)) return(NULL)
+  # (a time in days kept in days: no step)
+  if (is.na(pp_time_divisor[[unit]]) || pp_time_divisor[[unit]] == 1 || !length(vars)) return(NULL)
   d <- format(pp_time_divisor[[unit]])
   if (length(vars) == 1) return(sprintf("mutate(%s = %s / %s)", vars, vars, d))
   sprintf("mutate(across(c(%s), ~ .x / %s))", paste(vars, collapse = ", "), d)
@@ -134,7 +135,8 @@ pp_gen_km <- function(ctx) {
       "km_ard  <- km_ard[km_ard$variable == \"time\" & km_ard$stat_name == \"n.risk\", ]",
       paste0("risk_df <- data.frame(\n",
              "  time   = as.numeric(unlist(km_ard$variable_level))",
-             if (!risk_tte && !identical(pp_opt(ctx, "time_unit"), "as_is"))
+             if (!risk_tte && !is.na(pp_time_divisor[[pp_opt(ctx, "time_unit")]]) &&
+                 pp_time_divisor[[pp_opt(ctx, "time_unit")]] != 1)
                paste0(" / ", format(pp_time_divisor[[pp_opt(ctx, "time_unit")]]),
                       ",   # in the axis's unit\n")
              else ",\n",

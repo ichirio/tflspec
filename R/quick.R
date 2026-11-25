@@ -36,7 +36,7 @@ pp_quick_legends <- list(
   panel_inside = c("manual", "inside_tr")
 )
 
-pp_time_units <- c(days = "as_is", weeks = "days_to_weeks", months = "days_to_months", years = "days_to_years")
+pp_time_units <- c(days = "days", weeks = "days_to_weeks", months = "days_to_months", years = "days_to_years")
 
 #' Code object returned by the quick API
 #' @param x A `tfl_code` object.
