@@ -58,6 +58,13 @@
   lapply(want, function(k) list(value = k, label = lab[[k]]))
 }
 
+# The same for the sheets: a list or a code the study has not got gives one
+# row of no code, so the `list` cell is kept and the study still opens (the
+# check, and the programs, say it)
+.cl_ref_rows_or_cell <- function(ref, v, study_cl, id) {
+  tryCatch(.cl_ref_rows(ref, v, study_cl, id, "sheets"), error = function(e) list(list()))
+}
+
 # A report's code lists with each reference made into its rows
 .codelists_refs <- function(cl, study_cl, id, what) {
   for (v in names(cl)) {

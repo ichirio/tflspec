@@ -391,13 +391,16 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     }
     add("report", rr)
     # (a reference to the study's list: its rows as the programs get them,
-    # each with the reference in its `list` cell, which is what is read back)
+    # each with the reference in its `list` cell, which is what is read back;
+    # a list or code the study has not got: the cell alone, no codes -- the
+    # study opens, the check and the programs say it)
     for (v in names(o$codelists)) {
       ref <- if (.cl_is_ref(o$codelists[[v]])) o$codelists[[v]]
-      vrows <- if (is.null(ref)) o$codelists[[v]] else .cl_ref_rows(ref, v, s$codelists, id, "tfl_sheets_from_spec()")
+      vrows <- if (is.null(ref)) o$codelists[[v]] else .cl_ref_rows_or_cell(ref, v, s$codelists, id)
       for (i in seq_along(vrows)) {
         cl <- vrows[[i]]
-        add("codelists", list(output_id = id, variable = v, value = cell(cl$value), label = cell(cl$label), order = as.character(i),
+        add("codelists", list(output_id = id, variable = v, value = cell(cl$value), label = cell(cl$label),
+                              order = if (is.null(cl$value)) NA_character_ else as.character(i),
                               under = cell(cl$under), list = if (!is.null(ref)) .cl_ref_cell(ref, paste0("tfl_sheets_from_spec(): ", id, ", ", v)) else NA_character_))
       }
     }

@@ -97,8 +97,9 @@ test_that("a list or a code the study has not got stops, naming the report, the 
   expect_error(tfl_resolve_output(o, st),
                "report T-14-1-1, the code list of SEX refers to the study's list GENDER, which the study has not got",
                fixed = TRUE)
-  expect_error(tfl_sheets_from_spec(st, list(`T-14-1-1` = o)), "the code list of SEX refers to the study's list GENDER",
-               fixed = TRUE)
+  # (the programs written from the sheets' rows too)
+  expect_error(tfl_ard_code(st, "T-14-1-1", save = FALSE),
+               "report T-14-1-1, the code list of SEX refers to the study's list GENDER", fixed = TRUE)
   clr_put(d, c(clr_trt, "SEX: {list: SEX, codes: [F, U]}"))
   o <- tfl_read_outputs(d)[["T-14-1-1"]]
   expect_error(tfl_resolve_output(o, st),
@@ -106,6 +107,24 @@ test_that("a list or a code the study has not got stops, naming the report, the 
                fixed = TRUE)
   # (a study's list is codes, not a reference)
   expect_error(tflspec:::.study_codelists_read(list(RACE = list(list = "SEX"))), "RACE: a study's list is its codes")
+})
+
+test_that("a reference the study has not got: the sheets keep its cell (no codes), the study opens, the cell comes back", {
+  d <- clr_study(c(clr_trt, "SEX: {list: GENDER}", "AGEGR1: {list: AGEGR1, codes: [\">=65\", X]}"))
+  sh <- tfl_sheets_from_yaml(d)
+  cl <- sh$table$codelists
+  expect_identical(cl$list[cl$variable == "SEX"], "GENDER")
+  expect_true(is.na(cl$value[cl$variable == "SEX"]))
+  expect_identical(cl$list[cl$variable == "AGEGR1"], "AGEGR1: >=65 | X")
+  expect_true(is.na(cl$value[cl$variable == "AGEGR1"]))
+  expect_identical(nrow(cl[cl$variable == "TRT01A", ]), 2L)
+  to <- withr::local_tempdir()
+  suppressWarnings(suppressMessages(tfl_yaml_from_sheets(sh, to)))
+  o1 <- tfl_read_outputs(to)[["T-14-1-1"]]
+  expect_identical(o1$codelists$SEX, list(list = "GENDER"))
+  expect_identical(o1$codelists$AGEGR1, list(list = "AGEGR1", codes = list(">=65", "X")))
+  # (generation stops, naming it)
+  expect_error(tfl_resolve_output(o1, tfl_read_study_spec(to)), "refers to the study's list GENDER", fixed = TRUE)
 })
 
 test_that("the sheets keep a reference in the `list` column; YAML -> sheets -> YAML gives both forms back", {

@@ -219,6 +219,13 @@ tfl_report_codelists <- function(study, outputs = NULL, rows = NULL) {
     outputs <- outputs[ids %in% output_id]
     ids <- ids[ids %in% output_id]
   }
+  # (a reference to a list or code the study has not got: the sheets keep
+  # its cell with no code; the programs written from these rows stop here)
+  for (o in outputs) {
+    for (v in names(o$codelists)) {
+      if (.cl_is_ref(o$codelists[[v]])) .cl_ref_rows(o$codelists[[v]], v, study$codelists, o$id, "tfl_report_codelists()")
+    }
+  }
   # (each report's own rows; no layer gives a list)
   made <- lapply(seq_along(outputs), function(i) own[own$output_id == ids[i], , drop = FALSE])
   # (a report of the rows that is not among the outputs: kept, last)
