@@ -1913,7 +1913,7 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
   # content_code): written as it is, after the data's steps; it leaves
   # `content`
   if (inherits(output$content, "tfl_r")) {
-    steps <- .content_r_steps(output)
+    steps <- .content_steps_code(.content_r_steps(output))
     own <- unlist(strsplit(as.character(output$content), "\n", fixed = TRUE))
     return(c(steps, if (length(steps)) "", own))
   }
@@ -1987,16 +1987,17 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
   # the object the pipe starts from: the output's own name for it, else
   # the ARD when the content normalizes it, else the normalized data
   # the data's steps (`data.steps`, the Rework, the old process_code): R
-  # on `data`, written as it is, between the normalization and the plan
+  # on `data`, between the normalization and the plan, as
+  # .content_steps_code() writes it
   steps <- .content_r_steps(output)
   if (.content_rework(output)) {
     # `data <- ard |> normalize_ard(...)` (the content's, else `data <- ard`),
-    # the Rework as it is written, the plan from `data`
+    # the Rework, the plan from `data`
     .content_rework_need_data(steps, "tfl_content_code()")
     sp <- .content_rework_split(output$content)
     return(c(.drop_attached_ns(
                .content_rework_normalize_code(sp$pre, output$data$object %||% "ard", pipe)),
-             steps, "", bign_pre(data %||% "data"),
+             .content_steps_code(steps), "", bign_pre(data %||% "data"),
              .content_table_code(sp$rest, data = data %||% "data",
                                  plan = plan, pipe = pipe, kind = output$kind, piped = piped)))
   }
@@ -2012,7 +2013,7 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
                                    kind = output$kind, piped = piped)))
     }
     # the steps make the data: no normalize_ard() of the defaults after them
-    return(c(steps, "", bign_pre(data %||% "data"),
+    return(c(.content_steps_code(steps), "", bign_pre(data %||% "data"),
              .content_table_code(.content_drop_data_steps(output$content),
                                             data = data %||% "data",
                                             plan = plan, pipe = pipe, kind = output$kind,
@@ -2133,6 +2134,16 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
     })
     it
   })
+}
+
+# The data's steps (a Rework, the report's own data code) as the program
+# writes them, one element a line: one expression as it is, else in a
+# scope of its own that leaves `data` (.code_piece()), so what else they
+# assign stays there
+.content_steps_code <- function(steps) {
+  if (!length(steps)) return(character())
+  unlist(strsplit(.code_piece(paste(steps, collapse = "\n"), "data", "name"), "\n",
+                  fixed = TRUE))
 }
 
 # A table's or a listing's data steps as code, one element a line: each

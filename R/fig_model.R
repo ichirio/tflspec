@@ -356,7 +356,12 @@ tfl_time_unit_days <- function() {
 .fig_io_fields <- function(pcs) {
   f_in <- .ff("in", "object", "In", help = "The object it reads; empty: the one above")
   f_out <- .ff("out", "text", "Out", help = "The object it leaves; empty: the one it reads")
-  for (k in c(.fig_row_steps, "code")) pcs[[k]]$fields <- rbind(pcs[[k]]$fields, f_in, f_out)
+  for (k in .fig_row_steps) pcs[[k]]$fields <- rbind(pcs[[k]]$fields, f_in, f_out)
+  # (a code step runs in a scope of its own: `out` is the one object it keeps)
+  pcs$code$fields <- rbind(pcs$code$fields, f_in,
+    .ff("out", "text", "Out", help = paste0(
+      "The one object the code keeps (it runs in a scope of its own); empty: the name ",
+      "one assignment makes, else nothing")))
   for (k in c("survfit", "summary", "summary_by", "rate", "count", "function")) {
     pcs[[k]]$fields <- rbind(pcs[[k]]$fields,
       .ff("in", "object", "In", help = "The data it reads; empty: df (or the data a step put into an object of its own)"))
@@ -742,6 +747,8 @@ tfl_read_fig_design <- function(path) {
   reads <- character()
   adata <- character()
   libs <- character()
+  # what each code step makes and does not keep (.fig_kept_check())
+  lost <- list()
   cur <- "df"
   lv_todo <- length(levels) > 0L
   flush <- function() {
@@ -902,7 +909,15 @@ tfl_read_fig_design <- function(path) {
       },
       code = {
         flush()
-        out <- c(out, if (!is.null(s$label)) paste("#", s$label), s$code, "")
+        # the user's code (.code_piece()): it keeps its `out`, else the one
+        # name one expression assigns; what else it makes stays in it
+        txt <- paste(as.character(s$code), collapse = "\n")
+        keep <- if (!is.na(o)) o else .code_one_target(txt)
+        made <- setdiff(.code_assigns(txt), keep)
+        out <- c(out, if (!is.null(s$label)) paste("#", s$label), .code_piece(txt, keep, "name"), "")
+        if (length(made) && !anyNA(made)) {
+          lost[[length(lost) + 1L]] <- list(names = made, at = length(out), part = sprintf("data[%d] code", i))
+        }
         if (!is.na(o)) cur <- o
       },
       # an analysis of the ARD: its row of the ARD definition, not a line here
@@ -911,7 +926,25 @@ tfl_read_fig_design <- function(path) {
   }
   put_levels()
   flush()
-  list(code = out, reads = unique(reads), libs = unique(libs), data = unique(adata))
+  list(code = out, reads = unique(reads), libs = unique(libs), data = unique(adata), lost = lost)
+}
+
+# A code step keeps one object (its `out`); what else it makes stays in its
+# scope.  A line after it -- its data steps, `later` (the plot) -- that
+# reads one of those stops the program's writing, saying which `out` to give.
+.fig_kept_check <- function(d, later = character()) {
+  code <- c(d$code, later)
+  for (l in d$lost) {
+    after <- code[seq_along(code) > l$at]
+    read <- intersect(l$names, .code_reads(paste(after, collapse = "\n")))
+    if (length(read)) {
+      .ard_stop(sprintf(paste0("%s: its code makes `%s`, which a later line reads; a code step ",
+                               "runs in a scope of its own and keeps only its `out`: say ",
+                               "`out: %s` (another object: a code step of its own)."),
+                        l$part, read[1L], read[1L]))
+    }
+  }
+  invisible(TRUE)
 }
 
 # A time_unit step on AVAL: AVAL in `unit`, each record's from its own
@@ -1283,7 +1316,7 @@ tfl_read_fig_design <- function(path) {
         if (length(pr)) paste(names(pr), "=", pr, collapse = ", ")))),
         libs = if (grepl("::", v("geom"), fixed = TRUE)) character() else NULL)
     },
-    layer_code = list(code = c(lbl(l$label %||% "R code"), l$code)),
+    layer_code = list(code = c(lbl(l$label %||% "R code"), .fig_own_layer_code(l$code))),
     call = {
       res <- .fig_call_code(l, target = "p", plus = !isTRUE(l$base), ggplot2_version = ggplot2_version)
       out <- list(libs = res$libs, guard = res$guard, features = res$features)
@@ -1495,6 +1528,13 @@ tfl_read_fig_design <- function(path) {
   })
 }
 
+# A report's own layer code (`layer_code`) as the program writes it: a
+# statement on `p` -- one expression as it is, else in a scope of its own
+# that leaves `p` (.code_piece())
+.fig_own_layer_code <- function(code) {
+  .code_piece(paste(as.character(code), collapse = "\n"), "p", "name")
+}
+
 # The figure's chain into `name`: the first layer, the layers, then the
 # items after them.  The user's own layer code (`layer_code`) is a
 # statement on `p`: around it the chain is `p`, and `name <- p` closes it.
@@ -1633,7 +1673,7 @@ tfl_read_fig_design <- function(path) {
     x <- lc[[i]]
     if (!is.null(x$panel) || is.null(x$code)) next
     if (identical(kinds[i], "layer_code")) {
-      own <- c(own, list(list(stmt = layers[[i]]$code, label = layers[[i]]$label)))
+      own <- c(own, list(list(stmt = .fig_own_layer_code(layers[[i]]$code), label = layers[[i]]$label)))
     } else {
       items <- c(items, lapply(.fig_terms(x$code), function(t) list(term = t)))
     }
@@ -1665,7 +1705,7 @@ tfl_read_fig_design <- function(path) {
   }
   n <- function(f) .pv(plot, f)
   fnames <- vapply(layers, function(l) if (identical(l$layer, "call")) .fig_bare_fn_name(l$fn) else "", "")
-  list(
+  res <- list(
     libs = libs, needs = needs, guard = guard, guard_v = guard_v, features = features,
     reads = d$reads, data = d$data,
     step1 = c(
@@ -1689,6 +1729,9 @@ tfl_read_fig_design <- function(path) {
     patch = length(panels) > 0L,
     risktable = any(fnames == "add_risktable") ||
       any(vapply(lc, function(x) isTRUE(x$risktable), logical(1))))
+  # (what a code step does not keep, read after it: stopped)
+  .fig_kept_check(d, c(ard_pre, ax$pre, panel_data, res$step2))
+  res
 }
 
 # a script's lines, one an element, no two blank lines in a row
@@ -2486,7 +2529,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
                variable = group, stats = "n_obs, estimate, conf.low, conf.high",
                by = if (length(sub)) paste(sub, collapse = ", ")),
           list(step = "code",
-               label = "the rows to draw: the comparison arm, a heading row per subgroup",
+               label = "the rows to draw: the comparison arm, a heading row per subgroup", out = "est",
                code = .forest_est_code(group, sub, comparison))),
         plot = plot_of(x_label = "Hazard Ratio (95% CI)", legend = "none", x_log = TRUE,
                        add = list(

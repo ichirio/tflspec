@@ -217,7 +217,9 @@ tpl_mean_ci <- function(data, group = "TRT01A", value = "AVAL", visit_var = "AVI
     "if (n_cut > 0) {\n",
     "  warning(\"waterfall: \", n_cut, \" bars beyond the axis (", lo, " to ", hi, ") are cut off\", call. = FALSE)\n",
     "}")
-  f$stats <- c(list(list(step = "code", label = lab, code = one),
+  # (the reduction makes `df` again: the step keeps it, its scope its own)
+  f$stats <- c(list(c(list(step = "code", label = lab, code = one),
+                      if (is.null(where)) list(out = "df")),
                     list(step = "code", label = "the bars beyond the y axis, said", code = cut)), f$stats)
   # a subject with no response (blank or missing) is a bar of its own colour:
   # in the legend as Missing, not a grey with no key

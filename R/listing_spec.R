@@ -411,7 +411,9 @@ print.tfl_listing_spec <- function(x, ...) {
 #' @param output_id The listing; may be left out when the definition has one.
 #' @param datasets The data catalog (see [tfl_read_data_code()]); `NULL`:
 #'   `ard`'s.
-#' @param rework Code run on `data` before it is sorted, or `NULL`.
+#' @param rework Code run on `data` before it is sorted, or `NULL`.  One
+#'   expression is written as it is; code of several runs in a scope of its
+#'   own, `data <- local({ ...; data })`, so only `data` comes out of it.
 #' @param type The listing type when the listing's `type` is blank (one of
 #'   rtfreporter's `listing_spec()` types).
 #' @param codelists The reports' code lists (a table definition's
@@ -570,7 +572,8 @@ tfl_listing_code <- function(spec, output_id = NULL, datasets = NULL,
     unlist(lapply(also, function(d) tfl_read_data_code(datasets, d))),
     if (is.null(rework)) "# its records, in its order; dates as they print",
     .make_code("data", obj, steps),
-    if (!is.null(rework)) c("", "# rework", rework, "", "# in its order; dates as they print",
+    if (!is.null(rework)) c("", "# rework", .content_steps_code(rework), "",
+                            "# in its order; dates as they print",
                             .make_code("data", "data", c(sort, dates))),
     if (identical(part, "all")) lay_out) |>
     .drop_attached_ns()
