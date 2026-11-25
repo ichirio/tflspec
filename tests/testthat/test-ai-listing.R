@@ -158,3 +158,19 @@ test_that("a listing read from an analysis data with R code: its columns are not
   expect_false(any(grepl("AGE_SEX", p$problem)))
   expect_false(any(p$severity == "error"))
 })
+
+test_that("a data definition with `arrange` (the listing's sort in the data step) gives no problem (#970)", {
+  skip_on_cran()
+  vars <- data.frame(dataset = rep("ADAE", 5), variable = c("USUBJID", "AESER", "AEDECOD", "TRT01A", "ASTDY"),
+                     stringsAsFactors = FALSE)
+  ctx <- structure(list(task = "table", datasets = vars, populations = c("SAF", "ITT")),
+                   class = "tfl_ai_context")
+  a <- lst_answer("L-4")
+  a <- sub("data: {source: dataset, dataset: ADAE, population: SAF, where: !r 'AESER == \"Y\"', sort: [TRT01A, USUBJID, ASTDY]}",
+           "data: [{id: sae, from: ADAE, population: SAF, where: !r 'AESER == \"Y\"', arrange: [TRT01A, USUBJID, -ASTDY]}]", a, fixed = TRUE)
+  a <- sub("vars: [AEBODSYS, AEDECOD]", "vars: [AEDECOD]", a, fixed = TRUE)
+  expect_true(any(grepl("arrange: [TRT01A", a, fixed = TRUE)))
+  p <- tfl_ai_check(tfl_ai_parse(paste(a, collapse = "\n"), task = "table"), ctx)
+  expect_false(any(p$severity == "error"))
+  expect_false(any(grepl("arrange", p$problem)))
+})

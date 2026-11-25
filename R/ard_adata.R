@@ -331,12 +331,8 @@
         t, den[i], a$output_id[i]))
     }
     if (is.na(dcol[i])) next
-    both <- c("dataset", "population_id")[!is.na(c(a$dataset[i], a$population_id[i]))]
-    if (length(both)) {
-      add_a(i, "data", sprintf(paste(
-        "%s: an analysis reads its `data` or a %s; not both (the analysis",
-        "data has them)"), t, paste0("`", both, "`", collapse = " and ")))
-    }
+    both <- .data_both(dcol[i], a$dataset[i], a$population_id[i], c("dataset", "population_id"))
+    if (length(both)) add_a(i, "data", sprintf("%s: an analysis %s", t, .data_both_text(both)))
   }
   do.call(rbind, pr)
 }

@@ -385,11 +385,11 @@
 }
 
 # The report's analysis set (A2 R1): its spec's, by the one reader
-# (.report_population(): its data's `population`, its subjects entries',
-# its `common:`); NA when it has none
+# (.out_population_or_data(): its data's `population`, its `common:` until
+# `common` goes, else its subjects entries'); NA when it has none
 .rp_population <- function(ctx) {
   r <- ctx$report
-  .na_scalar(.report_population(r$spec_output %||% r$output %||% list()))
+  .out_population_or_data(r$spec_output %||% r$output %||% list())
 }
 
 # A figure's subjects (A2 R1, R4): the subjects of the report's analysis set,

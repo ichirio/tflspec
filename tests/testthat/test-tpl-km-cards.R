@@ -79,7 +79,7 @@ test_that("km_cards' program is the card chain, ggsurvfit() + ... + add_risktabl
 
 test_that("km_cards' set is its data's: the records joined to the set's subjects, no flag step (A2)", {
   o <- tfl_template_resolve(kmc_report(), study = kmc_study)
-  expect_identical(.report_population(o), "FAS")
+  expect_identical(.out_population_or_data(o), "FAS")
   # the program's read of ADTTE: the records of the subjects the data part
   # makes (adsl_sub), as every A2 figure's
   subj <- list(object = "adsl_sub", dataset = "ADSL", id = "USUBJID")

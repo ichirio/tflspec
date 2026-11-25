@@ -131,9 +131,9 @@
   switch(root,
     output = {
       # (the report's analysis set: the one reader's -- its data's
-      # `population`, its subjects entries', its `common:`, A2)
+      # `population`, its `common:`, its subjects entries', A2)
       v <- if (identical(path, c("common", "population")) && is.list(output)) {
-        .report_population(output)
+        .out_population_or_data(output)
       } else down(output, path)
       # (none when the report names none: NA is tfl_output()'s "not given")
       if (length(v) == 1L && !is.na(v)) v
@@ -593,7 +593,7 @@ tfl_template_to_spec <- function(output, study) {
   # definition does not repeat it (the code SPEC's `data:` says what the
   # report adds to the set)
   if (output$kind %in% c("table", "listing")) {
-    pop <- .na_scalar(as.character(e$args$population %||% output$common$population %||% NA))
+    pop <- .na_scalar(as.character(e$args[["population"]] %||% output[["common"]][["population"]] %||% NA))
     if (!is.na(pop)) {
       output$common <- .common_in(c(list(population = pop), output$common[setdiff(names(output$common), "population")]),
                                   paste0("tfl_template_to_spec(): ", output$id))

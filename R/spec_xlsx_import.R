@@ -353,7 +353,7 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
   if (identical(sheet, "analysis_data") && y$kind %in% c("table", "listing") &&
       (is.null(y$data) || is.null(names(y$data)))) {
     path_in <- "data"
-    pop <- y$common$population
+    pop <- y[["common"]][["population"]]
   }
   if (is.null(content_fn)) rows <- .get_in(y, path_in) %||% list()
   else rows <- lapply(Filter(function(it) is.list(it) && identical(names(it), content_fn), y$content %||% list()), function(it) it[[1L]])

@@ -113,7 +113,7 @@
 # the report has none or the study's ARD definition cannot be made
 .ai_fig_subjects <- function(st, id, sh) {
   o <- tfl_read_outputs(".", skip_bad = TRUE)[[id]]
-  pop <- if (!is.null(o)) .na_scalar(.report_population(o)) else NA_character_
+  pop <- if (!is.null(o)) .out_population_or_data(o) else NA_character_
   if (is.na(pop)) return(NULL)
   x <- tryCatch(.ard_spec_of_study(st, output_id = id, sheets = sh)$spec,
                 error = function(e) NULL)

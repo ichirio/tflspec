@@ -27,10 +27,8 @@
   }
   pops <- context$populations
   chk_pop <- function(where, x) {
-    if (length(pops) && !is.null(x) && !x %in% pops) {
-      add(where, sprintf("%s is not an analysis set of spec/data.yml (%s)", sQuote(x, FALSE),
-                         paste(pops, collapse = ", ")))
-    }
+    m <- .pop_unknown_text(x, pops)
+    if (!is.null(m)) add(where, m)
   }
   if (!is.na(.out_population(o))) chk_pop("common population", .out_population(o))
   if (is.na(o[["label"]])) add("label", "the report has no label (its title)", "warning")
@@ -59,10 +57,8 @@
   ad <- o[["ard"]]$analysis_data %||% list()
   ad_ids <- vapply(ad, function(a) .ai_scalar_text(a[["id"]]) %||% NA_character_, "")
   if (!is.null(data_id)) {
-    if (nzchar(ds) || has_pop) {
-      add("data", paste("reads its `data` (an analysis data) or a `dataset` and `population`; not both",
-                        "(the analysis data has them)"))
-    }
+    both <- .data_both(data_id, d[["dataset"]], pop)
+    if (length(both)) add("data", .data_both_text(both))
     if (!data_id %in% ad_ids) {
       add("data data", sprintf("%s is not an analysis_data id of this report%s", sQuote(data_id, FALSE),
                                if (length(ad_ids)) sprintf(" (%s)", paste(ad_ids, collapse = ", ")) else ""))
