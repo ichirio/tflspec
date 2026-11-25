@@ -491,9 +491,12 @@
   if (!is.null(study)) return(tfl_template_to_spec(o, study))
   tp <- o$template
   args <- tp$args %||% list()
+  # (the report's set by the one reader: its data's `population:`, `common:`
+  # until it goes, its subjects rows' -- A2)
+  pop <- .out_population_or_data(o)
   if (is.null(args$population) && "population" %in% names(tfl_template_params(tp$name)) &&
-      !is.na(.out_population(o))) {
-    args$population <- .out_population(o)
+      !is.na(pop)) {
+    args$population <- pop
   }
   x <- tfl_template_expand(tp$name, args)
   o$ard <- x$ard
