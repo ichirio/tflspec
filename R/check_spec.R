@@ -9,7 +9,8 @@
 #'   refuses): the report cannot be copied into the study;
 #' * `warning`: the SPEC reads, but a program that runs cannot be written
 #'   from it (the ARD program or the table's code stops; a content
-#'   function the installed rtfreporter does not have yet);
+#'   function the installed rtfreporter does not have yet; with `adam`, a
+#'   `!=` condition that drops the rows where its variable is NA);
 #' * `note`: the program is written all the same -- an argument the
 #'   installed cards / cardx does not know, a version to look at.
 #'
@@ -46,6 +47,20 @@
 #'   row can be made; one that cannot has an `error` row, `part`
 #'   `"build"`.  A few seconds a report.  `FALSE` (default): the checks
 #'   above only.
+#' @param adam Where the data for the data check come from.  `TRUE`
+#'   (default): the study's own datasets, from the paths of `spec/data.yml`
+#'   (from the study folder), read as the study's program reads them and
+#'   only when needed: a study with no `!=` condition reads no data, and a
+#'   dataset is read once.  `FALSE` (or `NULL`): no data check.  Or the ADaM
+#'   data as [tfl_check_fig_design()]'s `adam` takes it ([tfl_read_adam()]: a
+#'   folder or a named list of data frames).  The check: a condition of the
+#'   ARD definition (a `where` of the populations, records, analysis data or
+#'   analyses) that holds `var != value` is looked at in the dataset it
+#'   applies to: where `var` has NA there, the condition drops those rows (a
+#'   filter keeps only TRUE), and a `warning` row (`part` `"ard"`) gives the
+#'   count and the form that keeps them, `!var %in% value`.  No study
+#'   folder, a dataset whose file is not there or is not listed, or a
+#'   variable not in the dataset: no row.  The generated code is not changed.
 #' @return A data frame, one row a problem: `output_id` (`NA` for the
 #'   study's ARD definition as a whole and the study's own rows), `part`
 #'   (`"file"`, `"study"`, `"ard"`, `"content"`, `"program"`, `"figure"`,
@@ -77,7 +92,7 @@
 #' @seealso [tfl_check_reports()], [tfl_check_fix_text()], [tfl_ard_spec()],
 #'   [tfl_schema_check()], [tfl_check_fig_design()]
 #' @export
-tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
+tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) {
   if (is.character(study) && length(study) == 1L) study <- tfl_read_study_spec(study)
   if (!inherits(study, "tfl_study_spec")) {
     .ard_stop("tfl_check_spec(): `study` is a study read with tfl_read_study_spec(), or its folder.")
@@ -279,6 +294,8 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
       }
     }
   }
+  # (with the study's data: a `!=` that drops the rows where the variable is NA)
+  rows[[length(rows) + 1L]] <- .check_ne_na_rows(study, adam, setdiff(ids, bad), is.null(output_id))
   out <- do.call(rbind, rows)
   out <- out[is.na(out$output_id) | out$output_id %in% ids, , drop = FALSE]
   if (isTRUE(build) && !is.null(study$dir)) {
