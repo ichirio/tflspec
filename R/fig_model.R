@@ -2001,25 +2001,46 @@ tfl_fig_data_name <- function(design) {
   intersect(fns, used)
 }
 
+# R's base packages: installed with R, never named as a need
+.r_base_pkgs <- c("base", "compiler", "datasets", "graphics", "grDevices", "grid",
+                  "methods", "parallel", "splines", "stats", "stats4", "tcltk",
+                  "tools", "utils")
+
+# The packages `src` (code) calls as pkg::fn or pkg:::fn, read from its
+# parse, not its text: a `pkg::` in a comment or a string is not a call.  Code
+# that does not parse as a whole is read piece by piece; a piece that does not
+# parse adds nothing.
+.code_ns_pkgs <- function(src) {
+  src <- src[!is.na(src)]
+  if (!length(src)) return(character())
+  one <- function(txt) {
+    pd <- tryCatch(utils::getParseData(parse(text = txt, keep.source = TRUE)),
+                   error = function(e) NULL)
+    if (is.null(pd) || !nrow(pd)) return(NULL)
+    pd$text[pd$token == "SYMBOL_PACKAGE"]
+  }
+  pk <- one(paste(src, collapse = "\n"))
+  if (is.null(pk)) pk <- unlist(lapply(src, one))
+  unique(as.character(pk))
+}
+
 # The packages a script of its own needs installed, for its "# also needs"
-# line: `needs` (what its code calls as pkg::fn) and what the helpers it
-# carries call (fmt_num() calls rtfreporter::round_num()), without the
-# packages it attaches (`libs`) and the base ones.  Read from the parse of the
-# helpers' code, not its text: a comment's `pkg::` is not a call.  With the
-# study's setup, or in a program, the helpers are not carried: `needs` as is.
+# line: every package the script calls as pkg::fn -- `needs` (what its
+# writer recorded), its own code (`code`: forest_or's
+# rtfreporter::round_num()) and the study helpers it carries (fmt_num() calls
+# rtfreporter::round_num()) -- without the packages it attaches (`libs`) and
+# R's base packages (.r_base_pkgs).  Read from the parse (.code_ns_pkgs()): a
+# comment's `pkg::` is not a call.  With the study's setup, or in a program,
+# the program around the code attaches and checks its packages: `needs` as is.
 .fig_script_needs <- function(code, needs = character(), libs = character(),
                               setup = FALSE) {
-  carry <- !(isTRUE(setup) || isTRUE(getOption("tflspec.fig_in_program")))
-  used <- if (carry) .fig_helpers_carried(code) else character()
-  pk <- character()
-  if (length(used)) {
-    src <- unlist(.study_helper_defs()[used])
-    pd <- utils::getParseData(parse(text = src, keep.source = TRUE))
-    pk <- unique(pd$text[pd$token == "SYMBOL_PACKAGE"])
+  if (isTRUE(setup) || isTRUE(getOption("tflspec.fig_in_program"))) {
+    return(unique(needs))
   }
-  base <- c("base", "stats", "utils", "tools", "methods", "grDevices", "graphics")
-  needs <- unique(c(needs, setdiff(pk, c(base, libs))))
-  needs
+  used <- .fig_helpers_carried(code)
+  helper_pk <- if (length(used)) .code_ns_pkgs(unlist(.study_helper_defs()[used]))
+  pk <- unique(c(needs, .code_ns_pkgs(code), helper_pk))
+  setdiff(pk, c(.r_base_pkgs, libs))
 }
 
 # The head of a figure script, the one rule every figure writer follows:

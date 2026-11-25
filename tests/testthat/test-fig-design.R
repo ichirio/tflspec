@@ -478,6 +478,50 @@ test_that("a script of its own names the packages its carried helpers call", {
   expect_identical(tflspec:::.fig_script_needs("fmt_num(x, 1)", setup = TRUE), character())
 })
 
+test_that("a script of its own names every package its own code calls as pkg::fn", {
+  # forest_or's own code calls rtfreporter::round_num(): the script needs it
+  expect_identical(tflspec:::.fig_script_needs("lab <- rtfreporter::round_num(x, 1)"),
+                   "rtfreporter")
+  # pkg:::fn is a call of the package too
+  expect_identical(tflspec:::.fig_script_needs("y <- scales:::percent(x)"), "scales")
+  # R's base packages are installed with R: not named
+  expect_identical(tflspec:::.fig_script_needs("m <- stats::median(x)"), character())
+  expect_identical(tflspec:::.fig_script_needs(c("m <- stats::median(x)",
+                                                 "g <- grid::unit(1, 'mm')",
+                                                 "v <- utils::head(x)")), character())
+  # a package the script attaches with library() is not named
+  expect_identical(tflspec:::.fig_script_needs("y <- scales::percent(x)", libs = "scales"),
+                   character())
+  # a pkg:: in a comment or a string is not a call
+  expect_length(tflspec:::.fig_script_needs("x <- 1 # scales::percent"), 0L)
+  expect_length(tflspec:::.fig_script_needs("x <- 'scales::percent(y)'"), 0L)
+  # the own code's packages, the writer's and the carried helpers' together, once
+  expect_setequal(tflspec:::.fig_script_needs(c("a <- rtfreporter::round_num(x, 1)",
+                                                "b <- fmt_num(x, 1)"), needs = "ggtext"),
+                  c("ggtext", "rtfreporter"))
+  # code in pieces that do not parse together is read piece by piece
+  expect_identical(tflspec:::.fig_script_needs(c("p <- f(", "y <- scales::percent(x)")),
+                   "scales")
+  # with the study's setup, or in a program: what the writer recorded, as is
+  expect_identical(tflspec:::.fig_script_needs("a <- rtfreporter::round_num(x, 1)", setup = TRUE),
+                   character())
+  old <- options(tflspec.fig_in_program = TRUE)
+  on.exit(options(old), add = TRUE)
+  expect_identical(tflspec:::.fig_script_needs("a <- rtfreporter::round_num(x, 1)",
+                                               needs = "ggtext"), "ggtext")
+})
+
+test_that("a template whose own code calls rtfreporter:: names it in its script", {
+  needs_line <- function(code) grep("^# also needs:", code, value = TRUE)
+  for (tpl in c("forest_or", "butterfly_soc", "butterfly_pt")) {
+    own <- tfl_fig_design_code(tfl_fig_template(tpl), "F1")
+    expect_true(any(grepl("rtfreporter", needs_line(own))), info = tpl)
+    expect_true("rtfreporter" %in% attr(own, "needs"), info = tpl)
+    st <- tfl_fig_design_code(tfl_fig_template(tpl), "F1", setup = TRUE)
+    expect_length(needs_line(st), 0L)
+  }
+})
+
 test_that("the in-program option works end to end: a report's content code has no helper definitions (A3)", {
   expect_null(getOption("tflspec.fig_in_program"))
   design <- tfl_fig_template("bar_rate_ci")
