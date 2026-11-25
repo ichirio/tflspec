@@ -70,12 +70,14 @@ params:
     step: content
     tier: other
     description: Where the legend goes (inside at the top right, bottom); none for no legend.
+derive:
+  population: {value: !series population_efficacy}
 extends: !series extends
 style: !series style
 data:
   - id: adsl_sub
     from: ADSL
-    population: !series population_efficacy
+    population: "{population}"
   - id: adtte_sub
     from: ADTTE
     subjects_in: adsl_sub
