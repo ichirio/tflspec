@@ -44,8 +44,12 @@ test_that("relevel_ard() with a code list of labels (code -> label) uses its cod
   env <- new.env()
   eval(parse(text = tfl_helpers_code()), envir = env)
   # the codes are the names; the labels differ from them
-  expect_identical(env$cl_values(c(F = "Female", M = "Male")), c("F", "M"))
-  expect_identical(env$cl_values(c("Placebo", "Drug A")), c("Placebo", "Drug A"))
+  expect_identical(env$codelist_codes(c(F = "Female", M = "Male")), c("F", "M"))
+  expect_identical(env$codelist_codes(c("Placebo", "Drug A")), c("Placebo", "Drug A"))
+  # (no helper in the code lists' names, cl_<var>: a column VALUES's list
+  # would hide it)
+  fns <- ls(env)[vapply(ls(env), function(n) is.function(env[[n]]), NA)]
+  expect_false(any(startsWith(fns, "cl_")))
   adtte <- as.data.frame(cards::ADTTE)
   arms <- c("Xanomeline Low Dose", "Placebo", "Xanomeline High Dose")
   cl_trta <- stats::setNames(c("Drug X low", "Control", "Drug X high"), arms)
