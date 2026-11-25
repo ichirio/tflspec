@@ -88,11 +88,10 @@ tfl_latest_run <- function(study_dir, report_id, part = c("tfl", "ard")) {
   fin <- .as_time(field("Finished"))
   if (is.na(fin) || !identical(field("Study"), study_id)) return(NULL)
   # the end record: verified, an official run, never a run again
-  if (!identical(field("Verified"), "yes") || any(grepl("^Re-run\\s*:", lines))) {
+  if (!identical(field("Verified"), "yes") || !identical(field("Kind"), "run") ||
+      any(grepl("^Re-run\\s*:", lines))) {
     return(NULL)
   }
-  kind <- field("Kind")
-  if (!is.na(kind) && !identical(kind, "run")) return(NULL)
   r <- tryCatch(utils::read.csv(csv, colClasses = "character"),
                 error = function(e) NULL)
   need <- c("part", "program", "output_id", "status", "md5")
