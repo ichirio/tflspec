@@ -7,10 +7,8 @@ The template or step has no argument for these; write the item shown.
    The text is built from the fit: `summary(survival::survfit(survival::Surv(AVAL, CNSR == 0) ~ TRT01P, data = <the figure's data>))$table`
    gives `median`, `0.95LCL`, `0.95UCL` a curve (`m` below); one line an arm:
    `paste0(fmt_num(m[, "median"], 1), " (", fmt_num(m[, "0.95LCL"], 1), ", ", fmt_num(m[, "0.95UCL"], 1), ")")`.
-2. A long y-axis title is cut: break it with `
-` in a double-quoted YAML string (not a real line break).
-   `plot: {y_label: "Mean Change from Baseline (95% CI)
-in Diastolic BP (mmHg)"}`
+2. A long y-axis title is cut: break it with `\n` in a double-quoted YAML string (not a real line break).
+   `plot: {y_label: "Mean Change from Baseline (95% CI)\nin Diastolic BP (mmHg)"}`
 3. A `rate` step's label prints on two lines: a `code` step after it (`rt` is the rate step's `name`).
    `- {step: code, code: 'rt$label <- paste0(fmt_num(rt$rate, 1), "% (", rt$x, "/", rt$n, ")")', label: "One-line label rate (n/N)"}`
 4. Arms come in alphabetical order (Control first): a `levels` step on the arm variable, in the data steps before the plot. The palette follows the order.
