@@ -41,7 +41,10 @@ tfl_fig_template(
 \item{template}{One of \code{tfl_fig_templates()$template}.}
 
 \item{data, param, group}{The dataset, its PARAMCD and the group variable
-(joined from ADSL when \code{join_adsl}).}
+(joined from ADSL when \code{join_adsl}).  \code{group} has no default: a
+template that splits the arms stops without it, naming itself and
+the argument (\code{km_single_arm}, \code{individual_spider}, the waterfalls and
+the swimmers draw no arms).}
 
 \item{pop}{The analysis set, by its id or its flag: no step of the
 design keeps it.  A figure's subjects are its report's analysis set

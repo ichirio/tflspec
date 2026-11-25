@@ -2120,7 +2120,7 @@ tfl_fig_data_name <- function(design) {
 #' @param design A `tfl_fig_design`.
 #' @return `TRUE` or `FALSE`.
 #' @examples
-#' tfl_fig_uses_ard(tfl_fig_template("km_risk_table"))
+#' tfl_fig_uses_ard(tfl_fig_template("km_risk_table", group = "TRT01P"))
 #' @export
 tfl_fig_uses_ard <- function(design) .fig_uses_ard(design)
 
@@ -2557,7 +2557,10 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
 #'
 #' @param template One of `tfl_fig_templates()$template`.
 #' @param data,param,group The dataset, its PARAMCD and the group variable
-#'   (joined from ADSL when `join_adsl`).
+#'   (joined from ADSL when `join_adsl`).  `group` has no default: a
+#'   template that splits the arms stops without it, naming itself and
+#'   the argument (`km_single_arm`, `individual_spider`, the waterfalls and
+#'   the swimmers draw no arms).
 #' @param pop The analysis set, by its id or its flag: no step of the
 #'   design keeps it.  A figure's subjects are its report's analysis set
 #'   (its data's `population:`): its program makes them and joins every dataset
@@ -2604,6 +2607,25 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
 #' @export
 tfl_fig_templates <- function() .fig_templates()
 
+# A kind's figure size and theme, from the figure style standard
+# (pp_default_options()): the dpi, the base font size, the theme
+.fig_kind_size <- function(kind) {
+  o <- pp_default_options(kind)
+  opt <- function(k, d) { x <- o[[k]]; if (is.null(x) || identical(x, "")) d else x }
+  list(dpi = as.numeric(opt("dpi", 300)), base_size = as.numeric(opt("base_size", 10)),
+       theme = opt("theme", "boxed"))
+}
+
+# A template's argument it cannot do without (a figure's `group`, PRINCIPLES
+# 1.14): none given stops, naming the template, the argument and what it is
+.fig_tpl_required <- function(x, template, arg, what) {
+  v <- as.character(unlist(x))
+  if (!length(v) || all(is.na(v) | !nzchar(trimws(v)))) {
+    .ard_stop(sprintf("%s: `%s` is required (%s).", template, arg, what))
+  }
+  x
+}
+
 #' @rdname tfl_fig_templates
 #' @export
 tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
@@ -2642,8 +2664,11 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
   o <- pp_default_options(kind)
   opt <- function(k, d) { x <- o[[k]]; if (is.null(x) || identical(x, "")) d else x }
   # (its size is its report's: tfl_fig_page_size())
-  size <- list(dpi = as.numeric(opt("dpi", 300)),
-               base_size = as.numeric(opt("base_size", 10)), theme = opt("theme", "boxed"))
+  size <- .fig_kind_size(kind)
+  # a figure's group has no default (PRINCIPLES 1.14): the template does not
+  # guess the arms -- one rule for every kind that draws by a group
+  need_group <- function() .fig_tpl_required(group, template, "group",
+                                             "the variable that splits the arms")
   # the design of a whole-script template: the type's function and its arguments
   if (!tp$parts[tp$template == template]) {
     style <- sub(paste0("^", kind, "_"), "", template)
@@ -2665,7 +2690,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
       single <- template == "km_single_arm"
       data <- data %||% "ADTTE"; param <- param %||% "OS"
       time <- time %||% "AVAL"
-      group <- if (single) NULL else group %||% "TRT01P"
+      group <- if (single) NULL else need_group()
       tfl_fig_design(
         template = template,
         data = drop(list(read(data), if (isTRUE(join_adsl)) join_step(group),
@@ -2692,7 +2717,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
       # the estimates are statistics: the figure's own ARD (cards / cardx),
       # read with ard_stats(); the analyses it needs come with the design
       data <- data %||% "ADTTE"; param <- param %||% "OS"; pop <- pop %||% "FASFL"
-      group <- group %||% "TRT01P"; time <- time %||% "AVAL"
+      group <- need_group(); time <- time %||% "AVAL"
       sub <- .split_vals(subgroups)
       # the layers read `est` (the ARD), not df; the subgroups are joined
       # in the ARD's own analysis data
@@ -2795,7 +2820,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
       param <- param %||% if (spider) "SDIAM" else "ALT"
       value <- value %||% if (spider) "PCHG" else "AVAL"
       x <- x %||% if (spider) "ADY" else visit_label
-      group <- if (spider) NULL else group %||% "TRT01A"
+      group <- if (spider) NULL else need_group()
       join <- join_adsl %||% !spider
       div <- if (spider) .fig_units[[time_unit]] else 1
       tfl_fig_design(
@@ -2821,7 +2846,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
           if (!spider) list(layer = "line", data = "sm", x = visit_label, y = "mean", colour = group, linewidth = 1.2))))
     },
     bar = {
-      data <- data %||% "ADRS"; param <- param %||% "BOR"; group <- group %||% "TRT01P"
+      data <- data %||% "ADRS"; param <- param %||% "BOR"; group <- need_group()
       join <- join_adsl %||% TRUE
       style <- sub("^bar_", "", template)
       tfl_fig_design(
@@ -2854,7 +2879,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
                  vjust = -0.3, position = "position_dodge(width = 0.75)"))))
     },
     mean = {
-      data <- data %||% "ADLB"; param <- param %||% "ALT"; group <- group %||% "TRT01A"
+      data <- data %||% "ADLB"; param <- param %||% "ALT"; group <- need_group()
       value <- value %||% "AVAL"
       join <- join_adsl %||% TRUE
       iv <- switch(template, mean_sd = "sd", mean_ci = "ci", "se")
@@ -2877,7 +2902,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
           if (template == "mean_se_n") list(layer = "n_table", data = "sm", x = visit_label, group = group))))
     },
     box = {
-      data <- data %||% "ADLB"; param <- param %||% "ALT"; group <- group %||% "TRT01A"
+      data <- data %||% "ADLB"; param <- param %||% "ALT"; group <- need_group()
       style <- sub("^box_", "", template)
       value <- value %||% if (style == "change") "CHG" else "AVAL"
       join <- join_adsl %||% TRUE
@@ -2907,7 +2932,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
                group = if (!one) group, shape = "plus", size = if (one) 3 else 2, dodge = !one))))
     },
     scatter = {
-      data <- data %||% "ADLB"; param <- param %||% "ALT"; group <- group %||% "TRT01A"
+      data <- data %||% "ADLB"; param <- param %||% "ALT"; group <- need_group()
       shift <- template == "scatter_shift"
       x <- x %||% "BASE"; y <- y %||% if (shift) "AVAL" else "CHG"
       join <- join_adsl %||% TRUE
@@ -2927,7 +2952,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
           if (!shift) list(layer = "smooth", data = "df", x = x, y = y, colour = group, method = "lm", se = FALSE))))
     },
     pk = {
-      data <- data %||% "ADPC"; group <- group %||% "TRT01A"
+      data <- data %||% "ADPC"; group <- need_group()
       value <- value %||% "AVAL"; time <- time %||% "NFRLT"
       join <- join_adsl %||% TRUE
       style <- sub("^pk_", "", template)
@@ -3084,7 +3109,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
 #' records of the population, the subgroup variables added from the
 #' population's data) and one `custom` analysis per estimate -- a Cox
 #' model of all subjects (`cardx::ard_regression()`), and one within each
-#' subgroup variable (`cards::ard_strata()`).  `tfl_fig_template("forest_hr")`
+#' subgroup variable (`cards::ard_strata()`).  `tfl_fig_template("forest_hr", group = )`
 #' returns them as the design's attribute `analyses`; a study manager
 #' writes them to the figure's ARD definition.
 #'

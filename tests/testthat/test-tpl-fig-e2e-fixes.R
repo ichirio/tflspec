@@ -228,7 +228,7 @@ test_that("mean_ci: a group with one record at a visit has no bar and no warning
   g <- d[d$TRT01A == d$TRT01A[1L], "AVAL"]
   expect_equal(max(eb$ymax, na.rm = TRUE) >= mean(g), TRUE)
   # the code
-  k <- tfl_template_expand("mean_ci", list(param = "SYSBP", data = "ADVS"))
+  k <- tfl_template_expand("mean_ci", list(param = "SYSBP", data = "ADVS", group = "TRT01A"))
   code <- paste(tflspec:::.fig_stats_code(k$data$steps[length(k$data$steps)], "df")$code, collapse = "\n")
   expect_match(code, "ifelse(n > 1, mean - qt(0.975, pmax(n - 1, 1)) * se, NA_real_)", fixed = TRUE)
 })
@@ -276,7 +276,7 @@ test_that("mean_se in a study: records with no value reach the summary, which sa
   e2e_study(d, list(adsl = tflspec::adsl, advs = vs), "F-1", "mean_se",
             list(param = "SYSBP", population = "SAF", data = "ADVS", group = "TRT01A"))
   # the data step no longer drops them unseen
-  x <- tfl_template_expand("mean_se", list(param = "SYSBP", data = "ADVS"))
+  x <- tfl_template_expand("mean_se", list(param = "SYSBP", data = "ADVS", group = "TRT01A"))
   exprs <- unlist(lapply(x$data$steps, function(s) if (identical(s$step, "filter")) s$expr))
   expect_true("!is.na(AVISITN)" %in% exprs)
   expect_false(any(grepl("!is.na(AVAL) & !is.na(AVISITN)", exprs, fixed = TRUE)))

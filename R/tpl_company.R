@@ -407,9 +407,9 @@ tfl_test_templates <- function(names = NULL) {
   # (the KM report types: their data stage is a report's own data: steps)
   km_survival = list(by = "TRT01P"),
   km_cumulative = list(by = "TRT01P", time_unit = "weeks"),
-  forest_hr = list(param = "PFS", population = "SAF"),
-  mean_se = list(param = "SYSBP", data = "ADVS"),
-  mean_ci = list(param = "SYSBP", data = "ADVS"),
+  forest_hr = list(param = "PFS", population = "SAF", group = "TRT01A"),
+  mean_se = list(param = "SYSBP", data = "ADVS", group = "TRT01A"),
+  mean_ci = list(param = "SYSBP", data = "ADVS", group = "TRT01A"),
   waterfall = list(param = "SUMDIAM", where = "AVISIT == \"WEEK 12\""),
   orr = list(),
   stat_block = list(variable = "RESP", cells = list(N = "{N}", "ORR (%)" = "{n} ({estimate:.1f%})")),
