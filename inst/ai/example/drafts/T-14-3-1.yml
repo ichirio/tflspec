@@ -18,6 +18,12 @@ ard:
         - AEBODSYS
         - AEDECOD
       args: !r over_variables = TRUE
+    - id: BIGN
+      method: categorical
+      dataset: ADSL
+      population: SAF
+      variables:
+        - TRT01A
 content:
   - normalize_ard:
       hierarchy:

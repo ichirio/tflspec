@@ -4,11 +4,12 @@
 # a batch folder as the runner leaves it (only what the index reads)
 fake_run <- function(study, run, rows, study_id = "S-1",
                      started = "2026-11-20 10:00:00", finished = TRUE,
-                     verified = TRUE, extra = character()) {
+                     verified = TRUE, kind = "run", extra = character()) {
   d <- file.path(study, "runs", run)
   dir.create(d, recursive = TRUE)
   utils::write.csv(rows, file.path(d, "run.csv"), row.names = FALSE)
-  writeLines(c(paste("Batch    :", run), paste("Study    :", study_id),
+  writeLines(c(paste("Batch    :", run), paste("Kind     :", kind),
+               paste("Study    :", study_id),
                "Spec     : none", paste("Started  :", started),
                if (finished) "Finished : 2026-11-20 10:05:00",
                if (finished && verified) "Verified : yes",
@@ -95,13 +96,13 @@ test_that("tfl_run_index(): only a verified run that was not run again counts", 
   # run again (a copy put back into runs/)
   fake_run(s, "20261122_100000_all", run_rows("tfl", "T-1"),
            started = "2026-11-22 10:00:00",
-           extra = c("Kind     : run", "Re-run   : 2026-11-22 11:00:00"))
+           extra = "Re-run   : 2026-11-22 11:00:00")
   # a preview
   fake_run(s, "20261123_100000_all", run_rows("tfl", "T-1"),
-           started = "2026-11-23 10:00:00", extra = "Kind     : preview")
+           started = "2026-11-23 10:00:00", kind = "preview")
   # an official run
   fake_run(s, "20261124_100000_all", run_rows("tfl", "T-1"),
-           started = "2026-11-24 10:00:00", extra = "Kind     : run")
+           started = "2026-11-24 10:00:00")
   expect_identical(unique(tfl_run_index(s)$run),
                    c("20261124_100000_all", "20261120_100000_all"))
 })
