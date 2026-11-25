@@ -49,12 +49,13 @@ files as written, not layered -- the sheets' readers layer them as they
 always did).  \code{tfl_sheets_from_spec()} does the same from a spec already
 read (or changed in memory, not written yet): \code{tfl_sheets_from_yaml(dir)}
 is \code{tfl_sheets_from_spec(tfl_read_study_spec(dir), tfl_read_outputs(dir))}.
-
+}
+\details{
 What a report extends: its row on the \code{report} sheet has a \code{pattern} cell
-(the first pattern, \verb{@<name>}), and an \code{extends} cell (\verb{a | b}, or \code{none})
+(the first pattern, \verb{@<name>}), and an \code{extends} cell (\code{a | b}, or \code{none})
 only when the chain is not \verb{[<pattern>, defaults]} as the \code{pattern} cell
 alone says it: \code{extends: none}, a pattern after the defaults, a pattern
-alone, two patterns.  \code{tfl_yaml_from_sheets()} reads the cell as the chain,
+alone, two patterns; a map by step as \verb{content=none; page=patterns/a | defaults}.  \code{tfl_yaml_from_sheets()} reads the cell as the chain,
 in its order; an \code{extends} cell whose first pattern is not the \code{pattern}
 cell's is an error (one of the two was edited).
 }
