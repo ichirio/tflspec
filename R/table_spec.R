@@ -834,7 +834,7 @@
 #'   \item{`span`}{Blank: one cell over all of `cols`.  `each`: one cell
 #'     per column.  A column key (`TRTA`): one cell per value of that
 #'     key, over its columns --- an arm's spanner, however many arms.}
-#'   \item{`text`}{The label.  A line break is Alt+Enter or `\\n`.  The
+#'   \item{`text`}{The label.  A line break is Alt+Enter or `\n`.  The
 #'     tokens of [rtfreporter::plan_col_header()] work: `{col}` (the column's own
 #'     value), `{col1}`, `{col2}` (its keys, outermost first), `{n}` (the
 #'     population of what the cell stands for: its column, or over an
