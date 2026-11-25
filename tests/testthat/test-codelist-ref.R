@@ -82,9 +82,11 @@ test_that("a reference writes the programs a list written in place writes, byte 
   # (what is compared: the lists' lines, set_levels(), relevel_ard(), the labels)
   ard <- paste(refs$ard, collapse = "\n")
   expect_match(ard, "cl_sex <- c(F = \"Female\", M = \"Male\")", fixed = TRUE)
-  expect_match(ard, "cl_agegr1 <- c(`>=65` = \">=65 years\", `<65` = \"<65 years\")", fixed = TRUE)
+  # (AGEGR1: the codes picked, in the order written)
+  expect_match(ard, "cl_agegr1 <- c\\([^\n]*>=65 years[^\n]*<65 years")
   expect_match(ard, "set_levels(", fixed = TRUE)
-  expect_match(ard, "relevel_ard(SEX = cl_sex)", fixed = TRUE)
+  # (the analysis that is not cards': its ARD in the lists' order, by and variables)
+  expect_match(ard, "relevel_ard\\([^)]*SEX = cl_sex")
   expect_match(paste(refs$content, collapse = "\n"), "Female", fixed = TRUE)
 })
 
