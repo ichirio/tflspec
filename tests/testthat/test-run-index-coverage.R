@@ -127,16 +127,15 @@ test_that("a batch.txt with an empty Verified value or no Verified line does not
   expect_identical(nrow(tfl_run_index(s)), 0L)
 })
 
-test_that("a Finished line whose time cannot be read counts, with an NA finish", {
-  # NOTE: looks wrong: R/run_index.R only checks that a Finished line is there
-  # (not NA), so `Finished : not a time` (or an empty value) counts as finished
-  # and the run is listed with finished = NA.
+test_that("a Finished line whose time cannot be read, or is empty, is not a finished run", {
   s <- ricv_study()
-  ricv_run(s, "r1", lines = c(ricv_good()[1:2], "Finished : not a time", ricv_good()[4:5]))
+  ricv_run(s, "not_a_time", lines = c(ricv_good()[1:2], "Finished : not a time", ricv_good()[4:5]))
+  ricv_run(s, "empty", lines = c(ricv_good()[1:2], "Finished :", ricv_good()[4:5]))
+  ricv_run(s, "r_ok", lines = ricv_good())
   idx <- tfl_run_index(s)
-  expect_identical(idx$run, "r1")
-  expect_true(is.na(idx$finished))
-  expect_false(is.na(idx$started))
+  expect_identical(idx$run, "r_ok")
+  expect_false(anyNA(idx$finished))
+  expect_identical(tfl_latest_run(s, "T-1")$run, "r_ok")
 })
 
 test_that("a time is read as year-month-day hour:minute:second, other forms are NA", {
