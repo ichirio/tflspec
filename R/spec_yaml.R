@@ -263,11 +263,18 @@ tfl_read_output <- function(path) {
   on.exit(.spec_read$file <- NULL, add = TRUE)
   y <- .yaml_read_file(path, handlers = .yaml_handlers())
   if (!is.list(y)) stop("tfl_read_output(): ", path, " is not a map.", call. = FALSE)
+  out <- .outputs_of_yaml(y, path)
+  if (is.null(y$outputs)) out[[1L]] else out
+}
+
+# A report file's plain list as its reports: a list of tfl_output (one, or
+# a family's `outputs:` each over its `base:`)
+.outputs_of_yaml <- function(y, path = "") {
   if (!is.null(y$outputs)) {
     base <- y$base %||% list()
     return(lapply(y$outputs, function(o) .output_from_list(.merge_plain(base, o), path)))
   }
-  .output_from_list(y, path)
+  list(.output_from_list(y, path))
 }
 
 # A tag with no value in flow style -- `{b: !unset}`, `[x, !unset]` -- is

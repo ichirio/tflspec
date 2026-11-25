@@ -356,8 +356,10 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   if (!is.null(tpl$x$codelists)) output$codelists <- .tpl_add_codelists(acc$codelists, tpl$x$codelists)
   output$content <- .any_label_default(acc$content, output, study)
   # the study's code lists the content names (study$codelists$SEX): one the
-  # study has not got is taken out; the lists go with the report, for the
-  # package's runners, which have no setup to make `study`
+  # study has not got is taken out (a template's default may name one); the
+  # lists go with the report, for the package's runners, which have no setup
+  # to make `study`.  The report's own references are checked, not taken
+  # out in silence: tfl_check_spec() (tfl_check_study_refs()).
   output$content <- .study_refs_prune(output$content, names(study$codelists))
   attr(output, "study_codelists") <- study$codelists %||% list()
   output$content <- .listing_rows_default(output$content, output$kind, provenance)

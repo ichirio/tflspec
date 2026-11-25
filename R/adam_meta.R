@@ -119,6 +119,8 @@
 # The study's code lists as the programs have them, by name: each list's
 # codes in their order, named by the code when a label is given
 # (c(F = "Female")), else the codes alone (defaults.yml's `codelists:`).
+# A code twice in a list stops, naming the list and the code (a list has a
+# code once, with one label).
 .study_codelists_read <- function(cl) {
   ref <- names(Filter(.cl_is_ref, cl %||% list()))
   if (length(ref)) {
@@ -126,12 +128,22 @@
          "(`[{value: F, label: Female}, ...]`); a reference ({list: ...}) is a report's.",
          call. = FALSE)
   }
-  out <- lapply(.codelists_norm(cl), function(rows) {
+  rows_of <- .codelists_norm(cl)
+  out <- lapply(seq_along(rows_of), function(i) {
+    rows <- rows_of[[i]]
+    nm <- names(rows_of)[i]
     codes <- vapply(rows, function(r) as.character(r$value), "")
+    twice <- unique(codes[duplicated(codes)])
+    if (length(twice)) {
+      stop("spec/defaults.yml `codelists:` ", nm, ": the code ", paste0("\"", twice, "\"", collapse = ", "),
+           " is in the list more than once; a list has each code once, with one label. ",
+           "Keep one row of it.", call. = FALSE)
+    }
     lab <- .tpl_cl_dict(rows)
     # (a list whose labels are its codes: the codes alone)
     if (is.null(lab) || all(names(lab) == unname(lab))) codes else lab
   })
+  names(out) <- names(rows_of)
   out[lengths(out) > 0L]
 }
 

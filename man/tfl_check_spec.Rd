@@ -36,8 +36,8 @@ variable not in the dataset: no row.  The generated code is not changed.}
 \value{
 A data frame, one row a problem: \code{output_id} (\code{NA} for the
 study's ARD definition as a whole and the study's own rows), \code{part}
-(\code{"file"}, \code{"study"}, \code{"ard"}, \code{"content"}, \code{"program"}, \code{"figure"},
-\code{"build"}), \code{item} (the file, the
+(\code{"file"}, \code{"study"}, \code{"codelists"}, \code{"ard"}, \code{"content"}, \code{"program"},
+\code{"figure"}, \code{"build"}), \code{item} (the file, the
 analysis, the function and argument, or the figure's part and
 field), \code{level} (\code{"error"}, \code{"warning"}, \code{"note"}, \code{"check"}) and
 \code{message}.  Its attributes: \code{versions}, a data frame of the key
@@ -86,7 +86,15 @@ a figure's field that names an object nothing above its content makes
 (\code{wrap_plots}'s \code{plots}, \code{ggsurvfit}'s \code{x}, a \code{data} or a \code{fit}), and a
 name given twice in a report or that is a study dataset's or a
 function's are errors (\code{part} \code{"names"} for the last two); an object
-the report names and nothing uses is a note.  The packages' installed versions come with
+the report names and nothing uses is a note.  The study's code lists a
+report names itself (\code{\link[=tfl_study_refs]{tfl_study_refs()}}: a code list \code{{list: X}}, a code
+its \verb{codes:} picks, a \code{study$codelists$X} in its own R text) are looked
+up in the study's (\code{spec/defaults.yml} \verb{codelists:}): one the study has
+not got is an \code{error}, \code{part} \code{"codelists"}, \code{item} the variable or the
+place of the R text; a report whose code lists name one gets no other
+check (each would stop on it).  A template's default reference is not
+the report's and is not checked: a list the study has not got is left
+out of it.  The packages' installed versions come with
 it, as an attribute.  A GUI's check button and the AI's run call it.
 }
 \examples{
@@ -109,5 +117,5 @@ if (requireNamespace("haven", quietly = TRUE)) {
 }
 \seealso{
 \code{\link[=tfl_check_reports]{tfl_check_reports()}}, \code{\link[=tfl_check_fix_text]{tfl_check_fix_text()}}, \code{\link[=tfl_ard_spec]{tfl_ard_spec()}},
-\code{\link[=tfl_schema_check]{tfl_schema_check()}}, \code{\link[=tfl_check_fig_design]{tfl_check_fig_design()}}
+\code{\link[=tfl_schema_check]{tfl_schema_check()}}, \code{\link[=tfl_check_fig_design]{tfl_check_fig_design()}}, \code{\link[=tfl_study_refs]{tfl_study_refs()}}
 }
