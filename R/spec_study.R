@@ -990,9 +990,9 @@ tfl_output_extends <- function(output, step = NULL) {
 #' Writes the study-level file of one part of a [tfl_read_study_spec()]
 #' result -- what a builder changes for the whole study (the rounding of
 #' every table, a pattern) -- in the form the reader reads.  For
-#' `"defaults"`, the blocks of `spec/defaults.yml` that are not layers
-#' (`codelists:`, `adam_meta:`, `figure_style:`, `options:`) are kept as the
-#' study's own file has them.
+#' `"defaults"` written over the study's own `spec/defaults.yml`, the blocks
+#' that are not layers (`codelists:`, `adam_meta:`, `figure_style:`,
+#' `options:`) are kept as the file has them.
 #'
 #' @param study A `tfl_study_spec`.
 #' @param part `"defaults"`, `"patterns"` (one, by `name`),
@@ -1028,7 +1028,7 @@ tfl_write_study_part <- function(study, part = c("defaults", "patterns", "data",
     defaults = {
       y <- layer_out(study$defaults)
       if (length(study$styles)) y$styles <- lapply(study$styles, layer_out)
-      c(y, .defaults_kept_blocks(study, names(y)))
+      y
     },
     patterns = {
       if (is.null(name) || is.null(study$patterns[[name]])) {
@@ -1045,27 +1045,50 @@ tfl_write_study_part <- function(study, part = c("defaults", "patterns", "data",
                    file.path(spec, paste0(part, ".yml")))
   }
   dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
-  writeLines(yaml::as.yaml(y, indent.mapping.sequence = TRUE, handlers = .yaml_out_handlers()),
-             path, useBytes = TRUE)
+  txt <- yaml::as.yaml(y, indent.mapping.sequence = TRUE, handlers = .yaml_out_handlers())
+  # (written over the study's own defaults.yml: its blocks that are not
+  # layers -- codelists:, adam_meta:, figure_style:, options: ... -- kept)
+  own <- if (identical(part, "defaults") && !is.null(study$dir)) file.path(.spec_dir(study$dir), "defaults.yml")
+  if (!is.null(own) && file.exists(path) && file.exists(own) &&
+      identical(normalizePath(path, "/"), normalizePath(own, "/"))) {
+    old <- readLines(path, encoding = "UTF-8", warn = FALSE)
+    txt <- paste0(paste(.defaults_keep_blocks(strsplit(txt, "\n", fixed = TRUE)[[1L]], old),
+                        collapse = "\n"), "\n")
+  }
+  writeLines(txt, path, useBytes = TRUE)
   invisible(path)
 }
 
-# The blocks of defaults.yml that tfl_write_study_part(, "defaults") does not
-# write from the layers (`own`: the ones it wrote) -- the study's code lists,
-# its ADaM metadata, figure_style:, options:, any other -- kept as the
-# study's own spec/defaults.yml has them; with no such file, the ones the
-# study holds as written (its code lists, figure_style:, options:)
-.defaults_kept_blocks <- function(study, own) {
-  f <- if (!is.null(study$dir)) file.path(.spec_dir(study$dir), "defaults.yml")
-  if (!is.null(f) && file.exists(f)) {
-    raw <- yaml::read_yaml(f, handlers = .yaml_handlers()) %||% list()
-    return(raw[setdiff(names(raw), c("content", "page", "data", "styles", own))])
+# `lines` (the writer's defaults.yml) with every top-level block of `old`
+# (the file it writes over) whose key `lines` has not, as `old` has it: the
+# key's line to the next top-level key, the comment lines just above the key
+# included.  The writer's own keys (content, page, data, styles) are not
+# kept: it leaves one out when it is empty.  The kept blocks keep their order
+# and their place by `styles:`: those before the old `styles:` (all, when it
+# has none) just before the new one (at the end when there is none), those
+# after it at the end.
+.defaults_keep_blocks <- function(lines, old) {
+  is_key <- function(x) grepl("^[A-Za-z_][A-Za-z0-9_]*:", x)
+  key_of <- function(x) sub(":.*$", "", x)
+  top <- is_key(old)
+  keys <- ifelse(top, key_of(old), NA_character_)
+  skip <- c(key_of(lines[is_key(lines)]), "content", "page", "data", "styles")
+  st <- which(keys %in% "styles")[1L]
+  before <- character()
+  after <- character()
+  for (i in which(top)) {
+    if (keys[i] %in% skip) next
+    skip <- c(skip, keys[i])
+    nxt <- which(top & seq_along(old) > i)
+    j <- if (length(nxt)) nxt[1L] - 1L else length(old)
+    while (j > i && grepl("^#", old[j])) j <- j - 1L
+    from <- i
+    while (from > 1L && grepl("^#", old[from - 1L])) from <- from - 1L
+    if (!is.na(st) && i > st) after <- c(after, old[from:j]) else before <- c(before, old[from:j])
   }
-  out <- list()
-  if (length(study$codelists)) out$codelists <- .study_codelists_out(study$codelists)
-  if (length(study$figure_style)) out$figure_style <- study$figure_style
-  if (length(study$options)) out$options <- study$options
-  out[setdiff(names(out), own)]
+  at <- which(grepl("^styles:", lines))[1L]
+  lines <- if (is.na(at)) c(lines, before) else append(lines, before, after = at - 1L)
+  c(lines, after)
 }
 
 # A table's normalize_ard() without `overall`, of a report whose hierarchy

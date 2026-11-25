@@ -214,15 +214,6 @@
 # none), its place
 .study_codelists_columns <- c("name", "value", "label", "order")
 
-# The study's lists (study$codelists, by name: named by the code when they
-# have labels) as defaults.yml's `codelists:` has them
-.study_codelists_out <- function(cl) {
-  lapply(cl %||% list(), function(x) {
-    if (is.null(names(x))) return(as.list(as.character(x)))
-    lapply(seq_along(x), function(i) list(value = names(x)[[i]], label = as.character(x[[i]])))
-  })
-}
-
 # The sheet back as defaults.yml's `codelists:`, each list in its order
 # (`order`, else the rows'): `{value, label}` rows, or the codes alone when
 # no row has a label
