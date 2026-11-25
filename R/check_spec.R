@@ -42,6 +42,12 @@
 #' the report names and nothing uses is a note.  The packages' installed versions come with
 #' it, as an attribute.  A GUI's check button and the AI's run call it.
 #'
+#' A table's column header N: a header text with `{n}` (and no `values` of
+#' its own) takes each column's N from the report's `BIGN` analysis.  A
+#' report with no `BIGN`, or whose `BIGN` counts by no column variable of
+#' the table, is a `warning` (`part` `"content"`, item
+#' `"plan_col_header(header)"`): its header would print `N=NA`.
+#'
 #' @param study A study read with [tfl_read_study_spec()], or its folder.
 #' @param output_id The reports to check; `NULL` for every report.
 #' @param build `TRUE`: each report the checks above pass is also built
@@ -224,6 +230,8 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
     # the names its fields give: a figure's that nothing above makes, a
     # table's named block (R/object_list.R)
     rows[[length(rows) + 1L]] <- .check_object_rows(ro, id, study_ds)
+    # a column header's N with no BIGN to take it from (R/check_spec_header_n.R)
+    rows[[length(rows) + 1L]] <- .check_header_n_rows(ro, id)
     if (inherits(ro$content, "tfl_r")) next
     # a figure's content key (`figure: {name, args}`): its name is one of the
     # table's (.fig_content_table()), its program is written

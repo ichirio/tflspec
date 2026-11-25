@@ -91,6 +91,12 @@ name given twice in a report or that is a study dataset's or a
 function's are errors (\code{part} \code{"names"} for the last two); an object
 the report names and nothing uses is a note.  The packages' installed versions come with
 it, as an attribute.  A GUI's check button and the AI's run call it.
+
+A table's column header N: a header text with \verb{\{n\}} (and no \code{values} of
+its own) takes each column's N from the report's \code{BIGN} analysis.  A
+report with no \code{BIGN}, or whose \code{BIGN} counts by no column variable of
+the table, is a \code{warning} (\code{part} \code{"content"}, item
+\code{"plan_col_header(header)"}): its header would print \code{N=NA}.
 }
 \examples{
 if (requireNamespace("haven", quietly = TRUE)) {
