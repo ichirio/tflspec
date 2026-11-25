@@ -30,8 +30,9 @@ test_that("ard_value() gives one statistic: its text, its value, or stops", {
   expect_identical(e$ard_value(a, "KM", "prob", "estimate", ARM = "A", level = 0.5),
                    unlist(a$stat_fmt[a$variable == "prob" & a$stat_name == "estimate" &
                                        vapply(a$group1_level, as.character, "") == "A"]))
+  # with digits: the study's rounding, as a table cell "{estimate:.1f}"
   expect_identical(e$ard_value(a, "KM", "prob", "estimate", ARM = "A", level = 0.5, digits = 1),
-                   formatC(est, format = "f", digits = 1))
+                   sprintf("%.1f", rtfreporter::round_num(est, 1)))
   # no group: a row each, so not one
   expect_error(e$ard_value(a, "KM", "prob", "estimate", level = 0.5), "2 rows .* not one")
   expect_error(e$ard_value(a, "KM", "prob", "estimate", ARM = "C", level = 0.5), "0 rows")
@@ -39,6 +40,28 @@ test_that("ard_value() gives one statistic: its text, its value, or stops", {
   a$stat[a$variable == "prob" & a$stat_name == "conf.high"] <- list(NA_real_)
   expect_identical(e$ard_value(a, "KM", "prob", "conf.high", ARM = "B", level = 0.5), "NE")
   expect_identical(e$ard_value(a, "KM", "prob", "conf.high", ARM = "B", level = 0.5, na = "-"), "-")
+})
+
+test_that("fmt_num() rounds by the study's rule, as a table cell does", {
+  e <- helper_env()
+  withr::local_options(rtfreporter.rounding = "sas")
+  expect_identical(e$fmt_num(0.125, 2), "0.13")
+  expect_identical(e$fmt_num(120.5, 0), "121")
+  expect_identical(e$fmt_num(c(2.675, NA, -0.125), 2), c("2.68", "NE", "-0.13"))
+  expect_identical(e$fmt_num(NA, 1, na = "-"), "-")
+  expect_identical(e$fmt_num("1.25", 1), "1.3")
+  withr::local_options(rtfreporter.rounding = "r")
+  expect_identical(e$fmt_num(0.125, 2), "0.12")
+  expect_identical(e$fmt_num(120.5, 0), "120")
+  expect_identical(e$fmt_num(NA_real_, 2), "NE")
+})
+
+test_that("fmt_pvalue(): <0.001, else 3 decimals by the study's rounding", {
+  e <- helper_env()
+  withr::local_options(rtfreporter.rounding = "sas")
+  expect_identical(e$fmt_pvalue(c(0.0004, 0.0125, 0.5, NA)),
+                   c("<0.001", "0.013", "0.500", NA))
+  expect_identical(e$fmt_pvalue(0.0125, na = "NE"), "0.013")
 })
 
 test_that("ard_stats() gives statistics as a data frame, a row per group and level", {

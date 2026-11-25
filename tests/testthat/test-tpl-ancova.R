@@ -20,8 +20,13 @@ an_data <- function(shift = 0, three = FALSE) {
   d$CHG[d$TRT01A == "Drug X"] <- d$CHG[d$TRT01A == "Drug X"] + shift
   d
 }
-# the program's fmt_pvalue() (inst/helpers/study_helpers.R)
-an_pvalue <- function(x) ifelse(x < 0.001, "<0.001", sprintf("%.3f", x))
+# the program's fmt_pvalue() (inst/helpers/study_helpers.R): <0.001, else
+# 3 decimals by the study's rounding (rtfreporter::round_num())
+an_pvalue <- function(x) {
+  txt <- sprintf("%.3f", rtfreporter::round_num(x, 3L))
+  txt[is.na(x)] <- NA_character_
+  ifelse(!is.na(x) & x < 0.001, "<0.001", txt)
+}
 # the ARD as the study's program makes it: cardx's LS means; the
 # differences by the analysis's own code; the arm (the difference's first)
 # as the group
