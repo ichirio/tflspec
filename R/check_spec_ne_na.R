@@ -6,14 +6,19 @@
 
 # The warnings for the conditions of the ARD definition (populations,
 # records, analysis data, analyses: their `where`) that compare a variable
-# with `!=` where the data have NA in the variable.  `adam`: the ADaM data as
-# tfl_check_fig_design(adam = ) takes it; NULL, a dataset that is not found
-# and a variable not in it give no row.
+# with `!=` where the data have NA in the variable.  `adam`: TRUE, the
+# study's own datasets (spec/data.yml's paths from the study folder, read as
+# the program reads them, and only those a `!=` condition applies to, each
+# once); FALSE / NULL, none; or the ADaM data as tfl_check_fig_design(adam = )
+# takes it.  No data, a dataset that is not found and a variable not in it
+# give no row.
 .check_ne_na_rows <- function(study, adam, ids, study_rows = TRUE) {
-  if (is.null(adam) || is.null(study$dir)) return(.check_rows())
-  adam <- tryCatch(pp_prep_adam(adam), error = function(e) NULL)
-  x <- tryCatch(.ard_spec_of_study(study)$spec, error = function(e) NULL)
-  if (is.null(adam) || is.null(x)) return(.check_rows())
+  if (is.null(adam) || isFALSE(adam) || is.null(study$dir)) return(.check_rows())
+  get_df <- .ne_na_reader(study, adam)
+  if (is.null(get_df)) return(.check_rows())
+  x <- tryCatch(suppressMessages(suppressWarnings(.ard_spec_of_study(study)$spec)),
+                error = function(e) NULL)
+  if (is.null(x)) return(.check_rows())
   ad <- .adata_sheet(x)
   a <- .normalize_ard_sheet(x$analyses %||% data.frame(), "analyses")
   # (output_id, what it is, the condition, the dataset it is applied to)
@@ -46,7 +51,9 @@
   }
   rows <- list(.check_rows())
   for (cd in cand) {
-    df <- adam[[toupper(cd$dataset)]]
+    # (the data are read for a condition with a `!=` only)
+    if (!length(.ne_na_hits(cd$where))) next
+    df <- get_df(cd$dataset)
     if (is.null(df)) next
     for (m in .ne_na_messages(cd$where, df, toupper(cd$dataset))) {
       rows[[length(rows) + 1L]] <- .check_rows(
@@ -59,11 +66,39 @@
   out[!duplicated(out), , drop = FALSE]
 }
 
-# The messages of the `var != value` parts of a condition (R text) that drop
-# rows of `df` for an NA of the variable; none when the text does not parse.
-.ne_na_messages <- function(where, df, ds_name) {
+# A function of a dataset's name that gives its data frame, or NULL (not
+# found: no warning).  `adam` TRUE: the study's file, read once; else the
+# data given.
+.ne_na_reader <- function(study, adam) {
+  if (!isTRUE(adam)) {
+    adam <- tryCatch(pp_prep_adam(adam), error = function(e) NULL)
+    if (is.null(adam)) return(NULL)
+    return(function(dataset) adam[[toupper(dataset)]])
+  }
+  cat <- study$data$datasets %||% list()
+  have <- toupper(vapply(cat, function(z) as.character(z$dataset %||% NA_character_)[1L], ""))
+  seen <- new.env(parent = emptyenv())
+  function(dataset) {
+    key <- toupper(dataset)
+    if (!is.null(seen[[key]])) return(seen[[key]][[1L]])
+    p <- if (key %in% have) as.character(cat[[match(key, have)]]$path %||% NA_character_)[1L]
+    df <- NULL
+    if (!is.null(p) && !is.na(p) && nzchar(p)) {
+      full <- if (grepl("^([A-Za-z]:)?[/\\\\]", p)) p else file.path(study$dir, p)
+      if (file.exists(full)) {
+        df <- tryCatch(suppressMessages(suppressWarnings(.ai_read_adam(full, key, study))),
+                       error = function(e) NULL)
+      }
+    }
+    seen[[key]] <- list(df)
+    df
+  }
+}
+
+# The `var != value` parts of a condition (R text): a list of list(call, var,
+# value); none when the text does not parse.
+.ne_na_hits <- function(where) {
   e <- tryCatch(parse(text = where, keep.source = FALSE), error = function(err) NULL)
-  if (is.null(e)) return(character())
   hits <- list()
   walk <- function(x) {
     if (!is.call(x)) return(invisible())
@@ -72,6 +107,15 @@
     for (y in as.list(x)) if (is.call(y)) walk(y)
   }
   for (ex in as.list(e)) walk(ex)
+  hits
+}
+
+# The messages of the `var != value` parts of a condition (R text) that drop
+# rows of `df` for an NA of the variable; none when the text does not parse.
+.ne_na_messages <- function(where, df, ds_name) {
+  hits <- .ne_na_hits(where)
+  if (!length(hits)) return(character())
+  e <- parse(text = where, keep.source = FALSE)
   out <- character()
   seen <- character()
   for (h in hits) {

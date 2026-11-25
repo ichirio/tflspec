@@ -64,18 +64,18 @@ test_that("a condition that cannot be run here: the NA count of the variable", {
   expect_match(m, "drops 2 rows of ADSL where SEX is NA", fixed = TRUE)
 })
 
-ne_study <- function() {
+ne_study <- function(where = 'SEX != "F"', where2 = "AGE != 0") {
   d <- file.path(withr::local_tempdir(.local_envir = parent.frame()), "study")
   dir.create(file.path(d, "adam"), recursive = TRUE)
   haven::write_xpt(tflspec:::.ai_chr(tflspec::adsl), file.path(d, "adam", "adsl.xpt"))
   tfl_ai_study_init(d, adam = "adam", study_id = "NE-1")
-  where <- 'SEX != "F"'
   o <- tfl_output("T-NE", "table", common = list(population = "SAF"), label = "Age",
-    ard = list(analysis_data = list(list(id = "adsl_sub", from = "ADSL", population = "SAF", where = where)),
+    ard = list(analysis_data = list(list(id = "adsl_sub", from = "ADSL", population = "SAF",
+                                                 where = where)),
                analyses = list(list(id = "AGE", method = "cards::ard_summary", data = "adsl_sub",
                                     by = "TRT01A", variables = "AGE"),
                                list(id = "AGE2", method = "cards::ard_summary", data = "adsl_sub",
-                                    by = "TRT01A", variables = "AGE", where = 'AGE != 0'))),
+                                    by = "TRT01A", variables = "AGE", where = where2))),
     content = list(tfl_item("table_plan", list(cols = "TRT01A"))))
   tfl_write_output(o, file.path(d, "spec", "outputs", "T-NE.yml"))
   d
@@ -86,7 +86,7 @@ test_that("tfl_check_spec(adam = ): a warning row of the report, counted by tfl_
   skip_if_not_installed("cards")
   d <- ne_study()
   adam <- list(ADSL = ne_df())
-  base <- tfl_check_spec(d, "T-NE")
+  base <- tfl_check_spec(d, "T-NE", adam = FALSE)
   p <- tfl_check_spec(d, "T-NE", adam = adam)
   w <- p[grepl("drops", p$message, fixed = TRUE), ]
   expect_identical(nrow(w), 2L)
@@ -107,7 +107,7 @@ test_that("tfl_check_spec(adam = ): no data, no NA, another dataset or no such v
   skip_if_not_installed("haven")
   skip_if_not_installed("cards")
   d <- ne_study()
-  base <- tfl_check_spec(d, "T-NE")
+  base <- tfl_check_spec(d, "T-NE", adam = FALSE)
   expect_identical(tfl_check_spec(d, "T-NE", adam = NULL), base)
   # data with no NA in SEX and AGE
   ok <- ne_df()
@@ -124,5 +124,88 @@ test_that("tfl_check_spec(adam = ): no data, no NA, another dataset or no such v
   o$ard$analyses[[2L]]$where <- '!AGE %in% 0'
   tfl_write_output(o, file.path(d, "spec", "outputs", "T-NE.yml"))
   expect_identical(nrow(tfl_check_spec(d, "T-NE", adam = list(ADSL = ne_df()))),
-                   nrow(tfl_check_spec(d, "T-NE")))
+                   nrow(tfl_check_spec(d, "T-NE", adam = FALSE)))
+})
+
+# the study's own data: the files of spec/data.yml, from the study folder
+ne_write_data <- function(d, df = ne_df()) {
+  st <- tfl_read_study_spec(d)
+  p <- file.path(d, st$data$datasets[[1L]]$path)
+  expect_identical(st$data$datasets[[1L]]$dataset, "ADSL")
+  haven::write_xpt(df, p)
+  p
+}
+
+test_that("the default reads the study's data; FALSE turns it off; a folder or a list still works", {
+  skip_if_not_installed("haven")
+  skip_if_not_installed("cards")
+  d <- ne_study()
+  ne_write_data(d)
+  off <- tfl_check_spec(d, "T-NE", adam = FALSE)
+  p <- tfl_check_spec(d, "T-NE")
+  expect_identical(nrow(p), nrow(off) + 2L)
+  expect_identical(p, tfl_check_spec(d, "T-NE", adam = TRUE))
+  expect_identical(p, tfl_check_spec(d, "T-NE", adam = list(ADSL = ne_df())))
+  expect_identical(tfl_check_spec(d, "T-NE", adam = NULL), off)
+  expect_match(p$message[grepl("analysis data adsl_sub", p$item, fixed = TRUE)],
+               "drops 2 rows of ADSL where SEX is NA", fixed = TRUE)
+  # the report's level in tfl_check_reports(): the warning counts
+  expect_identical(tfl_check_reports(p)$level, "WARNING")
+  expect_identical(tfl_check_reports(off)$warnings + 2L, tfl_check_reports(p)$warnings)
+  # a folder of the data, as tfl_check_fig_design() takes it: the file as it is
+  # (a blank text is not NA there: the SEX condition finds none, AGE does)
+  fo <- tfl_check_spec(d, "T-NE", adam = file.path(d, dirname(tfl_read_study_spec(d)$data$datasets[[1L]]$path)))
+  expect_identical(nrow(fo), nrow(off) + 1L)
+})
+
+test_that("the data the study's file has: a blank is NA, as the program reads it", {
+  skip_if_not_installed("haven")
+  skip_if_not_installed("cards")
+  d <- ne_study(where2 = "AGE > 0")
+  df <- ne_df()
+  df$SEX[is.na(df$SEX)] <- ""
+  ne_write_data(d, df)
+  p <- tfl_check_spec(d, "T-NE")
+  expect_match(p$message[grepl("drops", p$message, fixed = TRUE)], "drops 2 rows of ADSL where SEX is NA", fixed = TRUE)
+})
+
+test_that("no file, no study folder, a dataset not listed: no warning, no error", {
+  skip_if_not_installed("haven")
+  skip_if_not_installed("cards")
+  d <- ne_study()
+  off <- tfl_check_spec(d, "T-NE", adam = FALSE)
+  # the study's file is not there
+  unlink(file.path(d, tfl_read_study_spec(d)$data$datasets[[1L]]$path))
+  expect_identical(tfl_check_spec(d, "T-NE"), off)
+  # a study with no folder
+  st <- tfl_read_study_spec(d)
+  st$dir <- NULL
+  expect_identical(nrow(tflspec:::.check_ne_na_rows(st, TRUE, "T-NE")), 0L)
+})
+
+test_that("the data are read for a `!=` condition only, each dataset once", {
+  skip_if_not_installed("haven")
+  skip_if_not_installed("cards")
+  real <- tflspec:::.ai_read_adam
+  n <- new.env()
+  n$k <- 0L
+  testthat::local_mocked_bindings(.ai_read_adam = function(...) {
+    n$k <- n$k + 1L
+    real(...)
+  }, .package = "tflspec")
+  # no `!=` anywhere: nothing is read
+  d <- ne_study(where = 'SEX == "M"', where2 = "AGE > 0")
+  ne_write_data(d)
+  tfl_check_spec(d, "T-NE")
+  expect_identical(n$k, 0L)
+  # two `!=` conditions of one dataset: one read
+  d <- ne_study()
+  ne_write_data(d)
+  p <- tfl_check_spec(d, "T-NE")
+  expect_identical(n$k, 1L)
+  expect_identical(sum(grepl("drops", p$message, fixed = TRUE)), 2L)
+  # off: nothing
+  n$k <- 0L
+  tfl_check_spec(d, "T-NE", adam = FALSE)
+  expect_identical(n$k, 0L)
 })
