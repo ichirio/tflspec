@@ -1,8 +1,9 @@
 # The functions a study's generated programs call: the code lists on a
-# data, the ids in front of an analysis's ARD, the formats after a call,
-# the statistics asked for, one report's rows into the study ARD and back
-# out of it, and a figure's reading of an ARD (one statistic, statistics as
-# a data frame, the fingerprint of what was built).
+# data, a time to event in one unit, the ids in front of an analysis's
+# ARD, the formats after a call, the statistics asked for, one report's
+# rows into the study ARD and back out of it, and a figure's reading of an
+# ARD (one statistic, statistics as a data frame, the fingerprint of what
+# was built).
 # Base R, cards and dplyr only: the programs run without tflspec.
 
 # The code lists on a data: each listed column a factor whose levels are
@@ -176,6 +177,50 @@ order_levels <- function(data, vars = NULL, from = NULL, ...) {
 # level.  A code list set after wins.  order_levels() without categories.
 #   adsl |> order_arms()
 order_arms <- function(data) order_levels(data)
+
+# A time to event in `unit` (days, weeks, months, years): AVAL from its
+# unit, AVALU (any case; DAYS when the data has no AVALU).  One unit in the
+# data: a unit not DAYS, WEEKS, MONTHS or YEARS, a missing one, or two
+# units stop the program.  AVALU says the new unit after it.  The days in a
+# week, month, year: the study's days_per_week / days_per_month /
+# days_per_year when its setup sets them, else 7, 30.4375, 365.25.  The
+# step after the parameter filter; the event is Surv(AVAL, CNSR == 0).
+#   adtte |> filter(PARAMCD == "OS") |> tte_time("months")
+tte_time <- function(data, unit = "days") {
+  days <- c(DAYS = 1,
+            WEEKS = get0("days_per_week", mode = "numeric", ifnotfound = 7),
+            MONTHS = get0("days_per_month", mode = "numeric", ifnotfound = 30.4375),
+            YEARS = get0("days_per_year", mode = "numeric", ifnotfound = 365.25))
+  to <- toupper(as.character(unit))
+  if (length(to) != 1L || is.na(to) || !to %in% names(days)) {
+    stop("tte_time(): the unit must be one of days, weeks, months, years, not ",
+         paste(unit, collapse = " "), call. = FALSE)
+  }
+  if (!nrow(data)) return(data)
+  if (!"AVAL" %in% names(data)) stop("tte_time(): the data has no AVAL", call. = FALSE)
+  from <- "DAYS"
+  if ("AVALU" %in% names(data)) {
+    u <- toupper(trimws(as.character(data$AVALU)))
+    if (anyNA(u) || any(u == "")) {
+      stop("tte_time(): AVALU is missing on ", sum(is.na(u) | u == ""),
+           " record(s); the time's unit must be given", call. = FALSE)
+    }
+    from <- unique(u)
+    bad <- setdiff(from, names(days))
+    if (length(bad)) {
+      stop("tte_time(): AVALU ", paste(bad, collapse = ", "),
+           " is not DAYS, WEEKS, MONTHS or YEARS", call. = FALSE)
+    }
+    if (length(from) > 1L) {
+      stop("tte_time(): the data has two or more units (AVALU ",
+           paste(sort(from), collapse = ", "),
+           "); filter it to one parameter first", call. = FALSE)
+    }
+  }
+  if (from != to) data$AVAL <- data$AVAL * days[[from]] / days[[to]]
+  data$AVALU <- to
+  data
+}
 
 # The ids in front: the report, the analysis and its analysis set.  A cards
 # ARD stays one (class card), so the study ARD is one too and cards' own
