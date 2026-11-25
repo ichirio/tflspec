@@ -26,6 +26,13 @@ test_that("as_is keeps AVAL as it is: no tte_time() step", {
   expect_no_error(parse(text = code))
 })
 
+test_that("a quick KM in days converts AVAL to days from its AVALU (Q5); its axis is \"Time\"", {
+  code <- km_code_text(tfl_fig_km(time_unit = "days"))
+  expect_match(code, 'tte_time("days")', fixed = TRUE)
+  expect_match(code, 'labs(x = "Time", ', fixed = TRUE)
+  expect_no_error(parse(text = code))
+})
+
 test_that("days_to_months converts AVAL by tte_time(\"months\")", {
   code <- km_code_text(tfl_fig_km(time_unit = "months"))
   expect_match(code, 'tte_time("months")', fixed = TRUE)

@@ -81,7 +81,8 @@ test_that("the KM number at risk can come from the table's ARD", {
   code <- paste(tfl_fig_km(adam, param = "OS", ard = "km_table_ard", x_max = 24,
                       x_by = 6), collapse = "\n")
   expect_match(code, "km_ard  <- km_table_ard", fixed = TRUE)
-  expect_match(code, "/ 30.4375", fixed = TRUE)
+  # (the ARD's times in AVAL's own unit, converted as the curve's)
+  expect_match(code, 'tte_time(data.frame(AVAL = risk_df$time, AVALU = km_unit), "months")', fixed = TRUE)
   run <- function(ard) {
     e <- new.env()
     e$adtte <- adam$ADTTE
