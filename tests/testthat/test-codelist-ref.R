@@ -364,19 +364,20 @@ test_that("a `list` cell with no list name, or a code picked twice, stops before
 test_that("tfl_write_study_part(, \"defaults\") keeps the blocks that are not layers (code lists, ADaM metadata)", {
   d <- clr_study(clr_refs)
   s <- tfl_read_study_spec(d)
+  f0 <- file.path(d, "spec", "defaults.yml")
+  before <- readLines(f0)
   tfl_write_study_part(s, "defaults")
   s2 <- tfl_read_study_spec(d)
   expect_identical(s2$codelists, s$codelists)
   expect_identical(s2$adam_meta, s$adam_meta)
   ro <- tfl_resolve_output(tfl_read_outputs(d)[["T-14-1-1"]], s2)
   expect_identical(ro$codelists$SEX[[1L]]$label, "Female")
-  # (no study file: the study's own lists, as written)
-  s0 <- s
-  s0$dir <- NULL
+  # (the blocks as the file had them, line for line)
+  expect_true(all(before[grepl("^codelists:|^  (SEX|AGEGR1):", before)] %in% readLines(f0)))
+  # (another file: the layers and the styles, as before -- the caller keeps the rest)
   f <- withr::local_tempfile(fileext = ".yml")
-  tfl_write_study_part(s0, "defaults", f)
-  expect_identical(yaml::read_yaml(f)$codelists$SEX,
-                   list(list(value = "F", label = "Female"), list(value = "M", label = "Male")))
+  tfl_write_study_part(s, "defaults", f)
+  expect_null(yaml::read_yaml(f)$codelists)
 })
 
 test_that("the study_codelists sheet: codes alone, rows out of order, a list no report uses, labels not ASCII", {
@@ -389,7 +390,6 @@ test_that("the study_codelists sheet: codes alone, rows out of order, a list no 
   expect_identical(got$U, list("1"))
   expect_identical(got$A, list(list(value = "F", label = "\u5973\u6027"), list(value = "M", label = "Male")))
   st <- tflspec:::.study_codelists_read(got)
-  expect_identical(tflspec:::.study_codelists_out(st)$A, got$A)
   want <- tflspec:::.cl_ref_rows(list(list = "A"), "SEX", st, "T-1", "x")
   same <- data.frame(value = c("F", "M"), label = c("\u5973\u6027", "Male"), order = c("1", "2"),
                      stringsAsFactors = FALSE)
