@@ -10,7 +10,10 @@
 #' * `warning`: the SPEC reads, but a program that runs cannot be written
 #'   from it (the ARD program or the table's code stops; a content
 #'   function the installed rtfreporter does not have yet; with `adam`, a
-#'   `!=` condition that drops the rows where its variable is NA);
+#'   `!=` condition that drops the rows where its variable is NA; a
+#'   report's own code list, for a column the study's `adam_meta` maps,
+#'   with a code the define's code list does not have, `part`
+#'   `"codelists"` -- codes compared, not labels);
 #' * `note`: the program is written all the same -- an argument the
 #'   installed cards / cardx does not know, a version to look at.
 #'
@@ -64,9 +67,9 @@
 #' @return A data frame, one row a problem: `output_id` (`NA` for the
 #'   study's ARD definition as a whole and the study's own rows), `part`
 #'   (`"file"`, `"study"`, `"ard"`, `"content"`, `"program"`, `"figure"`,
-#'   `"build"`), `item` (the file, the
-#'   analysis, the function and argument, or the figure's part and
-#'   field), `level` (`"error"`, `"warning"`, `"note"`, `"check"`) and
+#'   `"codelists"`, `"build"`), `item` (the file, the
+#'   analysis, the function and argument, the figure's part and
+#'   field, or the code list's column), `level` (`"error"`, `"warning"`, `"note"`, `"check"`) and
 #'   `message`.  Its attributes: `versions`, a data frame of the key
 #'   packages (`package`, `installed`, `NA` when not installed); `ids`, the
 #'   reports checked (the OK ones too); `kinds`, each report's kind, named
@@ -151,6 +154,9 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
           level = "warning", message = w$message)
     }
   }
+  # a report's own code list with a code the define's list of its column
+  # does not have (the column adam_meta maps; codes, not labels)
+  rows[[length(rows) + 1L]] <- .check_define_code_rows(study, outs[setdiff(ids, bad)])
   for (id in setdiff(ids, bad)) {
     o <- outs[[id]]
     for (m in c(.blank_entry_notes(o$ard$analysis_data, c("where", "derive", "code", "then")),
