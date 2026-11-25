@@ -207,16 +207,15 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
       for (key in names(r)) rows[[k]][key] <- list(r[[key]])
     }
   }
-  rows <- lapply(rows, function(r) {
+  # (each row filled as a map: a key filled with no value -- nothing, or
+  # `!unset` -- is no key.  A figure's data map is one such map, filled
+  # whole: its `population: "{population}"` with no set is no set)
+  fill_row <- function(r) {
     r <- .tr_fill(r, env)
-    r[!vapply(r, function(v) inherits(v, "tfl_unset"), NA)]
-  })
-  rows <- lapply(rows, .derive_map_in)
-  # (a figure's data map: a key filled with no value is no key -- its
-  # `population: "{population}"` with no set is no set)
-  if (!is.null(names(rows))) {
-    rows <- rows[!vapply(rows, function(v) is.null(v) || inherits(v, "tfl_unset"), NA)]
+    if (is.list(r)) r <- r[!vapply(r, function(v) is.null(v) || inherits(v, "tfl_unset"), NA)]
+    .derive_map_in(r)
   }
+  rows <- if (!is.null(names(rows))) fill_row(rows) else lapply(rows, fill_row)
 
   items <- list()
   for (it in tpl$analysis %||% list()) {
