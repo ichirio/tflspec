@@ -1059,6 +1059,43 @@ tfl_read_fig_design <- function(path) {
   gsub("\n", "\n  ", .lay(.step_cl(j[[length(j)]]), lead = 2L), fixed = TRUE)
 }
 
+# The data steps that keep the report's analysis set's rows by the
+# records' own columns -- a `flag` step's variable, a `filter` step's R
+# reading a variable of the set's condition `pop_where` (`flag: SAFFL` when
+# the set is `SAFFL == "Y"`).  The one rule of both checkers: tfl_ai_check()
+# (.ai_fig_required(), an error) and tfl_check_spec()
+# (.check_population_rows(), a warning).  `steps`: the design's data steps,
+# indexed as given (an item that is not a step is skipped).
+# data.frame(index, step, value, vars): one row a step; none when the set
+# has no condition
+.fig_pop_keep_steps <- function(steps, pop_where) {
+  out <- data.frame(index = integer(), step = character(), value = character(),
+                    vars = character(), stringsAsFactors = FALSE)
+  pop_vars <- .ai_r_names(pop_where)
+  if (!length(pop_vars)) return(out)
+  keeps <- c(flag = "variable", filter = "expr")
+  for (k in seq_along(steps)) {
+    s <- steps[[k]]
+    kind <- if (is.list(s)) as.character(unlist(s$step))[1L] else NA_character_
+    if (is.na(kind) || !kind %in% names(keeps)) next
+    v <- as.character(unlist(s[[keeps[[kind]]]]))[1L]
+    if (is.na(v)) next
+    hit <- intersect(.ai_r_names(v), pop_vars)
+    if (!length(hit)) next
+    out[nrow(out) + 1L, ] <- list(k, kind, v, paste(hit, collapse = ", "))
+  }
+  out
+}
+
+# ... and what both checkers say of such a step (`vars`: the variables of
+# the set's condition it reads)
+.fig_pop_keep_text <- function(vars) {
+  sprintf(paste(
+    "keeps the rows of the analysis set by the records' own %s: the set is the report's",
+    "(its data's `population:`), whose subjects the program joins the records to -- remove",
+    "the step (a `flag` step is for a record flag, ANL01FL)"), vars)
+}
+
 .fig_stats_code <- function(steps, src = "df") {
   out <- character()
   libs <- character()

@@ -184,9 +184,9 @@ test_that("a figure or listing of subjects' records with no analysis set: a warn
                                                                             dataset = "ADAE")), "T-1", st)), 0L)
 })
 
-test_that("a step that keeps a population's rows by the records' flag: a warning, the set is the report's (R5, Q4)", {
+test_that("a step that keeps the report's set's rows by the records' flag: a warning, the AI check's rule (R5, Q4)", {
   st <- a2_study()
-  f <- list(kind = "figure", common = list(population = "SAF"), data = list(source = "code", steps = list(
+  f <- list(kind = "figure", data = list(source = "code", population = "SAF", steps = list(
     list(step = "read", dataset = "ADTTE"),
     list(step = "param", value = "TTSKIN"),
     list(step = "flag", variable = "SAFFL"),
@@ -195,24 +195,50 @@ test_that("a step that keeps a population's rows by the records' flag: a warning
   p <- .check_static_rows(f, "F-1", st)
   expect_identical(p$level, c("warning", "warning"))
   expect_identical(p$item, c("data$steps[3]", "data$steps[5]"))
-  expect_match(p$message[1L], "step 3 (`flag: SAFFL`) keeps the rows of population SAF", fixed = TRUE)
-  expect_match(p$message[1L], "its data's `population:` (SAF)", fixed = TRUE)
-  # no report set: the message says which to write (and Q3 says it has none)
-  f$common <- NULL
-  p2 <- .check_static_rows(f, "F-1", st)
-  expect_true(any(grepl("write `data: {population: SAF}`", p2$message, fixed = TRUE)))
-  # the set on its data (the canon's place): the same, the set named
-  f$data$population <- "SAF"
-  p3 <- .check_static_rows(f, "F-1", st)
-  expect_identical(p3$item, c("data$steps[3]", "data$steps[5]"))
-  expect_match(p3$message[1L], "its data's `population:` (SAF)", fixed = TRUE)
-  f$data$population <- NULL
-  # (a record flag, a population with no condition, no study: nothing)
-  f$common <- list(population = "SAF")
-  f$data$steps <- f$data$steps[c(1L, 2L, 4L)]
-  expect_identical(nrow(.check_static_rows(f, "F-1", st)), 0L)
-  f$data$steps[[3L]] <- list(step = "flag", variable = "SAFFL")
+  # (the AI check's words: .fig_pop_keep_text())
+  expect_match(p$message[1L], paste("step 3 (`flag: SAFFL`) keeps the rows of the analysis set by the",
+                                    "records' own SAFFL: the set is the report's"), fixed = TRUE)
+  expect_match(p$message[1L], "whose subjects the program joins the records to -- remove the step", fixed = TRUE)
+  expect_identical(p$message[1L], paste("step 3 (`flag: SAFFL`)", .fig_pop_keep_text("SAFFL")))
+  expect_match(p$message[2L], "step 5 (`filter: AVAL > 0 & SAFFL == \"Y\"`)", fixed = TRUE)
+  # the set in `common:` (until it goes): the same rows
+  f2 <- f
+  f2$data$population <- NULL
+  f2$common <- list(population = "SAF")
+  expect_identical(.check_static_rows(f2, "F-1", st), p)
+  # a record flag only: nothing
+  f3 <- f
+  f3$data$steps <- f$data$steps[c(1L, 2L, 4L)]
+  expect_identical(nrow(.check_static_rows(f3, "F-1", st)), 0L)
+  # no report set: no step row (Q3 says it has none)
+  f4 <- f
+  f4$data$population <- NULL
+  p4 <- .check_static_rows(f4, "F-1", st)
+  expect_identical(p4$item, "data$population")
+  # the set's own condition only: SAFFL keeps nothing of ENR (no condition)
+  f5 <- f
+  f5$data$population <- "ENR"
+  expect_identical(nrow(.check_static_rows(f5, "F-1", st)), 0L)
+  # no study (no condition known): nothing
   expect_identical(nrow(.check_static_rows(f, "F-1")), 0L)
+  # the study's populations as a sheet: the same
+  st_df <- list(data = list(populations = data.frame(population_id = c("SAF", "ENR"),
+                                                     where = c("SAFFL == \"Y\"", NA))))
+  expect_identical(.check_static_rows(f, "F-1", st_df)$item, c("data$steps[3]", "data$steps[5]"))
+})
+
+test_that("the one rule of both checkers: .fig_pop_keep_steps()", {
+  steps <- list(list(step = "read", dataset = "ADTTE"),
+                list(step = "flag", variable = "FASFL"),
+                "not a step",
+                list(step = "filter", expr = "FASFL == \"Y\" & AVAL > 0"),
+                list(step = "flag", variable = "ANL01FL"))
+  h <- .fig_pop_keep_steps(steps, "FASFL == \"Y\"")
+  expect_identical(h$index, c(2L, 4L))
+  expect_identical(h$step, c("flag", "filter"))
+  expect_identical(h$vars, c("FASFL", "FASFL"))
+  expect_identical(nrow(.fig_pop_keep_steps(steps, NULL)), 0L)
+  expect_identical(nrow(.fig_pop_keep_steps(steps, "ITTFL == \"Y\"")), 0L)
 })
 
 test_that("Q3: a set on the analysis data rows counts (canon 11-15)", {

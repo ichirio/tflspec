@@ -11,29 +11,28 @@
 #  - a listing whose columns all carry a width: a note, the widths to look
 #    at (a narrow subject id breaks every record over lines);
 #  - (A2, R5) a figure or listing that reads subjects' records with no
-#    analysis set: a warning; a data step that keeps rows by a variable of a
-#    study population's condition (`flag: SAFFL` on the records): a warning,
-#    the analysis set is the report's, its data's `population:`.
+#    analysis set: a warning; a data step that keeps the report's set's rows
+#    by a variable of the set's condition (`flag: SAFFL` when the set is
+#    `SAFFL == "Y"`): a warning (the program joins the records to the set's
+#    subjects already: the step is redundant), the rule and its words
+#    tfl_ai_check()'s (.fig_pop_keep_steps()).
 # ============================================================================
 
-# The variables each study population's condition reads (`populations:` of
-# spec/data.yml: a list of maps, `id` and `where`), by its id; a population
-# with no condition reads none
-.check_pop_vars <- function(pops) {
-  out <- list()
-  for (p in pops) {
-    if (!is.list(p) || is.null(p$id)) next
-    w <- .na_scalar(unlist(p$where))
-    v <- if (!is.na(w)) tryCatch(all.vars(str2lang(w)), error = function(e) character())
-    if (length(v)) out[[as.character(p$id)[1L]]] <- v
+# The condition of the study population `pop` (`populations:` of
+# spec/data.yml: a list of maps, `id` and `where`, or its sheet); NULL when
+# it has none or the study does not define it
+.check_pop_where <- function(pops, pop) {
+  if (is.data.frame(pops)) {
+    pops <- lapply(seq_len(nrow(pops)), function(i) as.list(pops[i, , drop = FALSE]))
   }
-  out
+  for (p in pops) {
+    if (is.list(p) && identical(as.character(unlist(p$id %||% p$population_id))[1L], pop)) {
+      w <- .na_scalar(unlist(p$where))
+      return(if (!is.na(w)) w)
+    }
+  }
+  NULL
 }
-
-# The data steps that keep rows by a condition (the figure design's pieces,
-# R/fig_model.R) and the field each one's condition is in: a flag step its
-# variable, a filter its R
-.check_row_keeps <- c(flag = "variable", filter = "expr")
 
 # A2 R5: the analysis set of a figure or listing (`o`, as written) and of
 # its data steps: the rows of the check's frame (.check_rows())
@@ -58,27 +57,19 @@
       "the ", o$kind, " reads subjects' records and has no analysis set: write `population:` on its ",
       "data or its analysis data rows (a population of spec/data.yml)"))
   }
-  # (Q4) a step that keeps the rows of a population by the records' own
-  # columns (the subjects outside it, and a record's own arm, stay); the
-  # report's set by the one reader (its data's, its entries', `common:`)
+  # (Q4) a step that keeps the report's set's rows by the records' own
+  # columns, a variable of the set's condition: the AI check's rule and
+  # words (.fig_pop_keep_steps()), a warning here -- the program joins the
+  # records to the set's subjects already.  The set by the one reader (its
+  # data's, its entries', `common:`); no set, or one with no condition: none
   rp <- .na_scalar(.report_population(o))
-  pv <- .check_pop_vars(pops)
-  steps <- if (is.list(d$steps)) d$steps else list()
-  for (k in seq_along(steps)) {
-    s <- steps[[k]]
-    if (!is.list(s) || !is.character(s$step) || !s$step[1L] %in% names(.check_row_keeps)) next
-    v <- .na_scalar(unlist(s[[.check_row_keeps[[s$step[1L]]]]]))
-    if (is.na(v)) next
-    used <- tryCatch(all.vars(str2lang(v)), error = function(e) character())
-    hit <- names(pv)[vapply(pv, function(p) any(used %in% p), NA)]
-    if (!length(hit)) next
-    add(part = "data", item = sprintf("data$steps[%d]", k), level = "warning", message = sprintf(paste0(
-      "step %d (`%s: %s`) keeps the rows of population %s by the records' own %s: the analysis set is ",
-      "the report's, its data's `population:`%s (its subjects from their dataset, the records joined to ",
-      "them); remove the step%s (a `flag` step is for a record flag, ANL01FL)"),
-      k, s$step[1L], v, paste(hit, collapse = " / "), paste(intersect(used, unlist(pv[hit])), collapse = ", "),
-      if (!is.na(rp)) sprintf(" (%s)", rp) else "",
-      if (is.na(rp)) sprintf(" and write `data: {population: %s}`", hit[1L]) else ""))
+  if (!is.na(rp) && is.list(d$steps)) {
+    hits <- .fig_pop_keep_steps(d$steps, .check_pop_where(pops, rp))
+    for (i in seq_len(nrow(hits))) {
+      add(part = "data", item = sprintf("data$steps[%d]", hits$index[i]), level = "warning",
+          message = sprintf("step %d (`%s: %s`) %s", hits$index[i], hits$step[i], hits$value[i],
+                            .fig_pop_keep_text(hits$vars[i])))
+    }
   }
   do.call(rbind, rows)
 }
