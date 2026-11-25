@@ -327,9 +327,10 @@ Group: {RENALGR}"`.
   `analyses: [..., {id: P_SEX, method: fisher, dataset: ADSL, population:
   SAF, by: [TRT01A], variables: [SEX]}, {id: P_AGE, method: kruskal,
   dataset: ADSL, population: SAF, by: [TRT01A], variables: [AGE]}]` and
-  `plan_compare: {p: "{p.value:.3f}"}` (the column's name is yours: `p`,
-  `pvalue`; `"<0.001"` for small values: `p: [!r 'p.value < 0.001 ~
-  "<0.001"', "{p.value:.3f}"]`).  The methods: `fisher`, `chisq`
+  `plan_compare: {p: [!r 'p.value < 0.001 ~ "<0.001"', "{p.value:.3f}"]}`
+  (the column's name is yours: `p`, `pvalue`; the p-value `<0.001` below
+  0.001, else 3 decimals -- write it so, never `"{p.value:.3f}"` alone,
+  which prints `0.000`).  The methods: `fisher`, `chisq`
   (categorical), `ttest` (two arms), `wilcox`, `kruskal`, `oneway`
   (continuous, any number of arms).  The p-value goes on the variable's
   first row; a p-value the shell puts on a row of its own is a question.

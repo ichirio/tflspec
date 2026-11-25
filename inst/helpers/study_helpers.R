@@ -3,7 +3,8 @@
 # the statistics asked for, one report's rows into the study ARD and back
 # out of it, and a figure's reading of an ARD (one statistic, statistics as
 # a data frame, the fingerprint of what was built).
-# Base R, cards and dplyr only: the programs run without tflspec.
+# Base R, cards, dplyr and rtfreporter's round_num(): the programs run
+# without tflspec.
 
 # The code lists on a data: each listed column a factor whose levels are
 # the CODES, in its list's order (a list with names: the names, the codes
@@ -304,8 +305,23 @@ bind_items <- function(...) {
   ard
 }
 
-# A p-value as text: <0.001, else 3 decimals
-fmt_pvalue <- function(x) ifelse(x < 0.001, "<0.001", sprintf("%.3f", x))
+# A number as text with `digits` decimals, rounded by the study's rule
+# (options(rtfreporter.rounding), set once in study_setup.R): the rule a
+# table's "{x:.2f}" rounds by, so a figure prints what the table prints.
+# A missing value is `na`.
+#   fmt_num(0.125, 2)  # "0.13" with rounding: sas; "0.12" with r
+fmt_num <- function(x, digits, na = "NE") {
+  x <- as.numeric(x)
+  out <- sprintf(paste0("%.", digits, "f"), rtfreporter::round_num(x, digits))
+  out[is.na(x)] <- na
+  out
+}
+
+# A p-value as text: <0.001, else 3 decimals by the study's rounding
+fmt_pvalue <- function(x, na = NA_character_) {
+  x <- as.numeric(x)
+  ifelse(!is.na(x) & x < 0.001, "<0.001", fmt_num(x, 3L, na = na))
+}
 
 # The formats after the call, for what takes no fmt_fun (cardx's tests and
 # models, a study's own functions, code, ard_stack()'s own rows): by
@@ -594,8 +610,11 @@ complete_hierarchy <- function(ard, variables, under = list(), when_none = FALSE
 # One statistic of an ARD, as text: the row of the analysis, the variable
 # (and its level), the statistic and the groups named (`TRT01A =
 # "Placebo"`); exactly one row, or the program stops and says how many.
-# The text is the ARD's own (stat_fmt), or the value with `digits`
-# decimals; a missing value is `na`.
+# With `digits` the value is rounded by the study's rule (fmt_num()), as a
+# table cell is; a figure's label gives `digits`.  Without it the text is
+# the ARD's own (stat_fmt: the formats of ard_setup.R, rounded by cards),
+# which need not be a table's decimals: for reading the ARD's own text.
+# A missing value is `na`.
 #   ard_value(ard, "KM", "prob", "estimate", TRT01A = "Placebo", level = 0.5)
 ard_value <- function(ard, analysis_id, variable, stat, ..., level = NULL,
                       digits = NULL, na = "NE") {
@@ -625,7 +644,7 @@ ard_value <- function(ard, analysis_id, variable, stat, ..., level = NULL,
   i <- which(k)
   v <- if (is.list(ard$stat)) ard$stat[[i]] else ard$stat[i]
   if (!length(v) || is.na(v[[1L]])) return(na)
-  if (!is.null(digits)) return(formatC(as.numeric(v[[1L]]), format = "f", digits = digits))
+  if (!is.null(digits)) return(fmt_num(v[[1L]], digits, na = na))
   f <- if ("stat_fmt" %in% names(ard)) {
     if (is.list(ard$stat_fmt)) ard$stat_fmt[[i]] else ard$stat_fmt[i]
   }

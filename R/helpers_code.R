@@ -22,7 +22,9 @@
 #' analysis set in front of an analysis's ARD), `bind_items()` (a report's items into one
 #' ARD: no row lost, the columns in order, a statistic twice in one item an error, the
 #' same statistic in two items a warning), `fmt_ard()` and
-#' `fmt_pvalue()` (formats after a call), `keep_stats()` (only the
+#' `fmt_pvalue()` (formats after a call), `fmt_num()` (a number as text
+#' with the decimals asked for, rounded by the study's rule: what a table
+#' cell `{x:.2f}` prints), `keep_stats()` (only the
 #' statistics asked for), `ard_hierarchical_or_none()` (nested counts,
 #' and the ARD of no records: the overall row 0), `complete_hierarchy()` (a
 #' nested count's code-list values no subject has, counted 0),
@@ -38,8 +40,10 @@
 #' naming the ARD program to run first), and what a figure
 #' reads an ARD with: `ard_value()` (one statistic, as text),
 #' `ard_stats()` (statistics as a data frame) and `ard_fingerprint()` (the
-#' fingerprint `ard_status.csv` recorded for a report).  Base R, cards and
-#' dplyr only: a study writes them once into a file of its own (tflplanner:
+#' fingerprint `ard_status.csv` recorded for a report).  Base R, cards,
+#' dplyr and rtfreporter's `round_num()` (the study's rounding,
+#' `options(rtfreporter.rounding)`): a study writes them once into a file
+#' of its own (tflplanner:
 #' `programs/study_helpers.R`, sourced by its setup) and its programs run
 #' without tflspec.  [tfl_ard_code()]'s whole program (`part = "all"`)
 #' carries them itself.
