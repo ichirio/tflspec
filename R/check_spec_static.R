@@ -12,6 +12,10 @@
 #    at (a narrow subject id breaks every record over lines);
 #  - (A2, R5) a figure or listing that reads subjects' records with no
 #    analysis set: a warning.
+#  - (A2, with the study: .check_set_rows()) a set that is none of
+#    data.yml's, a data that names an analysis data and a set or dataset
+#    beside it: errors; a TOC line naming another set than the report's
+#    data: a warning.
 # ============================================================================
 
 # A2 R5: the analysis set of a figure or listing (`o`, as written): the rows
@@ -26,16 +30,49 @@
   # its analysis data rows (the report's own ARD's, a template's rows).
   # Until `common` goes, its `population` and `population_label` (all
   # subjects) still count
-  reads <- !is.null(d$dataset) || !is.null(d$data) ||
-    (as.character(d$source %||% "ard")[1L] %in% c("dataset", "code"))
-  data_rows <- c(if (is.list(o$ard$analysis_data)) o$ard$analysis_data,
-                 if (is.list(d) && is.null(names(d))) d)
-  row_sets <- unlist(lapply(data_rows, function(a) if (is.list(a)) a[["population"]]))
-  if (reads && all(is.na(unlist(.data_population(d, o)))) && !length(stats::na.omit(row_sets)) &&
+  reads <- !is.null(d[["dataset"]]) || !is.null(d[["data"]]) ||
+    (as.character(d[["source"]] %||% "ard")[1L] %in% c("dataset", "code"))
+  row_sets <- unlist(lapply(.data_rows(o), function(a) a[["population"]]))
+  if (reads && is.na(.report_set(o)) && !length(stats::na.omit(row_sets)) &&
       is.na(.na_scalar(o$common$population_label))) {
     add(part = "data", item = "data$population", level = "warning", message = paste0(
       "the ", o$kind, " reads subjects' records and has no analysis set: write `population:` on its ",
       "data or its analysis data rows (a population of spec/data.yml)"))
+  }
+  do.call(rbind, rows)
+}
+
+# A2 (the Codex review of 2026-11-26): a report's analysis set against the
+# study (`study`, tfl_read_study_spec()'s), `o` as written.  The set its data
+# says (.report_set()) is one of data.yml's (.pop_unknown_text(); its data
+# rows' sets are the ARD definition's check); a data that reads one of the
+# report's analysis data writes no dataset or set beside it (.data_both(),
+# the rule of the sheets and of the AI's check); the TOC's line names the set
+# the report's data names (the data's wins in the sheets)
+.check_set_rows <- function(o, id, study) {
+  rows <- list(.check_rows())
+  add <- function(...) rows[[length(rows) + 1L]] <<- .check_rows(output_id = id, ...)
+  pops <- unlist(lapply(study$data$populations %||% list(), function(p) .na_scalar(unlist(p$id))))
+  pops <- pops[!is.na(pops)]
+  d <- o[["data"]]
+  map <- if (is.list(d) && !is.null(names(d))) d
+  both <- .data_both(map[["data"]], map[["dataset"]], map[["population"]])
+  if (length(both)) {
+    add(part = "data", item = "data$data", level = "error",
+        message = paste("the", o$kind %||% "report", .data_both_text(both)))
+  } else if (is.na(.na_scalar(unlist(map[["data"]])))) {
+    m <- .pop_unknown_text(.report_set(o), pops)
+    if (!is.null(m)) add(part = "data", item = "data$population", level = "error",
+                         message = paste("the report's analysis set:", m))
+  }
+  toc <- Filter(function(e) identical(e$id, id), study$toc$outputs %||% list())
+  tp <- if (length(toc)) .na_scalar(unlist(toc[[1L]][["population"]])) else NA_character_
+  op <- .out_population_or_data(o)
+  if (!is.na(tp) && !is.na(op) && !identical(tp, op)) {
+    add(part = "data", item = "toc$population", level = "warning", message = sprintf(paste0(
+      "the TOC says analysis set %s and the report's data %s: the data's is the report's set (the ",
+      "sheets and the page take it); write %s in the TOC, or the set the report means on its data"),
+      tp, op, op))
   }
   do.call(rbind, rows)
 }

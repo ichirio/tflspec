@@ -223,12 +223,8 @@ tfl_listing_spec <- function(listings = NULL, listing_cols = NULL,
     r$population_id <- r$population_id %||% NA_character_
     if (is.na(r$dataset) && is.na(r$data)) add_l(i, "dataset", sprintf("%s: no `dataset`", who(r$output_id)))
     if (!is.na(r$data)) {
-      both <- c("dataset", "population_id")[!is.na(c(r$dataset, r$population_id))]
-      if (length(both)) {
-        add_l(i, "data", sprintf(paste(
-          "%s: a listing reads its `data` or a %s; not both (the analysis",
-          "data has them)"), who(r$output_id), paste0("`", both, "`", collapse = " and ")))
-      }
+      both <- .data_both(r$data, r$dataset, r$population_id, c("dataset", "population_id"))
+      if (length(both)) add_l(i, "data", sprintf("%s: a listing %s", who(r$output_id), .data_both_text(both)))
       if (!.adata_name_ok(r$data)) {
         add_l(i, "data", sprintf("%s: `data` is the data_id of an analysis data, not %s",
                                  who(r$output_id), r$data))

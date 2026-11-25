@@ -68,7 +68,9 @@
 #'   does not take the variable from the subjects (`add`), gives a `warning`
 #'   row when the two data carry the variable and its value differs for a
 #'   subject (the subject counted under one group in the N, another in the
-#'   rows).  Only the datasets of such tables are read.
+#'   rows).  Only a table whose header shows the N (`{n}` in a column
+#'   header that gives no values of its own) is looked at, and only the
+#'   datasets of such tables are read.
 #' @return A data frame, one row a problem: `output_id` (`NA` for the
 #'   study's ARD definition as a whole and the study's own rows), `part`
 #'   (`"file"`, `"study"`, `"ard"`, `"content"`, `"program"`, `"figure"`,
@@ -137,6 +139,8 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
   kinds <- vapply(outs, function(o) o$kind %||% "table", "")
   # (the study's datasets: no object of a report takes one's name)
   study_ds <- .obj_study_datasets(study)
+  # (the reports whose header shows BIGN's N, .bign_shown())
+  n_shown <- character()
 
   # what the user wrote and a study's R fields hold: a test for a blank text,
   # where study$adam has NA (a template's own rows are not the user's: left out)
@@ -202,6 +206,8 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
       add(output_id = id, part = "content", item = "", level = "error", message = one(ro))
       next
     }
+    # (a header that shows BIGN's N: the N check looks at that N only)
+    if (.bign_shown(ro)) n_shown <- c(n_shown, id)
     # its own titles under a study header that prints the label, the title
     # and the population from the report's keys: printed twice (#518)
     if (length(.page_args(o$page$titles))) {
@@ -223,6 +229,8 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
     }
     # the report as written: what stops the build far from its cause
     rows[[length(rows) + 1L]] <- .check_static_rows(o, id)
+    # its analysis set against the study: data.yml's sets, the TOC's line
+    rows[[length(rows) + 1L]] <- .check_set_rows(o, id, study)
     # the names its fields give: a figure's that nothing above makes, a
     # table's named block (R/object_list.R)
     rows[[length(rows) + 1L]] <- .check_object_rows(ro, id, study_ds)
@@ -304,7 +312,7 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
   rows[[length(rows) + 1L]] <- .check_ne_na_rows(study, adam, setdiff(ids, bad), is.null(output_id))
   # (and a table's header N and its counts: a column variable of two data that
   # differs for a subject, R/check_spec_n.R)
-  rows[[length(rows) + 1L]] <- .check_n_rows(study, adam, setdiff(ids, bad))
+  rows[[length(rows) + 1L]] <- .check_n_rows(study, adam, intersect(setdiff(ids, bad), n_shown))
   out <- do.call(rbind, rows)
   out <- out[is.na(out$output_id) | out$output_id %in% ids, , drop = FALSE]
   if (isTRUE(build) && !is.null(study$dir)) {

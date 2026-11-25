@@ -571,10 +571,8 @@
   }
   pops <- context$populations
   chk_pop <- function(where, x) {
-    if (length(pops) && !is.null(x) && !x %in% pops) {
-      add(where, sprintf("%s is not an analysis set of spec/data.yml (%s)", sQuote(x, FALSE),
-                         paste(pops, collapse = ", ")))
-    }
+    m <- .pop_unknown_text(x, pops)
+    if (!is.null(m)) add(where, m)
   }
   if (!is.na(.out_population(o))) chk_pop("common population", .out_population(o))
   if (is.na(o[["label"]])) add("label", "the report has no label (its title)", "warning")

@@ -375,10 +375,11 @@
 # (a report built from a template has none) the one set its subjects data
 # entries name; NA for none or for several
 .out_population_or_data <- function(output) {
-  pop <- .na_scalar(.data_population(if (is.list(output$data)) output$data, output))
+  pop <- .report_set(output)
   if (!is.na(pop)) return(pop)
-  # (a resolved report has them as its ARD's analysis_data, a file's as `data:`)
-  d <- c(if (is.list(output$data)) output$data, if (is.list(output$ard$analysis_data)) output$ard$analysis_data)
+  # (a resolved report has them as its ARD's analysis_data, a file's as
+  # `data:`; the rows only, never the keys of a data map, .data_rows())
+  d <- .data_rows(output)
   if (!length(d)) return(NA_character_)
   v <- unlist(lapply(d, function(a) {
     p <- a[["population"]]
