@@ -33,7 +33,9 @@
 #' the other terms' rows dropped), `relevel_ard()` (an ARD's
 #' columns in their code lists' order, after an analysis that is not
 #' cards'), `save_ard()` (one report's rows into the
-#' study ARD, and what was built in `ard_status.csv`), `read_ard()` (one
+#' study ARD, and what was built in `ard_status.csv`), `bign_values()` and
+#' `bign_drop()` (a table's BIGN rows: the column headings' N, apart from
+#' its rows), `read_ard()` (one
 #' report's rows of the study ARD; none, or no study ARD, stops the program,
 #' naming the ARD program to run first), and what a figure
 #' reads an ARD with: `ard_value()` (one statistic, as text),

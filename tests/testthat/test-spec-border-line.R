@@ -50,7 +50,7 @@ test_that("a border with sides of their own look reads from YAML and runs", {
     "border_last_row = rtf_border(\n      bottom = rtf_border_line(style = \"double\", width = 30, color = \"#003366\")",
     paste(code, collapse = "\n"), fixed = TRUE)))
   ard <- cards::ard_stack(cards::ADSL, .by = ARM, cards::ard_tabulate(variables = SEX))
-  env <- new.env()
+  env <- study_env()
   env$data <- rtfreporter::normalize_ard(ard)
   eval(parse(text = c("library(rtfreporter)", code)), env)
   expect_s3_class(env$plan, "table_plan")

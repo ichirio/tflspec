@@ -70,7 +70,7 @@ test_that("a SPEC with border_group draws a rule under each group's last row", {
     code <- tfl_content_code(tfl_read_output(f), pipe = "|>")
     ard <- cards::ard_stack(cards::ADSL, .by = ARM,
                             cards::ard_tabulate(variables = c(SEX, RACE)))
-    env <- new.env()
+    env <- study_env()
     env$data <- rtfreporter::normalize_ard(ard)
     eval(parse(text = c("library(rtfreporter)", code)), env)
     rtf <- tempfile(fileext = ".rtf")

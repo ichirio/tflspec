@@ -10,3 +10,12 @@ no_bign <- function(code) {
   while (j <= length(code) && nzchar(code[j])) j <- j + 1L
   code[-seq(i, min(j, length(code)))]
 }
+
+# An environment to run a program's generated code in: it has the study's
+# helpers (bign_values(), bign_drop()), as a real program gets them by
+# sourcing programs/study_helpers.R.
+study_env <- function(parent = parent.frame()) {
+  env <- new.env(parent = parent)
+  sys.source(system.file("helpers", "study_helpers.R", package = "tflspec"), envir = env)
+  env
+}

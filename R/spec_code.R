@@ -1485,8 +1485,9 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 # rows, and BIGN's numbers go to rtfreporter apart, as
 # plan_col_header(values = list(n = )): rtfreporter reads neither
 # output_id nor analysis_id (the user's rule, 2026-11-21; rtfreporter#1103,
-# BIGN's rows among a shift table's made a page of their own).
-.bign_id <- "BIGN"
+# BIGN's rows among a shift table's made a page of their own).  Which rows
+# are BIGN's, and their n, is the study helpers' rule (study_helpers.R:
+# bign_values(), bign_drop()), written once for the programs and tflspec.
 
 # Does the BIGN rule apply to the report?  Every table made from an ARD
 # (not a table of records): the program splits BIGN's rows off whatever
@@ -1514,20 +1515,6 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   })
   attr(out, "used") <- used
   out
-}
-
-# BIGN's n of each group (the by variable's values, as the table's column
-# keys), one unnamed number for a BIGN with no by; NULL when the ARD has
-# none
-.bign_n <- function(ard) {
-  if (!all(c("analysis_id", "stat_name", "stat") %in% names(ard))) return(NULL)
-  b <- ard[as.character(ard$analysis_id) %in% .bign_id &
-             as.character(ard$stat_name) %in% "n", , drop = FALSE]
-  if (!nrow(b)) return(NULL)
-  lv <- if ("variable_level" %in% names(b)) b$variable_level else rep(list(NULL), nrow(b))
-  nm <- vapply(lv, function(x) if (length(x) && !is.na(x[[1L]])) as.character(x[[1L]]) else "", "")
-  n <- stats::setNames(as.numeric(unlist(b$stat)), nm)
-  if (all(!nzchar(nm))) unname(n[1L]) else n[nzchar(nm)]
 }
 
 # BIGN's variable: the table's column variable (the first of
@@ -1564,15 +1551,6 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   NULL
 }
 
-# n named by the labels (a value with no label keeps its own)
-.bign_relabel <- function(n, labels) {
-  labels <- unlist(labels)
-  if (is.null(n) || is.null(names(n)) || !is.character(labels) || is.null(names(labels))) return(n)
-  hit <- names(n) %in% names(labels)
-  names(n)[hit] <- unname(labels[names(n)[hit]])
-  n
-}
-
 # The Total column's heading when the content makes one: its plan_total()
 # items' label and direction, the last given of each (as the layers
 # merge them), the label "Total" when none gives it.  NULL when there is
@@ -1594,25 +1572,19 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   if (is.character(label) && length(label) == 1L && !is.na(label) && nzchar(label)) label else NULL
 }
 
-# The ARD without BIGN's rows
-.bign_drop <- function(ard) {
-  if (!"analysis_id" %in% names(ard)) return(ard)
-  ard[!as.character(ard$analysis_id) %in% .bign_id, , drop = FALSE]
-}
-
 # The same, as the program's lines on its ARD object `obj`: `bign`, the
 # header's values, when a heading reads it, then the ARD without BIGN's
-# rows
+# rows -- the study's helpers (study_helpers.R: bign_values(),
+# bign_drop()), so the program runs without tflspec (A10, 2026-11-24)
 .bign_code <- function(obj, n = TRUE, labels = NULL, total = NULL) {
   lab <- if (inherits(labels, "tfl_r")) as.character(labels)
          else if (!is.null(labels)) paste(deparse(labels, width.cutoff = 500L), collapse = "")
-  .drop_attached_ns(c(
-    "# BIGN: the column headings' N, apart from the table's rows",
-    if (n) sprintf("bign <- tflspec::tfl_bign_values(%s%s%s)", obj,
+  c("# BIGN: the column headings' N, apart from the table's rows",
+    if (n) sprintf("bign <- bign_values(%s%s%s)", obj,
                    if (is.null(lab)) "" else paste0(", labels = ", lab),
                    if (is.null(total)) "" else paste0(", total = ", encodeString(total, quote = "\""))),
-    sprintf("%s <- tflspec::tfl_bign_drop(%s)", obj, obj),
-    ""))
+    sprintf("%s <- bign_drop(%s)", obj, obj),
+    "")
 }
 
 #' BIGN: the column headings' N, apart from the table's rows
@@ -1621,9 +1593,11 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 #' `BIGN` analysis (`analysis_id == "BIGN"`): they are the column
 #' headings' N, not the table's cells.  tflspec takes them out before the
 #' table is made and gives their numbers to rtfreporter apart, as
-#' `plan_col_header(values = )`; rtfreporter reads no `analysis_id`.  The
-#' program of a table made from an ARD calls these two, and so does
-#' [tfl_content_run()].
+#' `plan_col_header(values = )`; rtfreporter reads no `analysis_id`.
+#' [tfl_content_run()] calls these two.  They are the study helpers
+#' `bign_values()` and `bign_drop()` ([tfl_helpers_code()]): the program of
+#' a table made from an ARD calls those, so it runs without tflspec, and
+#' the rule is written once.
 #'
 #' @param ard An ARD (a data frame with `analysis_id`, `stat_name` and
 #'   `stat`).  Without those columns, or with no BIGN row, nothing is
@@ -1647,19 +1621,12 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 #' nrow(tfl_bign_drop(ard))
 #' @export
 tfl_bign_values <- function(ard, labels = NULL, total = NULL) {
-  n <- .bign_n(ard)
-  if (is.null(n)) return(NULL)
-  n <- .bign_relabel(n, labels)
-  if (is.character(total) && length(total) == 1L && !is.na(total) && nzchar(total) &&
-      !is.null(names(n)) && !total %in% names(n)) {
-    n <- c(n, stats::setNames(sum(n), total))
-  }
-  list(n = n)
+  .helpers_env()$bign_values(ard, labels = labels, total = total)
 }
 
 #' @rdname tfl_bign_values
 #' @export
-tfl_bign_drop <- function(ard) .bign_drop(ard)
+tfl_bign_drop <- function(ard) .helpers_env()$bign_drop(ard)
 
 
 #' Make a report's content, from its spec file, without its code

@@ -64,10 +64,13 @@ test_that("a heading that says {n} and gives no values takes BIGN's", {
 test_that("the program's lines do what the run does", {
   lab <- c(`Drug A` = "Drug A 10 mg")
   code <- tflspec:::.bign_code("ard", labels = lab)
-  expect_true(any(grepl("tfl_bign_values(ard, labels = ", code, fixed = TRUE)))
-  expect_true(any(grepl("ard <- tflspec::tfl_bign_drop(ard)", code, fixed = TRUE)) ||
-                any(grepl("ard <- tfl_bign_drop(ard)", code, fixed = TRUE)))
+  # the study's helpers, not tflspec: the program runs without it (A10)
+  expect_true(any(startsWith(code, "bign <- bign_values(ard, labels = ")))
+  expect_true("ard <- bign_drop(ard)" %in% code)
+  expect_false(any(grepl("tflspec", code, fixed = TRUE)))
+  # run as the program runs it: after the study's helpers
   env <- new.env()
+  eval(parse(text = tfl_helpers_code()), env)
   assign("ard", bs_ard(), envir = env)
   eval(parse(text = code), env)
   expect_identical(get("bign", env), tfl_bign_values(bs_ard(), labels = lab))
@@ -92,7 +95,7 @@ test_that("with data steps, the BIGN lines stand after them, just before the tab
   i <- grep("^# BIGN", code)
   expect_length(i, 1L)
   expect_true(i > grep("RACE", code, fixed = TRUE))
-  expect_identical(code[i + 2L], "data <- tflspec::tfl_bign_drop(data)")
+  expect_identical(code[i + 2L], "data <- bign_drop(data)")
   expect_true(startsWith(code[i + 4L], "plan <-") || startsWith(code[i + 3L], "plan <-"))
 })
 
@@ -122,7 +125,7 @@ test_that("a custom Total heading: the program and the run give its N", {
   o$content <- c(o$content, list(tfl_item("plan_total", list(label = "All Subjects"))))
   code <- tfl_content_code(o)
   expect_true(any(grepl("total = \"All Subjects\"", code, fixed = TRUE)))
-  env <- new.env()
+  env <- study_env()
   assign("ard", bs_ard(), envir = env)
   assign("data", bs_ard(), envir = env)
   b <- grep("^bign <- ", code, value = TRUE)
@@ -130,4 +133,19 @@ test_that("a custom Total heading: the program and the run give its N", {
   eval(parse(text = b), env)
   expect_identical(get("bign", env),
                    list(n = c(`Drug A` = 12, `Drug B` = 18, `All Subjects` = 30)))
+})
+
+test_that("tfl_bign_values() and tfl_bign_drop() are the study helpers: one rule for the programs and tflspec", {
+  env <- new.env()
+  eval(parse(text = tfl_helpers_code()), env)
+  lab <- c(`Drug A` = "Drug A 10 mg")
+  for (a in list(bs_ard(), bs_ard()[4:5, ])) {
+    expect_identical(env$bign_values(a), tfl_bign_values(a))
+    expect_identical(env$bign_values(a, labels = lab, total = "Total"),
+                     tfl_bign_values(a, labels = lab, total = "Total"))
+    expect_identical(env$bign_drop(a), tfl_bign_drop(a))
+  }
+  # the helpers' header says what a program runs without
+  expect_true(any(grepl("^bign_values <- function", tfl_helpers_code())))
+  expect_true(any(grepl("^bign_drop <- function", tfl_helpers_code())))
 })
