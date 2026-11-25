@@ -30,7 +30,7 @@
   # (A2-T Q3) several sets on the rows that make subjects: the heading's is
   # that of the row BIGN reads; no BIGN, none
   sets <- .rows_sets(.data_rows(o))
-  if (length(sets) > 1L && is.na(.rows_set(.data_rows(o), o[["ard"]][["analyses"]])) &&
+  if (length(sets) > 1L && is.na(.rows_carried_set(.data_rows(o), o[["ard"]][["analyses"]])) &&
       is.na(.na_scalar(o$common$population_label))) {
     add(part = "data", item = "data$population", level = "warning", message = sprintf(paste0(
       "the %s's data rows carry several analysis sets (%s) and no BIGN analysis says which is the ",

@@ -27,7 +27,7 @@
 # denominator of another set beside the report's own): the set of the row
 # the BIGN analysis reads (the heading's N is BIGN's, A2-T Q3); NA when
 # none, or several and no BIGN (tfl_check_spec() says so)
-.rows_set <- function(rows, analyses = list()) {
+.rows_carried_set <- function(rows, analyses = list()) {
   v <- .rows_sets(rows)
   if (length(v) <= 1L) return(if (length(v)) v else NA_character_)
   b <- Filter(function(a) is.list(a) && identical(.na_scalar(unlist(a[["id"]])), .bign_id),

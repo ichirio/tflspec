@@ -1072,7 +1072,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       if (.set_row_takes(a, NA_character_, from)) a$population <- entry$population
       a
     })
-    rs <- .rows_set(ard_part$analysis_data %||% list(), ard_part$analyses %||% list())
+    rs <- .rows_carried_set(ard_part$analysis_data %||% list(), ard_part$analyses %||% list())
     if (!identical(rs, as.character(entry$population))) {
       note(id, "report", id, "population", sprintf(paste0(
         "the planner's analysis set %s is not the set its subjects rows carry (%s): the rows' is kept; ",

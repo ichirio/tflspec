@@ -498,7 +498,7 @@ tfl_read_output <- function(path) {
 
 # The analysis set of a report's data (a listing's, a records part's): the
 # data's own `population` (canon 11-15: the set lives on the data), else the
-# one set its data rows carry (`rows`, the report's: .rows_set(), A2-T);
+# one set its data rows carry (`rows`, the report's: .rows_carried_set(), A2-T);
 # the report's `common: population` is read only until `common` goes, last
 # (NA when none) -- one rule, the sheets' and the YAML's alike (A2 Q7).  A
 # data that reads one of the report's analysis data (`data: <id>`) has that
@@ -513,7 +513,7 @@ tfl_read_output <- function(path) {
     return(.rows_adata_pop(rows, id))
   }
   if (!is.null(data[["population"]])) return(data[["population"]])
-  rs <- .rows_set(rows, o[["ard"]][["analyses"]])
+  rs <- .rows_carried_set(rows, o[["ard"]][["analyses"]])
   if (!is.na(rs)) rs else .out_population(o)
 }
 
