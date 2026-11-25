@@ -1,0 +1,15 @@
+study_id: XMP-204
+title: A fictional study of Examplumab in moderate plaque
+short_title: XMP-204 plaque study
+compound: Examplumab
+phase: '3'
+description: 'A fictional two-arm study (Examplumab vs Placebo) for the golden
+  test of the setup programs; no real data.'
+spec_version: 1
+tokens: {COMPANY: Example Pharma, STATUS: FINAL, ANALYSIS_TYPE: Week 16 Analysis}
+settings:
+  rounding: r
+  style: house
+  adam_levels: define_xml
+keys:
+  id: USUBJID

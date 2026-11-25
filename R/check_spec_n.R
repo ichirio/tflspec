@@ -6,20 +6,10 @@
 # BIGN's variable.  Where the two data differ, a subject may be counted under
 # one group in the N and under another in the rows.  A data check, with the
 # study's data as the `!=` check reads them (.ne_na_reader()): a warning,
-# nothing rewritten.  Only an N the header shows (.bign_shown()); the rows
+# nothing rewritten.  Only an N the header shows (.bign_shown(), in
+# R/check_spec_header_n.R); the rows
 # compared are those the ARD program counts (the subjects it joins them to,
 # .n_subject_sets()); a condition that cannot be run here: no row.
-
-# Does the report's header show BIGN's N?  A table of its ARD
-# (.bign_applies()) with a plan_col_header() whose text says {n} and gives
-# no values of its own (.bign_header_items(), the rule tfl_content_code()
-# follows); content it cannot look at counts as shown
-.bign_shown <- function(output) {
-  if (!.bign_applies(output) || !is.list(output$content) || inherits(output$content, "tfl_r")) {
-    return(FALSE)
-  }
-  tryCatch(isTRUE(attr(.bign_header_items(output$content, NA), "used")), error = function(e) TRUE)
-}
 
 # The dataset an analysis's rows come from (a row of the analyses sheet; `ad`
 # its report's analysis data): its analysis data's first dataset, else its
