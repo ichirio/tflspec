@@ -9,22 +9,22 @@ The table template \code{stf_t02_demog}, layout \code{summary}. Its program is o
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
-   \code{continuous} \tab required \tab call \tab  \tab  \tab the continuous variables, in order (required: this or 'categorical') \cr
-   \code{categorical} \tab required \tab call \tab  \tab  \tab the categorical variables, in order (required: this or 'continuous') \cr
+   \code{continuous} \tab required \tab call \tab  \tab  \tab the continuous variables, in order (required: this or \code{categorical}) \cr
+   \code{categorical} \tab required \tab call \tab  \tab  \tab the categorical variables, in order (required: this or \code{continuous}) \cr
    \code{by} \tab required \tab call \tab  \tab  \tab the column variable (the arms); not a default and not the study's treatment \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1"; unset: all \cr
    \code{data} \tab other \tab call \tab ADSL \tab  \tab a subject-level dataset \cr
-   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id when 'data' is not ADSL; NULL: <data>_sub \cr
-   \code{total} \tab usual \tab call \tab TRUE \tab  \tab TRUE: a Total column, last (each analysis again without 'by') \cr
+   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id when \code{data} is not ADSL; NULL: <data>_sub \cr
+   \code{total} \tab usual \tab call \tab TRUE \tab  \tab TRUE: a Total column, last (each analysis again without \code{by}) \cr
    \code{missing_label} \tab other \tab call \tab Missing \tab  \tab that row's label \cr
    \code{order} \tab other \tab call \tab SEX, AGE, AGEGR1, RACE, ETHNIC, COUNTRY \tab plan_levels.variable \tab the blocks' order (plan_levels(variable = )); NULL: the continuous, then the categorical \cr
    \code{labels} \tab usual \tab call \tab SEX = Sex, n (\%); AGE = Age, years; AGEGR1 = Age groups (... \tab  \tab each variable's heading; given by name, merged (RACE: ~ drops one); a variable it does not name has none; unset: no headings \cr
    \code{categorical_levels} \tab other \tab call \tab RACE = AMERICAN INDIAN OR ALASKA NATIVE, ASIAN, BLACK OR ... \tab  \tab per categorical variable, its values in display order, each shown even when 0 (RACE: [ASIAN, WHITE]); NULL: the code list's order, else the data's \cr
    \code{cells} \tab usual \tab call \tab Mean (SD) = \{mean\} (\{sd\}); Median (min, max) = \{median\} (... \tab  \tab the rows of each continuous variable: where each statistic goes (placement only, \{mean\}) \cr
-   \code{sd_missing} \tab other \tab call \tab - \tab  \tab what prints in place of the SD when a group has no SD (n = 1): \{mean\} (<sd_missing>); "" prints the mean alone; unset: no such guard; no effect when 'cells' is given \cr
-   \code{count_cell} \tab other \tab call \tab \{n\} (\{p\}) \tab  \tab a categorical value's cell, n (\%); NULL: the study standard's \cr
+   \code{sd_missing} \tab other \tab call \tab - \tab  \tab what prints in place of the SD when a group has no SD (n = 1): \{mean\} (<sd_missing>); "" prints the mean alone; unset: no such guard; no effect when \code{cells} is given \cr
+   \code{count_cell} \tab other \tab call \tab n == 0 ~ "0"; \{n\} (\{p\}) \tab  \tab a categorical value's cell, n (\%); NULL: the study standard's \cr
    \code{total_label} \tab other \tab call \tab Total Population \tab  \tab the Total column's heading \cr
-   \code{header_n} \tab other \tab call \tab denominator \tab  \tab the arm headings' N: "denominator" or "set": the arm's subjects in the analysis set ('denominator' does not move it); "none" no N; unset: no N. It acts on the heading 'col_header' gives as a text \cr
+   \code{header_n} \tab other \tab call \tab denominator \tab  \tab the arm headings' N: "denominator" or "set": the arm's subjects in the analysis set (\code{denominator} does not move it); "none" no N; unset: no N. It acts on the heading \code{col_header} gives as a text \cr
    \code{col_header} \tab other \tab call \tab \{col\} N=\{n\} \tab plan_col_header.lines \tab the arm heading: a text (\{col\} and \{n\}, a line a line), the lines of plan_col_header(lines = ), or its cells (header = ); NULL: none \cr
    \code{heading} \tab other \tab call \tab Characteristic \tab plan_stub.heading \tab the row-title (stub) column's heading, a line a line.  Given, it is the stub's (plan_stub(heading = ), the stub being row_label, first) \cr
    \code{stub_name} \tab other \tab call \tab  \tab plan_stub.name \tab the row-title column's name (plan_stub(name = )) \cr

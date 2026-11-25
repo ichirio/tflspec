@@ -39,7 +39,7 @@ run builds those ARD before the report:
 template's) reads its own ARD;
 \item a figure whose ARD source (\verb{page: report: ard_source:}) is \code{own} or
 \verb{table:<id>} reads that report's ARD; one with no source but a
-template (\verb{template: \{name: ...\}}) or a \verb{figure:} content key and
+template (\code{template: {name: ...}}) or a \verb{figure:} content key and
 analyses of its own reads its own ARD; \verb{import:<file>} reads an ARD
 taken in, no report's.
 }
