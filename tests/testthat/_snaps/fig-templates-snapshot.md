@@ -11,34 +11,49 @@
       library(ggsurvfit)
       library(patchwork)
       
-      # the days in a week, a month, a year (the study's setup may set them)
-      if (!exists("days_per_week")) days_per_week <- 7
-      if (!exists("days_per_month")) days_per_month <- 30.4375
-      if (!exists("days_per_year")) days_per_year <- 365.25
+      # the study helper tte_time() (tfl_helpers_code()), unless the study's setup has it
+      if (!exists("tte_time")) tte_time <- function(data, unit = "days") {
+        days <- c(DAYS = 1,
+                  WEEKS = get0("days_per_week", mode = "numeric", ifnotfound = 7),
+                  MONTHS = get0("days_per_month", mode = "numeric", ifnotfound = 30.4375),
+                  YEARS = get0("days_per_year", mode = "numeric", ifnotfound = 365.25))
+        to <- toupper(as.character(unit))
+        if (length(to) != 1L || is.na(to) || !to %in% names(days)) {
+          stop("tte_time(): the unit must be one of days, weeks, months, years, not ",
+               paste(unit, collapse = " "), call. = FALSE)
+        }
+        if (!nrow(data)) return(data)
+        if (!"AVAL" %in% names(data)) stop("tte_time(): the data has no AVAL", call. = FALSE)
+        from <- "DAYS"
+        if ("AVALU" %in% names(data)) {
+          u <- toupper(trimws(as.character(data$AVALU)))
+          if (anyNA(u) || any(u == "")) {
+            stop("tte_time(): AVALU is missing on ", sum(is.na(u) | u == ""),
+                 " record(s); the time's unit must be given", call. = FALSE)
+          }
+          from <- unique(u)
+          bad <- setdiff(from, names(days))
+          if (length(bad)) {
+            stop("tte_time(): AVALU ", paste(bad, collapse = ", "),
+                 " is not DAYS, WEEKS, MONTHS or YEARS", call. = FALSE)
+          }
+          if (length(from) > 1L) {
+            stop("tte_time(): the data has two or more units (AVALU ",
+                 paste(sort(from), collapse = ", "),
+                 "); filter it to one parameter first", call. = FALSE)
+          }
+        }
+        if (from != to) data$AVAL <- data$AVAL * days[[from]] / days[[to]]
+        data$AVALU <- to
+        data
+      }
       
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtte
       
       adtte_sub <- adtte |>
-        filter(PARAMCD == "OS")
-      
-      # AVAL in months, from each record's unit, AVALU (days when the data has no AVALU)
-      adtte_sub <- adtte_sub |>
-        mutate(AVALU = if ("AVALU" %in% names(adtte_sub)) toupper(AVALU) else "DAYS")
-      units_unknown <- setdiff(adtte_sub$AVALU, c("DAYS", "WEEKS", "MONTHS", "YEARS"))
-      if (length(units_unknown)) {
-        stop("AVALU: a unit not DAYS, WEEKS, MONTHS or YEARS: ", toString(units_unknown), call. = FALSE)
-      }
-      adtte_sub <- adtte_sub |>
-        mutate(
-          AVAL = AVAL * case_when(
-            AVALU == "DAYS"   ~ 1,
-            AVALU == "WEEKS"  ~ days_per_week,
-            AVALU == "MONTHS" ~ days_per_month,
-            AVALU == "YEARS"  ~ days_per_year
-          ) / days_per_month,
-          AVALU = "MONTHS"
-        )
+        filter(PARAMCD == "OS") |>
+        tte_time("months")
       
       fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = adtte_sub)
       
@@ -138,34 +153,49 @@
       library(ggplot2)
       library(ggsurvfit)
       
-      # the days in a week, a month, a year (the study's setup may set them)
-      if (!exists("days_per_week")) days_per_week <- 7
-      if (!exists("days_per_month")) days_per_month <- 30.4375
-      if (!exists("days_per_year")) days_per_year <- 365.25
+      # the study helper tte_time() (tfl_helpers_code()), unless the study's setup has it
+      if (!exists("tte_time")) tte_time <- function(data, unit = "days") {
+        days <- c(DAYS = 1,
+                  WEEKS = get0("days_per_week", mode = "numeric", ifnotfound = 7),
+                  MONTHS = get0("days_per_month", mode = "numeric", ifnotfound = 30.4375),
+                  YEARS = get0("days_per_year", mode = "numeric", ifnotfound = 365.25))
+        to <- toupper(as.character(unit))
+        if (length(to) != 1L || is.na(to) || !to %in% names(days)) {
+          stop("tte_time(): the unit must be one of days, weeks, months, years, not ",
+               paste(unit, collapse = " "), call. = FALSE)
+        }
+        if (!nrow(data)) return(data)
+        if (!"AVAL" %in% names(data)) stop("tte_time(): the data has no AVAL", call. = FALSE)
+        from <- "DAYS"
+        if ("AVALU" %in% names(data)) {
+          u <- toupper(trimws(as.character(data$AVALU)))
+          if (anyNA(u) || any(u == "")) {
+            stop("tte_time(): AVALU is missing on ", sum(is.na(u) | u == ""),
+                 " record(s); the time's unit must be given", call. = FALSE)
+          }
+          from <- unique(u)
+          bad <- setdiff(from, names(days))
+          if (length(bad)) {
+            stop("tte_time(): AVALU ", paste(bad, collapse = ", "),
+                 " is not DAYS, WEEKS, MONTHS or YEARS", call. = FALSE)
+          }
+          if (length(from) > 1L) {
+            stop("tte_time(): the data has two or more units (AVALU ",
+                 paste(sort(from), collapse = ", "),
+                 "); filter it to one parameter first", call. = FALSE)
+          }
+        }
+        if (from != to) data$AVAL <- data$AVAL * days[[from]] / days[[to]]
+        data$AVALU <- to
+        data
+      }
       
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtte
       
       adtte_sub <- adtte |>
-        filter(PARAMCD == "OS")
-      
-      # AVAL in months, from each record's unit, AVALU (days when the data has no AVALU)
-      adtte_sub <- adtte_sub |>
-        mutate(AVALU = if ("AVALU" %in% names(adtte_sub)) toupper(AVALU) else "DAYS")
-      units_unknown <- setdiff(adtte_sub$AVALU, c("DAYS", "WEEKS", "MONTHS", "YEARS"))
-      if (length(units_unknown)) {
-        stop("AVALU: a unit not DAYS, WEEKS, MONTHS or YEARS: ", toString(units_unknown), call. = FALSE)
-      }
-      adtte_sub <- adtte_sub |>
-        mutate(
-          AVAL = AVAL * case_when(
-            AVALU == "DAYS"   ~ 1,
-            AVALU == "WEEKS"  ~ days_per_week,
-            AVALU == "MONTHS" ~ days_per_month,
-            AVALU == "YEARS"  ~ days_per_year
-          ) / days_per_month,
-          AVALU = "MONTHS"
-        )
+        filter(PARAMCD == "OS") |>
+        tte_time("months")
       
       fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = adtte_sub)
       
@@ -231,34 +261,49 @@
       library(ggsurvfit)
       library(patchwork)
       
-      # the days in a week, a month, a year (the study's setup may set them)
-      if (!exists("days_per_week")) days_per_week <- 7
-      if (!exists("days_per_month")) days_per_month <- 30.4375
-      if (!exists("days_per_year")) days_per_year <- 365.25
+      # the study helper tte_time() (tfl_helpers_code()), unless the study's setup has it
+      if (!exists("tte_time")) tte_time <- function(data, unit = "days") {
+        days <- c(DAYS = 1,
+                  WEEKS = get0("days_per_week", mode = "numeric", ifnotfound = 7),
+                  MONTHS = get0("days_per_month", mode = "numeric", ifnotfound = 30.4375),
+                  YEARS = get0("days_per_year", mode = "numeric", ifnotfound = 365.25))
+        to <- toupper(as.character(unit))
+        if (length(to) != 1L || is.na(to) || !to %in% names(days)) {
+          stop("tte_time(): the unit must be one of days, weeks, months, years, not ",
+               paste(unit, collapse = " "), call. = FALSE)
+        }
+        if (!nrow(data)) return(data)
+        if (!"AVAL" %in% names(data)) stop("tte_time(): the data has no AVAL", call. = FALSE)
+        from <- "DAYS"
+        if ("AVALU" %in% names(data)) {
+          u <- toupper(trimws(as.character(data$AVALU)))
+          if (anyNA(u) || any(u == "")) {
+            stop("tte_time(): AVALU is missing on ", sum(is.na(u) | u == ""),
+                 " record(s); the time's unit must be given", call. = FALSE)
+          }
+          from <- unique(u)
+          bad <- setdiff(from, names(days))
+          if (length(bad)) {
+            stop("tte_time(): AVALU ", paste(bad, collapse = ", "),
+                 " is not DAYS, WEEKS, MONTHS or YEARS", call. = FALSE)
+          }
+          if (length(from) > 1L) {
+            stop("tte_time(): the data has two or more units (AVALU ",
+                 paste(sort(from), collapse = ", "),
+                 "); filter it to one parameter first", call. = FALSE)
+          }
+        }
+        if (from != to) data$AVAL <- data$AVAL * days[[from]] / days[[to]]
+        data$AVALU <- to
+        data
+      }
       
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtte
       
       adtte_sub <- adtte |>
-        filter(PARAMCD == "OS")
-      
-      # AVAL in months, from each record's unit, AVALU (days when the data has no AVALU)
-      adtte_sub <- adtte_sub |>
-        mutate(AVALU = if ("AVALU" %in% names(adtte_sub)) toupper(AVALU) else "DAYS")
-      units_unknown <- setdiff(adtte_sub$AVALU, c("DAYS", "WEEKS", "MONTHS", "YEARS"))
-      if (length(units_unknown)) {
-        stop("AVALU: a unit not DAYS, WEEKS, MONTHS or YEARS: ", toString(units_unknown), call. = FALSE)
-      }
-      adtte_sub <- adtte_sub |>
-        mutate(
-          AVAL = AVAL * case_when(
-            AVALU == "DAYS"   ~ 1,
-            AVALU == "WEEKS"  ~ days_per_week,
-            AVALU == "MONTHS" ~ days_per_month,
-            AVALU == "YEARS"  ~ days_per_year
-          ) / days_per_month,
-          AVALU = "MONTHS"
-        )
+        filter(PARAMCD == "OS") |>
+        tte_time("months")
       
       fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = adtte_sub)
       
@@ -361,34 +406,49 @@
       library(ggsurvfit)
       library(patchwork)
       
-      # the days in a week, a month, a year (the study's setup may set them)
-      if (!exists("days_per_week")) days_per_week <- 7
-      if (!exists("days_per_month")) days_per_month <- 30.4375
-      if (!exists("days_per_year")) days_per_year <- 365.25
+      # the study helper tte_time() (tfl_helpers_code()), unless the study's setup has it
+      if (!exists("tte_time")) tte_time <- function(data, unit = "days") {
+        days <- c(DAYS = 1,
+                  WEEKS = get0("days_per_week", mode = "numeric", ifnotfound = 7),
+                  MONTHS = get0("days_per_month", mode = "numeric", ifnotfound = 30.4375),
+                  YEARS = get0("days_per_year", mode = "numeric", ifnotfound = 365.25))
+        to <- toupper(as.character(unit))
+        if (length(to) != 1L || is.na(to) || !to %in% names(days)) {
+          stop("tte_time(): the unit must be one of days, weeks, months, years, not ",
+               paste(unit, collapse = " "), call. = FALSE)
+        }
+        if (!nrow(data)) return(data)
+        if (!"AVAL" %in% names(data)) stop("tte_time(): the data has no AVAL", call. = FALSE)
+        from <- "DAYS"
+        if ("AVALU" %in% names(data)) {
+          u <- toupper(trimws(as.character(data$AVALU)))
+          if (anyNA(u) || any(u == "")) {
+            stop("tte_time(): AVALU is missing on ", sum(is.na(u) | u == ""),
+                 " record(s); the time's unit must be given", call. = FALSE)
+          }
+          from <- unique(u)
+          bad <- setdiff(from, names(days))
+          if (length(bad)) {
+            stop("tte_time(): AVALU ", paste(bad, collapse = ", "),
+                 " is not DAYS, WEEKS, MONTHS or YEARS", call. = FALSE)
+          }
+          if (length(from) > 1L) {
+            stop("tte_time(): the data has two or more units (AVALU ",
+                 paste(sort(from), collapse = ", "),
+                 "); filter it to one parameter first", call. = FALSE)
+          }
+        }
+        if (from != to) data$AVAL <- data$AVAL * days[[from]] / days[[to]]
+        data$AVALU <- to
+        data
+      }
       
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtte
       
       adtte_sub <- adtte |>
-        filter(PARAMCD == "OS")
-      
-      # AVAL in months, from each record's unit, AVALU (days when the data has no AVALU)
-      adtte_sub <- adtte_sub |>
-        mutate(AVALU = if ("AVALU" %in% names(adtte_sub)) toupper(AVALU) else "DAYS")
-      units_unknown <- setdiff(adtte_sub$AVALU, c("DAYS", "WEEKS", "MONTHS", "YEARS"))
-      if (length(units_unknown)) {
-        stop("AVALU: a unit not DAYS, WEEKS, MONTHS or YEARS: ", toString(units_unknown), call. = FALSE)
-      }
-      adtte_sub <- adtte_sub |>
-        mutate(
-          AVAL = AVAL * case_when(
-            AVALU == "DAYS"   ~ 1,
-            AVALU == "WEEKS"  ~ days_per_week,
-            AVALU == "MONTHS" ~ days_per_month,
-            AVALU == "YEARS"  ~ days_per_year
-          ) / days_per_month,
-          AVALU = "MONTHS"
-        )
+        filter(PARAMCD == "OS") |>
+        tte_time("months")
       
       fit <- survfit2(Surv(AVAL, CNSR == 0) ~ 1, data = adtte_sub)
       

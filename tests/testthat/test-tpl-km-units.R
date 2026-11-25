@@ -37,8 +37,8 @@ test_that("time_unit on AVAL: the time from its unit, AVALU, by tte_time()", {
   expect_equal(km_unit_run(d(c(1, 2.5), "YEARS"), "months")$AVAL, c(12, 30))
   expect_equal(km_unit_run(d(2, "MONTHS"), "days")$AVAL, 60.875)
   # any case; AVALU says the new unit after it
-  x <- km_unit_run(d(c(7, 1), c("days", "Weeks")), "weeks")
-  expect_equal(x$AVAL, c(1, 1))
+  x <- km_unit_run(d(c(7, 14), c("days", "Days")), "weeks")
+  expect_equal(x$AVAL, c(1, 2))
   expect_identical(x$AVALU, c("WEEKS", "WEEKS"))
   # no AVALU: the time in days, as before
   expect_equal(km_unit_run(data.frame(AVAL = c(60.875, 365.25)), "months")$AVAL, c(2, 12))
