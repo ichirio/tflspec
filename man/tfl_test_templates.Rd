@@ -11,7 +11,7 @@ tfl_test_templates(names = NULL)
 }
 \value{
 A data frame, one row a finding: a parameter with no type (\code{"no type (guessed: <type>)"}),
-one with no study source (\code{"no study source (population / treatment)"}),
+one with no study source (\code{"no study source (population)"}),
 a template without the standard pair (\code{"no subset"}, \code{"no where (a records template)"})
 or a template whose run stopped (\code{"not checked: ..."}):
 \code{template}, \code{param}, \code{fn}, \code{arg}, \code{status}.  No rows: none.
@@ -20,9 +20,10 @@ or a template whose run stopped (\code{"not checked: ..."}):
 Runs each template's body with its example and lists what is wrong
 with its definition: a parameter with no type (\code{\link[=tfl_param]{tfl_param()}}'s \code{type},
 nor tflspec's for its name): an input form guesses its field from the
-default; and the analysis set or the treatment not read from the study
-standard (no \verb{study =}).  A study's value of them is the study's, not
-each report's.  So is a template of data of its own without \code{subset},
+default; and the analysis set not read from the report (no \verb{study =}):
+it is the report's \verb{common: population}, not each template's (the
+treatment is not a study value: \code{by} and \code{group} are the report's to
+write).  So is a template of data of its own without \code{subset},
 and one of records data without \code{where} (\code{\link[=tfl_templates]{tfl_templates()}}: the standard
 pair).  A parameter that is the look (the rows a page, column widths,
 the digits, the blank rows, the style) is not listed: the look is a

@@ -14,7 +14,7 @@ The table template \code{ancova}, layout \code{summary}. Its program is one call
    \code{data} \tab required \tab call \tab  \tab  \tab the BDS dataset (ADVS, ADLB) \cr
    \code{param} \tab required \tab call \tab  \tab  \tab the PARAMCD (SYSBP) \cr
    \code{visit} \tab required \tab call \tab  \tab  \tab the AVISIT (CYCLE 9 DAY 1) \cr
-   \code{by} \tab other \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the arm variable (the columns) \cr
+   \code{by} \tab other \tab call \tab TRT01A \tab  \tab the arm variable (the columns) \cr
    \code{response} \tab other \tab call \tab CHG \tab  \tab the response variable \cr
    \code{covariates} \tab other \tab call \tab BASE \tab  \tab the model's covariates besides the arm \cr
    \code{where} \tab other \tab call \tab  \tab  \tab the records kept besides the parameter and visit (R) \cr

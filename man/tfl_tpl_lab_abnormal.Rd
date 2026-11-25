@@ -14,7 +14,7 @@ The table template \code{lab_abnormal}, layout \code{summary}. Its program is on
    \code{data} \tab other \tab call \tab ADLB \tab  \tab the dataset of records \cr
    \code{params} \tab other \tab call \tab  \tab  \tab the PARAMCD values; NULL: all \cr
    \code{where} \tab other \tab call \tab  \tab  \tab the records kept (R), e.g. ONTRTFL == "Y" \cr
-   \code{by} \tab other \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the column variable \cr
+   \code{by} \tab other \tab call \tab TRT01A \tab  \tab the column variable \cr
    \code{param_order} \tab other \tab call \tab PARAMN \tab  \tab the parameters' order variable; NULL: by name \cr
    \code{category} \tab other \tab call \tab ANRIND \tab  \tab the category's variable (ANRIND, a criterion's MCRIT1ML) \cr
    \code{levels} \tab other \tab call \tab  \tab  \tab the values counted, in order (lowest first); NULL: the code list's \cr
