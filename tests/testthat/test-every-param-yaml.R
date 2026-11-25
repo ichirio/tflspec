@@ -12,11 +12,9 @@
 
 # each template's report: what a report of it needs (its required args, by
 # step, and its own data rows); the other params at their defaults
+# (the purpose templates left tflspec_v1, canon 2026-11-24: not shipped, not
+# walked here)
 ep_reports <- list(
-  ae_soc_pt = c("kind: table", "template:", "  name: tflspec_v1/ae_soc_pt",
-                "  analysis:", "    by: [TRT01A]"),
-  demog = c("kind: table", "template:", "  name: tflspec_v1/demog",
-            "  analysis:", "    by: [TRT01A]", "    continuous: [AGE]", "    categorical: [AGEGR1, SEX]"),
   forest_hr = c("kind: figure", "template:", "  name: tflspec_v1/forest_hr",
                 "  data:", "    subgroup_vars: [SEX]",
                 "  analysis:", "    by: TRT01A",
@@ -25,19 +23,6 @@ ep_reports <- list(
                "  data:", "    by: TRT01A", "    param: PFS"),
   km_simple = c("kind: figure", "template:", "  name: tflspec_v1/km_simple",
                 "  analysis:", "    by: TRT01A"),
-  lab_tox_shift = c("kind: table", "template:", "  name: tflspec_v1/lab_tox_shift",
-                    "  analysis:", "    by: [TRT01A]",
-                    "    conditions:", "      - {tox_dir: High, param: Alanine Aminotransferase (U/L)}",
-                    "      - {tox_dir: Low, param: Hemoglobin (g/L)}",
-                    "content:", "  - table_plan: {cols: TRT01A, rows: {param: PARAM, base: base}}"),
-  listing = c("kind: listing",
-              "data:", "  - id: lst_sub", "    where: !r AESEV == \"SEVERE\"",
-              "template:", "  name: tflspec_v1/listing", "  data:", "    from: ADAE"),
-  orr_subgroup = c("kind: table", "template:", "  name: tflspec_v1/orr_subgroup",
-                   "  data:", "    subgroup_vars: [SEX]",
-                   "  analysis:", "    by: [TRT01A]",
-                   "    conditions:", "      - {subgroup: SEX, subgroup_lvl: F, where: !r SEX == \"F\"}",
-                   "content:", "  - table_plan: {cols: TRT01A, rows: {group: variable}}"),
   tflspec_hierarchy = c("kind: table", "template:", "  name: tflspec_v1/tflspec_hierarchy",
                         "  data:", "    from: ADAE",
                         "  analysis:", "    by: [TRT01A]", "    hierarchy: [AEBODSYS, AEDECOD]"),
@@ -67,12 +52,8 @@ ep_allow <- c()
 ep_issues <- c(
   # an analysis's formats map never reaches the ARD program
   as_tag("tflspec#925", paste0(c(
-    "ae_soc_pt", "demog", "forest_hr", "km_simple", "lab_tox_shift", "listing", "orr_subgroup",
-    "tflspec_hierarchy", "tflspec_listing", "tflspec_shift", "tflspec_summary"), ".formats")),
-  # an !unset record_where: a blank `where`
-  `lab_tox_shift.record_where=!unset` = "tflspec#926",
-  # params the template's body never uses
-  listing.columns = "tflspec#928", listing.by = "tflspec#928"
+    "forest_hr", "km_simple", "tflspec_hierarchy", "tflspec_listing", "tflspec_shift",
+    "tflspec_summary"), ".formats"))
 )
 
 # the issue a walk's row is held by, or NA
