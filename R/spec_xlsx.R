@@ -88,7 +88,7 @@ tfl_write_spec_xlsx <- function(dir, path) {
       # (a reference to the study's list: its rows, the study's codes and
       # labels, each with the reference in its `list` cell, which an import reads)
       if (.cl_is_ref(l)) {
-        lc <- .cl_ref_cell(l)
+        lc <- .cl_ref_cell(l, paste0("tfl_write_spec_xlsx(): ", id, ", ", v))
         add_rows("codelists", lapply(.cl_ref_rows(l, v, s$codelists, id, "tfl_write_spec_xlsx()"), function(e)
           c(list(output_id = id, variable = v), e, list(list = lc))))
       } else {

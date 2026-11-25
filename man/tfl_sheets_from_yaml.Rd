@@ -38,7 +38,10 @@ A list: \code{table} (the table and report sheets, with \code{study}),
 fields), \code{templates} and \code{template_rows} (the template reports; with
 \code{templates = "expand"} both are empty), \code{template_maps} (\code{output_id},
 \code{param}: a template report's arguments that are maps, which the sheets
-do not hold), \code{not_converted} (what the sheets cannot hold).
+do not hold), \code{study_codelists} (the study's code lists,
+\code{spec/defaults.yml} \verb{codelists:}: \code{name}, \code{value}, \code{label}, \code{order}, a
+code a row, \code{label} blank when the list has none), \code{not_converted}
+(what the sheets cannot hold).
 }
 \description{
 \code{tfl_sheets_from_yaml()} reads a study's YAML spec and gives the sheets

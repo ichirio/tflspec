@@ -71,7 +71,9 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
 #'   (study.yml's fields), `templates`, `template_rows` and `template_maps`
 #'   (the template reports: [tfl_sheets_from_yaml()]; a template report's
 #'   map arguments, which the sheets do not hold, are taken from its file
-#'   already in `to`, else named in a warning and a note), `not_converted` ([tfl_sheets_from_yaml()]'s notes
+#'   already in `to`, else named in a warning and a note), `study_codelists`
+#'   (the study's code lists, written to `spec/defaults.yml` `codelists:`,
+#'   each in its `order`), `not_converted` ([tfl_sheets_from_yaml()]'s notes
 #'   on what the sheets could not hold: listed in `_not_converted.yml` too,
 #'   with one message saying how many).  What the app holds, or what the
 #'   workbooks read as.
@@ -324,6 +326,9 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   }
   if (length(pat_styles)) defaults$styles <- c(defaults$styles, pat_styles)
   style_names <- names(defaults$styles)
+  # the study's code lists (the study_codelists sheet), each in its order
+  scl <- .conv_study_codelists(sheets$study_codelists)
+  if (length(scl)) defaults$codelists <- scl
   put("spec/defaults.yml", defaults)
 
   # spec/toc.yml and spec/outputs/<id>.yml

@@ -635,6 +635,11 @@ tfl_template_to_spec <- function(output, study) {
     ref <- names(Filter(.cl_is_ref, output$codelists))
     add <- .tpl_add_codelists(rcl, e$x$codelists)
     keep <- ref[vapply(ref, function(v) identical(add[[v]], rcl[[v]]), NA)]
+    for (v in setdiff(ref, keep)) {
+      message("tfl_template_to_spec(): ", output$id, ": the template adds codes to ", v,
+              ", a reference to the study's list ", output$codelists[[v]]$list,
+              "; the code SPEC writes the list in place (the study's codes and the template's).")
+    }
     add[keep] <- output$codelists[keep]
     output$codelists <- add
   }

@@ -19,7 +19,12 @@
 #' (`row_height_twips`), which the workbook has no column for, stays as it
 #' is.  The `records` and `objects` sheets are written but not read back; a
 #' change made to one in the workbook is said in a message and listed in
-#' `ignored`.
+#' `ignored`.  A code list that refers to one of the study's lists (its
+#' `list` cell, [tfl_read_study_spec()]) is read back as the cell says; its
+#' rows are the study's codes and labels, and an edit to them is said in a
+#' message and listed in `ignored` (`codelists: <report> / <variable>`).
+#' The rows of one variable that give different `list` cells (one blank and
+#' one not, too) stop the import.
 #'
 #' @param dir The study folder (or its `spec/`).
 #' @param path The workbook.
@@ -27,7 +32,8 @@
 #' @return Invisibly, a list: `changes` (a data frame: `sheet`, `key`,
 #'   `column`, `from`, `to`), `added` (keys new to the spec), `missing`
 #'   (keys of the spec the workbook lacks), `ignored` (the sheets that were
-#'   changed in the workbook but are not read back, `records` and `objects`;
+#'   changed in the workbook but are not read back, `records` and `objects`,
+#'   and the reports' code lists whose rows of a reference were edited;
 #'   each also said in a message), `files` (written).
 #' @export
 tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
@@ -202,6 +208,7 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
     y$content[[k[1L]]]$plan_listing <- pl
     set_file(rel, y)
   })
+  study_cl <- NULL
   by_scope("codelists", function(id, part) {
     if (is.na(id)) return()
     rel <- scope_rel(id)
@@ -222,6 +229,19 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
         }
         if (!is.null(lc)) {
           if (!identical(was_cell, to_cell)) y$codelists[[v]] <- .cl_ref_from_cell(lc)
+          # (its rows edited: not read back, said and listed in `ignored`; the
+          # rows were written from the reference the file had)
+          if (is.null(study_cl)) {
+            study_cl <<- tryCatch(tfl_read_study_spec(dir)$codelists %||% list(), error = function(e) list())
+          }
+          base <- if (!is.null(was_cell)) .cl_ref_norm(was, v, id) else .cl_ref_from_cell(lc)
+          want <- tryCatch(.cl_ref_rows(base, v, study_cl, id, "tfl_import_spec_xlsx()"), error = function(e) NULL)
+          if (!is.null(want) && .cl_ref_rows_edited(pv, want)) {
+            st$ignored <- c(st$ignored, paste0("codelists: ", id, " / ", v))
+            message("tfl_import_spec_xlsx(): codelists ", id, " / ", v, ": the rows of a reference to the study's list ",
+                    base$list, " are the study's codes and labels and are not read back; change the `list` cell ",
+                    "or the study's list (spec/defaults.yml `codelists:`).")
+          }
           next
         }
         # (the reference taken off: the rows, written in place)

@@ -129,6 +129,57 @@ test_that("the sheets keep a reference in the `list` column; YAML -> sheets -> Y
   expect_identical(tfl_read_output(f2[1L])$codelists, tfl_read_outputs(d2)[["T-14-1-1"]]$codelists)
 })
 
+test_that("the study's lists cross the sheets (study_codelists): the study written back resolves its references", {
+  d <- clr_study(clr_refs)
+  sh <- tfl_sheets_from_yaml(d)
+  scl <- sh$study_codelists
+  expect_identical(names(scl), c("name", "value", "label", "order"))
+  expect_identical(scl$value[scl$name == "AGEGR1"], c("<65", ">=65"))
+  expect_identical(scl$label[scl$name == "SEX"], c("Female", "Male"))
+  expect_false("codelists" %in% sh$not_converted$part)
+  # the lines a code list writes in the ARD program
+  cl_lines <- function(dir) {
+    code <- tfl_ard_code(tfl_read_study_spec(dir), "T-14-1-1", save = FALSE)
+    grep("^cl_[a-z0-9_]+ <- |set_levels\\(|relevel_ard\\(", code, value = TRUE)
+  }
+  before <- cl_lines(d)
+  expect_match(paste(before, collapse = "\n"), "cl_sex <- c(F = \"Female\", M = \"Male\")", fixed = TRUE)
+  st0 <- tfl_read_study_spec(d)
+  ro0 <- tfl_resolve_output(tfl_read_outputs(d)[["T-14-1-1"]], st0)
+  to <- withr::local_tempdir()
+  for (overwrite in c(FALSE, TRUE)) {
+    suppressWarnings(suppressMessages(tfl_yaml_from_sheets(sh, to, overwrite = overwrite)))
+    st1 <- tfl_read_study_spec(to)
+    expect_identical(st1$codelists, st0$codelists, info = paste("overwrite", overwrite))
+    o1 <- tfl_read_outputs(to)[["T-14-1-1"]]
+    expect_identical(o1$codelists$SEX, list(list = "SEX"))
+    expect_identical(tfl_resolve_output(o1, st1)$codelists, ro0$codelists, info = paste("overwrite", overwrite))
+    expect_identical(cl_lines(to), before, info = paste("overwrite", overwrite))
+  }
+})
+
+test_that("the rows of one variable agree on their `list` cell; a cell that cannot be read back stops", {
+  d <- clr_study(clr_refs)
+  sh <- tfl_sheets_from_yaml(d)
+  k <- which(sh$table$codelists$variable == "SEX")
+  two <- sh
+  two$table$codelists$list[k[2L]] <- "SEX: M"
+  expect_error(suppressMessages(tfl_yaml_from_sheets(two, withr::local_tempdir())),
+               "report T-14-1-1, variable SEX: its rows' `list` cells differ (\"SEX\", \"SEX: M\")", fixed = TRUE)
+  blank <- sh
+  blank$table$codelists$list[k[2L]] <- NA
+  expect_error(suppressMessages(tfl_yaml_from_sheets(blank, withr::local_tempdir())),
+               "its rows' `list` cells differ (\"SEX\", \"(blank)\")", fixed = TRUE)
+  # a code with "|", a list name with ":": not written as a cell
+  expect_error(tflspec:::.cl_ref_cell(list(list = "SEX", codes = list("A|B", "C")), "T-1, SEX"),
+               "T-1, SEX: the reference to the study's list SEX cannot be the codelists sheet's `list` cell \"SEX: A|B | C\": a code with \"|\" (\"A|B\")",
+               fixed = TRUE)
+  expect_error(tflspec:::.cl_ref_cell(list(list = "A:B")), "a list name with \":\" is read back as the name before it",
+               fixed = TRUE)
+  expect_identical(tflspec:::.cl_ref_cell(list(list = "SEX", codes = list("M", "F"))), "SEX: M | F")
+  expect_identical(tflspec:::.cl_ref_from_cell("SEX: M | F"), list(list = "SEX", codes = list("M", "F")))
+})
+
 test_that("the flat-view workbook keeps a reference: written, read back unchanged, changed in its cell", {
   skip_if_not_installed("openxlsx")
   skip_if_not_installed("readxl")
@@ -140,17 +191,57 @@ test_that("the flat-view workbook keeps a reference: written, read back unchange
   expect_identical(x$label[x$variable == "SEX"], c("Female", "Male"))
   r <- tfl_import_spec_xlsx(d, f, write = FALSE)
   expect_false(any(r$changes$sheet %in% "codelists"))
-  # the cell changed in "Excel": the reference changes, the other stays
-  wb <- openxlsx::loadWorkbook(f)
+  expect_false(any(grepl("^codelists", r$ignored)))
   x[] <- lapply(x, as.character)
+  put <- function(x) {
+    wb <- openxlsx::loadWorkbook(f)
+    openxlsx::removeWorksheet(wb, "codelists")
+    openxlsx::addWorksheet(wb, "codelists")
+    openxlsx::writeData(wb, "codelists", x, keepNA = FALSE)
+    openxlsx::saveWorkbook(wb, f, overwrite = TRUE)
+  }
+  # a reference's row edited: not read back, said and listed in `ignored`
+  y <- x
+  y$label[y$variable == "SEX" & y$value == "F"] <- "Woman"
+  put(y)
+  expect_message(r <- tfl_import_spec_xlsx(d, f, write = FALSE),
+                 "codelists T-14-1-1 / SEX: the rows of a reference to the study's list SEX", fixed = TRUE)
+  expect_true("codelists: T-14-1-1 / SEX" %in% r$ignored)
+  expect_false(any(r$changes$sheet %in% "codelists"))
+  # the rows' cells disagree: the import stops
+  y <- x
+  y$list[which(y$variable == "SEX")[2L]] <- "SEX: M"
+  put(y)
+  expect_error(tfl_import_spec_xlsx(d, f, write = FALSE), "its rows' `list` cells differ", fixed = TRUE)
+  # the cell changed in "Excel": the reference changes, the other stays
   x$list[x$variable == "SEX"] <- "SEX: M"
-  openxlsx::removeWorksheet(wb, "codelists")
-  openxlsx::addWorksheet(wb, "codelists")
-  openxlsx::writeData(wb, "codelists", x, keepNA = FALSE)
-  openxlsx::saveWorkbook(wb, f, overwrite = TRUE)
+  put(x)
   r <- tfl_import_spec_xlsx(d, f)
   expect_true(any(r$changes$column %in% "list" & r$changes$to %in% "SEX: M"))
   o <- tfl_read_outputs(d)[["T-14-1-1"]]
   expect_identical(o$codelists$SEX, list(list = "SEX", codes = list("M")))
   expect_identical(o$codelists$AGEGR1, list(list = "AGEGR1", codes = list(">=65", "<65")))
+})
+
+test_that("a template that adds codes to a reference: the code SPEC writes the list in place, and says so", {
+  skip_on_cran()
+  d <- clr_study(clr_trt)
+  st <- tfl_read_study_spec(d)
+  demog <- function(levels) {
+    tfl_output("T-9", "table", common = list(population = "SAF"), codelists = list(SEX = list(list = "SEX")),
+               template = list(name = "demog", args = list(
+                 population = "SAF", by = "TRT01A", continuous = "AGE", categorical = "SEX",
+                 categorical_levels = list(SEX = levels))))
+  }
+  expect_message(cs <- tfl_template_to_spec(demog(c("F", "M", "U")), st),
+                 "T-9: the template adds codes to SEX, a reference to the study's list SEX", fixed = TRUE)
+  expect_identical(vapply(cs$codelists$SEX, `[[`, "", "value"), c("F", "M", "U"))
+  # (the template's codes all in the list: the reference stays, nothing said)
+  msgs <- character()
+  cs2 <- withCallingHandlers(tfl_template_to_spec(demog(c("M", "F")), st), message = function(m) {
+    msgs <<- c(msgs, conditionMessage(m))
+    invokeRestart("muffleMessage")
+  })
+  expect_identical(cs2$codelists$SEX, list(list = "SEX"))
+  expect_false(any(grepl("adds codes", msgs, fixed = TRUE)))
 })
