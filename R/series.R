@@ -133,7 +133,7 @@ tfl_series_read <- function(series, dir = NULL) {
   # (read with the `!study` tag, only to find one in values:; other tags are
   # not read here)
   y <- .yaml_read_file(file, handlers = c(.yaml_handlers(), list(study = .series_study_tag)))
-  if (is.null(y)) y <- list()
+  if (is.null(y)) y <- stats::setNames(list(), character())
   if (!.series_is_map(y)) stop(fn, ": ", file, " is not a map.", call. = FALSE)
   if (!is.null(y$name) && !identical(y$name, series)) {
     stop(fn, ": series \"", series, "\": its series.yml says name: ", y$name,
