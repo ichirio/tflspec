@@ -23,12 +23,14 @@ test_that("forest_hr: the report's ARD (its Cox analyses) and the design that re
   expect_identical(vapply(y$content, `[[`, "", "fn"), c("vline", "errorbar_h", "geom", "text_column"))
   expect_error(tfl_template_expand("forest_hr", list(param = "PFS", population = "SAF", favours = "A")),
                "two labels")
-  # bold headings: the axis's labels are y_labels (made with the rows); nothing changes without it
+  # bold headings: the axis's labels are plotmath from the rows (est$label, est$head), so the
+  # rows' step keeps `est` alone; nothing changes without it
   bold <- tfl_template_expand("forest_hr", list(param = "PFS", population = "SAF", bold_headings = TRUE))
   code <- function(x) paste(vapply(x$data$steps, function(s) as.character(s$code %||% ""), ""), collapse = "
 ")
-  expect_match(code(bold), "y_labels <- as.expression(Map(", fixed = TRUE)
-  expect_identical(as.character(bold$plot$add[[1L]]$args$labels), "y_labels")
+  expect_false(grepl("y_labels", code(bold), fixed = TRUE))
+  expect_identical(as.character(bold$plot$add[[1L]]$args$labels),
+                   "as.expression(Map(function(l, h) if (h) bquote(bold(.(l))) else l, est$label, est$head))")
   plain <- tfl_template_expand("forest_hr", list(param = "PFS", population = "SAF"))
   expect_false(grepl("y_labels", code(plain), fixed = TRUE))
   expect_identical(as.character(plain$plot$add[[1L]]$args$labels), "est$label")
