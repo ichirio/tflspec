@@ -31,14 +31,7 @@ params:
     default: !series time_unit
     step: data
     tier: usual
-    description: The unit of the time axis; months divides the days by days_per_month.
-  days_per_month:
-    type: number
-    input: text
-    default: !series days_per_month
-    step: data
-    tier: other
-    description: The days in a month, for time_unit months.
+    description: The unit the analysis and the axis use; AVAL is converted from its unit, AVALU, to it (tte_time()).
   x_breaks:
     type: list<number>
     input: text
@@ -77,9 +70,7 @@ data:
     - {step: read, dataset: ADTTE}
     - {step: param, value: "{param}"}
     - {step: flag, variable: "{population_flag}"}
-    - step: derive
-      variable: AVAL
-      expr: !r 'AVAL / c(days = 1, months = {days_per_month})[["{time_unit}"]]'
+    - {step: time_unit, variable: AVAL, unit: "{time_unit}"}
     - {step: survfit, name: fit, time: AVAL, censor: CNSR, by: "{by}"}
 content:
   - ggsurvfit: {x: fit, linewidth: 0.3}

@@ -98,6 +98,9 @@ pp_default_options <- function(type = NA) {
 }
 
 pp_time_divisor <- c(as_is = NA, days_to_weeks = 7, days_to_months = 30.4375, days_to_years = 365.25)
+# the unit tte_time() is given for each option value
+pp_time_unit_name <- c(as_is = "days", days_to_weeks = "weeks",
+                       days_to_months = "months", days_to_years = "years")
 pp_time_axis_label <- c(
   as_is = "Time", days_to_weeks = "Time (Weeks)",
   days_to_months = "Time (Months)", days_to_years = "Time (Years)"

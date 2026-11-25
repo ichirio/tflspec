@@ -59,8 +59,8 @@
 #' `days_per_week`, `days_per_month`, `days_per_year` -- not by numbers
 #' written in each program, so a company sets them once (a study's
 #' setup: tflplanner writes them from its company standards): AVAL from
-#' each record's unit, AVALU (`AVALU == "MONTHS" ~ days_per_month`), another
-#' time in days (`TRTDURD / days_per_week`).  These are
+#' its unit, AVALU, by the study helper `tte_time()` (which reads them),
+#' another time in days (`TRTDURD / days_per_week`).  These are
 #' the values used where none is set: the figure setup
 #' ([tfl_fig_setup_code()]) and a figure script of its own define a
 #' constant only when it is not defined yet.  The programs say the name as
@@ -141,9 +141,10 @@ tfl_time_unit_days <- function() {
         .ff("variable", "text", "Variable", required = TRUE),
         .ff("expr", "expr", "Value (R)", required = TRUE, help = "e.g. AVAL / 7"))),
     time_unit = list(section = "data", label = "Change a time's unit",
-      help = paste("A time shown in days, weeks, months or years.  AVAL is converted from each",
-                   "record's unit, AVALU (DAYS, WEEKS, MONTHS, YEARS; days when the data has no",
-                   "AVALU); another variable is a time in days."),
+      help = paste("A time shown in days, weeks, months or years.  AVAL is converted from its",
+                   "unit, AVALU (DAYS, WEEKS, MONTHS, YEARS; days when the data has no AVALU) by",
+                   "the study helper tte_time(); one unit in the data, or the program stops.",
+                   "Another variable is a time in days."),
       fields = rbind(
         .ff("variable", "variable", "Time variable", "AVAL", required = TRUE),
         .ff("unit", "choice", "Unit", "months", names(.fig_units)))),
@@ -170,7 +171,7 @@ tfl_time_unit_days <- function() {
       fields = rbind(
         .ff("name", "text", "Name", "fit"),
         .ff("time", "variable", "Time", "AVAL", required = TRUE),
-        .ff("censor", "variable", "Censor (1 = censored)", "CNSR", required = TRUE),
+        .ff("censor", "variable", "Censor (0 = event)", "CNSR", required = TRUE),
         .ff("by", "variable", "Group", help = "Empty = one curve"),
         .ff("conf_type", "choice", "Confidence interval", "log",
             c("log", "log-log", "plain")),
@@ -892,10 +893,9 @@ tfl_read_fig_design <- function(path) {
       },
       derive = add(sprintf("mutate(%s = %s)", v("variable"), v("expr"))),
       time_unit = if (identical(v("variable"), "AVAL")) {
-        # AVAL's unit is the data's (AVALU): checked, and converted record
-        # by record -- code of its own
-        src <- block_src()
-        out <- c(out, .fig_aval_unit_code(src, cur, v("unit")), "")
+        # AVAL's unit is the data's (AVALU): the study helper tte_time()
+        # checks it and converts (one unit in the data; no AVALU = days)
+        add(sprintf("tte_time(%s)", q(v("unit"))))
       } else if (!identical(v("unit"), "days")) {
         # another variable: a time in days (TRTDURD, ADY ...)
         add(sprintf("# days -> %s\n  mutate(%s = %s / %s)", v("unit"), v("variable"),
@@ -956,34 +956,6 @@ tfl_read_fig_design <- function(path) {
     }
   }
   invisible(TRUE)
-}
-
-# A time_unit step on AVAL: AVAL in `unit`, each record's from its own
-# unit, AVALU (days when the data has none: ADaM's AVAL of a time to event
-# may be in days, months ...).  A unit it does not know stops the program:
-# a time read in the wrong unit is a wrong figure.  AVALU says the new unit
-# after it.
-.fig_aval_unit_code <- function(src, dst, unit) {
-  to <- toupper(unit)
-  div <- if (identical(unit, "days")) "" else paste0(" / ", .fig_unit_ref(unit))
-  c(sprintf("# AVAL in %s, from each record's unit, AVALU (days when the data has no AVALU)", unit),
-    sprintf("%s <- %s |>", dst, src),
-    sprintf("  mutate(AVALU = if (\"AVALU\" %%in%% names(%s)) toupper(AVALU) else \"DAYS\")", src),
-    sprintf("units_unknown <- setdiff(%s$AVALU, c(\"DAYS\", \"WEEKS\", \"MONTHS\", \"YEARS\"))", dst),
-    "if (length(units_unknown)) {",
-    paste0("  stop(\"AVALU: a unit not DAYS, WEEKS, MONTHS or YEARS: \", toString(units_unknown),",
-           " call. = FALSE)"),
-    "}",
-    sprintf("%s <- %s |>", dst, dst),
-    "  mutate(",
-    "    AVAL = AVAL * case_when(",
-    "      AVALU == \"DAYS\"   ~ 1,",
-    "      AVALU == \"WEEKS\"  ~ days_per_week,",
-    "      AVALU == \"MONTHS\" ~ days_per_month,",
-    "      AVALU == \"YEARS\"  ~ days_per_year",
-    sprintf("    )%s,", div),
-    sprintf("    AVALU = \"%s\"", to),
-    "  )")
 }
 
 # A filter step that warns with `warn` ({n}: the rows left out) when it
@@ -1070,8 +1042,9 @@ tfl_read_fig_design <- function(path) {
         libs <- c(libs, "ggsurvfit")
         ct <- v("conf_type")
         cl <- as.numeric(v("conf_level") %||% 0.95)
-        out <- c(out, sprintf("%s <- survfit2(Surv(%s, %s == 0) ~ %s, data = %s%s%s)",
-                              v("name"), v("time"), v("censor"), v("by") %||% "1", src,
+        out <- c(out, sprintf("%s <- survfit2(%s ~ %s, data = %s%s%s)",
+                              v("name"), .tte_surv(v("time"), v("censor"), pkg = FALSE),
+                              v("by") %||% "1", src,
                               if (!identical(ct, "log")) paste0(", conf.type = ", q(ct)) else "",
                               if (!isTRUE(all.equal(cl, 0.95))) paste0(", conf.int = ", format(cl)) else ""),
                  "")
@@ -1897,7 +1870,7 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
       if (length(b$needs)) sprintf("# also needs: %s (called as pkg::fn)", paste(b$needs, collapse = ", "))),
     if (setup && gg$explicit) sprintf("# Written for ggplot2 %s", gg$version),
     if (length(b$guard)) c("", b$guard),
-    if (!setup) .fig_units_used(c(b$step1, b$step2)),
+    if (!setup) c(.fig_units_used(c(b$step1, b$step2)), .fig_helper_used(c(b$step1, b$step2))),
     "",
     section("data"),
     b$step1,
@@ -1990,6 +1963,18 @@ tfl_fig_data_name <- function(design) {
 .fig_units_used <- function(code) {
   used <- unique(unlist(regmatches(code, gregexpr("days_per_(week|month|year)", code))))
   if (length(used)) c("", .fig_unit_guard(used)) else character()
+}
+
+# a script of its own: the study helper tte_time() its code calls, defined
+# unless the study's setup has it (a study's programs get it from
+# programs/study_helpers.R, sourced by their setup)
+.fig_helper_used <- function(code) {
+  if (!any(grepl("tte_time(", code, fixed = TRUE))) return(character())
+  h <- tfl_helpers_code()
+  a <- grep("^tte_time <- function", h)[1L]
+  b <- a - 1L + which(h[a:length(h)] == "}")[1L]
+  c("", "# the study helper tte_time() (tfl_helpers_code()), unless the study's setup has it",
+    paste0("if (!exists(\"tte_time\")) ", h[a]), h[seq(a + 1L, b)])
 }
 
 #' Whether a figure's design reads an ARD
@@ -2446,8 +2431,9 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
 #'   the design reads to them.  `forest_hr` names its own analysis data's
 #'   set by it ([tfl_fig_forest_analyses()]); a whole-script template passes
 #'   it to its type's function.
-#' @param time,censor,time_unit KM: the time, the censor variable, the axis's
-#'   unit.  PK: `time` is the nominal time.
+#' @param time,censor,time_unit KM: the time, the censor variable (0 = the
+#'   event), the unit the time is in for the analysis and the axis: AVAL is
+#'   converted from its AVALU by `tte_time()`.  PK: `time` is the nominal time.
 #' @param value,visit,visit_label The value and the visit (number and
 #'   label): mean, box, spaghetti, scatter.
 #' @param x,y Scatter: the two variables.
@@ -2981,7 +2967,8 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
 #'   data's `derive`; `NULL`: the first level (none derived).
 #' @param subgroups The subgroup variables (of the population's data), a
 #'   character vector or one string with `,` between them.
-#' @param time,censor The time and the censoring indicator (1 = censored).
+#' @param time,censor The time and the censoring variable (CNSR: 0 = the event,
+#'   any other value a censoring).
 #' @param id The analysis id of the overall estimate; a subgroup's is
 #'   `<id>_<variable>`.
 #' @return A list of two data frames, `analysis_data` and `analyses`, with
@@ -2996,7 +2983,7 @@ tfl_fig_forest_analyses <- function(data = "ADTTE", param = "OS", pop = "FASFL",
   subgroups <- .split_vals(paste(subgroups, collapse = ", "))
   data_id <- gsub("[^a-z0-9_.]", "_", tolower(paste(data, sub("FL$", "", pop), param, sep = "_")))
   # the event as the KM figures write it: CNSR == 0
-  model <- sprintf("survival::coxph(survival::Surv(%s, %s == 0) ~ %s, data = %%s)", time, censor, group)
+  model <- sprintf("survival::coxph(%s ~ %s, data = %%s)", .tte_surv(time, censor), group)
   # all subjects: the model under a name, then its ARD; within a subgroup,
   # the same inside ard_strata()
   # (the subjects the model leaves out without a word -- no arm, no time or

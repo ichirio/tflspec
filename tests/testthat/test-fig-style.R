@@ -76,7 +76,7 @@ test_that("the KM number at risk can come from the table's ARD", {
   adtte <- adtte[adtte$PARAMCD == "OS" & adtte$FASFL == "Y", ]
   times <- seq(0, 24, by = 6) * 30.4375
   km_table_ard <- cardx::ard_survival_survfit(
-    survival::survfit(survival::Surv(AVAL, 1 - CNSR) ~ TRT01P, data = adtte),
+    survival::survfit(survival::Surv(AVAL, CNSR == 0) ~ TRT01P, data = adtte),
     times = times)
   code <- paste(tfl_fig_km(adam, param = "OS", ard = "km_table_ard", x_max = 24,
                       x_by = 6), collapse = "\n")
@@ -109,7 +109,7 @@ test_that("tfl_km_risk() reads the table's ARD and checks it", {
   eval(parse(text = tfl_fig_setup_code()), envir = e)
   d <- tfl_example_adam()$ADTTE
   d <- d[d$PARAMCD == "OS", ]
-  fit <- survival::survfit(survival::Surv(AVAL, 1 - CNSR) ~ TRT01P, data = d)
+  fit <- survival::survfit(survival::Surv(AVAL, CNSR == 0) ~ TRT01P, data = d)
   ard <- cardx::ard_survival_survfit(fit, times = c(0, 100, 200))
   r <- e$tfl_km_risk(ard, fit)
   expect_named(r, c("time", "strata", "n_risk"))

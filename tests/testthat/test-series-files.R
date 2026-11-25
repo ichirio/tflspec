@@ -126,9 +126,12 @@ test_that("the percentages' denominator is BIGN and the items say how analysis i
   expect_identical(cmp$step, "analysis")
   expect_identical(cmp$tier, "usual")
   expect_identical(cmp$description, "The arm compared against the reference")
-  expect_match(ts[["km_simple.yml"]]$data[[2]]$derive,
-               "[[\"{time_unit}\"]]", fixed = TRUE)
-  expect_match(ts[["km_simple.yml"]]$data[[2]]$derive, "months = {days_per_month}", fixed = TRUE)
+  # the time's unit is the study helper's, not a division written in the template
+  expect_identical(as.character(ts[["km_simple.yml"]]$data[[2]]$then), "tte_time(\"{time_unit}\")")
+  expect_null(ts[["km_simple.yml"]]$data[[2]]$derive)
+  expect_null(ts[["km_simple.yml"]]$params$days_per_month)
+  expect_null(ts[["km_cards.yml"]]$params$days_per_month)
+  expect_match(ts[["forest_hr.yml"]]$analysis[[2]]$args, "survival::Surv({time}, {censor} == 0)", fixed = TRUE)
   expect_equal(ts[["ae_soc_pt.yml"]]$params$min_pct$default, 0)
   expect_identical(ts[["orr_subgroup.yml"]]$data[[1]]$population,
                    "population_efficacy")

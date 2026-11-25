@@ -50,8 +50,9 @@ the design reads to them.  \code{forest_hr} names its own analysis data's
 set by it (\code{\link[=tfl_fig_forest_analyses]{tfl_fig_forest_analyses()}}); a whole-script template passes
 it to its type's function.}
 
-\item{time, censor, time_unit}{KM: the time, the censor variable, the axis's
-unit.  PK: \code{time} is the nominal time.}
+\item{time, censor, time_unit}{KM: the time, the censor variable (0 = the
+event), the unit the time is in for the analysis and the axis: AVAL is
+converted from its AVALU by \code{tte_time()}.  PK: \code{time} is the nominal time.}
 
 \item{value, visit, visit_label}{The value and the visit (number and
 label): mean, box, spaghetti, scatter.}

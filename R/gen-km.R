@@ -7,6 +7,16 @@ pp_time_mutate <- function(ctx, vars) {
   sprintf("mutate(across(c(%s), ~ .x / %s))", paste(vars, collapse = ", "), d)
 }
 
+# A time to event's AVAL in the sheet's unit: the study helper tte_time()
+# converts it from its AVALU (days when there is none), one unit in the data;
+# "as_is" (the old default) is days.  Another variable is a time in days.
+pp_tte_mutate <- function(ctx, var) {
+  if (!identical(var, "AVAL")) return(pp_time_mutate(ctx, var))
+  unit <- pp_opt(ctx, "time_unit")
+  if (!unit %in% names(pp_time_unit_name)) stop("Unknown time_unit: ", unit, call. = FALSE)
+  sprintf("tte_time(%s)", q(pp_time_unit_name[[unit]]))
+}
+
 pp_time_label <- function(ctx) unname(pp_time_axis_label[pp_opt(ctx, "time_unit")])
 
 # x axis range / breaks lines shared by time-based plots.
@@ -44,7 +54,7 @@ pp_gen_km <- function(ctx) {
       s_values <- pp_values_or_null(pp_filtered_data(ctx, ctx$ds, flist), s_var)
     }
   }
-  steps <- c(steps, list(pp_time_mutate(ctx, time)))
+  steps <- c(steps, list(pp_tte_mutate(ctx, time)))
 
   # colours: one per stratum (single arm: arm_label)
   if (is.null(s_var)) {
@@ -58,7 +68,7 @@ pp_gen_km <- function(ctx) {
   }
 
   data <- c(pipe_code("km_df", steps))
-  fit <- sprintf("km_fit <- survfit2(Surv(%s, %s == 0) ~ %s, data = km_df)", time, cnsr, s_var %or% "1")
+  fit <- sprintf("km_fit <- survfit2(%s ~ %s, data = km_df)", .tte_surv(time, cnsr, pkg = FALSE), s_var %or% "1")
 
   lw <- pp_opt(ctx, "line_width")
   cshape <- pp_shape_code(pp_opt(ctx, "censor_shape"), "x")

@@ -27,7 +27,6 @@ values:
   time: AVAL
   censor: CNSR
   time_unit: months
-  days_per_month: 30.4375
 descriptions:
   extends: "The SPEC files a report made from these templates builds on ([defaults]: the study's spec/defaults.yml)."
   style: "The style of the Tables and Figures: one of the study's (defaults.yml styles:) or a built-in one (tfl_styles())."
@@ -45,6 +44,5 @@ descriptions:
   max_rows: "The most rows a page holds."
   conf_level: "The level of the confidence intervals (0.95: 95%)."
   time: "The column of the time to event."
-  censor: "The censoring column (1 censored, 0 event)."
-  time_unit: "The unit of the time axis; months divides the days by days_per_month."
-  days_per_month: "The days in a month, for time_unit months."
+  censor: "The censoring column (0 is the event, any other value a censoring)."
+  time_unit: "The unit the analysis and the axis use; AVAL is converted from its unit, AVALU, to it."

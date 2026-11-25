@@ -59,7 +59,7 @@ params:
     default: !series censor
     step: analysis
     tier: other
-    description: The censoring column (1 censored, 0 event).
+    description: The censoring column (0 is the event, any other value a censoring).
   formats:
     type: map<string,number|string>
     input: table
@@ -99,7 +99,7 @@ analysis:
       - {subgroup: ALL, subgroup_lvl: ALL, where: !r TRUE}
       - "{conditions}"
     where: !r "{where}"
-    args: !r formula = ggsurvfit::Surv_CNSR({time}, {censor}) ~ {by}, method = "coxph", package = "survival", exponentiate = TRUE
+    args: !r formula = survival::Surv({time}, {censor} == 0) ~ {by}, method = "coxph", package = "survival", exponentiate = TRUE
     post: !r dplyr::mutate(group1 = "subgroup", group1_level = list("{subgroup}"), group2 = "subgroup_lvl", group2_level = list("{subgroup_lvl}"))
     formats: "{formats}"
 page:

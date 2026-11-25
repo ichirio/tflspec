@@ -220,19 +220,22 @@ test_that("a time's unit is a named constant of the setup, never a column", {
   d <- tfl_fig_template("km_simple", data = "ADTTE", param = "TTDE", pop = "SAFFL", group = "TRT01A")
   # a study's program: the figure setup defines it (unless the study's setup has)
   prog <- strsplit(paste(tfl_fig_design_code(d, "F1", setup = TRUE), collapse = "\n"), "\n")[[1]]
-  # (AVAL from each record's unit, AVALU)
-  expect_true(any(grepl("AVALU == \"MONTHS\" ~ days_per_month", prog, fixed = TRUE)))
-  expect_true(any(grepl("    ) / days_per_month,", prog, fixed = TRUE)))
+  # (AVAL from its unit, AVALU: the study helper, one pipe step)
+  expect_true(any(grepl("  tte_time(\"months\")", prog, fixed = TRUE)))
+  expect_false(any(grepl("days_per_month", prog, fixed = TRUE)))
   expect_false(any(grepl("30.4375", prog, fixed = TRUE)))
   expect_true(any(grepl('if (!exists("days_per_month")) days_per_month <- 30.4375',
                         tfl_fig_setup_code(), fixed = TRUE)))
-  # a script of its own: defines the ones it uses (AVAL from its unit: all
-  # three; another time, in days: the one)
+  # a script of its own: defines what it uses (AVAL from its unit: the
+  # helper tte_time(), no constant; another time, in days: the constant)
   own <- strsplit(paste(tfl_fig_design_code(d, "F1"), collapse = "\n"), "\n")[[1]]
-  expect_identical(sum(grepl("^if [(]!exists", own)), 3L)
+  expect_identical(sum(grepl("^if [(]!exists", own)), 1L)
+  expect_true(any(grepl("^if [(]!exists[(]\"tte_time\"[)][)] tte_time <- function", own)))
   d$data[[which(vapply(d$data, `[[`, "", "step") == "time_unit")]]$variable <- "ADY"
   own <- strsplit(paste(tfl_fig_design_code(d, "F1"), collapse = "\n"), "\n")[[1]]
   expect_identical(sum(grepl("^if [(]!exists", own)), 1L)
+  expect_true(any(grepl("^if [(]!exists[(]\"days_per_month\"[)][)]", own)))
+  expect_false(any(grepl("tte_time", own, fixed = TRUE)))
   expect_true(any(grepl("mutate(ADY = ADY / days_per_month)", own, fixed = TRUE)))
   # the study's value wins
   e <- new.env()

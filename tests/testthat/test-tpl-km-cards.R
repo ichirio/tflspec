@@ -22,11 +22,12 @@ test_that("km_cards resolves: its data the figure's steps filled in, its content
   expect_null(o$figure)
   expect_null(o$ard)
   steps <- o$data$steps
-  expect_identical(vapply(steps, `[[`, "", "step"), c("read", "param", "flag", "derive", "survfit"))
+  expect_identical(vapply(steps, `[[`, "", "step"), c("read", "param", "flag", "time_unit", "survfit"))
   expect_identical(steps[[2L]]$value, "OS")
   expect_identical(steps[[3L]]$variable, "FASFL")
   expect_identical(steps[[5L]]$by, "TRT01P")
-  expect_match(as.character(steps[[4L]]$expr), "months = 30.4375)[[\"months\"]]", fixed = TRUE)
+  expect_identical(steps[[4L]]$variable, "AVAL")
+  expect_identical(steps[[4L]]$unit, "months")
   expect_identical(kmc_fns(o), c("ggsurvfit", "add_censor_mark", "scale_colour_tfl", "scale_y_continuous",
                                  "coord_cartesian", "labs", "theme_tfl", "theme", "add_risktable"))
   # each card passes the schema
@@ -48,6 +49,7 @@ test_that("km_cards' program is the card chain, ggsurvfit() + ... + add_risktabl
   code <- tfl_content_code(o)
   expect_true(any(grepl("fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P", code, fixed = TRUE)))
   expect_true(any(grepl("filter(PARAMCD == \"OS\", FASFL == \"Y\")", code, fixed = TRUE)))
+  expect_true(any(grepl("tte_time(\"months\")", code, fixed = TRUE)))
   expect_true(any(code == "content <- ggsurvfit(x = fit, linewidth = 0.3) +"))
   expect_true(any(code == "  add_censor_mark(shape = 3, size = 3, stroke = 0.6) +"))
   expect_true(any(grepl("^  add_risktable\\(risktable_stats = \"n.risk\"\\)$", code)))
@@ -71,7 +73,8 @@ test_that("km_cards' program is the card chain, ggsurvfit() + ... + add_risktabl
   code3 <- tfl_content_code(o3)
   expect_true(any(grepl("add_risktable(risktable_stats = \"n.risk\", times = c(0, 100, 200))",
                         code3, fixed = TRUE)))
-  expect_true(any(grepl("months = 30.4375)[[\"days\"]]", code3, fixed = TRUE)))
+  expect_true(any(grepl("tte_time(\"days\")", code3, fixed = TRUE)))
+  expect_false(any(grepl("30.4375", code3, fixed = TRUE)))
   expect_true(any(grepl("Time (Days)", code3, fixed = TRUE)))
 })
 
