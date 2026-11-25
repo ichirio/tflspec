@@ -34,7 +34,8 @@ without error.  A run that failed still answers for the reports it made;
 a run of the ARD only answers for the ARD.
 }
 \details{
-A run counts when its \code{batch.txt} says it finished and names this study
+A run counts when its \code{batch.txt} says when it finished (a \verb{Finished :}
+time that reads as year-month-day hour:minute:second) and names this study
 (study.yml's \code{study_id}), has the line \code{Verified : yes} (the runner writes
 it last, after \code{issues.csv}, so the run's end record is whole) and
 \code{Kind : run}, and has no \verb{Re-run :} line, and its \code{run.csv} has the
