@@ -24,5 +24,5 @@ limits:
     instead:
       en: "Use one column key, or give the column order with plan_levels()."
       ja: "列のキーを 1 つにするか、plan_levels() で列の順を書いてください。"
-    fixed_in: 0.8.2.9100
+    fixed_in: 0.9.1
     added: 2026-11-22

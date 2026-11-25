@@ -11,7 +11,7 @@ lim_row <- function() Filter(function(r) identical(r$id, "rtfreporter-1103"), tf
 test_that("the 1103 row stops two column keys with a Total, before the version that does it", {
   rows <- lim_row()
   expect_length(rows, 1L)
-  old <- package_version("0.8.2.9000")
+  old <- package_version("0.9.0")  # the release without the fix (rtfreporter#1137)
   expect_error(tflspec:::.content_limits(lim_content(c("TRTA", "SEX")), "T-1", rows = rows, version = old),
                "T-1: rtfreporter cannot yet place the Total column", fixed = TRUE)
   expect_error(tflspec:::.content_limits(lim_content("TRTA | SEX"), rows = rows, version = old),
