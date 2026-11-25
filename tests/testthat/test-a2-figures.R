@@ -48,6 +48,8 @@ test_that("a report's subjects: its analysis set's, made by the data part (R1, R
   # a set of ADSL with a condition: <dataset>_sub, as the ARD programs name it
   sj <- .fig_subjects_part(x, "F-1", "SAF")
   expect_identical(sj$subjects, list(object = "adsl_sub", dataset = "ADSL", id = "USUBJID"))
+  # (lines only: no section heading, the program writes its sections)
+  expect_false(any(grepl("^# ---- .* ----$", unlist(sj$code))))
   expect_true(any(grepl("^adsl_sub <- ", unlist(sj$code))))
   expect_match(a2f_flat(sj$code), "SAFFL == \"Y\"", fixed = TRUE)
   # a set of another dataset: that dataset's subjects
@@ -180,6 +182,9 @@ test_that("a designed figure's program: the subjects in its data part, its reads
   expect_length(i_sub, 1L)
   expect_lt(i_sub, i_rec[1L])
   expect_match(a2f_flat(p), a2f_join("adsl_sub"), fixed = TRUE)
+  # one data section: the subjects part brings no heading of its own
+  expect_identical(sum(startsWith(p, "# ---- data ")), 1L)
+  expect_identical(sum(startsWith(before, "# ---- data ")), 1L)
   # the set in `common:` (until it goes): the same subjects, the same join
   expect_identical(a2f_prog(x, a2f_pop(r, "SAF", "common")), p)
   # a set the study does not define: no subjects, no join -- the program

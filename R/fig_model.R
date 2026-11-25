@@ -1054,8 +1054,21 @@ tfl_read_fig_design <- function(path) {
                                       "definition (no object of them); the figure would draw every ",
                                       "subject."), output_id, pop))
   }
-  list(code = made, subjects = list(object = obj, dataset = ds,
-                                    id = .study_value(x, "id", "USUBJID")))
+  list(code = .fig_subjects_lines(made), subjects = list(object = obj, dataset = ds,
+                                                         id = .study_value(x, "id", "USUBJID")))
+}
+
+# The data part's lines as a figure's subjects part: its lines only, no
+# section heading (`# ---- data ----`, `# ---- code lists ... ----`): the
+# program writer writes each section's heading once, the subjects inside
+# the figure's own data section
+.fig_subjects_lines <- function(code) {
+  code <- as.character(unlist(code))
+  code <- code[!grepl("^# ---- .* ----$", code)]
+  # (no blank line first, none twice in a row)
+  while (length(code) && !nzchar(code[1L])) code <- code[-1L]
+  blank <- !nzchar(code)
+  code[!(blank & c(FALSE, blank[-length(blank)]))]
 }
 
 # The message of a report's analysis set `pop` that is none of the study's
