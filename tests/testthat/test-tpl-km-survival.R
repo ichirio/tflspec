@@ -97,10 +97,14 @@ test_that("the B file in the figure designer: the report's own items seen, saved
   tfl_write_fig_design(back, f2)
   expect_identical(readLines(f2), readLines(f1))
   expect_identical(unclass(back), unclass(design))
-  # the design read back writes the report's figure
-  expect_identical(as.character(tfl_fig_design_code(back, plot_id = "F-14-2-3", save = FALSE,
-                                                    name = "content", order_arms = TRUE)),
+  # the design read back writes the report's figure (the one writer of a
+  # report's figure from a design: a part of the program, no head)
+  expect_identical(as.character(tflspec:::.fig_design_content_code(back, "F-14-2-3")),
                    tflspec:::.content_fig_code(tfl_resolve_output(b, st)))
+  # the same design as a script of its own carries the study helpers it calls
+  own <- tfl_fig_design_code(back, plot_id = "F-14-2-3", save = FALSE, name = "content",
+                             order_arms = TRUE)
+  expect_true(any(grepl("^if [(]!exists[(]\"order_levels\"[)][)] ", own)))
 })
 
 test_that("a report that replaces a template's layer: its design, not the call", {

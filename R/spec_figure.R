@@ -122,15 +122,23 @@
   if (!is.null(series)) return(series)
   if (.fig_new_content(output$content)) return(.fig_content_code(output))
   # (the design as its list: tfl_fig_design_code() reads it as a design)
-  design <- .fig_design_of_output(output)
-  # (the report's program runs after the study's helpers: the arms in their
-  # numeric order, as the figure of items has them; and no head -- the
-  # setup defines the helpers, .fig_script_head())
+  .fig_design_content_code(.fig_design_of_output(output), output$id,
+                           .codelists_rows(output$codelists, output$id))
+}
+
+# A report's figure written from a designer's design: the code that makes
+# `content` (the report's program writes it into its RTF).  It is a part of
+# the report's program, run after the study's helpers: the arms in their
+# numeric order, as the figure of items has them, and no head -- the setup
+# defines the helpers and the units (.fig_script_head()).  The one writer of
+# it: a report's content and a designer's design of that report give the
+# same text.  (tfl_fig_design_code() called by itself, `setup = FALSE`, is a
+# script of its own and carries them.)
+.fig_design_content_code <- function(design, plot_id, codelists = NULL) {
   old <- options(tflspec.fig_in_program = TRUE)
   on.exit(options(old), add = TRUE)
-  tfl_fig_design_code(design, plot_id = output$id, save = FALSE, name = "content",
-                      codelists = .codelists_rows(output$codelists, output$id),
-                      order_arms = TRUE)
+  tfl_fig_design_code(design, plot_id = plot_id, save = FALSE, name = "content",
+                      codelists = codelists, order_arms = TRUE)
 }
 
 # the figure made: its code run on the objects it reads (`data`: a named
