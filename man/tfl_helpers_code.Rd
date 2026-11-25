@@ -35,7 +35,9 @@ set, else \code{\link[=tfl_time_unit_days]{tfl_time_unit_days()}}), \code{tag_ar
 analysis set in front of an analysis's ARD), \code{bind_items()} (a report's items into one
 ARD: no row lost, the columns in order, a statistic twice in one item an error, the
 same statistic in two items a warning), \code{fmt_ard()} and
-\code{fmt_pvalue()} (formats after a call), \code{keep_stats()} (only the
+\code{fmt_pvalue()} (formats after a call), \code{fmt_num()} (a number as text
+with the decimals asked for, rounded by the study's rule: what a table
+cell \verb{\{x:.2f\}} prints), \code{keep_stats()} (only the
 statistics asked for), \code{ard_hierarchical_or_none()} (nested counts,
 and the ARD of no records: the overall row 0), \code{complete_hierarchy()} (a
 nested count's code-list values no subject has, counted 0),
@@ -51,8 +53,10 @@ report's rows of the study ARD; none, or no study ARD, stops the program,
 naming the ARD program to run first), and what a figure
 reads an ARD with: \code{ard_value()} (one statistic, as text),
 \code{ard_stats()} (statistics as a data frame) and \code{ard_fingerprint()} (the
-fingerprint \code{ard_status.csv} recorded for a report).  Base R, cards and
-dplyr only: a study writes them once into a file of its own (tflplanner:
+fingerprint \code{ard_status.csv} recorded for a report).  Base R, cards,
+dplyr and rtfreporter's \code{round_num()} (the study's rounding,
+\code{options(rtfreporter.rounding)}): a study writes them once into a file
+of its own (tflplanner:
 \code{programs/study_helpers.R}, sourced by its setup) and its programs run
 without tflspec.  \code{\link[=tfl_ard_code]{tfl_ard_code()}}'s whole program (\code{part = "all"})
 carries them itself.
