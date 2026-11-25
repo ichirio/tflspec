@@ -43,6 +43,13 @@ the series' map of that name, in the same way), a name whose value is
 \code{!unset} is removed, and the names the report does not write keep the
 series' values.
 
+An argument the report writes \verb{~} (YAML null) is not given: the
+default applies, as when it is left out.  None (the argument not
+passed) is \code{!unset}; \code{NULL} itself is \verb{!r NULL}.  A list argument
+(\verb{list<...>}) the report gives is never empty, has no \code{""} or \code{NA}
+entry, and is not a map where a sequence is declared: such a value
+stops, naming the argument.
+
 An analysis item's \verb{analyses:} (\code{per}, \code{ids}) says its analyses: \code{per: variable} one a variable (its id the variable's entry in \code{ids}, else the
 variable's name); \code{per: level} or \verb{per: [columns]} one row whose
 \code{analysis_per} tells the generator how to name the analyses; no \code{per}
