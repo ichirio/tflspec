@@ -9,16 +9,34 @@
 # list's own name.
 
 # The define's codes of a column: the code lists of values adam_meta maps
-# `variable` to (in any dataset; a dictionary's list has no values) and
-# their codes, a code of any of them counting; NULL when it maps none
-.define_codes_of <- function(meta, variable) {
+# `variable` to in `datasets` (the ones the report reads; in any dataset
+# when none is known) and their codes, a code of any of them counting (a
+# dictionary's list has no values); NULL when it maps none there
+.define_codes_of <- function(meta, variable, datasets = NULL) {
   v <- meta$variables
   if (is.null(v) || !nrow(v)) return(NULL)
   keep <- v$variable %in% variable & !is.na(v$codelist) & v$codelist %in% meta$codelists$codelist
+  if (length(datasets)) keep <- keep & toupper(v$dataset) %in% toupper(datasets)
   if (!any(keep)) return(NULL)
   cls <- unique(v$codelist[keep])
   list(codelists = cls, where = unique(paste0(v$dataset[keep], ".", v$variable[keep])),
        codes = unique(unlist(lapply(cls, .adam_codes, meta = meta), use.names = FALSE)))
+}
+
+# The datasets a report reads: the `from` of its data definitions (one that
+# names another definition is not a dataset) and its analyses' `dataset`;
+# none when it says none
+.report_datasets <- function(o) {
+  one <- function(e, key) {
+    x <- if (is.list(e)) e[[key]] else NULL
+    if (is.character(x) && length(x) == 1L && !inherits(x, "tfl_r")) x else NA_character_
+  }
+  defs <- o$ard$analysis_data
+  defs <- if (is.list(defs) && is.null(names(defs))) defs else list()
+  ids <- vapply(defs, one, "", key = "id")
+  ds <- c(vapply(defs, one, "", key = "from"), vapply(o$ard$analyses %||% list(), one, "", key = "dataset"))
+  ds <- unique(ds[!is.na(ds) & nzchar(ds)])
+  ds[!ds %in% ids]
 }
 
 # The codes of a report's code list written in place (a list of {value,
@@ -35,18 +53,19 @@
 }
 
 # The check's rows: one warning a report's in-place list of a column adam_meta
-# maps that has codes the define's list does not have (`part` "codelists",
-# `item` the column).  `outs`: the reports as read, by id.  No adam_meta, or
-# a column it does not map: no row.
+# maps (in the datasets the report reads) that has codes the define's list
+# does not have (`part` "codelists", `item` the column).  `outs`: the
+# reports as read, by id.  No adam_meta, or a column it does not map: no row.
 .check_define_code_rows <- function(study, outs) {
   meta <- study$adam_meta
   if (is.null(meta) || !nrow(meta$variables %||% data.frame())) return(.check_rows())
   rows <- list(.check_rows())
   for (id in names(outs)) {
     cls <- outs[[id]]$codelists %||% list()
+    ds <- if (length(cls)) .report_datasets(outs[[id]])
     for (var in names(cls)) {
       codes <- .inplace_codes(cls[[var]])
-      def <- if (length(codes)) .define_codes_of(meta, var)
+      def <- if (length(codes)) .define_codes_of(meta, var, ds)
       if (is.null(def)) next
       extra <- unique(setdiff(codes, def$codes))
       if (!length(extra)) next

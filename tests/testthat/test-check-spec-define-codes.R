@@ -77,7 +77,40 @@ test_that("a study list is not tied to a column by its name: no row", {
   expect_identical(nrow(dc_rows(d)), 0L)
 })
 
-test_that("a column mapped to two lists: a code of either is the define's", {
+test_that("two datasets map a column to different lists: the report's datasets' list only", {
+  d <- withr_tempdir()
+  dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)
+  writeLines(c(
+    "adam_meta:",
+    "  variables:",
+    "    - {dataset: ADLB, variable: AVALC, codelist: CL.LB}",
+    "    - {dataset: ADVS, variable: AVALC, codelist: CL.VS}",
+    "  codelists:",
+    "    - {codelist: CL.LB, value: HIGH}",
+    "    - {codelist: CL.LB, value: LOW}",
+    "    - {codelist: CL.VS, value: ABNORMAL}"), file.path(d, "spec", "defaults.yml"))
+  put <- function(data) {
+    writeLines(c("id: T-CL", "kind: table", "extends: none", data,
+                 "codelists:", "  AVALC: [HIGH, ABNORMAL]", "content: []"),
+               file.path(d, "spec", "outputs", "T-CL.yml"))
+  }
+  # a report on ADLB: ABNORMAL is ADVS's code, not ADLB's
+  put(c("data:", "  - id: adlb_x", "    from: ADLB", "  - id: adlb_y", "    from: adlb_x"))
+  w <- dc_rows(d)
+  expect_identical(nrow(w), 1L)
+  expect_match(w$message, "has the code \"ABNORMAL\", which the define's code list CL.LB does not", fixed = TRUE)
+  expect_match(w$message, "adam_meta maps ADLB.AVALC to it", fixed = TRUE)
+  # a report on ADVS: HIGH is ADLB's
+  put(c("data:", "  - id: advs_x", "    from: ADVS"))
+  w <- dc_rows(d)
+  expect_identical(nrow(w), 1L)
+  expect_match(w$message, "has the code \"HIGH\", which the define's code list CL.VS does not", fixed = TRUE)
+  # no dataset known: either list's codes count
+  put(character())
+  expect_identical(nrow(dc_rows(d)), 0L)
+})
+
+test_that("the define's codes of a column, by the datasets; a list written in place", {
   meta <- list(
     variables = data.frame(dataset = c("ADLB", "ADVS"), variable = "AVALC",
                            codelist = c("CL.LB", "CL.VS"), stringsAsFactors = FALSE),
@@ -86,7 +119,15 @@ test_that("a column mapped to two lists: a code of either is the define's", {
   def <- .define_codes_of(meta, "AVALC")
   expect_identical(def$codelists, c("CL.LB", "CL.VS"))
   expect_identical(def$codes, c("HIGH", "ABNORMAL"))
+  def <- .define_codes_of(meta, "AVALC", "advs")
+  expect_identical(def$codelists, "CL.VS")
+  expect_identical(def$codes, "ABNORMAL")
+  expect_null(.define_codes_of(meta, "AVALC", "ADAE"))
   expect_null(.define_codes_of(meta, "SEX"))
+  o <- list(ard = list(analysis_data = list(list(id = "a", from = "ADLB"), list(id = "b", from = "a")),
+                       analyses = list(list(id = "X", dataset = "ADVS"), list(id = "Y", data = "b"))))
+  expect_identical(.report_datasets(o), c("ADLB", "ADVS"))
+  expect_identical(.report_datasets(list()), character())
   expect_identical(.inplace_codes(list(list(value = "A", label = "a"), list(value = "B"))), c("A", "B"))
   expect_identical(.inplace_codes(c(F = "Female")), "F")
   # (a map is not a list written in place)
