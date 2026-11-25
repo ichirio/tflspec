@@ -331,9 +331,17 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
     }
     if (identical(st$step, "code")) {
       d$data[[k]]$code <- .forest_est_code(group, subgroups, comparison, look$n_by_arm,
-                                           look$subgroup_labels,
-                                           isTRUE(look$bold_headings) && length(subgroups) > 0L)
+                                           look$subgroup_labels)
     }
+  }
+  # the headings bold: the axis's labels (y_labels, .tpl_forest_look()) made
+  # from the rows by a code step of their own -- a code step keeps its `out`
+  # only (est), and the plot reads both
+  if (isTRUE(look$bold_headings) && length(subgroups) > 0L) {
+    k <- which(vapply(d$data, function(st) identical(st$step, "code"), NA))[1L]
+    d$data <- append(d$data, list(list(
+      step = "code", label = "the axis's labels, the subgroups' headings bold",
+      out = "y_labels", code = .forest_y_labels_code())), after = k)
   }
   # the ARD read and the rows made: all the call's (no data steps)
   keep <- vapply(d$data, function(st) st$step %in% c("ard_stats", "code"), NA)
