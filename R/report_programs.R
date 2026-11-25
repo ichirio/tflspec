@@ -404,7 +404,7 @@
   pop <- .rp_population(ctx)
   if (is.na(pop)) return(NULL)
   id <- ctx$report$id
-  stop_line <- function(msg) list(code = sprintf("stop(%s)", encodeString(msg, quote = """)),
+  stop_line <- function(msg) list(code = sprintf("stop(%s)", encodeString(msg, quote = "\"")),
                                   subjects = NULL)
   if (is.null(ctx$shared$ard)) return(stop_line(.fig_subjects_no_ard(id, pop)))
   x <- .as_spec(ctx$shared$ard, "ard", "tfl_report_program")
