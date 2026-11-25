@@ -1996,10 +1996,11 @@ tfl_fig_data_name <- function(design) {
 # The head of a figure script, the one rule every figure writer follows:
 # what its code uses of the study's setup -- the time-unit constants
 # (.fig_units_used()) and the study helpers (.fig_helper_used()) -- each
-# defined unless the setup has it.  `setup = TRUE`: the script is a study
-# program's part, after the study's setup, which has them all: none.
+# defined unless the setup has it.  `setup = TRUE`, or a report's content
+# (option tflspec.fig_in_program, set by .content_fig_code_out()): the code
+# is a study program's part, after the study's setup, which has them all: none.
 .fig_script_head <- function(code, setup = FALSE) {
-  if (isTRUE(setup)) return(character())
+  if (isTRUE(setup) || isTRUE(getOption("tflspec.fig_in_program"))) return(character())
   c(.fig_units_used(code), .fig_helper_used(code))
 }
 

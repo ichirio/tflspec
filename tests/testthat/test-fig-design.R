@@ -432,3 +432,12 @@ test_that("plot.colours as text: split at the commas between pairs, and a call i
   expect_error(own("X = blue, Y"), "value = colour pairs")
   expect_identical(own(c(X = "blue")), c(X = "blue"))
 })
+
+test_that("a report's content code carries no study helper: the program's setup has them (A3)", {
+  code <- c("adlb_sub <- order_levels(adlb_sub)", "lab <- fmt_num(x, 2)")
+  expect_true(length(tflspec:::.fig_script_head(code)) > 0L)
+  expect_length(tflspec:::.fig_script_head(code, setup = TRUE), 0L)
+  old <- options(tflspec.fig_in_program = TRUE)
+  on.exit(options(old), add = TRUE)
+  expect_length(tflspec:::.fig_script_head(code), 0L)
+})

@@ -124,7 +124,10 @@
   # (the design as its list: tfl_fig_design_code() reads it as a design)
   design <- .fig_design_of_output(output)
   # (the report's program runs after the study's helpers: the arms in their
-  # numeric order, as the figure of items has them)
+  # numeric order, as the figure of items has them; and no head -- the
+  # setup defines the helpers, .fig_script_head())
+  old <- options(tflspec.fig_in_program = TRUE)
+  on.exit(options(old), add = TRUE)
   tfl_fig_design_code(design, plot_id = output$id, save = FALSE, name = "content",
                       codelists = .codelists_rows(output$codelists, output$id),
                       order_arms = TRUE)
