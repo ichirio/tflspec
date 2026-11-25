@@ -206,7 +206,7 @@ tfl_report_codelists <- function(study, outputs = NULL, rows = NULL) {
   own <- rows
   if (is.data.frame(own) && nrow(own) && "output_id" %in% names(own)) own <- own[!is.na(own$output_id), , drop = FALSE]
   if (is.null(own)) own <- data.frame(output_id = character())
-  for (cn in setdiff(c("output_id", "variable", "value", "label", "order", "under"), names(own))) {
+  for (cn in setdiff(c("output_id", "variable", "value", "label", "order", "under", "list"), names(own))) {
     own[[cn]] <- rep(NA_character_, nrow(own))
   }
   toc_ids <- vapply(study$toc$outputs %||% list(), function(e) e$id %||% NA_character_, "")

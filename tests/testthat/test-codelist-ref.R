@@ -31,6 +31,8 @@ clr_put <- function(d, codelists) {
   own <- c("    - id: OWN", "      method: custom", "      data: adsl_sub", "      by: [TRT01A]",
            "      variables: [SEX]",
            "      code: \"cards::ard_tabulate(data, by = TRT01A, variables = SEX)\"")
+  # (the analysis once: a second call changes the lists only)
+  if (any(grepl("- id: OWN", y, fixed = TRUE))) own <- character()
   writeLines(c(y[seq_len(i - 1L)], own, "codelists:", paste0("  ", codelists), y[j:length(y)]), f)
 }
 clr_trt <- c("TRT01A:", "  - {value: Drug X, label: Drug X 200 mg}",
@@ -230,7 +232,7 @@ test_that("a template that adds codes to a reference: the code SPEC writes the l
   demog <- function(levels) {
     tfl_output("T-9", "table", common = list(population = "SAF"), codelists = list(SEX = list(list = "SEX")),
                template = list(name = "demog", args = list(
-                 population = "SAF", by = "TRT01A", continuous = "AGE", categorical = "SEX",
+                 by = "TRT01A", continuous = "AGE", categorical = "SEX",
                  categorical_levels = list(SEX = levels))))
   }
   expect_message(cs <- tfl_template_to_spec(demog(c("F", "M", "U")), st),
