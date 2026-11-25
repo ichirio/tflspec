@@ -872,6 +872,13 @@
   report_part <- c(
     .rp_section("report"),
     .rp_report_code_lines(ctx, (table || tpl_listing) && identical(content, "plan"), content))
+  # a listing of `data` (as_rtftables(data, ...)): its program records
+  # whether `data` has no records, so the official run notes an empty
+  # listing (batch.R reads report_status.csv's `empty`)
+  if (identical(type, "listing") && any(grepl("as_rtftables[(]data,", c(data, report_part)))) {
+    report_part[report_part == "record_report(report_id)"] <-
+      "record_report(report_id, empty = nrow(data) == 0)"
+  }
 
   c(head,
     "",
