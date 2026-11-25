@@ -54,8 +54,10 @@
 .tpl_demog_params <- function(defaults = list(), fixed = character(), fixed_value = character(),
                               drop = character(), add = list()) {
   p <- list(
-    tfl_param("population", required = TRUE, unset = "stop",
-              doc = "the analysis set's id: the report's `common: population`, not a template parameter"),
+    # (A2-T Q2: shown, in the data step -- the set adsl_sub keeps, one of
+    # the study's; the report's set is this argument)
+    tfl_param("population", required = TRUE, unset = "stop", step = "data",
+              choices = "populations", doc = "the analysis set's id (SAF): the subjects the report is of"),
     tfl_param("continuous", NULL, tier = "required", unset = "stop",
               doc = "the continuous variables, in order (required: this or `categorical`)"),
     tfl_param("categorical", NULL, tier = "required", unset = "stop",
@@ -163,7 +165,6 @@
     p[[k]]$hidden <- TRUE
     p[[k]]$fixed_value <- TRUE
   }
-  p[[1L]]$hidden <- TRUE
   unname(p)
 }
 

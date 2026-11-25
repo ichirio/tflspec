@@ -140,6 +140,9 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   defs <- tfl_arg_defs(template = template, study_dir = study_dir)
 
   given <- .tr_given(report$template, defs$name, template, who)
+  # the set parameter (the one its subjects row's `population: "{...}"`
+  # names, A2-T): the report's set when it does not give it (.tpl_set_fill())
+  given <- .tpl_set_fill(given, .tpl_set_param(template, study_dir), report, who)
   env <- list()
   origins <- character()
   missing <- character()
@@ -249,7 +252,9 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   if (inherits(style, "tfl_unset")) style <- NULL
 
   y <- list(id = report$id, kind = report$kind %||% tpl$kind %||% "table",
-            label = report$label %||% tpl$label, common = report$common,
+            label = report$label %||% tpl$label,
+            # (its set is on the rows the set parameter filled, A2-T: not in `common:`)
+            common = if (length(report$common)) report$common[setdiff(names(report$common), "population")],
             extends = report$extends %||% tpl$extends, style = style,
             figure = tpl$figure, data = rows,
             ard = if (length(items)) c(if (identical(kind, "figure")) list(analysis_data = rows),

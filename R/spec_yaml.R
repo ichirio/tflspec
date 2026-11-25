@@ -497,27 +497,37 @@ tfl_read_output <- function(path) {
 .out_population <- function(o) .na_scalar(o[["common"]][["population"]])
 
 # The analysis set of a report's data (a listing's, a records part's): the
-# data's own `population` (canon 11-15: the set lives on the data); the
-# report's `common: population` is read only until `common` goes (NA when
-# none) -- one rule, the sheets' and the YAML's alike (A2 Q7).  A data that
-# reads one of the report's analysis data (`data: <id>`) has that data's set
-# (.adata_pop(): its own, else that of the subjects it keeps, else the
-# nearest above it), never one written beside it (.data_both()); its rows
-# as the ARD program reads them (a subjects row with no set has the
-# report's `common: population`, .entry_pop_inject(), until `common` goes)
-.data_population <- function(data, o) {
+# data's own `population` (canon 11-15: the set lives on the data), else the
+# one set its data rows carry (`rows`, the report's: .rows_set(), A2-T);
+# the report's `common: population` is read only until `common` goes, last
+# (NA when none) -- one rule, the sheets' and the YAML's alike (A2 Q7).  A
+# data that reads one of the report's analysis data (`data: <id>`) has that
+# data's set (.adata_pop(): its own, else that of the subjects it keeps,
+# else the nearest above it), never one written beside it (.data_both());
+# its rows as the ARD program reads them (a subjects row with no set has
+# the report's `common: population`, .entry_pop_inject(), until `common` goes)
+.data_population <- function(data, o, rows = .data_rows(o)) {
   id <- .na_scalar(if (is.list(data)) unlist(data[["data"]]))
   if (!is.na(id)) {
     rows <- lapply(.data_rows(o), .entry_pop_inject, .out_population(o))
     return(.rows_adata_pop(rows, id))
   }
-  data[["population"]] %||% .out_population(o)
+  if (!is.null(data[["population"]])) return(data[["population"]])
+  rs <- .rows_set(rows, o[["ard"]][["analyses"]])
+  if (!is.na(rs)) rs else .out_population(o)
 }
 
-# The report's analysis set as its data says it (.data_population() of its
-# data map; NA when none): the sheets' population column, the page's set
-# line and the checks read it alike
-.report_set <- function(o) {
+# The report's analysis set as its data says it (A2-T, R/report_set.R): a
+# template report's set argument (.tpl_set_arg()), else what its data says
+# beside it (.tpl_set_beside(): its own rows add to the template's); any
+# other report's data map's set, else its rows' (.data_population(); NA
+# when none).  The sheets' population column, the page's set line and the
+# checks read it alike; `study_dir`, a study whose template copies it reads
+.report_set <- function(o, study_dir = NULL) {
+  a <- .tpl_set_arg(o, study_dir)
+  if (!is.na(a)) return(a)
+  ts <- tryCatch(.tpl_spec_of(o), error = function(e) NULL)
+  if (!is.null(ts) && !is.na(.tpl_set_param(ts$name, study_dir))) return(.tpl_set_beside(o))
   d <- o[["data"]]
   .na_scalar(unlist(.data_population(if (is.list(d) && !is.null(names(d))) d, o)))
 }

@@ -12,6 +12,10 @@
 #    at (a narrow subject id breaks every record over lines);
 #  - (A2, R5) a figure or listing that reads subjects' records with no
 #    analysis set: a warning.
+#  - (A2-T Q3) a report whose data rows carry several sets and that has no
+#    BIGN analysis (the heading's set is BIGN's row's): a warning.
+#  - (A2-T Q6) a template report's own row over the template's subjects row
+#    naming another set than its template argument: an error.
 #  - (A2, with the study: .check_set_rows()) a set that is none of
 #    data.yml's, a data that names an analysis data and a set or dataset
 #    beside it: errors; a TOC line naming another set than the report's
@@ -23,7 +27,17 @@
 .check_population_rows <- function(o, id) {
   rows <- list(.check_rows())
   add <- function(...) rows[[length(rows) + 1L]] <<- .check_rows(output_id = id, ...)
-  if (!identical(o$kind, "figure") && !identical(o$kind, "listing")) return(rows[[1L]])
+  # (A2-T Q3) several sets on the rows that make subjects: the heading's is
+  # that of the row BIGN reads; no BIGN, none
+  sets <- .rows_sets(.data_rows(o))
+  if (length(sets) > 1L && is.na(.rows_set(.data_rows(o), o[["ard"]][["analyses"]])) &&
+      is.na(.na_scalar(o$common$population_label))) {
+    add(part = "data", item = "data$population", level = "warning", message = sprintf(paste0(
+      "the %s's data rows carry several analysis sets (%s) and no BIGN analysis says which is the ",
+      "report's: the page heading names none; add the BIGN analysis of the report's set, or write ",
+      "the heading's set (`common: population_label`)"), o$kind %||% "report", paste(sets, collapse = ", ")))
+  }
+  if (!identical(o$kind, "figure") && !identical(o$kind, "listing")) return(do.call(rbind, rows))
   d <- if (is.list(o$data)) o$data else list()
   # (Q3) subjects' records -- a dataset, an analysis data, the report's code
   # -- and no analysis set on the data (canon 11-15): on the data, or on
@@ -67,7 +81,7 @@
   }
   toc <- Filter(function(e) identical(e$id, id), study$toc$outputs %||% list())
   tp <- if (length(toc)) .na_scalar(unlist(toc[[1L]][["population"]])) else NA_character_
-  op <- .out_population_or_data(o)
+  op <- .report_set(o)
   if (!is.na(tp) && !is.na(op) && !identical(tp, op)) {
     add(part = "data", item = "toc$population", level = "warning", message = sprintf(paste0(
       "the TOC says analysis set %s and the report's data %s: the data's is the report's set (the ",
@@ -108,20 +122,10 @@
   } else {
     list()
   }
-  # the analysis set is the report's `common: population`: a template argument that
-  # differs from it is a conflict (the one equal to it, or with no report
-  # `common: population`, is used and not said)
-  if ("population" %in% names(args) && is.list(tpl) && is.character(tpl$name) &&
-      !is.null(tryCatch(.tpl_get(tpl$name, "tfl_check_spec()")$params$population,
-                        error = function(e) NULL))) {
-    rp <- .out_population(o)
-    if (length(rp) == 1L && !is.na(rp) && !identical(as.character(args$population), as.character(rp))) {
-      add(part = "template", item = "population", level = "warning", message = sprintf(paste0(
-        "template argument `population` (%s) differs from the report's `common: population` (%s): the report is built ",
-        "with the template's; make the report's `common: population` the one to use and remove the template's"),
-        args$population[1L], rp))
-    }
-  }
+  # (A2-T Q6) the template's set argument and the report's own row over the
+  # template's subjects row: one set, written once
+  tw <- tryCatch(.tpl_set_twice_rows(o, id), error = function(e) NULL)
+  if (!is.null(tw) && nrow(tw)) rows[[length(rows) + 1L]] <- tw
   tx <- .check_texts(list(content = o$content, template = args, layers = o$layers))
   # {p:.1%}: a precision then `%`, no type between them
   bad <- if (!is.null(tx)) tx[grepl("[{][^{}:]+:[^{}]*[.][0-9]+%[}]", tx$text), , drop = FALSE]

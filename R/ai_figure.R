@@ -23,8 +23,9 @@
   })
   ttl <- ctx$titles %||% character()
   pop <- ctx$population$id
+  # (the request's set on the figure's data, A2-T: never `common:`)
+  if (length(pop) && is.null(data$population)) data$population <- pop
   o <- tfl_output(id, kind = "figure", label = if (length(ttl)) ttl[1L] else NA_character_,
-                  common = list(population = if (length(pop)) pop else NA_character_),
                   data = data, content = content,
                   page = if (length(ttl)) list(titles = as.list(ttl)) else list())
   for (k in c("template", "ggplot2_version", "plot", "plots", "compose")) {

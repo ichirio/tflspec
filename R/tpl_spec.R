@@ -211,10 +211,6 @@
                              "`template: args:`."),
                       id, t$name, paste(sQuote(stage, FALSE), collapse = ", ")))
   }
-  if ("population" %in% hidden) {
-    .ard_stop(sprintf(paste0("%s: template %s takes the analysis set from the report's `common: population`, ",
-                             "not from `template:`."), id, t$name))
-  }
   if (length(hidden)) {
     .ard_stop(sprintf(paste0("%s: template %s takes %s from the study standard, not from ",
                              "`template: args:`; a figure setting (`plot:`: the title, axes, legend, theme, palette, ",
@@ -223,6 +219,10 @@
                       id, t$name, paste(sQuote(hidden, FALSE), collapse = ", ")))
   }
   .tpl_data_said(t, output, id)
+  # the template's set parameter (A2-T): the report's set when the report
+  # does not give it (its data map's, until `common` goes its `common:
+  # population`); another set there stops (written twice)
+  args <- .tpl_set_fill(args, .tpl_set_param_of(t, hidden = TRUE), output, id)
   # a template with a `style` parameter: the report's `style:` field is its value
   # when the SPEC does not give one
   if ("style" %in% names(t$params) && !"style" %in% names(args) && length(output$style) == 1L &&
@@ -585,18 +585,10 @@ tfl_template_to_spec <- function(output, study) {
   # (canon: B = A, explicit `extends` and `style:`)
   output$extends <- .extends_compact(lb$extends)
   output$ard <- .merge_ard(e$x$ard, output$ard)
-  # the report's analysis set is its `common: population`, and the subjects
-  # definition does not repeat it (the code SPEC's `data:` says what the
-  # report adds to the set)
-  if (output$kind %in% c("table", "listing")) {
-    pop <- .na_scalar(as.character(e$args[["population"]] %||% output[["common"]][["population"]] %||% NA))
-    if (!is.na(pop)) {
-      output$common <- .common_in(c(list(population = pop), output$common[setdiff(names(output$common), "population")]),
-                                  paste0("tfl_template_to_spec(): ", output$id))
-      if (length(output$ard$analysis_data)) {
-        output$ard$analysis_data <- lapply(output$ard$analysis_data, .entry_pop_strip, pop, .pop_from(study$data$populations, pop))
-      }
-    }
+  # the report's analysis set is on the subjects rows the template made
+  # (A2-T: the set lives on the data), never in `common:`
+  if (is.list(output$common) && !is.null(output$common[["population"]])) {
+    output$common <- output$common[setdiff(names(output$common), "population")]
   }
   own <- if (.tpl_composes(output$data, e$x)) .tpl_compose_data(output$data, e$x) else output$data
   output$data <- .merge_map(e$x$data %||% list(), own %||% list())
