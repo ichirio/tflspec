@@ -117,10 +117,11 @@
 }
 
 # Every text in a report's content and template arguments, with where it is
+# (`r`: an `!r` value, R/check_spec_r_parse.R)
 .check_texts <- function(x, at = character()) {
   if (is.character(x)) {
     return(if (length(x)) data.frame(at = paste(at, collapse = "$"), text = as.character(x),
-                                     stringsAsFactors = FALSE))
+                                     r = inherits(x, "tfl_r"), stringsAsFactors = FALSE))
   }
   if (!is.list(x) || !length(x)) return(NULL)
   nm <- names(x) %||% rep("", length(x))
