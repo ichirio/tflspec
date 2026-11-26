@@ -9,7 +9,7 @@ The table template \code{summary}, layout \code{summary}. Its program is one cal
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab required \tab data \tab  \tab  \tab the analysis set's id (SAF): the subjects the report is of \cr
+   \code{population} \tab key \tab data \tab SAF \tab  \tab the analysis set's id (SAF): the subjects the report is of \cr
    \code{continuous} \tab required \tab call \tab  \tab  \tab the continuous variables, in order (required: this or \code{categorical}) \cr
    \code{categorical} \tab required \tab call \tab  \tab  \tab the categorical variables, in order (required: this or \code{continuous}) \cr
    \code{by} \tab required \tab call \tab  \tab  \tab the column variable (the arms); not a default and not the study's treatment \cr

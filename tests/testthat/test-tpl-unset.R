@@ -72,7 +72,9 @@ test_that("a report's `!unset` over a default omits the argument; NA and NULL st
 })
 
 test_that("a required parameter left `!unset` is still needed", {
-  expect_error(tfl_template_expand("summary", list(by = "TRT01A", population = tfl_unset(), continuous = "AGE")),
+  # (disposition's set has no default, A2-T: required)
+  expect_error(tfl_template_expand("disposition", list(by = "TRT01A", population = tfl_unset(),
+                                                        categorical = "EOSSTT")),
                "needs 'population'")
 })
 

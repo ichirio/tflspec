@@ -54,10 +54,7 @@
 .tpl_demog_params <- function(defaults = list(), fixed = character(), fixed_value = character(),
                               drop = character(), add = list()) {
   p <- list(
-    # (A2-T Q2: shown, in the data step -- the set adsl_sub keeps, one of
-    # the study's; the report's set is this argument)
-    tfl_param("population", required = TRUE, unset = "stop", step = "data",
-              choices = "populations", doc = "the analysis set's id (SAF): the subjects the report is of"),
+    .tpl_demog_set_param("SAF"),
     tfl_param("continuous", NULL, tier = "required", unset = "stop",
               doc = "the continuous variables, in order (required: this or `categorical`)"),
     tfl_param("categorical", NULL, tier = "required", unset = "stop",
@@ -166,6 +163,16 @@
     p[[k]]$fixed_value <- TRUE
   }
   unname(p)
+}
+
+# The family's set parameter (A2-T Q2, canon 11-15 (1): the template holds
+# the set's default, DM's SAF): shown, in the data step -- the set adsl_sub
+# keeps, one of the study's; the report's set is this argument.  `default`
+# NULL where no set fits the template's purpose: required
+.tpl_demog_set_param <- function(default) {
+  tfl_param("population", default, required = is.null(default), tier = if (!is.null(default)) "key",
+            unset = "stop", step = "data", choices = "populations",
+            doc = "the analysis set's id (SAF): the subjects the report is of")
 }
 
 # The continuous statistics the cells name: their tokens ({mean:.1f} -> mean),
@@ -608,7 +615,10 @@
 .tpl_disposition_params <- .tpl_demog_params(
   defaults = list(labels = c(EOSSTT = "Status at end of study, n (%)"), max_rows = 24L),
   drop = c("continuous", "style"),
-  add = list(tfl_param("categorical", required = TRUE, unset = "stop",
+  # (the subjects' status at the end: of the set the study's disposition is
+  # of -- enrolled, randomized --, which has no one id: no default)
+  add = list(.tpl_demog_set_param(NULL),
+             tfl_param("categorical", required = TRUE, unset = "stop",
                        doc = "the status variables, in order (EOSSTT)"),
              tfl_param("denominator", NULL, doc = .tpl_den_sum_doc),
              .tpl_missing_row_sum))

@@ -179,6 +179,17 @@ test_that("population is a shown data-step parameter, the template's set (A2-T Q
     expect_identical(p$choices, "populations", info = n)
     expect_identical(tflspec:::.tpl_set_param(n), "population", info = n)
   }
+  # (the template holds the set's default, canon 11-15 (1): DM's SAF;
+  # disposition's set has no one id: required)
+  for (n in c("demog", "stf_t02_demog", "summary")) {
+    p <- tflspec:::.tpl_get(n, "test")$params$population
+    expect_identical(p$default, "SAF", info = n)
+    expect_identical(p$tier, "key", info = n)
+    expect_false(p$required, info = n)
+  }
+  p <- tflspec:::.tpl_get("disposition", "test")$params$population
+  expect_null(p$default)
+  expect_true(p$required)
   s <- b1_study()
   # (the set from `common: population` until it goes: the argument filled, not a study default)
   o <- tfl_output("T-9", "table", common = list(population = "SAF"),
@@ -191,6 +202,9 @@ test_that("population is a shown data-step parameter, the template's set (A2-T Q
   r2 <- tfl_resolve_output(o2, s)
   expect_identical(r2$ard, r$ard)
   expect_identical(r2$content, r$content)
+  # no set anywhere: the template's own, SAF
+  o4 <- tfl_output("T-9", "table", template = list(name = "demog", args = b1_args()[-1L]))
+  expect_identical(tfl_resolve_output(o4, s)$ard$analysis_data[[1L]]$population, "SAF")
   # the argument and another `common: population`: written twice
   o3 <- tfl_output("T-9", "table", common = list(population = "ITT"), template = list(name = "demog", args = b1_args()))
   expect_error(tfl_resolve_output(o3, s), "the set is written twice")

@@ -56,7 +56,9 @@ test_that("tfl_tpl(): the same plan as the template's own function; its errors",
 
 test_that("the layouts' parameters: what a report changes, the look too (summary: batch 2)", {
   p <- tfl_template_params("summary")
-  expect_identical(p$population$tier, "required")
+  # (the template's own set, canon 11-15 (1): a key parameter with its default)
+  expect_identical(p$population$tier, "key")
+  expect_identical(p$population$default, "SAF")
   expect_identical(p$by$tier, "required")
   # demog's parameters (one body), with `where` and `denominator`, without `rounding`
   # and `style` (the study's force; the report's `style:` until the flip)

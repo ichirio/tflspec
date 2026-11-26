@@ -11,10 +11,13 @@ test_that("tfl_tpl_args(): one row a parameter, the template's order and tiers",
   expect_true(isTRUE(p$denominator$hidden))
   expect_identical(names(a), c("param", "tier", "step", "type", "required", "default", "variant",
                                "study", "effective", "layer", "maps_to", "doc", "study_key", "fallback", "unset", "route"))
-  # (the analysis set is the template's set parameter, of the data step; the variables and `by` are required)
-  expect_identical(a$param[a$tier == "required"], c("population", "continuous", "categorical", "by"))
+  # (the analysis set is the template's set parameter, of the data step, a
+  # key one with the template's default, SAF; the variables and `by` are required)
+  expect_identical(a$param[a$tier == "key"], "population")
+  expect_identical(a$effective[a$param == "population"], "SAF")
+  expect_identical(a$param[a$tier == "required"], c("continuous", "categorical", "by"))
   expect_identical(a$param[a$tier == "usual"], c("formats", "total", "labels", "cells"))
-  expect_true(all(a$tier %in% c("required", "usual", "other")))
+  expect_true(all(a$tier %in% c("required", "key", "usual", "other")))
   # each its step, tfl_param(step = ): a table's all of its call but its set's, the data step's
   expect_identical(a$step, unname(vapply(p[a$param], function(x) x$step %||% "call", "")))
   expect_identical(a$param[a$step != "call"], "population")
