@@ -61,10 +61,23 @@
 #' the table, is a `warning` (`part` `"content"`, item
 #' `"plan_col_header(header)"`): its header would print `N=NA`.
 #'
-#' A report's `!r` value (outside its `ard:`, which the ARD check reads)
-#' that does not read as R is an `error`: `part` the report's key it is
-#' under, `item` its place (`"content$plan_filter$args$where"`), the
-#' parser's message.  It is read, not run.
+#' Every `!r` value of the SPEC is read as R once, by one walker; one that
+#' does not read is an `error`, with the parser's message.  It is read, not
+#' run, by the kind of slot it fills: an item's argument by the schema's
+#' kind (a guard takes `condition ~ text`), the fields of R of the ARD and
+#' of data.yml by their own (`where` one condition, `args` a call's
+#' arguments, `derive` pieces `name = expression` and `post` steps between
+#' `|`, `code` and `then` R code); those fields are R whether or not they
+#' are written `!r`.  A report's value: `part` the report's key it is under
+#' (`content`, `template`, `ard` ...), `item` its place
+#' (`"content$plan_filter$args$where"`, `"ard$analyses$HR$code"`).  The
+#' study's own (study.yml `setup`, defaults.yml, data.yml's populations,
+#' records and datasets), on a check of every report only: `output_id` NA,
+#' `part` `"study"`, `item` the file and the place
+#' (`"data.yml: populations$SAF$where"`).  The ARD check's row and the
+#' `program` warning for the same value are not given twice.  A report's
+#' own program (a file, not a SPEC value) is read by [tfl_check_code()]
+#' (rule U01) on the review path.
 #'
 #' @param study A study read with [tfl_read_study_spec()], or its folder.
 #' @param output_id The reports to check; `NULL` for every report.
@@ -170,7 +183,11 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
     add(output_id = output_id, part = "ard", item = paste(at[2L], "/", at[3L]), level = "note",
         message = at[4L])
   }
+  # the study's own `!r` values that do not read (study.yml, defaults.yml,
+  # data.yml), on a full check only (R/check_spec_r_parse.R)
+  wks <- .check_rows()
   if (is.null(output_id)) {
+    rows[[length(rows) + 1L]] <- wks <- .r_walk_study(study)
     dd <- study$data %||% list()
     for (m in c(.blank_entry_notes(dd$populations, c("where", "derive")),
                 .blank_entry_notes(dd$records, "where"),
@@ -201,6 +218,7 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
       blank_note(id, m)
     }
     if (id %in% unresolved) next
+    rows[[length(rows) + 1L]] <- wk <- .check_r_parse_rows(o, id)  # an `!r` value that is not R
     # its ARD definition, written as its program: the definition's problems
     # are errors; what the installed packages do not know, notes; a program
     # that cannot be written otherwise, a warning
@@ -209,10 +227,16 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
         tryCatch(tfl_ard_code(study, output_id = id, save = FALSE), error = function(e) {
           p <- e$problems
           if (is.data.frame(p) && nrow(p)) {
-            add(output_id = ifelse(is.na(p$output_id), id, p$output_id), part = "ard",
-                item = ifelse(nzchar(p$row %||% ""), paste0(p$row, "$", p$field), p$field),
-                level = "error", message = p$message)
-          } else {
+            # (a field of R that does not read: the walker's row says it)
+            p <- .r_ard_problems_left(p, rbind(wk, wks))
+            if (nrow(p)) {
+              add(output_id = ifelse(is.na(p$output_id), id, p$output_id), part = "ard",
+                  item = ifelse(nzchar(p$row %||% ""), paste0(p$row, "$", p$field), p$field),
+                  level = "error", message = p$message)
+            }
+          } else if (!any(wk$level == "error" & wk$part == "ard")) {
+            # (not when an `ard:` value that does not read is the cause: the
+            # walker's row says it)
             add(output_id = id, part = "program", item = "ard", level = "warning",
                 message = paste("the ARD program cannot be written:", one(e)))
           }
@@ -264,7 +288,6 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
     rows[[length(rows) + 1L]] <- .check_object_rows(ro, id, study_ds)
     # a column header's N with no BIGN to take it from (R/check_spec_header_n.R)
     rows[[length(rows) + 1L]] <- .check_header_n_rows(ro, id)
-    rows[[length(rows) + 1L]] <- .check_r_parse_rows(o, id)  # an `!r` value that is not R
     if (inherits(ro$content, "tfl_r")) next
     # a figure's content key (`figure: {name, args}`): its name is one of the
     # table's (.fig_content_table()), its program is written
@@ -330,8 +353,9 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
       }
     }
     # the report's code, written: a stop is a warning (the form is right,
-    # the code is not)
-    if (form_ok) {
+    # the code is not); not when an `!r` that does not read is already
+    # an error (the walker's row says it, R/check_spec_r_parse.R)
+    if (form_ok && !any(wk$level == "error")) {
       r <- tryCatch(suppressMessages(suppressWarnings(tfl_content_code(ro))), error = function(e) e)
       if (inherits(r, "error")) {
         add(output_id = id, part = "program", item = "content", level = "warning",

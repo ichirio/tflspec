@@ -245,18 +245,10 @@
       add_d(i, "population_id", sprintf("%s: population %s is not in `populations`", tag(i), p))
     }
     # each derive piece `name = expression`, as R reads it (a `|` of R's own
-    # inside parentheses is not a separator)
-    for (piece in .split_bar(ad$derive[i] %||% NA)) {
-      ok <- !is.null(tryCatch(parse(text = sprintf("list(%s)", piece), keep.source = FALSE),
-                              error = function(e) NULL)) &&
-        grepl("^[A-Za-z.][A-Za-z0-9._]* *=[^=]", piece)
-      if (!ok) {
-        add_d(i, "derive", sprintf(paste(
-          "%s: `derive` piece %s does not read as `name = expression`",
-          "(pieces are separated by `|` outside parentheses; R's own `|` goes inside them)"),
-          tag(i), sQuote(piece, FALSE)))
-      }
-    }
+    # inside parentheses is not a separator): the walker's reading and words
+    # (R/check_spec_r_parse.R), as for `then`, `code` and `where` below
+    m <- .r_ard_problem(ad$derive[i] %||% NA, "derive")
+    if (!is.null(m)) add_d(i, "derive", sprintf("%s: `derive` %s", tag(i), m))
     # `arrange`: each element a column, -column (descending) or desc(column)
     for (piece in .split_bar(ad$arrange[i] %||% NA)) {
       if (!grepl(.arrange_re, piece)) {
@@ -266,11 +258,8 @@
       }
     }
     # `then`: R, piped onto the end of the data
-    thn <- ad$then[i] %||% NA
-    if (!is.na(thn) && is.null(tryCatch(parse(text = thn, keep.source = FALSE),
-                                        error = function(e) NULL))) {
-      add_d(i, "then", sprintf("%s: `then` does not read as R", tag(i)))
-    }
+    m <- .r_ard_problem(ad$then[i] %||% NA, "then")
+    if (!is.null(m)) add_d(i, "then", sprintf("%s: `then` %s", tag(i), m))
     s <- ad$subjects_in[i]
     if (!is.na(s)) {
       if (!s %in% above) {
@@ -285,9 +274,8 @@
     }
     code <- ad$code[i] %||% NA
     if (!is.na(code)) {
-      if (is.null(tryCatch(parse(text = code), error = function(e) NULL))) {
-        add_d(i, "code", sprintf("%s: `code` does not read as R", tag(i)))
-      }
+      m <- .r_ard_problem(code, "code")
+      if (!is.null(m)) add_d(i, "code", sprintf("%s: `code` %s", tag(i), m))
       # (`population_id` with `code`: the set's subjects are made first,
       # in reach as <dataset>_sub; the other columns are for a data the
       # columns make)
@@ -306,12 +294,8 @@
         "%s: `add` takes columns from the population's data or the data of",
         "`subjects_in`, and it has neither (here or above)"), tag(i)))
     }
-    for (cn in c("where")) {
-      v <- ad[[cn]][i]
-      if (!is.na(v) && is.null(tryCatch(str2lang(v), error = function(e) NULL))) {
-        add_d(i, "where", sprintf("%s: `%s` does not read as R", tag(i), cn))
-      }
-    }
+    m <- .r_ard_problem(ad$where[i], "where")
+    if (!is.null(m)) add_d(i, "where", sprintf("%s: `where` %s", tag(i), m))
   }
   }
   # an analysis reads (and divides by) its own report's analysis data
