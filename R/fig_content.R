@@ -794,6 +794,11 @@ tfl_plot <- function(name, items = list(), from = "own", input = NULL, form = c(
     }
     if (identical(op[k], "+")) plus <- TRUE
   }
+  # (no input: the first call starts the statement, a table object's helper)
+  if (is.null(input)) {
+    return(c(paste0(target, " <- ", strrep("(", open), t[1L], if (n > 1L) paste0(" ", op[2L])),
+             if (n > 1L) paste0("  ", t[-1L], c(if (n > 2L) paste0(" ", op[-(1:2)]), ""))))
+  }
   c(paste0(target, " <- ", strrep("(", open), input, " |>"),
     paste0("  ", t, c(if (n > 1L) paste0(" ", op[-1L]), "")))
 }

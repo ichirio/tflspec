@@ -540,6 +540,10 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 # tfl_content_code() writes and tfl_content_run() runs: the one list both
 # read, so the two cannot differ.
 .content_table_pipeline <- function(content, kind = "table") {
+  if (.content_has_objects(content)) {
+    .ard_stop(paste0("A content that holds objects (`name:`, `from:`, `calls:`) is written by ",
+                     "tfl_content_code(); it is not run or measured from the items yet."))
+  }
   fns <- vapply(content, function(it) .schema_fn_name(it$fn), "")
   # a listing has no roles: its plan is table_plan(data) with none
   if (identical(kind, "listing") && !"table_plan" %in% fns) {
@@ -648,14 +652,15 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 }
 
 .content_table_code <- function(content, data = "data", plan = "plan",
-                                pipe = NULL, kind = "table") {
+                                pipe = NULL, kind = "table", piped = FALSE) {
   op <- .ard_pipe_op(pipe)
   pl <- .content_table_pipeline(content, kind)
   head <- pl$head
   steps <- pl$steps
   from <- pl$from
-  # the data's own steps make a pipe of their own into table_plan()
-  if (length(pl$pre)) {
+  # the data's own steps make a pipe of their own into table_plan(); so does
+  # a content object's `from:` (the plan's input is the pipe's start)
+  if (length(pl$pre) || piped) {
     steps <- c(list(head), steps)
     from <- c("own", from)
     head <- NULL
@@ -1709,6 +1714,10 @@ tfl_content_run <- function(output, data) {
     .ard_stop(sprintf(paste0("tfl_content_run(): a %s's content is not run ",
                              "yet; tables, listings and figures, for now."), output$kind))
   }
+  if (.content_has_objects(output$content)) {
+    .ard_stop(paste0("tfl_content_run(): a content that holds objects (`name:`, `from:`, ",
+                     "`calls:`) is not run yet; run the program tfl_content_code() writes."))
+  }
   for (it in output$content) .schema_need_version(it)
   # the study's code lists the content names (`!r study$codelists$SEX`): their
   # values, as the program's setup has them
@@ -1894,6 +1903,15 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
   if (!inherits(output, "tfl_output")) {
     .ard_stop("tfl_content_code(): `output` is a report, tfl_output().")
   }
+  .content_code(output, data = data, plan = plan, pipe = pipe,
+                template = match.arg(template), study = study)
+}
+
+# What tfl_content_code() writes.  `piped`: the plan starts from `data` as
+# its input (`plan <- data |> table_plan(...)`: a content object's `from:`),
+# not as table_plan()'s first argument.
+.content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
+                          template = c("call", "items"), study = NULL, piped = FALSE) {
   # the content as the report's own code (`content: !r`, the old
   # content_code): written as it is, after the data's steps; it leaves
   # `content`
@@ -1920,6 +1938,11 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
   if (!output$kind %in% c("table", "listing")) {
     .ard_stop(sprintf(paste0("tfl_content_code(): a %s's content is not written ",
                              "yet; tables, listings and figures, for now."), output$kind))
+  }
+  # the content that holds objects (`name:`, `from:`, `calls:`): each its own
+  # statement, the last one the plan
+  if (.content_has_objects(output$content)) {
+    return(.content_objects_code(output, data, plan, pipe, template, study))
   }
   for (it in output$content) .schema_need_version(it)
   if (identical(output$kind, "listing")) output$content <- .content_listing_labels(output$content)
@@ -1978,7 +2001,7 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
                .content_rework_normalize_code(sp$pre, output$data$object %||% "ard", pipe)),
              steps, "", bign_pre(data %||% "data"),
              .content_table_code(sp$rest, data = data %||% "data",
-                                 plan = plan, pipe = pipe, kind = output$kind)))
+                                 plan = plan, pipe = pipe, kind = output$kind, piped = piped)))
   }
   if (length(steps)) {
     # a listing of a study's records: its data part makes them, the steps
@@ -1989,13 +2012,14 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
       return(c(.content_listing_data(output, study), "",
                .content_table_code(.content_drop_data_steps(output$content),
                                    data = data %||% "data", plan = plan, pipe = pipe,
-                                   kind = output$kind)))
+                                   kind = output$kind, piped = piped)))
     }
     # the steps make the data: no normalize_ard() of the defaults after them
     return(c(steps, "", bign_pre(data %||% "data"),
              .content_table_code(.content_drop_data_steps(output$content),
                                             data = data %||% "data",
-                                            plan = plan, pipe = pipe, kind = output$kind)))
+                                            plan = plan, pipe = pipe, kind = output$kind,
+                                            piped = piped)))
   }
   if (is.null(data)) {
     pre <- any(vapply(output$content, function(it)
@@ -2007,7 +2031,84 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
               identical(output$data$source, "dataset")) .content_listing_data(output, study)
   c(recs, if (length(recs)) "", bign_pre(data),
     .content_table_code(output$content, data = data, plan = plan, pipe = pipe,
-                        kind = output$kind))
+                        kind = output$kind, piped = piped))
+}
+
+# ---- content objects (B-5) -------------------------------------------------
+
+# A table's or listing's content that holds objects in the map form
+# (`- {name: plan, from: ard, calls: [...]}`, a tfl_plot of form "map")
+.content_is_object <- function(it) inherits(it, "tfl_plot") && identical(it[["form"]], "map")
+
+.content_has_objects <- function(content) {
+  is.list(content) && !inherits(content, "tfl_r") && length(content) > 0L &&
+    any(vapply(content, .content_is_object, NA))
+}
+
+# The program of a content that holds objects: each object its statement, in
+# order, the last one the plan the program reads (`plan`).  The last object
+# is written as a table's content is -- the table's own rules (the study's
+# rounding, labels, BIGN, `data:`) -- from its `from:` (piped) or, without
+# one, from the report's data as today's content is; the objects above it
+# are its helpers.
+.content_objects_code <- function(output, data, plan, pipe, template, study) {
+  ct <- output$content
+  if (!all(vapply(ct, .content_is_object, NA))) {
+    .ard_stop(paste0("tfl_content_code(): a ", output$kind, "'s content holds objects ",
+                     "(`name:`, `from:`, `calls:`) or a flat list of calls, not both."))
+  }
+  last <- ct[[length(ct)]]
+  if (!identical(last$fn, plan)) {
+    .ard_stop(sprintf(paste0("tfl_content_code(): the last object of a %s's content is `%s`; the ",
+                             "program reads `%s`: name it `%s`."),
+                      output$kind, last$fn, plan, plan))
+  }
+  if (!is.null(last[["input"]]) && !is.null(output$data$object)) {
+    .ard_stop(sprintf(paste0("tfl_content_code(): `%s` takes `from: %s` and the report's `data: ",
+                             "{object: %s}` is written too: two inputs; drop one of them."),
+                      last$fn, last[["input"]], output$data$object))
+  }
+  if (!is.null(last[["input"]]) && (length(.content_r_steps(output)) || .content_rework(output))) {
+    .ard_stop(sprintf(paste0("tfl_content_code(): `%s` takes `from: %s` and the report's data steps ",
+                             "are written too: two inputs; drop one of them."),
+                      last$fn, last[["input"]]))
+  }
+  out <- character()
+  for (o in ct[-length(ct)]) out <- c(out, .content_object_lines(o, pipe), "")
+  sub <- output
+  sub$content <- last$items
+  piped <- !is.null(last[["input"]])
+  c(out, .content_code(sub, data = if (piped) last[["input"]] else data, plan = plan, pipe = pipe,
+                       template = template, study = study, piped = piped))
+}
+
+# A helper object (not the plan): `name <- from |> call1() |> call2()`, or
+# `name <- call1(...) |> call2()` without a `from:`; each call joined as its
+# function's `join` says (tfl_fn_defs(); `|>` for R), the same chain as a
+# figure's plot with `from:` (.fig_pipe_chain())
+.content_object_lines <- function(o, pipe = NULL) {
+  op <- .ard_pipe_op(pipe)
+  input <- o[["input"]]
+  is_r <- vapply(o$items, function(it) identical(it$fn, ".r"), NA)
+  calls <- .content_calls(o$items[!is_r])
+  k <- 0L
+  txt <- character()
+  joins <- character()
+  for (i in seq_along(o$items)) {
+    it <- o$items[[i]]
+    if (is_r[i]) {
+      txt <- c(txt, as.character(it$args$code))
+      joins <- c(joins, "|>")
+      next
+    }
+    k <- k + 1L
+    head <- is.null(input) && !length(txt)
+    txt <- c(txt, .spec_call_code(.content_print(calls[[k]]), if (head) 0L else 2L,
+                                  lead = if (head) nchar(o$fn) + 4L else 2L))
+    joins <- c(joins, .fig_fn_join(.schema_fn_name(it$fn)))
+  }
+  lines <- .fig_pipe_chain(o$fn, input, txt, joins)
+  unlist(strsplit(sub(" \\|>$", paste0(" ", op), lines), "\n", fixed = TRUE))
 }
 
 # A listing's data part for its content code: tfl_listing_code(part =
