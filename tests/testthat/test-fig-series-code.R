@@ -180,10 +180,15 @@ test_that("a km_curves card on a km_simple report changes only the params it wri
   expect_identical(code[code != plain], "    legend = \"inside\"")
   expect_no_error(parse(text = code, keep.source = FALSE))
   # !unset takes a param away: the function's own default
-  code <- tfl_content_code(sfc_km_cards("  - km_curves:", "      params: {legend: !unset}"))
+  u <- sfc_km_cards("  - km_curves:", "      params: {legend: !unset}")
+  code <- tfl_content_code(u)
   expect_false(any(grepl("legend =", code, fixed = TRUE)))
   expect_true(any(code == "    y_label = \"Survival Probability\""))
   expect_no_error(parse(text = code, keep.source = FALSE))
+  # (the same after the study's layers, as the report's program has it:
+  # the card keeps its !unset for the call, the other params stay)
+  u$content <- .merge_content(list(), u$content)
+  expect_identical(as.character(tfl_content_code(u)), as.character(code))
 })
 
 test_that("two km_curves cards: the later one wins, by name", {
@@ -212,6 +217,18 @@ test_that("a card the template has not (labs, annotate) is added after the call,
   b <- o
   b$figure <- .fig_content_key(o)
   expect_identical(as.character(tfl_content_code(b)), as.character(code))
+})
+
+test_that("two scale cards after the call are one scale, by argument; layers stack", {
+  o <- sfc_km_cards("  - scale_y_continuous: {breaks: [0, 0.5, 1], limits: [0, 1]}",
+                    "  - geom_hline: {yintercept: 0.5}",
+                    "  - scale_y_continuous: {breaks: [0, 0.25, 0.5, 0.75, 1]}",
+                    "  - geom_hline: {yintercept: 0.25}")
+  code <- tfl_content_code(o)
+  expect_identical(sum(grepl("scale_y_continuous(", code, fixed = TRUE)), 1L)
+  expect_true(any(code == "  scale_y_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1), limits = c(0, 1)) +"))
+  expect_identical(sum(grepl("geom_hline(", code, fixed = TRUE)), 2L)
+  expect_no_error(parse(text = code, keep.source = FALSE))
 })
 
 test_that("the cards run: only what they write changes in the plot", {

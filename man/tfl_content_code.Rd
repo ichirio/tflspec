@@ -52,8 +52,11 @@ of a series template (\verb{<series>/<template>}, resolved by
 finds, with the report's resolved arguments, one a line (the model
 \code{km_fit} written before it).  The report's own cards follow it: a
 card of that function (\verb{km_curves: {params: {legend: inside}}}) is
-merged into the call argument by argument, a later card winning; any
-other card is \code{+}-ed after it.}
+merged into the call argument by argument, a later card winning;
+\code{!unset} (\verb{km_curves: {params: {legend: !unset}}}) leaves it out, the
+function's own default applying.  A scale, coord, facet or guides card
+given again is folded onto the first the same way; any other card is
+\code{+}-ed after it.}
 
 \item{study}{The study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}) or its folder; for a listing
 of records (\code{data: {source: dataset}}) the code starts with its data

@@ -122,12 +122,63 @@ tfl_plot <- function(name, items = list(), from = "own", input = NULL, form = c(
                         paste(.fig_p_fns, collapse = ", "), f))
     }
   }
+  # (a call a plot has once, given again: one call, .fig_fold_once())
+  for (i in seq_along(plots)) plots[[i]]$items <- .fig_fold_once(plots[[i]]$items)
   img <- content[tail & fns == "tfl_image"]
   if (length(img) && !identical(tail(fns, 1L), "tfl_image")) {
     .ard_stop("A figure's tfl_image item is its last.")
   }
   list(plots = plots, compose = content[tail & fns != "tfl_image"],
        image = if (length(img)) img[[1L]]$args %||% list() else list())
+}
+
+# The calls a plot has once: ggplot2 keeps the last scale of an aesthetic,
+# the last coord, facet and guides, replacing the earlier whole.  A later
+# card of one of these is folded onto the plot's first card of the same
+# function, argument by argument (.merge_by_arg(): the later card's
+# arguments win, the others stay, `!unset` takes one away), as an appended
+# card overrides only what it writes (canon 1.4, 11-09); a layer, labs()
+# and theme() add up as ggplot2 adds them.  The one list of these kinds:
+# every writer of a figure's cards folds by it (.fig_split_content(), the
+# cards after a series template's figure call, .fig_series_cards()).
+.fig_once_prefixes <- c("scale_", "coord_", "facet_", "guides")
+
+# the kind a call is folded by: its function (scale_color_* is
+# scale_colour_*), "" for one that adds up
+.fig_once_key <- function(fn) {
+  f <- .schema_fn_name(fn %||% "")
+  if (!is.character(f) || length(f) != 1L || !any(startsWith(f, .fig_once_prefixes))) return("")
+  sub("_color_", "_colour_", f, fixed = TRUE)
+}
+
+# the items with each once-a-plot call given more than once folded onto
+# the first of its function, in that one's place; their `!unset`s (kept
+# through the layers for this, .fig_unset_kept()) taken out here
+.fig_fold_once <- function(items) {
+  if (!length(items)) return(items)
+  key <- vapply(items, function(it) if (inherits(it, "tfl_item")) .fig_once_key(it$fn) else "", "")
+  drop <- integer()
+  for (k in unique(key[nzchar(key)])) {
+    at <- which(key == k)
+    first <- items[[at[1L]]]
+    for (j in at[-1L]) first$args <- .merge_by_arg(first$args, items[[j]]$args)
+    first$args <- .drop_unset(first$args)
+    items[[at[1L]]] <- first
+    drop <- c(drop, at[-1L])
+  }
+  if (length(drop)) items[-drop] else items
+}
+
+# Does a figure's card keep its `!unset` through the layers
+# (.drop_unset_items())?  A once-a-plot card (folded by .fig_fold_once())
+# and a card of a series figure's content function (km_curves, merged into
+# the call by .content_fig_series_code()): their writer merges them onto
+# the card before, so `!unset` there says "not the template's value, the
+# function's own default" -- taken out first, it would say nothing
+.fig_unset_kept <- function(it) {
+  if (!inherits(it, "tfl_item") || !is.character(it$fn) || length(it$fn) != 1L) return(FALSE)
+  nzchar(.fig_once_key(it$fn)) ||
+    .schema_fn_name(it$fn) %in% vapply(.fig_content_table(), `[[`, "", "fn")
 }
 
 # ---- an item <-> its call --------------------------------------------------

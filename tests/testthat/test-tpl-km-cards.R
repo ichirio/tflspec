@@ -190,3 +190,38 @@ test_that("km_cards: a report's card after the template's cards changes only wha
   expect_true(at("labs(y = \"Overall Survival\")") < at("geom_hline(yintercept = 0.5"))
   expect_no_error(parse(text = code, keep.source = FALSE))
 })
+
+test_that("km_cards: a once-a-plot card (scale, coord, facet) merges into the template's by argument; a layer stacks", {
+  o <- tfl_template_resolve(kmc_report("content:",
+                                       "  - scale_y_continuous: {expand: [0, 0]}",
+                                       "  - coord_cartesian: {xlim: [0, 24]}",
+                                       "  - geom_hline: {yintercept: 0.5}",
+                                       "  - facet_wrap: {facets: SEX}",
+                                       "  - facet_wrap: {ncol: 1}"),
+                            study = kmc_study)
+  code <- tfl_content_code(o)
+  one <- gsub("[[:space:]]+", " ", paste(code, collapse = " "))
+  n <- function(fn) lengths(regmatches(one, gregexpr(paste0(fn, "("), one, fixed = TRUE)))
+  # one call of each: the template's place, its arguments kept, the report's added
+  expect_identical(n("scale_y_continuous"), 1L)
+  expect_match(one, "scale_y_continuous(breaks = seq(0, 1, by = 0.2), expand = c(0, 0))", fixed = TRUE)
+  expect_identical(n("coord_cartesian"), 1L)
+  expect_match(one, "coord_cartesian(ylim = c(0, 1), xlim = c(0, 24))", fixed = TRUE)
+  expect_identical(n("facet_wrap"), 1L)
+  expect_match(one, "ncol = 1", fixed = TRUE)
+  expect_match(one, "SEX", fixed = TRUE)
+  at <- function(pat) which(grepl(pat, code, fixed = TRUE))
+  expect_true(at("scale_y_continuous(") < at("add_risktable("))
+  # a layer is added after the template's last card
+  expect_identical(n("geom_hline"), 1L)
+  expect_true(at("add_risktable(") < at("geom_hline("))
+  # `!unset` takes the template's argument away (the function's own default)
+  u <- tfl_template_resolve(kmc_report("content:", "  - coord_cartesian: {ylim: !unset, xlim: [0, 24]}"),
+                            study = kmc_study)
+  one <- gsub("[[:space:]]+", " ", paste(tfl_content_code(u), collapse = " "))
+  expect_match(one, "coord_cartesian(xlim = c(0, 24))", fixed = TRUE)
+  # (the same after the study's layers, as the report's program has it)
+  u$content <- .merge_content(list(), u$content)
+  expect_identical(gsub("[[:space:]]+", " ", paste(tfl_content_code(u), collapse = " ")), one)
+  expect_no_error(parse(text = code, keep.source = FALSE))
+})

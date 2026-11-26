@@ -722,10 +722,13 @@ tfl_output_extends <- function(output, step = NULL) {
 
 # an !unset argument with nothing under it means "leave the argument out", on
 # every item that leaves the merge (the early returns, a verb only the report
-# has, a "whole" or "stack" item: not only where the "arg" merge ran)
+# has, a "whole" or "stack" item: not only where the "arg" merge ran).  A
+# figure's card its writer folds onto another (.fig_unset_kept()) keeps
+# its !unset for that writer, which takes the argument away there.
 .drop_unset_items <- function(content) {
   if (inherits(content, "tfl_r") || !is.list(content)) return(content)
   lapply(content, function(it) {
+    if (.fig_unset_kept(it)) return(it)
     if (is.list(it) && is.list(it$args) && length(it$args)) it$args <- .drop_unset(it$args)
     it
   })

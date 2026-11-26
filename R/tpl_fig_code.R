@@ -382,6 +382,8 @@
     }
   }
   out$image <- .drop_unset(out$image)
+  # (a scale, coord, facet or guides card given twice: one, by argument)
+  out$add <- .fig_fold_once(out$add)
   out
 }
 

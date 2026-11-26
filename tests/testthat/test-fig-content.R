@@ -357,3 +357,48 @@ test_that("a figure of items is its report program's part: the study's helpers a
   expect_false(any(grepl("(tte_time|fmt_num|days_per_week) <-", code)))
   expect_no_error(parse(text = code))
 })
+
+test_that("a scale, coord, facet or guides card given again is folded onto the first, by argument", {
+  o <- tfl_output("F-1", "figure", content = list(
+    tfl_item("ggplot", list(data = "df", mapping = list(x = "AVAL", y = "AGE"))),
+    tfl_item("geom_point", list()),
+    tfl_item("scale_x_continuous", list(breaks = c(0, 6, 12), limits = c(0, 24), labels = tfl_r("toupper"))),
+    tfl_item("scale_colour_manual", list(values = c("red", "blue"), name = "Arm")),
+    tfl_item("geom_line", list()),
+    tfl_item("scale_x_continuous", list(breaks = c(0, 12, 24))),
+    tfl_item("scale_color_manual", list(name = tfl_unset())),
+    tfl_item("facet_wrap", list(facets = "SEX")),
+    tfl_item("facet_wrap", list(ncol = 1L))))
+  s <- .fig_split_content(o$content)
+  fns <- vapply(s$plots[[1L]]$items, `[[`, "", "fn")
+  # one of each once-a-plot call, in the first one's place; the layers both
+  expect_identical(fns, c("ggplot", "geom_point", "scale_x_continuous", "scale_colour_manual",
+                          "geom_line", "facet_wrap"))
+  x <- s$plots[[1L]]$items[[3L]]$args
+  # the later card's breaks; the first's limits and labels stay
+  expect_identical(x$breaks, c(0, 12, 24))
+  expect_identical(x$limits, c(0, 24))
+  expect_s3_class(x$labels, "tfl_r")
+  # (scale_color_* is scale_colour_*: its !unset takes the name away)
+  expect_identical(names(s$plots[[1L]]$items[[4L]]$args), "values")
+  expect_identical(s$plots[[1L]]$items[[6L]]$args, list(facets = "SEX", ncol = 1L))
+  code <- gsub("[[:space:]]+", " ", paste(.fig_content_code(o), collapse = " "))
+  expect_match(code, "scale_x_continuous(breaks = c(0, 12, 24), limits = c(0, 24), labels = toupper)",
+               fixed = TRUE)
+  expect_identical(.fig_fold_once(list()), list())
+})
+
+test_that("a figure card its writer folds keeps its !unset through the layers; the others lose it", {
+  m <- .merge_content(list(), list(
+    tfl_item("scale_x_continuous", list(limits = tfl_unset(), breaks = c(0, 12))),
+    tfl_item("km_curves", list(params = list(legend = tfl_unset()))),
+    tfl_item("labs", list(x = tfl_unset(), y = "Y"))))
+  expect_s3_class(m[[1L]]$args$limits, "tfl_unset")
+  expect_s3_class(m[[2L]]$args$params$legend, "tfl_unset")
+  expect_identical(m[[3L]]$args, list(y = "Y"))
+  # (taken out by the writer's fold: the function's own default)
+  expect_identical(.fig_fold_once(m[1L])[[1L]]$args, list(breaks = c(0, 12)))
+  # a table's item as before
+  t <- .merge_content(list(), list(tfl_item("plan_style", list(decimal = tfl_unset(), widths = 2))))
+  expect_identical(t[[1L]]$args, list(widths = 2))
+})
