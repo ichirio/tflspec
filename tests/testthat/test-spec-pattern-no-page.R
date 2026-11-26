@@ -89,21 +89,20 @@ test_that("a pattern with code lists stops: no layer gives a report a list", {
   expect_error(tfl_read_study_spec(d), "a pattern holds no code list", fixed = TRUE)
 })
 
-test_that("the defaults' code lists are said to stay in YAML (#662)", {
+test_that("the defaults' code lists cross the sheets as study_codelists (#662, A7)", {
   skip_on_cran()
   d <- pnp_study(defaults = pnp_def)
   sh <- tfl_sheets_from_yaml(d)
-  n <- pnp_notes(sh)
-  expect_identical(nrow(n), 1L)
-  expect_true(is.na(n$output))
-  expect_match(n$reason, "defaults.yml.*stay in YAML")
-  # (the stated limit, as above)
+  expect_identical(nrow(pnp_notes(sh)), 0L)
+  expect_identical(sh$study_codelists$label, c("DefM", "DefF"))
   d2 <- tempfile("pnp-rt-")
   dir.create(d2)
   withr::defer(unlink(d2, recursive = TRUE))
   file.copy(file.path(d, "adam"), d2, recursive = TRUE)
   suppressMessages(tfl_yaml_from_sheets(sh, d2, overwrite = TRUE))
+  # (the study's lists, not a layer's)
   expect_length(tfl_read_study_spec(d2)$defaults$codelists, 0L)
+  expect_identical(tfl_read_study_spec(d2)$codelists, tfl_read_study_spec(d)$codelists)
 })
 
 test_that("a report's own list is a row, and says nothing (#662)", {

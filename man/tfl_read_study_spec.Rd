@@ -49,7 +49,14 @@ report's \code{value_labels} names \code{SEX}, \code{RACE}, \code{ETHNIC} and \c
 reference to a list the study has not got is left out when the report is
 resolved.  No list reaches a report through \verb{extends:}: a report's code
 lists are its own (\verb{codelists:} in its file), and a pattern's
-\verb{codelists:} stops the read.
+\verb{codelists:} stops the read.  A report's list of a variable is written
+in place (\verb{SEX: [\{value: F, label: Female\}, ...]}) or names one of the
+study's lists: \code{SEX: {list: SEX}} (all its codes, in its order) or \verb{SEX: \{list: SEX, codes: [M, F]\}} (those codes, in the order written).  The
+labels are the study's list's, and the programs are written as from the
+same list written in place (\code{\link[=tfl_resolve_output]{tfl_resolve_output()}}); a list the study
+has not got, or a code its list has not got, stops there, naming the
+report, the variable and the list.  The sheets keep the reference in the
+codelists sheet's \code{list} column (\code{\link[=tfl_sheets_from_yaml]{tfl_sheets_from_yaml()}}).
 \item \verb{adam_meta:} the ADaM metadata in the shape \code{\link[=tfl_read_define]{tfl_read_define()}} gives
 (until a define is read): each part a list of rows, \verb{variables: [\{dataset: ADSL, variable: SEX, codelist: CL.SEX\}, ...]} (the code list's OID) and
 \verb{codelists: [\{codelist: CL.SEX, name: Sex, value: F, decode: Female, order: 1\}, ...]} (a value a row); \verb{datasets:}, \verb{external:} and
