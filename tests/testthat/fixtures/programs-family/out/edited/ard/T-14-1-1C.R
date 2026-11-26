@@ -28,8 +28,23 @@ adsl_sub <- adsl |>
 # BIGN
 .ard_bign <- adsl_sub |>
   mutate(across(where(is.character), ~ na_if(.x, ""))) |>
-  ard_tabulate(variables = TRT01A, fmt_fun = everything() ~ fmt_default) |>
-  apply_fmt_fun() |>
+  ard_tabulate(variables = TRT01A) |>
+  fmt_ard(
+    modifyList(
+      fmt_default,
+      list(
+        N = 0L,
+        mean = 2L,
+        sd = 3L,
+        median = 1L,
+        min = 0L,
+        max = 0L,
+        p = label_round(1, scale = 100),
+        `AGE:mean` = 1L,
+        `AGE:sd` = 2L
+      )
+    )
+  ) |>
   tag_ard(report_id, "BIGN", population = "SAF")
 
 # AGE
@@ -40,7 +55,18 @@ adsl_sub <- adsl |>
     statistic = ~ continuous_summary_fns(
       c("N", "mean", "sd", "median", "min", "max")
     ),
-    fmt_fun = everything() ~ fmt_default
+    fmt_fun = everything() ~ modifyList(
+      fmt_default,
+      list(
+        N = 0L,
+        mean = 1L,
+        sd = 2L,
+        median = 1L,
+        min = 0L,
+        max = 0L,
+        p = label_round(1, scale = 100)
+      )
+    )
   ) |>
   apply_fmt_fun() |>
   tag_ard(report_id, "AGE", population = "SAF")
@@ -51,12 +77,23 @@ adsl_sub <- adsl |>
     across(where(is.character), ~ na_if(.x, "")),
     across(any_of("AGEGR1") & where(is.factor), droplevels)
   ) |>
-  ard_tabulate(
-    by = TRT01A,
-    variables = AGEGR1,
-    fmt_fun = everything() ~ fmt_default
+  ard_tabulate(by = TRT01A, variables = AGEGR1) |>
+  fmt_ard(
+    modifyList(
+      fmt_default,
+      list(
+        N = 0L,
+        mean = 2L,
+        sd = 3L,
+        median = 1L,
+        min = 0L,
+        max = 0L,
+        p = label_round(1, scale = 100),
+        `AGE:mean` = 1L,
+        `AGE:sd` = 2L
+      )
+    )
   ) |>
-  apply_fmt_fun() |>
   tag_ard(report_id, "AGEGR1", population = "SAF")
 
 # SEX
@@ -65,12 +102,23 @@ adsl_sub <- adsl |>
     across(where(is.character), ~ na_if(.x, "")),
     across(any_of("SEX") & where(is.factor), droplevels)
   ) |>
-  ard_tabulate(
-    by = TRT01A,
-    variables = SEX,
-    fmt_fun = everything() ~ fmt_default
+  ard_tabulate(by = TRT01A, variables = SEX) |>
+  fmt_ard(
+    modifyList(
+      fmt_default,
+      list(
+        N = 0L,
+        mean = 2L,
+        sd = 3L,
+        median = 1L,
+        min = 0L,
+        max = 0L,
+        p = label_round(1, scale = 100),
+        `AGE:mean` = 1L,
+        `AGE:sd` = 2L
+      )
+    )
   ) |>
-  apply_fmt_fun() |>
   tag_ard(report_id, "SEX", population = "SAF")
 
 # RACE
@@ -79,12 +127,23 @@ adsl_sub <- adsl |>
     across(where(is.character), ~ na_if(.x, "")),
     across(any_of("RACE") & where(is.factor), droplevels)
   ) |>
-  ard_tabulate(
-    by = TRT01A,
-    variables = RACE,
-    fmt_fun = everything() ~ fmt_default
+  ard_tabulate(by = TRT01A, variables = RACE) |>
+  fmt_ard(
+    modifyList(
+      fmt_default,
+      list(
+        N = 0L,
+        mean = 2L,
+        sd = 3L,
+        median = 1L,
+        min = 0L,
+        max = 0L,
+        p = label_round(1, scale = 100),
+        `AGE:mean` = 1L,
+        `AGE:sd` = 2L
+      )
+    )
   ) |>
-  apply_fmt_fun() |>
   tag_ard(report_id, "RACE", population = "SAF")
 
 # ECOGBL
@@ -93,12 +152,23 @@ adsl_sub <- adsl |>
     across(where(is.character), ~ na_if(.x, "")),
     across(any_of("ECOGBL") & where(is.factor), droplevels)
   ) |>
-  ard_tabulate(
-    by = TRT01A,
-    variables = ECOGBL,
-    fmt_fun = everything() ~ fmt_default
+  ard_tabulate(by = TRT01A, variables = ECOGBL) |>
+  fmt_ard(
+    modifyList(
+      fmt_default,
+      list(
+        N = 0L,
+        mean = 2L,
+        sd = 3L,
+        median = 1L,
+        min = 0L,
+        max = 0L,
+        p = label_round(1, scale = 100),
+        `AGE:mean` = 1L,
+        `AGE:sd` = 2L
+      )
+    )
   ) |>
-  apply_fmt_fun() |>
   tag_ard(report_id, "ECOGBL", population = "SAF")
 
 # the report's rows of the study ARD, with the fingerprint of its

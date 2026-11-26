@@ -24,7 +24,7 @@ advs <- order_levels(advs, from = adsl)
 adsl_saf <- adsl |>
   filter(SAFFL == "Y") |>
   set_levels(TRT01A = cl_trt01a)
-# advs_saf_sysbp: the records. ADVS of the subjects of adsl_saf; where
+# advs_saf_sysbp: the records. ADVS of the subjects of adsl_saf
 advs_saf_sysbp <- advs |>
   inner_join(
     select(adsl_saf, USUBJID),

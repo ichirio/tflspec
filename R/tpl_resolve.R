@@ -141,8 +141,13 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
 
   given <- .tr_given(report$template, defs$name, template, who)
   # the set parameter (the one its subjects row's `population: "{...}"`
-  # names, A2-T): the report's set when it does not give it (.tpl_set_fill())
-  given <- .tpl_set_fill(given, .tpl_set_param(template, study_dir), report, who)
+  # names, a figure's data map's, A2-T): the report's set when it does not
+  # give it (.tr_report_set(), .tpl_set_fill()); its data map is no rows
+  sp <- .tpl_set_param(template, study_dir)
+  if (is.na(sp)) sp <- .tr_map_set_param(tpl, defs$name)
+  rs <- .tr_report_set(report, given, sp, template, who)
+  report$data <- rs$data
+  given <- rs$given
   env <- list()
   origins <- character()
   missing <- character()
@@ -205,11 +210,15 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
       for (key in names(r)) rows[[k]][key] <- list(r[[key]])
     }
   }
-  rows <- lapply(rows, function(r) {
+  # (each row filled as a map: a key filled with no value -- nothing, or
+  # `!unset` -- is no key.  A figure's data map is one such map, filled
+  # whole: its `population: "{population}"` with no set is no set)
+  fill_row <- function(r) {
     r <- .tr_fill(r, env)
-    r[!vapply(r, function(v) inherits(v, "tfl_unset"), NA)]
-  })
-  rows <- lapply(rows, .derive_map_in)
+    if (is.list(r)) r <- r[!vapply(r, function(v) is.null(v) || inherits(v, "tfl_unset"), NA)]
+    .derive_map_in(r)
+  }
+  rows <- if (!is.null(names(rows))) fill_row(rows) else lapply(rows, fill_row)
 
   items <- list()
   for (it in tpl$analysis %||% list()) {
@@ -544,6 +553,63 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
     }
   }
   if (length(out)) out
+}
+
+# The report's analysis set and the template's set parameter (A2, A2-T,
+# canon 11-15: the set lives on the report's data; the template's set
+# parameter `sp` -- the one that fills its subjects row, or its data map's
+# `population: "{...}"`, found from the template, not by a name; NA none --
+# is that value, its default the template's).  One rule for every template:
+# - the set the report says beside its arguments (.tpl_set_beside(): its
+#   data map's `population`, `data: {population: SAF}`, else `common:
+#   population` until `common` goes) is the parameter's value when the
+#   report does not give it; given both, they are one value, or it stops
+#   (.tpl_set_fill(): the set is written twice);
+# - a template with no set parameter takes no set on the data map (it
+#   stops: no claim the program does not keep; `common:` is left as it was);
+# - the data map says the set only: it is no data rows (those are a list,
+#   merged by id), and another key stops, naming it.
+# list(data = the report's data rows, given = its arguments)
+.tr_report_set <- function(report, given, sp, template, who) {
+  d <- report[["data"]]
+  map <- is.list(d) && length(d) && !is.null(names(d))
+  if (map) {
+    other <- setdiff(names(d), "population")
+    if (length(other)) {
+      stop(who, ": ", template, ": the report's data is a map (", paste(other, collapse = ", "),
+           "); a template report's data map says its analysis set only (data: {population: SAF}), ",
+           "its own data are rows by id (data: [{id: ..., ...}]).", call. = FALSE)
+    }
+  }
+  set <- .tpl_set_beside(report)
+  rows <- if (!map) d
+  if (is.na(set)) return(list(data = rows, given = given))
+  if (is.na(sp)) {
+    if (map) {
+      stop(who, ": ", template, " takes no analysis set (it fills none from an argument); ",
+           "the report's data says ", set, ".", call. = FALSE)
+    }
+    return(list(data = rows, given = given))
+  }
+  # (the parameter given `!unset`, no set, beside a set: two sets too)
+  if (inherits(given[[sp]], "tfl_unset")) {
+    stop(who, ": ", template, ": ", .set_twice_text(
+      sprintf("the template argument `%s` (none)", sp), sprintf("the report's data (%s)", set)),
+      ", on the report's data.", call. = FALSE)
+  }
+  list(data = rows, given = .tpl_set_fill(given, sp, report, who))
+}
+
+# The parameter a template's data map fills its set from (a figure's
+# `data: {population: "{population}"}`; `names_ok` its parameters): NA none
+.tr_map_set_param <- function(tpl, names_ok) {
+  d <- tpl[["data"]]
+  p <- if (is.list(d) && !is.null(names(d))) d[["population"]]
+  if (!is.character(p) || length(p) != 1L || !grepl("^[{][A-Za-z_][A-Za-z0-9_]*[}]$", p)) {
+    return(NA_character_)
+  }
+  p <- substr(p, 2L, nchar(p) - 1L)
+  if (p %in% names_ok) p else NA_character_
 }
 
 # The report's arguments: `template:` without `name`, its step sections

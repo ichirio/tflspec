@@ -220,7 +220,7 @@ test_that("a template figure whose analyses come only from the template is one o
   o <- tfl_output("F-9-1", "figure", common = list(population = "SAF"), label = "Forest",
                   extends = "defaults",
                   template = list(name = "forest_hr",
-                                  args = list(param = "PFS", population = "SAF",
+                                  args = list(param = "PFS", population = "SAF", group = "TRT01A",
                                               subgroups = c("SEX", "AGEGR1"))))
   r <- tfl_ard_reads(tfl_read_study_spec(d), list(`F-9-1` = o))
   expect_identical(nrow(r), 1L)

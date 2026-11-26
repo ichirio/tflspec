@@ -123,7 +123,8 @@
   if (is.na(given)) {
     args[[sp]] <- own
   } else if (!identical(given, own)) {
-    .ard_stop(sprintf("%s: %s.", who, .set_twice_text(
+    # (one message, both rules: written twice; the set's place, the data)
+    .ard_stop(sprintf("%s: %s, on the report's data.", who, .set_twice_text(
       sprintf("the template argument `%s` (%s)", sp, given), sprintf("the report's data (%s)", own))))
   }
   args

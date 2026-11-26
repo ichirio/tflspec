@@ -1,6 +1,6 @@
 # A2 (one population rule), S1's part: the listing's analysis set read alike
 # from the sheets and the YAML (Q7), tfl_check_spec()'s look at a figure's or
-# a listing's analysis set (R5: Q3), and its data check of a table whose
+# a listing's analysis set (R5: Q3, Q4), and its data check of a table whose
 # header N and counts give a subject different groups (a warning, nothing
 # rewritten).  The arm is a variable the SPEC names: records keep their own.
 
@@ -162,9 +162,16 @@ test_that("a listing's analysis set: its own, else the report's -- the sheets an
   expect_null(back[["L-3"]]$data$population)
 })
 
+a2_study <- function() {
+  list(data = list(populations = list(
+    list(id = "SAF", dataset = "ADSL", where = tfl_r("SAFFL == \"Y\"")),
+    list(id = "ENR", dataset = "ADSL"))))
+}
+
 test_that("a figure or listing of subjects' records with no analysis set: a warning (R5, Q3)", {
+  st <- a2_study()
   l <- list(kind = "listing", data = list(source = "dataset", dataset = "ADAE"))
-  p <- .check_static_rows(l, "L-1")
+  p <- .check_static_rows(l, "L-1", st)
   expect_identical(p$level, "warning")
   expect_identical(p$item, "data$population")
   expect_match(p$message, "has no analysis set: write `population:` on its data", fixed = TRUE)
@@ -173,15 +180,50 @@ test_that("a figure or listing of subjects' records with no analysis set: a warn
                  c(l, list(common = list(population_label = "All subjects"))),
                  list(kind = "listing", data = list(source = "dataset", dataset = "ADAE",
                                                     population = "SAF")))) {
-    expect_identical(nrow(.check_static_rows(o, "L-1")), 0L)
+    expect_identical(nrow(.check_static_rows(o, "L-1", st)), 0L)
   }
   # a figure of its own code, of its design's datasets: the same
   f <- list(kind = "figure", data = list(source = "code"), content = tfl_r("df <- adsl"))
-  expect_identical(.check_static_rows(f, "F-1")$level, "warning")
+  expect_identical(.check_static_rows(f, "F-1", st)$level, "warning")
   # a figure of its ARD, a table: no records read here
-  expect_identical(nrow(.check_static_rows(list(kind = "figure", template = "km_simple"), "F-2")), 0L)
+  expect_identical(nrow(.check_static_rows(list(kind = "figure", template = "km_simple"), "F-2", st)), 0L)
   expect_identical(nrow(.check_static_rows(list(kind = "table", data = list(source = "dataset",
-                                                                            dataset = "ADAE")), "T-1")), 0L)
+                                                                            dataset = "ADAE")), "T-1", st)), 0L)
+})
+
+test_that("a step that keeps a population's rows by the records' flag: an error, the set is the report's (R5, Q4)", {
+  st <- a2_study()
+  f <- list(kind = "figure", common = list(population = "SAF"), data = list(source = "code", steps = list(
+    list(step = "read", dataset = "ADTTE"),
+    list(step = "param", value = "TTSKIN"),
+    list(step = "flag", variable = "SAFFL"),
+    list(step = "flag", variable = "ANL01FL"),
+    list(step = "filter", expr = "AVAL > 0 & SAFFL == \"Y\""))))
+  p <- .check_static_rows(f, "F-1", st)
+  # (one level and one message with the AI's check: .step_keeps_population())
+  expect_identical(p$level, c("error", "error"))
+  expect_identical(p$item, c("data$steps[3]", "data$steps[5]"))
+  expect_match(p$message[1L], "step 3 (`flag: SAFFL`) keeps the rows of population SAF", fixed = TRUE)
+  expect_match(p$message[1L], "its data's `population:` (SAF)", fixed = TRUE)
+  saf <- Filter(function(x) identical(x$id, "SAF"), st$data$populations)
+  expect_identical(p$message[1L], .step_keeps_population_text(
+    3L, .step_keeps_population(list(step = "flag", variable = "SAFFL"), saf), "SAF"))
+  # no report set: the message says which to write (and Q3 says it has none)
+  f$common <- NULL
+  p2 <- .check_static_rows(f, "F-1", st)
+  expect_true(any(grepl("write `data: {population: SAF}`", p2$message, fixed = TRUE)))
+  # the set on its data (the canon's place): the same, the set named
+  f$data$population <- "SAF"
+  p3 <- .check_static_rows(f, "F-1", st)
+  expect_identical(p3$item, c("data$steps[3]", "data$steps[5]"))
+  expect_match(p3$message[1L], "its data's `population:` (SAF)", fixed = TRUE)
+  f$data$population <- NULL
+  # (a record flag, a population with no condition, no study: nothing)
+  f$common <- list(population = "SAF")
+  f$data$steps <- f$data$steps[c(1L, 2L, 4L)]
+  expect_identical(nrow(.check_static_rows(f, "F-1", st)), 0L)
+  f$data$steps[[3L]] <- list(step = "flag", variable = "SAFFL")
+  expect_identical(nrow(.check_static_rows(f, "F-1")), 0L)
 })
 
 test_that("Q3: a set on the analysis data rows counts (canon 11-15)", {

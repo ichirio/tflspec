@@ -590,8 +590,8 @@
   }, tfl_plot_key_unused = function(w) invokeRestart("muffleWarning")),
   error = function(e) .ai_one_line(conditionMessage(e)))
   if (!is.null(r)) p <- .ai_problem(p, "template", paste("could not be written:", r))
-  # (its data steps, when the report says them: the analysis set kept --
-  # the parameter the template's own check says)
+  # (its data steps, when the report says them: no step keeping the
+  # analysis set, the report's -- the parameter the template's own check says)
   if (length(answer$design$data)) {
     fr <- .ai_fig_required(answer$design$data, answer$design["layers"], context)
     p <- rbind(p, fr[!grepl("keeps no parameter", fr$problem), , drop = FALSE])
@@ -617,7 +617,8 @@
   if (length(o$ard$analyses %||% list())) {
     data$ard <- suppressMessages(tfl_build_ard(st, dir = ".", output_id = o$id, save = FALSE))
   }
-  fig <- suppressMessages(suppressWarnings(tfl_content_run(o, data)))
+  # (its subjects: the report's analysis set, made from the study, A2)
+  fig <- suppressMessages(suppressWarnings(tfl_content_run(o, data, study = st)))
   .ai_fig_nothing_drawn(fig, o$id)
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
   png <- file.path(out_dir, paste0(o$id, ".png"))

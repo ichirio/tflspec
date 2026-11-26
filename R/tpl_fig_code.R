@@ -96,7 +96,8 @@
   n_call <- tp$call_steps
   data_steps <- steps[seq_len(length(steps) - n_call)]
   lv <- .codelist_levels(.codelists_rows(output$codelists, output$id), output$id)
-  d <- .fig_steps_code(data_steps, lv, order = TRUE)
+  # (the report's subjects, when made: its reads joined to them)
+  d <- .fig_steps_code(data_steps, lv, order = TRUE, subjects = attr(output, "fig_subjects"))
   generic <- identical(t$call, "tfl_tpl")
   args <- tp$args
   called <- tp$name
@@ -165,7 +166,7 @@
     x <- .fig_item_as_piece(tp$rest[[i]])
     # the report's own R code: statements on `p`, after the other items
     if (identical(x$piece$layer, "layer_code")) {
-      own <- c(own, list(list(stmt = x$piece$code, label = x$piece$label)))
+      own <- c(own, list(list(stmt = .fig_own_layer_code(x$piece$code), label = x$piece$label)))
       next
     }
     if (identical(x$to, "add")) {
@@ -191,6 +192,16 @@
     sprintf(" (a variant of %s%s)", t$from,
             if (!identical(t$package, "tflspec")) paste(",", .tpl_pkg_version(t$package)) else "")
   } else ""
+  chain <- c(
+    .tpl_fig_chain(if (is.null(form$assemble)) name else "fig", call, terms, own),
+    if (!is.null(form$assemble)) {
+      # (the call's arguments the assembly needs too: the same values)
+      aa <- intersect(form$assemble_args, keep)
+      sprintf("%s <- %s(%s)", name, form$assemble,
+              paste(c("fig", arg_code[match(aa, keep)]), collapse = ", "))
+    })
+  # (what a code step does not keep, read after it: stopped)
+  .fig_kept_check(d, c(pre, chain))
   code <- c(
     sprintf("# template %s%s%s", tp$name, variant,
             if (length(tp$study)) paste0("; study defaults: ", paste(tp$study, collapse = ", ")) else ""),
@@ -199,13 +210,7 @@
     d$code,
     if (length(pre)) c("# the numbers it prints, from the ARD", pre, ""),
     section("plot"),
-    .tpl_fig_chain(if (is.null(form$assemble)) name else "fig", call, terms, own),
-    if (!is.null(form$assemble)) {
-      # (the call's arguments the assembly needs too: the same values)
-      aa <- intersect(form$assemble_args, keep)
-      sprintf("%s <- %s(%s)", name, form$assemble,
-              paste(c("fig", arg_code[match(aa, keep)]), collapse = ", "))
-    })
+    chain)
   code <- .code_lines(code)
   code <- .fig_rename_df(code, tfl_fig_data_name(list(data = steps)))
   code <- .fig_tidy_names(code)

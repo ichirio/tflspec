@@ -227,7 +227,11 @@
   }
   switch(root,
     output = {
-      v <- down(output, path)
+      # (the report's analysis set: the one reader's, .report_set() -- its
+      # data's `population`, its subjects rows', `common:` last, A2-T)
+      v <- if (identical(path, c("common", "population")) && is.list(output)) {
+        .report_set(output)
+      } else down(output, path)
       # (none when the report names none: NA is tfl_output()'s "not given")
       if (length(v) == 1L && !is.na(v)) v
     },
@@ -762,11 +766,17 @@ tfl_template_to_spec <- function(output, study) {
   if (length(dup)) {
     .ard_stop(sprintf(paste0(
       "%s uses template %s, which makes its own %s step%s (%s); `data.steps` writes %s too. ",
-      "Keep the data stage (read, the analysis set, param, filter, derive) and remove %s; ",
+      "Keep the data stage (read, param, filter, derive; the analysis set is the data's ",
+      "`population:`) and remove %s; ",
       "keep plot and layers."),
       id, name, paste(dup, collapse = " and "), if (length(dup) > 1L) "s" else "",
       paste(unique(kind(call)), collapse = ", "), paste(dup, collapse = ", "),
       paste(dup, collapse = ", ")))
+  }
+  # (the analysis set is the data's `population:`, the template's and the
+  # report's one value: no step of it, A2)
+  if (is.null(data[["population"]]) && !is.null(x$data[["population"]])) {
+    data$population <- x$data[["population"]]
   }
   data$steps <- c(data$steps, call)
   data

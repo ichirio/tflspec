@@ -123,10 +123,10 @@ test_that("an agent's figure draft with its layers as `layers:` (the instruction
   # the agent's file: no template, the layers beside an empty content
   f <- file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml")
   writeLines(c(
-    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "common: {population: ITT}",
+    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm",
     "extends: [defaults]",
-    "data:", "  source: code", "  steps:",
-    "    - {step: read, dataset: ADRS}", "    - {step: flag, variable: ITTFL}",
+    "data:", "  source: code", "  population: ITT", "  steps:",
+    "    - {step: read, dataset: ADRS}",
     "    - {step: param, value: OVR}",
     "content: []",
     "plot: {x_label: Arm, y_label: Subjects}",
@@ -170,10 +170,10 @@ test_that("a built figure's facts beside its PNG; a figure of the agent's own co
   # the fallback after two fixes: the data steps, and one layer_code that draws the whole plot
   f <- file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml")
   writeLines(c(
-    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "common: {population: ITT}",
+    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm",
     "extends: [defaults]",
-    "data:", "  source: code", "  steps:",
-    "    - {step: read, dataset: ADRS}", "    - {step: flag, variable: ITTFL}",
+    "data:", "  source: code", "  population: ITT", "  steps:",
+    "    - {step: read, dataset: ADRS}",
     "    - {step: param, value: OVR}",
     "content: []",
     "layers:",
@@ -202,10 +202,10 @@ test_that("a km_survival draft with `codelists` for its arms is drawn (set_level
   ai_drafts_from_fixtures(d)
   f <- file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml")
   writeLines(c(
-    "id: F-14-2-2", "kind: figure", "label: Kaplan-Meier Plot of Overall Survival", "common: {population: ITT}",
+    "id: F-14-2-2", "kind: figure", "label: Kaplan-Meier Plot of Overall Survival",
     "extends: [defaults]",
-    "data:", "  source: code", "  steps:",
-    "    - {step: read, dataset: ADTTE}", "    - {step: flag, variable: ITTFL}",
+    "data:", "  source: code", "  population: ITT", "  steps:",
+    "    - {step: read, dataset: ADTTE}",
     "    - {step: param, value: OS}",
     "content: []",
     "codelists:", "  TRT01P:",
@@ -328,12 +328,12 @@ fig_codelists_study <- function(own = FALSE) {
   ai_drafts_from_fixtures(d)
   f <- file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml")
   writeLines(c(
-    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "common: {population: ITT}",
+    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm",
     "extends: [defaults]",
-    "data:", "  source: code", "  steps:",
-    if (own) c("    - {step: read, dataset: ADTTE}", "    - {step: flag, variable: ITTFL}",
+    "data:", "  source: code", "  population: ITT", "  steps:",
+    if (own) c("    - {step: read, dataset: ADTTE}",
                "    - {step: param, value: OS}") else
-      c("    - {step: read, dataset: ADRS}", "    - {step: flag, variable: ITTFL}",
+      c("    - {step: read, dataset: ADRS}",
         "    - {step: param, value: OVR}"),
     "content: []",
     if (own) c("codelists:", "  TRT01P:",
@@ -386,10 +386,10 @@ fig_cl_study <- function(own = NULL, layer = NULL) {
     writeLines(c(readLines(f), "codelists:", layer), f)
   }
   writeLines(c(
-    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "common: {population: ITT}",
+    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm",
     "extends: [defaults]",
-    "data:", "  source: code", "  steps:",
-    "    - {step: read, dataset: ADRS}", "    - {step: flag, variable: ITTFL}",
+    "data:", "  source: code", "  population: ITT", "  steps:",
+    "    - {step: read, dataset: ADRS}",
     "    - {step: param, value: OVR}",
     "content: []",
     if (length(own)) c("codelists:", own),

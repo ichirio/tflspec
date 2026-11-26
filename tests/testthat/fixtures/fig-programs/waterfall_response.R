@@ -1,7 +1,7 @@
 # ---- data ------------------------------------------------------------------
 adtr_sub <- adtr |>
   order_levels() |>
-  filter(PARAMCD == "BPCHG", FASFL == "Y") |>
+  filter(PARAMCD == "BPCHG") |>
   left_join(
     adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
     by = "USUBJID"

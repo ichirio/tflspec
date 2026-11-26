@@ -157,6 +157,24 @@ test_that("tfl_check_spec(): a template's set argument and the report's own row 
   expect_identical(nrow(tflspec:::.check_static_rows(o, "T1")), 0L)
   o$ard$analysis_data <- list(list(id = "adsl_itt", from = "ADSL", population = "ITT"))
   expect_identical(nrow(tflspec:::.check_static_rows(o, "T1")), 0L)
+  # the template's argument and another set beside it (`common:` until it
+  # goes, the data map, the canon's place): one report, one message -- the
+  # resolve's stop, which tfl_check_spec() says as an error row; no row of
+  # the look before the build
+  expect_identical(nrow(tflspec:::.check_static_rows(mk(list(population = "ITT"), population = "SAF"), "T1")), 0L)
+  f <- tp_output(list(name = "ae_soc_pt", args = list(population = "ITT")), NULL)
+  f$data <- list(source = "code", population = "SAF")
+  expect_identical(nrow(tflspec:::.check_static_rows(f, "T1")), 0L)
+  expect_error(tfl_resolve_output(f, tp_study()), "the set is written twice", fixed = TRUE)
+  d <- withr::local_tempdir()
+  file.copy(list.files(system.file("extdata", "spec-yaml", package = "tflspec"), full.names = TRUE), d,
+            recursive = TRUE)
+  tfl_write_output(mk(list(population = "ITT"), population = "SAF"), file.path(d, "outputs", "T-9.yml"))
+  ck <- suppressWarnings(tfl_check_spec(d, output_id = "T-9", adam = FALSE))
+  ck <- ck[ck$output_id == "T-9" & grepl("written twice", ck$message, fixed = TRUE), , drop = FALSE]
+  expect_identical(ck$level, "error")
+  expect_match(ck$message, "the template argument `population` (ITT) and the report's data (SAF)", fixed = TRUE)
+  expect_match(ck$message, "write it once, on the report's data", fixed = TRUE)
 })
 
 test_that("demog's `population` parameter (A2-T Q2): given in either part, the same report", {

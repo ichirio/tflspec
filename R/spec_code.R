@@ -1689,6 +1689,13 @@ tfl_bign_drop <- function(ard) .bign_drop(ard)
 #'   the steps start from `data`.  For a figure, a
 #'   named list of the objects its code reads: the datasets by their names
 #'   in lower case (`adtte`), and `ard`.
+#' @param study For a figure with an analysis set (its data's
+#'   `population:`) that reads a dataset: the study ([tfl_read_study_spec()])
+#'   or its folder.  The set's subjects are made as the report's program
+#'   makes them (its data part, from the study's files) and every dataset
+#'   the figure reads is joined to them.  Such a figure given no study, or
+#'   a set the study does not define, is an error: never a figure of every
+#'   subject.
 #' @return For a table, the [rtfreporter::table_plan()]; for a figure, the
 #'   ggplot.
 #' @examples
@@ -1704,12 +1711,12 @@ tfl_bign_drop <- function(ard) .bign_drop(ard)
 #' }
 #' @seealso [tfl_content_code()]
 #' @export
-tfl_content_run <- function(output, data) {
+tfl_content_run <- function(output, data, study = NULL) {
   if (!inherits(output, "tfl_output")) {
     .ard_stop("tfl_content_run(): `output` is a report, tfl_output().")
   }
   if (inherits(output$content, "tfl_r")) return(.content_own_run(output, data))
-  if (identical(output$kind, "figure")) return(.content_fig_run(output, data))
+  if (identical(output$kind, "figure")) return(.content_fig_run(output, data, study))
   if (!output$kind %in% c("table", "listing")) {
     .ard_stop(sprintf(paste0("tfl_content_run(): a %s's content is not run ",
                              "yet; tables, listings and figures, for now."), output$kind))
@@ -1889,6 +1896,11 @@ tfl_content_run <- function(output, data) {
 #'   of records (`data: {source: dataset}`) the code starts with its data
 #'   part, as [tfl_listing_code()] `part = "data"` writes it (the dataset
 #'   read, its condition, code lists and order).  `NULL`: the content only.
+#'   A figure with an analysis set (its data's `population:`) that reads a
+#'   dataset starts with the set's subjects, made as the report's program
+#'   makes them, and every dataset it reads is joined to them; with no
+#'   study (or a set the study does not define) it starts with a `stop()`
+#'   line saying so: never a figure of every subject.
 #' @return The code, one element a line.
 #' @examples
 #' out <- tfl_output("T-1", "table", content = list(
@@ -1916,7 +1928,7 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
   # content_code): written as it is, after the data's steps; it leaves
   # `content`
   if (inherits(output$content, "tfl_r")) {
-    steps <- .content_r_steps(output)
+    steps <- .content_steps_code(.content_r_steps(output))
     own <- unlist(strsplit(as.character(output$content), "\n", fixed = TRUE))
     return(c(steps, if (length(steps)) "", own))
   }
@@ -1927,13 +1939,21 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
     # (a series template's: its `figure:` content function's call)
     series <- .content_fig_series_code(output)
     if (!is.null(series) && identical(match.arg(template), "call")) return(series)
+    # the report's subjects (its analysis set), made as its program's data
+    # part makes them, its reads joined to them; a set they cannot be made
+    # for: its stop() line (as the program's), no subjects (canon 11-15)
+    sj <- tryCatch(.fig_session_subjects(output, study, "tfl_content_code()"),
+                   tfl_fig_subjects = function(e) list(
+                     code = sprintf("stop(%s)", encodeString(conditionMessage(e), quote = "\"")),
+                     subjects = NULL))
+    attr(output, "fig_subjects") <- sj$subjects
     if (is.list(tp) && identical(match.arg(template), "call")) {
-      if (isTRUE(tp$ok)) return(.content_fig_tpl_code(output))
+      if (isTRUE(tp$ok)) return(.fig_code_with_subjects(.content_fig_tpl_code(output), sj))
       message(sprintf(paste0("%s: the template's call cannot say this report's own data or ",
                              "a layer of the template it replaces; its design is written."),
                       output$id))
     }
-    return(.content_fig_code(output))
+    return(.fig_code_with_subjects(.content_fig_code(output), sj))
   }
   if (!output$kind %in% c("table", "listing")) {
     .ard_stop(sprintf(paste0("tfl_content_code(): a %s's content is not written ",
@@ -1990,16 +2010,17 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
   # the object the pipe starts from: the output's own name for it, else
   # the ARD when the content normalizes it, else the normalized data
   # the data's steps (`data.steps`, the Rework, the old process_code): R
-  # on `data`, written as it is, between the normalization and the plan
+  # on `data`, between the normalization and the plan, as
+  # .content_steps_code() writes it
   steps <- .content_r_steps(output)
   if (.content_rework(output)) {
     # `data <- ard |> normalize_ard(...)` (the content's, else `data <- ard`),
-    # the Rework as it is written, the plan from `data`
+    # the Rework, the plan from `data`
     .content_rework_need_data(steps, "tfl_content_code()")
     sp <- .content_rework_split(output$content)
     return(c(.drop_attached_ns(
                .content_rework_normalize_code(sp$pre, output$data$object %||% "ard", pipe)),
-             steps, "", bign_pre(data %||% "data"),
+             .content_steps_code(steps), "", bign_pre(data %||% "data"),
              .content_table_code(sp$rest, data = data %||% "data",
                                  plan = plan, pipe = pipe, kind = output$kind, piped = piped)))
   }
@@ -2015,7 +2036,7 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
                                    kind = output$kind, piped = piped)))
     }
     # the steps make the data: no normalize_ard() of the defaults after them
-    return(c(steps, "", bign_pre(data %||% "data"),
+    return(c(.content_steps_code(steps), "", bign_pre(data %||% "data"),
              .content_table_code(.content_drop_data_steps(output$content),
                                             data = data %||% "data",
                                             plan = plan, pipe = pipe, kind = output$kind,
@@ -2136,6 +2157,16 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
     })
     it
   })
+}
+
+# The data's steps (a Rework, the report's own data code) as the program
+# writes them, one element a line: one expression as it is, else in a
+# scope of its own that leaves `data` (.code_piece()), so what else they
+# assign stays there
+.content_steps_code <- function(steps) {
+  if (!length(steps)) return(character())
+  unlist(strsplit(.code_piece(paste(steps, collapse = "\n"), "data", "name"), "\n",
+                  fixed = TRUE))
 }
 
 # A table's or a listing's data steps as code, one element a line: each

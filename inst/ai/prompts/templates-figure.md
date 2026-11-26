@@ -3,7 +3,7 @@
 These figure templates are available: a figure kind written from a few arguments (listed below). When one fits the figure, answer with it instead of a design:
 
 - After the header: `template: {name: <template>, args: {<argument>: <value>, ...}}` -- a mapping, unlike a design's `template` (a preset's name). Give only the arguments the shell asks to differ from the default.
-- `data`: the data stage, when the template's arguments do not hold it (the Kaplan-Meier types): a design's data steps -- `read`, the analysis set (`join`, `how: semi`, on ADSL), `param`, `filter`, `derive` -- before the template's call, which makes the rest (the time's unit, the fit).  With a template, never write the call's own steps (`time_unit`, `survfit`, the statistics) in `data.steps`: the check refuses a draft that does.
+- `data`: the data stage, when the template's arguments do not hold it (the Kaplan-Meier types): a design's data steps -- `read`, `param`, `filter`, `derive` -- before the template's call (the analysis set is the report's, the request's: the program joins the records to its subjects; never a step -- no `join` to ADSL's set, no `flag` on its flag), which makes the rest (the time's unit, the fit).  With a template, never write the call's own steps (`time_unit`, `survfit`, the statistics) in `data.steps`: the check refuses a draft that does.
 - `layers`: only the figure's own items, for what the template does not draw (a reference line, a label), each as a design's layer.
 - Then `assumptions`, as always.
 - When no template fits, answer with the design, as the schema above says.
@@ -12,13 +12,12 @@ These figure templates are available: a figure kind written from a few arguments
 - FDA STF Figures 1, 4 and 13 are written as `km_cumulative` with `data` steps (the parameter), `time_unit: weeks` and the axes' labels: see `system.file("extdata", "report-definitions", package = "tflspec")` (`stf_f01_km_disc.yml`, `stf_f04_km_ae_onset.yml`, `stf_f13_km_lfu.yml`).
 - The log-rank p-value of `km_survival` and `km_cumulative` prints unless `pvalue: false`. Read the shell for it: when the shell shows no p-value, write `pvalue: false`; when it does, leave it out.
 
-An example: Kaplan-Meier curves of progression-free survival by arm, with a dashed line at the median.  The `data` steps are the data stage only -- `read`, the analysis set, `param`; the template makes the time unit and the fit (`survfit`): never write those, and never leave `data` out.
+An example: Kaplan-Meier curves of progression-free survival by arm, with a dashed line at the median.  The `data` steps are the data stage only -- `read`, `param` (the analysis set is the report's, never a step); the template makes the time unit and the fit (`survfit`): never write those, and never leave `data` out.
 
 ```yaml
 tflspec_ai: {task: figure, version: 1, output_id: F-14-2-1}
 data:
   - {step: read, dataset: ADTTE}
-  - {step: join, dataset: ADSL, where: SAFFL == "Y", by: USUBJID, how: semi}
   - {step: param, value: PFS}
 template:
   name: km_survival

@@ -268,23 +268,18 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     k("columns", "list", TRUE, fields = c("vars", "label", "width", "collapse_repeats")))
 })
 
-# A figure's data step keeping an analysis set's subjects: a semi join of
-# its dataset's records (data.yml's definition: dataset, where), so any
-# where works, whatever the figure's data has
-.tpl_population_step <- function(id, populations) {
-  # as a table's analysis data: an analysis set the study does not
-  # define stops (no figure of the wrong subjects)
+# A figure template's analysis set (its `population`, written on its
+# data: the report program joins the records to its subjects, A2): as a
+# table's analysis data, an analysis set the study does not define stops
+# (no figure of the wrong subjects)
+.tpl_population_check <- function(id, populations) {
   def <- Filter(function(p) identical(p$id, id), populations %||% list())
   if (!length(def)) {
     .ard_stop(sprintf("template: population %s is not in `populations` (data.yml: %s).",
                       id, paste(vapply(populations %||% list(), `[[`, "", "id"),
                                 collapse = ", ")))
   }
-  def <- def[[1L]]
-  w <- def$where
-  list(Filter(Negate(is.null), list(
-    step = "join", dataset = def$dataset %||% "ADSL",
-    where = if (!is.null(w)) as.character(w), by = "USUBJID", how = "semi")))
+  invisible(TRUE)
 }
 
 # A parameter of several lines (a heading) as the one text of a header cell:
@@ -301,6 +296,17 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
 # `choices = "populations"`, is the report's set, .tpl_set_fill(), A2-T.)
 .tpl_study_by_name <- c(by = "settings.treatment", group = "settings.treatment")
 
+# A treatment argument the report must write: `by` / `group` required with
+# no default (a figure's group and km's by, canon 1.14).  The study's
+# settings.treatment does not fill it (it is the planner's suggestion,
+# canon 1.15): not written, it stops.  (A table template's `by` with a
+# declared default still reads settings.treatment until its family's
+# batch decides it -- A2-T.)
+.tpl_report_writes <- function(p) {
+  identical(unname(.tpl_study_by_name[p$name]), "settings.treatment") &&
+    isTRUE(p$required) && is.null(p$default)
+}
+
 # A parameter's type filled in: as declared, by its name, else from its
 # default (a company's template that says none: `guessed`, which
 # tfl_test_templates() lists)
@@ -312,7 +318,8 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     p$study <- NULL
     p$no_study <- TRUE
   }
-  if (is.null(p$study) && !isTRUE(p$no_study) && p$name %in% names(.tpl_study_by_name)) {
+  if (is.null(p$study) && !isTRUE(p$no_study) && p$name %in% names(.tpl_study_by_name) &&
+      !.tpl_report_writes(p)) {
     p$study <- .tpl_study_by_name[[p$name]]
   }
   by_name <- .tpl_param_kinds[[p$name]]
