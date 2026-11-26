@@ -374,12 +374,13 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       maps <- if (is.data.frame(tm) && nrow(tm)) tm$param[tm$output_id %in% id] else character()
       out$template <- .tpl_maps_back(out$template, file.path(to, "spec", "outputs", paste0(id, ".yml")),
                                      maps, id, note)
-      # (the planner's set and the template's set argument: one, A2-T)
-      ta <- .tpl_set_arg(out)
+      # (the planner's set and the template report's set -- its argument,
+      # else the template's default: .report_set() -- one, A2-T)
+      ta <- .report_set(out)
       if (!is.null(entry$population) && !identical(ta, as.character(entry$population))) {
         note(id, "report", id, "population", sprintf(paste0(
-          "the planner's analysis set %s is not the template's set argument (%s, the templates ",
-          "sheet's population column): the template's is kept"), entry$population,
+          "the planner's analysis set %s is not the template report's set (%s: the templates ",
+          "sheet's population column, else the template's default): the template's is kept"), entry$population,
           if (is.na(ta)) "none" else ta))
       }
     }
@@ -1060,16 +1061,20 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   # the set is the data's; the data's own wins); a table's on its subjects
   # rows (A2-T); never in `common`
   common <- list()
-  # (the planner's set on the subjects rows that name none, as
-  # tfl_set_report_set() writes it; a planner set its rows do not carry --
-  # another set on them, or no subjects row -- is said, not written: the
-  # rows are what the program reads, A2-T Q7)
+  # (the planner's set -- the report's own, .planner_set(), or one typed
+  # in the sheet -- on the rows tfl_set_report_set() writes it on
+  # (.set_row_taker()); a planner set its rows do not carry -- another set
+  # on them, or no subjects row -- is said, not written: the rows are what
+  # the program reads, A2-T Q7)
   if (pop_on_rows && !is.null(entry$population)) {
     from <- .pop_from(ard$populations, entry$population)
-    if (length(ard_part$analysis_data)) ard_part$analysis_data <- lapply(ard_part$analysis_data, function(a) {
-      if (.set_row_takes(a, NA_character_, from)) a$population <- entry$population
-      a
-    })
+    if (length(ard_part$analysis_data)) {
+      takes <- .set_row_taker(ard_part$analysis_data, as.character(entry$population), from)
+      ard_part$analysis_data <- lapply(ard_part$analysis_data, function(a) {
+        if (takes(a)) a$population <- entry$population
+        a
+      })
+    }
     rs <- .rows_carried_set(ard_part$analysis_data %||% list(), ard_part$analyses %||% list())
     if (!identical(rs, as.character(entry$population))) {
       note(id, "report", id, "population", sprintf(paste0(

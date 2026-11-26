@@ -29,8 +29,10 @@
   add <- function(...) rows[[length(rows) + 1L]] <<- .check_rows(output_id = id, ...)
   # (A2-T Q3) several sets on the rows that make subjects: the heading's is
   # that of the row BIGN reads; no BIGN, none
-  sets <- .rows_sets(.data_rows(o))
-  if (length(sets) > 1L && is.na(.rows_carried_set(.data_rows(o), o[["ard"]][["analyses"]])) &&
+  # (the rows as the ARD program reads them: .data_population()'s)
+  as_read <- lapply(.data_rows(o), .entry_pop_inject, .rows_set(o))
+  sets <- .rows_sets(as_read)
+  if (length(sets) > 1L && is.na(.rows_carried_set(as_read, o[["ard"]][["analyses"]])) &&
       is.na(.na_scalar(o$common$population_label))) {
     add(part = "data", item = "data$population", level = "warning", message = sprintf(paste0(
       "the %s's data rows carry several analysis sets (%s) and no BIGN analysis says which is the ",
@@ -74,14 +76,14 @@
     add(part = "data", item = "data$data", level = "error",
         message = paste("the", o$kind %||% "report", .data_both_text(both)))
   } else if (is.na(.na_scalar(unlist(map[["data"]])))) {
-    m <- .pop_unknown_text(.report_set(o), pops)
+    m <- .pop_unknown_text(.report_set(o, study$dir), pops)
     if (!is.null(m)) add(part = "data", item = "data$population", level = "error",
                          message = paste("the report's analysis set:", m))
   }
   # the page's set (.report_set()) is one its rows carry, as the
   # ARD program reads them (a subjects row with none takes the report's,
   # .rows_set()): else the page names a set its numbers are not of
-  op <- .report_set(o)
+  op <- .report_set(o, study$dir)
   rs <- .rows_set(o)
   data_rows <- lapply(.data_rows(o), function(a) {
     .entry_pop_inject(a, rs, .pop_from(study$data$populations %||% list(), rs))
@@ -105,12 +107,13 @@
       "sheets and the page take it); write %s in the TOC, or the set the report means on its data"),
       tp, op, op))
   }
-  # a TOC line of a report whose set lives on its data (.planner_set()) and
-  # which names none: the sheets keep the data as it is, not the TOC's line
+  # a TOC line of a report whose data names no set (.planner_set(), any
+  # kind): the sheets keep the data as it is, not the TOC's line
   if (!is.na(tp) && is.na(op) && is.na(.planner_set(o, tp, tryCatch(.tpl_spec_of(o), error = function(e) NULL)))) {
     add(part = "data", item = "toc$population", level = "warning", message = sprintf(paste0(
       "the TOC says analysis set %s and the report's data names none: the report reads all subjects, and ",
-      "the sheets do not keep the TOC's line; write `population: %s` on its data, or remove it from the TOC"),
+      "the sheets do not keep the TOC's line; write `population: %s` on its data (a table's: on its ",
+      "subjects row, tfl_set_report_set()), or remove it from the TOC"),
       tp, tp))
   }
   do.call(rbind, rows)
@@ -150,7 +153,11 @@
   }
   # (A2-T Q6) the template's set argument and the report's own row over the
   # template's subjects row: one set, written once
-  tw <- tryCatch(.tpl_set_twice_rows(o, id), error = function(e) NULL)
+  # (a template that cannot be read: said, a note, not passed over)
+  tw <- tryCatch(.tpl_set_twice_rows(o, id), error = function(e) .check_rows(
+    output_id = id, part = "data", item = "data$population", level = "note",
+    message = paste("the set of the report's own rows against its template's argument is not checked:",
+                    conditionMessage(e))))
   if (!is.null(tw) && nrow(tw)) rows[[length(rows) + 1L]] <- tw
   tx <- .check_texts(list(content = o$content, template = args, layers = o$layers))
   # {p:.1%}: a precision then `%`, no type between them

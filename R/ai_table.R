@@ -357,7 +357,7 @@
     if (!is.null(id)) at <- paste(at, id)
     for (k in setdiff(names(o), .ai_table_keys)) {
       p <- .ai_problem(p, paste(at, k), if (identical(k, "population")) {
-        "`population:` -> `common: population` (write `common: {population: <analysis set id>}`)"
+        .common_old_line
       } else {
         sprintf("is not a key of a report file; its keys are %s", paste(.ai_table_keys, collapse = ", "))
       })

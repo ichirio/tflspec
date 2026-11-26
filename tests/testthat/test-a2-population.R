@@ -569,8 +569,12 @@ test_that("a TOC set the report does not name: the sheets keep the data as it is
   p <- .check_set_rows(l, "L-1", st)
   expect_identical(c(p$item, p$level), c("toc$population", "warning"))
   expect_match(p$message, "the TOC says analysis set SAF and the report's data names none", fixed = TRUE)
-  # a table's set is on its subjects rows (A2-T): its TOC line goes there
-  expect_identical(.planner_set(list(kind = "table", data = list(source = "ard")), "SAF"), "SAF")
+  # a table whose data names no set: the TOC's line is not added either (A2-T
+  # M2: it would go on its rows and count another set's subjects); one its
+  # rows carry is kept
+  expect_true(is.na(.planner_set(list(kind = "table", data = list(source = "ard")), "SAF")))
+  expect_identical(.planner_set(list(kind = "table", ard = list(analysis_data = list(
+    list(id = "adsl_saf", from = "ADSL", population = "SAF")))), "SAF"), "SAF")
 })
 
 test_that("tfl_check_spec() says a report's set rows: the TOC's line, an unknown set, a set beside an analysis data (S8)", {

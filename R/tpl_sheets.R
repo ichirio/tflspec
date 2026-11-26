@@ -111,12 +111,12 @@ tfl_read_template_sheets <- function(path) {
   one <- function(v) is.atomic(v) && length(v) == 1L && !is.na(v) && nzchar(as.character(v))
   # (the `population` column is the template's set parameter, .tpl_set_param();
   # a report that does not give it has the set it says beside it,
-  # `population`, written there: the sheets write the set where it is read)
+  # `population` (.tpl_set_given(): not the template's default, which it
+  # has without the column), written there: the sheets write the set where
+  # it is read)
   sp <- .tpl_set_param(spec$name %||% "")
+  if (is.null(args[[sp]]) && one(population) && !is.na(sp)) args[[sp]] <- as.character(population)
   if (is.na(sp)) sp <- "population"
-  if (is.null(args[[sp]]) && one(population) && !is.na(.tpl_set_param(spec$name %||% ""))) {
-    args[[sp]] <- as.character(population)
-  }
   cols <- list()
   cells <- character()
   prm <- list()

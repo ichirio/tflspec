@@ -53,7 +53,7 @@
 #'   to replace the set's label); a report may have none of them.  Any other
 #'   key stops.  The old `population` argument stops: write
 #'   `common = list(population = )`.
-#' @param population Removed: `population` -> `common: population`.
+#' @param population Removed: the set is the data's ([tfl_set_report_set()]).
 #' @param extends The files layered under this one, nearest first
 #'   (`"defaults"`, `"patterns/<name>"`); `"none"` for none; or a list by
 #'   step (`data`, `ard`, `content`, `page`), each such a value
@@ -138,8 +138,7 @@ tfl_output <- function(id, kind = c("table", "figure", "listing"),
   }
   kind <- match.arg(kind)
   if (!is.null(population)) {
-    stop("tfl_output(): ", id, ": `population` -> `common: population`; write ",
-         "`common = list(population = ...)`.", call. = FALSE)
+    stop("tfl_output(): ", id, ": ", .common_old_line, call. = FALSE)
   }
   common <- .common_in(common, paste0("tfl_output(): ", id))
   if (!inherits(content, "tfl_r") &&
@@ -412,8 +411,10 @@ tfl_read_output <- function(path) {
 }
 
 # The old top-level `population:` of a report, and where it went
-.common_old_line <- paste0("`population:` -> `common: population`: a report's analysis set ",
-                           "is written under `common:` (`common:` / `  population: SAF`).")
+.common_old_line <- paste0("`population:` -> the report's data: its analysis set is written where ",
+                           "its data says it -- a subjects row's `population:`, a data map's ",
+                           "`population:`, or the template's set argument (tfl_set_report_set() ",
+                           "writes it).")
 
 # The keys of a report's `common:` (what several steps read): a closed list
 .common_keys <- c("population", "treatment", "population_label")
@@ -504,8 +505,9 @@ tfl_read_output <- function(path) {
 # data that reads one of the report's analysis data (`data: <id>`) has that
 # data's set (.adata_pop(): its own, else that of the subjects it keeps,
 # else the nearest above it), never one written beside it (.data_both());
-# its rows as the ARD program reads them (a subjects row with no set has
-# the report's `common: population`, .entry_pop_inject(), until `common` goes)
+# its rows -- here and for the set they carry -- as the ARD program reads
+# them (a subjects row with no set has the report's `common: population`,
+# .rows_set() / .entry_pop_inject(), until `common` goes)
 .data_population <- function(data, o, rows = .data_rows(o)) {
   id <- .na_scalar(if (is.list(data)) unlist(data[["data"]]))
   if (!is.na(id)) {
@@ -513,7 +515,7 @@ tfl_read_output <- function(path) {
     return(.rows_adata_pop(rows, id))
   }
   if (!is.null(data[["population"]])) return(data[["population"]])
-  rs <- .rows_carried_set(rows, o[["ard"]][["analyses"]])
+  rs <- .rows_carried_set(lapply(rows, .entry_pop_inject, .rows_set(o)), o[["ard"]][["analyses"]])
   if (!is.na(rs)) rs else .out_population(o)
 }
 
@@ -537,33 +539,40 @@ tfl_read_output <- function(path) {
 
 # The sheets' population column of a report (the planner's: the TOC's line
 # and the report's set in one cell; `tp` its TOC line's set, `tpl` its
-# template SPEC): the report's set as its data says it (.report_set()), else
-# the TOC's line.  A report whose set lives on its data (a listing's, a
-# figure's: .set_on_data()) takes this column back onto its data map, so
-# there it is the set the map says (.rows_set(): a set its subjects rows
-# carry stays on them, written once), and the TOC's line only when the
-# report carries that set already (.report_set(): the sheets add no set to
-# a report).  NA when none
+# template SPEC): the report's set as its data says it (.report_set()).  A
+# report whose set lives on its data (a listing's, a figure's:
+# .set_on_data()) takes this column back onto its data map, so there it is
+# the set the map says (.rows_set(): a set its subjects rows carry stays on
+# them, written once).  The TOC's line only when the report carries that
+# set already: the sheets add no set to a report of any kind (a table's
+# column goes on its rows, which would then count another set's subjects;
+# the sheets warn, tfl_check_spec() says it before).  NA when none
 .planner_set <- function(o, tp, tpl = NULL) {
   d <- o[["data"]]
   on_data <- is.null(tpl) && .set_on_data(o[["kind"]], if (is.list(d) && !is.null(names(d))) d)
   rs <- if (on_data) .rows_set(o) else .report_set(o)
   if (!is.na(rs)) return(rs)
   tp <- .na_scalar(unlist(tp))
-  if (on_data && !identical(.report_set(o), tp)) NA_character_ else tp
+  if (identical(.report_set(o), tp)) tp else NA_character_
 }
 
-# The report's analysis set as its data says it (A2-T, R/report_set.R): a
-# template report's set argument (.tpl_set_arg()), else what its data says
-# beside it (.tpl_set_beside(): its own rows add to the template's); any
-# other report's data map's set, else its rows' (.data_population(); NA
-# when none).  The sheets' population column, the page's set line and the
-# checks read it alike; `study_dir`, a study whose template copies it reads
+# The report's analysis set as its data says it (A2-T, R/report_set.R),
+# one reader for every report, as written or resolved: a template report's
+# set argument (.tpl_set_arg()), else what its data says beside it
+# (.tpl_set_beside()), else the set its own row over the template's
+# subjects row carries (.tpl_set_rows_set(); a resolved report's row as
+# the template filled it), else the template's own default
+# (.tpl_set_default(), canon 11-15 (1)); any other report's data map's set,
+# else its rows' (.data_population(); NA when none).  The sheets'
+# population column, the page's set line and the checks read it alike;
+# `study_dir`, a study whose template copies it reads
 .report_set <- function(o, study_dir = NULL) {
-  a <- .tpl_set_arg(o, study_dir)
-  if (!is.na(a)) return(a)
   ts <- tryCatch(.tpl_spec_of(o), error = function(e) NULL)
-  if (!is.null(ts) && !is.na(.tpl_set_param(ts$name, study_dir))) return(.tpl_set_beside(o))
+  sp <- if (!is.null(ts)) .tpl_set_param(ts$name, study_dir) else NA_character_
+  if (!is.na(sp)) {
+    g <- .tpl_set_given(o, study_dir)
+    return(if (!is.na(g)) g else .tpl_set_default(ts$name, sp, study_dir))
+  }
   d <- o[["data"]]
   .na_scalar(unlist(.data_population(if (is.list(d) && !is.null(names(d))) d, o)))
 }

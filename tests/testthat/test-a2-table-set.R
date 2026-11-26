@@ -120,10 +120,45 @@ test_that("a template report's set: its set argument, found from the template, n
   d$template$args$population <- NULL
   d$common <- list(population = "ENR")
   expect_identical(tfl_report_set(d), "ENR")
-  # (its own row adds to the template's: not its set)
+  # (its own row adds to the template's: not its set; none given: the template's default)
   d$common <- list()
   d$ard <- list(analysis_data = list(list(id = "adsl_itt", from = "ADSL", population = "ITT")))
-  expect_true(is.na(tfl_report_set(d)))
+  expect_identical(tfl_report_set(d), "SAF")
+})
+
+test_that("a template's own default set is the report's set: the reader, the page, the TOC check, the planner (M1)", {
+  st <- tfl_read_study_spec(ts_dir(list()))
+  dm_args <- list(by = "TRT01A", continuous = "AGE", categorical = "SEX")
+  d <- tfl_output("T-9", "table", label = "Demographics", template = list(name = "demog", args = dm_args))
+  # (canon 11-15 (1): the template holds the default, DM's SAF; orr's ITT)
+  expect_identical(tfl_report_set(d), "SAF")
+  expect_identical(tfl_report_set(d, st), "SAF")
+  expect_identical(tfl_report_set(tfl_output("T-O", "table", template = list(name = "orr", args = list()))), "ITT")
+  expect_identical(tfl_report_set(tfl_output("T-S", "table", template = list(
+    name = "tflspec_v1/tflspec_summary", args = list(by = "TRT01A")))), "SAF")
+  # the page's heading, as the report program reads it (resolved)
+  ro <- tfl_resolve_output(d, st)
+  expect_identical(.report_set(ro, st$dir), "SAF")
+  expect_identical(.page_own_tokens(ro, st)$OUTPUT_POPULATION, "Safety Analysis Set")
+  # a TOC line of another set: said
+  st2 <- st
+  st2$toc <- list(outputs = list(list(id = "T-9", kind = "table", population = "ENR")))
+  p <- .check_set_rows(d, "T-9", st2)
+  expect_true(any(p$item == "toc$population" & grepl("the TOC says analysis set ENR and the report's data SAF",
+                                                     p$message, fixed = TRUE)))
+  # the planner's column: the template's set, not the TOC's
+  expect_identical(.planner_set(d, "ENR", .tpl_spec_of(d)), "SAF")
+  # its own row over the template's subjects row: that row's set (as the ARD reads it)
+  ids <- .tpl_set_row_ids("demog", "population", dm_args)
+  expect_length(ids, 1L)
+  d2 <- d
+  d2$ard <- list(analysis_data = list(list(id = ids, from = "ADSL", population = "ENR")))
+  expect_identical(tfl_report_set(d2), "ENR")
+  # ... and the writer writes the argument and takes the row's set off: once (S2)
+  d3 <- tfl_set_report_set(d2, "SAF")
+  expect_identical(d3$template$args$population, "SAF")
+  expect_null(d3$ard$analysis_data[[1L]]$population)
+  expect_identical(tfl_report_set(d3), "SAF")
 })
 
 test_that("tfl_set_report_set(): writes where the reader reads, once, never in common:", {
@@ -161,6 +196,27 @@ test_that("tfl_set_report_set(): writes where the reader reads, once, never in c
   expect_identical(l2$data$population, "ENR")
   expect_null(l2$common$population)
   expect_identical(tfl_set_report_set(l2, "ENR"), l2)
+  # (the writer's rows are the reader's: a row of the set on ADPC, with no
+  # study; a subjects row of its own code -- S1)
+  pk2 <- suppressWarnings(tfl_set_report_set(ts_tables()[[3L]], "SAF"))
+  expect_identical(pk2$ard$analysis_data[[1L]]$population, "SAF")
+  cd <- tfl_output("T-K", "table", ard = list(analysis_data = list(
+    list(id = "adsl_k", code = tfl_r("adsl |> dplyr::filter(SAFFL == \"Y\")"), population = "SAF"))))
+  expect_identical(tfl_set_report_set(cd, "ENR")$ard$analysis_data[[1L]]$population, "ENR")
+  # (two sets and no BIGN to say the report's: the writer cannot tell, it stops)
+  two <- tfl_output("T-2", "table", ard = list(analysis_data = list(
+    list(id = "adsl_saf", from = "ADSL", population = "SAF"), list(id = "adsl_enr", from = "ADSL", population = "ENR"))))
+  expect_error(tfl_set_report_set(two, "FAS"), "carry several analysis sets (SAF, ENR) and no BIGN", fixed = TRUE)
+  # (a set the study does not register: stops, canon 11-15 (2) -- S3)
+  expect_error(tfl_set_report_set(b, "SAFFL", st), "'SAFFL' is not an analysis set of spec/data.yml", fixed = TRUE)
+  # (the old form with a denominator row: the set as the ARD reads it -- common
+  # on the unset subjects row, BIGN's -- changes; the denominator keeps its own)
+  od <- ts_tables(old = TRUE)[[1L]]
+  od$ard$analysis_data <- c(od$ard$analysis_data, list(list(id = "adsl_itt", from = "ADSL", population = "ITT")))
+  expect_identical(tfl_report_set(od), "SAF")
+  od2 <- tfl_set_report_set(od, "ENR")
+  expect_identical(unname(vapply(od2$ard$analysis_data, function(a) a$population %||% NA_character_, "")),
+                   c("ENR", NA, "ITT"))
   # (a figure whose subjects row carries the set and whose map names none: the row)
   f <- tfl_output("F-2", "figure", content = tfl_r("df <- adsl_saf"))
   f$data <- list(source = "code")
@@ -266,17 +322,61 @@ test_that("the impact gate: the ARD and report programs are the same in both for
     oo <- tfl_read_output(file.path(old, "spec", "outputs", paste0(id, ".yml")))
     on <- tfl_read_output(file.path(new, "spec", "outputs", paste0(id, ".yml")))
     expect_identical(tfl_report_code(on, study = sn), tfl_report_code(oo, study = so), info = id)
-    # the page heading's set: the same label
-    expect_identical(.page_own_tokens(on, sn)$OUTPUT_POPULATION,
-                     .page_own_tokens(oo, so)$OUTPUT_POPULATION, info = id)
+    # the page heading's set, as the report program reads it: the set's label, both forms
+    lab <- c("T-A" = "Safety Analysis Set", "T-B" = "Enrolled Analysis Set", "T-C" = "PK Analysis Set")[[id]]
+    expect_identical(.page_own_tokens(tfl_resolve_output(on, sn), sn)$OUTPUT_POPULATION, lab, info = id)
+    expect_identical(.page_own_tokens(tfl_resolve_output(oo, so), so)$OUTPUT_POPULATION, lab, info = id)
   }
-  expect_identical(.page_own_tokens(tfl_read_output(file.path(new, "spec", "outputs", "T-B.yml")),
-                                              sn)$OUTPUT_POPULATION, "Enrolled Analysis Set")
   # a demog table: `common: population` and its argument give the same ARD program
   dold <- ts_dir(list(tfl_output("T-D", "table", common = list(population = "SAF"), template = list(
     name = "demog", args = list(by = "TRT01A", continuous = "AGE", categorical = "SEX")))))
   dnew <- ts_dir(list(tfl_output("T-D", "table", template = list(
     name = "demog", args = list(population = "SAF", by = "TRT01A", continuous = "AGE", categorical = "SEX")))))
-  expect_identical(tfl_ard_code(tfl_read_study_spec(dnew), "T-D", save = TRUE),
-                   tfl_ard_code(tfl_read_study_spec(dold), "T-D", save = TRUE))
+  # (and the template's default, no set written: the same)
+  ddef <- ts_dir(list(tfl_output("T-D", "table", template = list(
+    name = "demog", args = list(by = "TRT01A", continuous = "AGE", categorical = "SEX")))))
+  sts <- lapply(list(old = dold, new = dnew, default = ddef), tfl_read_study_spec)
+  ard <- lapply(sts, function(s) tfl_ard_code(s, "T-D", save = TRUE))
+  expect_identical(ard$new, ard$old)
+  expect_identical(ard$default, ard$old)
+  rep <- lapply(sts, function(s) tfl_report_code(s$outputs[["T-D"]] %||%
+                                                   tfl_read_output(file.path(s$dir, "spec", "outputs", "T-D.yml")),
+                                                 study = s))
+  expect_identical(rep$new, rep$old)
+  expect_identical(rep$default, rep$old)
+  for (s in sts) {
+    o <- tfl_read_output(file.path(s$dir, "spec", "outputs", "T-D.yml"))
+    expect_identical(.page_own_tokens(tfl_resolve_output(o, s), s)$OUTPUT_POPULATION, "Safety Analysis Set")
+  }
+})
+
+test_that("the sheets add no set to a table whose data names none: the TOC's line is said, the ARD program unchanged (M2)", {
+  skip_if_not_installed("openxlsx")
+  o <- tfl_output("T-N", "table", label = "All subjects", extends = "none", content = ts_content, ard = list(
+    analysis_data = list(list(id = "adsl_all", from = "ADSL")),
+    analyses = list(ts_bign("adsl_all"))))
+  dir <- ts_dir(list(o))
+  writeLines(c("outputs:", "  - id: T-N", "    kind: table", "    population: SAF"),
+             file.path(dir, "spec", "toc.yml"))
+  st <- tfl_read_study_spec(dir)
+  # (tfl_check_spec() says it before)
+  p <- .check_set_rows(o, "T-N", st)
+  expect_true(any(p$item == "toc$population" &
+                    grepl("the TOC says analysis set SAF and the report's data names none", p$message, fixed = TRUE)))
+  w <- character()
+  b <- withCallingHandlers(tfl_sheets_from_yaml(dir), warning = function(c) {
+    w <<- c(w, conditionMessage(c))
+    invokeRestart("muffleWarning")
+  })
+  expect_true(any(grepl("T-N: the TOC's analysis set SAF is not kept", w, fixed = TRUE)))
+  expect_true(is.na(b$planner$population[b$planner$output_id == "T-N"]))
+  to <- file.path(dir, "back")
+  invisible(suppressWarnings(tfl_yaml_from_sheets(b, to)))
+  back <- tfl_read_output(file.path(to, "spec", "outputs", "T-N.yml"))
+  expect_null(back$ard$analysis_data[[1L]]$population)
+  expect_null(back$common$population)
+  # the ARD program: the same (all subjects, as written)
+  file.copy(file.path(dir, "spec", "data.yml"), file.path(to, "spec", "data.yml"), overwrite = TRUE)
+  expect_identical(suppressWarnings(tfl_ard_code(tfl_read_study_spec(to), "T-N", save = TRUE)),
+                   suppressWarnings(tfl_ard_code(st, "T-N", save = TRUE)))
 })

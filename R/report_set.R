@@ -9,17 +9,24 @@
 #
 #    .report_set(o)               the reader (spec_yaml.R): the sheets, the
 #                                 page's set line, the checks, the AI kit
-#    tfl_report_set(o, study)     the same, a template report resolved
+#    tfl_report_set(o, study)     the same, exported
 #    tfl_set_report_set(o, pop)   the writer: where the reader reads
+#    .set_row_carries(a)          the rows that carry the set: the reader's
+#                                 and the writer's one rule
 # ============================================================================
 
-# The sets a report's data rows carry: the own `population` of each row
-# that makes subjects of a set (a row of another's subjects, `subjects_in`,
-# has theirs and names none), each once in the rows' order
+# Does a data row carry a set (`a`)?  A row that names its own
+# `population`, of no other's subjects (`subjects_in`: it has theirs) --
+# whatever it reads (ADSL, the set's dataset, another row, its code).  The
+# reader (.rows_sets()) and the writer (.set_rows_take()) alike
+.set_row_carries <- function(a) {
+  is.list(a) && is.null(a[["subjects_in"]]) && !is.na(.na_scalar(unlist(a[["population"]])))
+}
+
+# The sets a report's data rows carry (.set_row_carries()), each once in
+# the rows' order
 .rows_sets <- function(rows) {
-  v <- unlist(lapply(rows, function(a) {
-    if (is.list(a) && is.null(a[["subjects_in"]])) .na_scalar(unlist(a[["population"]]))
-  }))
+  v <- unlist(lapply(Filter(.set_row_carries, rows), function(a) .na_scalar(unlist(a[["population"]]))))
   unique(v[!is.na(v)])
 }
 
@@ -122,38 +129,102 @@
   args
 }
 
-# The ids of the rows a template makes its subjects in, with the set its
-# argument gives (`sp` its set parameter, `args` the report's): a template
-# file's rows that write `population: "{<sp>}"`, a registered template's
-# rows of that set as it expands them; none when it cannot tell
-.tpl_set_row_ids <- function(name, sp, args) {
+# The ids of the rows a template fills its set parameter into (`sp`;
+# `args` the report's): a template file's rows that write `population:
+# "{<sp>}"`; a registered template's rows that carry the set as it expands
+# them, the parameter given a mark.  None, with the reason as its attribute
+# `reason`, when the template cannot be read or expanded (a required
+# argument the report has not given).  `study_dir`: a study whose copy of
+# the template is read first
+.tpl_set_row_ids <- function(name, sp, args, study_dir = NULL) {
+  why <- NULL
   if (grepl("/", name, fixed = TRUE)) {
-    y <- tryCatch(.template_read(name), error = function(e) NULL)
+    y <- NULL
+    if (!is.null(study_dir)) y <- tryCatch(.template_read(name, study_dir), error = function(e) NULL)
+    if (is.null(y)) y <- tryCatch(.template_read(name), error = function(e) { why <<- conditionMessage(e); NULL })
     rows <- if (is.list(y$data) && is.null(names(y$data))) y$data
     want <- paste0("{", sp, "}")
   } else {
-    x <- tryCatch(tfl_template_expand(name, args), error = function(e) NULL)
+    want <- "TFLSPEC_SET_PARAM"
+    args <- if (is.list(args)) args else list()
+    args[[sp]] <- want
+    x <- tryCatch(tfl_template_expand(name, args), error = function(e) { why <<- conditionMessage(e); NULL })
     rows <- c(if (is.list(x$data) && is.null(names(x$data))) x$data, x$ard$analysis_data)
-    want <- .na_scalar(unlist(args[[sp]]))
   }
   ids <- unlist(lapply(rows, function(r) {
-    if (is.list(r) && is.null(r[["subjects_in"]]) && identical(.na_scalar(unlist(r[["population"]])), want)) {
-      .na_scalar(unlist(r[["id"]]))
-    }
+    if (.set_row_carries(r) && identical(.na_scalar(unlist(r[["population"]])), want)) .na_scalar(unlist(r[["id"]]))
   }))
-  unique(ids[!is.na(ids)])
+  out <- unique(ids[!is.na(ids)])
+  if (!is.null(why)) attr(out, "reason") <- why
+  out
+}
+
+# A template's own default of its set parameter (`sp`; NA when it has
+# none, canon 11-15 (1): the template holds it, DM's SAF): a registered
+# template's parameter default, a template file's as its series gives it
+# (`!series population_safety`).  `study_dir`: the study's copy first
+.tpl_set_default <- function(name, sp, study_dir = NULL) {
+  if (is.na(sp)) return(NA_character_)
+  if (!grepl("/", name, fixed = TRUE)) {
+    t <- tryCatch(.tpl_get(name, ".tpl_set_default()"), error = function(e) NULL)
+    p <- Filter(function(q) is.list(q) && identical(q$name, sp), t$params %||% list())
+    d <- if (length(p)) p[[1L]]$default
+    return(if (is.character(d) && length(d) == 1L) .na_scalar(d) else NA_character_)
+  }
+  tryCatch({
+    tf <- .template_file(name, study_dir)
+    series <- .tr_series(name, tf, study_dir, ".tpl_set_default()")
+    y <- .series_resolve(.series_read_yaml(tf), series, NULL, name)
+    d <- y$params[[sp]]$default
+    if (is.character(d) && length(d) == 1L) .na_scalar(d) else NA_character_
+  }, error = function(e) NA_character_)
+}
+
+# The set a template report says (NA when it names no template with a set
+# parameter, or says none: the template's default is then its set): its
+# argument (.tpl_set_arg()), else what its data says beside it
+# (.tpl_set_beside()), else its own row over the template's subjects row
+# (.tpl_set_rows_set()).  What the sheets write in the templates sheet's
+# population column -- not the default, which the template has without it
+.tpl_set_given <- function(o, study_dir = NULL) {
+  ts <- tryCatch(.tpl_spec_of(o), error = function(e) NULL)
+  sp <- if (!is.null(ts)) .tpl_set_param(ts$name, study_dir) else NA_character_
+  if (is.na(sp)) return(NA_character_)
+  a <- .na_scalar(unlist(ts$args[[sp]]))
+  if (!is.na(a)) return(a)
+  b <- .tpl_set_beside(o)
+  if (!is.na(b)) return(b)
+  .tpl_set_rows_set(o, ts, sp, study_dir)
+}
+
+# The set a template report's own data rows give its template's subjects
+# row (a row of that id over the template's, A2-T Q6; in a resolved report
+# the row as the template filled it): NA when none, or several
+.tpl_set_rows_set <- function(o, ts, sp, study_dir = NULL) {
+  ids <- .tpl_set_row_ids(ts$name, sp, ts$args, study_dir)
+  rows <- Filter(function(a) .na_scalar(unlist(a[["id"]])) %in% ids, .data_rows(o))
+  v <- .rows_sets(rows)
+  if (length(v) == 1L) v else NA_character_
 }
 
 # A template report whose own data row replaces the template's subjects
 # row (its id) with a set other than the template argument's (A2-T Q6):
-# one row of the check's frame each (.check_rows()), an error
-.tpl_set_twice_rows <- function(o, id) {
+# one row of the check's frame each (.check_rows()), an error; a template
+# whose rows cannot be told (.tpl_set_row_ids()'s reason): a note that
+# says the set was not checked
+.tpl_set_twice_rows <- function(o, id, study_dir = NULL) {
   rows <- list(.check_rows())
-  arg <- .tpl_set_arg(o)
+  arg <- .tpl_set_arg(o, study_dir)
   if (!is.na(arg)) {
     ts <- .tpl_spec_of(o)
-    sp <- .tpl_set_param(ts$name)
-    subj <- .tpl_set_row_ids(ts$name, sp, ts$args)
+    sp <- .tpl_set_param(ts$name, study_dir)
+    subj <- .tpl_set_row_ids(ts$name, sp, ts$args, study_dir)
+    if (!is.null(attr(subj, "reason")) && length(.data_rows(o))) {
+      rows[[length(rows) + 1L]] <- .check_rows(
+        output_id = id, part = "data", item = "data$population", level = "note",
+        message = paste0("the set of the report's own rows against its template's argument is not ",
+                         "checked: ", attr(subj, "reason")))
+    }
     for (a in .data_rows(o)) {
       rid <- .na_scalar(unlist(a[["id"]]))
       p <- .rows_sets(list(a))
@@ -175,16 +246,17 @@
 #' listing's); else the one set the data rows that make its subjects carry
 #' (a table's; several: the set of the row its BIGN analysis reads); for a
 #' template report, its template's set parameter (the one that fills the
-#' template's subjects row), else the rows the template makes.  One rule
+#' template's subjects row), else its own data row over the template's
+#' subjects row, else the template's own default (canon 11-15 (1): demog's
+#' SAF, orr's ITT).  One rule
 #' for every kind; the sheets' population column, the page's set line and
 #' the checks read the same.
 #'
 #' @param output A report: a [tfl_output()] (or its list, as
 #'   [tfl_read_output()] gives it).
-#' @param study The study ([tfl_read_study_spec()]), or `NULL`.  With it, a
-#'   template report is resolved first, so that a set the template's
-#'   default gives is found; without it, a template report's set is its
-#'   argument only.
+#' @param study The study ([tfl_read_study_spec()]), or `NULL`.  With it,
+#'   the study's copies of the templates are read (a template file's
+#'   default as the study's series gives it).
 #' @return The set's id (`"SAF"`), `NA` for none.
 #' @seealso [tfl_set_report_set()] to write it.
 #' @examples
@@ -198,12 +270,6 @@ tfl_report_set <- function(output, study = NULL) {
   if (!is.list(output)) stop("tfl_report_set(): `output` is a report (tfl_output()).", call. = FALSE)
   if (!is.null(study) && !inherits(study, "tfl_study_spec")) {
     stop("tfl_report_set(): `study` is a tfl_study_spec (tfl_read_study_spec()).", call. = FALSE)
-  }
-  if (!is.null(study) && inherits(output, "tfl_output") && !is.null(.tpl_spec_of(output))) {
-    r <- tfl_resolve_output(output, study)
-    # (the rows the template made, with the report's own: no argument left to read)
-    r$template <- NULL
-    return(.report_set(r, study$dir))
   }
   .report_set(output, study$dir)
 }
@@ -219,11 +285,15 @@ tfl_report_set <- function(output, study = NULL) {
 #'     fills the template's subjects row, found from the template, not by a
 #'     name); a template with none: a report data row of the template's
 #'     subjects row's id, over the template's (`study` needed);
-#'   \item a report of its own rows (a code SPEC's table): every row that
-#'     makes the report's subjects -- of ADSL or of the set's dataset, of no
-#'     other's subjects and no code -- that names no set or the report's
-#'     current one.  A row of another set (a denominator) keeps its own.
+#'   \item a report of its own rows (a code SPEC's table): the rows that
+#'     carry the report's current set (a row of no other's subjects that
+#'     names it); none: every row that makes its subjects -- of ADSL or of
+#'     the set's dataset, of no other's subjects and no code -- and names
+#'     no set.  A row of another set (a denominator) keeps its own.  Rows
+#'     of several sets and no BIGN analysis to say the report's stop.
 #' }
+#' A template report's own data row over the template's subjects row
+#' gives no set of its own once the argument is written (written once).
 #' It never writes `common:`; a `common: population` the report has is
 #' taken away (the set is then written once).  A second call with the same
 #' set changes nothing.
@@ -231,9 +301,10 @@ tfl_report_set <- function(output, study = NULL) {
 #' @inheritParams tfl_report_set
 #' @param population The set's id (`"SAF"`); `NA` or `NULL` takes the set
 #'   away.
-#' @param study The study ([tfl_read_study_spec()]), or `NULL`: its sets'
-#'   datasets say which rows make subjects (a set defined on ADPC), and a
-#'   template with no set parameter is resolved with it.
+#' @param study The study ([tfl_read_study_spec()]), or `NULL`: a set it
+#'   does not register stops (canon 11-15 (2)); its sets' datasets say
+#'   which rows make subjects (a set defined on ADPC), and a template with
+#'   no set parameter is resolved with it.
 #' @return The report, its set written.
 #' @seealso [tfl_report_set()]
 #' @examples
@@ -247,8 +318,15 @@ tfl_set_report_set <- function(output, population, study = NULL) {
   if (!is.list(output)) stop(fn, ": `output` is a report (tfl_output()).", call. = FALSE)
   pop <- .na_scalar(unlist(population))
   if (length(unlist(population)) > 1L) stop(fn, ": `population` is one set's id.", call. = FALSE)
+  # (a set is one the study registers, canon 11-15 (2))
+  if (!is.null(study) && !is.na(pop)) {
+    m <- .pop_unknown_text(pop, .study_set_ids(study$data))
+    if (!is.null(m)) stop(fn, ": ", m, ".", call. = FALSE)
+  }
   pops <- if (!is.null(study)) study$data$populations
   o <- output
+  # (the set the report has, its old `common:` read: the rows that carry it change)
+  old <- .report_set(o, study$dir)
   # (never `common:`: an old one is taken away, the set is written once)
   if (is.list(o$common) && !is.null(o$common[["population"]])) {
     o$common <- o$common[setdiff(names(o$common), "population")]
@@ -263,6 +341,15 @@ tfl_set_report_set <- function(output, population, study = NULL) {
       for (k in c("ard", "content")) if (sp %in% names(o$template[[k]])) part <- k
       o$template[[part]][[sp]] <- val
       if (!length(o$template[[part]])) o$template[[part]] <- NULL
+      # (a report row over the template's subjects row names no set of its
+      # own: the argument is the one place, A2-T Q6)
+      ids <- .tpl_set_row_ids(ts$name, sp, ts$args, study$dir)
+      own_off <- function(rows) lapply(rows, function(a) {
+        if (is.list(a) && .na_scalar(unlist(a[["id"]])) %in% ids) a[["population"]] <- NULL
+        a
+      })
+      if (is.list(o$data) && length(o$data) && is.null(names(o$data))) o$data <- own_off(o$data)
+      if (is.list(o$ard$analysis_data)) o$ard$analysis_data <- own_off(o$ard$analysis_data)
       return(o)
     }
     # (a figure's data written as a map: its key, as any report's map; a
@@ -282,11 +369,10 @@ tfl_set_report_set <- function(output, population, study = NULL) {
            "so that the row's id is read from the template.", call. = FALSE)
     }
     r <- tfl_resolve_output(o, study)
-    old <- .report_set(r, study$dir)
-    from <- unique(c(.pop_from(pops, pop), .pop_from(pops, old)))
-    ids <- unlist(lapply(.data_rows(r), function(a) {
-      if (.set_row_takes(a, old, from)) .na_scalar(unlist(a[["id"]]))
-    }))
+    rold <- .report_set(r, study$dir)
+    rr <- .data_rows(r)
+    takes <- .set_row_taker(rr, rold, unique(c(.pop_from(pops, pop), .pop_from(pops, rold))), fn, o$id)
+    ids <- unlist(lapply(rr, function(a) if (takes(a)) .na_scalar(unlist(a[["id"]]))))
     own <- if (is.list(o$data) && is.null(names(o$data))) o$data else list()
     for (i in stats::na.omit(ids)) {
       k <- match(i, vapply(own, function(a) .na_scalar(unlist(a[["id"]])), ""))
@@ -298,10 +384,9 @@ tfl_set_report_set <- function(output, population, study = NULL) {
     return(o)
   }
   d <- o[["data"]]
-  old <- .report_set(o)
-  from <- unique(c(.pop_from(pops, pop), .pop_from(pops, old)))
-  takes <- function(a) .set_row_takes(a, old, from)
-  rows_carry <- any(vapply(.data_rows(o), function(a) takes(a) && !is.null(a[["population"]]), NA))
+  rows <- .data_rows(o)
+  takes <- .set_row_taker(rows, old, unique(c(.pop_from(pops, pop), .pop_from(pops, old))), fn, o$id)
+  rows_carry <- any(vapply(rows, function(a) takes(a) && .set_row_carries(a), NA))
   if (is.list(d) && !is.null(names(d)) && .set_on_data(o$kind, d) &&
       (!is.null(d[["population"]]) || !rows_carry)) {
     o$data[["population"]] <- val
@@ -311,7 +396,7 @@ tfl_set_report_set <- function(output, population, study = NULL) {
     if (takes(a)) a[["population"]] <- val
     a
   })
-  hit <- any(vapply(.data_rows(o), takes, NA))
+  hit <- any(vapply(rows, takes, NA))
   if (is.list(d) && length(d) && is.null(names(d))) o$data <- set_rows(d)
   if (is.list(o$ard$analysis_data)) o$ard$analysis_data <- set_rows(o$ard$analysis_data)
   if (!hit && !is.na(pop)) {
@@ -322,11 +407,22 @@ tfl_set_report_set <- function(output, population, study = NULL) {
   o
 }
 
-# Does a data row take the report's set (`old`, the set the report has;
-# `from`, the datasets a subjects row reads, .pop_from())?  A row that makes
-# subjects (.entry_is_subjects()) and names no set or `old`
-.set_row_takes <- function(a, old, from) {
-  if (!.entry_is_subjects(a, from)) return(FALSE)
-  p <- .na_scalar(unlist(a[["population"]]))
-  is.na(p) || (!is.na(old) && identical(p, old))
+# Which of a report's data rows (`rows`) take its set, as a function of a
+# row: the rows that carry the set it has (`old`, .set_row_carries()) --
+# the rows the reader reads it from; none: the rows that make its subjects
+# (.entry_is_subjects(); `from`, the datasets one reads, .pop_from()) and
+# name no set.  Rows of several sets and no set the report has (no BIGN
+# analysis to say which) stop: the writer cannot tell which rows are the
+# report's.  `fn`, `id` head the stop
+.set_row_taker <- function(rows, old, from, fn = "tfl_set_report_set()", id = NULL) {
+  own <- function(a) .na_scalar(unlist(a[["population"]]))
+  carries <- function(a) .set_row_carries(a) && !is.na(old) && identical(own(a), old)
+  if (any(vapply(rows, carries, NA))) return(carries)
+  sets <- .rows_sets(rows)
+  if (is.na(old) && length(sets) > 1L) {
+    stop(sprintf(paste0("%s: %s's data rows carry several analysis sets (%s) and no BIGN analysis says ",
+                        "which is the report's: add the BIGN analysis of the report's set first"),
+                 fn, id %||% "the report", paste(sets, collapse = ", ")), call. = FALSE)
+  }
+  function(a) is.na(own(a)) && .entry_is_subjects(a, from)
 }

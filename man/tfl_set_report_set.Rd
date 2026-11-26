@@ -13,9 +13,10 @@ tfl_set_report_set(output, population, study = NULL)
 \item{population}{The set's id (\code{"SAF"}); \code{NA} or \code{NULL} takes the set
 away.}
 
-\item{study}{The study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}), or \code{NULL}: its sets'
-datasets say which rows make subjects (a set defined on ADPC), and a
-template with no set parameter is resolved with it.}
+\item{study}{The study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}), or \code{NULL}: a set it
+does not register stops (canon 11-15 (2)); its sets' datasets say
+which rows make subjects (a set defined on ADPC), and a template with
+no set parameter is resolved with it.}
 }
 \value{
 The report, its set written.
@@ -30,11 +31,15 @@ none and its subjects rows carry the set (then those rows, 3);
 fills the template's subjects row, found from the template, not by a
 name); a template with none: a report data row of the template's
 subjects row's id, over the template's (\code{study} needed);
-\item a report of its own rows (a code SPEC's table): every row that
-makes the report's subjects -- of ADSL or of the set's dataset, of no
-other's subjects and no code -- that names no set or the report's
-current one.  A row of another set (a denominator) keeps its own.
+\item a report of its own rows (a code SPEC's table): the rows that
+carry the report's current set (a row of no other's subjects that
+names it); none: every row that makes its subjects -- of ADSL or of
+the set's dataset, of no other's subjects and no code -- and names
+no set.  A row of another set (a denominator) keeps its own.  Rows
+of several sets and no BIGN analysis to say the report's stop.
 }
+A template report's own data row over the template's subjects row
+gives no set of its own once the argument is written (written once).
 It never writes \verb{common:}; a \code{common: population} the report has is
 taken away (the set is then written once).  A second call with the same
 set changes nothing.

@@ -10,10 +10,9 @@ tfl_report_set(output, study = NULL)
 \item{output}{A report: a \code{\link[=tfl_output]{tfl_output()}} (or its list, as
 \code{\link[=tfl_read_output]{tfl_read_output()}} gives it).}
 
-\item{study}{The study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}), or \code{NULL}.  With it, a
-template report is resolved first, so that a set the template's
-default gives is found; without it, a template report's set is its
-argument only.}
+\item{study}{The study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}), or \code{NULL}.  With it,
+the study's copies of the templates are read (a template file's
+default as the study's series gives it).}
 }
 \value{
 The set's id (\code{"SAF"}), \code{NA} for none.
@@ -24,7 +23,9 @@ on the data stage): a data map's own \code{population} (a figure's, a
 listing's); else the one set the data rows that make its subjects carry
 (a table's; several: the set of the row its BIGN analysis reads); for a
 template report, its template's set parameter (the one that fills the
-template's subjects row), else the rows the template makes.  One rule
+template's subjects row), else its own data row over the template's
+subjects row, else the template's own default (canon 11-15 (1): demog's
+SAF, orr's ITT).  One rule
 for every kind; the sheets' population column, the page's set line and
 the checks read the same.
 }

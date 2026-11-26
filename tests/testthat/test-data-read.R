@@ -52,7 +52,7 @@ test_that("the data: list is the report's definitions, written back as data:, no
 
 test_that("each old place stops with a line saying where it went", {
   old_pop <- dr_write(c("id: T-1", "kind: table", "population: SAF", "content: []"))
-  expect_error(tfl_read_output(old_pop), "`population:` -> `common: population`", fixed = TRUE)
+  expect_error(tfl_read_output(old_pop), "`population:` -> the report's data", fixed = TRUE)
   old_ard <- dr_write(c("id: T-1", "kind: table", "ard:", "  analysis_data:", "    - {id: adsl_sub, from: ADSL}",
                         "  analyses: []", "content: []"))
   expect_error(tfl_read_output(old_ard), "`ard: analysis_data:` moved to `data:`", fixed = TRUE)
@@ -60,7 +60,7 @@ test_that("each old place stops with a line saying where it went", {
   expect_error(tfl_read_output(old_map), "a table reads its ARD", fixed = TRUE)
   old_lst <- dr_write(c("id: L-1", "kind: listing", "ard:", "  analysis_data:", "    - {id: a, from: ADAE}", "content: []"))
   expect_error(tfl_read_output(old_lst), "moved to `data:`", fixed = TRUE)
-  expect_error(tfl_output("T-1", "table", population = "SAF"), "`population` -> `common: population`", fixed = TRUE)
+  expect_error(tfl_output("T-1", "table", population = "SAF"), "`population:` -> the report's data", fixed = TRUE)
   unlink(c(old_pop, old_ard, old_map, old_lst))
 })
 

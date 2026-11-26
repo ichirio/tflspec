@@ -96,7 +96,7 @@ a style set of \code{defaults.yml}'s \verb{styles:}, or a built-in one such as
 \code{"tfl_small"}; \code{\link[=tfl_styles]{tfl_styles()}} lists them); \code{NULL}: the template's set
 value, else the study's \code{settings.style}, else \code{tfl_standard}.}
 
-\item{population}{Removed: \code{population} -> \code{common: population}.}
+\item{population}{Removed: the set is the data's (\code{\link[=tfl_set_report_set]{tfl_set_report_set()}}).}
 }
 \value{
 \code{tfl_r()}: a string of class \code{tfl_r}; \code{tfl_unset()}: an object
