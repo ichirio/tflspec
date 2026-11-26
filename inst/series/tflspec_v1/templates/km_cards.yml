@@ -7,7 +7,10 @@
 # (`population:`, A2), the argument `population` (the report's own set,
 # `data: {population: SAF}`, fills it): the program makes its subjects and
 # joins the records to them; no step keeps it (a `flag` step is for a
-# record flag).
+# record flag).  The parameter is the argument `param`, default OS (an
+# ADaM value keeps its default, canon 11-09): the data are steps, which a
+# report's data rows do not reach, so it is not a row's `where` as in
+# km_simple and forest_hr.
 template: km_cards
 label: KM curves (cards)
 kind: figure
@@ -32,9 +35,10 @@ params:
     type: string
     input: pick
     choices: levels(PARAMCD)
-    required: true
+    default: OS
+    unset: stop
     step: data
-    tier: required
+    tier: usual
     description: The parameter (PARAMCD) whose time to event is drawn.
   time_unit:
     type: enum[days|weeks|months|years]

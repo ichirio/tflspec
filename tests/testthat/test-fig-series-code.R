@@ -77,8 +77,11 @@ test_that("a forest_hr report's program calls forest_hr() on the ARD with its co
   o <- tfl_template_resolve(sfc_forest(), study = sfc_study)
   expect_identical(o$figure, "forest_hr")
   code <- tfl_content_code(o)
+  # (the look params with a default, forest_hr()'s, written as every
+  # template argument with a value is)
   expect_identical(code[-1L], c("content <- tflspec::forest_hr(", "  ard = ard,", "  params = list(",
-                                "    comparison = \"Drug X\"", "  )", ")"))
+                                "    comparison = \"Drug X\",", "    size_by_n = FALSE,",
+                                "    bold_headings = FALSE", "  )", ")"))
   expect_false(any(grepl("km_fit", code, fixed = TRUE)))
   expect_true(isTRUE(attr(.content_fig_code_out(o), "ard")))
 })

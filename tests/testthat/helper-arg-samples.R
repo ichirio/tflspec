@@ -198,7 +198,8 @@ as_special <- list(
   `tflspec_v1/tflspec_hierarchy.analysis_ids` = function() list(list(ANY = "ANY_AE", L2 = "PT"), tfl_unset()),
   `tflspec_v1/forest_hr.comparison` = function() list("Drug X", "Control", tfl_unset()),
   `tflspec_v1/forest_hr.ref` = function() list("Control", "Drug X", tfl_unset()),
-  `tflspec_v1/km_cards.param` = function() list("OS"),
+  `tflspec_v1/forest_hr.n_by_arm` = function() list(c("Drug X", "Control"), tfl_unset()),
+  `tflspec_v1/km_cards.param` = function() list("PFS"),
   `tflspec_test/lab_tox_shift.conditions` = function() list(list(
     list(tox_dir = "High", param = "Bilirubin (umol/L)"))),
   `tflspec_test/listing.from` = function() list("ADLB"),

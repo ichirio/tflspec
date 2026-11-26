@@ -157,6 +157,13 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
              call. = FALSE)
       }
       val <- given[[p]]
+      # none (!unset) for an argument whose `unset: stop` says the template
+      # needs a value (canon 1.20): it stops here, naming it, for every
+      # template -- not later in a step or a call that lacks it
+      if (inherits(val, "tfl_unset") && identical(defs$unset[[i]], "stop")) {
+        stop(who, ": ", template, "'s ", p, " cannot be none (!unset): the template needs a value ",
+             "(unset: stop). Leave it out for the template's default, or give a value.", call. = FALSE)
+      }
       # a map whose default is the series' (!series K) or the study's
       # (!study K, with or without a fallback): the report's names
       # over that map, the rest as the series has them (canon e023312)
