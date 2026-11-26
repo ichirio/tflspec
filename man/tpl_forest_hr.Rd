@@ -7,7 +7,7 @@
 \usage{
 tpl_forest_hr(
   ard,
-  group = "TRT01A",
+  group,
   subgroups = c("SEX", "AGEGR1"),
   ref = NULL,
   comparison = NULL,
@@ -25,7 +25,8 @@ tpl_forest_layout(fig, n_by_arm = NULL)
 \arguments{
 \item{ard}{The study ARD's rows of this report.}
 
-\item{group}{The arms compared (\code{TRT01A}), bare or as text.}
+\item{group}{The arms compared (\code{TRT01A}), bare or as text; required (no
+default: the report says its group).}
 
 \item{subgroups}{The subgroups (\code{c(SEX, AGEGR1)}), bare or as text.}
 

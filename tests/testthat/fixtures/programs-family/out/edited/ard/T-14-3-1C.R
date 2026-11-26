@@ -24,8 +24,7 @@ adae <- order_levels(adae, c("AEBODSYS", "AEDECOD"), from = adsl)
 adsl_saf <- adsl |>
   filter(SAFFL == "Y") |>
   set_levels(TRT01A = cl_trt01a)
-# adae_saf: the records. ADAE of the subjects of adsl_saf, TRT01A from ADSL;
-# where
+# adae_saf: the records. ADAE of the subjects of adsl_saf, TRT01A from ADSL
 adae_saf <- adae |>
   select(-any_of("TRT01A")) |>
   inner_join(
@@ -40,8 +39,23 @@ adae_saf <- adae |>
 # BIGN: Subjects per group
 .ard_bign <- adsl_saf |>
   mutate(across(where(is.character), ~ na_if(.x, ""))) |>
-  ard_tabulate(variables = TRT01A, fmt_fun = everything() ~ fmt_default) |>
-  apply_fmt_fun() |>
+  ard_tabulate(variables = TRT01A) |>
+  fmt_ard(
+    modifyList(
+      fmt_default,
+      list(
+        N = 0L,
+        mean = 2L,
+        sd = 3L,
+        median = 1L,
+        min = 0L,
+        max = 0L,
+        p = label_round(1, scale = 100),
+        `AGE:mean` = 1L,
+        `AGE:sd` = 2L
+      )
+    )
+  ) |>
   tag_ard(report_id, "BIGN", population = "SAF")
 
 # AE: TEAE by SOC / PT
@@ -53,7 +67,22 @@ adae_saf <- adae |>
     id = USUBJID,
     over_variables = TRUE
   ) |>
-  fmt_ard(fmt_default) |>
+  fmt_ard(
+    modifyList(
+      fmt_default,
+      list(
+        N = 0L,
+        mean = 2L,
+        sd = 3L,
+        median = 1L,
+        min = 0L,
+        max = 0L,
+        p = label_round(1, scale = 100),
+        `AGE:mean` = 1L,
+        `AGE:sd` = 2L
+      )
+    )
+  ) |>
   tag_ard(report_id, "AE", population = "SAF")
 # AE: each depth an analysis (AE_ANY, AE_L1, AE_L2); the by counts are BIGN's
 .ard_ae <- .ard_ae |>

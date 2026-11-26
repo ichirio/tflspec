@@ -149,8 +149,13 @@ test_that("tfl_check_spec(): a template's population that differs from the repor
   p <- tflspec:::.check_static_rows(mk(list(population = "ITT")), "T1")
   expect_identical(p$level, "warning")
   expect_identical(p$item, "population")
-  expect_match(p$message, "(ITT) differs from the report's `common: population` (SAF)", fixed = TRUE)
-  expect_match(p$message, "make the report's `common: population` the one to use", fixed = TRUE)
+  expect_match(p$message, "(ITT) differs from the report's analysis set (SAF", fixed = TRUE)
+  expect_match(p$message, "write the set once, on the report's data", fixed = TRUE)
+  # the report's set on its data (the canon's place) is read too (the one reader)
+  f <- tp_output(list(name = "ae_soc_pt", args = list(population = "ITT")), NULL)
+  f$data <- list(source = "code", population = "SAF")
+  expect_match(tflspec:::.check_static_rows(f, "T1")$message, "(ITT) differs from the report's analysis set (SAF",
+               fixed = TRUE)
 })
 
 test_that("demog has no `population` parameter: the report's `population:` drives it, args naming it stop", {

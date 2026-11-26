@@ -333,10 +333,25 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     o <- outs[[id]]
     e <- toc_index[[id]] %||% list()
     tpl <- .tpl_spec_of(o)
+    pset <- .planner_set(o, e[["population"]], tpl)
+    if (!is.na(.na_scalar(unlist(e[["population"]]))) && is.na(pset)) {
+      warning(sprintf(paste0("%s: the TOC's analysis set %s is not kept: the report's data names ",
+                             "%s, and the sheets' population column is the report's set"),
+                      id, .na_scalar(unlist(e[["population"]])),
+                      if (is.na(.out_population_or_data(o))) "none" else .out_population_or_data(o)),
+              call. = FALSE)
+      note(id, "planner", paste0("the TOC's analysis set ", .na_scalar(unlist(e[["population"]])),
+                                 " is not kept: the report's data does not name it"))
+    }
     planner[[length(planner) + 1L]] <- list(
       output_id = id, description = cell(e$label %||% o$label), setup_code = NA_character_,
       process_code = .first_r_step(o$data$steps),
-      section = cell(e$section), population = cell(e$population %||% .out_population(o)),
+      # (the report's analysis set: its data's own, a listing's or a figure's,
+      # else `common: population` until `common` goes -- canon 11-15; the
+      # TOC's line only where it adds nothing to the report, .planner_set();
+      # tfl_check_spec() says a TOC line that differs, .check_set_rows())
+      section = cell(e$section),
+      population = cell(pset),
       datasets = cell(e$datasets %||% .records_dataset(o)), batches = cell(e$sets))
     if (!is.null(.records_dataset(o)) && !is.null(o$data$where)) {
       note(id, "data", "a records table's where (its dataset's condition) stays in YAML")
@@ -407,7 +422,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     # a template report: its name and arguments on the templates sheet, and
     # that is all of the template; the items are made again from them
     if (!is.null(tpl)) {
-      enc <- .tpl_sheets_encode(id, o$kind, .na_scalar(o$label), tpl, .out_population(o))
+      enc <- .tpl_sheets_encode(id, o$kind, .na_scalar(o$label), tpl, .report_set(o))
       trows[[length(trows) + 1L]] <- enc$row
       tparam_rows <- c(tparam_rows, enc$rows)
       # (its condition rows: the conditions sheet's, analysis_id blank)
@@ -441,7 +456,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     }
     # the report's ARD analyses and analysis data, whatever its kind
     for (a in o$ard$analysis_data %||% list()) {
-      a <- .entry_pop_inject(a, .out_population(o), .pop_from(s$data$populations, .out_population(o)))
+      a <- .entry_pop_inject(a, .rows_set(o), .pop_from(s$data$populations, .rows_set(o)))
       m <- lapply(a, cell); m$data_id <- m$id; m$id <- NULL
       if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
       adata[[length(adata) + 1L]] <- c(list(output_id = id), m)
@@ -489,7 +504,12 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     } else if (o$kind == "listing") {
       lr <- list(output_id = id)
       for (k in c("dataset", "data", "where", "sort")) if (!is.null(o$data[[k]])) lr[[k]] <- cell(o$data[[k]])
-      if (!is.null(o$data$population)) lr$population_id <- cell(o$data$population)
+      # (its analysis set: its own, else the report's, .data_population();
+      # a listing of an analysis data has that data's, on the data's row:
+      # only a set written beside it is kept, which the checks refuse,
+      # .data_both())
+      pop <- if (is.null(o$data[["data"]])) .data_population(o$data, o) else o$data[["population"]]
+      if (!all(is.na(unlist(pop)))) lr$population_id <- cell(pop)
       # what the listing sheets' columns cannot say is kept as YAML: the
       # items in the listing's content_more, a column's other arguments in
       # its row's more (read back by .conv_output(): nothing lost)
@@ -533,7 +553,8 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       for (k in c("ggplot2_version", "plot", "plots", "compose", "figure")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]
       figures[[id]] <- fd
       # what the design list has no place for is said, by the report
-      lost <- c(setdiff(names(o$data), c("steps", "code", "datasets", "ard", "source")),
+      # (its analysis set is the planner's population column, .report_set())
+      lost <- c(setdiff(names(o$data), c("steps", "code", "datasets", "ard", "source", "population")),
                 if (!is.null(o$data$source) && !identical(o$data$source, "code")) "source")
       lost <- c(lost, setdiff(names(o), c(.output_fields, "template", "ggplot2_version", "plot", "plots", "compose", "figure")))
       if (length(lost)) {

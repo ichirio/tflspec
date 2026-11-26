@@ -3,7 +3,7 @@
 # the compat table changes
 
 test_that("the walk's answers do not depend on what was worked out before", {
-  d <- tfl_fig_template("km_risk_table")
+  d <- tfl_fig_template("km_risk_table", group = "TRT01P")
   fresh <- function(target) {
     rm(list = grep("^ge:", ls(.gg_memo), value = TRUE), envir = .gg_memo)
     .gg_memo$glob <- list()

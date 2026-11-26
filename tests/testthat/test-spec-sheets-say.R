@@ -84,7 +84,11 @@ test_that("a figure written as items comes back with its items and data, either 
     b <- tfl_read_outputs(x$to)[["F-1"]]
     expect_length(b$content, 4L)
     expect_identical(b$content, a$content, info = fg)
-    expect_identical(b$data, a$data, info = fg)
+    expect_identical(b$data$steps, a$data$steps, info = fg)
+    # (its analysis set `common: {population: SAF}` comes back on its data:
+    # canon 11-15, a figure's set is its data's, A2-1)
+    expect_identical(b$data[["population"]], "SAF", info = fg)
+    expect_null(b$common[["population"]], info = fg)
     expect_false(any(x$sh$not_converted$output %in% "F-1"), info = fg)
   }
   # the design list as a file (spec/figures/<id>.yml) keeps the items too

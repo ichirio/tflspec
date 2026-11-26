@@ -36,7 +36,7 @@
 #'   (`added`, `changed`, `removed`, `moved`, `same`), `field`, `was`,
 #'   `now` (for `changed` the field's values; for `moved` the positions).
 #' @examples
-#' cur <- tfl_fig_template("km_simple")
+#' cur <- tfl_fig_template("km_simple", group = "TRT01P")
 #' new <- cur
 #' new$layers <- c(new$layers, list(list(layer = "censor_mark", shape = "x")))
 #' new$plot$x_label <- "Time (Months)"

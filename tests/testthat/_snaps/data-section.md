@@ -24,8 +24,7 @@
       # ---- data ----
       # adsl_sub: the subjects. population SAF (Safety Population)
       adsl_sub <- filter(adsl, SAFFL == "Y")
-      # adae_sub: the records. ADAE of the subjects of adsl_sub, TRT01A from ADSL;
-      # where
+      # adae_sub: the records. ADAE of the subjects of adsl_sub, TRT01A from ADSL
       adae_sub <- adae |>
         select(-any_of("TRT01A")) |>
         inner_join(

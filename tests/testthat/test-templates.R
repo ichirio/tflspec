@@ -738,7 +738,7 @@ test_that("a map of name and text also takes a list of {name, text}: the mapping
   expect_true(any(a == "Age (y)"))
   expect_false(any(a0 == "Age (y)"))
   # subgroup_labels (forest_hr) and worst_by (shift)
-  fa <- list(population = "SAF", param = "PFS")
+  fa <- list(population = "SAF", param = "PFS", group = "TRT01A")
   m <- tfl_template_expand("forest_hr", c(fa, list(subgroup_labels = list(SEX = "Gender"))))
   l <- tfl_template_expand("forest_hr", c(fa, list(subgroup_labels = nt(SEX = "Gender"))))
   expect_identical(l, m)
