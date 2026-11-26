@@ -2,16 +2,17 @@
 # pieces a GUI can list, add, remove and edit one by one.
 #
 #   data    one ordered list of steps from ADaM to what the layers draw:
-#           read a dataset (`df`), join ADSL, keep a PARAMCD or a
-#           population, derive a variable, change a time's unit, order a
-#           variable's values, rank rows; and the steps that make an object
-#           of their own (`name`): a Kaplan-Meier fit (survfit2), summary
-#           statistics by group and visit, a rate, counts, another
-#           dataset's rows ..., any function's result, and, for what has
-#           no step, the user's own code.  Consecutive steps on one object
-#           are one pipe.  Each step may say the object it reads (`in`) and
-#           the one it leaves (`out`; a named step's `name`): see
-#           .fig_step_io().  An `ard` step is an analysis of the figure's
+#           read a dataset (`df`), join ADSL, keep a PARAMCD or the
+#           records a flag marks, derive a variable, change a time's unit,
+#           order a variable's values, rank rows (the analysis set is no
+#           step: the report's data's `population:`); and the steps that
+#           make an object of their own (`name`): a Kaplan-Meier fit
+#           (survfit2), summary statistics by group and visit, a rate,
+#           counts, another dataset's rows ..., any function's result,
+#           and, for what has no step, the user's own code.  Consecutive
+#           steps on one object are one pipe.  Each step may say the object
+#           it reads (`in`) and the one it leaves (`out`; a named step's
+#           `name`): see .fig_step_io().  An `ard` step is an analysis of the figure's
 #           ARD (a row of the ARD definition, no line of the program).
 #           (Before 0.0.24.9074 the named steps were a list of their own,
 #           `stats`; such a design reads as one list.)
@@ -109,7 +110,8 @@ tfl_time_unit_days <- function() {
                                       "before the figure: read instead of the dataset")))),
     join = list(section = "data", label = "Join variables",
       help = paste("Variables of another dataset (e.g. ADSL's treatment, ADRS's best response),",
-                   "one row a subject; or only the rows of its subjects (semi: an analysis set's)."),
+                   "one row a subject; or only the rows of its subjects (semi: a subgroup's, e.g.",
+                   "AGE >= 65).  The analysis set is no join: the report's data's `population:`."),
       fields = rbind(
         .ff("dataset", "dataset", "Dataset", "ADSL", required = TRUE),
         .ff("where", "expr", "Its rows (R)", help = "e.g. PARAMCD == \"BOR\""),
@@ -123,10 +125,12 @@ tfl_time_unit_days <- function() {
       fields = rbind(
         .ff("value", "param", "PARAMCD", required = TRUE),
         .ff("variable", "variable", "Variable", "PARAMCD"))),
-    flag = list(section = "data", label = "Keep a population",
-      help = "The rows whose flag is \"Y\" (FASFL, SAFFL, ANL01FL ...).",
+    flag = list(section = "data", label = "Keep records whose flag is Y",
+      help = paste("The records a record flag marks (ANL01FL, TRTEMFL ...).  The analysis set",
+                   "(FAS, SAF ...) is no step: write it on the report's data (`population:`);",
+                   "the report's program makes its subjects and joins the records to them."),
       fields = rbind(
-        .ff("variable", "flag", "Flag", "SAFFL", required = TRUE),
+        .ff("variable", "flag", "Flag", "ANL01FL", required = TRUE),
         .ff("value", "text", "Value", "Y"))),
     filter = list(section = "data", label = "Keep rows (condition)",
       help = "Any condition, in R.",
