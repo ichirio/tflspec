@@ -7,11 +7,12 @@
       Demographics
       Call: tfl_tpl(ard, "demog", ...)
       
-      required (3):
-        param       | effective (layer) | what
-        continuous  | - (template)      | the continuous variables, in order (required: this or `categorical`)
-        categorical | - (template)      | the categorical variables, in order (required: this or `continuous`)
-        by          | - (template)      | the column variable (the arms); not a default and not the study's treatment
+      required (4):
+        param             | effective (layer) | what
+        population [data] | - (template)      | the analysis set's id (SAF): the subjects the report is of
+        continuous        | - (template)      | the continuous variables, in order (required: this or `categorical`)
+        categorical       | - (template)      | the categorical variables, in order (required: this or `continuous`)
+        by                | - (template)      | the column variable (the arms); not a default and not the study's treatment
       
       usual (4):
         param   | effective (layer)                                                       | what
