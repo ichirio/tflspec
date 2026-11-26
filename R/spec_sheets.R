@@ -470,6 +470,14 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       if (is.list(a$levels) && !is.null(names(a$levels))) a$levels <- .levels_cell(a$levels)
       # (a map on a column as its pieces, the function's other arguments in
       # args: nothing left for cell() to drop)
+      # (`name:` / `from:`: the item's R name and its input, columns of the
+      # analyses sheet, written into the ARD program; a nested item is part
+      # of its parent's call and has neither)
+      if (!is.null(a$parent) && (!is.null(a$name) || !is.null(a$from))) {
+        .ard_stop(sprintf(paste0("`name:` / `from:` on a nested item (%s, in %s) cannot be written: ",
+                                 "it is a part of its parent's call, not an object of its own; ",
+                                 "put them on the parent."), a$id %||% "?", a$parent))
+      }
       a <- .analysis_keys_carried(a, id)
       m <- lapply(a, cell); m$analysis_id <- m$id; m$id <- NULL
       if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
