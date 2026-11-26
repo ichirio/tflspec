@@ -333,9 +333,16 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
     }
     if (identical(st$step, "code")) {
       d$data[[k]]$code <- .forest_est_code(group, subgroups, comparison, look$n_by_arm,
-                                           look$subgroup_labels,
-                                           isTRUE(look$bold_headings) && length(subgroups) > 0L)
+                                           look$subgroup_labels)
     }
+  }
+  # the bold headings' labels: a code step of their own after the rows' (a
+  # code step keeps only its `out`; the axis reads y_labels)
+  if (isTRUE(look$bold_headings) && length(subgroups)) {
+    k <- max(which(vapply(d$data, function(st) identical(st$step, "code"), NA)))
+    d$data <- append(d$data, list(list(
+      step = "code", label = "the axis's labels, the headings bold (plotmath; bquote() keeps the text as it is)",
+      out = "y_labels", code = .forest_labels_code())), after = k)
   }
   # the ARD read and the rows made: all the call's (no data steps)
   keep <- vapply(d$data, function(st) st$step %in% c("ard_stats", "code"), NA)

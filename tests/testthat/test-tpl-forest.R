@@ -28,6 +28,9 @@ test_that("forest_hr: the report's ARD (its Cox analyses) and the design that re
   code <- function(x) paste(vapply(x$data$steps, function(s) as.character(s$code %||% ""), ""), collapse = "
 ")
   expect_match(code(bold), "y_labels <- as.expression(Map(", fixed = TRUE)
+  # (a code step of its own after the rows': a code step keeps only its `out`)
+  expect_identical(vapply(bold$data$steps, `[[`, "", "step"), c("ard_stats", "code", "code"))
+  expect_identical(vapply(bold$data$steps[2:3], `[[`, "", "out"), c("est", "y_labels"))
   expect_identical(as.character(bold$plot$add[[1L]]$args$labels), "y_labels")
   plain <- tfl_template_expand("forest_hr", list(param = "PFS", population = "SAF", group = "TRT01A"))
   expect_false(grepl("y_labels", code(plain), fixed = TRUE))

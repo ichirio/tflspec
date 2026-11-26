@@ -3023,9 +3023,11 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
 
 # The code step of a forest plot: the rows to draw (the comparison arm, not
 # the reference), their label, text and y; a subgroup whose model did not
-# converge has no point (NE)
+# converge has no point (NE).  It keeps `est` only (a code step keeps its
+# `out`): the bold headings' labels are a step of their own,
+# .forest_labels_code()
 .forest_est_code <- function(group, subgroups, comparison = NULL, n_by_arm = NULL,
-                             subgroup_labels = NULL, bold_headings = FALSE) {
+                             subgroup_labels = NULL) {
   # the headings' text: a subgroup's label (the given, else the common ADaM
   # variables'), the variable's name when it has none
   lab <- .forest_sub_labels(subgroups, subgroup_labels)
@@ -3092,15 +3094,19 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
       if (length(n_by_arm)) "    across(starts_with(\"n_arm\"), ~ ifelse(head, \"\", .x)),",
       "    txt = ifelse(head, \"\", txt),",
       "    y = rev(row_number())",
-      "  )",
-      if (isTRUE(bold_headings)) c(
-        "# the axis's labels, the headings bold (plotmath; bquote() keeps the text as it is)",
-        "y_labels <- as.expression(Map(function(l, h) if (h) bquote(bold(.(l))) else l,",
-        "                              est$label, est$head))"))
+      "  )")
     else c(
       "est <- est |>",
       "  mutate(label = level, n = as.character(n_obs), y = rev(row_number()))")),
     collapse = "\n")
+}
+
+# The code step of a forest plot's bold headings (`out: y_labels`, after
+# the rows' step): the axis's labels, a heading bold (plotmath; bquote()
+# keeps the text as it is), read by its scale_y_continuous()
+.forest_labels_code <- function() {
+  paste(c("y_labels <- as.expression(Map(function(l, h) if (h) bquote(bold(.(l))) else l,",
+          "                              est$label, est$head))"), collapse = "\n")
 }
 
 #' The analyses of a forest plot: the figure's own ARD
