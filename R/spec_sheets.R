@@ -330,15 +330,25 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     o <- outs[[id]]
     e <- toc_index[[id]] %||% list()
     tpl <- .tpl_spec_of(o)
+    pset <- .planner_set(o, e[["population"]], tpl)
+    if (!is.na(.na_scalar(unlist(e[["population"]]))) && is.na(pset)) {
+      warning(sprintf(paste0("%s: the TOC's analysis set %s is not kept: the report's data names ",
+                             "%s, and the sheets' population column is the report's set"),
+                      id, .na_scalar(unlist(e[["population"]])),
+                      if (is.na(.out_population_or_data(o))) "none" else .out_population_or_data(o)),
+              call. = FALSE)
+      note(id, "planner", paste0("the TOC's analysis set ", .na_scalar(unlist(e[["population"]])),
+                                 " is not kept: the report's data does not name it"))
+    }
     planner[[length(planner) + 1L]] <- list(
       output_id = id, description = cell(e$label %||% o$label), setup_code = NA_character_,
       process_code = .first_r_step(o$data$steps),
       # (the report's analysis set: its data's own, a listing's or a figure's,
       # else `common: population` until `common` goes -- canon 11-15; the
-      # TOC's line only when the data names none: the data's wins, and
+      # TOC's line only where it adds nothing to the report, .planner_set();
       # tfl_check_spec() says a TOC line that differs, .check_set_rows())
       section = cell(e$section),
-      population = cell(if (!is.na(.report_set(o))) .report_set(o) else e[["population"]]),
+      population = cell(pset),
       datasets = cell(e$datasets %||% .records_dataset(o)), batches = cell(e$sets))
     if (!is.null(.records_dataset(o)) && !is.null(o$data$where)) {
       note(id, "data", "a records table's where (its dataset's condition) stays in YAML")
@@ -433,10 +443,8 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
         ard = if (isTRUE(o$data$ard)) "TRUE" else NA_character_)
     }
     # the report's ARD analyses and analysis data, whatever its kind
-    # (its analysis set by the one reader: its data's, else `common:`)
-    rpop <- .report_set(o)
     for (a in o$ard$analysis_data %||% list()) {
-      a <- .entry_pop_inject(a, rpop, .pop_from(s$data$populations, rpop))
+      a <- .entry_pop_inject(a, .rows_set(o), .pop_from(s$data$populations, .rows_set(o)))
       m <- lapply(a, cell); m$data_id <- m$id; m$id <- NULL
       if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
       adata[[length(adata) + 1L]] <- c(list(output_id = id), m)

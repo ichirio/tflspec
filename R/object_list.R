@@ -258,8 +258,9 @@
       w <- sprintf("analysis[%d]", i)
       # (the item's name is its `name:`, else its stage's default, from its id)
       kd <- if (typed[i]) types[i] else .obj_returns_kind(a_fn[i], "analysis", types[i])
-      fr <- .obj_chr(e$data)
-      if (is.na(fr)) fr <- .obj_chr(e$from)
+      # (`[[`: a `$` would read an item's `dataset` as its `data`)
+      fr <- .obj_chr(e[["data"]])
+      if (is.na(fr)) fr <- .obj_chr(e[["from"]])
       row(NA_character_, if (named) cn else a_ids[i], cn, "analysis", kd, w, isTRUE(e$fixed), fr,
           if (named) "spec" else "default", a_ids[i])
       a_pos[i] <- length(rows)
@@ -967,7 +968,7 @@ tfl_output_name_check <- function(output, study = NULL) {
   for (a in o$ard$analyses %||% list()) {
     if (!is.list(a)) next
     who <- .obj_chr(a$id)
-    if (!is.null(a$from) && !is.null(a$data)) {
+    if (!is.null(a[["from"]]) && !is.null(a[["data"]])) {
       add(part = "analysis", item = who, level = "error", message = sprintf(
         paste0("analysis item `%s`: an analysis item takes its input from `from:` (the pipe) or `data:` ",
                "(the first argument), not both"), who))

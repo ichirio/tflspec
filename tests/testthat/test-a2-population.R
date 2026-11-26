@@ -252,7 +252,7 @@ test_that("the page's analysis set line reads the data's set (canon 11-15)", {
   expect_identical(.page_own_tokens(tab, st)$OUTPUT_POPULATION, "Full Analysis Set")
 })
 
-test_that("a figure's set on its data: the sheets keep its subjects row's set (canon 11-15)", {
+test_that("a figure's set on its data and on its subjects row: the sheets write it on the row, the YAML once, on the data (canon 11-15)", {
   d <- withr::local_tempdir()
   dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)
   writeLines(c("datasets:", "  - dataset: ADSL", "    path: data/adsl.rds",
@@ -265,12 +265,16 @@ test_that("a figure's set on its data: the sheets keep its subjects row's set (c
                                      variables = list("TRT01A"))))
   tfl_write_output(f, file.path(d, "spec", "outputs", "F-1.yml"))
   b <- tfl_sheets_from_yaml(d)
+  # the ARD program reads the row's set: the sheets' row has it
+  expect_identical(b$ard$analysis_data$population_id[b$ard$analysis_data$data_id == "adsl_saf"], "SAF")
   to <- file.path(d, "back")
   invisible(suppressWarnings(tfl_yaml_from_sheets(b, to)))
   back <- tfl_read_outputs(to)[["F-1"]]
-  # the ARD program reads the row's set: it stays on the row
+  # (the review of 2026-11-26, M1) back in YAML the set is the data's alone,
+  # as a table's is `common`'s: the subjects row takes it from there
+  # (.rows_set()), so that it follows the data's set when that changes
   ad <- back$ard$analysis_data
-  expect_identical(ad[[match("adsl_saf", vapply(ad, function(a) a$id, ""))]]$population, "SAF")
+  expect_null(ad[[match("adsl_saf", vapply(ad, function(a) a$id, ""))]][["population"]])
   expect_identical(back$data$population, "SAF")
   expect_null(back$common[["population"]])
 })
@@ -427,7 +431,22 @@ test_that("a report's set that is none of data.yml's: an error (Codex 8C)", {
   f$data$population <- "SAF"
   expect_identical(nrow(.check_set_rows(f, "F-1", st)), 0L)
   expect_null(.pop_unknown_text(NULL, "SAF"))
-  expect_null(.pop_unknown_text("X", character()))
+  # (the review of 2026-11-26, S1) a study that names no set: every set is
+  # unknown (a set is registered in data.yml, a report picks it); a study not
+  # known (NULL, an AI check given no study): not looked at
+  expect_match(.pop_unknown_text("X", character()),
+               "'X' is not an analysis set of spec/data.yml (it names none: register the set under `populations:`)",
+               fixed = TRUE)
+  expect_null(.pop_unknown_text("X", NULL))
+  # (a study with no data catalog, no data.yml: its sets are not known)
+  expect_null(.study_set_ids(list()))
+  expect_identical(.study_set_ids(list(datasets = list(list(dataset = "ADAE")))), character())
+  expect_identical(.study_set_ids(list(populations = list(list(id = "SAF"), list(id = "")))), "SAF")
+  st0 <- list(data = list(datasets = list(list(dataset = "ADAE"))))
+  l <- list(kind = "listing", data = list(source = "dataset", dataset = "ADAE", population = "flag:SAFFL"))
+  p <- .check_set_rows(l, "L-1", st0)
+  expect_identical(c(p$item, p$level), c("data$population", "error"))
+  expect_match(p$message, "'flag:SAFFL' is not an analysis set of spec/data.yml (it names none", fixed = TRUE)
 })
 
 # T-2: the N of ADSL's SAF; SYSBP of the records of the SAF subjects aged 65
@@ -487,4 +506,200 @@ test_that("an N the header shows: {n} in a column header that gives no values (Q
   expect_false(.bign_shown(t1))
   expect_false(.bign_shown(list(kind = "table", content = list(tfl_item("table_plan", list(cols = "TRT01A"))))))
   expect_false(.bign_shown(list(kind = "listing", content = t1$content)))
+})
+
+# ---- the independent review of 2026-11-26 ------------------------------------
+
+# A figure whose set is on its data map; its subjects row (`from: ADSL`) and
+# a records row joined to it name none
+a2_fig_rows <- function(id = "F-1", set = "SAF") {
+  f <- tfl_output(id, "figure", content = tfl_r("df <- advs_sub"))
+  f$data <- list(source = "code", population = set)
+  f$ard <- list(analysis_data = list(list(id = "adsl_sub", from = "ADSL"),
+                                     list(id = "advs_sub", from = "ADVS", subjects_in = "adsl_sub")),
+                analyses = list(list(id = "N", method = "categorical", data = "adsl_sub",
+                                     variables = list("TRT01A"))))
+  f
+}
+
+test_that("a set on a figure's data map reaches its subjects row: the ARD reads it (M1)", {
+  f <- a2_fig_rows()
+  expect_identical(.rows_set(f), "SAF")
+  r <- a2_back(a2_dir(list(f)))
+  ad <- r$sheets$ard$analysis_data
+  expect_identical(ad$population_id[ad$data_id == "adsl_sub"], "SAF")
+  expect_true(is.na(ad$population_id[ad$data_id == "advs_sub"]))
+  # back in YAML: where it was written, the data map alone
+  back <- r$back[["F-1"]]
+  expect_identical(back$data[["population"]], "SAF")
+  expect_null(back$ard$analysis_data[[1L]][["population"]])
+  expect_null(back$common[["population"]])
+  # the row follows the data's set
+  r2 <- a2_back(a2_dir(list(a2_fig_rows(set = "SCRF"))))
+  ad2 <- r2$sheets$ard$analysis_data
+  expect_identical(ad2$population_id[ad2$data_id == "adsl_sub"], "SCRF")
+  # a map that reads one of the report's analysis data: that data's set,
+  # its rows' (`common` until it goes), never the map's
+  l <- list(kind = "listing", common = list(population = "SCRF"),
+            data = list(source = "dataset", data = "advs_sub", population = "SAF"),
+            ard = list(analysis_data = f$ard$analysis_data))
+  expect_identical(.rows_set(l), "SCRF")
+  expect_identical(.data_population(l$data, l), "SCRF")
+})
+
+test_that("the page's set is one the report's rows carry, else a warning (M1)", {
+  st <- list(data = list(populations = list(list(id = "SAF", dataset = "ADSL"),
+                                            list(id = "SCRF", dataset = "ADSL"))))
+  f <- a2_fig_rows()
+  # (its subjects row takes the data's set: carried)
+  expect_identical(nrow(.check_set_rows(f, "F-1", st)), 0L)
+  # a subjects row of another set: the page says SAF, the numbers are SCRF's
+  f$ard$analysis_data[[1L]]$population <- "SCRF"
+  p <- .check_set_rows(f, "F-1", st)
+  expect_identical(c(p$item, p$level), c("data$population", "warning"))
+  expect_match(p$message, paste0("the page names analysis set SAF and no data row of the report carries it ",
+                                 "(its rows' sets: SCRF)"), fixed = TRUE)
+  # a subjects row made by code: no row carries a set
+  f$ard$analysis_data[[1L]] <- list(id = "adsl_sub", from = "ADSL", code = tfl_r("adsl"))
+  expect_match(.check_set_rows(f, "F-1", st)$message, "(its rows name none)", fixed = TRUE)
+  # an analysis of a dataset and the set carries it
+  f$ard$analyses[[1L]] <- list(id = "N", method = "categorical", dataset = "ADSL", population = "SAF",
+                               variables = list("TRT01A"))
+  expect_identical(nrow(.check_set_rows(f, "F-1", st)), 0L)
+})
+
+test_that("a TOC set the report does not name: the sheets keep the data as it is, and say so (S2)", {
+  l <- tfl_output("L-1", "listing", content = list(tfl_item("plan_listing", list(
+    cols = list(tfl_call("listing_col", list(vars = "USUBJID")))))))
+  l$data <- list(source = "dataset", dataset = "ADVS")
+  # its set on its subjects row only (SAMPLE-01's F-14-2-4): the TOC's line is the report's
+  f <- tfl_output("F-4", "figure", content = tfl_r("df <- adsl_saf"))
+  f$data <- list(source = "code")
+  f$ard <- list(analysis_data = list(list(id = "adsl_saf", from = "ADSL", population = "SAF")),
+                analyses = list(list(id = "N", method = "categorical", data = "adsl_saf",
+                                     variables = list("TRT01A"))))
+  toc <- c("outputs:", "  - id: L-1", "    kind: listing", "    population: SAF",
+           "  - id: F-4", "    kind: figure", "    population: SAF")
+  d <- a2_dir(list(l, f), toc)
+  w <- character()
+  b <- withCallingHandlers(tfl_sheets_from_yaml(d), warning = function(c) {
+    w <<- c(w, conditionMessage(c))
+    invokeRestart("muffleWarning")
+  })
+  expect_true(any(grepl("L-1: the TOC's analysis set SAF is not kept: the report's data names none", w,
+                        fixed = TRUE)))
+  expect_false(any(grepl("F-4: the TOC's", w, fixed = TRUE)))
+  pl <- b$planner
+  expect_true(is.na(pl$population[match("L-1", pl$output_id)]))
+  expect_identical(pl$population[match("F-4", pl$output_id)], "SAF")
+  to <- file.path(d, "back")
+  invisible(suppressWarnings(tfl_yaml_from_sheets(b, to)))
+  back <- tfl_read_outputs(to)
+  # nothing added to the listing's data: it reads all subjects, as written
+  expect_null(back[["L-1"]]$data[["population"]])
+  expect_null(back[["L-1"]]$common[["population"]])
+  # the figure's set and its TOC line kept
+  expect_identical(.out_population_or_data(back[["F-4"]]), "SAF")
+  toc_back <- yaml::read_yaml(file.path(to, "spec", "toc.yml"))$outputs
+  pop_of <- function(id) Filter(function(e) identical(e$id, id), toc_back)[[1L]]$population
+  expect_identical(pop_of("F-4"), "SAF")
+  expect_null(pop_of("L-1"))
+  # the check says it before
+  st <- list(data = list(populations = list(list(id = "SAF"), list(id = "SCRF"))),
+             toc = list(outputs = list(list(id = "L-1", kind = "listing", population = "SAF"))))
+  p <- .check_set_rows(l, "L-1", st)
+  expect_identical(c(p$item, p$level), c("toc$population", "warning"))
+  expect_match(p$message, "the TOC says analysis set SAF and the report's data names none", fixed = TRUE)
+  # a table's set is still `common`'s: its TOC line goes there as before
+  expect_identical(.planner_set(list(kind = "table", data = list(source = "ard")), "SAF"), "SAF")
+})
+
+test_that("tfl_check_spec() says a report's set rows: the TOC's line, an unknown set, a set beside an analysis data (S8)", {
+  skip_if_not_installed("haven")
+  d <- file.path(withr::local_tempdir(), "study")
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  # fictional subjects; the sets SAF and ITT (their flags)
+  ids <- sprintf("EX-1-%03d", 1:4)
+  haven::write_xpt(data.frame(STUDYID = "EX-1", USUBJID = ids, TRT01A = rep(c("Drug X", "Placebo"), 2),
+                              SAFFL = "Y", ITTFL = "Y", stringsAsFactors = FALSE),
+                   file.path(d, "adam", "adsl.xpt"))
+  haven::write_xpt(data.frame(STUDYID = "EX-1", USUBJID = ids, PARAMCD = "SYSBP", AVAL = 120,
+                              stringsAsFactors = FALSE), file.path(d, "adam", "advs.xpt"))
+  tfl_ai_study_init(d, adam = "adam", study_id = "EX-1")
+  put <- function(o) tfl_write_output(o, file.path(d, "spec", "outputs", paste0(o$id, ".yml")))
+  f <- tfl_output("F-1", "figure", label = "Ages", content = tfl_r("df <- adsl"))
+  f$data <- list(source = "code", population = "SAF")
+  put(f)
+  f2 <- tfl_output("F-2", "figure", label = "Ages", content = tfl_r("df <- adsl"))
+  f2$data <- list(source = "code", population = "flag:SAFFL")
+  put(f2)
+  l <- tfl_output("L-1", "listing", label = "Records", content = list(tfl_item("plan_listing", list(
+    cols = list(tfl_call("listing_col", list(vars = "USUBJID")))))))
+  l$ard <- list(analysis_data = list(list(id = "adsl_saf", from = "ADSL", population = "SAF"),
+                                     list(id = "advs_all", from = "ADVS", subjects_in = "adsl_saf")))
+  l$data <- list(source = "dataset", data = "advs_all", population = "SAF")
+  put(l)
+  writeLines(c("outputs:", "  - id: F-1", "    kind: figure", "    population: ITT",
+               "  - id: F-2", "    kind: figure", "  - id: L-1", "    kind: listing"),
+             file.path(d, "spec", "toc.yml"))
+  p <- suppressWarnings(tfl_check_spec(d, adam = FALSE))
+  # the study's TOC reaches the check
+  tp <- p[p$output_id %in% "F-1" & p$item %in% "toc$population", , drop = FALSE]
+  expect_identical(nrow(tp), 1L)
+  expect_identical(tp$level, "warning")
+  expect_match(tp$message, "the TOC says analysis set ITT and the report's data SAF", fixed = TRUE)
+  # the study's sets reach it
+  up <- p[p$output_id %in% "F-2" & p$item %in% "data$population" & p$level %in% "error", , drop = FALSE]
+  expect_identical(nrow(up), 1L)
+  expect_match(up$message, "'flag:SAFFL' is not an analysis set of spec/data.yml", fixed = TRUE)
+  # a set written beside the analysis data the listing reads: an error of L-1
+  expect_true(any(grepl("reads its `data` or a `population`; not both",
+                        p$message[p$output_id %in% "L-1" & p$level %in% "error"], fixed = TRUE)))
+})
+
+test_that("the AI's TOC lines and draft rows read the report's set where its data keeps it (S3)", {
+  l <- tfl_output("L-1", "listing", label = "Records", content = list(tfl_item("plan_listing", list(
+    cols = list(tfl_call("listing_col", list(vars = "USUBJID")))))))
+  l$data <- list(source = "dataset", dataset = "ADVS", population = "SAF")
+  d <- a2_dir(list(l))
+  expect_identical(.ai_draft_rows(d)$population, "SAF")
+  expect_identical(.ai_toc_add(d, "L-1"), "L-1")
+  toc <- yaml::read_yaml(file.path(d, "spec", "toc.yml"))$outputs
+  expect_identical(toc[[1L]]$population, "SAF")
+})
+
+test_that("an analysis item of `from:` and a `dataset`: no `data:` read into it (S7)", {
+  o <- tfl_output("T-1", "table",
+                  ard = list(analysis_data = list(list(id = "adae_sub", from = "ADAE")),
+                             analyses = list(list(id = "X", method = "categorical", from = "adae_sub",
+                                                  dataset = "ADAE", variables = list("AESOC")))))
+  p <- .check_object_rows(o, "T-1", "ADAE")
+  expect_false(any(grepl("not both", p$message, fixed = TRUE)))
+  o$ard$analyses[[1L]]$data <- "adae_sub"
+  p <- .check_object_rows(o, "T-1", "ADAE")
+  expect_true(any(grepl("not both", p$message, fixed = TRUE)))
+})
+
+test_that("the N check compares no value the program makes or reduces (S6)", {
+  expect_length(.n_count_pairs(a2_spec(), "T-1"), 1L)
+  # the counts' data derives the variable
+  x <- a2_spec()
+  x$analysis_data$derive <- c(NA, NA, "TRT01A = TRT01P", NA)
+  expect_length(.n_count_pairs(x, "T-1"), 0L)
+  # ... another variable: still compared
+  x$analysis_data$derive <- c(NA, NA, "AGEGR2 = AGE", NA)
+  expect_length(.n_count_pairs(x, "T-1"), 1L)
+  # the counts' rows reduced to one record a subject, or made by R
+  x <- a2_spec()
+  x$analysis_data$distinct[2L] <- "USUBJID"
+  expect_length(.n_count_pairs(x, "T-1"), 0L)
+  x <- a2_spec()
+  x$analysis_data$then <- c(NA, "dplyr::slice_head(n = 1)", NA, NA)
+  expect_length(.n_count_pairs(x, "T-1"), 0L)
+  # the N's rows derive it
+  x <- a2_spec()
+  x$analysis_data$derive <- c("TRT01A = TRT01P", NA, NA, NA)
+  expect_length(.n_count_pairs(x, "T-1"), 0L)
+  # an N of one record a subject (ADPC's subjects): still compared (Codex 6C)
+  expect_length(.n_count_pairs(a2_spec(bign_data = "adpc_subj"), "T-1"), 1L)
 })

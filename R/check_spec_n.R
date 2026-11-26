@@ -6,7 +6,8 @@
 # BIGN's variable.  Where the two data differ, a subject may be counted under
 # one group in the N and under another in the rows.  A data check, with the
 # study's data as the `!=` check reads them (.ne_na_reader()): a warning,
-# nothing rewritten.  Only an N the header shows (.bign_shown(), in
+# nothing rewritten; values the program makes or reduces (.n_known_vars()):
+# not compared.  Only an N the header shows (.bign_shown(), in
 # R/check_spec_header_n.R); the rows
 # compared are those the ARD program counts (the subjects it joins them to,
 # .n_subject_sets()); a condition that cannot be run here: no row.
@@ -73,6 +74,25 @@
   x$populations$dataset[match(f, paste0("pop_", .r_name(pid)))]
 }
 
+# Of the variables `vars`, those whose values an analysis counts as the
+# study's data has them (`r` a row of the analyses sheet, `ad` its report's
+# analysis data): none when its rows are made by R the check does not run
+# (a row's `code` or `then`, the analysis's own `code`) or, for the counts
+# (`counts`), reduced to one record a subject (`distinct`: the record kept
+# is not known here; the N's rows read whole only miss a difference); else
+# those no `derive` on the way (its analysis data's, its own) makes.  The
+# values a program makes cannot be compared: nothing is said of them (as
+# for a condition that cannot be run)
+.n_known_vars <- function(ad, r, vars, counts = TRUE) {
+  d <- r[["data"]] %||% NA
+  ch <- if (!is.na(d)) .adata_chain(ad, d)
+  rows <- ad[match(ch, ad$data_id), , drop = FALSE]
+  col <- function(df, k) if (k %in% names(df)) as.character(df[[k]]) else character()
+  made <- c(col(rows, "code"), col(rows, "then"), if (counts) col(rows, "distinct"), col(r, "code"))
+  if (any(!is.na(made) & nzchar(made))) return(character())
+  setdiff(vars, .derive_names(stats::na.omit(c(col(rows, "derive"), col(r, "derive")))))
+}
+
 # The rows of `df` the conditions keep (one value: all rows or none); NULL
 # when one cannot be run here (a derived column, a package's function): the
 # rows are not known, nothing is said of them
@@ -136,6 +156,8 @@
       if (!length(vb) || is.na(db)) next
       for (i in setdiff(seq_len(nrow(ao)), bn)) {
         v <- setdiff(intersect(vb, grp(i)), taken(i, db))
+        # (values the program makes or reduces on either side: not compared)
+        v <- intersect(.n_known_vars(ad, ao[i, ], v), .n_known_vars(ad, ao[b, ], v, counts = FALSE))
         di <- .n_rows_from(x, ad, ao[i, ])
         if (!length(v) || is.na(di) || identical(toupper(di), toupper(db))) next
         out[[length(out) + 1L]] <- list(
