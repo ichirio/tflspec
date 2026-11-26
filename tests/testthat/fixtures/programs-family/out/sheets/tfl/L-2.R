@@ -38,7 +38,7 @@ content <- as_rtftables(data, listing = lst)
 doc <- rtf_document(program_fallback = "L-2", file = "L-2.rtf") |>
   rtf_tables(content)
 generate_rtfreport(doc, file.path(".", paste0(report_id, ".rtf")), overwrite = TRUE)
-record_report(report_id)
+record_report(report_id, empty = nrow(data) == 0)
 
 # the end of this run
 options(tflplanner.run = NULL)

@@ -29,6 +29,12 @@ source("programs/tfl/fig_setup.R")
 # ---- data: the figure's data -----------------------------------------------
 # the report's data: ADSL, ADVS (data catalog)
 
+# the report's subjects: its analysis set (its data's population)
+adsl <- order_levels(adsl)
+
+# adsl_sub: the subjects. population SAF (Safety Analysis Set)
+adsl_sub <- filter(adsl, SAFFL == "Y")
+
 # ---- content: your code ----------------------------------------------------
 # your code: leaves `content`
 # adsl_sub: the subjects of the report's analysis set, made before this code

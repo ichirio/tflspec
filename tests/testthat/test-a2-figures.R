@@ -174,7 +174,9 @@ a2f_head <- "# the report's subjects: its analysis set (its data's population)"
 test_that("a designed figure's program: the subjects in its data part, its reads joined to them", {
   x <- a2f_fx()
   r <- x$reports[["F-14-2-3"]]
-  before <- a2f_prog(x, r)
+  # without a set (the fixture's figure may carry one: the sample's sets are on
+  # the data now)
+  before <- a2f_prog(x, a2f_pop(r, NULL))
   expect_false(any(startsWith(before, a2f_head)))
   expect_false(grepl(a2f_join("adsl_sub"), a2f_flat(before), fixed = TRUE))
   p <- a2f_prog(x, a2f_pop(r, "SAF"))
@@ -227,6 +229,21 @@ test_that("a figure of a `figure:` key: its data part is its ARD definition's, a
   r <- x$reports[["F-9"]]
   before <- a2f_prog(x, r)
   expect_identical(a2f_prog(x, a2f_pop(r, "SAF")), before)
+})
+
+test_that("a figure of a `figure:` key: its content code is written with the report's study (its set)", {
+  x <- a2f_fx()
+  skip_if(is.null(x$study), "the fixture has no study")
+  seen <- list()
+  testthat::local_mocked_bindings(tfl_content_code = function(output, ..., study = NULL) {
+    if (!is.null(output$figure)) seen[[length(seen) + 1L]] <<- list(study = study)
+    "content <- NULL"
+  })
+  p <- a2f_prog(x, a2f_pop(x$reports[["F-9"]], "SAF"))
+  expect_length(seen, 1L)
+  expect_false(is.null(seen[[1L]]$study))
+  expect_identical(seen[[1L]]$study, x$study)
+  expect_true("content <- NULL" %in% p)
 })
 
 # ---- a figure made in a session (canon 11-15: every way applies the set) ----

@@ -15,6 +15,14 @@ source("programs/tfl/fig_setup.R")
 adtte <- readRDS("data/adam/adtte.rds")
 adtte <- blank_as_na(adtte)
 
+# the report's subjects: its analysis set (its data's population)
+adsl <- readRDS("data/adam/adsl.rds") |>
+  blank_as_na() |>
+  order_levels()
+
+# adsl_sub: the subjects. population SAF (Safety Analysis Set)
+adsl_sub <- filter(adsl, SAFFL == "Y")
+
 # the ARD of T-14-2-2 (its rows of the study ARD)
 ard <- readRDS("output/ard/ard.rds") |>
   filter(output_id == "T-14-2-2")

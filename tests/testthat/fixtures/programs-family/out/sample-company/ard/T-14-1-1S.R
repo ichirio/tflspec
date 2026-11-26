@@ -1,8 +1,8 @@
 # ============================================================================
 #  Program    : programs/ard/T-14-1-1S.R
 #  Output     : T-14-1-1S -> its rows of output/ard/ard.rds
-#  Analyses   : DEMOG (Demographics, run together), CONT (Continuous), CAT
-#               (Categorical)
+#  Analyses   : BIGN (Subjects per group), DEMOG (Demographics, run
+#               together), CONT (Continuous), CAT (Categorical)
 #  Generated  : <masked>
 # ============================================================================
 
@@ -48,6 +48,13 @@ adsl_saf <- adsl |>
   )
 
 # ---- analyses ----
+# BIGN: Subjects per group
+.ard_bign <- adsl_saf |>
+  mutate(across(where(is.character), ~ na_if(.x, ""))) |>
+  ard_tabulate(variables = TRT01A, fmt_fun = everything() ~ fmt_default) |>
+  apply_fmt_fun() |>
+  tag_ard(report_id, "BIGN", population = "SAF")
+
 # DEMOG: Demographics, run together (runs CONT, CAT)
 .ard_demog <- adsl_saf |>
   ard_stack(
@@ -63,7 +70,8 @@ adsl_saf <- adsl |>
       variables = c(AGEGR1, SEX, RACE, ETHNIC),
       statistic = ~ c("n", "p"),
       fmt_fun = everything() ~ fmt_default
-    )
+    ),
+    .by_stats = FALSE
   ) |>
   fmt_ard(fmt_default, skip = c("AGE", "AGEGR1", "SEX", "RACE", "ETHNIC")) |>
   tag_ard(
@@ -75,7 +83,7 @@ adsl_saf <- adsl |>
 
 # the report's rows of the study ARD, with the fingerprint of its
 # definition (tfl_ard_spec_hash())
-.ard_demog |>
+bind_items(.ard_bign, .ard_demog) |>
   save_ard(report_id, definition = "80a54f66cd47cc62b247ea49a881a102")
 
 # the end of this run
