@@ -106,8 +106,9 @@ test_that("a design's read of the report's analysis data: made by the data part,
 })
 
 test_that("one reader of a report's analysis set (.report_set()): its data's first, `common:` last", {
-  # (A2-T: the data's set first, `common:` last (until it goes) -- one reader
-  # for every caller: the figure's subjects, the report programs, the checks)
+  # (A2-T (canon 11-15): the data's set first, `common:` last until it goes;
+  # one reader, .report_set(), for every caller: the figure's subjects, the
+  # report programs, the checks)
   subj <- function(pop) list(id = "adsl_sub", from = "ADSL", population = pop)
   o <- list(kind = "figure", common = list(population = "C"),
             data = list(source = "code", population = "D"),
