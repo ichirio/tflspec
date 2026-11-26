@@ -51,7 +51,9 @@
 #' A report's `!r` value (outside its `ard:`, which the ARD check reads)
 #' that does not read as R is an `error`: `part` the report's key it is
 #' under, `item` its place (`"content$plan_filter$args$where"`), the
-#' parser's message.  It is read, not run.
+#' parser's message.  It is read, not run, by the kind of slot the schema
+#' says it fills (a guard takes `condition ~ text`); the report's `program`
+#' warning for the same value is not given twice.
 #'
 #' @param study A study read with [tfl_read_study_spec()], or its folder.
 #' @param output_id The reports to check; `NULL` for every report.
@@ -237,7 +239,7 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
     rows[[length(rows) + 1L]] <- .check_object_rows(ro, id, study_ds)
     # a column header's N with no BIGN to take it from (R/check_spec_header_n.R)
     rows[[length(rows) + 1L]] <- .check_header_n_rows(ro, id)
-    rows[[length(rows) + 1L]] <- .check_r_parse_rows(o, id)  # an `!r` value that is not R
+    rows[[length(rows) + 1L]] <- wk <- .check_r_parse_rows(o, id)  # an `!r` value that is not R
     if (inherits(ro$content, "tfl_r")) next
     # a figure's content key (`figure: {name, args}`): its name is one of the
     # table's (.fig_content_table()), its program is written
@@ -303,8 +305,9 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
       }
     }
     # the report's code, written: a stop is a warning (the form is right,
-    # the code is not)
-    if (form_ok) {
+    # the code is not); not when an `!r` that does not read is already
+    # an error (the walker's row says it, R/check_spec_r_parse.R)
+    if (form_ok && !any(wk$level == "error")) {
       r <- tryCatch(suppressMessages(suppressWarnings(tfl_content_code(ro))), error = function(e) e)
       if (inherits(r, "error")) {
         add(output_id = id, part = "program", item = "content", level = "warning",

@@ -101,7 +101,9 @@ the table, is a \code{warning} (\code{part} \code{"content"}, item
 A report's \verb{!r} value (outside its \verb{ard:}, which the ARD check reads)
 that does not read as R is an \code{error}: \code{part} the report's key it is
 under, \code{item} its place (\code{"content$plan_filter$args$where"}), the
-parser's message.  It is read, not run.
+parser's message.  It is read, not run, by the kind of slot the schema
+says it fills (a guard takes \code{condition ~ text}); the report's \code{program}
+warning for the same value is not given twice.
 }
 \examples{
 if (requireNamespace("haven", quietly = TRUE)) {
