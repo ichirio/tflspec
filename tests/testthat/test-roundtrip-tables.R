@@ -96,6 +96,18 @@ rt_key <- function(items, sorted = FALSE) {
 
 rt_report <- function(d, id) suppressMessages(tfl_read_outputs(d))[[id]]
 
+# a report's data as the sheets give it back: a listing's analysis set is its
+# data's own, else `common: population` (the planner row's population
+# column, read back into data)
+rt_data <- function(o) {
+  d <- o$data
+  if (identical(o$kind, "listing") && is.list(d) && is.null(d$population) && !is.null(o$common$population)) {
+    at <- match("dataset", names(d), nomatch = length(d))
+    d <- append(d, list(population = o$common$population), after = at)
+  }
+  d
+}
+
 # a program with each call's named arguments in one order, and its
 # statements too: the sheets give a call's named arguments back in their own
 # order, which is the same call (and plan_levels()' code lists, at the head,
@@ -125,7 +137,7 @@ rt_same <- function(d, to, id, info) {
   b <- rt_report(to, id)
   expect_setequal(rt_key(b$content), rt_key(a$content))
   expect_identical(length(b$content), length(a$content), info = info)
-  expect_identical(rt_canon(b$data), rt_canon(a$data), info = info)
+  expect_identical(rt_canon(b$data), rt_canon(rt_data(a)), info = info)
   expect_identical(rt_code(to, id), rt_code(d, id), info = info)
 }
 
@@ -246,7 +258,7 @@ test_that("every table and listing template comes back as it was expanded", {
     expect_identical(length(b$content), length(e$content), info = nm)
     expect_false(any(grepl("does not come back|the sheets give it", sh$not_converted$reason)), info = nm)
     if (nm %in% names(rt_open)) next
-    expect_identical(rt_canon(b$data), rt_canon(e$data), info = nm)
+    expect_identical(rt_canon(b$data), rt_canon(rt_data(e)), info = nm)
     code <- function(x, st) suppressMessages(tfl_content_code(tfl_resolve_output(x, st), pipe = "|>"))
     expect_identical(rt_sorted(code(b, tfl_read_study_spec(to))), rt_sorted(code(e, s)), info = nm)
   }
@@ -407,7 +419,7 @@ test_that("a step that is not R: process_code blank, the steps whole in content_
     expect_match(cm, "- rework:", fixed = TRUE)
     expect_match(r$sh$not_converted$reason[r$sh$not_converted$output %in% o$id], "a step that is not R",
                  fixed = TRUE)
-    expect_identical(rt_canon(rt_report(r$to, o$id)$data), rt_canon(rt_report(d, o$id)$data), info = o$kind)
+    expect_identical(rt_canon(rt_report(r$to, o$id)$data), rt_canon(rt_data(rt_report(d, o$id))), info = o$kind)
     expect_identical(rt_key(rt_report(r$to, o$id)$content), rt_key(rt_report(d, o$id)$content), info = o$kind)
   }
 })
