@@ -45,6 +45,11 @@
 #' the table, is a `warning` (`part` `"content"`, item
 #' `"plan_col_header(header)"`): its header would print `N=NA`.
 #'
+#' A report's `!r` value (outside its `ard:`, which the ARD check reads)
+#' that does not read as R is an `error`: `part` the report's key it is
+#' under, `item` its place (`"content$plan_filter$args$where"`), the
+#' parser's message.  It is read, not run.
+#'
 #' @param study A study read with [tfl_read_study_spec()], or its folder.
 #' @param output_id The reports to check; `NULL` for every report.
 #' @param build `TRUE`: each report the checks above pass is also built
@@ -226,6 +231,7 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
     rows[[length(rows) + 1L]] <- .check_object_rows(ro, id, study_ds)
     # a column header's N with no BIGN to take it from (R/check_spec_header_n.R)
     rows[[length(rows) + 1L]] <- .check_header_n_rows(ro, id)
+    rows[[length(rows) + 1L]] <- .check_r_parse_rows(o, id)  # an `!r` value that is not R
     if (inherits(ro$content, "tfl_r")) next
     # a figure's content key (`figure: {name, args}`): its name is one of the
     # table's (.fig_content_table()), its program is written
