@@ -27,6 +27,9 @@
       ae_disc_soc_pt             shipped  8e76787768c2b6489c41420890e1d8b3
       ae_disc_soc_pt             plain    -------------------------------- not built: `col_header`: no column 'row_label' on the page. Columns: group1, label, Drug X, Control
       ae_disc_soc_pt             company  a9ecf4774ba44307b4ace9b34b3e7bb7
+      ae_rel_soc_pt              shipped  5e68c2ea65fb531ee6e8e60ca79db940
+      ae_rel_soc_pt              plain    -------------------------------- not built: `col_header`: no column 'row_label' on the page. Columns: group1, label, Drug X, Control
+      ae_rel_soc_pt              company  458279ad0314e23b926dac455fc5f0d2
       ae_pt_freq                 shipped  10a72c67e5b1d1af48c272d1c5f6142d
       ae_pt_freq                 plain    -------------------------------- not built: `col_header`: no column 'row_label' on the page. Columns: label, Drug X, Control
       ae_pt_freq                 company  b0edd54e239bfa85ee7435a57cc67d73
