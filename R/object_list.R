@@ -236,20 +236,21 @@
   # (an item's `name:`: its R name as written, in place of the default)
   a_names <- vapply(an, function(e) .obj_chr(e[[.obj_stage_keys$analysis$name_key]]), "")
   if (length(top)) {
-    dflt <- top[is.na(a_names[top])]
     pops <- unique(stats::na.omit(vapply(c(data, an), function(e) .obj_chr(e$population), "")))
     dsets <- unique(stats::na.omit(vapply(data, function(e) .obj_chr(e$from), "")))
     taken <- c(.r_name(setdiff(dsets, d_ids)), if (length(pops)) paste0("pop_", .r_name(pops)),
-               d_ids, ob_ids, auto, stats::na.omit(a_names[top]))
-    ard_names <- character()
-    if (length(dflt)) ard_names <- .ard_item_names(a_ids[dflt], c(taken, .ard_fun_names()))
+               d_ids, ob_ids, auto)
+    # (the one builder of the names, as the program calls it: a `name:` as
+    # written, the others' default made unique against them too)
+    ard_names <- .ard_item_names(a_ids[top], c(taken, .ard_fun_names()), given = a_names[top])
+    taken <- c(taken, stats::na.omit(a_names[top]))
     avoid <- c(taken, ard_names, paste0(ard_names, "_conditions"), paste0(ard_names, "_one"),
                "ard", "ards", "report_id", .ard_helper_names)
     for (j in seq_along(top)) {
       i <- top[j]
       e <- an[[i]]
       named <- !is.na(a_names[i])
-      cn <- if (named) a_names[i] else ard_names[match(i, dflt)]
+      cn <- ard_names[j]
       if (!named && identical(types[i], "model")) {
         cn <- .ard_model_name(a_ids[i], avoid)
         avoid <- c(avoid, cn)

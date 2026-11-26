@@ -1244,6 +1244,16 @@ rtf_footer:
           ids given for some values); level:ANY,L1,L2 (the depths'' ids themselves,
           the any row''s first); blank: the analysis_id.'
         example: PARAMCD | tox_dir
+      - column: name
+        description: 'The R name of the item''s object in the ARD program; blank: .ard_<analysis_id>
+          (a model: the id in lower case). A name is an R name no other object has.'
+        example: ae_soc
+      - column: from
+        description: 'The object the item reads, piped into its call (`name <- from |> method(...)`);
+          an object above it (an analysis data, a named item) or a dataset. Blank: the
+          item makes its own data (data, dataset, records, where). Not
+          with data.'
+        example: adsl_sub
   - sheet: conditions
     description: 'ARD: a template item''s condition rows, one row a run of the
       item (in row order), keyed by output_id and analysis_id. After row, a column
