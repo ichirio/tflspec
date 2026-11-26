@@ -307,6 +307,21 @@ test_that("a template argument is read and written where it sits: args:, a part,
   expect_identical(given[c("population", "by")], list(population = "ENR", by = "TRT01A"))
 })
 
+test_that("a template report its template cannot expand yet (a required argument empty) reads and writes its set", {
+  # (tflplanner's Add and a card's edit: demog with no variables, km with its
+  # `by` emptied -- the sheets read the set of every report, .tpl_set_given())
+  d <- tfl_output("T-D", "table", template = list(name = "demog", args = list(by = "TRT01A")))
+  ids <- .tpl_set_row_ids("demog", "population", list(by = "TRT01A"))
+  expect_identical(as.vector(ids), character())
+  expect_false(is.null(attr(ids, "reason")))
+  expect_true(is.na(.tpl_set_given(d)))
+  expect_identical(tfl_report_set(d), "SAF")
+  expect_identical(tfl_set_report_set(d, "ENR")$template$args$population, "ENR")
+  k <- tfl_output("F-K", "figure", template = list(name = "km", args = list(param = "OS")))
+  expect_true(is.na(.tpl_set_given(k)))
+  expect_true(is.na(tfl_report_set(k)))
+})
+
 test_that("sheets and back: a table keeps its set on its rows, a template table its argument, no common:", {
   skip_if_not_installed("openxlsx")
   tt <- ts_tables()
