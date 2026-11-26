@@ -350,6 +350,31 @@ test_that("sheets and back: a table keeps its set on its rows, a template table 
   expect_null(back[["T-E"]]$common$population)
 })
 
+test_that("sheets and back: the TOC line carries the report's set by one rule, a table's and a figure's alike", {
+  skip_if_not_installed("openxlsx")
+  # (canon 11-15 (1): the TOC line names the analysis set for every kind;
+  # a table's set on its subjects rows, a figure's on its data map)
+  ta <- ts_tables()[[1L]]
+  fm <- tfl_output("F-M", "figure", label = "Map", extends = "none", content = tfl_r("p <- NULL"))
+  fm$data <- list(source = "code", population = "SAF")
+  dir <- ts_dir(list(ta, fm))
+  # (TOC lines that name no set: the set comes from the reports' data)
+  writeLines(c("outputs:", "  - id: T-A", "    kind: table", "  - id: F-M", "    kind: figure"),
+             file.path(dir, "spec", "toc.yml"))
+  b <- suppressWarnings(tfl_sheets_from_yaml(dir))
+  to <- file.path(dir, "back")
+  invisible(suppressWarnings(tfl_yaml_from_sheets(b, to)))
+  toc <- yaml::read_yaml(file.path(to, "spec", "toc.yml"))$outputs
+  pops <- vapply(toc, function(e) as.character(e$population %||% NA_character_), "")
+  names(pops) <- vapply(toc, function(e) as.character(e$id), "")
+  expect_identical(pops[c("T-A", "F-M")], c(`T-A` = "SAF", `F-M` = "SAF"))
+  # (and each report's set is where its data says it: one place)
+  back <- tfl_read_outputs(to)
+  expect_identical(back[["F-M"]]$data$population, "SAF")
+  expect_identical(tfl_report_set(back[["F-M"]]), tfl_report_set(back[["T-A"]]))
+  expect_null(back[["F-M"]]$common$population)
+})
+
 test_that("the sheets' planner set a table's rows do not carry: on rows of no set, else said (Q7)", {
   skip_if_not_installed("openxlsx")
   # a subjects row that names no set: the planner's set is written on it
