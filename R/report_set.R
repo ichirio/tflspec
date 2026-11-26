@@ -154,7 +154,9 @@
   ids <- unlist(lapply(rows, function(r) {
     if (.set_row_carries(r) && identical(.na_scalar(unlist(r[["population"]])), want)) .na_scalar(unlist(r[["id"]]))
   }))
-  out <- unique(ids[!is.na(ids)])
+  # (character(0) for none: a template that cannot be expanded has no rows,
+  # and its reason is still said)
+  out <- as.character(unique(ids[!is.na(ids)]))
   if (!is.null(why)) attr(out, "reason") <- why
   out
 }
@@ -283,7 +285,9 @@ tfl_report_set <- function(output, study = NULL) {
 #'     none and its subjects rows carry the set (then those rows, 3);
 #'   \item a template report: its template's set parameter (the one that
 #'     fills the template's subjects row, found from the template, not by a
-#'     name); a template with none: a report data row of the template's
+#'     name), where `template:` gives it (`args:`, a part, a step section
+#'     such as `data:`), else where a new argument goes -- never a second
+#'     copy; a template with none: a report data row of the template's
 #'     subjects row's id, over the template's (`study` needed);
 #'   \item a report of its own rows (a code SPEC's table): the rows that
 #'     carry the report's current set (a row of no other's subjects that
@@ -336,11 +340,9 @@ tfl_set_report_set <- function(output, population, study = NULL) {
   if (!is.null(ts)) {
     sp <- .tpl_set_param(ts$name, study$dir)
     if (!is.na(sp)) {
-      # (the part of `template:` that gives it, else `args:`)
-      part <- "args"
-      for (k in c("ard", "content")) if (sp %in% names(o$template[[k]])) part <- k
-      o$template[[part]][[sp]] <- val
-      if (!length(o$template[[part]])) o$template[[part]] <- NULL
+      # (where `template:` gives it -- `args:`, a part, a step section --,
+      # else where a new argument goes: written once, .tpl_arg_put())
+      o$template <- .tpl_arg_put(o$template, sp, val, study$dir)
       # (a report row over the template's subjects row names no set of its
       # own: the argument is the one place, A2-T Q6)
       ids <- .tpl_set_row_ids(ts$name, sp, ts$args, study$dir)

@@ -29,7 +29,9 @@ figure's, a listing's): the map's \code{population}, unless the map names
 none and its subjects rows carry the set (then those rows, 3);
 \item a template report: its template's set parameter (the one that
 fills the template's subjects row, found from the template, not by a
-name); a template with none: a report data row of the template's
+name), where \verb{template:} gives it (\verb{args:}, a part, a step section
+such as \verb{data:}), else where a new argument goes -- never a second
+copy; a template with none: a report data row of the template's
 subjects row's id, over the template's (\code{study} needed);
 \item a report of its own rows (a code SPEC's table): the rows that
 carry the report's current set (a row of no other's subjects that

@@ -244,6 +244,69 @@ test_that("tfl_set_report_set(): writes where the reader reads, once, never in c
   expect_null(k2$template$args$population)
 })
 
+test_that("a template argument is read and written where it sits: args:, a part, a step section (one rule)", {
+  nm <- "tflspec_v1/tflspec_summary"
+  # the two forms of a template file's report: flat `args:` and by step
+  # (tflplanner's Add writes by step: `data:`, `analysis:`)
+  flat <- tfl_output("T-F", "table", template = list(name = nm, args = list(population = "ENR", by = "TRT01A")))
+  step <- tfl_output("T-B", "table", template = list(name = nm, data = list(population = "ENR"),
+                                                     analysis = list(by = "TRT01A")))
+  for (o in list(flat, step)) {
+    expect_identical(.tpl_spec_of(o)$args[c("population", "by")], list(population = "ENR", by = "TRT01A"))
+    expect_identical(tfl_report_set(o), "ENR")
+    expect_identical(.tpl_set_given(o), "ENR")
+  }
+  # the writer: where it sits, never a second copy
+  f2 <- tfl_set_report_set(flat, "FAS")
+  expect_identical(f2$template$args$population, "FAS")
+  expect_null(f2$template$data)
+  s2 <- tfl_set_report_set(step, "FAS")
+  expect_identical(s2$template$data$population, "FAS")
+  expect_null(s2$template$args)
+  expect_identical(s2$template$analysis, list(by = "TRT01A"))
+  expect_identical(tfl_report_set(s2), "FAS")
+  expect_identical(tfl_set_report_set(s2, "FAS"), s2)
+  # (NA takes it away: an emptied section goes, the template's default is the set)
+  s3 <- tfl_set_report_set(step, NA)
+  expect_null(s3$template$data)
+  expect_identical(tfl_report_set(s3), "SAF")
+  # a report by step that does not give it: the section of its step (data);
+  # one with no argument yet: by step too (the canon's form); a flat one: args:
+  s4 <- tfl_set_report_set(s3, "ENR")
+  expect_identical(s4$template$data, list(population = "ENR"))
+  expect_null(s4$template$args)
+  n <- tfl_set_report_set(tfl_output("T-N", "table", template = list(name = nm)), "ENR")
+  expect_identical(n$template$data, list(population = "ENR"))
+  f3 <- tfl_set_report_set(tfl_set_report_set(flat, NA), "ENR")
+  expect_identical(f3$template$args$population, "ENR")
+  expect_null(f3$template$data)
+  # an argument written directly under `template:` (a template file's) stays there
+  bare <- tfl_output("T-R", "table", template = list(name = nm, population = "ENR", analysis = list(by = "TRT01A")))
+  expect_identical(tfl_report_set(bare), "ENR")
+  b2 <- tfl_set_report_set(bare, "FAS")
+  expect_identical(b2$template$population, "FAS")
+  expect_null(b2$template$data)
+  expect_null(b2$template$args)
+  # given twice (two sections): stops, as resolving it does
+  two <- tfl_output("T-2", "table", template = list(name = nm, args = list(population = "SAF"),
+                                                    data = list(population = "ENR")))
+  expect_error(.tpl_spec_of(two), "'population' is given twice")
+  # a registered template: `args:` and its parts, as before
+  dm <- tfl_output("T-D", "table", template = list(name = "demog", args = list(by = "TRT01A"),
+                                                   ard = list(population = "ENR")))
+  expect_identical(tfl_report_set(dm), "ENR")
+  dm2 <- tfl_set_report_set(dm, "FAS")
+  expect_identical(dm2$template$ard$population, "FAS")
+  expect_null(dm2$template$args$population)
+  # the reader of a YAML file reads the same (the step sections kept)
+  f <- withr::local_tempfile(fileext = ".yml")
+  tfl_write_output(step, f)
+  expect_identical(tfl_report_set(tfl_read_output(f)), "ENR")
+  # the resolver reads the same rule (.tr_given())
+  given <- .tr_given(step$template, c("population", "by"), nm, "t")
+  expect_identical(given[c("population", "by")], list(population = "ENR", by = "TRT01A"))
+})
+
 test_that("sheets and back: a table keeps its set on its rows, a template table its argument, no common:", {
   skip_if_not_installed("openxlsx")
   tt <- ts_tables()

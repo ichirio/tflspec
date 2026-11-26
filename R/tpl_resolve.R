@@ -548,18 +548,9 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
 
 # The report's arguments: `template:` without `name`, its step sections
 # (data, analysis, content, page) and a flat `args:` read as one map
+# (.tpl_args_placed(), the one rule of where an argument sits)
 .tr_given <- function(t, names_ok, template, who) {
-  t$name <- NULL
-  out <- list()
-  for (k in names(t)) {
-    v <- t[[k]]
-    if (k %in% c("args", "data", "analysis", "content", "page") && !k %in% names_ok &&
-        is.list(v) && !is.null(names(v))) {
-      for (p in names(v)) out[p] <- list(v[[p]])
-    } else {
-      out[k] <- list(v)
-    }
-  }
+  out <- .tpl_args_placed(t, own = names_ok, name = template)$args
   bad <- setdiff(names(out), names_ok)
   if (length(bad)) {
     stop(who, ": ", template, " has no argument ", paste(bad, collapse = ", "),
