@@ -547,15 +547,15 @@ tpl_forest_layout <- function(fig, n_by_arm = NULL) {
 # ---- registered --------------------------------------------------------------------
 
 .tpl_fig_register <- function() {
-  .tfl_template("forest_hr", kind = "figure", layout = "forest", params = .tpl_fig_data_stage(.tpl_forest_params(),
+  .tfl_template("forest_hr", ai = TRUE, kind = "figure", layout = "forest", params = .tpl_fig_data_stage(.tpl_forest_params(),
                   c("param", "population", "subset", "data", "time", "censor", "where")),
                 body = .tpl_forest_body, label = "Hazard ratio by subgroup (forest)", call = "tfl_tpl")
   .tpl_km_register()
-  .tfl_template("mean_se", kind = "figure", layout = "mean", params = .tpl_fig_data_stage(.tpl_mean_params()),
+  .tfl_template("mean_se", ai = TRUE, kind = "figure", layout = "mean", params = .tpl_fig_data_stage(.tpl_mean_params()),
                 body = .tpl_mean_body("se"), label = "Mean +/- SE by visit", call = "tfl_tpl")
-  .tfl_template("mean_ci", kind = "figure", layout = "mean", params = .tpl_fig_data_stage(.tpl_mean_params()),
+  .tfl_template("mean_ci", ai = TRUE, kind = "figure", layout = "mean", params = .tpl_fig_data_stage(.tpl_mean_params()),
                 body = .tpl_mean_body("ci"), label = "Mean (95% CI) by visit", call = "tfl_tpl")
-  .tfl_template("waterfall", kind = "figure", layout = "waterfall", params = .tpl_fig_data_stage(.tpl_wf_params(),
+  .tfl_template("waterfall", ai = TRUE, kind = "figure", layout = "waterfall", params = .tpl_fig_data_stage(.tpl_wf_params(),
     c("param", "population", "subset", "data", "where")),
     body = function(a, ctx) {
       f <- .tpl_wf_design(a$value, a$by_response, a$param, a$data, a$where)

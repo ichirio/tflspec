@@ -6,7 +6,7 @@ us_study <- function() tfl_read_study_spec(system.file("extdata", "spec-yaml", p
 # a test-only template: `ind` goes straight into an inner call, `lab` has an
 # `!unset` default, `mr` a value
 us_register <- function(name) {
-  tflspec:::.tfl_template(name, "table", "summary",
+  tflspec:::.tfl_template(name, "table", "summary", ai = TRUE,
     params = list(tfl_param("population", "SAF", type = "text"),
                   tfl_param("ind", 2, type = "number", doc = "plan_stub(indent = )"),
                   tfl_param("lab", tfl_unset(), type = "text", doc = "plan_stub(label = )"),
