@@ -43,8 +43,19 @@ ard_built <- ard_fingerprint("F-14-2-4")
 
 # the data: ADTTE (data catalog)
 
+# the report's subjects: its analysis set (its data's population)
+adsl <- order_levels(adsl)
+
+# adsl_sub: the subjects. population SAF (Safety Analysis Set)
+adsl_sub <- filter(adsl, SAFFL == "Y")
+
 adtte_sub <- adtte |>
   order_levels() |>
+  inner_join(
+    select(adsl_sub, USUBJID),
+    by = "USUBJID",
+    relationship = "many-to-one"
+  ) |>
   filter(PARAMCD == "TTSKIN") |>
   set_levels(TRT01A = cl_trt01a, SEX = cl_sex, AGEGR1 = cl_agegr1)
 

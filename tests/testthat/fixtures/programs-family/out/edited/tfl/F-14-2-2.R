@@ -29,6 +29,12 @@ source("programs/tfl/fig_setup.R")
 # ---- data: the figure's data -----------------------------------------------
 # the report's data: ADTTE (data catalog)
 
+# the report's subjects: its analysis set (its data's population)
+adsl <- order_levels(adsl)
+
+# adsl_sub: the subjects. population SAF (Safety Analysis Set)
+adsl_sub <- filter(adsl, SAFFL == "Y")
+
 # the ARD of T-14-2-2 (its rows of the study ARD)
 ard <- readRDS(file.path(path_ard, "ard.rds")) |>
   filter(output_id == "T-14-2-2")

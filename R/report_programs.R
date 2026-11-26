@@ -543,11 +543,14 @@
 
 # A figure report with the content key `figure: {name, args}` (tflspec#835):
 # the report's datasets and analysis data (its ARD definition), its ARD
-# (`ard`), then `content <- tflspec::<fn>(...)`.  A key that does not hold
-# is a stop() line saying why.
+# (`ard`), then `content <- tflspec::<fn>(...)`, written with the study as
+# every figure runner writes it (its report's set, A2).  A key that does not
+# hold is a stop() line saying why.
 .rp_fig_key_lines <- function(ctx) {
   r <- ctx$report
-  call <- tryCatch(as.character(tfl_content_code(.rp_code_content(.rp_y(ctx)), pipe = "|>")),
+  y <- .rp_y(ctx)
+  call <- tryCatch(as.character(tfl_content_code(.rp_code_content(y), pipe = "|>",
+                                                 study = y$study)),
                    error = function(e) c(
                      "# the figure's key does not hold:",
                      paste0("stop(", .rp_r_string(trimws(conditionMessage(e))), ")")))
@@ -948,6 +951,13 @@
   report_part <- c(
     .rp_section("report"),
     .rp_report_code_lines(ctx, (table || tpl_listing) && identical(content, "plan"), content))
+  # a listing of `data` (as_rtftables(data, ...)): its program records
+  # whether `data` has no records, so the official run notes an empty
+  # listing (batch.R reads report_status.csv's `empty`)
+  if (identical(type, "listing") && any(grepl("as_rtftables[(]data,", c(data, report_part)))) {
+    report_part[report_part == "record_report(report_id)"] <-
+      "record_report(report_id, empty = nrow(data) == 0)"
+  }
 
   c(head,
     "",

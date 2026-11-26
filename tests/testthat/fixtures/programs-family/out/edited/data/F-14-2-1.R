@@ -17,6 +17,14 @@ adsl <- blank_as_na(adsl)
 advs <- readRDS("data/adam/advs.rds")
 advs <- blank_as_na(advs)
 
+# the report's subjects: its analysis set (its data's population)
+adsl <- readRDS("data/adam/adsl.rds") |>
+  blank_as_na() |>
+  order_levels()
+
+# adsl_sub: the subjects. population SAF (Safety Analysis Set)
+adsl_sub <- filter(adsl, SAFFL == "Y")
+
 # ---- content: your code ----------------------------------------------------
 # your code: leaves `content`
 # adsl_sub: the subjects of the report's analysis set, made before this code
