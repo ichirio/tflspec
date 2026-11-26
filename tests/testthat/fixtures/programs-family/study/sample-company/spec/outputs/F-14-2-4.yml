@@ -71,6 +71,7 @@ data:
       by: SEX, AGEGR1
     - step: code
       label: 'the rows to draw: the comparison arm, a heading row per subgroup'
+      out: est
       code: |-
         est <- est |>
           # the reference arm has no interval; a subgroup whose model did not

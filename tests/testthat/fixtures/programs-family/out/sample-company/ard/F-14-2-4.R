@@ -40,8 +40,11 @@ adtte_saf_ttskin <- adtte |>
 
 # ---- analyses ----
 # HR: Hazard ratio, all subjects
-cox <- survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = adtte_saf_ttskin)
-.ard_hr <- cardx::ard_regression(cox, exponentiate = TRUE) |>
+.ard_hr <- local({
+  data <- adtte_saf_ttskin
+  cox <- survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = data)
+  cardx::ard_regression(cox, exponentiate = TRUE)
+}) |>
   fmt_ard(fmt_default) |>
   relevel_ard(TRT01A = cl_trt01a) |>
   tag_ard(report_id, "HR", population = "SAF")
@@ -69,7 +72,7 @@ cox <- survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = adtte_sa
 # the report's rows of the study ARD, with the fingerprint of its
 # definition (tfl_ard_spec_hash())
 bind_items(.ard_hr, .ard_hr_sex, .ard_hr_agegr1) |>
-  save_ard(report_id, definition = "9c3061789671d5610a48f25e923c5a95")
+  save_ard(report_id, definition = "9c62d7d3fcf8c711774c1c7da4569ae3")
 
 # the end of this run
 options(tflplanner.run = NULL)
