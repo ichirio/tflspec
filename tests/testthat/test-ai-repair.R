@@ -9,7 +9,6 @@ ai_repair_answer <- function() {
     "data:",
     "- {step: read, dataset: ADTTE}",
     "- {step: param, value: OS}",
-    "- {step: flag, variable: FASFL}",
     "- {step: survfit, name: fit, time: AVAL, censor: CNSR}",
     "layers:",
     "- {layer: km_curve}",
@@ -21,7 +20,7 @@ ai_repair_answer <- function() {
 
 test_that("the repair prompt names each problem and only the offending schema", {
   a <- ai_repair_answer()
-  ctx <- tfl_ai_context("figure", output_id = "F-14-2-1")
+  ctx <- tfl_ai_context("figure", output_id = "F-14-2-1", population = list(id = "FAS"))
   p <- tfl_ai_check(a, ctx)
   r <- tfl_ai_repair_prompt(a, context = ctx)
   expect_s3_class(r, "tfl_ai_text")

@@ -166,7 +166,7 @@ test_that("forest_hr: a blank subgroup value is no subgroup", {
   d <- bv_study(withr::local_tempdir(), list(adsl = ad, adtte = tt))
   tfl_write_output(tfl_output("F-1", "figure", common = list(population = "SAF"), extends = "defaults",
                               template = list(name = "forest_hr",
-                                              args = list(param = "PFS", population = "SAF"))),
+                                              args = list(param = "PFS", population = "SAF", group = "TRT01A"))),
                    file.path(d, "spec", "outputs", "F-1.yml"))
   a <- suppressWarnings(bv_ard(d, "F-1"))
   lv <- unique(a$group1_level[a$analysis_id == "HR_SEX"])

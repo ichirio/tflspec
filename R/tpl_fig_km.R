@@ -247,7 +247,7 @@
     dg <- as.integer(a$legend_median_digits %||% 1L)
     lab <- .tpl_km_median_label(a$legend_median_text %||% .tpl_km_median_text)
     f$stats <- append(f$stats, list(list(step = "code",
-      label = "the legend's text: each arm's median survival (95% CI)",
+      label = "the legend's text: each arm's median survival (95% CI)", out = "legend_labels",
       code = paste0(
         "med <- summary(fit)$table\n",
         "if (!is.matrix(med)) med <- matrix(med, nrow = 1, dimnames = list(\"All\", names(med)))\n",
@@ -310,7 +310,7 @@
     risk <- identical(a$y_type, "risk")
     grp <- !is.null(f$stats[[fit]]$by)
     f$stats <- c(f$stats, list(list(step = "code",
-      label = "the confidence interval at the axis's times, as vertical bars",
+      label = "the confidence interval at the axis's times, as vertical bars", out = "ci_pts",
       code = paste0(
         "ci_pts <- summary(fit, times = ", times, ", extend = TRUE)\n",
         "ci_pts <- data.frame(\n",

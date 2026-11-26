@@ -71,9 +71,11 @@ study key \code{output} (default \code{output/ard/ard.rds}).  The code runs from
 the study folder, and reads as a person writes it: the tidyverse layout
 (a call on one line when it fits in 80 characters, else an argument a
 line), dplyr verbs for the data (\code{filter()}, \code{mutate()}, \code{select()}), and
-a \code{custom} analysis's code with the program's names in place of \code{data}
-and \code{population} (in \code{local()} only when it needs a scope of its own: it
-defines a function, or assigns a name the program has).
+a \code{custom} analysis's code: one expression as it is, with the program's
+names in place of \code{data} and \code{population}; code of several expressions
+(or one that assigns a name) as written, in a scope of its own,
+\verb{.ard_<id> <- local(\{ data <- <analysis data>; ... \})}, so what it
+assigns (\verb{data$TRT01A <- }, a model) changes nothing of the program's.
 }
 \details{
 The data comes in three stages: the denominator (ADSL filtered to the

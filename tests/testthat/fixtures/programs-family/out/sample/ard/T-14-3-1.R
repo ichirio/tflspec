@@ -1,7 +1,7 @@
 # ============================================================================
 #  Program    : programs/ard/T-14-3-1.R
 #  Output     : T-14-3-1 -> its rows of output/ard/ard.rds
-#  Analyses   : TEAE (TEAE by SOC / PT)
+#  Analyses   : BIGN (Subjects per group), TEAE (TEAE by SOC / PT)
 #  Generated  : <masked>
 # ============================================================================
 
@@ -24,8 +24,7 @@ adae <- order_levels(adae, c("AEBODSYS", "AEDECOD"), from = adsl)
 adsl_saf <- adsl |>
   filter(SAFFL == "Y") |>
   set_levels(TRT01A = cl_trt01a)
-# adae_saf: the records. ADAE of the subjects of adsl_saf, TRT01A from ADSL;
-# where
+# adae_saf: the records. ADAE of the subjects of adsl_saf, TRT01A from ADSL
 adae_saf <- adae |>
   select(-any_of("TRT01A")) |>
   inner_join(
@@ -37,6 +36,13 @@ adae_saf <- adae |>
   set_levels(TRT01A = cl_trt01a)
 
 # ---- analyses ----
+# BIGN: Subjects per group
+.ard_bign <- adsl_saf |>
+  mutate(across(where(is.character), ~ na_if(.x, ""))) |>
+  ard_tabulate(variables = TRT01A, fmt_fun = everything() ~ fmt_default) |>
+  apply_fmt_fun() |>
+  tag_ard(report_id, "BIGN", population = "SAF")
+
 # TEAE: TEAE by SOC / PT
 .ard_teae <- adae_saf |>
   ard_hierarchical_or_none(
@@ -51,7 +57,7 @@ adae_saf <- adae |>
 
 # the report's rows of the study ARD, with the fingerprint of its
 # definition (tfl_ard_spec_hash())
-.ard_teae |>
+bind_items(.ard_bign, .ard_teae) |>
   save_ard(report_id, definition = "0df8ef40bd80dd17b6e4e60d31846ad4")
 
 # the end of this run
