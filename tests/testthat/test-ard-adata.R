@@ -122,7 +122,7 @@ test_that("the sheet and the analyses' data are checked", {
   # a derive piece that is not `name = expression` (R's `|` inside
   # parentheses is one piece; a bare expression is not)
   d <- ad_rows(); d$derive[2L] <- "FLAG = ifelse(is.na(AESER) | AESER != \"Y\", 0, 1) | paste(AEDECOD)"
-  bad(d, msg = "`derive` piece 'paste(AEDECOD)' does not read as `name = expression`")
+  bad(d, msg = "piece `paste(AEDECOD)` is not `name = expression`")
   d <- ad_rows(); d$derive[2L] <- "FLAG = ifelse(is.na(AESER) | AESER != \"Y\", 0, 1)"
   expect_s3_class(ad_spec(d, an_rows()), "tfl_ard_spec")
   a <- an_rows(); a$data[2L] <- "adae_none"
@@ -258,7 +258,7 @@ test_that("a data written as R (`code`): made by it, checked, in the fingerprint
             grep("^adae_ser <- local", code))
   # checked: R, and the columns that make a data left blank
   bad <- d; bad$code[3L] <- "subset(adae_teae,"
-  expect_error(ad_spec(bad, an_rows()), "`code` does not read as R", fixed = TRUE)
+  expect_error(ad_spec(bad, an_rows()), "`code` `subset(adae_teae,` does not read as R (", fixed = TRUE)
   bad <- d; bad$where[3L] <- "AESER == \"Y\""
   expect_error(ad_spec(bad, an_rows()), "`code` makes the data itself; `where`", fixed = TRUE)
   # a code blank in every row keeps the fingerprint; a code counts
@@ -428,7 +428,7 @@ test_that("then: R piped onto the end of a data after its keys; read as R; not w
   # checked: R, and not with code (code makes the whole data)
   bad <- d
   bad$then[3L] <- "dplyr::filter("
-  expect_error(ad_spec(bad, an_rows()), "`then` does not read as R", fixed = TRUE)
+  expect_error(ad_spec(bad, an_rows()), "`then` `dplyr::filter(` does not read as R (", fixed = TRUE)
   bad <- d
   bad$where[3L] <- NA
   bad$derive[3L] <- NA

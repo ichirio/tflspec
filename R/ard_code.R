@@ -1312,7 +1312,9 @@
         taken <<- c(taken, nm)
         data_of[[key]] <<- nm
         auto_ds[[nm]] <<- .adata_dataset(ad_o, dcol[i]) %||% dcol[i]
-        auto_note[[nm]] <<- sprintf("made from %s; where", dcol[i])
+        # (its condition is the filter line below: no "where" of its own, which
+        # ended the comment with nothing after it, as the analysis data's)
+        auto_note[[nm]] <<- sprintf("made from %s.", dcol[i])
         made <<- c(made, .made_line(nm, dcol[i], r$where, lv))
         return(nm)
       }
@@ -1359,8 +1361,8 @@
           paste0(" \u2014 ", .records_sheet(x)$label[rk])) else
           if (!is.na(r$dataset)) r$dataset else pop_ds,
         if (!is.null(join)) sprintf(" of the subjects of %s", pop),
-        if (!is.null(join) && length(take_txt)) sprintf(", %s from ADSL", paste(take_txt, collapse = ", ")),
-        if (!is.null(whr)) "; where")
+        if (!is.null(join) && length(take_txt)) sprintf(", %s from ADSL", paste(take_txt, collapse = ", ")))
+      # (no "; where": its condition is the filter line below)
       made <<- c(made, .make_code(nm, src, c(
         join, if (!is.null(whr)) sprintf("dplyr::filter(%s)", whr),
         if (length(lv)) .levels_step)))

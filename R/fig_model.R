@@ -2997,7 +2997,9 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
 
 # The code step of a forest plot: the rows to draw (the comparison arm, not
 # the reference), their label, text and y; a subgroup whose model did not
-# converge has no point (NE)
+# converge has no point (NE).  It keeps `est` only (a code step keeps its
+# `out`): the bold headings' labels are a step of their own,
+# .forest_labels_code()
 .forest_est_code <- function(group, subgroups, comparison = NULL, n_by_arm = NULL,
                              subgroup_labels = NULL) {
   # the headings' text: a subgroup's label (the given, else the common ADaM
@@ -3073,10 +3075,10 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
     collapse = "\n")
 }
 
-# The axis's labels of a forest with subgroups, the headings bold (plotmath;
-# bquote() keeps the text as it is), from the rows .forest_est_code() made:
-# a code step of its own, `out: y_labels` (a code step keeps one object)
-.forest_y_labels_code <- function() {
+# The code step of a forest plot's bold headings (`out: y_labels`, after
+# the rows' step): the axis's labels, a heading bold (plotmath; bquote()
+# keeps the text as it is), read by its scale_y_continuous()
+.forest_labels_code <- function() {
   paste(c("y_labels <- as.expression(Map(function(l, h) if (h) bquote(bold(.(l))) else l,",
           "                              est$label, est$head))"), collapse = "\n")
 }

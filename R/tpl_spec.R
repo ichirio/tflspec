@@ -578,8 +578,11 @@ tfl_template_to_spec <- function(output, study) {
     return(out)
   }
   lb <- .tpl_layers_below(output, study)
+  # (a code list that refers to the study's, {list: SEX}: its rows for the
+  # template; the code SPEC keeps the reference)
+  rcl <- .codelists_refs(output$codelists, study$codelists, output$id, "tfl_template_to_spec()")
   # (the resolve below says what `plot:` does not reach, once)
-  e <- .tpl_expand_for(output, study, lb, .merge_map(lb$acc$codelists, output$codelists), warn = FALSE)
+  e <- .tpl_expand_for(output, study, lb, .merge_map(lb$acc$codelists, rcl), warn = FALSE)
   # the content: what the resolved report has from the template and its own
   # file, argument by argument -- the study's layers stay the layers', so
   # the report resolves the same
@@ -631,7 +634,19 @@ tfl_template_to_spec <- function(output, study) {
   }
   # a figure's design: its settings, the template's under the report's
   if (!is.null(ro$plot)) output$plot <- ro$plot
-  if (!is.null(e$x$codelists)) output$codelists <- .tpl_add_codelists(output$codelists, e$x$codelists)
+  if (!is.null(e$x$codelists)) {
+    # (a reference stays one, unless the template's list adds codes to it)
+    ref <- names(Filter(.cl_is_ref, output$codelists))
+    add <- .tpl_add_codelists(rcl, e$x$codelists)
+    keep <- ref[vapply(ref, function(v) identical(add[[v]], rcl[[v]]), NA)]
+    for (v in setdiff(ref, keep)) {
+      message("tfl_template_to_spec(): ", output$id, ": the template adds codes to ", v,
+              ", a reference to the study's list ", output$codelists[[v]]$list,
+              "; the code SPEC writes the list in place (the study's codes and the template's).")
+    }
+    add[keep] <- output$codelists[keep]
+    output$codelists <- add
+  }
   output$template <- NULL
   output
 }

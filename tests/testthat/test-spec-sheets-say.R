@@ -41,12 +41,17 @@ rts_trip <- function(d, env = parent.frame(), ...) {
 }
 
 test_that("the sheets' notes are written to _not_converted.yml, and counted in one message", {
-  d <- rts_study(list("defaults.yml" = c("codelists:", "  SEX: [F, M]", "content: []"),
+  # (the study's ADaM metadata: no sheet holds it)
+  d <- rts_study(list("defaults.yml" = c("adam_meta:", "  variables:",
+                                         "    - {dataset: ADSL, variable: SEX, codelist: CL.SEX}",
+                                         "  codelists:",
+                                         "    - {codelist: CL.SEX, name: Sex, value: F, decode: Female, order: 1}",
+                                         "content: []"),
                       "outputs/T-1.yml" = rts_table()))
   x <- rts_trip(d)
   expect_gt(nrow(x$sh$not_converted), 0L)
   parts <- vapply(x$nc, function(e) e$sheet, "")
-  expect_true("codelists" %in% parts)
+  expect_true("adam_meta" %in% parts)
   expect_identical(sum(grepl("could not hold", x$msgs)), 1L)
   expect_match(x$msgs[grepl("could not hold", x$msgs)],
                paste0("tfl_yaml_from_sheets(): ", nrow(x$sh$not_converted), " part"), fixed = TRUE)
@@ -154,15 +159,15 @@ rts_cl_study <- function(env = parent.frame()) {
   d
 }
 
-test_that("the study's code lists and ADaM metadata are named in the notes, and reach the file", {
+test_that("the study's code lists cross the sheets (A7); its ADaM metadata is named in the notes", {
   d <- rts_cl_study()
   x <- rts_trip(d)
   nc <- x$sh$not_converted
-  n <- nc[nc$part == "codelists", ]
-  expect_identical(nrow(n), 1L)
-  expect_match(n$reason[is.na(n$output)], "defaults.yml: SEX, AGEGR1", fixed = TRUE)
+  expect_identical(sum(nc$part == "codelists"), 0L)
+  expect_identical(unique(x$sh$study_codelists$name), c("SEX", "AGEGR1"))
+  expect_identical(tfl_read_study_spec(x$to)$codelists, tfl_read_study_spec(d)$codelists)
   expect_identical(sum(nc$part == "adam_meta"), 1L)
-  written <- x$nc[vapply(x$nc, function(e) identical(e$sheet, "codelists"), NA)]
+  written <- x$nc[vapply(x$nc, function(e) identical(e$sheet, "adam_meta"), NA)]
   expect_length(written, 1L)
   expect_true(any(grepl("[0-9]+ parts?", x$msgs)))
 })
