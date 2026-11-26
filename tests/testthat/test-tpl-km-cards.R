@@ -135,16 +135,29 @@ test_that("km_cards' figure builds on the package's sample data", {
   skip_on_cran()
   skip_if_not_installed("ggsurvfit")
   skip_if_not_installed("survival")
+  skip_if_not_installed("haven")
   adam <- tfl_example_adam()
   data <- stats::setNames(adam, tolower(names(adam)))
   param <- unique(adam$ADTTE$PARAMCD)[1L]
+  # the study of the sample data (its sets: ADSL's flags, FAS among them):
+  # the report's analysis set (the series' FAS) has its subjects made from
+  # it, as its program does (canon 11-15); tfl_content_run() is given it
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  for (x in c("ADSL", "ADTTE")) {
+    haven::write_xpt(.ai_chr(adam[[x]]), file.path(d, "adam", paste0(tolower(x), ".xpt")))
+  }
+  tfl_ai_study_init(d, adam = "adam", study_id = "KMC-1")
+  st <- tfl_read_study_spec(d)
   for (extra in list(character(), c("  content:", "    risk_table: false", "    legend: inside"))) {
     f <- tempfile(fileext = ".yml")
     writeLines(c("id: F-9", "kind: figure", "template:", "  name: tflspec_v1/km_cards",
                  "  data:", "    by: TRT01P", paste0("    param: ", param), extra), f)
     o <- tfl_template_resolve(.series_read_yaml(f), study = kmc_study)
     unlink(f)
-    p <- suppressWarnings(suppressMessages(tfl_content_run(o, data)))
+    expect_identical(o$data$population, "FAS")
+    p <- suppressWarnings(suppressMessages(tfl_content_run(o, data, study = st)))
     expect_true(inherits(p, "ggplot") || inherits(p, "ggsurvfit"))
     expect_no_error(suppressWarnings(suppressMessages(ggplot2::ggplot_build(p))))
   }
