@@ -397,6 +397,7 @@ tfl_test_templates <- function(names = NULL) {
   ae_soc_pt = list(population = "SAF"),
   ae_ser_soc_pt = list(population = "SAF"),
   ae_disc_soc_pt = list(population = "SAF"),
+  ae_rel_soc_pt = list(population = "SAF"),
   ae_pt_freq = list(population = "SAF", min_pct = 5),
   ae_max_grade = list(population = "SAF", grade_levels = c("MILD", "MODERATE", "SEVERE")),
   ae_overview = list(population = "SAF", by = "TRT01A"),

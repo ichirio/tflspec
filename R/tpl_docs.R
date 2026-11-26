@@ -18,6 +18,9 @@ NULL
 #' @eval .tpl_rd("ae_pt_freq")
 NULL
 
+#' @eval .tpl_rd("ae_rel_soc_pt")
+NULL
+
 #' @eval .tpl_rd("ae_ser_soc_pt")
 NULL
 
