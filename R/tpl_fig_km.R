@@ -445,7 +445,7 @@
     Filter(Negate(is.null), list(type = p$type, multiple = isTRUE(p$multiple), choices = p$choices,
                                  fields = p$fields))
   }), vapply(new, `[[`, "", "name")))
-  .tfl_template("km", kind = "figure", layout = "km", params = .tpl_km_params(),
+  .tfl_template("km", ai = TRUE, kind = "figure", layout = "km", params = .tpl_km_params(),
                 body = .tpl_km_layout_body, call = "tfl_tpl",
                 label = "Kaplan-Meier curves (the layout)",
                 example = list(param = "PFS", by = "TRT01A"))

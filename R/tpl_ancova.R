@@ -121,7 +121,7 @@
 }
 
 .tpl_ancova_register <- function() {
-  .tfl_template("ancova", kind = "table", layout = "summary",
+  .tfl_template("ancova", ai = TRUE, kind = "table", layout = "summary",
                 params = .tpl_ancova_params(), body = .tpl_ancova_body)
 }
 

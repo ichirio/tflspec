@@ -103,7 +103,7 @@
 }
 
 .tpl_eair_register <- function() {
-  .tfl_template("ae_eair", kind = "table", layout = "hierarchical",
+  .tfl_template("ae_eair", ai = TRUE, kind = "table", layout = "hierarchical",
                 params = .tpl_eair_params(), body = .tpl_eair_body)
 }
 

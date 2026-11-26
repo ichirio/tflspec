@@ -124,7 +124,7 @@
            times = list(type = "levels", multiple = TRUE, of = "time"),
            stats = list(type = "list", multiple = FALSE, fields = c("label", "template")))),
     examples = list(pk_conc = list(population = "SAF", blq = "BLQFL == \"Y\"")))
-  .tfl_template("pk_conc", kind = "table", layout = "listing_summary",
+  .tfl_template("pk_conc", ai = TRUE, kind = "table", layout = "listing_summary",
                 params = .tpl_pk_params(), body = .tpl_pk_body)
 }
 
