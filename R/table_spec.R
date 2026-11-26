@@ -212,8 +212,9 @@
                   "show_keys", "keep_where", "keep_any", "keep_parents", "content_more"),
     variables = c("output_id", "variable", "label", "order", "levels",
                   "empty_levels", "under"),
-    # the study's code list: a value's text and place
-    codelists = c("output_id", "variable", "value", "label", "order", "under"),
+    # the study's code list: a value's text and place (`list`: the study's
+    # list a report's refers to, R/codelist_ref.R)
+    codelists = c("output_id", "variable", "value", "label", "order", "under", "list"),
     cells     = c("output_id", "variable", "context", "row", "when",
                   "template", "digits", "signif"),
     # the statistics' decimals: every analysis variable's (variable blank),
@@ -834,7 +835,7 @@
 #'   \item{`span`}{Blank: one cell over all of `cols`.  `each`: one cell
 #'     per column.  A column key (`TRTA`): one cell per value of that
 #'     key, over its columns --- an arm's spanner, however many arms.}
-#'   \item{`text`}{The label.  A line break is Alt+Enter or `\\n`.  The
+#'   \item{`text`}{The label.  A line break is Alt+Enter or `\n`.  The
 #'     tokens of [rtfreporter::plan_col_header()] work: `{col}` (the column's own
 #'     value), `{col1}`, `{col2}` (its keys, outermost first), `{n}` (the
 #'     population of what the cell stands for: its column, or over an
@@ -1727,7 +1728,8 @@ print.tfl_table_spec <- function(x, ...) {
       .ard_stop(sprintf(paste0(
         "`tables$compare` names %s, and no `cells` row has `variable` = %s:
 ",
-        "  write its template there (`{p.value:.3f}`)."), sQuote(v), v))
+        "  write its templates there (a p-value: `<0.001` when `p.value < 0.001`, else `{p.value:.3f}`)."),
+        sQuote(v), v))
     }
     ctx <- s$context[idx]
     if (all(is.na(ctx))) return(chain(idx))

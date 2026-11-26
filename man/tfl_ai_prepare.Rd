@@ -70,8 +70,8 @@ nothing: the same result, to look at before the requests are written
 (its \code{requests} are the TOC's batches, without \code{chars} and \code{file};
 \code{files} is empty).  The one thing it keeps is \code{numbers}, the person's
 corrected report numbers, in \code{ai/sheet_numbers.csv} when the study's
-\code{ai/} folder is there already (\code{files} then names that file); a dry run
-never makes \code{ai/} or the study folder.}
+\verb{ai/} folder is there already (\code{files} then names that file); a dry run
+never makes \verb{ai/} or the study folder.}
 
 \item{adam_summary}{A \code{\link[=tfl_ai_adam_summary]{tfl_ai_adam_summary()}} result to use instead of
 reading the ADaM again (a previous call's \verb{$adam}); read again when
@@ -144,7 +144,7 @@ the first in the workbook's order; the others listed in \code{sheets}), one
 the rule made and no sheet makes now has none (the no-shell request's,
 counted in \code{counts}).  Saved as \code{ai/sheet_numbers.csv}
 (\code{sheet}, \code{number}, \code{make}, UTF-8) when the requests are written, and
-by a dry run when the study's \code{ai/} folder is there already (a dry run
+by a dry run when the study's \verb{ai/} folder is there already (a dry run
 on a new study keeps nothing), and read by a later call; given again, it goes over the
 saved rows (a row of the same sheet and number replaced, \code{NA} taking
 it out) and the file keeps the result.  \code{NULL} (default): the saved file, if any.
@@ -275,7 +275,7 @@ it asks, what a draft holds), \code{AGENTS.md} and
 (\code{\link[=tfl_ai_run]{tfl_ai_run()}}: the check from the command line, with the ARD and RTF)
 and \code{ai/decisions.md}, which is never written over.  One message
 (\code{ai/agent_prompt.md}) starts the agent: with one request, then a menu, or
-with a batch of all the requests (\verb{ai: run}); \code{ai/progress.md}, the work
+with a batch of all the requests (\code{ai: run}); \code{ai/progress.md}, the work
 queue (every request \code{todo}; never written over), says where it goes on.
 
 \code{study.yml}'s \verb{ai:} keys set the agent's rules (the study standard's

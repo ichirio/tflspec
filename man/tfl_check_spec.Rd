@@ -4,7 +4,7 @@
 \alias{tfl_check_spec}
 \title{Check a study's SPEC against the packages installed: one call}
 \usage{
-tfl_check_spec(study, output_id = NULL, build = FALSE)
+tfl_check_spec(study, output_id = NULL, build = FALSE, adam = TRUE)
 }
 \arguments{
 \item{study}{A study read with \code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}, or its folder.}
@@ -17,14 +17,29 @@ listing or figure object made, no RTF -- so that a report with no
 row can be made; one that cannot has an \code{error} row, \code{part}
 \code{"build"}.  A few seconds a report.  \code{FALSE} (default): the checks
 above only.}
+
+\item{adam}{Where the data for the data check come from.  \code{TRUE}
+(default): the study's own datasets, from the paths of \code{spec/data.yml}
+(from the study folder), read as the study's program reads them and
+only when needed: a study with no \code{!=} condition reads no data, and a
+dataset is read once.  \code{FALSE} (or \code{NULL}): no data check.  Or the ADaM
+data as \code{\link[=tfl_check_fig_design]{tfl_check_fig_design()}}'s \code{adam} takes it (\code{\link[=tfl_read_adam]{tfl_read_adam()}}: a
+folder or a named list of data frames).  The check: a condition of the
+ARD definition (a \code{where} of the populations, records, analysis data or
+analyses) that holds \code{var != value} is looked at in the dataset it
+applies to: where \code{var} has NA there, the condition drops those rows (a
+filter keeps only TRUE), and a \code{warning} row (\code{part} \code{"ard"}) gives the
+count and the form that keeps them, \code{!var \%in\% value}.  No study
+folder, a dataset whose file is not there or is not listed, or a
+variable not in the dataset: no row.  The generated code is not changed.}
 }
 \value{
 A data frame, one row a problem: \code{output_id} (\code{NA} for the
 study's ARD definition as a whole and the study's own rows), \code{part}
 (\code{"file"}, \code{"study"}, \code{"ard"}, \code{"content"}, \code{"program"}, \code{"figure"},
-\code{"build"}), \code{item} (the file, the
-analysis, the function and argument, or the figure's part and
-field), \code{level} (\code{"error"}, \code{"warning"}, \code{"note"}, \code{"check"}) and
+\code{"codelists"}, \code{"build"}), \code{item} (the file, the
+analysis, the function and argument, the figure's part and
+field, or the code list's column), \code{level} (\code{"error"}, \code{"warning"}, \code{"note"}, \code{"check"}) and
 \code{message}.  Its attributes: \code{versions}, a data frame of the key
 packages (\code{package}, \code{installed}, \code{NA} when not installed); \code{ids}, the
 reports checked (the OK ones too); \code{kinds}, each report's kind, named
@@ -43,7 +58,11 @@ value the schema does not have, an analysis the ARD definition
 refuses): the report cannot be copied into the study;
 \item \code{warning}: the SPEC reads, but a program that runs cannot be written
 from it (the ARD program or the table's code stops; a content
-function the installed rtfreporter does not have yet);
+function the installed rtfreporter does not have yet; with \code{adam}, a
+\code{!=} condition that drops the rows where its variable is NA; a
+report's own code list, for a column the study's \code{adam_meta} maps,
+with a code the define's code list does not have, \code{part}
+\code{"codelists"} -- codes compared, not labels);
 \item \code{note}: the program is written all the same -- an argument the
 installed cards / cardx does not know, a version to look at.
 }
@@ -72,6 +91,17 @@ name given twice in a report or that is a study dataset's or a
 function's are errors (\code{part} \code{"names"} for the last two); an object
 the report names and nothing uses is a note.  The packages' installed versions come with
 it, as an attribute.  A GUI's check button and the AI's run call it.
+
+A table's column header N: a header text with \verb{\{n\}} (and no \code{values} of
+its own) takes each column's N from the report's \code{BIGN} analysis.  A
+report with no \code{BIGN}, or whose \code{BIGN} counts by no column variable of
+the table, is a \code{warning} (\code{part} \code{"content"}, item
+\code{"plan_col_header(header)"}): its header would print \code{N=NA}.
+
+A report's \verb{!r} value (outside its \verb{ard:}, which the ARD check reads)
+that does not read as R is an \code{error}: \code{part} the report's key it is
+under, \code{item} its place (\code{"content$plan_filter$args$where"}), the
+parser's message.  It is read, not run.
 }
 \examples{
 if (requireNamespace("haven", quietly = TRUE)) {

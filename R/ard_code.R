@@ -296,11 +296,18 @@
 # ---- the setup ------------------------------------------------------------
 
 # the names the setup and tflspec give (a study's code does not assign them)
-.ard_helper_names <- c("set_levels", "tag_ard", "fmt_pvalue", "fmt_ard",
+.ard_helper_names <- c("set_levels", "tag_ard", "fmt_pvalue", "fmt_num", "fmt_ard",
                        "keep_stats", "save_ard", "fmt_default", "tfl_stats",
                        "complete_hierarchy", "relevel_ard", "drop_empty_groups", "keep_min_pct",
                        "ard_hierarchical_or_none", "order_arms", "order_levels", "bind_items",
-                       "blank_as_na", "missing_level")
+                       "blank_as_na", "missing_level", "tte_time")
+
+# The event of a time to event, as every writer writes it: CNSR 0 is the
+# event, any other value (1, 2, ... one a censoring reason) a censoring.
+# `1 - CNSR` holds only while CNSR is 0 or 1.
+.tte_surv <- function(time = "AVAL", censor = "CNSR") {
+  sprintf("survival::Surv(%s, %s == 0)", time, censor)
+}
 
 # the packages an ARD program attaches (its setup's library() calls), and
 # those R attaches itself: their functions without `pkg::`

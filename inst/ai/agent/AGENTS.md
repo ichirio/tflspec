@@ -52,6 +52,18 @@ request has what you need: the shell's text and the variables
 
 ## Every open point: three steps
 
+**The shell first; what it does not say, the study's common rules.**  A
+shell does not write everything.  What it writes comes first -- unless
+it is clearly wrong to an experienced statistical programmer (a
+statistic that cannot be, a label against the data, a number left from
+another table): then do not copy it; write what is right, and a
+`confirm` item naming the shell's text.  What the shell does not write
+follows the study's common rules -- the shells' general conventions, the
+SAP's general sections, the study's standard -- even when this shell
+leaves it out (a title line, a footnote, the digits): write it, an
+assumption citing the rule (`from: "shell conventions 1.3"`, `from:
+SAP 5.5`).
+
 1. **The documents settle it.**  The request's shell text and TOC row,
    the SAP and the documents the person gave, `ai/adam_summary.md` (the
    ADaM and its specification: the variables, their values, the define's
@@ -255,7 +267,8 @@ stop is *Running the requests*, below: one, or a batch.  For each request:
      (`study_facts.md`): `xx (xx.x%)` is `"{n} ({p:.1f%}%)"` (`.1f%` prints
      no `%` sign), `xx (xx.x)` is `"{n} ({p:.1f%})"` -- a template's
      `count_cell` or `plan_cells`; `(N=xx)` under the arm is one
-     `plan_col_header` line, `{col}\n(N={n})` (the instructions say how) --
+     `plan_col_header` line, `{col}\n(N={n})`, read from the report's
+     `BIGN` analysis (the instructions say how) --
      only for a table whose arm heads one value column and whose header
      has no N yet.  A template whose header already shows the N
      (`param_change`, `shift`), or arms over several columns (Value and
@@ -275,11 +288,13 @@ stop is *Running the requests*, below: one, or a batch.  For each request:
      A template's own default drops the SD only for n = 1; at n = 2 it
      prints one.  Write the guard even when no group in this study can be
      that small, unless an assumption says why it cannot be;
-   - the **column widths**, always, as a programmer sets them: a table's
-     `plan_columns: {widths: {row_label: 3, .values: 1}}`
-     (relative; `row_label` is the stub, `.values` every value column), a
-     listing column's `width:` (characters).  From the
-     shell's proportions when it shows them; else from the kind of table
+   - the **column widths**, as a programmer sets them, each from a basis:
+     a table's `plan_columns` item in `content:`,
+     `- plan_columns: {widths: {row_label: 3, .values: 1}}`
+     (relative; `row_label` is the stub, `.values` every value column),
+     never a template argument (not `widths:` under `template: args:`); a
+     listing column's `width:` (characters).  The basis: the
+     shell's proportions when it shows them; else the kind of table
      and its content -- the longest row label against a value cell
      (`xx (xx.x%)` is about 10 characters), the number of value columns
      (a demographics or AE table: the stub about 2.5 to 3 times a value
@@ -292,7 +307,8 @@ stop is *Running the requests*, below: one, or a batch.  For each request:
      lines, `GASTROINTEST` / `INAL`) is too narrow: widen it, taking the
      room from a column with space to spare.  Widths are for tables and
      listings only; a figure has none, write none.  An
-     assumption, `item: widths`, `from: "programmer convention"` (or
+     assumption, `item: widths`, its text saying the basis (the longest
+     label, the shell's proportions), `from: "programmer convention"` (or
      `from: shell`);
    - the **stub heading** as the shell's (`System Organ Class / Preferred
      Term`, `Visit / Statistic`): a template's `heading` argument where
@@ -445,6 +461,9 @@ Review each draft against this list and fix what fails:
 
 - every row, column, statistic and footnote of the shell is in the draft
   or marked to confirm;
+- what the shell does not write follows the study's common rules (a
+  title line the general conventions ask of every output is there,
+  though this shell leaves it out), each an assumption citing the rule;
 - the analysis set, the treatment variable, the denominator and the
   filters agree with the shell, the TOC and the documents (or the
   disagreement was asked about or is marked);
@@ -456,8 +475,12 @@ Review each draft against this list and fix what fails:
   question asked was one neither settled;
 - a derived timepoint or population a footnote or a document defines is
   made by its rule, not taken from the data;
+- a condition copied from SAS keeps what SAS keeps: a blank is `NA`,
+  so `ne` / `not in` is `!x %in% ...`, never `!=`
+  (`ai/instructions-spec.md`, *SAS and R: missing values first*);
 - nothing of the look is written but the column widths, which every
-  table and listing draft has (a figure has none);
+  table and listing draft has, each from a basis (a table's in a
+  `plan_columns` item, not a template argument; a figure has none);
 - every free-text value (`label`, titles, footnotes, assumption text) is
   in double quotes -- always one with `: ` or `#` in it;
 - every assumption, confirm item and question is in the chat's language
