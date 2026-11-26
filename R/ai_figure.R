@@ -110,19 +110,18 @@
 }
 
 # A drawn figure's subjects (A2): its report's analysis set made as the
-# program's data part makes it (.fig_subjects_part()), from the datasets the
-# draw reads (the study's setup has read them: no file read here); NULL when
-# the report has none or the study's ARD definition cannot be made
+# program's data part makes it (.fig_output_subjects(), the one function
+# every way a figure is made uses), from the datasets the draw reads (the
+# study's setup has read them: no file read here); NULL only when the
+# report has none.  A set whose subjects cannot be made -- none of the
+# study's, the study's ARD definition not made -- stops, as the report's
+# program does (no figure of every subject)
 .ai_fig_subjects <- function(st, id, sh) {
   o <- tfl_read_outputs(".", skip_bad = TRUE)[[id]]
-  pop <- if (!is.null(o)) .na_scalar(.report_population(o)) else NA_character_
-  if (is.na(pop)) return(NULL)
-  x <- tryCatch(.ard_spec_of_study(st, output_id = id, sheets = sh)$spec,
-                error = function(e) NULL)
-  if (is.null(x)) return(NULL)
+  if (is.null(o)) return(NULL)
   old <- options(tflspec.study_setup = TRUE)
   on.exit(options(old), add = TRUE)
-  .fig_subjects_part(x, id, pop)
+  .fig_output_subjects(o, st, "the figure's draw", sheets = sh)
 }
 
 # A figure that draws nothing -- its data empty after its steps (a

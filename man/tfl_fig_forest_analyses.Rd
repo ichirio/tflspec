@@ -52,7 +52,7 @@ an ARD definition the plot needs: one analysis data (the parameter's
 records of the population, the subgroup variables added from the
 population's data) and one \code{custom} analysis per estimate -- a Cox
 model of all subjects (\code{cardx::ard_regression()}), and one within each
-subgroup variable (\code{cards::ard_strata()}).  \code{tfl_fig_template("forest_hr")}
+subgroup variable (\code{cards::ard_strata()}).  \code{tfl_fig_template("forest_hr", group = )}
 returns them as the design's attribute \code{analyses}; a study manager
 writes them to the figure's ARD definition.
 }

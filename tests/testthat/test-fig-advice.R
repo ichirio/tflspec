@@ -113,6 +113,21 @@ test_that("a flag step on a design: advice that the analysis set is the report's
   expect_identical(nrow(p), 1L)
   expect_identical(p$level, "info")
   expect_match(p$message, "Step 3 keeps the rows whose FASFL", fixed = TRUE)
-  expect_match(p$message, "its data's `population:`", fixed = TRUE)
+  # (what to do when the flag is a set's: the set on the report's data, no step)
+  expect_match(p$message, "If FASFL is an analysis set's flag, remove the step", fixed = TRUE)
+  expect_match(p$message, "write the set on the report's data (`population:`", fixed = TRUE)
   expect_null(p$fix[[1L]])
+})
+
+test_that("the flag step is a record flag's; the analysis set is the report's data's (A2)", {
+  parts <- tfl_fig_parts()
+  fl <- parts[parts$piece == "flag", ]
+  expect_identical(unique(fl$piece_label), "Keep records whose flag is Y")
+  expect_match(unique(fl$piece_help), "write it on the report's data (`population:`)", fixed = TRUE)
+  # (its default flag is unchanged here: an open decision, not this change)
+  expect_identical(fl$default[fl$field == "variable"], "SAFFL")
+  # no piece of the design names a population as its own
+  expect_false(any(grepl("population", parts$piece_label, ignore.case = TRUE)))
+  jn <- unique(parts$piece_help[parts$piece == "join"])
+  expect_false(grepl("semi: an analysis set", jn, fixed = TRUE))
 })

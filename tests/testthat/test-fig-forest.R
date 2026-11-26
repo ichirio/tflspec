@@ -91,7 +91,7 @@ test_that("the forest template is in parts, with its analyses, and its design ch
   expect_match(code, "labs(y = NULL)", fixed = TRUE)
   expect_false(grepl("pal <- ", code, fixed = TRUE))
   # no comparison: every arm but the reference; no subgroups: all subjects
-  d2 <- tfl_fig_template("forest_hr", subgroups = "")
+  d2 <- tfl_fig_template("forest_hr", group = "TRT01P", subgroups = "")
   expect_false(grepl("filter(TRT01P ==", paste(tfl_fig_design_code(d2, "F1", save = FALSE), collapse = "\n"), fixed = TRUE))
   expect_identical(attr(d2, "analyses")$analyses$analysis_id, "HR")
   # no arm chosen: every other arm, each row saying which
@@ -114,7 +114,7 @@ test_that("text_column: its columns, a panel at the right; not with one below", 
   pieces <- tfl_fig_parts()
   expect_true("text_column" %in% pieces$piece[pieces$section == "layers"])
   expect_true("errorbar_h" %in% pieces$piece[pieces$section == "layers"])
-  d <- tfl_fig_template("forest_hr")
+  d <- tfl_fig_template("forest_hr", group = "TRT01P")
   d$layers <- c(d$layers, list(list(layer = "n_table", data = "est", x = "y", group = "TRT01P")))
   expect_error(tfl_fig_design_code(d, "F1", save = FALSE), "below it or at its right, not both")
 })

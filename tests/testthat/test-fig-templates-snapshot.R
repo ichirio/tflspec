@@ -4,9 +4,8 @@
 # existing design (with none of them) generates.
 
 .fig_tmpl_snapshot_design <- function(t, kind, prm) {
-  args <- switch(kind, km = list(param = prm, group = if (t != "km_single_arm") "TRT01P"),
-                 forest = list(param = prm), list())
-  do.call(tfl_fig_template, c(list(t), args))
+  args <- switch(kind, km = list(param = prm), forest = list(param = prm), list())
+  do.call(tfl_fig_template, c(list(t), args, list(group = fig_group_of(t))))
 }
 
 fig_tp <- tfl_fig_templates()

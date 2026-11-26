@@ -66,9 +66,9 @@ test_that("four templates' scripts make the figures written by hand", {
                          hand$km_risk_table(adam, os), "FASFL"),
     waterfall_response = list(tfl_fig_template("waterfall_response"),
                               hand$waterfall_response(adam), "FASFL"),
-    mean_se = list(tfl_fig_template("mean_se", param = lb),
+    mean_se = list(tfl_fig_template("mean_se", group = "TRT01A", param = lb),
                    hand$mean_se(adam, lb), "SAFFL"),
-    box_by_visit = list(tfl_fig_template("box_by_visit"),
+    box_by_visit = list(tfl_fig_template("box_by_visit", group = "TRT01A"),
                         hand$box_by_visit(adam), "SAFFL"))
   for (nm in names(cases)) {
     e <- fx_run(cases[[nm]][[1L]], adam, pop = cases[[nm]][[3L]])

@@ -4,12 +4,22 @@
 # `+` chain -- no figure content function (no `figure:` key).  The look is
 # the study's figure style (theme_tfl(), scale_colour_tfl()) and the
 # built-in KM values on the cards.  The analysis set is the data's
-# (`population:`, A2): the program makes its subjects and joins the
-# records to them; no step keeps it (a `flag` step is for a record flag).
+# (`population:`, A2), the argument `population` (the report's own set,
+# `data: {population: SAF}`, fills it): the program makes its subjects and
+# joins the records to them; no step keeps it (a `flag` step is for a
+# record flag).
 template: km_cards
 label: KM curves (cards)
 kind: figure
 params:
+  population:
+    type: string
+    input: pick
+    choices: populations
+    default: !series population_efficacy
+    step: data
+    tier: usual
+    description: The analysis set whose subjects' records the figure draws (data.yml's populations).
   by:
     type: column
     input: pick
@@ -57,7 +67,6 @@ params:
     tier: other
     description: Where the legend goes (inside at the top right, bottom); none for no legend.
 derive:
-  population: {value: !series population_efficacy}
   x_label_days: {if: "{time_unit}", is: days, then: Time (Days)}
   x_label_weeks: {if: "{time_unit}", is: weeks, then: Time (Weeks)}
   x_label_months: {if: "{time_unit}", is: months, then: Time (Months)}

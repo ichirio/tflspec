@@ -323,7 +323,12 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
       # (a report's own data: the call's data step is the template's --
       # unless the report's steps come before the template's call steps)
       # (a figure's call draws the template's layers: none of them replaced)
-      ok <- r$ok && (!length(own$data) || composed) &&
+      # (the report's analysis set on its data, `data: {population: SAF}`,
+      # is no data of its own: the template's data says the same set, A2)
+      own_data <- if (is.list(own$data) && !is.null(names(own$data))) {
+        own$data[setdiff(names(own$data), "population")]
+      } else own$data
+      ok <- r$ok && (!length(own_data) || composed) &&
         (!identical(output$kind, "figure") || !length(intersect(
         vapply(r$items, `[[`, "", "fn"), vapply(tpl$x$content, `[[`, "", "fn"))))
       attr(output, "template") <- list(name = tpl$name, args = tpl$args, study = tpl$study,

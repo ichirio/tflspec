@@ -98,7 +98,8 @@ default in \code{\link[=tfl_ard_statistics]{tfl_ard_statistics()}}) are in the c
 variable's own (\code{BMIBL:sd=3}) with its own list.  An integer is
 that many decimals, \verb{xx.x\%} is \code{label_round(1, scale = 100)},
 \code{xx.x*1000} is \code{label_round(1, scale = 1000)} and
-\code{pvalue} the program's \code{fmt_pvalue()} (\verb{<0.001} or 3 decimals);
+\code{pvalue} the program's \code{fmt_pvalue()} (\verb{<0.001}, or 3 decimals by the
+study's rounding);
 \code{cards::apply_fmt_fun()} then fills \code{stat_fmt}.  What takes no \code{fmt_fun}
 gets the same formats after the call, from \code{fmt_ard()}: cardx's tests, CIs
 and models, \code{cards::ard_stack_hierarchical()}, a study's own function,

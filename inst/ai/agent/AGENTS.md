@@ -267,7 +267,8 @@ stop is *Running the requests*, below: one, or a batch.  For each request:
      (`study_facts.md`): `xx (xx.x%)` is `"{n} ({p:.1f%}%)"` (`.1f%` prints
      no `%` sign), `xx (xx.x)` is `"{n} ({p:.1f%})"` -- a template's
      `count_cell` or `plan_cells`; `(N=xx)` under the arm is one
-     `plan_col_header` line, `{col}\n(N={n})` (the instructions say how) --
+     `plan_col_header` line, `{col}\n(N={n})`, read from the report's
+     `BIGN` analysis (the instructions say how) --
      only for a table whose arm heads one value column and whose header
      has no N yet.  A template whose header already shows the N
      (`param_change`, `shift`), or arms over several columns (Value and

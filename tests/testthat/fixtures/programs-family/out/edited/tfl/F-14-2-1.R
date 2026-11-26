@@ -31,7 +31,8 @@ source("programs/tfl/fig_setup.R")
 
 # ---- content: your code ----------------------------------------------------
 # your code: leaves `content`
-saf <- adsl$USUBJID[adsl$SAFFL == "Y"]
+# adsl_sub: the subjects of the report's analysis set, made before this code
+saf <- adsl_sub$USUBJID
 d <- advs[advs$PARAMCD == "SYSBP" & advs$USUBJID %in% saf &
             advs$AVISITN > 0 & advs$AVISITN <= 8 & !is.na(advs$CHG), ]
 m <- aggregate(CHG ~ TRTA + AVISITN, data = d, FUN = function(x)

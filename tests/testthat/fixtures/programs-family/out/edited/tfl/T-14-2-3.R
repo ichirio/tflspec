@@ -48,7 +48,7 @@ plan <- ard |>
     continuous = list(
       n = "{N:.0f}",
       "Mean (95% CI)" = "{estimate:.1f} ({conf.low:.1f}, {conf.high:.1f})",
-      "p-value" = "{p.value:.3f}"
+      "p-value" = "{p.value:stat_fmt}"
     ),
     na = "-"
   ) |>

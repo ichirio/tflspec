@@ -4,7 +4,7 @@
 \alias{tfl_content_run}
 \title{Make a report's content, from its spec file, without its code}
 \usage{
-tfl_content_run(output, data)
+tfl_content_run(output, data, study = NULL)
 }
 \arguments{
 \item{output}{A report (\code{\link[=tfl_output]{tfl_output()}}), resolved.}
@@ -17,6 +17,14 @@ content's \code{normalize_ard()} (as it is when the content has none), and
 the steps start from \code{data}.  For a figure, a
 named list of the objects its code reads: the datasets by their names
 in lower case (\code{adtte}), and \code{ard}.}
+
+\item{study}{For a figure with an analysis set (its data's
+\code{population:}) that reads a dataset: the study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}})
+or its folder.  The set's subjects are made as the report's program
+makes them (its data part, from the study's files) and every dataset
+the figure reads is joined to them.  Such a figure given no study, or
+a set the study does not define, is an error: never a figure of every
+subject.}
 }
 \value{
 For a table, the \code{\link[rtfreporter:table_plan]{rtfreporter::table_plan()}}; for a figure, the

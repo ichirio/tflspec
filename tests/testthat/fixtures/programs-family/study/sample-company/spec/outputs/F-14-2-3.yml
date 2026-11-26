@@ -4,8 +4,8 @@ label: KM curves of the time to first skin disorder (designed)
 extends:
   - defaults
 data:
-  source: code
   population: SAF
+  source: code
   steps:
     - step: read
       dataset: ADTTE

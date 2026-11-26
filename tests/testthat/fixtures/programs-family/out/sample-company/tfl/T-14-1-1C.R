@@ -2,8 +2,6 @@
 #  Program    : programs/tfl/T-14-1-1C.R
 #  Output     : T-14-1-1C (table) -> output/tfl/T-14-1-1C.rtf
 #  Description: Demographics (a code SPEC)
-#  Title      : Table 14.1.1
-#  Title      : Demographic Characteristics
 #  Generated  : <masked>
 #  The data part makes `data`; the report part is written from spec/.
 # ============================================================================
@@ -106,9 +104,6 @@ doc <- rtf_document(
 ) |>
   rtf_section(header = header_standard, footer = footer_standard) |>
   rtf_tables(plan) |>
-  rtf_titles(
-    list(list(c(c = "Table 14.1.1"), c(c = "Demographic Characteristics")))
-  ) |>
   rtf_footnotes(list(list(c(l = "SD = Standard Deviation."))))
 generate_rtfreport(doc, file.path(path_tfl, paste0(report_id, ".rtf")), overwrite = TRUE)
 record_report(report_id)

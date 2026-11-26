@@ -370,11 +370,23 @@
   })
 }
 
-# The report's analysis set, one id: the one reader's (.data_population(),
-# .report_population(): its data's own, its subjects entries', its
-# `common:` until `common` goes -- canon 11-15); NA for none or for several
+# The report's analysis set: its data's own `population` (canon 11-15: the
+# set is the data's; `common: population` read until `common` goes), else
+# (a report built from a template has none) the one set its subjects data
+# entries name; NA for none or for several
 .out_population_or_data <- function(output) {
-  .na_scalar(.data_population(if (is.list(output$data)) output$data, output))
+  pop <- .report_set(output)
+  if (!is.na(pop)) return(pop)
+  # (a resolved report has them as its ARD's analysis_data, a file's as
+  # `data:`; the rows only, never the keys of a data map, .data_rows())
+  d <- .data_rows(output)
+  if (!length(d)) return(NA_character_)
+  v <- unlist(lapply(d, function(a) {
+    p <- a[["population"]]
+    if (.entry_is_subjects(a) && is.character(p) && length(p) == 1L && !is.na(p) && nzchar(p)) p
+  }))
+  v <- unique(v)
+  if (length(v) == 1L) v else NA_character_
 }
 
 # a function's arguments as page: says them: a map, unset ones gone

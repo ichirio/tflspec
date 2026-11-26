@@ -19,5 +19,5 @@ of its figures does: what the script's \code{attr(, "ard")} says
 (\code{\link[=tfl_fig_design_code]{tfl_fig_design_code()}}), without writing the script.
 }
 \examples{
-tfl_fig_uses_ard(tfl_fig_template("km_risk_table"))
+tfl_fig_uses_ard(tfl_fig_template("km_risk_table", group = "TRT01P"))
 }

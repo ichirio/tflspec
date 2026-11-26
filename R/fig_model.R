@@ -2,16 +2,17 @@
 # pieces a GUI can list, add, remove and edit one by one.
 #
 #   data    one ordered list of steps from ADaM to what the layers draw:
-#           read a dataset (`df`), join ADSL, keep a PARAMCD or a
-#           population, derive a variable, change a time's unit, order a
-#           variable's values, rank rows; and the steps that make an object
-#           of their own (`name`): a Kaplan-Meier fit (survfit2), summary
-#           statistics by group and visit, a rate, counts, another
-#           dataset's rows ..., any function's result, and, for what has
-#           no step, the user's own code.  Consecutive steps on one object
-#           are one pipe.  Each step may say the object it reads (`in`) and
-#           the one it leaves (`out`; a named step's `name`): see
-#           .fig_step_io().  An `ard` step is an analysis of the figure's
+#           read a dataset (`df`), join ADSL, keep a PARAMCD or the
+#           records a flag marks, derive a variable, change a time's unit,
+#           order a variable's values, rank rows (the analysis set is no
+#           step: the report's data's `population:`); and the steps that
+#           make an object of their own (`name`): a Kaplan-Meier fit
+#           (survfit2), summary statistics by group and visit, a rate,
+#           counts, another dataset's rows ..., any function's result,
+#           and, for what has no step, the user's own code.  Consecutive
+#           steps on one object are one pipe.  Each step may say the object
+#           it reads (`in`) and the one it leaves (`out`; a named step's
+#           `name`): see .fig_step_io().  An `ard` step is an analysis of the figure's
 #           ARD (a row of the ARD definition, no line of the program).
 #           (Before 0.0.24.9074 the named steps were a list of their own,
 #           `stats`; such a design reads as one list.)
@@ -109,7 +110,8 @@ tfl_time_unit_days <- function() {
                                       "before the figure: read instead of the dataset")))),
     join = list(section = "data", label = "Join variables",
       help = paste("Variables of another dataset (e.g. ADSL's treatment, ADRS's best response),",
-                   "one row a subject; or only the rows of its subjects (semi: an analysis set's)."),
+                   "one row a subject; or only the rows of its subjects (semi: a subgroup's, e.g.",
+                   "AGE >= 65).  The analysis set is no join: the report's data's `population:`."),
       fields = rbind(
         .ff("dataset", "dataset", "Dataset", "ADSL", required = TRUE),
         .ff("where", "expr", "Its rows (R)", help = "e.g. PARAMCD == \"BOR\""),
@@ -123,8 +125,10 @@ tfl_time_unit_days <- function() {
       fields = rbind(
         .ff("value", "param", "PARAMCD", required = TRUE),
         .ff("variable", "variable", "Variable", "PARAMCD"))),
-    flag = list(section = "data", label = "Keep a population",
-      help = "The rows whose flag is \"Y\" (FASFL, SAFFL, ANL01FL ...).",
+    flag = list(section = "data", label = "Keep records whose flag is Y",
+      help = paste("The records a record flag marks (ANL01FL, TRTEMFL ...).  The analysis set",
+                   "(FAS, SAF ...) is no step: write it on the report's data (`population:`);",
+                   "the report's program makes its subjects and joins the records to them."),
       fields = rbind(
         .ff("variable", "flag", "Flag", "SAFFL", required = TRUE),
         .ff("value", "text", "Value", "Y"))),
@@ -993,12 +997,16 @@ tfl_read_fig_design <- function(path) {
 # The subjects of the analysis set `pop` of report `output_id`, as the data
 # part of its program makes them, with its analysis data `data` (the ARD
 # definition `x`): list(code = <the data part's lines>, subjects =
-# list(object, dataset, id)).  NULL when the report has no analysis set or
-# the definition does not define it.
+# list(object, dataset, id)).  NULL only when the report has no analysis
+# set.  A set the study does not define, or whose subjects cannot be made,
+# stops (no figure of every subject: the rule of the template's analysis
+# set, .tpl_population_check(), and of the ARD programs).
 .fig_subjects_part <- function(x, output_id, pop, data = character()) {
   pop <- .na_scalar(pop)
+  if (is.na(pop)) return(NULL)
   pops <- x$populations
-  if (is.na(pop) || is.null(pops) || !pop %in% pops$population_id) return(NULL)
+  ids <- if (!is.null(pops)) as.character(pops$population_id) else character()
+  if (!pop %in% ids) .fig_subjects_stop(.fig_subjects_unknown(output_id, pop, ids))
   k <- match(pop, pops$population_id)
   ds <- pops$dataset[k]
   made <- .ard_data_part(x, output_id, data = data, population_id = pop)
@@ -1017,9 +1025,122 @@ tfl_read_fig_design <- function(path) {
     plain <- is.na(pops$where[k]) && is.na(pops$derive[k] %||% NA)
     obj <- if (length(same)) same[1L] else if (plain) .r_name(ds) else NA_character_
   }
-  if (is.na(obj)) return(NULL)
-  list(code = made, subjects = list(object = obj, dataset = ds,
-                                    id = .study_value(x, "id", "USUBJID")))
+  if (is.na(obj)) {
+    .fig_subjects_stop(sprintf(paste0("%s: the subjects of analysis set %s are not made by its ARD ",
+                                      "definition (no object of them); the figure would draw every ",
+                                      "subject."), output_id, pop))
+  }
+  list(code = .fig_subjects_lines(made), subjects = list(object = obj, dataset = ds,
+                                                         id = .study_value(x, "id", "USUBJID")))
+}
+
+# The data part's lines as a figure's subjects part: its lines only, no
+# section heading (`# ---- data ----`, `# ---- code lists ... ----`): the
+# program writer writes each section's heading once, the subjects inside
+# the figure's own data section
+.fig_subjects_lines <- function(code) {
+  code <- as.character(unlist(code))
+  code <- code[!grepl("^# ---- .* ----$", code)]
+  # (no blank line first, none twice in a row)
+  while (length(code) && !nzchar(code[1L])) code <- code[-1L]
+  blank <- !nzchar(code)
+  code[!(blank & c(FALSE, blank[-length(blank)]))]
+}
+
+# The message of a report's analysis set `pop` that is none of the study's
+# (`ids`: data.yml `populations:`, as its ARD definition has them,
+# character(0) when it defines none): the shared text (.pop_unknown_text())
+.fig_subjects_unknown <- function(output_id, pop, ids) {
+  sprintf("%s: the report's analysis set: %s; the figure would draw every subject.",
+          output_id, .pop_unknown_text(pop, ids))
+}
+
+# ... and of a report's set whose subjects have no ARD definition to be
+# made from (none, or one that cannot be made: `why`)
+.fig_subjects_no_ard <- function(output_id, pop, why = NULL) {
+  sprintf(paste0("%s: the report's analysis set %s: its subjects are made from the study's ARD ",
+                 "definition, %s; the figure would draw every subject."),
+          output_id, pop,
+          if (is.null(why)) "and the study has none" else paste0("which cannot be made (", why, ")"))
+}
+
+# A figure's subjects that cannot be made stop with the message (class
+# `tfl_fig_subjects`: a report program writes it as its stop() line,
+# .rp_fig_subjects(); the AI's draw stops with it)
+.fig_subjects_stop <- function(msg) {
+  stop(structure(class = c("tfl_fig_subjects", "error", "condition"),
+                 list(message = msg, call = NULL)))
+}
+
+# ... and of a report's set in a session's call given no study to make its
+# subjects from (`fn`: the call)
+.fig_subjects_no_study <- function(output_id, pop, fn) {
+  sprintf(paste0("%s: the report's analysis set %s: its subjects are made from the study's ARD ",
+                 "definition: give %s the study (`study =`); the figure would draw every subject."),
+          output_id, pop, fn)
+}
+
+# A figure report's subjects wherever it is made -- its program, the AI's
+# draw, tfl_content_code(), tfl_content_run(), tfl_run_output() (canon
+# 11-15: every way a figure is made applies the report's set): the
+# subjects part its program writes (.fig_subjects_part()), from the
+# study's ARD definition (`sheets`: the study's, when the caller has them).
+# NULL only when the report has no analysis set; a set whose subjects
+# cannot be made -- none of the study's, no study, no ARD definition --
+# stops (class `tfl_fig_subjects`).  `fn`: the call, for the message.
+.fig_output_subjects <- function(output, study, fn, data = character(), sheets = NULL) {
+  pop <- .out_population_or_data(output)
+  if (is.na(pop)) return(NULL)
+  id <- output$id
+  if (is.null(study)) .fig_subjects_stop(.fig_subjects_no_study(id, pop, fn))
+  if (is.character(study)) study <- tfl_read_study_spec(study)
+  x <- tryCatch(.ard_spec_of_study(study, output_id = id, sheets = sheets)$spec,
+                error = function(e) .fig_subjects_stop(.fig_subjects_no_ard(id, pop, conditionMessage(e))))
+  if (is.null(x)) .fig_subjects_stop(.fig_subjects_no_ard(id, pop))
+  .fig_subjects_part(x, id, pop, data = data)
+}
+
+# The datasets a figure report's read steps read (its analysis data, `data:`,
+# not among them): those the subjects' join applies to
+.fig_output_reads <- function(output) {
+  steps <- c(output$data$steps %||% list(),
+             unlist(lapply(output$plots %||% list(), function(p) p$data), recursive = FALSE))
+  unique(toupper(unlist(lapply(steps, function(s) {
+    if (is.list(s) && identical(s$step, "read") && is.null(.fig_read_data(s))) s$dataset
+  }))))
+}
+
+# A figure report's subjects in a session (tfl_content_code(),
+# tfl_content_run()): .fig_output_subjects(), for a figure that reads a
+# dataset (as the program makes them: .rp_fig_design_plot()); NULL for one
+# that reads none (its ARD, its analysis data) and for a `figure:` key's
+# (its data is its ARD definition's, the set in it)
+.fig_session_subjects <- function(output, study, fn) {
+  if (!is.null(output$figure) || !length(.fig_output_reads(output))) return(NULL)
+  .fig_output_subjects(output, study, fn)
+}
+
+# The subjects made in a session's environment `env`: their code (the data
+# part's, its own reads of the study's files) run in the study folder,
+# with the study's helpers (set_levels(), order_levels())
+.fig_subjects_eval <- function(sj, env, study, output_id) {
+  eval(parse(text = tfl_helpers_code()), env)
+  wd <- setwd(study$dir)
+  on.exit(setwd(wd), add = TRUE)
+  .eval_study_code(sj$code, env, study, ".", output_id = output_id)
+  invisible(env)
+}
+
+# A figure's code with its subjects part first (`sj`: .fig_output_subjects()'s,
+# or a stop() line with no subjects), the code's attributes kept
+.fig_code_with_subjects <- function(code, sj) {
+  if (is.null(sj)) return(code)
+  at <- attributes(code)
+  out <- c("# the report's subjects: its analysis set (its data's population)",
+           as.character(unlist(sj$code)), "", as.character(code))
+  at$names <- NULL
+  attributes(out) <- at
+  out
 }
 
 # The join that keeps a records dataset's rows of the report's subjects:
@@ -1987,7 +2108,7 @@ tfl_fig_data_name <- function(design) {
 #' @param design A `tfl_fig_design`.
 #' @return `TRUE` or `FALSE`.
 #' @examples
-#' tfl_fig_uses_ard(tfl_fig_template("km_risk_table"))
+#' tfl_fig_uses_ard(tfl_fig_template("km_risk_table", group = "TRT01P"))
 #' @export
 tfl_fig_uses_ard <- function(design) .fig_uses_ard(design)
 
@@ -2424,7 +2545,10 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
 #'
 #' @param template One of `tfl_fig_templates()$template`.
 #' @param data,param,group The dataset, its PARAMCD and the group variable
-#'   (joined from ADSL when `join_adsl`).
+#'   (joined from ADSL when `join_adsl`).  `group` has no default: a
+#'   template that splits the arms stops without it, naming itself and
+#'   the argument (`km_single_arm`, `individual_spider`, the waterfalls and
+#'   the swimmers draw no arms).
 #' @param pop The analysis set, by its id or its flag: no step of the
 #'   design keeps it.  A figure's subjects are its report's analysis set
 #'   (its data's `population:`): its program makes them and joins every dataset
@@ -2472,6 +2596,25 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
 #' @export
 tfl_fig_templates <- function() .fig_templates()
 
+# A kind's figure size and theme, from the figure style standard
+# (pp_default_options()): the dpi, the base font size, the theme
+.fig_kind_size <- function(kind) {
+  o <- pp_default_options(kind)
+  opt <- function(k, d) { x <- o[[k]]; if (is.null(x) || identical(x, "")) d else x }
+  list(dpi = as.numeric(opt("dpi", 300)), base_size = as.numeric(opt("base_size", 10)),
+       theme = opt("theme", "boxed"))
+}
+
+# A template's argument it cannot do without (a figure's `group`, PRINCIPLES
+# 1.14): none given stops, naming the template, the argument and what it is
+.fig_tpl_required <- function(x, template, arg, what) {
+  v <- as.character(unlist(x))
+  if (!length(v) || all(is.na(v) | !nzchar(trimws(v)))) {
+    .ard_stop(sprintf("%s: `%s` is required (%s).", template, arg, what))
+  }
+  x
+}
+
 #' @rdname tfl_fig_templates
 #' @export
 tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
@@ -2510,8 +2653,11 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
   o <- pp_default_options(kind)
   opt <- function(k, d) { x <- o[[k]]; if (is.null(x) || identical(x, "")) d else x }
   # (its size is its report's: tfl_fig_page_size())
-  size <- list(dpi = as.numeric(opt("dpi", 300)),
-               base_size = as.numeric(opt("base_size", 10)), theme = opt("theme", "boxed"))
+  size <- .fig_kind_size(kind)
+  # a figure's group has no default (PRINCIPLES 1.14): the template does not
+  # guess the arms -- one rule for every kind that draws by a group
+  need_group <- function() .fig_tpl_required(group, template, "group",
+                                             "the variable that splits the arms")
   # the design of a whole-script template: the type's function and its arguments
   if (!tp$parts[tp$template == template]) {
     style <- sub(paste0("^", kind, "_"), "", template)
@@ -2533,7 +2679,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
       single <- template == "km_single_arm"
       data <- data %||% "ADTTE"; param <- param %||% "OS"
       time <- time %||% "AVAL"
-      group <- if (single) NULL else group %||% "TRT01P"
+      group <- if (single) NULL else need_group()
       tfl_fig_design(
         template = template,
         data = drop(list(read(data), if (isTRUE(join_adsl)) join_step(group),
@@ -2560,7 +2706,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
       # the estimates are statistics: the figure's own ARD (cards / cardx),
       # read with ard_stats(); the analyses it needs come with the design
       data <- data %||% "ADTTE"; param <- param %||% "OS"; pop <- pop %||% "FASFL"
-      group <- group %||% "TRT01P"; time <- time %||% "AVAL"
+      group <- need_group(); time <- time %||% "AVAL"
       sub <- .split_vals(subgroups)
       # the layers read `est` (the ARD), not df; the subgroups are joined
       # in the ARD's own analysis data
@@ -2663,7 +2809,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
       param <- param %||% if (spider) "SDIAM" else "ALT"
       value <- value %||% if (spider) "PCHG" else "AVAL"
       x <- x %||% if (spider) "ADY" else visit_label
-      group <- if (spider) NULL else group %||% "TRT01A"
+      group <- if (spider) NULL else need_group()
       join <- join_adsl %||% !spider
       div <- if (spider) .fig_units[[time_unit]] else 1
       tfl_fig_design(
@@ -2689,7 +2835,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
           if (!spider) list(layer = "line", data = "sm", x = visit_label, y = "mean", colour = group, linewidth = 1.2))))
     },
     bar = {
-      data <- data %||% "ADRS"; param <- param %||% "BOR"; group <- group %||% "TRT01P"
+      data <- data %||% "ADRS"; param <- param %||% "BOR"; group <- need_group()
       join <- join_adsl %||% TRUE
       style <- sub("^bar_", "", template)
       tfl_fig_design(
@@ -2722,7 +2868,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
                  vjust = -0.3, position = "position_dodge(width = 0.75)"))))
     },
     mean = {
-      data <- data %||% "ADLB"; param <- param %||% "ALT"; group <- group %||% "TRT01A"
+      data <- data %||% "ADLB"; param <- param %||% "ALT"; group <- need_group()
       value <- value %||% "AVAL"
       join <- join_adsl %||% TRUE
       iv <- switch(template, mean_sd = "sd", mean_ci = "ci", "se")
@@ -2745,7 +2891,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
           if (template == "mean_se_n") list(layer = "n_table", data = "sm", x = visit_label, group = group))))
     },
     box = {
-      data <- data %||% "ADLB"; param <- param %||% "ALT"; group <- group %||% "TRT01A"
+      data <- data %||% "ADLB"; param <- param %||% "ALT"; group <- need_group()
       style <- sub("^box_", "", template)
       value <- value %||% if (style == "change") "CHG" else "AVAL"
       join <- join_adsl %||% TRUE
@@ -2775,7 +2921,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
                group = if (!one) group, shape = "plus", size = if (one) 3 else 2, dodge = !one))))
     },
     scatter = {
-      data <- data %||% "ADLB"; param <- param %||% "ALT"; group <- group %||% "TRT01A"
+      data <- data %||% "ADLB"; param <- param %||% "ALT"; group <- need_group()
       shift <- template == "scatter_shift"
       x <- x %||% "BASE"; y <- y %||% if (shift) "AVAL" else "CHG"
       join <- join_adsl %||% TRUE
@@ -2795,7 +2941,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
           if (!shift) list(layer = "smooth", data = "df", x = x, y = y, colour = group, method = "lm", se = FALSE))))
     },
     pk = {
-      data <- data %||% "ADPC"; group <- group %||% "TRT01A"
+      data <- data %||% "ADPC"; group <- need_group()
       value <- value %||% "AVAL"; time <- time %||% "NFRLT"
       join <- join_adsl %||% TRUE
       style <- sub("^pk_", "", template)
@@ -2952,7 +3098,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
 #' records of the population, the subgroup variables added from the
 #' population's data) and one `custom` analysis per estimate -- a Cox
 #' model of all subjects (`cardx::ard_regression()`), and one within each
-#' subgroup variable (`cards::ard_strata()`).  `tfl_fig_template("forest_hr")`
+#' subgroup variable (`cards::ard_strata()`).  `tfl_fig_template("forest_hr", group = )`
 #' returns them as the design's attribute `analyses`; a study manager
 #' writes them to the figure's ARD definition.
 #'

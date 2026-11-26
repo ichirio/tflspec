@@ -1,7 +1,9 @@
 # A2-2 (canon 11-15): a figure's subjects are its report's analysis set,
-# written on its data as `population:`.  forest_hr and km_simple carry the
-# series' efficacy set as the default, as km_cards; a report's own set (a
-# data row of the subjects' id) goes over it.  Fictional data only.
+# written on its data as `population:`.  forest_hr and km_simple take it as
+# the argument `population` (as km_cards and the table templates), its
+# default the series' efficacy set; the report's own set -- its data map
+# `data: {population: SAF}`, `common:` until it goes, or a data row of the
+# subjects' id -- goes over it.  Fictional data only.
 
 fp_study <- list(settings = list(rounding = "sas"))
 
@@ -36,6 +38,31 @@ test_that("forest_hr and km_simple: the subjects' set is the series' efficacy se
   for (mk in list(fp_forest, fp_km)) {
     o <- tfl_template_resolve(mk(), study = fp_study)
     expect_identical(fp_subjects_row(o)$population, "FAS")
+    expect_identical(attr(o, "args")$population, "FAS")
+    expect_identical(.out_population_or_data(o), "FAS")
+  }
+})
+
+test_that("forest_hr and km_simple: the argument population, given as an argument or on the report's data", {
+  for (mk in list(fp_forest, fp_km)) {
+    # the template's argument (its data step)
+    rep <- mk()
+    rep$template$data$population <- "SAF"
+    o <- tfl_template_resolve(rep, study = fp_study)
+    expect_identical(fp_subjects_row(o)$population, "SAF")
+    expect_identical(attr(o, "origins")[["population"]], "report")
+    # the canon's place: the report's data map (no rows: no `$` on a value)
+    rep <- mk()
+    rep$data <- list(population = "SAF")
+    o <- tfl_template_resolve(rep, study = fp_study)
+    expect_identical(fp_subjects_row(o)$population, "SAF")
+    expect_identical(.out_population_or_data(o), "SAF")
+    # `common: population` (until it goes): no longer shadowed by the default
+    rep <- mk()
+    rep$common <- list(population = "SAF")
+    o <- tfl_template_resolve(rep, study = fp_study)
+    expect_identical(fp_subjects_row(o)$population, "SAF")
+    expect_identical(.out_population_or_data(o), "SAF")
   }
 })
 
