@@ -49,7 +49,7 @@ test_that("an old design's size is read as nothing: its report's now", {
   expect_identical(d$plot$dpi, 150)
   expect_false("width" %in% tfl_fig_parts()$field[tfl_fig_parts()$piece == "plot"])
   # a script of its own: saved at the size it is given
-  code <- tfl_fig_design_code(tfl_fig_template("box_by_group"), "f", width_in = 8, height_in = 3)
+  code <- tfl_fig_design_code(tfl_fig_template("box_by_group", group = "TRT01A"), "f", width_in = 8, height_in = 3)
   expect_true("fig_width  <- 8" %in% code)
   expect_true("fig_height <- 3" %in% code)
 })

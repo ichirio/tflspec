@@ -37,7 +37,7 @@ test_that("an analysis's calls write the code the program writes", {
     res <- tflspec:::.ard_analysis_call(x, r, keys, "USUBJID")
     expect_identical(
       tflspec:::.ard_call_lines(res, r, "data", "ard_x"),
-      tflspec:::.ard_analysis_lines(x, r, keys, "USUBJID", "data", "ard_x", character()),
+      tflspec:::.ard_analysis_lines(x, r, keys, "USUBJID", "data", "ard_x"),
       info = r$analysis_id)
   }
 })

@@ -290,8 +290,13 @@
 # that makes `data` itself has no `ard` to normalize.
 .rp_rework_lines <- function(ctx, code, proc) {
   c(if (is.na(code) || !.rp_makes_data(code)) .rp_rework_normalize_lines(ctx),
-    .rp_code_block(proc))
+    .rp_rework_code(proc))
 }
+
+# A Rework (a table's, a template listing's) as the content's data steps
+# are written (.content_steps_code(), A1): one expression that assigns only
+# `data` as it is, any other code in a scope of its own that leaves `data`
+.rp_rework_code <- function(proc) .content_steps_code(.rp_code_block(proc))
 
 # The check made of a Rework: it names `data` (code that does not parse is
 # left to R, which says so when it runs)
@@ -384,13 +389,58 @@
                                                  .setup_file_names[["fig_setup"]]), quote = "\"")))
 }
 
+# The report's analysis set (A2 R1): its spec's, by the one reader
+# (.out_population_or_data(): its data's `population`, its `common:` until
+# `common` goes, else its subjects entries'); NA when it has none
+.rp_population <- function(ctx) {
+  r <- ctx$report
+  .out_population_or_data(r$spec_output %||% r$output %||% list())
+}
+
+# A figure's subjects (A2 R1, R4): the subjects of the report's analysis set,
+# made once by the program's data part as the ARD programs make them
+# (.fig_subjects_part(): the object <dataset>_sub), with the report's
+# analysis data `data`; the records the figure reads are joined to them.
+# list(code, subjects); NULL only when the report has no analysis set.  A
+# set whose subjects cannot be made (none of the study's, no ARD definition)
+# is a stop() line saying so, and no subjects: never every subject drawn
+# (.fig_subjects_part())
+.rp_fig_subjects <- function(ctx, data = character()) {
+  pop <- .rp_population(ctx)
+  if (is.na(pop)) return(NULL)
+  id <- ctx$report$id
+  stop_line <- function(msg) list(code = sprintf("stop(%s)", encodeString(msg, quote = "\"")),
+                                  subjects = NULL)
+  if (is.null(ctx$shared$ard)) return(stop_line(.fig_subjects_no_ard(id, pop)))
+  x <- .as_spec(ctx$shared$ard, "ard", "tfl_report_program")
+  # (written as tfl_ard_code(part = "data") writes it: for its setup, which
+  # attaches cards and dplyr)
+  user <- .attached()
+  old <- options(tflspec.user_attached = user,
+                 tflspec.attached = union(user, c(.ard_pkgs, .ard_base_pkgs)))
+  on.exit(options(old), add = TRUE)
+  sj <- tryCatch(.fig_subjects_part(x, id, pop, data = data),
+                 tfl_fig_subjects = function(e) stop_line(conditionMessage(e)))
+  if (!is.null(sj$subjects)) sj$code <- .drop_attached_ns(sj$code)
+  sj
+}
+
+# ... its lines in the program: the subjects (and the analysis data) made
+.rp_fig_subjects_lines <- function(sj, data = character()) {
+  if (is.null(sj)) return(NULL)
+  c(paste0("# the report's subjects: its analysis set (its data's population)",
+           if (length(data)) ", and its analysis data (its ARD definition)"),
+    sj$code, "")
+}
+
 # the part of a figure's program between its setup and its report: a
 # figure with no design and no code of its own yet -- its datasets read,
-# the company's plot template or a TODO
+# the report's subjects, the company's plot template or a TODO
 .rp_figure_lines <- function(ctx) {
   r <- ctx$report
   ds <- r$datasets
   if (!length(ds)) return(NULL)
+  sj <- .rp_fig_subjects(ctx)
   tpl <- .rp_fill_template(ctx, "figure_plot")
   plot <- c(
     if (!is.na(tpl)) .rp_code_block(tpl) else c(
@@ -402,6 +452,7 @@
   c(c(paste0("# the data: ", paste(ds, collapse = ", "), " (data catalog)"),
       unlist(lapply(ds, function(d) .rp_read_dataset_lines(ctx, d))),
       ""),
+    .rp_fig_subjects_lines(sj),
     "# the figure style of the company standards, and the figure checks",
     sprintf("source(%s)", encodeString(setup, quote = "\"")),
     "",
@@ -492,11 +543,14 @@
 
 # A figure report with the content key `figure: {name, args}` (tflspec#835):
 # the report's datasets and analysis data (its ARD definition), its ARD
-# (`ard`), then `content <- tflspec::<fn>(...)`.  A key that does not hold
-# is a stop() line saying why.
+# (`ard`), then `content <- tflspec::<fn>(...)`, written with the study as
+# every figure runner writes it (its report's set, A2).  A key that does not
+# hold is a stop() line saying why.
 .rp_fig_key_lines <- function(ctx) {
   r <- ctx$report
-  call <- tryCatch(as.character(tfl_content_code(.rp_code_content(.rp_y(ctx)), pipe = "|>")),
+  y <- .rp_y(ctx)
+  call <- tryCatch(as.character(tfl_content_code(.rp_code_content(y), pipe = "|>",
+                                                 study = y$study)),
                    error = function(e) c(
                      "# the figure's key does not hold:",
                      paste0("stop(", .rp_r_string(trimws(conditionMessage(e))), ")")))
@@ -514,12 +568,30 @@
     call)
 }
 
+# What a design's read steps read (each figure's of a composed one): the
+# datasets, and the report's analysis data (by data_id)
+.rp_fig_design_reads <- function(design) {
+  steps <- c(design$data, unlist(lapply(design$plots %||% list(), function(p) p$data),
+                                 recursive = FALSE))
+  reads <- Filter(function(s) is.list(s) && identical(s$step, "read"), steps)
+  data <- unlist(lapply(reads, .fig_read_data))
+  ds <- unlist(lapply(reads, function(s) if (is.null(.fig_read_data(s))) .fv(s, "dataset", "read")))
+  list(datasets = unique(toupper(ds)), data = unique(as.character(data)))
+}
+
 # A designed figure's data and plot sections, as its program has them
 # (#293): `# ---- data ----` -- the code lists, the datasets read, the
 # steps' pipes -- and `# ---- plot ----` -- the palette, the chain into
 # `plot` -- then the figure checks and its size on the page
 .rp_fig_design_plot <- function(ctx, design, codelists) {
   r <- ctx$report
+  if (!inherits(design, "tfl_fig_design")) design <- .fig_design_from_list(design)
+  # a report with an analysis set: its subjects made in the data part, the
+  # datasets the design reads joined to them (A2: no step keeps a
+  # population); the analysis data its reads name made with them
+  reads_of <- .rp_fig_design_reads(design)
+  sj <- if (length(reads_of$datasets)) .rp_fig_subjects(ctx, data = reads_of$data)
+  if (!is.null(sj)) attr(design, "subjects") <- sj$subjects
   code <- tfl_fig_design_code(design, r$id, setup = TRUE, save = FALSE, name = "plot",
                               codelists = codelists)
   reads <- attr(code, "reads") %||% character()
@@ -531,7 +603,9 @@
   # the report's analysis data its reads name: made first, as its ARD
   # definition says (the ARD code's data part)
   adata <- attr(code, "data") %||% character()
-  if (length(adata)) {
+  if (!is.null(sj)) {
+    read <- c(read, .rp_fig_subjects_lines(sj, adata))
+  } else if (length(adata)) {
     read <- c(read, "# the report's analysis data (its ARD definition)",
               .rp_ard_code(ctx, ctx$shared$ard, output_id = r$id, part = "data", data = adata),
               "")
@@ -564,18 +638,23 @@
        plot = utils::tail(lines, length(lines) - at + 1L))
 }
 
-# The datasets the report registers, read; and a figure's ARD as `ard`
-# when its source gives one
+# The datasets the report registers, read; a figure's subjects (its
+# analysis set's, with its analysis data: the code reads them by name, A2
+# Q5); and a figure's ARD as `ard` when its source gives one
 .rp_code_inputs <- function(ctx) {
   r <- ctx$report
   ds <- r$datasets
-  ard <- if (identical(r$type, "figure") && !identical(r$ard_source$kind, "none")) {
+  fig <- identical(r$type, "figure")
+  adata <- if (fig) as.character(r$adata$ids %||% character())
+  sj <- if (fig) .rp_fig_subjects(ctx, data = adata)
+  ard <- if (fig && !identical(r$ard_source$kind, "none")) {
     a <- .rp_fig_ard_lines(ctx)
     if (length(a)) a
   }
   c(if (length(ds)) c(
       paste0("# the report's data: ", paste(ds, collapse = ", "), " (data catalog)"),
       unlist(lapply(ds, function(d) .rp_read_dataset_lines(ctx, d))), ""),
+    .rp_fig_subjects_lines(sj, adata),
     ard)
 }
 
@@ -683,7 +762,7 @@
     }
     if (!is.null(recs)) {
       return(c(setup, "# the listing's records", recs,
-               if (!is.na(proc)) c("", "# its rework", .rp_code_block(proc))))
+               if (!is.na(proc)) c("", "# its rework", .rp_rework_code(proc))))
     }
   }
   # a listing defined in rows: its process code is a rework of `data`

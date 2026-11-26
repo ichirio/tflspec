@@ -155,8 +155,8 @@ tfl_output_contents <- function(output, study, dir = ".") {
     if (identical(o$kind, "figure")) {
       data <- .contents_fig_data(ro, study, dir)
       if (identical(ro$data$source, "ard") || length(o$ard$analyses %||% list())) data$ard <- get_ard()
-      # (the warnings stay, as a table's do)
-      return(suppressMessages(tfl_content_run(ro, data)))
+      # (the warnings stay, as a table's do; its subjects: the study's, A2)
+      return(suppressMessages(tfl_content_run(ro, data, study = study)))
     }
     if (identical(o$kind, "listing")) {
       # a listing's records: its data step, as its program reads them; its
@@ -290,7 +290,8 @@ tfl_output_contents <- function(output, study, dir = ".") {
     }
     # (the warnings stay: the template's own -- subjects or records left out,
     # bars cut off -- are the user's to see, as a table's are)
-    stage("the figure", suppressMessages(tfl_content_run(ro, data)))
+    # (its subjects: the report's analysis set, made from the study, A2)
+    stage("the figure", suppressMessages(tfl_content_run(ro, data, study = st)))
   } else {
     ard <- stage("the ARD", suppressMessages(tfl_build_ard(st, dir = ".", output_id = ro$id, save = FALSE)))
     if (!is.null(ard$output_id)) ard <- ard[ard$output_id %in% ro$id, , drop = FALSE]

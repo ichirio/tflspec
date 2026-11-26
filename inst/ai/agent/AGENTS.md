@@ -486,8 +486,9 @@ Review each draft against this list and fix what fails:
 - every assumption, confirm item and question is in the chat's language
   (`ai: language`: {{language}}); keys and values stay as they are;
 - a template with its own data (`km_survival`, `km_cumulative`) has
-  `data.steps` of `read`, the analysis set and `param`, and none of the
-  template's own steps (`survfit`, `time_unit`);
+  `data.steps` of `read` and `param`, and none of the template's own
+  steps (`survfit`, `time_unit`); a figure's analysis set is its
+  data's `population:`, never a `flag` step on the set's flag;
 - the forms are the instructions' (*Before you save a draft*).
 
 Then tell the person what the review changed, draft by draft (or that it

@@ -11,6 +11,7 @@
 #'   from it (the ARD program or the table's code stops; a content
 #'   function the installed rtfreporter does not have yet; with `adam`, a
 #'   `!=` condition that drops the rows where its variable is NA; a
+#'   table whose header N and counts give a subject different groups; a
 #'   report's own code list, for a column the study's `adam_meta` maps,
 #'   with a code the define's code list does not have, `part`
 #'   `"codelists"` -- codes compared, not labels);
@@ -101,6 +102,15 @@
 #'   count and the form that keeps them, `!var %in% value`.  No study
 #'   folder, a dataset whose file is not there or is not listed, or a
 #'   variable not in the dataset: no row.  The generated code is not changed.
+#'   The same data check a table's header N (its `BIGN` analysis, from
+#'   whatever data or population it names) against its counts: an analysis
+#'   that groups by BIGN's variable and reads another dataset, whose data
+#'   does not take the variable from the subjects (`add`), gives a `warning`
+#'   row when the two data carry the variable and its value differs for a
+#'   subject (the subject counted under one group in the N, another in the
+#'   rows).  Only a table whose header shows the N (`{n}` in a column
+#'   header that gives no values of its own) is looked at, and only the
+#'   datasets of such tables are read.
 #' @return A data frame, one row a problem: `output_id` (`NA` for the
 #'   study's ARD definition as a whole and the study's own rows), `part`
 #'   (`"file"`, `"study"`, `"ard"`, `"content"`, `"program"`, `"figure"`,
@@ -175,6 +185,8 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
   refs <- tfl_check_study_refs(study, outs[setdiff(ids, bad)])
   unresolved <- attr(refs, "unresolved")
   rows[[length(rows) + 1L]] <- refs[c("output_id", "part", "item", "level", "message")]
+  # (the reports whose header shows BIGN's N, .bign_shown())
+  n_shown <- character()
 
   # what the user wrote and a study's R fields hold: a test for a blank text,
   # where study$adam has NA (a template's own rows are not the user's: left out)
@@ -262,6 +274,8 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
       add(output_id = id, part = "content", item = "", level = "error", message = one(ro))
       next
     }
+    # (a header that shows BIGN's N: the N check looks at that N only)
+    if (.bign_shown(ro)) n_shown <- c(n_shown, id)
     # its own titles under a study header that prints the label, the title
     # and the population from the report's keys: printed twice (#518)
     if (length(.page_args(o$page$titles))) {
@@ -282,7 +296,9 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
           level = "check", message = paste0("to confirm: ", cf$why))
     }
     # the report as written: what stops the build far from its cause
-    rows[[length(rows) + 1L]] <- .check_static_rows(o, id)
+    rows[[length(rows) + 1L]] <- .check_static_rows(o, id, study)
+    # its analysis set against the study: data.yml's sets, the TOC's line
+    rows[[length(rows) + 1L]] <- .check_set_rows(o, id, study)
     # the names its fields give: a figure's that nothing above makes, a
     # table's named block (R/object_list.R)
     rows[[length(rows) + 1L]] <- .check_object_rows(ro, id, study_ds)
@@ -365,6 +381,9 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
   }
   # (with the study's data: a `!=` that drops the rows where the variable is NA)
   rows[[length(rows) + 1L]] <- .check_ne_na_rows(study, adam, setdiff(ids, bad), is.null(output_id))
+  # (and a table's header N and its counts: a column variable of two data that
+  # differs for a subject, R/check_spec_n.R)
+  rows[[length(rows) + 1L]] <- .check_n_rows(study, adam, intersect(setdiff(ids, bad), n_shown))
   out <- do.call(rbind, rows)
   out <- out[is.na(out$output_id) | out$output_id %in% ids, , drop = FALSE]
   if (isTRUE(build) && !is.null(study$dir)) {

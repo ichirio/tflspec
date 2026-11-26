@@ -31,7 +31,16 @@ applies to: where \code{var} has NA there, the condition drops those rows (a
 filter keeps only TRUE), and a \code{warning} row (\code{part} \code{"ard"}) gives the
 count and the form that keeps them, \code{!var \%in\% value}.  No study
 folder, a dataset whose file is not there or is not listed, or a
-variable not in the dataset: no row.  The generated code is not changed.}
+variable not in the dataset: no row.  The generated code is not changed.
+The same data check a table's header N (its \code{BIGN} analysis, from
+whatever data or population it names) against its counts: an analysis
+that groups by BIGN's variable and reads another dataset, whose data
+does not take the variable from the subjects (\code{add}), gives a \code{warning}
+row when the two data carry the variable and its value differs for a
+subject (the subject counted under one group in the N, another in the
+rows).  Only a table whose header shows the N (\code{{n}} in a column
+header that gives no values of its own) is looked at, and only the
+datasets of such tables are read.}
 }
 \value{
 A data frame, one row a problem: \code{output_id} (\code{NA} for the
@@ -60,6 +69,7 @@ refuses): the report cannot be copied into the study;
 from it (the ARD program or the table's code stops; a content
 function the installed rtfreporter does not have yet; with \code{adam}, a
 \code{!=} condition that drops the rows where its variable is NA; a
+table whose header N and counts give a subject different groups; a
 report's own code list, for a column the study's \code{adam_meta} maps,
 with a code the define's code list does not have, \code{part}
 \code{"codelists"} -- codes compared, not labels);

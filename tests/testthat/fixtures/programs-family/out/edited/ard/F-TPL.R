@@ -21,7 +21,7 @@ adtte <- order_levels(adtte, from = adsl)
 adsl_sub <- filter(adsl, SAFFL == "Y")
 
 # adtte_saf_pfs: the records. ADTTE of the subjects of adsl_sub, SEX, AGEGR1
-# from ADSL; where
+# from ADSL
 adtte_saf_pfs <- adtte |>
   select(-any_of(c("SEX", "AGEGR1"))) |>
   inner_join(
@@ -33,16 +33,19 @@ adtte_saf_pfs <- adtte |>
 
 # ---- analyses ----
 # HR: Hazard ratio, all subjects
-n_no_arm <- sum(is.na(adtte_saf_pfs$TRT01A))
-if (n_no_arm > 0) {
-  warning("forest_hr: ", n_no_arm, " subjects with an empty or missing TRT01A were left out of the Cox model", call. = FALSE)
-}
-n_no_time <- sum(!is.na(adtte_saf_pfs$TRT01A) & (is.na(adtte_saf_pfs$AVAL) | is.na(adtte_saf_pfs$CNSR)))
-if (n_no_time > 0) {
-  warning("forest_hr: ", n_no_time, " subjects with a missing AVAL or CNSR were left out of the Cox model", call. = FALSE)
-}
-cox <- survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = adtte_saf_pfs)
-.ard_hr <- cardx::ard_regression(cox, exponentiate = TRUE) |>
+.ard_hr <- local({
+  data <- adtte_saf_pfs
+  n_no_arm <- sum(is.na(data$TRT01A))
+  if (n_no_arm > 0) {
+    warning("forest_hr: ", n_no_arm, " subjects with an empty or missing TRT01A were left out of the Cox model", call. = FALSE)
+  }
+  n_no_time <- sum(!is.na(data$TRT01A) & (is.na(data$AVAL) | is.na(data$CNSR)))
+  if (n_no_time > 0) {
+    warning("forest_hr: ", n_no_time, " subjects with a missing AVAL or CNSR were left out of the Cox model", call. = FALSE)
+  }
+  cox <- survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = data)
+  cardx::ard_regression(cox, exponentiate = TRUE)
+}) |>
   fmt_ard(fmt_default) |>
   tag_ard(report_id, "HR", population = "SAF")
 

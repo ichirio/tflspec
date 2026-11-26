@@ -44,8 +44,9 @@ test_that("own data steps come before the template's call steps; the same figure
   expect_true(attr(r2, "template")$ok)
   x <- tplfig_check(o2, d, data)
   expect_match(paste(x$a, collapse = "\n"), "\"km\"", fixed = TRUE)
-  p1 <- tplfig_png(suppressMessages(tfl_content_run(r1, data)))
-  expect_identical(tplfig_png(suppressMessages(tfl_content_run(r2, data))), p1)
+  # (the set's subjects made from the study, A2)
+  p1 <- tplfig_png(suppressMessages(tfl_content_run(r1, data, study = st)))
+  expect_identical(tplfig_png(suppressMessages(tfl_content_run(r2, data, study = st))), p1)
 })
 
 test_that("a report's own steps other than the template's: theirs, then the call's", {
@@ -108,7 +109,6 @@ test_that("tfl_content_run(): a dataset the figure reads and the data do not hol
   o <- tfl_output("F-9", "figure", extends = "none",
                   template = list(name = "km_survival", args = list(by = "TRT01A")),
                   data = list(steps = list(list(step = "read", dataset = "ADTTE"),
-                                           list(step = "flag", variable = "FASFL"),
                                            list(step = "param", value = "PFS"))))
   ro <- tfl_resolve_output(o, s)
   expect_error(tfl_content_run(ro, list()), "the figure reads ADTTE, not among the data given (none)", fixed = TRUE)

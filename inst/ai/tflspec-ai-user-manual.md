@@ -278,7 +278,7 @@ sections follow this order.
 | Key | What it holds |
 |---|---|
 | `id`, `kind`, `label` | as in the TOC; the file is named after `id` |
-| `common` | what several steps of the report read: `population` (an analysis set's `id`: the report's subjects), `treatment` (its arm variable), `population_label` (the text `{OUTPUT_POPULATION}` prints when the report has no set, or in place of the set's label); a report may have no population.  Any other key stops; so does a top-level `population:` (`population:` -> `common: population`) |
+| `common` | what several steps of the report read: `population` (an analysis set's `id`: the report's subjects; a figure's or a listing's set is on its data, `data: {population: SAF}`, and a template report's data map says only that), `treatment` (its arm variable), `population_label` (the text `{OUTPUT_POPULATION}` prints when the report has no set, or in place of the set's label); a report may have no population.  Any other key stops; so does a top-level `population:` (`population:` -> `common: population`) |
 | `extends` | the layers under it, nearest first: `[defaults]` (the usual), `[patterns/<name>, defaults]`, or `none` |
 | `data` (a table, a listing) | the report's datasets: a flat list of definitions (`id`, `from`, `population`, `subjects_in`, `where`, `add`, `derive`, `arrange`, `keep`, `distinct`, `then`, `code`: the `analysis_data` sheet's rows, `data_id` as `id`), in build order, named `<dataset>_sub` / `_den` / `_<noun>` (`adsl_sub`, `adae_sub`, `adlb_den`) -- §A.1.  `then` is R piped onto the end of the definition's data after all its other keys (and the code lists' levels), as written: the data is its first argument, a pipe of several steps is fine (`dplyr::mutate(...) |> dplyr::filter(...)`), and it may do anything R does; it is not written with `code` (an error: `code` makes the whole data).  A report on a template writes a definition of the template's id to change that definition: its keys go over the template's key by key, but a definition with `code` replaces the template's one whole (none of the template's `from`, `subjects_in`, `add`, `where`, `derive` stay).  For example, `tflspec_v1/lab_tox_shift` keeps each subject's worst record by its `record_where` (default `AVISIT == "WORST POST-BASELINE"`, the ADaM's own worst record); for an ADaM with no worst record, set it to TRUE and pick the record with `then` on the template's `adlb_sub`: `template: {name: tflspec_v1/lab_tox_shift, data: {record_where: !r TRUE}, analysis: {...}}` and `data: [{id: adlb_sub, then: !r 'dplyr::slice_max(ATOXGRH, n = 1, with_ties = FALSE, by = USUBJID)'}]` (several tests: `by = c(USUBJID, PARAMCD)`, and each test's own direction, `dplyr::coalesce(ATOXGRH, ATOXGRL)` for `ATOXGRH`).  Likewise `tflspec_v1/tflspec_shift` (a category at baseline by the same after it, `BNRIND` by `ANRIND` by default, a page a `PARAMCD`) computes no worst record: the shell's rule goes on the template's `rec_sub` as `where` and `then`, for example "a subject with both Low and High after baseline counts as High": `data: [{id: rec_sub, where: !r 'PARAMCD %in% c("ALT", "HGB") & !ABLFL %in% "Y"', then: !r 'dplyr::arrange(match(ANRIND, c("HIGH", "LOW", "NORMAL"))) |> dplyr::distinct(USUBJID, PARAMCD, .keep_all = TRUE)'}]` (the order is the study's rule, worst first; one record a subject and parameter).  A subjects definition (`from: ADSL`, no `subjects_in`) without a `population` of its own takes `common: population`.  A table writes no `data: {source: ard}` (it always reads its ARD: that map stops); `ard: analysis_data:` stops (it is `data:`) |
 | `ard` | the report's part of the study ARD: `analyses:` (the `analyses` sheet's rows, `analysis_id` as `id`, `population_id` as `population`) -- §A.1 |
@@ -379,7 +379,7 @@ page:
 | a listing with its summary under it (the PK samples) | the listing as the table (`table_plan: {cols: ATPT, rows: {subject: !r '~ "{USUBJID}/{AGE}/{SEX}"'}, value: AVAL}`), the summary as a part: `plan_append: {name: summary, data: {source: ard}, content: [...]}`, the whole-table items after it |
 | a p-value column (Fisher / chi-square of a categorical, Kruskal-Wallis / one-way of a continuous, a t-test of two arms) | one analysis a test with the counts' `by` and `variables` (`method: fisher`, `kruskal` ...), and `plan_compare: {p: [!r 'p.value < 0.001 ~ "<0.001"', "{p.value:.3f}"]}` -- the column named as you like, the p-value on the variable's first row, `<0.001` below 0.001, else 3 decimals |
 | every subject, no flag | `common: {population: ALL}` (in `spec/data.yml` beside the flags' sets) |
-| the KM legend with each arm's median (95% CI) | the template: `template: {name: km_survival, args: {legend_median: true}}`; the wording is `legend_median_text` with `{arm}`, `{median}`, `{lcl}`, `{ucl}` (default `"{arm}: {median} ({lcl}, {ucl})"`), e.g. `args: {legend_median: true, legend_median_text: "{arm}, Median (95% CI): {median} ({lcl}, {ucl})"}`; by hand, the plot's `legend_labels` (R: a vector named by the arms) |
+| the KM legend with each arm's median (95% CI) | the template: `template: {name: km_survival, args: {by: TRT01A, legend_median: true}}`; the wording is `legend_median_text` with `{arm}`, `{median}`, `{lcl}`, `{ucl}` (default `"{arm}: {median} ({lcl}, {ucl})"`), e.g. `args: {legend_median: true, legend_median_text: "{arm}, Median (95% CI): {median} ({lcl}, {ucl})"}`; by hand, the plot's `legend_labels` (R: a vector named by the arms) |
 
 The keys of `ard:` are the ARD sheets' columns (Appendix A.1) under their
 YAML names (`id`, `population`); the methods are `tfl_ard_methods()`.  The
@@ -493,8 +493,7 @@ object each data step reads (`in`) and leaves (`out`).
 template: km_risk_table
 data:                                   # one ordered list of steps
 - {step: read, dataset: ADTTE}          # -> df
-- {step: param, value: OS}
-- {step: flag, variable: FASFL}
+- {step: param, value: OS}              # the analysis set: the report's data population, no step
 - {step: survfit, name: fit, time: AVAL, censor: CNSR, by: TRT01A}   # -> fit
 plot: {x_label: Time (Months), colour_by: TRT01A, legend: inside}
 layers:                                 # what is drawn, in order
@@ -518,7 +517,12 @@ analyses do, and the figure starts from it.
   -- a row of the ARD definition, no line of the script.  Any step may
   say the object it reads (`in`) and the one it leaves (`out`): `filter`
   with `out: df_ev` makes `df_ev <- df |> filter(...)` and keeps `df`; a
-  `survfit` with `in: df_ev` fits it.  Unset, a read makes `df` (then
+  `survfit` with `in: df_ev` fits it.  A `code` step runs in a scope of
+  its own and keeps one object: its `out` (`{step: code, out: est, code:
+  ...}` is written `est <- local({ ...; est })`); one expression that
+  assigns one name (`x_breaks <- ...`) is written as it is and keeps it.
+  A later line that reads another object the step made stops the program's
+  writing: give it `out:`, or a code step of its own.  Unset, a read makes `df` (then
   `df2`, `df3`), a step on rows changes the object above it, a named step
   reads `df`.  A design written
   before 0.0.24.9074 (`data:` and `stats:`, `data_code` / `stats_code`)
@@ -1235,8 +1239,14 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
 - In `args` and `code`, `data` is the analysis data and `population` the
   analysis set's subjects; the program writes them as the data's own names
   (`adtte_sub`, `adsl_sub`), and a `custom` analysis's last expression is
-  its ARD (`local()` only when its code defines a function or assigns a
-  name the program has).
+  its ARD.  SPEC code runs only in its own step: one expression is written
+  as it is; code of several expressions (or one that assigns a name) is
+  written as it is inside `local({ data <- adtte_sub; ... })`, its result
+  the analysis's ARD, so `data$TRT01A <- ...` or a model made there changes
+  no other analysis's data.  The same for an analysis data's `code`, a
+  Rework / own data code / a listing's rework (`data <- local({ ...; data
+  })`), a figure's `code` step (it keeps its `out`) and `layer_code` (it
+  keeps `p`); the whole `content: !r` stays as it is.
 - A function that takes a **formula** (`cardx::ard_survival_survdiff`,
   `cardx::ard_regression`, `cardx::ard_stats_aov`) leaves `by` and
   `variables` blank and gets `formula = ...` in `args`.
