@@ -169,7 +169,7 @@ test_that("tfl_report_codelists(): the sheets' rows, a report's own (#647)", {
   cl <- tfl_report_codelists(st)
   expect_identical(cl, tfl_sheets_from_yaml(d)$table$codelists)
   expect_identical(nrow(cl), 0L)
-  expect_identical(names(cl), c("output_id", "variable", "value", "label", "order", "under"))
+  expect_identical(names(cl), c("output_id", "variable", "value", "label", "order", "under", "list"))
   cll_sex_report(d, "T-A", "[defaults]", c("codelists:", paste0("  ", cll_sex)))
   st <- tfl_read_study_spec(d)
   cl <- tfl_report_codelists(st)
@@ -213,7 +213,7 @@ test_that("tfl_report_codelists(rows =): the caller's own rows, the sheets not m
   expect_false(anyNA(tfl_report_codelists(st, rows = rbind(chg, na))$output_id))
   # none given: none
   none <- tfl_report_codelists(st, rows = sheets[0L, c("output_id", "variable")])
-  expect_identical(names(none), c("output_id", "variable", "value", "label", "order", "under"))
+  expect_identical(names(none), c("output_id", "variable", "value", "label", "order", "under", "list"))
   expect_identical(nrow(none), 0L)
   expect_identical(nrow(tfl_report_codelists(st, list(), rows = sheets[0L, ])), 0L)
 })
