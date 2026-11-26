@@ -500,6 +500,7 @@
 tfl_table_code <- function(spec, output_id = NULL, data = "ard",
                            plan = "plan", pipe = NULL, ard_spec = NULL,
                            normalize = TRUE) {
+  study_cl <- attr(spec, "study_codelists")
   sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_table_code",
                                  output_id = output_id), output_id)
   # (the study sheet's rounding is the setup's option, tfl_report_setup_code());
@@ -514,7 +515,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
       .normalize_spec_args(sp, ard_spec, id, "tfl_table_code", guess = TRUE)))
     # plan_levels() the ARD already says, left out as from a YAML file
     # (.levels_prune()); not when the program's data part makes the data
-    items <- c(nz, .levels_prune_sheets(items, sp, ard_spec, id))
+    items <- c(nz, .levels_prune_sheets(items, sp, ard_spec, id, study_cl = study_cl))
   }
   # BIGN's rows: the headings' N, not the table's -- the rule
   # tfl_content_code() follows (.bign_applies()): a workbook's report and
@@ -757,6 +758,8 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 #' @noRd
 .plan_content_from_sheets <- function(spec, output_id = NULL, own = FALSE, ard_spec = NULL) {
   defaults <- length(output_id) == 1L && is.na(output_id)
+  # (the study's lists, when the sheets carry them: a reference's rows)
+  study_cl <- attr(spec, "study_codelists")
   sp <- .as_spec(spec, "table", ".plan_content_from_sheets",
                  output_id = if (defaults || isTRUE(own)) NULL else output_id)
   if (defaults || isTRUE(own)) {
@@ -777,7 +780,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   if (defaults && !length(items[[1L]]$args)) items <- items[-1L]
   if (!defaults && !is.null(ard_spec)) {
     items <- .levels_prune_sheets(items, sp, ard_spec, output_id %||% attr(sp, "output_id"),
-                                  own = isTRUE(own))
+                                  own = isTRUE(own), study_cl = study_cl)
   }
   .plan_content_more(items, sp$tables)
 }

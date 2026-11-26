@@ -46,9 +46,9 @@ datasets of such tables are read.}
 A data frame, one row a problem: \code{output_id} (\code{NA} for the
 study's ARD definition as a whole and the study's own rows), \code{part}
 (\code{"file"}, \code{"study"}, \code{"ard"}, \code{"content"}, \code{"program"}, \code{"figure"},
-\code{"build"}), \code{item} (the file, the
-analysis, the function and argument, or the figure's part and
-field), \code{level} (\code{"error"}, \code{"warning"}, \code{"note"}, \code{"check"}) and
+\code{"codelists"}, \code{"build"}), \code{item} (the file, the
+analysis, the function and argument, the figure's part and
+field, or the code list's column), \code{level} (\code{"error"}, \code{"warning"}, \code{"note"}, \code{"check"}) and
 \code{message}.  Its attributes: \code{versions}, a data frame of the key
 packages (\code{package}, \code{installed}, \code{NA} when not installed); \code{ids}, the
 reports checked (the OK ones too); \code{kinds}, each report's kind, named
@@ -68,8 +68,11 @@ refuses): the report cannot be copied into the study;
 \item \code{warning}: the SPEC reads, but a program that runs cannot be written
 from it (the ARD program or the table's code stops; a content
 function the installed rtfreporter does not have yet; with \code{adam}, a
-\code{!=} condition that drops the rows where its variable is NA, and a
-table whose header N and counts give a subject different groups);
+\code{!=} condition that drops the rows where its variable is NA; a
+table whose header N and counts give a subject different groups; a
+report's own code list, for a column the study's \code{adam_meta} maps,
+with a code the define's code list does not have, \code{part}
+\code{"codelists"} -- codes compared, not labels);
 \item \code{note}: the program is written all the same -- an argument the
 installed cards / cardx does not know, a version to look at.
 }
@@ -104,6 +107,24 @@ its own) takes each column's N from the report's \code{BIGN} analysis.  A
 report with no \code{BIGN}, or whose \code{BIGN} counts by no column variable of
 the table, is a \code{warning} (\code{part} \code{"content"}, item
 \code{"plan_col_header(header)"}): its header would print \code{N=NA}.
+
+Every \verb{!r} value of the SPEC is read as R once, by one walker; one that
+does not read is an \code{error}, with the parser's message.  It is read, not
+run, by the kind of slot it fills: an item's argument by the schema's
+kind (a guard takes \code{condition ~ text}), the fields of R of the ARD and
+of data.yml by their own (\code{where} one condition, \code{args} a call's
+arguments, \code{derive} pieces \code{name = expression} and \code{post} steps between
+\verb{|}, \code{code} and \code{then} R code); those fields are R whether or not they
+are written \verb{!r}.  A report's value: \code{part} the report's key it is under
+(\code{content}, \code{template}, \code{ard} ...), \code{item} its place
+(\code{"content$plan_filter$args$where"}, \code{"ard$analyses$HR$code"}).  The
+study's own (study.yml \code{setup}, defaults.yml, data.yml's populations,
+records and datasets), on a check of every report only: \code{output_id} NA,
+\code{part} \code{"study"}, \code{item} the file and the place
+(\code{"data.yml: populations$SAF$where"}).  The ARD check's row and the
+\code{program} warning for the same value are not given twice.  A report's
+own program (a file, not a SPEC value) is read by \code{\link[=tfl_check_code]{tfl_check_code()}}
+(rule U01) on the review path.
 }
 \examples{
 if (requireNamespace("haven", quietly = TRUE)) {

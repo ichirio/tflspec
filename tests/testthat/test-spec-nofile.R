@@ -16,7 +16,7 @@ nf_study <- function(file = TRUE, env = parent.frame()) {
 # a code list row with no report, as a hand-edited sheet or workbook has it
 nf_bad_row <- function() {
   data.frame(output_id = NA_character_, variable = "RACE", value = "WHITE", label = "White",
-             order = "1", under = NA_character_, stringsAsFactors = FALSE)
+             order = "1", under = NA_character_, list = NA_character_, stringsAsFactors = FALSE)
 }
 
 # the sheet's rows (all text) and one more, with no report
