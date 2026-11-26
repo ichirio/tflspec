@@ -10,7 +10,8 @@ tfl_report_code(
   content = "content",
   doc = "doc",
   setup = FALSE,
-  study = NULL
+  study = NULL,
+  figure = NULL
 )
 }
 \arguments{
@@ -50,7 +51,17 @@ its program (the TOC's \code{program}, else \code{settings: program}, in
 print: \code{settings: titles_at} \code{header} (the running header, after the
 study's lines) or \code{titles} (above the table), \code{footnotes_at} \code{footer}
 (the running footer, before the study's lines) or \code{footnotes} (below
-the table); not set, above and below the table.}
+the table); not set, above and below the table.  For a figure report
+(either form): the study whose figure style standard
+(\code{spec/defaults.yml}'s \verb{figure_style:}, \code{\link[=tfl_image_defaults]{tfl_image_defaults()}}) gives
+the figure's size, resolution and alignment its report does not say;
+a \code{tfl_study_spec} or its folder.}
+
+\item{figure}{For a figure report of the sheets: its design, as
+\code{\link[=tfl_sheets_from_spec]{tfl_sheets_from_spec()}} gives it (\verb{$figures[[id]]}) -- its type (its
+template's, its \verb{figure:}'s) and, for a figure of items, its content
+and \code{tfl_image}, so the report is placed as its YAML report is.  A
+YAML report has its own.}
 }
 \value{
 The code, one element per line.

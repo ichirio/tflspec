@@ -58,6 +58,9 @@
   # has them first)
   fd$layers <- Filter(function(l) is.list(l) && !is.null(l$layer), output$layers %||% list())
   for (it in output$content) {
+    # (its render settings, tfl_image, are no piece: the report's page
+    # step reads them)
+    if (.fig_is_image(it)) next
     x <- .fig_item_as_piece(it)
     if (identical(x$to, "add")) {
       fd$plot$add <- c(fd$plot$add, list(x$piece))

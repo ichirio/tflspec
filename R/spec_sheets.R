@@ -389,6 +389,21 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       # the ARD's name in the report's program, when not ard
       if (!is.null(o$data$object) && !identical(o$data$object, "ard")) rr$ard_object <- cell(o$data$object)
     }
+    # a figure of the designer's pieces: its tfl_image's size is the report
+    # row's (figure_width_in / figure_height_in, read back into its
+    # tfl_image: .conv_fig_image()); a figure of items keeps its tfl_image
+    # with its items
+    if (identical(o$kind, "figure") && !.fig_new_content(o$content)) {
+      img <- .fig_image_of(o$content)
+      if (!is.null(img$width_in)) rr$figure_width_in <- cell(img$width_in)
+      if (!is.null(img$height_in)) rr$figure_height_in <- cell(img$height_in)
+      lost <- setdiff(names(img), c("width_in", "height_in"))
+      if (length(lost)) {
+        note(id, "figure", paste0("a figure of the designer's pieces: its tfl_image's ",
+                                   paste(lost, collapse = ", "),
+                                   " is not kept (the report sheet says only its size)"))
+      }
+    }
     add("report", rr)
     # (a reference to the study's list: its rows as the programs get them,
     # each with the reference in its `list` cell, which is what is read back;
@@ -953,11 +968,8 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
   if (length(page$rtf_document$font_lang)) pr$page$font_lang <- slots(page$rtf_document$font_lang)
   if (inherits(page$header, "tfl_unset")) pr$report$page_header <- "FALSE"
   if (inherits(page$footer, "tfl_unset")) pr$report$page_footer <- "FALSE"
-  for (a in c("width_twips", "height_twips")) {
-    v <- page$rtf_figures[[a]]
-    if (!is.null(v)) pr$report[[if (a == "width_twips") "figure_width_in" else "figure_height_in"]] <-
-      if (is.numeric(v)) format(v / 1440) else cell(v)
-  }
+  # (a figure's size is its content's tfl_image, not the page's: it goes
+  # with the figure's items)
   for (k in names(page$report)) pr$report[[k]] <- cell(page$report[[k]])
   # what no column says (the titles' row height, the bands' look, a second
   # font ...): kept as YAML in the page sheet's page_more, read back as it was
@@ -979,7 +991,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     m <- .page_map[[sh]]
     said <- c(said, ifelse(grepl(".", m, fixed = TRUE), m, paste(m, names(m), sep = ".")))
   }
-  said <- c(said, "rtf_document.font_lang", "rtf_figures.width_twips", "rtf_figures.height_twips")
+  said <- c(said, "rtf_document.font_lang")
   if (inherits(page$rtf_document$watermark, "tfl_call")) {
     said <- setdiff(said, "rtf_document.watermark")
   }

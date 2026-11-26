@@ -2350,7 +2350,8 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
 # The rtfreporter calls a report definition stands for, as `doc <- ...`
 # steps: what tfl_report() runs and what tfl_report_code() writes.
 # `content` is the name of the report's content in the program.
-.report_spec_steps <- function(sp, content = "content", setup = FALSE) {
+.report_spec_steps <- function(sp, content = "content", setup = FALSE, study = NULL,
+                               figure = NULL) {
   r <- .ard_spec_report_row(sp)
   pg <- if (nrow(sp$page)) .ard_spec_typed(sp$page[1L, ], "page") else list()
   # (all of it for a figure's size: its font's lines too)
@@ -2425,16 +2426,17 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
                                         footer = ftr)
   }
   if (identical(r$type %||% "table", "figure")) {
-    # its size on the page (tfl_fig_page_size()): a number or the page's
-    # body (fit) said; blank, the figure's own size (rtfreporter's)
-    twips <- function(v) as.integer(round(v * 1440))
+    # the YAML spec's step (.fig_report_step()): the figure's content its
+    # design's (`figure`), the report row's size (figure_width_in /
+    # figure_height_in) its tfl_image's -- under the design's own, as the
+    # sheets read back to YAML (.conv_fig_image()) -- and the study's
+    # figure style standard for the design's type under both
+    fig <- .fig_image_under(.fig_content_of_design(figure),
+                            list(width_in = r$figure_width_in, height_in = r$figure_height_in))
     lines <- length(.ard_spec_band(sp, "titles")) + length(.ard_spec_band(sp, "footnotes"))
-    sz <- .fig_page_size(r, pg_all, lines)
-    st[[length(st) + 1L]] <- .spec_call("rtf_figures", doc, .spec_sym(content),
-      width_twips = if (sz$mode[["width"]] != "native") twips(sz$width_in),
-      height_twips = if (sz$mode[["height"]] != "native") twips(sz$height_in),
-      page_break = if (isFALSE(r$page_break)) FALSE,
-      space_before = if (isFALSE(r$page_break) && !identical(r$space_before, 0L)) r$space_before)
+    st[[length(st) + 1L]] <- .fig_report_step(content, fig, study, .fig_type_of_output(figure),
+      pg_all, lines, .page_flow_args(r[intersect(c("page_break", "space_before"), names(r))]),
+      r$output_id %||% NA_character_)
   } else {
     # (a table's font size is its plan's, plan_style(): .plan_spec_steps();
     # a listing's is on its pages, as_rtftables(listing = ): tfl_listing_code())
@@ -2640,13 +2642,24 @@ tfl_report_tokens <- function(spec, output_id = NULL, study = NULL) {
 #' cat(tfl_report_code(spec, content = "plan"), sep = "\n")
 #' @export
 tfl_report_code <- function(spec, output_id = NULL, content = "content",
-                            doc = "doc", setup = FALSE, study = NULL) {
+                            doc = "doc", setup = FALSE, study = NULL, figure = NULL) {
   if (inherits(spec, "tfl_output")) {
     return(.report_steps_code(.page_report_steps(spec, study, content, isTRUE(setup)), doc))
   }
   sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_report_code",
                                  output_id = output_id), output_id)
-  .report_steps_code(.report_spec_steps(sp, content, isTRUE(setup)), doc)
+  .report_steps_code(.report_spec_steps(sp, content, isTRUE(setup),
+                                        study = .study_or_path(study, "tfl_report_code"),
+                                        figure = figure), doc)
+}
+
+# A study given to a sheets' report: a tfl_study_spec, or its folder read;
+# NULL stays NULL
+.study_or_path <- function(study, fn) {
+  if (is.null(study) || inherits(study, "tfl_study_spec")) return(study)
+  if (is.character(study) && length(study) == 1L && dir.exists(study)) return(tfl_read_study_spec(study))
+  stop(sprintf("%s(): `study` is a study read with tfl_read_study_spec(), or its folder.", fn),
+       call. = FALSE)
 }
 
 # the document's calls as one pipe: rtf_document() |> rtf_section() |>

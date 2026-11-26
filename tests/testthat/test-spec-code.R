@@ -158,16 +158,16 @@ test_that("tfl_report_code() writes the document tfl_report() makes", {
 })
 
 test_that("a figure report writes rtf_figures(), at its size on the page", {
-  # blank: the figure's own size, as rtfreporter places it
+  one <- function(code) gsub("\\s+", " ", paste(code, collapse = " "))
+  # blank: the figure style standard's all-figures size (7.3 x 4.2 in)
   sp <- tfl_table_spec(report = data.frame(output_id = "F1", type = "figure"))
-  code <- tfl_report_code(sp, content = "plots")
-  expect_true(any(grepl("rtf_figures(plots)", code, fixed = TRUE)))
+  code <- one(tfl_report_code(sp, content = "plots"))
+  expect_match(code, "plots, width_twips = 10512, height_twips = 6048,", fixed = TRUE)
   # fit: letter landscape's body, 9.5 x 6.7 in (two spacing lines)
   sp <- tfl_table_spec(report = data.frame(output_id = "F1", type = "figure",
                                            figure_width_in = "fit", figure_height_in = "fit"))
-  code <- tfl_report_code(sp, content = "plots")
-  expect_true(any(grepl("rtf_figures(plots, width_twips = 13680, height_twips = 9648)",
-                        code, fixed = TRUE)))
+  code <- one(tfl_report_code(sp, content = "plots"))
+  expect_match(code, "plots, width_twips = 13680, height_twips = 9648,", fixed = TRUE)
 })
 
 test_that("a table and its report, written out, make the report the objects make", {
@@ -194,7 +194,7 @@ test_that("a report's watermark and a figure's size are report columns", {
                                            figure_height_in = "5.5"))
   code <- paste(tfl_report_code(sp, content = "plots"), collapse = "\n")
   expect_match(code, "watermark = \"DRAFT\"", fixed = TRUE)
-  expect_match(code, "rtf_figures(plots, width_twips = 12960, height_twips = 7920)",
+  expect_match(gsub("\\s+", " ", code), "plots, width_twips = 12960, height_twips = 7920,",
                fixed = TRUE)
   # the document tfl_report() makes carries them too
   skip_if_not_installed("ggplot2")

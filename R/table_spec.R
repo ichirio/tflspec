@@ -2384,7 +2384,16 @@ tfl_read_report_spec <- function(path, output_id = NULL) {
 #'   print: `settings: titles_at` `header` (the running header, after the
 #'   study's lines) or `titles` (above the table), `footnotes_at` `footer`
 #'   (the running footer, before the study's lines) or `footnotes` (below
-#'   the table); not set, above and below the table.
+#'   the table); not set, above and below the table.  For a figure report
+#'   (either form): the study whose figure style standard
+#'   (`spec/defaults.yml`'s `figure_style:`, [tfl_image_defaults()]) gives
+#'   the figure's size, resolution and alignment its report does not say;
+#'   a `tfl_study_spec` or its folder.
+#' @param figure For a figure report of the sheets: its design, as
+#'   [tfl_sheets_from_spec()] gives it (`$figures[[id]]`) -- its type (its
+#'   template's, its `figure:`'s) and, for a figure of items, its content
+#'   and `tfl_image`, so the report is placed as its YAML report is.  A
+#'   YAML report has its own.
 #'
 #' @return An [rtfreporter::rtf_document()].
 #'
@@ -2394,7 +2403,7 @@ tfl_read_report_spec <- function(path, output_id = NULL) {
 #'
 #' @seealso [tfl_read_report_spec()], [tfl_report_path()]
 #' @export
-tfl_report <- function(spec, output_id = NULL, content, study = NULL) {
+tfl_report <- function(spec, output_id = NULL, content, study = NULL, figure = NULL) {
   if (!is.null(output_id) && !(is.character(output_id) &&
                                length(output_id) == 1L)) {
     .ard_stop(paste0(
@@ -2421,7 +2430,7 @@ tfl_report <- function(spec, output_id = NULL, content, study = NULL) {
   } else {
     .report_spec_steps(.ard_spec_scope(.as_spec(spec, "table", "tfl_report",
                                                 output_id = output_id), output_id),
-                       "content")
+                       "content", study = .study_or_path(study, "tfl_report"), figure = figure)
   }
   env <- new.env(parent = emptyenv())
   env$content <- content

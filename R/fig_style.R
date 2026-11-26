@@ -54,6 +54,10 @@
     s(NA, "height", "4.2", ""),
     s(NA, "units", "in", "in | cm | px"),
     s(NA, "dpi", "300", ""),
+    # (a figure report's tfl_image defaults too: width, height, dpi and these)
+    s(NA, "align", NA, "optional: left | center | right, on the RTF page (blank = center)"),
+    s(NA, "rtf_format", NA, "optional: png | emf, the picture in the RTF (blank = png)"),
+    s(NA, "png_device", NA, "optional: auto | ragg | png (blank = rtfreporter's)"),
     s(NA, "treatment_shapes", NA,
       "optional: the arms' point shapes in order, e.g. 16, 17, 15 (blank = one shape)"),
     s(NA, "treatment_linetypes", NA,
@@ -211,12 +215,20 @@ tfl_read_fig_style <- function(path) {
   stats::setNames(out, names(b))
 }
 
-# One setting for a figure type: its own row, else the blank-type row.
+# One setting for a figure type: its own row, else the blank-type row (as
+# the setup's tfl_setting() reads it for tfl_save()).
 .fs_get <- function(key, type = NA, style = tfl_fig_style()) {
+  .fs_find(key, type, style)$value
+}
+
+# The same, with whether the value is the type's own row (`own`) or the
+# blank-type row's
+.fs_find <- function(key, type = NA, style = tfl_fig_style()) {
   s <- style$settings
   v <- s$value[s$key %in% key & s$type %in% type]
-  if (!length(v) || is.na(v[1])) v <- s$value[s$key %in% key & is.na(s$type)]
-  if (length(v)) v[1] else NA_character_
+  own <- length(v) > 0L && !is.na(v[1])
+  if (!own) v <- s$value[s$key %in% key & is.na(s$type)]
+  list(value = if (length(v)) v[1] else NA_character_, own = own)
 }
 
 # Every setting of a type, as a named list (the type's rows over the blank).

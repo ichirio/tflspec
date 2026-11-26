@@ -1184,6 +1184,264 @@ tfl_args_from_r <- function(fn, text) {
   output
 }
 
+# ---- the figure's render settings: tfl_image -------------------------------
+#
+# A figure content's last item, tfl_image, holds how the figure is drawn
+# and placed: its size on the page (width_in, height_in: inches, or fit),
+# its alignment, its resolution and PNG device, the picture the RTF holds
+# (rtf_format: png, or emf -- a vector picture), the format and file of a
+# saved copy (decided 2026-11-19, canon 3e2d421).  `page:` keeps only what
+# tables and figures share (titles, footnotes, page_break, space_before).
+# A setting the item does not give is the study's figure style standard's
+# (defaults.yml `figure_style:` settings, the figure's type's row, else the
+# all-figures row: width, height, units, dpi, align, rtf_format,
+# png_device; decided 2026-11-19, canon f115995), else the built-in one
+# (the figure's own size, 300 dpi, centred, png).  tfl_image_defaults()
+# shows them.
+
+# the settings tfl_image takes
+.fig_image_keys <- c("width_in", "height_in", "align", "dpi", "png_device", "rtf_format",
+                     "format", "file")
+
+# the picture formats the RTF takes (rtfreporter's render_format)
+.fig_rtf_formats <- c("png", "emf")
+
+# A tfl_image's rtf_format: png (also when not said) or emf; any other
+# value stops, naming the ones it takes
+.fig_rtf_format <- function(img, id = NULL) {
+  v <- img$rtf_format
+  if (is.null(v)) return("png")
+  v <- tolower(as.character(v))
+  if (length(v) != 1L || is.na(v) || !v %in% .fig_rtf_formats) {
+    who <- if (length(id) == 1L && !is.na(id)) paste0(id, ": ") else ""
+    .ard_stop(sprintf("%stfl_image: rtf_format is %s, not %s.", who,
+                      paste(.fig_rtf_formats, collapse = " or "),
+                      paste(as.character(img$rtf_format), collapse = ", ")))
+  }
+  v
+}
+
+# The figure-only settings that page.rtf_figures and a page.layout row once
+# held, and the tfl_image setting each is now
+.fig_page_moved <- c(width_twips = "width_in", height_twips = "height_in", align = "align",
+                     render_width = "width_in", render_height = "height_in",
+                     render_dpi = "dpi", png_device = "png_device", render_format = "rtf_format")
+.fig_layout_moved <- c(width_in = "width_in", height_in = "height_in")
+
+# What a page says that is now a figure content's tfl_image: one message a
+# key (none: character()).  `page` a report's page: (resolved or its own).
+.fig_page_moved_said <- function(page) {
+  if (!is.list(page)) return(character())
+  out <- character()
+  fa <- page$rtf_figures
+  if (is.list(fa) && !inherits(fa, "tfl_unset")) {
+    for (k in intersect(names(fa), names(.fig_page_moved))) {
+      out <- c(out, sprintf(paste0("page.rtf_figures.%s is a figure's own setting: it moved to the ",
+                                   "content's last item, tfl_image: {%s: ...} (the study's default: ",
+                                   "defaults.yml figure_style: settings, key %s)."),
+                            k, .fig_page_moved[[k]], .fig_style_key_of[[.fig_page_moved[[k]]]]))
+    }
+  }
+  for (row in if (is.list(page$layout)) page$layout else list()) {
+    if (!is.list(row)) next
+    for (k in intersect(names(row), names(.fig_layout_moved))) {
+      out <- c(out, sprintf(paste0("page.layout (object %s): %s is a figure's own setting: it moved to ",
+                                   "the object's content, its last item tfl_image: {%s: ...}."),
+                            as.character(row$object %||% "?")[1L], k, .fig_layout_moved[[k]]))
+    }
+  }
+  out
+}
+
+# Stops when a page says a figure's own setting (.fig_page_moved_said())
+.fig_page_moved_stop <- function(page, id = NULL) {
+  m <- .fig_page_moved_said(page)
+  if (length(m)) {
+    who <- if (length(id) == 1L && !is.na(id)) paste0(id, ": ") else ""
+    .ard_stop(paste0(who, paste(m, collapse = " ")))
+  }
+  invisible(TRUE)
+}
+
+# is an item tfl_image?
+.fig_is_image <- function(it) {
+  is.list(it) && !inherits(it, "tfl_plot") && identical(.schema_fn_name(it$fn %||% ""), "tfl_image")
+}
+
+# A figure content's tfl_image settings (its last item; any form of
+# content but R as a whole): a list, empty when there is none
+.fig_image_of <- function(content) {
+  if (inherits(content, "tfl_r") || !is.list(content) || !length(content)) return(list())
+  last <- content[[length(content)]]
+  if (!.fig_is_image(last)) return(list())
+  .page_args(last$args %||% list())
+}
+
+# tfl_image's settings and the figure style standard's key each is read
+# from (a size in the standard's `units`); format is tfl_image's own
+.fig_style_key_of <- c(width_in = "width", height_in = "height", dpi = "dpi", align = "align",
+                       rtf_format = "rtf_format", png_device = "png_device")
+# the built-in defaults (tfl_image_defaults(); none of them written into a
+# program: rtfplot()'s own size and dpi, rtf_figures()'s centre, png)
+.fig_image_builtin <- list(width_in = 6.5, height_in = 4.5, dpi = 300L, align = "center",
+                           rtf_format = "png", png_device = "auto", format = "png")
+
+# The study.yml `settings: figure:` of #874, gone (the figure style
+# standard is the one source): stops, naming each key's new place
+.fig_settings_figure_stop <- function(settings) {
+  f <- if (is.list(settings)) settings$figure
+  if (is.null(f)) return(invisible(TRUE))
+  ks <- if (is.list(f)) names(f) else character()
+  to <- vapply(ks, function(k) {
+    if (k %in% names(.fig_style_key_of)) sprintf("%s -> figure_style key %s", k, .fig_style_key_of[[k]])
+    else sprintf("%s -> the report's tfl_image", k)
+  }, "")
+  .ard_stop(paste0("study.yml settings: figure: is no more: a figure's defaults are the figure style ",
+                   "standard's, defaults.yml figure_style: settings rows {type, key, value}",
+                   if (length(to)) paste0(" (", paste(to, collapse = "; "), ")"), "."))
+}
+
+# A figure template's or a figure content function's name as the figure's
+# type, the figure style standard's (tfl_fig_templates()'s kind: km,
+# swimmer, forest ...): the template's own kind, else the longest kind its
+# name starts with; NA when none
+.fig_type_of <- function(name) {
+  if (!is.character(name) || length(name) != 1L || is.na(name) || !nzchar(name)) return(NA_character_)
+  name <- sub("^.*/", "", name)
+  tt <- .fig_templates()
+  hit <- tt$kind[tt$template == name]
+  if (length(hit)) return(hit[1L])
+  kinds <- unique(tt$kind)
+  kinds <- kinds[startsWith(name, paste0(kinds, "_"))]
+  if (length(kinds)) kinds[which.max(nchar(kinds))] else NA_character_
+}
+
+# A figure report's (or a contents object's) type: its template's, its
+# figure content function's (`figure:`), else NA (the all-figures row)
+.fig_type_of_output <- function(output) {
+  tp <- output$template
+  if (is.list(tp)) tp <- tp$name
+  st <- attr(output, "template")
+  if (is.null(tp) && is.list(st)) tp <- st$name
+  ty <- .fig_type_of(if (is.character(tp)) tp else NA_character_)
+  if (is.na(ty) && is.list(output$figure)) ty <- .fig_type_of(output$figure$name %||% NA_character_)
+  ty
+}
+
+# The defaults of tfl_image for a figure type: each key's value and where
+# it came from (attribute "source": figure_style.<type>, figure_style or
+# builtin) -- the figure style standard's row (.fs_find(), the lookup
+# tfl_save() makes: the type's row, else the all-figures row), else
+# built-in.  `study` a tfl_study_spec or NULL (tflspec's built-in style).
+.fig_image_defaults <- function(study = NULL, type = NA) {
+  if (inherits(study, "tfl_study_spec")) .fig_settings_figure_stop(study$study$settings)
+  style <- .fig_style_study(if (inherits(study, "tfl_study_spec")) study$figure_style)
+  out <- .fig_image_builtin
+  src <- stats::setNames(rep("builtin", length(out)), names(out))
+  units <- .fs_get("units", type, style)
+  for (k in names(.fig_style_key_of)) {
+    hit <- .fs_find(.fig_style_key_of[[k]], type, style)
+    if (is.na(hit$value) || !nzchar(trimws(hit$value))) next
+    v <- trimws(hit$value)
+    if (k %in% c("width_in", "height_in", "dpi")) {
+      n <- suppressWarnings(as.numeric(v))
+      if (is.na(n)) next
+      if (k == "dpi") {
+        v <- as.integer(round(n))
+      } else {
+        dpi <- suppressWarnings(as.numeric(.fs_get("dpi", type, style)))
+        v <- switch(tolower(if (is.na(units)) "in" else units), cm = n / 2.54,
+                    px = n / (if (is.na(dpi)) 300 else dpi), n)
+      }
+    }
+    out[[k]] <- v
+    src[[k]] <- if (hit$own && !is.na(type)) paste0("figure_style.", type) else "figure_style"
+  }
+  attr(out, "source") <- src
+  out
+}
+
+#' The defaults of a figure's render settings (tfl_image)
+#'
+#' What a figure report's `tfl_image` takes when it does not say a setting:
+#' the study's figure style standard (`spec/defaults.yml`'s
+#' `figure_style:` settings) -- the row of the figure's type, else the
+#' all-figures row (as `tfl_save()` reads it) -- else the built-in value
+#' (rtfreporter's own size 6.5 x 4.5 in, 300 dpi, centred, png).  The size
+#' is the standard's `width` / `height` in its `units`; `align`,
+#' `rtf_format` and `png_device` are its keys of those names.  A report's
+#' own `tfl_image` wins over all of them.
+#'
+#' @param study The study: a `tfl_study_spec` ([tfl_read_study_spec()]) or
+#'   the path of its folder.
+#' @param type The figure's type, a kind of [tfl_fig_templates()] (`"km"`,
+#'   `"swimmer"`) or a type the study's figure style has rows for; `NULL`
+#'   for the all-figures values.
+#' @return A named list, one element a `tfl_image` setting (`width_in`,
+#'   `height_in`, `dpi`, `align`, `rtf_format`, `png_device`, `format`),
+#'   with attribute `"source"`: for each, `"figure_style.<type>"`,
+#'   `"figure_style"` or `"builtin"`.
+#' @examples
+#' d <- system.file("extdata", "spec-yaml", package = "tflspec")
+#' km <- tfl_image_defaults(d, "km")
+#' unlist(km)
+#' attr(km, "source")
+#' @export
+tfl_image_defaults <- function(study, type = NULL) {
+  if (is.character(study) && length(study) == 1L) study <- tfl_read_study_spec(study)
+  if (!inherits(study, "tfl_study_spec")) {
+    stop("tfl_image_defaults(): `study` is a study read with tfl_read_study_spec(), or its folder.",
+         call. = FALSE)
+  }
+  if (is.null(type)) return(.fig_image_defaults(study, NA))
+  style <- .fig_style_study(study$figure_style)
+  known <- sort(unique(c(.fig_templates()$kind, stats::na.omit(style$settings$type))))
+  if (!is.character(type) || length(type) != 1L || !type %in% known) {
+    stop(sprintf("tfl_image_defaults(): `type` %s is not a figure type; the types are %s.",
+                 paste(as.character(type), collapse = ", "), paste(known, collapse = ", ")),
+         call. = FALSE)
+  }
+  .fig_image_defaults(study, type)
+}
+
+# A figure content with the study's figure defaults (.fig_image_defaults(),
+# the ones the figure style standard says: built-in ones are written by no
+# one) under its tfl_image's: the item made (last) when the standard says
+# one and the content has none.  R as a whole is left as it is.
+.fig_image_fill <- function(content, study, type = NA) {
+  d <- .fig_image_defaults(study, type)
+  # (the study's: as its defaults' items are)
+  .fig_image_under(content, d[attr(d, "source") != "builtin"], from = "defaults")
+}
+
+# A figure content with `settings` (tfl_image's, a named list; blank ones
+# left out) under its tfl_image's: its own win; the item made (last, from
+# `from`) when there is none.  R as a whole is left as it is.
+.fig_image_under <- function(content, settings, from = "own") {
+  settings <- Filter(function(v) !is.null(v) && !(length(v) == 1L && is.atomic(v) &&
+                                                   (is.na(v) || !nzchar(trimws(as.character(v))))),
+                     settings)
+  if (!length(settings) || inherits(content, "tfl_r")) return(content)
+  content <- content %||% list()
+  n <- length(content)
+  if (n && .fig_is_image(content[[n]])) {
+    a <- content[[n]]$args %||% list()
+    for (k in setdiff(names(settings), names(a))) a[[k]] <- settings[[k]]
+    content[[n]]$args <- a
+  } else {
+    content[[n + 1L]] <- tfl_item("tfl_image", settings, from = from)
+  }
+  content
+}
+
+# A figure's content as its design list has it (tfl_sheets_from_spec()'s
+# `figures`, a figure of items: its `content`): the items; NULL for a
+# design of the designer's pieces (`layers`), which has no tfl_image
+.fig_content_of_design <- function(fd) {
+  if (!is.list(fd) || !is.null(fd$layers) || !is.list(fd$content) || !length(fd$content)) return(NULL)
+  lapply(unname(fd$content), .item_from_list)
+}
+
 # The image saved, when its tfl_image names a file: at its size on the page
 # and its resolution, in its format (`{output_id}` filled)
 .fig_image_save <- function(output, img, name = "content") {
