@@ -152,7 +152,7 @@ tfl_time_unit_days()
 The `forest_hr` template draws hazard ratios that are statistics of an
 ARD -- one Cox model of all subjects and one within each subgroup,
 made by cards / cardx -- rather than fitting the models in the figure
-program. `tfl_fig_template("forest_hr", subgroups = , comparison = )`
+program. `tfl_fig_template("forest_hr", group = , subgroups = , comparison = )`
 gives the design, and `attr(design, "analyses")` the analyses the ARD
 needs (`tfl_fig_forest_analyses()`), ready for the ARD spec. Its text
 columns (N, the estimate and its interval) are a panel at the right of

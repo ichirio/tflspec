@@ -10,9 +10,8 @@ fc_template <- function(t, adam = tfl_example_adam()) {
   kinds <- tfl_fig_templates()
   kind <- kinds$kind[kinds$template == t]
   prm <- unique(adam$ADTTE$PARAMCD)[1]
-  args <- switch(kind, km = list(param = prm, group = if (t != "km_single_arm") "TRT01P"),
-                 forest = list(param = prm), list())
-  do.call(tfl_fig_template, c(list(t), args))
+  args <- switch(kind, km = list(param = prm), forest = list(param = prm), list())
+  do.call(tfl_fig_template, c(list(t), args, list(group = fig_group_of(t))))
 }
 
 fc_output <- function(x, id = "F-1") {
@@ -239,10 +238,10 @@ test_that("tfl_fig_template(form = \"items\"): the content of calls, marked as t
   expect_identical(lapply(.fig_mark_from(tfl_fig_content_from_design(d)$content, "own"), `[[`, "fn"),
                    lapply(x$content, `[[`, "fn"))
   # a template of its own ARD keeps its analyses; a figure type of its own is R
-  expect_false(is.null(tfl_fig_template("forest_hr", param = "OS", form = "items")$analyses))
+  expect_false(is.null(tfl_fig_template("forest_hr", group = "TRT01P", param = "OS", form = "items")$analyses))
   expect_s3_class(tfl_fig_template("sankey_grey_links", form = "items")$content, "tfl_r")
   # the design stays the default
-  expect_s3_class(tfl_fig_template("mean_se"), "tfl_fig_design")
+  expect_s3_class(tfl_fig_template("mean_se", group = "TRT01A"), "tfl_fig_design")
 })
 
 test_that("the extension packages' functions: in the catalog, called as pkg::fn", {
@@ -310,7 +309,7 @@ test_that("a figure type of its own converts to its R, the same figure; a compos
   # several designs, one data part: each plot's objects renamed after it
   skip_if_not_installed("ggsurvfit")
   km <- tfl_fig_template("km_simple", param = unique(adam$ADTTE$PARAMCD)[1], group = "TRT01P")
-  d <- tfl_fig_design(plots = list(km = km, box = tfl_fig_template("box_by_group")),
+  d <- tfl_fig_design(plots = list(km = km, box = tfl_fig_template("box_by_group", group = "TRT01A")),
                       compose = list(layout = "km | box",
                                      add = list(list(fn = "plot_annotation", args = list(tag_levels = "A")),
                                                 list(fn = "theme", args = list(legend.position = "bottom"), op = "&"))),

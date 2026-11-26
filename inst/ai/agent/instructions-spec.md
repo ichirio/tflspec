@@ -67,7 +67,11 @@ report's skeleton and nothing of its look:
   and `shift` have it -- and each arm heads one value column, not a Value
   and a Change column under it), write this
   one item, nothing more of the header: `plan_col_header: {header: [{line:
-  "1", cols: .values, span: each, text: "{col}\n(N={n})"}]}`;
+  "1", cols: .values, span: each, text: "{col}\n(N={n})"}]}`.  The N is
+  the report's `BIGN` analysis: when the report has none, add it (`id:
+  BIGN`, `method: categorical`, `data:` the report's subjects data,
+  `variables: [<the column variable>]`); without it the header prints
+  `N=NA` and `tfl_check_spec()` warns;
 - a `data:` definition that `code` makes may name its `population`: the
   set's subjects are made first and are in reach as `<dataset>_sub`
   (`adsl_sub`); its other fields (`where`, `add`, `derive` ...) stay blank.
@@ -234,10 +238,13 @@ it to these rules (every agent of tflspec#512 tripped on them):
 
 `data` (a table's or listing's flat list of definitions), one item each: `id`, `from` (a dataset of
 `spec/data.yml`, or an analysis data above it), `population`, `subjects_in`,
-`where`, `add`, `derive`, `keep`, `distinct`, `code` -- no other key (a data has no
+`where`, `add`, `derive`, `arrange`, `keep`, `distinct`, `code` -- no other key (a data has no
 `label`: its `id` names it; a note is a YAML comment).
 `population` and `subjects_in` are one or the other; with `code`, only `id`,
 `from` and `population`.
+`arrange` is the rows' order, a list of columns (of the data so far, after `derive`),
+`-COL` for descending (`arrange: [USUBJID, -ASTDT]`): write a listing's sort here, in
+the data, not in `code`; `distinct` then keeps the first row in that order.
 
 `ard.analyses`, one item each: `id`, `method`, then **either** `data`
 (an analysis data's id of this report) **or** `dataset` with

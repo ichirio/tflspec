@@ -25,7 +25,7 @@ km_part <- function(risk = "panel") {
 two_up <- function(km = km_part()) {
   tfl_fig_design(
     plot = list(dpi = 300),
-    plots = list(km = km, box = tfl_fig_template("box_by_group")),
+    plots = list(km = km, box = tfl_fig_template("box_by_group", group = "TRT01A")),
     compose = list(layout = "km | box",
                    add = list(list(fn = "plot_layout", args = list(widths = list(3, 2))),
                               list(fn = "plot_annotation", args = list(tag_levels = "A")),
@@ -120,7 +120,7 @@ test_that("composed designs go through YAML and advice", {
 
 test_that("ggsurvfit add_* need the KM curves; add_risktable only once", {
   adam <- tfl_example_adam()
-  d <- tfl_fig_template("box_by_group")
+  d <- tfl_fig_template("box_by_group", group = "TRT01A")
   d$layers <- c(d$layers, list(list(layer = "call", fn = "add_quantile", package = "ggsurvfit")))
   p <- tfl_check_fig_design(d, adam)
   expect_true(any(grepl("add_quantile\\(\\) needs the KM curves layer", p$problem)))
@@ -157,7 +157,7 @@ test_that("catalog functions resolve to their package", {
   expect_true(all(c("ggh4x", "ggtext", "ggforce", "ggnewscale") %in% cc$package))
   expect_true(all(cc$where %in% c("layers", "plot.add", "nested")))
   expect_false(any(c("cowplot", "ggpubr", "ggbreak") %in% cc$package))
-  d <- tfl_fig_template("box_by_group")
+  d <- tfl_fig_template("box_by_group", group = "TRT01A")
   d$plot$add <- list(list(fn = "theme", args = list(axis.title.y = list(fn = "element_markdown"))))
   d$layers <- c(d$layers, list(list(layer = "call", fn = "new_scale_colour")))
   code <- tfl_fig_design_code(d)
@@ -169,7 +169,7 @@ test_that("catalog functions resolve to their package", {
 
 test_that("the sina layer is in the geom catalog", {
   expect_true("sina" %in% tfl_fig_parts()$piece)
-  d <- tfl_fig_template("box_by_group")
+  d <- tfl_fig_template("box_by_group", group = "TRT01A")
   d$layers <- list(list(layer = "sina", data = "df", x = "TRT01A", y = "AVAL"))
   code <- tfl_fig_design_code(d)
   expect_true(any(grepl("ggforce::geom_sina(", code, fixed = TRUE)))
@@ -177,7 +177,7 @@ test_that("the sina layer is in the geom catalog", {
 
 test_that("an empty axis label is untitled: ggplot2 4.0's label attribute advice", {
   adam <- tfl_example_adam()
-  b <- tfl_fig_template("box_by_group")
+  b <- tfl_fig_template("box_by_group", group = "TRT01A")
   a <- tfl_fig_advice(b, adam, ggplot2_version = "4.0")
   if (!is.null(attr(adam$ADLB$TRT01A, "label")) || !is.null(attr(adam$ADSL$TRT01A, "label"))) {
     expect_true("gg_label_attr" %in% a$rule)
@@ -189,7 +189,7 @@ test_that("a composed figure's script defines each study helper it calls once (A
   # two KM figures call tte_time(), the rate bars fmt_num(): one head
   d <- tfl_fig_design(
     plot = list(dpi = 300),
-    plots = list(a = km_part(), b = km_part(), rate = tfl_fig_template("bar_rate_ci")),
+    plots = list(a = km_part(), b = km_part(), rate = tfl_fig_template("bar_rate_ci", group = "TRT01P")),
     compose = list(layout = "a | b | rate"))
   lines <- function(x) unlist(strsplit(paste(as.character(x), collapse = "\n"), "\n", fixed = TRUE))
   code <- lines(tfl_fig_design_code(d, "c"))

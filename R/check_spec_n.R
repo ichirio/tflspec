@@ -6,7 +6,11 @@
 # BIGN's variable.  Where the two data differ, a subject may be counted under
 # one group in the N and under another in the rows.  A data check, with the
 # study's data as the `!=` check reads them (.ne_na_reader()): a warning,
-# nothing rewritten.
+# nothing rewritten; values the program makes or reduces (.n_known_vars()):
+# not compared.  Only an N the header shows (.bign_shown(), in
+# R/check_spec_header_n.R); the rows
+# compared are those the ARD program counts (the subjects it joins them to,
+# .n_subject_sets()); a condition that cannot be run here: no row.
 
 # The dataset an analysis's rows come from (a row of the analyses sheet; `ad`
 # its report's analysis data): its analysis data's first dataset, else its
@@ -34,13 +38,83 @@
   w[!is.na(w)]
 }
 
-# The rows of `df` the conditions keep (one that cannot be run here -- a
-# derived column, a package's function -- keeps all)
+# The subject sets an analysis's rows are joined to, as the ARD program joins
+# them (R/ard_adata.R), each a dataset and the conditions that keep it: its
+# population's subjects when they are of another dataset than `ds`, and the
+# analysis data whose subjects it keeps (`subjects_in`, with its own sets)
+.n_subject_sets <- function(x, ad, r, ds, seen = character()) {
+  d <- r$data %||% NA
+  out <- list()
+  p <- if (!is.na(d)) .adata_pop(ad, d) else r$population_id %||% NA
+  k <- match(p, x$populations$population_id)
+  if (!is.na(k) && !identical(toupper(x$populations$dataset[k]), toupper(ds))) {
+    w <- x$populations$where[k]
+    out <- list(list(dataset = x$populations$dataset[k], where = w[!is.na(w)]))
+  }
+  s <- if (!is.na(d)) .adata_subjects_of(ad, d)
+  if (!is.null(s) && !s %in% seen) {
+    sds <- .adata_dataset(ad, s)
+    rs <- list(data = s)
+    if (!is.na(sds)) {
+      out <- c(out, list(list(dataset = sds, where = .n_rows_where(x, ad, rs, sds))),
+               .n_subject_sets(x, ad, rs, sds, c(seen, s)))
+    }
+  }
+  out
+}
+
+# The dataset whose subjects' columns an analysis data takes (`add`, a
+# denominator's groups: .adata_add_from()'s data, else its set's); NA when
+# none
+.n_add_dataset <- function(x, ad, id) {
+  f <- .adata_add_from(ad, id)
+  if (is.na(f)) return(NA_character_)
+  if (f %in% ad$data_id) return(.adata_dataset(ad, f))
+  pid <- x$populations$population_id
+  x$populations$dataset[match(f, paste0("pop_", .r_name(pid)))]
+}
+
+# Of the variables `vars`, those whose values an analysis counts as the
+# study's data has them (`r` a row of the analyses sheet, `ad` its report's
+# analysis data): none when its rows are made by R the check does not run
+# (a row's `code` or `then`, the analysis's own `code`) or, for the counts
+# (`counts`), reduced to one record a subject (`distinct`: the record kept
+# is not known here; the N's rows read whole only miss a difference); else
+# those no `derive` on the way (its analysis data's, its own) makes.  The
+# values a program makes cannot be compared: nothing is said of them (as
+# for a condition that cannot be run)
+.n_known_vars <- function(ad, r, vars, counts = TRUE) {
+  d <- r[["data"]] %||% NA
+  ch <- if (!is.na(d)) .adata_chain(ad, d)
+  rows <- ad[match(ch, ad$data_id), , drop = FALSE]
+  col <- function(df, k) if (k %in% names(df)) as.character(df[[k]]) else character()
+  made <- c(col(rows, "code"), col(rows, "then"), if (counts) col(rows, "distinct"), col(r, "code"))
+  if (any(!is.na(made) & nzchar(made))) return(character())
+  setdiff(vars, .derive_names(stats::na.omit(c(col(rows, "derive"), col(r, "derive")))))
+}
+
+# The rows of `df` the conditions keep (one value: all rows or none); NULL
+# when one cannot be run here (a derived column, a package's function): the
+# rows are not known, nothing is said of them
 .n_keep <- function(df, where) {
   for (w in where) {
     e <- tryCatch(parse(text = w, keep.source = FALSE)[[1L]], error = function(err) NULL)
     k <- if (!is.null(e)) tryCatch(eval(e, df, baseenv()), error = function(err) NULL)
-    if (is.logical(k) && length(k) == nrow(df)) df <- df[!is.na(k) & k, , drop = FALSE]
+    if (is.logical(k) && length(k) == 1L) k <- rep(k, nrow(df))
+    if (!is.logical(k) || length(k) != nrow(df)) return(NULL)
+    df <- df[!is.na(k) & k, , drop = FALSE]
+  }
+  df
+}
+
+# The rows of `df` whose subjects are in each of the sets (.n_subject_sets();
+# `get_df` reads a dataset); NULL when a set cannot be read or kept
+.n_keep_subjects <- function(df, sets, subj, get_df) {
+  for (st in sets) {
+    sd <- get_df(st$dataset)
+    sd <- if (!is.null(sd)) .n_keep(sd, st$where)
+    if (is.null(sd) || !subj %in% names(sd)) return(NULL)
+    df <- df[df[[subj]] %in% sd[[subj]], , drop = FALSE]
   }
   df
 }
@@ -64,7 +138,13 @@
     d <- .data_col(ao)
     src <- paste(ao$dataset, ao$population_id, ao$where, sep = "\r")
     grp <- function(i) unlist(lapply(c(ao$by[i], ao$strata[i] %||% NA), .split_bar))
-    taken <- function(i) {
+    # (the subjects' value is the N's only when the subjects are of the N's
+    # dataset: an N of ADPC's subjects and the columns of ADSL's differ)
+    taken <- function(i, db) {
+      if (!is.na(d[i])) {
+        fd <- .n_add_dataset(x, ad, d[i])
+        if (!is.na(fd) && !identical(toupper(fd), toupper(db))) return(character())
+      }
       same <- if (!is.na(d[i])) which(d %in% d[i]) else which(is.na(d) & src == src[i])
       add <- if (!is.na(d[i])) unlist(lapply(.adata_chain(ad, d[i]), function(k)
         .split_bar(ad$add[match(k, ad$data_id)])))
@@ -75,13 +155,17 @@
       db <- .n_rows_from(x, ad, ao[b, ])
       if (!length(vb) || is.na(db)) next
       for (i in setdiff(seq_len(nrow(ao)), bn)) {
-        v <- setdiff(intersect(vb, grp(i)), taken(i))
+        v <- setdiff(intersect(vb, grp(i)), taken(i, db))
+        # (values the program makes or reduces on either side: not compared)
+        v <- intersect(.n_known_vars(ad, ao[i, ], v), .n_known_vars(ad, ao[b, ], v, counts = FALSE))
         di <- .n_rows_from(x, ad, ao[i, ])
         if (!length(v) || is.na(di) || identical(toupper(di), toupper(db))) next
         out[[length(out) + 1L]] <- list(
           output_id = o, bign = ao$analysis_id[b], analysis = ao$analysis_id[i], vars = v,
           n_dataset = db, n_where = .n_rows_where(x, ad, ao[b, ], db),
-          dataset = di, where = .n_rows_where(x, ad, ao[i, ], di))
+          n_subjects = .n_subject_sets(x, ad, ao[b, ], db),
+          dataset = di, where = .n_rows_where(x, ad, ao[i, ], di),
+          subjects = .n_subject_sets(x, ad, ao[i, ], di))
       }
     }
   }
@@ -105,20 +189,26 @@
   for (pr in pairs) {
     dn <- get_df(pr$n_dataset)
     dr <- get_df(pr$dataset)
-    if (!is.null(dn) && !is.null(dr)) rows[[length(rows) + 1L]] <- .n_pair_rows(pr, dn, dr, subj)
+    if (!is.null(dn) && !is.null(dr)) rows[[length(rows) + 1L]] <- .n_pair_rows(pr, dn, dr, subj, get_df)
   }
   out <- do.call(rbind, rows)
   out[!duplicated(out), , drop = FALSE]
 }
 
 # One pair's warnings (.n_count_pairs()'s item `pr`), on the N's data `dn`
-# and the counts' data `dr` (each kept by its conditions here): a variable
+# and the counts' data `dr` (each kept by its conditions here, and by the
+# subjects it is joined to when `get_df` reads their datasets): a variable
 # both carry, with the subject key, whose value of a subject's records is
-# none of its value in the N's rows
-.n_pair_rows <- function(pr, dn, dr, subj) {
+# none of its value in the N's rows.  Rows that cannot be known: none
+.n_pair_rows <- function(pr, dn, dr, subj, get_df = NULL) {
   rows <- list(.check_rows())
   dn <- .n_keep(dn, pr$n_where)
   dr <- .n_keep(dr, pr$where)
+  if (is.function(get_df)) {
+    if (!is.null(dn)) dn <- .n_keep_subjects(dn, pr$n_subjects, subj, get_df)
+    if (!is.null(dr)) dr <- .n_keep_subjects(dr, pr$subjects, subj, get_df)
+  }
+  if (is.null(dn) || is.null(dr)) return(rows[[1L]])
   for (v in pr$vars) {
     if (!all(c(subj, v) %in% names(dn)) || !all(c(subj, v) %in% names(dr))) next
     key <- function(df) paste(as.character(df[[subj]]), as.character(df[[v]]), sep = "\r")

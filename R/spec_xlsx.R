@@ -65,10 +65,9 @@ tfl_write_spec_xlsx <- function(dir, path) {
     if (inherits(o$content, "tfl_r")) note(id, "content", "the content as R code is not rows")
     else if (length(o$content)) note(id, "content", "the layers (content) are not rows")
     add_rows("objects", .flat_report_objects_rows(o, id, note))
-    # (the report's `common: population` is the set of its subjects definition)
-    rpop <- .na_scalar(.report_population(o, entries = FALSE))
+    # (the report's set, its data's, is the set of its subjects definition: .rows_set())
     for (e in o$ard$analysis_data %||% list()) {
-      e <- .entry_pop_inject(e, rpop, .pop_from(s$data$populations, rpop))
+      e <- .entry_pop_inject(e, .rows_set(o), .pop_from(s$data$populations, .rows_set(o)))
       add_rows("analysis_data", list(.flat_map(c(list(output_id = id), e), "analysis_data", id, note)))
     }
     for (k in c("treatment", "population_label")) {

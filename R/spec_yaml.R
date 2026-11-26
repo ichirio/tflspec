@@ -372,7 +372,7 @@ tfl_read_output <- function(path) {
   .spec_read$id <- y$id
   on.exit(.spec_read$id <- old_id, add = TRUE)
   # (the old places, each with a line saying where it moved)
-  if (!is.null(y$population)) stop(who, ": ", .common_old_line, call. = FALSE)
+  if (!is.null(y[["population"]])) stop(who, ": ", .common_old_line, call. = FALSE)
   common <- .common_in(y$common, who)
   .yaml_keys_check(y)
   y <- .data_list_in(y, who)
@@ -493,33 +493,126 @@ tfl_read_output <- function(path) {
 }
 
 # The report's analysis set (NA when it has none)
-.out_population <- function(o) .na_scalar(o$common$population)
-
-# The report's analysis set, the one reader (A2; template canon 11-15 (1):
-# the population lives on the report's data): the data map's own
-# `population` (a listing's, a code figure's `data: {population: SAF}`),
-# else the one set its subjects entries name (`data:` / `ard:
-# analysis_data:`), else `common: population` -- until `common` goes.
-# `data`: the map to read (a records part's; the report's own by default);
-# `entries = FALSE` when the set is wanted for the entries themselves (a
-# subjects entry given the report's set).  Its own value as given; else one
-# id (entries naming several: none of them); NA when none
-.report_population <- function(o, data = o$data, entries = TRUE) {
-  own <- if (is.list(data) && !is.null(names(data))) data[["population"]]
-  if (!is.null(own) && !all(is.na(unlist(own)))) return(own)
-  ents <- if (entries) c(if (is.list(o$data) && is.null(names(o$data))) o$data,
-                         if (is.list(o$ard$analysis_data)) o$ard$analysis_data)
-  v <- unique(unlist(lapply(ents, function(a) {
-    if (.entry_is_subjects(a)) .na_scalar(unlist(a$population))
-  })))
-  v <- v[!is.na(v)]
-  if (length(v) == 1L) return(v)
-  .out_population(o)
-}
+# (`[[`: a `$` would read `population_label` when the set is not written)
+.out_population <- function(o) .na_scalar(o[["common"]][["population"]])
 
 # The analysis set of a report's data (a listing's, a records part's): the
-# one reader's, of that data (A2 Q7: the sheets' and the YAML's alike)
-.data_population <- function(data, o) .report_population(o, data)
+# data's own `population` (canon 11-15: the set lives on the data); the
+# report's `common: population` is read only until `common` goes (NA when
+# none) -- one rule, the sheets' and the YAML's alike (A2 Q7).  A data that
+# reads one of the report's analysis data (`data: <id>`) has that data's set
+# (.adata_pop(): its own, else that of the subjects it keeps, else the
+# nearest above it), never one written beside it (.data_both()); its rows
+# as the ARD program reads them (a subjects row with no set has the
+# report's `common: population`, .entry_pop_inject(), until `common` goes)
+.data_population <- function(data, o) {
+  id <- .na_scalar(if (is.list(data)) unlist(data[["data"]]))
+  if (!is.na(id)) {
+    rows <- lapply(.data_rows(o), .entry_pop_inject, .rows_set(o))
+    return(.rows_adata_pop(rows, id))
+  }
+  data[["population"]] %||% .out_population(o)
+}
+
+# The set a report's subjects rows that name none take (.entry_pop_inject()),
+# as the ARD program reads them: the report's set as its data map says it
+# (.report_set(): a figure's or listing's `data: {population:}`, else
+# `common: population` until `common` goes); a map that reads one of the
+# report's analysis data (`data: <id>`) has that data's set, which comes from
+# the rows themselves: `common` only.  One rule for every path that writes the
+# rows out (the sheets, the workbook) and reads them back (NA when none)
+.rows_set <- function(o) {
+  d <- o[["data"]]
+  map <- if (is.list(d) && !is.null(names(d))) d
+  if (!is.na(.na_scalar(unlist(map[["data"]])))) return(.out_population(o))
+  .report_set(o)
+}
+
+# The sheets' population column of a report (the planner's: the TOC's line
+# and the report's set in one cell; `tp` its TOC line's set, `tpl` its
+# template SPEC): the report's set as its data says it (.report_set()), else
+# the TOC's line.  A report whose set lives on its data (a listing's, a
+# figure's: .set_on_data()) takes this column back onto its data, so there
+# the TOC's line is written only when the report carries that set already
+# (its subjects rows', .out_population_or_data()): the sheets add no set to
+# a report.  NA when none
+.planner_set <- function(o, tp, tpl = NULL) {
+  rs <- .report_set(o)
+  if (!is.na(rs)) return(rs)
+  tp <- .na_scalar(unlist(tp))
+  d <- o[["data"]]
+  on_data <- is.null(tpl) && .set_on_data(o[["kind"]], if (is.list(d) && !is.null(names(d))) d)
+  if (on_data && !identical(.out_population_or_data(o), tp)) NA_character_ else tp
+}
+
+# The report's analysis set as its data says it (.data_population() of its
+# data map; NA when none): the sheets' population column, the page's set
+# line and the checks read it alike
+.report_set <- function(o) {
+  d <- o[["data"]]
+  .na_scalar(unlist(.data_population(if (is.list(d) && !is.null(names(d))) d, o)))
+}
+
+# A report's data rows, each a list (its definitions): its `data:` list and
+# its ARD's `analysis_data` -- never the keys of a data map (`source`,
+# `steps` ...), which are no rows
+.data_rows <- function(o) {
+  d <- o[["data"]]
+  rows <- c(if (is.list(d) && length(d) && is.null(names(d))) d,
+            if (is.list(o[["ard"]][["analysis_data"]])) o[["ard"]][["analysis_data"]])
+  Filter(is.list, rows)
+}
+
+# .adata_pop() of the data `id` among a report's data rows as the file says
+# them (`id`, `from`, `population`, `subjects_in`)
+.rows_adata_pop <- function(rows, id) {
+  col <- function(k) vapply(rows, function(a) .na_scalar(unlist(a[[k]])), "")
+  ad <- data.frame(data_id = col("id"), from = col("from"), population_id = col("population"),
+                   subjects_in = col("subjects_in"), stringsAsFactors = FALSE)
+  .adata_pop(ad, id)
+}
+
+# A data that reads one of the report's analysis data (`data`) takes its
+# dataset and its analysis set from it: the keys written beside it as well
+# (`keys`: the dataset's, the set's), character(0) when none.  One rule: an
+# analysis's and a listing's rows (R/ard_adata.R, R/listing_spec.R), the AI's
+# listing check (R/ai_listing.R) and tfl_check_spec() (.check_set_rows())
+.data_both <- function(data, dataset, population, keys = c("dataset", "population")) {
+  given <- function(v) !is.na(.na_scalar(unlist(v)))
+  if (!given(data)) return(character())
+  keys[c(given(dataset), given(population))]
+}
+.data_both_text <- function(keys) {
+  sprintf("reads its `data` or a %s; not both (the analysis data has them)",
+          paste0("`", keys, "`", collapse = " and "))
+}
+
+# The ids of a study's analysis sets (`data`: its data.yml as read):
+# character(0) when data.yml names none; NULL when the study has no data
+# catalog (no data.yml, or an empty one): its sets are not known, and no set
+# is checked against them (.pop_unknown_text())
+.study_set_ids <- function(data) {
+  if (!length(data)) return(NULL)
+  ids <- vapply(data[["populations"]] %||% list(), function(p) .na_scalar(unlist(p[["id"]])), "")
+  ids[!is.na(ids)]
+}
+
+# A set that is none of the study's analysis sets (`pops`: the ids of
+# data.yml `populations:`, character(0) when it names none; NULL when the
+# study is not known): the line that says so, NULL when it is one or when
+# none is written.  A set is always one of the study's (canon 11-15 (2): a
+# set is registered in data.yml, a report picks it), so a study that names
+# none has none to pick.  The AI's checks and tfl_check_spec()
+# (.check_set_rows()) alike
+.pop_unknown_text <- function(x, pops) {
+  v <- as.character(unlist(x))
+  v <- v[!is.na(v) & nzchar(v)]
+  if (is.null(pops) || !length(v) || all(v %in% pops)) return(NULL)
+  sprintf("%s is not an analysis set of spec/data.yml (%s)",
+          paste(sQuote(setdiff(v, pops), FALSE), collapse = ", "),
+          if (length(pops)) paste(pops, collapse = ", ") else
+            "it names none: register the set under `populations:`")
+}
 
 # The report's subjects definition (`from: ADSL`, or from the dataset its
 # analysis set is defined on: data.yml `populations:`; no `subjects_in`, no code)

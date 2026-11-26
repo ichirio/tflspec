@@ -290,8 +290,13 @@
 # that makes `data` itself has no `ard` to normalize.
 .rp_rework_lines <- function(ctx, code, proc) {
   c(if (is.na(code) || !.rp_makes_data(code)) .rp_rework_normalize_lines(ctx),
-    .rp_code_block(proc))
+    .rp_rework_code(proc))
 }
+
+# A Rework (a table's, a template listing's) as the content's data steps
+# are written (.content_steps_code(), A1): one expression that assigns only
+# `data` as it is, any other code in a scope of its own that leaves `data`
+.rp_rework_code <- function(proc) .content_steps_code(.rp_code_block(proc))
 
 # The check made of a Rework: it names `data` (code that does not parse is
 # left to R, which says so when it runs)
@@ -385,21 +390,28 @@
 }
 
 # The report's analysis set (A2 R1): its spec's, by the one reader
-# (.report_population(): its data's `population`, its subjects entries',
-# its `common:`); NA when it has none
+# (.out_population_or_data(): its data's `population`, its `common:` until
+# `common` goes, else its subjects entries'); NA when it has none
 .rp_population <- function(ctx) {
   r <- ctx$report
-  .na_scalar(.report_population(r$spec_output %||% r$output %||% list()))
+  .out_population_or_data(r$spec_output %||% r$output %||% list())
 }
 
 # A figure's subjects (A2 R1, R4): the subjects of the report's analysis set,
 # made once by the program's data part as the ARD programs make them
 # (.fig_subjects_part(): the object <dataset>_sub), with the report's
 # analysis data `data`; the records the figure reads are joined to them.
-# list(code, subjects); NULL when the report has no analysis set
+# list(code, subjects); NULL only when the report has no analysis set.  A
+# set whose subjects cannot be made (none of the study's, no ARD definition)
+# is a stop() line saying so, and no subjects: never every subject drawn
+# (.fig_subjects_part())
 .rp_fig_subjects <- function(ctx, data = character()) {
   pop <- .rp_population(ctx)
-  if (is.na(pop) || is.null(ctx$shared$ard)) return(NULL)
+  if (is.na(pop)) return(NULL)
+  id <- ctx$report$id
+  stop_line <- function(msg) list(code = sprintf("stop(%s)", encodeString(msg, quote = "\"")),
+                                  subjects = NULL)
+  if (is.null(ctx$shared$ard)) return(stop_line(.fig_subjects_no_ard(id, pop)))
   x <- .as_spec(ctx$shared$ard, "ard", "tfl_report_program")
   # (written as tfl_ard_code(part = "data") writes it: for its setup, which
   # attaches cards and dplyr)
@@ -407,8 +419,9 @@
   old <- options(tflspec.user_attached = user,
                  tflspec.attached = union(user, c(.ard_pkgs, .ard_base_pkgs)))
   on.exit(options(old), add = TRUE)
-  sj <- .fig_subjects_part(x, ctx$report$id, pop, data = data)
-  if (!is.null(sj)) sj$code <- .drop_attached_ns(sj$code)
+  sj <- tryCatch(.fig_subjects_part(x, id, pop, data = data),
+                 tfl_fig_subjects = function(e) stop_line(conditionMessage(e)))
+  if (!is.null(sj$subjects)) sj$code <- .drop_attached_ns(sj$code)
   sj
 }
 
@@ -746,7 +759,7 @@
     }
     if (!is.null(recs)) {
       return(c(setup, "# the listing's records", recs,
-               if (!is.na(proc)) c("", "# its rework", .rp_code_block(proc))))
+               if (!is.na(proc)) c("", "# its rework", .rp_rework_code(proc))))
     }
   }
   # a listing defined in rows: its process code is a rework of `data`

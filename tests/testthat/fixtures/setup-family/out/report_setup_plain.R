@@ -41,8 +41,9 @@ header_wide <- rtf_header(
 )
 
 # what was made, with which study setup, and -- a figure printing an
-# ARD's numbers -- from which definition of that ARD (tflplanner reads it)
-record_report <- function(output_id, ard = "") {
+# ARD's numbers -- from which definition of that ARD (tflplanner reads it);
+# `empty`: TRUE when the report has no rows (the official run notes it)
+record_report <- function(output_id, ard = "", empty = NA) {
   sf <- "output/tfl/report_status.csv"
   setup <- paste(paste(unname(tools::md5sum(Filter(file.exists, c("programs/company_setup.R", "programs/study_setup.R", "programs/study_user.R")))),
                 collapse = "+"),
@@ -52,6 +53,7 @@ record_report <- function(output_id, ard = "") {
                     built = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
                     setup = setup,
                     ard = ard,
+                    empty = if (isTRUE(empty)) "TRUE" else if (isFALSE(empty)) "FALSE" else "",
                     stringsAsFactors = FALSE)
   dir.create(dirname(sf), recursive = TRUE, showWarnings = FALSE)
   st <- if (file.exists(sf)) utils::read.csv(sf, colClasses = "character")

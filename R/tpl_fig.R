@@ -3,9 +3,10 @@
 #
 # A figure template expands to the design form, as a designed report has
 # it: its data steps, the layers as the content's items, the figure's
-# settings (`plot:`).  The analysis set's subjects are a semi join after
-# the read (data.yml's definition), in place of the preset's flag.  The
-# data's last steps -- the statistics, the fit, the bars' order -- are its
+# settings (`plot:`).  The analysis set is the data's `population:` (A2,
+# one rule): the report program makes its subjects and joins the records
+# to them, as for every figure; no step keeps it, and the preset's flag
+# step is dropped.  The data's last steps -- the statistics, the fit, the bars' order -- are its
 # call's (`call_steps`): the program (A) writes the steps before them as
 # plain dplyr, then `content <- tpl_<name>(<data>, ...)` and the report's
 # own items `+`-ed after it.
@@ -21,26 +22,22 @@
        content = lapply(f$layers, function(l) tfl_item(l$layer, l[setdiff(names(l), "layer")])))
 }
 
-# The template's body from its design: the analysis set's subjects in
-# place of the preset's flag; `call_steps` the steps the call makes
+# The template's body from its design: the analysis set on the data (its
+# `population`, the report's set: one value, applied once by the program's
+# join), the preset's flag step dropped; `call_steps` the steps the call
+# makes
 .tpl_fig_body_of <- function(f, a, ctx) {
   steps <- Filter(function(s) !identical(s$step, "flag"), f$steps)
-  pop_step <- NULL
-  if (!is.null(a$population)) {
-    at <- match("read", vapply(steps, `[[`, "", "step"))
-    steps <- append(steps, .tpl_population_step(a$population, ctx$population), at)
-    pop_step <- at + 1L
-  }
+  if (!is.null(a$population)) .tpl_population_check(a$population, ctx$population)
   # the records kept besides the parameter (`where`): after it
   if (!is.null(a$where)) {
     kinds <- vapply(steps, `[[`, "", "step")
     at <- match("param", kinds, nomatch = match("read", kinds, nomatch = 0L))
     steps <- append(steps, list(list(step = "filter", expr = a$where)), at)
   }
-  # (`pop_step`: where the analysis set's step is, for a report whose own
-  # steps are the data stage: .tpl_compose_data() keeps it)
-  list(data = list(source = "code", steps = c(steps, f$stats)), content = f$content,
-       plot = f$plot, call_steps = length(f$stats), pop_step = pop_step)
+  data <- c(list(source = "code"), if (!is.null(a$population)) list(population = a$population),
+            list(steps = c(steps, f$stats)))
+  list(data = data, content = f$content, plot = f$plot, call_steps = length(f$stats))
 }
 
 # The settings `over` over a template's `base`. The `add` lists join (the
@@ -71,12 +68,15 @@
   tfl_content_run(o, stats::setNames(list(data), as))
 }
 
-# a column given bare or as text (a quosure), NULL when not given
-.tpl_col <- function(q) if (rlang::quo_is_null(q)) NULL else rlang::as_name(q)
+# a column given bare or as text (a quosure), NULL when not given (NULL, or
+# an argument left out: a required one then stops, naming it)
+.tpl_col <- function(q) {
+  if (rlang::quo_is_missing(q) || rlang::quo_is_null(q)) NULL else rlang::as_name(q)
+}
 
 # ---- mean_se / mean_ci: a mean over the visits, with SE or CI bars ------------------
 
-.tpl_mean_design <- function(interval, group = "TRT01A", value = "AVAL", visit_var = "AVISIT",
+.tpl_mean_design <- function(interval, group, value = "AVAL", visit_var = "AVISIT",
                              visit_order = "AVISITN", param = NULL, data = NULL) {
   f <- .tpl_fig_design(paste0("mean_", interval),
                        list(data = data, param = param, group = group, value = value,
@@ -119,7 +119,8 @@
   .tpl_subset_param(),
   tfl_param("data", "ADLB", type = "text", doc = "the BDS dataset (ADVS, ADLB)"),
   tfl_param("value", "AVAL", type = "vars", doc = "the variable averaged (AVAL, CHG)"),
-  tfl_param("group", "TRT01A", type = "vars", doc = "the lines' variable"),
+  # (no default: a figure's group is the report's to say, PRINCIPLES 1.14)
+  tfl_param("group", NULL, required = TRUE, type = "vars", doc = "the lines' variable"),
   tfl_param("visit_var", "AVISIT", type = "vars", doc = "the visits on the x axis"),
   tfl_param("visit_order", "AVISITN", type = "vars", doc = "the visits' order"),
   .tpl_where_param(doc = "the records kept besides the parameter (R)")
@@ -146,7 +147,8 @@
 #' report's own layers and settings go after the call with `+`.
 #'
 #' @param data The records: one a subject and visit, the parameter's.
-#' @param group The lines' variable (`TRT01A`), bare or as text.
+#' @param group The lines' variable (`TRT01A`), bare or as text; required
+#'   (no default: the report says its group).
 #' @param value The variable averaged (`AVAL`, `CHG`).
 #' @param visit_var The visits on the x axis (`AVISIT`), a factor in their order.
 #' @param visit_order The visits' order (`AVISITN`).
@@ -162,7 +164,7 @@
 #' p <- tpl_mean_se(df, group = TRT01A, param = "SYSBP")
 #' class(p)
 #' @export
-tpl_mean_se <- function(data, group = "TRT01A", value = "AVAL", visit_var = "AVISIT",
+tpl_mean_se <- function(data, group, value = "AVAL", visit_var = "AVISIT",
                         visit_order = "AVISITN", param = NULL, plot = NULL) {
   f <- .tpl_mean_design("se", .tpl_col(rlang::enquo(group)), .tpl_col(rlang::enquo(value)),
                         .tpl_col(rlang::enquo(visit_var)), .tpl_col(rlang::enquo(visit_order)), param)
@@ -171,7 +173,7 @@ tpl_mean_se <- function(data, group = "TRT01A", value = "AVAL", visit_var = "AVI
 
 #' @rdname tpl_mean_se
 #' @export
-tpl_mean_ci <- function(data, group = "TRT01A", value = "AVAL", visit_var = "AVISIT",
+tpl_mean_ci <- function(data, group, value = "AVAL", visit_var = "AVISIT",
                         visit_order = "AVISITN", param = NULL, plot = NULL) {
   f <- .tpl_mean_design("ci", .tpl_col(rlang::enquo(group)), .tpl_col(rlang::enquo(value)),
                         .tpl_col(rlang::enquo(visit_var)), .tpl_col(rlang::enquo(visit_order)), param)
@@ -324,7 +326,7 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
     out = "y_labels", code = .forest_y_labels_code())), after = k)
 }
 
-.tpl_forest_design <- function(group = "TRT01A", subgroups = c("SEX", "AGEGR1"),
+.tpl_forest_design <- function(group, subgroups = c("SEX", "AGEGR1"),
                                comparison = NULL, look = list(), ref = NULL) {
   if (!is.null(ref) && identical(ref[1L], comparison[1L])) {
     .ard_stop("forest_hr: `comparison` is the reference arm (`ref`); the reference has no hazard ratio to show.")
@@ -364,7 +366,9 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
   tfl_param("population", required = TRUE, type = "text", doc = "the analysis set's id (SAF)"),
   .tpl_subset_param(),
   tfl_param("data", "ADTTE", type = "text", doc = "the dataset"),
-  tfl_param("group", "TRT01A", type = "vars", doc = "the arms compared (the Cox model's term)"),
+  # (no default: a figure's group is the report's to say, PRINCIPLES 1.14)
+  tfl_param("group", NULL, required = TRUE, type = "vars",
+            doc = "the arms compared (the Cox model's term)"),
   tfl_param("subgroups", c("SEX", "AGEGR1"), type = "vars", multiple = TRUE,
             doc = "the subgroups, each its levels' hazard ratios"),
   tfl_param("subgroup_labels", NULL, type = "list", multiple = FALSE, fields = c("name", "text"),
@@ -465,7 +469,8 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
 #' hazard ratio and its CI) at its right.
 #'
 #' @param ard The study ARD's rows of this report.
-#' @param group The arms compared (`TRT01A`), bare or as text.
+#' @param group The arms compared (`TRT01A`), bare or as text; required (no
+#'   default: the report says its group).
 #' @param subgroups The subgroups (`c(SEX, AGEGR1)`), bare or as text.
 #' @param comparison The one arm to show, compared with the reference (not
 #'   the reference itself); `NULL`: every other arm, each row saying which.
@@ -493,7 +498,7 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
 #'   of it and its text column.
 #' @seealso [tfl_template_expand()] for its ARD and design (the B use).
 #' @export
-tpl_forest_hr <- function(ard, group = "TRT01A", subgroups = c("SEX", "AGEGR1"),
+tpl_forest_hr <- function(ard, group, subgroups = c("SEX", "AGEGR1"),
                           ref = NULL, comparison = NULL, favours = NULL, x_breaks = NULL,
                           size_by_n = FALSE, bold_headings = FALSE, n_by_arm = NULL,
                           subgroup_labels = NULL, plot = NULL) {
@@ -522,7 +527,7 @@ tpl_forest_layout <- function(fig, n_by_arm = NULL) {
     .ard_stop("tpl_forest_layout(): `n_by_arm` is the arms tpl_forest_hr() was given.")
   }
   l <- .tpl_forest_text(n_by_arm)
-  base <- tfl_fig_template("forest_hr")$plot$base_size
+  base <- .fig_kind_size("forest")$base_size
   x <- .fig_layer_code(l, 1L, list(base_size = base))
   w <- as.numeric(l$width)
   code <- c(x$chain, sprintf("fig <- fig + %s + plot_layout(widths = %s)", x$panel$name,

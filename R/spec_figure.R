@@ -121,8 +121,12 @@
   series <- .content_fig_series_code(output)
   if (!is.null(series)) return(series)
   if (.fig_new_content(output$content)) return(.fig_content_code(output))
-  # (the design as its list: tfl_fig_design_code() reads it as a design)
-  .fig_design_content_code(.fig_design_of_output(output), output$id,
+  # (the design as its list: tfl_fig_design_code() reads it as a design;
+  # the report's subjects, when made (.fig_session_subjects()): its reads
+  # joined to them)
+  design <- .fig_design_from_list(.fig_design_of_output(output))
+  attr(design, "subjects") <- attr(output, "fig_subjects")
+  .fig_design_content_code(design, output$id,
                            .codelists_rows(output$codelists, output$id))
 }
 
@@ -160,12 +164,23 @@
   invisible(TRUE)
 }
 
-.content_fig_run <- function(output, data) {
+.content_fig_run <- function(output, data, study = NULL) {
   if (is.data.frame(data)) data <- list(df = data)
   .fig_reads_given(output, data)
+  if (is.character(study)) study <- tfl_read_study_spec(study)
+  # the report's subjects (its analysis set): made as its program's data
+  # part makes them, the part's own reads of the study's files; the
+  # datasets it reads joined to them (canon 11-15)
+  sj <- local({
+    old <- options(tflspec.plain_ns = TRUE, tflspec.study_setup = FALSE)
+    on.exit(options(old))
+    .fig_session_subjects(output, study, "tfl_content_run()")
+  })
+  attr(output, "fig_subjects") <- sj$subjects
   code <- .content_fig_code_out(output)
   # the packages it calls: their exports around it, none attached
   env <- new.env(parent = .fig_pkg_env(attr(code, "libs")))
+  if (!is.null(sj)) .fig_subjects_eval(sj, env, study, output$id)
   for (n in names(data)) assign(n, data[[n]], envir = env)
   # the content is a part of the report's program, run after the study's
   # setup, and carries nothing of it (.fig_script_head()): the setup's
@@ -386,6 +401,19 @@
 .schema_gg_generic <- paste0("r|call|string|number|logical|list<string|number|logical>|",
                              "map<string, string|number|logical>")
 
+# The names a layer's `position` takes (the same as the yaml geoms' own `values:`):
+# a bare call is a pick of these, the function's arguments the detail
+.fig_position_values <- list(
+  list(value = "dodge", label = list(en = "Side by side", ja = "\u6a2a\u306b\u4e26\u3079\u308b")),
+  list(value = "dodge2", label = list(en = "Side by side (with padding)", ja = "\u6a2a\u306b\u4e26\u3079\u308b\uff08\u9593\u9694\u4ed8\u304d\uff09")),
+  list(value = "stack", label = list(en = "Stacked", ja = "\u7a4d\u307f\u4e0a\u3052")),
+  list(value = "fill", label = list(en = "Stacked to 100%", ja = "100% \u7a4d\u307f\u4e0a\u3052")),
+  list(value = "identity", label = list(en = "As they are", ja = "\u305d\u306e\u307e\u307e")),
+  list(value = "jitter", label = list(en = "Jittered", ja = "\u3070\u3089\u3059")),
+  list(value = "jitterdodge", label = list(en = "Jittered side by side", ja = "\u6a2a\u306b\u4e26\u3079\u3066\u3070\u3089\u3059")),
+  list(value = "nudge", label = list(en = "Nudged", ja = "\u305a\u3089\u3059"))
+)
+
 .fig_gg_args <- function() {
   if (is.null(.fig_registry$gg_args)) {
     .fig_registry$gg_args <- utils::read.csv(
@@ -578,6 +606,9 @@
     if (!is.null(old$type) && !identical(old$type, .schema_gg_generic)) next
     new <- list(type = g$type[i], label = list(en = g$en[i], ja = g$ja[i]))
     if (!is.na(g$help[i])) new$description <- g$help[i]
+    if (identical(kind, "layer") && identical(a, "position") && identical(g$type[i], "call|string|r")) {
+      new$values <- .fig_position_values
+    }
     ent$args[[a]] <- c(new, old[setdiff(names(old), names(new))])
   }
   # a theme setting of one side or axis (axis.text.x.top, legend.key.spacing.y)

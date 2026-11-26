@@ -35,7 +35,7 @@ test_that("the templates make figures that draw, and check clean", {
     tfl_fig_template("km_risk_table", param = prm, group = "TRT01P"),
     tfl_fig_template("km_ci", param = prm, group = "TRT01P"),
     tfl_fig_template("km_single_arm", param = prm),
-    tfl_fig_template("mean_se_n", param = unique(adam$ADLB$PARAMCD)[1]),
+    tfl_fig_template("mean_se_n", group = "TRT01A", param = unique(adam$ADLB$PARAMCD)[1]),
     tfl_fig_template("waterfall_response"))) {
     expect_equal(nrow(tfl_check_fig_design(d, adam)), 0L, info = d$template)
     r <- run_design(d, adam)
@@ -44,7 +44,7 @@ test_that("the templates make figures that draw, and check clean", {
 })
 
 test_that("a design goes to YAML and back", {
-  d <- tfl_fig_template("mean_ci", param = "ALT")
+  d <- tfl_fig_template("mean_ci", group = "TRT01A", param = "ALT")
   f <- tempfile(fileext = ".yml")
   tfl_write_fig_design(d, f)
   expect_equal(unclass(tfl_read_fig_design(f)), unclass(d))
@@ -131,9 +131,8 @@ test_that("every template draws on the example data and checks clean", {
   prm <- unique(adam$ADTTE$PARAMCD)[1]
   for (i in seq_len(nrow(tp))) {
     t <- tp$template[i]
-    args <- switch(tp$kind[i], km = list(param = prm, group = if (t != "km_single_arm") "TRT01P"),
-                   forest = list(param = prm), list())
-    d <- do.call(tfl_fig_template, c(list(t), args))
+    args <- switch(tp$kind[i], km = list(param = prm), forest = list(param = prm), list())
+    d <- do.call(tfl_fig_template, c(list(t), args, list(group = fig_group_of(t))))
     expect_equal(nrow(tfl_check_fig_design(d, adam)), 0L, info = t)
     # the forest plot reads its own ARD: made first, from its analyses
     ard <- if (!is.null(attr(d, "analyses"))) forest_example_ard(adam, d)
@@ -142,11 +141,11 @@ test_that("every template draws on the example data and checks clean", {
 })
 
 test_that("the new statistics and settings write what they say", {
-  d <- tfl_fig_template("bar_rate_ci")
+  d <- tfl_fig_template("bar_rate_ci", group = "TRT01P")
   code <- paste(tfl_fig_design_code(d), collapse = "\n")
   expect_match(code, "binom.test", fixed = TRUE)
   expect_match(code, 'label = paste0(fmt_num(rate, 1), "%\\n(', fixed = TRUE)
-  d <- tfl_fig_template("pk_individual")
+  d <- tfl_fig_template("pk_individual", group = "TRT01A")
   code <- paste(tfl_fig_design_code(d), collapse = "\n")
   expect_match(code, "scale_y_log10()", fixed = TRUE)
   expect_match(code, "facet_wrap(vars(TRT01A))", fixed = TRUE)
@@ -218,14 +217,14 @@ test_that("a number a figure prints is fmt_num(): the study's rounding, as a tab
   # (A3) the rate, count and forest steps; a study's program has fmt_num()
   # from its setup, a script of its own defines it (unless the setup has)
   for (t in c("bar_rate_ci", "bar_stacked")) {
-    prog <- paste(tfl_fig_design_code(tfl_fig_template(t), "F1", setup = TRUE), collapse = "\n")
+    prog <- paste(tfl_fig_design_code(tfl_fig_template(t, group = "TRT01P"), "F1", setup = TRUE), collapse = "\n")
     expect_false(grepl("fmt_num <- function", prog, fixed = TRUE), info = t)
-    own <- strsplit(paste(tfl_fig_design_code(tfl_fig_template(t), "F1"), collapse = "\n"), "\n")[[1]]
+    own <- strsplit(paste(tfl_fig_design_code(tfl_fig_template(t, group = "TRT01P"), "F1"), collapse = "\n"), "\n")[[1]]
     expect_identical(sum(grepl('^if [(]!exists[(]"fmt_num"[)][)] fmt_num <- function', own)), 1L, info = t)
   }
-  rate <- paste(tfl_fig_design_code(tfl_fig_template("bar_rate_ci"), "F1", setup = TRUE), collapse = "\n")
+  rate <- paste(tfl_fig_design_code(tfl_fig_template("bar_rate_ci", group = "TRT01P"), "F1", setup = TRUE), collapse = "\n")
   expect_match(rate, 'label = paste0(fmt_num(rate, 1), "%\\n(", x, "/", n, ")")', fixed = TRUE)
-  count <- paste(tfl_fig_design_code(tfl_fig_template("bar_stacked"), "F1", setup = TRUE), collapse = "\n")
+  count <- paste(tfl_fig_design_code(tfl_fig_template("bar_stacked", group = "TRT01P"), "F1", setup = TRUE), collapse = "\n")
   expect_match(count, 'label = paste0(fmt_num(pct, 0), "%")', fixed = TRUE)
   fr <- tfl_fig_template("forest_hr", data = "ADTTE", param = "TTDE", pop = "SAFFL", group = "TRT01A",
                          subgroups = "SEX, AGEGR1", comparison = "Xanomeline High Dose")
@@ -445,7 +444,7 @@ test_that("a report's content code carries no study helper: the program's setup 
 test_that("a script of its own names the packages its carried helpers call", {
   needs_line <- function(code) grep("^# also needs:", code, value = TRUE)
   # fmt_num() calls rtfreporter::round_num(): the script needs rtfreporter
-  own <- tfl_fig_design_code(tfl_fig_template("bar_rate_ci"), "F1")
+  own <- tfl_fig_design_code(tfl_fig_template("bar_rate_ci", group = "TRT01P"), "F1")
   expect_true(any(grepl("rtfreporter", needs_line(own))))
   expect_true("rtfreporter" %in% attr(own, "needs"))
   # the helpers' own base packages and the attached ones are not named
@@ -472,7 +471,7 @@ test_that("a script of its own names the packages its carried helpers call", {
   # a package the script attaches is not named twice
   expect_false("rtfreporter" %in% tflspec:::.fig_script_needs("fmt_num(x, 1)", libs = "rtfreporter"))
   # with the study's setup, nothing changes
-  st <- tfl_fig_design_code(tfl_fig_template("bar_rate_ci"), "F1", setup = TRUE)
+  st <- tfl_fig_design_code(tfl_fig_template("bar_rate_ci", group = "TRT01P"), "F1", setup = TRUE)
   expect_length(needs_line(st), 0L)
   expect_false("rtfreporter" %in% attr(st, "needs"))
   expect_identical(tflspec:::.fig_script_needs("fmt_num(x, 1)", setup = TRUE), character())
@@ -527,7 +526,7 @@ test_that("the in-program option works end to end: a report's content code has n
   old0 <- options(tflspec.fig_in_program = NULL)
   on.exit(options(old0), add = TRUE)
   expect_null(getOption("tflspec.fig_in_program"))
-  design <- tfl_fig_template("bar_rate_ci")
+  design <- tfl_fig_template("bar_rate_ci", group = "TRT01P")
   # outside a program the design's own script carries the helper it calls
   own <- tfl_fig_design_code(design, "F1")
   expect_true(any(grepl("if (!exists(\"fmt_num\")) ", own, fixed = TRUE)))
@@ -541,4 +540,31 @@ test_that("the in-program option works end to end: a report's content code has n
   on.exit(options(old), add = TRUE)
   expect_identical(tflspec:::.fig_script_needs("fmt_num(x, 1)"), character())
   expect_identical(tflspec:::.fig_script_needs("fmt_num(x, 1)", needs = "ggtext"), "ggtext")
+})
+
+test_that("a figure's group has no default: a template that splits the arms stops, naming itself (PRINCIPLES 1.14)", {
+  # every preset that draws the arms: its name, the argument, what it is
+  tp <- tfl_fig_templates()
+  for (t in tp$template[tp$parts]) {
+    if (is.null(fig_group_of(t))) next
+    expect_error(tfl_fig_template(t), sprintf("%s: `group` is required (the variable that splits the arms).", t),
+                 fixed = TRUE, info = t)
+    expect_error(tfl_fig_template(t, group = ""), "`group` is required", fixed = TRUE, info = t)
+    expect_s3_class(tfl_fig_template(t, group = fig_group_of(t)), "tfl_fig_design")
+  }
+  # the ones that draw no arms need none
+  for (t in c("km_single_arm", "individual_spider", "waterfall_response", "swimmer_full")) {
+    expect_s3_class(tfl_fig_template(t), "tfl_fig_design")
+  }
+  # the template SPECs: `group` required, no default (like km's `by`)
+  for (nm in c("mean_se", "mean_ci", "forest_hr")) {
+    g <- tfl_template_params(nm)$group
+    expect_true(isTRUE(g$required), info = nm)
+    expect_null(g$default, info = nm)
+    expect_error(tfl_template_expand(nm, list(param = "SYSBP", population = "SAF")), "group", info = nm)
+  }
+  # the functions: the same stop, before the data
+  expect_error(tpl_mean_se(advs, param = "SYSBP"), "mean_se: `group` is required", fixed = TRUE)
+  expect_error(tpl_mean_ci(advs, param = "SYSBP"), "mean_ci: `group` is required", fixed = TRUE)
+  expect_error(tpl_forest_hr(data.frame()), "forest_hr: `group` is required", fixed = TRUE)
 })

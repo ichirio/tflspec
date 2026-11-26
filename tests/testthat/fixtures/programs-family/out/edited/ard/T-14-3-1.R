@@ -24,8 +24,7 @@ adae <- order_levels(adae, c("AEBODSYS", "AEDECOD"), from = adsl)
 adsl_saf <- adsl |>
   filter(SAFFL == "Y") |>
   set_levels(TRT01A = cl_trt01a)
-# adae_saf: the records. ADAE of the subjects of adsl_saf, TRT01A from ADSL;
-# where
+# adae_saf: the records. ADAE of the subjects of adsl_saf, TRT01A from ADSL
 adae_saf <- adae |>
   select(-any_of("TRT01A")) |>
   inner_join(

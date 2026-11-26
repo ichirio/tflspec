@@ -679,7 +679,9 @@ tfl_plot <- function(name, items = list(), from = "own", input = NULL, form = c(
 .fig_content_code <- function(output, name = "content") {
   parts <- .fig_split_content(output$content)
   lv <- .codelist_levels(.codelists_rows(output$codelists, output$id), output$id)
-  d <- .fig_steps_code(output$data$steps %||% list(), lv, order = TRUE)
+  # (the report's subjects, when made: its reads joined to them)
+  d <- .fig_steps_code(output$data$steps %||% list(), lv, order = TRUE,
+                       subjects = attr(output, "fig_subjects"))
   head <- if (length(lv)) .codelists_head(lv)
   plots <- parts$plots
   one <- length(plots) == 1L

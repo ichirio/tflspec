@@ -218,7 +218,8 @@ tfl_ai_check <- function(answer, context = NULL, adam = NULL) {
 # reads a dataset with no set is no report -- a warning, the set to be
 # asked, not guessed -- and a step that keeps the set's rows by the
 # records' own columns (a variable of its condition: `flag: SAFFL`) is an
-# error, the step to be removed.
+# error, the step to be removed (.step_keeps_population(), tfl_check_spec()'s
+# rule and message too).
 .ai_fig_required <- function(steps, rest = list(), context = NULL) {
   p <- .ai_problems()
   steps <- Filter(is.list, steps %||% list())
@@ -239,20 +240,17 @@ tfl_ai_check <- function(answer, context = NULL, adam = NULL) {
       "to; if the shell names one the TOC does not, ask it in a question -- do not guess"),
       "warning")
   }
-  # a step that keeps the set's rows by a variable of its condition
-  pop_vars <- if (is.list(pop) && !is.null(pop$where)) .ai_r_names(pop$where)
-  keeps <- c(flag = "variable", filter = "expr")
-  for (k in seq_along(steps)) {
-    if (!kind[k] %in% names(keeps) || !length(pop_vars)) next
-    v <- as.character(unlist(steps[[k]][[keeps[[kind[k]]]]]))[1L]
-    used <- if (!is.na(v %||% NA)) .ai_r_names(v)
-    hit <- intersect(used, pop_vars)
-    if (!length(hit)) next
-    p <- .ai_problem(p, sprintf("data[%d] %s", k, kind[k]), sprintf(paste(
-      "keeps the rows of the analysis set by the records' own %s: the set is the report's",
-      "(its data's `population:`), whose subjects the program joins the records to -- remove",
-      "the step (a `flag` step is for a record flag, ANL01FL)"),
-      paste(hit, collapse = ", ")))
+  # a step that keeps the set's rows by a variable of its condition: an
+  # error, the one rule of tfl_check_spec() (.step_keeps_population()) on
+  # the report's set (the context's: the only set the AI's check knows)
+  if (is.list(pop) && !is.null(pop$where)) {
+    rp <- as.character(unlist(pop$id %||% pop$label %||% "the report's"))[1L]
+    look <- list(list(id = rp, where = pop$where))
+    for (k in seq_along(steps)) {
+      keep <- .step_keeps_population(steps[[k]], look)
+      if (is.null(keep)) next
+      p <- .ai_problem(p, sprintf("data[%d] %s", k, kind[k]), .step_keeps_population_text(k, keep, rp))
+    }
   }
   # a dataset of parameters: kept to the shell's, or the figure by it
   bds <- if (!is.null(context$datasets)) {

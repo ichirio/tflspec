@@ -146,7 +146,7 @@ test_that("a report's plot: key that does nothing in km_survival, km_cumulative 
                               })
     list(ro = ro, w = w)
   }
-  draw <- function(ro) tplfig_png(suppressMessages(suppressWarnings(tfl_content_run(ro, data))))
+  draw <- function(ro) tplfig_png(suppressMessages(suppressWarnings(tfl_content_run(ro, data, study = st))))
   for (nm in c("km_survival", "km_cumulative")) {
     base <- resolve(km_plot_report(nm))
     expect_length(base$w, 0L)

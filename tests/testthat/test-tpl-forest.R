@@ -6,7 +6,7 @@ fr_skip <- function() {
 }
 
 test_that("forest_hr: the report's ARD (its Cox analyses) and the design that reads it", {
-  x <- tfl_template_expand("forest_hr", list(param = "PFS", population = "SAF"))
+  x <- tfl_template_expand("forest_hr", list(param = "PFS", population = "SAF", group = "TRT01A"))
   ad <- x$ard$analysis_data[[1L]]
   expect_identical(ad[c("id", "from", "population")],
                    list(id = "adtte_saf_pfs", from = "ADTTE", population = "SAF"))
@@ -18,18 +18,18 @@ test_that("forest_hr: the report's ARD (its Cox analyses) and the design that re
   expect_identical(vapply(x$content, `[[`, "", "fn"),
                    c("vline", "errorbar_h", "point", "text_column"))
   expect_identical(tfl_template_params("forest_hr")$subgroups$type, "vars")
-  y <- tfl_template_expand("forest_hr", list(param = "PFS", population = "SAF", favours = c("A", "B"),
+  y <- tfl_template_expand("forest_hr", list(param = "PFS", population = "SAF", group = "TRT01A", favours = c("A", "B"),
                                              x_breaks = c(0.5, 1, 2), size_by_n = TRUE))
   expect_identical(vapply(y$content, `[[`, "", "fn"), c("vline", "errorbar_h", "geom", "text_column"))
-  expect_error(tfl_template_expand("forest_hr", list(param = "PFS", population = "SAF", favours = "A")),
+  expect_error(tfl_template_expand("forest_hr", list(param = "PFS", population = "SAF", group = "TRT01A", favours = "A")),
                "two labels")
   # bold headings: the axis's labels are y_labels (made with the rows); nothing changes without it
-  bold <- tfl_template_expand("forest_hr", list(param = "PFS", population = "SAF", bold_headings = TRUE))
+  bold <- tfl_template_expand("forest_hr", list(param = "PFS", population = "SAF", group = "TRT01A", bold_headings = TRUE))
   code <- function(x) paste(vapply(x$data$steps, function(s) as.character(s$code %||% ""), ""), collapse = "
 ")
   expect_match(code(bold), "y_labels <- as.expression(Map(", fixed = TRUE)
   expect_identical(as.character(bold$plot$add[[1L]]$args$labels), "y_labels")
-  plain <- tfl_template_expand("forest_hr", list(param = "PFS", population = "SAF"))
+  plain <- tfl_template_expand("forest_hr", list(param = "PFS", population = "SAF", group = "TRT01A"))
   expect_false(grepl("y_labels", code(plain), fixed = TRUE))
   expect_identical(as.character(plain$plot$add[[1L]]$args$labels), "est$label")
 })
@@ -44,7 +44,7 @@ test_that("in a study: the ARD built; A (the call, the layout) = B (the design) 
   o <- tfl_output("F-9-1", "figure", common = list(population = "SAF"), label = "Forest",
                   extends = "defaults",
                   template = list(name = "forest_hr",
-                                  args = list(param = "PFS", population = "SAF",
+                                  args = list(param = "PFS", population = "SAF", group = "TRT01A",
                                               subgroups = c("SEX", "AGEGR1"))),
                   content = list(tfl_item("geom_vline", list(xintercept = 0.5, linetype = "dotted")),
                                  tfl_item("labs", list(x = "Hazard ratio (95% CI)"))))
@@ -54,7 +54,7 @@ test_that("in a study: the ARD built; A (the call, the layout) = B (the design) 
   expect_true(all(c("HR", "HR_SEX", "HR_AGEGR1") %in% ard$analysis_id))
   x <- tplfig_check(o, d, c(data, list(ard = ard)))
   txt <- paste(x$a, collapse = "\n")
-  expect_match(txt, "fig <- tflspec::tfl_tpl(ard, \"forest_hr\", subgroups = c(SEX, AGEGR1)) +", fixed = TRUE)
+  expect_match(txt, "fig <- tflspec::tfl_tpl(ard, \"forest_hr\", group = TRT01A, subgroups = c(SEX, AGEGR1)) +", fixed = TRUE)
   expect_match(txt, "content <- tpl_forest_layout(fig)", fixed = TRUE)
   # the forest alone, then its text column at its right
   p <- tpl_forest_hr(ard, group = TRT01A, subgroups = c(SEX, AGEGR1))
@@ -102,11 +102,11 @@ test_that("ref: the reference arm is put first by a relevel; comparison only sho
   y <- tfl_template_expand("forest_hr", list(param = "OS", population = "ITT", group = "TRT01P",
                                              comparison = "Drug X"))
   expect_null(y$ard$analysis_data[[1L]]$derive)
-  expect_error(tfl_template_expand("forest_hr", list(param = "OS", population = "ITT",
+  expect_error(tfl_template_expand("forest_hr", list(param = "OS", population = "ITT", group = "TRT01A",
                                                      ref = "Drug X", comparison = "Drug X")),
                "`comparison` is the reference arm")
   # (no ref: no derive step; a blank arm is NA already)
-  expect_null(tfl_template_expand("forest_hr", list(param = "OS", population = "ITT"))$ard$analysis_data[[1L]]$derive)
+  expect_null(tfl_template_expand("forest_hr", list(param = "OS", population = "ITT", group = "TRT01A"))$ard$analysis_data[[1L]]$derive)
   skip_on_cran()
   fr_skip()
   skip_if_not_installed("haven")
@@ -133,20 +133,20 @@ test_that("ref: the reference arm is put first by a relevel; comparison only sho
 })
 
 test_that("x_breaks as YAML writes it (decimals and whole numbers: a list) is several numbers", {
-  a <- yaml::yaml.load("{param: OS, population: ITT, x_breaks: [0.25, 0.5, 1, 2, 4]}")
+  a <- yaml::yaml.load("{param: OS, population: ITT, group: TRT01A, x_breaks: [0.25, 0.5, 1, 2, 4]}")
   expect_true(is.list(a$x_breaks))
   p <- tflspec:::.ai_check_template(list(name = "forest_hr", args = a), "")
   expect_identical(nrow(p[p$severity == "error", , drop = FALSE]), 0L)
   x <- tfl_template_expand("forest_hr", a)
   sc <- Filter(function(z) identical(z$fn, "scale_x_log10"), x$plot$add)
   expect_identical(as.numeric(sc[[1L]]$args$breaks), c(0.25, 0.5, 1, 2, 4))
-  bad <- tflspec:::.ai_check_template(list(name = "forest_hr", args = list(param = "OS", population = "ITT",
+  bad <- tflspec:::.ai_check_template(list(name = "forest_hr", args = list(param = "OS", population = "ITT", group = "TRT01A",
                                                                            x_breaks = list(1, "a"))), "")
   expect_true(any(grepl("number", bad$problem)))
 })
 
 test_that("n_by_arm: each arm's events / subjects, a column each; the call's look kept (#579)", {
-  x <- tfl_template_expand("forest_hr", list(param = "PFS", population = "SAF",
+  x <- tfl_template_expand("forest_hr", list(param = "PFS", population = "SAF", group = "TRT01A",
                                              n_by_arm = c("Control", "Drug X")))
   st <- x$data$steps
   expect_match(st[[1L]]$stats, "n_event", fixed = TRUE)
@@ -161,7 +161,7 @@ test_that("n_by_arm: each arm's events / subjects, a column each; the call's loo
   data <- tplfig_study(d, c("adsl", "adtte"), "FR-3")
   o <- tfl_output("F-9-3", "figure", common = list(population = "SAF"), label = "Forest", extends = "defaults",
                   template = list(name = "forest_hr", args = list(
-                    param = "PFS", population = "SAF", subgroups = "SEX",
+                    param = "PFS", population = "SAF", group = "TRT01A", subgroups = "SEX",
                     favours = c("Drug X", "Control"), n_by_arm = c("Control", "Drug X"))))
   tfl_write_output(o, file.path(d, "spec", "outputs", "F-9-3.yml"))
   st <- tfl_read_study_spec(d)
@@ -179,7 +179,7 @@ test_that("n_by_arm: each arm's events / subjects, a column each; the call's loo
   expect_error(tpl_forest_layout(tpl_forest_hr(ard, group = TRT01A, subgroups = SEX), n_by_arm = "Control"),
                "the arms tpl_forest_hr")
   # tfl_tpl() draws the look its arguments ask for (favours under the axis)
-  q <- tfl_tpl(ard, "forest_hr", subgroups = SEX, favours = c("Drug X", "Control"))
+  q <- tfl_tpl(ard, "forest_hr", group = TRT01A, subgroups = SEX, favours = c("Drug X", "Control"))
   expect_match(q$labels$x %||% suppressWarnings(ggplot2::ggplot_build(q))$plot$labels$x,
                "<- Favours Drug X", fixed = TRUE)
 })
@@ -199,7 +199,7 @@ test_that("subgroup_labels: the headings by label; the levels' rows and the orde
   }
   heads <- function(e) e$label[e$head]
   # default: the common ADaM variables' label, the name for the others
-  x <- tfl_template_expand("forest_hr", list(param = "OS", population = "ITT",
+  x <- tfl_template_expand("forest_hr", list(param = "OS", population = "ITT", group = "TRT01A",
                                              subgroups = c("SEX", "AGEGR1", "STRATA1")))
   code <- x$data$steps[[2L]]$code
   expect_match(code, "sg_label <- c(SEX = \"Sex\", AGEGR1 = \"Age group\")", fixed = TRUE)
@@ -207,19 +207,19 @@ test_that("subgroup_labels: the headings by label; the levels' rows and the orde
   expect_identical(heads(e), c("Sex", "Age group"))
   expect_true(all(c("    F: Drug", "    M: Drug", "    <65: Drug", "    >=65: Drug") %in% e$label))
   # given: over the default, for a variable of the template's subgroups only
-  y <- tfl_template_expand("forest_hr", list(param = "OS", population = "ITT",
+  y <- tfl_template_expand("forest_hr", list(param = "OS", population = "ITT", group = "TRT01A",
                                              subgroups = c("SEX", "AGEGR1"),
                                              subgroup_labels = list(SEX = "Gender", ECOGBL = "ECOG")))
   expect_match(y$data$steps[[2L]]$code, "sg_label <- c(SEX = \"Gender\", AGEGR1 = \"Age group\")",
                fixed = TRUE)
   expect_identical(heads(rows(y$data$steps[[2L]]$code)), c("Gender", "Age group"))
   # a variable's own name when nothing labels it; the old code when no subgroup has a label
-  z <- tfl_template_expand("forest_hr", list(param = "OS", population = "ITT", subgroups = "STRATA1"))
+  z <- tfl_template_expand("forest_hr", list(param = "OS", population = "ITT", group = "TRT01A", subgroups = "STRATA1"))
   expect_false(grepl("sg_label", z$data$steps[[2L]]$code, fixed = TRUE))
-  w <- tfl_template_expand("forest_hr", list(param = "OS", population = "ITT", subgroups = "STRATA1",
+  w <- tfl_template_expand("forest_hr", list(param = "OS", population = "ITT", group = "TRT01A", subgroups = "STRATA1",
                                              subgroup_labels = c(STRATA1 = "Stratum")))
   expect_match(w$data$steps[[2L]]$code, "STRATA1 = \"Stratum\"", fixed = TRUE)
-  expect_error(tfl_template_expand("forest_hr", list(param = "OS", population = "ITT",
+  expect_error(tfl_template_expand("forest_hr", list(param = "OS", population = "ITT", group = "TRT01A",
                                                      subgroup_labels = c("Sex"))), "named")
   expect_identical(tfl_template_params("forest_hr")$subgroup_labels$type, "list")
 })
@@ -309,10 +309,10 @@ test_that("comparison: shows only that arm, with the HR it has without the filte
   expect_error(run(tflspec:::.forest_est_code("TRT01A", character(), "Placebo"), r$est),
                "`comparison` (Placebo) is the reference arm or not an arm", fixed = TRUE)
   # ... and with ref given, before any run
-  expect_error(tfl_template_expand("forest_hr", list(param = "OS", population = "ITT", ref = "Drug B",
+  expect_error(tfl_template_expand("forest_hr", list(param = "OS", population = "ITT", group = "TRT01A", ref = "Drug B",
                                                     comparison = "Drug B")),
                "`comparison` is the reference arm")
-  expect_error(tfl_fig_template("forest_hr", ref = "Drug B", comparison = "Drug B"),
+  expect_error(tfl_fig_template("forest_hr", group = "TRT01P", ref = "Drug B", comparison = "Drug B"),
                "`comparison` is the reference arm")
   # tfl_fig_template(ref =): the analysis data's derive relevels the arm
   an <- tfl_fig_forest_analyses("ADTTE", "OS", "FASFL", "TRT01A", "SEX", ref = "Drug B")

@@ -1309,11 +1309,12 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
                                                   .ard_read_vars(a))))
                    utils::capture.output(print(un)),
                  # an analysis whose ARD relevel_ard() puts in the lists'
-                 # order (an ARD made before it is made again)
+                 # order (an ARD made before it is made again; ": codes"
+                 # since it matches a named list's codes, not its labels)
                  if (length(lv) && any(vapply(seq_len(nrow(a)), function(i)
                    !.ard_keeps_order(a[i, , drop = FALSE]) &&
                      any(names(lv) %in% .ard_read_vars(a[i, , drop = FALSE])), NA)))
-                   "relevel_ard"),
+                   "relevel_ard: codes"),
                collapse = "\n")
   # (md5sum() reads a file: one file of the session's, written over each
   # time -- a file made and deleted for every report made a study's open
