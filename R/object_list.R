@@ -236,7 +236,6 @@
   # (an item's `name:`: its R name as written, in place of the default)
   a_names <- vapply(an, function(e) .obj_chr(e[[.obj_stage_keys$analysis$name_key]]), "")
   if (length(top)) {
-    dflt <- top[is.na(a_names[top])]
     pops <- unique(stats::na.omit(vapply(c(data, an), function(e) .obj_chr(e$population), "")))
     dsets <- unique(stats::na.omit(vapply(data, function(e) .obj_chr(e$from), "")))
     taken <- c(.r_name(setdiff(dsets, d_ids)), if (length(pops)) paste0("pop_", .r_name(pops)),
