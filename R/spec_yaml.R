@@ -70,7 +70,10 @@
 #' @param ard The report's part of the study ARD, made in the ARD stage
 #'   before any report (a list: `analyses`, and `analysis_data` for a figure);
 #'   `NULL` none.  A table's or listing's definitions are `data:` in a file.
-#' @param codelists The report's code lists, by variable.
+#' @param codelists The report's code lists, by variable: each a list of
+#'   `{value, label}` entries, or a reference to one of the study's lists,
+#'   `list(list = "SEX")` or `list(list = "SEX", codes = list("M", "F"))`
+#'   ([tfl_read_study_spec()]).
 #' @param content The layers, a list of `tfl_item`.
 #' @param page The document: `titles`, `footnotes`, `header`, `footer`
 #'   (maps by line), `tokens`, and the `rtf_*` calls' arguments.
@@ -397,7 +400,7 @@ tfl_read_output <- function(path) {
     id = y$id, kind = y$kind, label = y$label, common = common,
     extends = extends,
     ard = if (!is.null(y$ard)) .calls_in(y$ard),
-    data = .data_steps_in(.calls_in(y$data)), codelists = .codelists_norm(y$codelists),
+    data = .data_steps_in(.calls_in(y$data)), codelists = .codelists_norm(y$codelists, y$id),
     content = content, page = .calls_in(y$page %||% list()))
   for (k in setdiff(names(y), c(.output_fields, "outputs", "base"))) out[[k]] <- .calls_in(y[[k]])
   # several objects on its pages (R/output_objects.R): their items as items
@@ -450,7 +453,9 @@ tfl_read_output <- function(path) {
 .yaml_known_keys <- list(
   ard = c("analyses", "objects", "data", "analysis_data"),
   analysis = c("id", setdiff(.ard_spec_sheets$analyses, c("output_id", "analysis_id")),
-               "population", "conditions", "ards", "analysis_ids", "ref", "note"),
+               "population", "conditions", "ards", "analysis_ids", "ref", "note",
+               # the item's R name (default `.ard_<id>`) and its input (the pipe)
+               "name", "from"),
   data = c("id", setdiff(.ard_spec_sheets$analysis_data, c("output_id", "data_id")),
            "population", "subjects_in", "arrange", "note")
 )
@@ -986,13 +991,20 @@ tfl_write_output <- function(x, path) {
 }
 
 # A report's code lists as {value, label} entries: a value written alone
-# (`TRT01P: [Placebo, Drug A]`) is its own label
-.codelists_norm <- function(cl) {
+# (`TRT01P: [Placebo, Drug A]`) is its own label; a reference to the study's
+# list (`SEX: {list: SEX}`, `{list: SEX, codes: [F, M]}`) is kept as one
+# (R/codelist_ref.R), made into its rows where the study is known
+.codelists_norm <- function(cl, id = NULL) {
   if (!length(cl)) return(list())
-  lapply(cl, function(l) {
+  nm <- names(cl) %||% rep("", length(cl))
+  out <- lapply(seq_along(cl), function(i) {
+    l <- cl[[i]]
+    if (.cl_is_ref(l)) return(.cl_ref_norm(l, nm[[i]], id))
     if (!is.list(l)) l <- as.list(l)
     lapply(l, function(e) {
       if (is.list(e)) e else list(value = e, label = e)
     })
   })
+  names(out) <- names(cl)
+  out
 }

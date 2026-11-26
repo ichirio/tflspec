@@ -1,6 +1,6 @@
 # A figure's content object in the map form `{name, from, calls}` (OBJECTS.md
 # B-4): reading, the round trip, the read stops, the checks of `from:`, and
-# the code (no writer for `from:` before B-5).
+# the code (`from:` is written: test-b5-writers.R).
 
 co_calls <- function() list(tfl_item("ggplot", list()), tfl_item("geom_point", list()))
 
@@ -143,11 +143,9 @@ test_that("B-7: a call that writes the argument the pipe fills is an error", {
   expect_equal(nrow(.check_object_rows(fine, "F-1", datasets = "ADSL")), 0L)
 })
 
-test_that("code: `from:` stops, a map object without it is written as its short twin", {
+test_that("code: `from:` is piped, a map object without it is written as its short twin", {
   withfrom <- co_output(tfl_plot("km", co_calls(), input = "adsl", form = "map"))
-  expect_error(.fig_content_code(withfrom),
-               "`from:` on a content object \\(km\\) is not written into the program yet: it comes with B-5")
-  expect_error(tfl_content_code(withfrom), "B-5")
+  expect_true("content <- adsl |>" %in% .fig_content_code(withfrom))
   m <- co_output(tfl_plot("km", co_calls(), form = "map"),
                  tfl_plot("risk", co_calls(), form = "map"),
                  tfl_item("wrap_plots", list(plots = c("km", "risk"))))

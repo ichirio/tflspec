@@ -19,13 +19,13 @@
 # Each stage's block keys, in one place: the key that names a block (its
 # name; NULL: the stage's default name only), the keys that name another
 # block as its input or an argument, and the key that names the stage's
-# result (NULL: the SPEC has none yet).  TODO (OBJECTS.md B-4, its own
-# PR): an analysis item's `from:` (refs) and a content block's `{name,
-# from, calls}` (name_key, refs, result_key) go here; the list, the uses
-# and the rename follow.  The page is no block (canon 7e56ab2).
+# result (NULL: the SPEC has none yet).  An analysis item's `name:` (its R
+# name, default `.ard_<id>`) and `from:` (its input, a use) are here (B-4,
+# item 2); a content block's `{name, from, calls}` is read by the content
+# reader.  The page is no block (canon 7e56ab2).
 .obj_stage_keys <- list(
   data = list(name_key = "id", refs = c("from", "subjects_in"), result_key = NULL),
-  analysis = list(name_key = NULL, refs = c("data", "denominator"), result_key = NULL),
+  analysis = list(name_key = "name", refs = c("data", "denominator", "from"), result_key = NULL),
   content = list(name_key = NULL, refs = character(), result_key = NULL),
   page = list(name_key = NULL, refs = character(), result_key = NULL)
 )
@@ -163,11 +163,11 @@
   obs <- output$ard$objects %||% list()
   rows <- list()
   row <- function(object, spec_name, code_name, stage, kind, where, fixed, from = NA_character_,
-                  name_source = "written") {
+                  name_source = "written", item_id = NA_character_) {
     rows[[length(rows) + 1L]] <<- data.frame(
       output_id = output$id, object = object, spec_name = spec_name, code_name = code_name,
       stage = stage, kind = kind, where = where, name_source = name_source, fixed = fixed,
-      from = from, stringsAsFactors = FALSE)
+      from = from, item_id = item_id, stringsAsFactors = FALSE)
   }
   uses <- list()
   # (`pos`: the row of the object the use is in, for "only what is made
@@ -233,27 +233,35 @@
   calls <- tfl_ard_methods()
   a_fn <- .schema_fn_name(calls$call[match(vapply(an, function(e) .obj_chr(e$method), ""), calls$method)])
   a_pos <- rep(NA_integer_, length(an))
+  # (an item's `name:`: its R name as written, in place of the default)
+  a_names <- vapply(an, function(e) .obj_chr(e[[.obj_stage_keys$analysis$name_key]]), "")
   if (length(top)) {
     pops <- unique(stats::na.omit(vapply(c(data, an), function(e) .obj_chr(e$population), "")))
     dsets <- unique(stats::na.omit(vapply(data, function(e) .obj_chr(e$from), "")))
     taken <- c(.r_name(setdiff(dsets, d_ids)), if (length(pops)) paste0("pop_", .r_name(pops)),
                d_ids, ob_ids, auto)
-    ard_names <- .ard_item_names(a_ids[top], c(taken, .ard_fun_names()))
+    # (the one builder of the names, as the program calls it: a `name:` as
+    # written, the others' default made unique against them too)
+    ard_names <- .ard_item_names(a_ids[top], c(taken, .ard_fun_names()), given = a_names[top])
+    taken <- c(taken, stats::na.omit(a_names[top]))
     avoid <- c(taken, ard_names, paste0(ard_names, "_conditions"), paste0(ard_names, "_one"),
                "ard", "ards", "report_id", .ard_helper_names)
     for (j in seq_along(top)) {
       i <- top[j]
       e <- an[[i]]
+      named <- !is.na(a_names[i])
       cn <- ard_names[j]
-      if (identical(types[i], "model")) {
+      if (!named && identical(types[i], "model")) {
         cn <- .ard_model_name(a_ids[i], avoid)
         avoid <- c(avoid, cn)
       }
       w <- sprintf("analysis[%d]", i)
-      # (the item's name is its stage's default, from its id: no name key yet)
+      # (the item's name is its `name:`, else its stage's default, from its id)
       kd <- if (typed[i]) types[i] else .obj_returns_kind(a_fn[i], "analysis", types[i])
-      row(NA_character_, a_ids[i], cn, "analysis", kd, w, isTRUE(e$fixed), .obj_chr(e$data),
-          "default")
+      fr <- .obj_chr(e$data)
+      if (is.na(fr)) fr <- .obj_chr(e$from)
+      row(NA_character_, if (named) cn else a_ids[i], cn, "analysis", kd, w, isTRUE(e$fixed), fr,
+          if (named) "spec" else "default", a_ids[i])
       a_pos[i] <- length(rows)
     }
     if (any(types[top] == "ard")) {
@@ -331,9 +339,19 @@
       for (i in seq_along(ct)) {
         it <- ct[[i]]
         w <- sprintf("%s[%d]", cw, i)
-        # (TODO, OBJECTS.md B-6: a table's `- name: [items]` is read as a
-        # figure's plot today; when tables take named blocks, list them here)
-        if (is_plot[i] && !identical(p$kind, "figure")) next
+        # a table's or listing's content object (`{name, from, calls}`): its
+        # name, made by its calls, and its `from:`; the last one is the plan
+        # the program reads, which the report cannot rename.  (A short
+        # `- name: [items]` there is read as a figure's plot today, B-6.)
+        if (is_plot[i] && !identical(p$kind, "figure")) {
+          if (identical(it[["form"]], "map")) {
+            lastfn <- if (length(it$items)) it$items[[length(it$items)]]$fn else NULL
+            row(p$object, it$fn, it$fn, "content", .obj_returns_kind(lastfn, "content", "object"), w,
+                i == length(ct), .obj_chr(it[["input"]]))
+            use(.obj_chr(it[["input"]]), "content", w, it$fn, "from", "ref")
+          }
+          next
+        }
         if (is_plot[i]) {
           lastfn <- if (length(it$items)) it$items[[length(it$items)]]$fn else NULL
           row(p$object, it$fn, if (one) "content" else .fig_plot_name(it$fn), "content",
@@ -400,8 +418,10 @@
   last_data <- utils::tail(which(objects$kind == "data" & grepl("^data\\[", objects$where)), 1L)
   result <- is.na(objects$spec_name) & objects$where %in% c("analysis", "content", "page")
   objects$used <- !is.na(objects$used_by) | result | objects$name_source == "default" & objects$fixed |
+    (objects$name_source == "spec" & objects$stage == "analysis") |
     objects$kind == "ard" |
     (objects$kind == "plot" & (!wrapped | objects$code_name == "content")) |
+    (objects$stage == "content" & objects$fixed & objects$code_name %in% .obj_final[c("table", "listing")]) |
     (identical(output$kind, "listing") & seq_len(nrow(objects)) %in% last_data)
   rownames(objects) <- NULL
   rownames(uses) <- NULL
@@ -415,7 +435,8 @@
   an <- objects$stage == "analysis" & !is.na(objects$spec_name)
   data.frame(output_id = objects$output_id, object = objects$object,
              name = ifelse(an | is.na(objects$spec_name), objects$code_name, objects$spec_name),
-             id = ifelse(an, objects$spec_name, NA_character_),
+             id = ifelse(an, ifelse(is.na(objects$item_id), objects$spec_name, objects$item_id),
+                         NA_character_),
              stage = objects$stage, kind = objects$kind, where = objects$where,
              name_source = objects$name_source, changeable = !objects$fixed,
              used = objects$used, from = objects$from, used_by = objects$used_by,
@@ -452,7 +473,7 @@
   data.frame(output_id = character(), object = character(), spec_name = character(),
              code_name = character(), stage = character(), kind = character(), where = character(),
              name_source = character(), fixed = logical(), from = character(),
-             stringsAsFactors = FALSE)
+             item_id = character(), stringsAsFactors = FALSE)
 }
 .obj_uses_empty <- function() {
   data.frame(name = character(), stage = character(), where = character(), item = character(),
@@ -492,11 +513,12 @@
 #'   `where` (the stage and the position: `data[2]`, `analysis[1]`,
 #'   `content[3]`, `data.steps[2]`); `name_source` (`written`: the SPEC
 #'   writes the name; `default`: the stage's default -- an analysis item's
-#'   from its id, a stage's result); `changeable` (`FALSE`: the report
+#'   from its id, a stage's result; `spec`: an analysis item's `name:`);
+#'   `changeable` (`FALSE`: the report
 #'   cannot rename it -- the template defines it, it is a stage's result,
 #'   the program makes it, a name read from a step written as R); `used` (something names it or reads it; a
 #'   stage's result and an ARD item count as used); `from` (what it is made
-#'   from: a dataset or a data above, an item's `data`, `NA`); `used_by`
+#'   from: a dataset or a data above, an item's `data` or `from`, `NA`); `used_by`
 #'   (the items that name it or whose R reads it, ` | ` between them).  Its
 #'   attribute `uses` is the uses, one row a use: `name` (the name as
 #'   written there), `stage`, `where`, `item` (the data row's or the item's
@@ -567,7 +589,7 @@ tfl_output_object_uses <- function(output, name, study = NULL) {
     data = .adata_name_ok(name),
     plot = grepl("^[A-Za-z][A-Za-z0-9_]*$", name) && !name %in% c(.fig_p_fns, .fig_compose_fns) &&
       !exists(name, envir = asNamespace("ggplot2"), inherits = FALSE),
-    object = identical(make.names(name), name),
+    object = , plan = identical(make.names(name), name),
     nzchar(trimws(name)))
 }
 
@@ -665,9 +687,11 @@ tfl_output_rename <- function(output, old, new, study = NULL) {
     .ard_stop(sprintf("%s: %s is not a name of a %s.", who, new, r$kind))
   }
   # the new R name, by the builder that gives the old one
+  # (an analysis item with `name:`: the name is the R name, as written)
+  by_name <- r$stage == "analysis" && identical(r$name_source, "spec")
   new_code <- switch(r$kind,
-    ard = , value = if (r$stage == "analysis") .ard_item_names(new) else new,
-    model = if (r$stage == "analysis") .ard_model_name(new) else new,
+    ard = , value = if (r$stage == "analysis" && !by_name) .ard_item_names(new) else new,
+    model = if (r$stage == "analysis" && !by_name) .ard_model_name(new) else new,
     plot = if (identical(r$code_name, "content")) "content" else .fig_plot_name(new),
     new)
   others <- ob[-k, , drop = FALSE]
@@ -682,10 +706,11 @@ tfl_output_rename <- function(output, old, new, study = NULL) {
     if (identical(v, r$code_name) && !identical(r$code_name, "content")) return(new_code)
     v
   }
-  rn_entries <- function(l, fields, own = FALSE) {
+  rn_entries <- function(l, fields, own = FALSE, own_key = "id") {
     lapply(l, function(e) {
       if (!is.list(e)) return(e)
-      if (own && identical(.obj_chr(e$id), old)) e$id <- new
+      if (own && identical(own_key, "name") && identical(.obj_chr(e$name), old)) e$name <- new
+      if (own && identical(own_key, "id") && identical(.obj_chr(e$id), old)) e$id <- new
       if (own && identical(.obj_chr(e$object_id), old)) e$object_id <- new
       for (f in intersect(fields, names(e))) e[[f]] <- swap(e[[f]])
       e
@@ -701,7 +726,8 @@ tfl_output_rename <- function(output, old, new, study = NULL) {
   if (!is.null(output$ard$objects)) output$ard$objects <- rn_entries(output$ard$objects, character(), is_ob)
   if (!is.null(output$ard$analyses)) {
     output$ard$analyses <- rn_entries(output$ard$analyses,
-                                      c(.obj_stage_keys$analysis$refs, if (is_an) "parent"), is_an)
+                                      c(.obj_stage_keys$analysis$refs, if (is_an && !by_name) "parent"),
+                                      is_an, if (by_name) "name" else "id")
   }
   # (TODO, OBJECTS.md b-2: the page's `from` once the key exists --
   # .obj_stage_keys$page$refs)
@@ -718,13 +744,16 @@ tfl_output_rename <- function(output, old, new, study = NULL) {
       s
     })
   }
-  rn_items <- function(items) {
+  rn_items <- function(items, tbl = FALSE) {
     if (inherits(items, "tfl_r") || !is.list(items)) return(items)
     lapply(items, function(it) {
       if (inherits(it, "tfl_plot")) {
         if (identical(r$kind, "plot") && identical(it$fn, old)) it$fn <- new
+        # (a table's content object: its name, if a helper's, and its `from:`;
+        # the items are table calls, which name no figure object)
+        if (tbl && identical(r$stage, "content") && identical(it$fn, old)) it$fn <- new
         if (!is.null(it[["input"]])) it$input <- swap(it$input)
-        it$items <- rn_items(it$items)
+        if (!tbl) it$items <- rn_items(it$items)
         return(it)
       }
       fn <- .schema_fn_name(it$fn %||% "")
@@ -740,6 +769,8 @@ tfl_output_rename <- function(output, old, new, study = NULL) {
   if (identical(output$kind, "figure")) {
     if (!is.null(output$data$steps)) output$data$steps <- rn_steps(output$data$steps)
     output$content <- rn_items(output$content)
+  } else if (.content_has_objects(output$content)) {
+    output$content <- rn_items(output$content, tbl = TRUE)
   }
   if (is.list(output$data) && !is.null(output$data$object)) output$data$object <- swap(output$data$object)
   for (nm in names(output$contents)) {
@@ -909,7 +940,7 @@ tfl_output_name_check <- function(output, study = NULL) {
   }
   # 7) a name twice, a dataset's or a function's name (a data row's id: the
   # ARD definition's own check)
-  mine <- !is.na(ob$spec_name) & ob$name_source == "written"
+  mine <- !is.na(ob$spec_name) & ob$name_source %in% c("written", "spec")
   dup <- unique(ob$spec_name[mine][duplicated(ob$spec_name[mine])])
   for (nm in dup) {
     add(part = "names", item = nm, level = "error", message = sprintf(
@@ -929,6 +960,25 @@ tfl_output_name_check <- function(output, study = NULL) {
     if (is.null(what)) next
     add(part = "names", item = nm, level = "error", message = sprintf(
       "`%s` (%s) is %s: name the object otherwise", nm, ob$where[k], what))
+  }
+  # an analysis item's input is its `from:` (the pipe) or its `data:` (the
+  # first argument), not both (B-7 for analyses); a `from:` names an object
+  # made above (made below: rule 5) or a study dataset
+  for (a in o$ard$analyses %||% list()) {
+    if (!is.list(a)) next
+    who <- .obj_chr(a$id)
+    if (!is.null(a$from) && !is.null(a$data)) {
+      add(part = "analysis", item = who, level = "error", message = sprintf(
+        paste0("analysis item `%s`: an analysis item takes its input from `from:` (the pipe) or `data:` ",
+               "(the first argument), not both"), who))
+    }
+  }
+  for (i in which(u_ref$stage == "analysis" & u_ref$arg == "from")) {
+    nm <- u_ref$name[i]
+    if (length(.obj_find(ob, nm)) || nm %in% c(datasets, .r_name(datasets))) next
+    add(part = "analysis", item = sprintf("%s(from)", u_ref$item[i]), level = "error", message = sprintf(
+      paste0("the analysis item `%s` takes its `from:` `%s`, which nothing above it makes: ",
+             "name an object made above it or a study dataset"), u_ref$item[i], nm))
   }
   # a step written as R: its final object is made (an error: the next step
   # reads it); the names assign() and the like make cannot be checked
@@ -964,7 +1014,11 @@ tfl_output_name_check <- function(output, study = NULL) {
     if (inherits(ct, "tfl_r") || !is.list(ct) || !length(ct)) next
     is_plot <- vapply(ct, inherits, NA, "tfl_plot")
     at <- if (is.na(p$object)) "" else paste0(p$object, ": ")
-    if (!identical(p$kind, "figure") || !tryCatch(.fig_new_content(ct), error = function(e) FALSE)) next
+    if (!identical(p$kind, "figure")) {
+      .check_content_objects(p, ct, ob, datasets, at, add)
+      next
+    }
+    if (!tryCatch(.fig_new_content(ct), error = function(e) FALSE)) next
     plots <- vapply(ct[is_plot], function(it) as.character(it$fn), "")
     # the names above the content: the report's data, objects and items,
     # the figure's data steps (each step's, the data's own df), the ARD
@@ -1006,22 +1060,67 @@ tfl_output_name_check <- function(output, study = NULL) {
                             fn, u$arg[i], u$name[i],
                             paste(setdiff(known, c("df", "ard")), collapse = ", ")))
     }
-    # B-7: a content object that pipes from an object (`from:`) has no call
-    # that writes the argument the pipe fills (`first_arg_name`)
-    fd <- NULL
-    for (it in ct[is_plot]) {
-      if (is.null(it[["input"]])) next
-      if (is.null(fd)) fd <- tfl_fn_defs()
-      for (cl in it$items) {
-        first <- fd$first_arg_name[match(.schema_fn_name(cl$fn %||% ""), fd$fn)]
-        if (length(first) != 1L || is.na(first) || !first %in% names(cl$args)) next
-        add(part = "content", item = sprintf("%s%s$%s", at, it$fn, .schema_fn_name(cl$fn)),
-            level = "error", message = sprintf(
-              paste0("the value and the pipe disagree: `%s` takes its input `from: %s` and also writes ",
-                     "`%s` in %s(): the pipe fills `%s`; drop one of them"),
-              it$fn, it[["input"]], first, .schema_fn_name(cl$fn), first))
-      }
-    }
+    .check_object_b7(ct[is_plot], at, add)
   }
   do.call(rbind, rows)
+}
+
+# B-7: a content object that pipes from an object (`from:`) has no call that
+# writes the argument the pipe fills (`first_arg_name`); a figure's and a
+# table's objects alike
+.check_object_b7 <- function(objs, at, add) {
+  fd <- NULL
+  for (it in objs) {
+    if (is.null(it[["input"]])) next
+    if (is.null(fd)) fd <- tfl_fn_defs()
+    for (cl in it$items) {
+      first <- fd$first_arg_name[match(.schema_fn_name(cl$fn %||% ""), fd$fn)]
+      if (length(first) != 1L || is.na(first) || !first %in% names(cl$args)) next
+      add(part = "content", item = sprintf("%s%s$%s", at, it$fn, .schema_fn_name(cl$fn)),
+          level = "error", message = sprintf(
+            paste0("the value and the pipe disagree: `%s` takes its input `from: %s` and also writes ",
+                   "`%s` in %s(): the pipe fills `%s`; drop one of them"),
+            it$fn, it[["input"]], first, .schema_fn_name(cl$fn), first))
+    }
+  }
+}
+
+# A table's or listing's content objects (`{name, from, calls}`): the same
+# checks as a figure's -- a `from:` names an object made above or a study
+# dataset, B-7 -- and the rules of the program that reads the content's
+# result: the last object is the `plan` the program reads, the objects above
+# it are helpers, and `from:` and the report's `data: {object:}` are two
+# inputs of the plan.  A content with none is not looked at.
+.check_content_objects <- function(p, ct, ob, datasets, at, add) {
+  is_obj <- vapply(ct, .content_is_object, NA)
+  if (!any(is_obj)) return(invisible())
+  if (!all(is_obj)) {
+    add(part = "content", item = paste0(at, "content"), level = "error", message = sprintf(
+      paste0("a %s's content holds objects (`name:`, `from:`, `calls:`) or a flat list of calls, not both: ",
+             "put the calls into an object"), p$kind))
+    return(invisible())
+  }
+  names_ <- vapply(ct, function(it) as.character(it$fn), "")
+  fin <- .obj_final_of(p$kind)
+  last <- ct[[length(ct)]]
+  if (!identical(names_[length(ct)], fin)) {
+    add(part = "content", item = paste0(at, names_[length(ct)]), level = "error", message = sprintf(
+      paste0("the last object of a %s's content is `%s`: the program reads `%s`, so name the last ",
+             "object `%s` (the objects above it are helpers)"), p$kind, names_[length(ct)], fin, fin))
+  }
+  if (!is.null(last[["input"]]) && !is.null(p$data_object)) {
+    add(part = "content", item = paste0(at, names_[length(ct)]), level = "error", message = sprintf(
+      paste0("`%s` takes `from: %s` and the report's `data: {object: %s}` is written too: two inputs; ",
+             "drop one of them"), names_[length(ct)], last[["input"]], p$data_object))
+  }
+  known <- unique(stats::na.omit(c(
+    ob$spec_name[ob$stage != "content"], ob$code_name[ob$stage != "content"], "ard", "data", names_)))
+  for (it in ct) {
+    from <- it[["input"]]
+    if (is.null(from) || from %in% c(known, datasets, .r_name(datasets))) next
+    add(part = "content", item = sprintf("%s%s(from)", at, it$fn), level = "error", message = sprintf(
+      paste0("the content object `%s` takes its `from:` `%s`, which nothing above it makes: name an ",
+             "object made above it or a study dataset"), it$fn, from))
+  }
+  .check_object_b7(ct, at, add)
 }

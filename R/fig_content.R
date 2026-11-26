@@ -104,7 +104,8 @@ tfl_plot <- function(name, items = list(), from = "own", input = NULL, form = c(
                        "and what arranges them -- not both: ",
                        paste(unique(fns[!is_plot & !tail]), collapse = ", "), "."))
     }
-    plots <- lapply(content[is_plot], function(p) list(name = p$fn, items = p$items))
+    plots <- lapply(content[is_plot], function(p) list(name = p$fn, items = p$items,
+                                                       input = p[["input"]]))
   } else {
     plots <- list(list(name = NULL, items = content[!tail]))
   }
@@ -676,14 +677,6 @@ tfl_plot <- function(name, items = list(), from = "own", input = NULL, form = c(
 # tfl_colours()).  Returns the lines, with the attributes of
 # tfl_fig_design_code()'s (reads, libs, needs, ard).
 .fig_content_code <- function(output, name = "content") {
-  # a content object that pipes from an object (`from:`) has no writer yet
-  # (OBJECTS.md B-5): it stops, it is never dropped
-  for (it in output$content) {
-    if (inherits(it, "tfl_plot") && !is.null(it[["input"]])) {
-      .ard_stop(sprintf(paste0("`from:` on a content object (%s) is not written into the program yet: ",
-                               "it comes with B-5 (the writers of the object cards)."), it$fn))
-    }
-  }
   parts <- .fig_split_content(output$content)
   lv <- .codelist_levels(.codelists_rows(output$codelists, output$id), output$id)
   d <- .fig_steps_code(output$data$steps %||% list(), lv, order = TRUE)
@@ -702,16 +695,24 @@ tfl_plot <- function(name, items = list(), from = "own", input = NULL, form = c(
     f1 <- .schema_fn_name(first$fn)
     lines <- character()
     if (f1 %in% c("tfl_risk_panel", "tfl_text_column", "tfl_n_panel")) {
+      if (!is.null(p$input)) {
+        .ard_stop(sprintf(paste0("The plot `%s` starts with %s, which makes its own data and takes no ",
+                                 "input: drop `from: %s`."), target, f1, p$input))
+      }
       own <- .fig_own_panel(first, target)
       pre <- c(pre, own$data)
       lines <- own$code
       libs <- c(libs, own$libs)
     } else {
       terms <- character()
+      # (what joins a call to the one before it, with `from:` only: the
+      # receiving function's `join`; R code and the like `+`, as before)
+      joins <- character()
       for (it in p$items) {
         fn <- .schema_fn_name(it$fn)
         if (identical(fn, ".r")) {
           terms <- c(terms, as.character(it$args$code))
+          joins <- c(joins, "+")
           next
         }
         if (identical(fn, "tfl_ard_number")) {
@@ -719,10 +720,12 @@ tfl_plot <- function(name, items = list(), from = "own", input = NULL, form = c(
           own <- .fig_own_ard_number(it, k_ard)
           pre <- c(pre, own$pre)
           terms <- c(terms, own$term)
+          joins <- c(joins, "+")
           ard <- TRUE
           next
         }
         terms <- c(terms, .fig_term_text(.fig_item_lang(it)))
+        joins <- c(joins, if (!is.null(p$input)) .fig_fn_join(fn) else "+")
         pk <- if (grepl("::", it$fn, fixed = TRUE)) sub("::.*$", "", it$fn) else .fig_fn_package(fn)
         if (!is.null(pk) && !pk %in% .fig_attached) needs <- c(needs, pk)
         if (fn %in% c("ggsurvfit", "ggcuminc") || startsWith(fn, "add_") || identical(pk, "ggsurvfit")) {
@@ -731,7 +734,7 @@ tfl_plot <- function(name, items = list(), from = "own", input = NULL, form = c(
         # patchwork's inside one plot (p + inset_element(...))
         if (identical(pk, "patchwork")) libs <- c(libs, "patchwork")
       }
-      lines <- .fig_plus_chain(target, terms)
+      lines <- .fig_plus_chain(target, terms, p$input, joins)
     }
     body <- c(body, lines, "")
   }
@@ -755,13 +758,49 @@ tfl_plot <- function(name, items = list(), from = "own", input = NULL, form = c(
 }
 
 # `target <- a +` then each term on its line
-.fig_plus_chain <- function(target, terms) {
+.fig_plus_chain <- function(target, terms, input = NULL, joins = NULL) {
   if (!length(terms)) return(paste(target, "<- ggplot()"))
   ind <- function(t) gsub("\n", "\n  ", t, fixed = TRUE)
   t <- vapply(terms, ind, "")
   n <- length(t)
+  if (!is.null(input)) return(.fig_pipe_chain(target, input, t, joins))
   c(paste0(target, " <- ", t[1L], if (n > 1L) " +"),
     if (n > 1L) paste0("  ", t[-1L], c(rep(" +", n - 2L), "")))
+}
+
+# The join of a function in a plot's chain: its row in tfl_fn_defs() (`|>`
+# or `+`); `+` for one that has no row
+.fig_fn_join <- function(fn) {
+  d <- tfl_fn_defs()
+  j <- d$join[match(fn, d$fn)]
+  if (is.na(j)) "+" else j
+}
+
+# A plot with `from:`: `target <- input |> first(...) + layer(...) ...`, the
+# first call piped from the input and each of the others joined as its
+# function's join says.  A `|>` call after a `+` chain is written with the
+# chain in parentheses: `(input |> first() + layer()) |> next()` (`|>` binds
+# tighter than `+`).  `t`: the calls as text, `joins`: the join of each.
+.fig_pipe_chain <- function(target, input, t, joins) {
+  n <- length(t)
+  op <- c("|>", if (n > 1L) joins[-1L])
+  open <- 0L
+  plus <- FALSE
+  for (k in seq_len(n)) {
+    if (k > 1L && identical(op[k], "|>") && plus) {
+      t[k - 1L] <- paste0(t[k - 1L], ")")
+      open <- open + 1L
+      plus <- FALSE
+    }
+    if (identical(op[k], "+")) plus <- TRUE
+  }
+  # (no input: the first call starts the statement, a table object's helper)
+  if (is.null(input)) {
+    return(c(paste0(target, " <- ", strrep("(", open), t[1L], if (n > 1L) paste0(" ", op[2L])),
+             if (n > 1L) paste0("  ", t[-1L], c(if (n > 2L) paste0(" ", op[-(1:2)]), ""))))
+  }
+  c(paste0(target, " <- ", strrep("(", open), input, " |>"),
+    paste0("  ", t, c(if (n > 1L) paste0(" ", op[-1L]), "")))
 }
 
 # the plots into one: wrap_plots() when the content says it, else one
