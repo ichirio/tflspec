@@ -369,7 +369,7 @@ test_that("the sheets add no set to a table whose data names none: the TOC's lin
     invokeRestart("muffleWarning")
   })
   expect_true(any(grepl("T-N: the TOC's analysis set SAF is not kept", w, fixed = TRUE)))
-  expect_true(is.na(b$planner$population[b$planner$output_id == "T-N"]))
+  expect_true(all(is.na(b$planner$population[b$planner$output_id == "T-N"])))
   to <- file.path(dir, "back")
   invisible(suppressWarnings(tfl_yaml_from_sheets(b, to)))
   back <- tfl_read_output(file.path(to, "spec", "outputs", "T-N.yml"))
