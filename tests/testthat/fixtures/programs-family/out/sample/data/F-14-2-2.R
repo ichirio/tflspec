@@ -1,0 +1,69 @@
+# Setup code: runs first in every ARD and report program of this study.
+# What every program needs: the packages, and the options the study shares.
+library(cards)
+library(dplyr)
+library(rtfreporter)
+
+# Warnings are printed as they happen, so the run's log shows where
+options(warn = 1)
+
+# the figure style of the company standards, the figures' packages, and the figure checks
+source("programs/tfl/fig_setup.R")
+
+# ---- data: the figure's data -----------------------------------------------
+# the report's data: ADTTE (data catalog)
+adtte <- readRDS("data/adam/adtte.rds")
+adtte <- blank_as_na(adtte)
+
+# the ARD of T-14-2-2 (its rows of the study ARD)
+ard <- readRDS("output/ard/ard.rds") |>
+  filter(output_id == "T-14-2-2")
+if (!nrow(ard)) stop("The study ARD has no rows for T-14-2-2: run programs/ard/T-14-2-2.R first.")
+# (the definition it was made from: the report records it, #293)
+ard_built <- ard_fingerprint("T-14-2-2")
+
+# ---- content: your code ----------------------------------------------------
+# your code: leaves `content`
+arms <- c("Drug X", "Control")
+km_df <- adtte[adtte$PARAMCD == "TTSKIN" & adtte$SAFFL == "Y", ]
+km_df$TRT01A <- factor(km_df$TRT01A, levels = arms)
+km_fit <- survfit2(Surv(AVAL, 1 - CNSR) ~ TRT01A, data = km_df)
+
+# the number at risk: the KM table's (T-14-2-2's ARD, `ard`: the
+# figure's ARD source) -- checked against the curve's own count
+risk_df <- tfl_km_risk(ard, km_fit)
+x_breaks <- sort(unique(risk_df$time))
+
+pal <- tfl_colours("treatment", arms)
+p_km <- ggsurvfit(km_fit, linewidth = tfl_num("line_width", "km")) +
+  add_censor_mark(shape = tfl_marker("censor")$shape,
+                  size = tfl_num("censor_size", "km"),
+                  stroke = tfl_num("censor_stroke", "km")) +
+  geom_hline(yintercept = 0.5, linetype = tfl_setting("median_linetype", "km"),
+             colour = tfl_setting("median_colour", "km"),
+             linewidth = tfl_num("median_line_width", "km")) +
+  scale_colour_manual(values = pal, breaks = names(pal)) +
+  scale_x_continuous(breaks = x_breaks) +
+  scale_y_continuous(breaks = seq(0, 1, by = tfl_num("y_by", "km"))) +
+  coord_cartesian(xlim = range(x_breaks), ylim = c(0, 1)) +
+  labs(x = "Days since first dose",
+       y = "Probability without a skin disorder", colour = NULL) +
+  theme_tfl("km") + theme(legend.position = "bottom")
+p_risk <- ggplot(risk_df, aes(time, factor(strata, levels = rev(arms)),
+                              label = n_risk, colour = strata)) +
+  geom_text(size = tfl_num("text_size")) +
+  scale_colour_manual(values = pal, guide = "none") +
+  scale_x_continuous(breaks = x_breaks) +
+  coord_cartesian(xlim = range(x_breaks)) +
+  labs(title = tfl_setting("risk_title", "km"), x = NULL, y = NULL) +
+  theme_void(base_size = tfl_num("base_size")) +
+  theme(plot.title = element_text(hjust = 0, size = rel(0.9)),
+        axis.text.y = element_text(hjust = 1, margin = margin(r = 5)))
+plot <- p_km / p_risk +
+  plot_layout(heights = c(1, tfl_num("risk_height", "km")))
+tfl_check(plot)
+content <- plot
+
+# the figure drawn at its size on the page: 6.5 x 4.5 in (its own size), 300 dpi
+content <- fig_sized(content, width_in = 6.5, height_in = 4.5, dpi = 300)
+content <- report_content(content)

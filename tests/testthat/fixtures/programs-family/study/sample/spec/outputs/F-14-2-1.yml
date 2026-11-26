@@ -1,0 +1,42 @@
+id: F-14-2-1
+kind: figure
+label: Mean change from baseline in systolic blood pressure
+extends:
+  - defaults
+data:
+  source: code
+content: !r |-
+  saf <- adsl$USUBJID[adsl$SAFFL == "Y"]
+  d <- advs[advs$PARAMCD == "SYSBP" & advs$USUBJID %in% saf &
+              advs$AVISITN > 0 & advs$AVISITN <= 8 & !is.na(advs$CHG), ]
+  m <- aggregate(CHG ~ TRTA + AVISITN, data = d, FUN = function(x)
+    c(mean = mean(x), se = stats::sd(x) / sqrt(length(x))))
+  m <- data.frame(m[c("TRTA", "AVISITN")], m$CHG)
+  m$CYCLE <- m$AVISITN + 1  # AVISITN 1 is cycle 2 day 1
+  arms <- c("Drug X", "Control")
+  m$TRTA <- factor(m$TRTA, levels = arms)
+  plot <- ggplot(m, aes(CYCLE, mean, colour = TRTA)) +
+    geom_hline(yintercept = 0, colour = tfl_setting("zero_line_colour"),
+               linewidth = tfl_num("line_width")) +
+    geom_line(position = position_dodge(width = 0.6), linewidth = tfl_num("line_width")) +
+    geom_point(position = position_dodge(width = 0.6)) +
+    geom_errorbar(aes(ymin = mean - se, ymax = mean + se), width = 0.4,
+                  position = position_dodge(width = 0.6)) +
+    scale_colour_tfl("treatment", arms) +
+    scale_x_continuous(breaks = sort(unique(m$CYCLE))) +
+    labs(x = "Cycle (day 1)", y = "Mean change from baseline (mmHg)",
+         colour = NULL) +
+    theme_tfl() + theme(legend.position = "bottom")
+  tfl_check(plot)
+  content <- plot
+page:
+  footer:
+    '1':
+      left: 'Vertical bars: mean +/- SE.  Systolic blood pressure on day 1 of each
+        21-day cycle.'
+  tokens:
+    OUTPUT_TITLE: Mean (SE) Change from Baseline in Systolic Blood Pressure over Time
+    OUTPUT_POPULATION: Safety Analysis Set
+  rtf_page:
+    orientation: landscape
+

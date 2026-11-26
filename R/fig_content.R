@@ -42,18 +42,36 @@
 #'
 #' @param name The plot's name (`km`; the code calls it `p_km`).
 #' @param items Its items ([tfl_item()]), the plot's first item first.
-#' @param from Where it came from, as an item's.
+#' @param from Where it came from, as an item's: `"own"` or the template
+#'   (the provenance).  It is not the object the plot pipes from: that is
+#'   `input`.
+#' @param input The object the plot's calls pipe from (a content object's
+#'   From), one object name, or `NULL` for none.  In a report file it is
+#'   the key `from:` of the map form `{name, from, calls}`; the R object
+#'   calls it `input` because its field `from` already means the
+#'   provenance.
+#' @param form `"short"` (`- km: [calls]`, the default) or `"map"`
+#'   (`{name, from, calls}`): the form a report file read it in, and
+#'   writes it back in.
 #' @return A `tfl_plot`: a [tfl_item()] whose `fn` is the name, with
-#'   `items`.
+#'   `items`, `input` (when there is one) and `form`.
 #' @examples
 #' tfl_plot("risk", list(tfl_item("tfl_risk_panel", list(fit = "fit"))))
 #' @export
-tfl_plot <- function(name, items = list(), from = "own") {
+tfl_plot <- function(name, items = list(), from = "own", input = NULL, form = c("short", "map")) {
   if (!is.character(name) || length(name) != 1L || !grepl("^[A-Za-z][A-Za-z0-9_]*$", name)) {
     stop("tfl_plot(): `name` is a plot's name: a letter, then letters, digits or _.", call. = FALSE)
   }
+  form <- match.arg(form)
+  if (!is.null(input) && (!is.character(input) || length(input) != 1L || is.na(input) ||
+                          !grepl("^[A-Za-z.][A-Za-z0-9_.]*$", input))) {
+    stop("tfl_plot(): `input` is one object's name (the object the plot pipes from), or NULL.",
+         call. = FALSE)
+  }
   x <- tfl_item(name, list(), from)
   x$items <- items
+  x$form <- form
+  x[["input"]] <- input
   class(x) <- c("tfl_plot", class(x))
   x
 }
@@ -658,6 +676,14 @@ tfl_plot <- function(name, items = list(), from = "own") {
 # tfl_colours()).  Returns the lines, with the attributes of
 # tfl_fig_design_code()'s (reads, libs, needs, ard).
 .fig_content_code <- function(output, name = "content") {
+  # a content object that pipes from an object (`from:`) has no writer yet
+  # (OBJECTS.md B-5): it stops, it is never dropped
+  for (it in output$content) {
+    if (inherits(it, "tfl_plot") && !is.null(it[["input"]])) {
+      .ard_stop(sprintf(paste0("`from:` on a content object (%s) is not written into the program yet: ",
+                               "it comes with B-5 (the writers of the object cards)."), it$fn))
+    }
+  }
   parts <- .fig_split_content(output$content)
   lv <- .codelist_levels(.codelists_rows(output$codelists, output$id), output$id)
   d <- .fig_steps_code(output$data$steps %||% list(), lv, order = TRUE)
