@@ -816,7 +816,10 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 # when any value has a label (one without stays itself), else the values
 # alone.  A code list is a report's: a row without `output_id` stops.
 # `vars`: only these variables (the ones the report's program reads); NULL,
-# all the report's.
+# all the report's.  Rows with a `list` cell are a reference to the study's
+# list: with no code (one the study has not got, as the sheets keep it)
+# they stop, naming the list (.cl_rows_from_study()), never dropped; a
+# writer that knows the study makes them again from its lists first.
 .codelist_levels <- function(codelists, output_id = NULL, vars = NULL) {
   if (is.null(codelists)) return(NULL)
   if (inherits(codelists, "tfl_table_spec") || (is.list(codelists) &&
@@ -832,9 +835,10 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
     .codelist_memo$checked <- d
   }
   if (length(output_id) != 1L || is.na(output_id)) return(NULL)
-  d <- d[d$output_id == output_id & !is.na(d$variable) & !is.na(d$value), ,
-         drop = FALSE]
+  d <- d[d$output_id %in% output_id & !is.na(d$variable), , drop = FALSE]
   if (!is.null(vars)) d <- d[d$variable %in% vars, , drop = FALSE]
+  d <- .cl_rows_from_study(d, NULL, "the program's code lists", "stop")
+  d <- d[!is.na(d$value), , drop = FALSE]
   if (!nrow(d)) return(NULL)
   ord <- suppressWarnings(as.numeric(d$order %||% NA))
   d <- d[order(match(d$variable, unique(d$variable)), is.na(ord), ord), , drop = FALSE]
@@ -1150,6 +1154,11 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   # files (R/spec_ard.R)
   if (inherits(spec, "tfl_study_spec")) {
     st <- .ard_spec_of_study(spec, output_id = output_id)
+    # (rows given with a `list` cell: made again from the study's lists, not
+    # taken as given; one the study has not got stops)
+    if (is.data.frame(codelists)) {
+      codelists <- .cl_rows_from_study(codelists, spec$codelists %||% list(), "tfl_ard_code()", "stop")
+    }
     spec <- st$spec
     codelists <- codelists %||% st$codelists
   }
@@ -1364,6 +1373,10 @@ tfl_build_ard <- function(spec, dir = ".", output_id = NULL, save = TRUE,
   if (inherits(spec, "tfl_study_spec")) {
     st <- .ard_spec_of_study(spec, output_id = output_id, sheets = sheets)
     ard <- st$spec
+    # (rows given with a `list` cell: the study's lists', as tfl_ard_code())
+    if (is.data.frame(codelists)) {
+      codelists <- .cl_rows_from_study(codelists, spec$codelists %||% list(), "tfl_build_ard()", "stop")
+    }
     codelists <- codelists %||% st$codelists
   }
   code <- tfl_ard_code(ard, output_id = output_id, save = save,

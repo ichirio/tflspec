@@ -97,7 +97,12 @@ not got is an \code{error}, \code{part} \code{"codelists"}, \code{item} the vari
 place of the R text; a report whose code lists name one gets no other
 check (each would stop on it).  A template's default reference is not
 the report's and is not checked: a list the study has not got is left
-out of it.  The packages' installed versions come with
+out of it.  A list the study has with no code is empty: a reference to
+it is an error too, saying so.  The study's lists themselves (when
+every report is checked; \code{output_id} \code{NA}, \code{part} \code{"study"}, \code{item}
+\code{"codelists: <list>"}): a code twice is an \code{error} (the study reads its
+first label and still opens), a code that is a number in the YAML (an
+unquoted \code{01}) a \code{warning} to quote it.  The packages' installed versions come with
 it, as an attribute.  A GUI's check button and the AI's run call it.
 
 A table's column header N: a header text with \verb{\{n\}} (and no \code{values} of

@@ -49,8 +49,8 @@
 .cl_ref_rows <- function(ref, v, study_cl, id, what) {
   where <- sprintf("%s: report %s, the code list of %s", what, id %||% "(no id)", v)
   x <- study_cl[[ref$list]]
-  if (is.null(x)) {
-    stop(where, " refers to ", .cl_ref_no_list(ref$list, names(study_cl)), ".", call. = FALSE)
+  if (!length(x)) {
+    stop(where, " refers to ", .cl_ref_no_list(ref$list, study_cl), ".", call. = FALSE)
   }
   codes <- .study_list_codes(x)
   lab <- stats::setNames(as.character(unname(x)), codes)
@@ -75,8 +75,14 @@
 
 # The words for a list the study has not got and for codes its list has
 # not got: one text for the reader that stops and for tfl_check_spec()'s
-# row (R/check_spec_study_refs.R).  `have`: the study's list names.
-.cl_ref_no_list <- function(name, have) {
+# row (R/check_spec_study_refs.R).  `lists`: the study's lists; one it has
+# with no code is empty, not missing.
+.cl_ref_no_list <- function(name, lists) {
+  have <- names(lists)
+  if (name %in% have) {
+    return(paste0("the study's list ", name, ", which is empty (spec/defaults.yml `codelists:` ", name,
+                  " has no codes)"))
+  }
   paste0("the study's list ", name, ", which the study has not got (spec/defaults.yml `codelists:` has ",
          if (length(have)) paste(have, collapse = ", ") else "none", ")")
 }

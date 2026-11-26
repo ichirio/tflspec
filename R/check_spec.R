@@ -47,7 +47,12 @@
 #' place of the R text; a report whose code lists name one gets no other
 #' check (each would stop on it).  A template's default reference is not
 #' the report's and is not checked: a list the study has not got is left
-#' out of it.  The packages' installed versions come with
+#' out of it.  A list the study has with no code is empty: a reference to
+#' it is an error too, saying so.  The study's lists themselves (when
+#' every report is checked; `output_id` `NA`, `part` `"study"`, `item`
+#' `"codelists: <list>"`): a code twice is an `error` (the study reads its
+#' first label and still opens), a code that is a number in the YAML (an
+#' unquoted `01`) a `warning` to quote it.  The packages' installed versions come with
 #' it, as an attribute.  A GUI's check button and the AI's run call it.
 #'
 #' A table's column header N: a header text with `{n}` (and no `values` of
@@ -155,8 +160,8 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
   # not got is an error (R/check_spec_study_refs.R); a report whose own code
   # lists name one cannot be resolved, and its other checks would stop on it
   refs <- tfl_check_study_refs(study, outs[setdiff(ids, bad)])
-  rows[[length(rows) + 1L]] <- refs
   unresolved <- attr(refs, "unresolved")
+  rows[[length(rows) + 1L]] <- refs[c("output_id", "part", "item", "level", "message")]
 
   # what the user wrote and a study's R fields hold: a test for a blank text,
   # where study$adam has NA (a template's own rows are not the user's: left out)
@@ -171,6 +176,13 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
                 .blank_entry_notes(dd$records, "where"),
                 .blank_entry_notes(dd$datasets, "derive", function(e) as.character(e$dataset %||% NA)[1L]))) {
       blank_note(NA_character_, m)
+    }
+    # what the study's lists have that their read let through (the study
+    # still opens): a code twice, a code that is a number in the YAML
+    sp <- attr(study$codelists, "problems")
+    for (i in seq_len(NROW(sp))) {
+      add(output_id = NA_character_, part = "study", item = paste0("codelists: ", sp$list[i]),
+          level = sp$level[i], message = sp$message[i])
     }
     # a study code list named like an ADaM column adam_meta does not map:
     # study$adam has no levels of it (the name is not a mapping)

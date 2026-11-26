@@ -139,7 +139,12 @@ test_that("the check of the reports in memory gives the rows tfl_check_spec() gi
   disk <- srf_refs(tfl_check_spec(d, adam = FALSE))
   rownames(disk) <- NULL
   expect_identical(nrow(mem), 3L)
-  expect_identical(mem, disk)
+  # (and the study's list and the code each row names: what a writer
+  # compares, not the message)
+  expect_identical(names(mem), c("output_id", "part", "item", "level", "message", "list", "code"))
+  expect_setequal(paste(mem$item, mem$list, mem$code), c("SEX GENDER NA", "AGEGR1 AGEGR1 <70",
+                                                         "content: plan_labels / RACE RACE NA"))
+  expect_identical(mem[names(disk)], disk)
   # (a study changed in memory, not on disk: the in-memory check sees it)
   st$codelists$GENDER <- c(F = "Female", M = "Male")
   st$codelists$RACE <- c("WHITE", "ASIAN")
@@ -197,17 +202,170 @@ test_that("the xlsx import refuses a change that names a list the study has not 
   expect_identical(tfl_read_outputs(d)[["T-14-1-1"]]$codelists$SEX, list(list = "SEX", codes = list("M")))
 })
 
-test_that("a code twice in a study list stops reading, naming the list and the code", {
-  expect_error(
-    tflspec:::.study_codelists_read(list(SEX = list(list(value = "F", label = "Female"), list(value = "M", label = "Male"),
-                                                    list(value = "F", label = "Woman")))),
-    "spec/defaults.yml `codelists:` SEX: the code \"F\" is in the list more than once", fixed = TRUE)
-  expect_error(tflspec:::.study_codelists_read(list(RACE = list("WHITE", "ASIAN", "WHITE"))),
-               "RACE: the code \"WHITE\" is in the list more than once", fixed = TRUE)
-  expect_identical(tflspec:::.study_codelists_read(list(SEX = list("F", "M"))), list(SEX = c("F", "M")))
+test_that("a code twice in a study list: the read keeps the first label, tfl_check_spec() has an error row", {
+  r <- tflspec:::.study_codelists_read(list(SEX = list(list(value = "F", label = "Female"),
+                                                       list(value = "M", label = "Male"),
+                                                       list(value = "F", label = "Woman"))))
+  expect_identical(unclass(r$SEX), c(F = "Female", M = "Male"))
+  p <- attr(r, "problems")
+  expect_identical(p$list, "SEX")
+  expect_identical(p$code, "F")
+  expect_identical(p$level, "error")
+  expect_match(p$message, "code list SEX: the code \"F\" is in it 2 times, with the labels \"Female\", \"Woman\"; the study reads the first (\"Female\")",
+               fixed = TRUE)
+  r2 <- tflspec:::.study_codelists_read(list(RACE = list("WHITE", "ASIAN", "WHITE")))
+  expect_identical(r2$RACE, c("WHITE", "ASIAN"))
+  expect_match(attr(r2, "problems")$message, "the code \"WHITE\" is in it 2 times", fixed = TRUE)
+  ok <- tflspec:::.study_codelists_read(list(SEX = list("F", "M")))
+  expect_identical(ok, list(SEX = c("F", "M")))
+  expect_null(attr(ok, "problems"))
+  # (on a study: it opens, and the check's study row is an error)
   d <- srf_study(srf_trt)
   cat("  RACE: [WHITE, ASIAN, WHITE]\n", file = file.path(d, "spec", "defaults.yml"), append = TRUE)
-  expect_error(tfl_read_study_spec(d), "RACE: the code \"WHITE\" is in the list more than once", fixed = TRUE)
+  st <- tfl_read_study_spec(d)
+  expect_identical(st$codelists$RACE, c("WHITE", "ASIAN"))
+  ck <- tfl_check_spec(d, adam = FALSE)
+  row <- ck[ck$part == "study" & ck$item == "codelists: RACE" & ck$level == "error", , drop = FALSE]
+  expect_identical(nrow(row), 1L)
+  expect_true(is.na(row$output_id))
+  expect_identical(row$level, "error")
+  expect_match(row$message, "the labels \"WHITE\", \"WHITE\"", fixed = TRUE)
+})
+
+test_that("a code that is a number in defaults.yml is a warning row asking to quote it (N4)", {
+  r <- tflspec:::.study_codelists_read(list(VISITN = list(list(value = 1, label = "Week 1"),
+                                                          list(value = "02", label = "Week 2"))))
+  expect_identical(unclass(r$VISITN), c("1" = "Week 1", "02" = "Week 2"))
+  p <- attr(r, "problems")
+  expect_identical(p$code, "1")
+  expect_identical(p$level, "warning")
+  expect_match(p$message, "code list VISITN: the code 1 is a number in spec/defaults.yml, not text", fixed = TRUE)
+  expect_match(p$message, "Quote it as written (`value: \"1\"`)", fixed = TRUE)
+  d <- srf_study(srf_trt)
+  cat("  VISX: [{value: 01, label: Week 1}, {value: \"2\", label: Week 2}]\n",
+      file = file.path(d, "spec", "defaults.yml"), append = TRUE)
+  ck <- tfl_check_spec(d, adam = FALSE)
+  row <- ck[ck$part == "study" & ck$item == "codelists: VISX", , drop = FALSE]
+  expect_identical(row$level, "warning")
+  expect_match(row$message, "the code 1 is a number", fixed = TRUE)
+})
+
+test_that("a code list written as a map of codes to labels stops, naming the right forms (S4)", {
+  # the study's list
+  expect_error(tflspec:::.study_codelists_read(list(SEX = list(F = "Female", M = "Male"))),
+               paste0("spec/defaults.yml `codelists:` SEX: a map of codes to labels ({F: Female, ...}) is not a ",
+                      "code list (its codes would be lost). Write its rows, [{value: F, label: Female}, ...], ",
+                      "or its codes alone, [F, ...]."), fixed = TRUE)
+  d <- srf_study(srf_trt)
+  cat("  RACE: {WHITE: White, ASIAN: Asian}\n", file = file.path(d, "spec", "defaults.yml"), append = TRUE)
+  expect_error(tfl_read_study_spec(d), "RACE: a map of codes to labels ({WHITE: White, ...})", fixed = TRUE)
+  # a report's list
+  expect_error(tflspec:::.codelists_norm(list(SEX = list(F = "Female")), "T-1"),
+               paste0("T-1: codelists: SEX: a map of codes to labels ({F: Female, ...}) is not a code list ",
+                      "(its codes would be lost). Write its rows, [{value: F, label: Female}, ...], or refer ",
+                      "to the study's list, {list: SEX}."), fixed = TRUE)
+  d2 <- srf_study(c(srf_trt, "SEX: {F: Female, M: Male}"))
+  expect_error(tfl_read_output(file.path(d2, "spec", "outputs", "T-14-1-1.yml")),
+               "T-14-1-1: codelists: SEX: a map of codes to labels", fixed = TRUE)
+  # (the right forms still read)
+  expect_identical(tflspec:::.codelists_norm(list(SEX = list("F", "M")))$SEX[[1L]], list(value = "F", label = "F"))
+  expect_identical(tflspec:::.codelists_norm(list(SEX = list(list = "SEX")))$SEX, list(list = "SEX"))
+})
+
+test_that("an empty study list is kept by name: a reference to it says it is empty (S5)", {
+  r <- tflspec:::.study_codelists_read(list(SEX = list("F", "M"), RACE = list(), ETHNIC = NULL))
+  expect_identical(names(r), c("SEX", "RACE", "ETHNIC"))
+  expect_length(r$RACE, 0L)
+  expect_error(tflspec:::.cl_ref_rows(list(list = "RACE"), "RACE", r, "T-1", "test"),
+               "test: report T-1, the code list of RACE refers to the study's list RACE, which is empty (spec/defaults.yml `codelists:` RACE has no codes).",
+               fixed = TRUE)
+  d <- srf_study(c(srf_trt, "SEX: {list: GENDER}", "RACE: {list: RACE}"),
+                 labels = "{ETHNIC: !r study$codelists$ETHNIC}")
+  cat("  RACE: []\n  ETHNIC: []\n", file = file.path(d, "spec", "defaults.yml"), append = TRUE)
+  rr <- srf_refs(tfl_check_spec(d, adam = FALSE))
+  expect_match(rr$message[rr$item == "RACE"],
+               "the code list of RACE refers to the study's list RACE, which is empty (spec/defaults.yml `codelists:` RACE has no codes). Give the list its codes",
+               fixed = TRUE)
+  expect_match(rr$message[rr$item == "content: plan_labels / ETHNIC"],
+               "names the study's list ETHNIC, which is empty", fixed = TRUE)
+  # (a list the study has not got is still said so, the empty ones among its names)
+  expect_match(rr$message[rr$item == "SEX"], "GENDER, which the study has not got", fixed = TRUE)
+})
+
+test_that("a writer's new rows are by report, place, list and code, not by message (S3)", {
+  d <- srf_study(c(srf_trt, "SEX: {list: X}", "AGEGR1: {list: Z}"))
+  st <- tfl_read_study_spec(d)
+  outs <- tfl_read_outputs(d)
+  old <- tfl_check_study_refs(st, outs)
+  expect_identical(old$list, c("X", "Z"))
+  # broken on X and Z; add X: Z's row has other words (the study's list
+  # names), but it is not new, so a save goes through
+  st$codelists$X <- c(F = "Female", M = "Male")
+  new <- tfl_check_study_refs(st, outs)
+  expect_identical(new$list, "Z")
+  expect_false(identical(new$message, old$message[old$list == "Z"]))
+  expect_identical(nrow(tflspec:::.check_rows_new(new, old)), 0L)
+  # a break the edit makes is new: a code taken out of a list a pick names
+  srf_put(d, c(srf_trt, "SEX: {list: SEX, codes: [F, M]}", "AGEGR1: {list: Z}"))
+  st <- tfl_read_study_spec(d)
+  outs <- tfl_read_outputs(d)
+  old <- tfl_check_study_refs(st, outs)
+  st$codelists$SEX <- c(F = "Female")
+  add <- tflspec:::.check_rows_new(tfl_check_study_refs(st, outs), old)
+  expect_identical(add$item, "SEX")
+  expect_identical(add$code, "M")
+  # two codes missing, one put back: the row left is not new
+  srf_put(d, c(srf_trt, "SEX: {list: SEX, codes: [F, U, X]}"))
+  outs <- tfl_read_outputs(d)
+  st <- tfl_read_study_spec(d)
+  old <- tfl_check_study_refs(st, outs)
+  expect_identical(old$code, "U | X")
+  st$codelists$SEX <- c(F = "Female", M = "Male", U = "Unknown")
+  new <- tfl_check_study_refs(st, outs)
+  expect_identical(new$code, "X")
+  expect_identical(nrow(tflspec:::.check_rows_new(new, old)), 0L)
+})
+
+test_that("the xlsx import says when the study cannot be read, not skip the check in silence (S6, N6)", {
+  skip_if_not_installed("openxlsx")
+  skip_if_not_installed("readxl")
+  d <- srf_study(c(srf_trt, "SEX: {list: SEX}"))
+  f <- file.path(d, "view.xlsx")
+  tfl_write_spec_xlsx(d, f)
+  x <- openxlsx::read.xlsx(f, "codelists")
+  x[] <- lapply(x, as.character)
+  x$list[x$variable == "SEX"] <- "SEX: M"
+  wb <- openxlsx::loadWorkbook(f)
+  openxlsx::removeWorksheet(wb, "codelists")
+  openxlsx::addWorksheet(wb, "codelists")
+  openxlsx::writeData(wb, "codelists", x, keepNA = FALSE)
+  openxlsx::saveWorkbook(wb, f, overwrite = TRUE)
+  cat("  RACE: {WHITE: White}\n", file = file.path(d, "spec", "defaults.yml"), append = TRUE)
+  expect_message(tfl_import_spec_xlsx(d, f),
+                 "the references of the changed reports to the study's code lists are not checked: the study cannot be read",
+                 fixed = TRUE)
+})
+
+test_that("every study code-list block shipped in tflspec and its test fixtures reads with no problem (S5)", {
+  files <- c(list.files(system.file(package = "tflspec"), "^defaults[.]yml$", recursive = TRUE, full.names = TRUE),
+             list.files(test_path("fixtures"), "^defaults[.]yml$", recursive = TRUE, full.names = TRUE))
+  n <- 0L
+  for (f in files) {
+    cl <- yaml::read_yaml(f, handlers = tflspec:::.yaml_handlers())$codelists
+    if (is.null(cl)) next
+    r <- tflspec:::.study_codelists_read(cl)
+    expect_null(attr(r, "problems"), label = f)
+    n <- n + 1L
+  }
+  # (the sheets of the fixtures' studies, when they have the study's lists)
+  for (f in list.files(test_path("fixtures"), "[.]rds$", recursive = TRUE, full.names = TRUE)) {
+    sh <- readRDS(f)
+    if (!is.list(sh) || is.null(sh[["study_codelists"]])) next
+    r <- tflspec:::.study_codelists_read(tflspec:::.conv_study_codelists(sh[["study_codelists"]]))
+    expect_null(attr(r, "problems"), label = f)
+    n <- n + 1L
+  }
+  expect_gt(n, 0L)
 })
 
 test_that("C04 says a code not in the study's list", {

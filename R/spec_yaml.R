@@ -1000,13 +1000,17 @@ tfl_write_output <- function(x, path) {
 # A report's code lists as {value, label} entries: a value written alone
 # (`TRT01P: [Placebo, Drug A]`) is its own label; a reference to the study's
 # list (`SEX: {list: SEX}`, `{list: SEX, codes: [F, M]}`) is kept as one
-# (R/codelist_ref.R), made into its rows where the study is known
-.codelists_norm <- function(cl, id = NULL) {
+# (R/codelist_ref.R), made into its rows where the study is known.  A map
+# that is not a reference (`SEX: {F: Female, M: Male}`) stops, naming the
+# right forms: read as a list, its codes would be its labels.  `study`: the
+# study's lists (spec/defaults.yml), which take no reference.
+.codelists_norm <- function(cl, id = NULL, study = FALSE) {
   if (!length(cl)) return(list())
   nm <- names(cl) %||% rep("", length(cl))
   out <- lapply(seq_along(cl), function(i) {
     l <- cl[[i]]
     if (.cl_is_ref(l)) return(.cl_ref_norm(l, nm[[i]], id))
+    if (is.list(l) && any(nzchar(names(l) %||% ""))) .cl_map_stop(l, nm[[i]], id, study)
     if (!is.list(l)) l <- as.list(l)
     lapply(l, function(e) {
       if (is.list(e)) e else list(value = e, label = e)
@@ -1014,4 +1018,16 @@ tfl_write_output <- function(x, path) {
   })
   names(out) <- names(cl)
   out
+}
+
+# The stop for a code list written as a map of codes to labels
+.cl_map_stop <- function(l, v, id, study) {
+  k <- names(l)[nzchar(names(l))][1L]
+  lab <- l[[k]]
+  lab <- if (is.atomic(lab) && length(lab) == 1L && !is.na(lab)) as.character(lab) else "<label>"
+  rows <- sprintf("[{value: %s, label: %s}, ...]", k, lab)
+  stop(if (study) "spec/defaults.yml `codelists:` " else paste0(if (!is.null(id)) paste0(id, ": "), "codelists: "),
+       v, ": a map of codes to labels ({", k, ": ", lab, ", ...}) is not a code list (its codes would ",
+       "be lost). Write its rows, ", rows, if (study) paste0(", or its codes alone, [", k, ", ...].") else
+         paste0(", or refer to the study's list, {list: ", v, "}."), call. = FALSE)
 }

@@ -379,12 +379,18 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
 # changed report files (`files`: the import's, each its `y` as it will be
 # written and `y0` as read) against the study's code lists; an error row
 # the new text has and the old has not stops, nothing written.  A file that
-# cannot be read as reports is left to the reader's own errors.
+# cannot be read as reports is left to the reader's own errors.  A study
+# that cannot be read is said in a message (the check is not made), not
+# passed over in silence.
 .imp_refs_check <- function(dir, files) {
   rels <- names(files)[startsWith(names(files), "outputs")]
   if (!length(rels)) return(invisible())
-  study <- tryCatch(suppressWarnings(suppressMessages(tfl_read_study_spec(dir))), error = function(e) NULL)
-  if (is.null(study)) return(invisible())
+  study <- tryCatch(suppressWarnings(suppressMessages(tfl_read_study_spec(dir))), error = function(e) e)
+  if (inherits(study, "error")) {
+    message("tfl_import_spec_xlsx(): the references of the changed reports to the study's code lists are ",
+            "not checked: the study cannot be read (", .ai_one_line(conditionMessage(study)), ").")
+    return(invisible())
+  }
   outs_of <- function(which) {
     outs <- list()
     for (rel in rels) {
