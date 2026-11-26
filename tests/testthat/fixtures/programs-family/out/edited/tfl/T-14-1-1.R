@@ -2,8 +2,6 @@
 #  Program    : programs/tfl/T-14-1-1.R
 #  Output     : T-14-1-1 (table) -> output/tfl/T-14-1-1.rtf
 #  Description: Demographic characteristics
-#  Title      : Demographics of "all subjects"\nSafety Analysis Set
-#  Title      : "A quoted line"
 #  Generated  : <masked>
 #  The data part makes `data`; the report part is written from spec/.
 # ============================================================================
@@ -148,15 +146,7 @@ doc <- rtf_document(
       )
     )
   ) |>
-  rtf_tables(plan) |>
-  rtf_titles(
-    list(
-      list(
-        c(c = "Demographics of \"all subjects\"\nSafety Analysis Set"),
-        c(c = "A quoted line")
-      )
-    )
-  )
+  rtf_tables(plan)
 generate_rtfreport(doc, file.path(path_tfl, paste0(report_id, ".rtf")), overwrite = TRUE)
 record_report(report_id)
 

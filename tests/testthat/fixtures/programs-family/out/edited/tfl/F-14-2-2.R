@@ -39,8 +39,7 @@ ard_built <- ard_fingerprint("T-14-2-2")
 # ---- content: your code ----------------------------------------------------
 # your code: leaves `content`
 arms <- c("Drug X", "Control")
-# adsl_sub: the subjects of the report's analysis set, made before this code
-km_df <- adtte[adtte$PARAMCD == "TTSKIN" & adtte$USUBJID %in% adsl_sub$USUBJID, ]
+km_df <- adtte[adtte$PARAMCD == "TTSKIN" & adtte$SAFFL == "Y", ]
 km_df$TRT01A <- factor(km_df$TRT01A, levels = arms)
 km_fit <- survfit2(Surv(AVAL, 1 - CNSR) ~ TRT01A, data = km_df)
 

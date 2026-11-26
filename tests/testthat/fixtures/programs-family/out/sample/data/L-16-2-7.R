@@ -8,24 +8,13 @@ library(rtfreporter)
 options(warn = 1)
 
 # ---- input data ----
-adsl <- readRDS("data/adam/adsl.rds") |>
-  blank_as_na() |>
-  order_levels()
-adae <- readRDS("data/adam/adae.rds") |>
-  blank_as_na() |>
-  order_levels(from = adsl)
+adae <- readRDS("data/adam/adae.rds")
+adae <- blank_as_na(adae)
 
 # ---- data ----
-# adsl_sub: the subjects. population SAF (Safety Analysis Set)
-adsl_sub <- dplyr::filter(adsl, SAFFL == "Y")
-
 # its records, in its order; dates as they print
 data <- adae |>
-  dplyr::inner_join(
-    dplyr::select(adsl_sub, USUBJID),
-    by = "USUBJID",
-    relationship = "many-to-one"
-  ) |>
+  order_levels() |>
   dplyr::filter(AESEV == "SEVERE", TRTEMFL == "Y") |>
   dplyr::arrange(TRT01AN, USUBJID, ASTDT) |>
   dplyr::mutate(

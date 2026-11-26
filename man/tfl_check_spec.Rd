@@ -46,9 +46,9 @@ datasets of such tables are read.}
 A data frame, one row a problem: \code{output_id} (\code{NA} for the
 study's ARD definition as a whole and the study's own rows), \code{part}
 (\code{"file"}, \code{"study"}, \code{"ard"}, \code{"content"}, \code{"program"}, \code{"figure"},
-\code{"build"}), \code{item} (the file, the
-analysis, the function and argument, or the figure's part and
-field), \code{level} (\code{"error"}, \code{"warning"}, \code{"note"}, \code{"check"}) and
+\code{"codelists"}, \code{"build"}), \code{item} (the file, the
+analysis, the function and argument, the figure's part and
+field, or the code list's column), \code{level} (\code{"error"}, \code{"warning"}, \code{"note"}, \code{"check"}) and
 \code{message}.  Its attributes: \code{versions}, a data frame of the key
 packages (\code{package}, \code{installed}, \code{NA} when not installed); \code{ids}, the
 reports checked (the OK ones too); \code{kinds}, each report's kind, named
@@ -68,8 +68,11 @@ refuses): the report cannot be copied into the study;
 \item \code{warning}: the SPEC reads, but a program that runs cannot be written
 from it (the ARD program or the table's code stops; a content
 function the installed rtfreporter does not have yet; with \code{adam}, a
-\code{!=} condition that drops the rows where its variable is NA, and a
-table whose header N and counts give a subject different groups);
+\code{!=} condition that drops the rows where its variable is NA; a
+table whose header N and counts give a subject different groups; a
+report's own code list, for a column the study's \code{adam_meta} maps,
+with a code the define's code list does not have, \code{part}
+\code{"codelists"} -- codes compared, not labels);
 \item \code{note}: the program is written all the same -- an argument the
 installed cards / cardx does not know, a version to look at.
 }
@@ -104,6 +107,11 @@ its own) takes each column's N from the report's \code{BIGN} analysis.  A
 report with no \code{BIGN}, or whose \code{BIGN} counts by no column variable of
 the table, is a \code{warning} (\code{part} \code{"content"}, item
 \code{"plan_col_header(header)"}): its header would print \code{N=NA}.
+
+A report's \verb{!r} value (outside its \verb{ard:}, which the ARD check reads)
+that does not read as R is an \code{error}: \code{part} the report's key it is
+under, \code{item} its place (\code{"content$plan_filter$args$where"}), the
+parser's message.  It is read, not run.
 }
 \examples{
 if (requireNamespace("haven", quietly = TRUE)) {

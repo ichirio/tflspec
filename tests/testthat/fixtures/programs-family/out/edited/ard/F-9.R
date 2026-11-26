@@ -22,23 +22,8 @@ adsl_sub <- filter(adsl, SAFFL == "Y")
 # BIGN: Subjects per group
 .ard_bign <- adsl_sub |>
   mutate(across(where(is.character), ~ na_if(.x, ""))) |>
-  ard_tabulate(variables = TRT01A) |>
-  fmt_ard(
-    modifyList(
-      fmt_default,
-      list(
-        N = 0L,
-        mean = 2L,
-        sd = 3L,
-        median = 1L,
-        min = 0L,
-        max = 0L,
-        p = label_round(1, scale = 100),
-        `AGE:mean` = 1L,
-        `AGE:sd` = 2L
-      )
-    )
-  ) |>
+  ard_tabulate(variables = TRT01A, fmt_fun = everything() ~ fmt_default) |>
+  apply_fmt_fun() |>
   tag_ard(report_id, "BIGN", population = "SAF")
 
 # the report's rows of the study ARD, with the fingerprint of its

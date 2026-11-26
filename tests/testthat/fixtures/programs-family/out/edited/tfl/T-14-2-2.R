@@ -34,14 +34,11 @@ if (!nrow(ard)) {
 
 # normalize and rework
 data <- ard |> normalize_ard()
-data <- local({
-  # row labels: the median, and the event-free probability by day (day 0 left out)
-  is_time <- data$variable == "time"
-  data$.label[data$variable == "prob"] <- "Median (95% CI)"
-  data$.label[is_time] <- paste("Day", as.character(data$variable_level[is_time]))
-  data <- data[!(is_time & as.character(data$variable_level) == "0"), ]
-  data
-})
+# row labels: the median, and the event-free probability by day (day 0 left out)
+is_time <- data$variable == "time"
+data$.label[data$variable == "prob"] <- "Median (95% CI)"
+data$.label[is_time] <- paste("Day", as.character(data$variable_level[is_time]))
+data <- data[!(is_time & as.character(data$variable_level) == "0"), ]
 
 # ---- report ----------------------------------------------------------------
 TRUE

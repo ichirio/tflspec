@@ -27,7 +27,7 @@ adtte <- order_levels(adtte, from = adsl)
 adsl_sub <- filter(adsl, SAFFL == "Y")
 
 # adtte_saf_ttskin: the records. ADTTE of the subjects of adsl_sub, SEX, AGEGR1
-# from ADSL
+# from ADSL; where
 adtte_saf_ttskin <- adtte |>
   select(-any_of(c("SEX", "AGEGR1"))) |>
   inner_join(
@@ -40,11 +40,8 @@ adtte_saf_ttskin <- adtte |>
 
 # ---- analyses ----
 # HR: Hazard ratio, all subjects
-.ard_hr <- local({
-  data <- adtte_saf_ttskin
-  cox <- survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = data)
-  cardx::ard_regression(cox, exponentiate = TRUE)
-}) |>
+cox <- survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = adtte_saf_ttskin)
+.ard_hr <- cardx::ard_regression(cox, exponentiate = TRUE) |>
   fmt_ard(fmt_default) |>
   relevel_ard(TRT01A = cl_trt01a) |>
   tag_ard(report_id, "HR", population = "SAF")
@@ -53,18 +50,7 @@ adtte_saf_ttskin <- adtte |>
 .ard_hr_sex <- ard_strata(
   adtte_saf_ttskin,
   .strata = SEX,
-  .f = ~ tryCatch(
-    cardx::ard_regression(
-      survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = .x),
-      exponentiate = TRUE
-    ),
-    error = function(e) {
-      warning("HR_SEX: the Cox model of a subgroup failed (",
-              conditionMessage(e), "); the figure prints its hazard ratio NE",
-              call. = FALSE)
-      NULL
-    }
-  )
+  .f = ~ cardx::ard_regression(survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = .x), exponentiate = TRUE)
 ) |>
   fmt_ard(fmt_default) |>
   relevel_ard(TRT01A = cl_trt01a, SEX = cl_sex) |>
@@ -74,18 +60,7 @@ adtte_saf_ttskin <- adtte |>
 .ard_hr_agegr1 <- ard_strata(
   adtte_saf_ttskin,
   .strata = AGEGR1,
-  .f = ~ tryCatch(
-    cardx::ard_regression(
-      survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = .x),
-      exponentiate = TRUE
-    ),
-    error = function(e) {
-      warning("HR_AGEGR1: the Cox model of a subgroup failed (",
-              conditionMessage(e), "); the figure prints its hazard ratio NE",
-              call. = FALSE)
-      NULL
-    }
-  )
+  .f = ~ cardx::ard_regression(survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = .x), exponentiate = TRUE)
 ) |>
   fmt_ard(fmt_default) |>
   relevel_ard(TRT01A = cl_trt01a, AGEGR1 = cl_agegr1) |>

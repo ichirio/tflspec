@@ -30,7 +30,7 @@ adtte <- blank_as_na(adtte)
 
 adtte_sub <- adtte |>
   order_levels() |>
-  filter(PARAMCD == "TTSKIN") |>
+  filter(PARAMCD == "TTSKIN", SAFFL == "Y") |>
   set_levels(TRT01A = cl_trt01a, SEX = cl_sex, AGEGR1 = cl_agegr1)
 
 est <- ard_stats(
@@ -42,54 +42,41 @@ est <- ard_stats(
 )
 
 # the rows to draw: the comparison arm, a heading row per subgroup
-est <- local({
-  # an upper limit above this is a model that did not converge (an arm
-  # with no event in the subgroup): its hazard ratio is NE
-  ne_upper <- 1000
-  # the comparison arm (the reference arm's row has no interval)
-  est <- filter(est, TRT01A == "Drug X")
-  # a subgroup level with no row (its Cox model failed: the ARD program
-  # left it out) is a row of its own, NE
-  est <- bind_rows(
-    est,
-    tibble(SEX = setdiff(names(cl_sex), as.character(est$SEX))),
-    tibble(AGEGR1 = setdiff(names(cl_agegr1), as.character(est$AGEGR1)))
+est <- est |>
+  # the reference arm has no interval; a subgroup whose model did not
+  # converge (no events in an arm) has no point: NE
+  filter(!is.na(conf.low)) |>
+  filter(TRT01A == "Drug X") |>
+  mutate(
+    subgroup = case_when(
+      !is.na(SEX) ~ "SEX",
+      !is.na(AGEGR1) ~ "AGEGR1",
+      TRUE ~ "All subjects"
+    ),
+    # (the ARD holds the codes: the code lists give the labels)
+    level = coalesce(unname(cl_sex[as.character(SEX)]),
+                 unname(cl_agegr1[as.character(AGEGR1)]), "All subjects"),
+    ok = is.finite(estimate) & is.finite(conf.low) & is.finite(conf.high) &
+      conf.high < 1000,
+    txt = ifelse(ok, sprintf("%.2f (%.2f, %.2f)", estimate, conf.low, conf.high),
+                 "NE"),
+    across(c(estimate, conf.low, conf.high), ~ ifelse(ok, .x, NA))
   )
-  # NE: no estimate, or an interval that is not finite or above ne_upper
-  est <- est |>
-    mutate(
-      subgroup = case_when(
-        !is.na(SEX) ~ "SEX",
-        !is.na(AGEGR1) ~ "AGEGR1",
-        TRUE ~ "All subjects"
-      ),
-      # (the ARD holds the codes: the code lists give the labels)
-      level = coalesce(unname(cl_sex[as.character(SEX)]),
-                   unname(cl_agegr1[as.character(AGEGR1)]), "All subjects"),
-      ok = is.finite(estimate) & is.finite(conf.low) & is.finite(conf.high) &
-        conf.high <= ne_upper,
-      txt = ifelse(ok, sprintf("%.2f (%.2f, %.2f)", estimate, conf.low, conf.high),
-                   "NE"),
-      across(c(estimate, conf.low, conf.high), ~ ifelse(ok, .x, NA))
-    )
-  # a heading row above each subgroup's levels, the levels indented
-  heads <- est |>
-    filter(subgroup != "All subjects") |>
-    distinct(subgroup) |>
-    mutate(level = subgroup, head = TRUE)
-  est <- est |>
-    mutate(head = FALSE) |>
-    bind_rows(heads) |>
-    arrange(factor(subgroup, levels = unique(est$subgroup)), desc(head),
-            match(SEX, names(cl_sex)), match(AGEGR1, names(cl_agegr1))) |>
-    mutate(
-      label = ifelse(head | subgroup == "All subjects", level, paste0("    ", level)),
-      n = ifelse(head | is.na(n_obs), "", as.character(n_obs)),
-      txt = ifelse(head, "", txt),
-      y = rev(row_number())
-    )
-  est
-})
+# a heading row above each subgroup's levels, the levels indented
+heads <- est |>
+  filter(subgroup != "All subjects") |>
+  distinct(subgroup) |>
+  mutate(level = subgroup, head = TRUE)
+est <- est |>
+  mutate(head = FALSE) |>
+  bind_rows(heads) |>
+  arrange(factor(subgroup, levels = unique(est$subgroup)), desc(head)) |>
+  mutate(
+    label = ifelse(head | subgroup == "All subjects", level, paste0("    ", level)),
+    n = ifelse(head, "", as.character(n_obs)),
+    txt = ifelse(head, "", txt),
+    y = rev(row_number())
+  )
 
 # ---- plot ------------------------------------------------------------------
 

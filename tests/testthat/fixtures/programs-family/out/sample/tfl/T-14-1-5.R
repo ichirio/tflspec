@@ -71,12 +71,7 @@ plan <- ard |>
       "NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER" = "Native Hawaiian or Other Pacific Islander",
       OTHER = "Other"
     ),
-    ASIANSUB = c(
-      CHINESE = "Chinese",
-      JAPANESE = "Japanese",
-      KOREAN = "Korean",
-      OTHER = "Other"
-    ),
+    ASIANSUB = c(CHINESE = "Chinese", JAPANESE = "Japanese", KOREAN = "Korean"),
     SEX = c(F = "Female", M = "Male"),
     AGEGR1 = c("<65" = "<65 years", ">=65" = ">=65 years"),
     ETHNIC = c(
@@ -123,7 +118,7 @@ doc <- rtf_document(
     footer = rtf_footer(
       list(
         c(l = "Screened subjects: all subjects of ADSL, screen failures included (a column of their own).  Percentages of the column's subjects."),
-        c(l = "Asian sub-categories (ASIANSUB: Chinese, Japanese, Korean, Other) are derived for demonstration from the country (China, Japan, Korea; an Asian subject of another country: Other); they are not in the source data.  As an EDC collects them, each race has its own sub-category column."),
+        c(l = "Asian sub-categories (ASIANSUB: Chinese, Japanese, Korean) are derived for demonstration from the country (Japan, Korea); they are not in the source data.  As an EDC collects them, each race has its own sub-category column."),
         c(l = "Source: tflspec's oncology sample study XYZ-ONC-01 (simulated ADaM data; not real patients)."),
         c(l = "{PROGRAM}       Generated on: {DATETIME}")
       )

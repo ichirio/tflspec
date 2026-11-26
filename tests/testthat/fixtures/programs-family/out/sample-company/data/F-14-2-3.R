@@ -26,22 +26,9 @@ ard_built <- ard_fingerprint("T-14-2-2")
 adtte <- readRDS("data/adam/adtte.rds")
 adtte <- blank_as_na(adtte)
 
-# the report's subjects: its analysis set (its data's population)
-adsl <- readRDS("data/adam/adsl.rds") |>
-  blank_as_na() |>
-  order_levels()
-
-# adsl_sub: the subjects. population SAF (Safety Analysis Set)
-adsl_sub <- filter(adsl, SAFFL == "Y")
-
 adtte_sub <- adtte |>
   order_levels() |>
-  inner_join(
-    select(adsl_sub, USUBJID),
-    by = "USUBJID",
-    relationship = "many-to-one"
-  ) |>
-  filter(PARAMCD == "TTSKIN")
+  filter(PARAMCD == "TTSKIN", SAFFL == "Y")
 
 # AVAL in days, from each record's unit, AVALU (days when the data has no AVALU)
 adtte_sub <- adtte_sub |>

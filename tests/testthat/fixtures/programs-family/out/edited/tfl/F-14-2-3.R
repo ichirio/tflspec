@@ -42,7 +42,7 @@ ard_built <- ard_fingerprint("T-14-2-2")
 
 adtte_sub <- adtte |>
   order_levels() |>
-  filter(PARAMCD == "TTSKIN")
+  filter(PARAMCD == "TTSKIN", SAFFL == "Y")
 
 # AVAL in days, from each record's unit, AVALU (days when the data has no AVALU)
 adtte_sub <- adtte_sub |>

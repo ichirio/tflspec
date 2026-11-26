@@ -28,7 +28,8 @@ adtte <- readRDS("data/adam/adtte.rds") |>
 # ---- data ----
 # adsl_sub: the subjects. population SAF (Safety Analysis Set)
 adsl_sub <- filter(adsl, SAFFL == "Y")
-# adtte_sub: the records. ADTTE of the subjects of adsl_sub, TRT01A from ADSL
+# adtte_sub: the records. ADTTE of the subjects of adsl_sub, TRT01A from ADSL;
+# where
 adtte_sub <- adtte |>
   select(-any_of("TRT01A")) |>
   inner_join(

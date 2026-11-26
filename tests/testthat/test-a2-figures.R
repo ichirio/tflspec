@@ -229,6 +229,21 @@ test_that("a figure of a `figure:` key: its data part is its ARD definition's, a
   expect_identical(a2f_prog(x, a2f_pop(r, "SAF")), before)
 })
 
+test_that("a figure of a `figure:` key: its content code is written with the report's study (its set)", {
+  x <- a2f_fx()
+  skip_if(is.null(x$study), "the fixture has no study")
+  seen <- list()
+  testthat::local_mocked_bindings(tfl_content_code = function(output, ..., study = NULL) {
+    if (!is.null(output$figure)) seen[[length(seen) + 1L]] <<- list(study = study)
+    "content <- NULL"
+  })
+  p <- a2f_prog(x, a2f_pop(x$reports[["F-9"]], "SAF"))
+  expect_length(seen, 1L)
+  expect_false(is.null(seen[[1L]]$study))
+  expect_identical(seen[[1L]]$study, x$study)
+  expect_true("content <- NULL" %in% p)
+})
+
 # ---- a figure made in a session (canon 11-15: every way applies the set) ----
 
 test_that("a figure made in a session applies its report's set: tfl_content_code(), tfl_content_run(), tfl_run_output()", {
