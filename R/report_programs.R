@@ -290,8 +290,13 @@
 # that makes `data` itself has no `ard` to normalize.
 .rp_rework_lines <- function(ctx, code, proc) {
   c(if (is.na(code) || !.rp_makes_data(code)) .rp_rework_normalize_lines(ctx),
-    .rp_code_block(proc))
+    .rp_rework_code(proc))
 }
+
+# A Rework (a table's, a template listing's) as the content's data steps
+# are written (.content_steps_code(), A1): one expression that assigns only
+# `data` as it is, any other code in a scope of its own that leaves `data`
+.rp_rework_code <- function(proc) .content_steps_code(.rp_code_block(proc))
 
 # The check made of a Rework: it names `data` (code that does not parse is
 # left to R, which says so when it runs)
@@ -754,7 +759,7 @@
     }
     if (!is.null(recs)) {
       return(c(setup, "# the listing's records", recs,
-               if (!is.na(proc)) c("", "# its rework", .rp_code_block(proc))))
+               if (!is.na(proc)) c("", "# its rework", .rp_rework_code(proc))))
     }
   }
   # a listing defined in rows: its process code is a rework of `data`
