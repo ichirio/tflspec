@@ -269,7 +269,7 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
           level = "check", message = paste0("to confirm: ", cf$why))
     }
     # the report as written: what stops the build far from its cause
-    rows[[length(rows) + 1L]] <- .check_static_rows(o, id)
+    rows[[length(rows) + 1L]] <- .check_static_rows(o, id, study)
     # its analysis set against the study: data.yml's sets, the TOC's line
     rows[[length(rows) + 1L]] <- .check_set_rows(o, id, study)
     # the names its fields give: a figure's that nothing above makes, a

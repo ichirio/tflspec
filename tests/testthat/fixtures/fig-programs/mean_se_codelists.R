@@ -11,10 +11,10 @@ advs_sub <- advs |>
   order_levels(from = adsl) |>
   filter(PARAMCD == "SYSBP") |>
   left_join(
-    adsl |> order_levels() |> select(USUBJID, TRTA, SAFFL),
+    adsl |> order_levels() |> select(USUBJID, TRTA),
     by = "USUBJID"
   ) |>
-  filter(SAFFL == "Y", !is.na(AVAL) & !is.na(AVISITN)) |>
+  filter(!is.na(AVAL) & !is.na(AVISITN)) |>
   mutate(AVISIT = reorder(factor(AVISIT), AVISITN)) |>
   set_levels(TRTA = cl_trta)
 

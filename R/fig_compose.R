@@ -60,6 +60,9 @@
   # panels, a risk table) is made as `fig` first
   bodies <- lapply(seq_along(nms), function(i) {
     d <- .fig_as_design(design$plots[[i]])
+    # (the report's subjects, when a report program gives them: each
+    # figure's reads are their records)
+    attr(d, "subjects") <- attr(design, "subjects")
     # (the code lists once, at the head: below)
     b <- .fig_design_body(d, gg, setup = setup, levels = levels,
                           codelists_head = FALSE, order = order)

@@ -278,7 +278,7 @@ test_that("a figure with analyses of its own is not reviewed as a table (#293 P6
   s$spec$tables <- s$spec$tables[s$spec$tables$output_id != "T-2", , drop = FALSE]
   r <- .rv_review(s)
   expect_true(any(r$rule == "T09" & r$output_id == "T-2"))
-  s$figures <- list(`T-2` = tfl_fig_template("km_simple"))
+  s$figures <- list(`T-2` = tfl_fig_template("km_simple", group = "TRT01P"))
   r <- .rv_review(s)
   expect_false(any(grepl("^T", r$rule) & r$output_id %in% "T-2"))
 })

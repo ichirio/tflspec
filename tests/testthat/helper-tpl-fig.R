@@ -25,22 +25,28 @@ tplfig_study <- function(d, datasets, id = "FIG-1") {
 }
 
 # The report `o` (a template SPEC) in the study `d`: the figure of each use,
-# expected the same; returns the A program, the resolved report and the PNG
+# expected the same; returns the A program, the resolved report and the PNG.
+# (A report with an analysis set: each use makes its subjects from the
+# study, as its program does -- canon 11-15)
 tplfig_check <- function(o, d, data) {
   f <- file.path(d, "spec", "outputs", paste0(o$id, ".yml"))
   tfl_write_output(o, f)
   st <- tfl_read_study_spec(d)
   ro <- tfl_resolve_output(tfl_read_output(f), st)
-  png_t <- tplfig_png(suppressMessages(tfl_content_run(ro, data)))
-  # A: the data steps written out, the call, the report's own items
-  a <- tfl_content_code(ro)
+  png_t <- tplfig_png(suppressMessages(tfl_content_run(ro, data, study = st)))
+  # A: the data steps written out, the call, the report's own items (the
+  # subjects part first, its reads of the study's files: run in the study)
+  a <- tfl_content_code(ro, study = st)
   call <- a[grepl("<- tflspec::tfl_tpl(", a, fixed = TRUE)]
   testthat::expect_true(any(grepl(sprintf(", \"%s\"", o$template$name), call, fixed = TRUE)))
   env <- new.env(parent = .fig_pkg_env(c(attr(a, "libs"), "tflspec")))
   for (n in names(data)) assign(n, data[[n]], envir = env)
   eval(parse(text = tfl_fig_setup_code()), env)
   eval(parse(text = tfl_helpers_code()), env)
+  wd <- setwd(d)
+  on.exit(setwd(wd), add = TRUE)
   eval(parse(text = a), env)
+  setwd(wd)
   testthat::expect_identical(tplfig_png(env$content), png_t)
   # B: the written-out report, read back
   b <- tfl_template_to_spec(tfl_read_output(f), st)
@@ -49,7 +55,7 @@ tplfig_check <- function(o, d, data) {
   tfl_write_output(b, fb)
   rb <- tfl_resolve_output(tfl_read_output(fb), st)
   testthat::expect_null(attr(rb, "template"))
-  testthat::expect_identical(tplfig_png(suppressMessages(tfl_content_run(rb, data))), png_t)
+  testthat::expect_identical(tplfig_png(suppressMessages(tfl_content_run(rb, data, study = st))), png_t)
   # the program of the design (no call): no tflspec function in it
   code <- tfl_content_code(ro, template = "items")
   testthat::expect_false(any(grepl("tpl_", code, fixed = TRUE)))

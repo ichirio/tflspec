@@ -24,7 +24,12 @@ cl_race <- c(
   "NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER" = "Native Hawaiian or Other Pacific Islander",
   OTHER = "Other"
 )
-cl_asiansub <- c(CHINESE = "Chinese", JAPANESE = "Japanese", KOREAN = "Korean")
+cl_asiansub <- c(
+  CHINESE = "Chinese",
+  JAPANESE = "Japanese",
+  KOREAN = "Korean",
+  OTHER = "Other"
+)
 cl_sex <- c(F = "Female", M = "Male")
 cl_agegr1 <- c("<65" = "<65 years", ">=65" = ">=65 years")
 cl_ethnic <- c(
@@ -49,8 +54,10 @@ adsl_enr <- adsl_sub |>
       as.character(ARM)
     ),
     ASIANSUB = case_when(
+      RACE == "ASIAN" & COUNTRY == "CHN" ~ "CHINESE",
       RACE == "ASIAN" & COUNTRY == "JPN" ~ "JAPANESE",
-      RACE == "ASIAN" & COUNTRY == "KOR" ~ "KOREAN"
+      RACE == "ASIAN" & COUNTRY == "KOR" ~ "KOREAN",
+      RACE == "ASIAN" ~ "OTHER"
     )
   ) |>
   set_levels(

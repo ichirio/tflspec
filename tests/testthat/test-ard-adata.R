@@ -247,12 +247,15 @@ test_that("a data written as R (`code`): made by it, checked, in the fingerprint
   d$code[3L] <- "out <- adae_teae[adae_teae$AESER == \"Y\", ]\nout$SER <- 1\nout"
   x <- ad_spec(d, an_rows())
   code <- tfl_ard_code(x, output_id = "T1", save = FALSE, part = "body")
-  expect_true(any(code == "out <- adae_teae[adae_teae$AESER == \"Y\", ]"))
-  expect_true(any(code == "adae_ser <- out"))
-  expect_false(any(grepl("local(", code, fixed = TRUE)))
+  # several expressions: as written, in a scope of its own (A1), so `out`
+  # is no object of the program's
+  expect_true(grepl(paste0(
+    "adae_ser <- local({\n  out <- adae_teae[adae_teae$AESER == \"Y\", ]\n",
+    "  out$SER <- 1\n  out\n})"), paste(code, collapse = "\n"), fixed = TRUE))
+  expect_false(any(grepl("^out <- ", code)))
   # in the sheet's order, after what it reads
   expect_lt(grep("^adae_teae <- adae", code),
-            grep("^adae_ser <- out", code))
+            grep("^adae_ser <- local", code))
   # checked: R, and the columns that make a data left blank
   bad <- d; bad$code[3L] <- "subset(adae_teae,"
   expect_error(ad_spec(bad, an_rows()), "`code` `subset(adae_teae,` does not read as R (", fixed = TRUE)
