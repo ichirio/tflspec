@@ -28,7 +28,7 @@ adtte <- blank_as_na(adtte)
 
 adtte_sub <- adtte |>
   order_levels() |>
-  filter(PARAMCD == "TTSKIN", SAFFL == "Y")
+  filter(PARAMCD == "TTSKIN")
 
 # AVAL in days, from each record's unit, AVALU (days when the data has no AVALU)
 adtte_sub <- adtte_sub |>

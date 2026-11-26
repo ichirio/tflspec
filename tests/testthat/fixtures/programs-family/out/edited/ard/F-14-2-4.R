@@ -53,7 +53,18 @@ adtte_saf_ttskin <- adtte |>
 .ard_hr_sex <- ard_strata(
   adtte_saf_ttskin,
   .strata = SEX,
-  .f = ~ cardx::ard_regression(survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = .x), exponentiate = TRUE)
+  .f = ~ tryCatch(
+    cardx::ard_regression(
+      survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = .x),
+      exponentiate = TRUE
+    ),
+    error = function(e) {
+      warning("HR_SEX: the Cox model of a subgroup failed (",
+              conditionMessage(e), "); the figure prints its hazard ratio NE",
+              call. = FALSE)
+      NULL
+    }
+  )
 ) |>
   fmt_ard(fmt_default) |>
   relevel_ard(TRT01A = cl_trt01a, SEX = cl_sex) |>
@@ -63,7 +74,18 @@ adtte_saf_ttskin <- adtte |>
 .ard_hr_agegr1 <- ard_strata(
   adtte_saf_ttskin,
   .strata = AGEGR1,
-  .f = ~ cardx::ard_regression(survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = .x), exponentiate = TRUE)
+  .f = ~ tryCatch(
+    cardx::ard_regression(
+      survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = .x),
+      exponentiate = TRUE
+    ),
+    error = function(e) {
+      warning("HR_AGEGR1: the Cox model of a subgroup failed (",
+              conditionMessage(e), "); the figure prints its hazard ratio NE",
+              call. = FALSE)
+      NULL
+    }
+  )
 ) |>
   fmt_ard(fmt_default) |>
   relevel_ard(TRT01A = cl_trt01a, AGEGR1 = cl_agegr1) |>
