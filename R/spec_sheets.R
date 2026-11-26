@@ -48,7 +48,10 @@
 #'   fields), `templates` and `template_rows` (the template reports; with
 #'   `templates = "expand"` both are empty), `template_maps` (`output_id`,
 #'   `param`: a template report's arguments that are maps, which the sheets
-#'   do not hold), `not_converted` (what the sheets cannot hold).
+#'   do not hold), `study_codelists` (the study's code lists,
+#'   `spec/defaults.yml` `codelists:`: `name`, `value`, `label`, `order`, a
+#'   code a row, `label` blank when the list has none), `not_converted`
+#'   (what the sheets cannot hold).
 #' @examples
 #' d <- system.file("extdata", "spec-yaml", package = "tflspec")
 #' sh <- tfl_sheets_from_yaml(d)
@@ -402,10 +405,19 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       if (!is.null(o$data$object) && !identical(o$data$object, "ard")) rr$ard_object <- cell(o$data$object)
     }
     add("report", rr)
-    for (v in names(o$codelists)) for (i in seq_along(o$codelists[[v]])) {
-      cl <- o$codelists[[v]][[i]]
-      add("codelists", list(output_id = id, variable = v, value = cell(cl$value), label = cell(cl$label), order = as.character(i),
-                            under = cell(cl$under)))
+    # (a reference to the study's list: its rows as the programs get them,
+    # each with the reference in its `list` cell, which is what is read back;
+    # a list or code the study has not got: the cell alone, no codes -- the
+    # study opens, the check and the programs say it)
+    for (v in names(o$codelists)) {
+      ref <- if (.cl_is_ref(o$codelists[[v]])) o$codelists[[v]]
+      vrows <- if (is.null(ref)) o$codelists[[v]] else .cl_ref_rows_or_cell(ref, v, s$codelists, id)
+      for (i in seq_along(vrows)) {
+        cl <- vrows[[i]]
+        add("codelists", list(output_id = id, variable = v, value = cell(cl$value), label = cell(cl$label),
+                              order = if (is.null(cl$value)) NA_character_ else as.character(i),
+                              under = cell(cl$under), list = if (!is.null(ref)) .cl_ref_cell(ref, paste0("tfl_sheets_from_spec(): ", id, ", ", v)) else NA_character_))
+      }
     }
     # a template report: its name and arguments on the templates sheet, and
     # that is all of the template; the items are made again from them
@@ -581,12 +593,17 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
                                " is a built-in configuration or not the study's: no sheet or column holds it"))
     }
   }
-  # (the study's own lists, by name, and its ADaM metadata: no sheet holds them)
-  if (length(s$codelists)) {
-    note(NA_character_, "codelists", paste0(
-      "the study's code lists (defaults.yml: ", paste(names(s$codelists), collapse = ", "),
-      ") stay in YAML, not on the sheets: a study written from the sheets has not got them"))
-  }
+  # the study's own lists, by name (defaults.yml `codelists:`): the
+  # study_codelists sheet, a code a row in its order, its label when the list
+  # has labels (a report's `{list: SEX}` names one); its ADaM metadata: no
+  # sheet holds it
+  scl_rows <- unlist(lapply(names(s$codelists), function(nm) {
+    x <- s$codelists[[nm]]
+    codes <- as.character(names(x) %||% unname(x))
+    lab <- if (is.null(names(x))) rep(NA_character_, length(x)) else as.character(unname(x))
+    lapply(seq_along(codes), function(i) list(name = nm, value = codes[[i]], label = lab[[i]],
+                                              order = as.character(i)))
+  }), recursive = FALSE)
   if (nrow(s$adam_meta$variables %||% data.frame())) {
     note(NA_character_, "adam_meta", paste0(
       "the study's ADaM metadata (defaults.yml adam_meta:) stays in YAML, not on the sheets: ",
@@ -691,6 +708,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
                                      "where", "args")),
        template_rows = .rows_df(tparam_rows, c("output_id", "param", "value", "label")),
        template_maps = .rows_df(tmap_rows, c("output_id", "param")),
+       study_codelists = .rows_df(scl_rows %||% list(), .study_codelists_columns),
        not_converted = if (length(nc)) do.call(rbind, nc) else
          data.frame(output = character(), part = character(), reason = character(), stringsAsFactors = FALSE))
 }
