@@ -313,3 +313,30 @@ test_that("comparison: shows only that arm, with the HR it has without the filte
                    "TRT01A = factor(TRT01A, levels = c(\"Drug B\", setdiff(levels(factor(TRT01A)), \"Drug B\")))")
   expect_false("derive" %in% names(tfl_fig_forest_analyses("ADTTE", "OS", "FASFL", "TRT01A", "SEX")$analysis_data))
 })
+
+# ---- the headings are the code list's variable label (#230) ----
+test_that("forest_hr headings: the code list's variable label, subgroup_labels over it, else the rest", {
+  heads <- function(x) x$data$steps[[2L]]$code
+  cl <- list(variable = list(list(value = "SEX", label = "Sex at birth"),
+                             list(value = "AGEGR1", label = "Age category")))
+  a <- list(param = "OS", population = "ITT", subgroups = c("SEX", "AGEGR1", "STRATA1"))
+  # the code list's variable label, over the common ADaM label
+  x <- tfl_template_expand("forest_hr", a, codelists = cl)
+  expect_match(heads(x), "sg_label <- c(SEX = \"Sex at birth\", AGEGR1 = \"Age category\")", fixed = TRUE)
+  # a named vector of labels is a code list's form too
+  y <- tfl_template_expand("forest_hr", a, codelists = list(variable = c(SEX = "Gender")))
+  expect_match(heads(y), "sg_label <- c(SEX = \"Gender\", AGEGR1 = \"Age group\")", fixed = TRUE)
+  # subgroup_labels wins over the code list
+  z <- tfl_template_expand("forest_hr", c(a, list(subgroup_labels = list(SEX = "Sex (given)"))),
+                           codelists = cl)
+  expect_match(heads(z), "sg_label <- c(SEX = \"Sex (given)\", AGEGR1 = \"Age category\")", fixed = TRUE)
+  # no code list: the common ADaM label; a variable nothing labels is its name
+  w <- tfl_template_expand("forest_hr", a)
+  expect_match(heads(w), "sg_label <- c(SEX = \"Sex\", AGEGR1 = \"Age group\")", fixed = TRUE)
+  expect_false(grepl("STRATA1 =", heads(w), fixed = TRUE))
+  # a code list's label for a variable that is not a subgroup is not read
+  v <- tfl_template_expand("forest_hr", list(param = "OS", population = "ITT", subgroups = "SEX"),
+                           codelists = list(variable = list(list(value = "AGE", label = "Age"))))
+  expect_match(heads(v), "SEX = \"Sex\"", fixed = TRUE)
+  expect_false(grepl("AGE =", heads(v), fixed = TRUE))
+})
