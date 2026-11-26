@@ -124,7 +124,8 @@ test_that("the flag step is a record flag's; the analysis set is the report's da
   fl <- parts[parts$piece == "flag", ]
   expect_identical(unique(fl$piece_label), "Keep records whose flag is Y")
   expect_match(unique(fl$piece_help), "write it on the report's data (`population:`)", fixed = TRUE)
-  expect_identical(fl$default[fl$field == "variable"], "ANL01FL")
+  # (its default flag is unchanged here: an open decision, not this change)
+  expect_identical(fl$default[fl$field == "variable"], "SAFFL")
   # no piece of the design names a population as its own
   expect_false(any(grepl("population", parts$piece_label, ignore.case = TRUE)))
   jn <- unique(parts$piece_help[parts$piece == "join"])

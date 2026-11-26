@@ -130,7 +130,7 @@ tfl_time_unit_days <- function() {
                    "(FAS, SAF ...) is no step: write it on the report's data (`population:`);",
                    "the report's program makes its subjects and joins the records to them."),
       fields = rbind(
-        .ff("variable", "flag", "Flag", "ANL01FL", required = TRUE),
+        .ff("variable", "flag", "Flag", "SAFFL", required = TRUE),
         .ff("value", "text", "Value", "Y"))),
     filter = list(section = "data", label = "Keep rows (condition)",
       help = "Any condition, in R.",
