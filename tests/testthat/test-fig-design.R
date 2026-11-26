@@ -264,11 +264,11 @@ test_that("a number a figure prints is fmt_num(): the study's rounding, as a tab
   expect_identical(sum(grepl("^if [(]!exists", bi)), 1L)
   # every helper of the study's file, not a fixed few: the ones it calls
   # with it, in the file's order (order_arms(), one line, calls
-  # order_levels(), which calls set_levels())
+  # order_levels(), which calls set_levels(), which calls codelist_codes())
   arms <- tflspec:::.fig_helper_used("adsl <- adsl |> order_arms()")
-  expect_identical(arms[2L], paste("# the study helpers set_levels(), order_levels(), order_arms()",
+  expect_identical(arms[2L], paste("# the study helpers codelist_codes(), set_levels(), order_levels(), order_arms()",
                                    "(tfl_helpers_code()), unless the study's setup has them"))
-  expect_identical(sum(grepl("^if [(]!exists", arms)), 3L)
+  expect_identical(sum(grepl("^if [(]!exists", arms)), 4L)
   # each one's whole definition, as the file has it
   h <- new.env(parent = globalenv())
   eval(parse(text = tfl_helpers_code()), h)
