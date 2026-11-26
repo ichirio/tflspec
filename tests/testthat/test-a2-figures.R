@@ -41,10 +41,12 @@ test_that("a report's subjects: its analysis set's, made by the data part (R1, R
   expect_match(conditionMessage(e), "F-1: the report's analysis set: 'NOPE' is not an analysis set",
                fixed = TRUE)
   expect_match(conditionMessage(e), "(SAF, ENR, PKS)", fixed = TRUE)
-  # (a study that defines none: the same stop)
+  # (a study that defines none: the same stop, the shared text: .pop_unknown_text())
   x0 <- x
   x0$populations <- NULL
-  expect_error(.fig_subjects_part(x0, "F-1", "SAF"), "spec/data.yml defines none", fixed = TRUE)
+  expect_error(.fig_subjects_part(x0, "F-1", "SAF"),
+               "'SAF' is not an analysis set of spec/data.yml (it names none: register the set under `populations:`)",
+               fixed = TRUE)
   # a set of ADSL with a condition: <dataset>_sub, as the ARD programs name it
   sj <- .fig_subjects_part(x, "F-1", "SAF")
   expect_identical(sj$subjects, list(object = "adsl_sub", dataset = "ADSL", id = "USUBJID"))

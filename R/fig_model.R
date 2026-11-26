@@ -1076,12 +1076,11 @@ tfl_read_fig_design <- function(path) {
 }
 
 # The message of a report's analysis set `pop` that is none of the study's
-# (`ids`: data.yml `populations:`, as its ARD definition has them): the
-# shared text (.pop_unknown_text()), or, a study that defines none, that
+# (`ids`: data.yml `populations:`, as its ARD definition has them,
+# character(0) when it defines none): the shared text (.pop_unknown_text())
 .fig_subjects_unknown <- function(output_id, pop, ids) {
-  m <- .pop_unknown_text(pop, ids) %||%
-    sprintf("%s is not an analysis set: spec/data.yml defines none", sQuote(pop, FALSE))
-  sprintf("%s: the report's analysis set: %s; the figure would draw every subject.", output_id, m)
+  sprintf("%s: the report's analysis set: %s; the figure would draw every subject.",
+          output_id, .pop_unknown_text(pop, ids))
 }
 
 # ... and of a report's set whose subjects have no ARD definition to be
