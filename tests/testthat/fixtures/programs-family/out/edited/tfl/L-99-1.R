@@ -61,7 +61,7 @@ doc <- rtf_document(
   rtf_section(header = header_standard, footer = footer_standard) |>
   rtf_tables(content)
 generate_rtfreport(doc, file.path(path_tfl, paste0(report_id, ".rtf")), overwrite = TRUE)
-record_report(report_id)
+record_report(report_id, empty = nrow(data) == 0)
 
 # the end of this run
 options(tflplanner.run = NULL)

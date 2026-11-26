@@ -174,7 +174,9 @@ a2f_head <- "# the report's subjects: its analysis set (its data's population)"
 test_that("a designed figure's program: the subjects in its data part, its reads joined to them", {
   x <- a2f_fx()
   r <- x$reports[["F-14-2-3"]]
-  before <- a2f_prog(x, r)
+  # without a set (the fixture's figure may carry one: the sample's sets are on
+  # the data now)
+  before <- a2f_prog(x, a2f_pop(r, NULL))
   expect_false(any(startsWith(before, a2f_head)))
   expect_false(grepl(a2f_join("adsl_sub"), a2f_flat(before), fixed = TRUE))
   p <- a2f_prog(x, a2f_pop(r, "SAF"))

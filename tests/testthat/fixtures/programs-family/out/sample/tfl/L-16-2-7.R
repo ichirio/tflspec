@@ -25,9 +25,19 @@ library(rtfreporter)
 options(warn = 1)
 
 # ---- data ----
+adsl <- order_levels(adsl)
+adae <- order_levels(adae, from = adsl)
+
+# adsl_sub: the subjects. population SAF (Safety Analysis Set)
+adsl_sub <- filter(adsl, SAFFL == "Y")
+
 # its records, in its order; dates as they print
 data <- adae |>
-  order_levels() |>
+  inner_join(
+    select(adsl_sub, USUBJID),
+    by = "USUBJID",
+    relationship = "many-to-one"
+  ) |>
   filter(AESEV == "SEVERE", TRTEMFL == "Y") |>
   arrange(TRT01AN, USUBJID, ASTDT) |>
   mutate(across(where(~ inherits(.x, c("Date", "POSIXt"))), format))
