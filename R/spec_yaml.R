@@ -124,7 +124,8 @@ tfl_item <- function(fn, args = list(), from = "own") {
     stop(paste0("tfl_item(): `from` is \"own\", \"defaults\", \"pattern:<name>\", ",
                 "\"style:<name>\" or \"template:<name>\"."), call. = FALSE)
   }
-  structure(list(fn = fn, args = args, from = from), class = "tfl_item")
+  # (a `~` argument is not written: R/spec_study.R .drop_null(), L463)
+  structure(list(fn = fn, args = .drop_null(args), from = from), class = "tfl_item")
 }
 
 #' @rdname tfl_r

@@ -52,7 +52,8 @@
           first$args[[k]] <- if (is.list(a[[k]]) || is.list(first$args[[k]])) as.list(v) else v
         }
       } else {
-        for (k in names(a)) first$args[k] <- list(a[[k]])
+        # (a later card's `~` is not written: the earlier's value stays, L463)
+        for (k in names(a)) if (!is.null(a[[k]])) first$args[k] <- list(a[[k]])
       }
     }
     items[[at[1L]]] <- first
