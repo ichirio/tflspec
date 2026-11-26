@@ -65,9 +65,9 @@ tfl_write_spec_xlsx <- function(dir, path) {
     if (inherits(o$content, "tfl_r")) note(id, "content", "the content as R code is not rows")
     else if (length(o$content)) note(id, "content", "the layers (content) are not rows")
     add_rows("objects", .flat_report_objects_rows(o, id, note))
-    # (the report's `common: population` is the set of its subjects definition)
+    # (the report's set, its data's, is the set of its subjects definition: .rows_set())
     for (e in o$ard$analysis_data %||% list()) {
-      e <- .entry_pop_inject(e, .out_population(o), .pop_from(s$data$populations, .out_population(o)))
+      e <- .entry_pop_inject(e, .rows_set(o), .pop_from(s$data$populations, .rows_set(o)))
       add_rows("analysis_data", list(.flat_map(c(list(output_id = id), e), "analysis_data", id, note)))
     }
     for (k in c("treatment", "population_label")) {
@@ -84,7 +84,17 @@ tfl_write_spec_xlsx <- function(dir, path) {
       }
     }
     for (v in names(o$codelists)) {
-      add_rows("codelists", lapply(o$codelists[[v]], function(e) c(list(output_id = id, variable = v), e)))
+      l <- o$codelists[[v]]
+      # (a reference to the study's list: its rows, the study's codes and
+      # labels, each with the reference in its `list` cell, which an import
+      # reads; one the study has not got: the cell alone)
+      if (.cl_is_ref(l)) {
+        lc <- .cl_ref_cell(l, paste0("tfl_write_spec_xlsx(): ", id, ", ", v))
+        add_rows("codelists", lapply(.cl_ref_rows_or_cell(l, v, s$codelists, id), function(e)
+          c(list(output_id = id, variable = v), e, list(list = lc))))
+      } else {
+        add_rows("codelists", lapply(l, function(e) c(list(output_id = id, variable = v), e)))
+      }
     }
     .flat_page(o$page, id, add_rows, note)
     if (o$kind == "listing") {

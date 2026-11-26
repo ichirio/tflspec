@@ -263,7 +263,7 @@ test_that("ggplot2 4.0's label attribute: advice when an axis has no title", {
 test_that("templates' output does not depend on the target", {
   withr::local_options(tflspec.ggplot2_version = NULL)
   for (t in c("km_risk_table", "waterfall_response")) {
-    d <- tfl_fig_template(t)
+    d <- tfl_fig_template(t, group = fig_group_of(t))
     a <- tfl_fig_design_code(d)
     b <- tfl_fig_design_code(d, ggplot2_version = "3.5")
     bare <- function(x) { x <- unclass(x); attributes(x) <- NULL; x }

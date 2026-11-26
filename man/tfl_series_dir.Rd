@@ -31,7 +31,7 @@ A series is a versioned folder of template SPECs (\code{tflspec_v1},
 and, optionally, what each value means under \verb{descriptions:} (a value's
 key and one line of English, for a screen that shows the values),
 \verb{templates/<name>.yml} and \verb{styles/<name>.yml}.  A report SPEC
-names a template as \code{template: name: tflspec_v1/demog}.
+names a template as \code{template: name: tflspec_v1/tflspec_summary}.
 }
 \details{
 These folders are the sources (the company's and tflspec's own).  A
@@ -47,7 +47,8 @@ hold no \code{!study} (the series is the study's fallback).
 
 \code{tfl_series_dir()} finds the source folder of a series.  It looks in \code{dir}, then
 \code{getOption("tflspec.series_dir")}, then
-\code{file.path(tools::R_user_dir("tflplanner", "data"), "standards", "series")},
+\code{file.path(tools::R_user_dir("tflplanner", "data"), "standards", "series")}
+(not while a study's program is made: its series are a value then),
 then the series that come with tflspec (\code{system.file("series", package = "tflspec")}); the first folder that holds \verb{<series>/series.yml} wins.
 \code{tfl_series_read()} reads its \code{series.yml}.
 }

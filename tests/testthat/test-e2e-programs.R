@@ -31,6 +31,10 @@ ep_run_child <- function(d, id) {
   withr::local_dir(d)
   writeLines(c(code, "saveRDS(ard, 'ard.rds')"), "prog.R")
   out <- suppressWarnings(system2(rscript, "prog.R", stdout = TRUE, stderr = TRUE))
+  # (and the child's exit status, so that a failure says it: a program that
+  # stops prints its error; a child that printed nothing at all did not run R)
+  st <- attr(out, "status")
+  out <- c(out, sprintf("[the child R (%s): exit status %s]", rscript, if (is.null(st)) 0L else st))
   list(ard = if (file.exists("ard.rds")) readRDS("ard.rds"), out = out, code = code)
 }
 

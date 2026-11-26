@@ -6,7 +6,6 @@ template: km_risk_table
 data:
 - {step: read, dataset: ADTTE}
 - {step: param, value: OS}
-- {step: flag, variable: FASFL}
 - {step: time_unit, variable: AVAL, unit: months}
 - {step: survfit, name: fit, time: AVAL, censor: CNSR, by: TRT01P}
 plot:

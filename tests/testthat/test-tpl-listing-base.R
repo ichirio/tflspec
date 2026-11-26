@@ -88,7 +88,7 @@ test_that("tflspec_listing resolves: no analysis, the rows' add and arrange, one
   expect_length(r0$ard$analysis_data[[2L]]$add, 0L)
   # empty_text "" or unset: no plan_empty
   expect_false("plan_empty" %in% lstb_fns(lstb_resolve(empty_text = "")))
-  expect_false("plan_empty" %in% lstb_fns(lstb_resolve(empty_text = NULL)))
+  expect_false("plan_empty" %in% lstb_fns(lstb_resolve(empty_text = tfl_unset())))
 })
 
 test_that("tflspec_listing: by divides the listing, by page or by block", {
@@ -185,14 +185,13 @@ test_that("a data row's arrange: a column, -column or desc(column)", {
 
 # ---- the listing's style: the study's settings.style, else the series's ------
 # (canon e023312: `style: !study {key: settings.style, fallback: !series
-# style_listing}` in both listing templates; series.yml style_listing:
-# tfl_small)
+# style_listing}` in the listing template; series.yml style_listing:
+# tfl_small.  The old listing template left tflspec_v1, canon 2026-11-24.)
 
 # The listing template's style for `study` (a list, a folder or NULL), and
 # its origin, as tfl_template_resolve() resolves the template
 lstb_style <- function(study, name = "tflspec_v1/tflspec_listing", report_style = NULL) {
-  args <- if (identical(name, "tflspec_v1/listing")) list(from = "ADAE") else lstb_args
-  rep <- list(id = "X", kind = "listing", template = c(list(name = name), args))
+  rep <- list(id = "X", kind = "listing", template = c(list(name = name), lstb_args))
   rep$style <- report_style
   st <- tflspec:::.tr_study(study, "test")
   sd <- attr(st, "study_dir")
@@ -204,34 +203,32 @@ lstb_style <- function(study, name = "tflspec_v1/tflspec_listing", report_style 
 }
 
 # A study folder under `root`: study.yml with `settings` (lines), its copy
-# of the listing templates
+# of the listing template
 lstb_folder <- function(root, name, settings) {
   st <- file.path(root, name)
   dir.create(file.path(st, "spec", "outputs"), recursive = TRUE)
   writeLines(c(paste0("study_id: ", name), "settings:", settings), file.path(st, "study.yml"))
-  invisible(tfl_copy_templates(st, c("tflspec_v1/tflspec_listing", "tflspec_v1/listing")))
+  invisible(tfl_copy_templates(st, "tflspec_v1/tflspec_listing"))
   st
 }
 
-test_that("both listing templates write the style as the study's, else the series's", {
-  for (t in c("listing", "tflspec_listing")) {
-    f <- system.file("series", "tflspec_v1", "templates", paste0(t, ".yml"), package = "tflspec")
-    expect_true("style: !study {key: settings.style, fallback: !series style_listing}" %in%
-                  readLines(f, warn = FALSE), info = t)
-  }
+test_that("the listing template writes the style as the study's, else the series's", {
+  f <- system.file("series", "tflspec_v1", "templates", "tflspec_listing.yml", package = "tflspec")
+  expect_true("style: !study {key: settings.style, fallback: !series style_listing}" %in%
+                readLines(f, warn = FALSE))
   # the series keeps the fallback a value (a series's values: hold no !study)
   expect_identical(tfl_series_read("tflspec_v1")$values$style_listing, "tfl_small")
 })
 
 test_that("a listing's style: the study's settings.style (origin study)", {
-  for (t in c("tflspec_v1/tflspec_listing", "tflspec_v1/listing")) {
+  for (t in "tflspec_v1/tflspec_listing") {
     s <- lstb_style(list(settings = list(rounding = "sas", style = "standard")), t)
     expect_identical(s, list(style = "standard", origin = "study"), info = t)
   }
 })
 
 test_that("a listing's style: no settings.style, or no study, is tfl_small (origin series)", {
-  for (t in c("tflspec_v1/tflspec_listing", "tflspec_v1/listing")) {
+  for (t in "tflspec_v1/tflspec_listing") {
     expect_identical(lstb_style(list(settings = list(rounding = "sas")), t),
                      list(style = "tfl_small", origin = "series"), info = t)
     expect_identical(lstb_style(list(), t), list(style = "tfl_small", origin = "series"), info = t)
@@ -244,7 +241,7 @@ test_that("a listing's style: no settings.style, or no study, is tfl_small (orig
 
 test_that("a listing's style: settings.style !unset is no style (a report's default, tfl_standard)", {
   un <- yaml::yaml.load("settings:\n  style: !unset", handlers = tflspec:::.yaml_handlers())
-  for (t in c("tflspec_v1/tflspec_listing", "tflspec_v1/listing")) {
+  for (t in "tflspec_v1/tflspec_listing") {
     s <- lstb_style(un, t)
     # the study switched the style off: not the fallback (tfl_small); the
     # listing writes no style:, so it gets what any report without one
@@ -277,7 +274,7 @@ test_that("a listing's style: the study's copy keeps the line and resolves the s
   dir.create(root)
   a <- lstb_folder(root, "STUDY-A", c("  rounding: sas", "  style: standard"))
   b <- lstb_folder(root, "STUDY-B", "  rounding: sas")
-  for (t in c("listing", "tflspec_listing")) {
+  for (t in "tflspec_listing") {
     copy <- file.path(a, "spec", "series", "tflspec_v1", "templates", paste0(t, ".yml"))
     expect_true("style: !study {key: settings.style, fallback: !series style_listing}" %in%
                   readLines(copy, warn = FALSE), info = t)
@@ -298,7 +295,6 @@ test_that("a listing's style: style_listing set in the study's copy is used with
   for (st in c(a, b)) tfl_series_values_set(st, "tflspec_v1", list(style_listing = "compact"))
   # no settings.style: the copy's series value
   expect_identical(lstb_style(b), list(style = "compact", origin = "series"))
-  expect_identical(lstb_style(b, "tflspec_v1/listing")$style, "compact")
   # settings.style is first: the series value is only the fallback
   expect_identical(lstb_style(a), list(style = "standard", origin = "study"))
 })
@@ -313,5 +309,4 @@ test_that("a listing's style: the report's own style: wins over the study's and 
   expect_identical(lstb_style(list(settings = list(style = "standard")), report_style = own)$style, own)
   expect_identical(lstb_style(NULL, report_style = own)$style, own)
   expect_identical(lstb_style(b, report_style = own)$style, own)
-  expect_identical(lstb_style(b, "tflspec_v1/listing", report_style = own)$style, own)
 })

@@ -35,7 +35,7 @@ test_that("the templates make figures that draw, and check clean", {
     tfl_fig_template("km_risk_table", param = prm, group = "TRT01P"),
     tfl_fig_template("km_ci", param = prm, group = "TRT01P"),
     tfl_fig_template("km_single_arm", param = prm),
-    tfl_fig_template("mean_se_n", param = unique(adam$ADLB$PARAMCD)[1]),
+    tfl_fig_template("mean_se_n", group = "TRT01A", param = unique(adam$ADLB$PARAMCD)[1]),
     tfl_fig_template("waterfall_response"))) {
     expect_equal(nrow(tfl_check_fig_design(d, adam)), 0L, info = d$template)
     r <- run_design(d, adam)
@@ -44,7 +44,7 @@ test_that("the templates make figures that draw, and check clean", {
 })
 
 test_that("a design goes to YAML and back", {
-  d <- tfl_fig_template("mean_ci", param = "ALT")
+  d <- tfl_fig_template("mean_ci", group = "TRT01A", param = "ALT")
   f <- tempfile(fileext = ".yml")
   tfl_write_fig_design(d, f)
   expect_equal(unclass(tfl_read_fig_design(f)), unclass(d))
@@ -131,9 +131,8 @@ test_that("every template draws on the example data and checks clean", {
   prm <- unique(adam$ADTTE$PARAMCD)[1]
   for (i in seq_len(nrow(tp))) {
     t <- tp$template[i]
-    args <- switch(tp$kind[i], km = list(param = prm, group = if (t != "km_single_arm") "TRT01P"),
-                   forest = list(param = prm), list())
-    d <- do.call(tfl_fig_template, c(list(t), args))
+    args <- switch(tp$kind[i], km = list(param = prm), forest = list(param = prm), list())
+    d <- do.call(tfl_fig_template, c(list(t), args, list(group = fig_group_of(t))))
     expect_equal(nrow(tfl_check_fig_design(d, adam)), 0L, info = t)
     # the forest plot reads its own ARD: made first, from its analyses
     ard <- if (!is.null(attr(d, "analyses"))) forest_example_ard(adam, d)
@@ -142,11 +141,11 @@ test_that("every template draws on the example data and checks clean", {
 })
 
 test_that("the new statistics and settings write what they say", {
-  d <- tfl_fig_template("bar_rate_ci")
+  d <- tfl_fig_template("bar_rate_ci", group = "TRT01P")
   code <- paste(tfl_fig_design_code(d), collapse = "\n")
   expect_match(code, "binom.test", fixed = TRUE)
   expect_match(code, 'label = sprintf("%.1f%%', fixed = TRUE)
-  d <- tfl_fig_template("pk_individual")
+  d <- tfl_fig_template("pk_individual", group = "TRT01A")
   code <- paste(tfl_fig_design_code(d), collapse = "\n")
   expect_match(code, "scale_y_log10()", fixed = TRUE)
   expect_match(code, "facet_wrap(vars(TRT01A))", fixed = TRUE)
@@ -325,4 +324,31 @@ test_that("plot.colours as text: split at the commas between pairs, and a call i
   expect_error(own("X = blue, Y = rgb(1,0,0)"), "hex code")
   expect_error(own("X = blue, Y"), "value = colour pairs")
   expect_identical(own(c(X = "blue")), c(X = "blue"))
+})
+
+test_that("a figure's group has no default: a template that splits the arms stops, naming itself (PRINCIPLES 1.14)", {
+  # every preset that draws the arms: its name, the argument, what it is
+  tp <- tfl_fig_templates()
+  for (t in tp$template[tp$parts]) {
+    if (is.null(fig_group_of(t))) next
+    expect_error(tfl_fig_template(t), sprintf("%s: `group` is required (the variable that splits the arms).", t),
+                 fixed = TRUE, info = t)
+    expect_error(tfl_fig_template(t, group = ""), "`group` is required", fixed = TRUE, info = t)
+    expect_s3_class(tfl_fig_template(t, group = fig_group_of(t)), "tfl_fig_design")
+  }
+  # the ones that draw no arms need none
+  for (t in c("km_single_arm", "individual_spider", "waterfall_response", "swimmer_full")) {
+    expect_s3_class(tfl_fig_template(t), "tfl_fig_design")
+  }
+  # the template SPECs: `group` required, no default (like km's `by`)
+  for (nm in c("mean_se", "mean_ci", "forest_hr")) {
+    g <- tfl_template_params(nm)$group
+    expect_true(isTRUE(g$required), info = nm)
+    expect_null(g$default, info = nm)
+    expect_error(tfl_template_expand(nm, list(param = "SYSBP", population = "SAF")), "group", info = nm)
+  }
+  # the functions: the same stop, before the data
+  expect_error(tpl_mean_se(advs, param = "SYSBP"), "mean_se: `group` is required", fixed = TRUE)
+  expect_error(tpl_mean_ci(advs, param = "SYSBP"), "mean_ci: `group` is required", fixed = TRUE)
+  expect_error(tpl_forest_hr(data.frame()), "forest_hr: `group` is required", fixed = TRUE)
 })

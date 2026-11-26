@@ -48,7 +48,10 @@
 #'   fields), `templates` and `template_rows` (the template reports; with
 #'   `templates = "expand"` both are empty), `template_maps` (`output_id`,
 #'   `param`: a template report's arguments that are maps, which the sheets
-#'   do not hold), `not_converted` (what the sheets cannot hold).
+#'   do not hold), `study_codelists` (the study's code lists,
+#'   `spec/defaults.yml` `codelists:`: `name`, `value`, `label`, `order`, a
+#'   code a row, `label` blank when the list has none), `not_converted`
+#'   (what the sheets cannot hold).
 #' @examples
 #' d <- system.file("extdata", "spec-yaml", package = "tflspec")
 #' sh <- tfl_sheets_from_yaml(d)
@@ -357,10 +360,25 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       note(id, "data", paste0("data.steps: a step that is not R, which process_code (R) cannot hold: ",
                               "the steps are kept whole in content_more (YAML)"))
     }
+    pset <- .planner_set(o, e[["population"]], tpl)
+    if (!is.na(.na_scalar(unlist(e[["population"]]))) && is.na(pset)) {
+      warning(sprintf(paste0("%s: the TOC's analysis set %s is not kept: the report's data names ",
+                             "%s, and the sheets' population column is the report's set"),
+                      id, .na_scalar(unlist(e[["population"]])),
+                      if (is.na(.out_population_or_data(o))) "none" else .out_population_or_data(o)),
+              call. = FALSE)
+      note(id, "planner", paste0("the TOC's analysis set ", .na_scalar(unlist(e[["population"]])),
+                                 " is not kept: the report's data does not name it"))
+    }
     planner[[length(planner) + 1L]] <- list(
       output_id = id, description = cell(e$label %||% o$label), setup_code = NA_character_,
       process_code = pcode,
-      section = cell(e$section), population = cell(e$population %||% .out_population(o)),
+      # (the report's analysis set: its data's own, a listing's or a figure's,
+      # else `common: population` until `common` goes -- canon 11-15; the
+      # TOC's line only where it adds nothing to the report, .planner_set();
+      # tfl_check_spec() says a TOC line that differs, .check_set_rows())
+      section = cell(e$section),
+      population = cell(pset),
       datasets = cell(e$datasets %||% .records_dataset(o)), batches = cell(e$sets))
     if (!is.null(.records_dataset(o)) && !is.null(o$data$where)) {
       note(id, "data", "a records table's where (its dataset's condition) stays in YAML")
@@ -414,15 +432,24 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       if (!is.null(o$data$object) && !identical(o$data$object, "ard")) rr$ard_object <- cell(o$data$object)
     }
     add("report", rr)
-    for (v in names(o$codelists)) for (i in seq_along(o$codelists[[v]])) {
-      cl <- o$codelists[[v]][[i]]
-      add("codelists", list(output_id = id, variable = v, value = cell(cl$value), label = cell(cl$label), order = as.character(i),
-                            under = cell(cl$under)))
+    # (a reference to the study's list: its rows as the programs get them,
+    # each with the reference in its `list` cell, which is what is read back;
+    # a list or code the study has not got: the cell alone, no codes -- the
+    # study opens, the check and the programs say it)
+    for (v in names(o$codelists)) {
+      ref <- if (.cl_is_ref(o$codelists[[v]])) o$codelists[[v]]
+      vrows <- if (is.null(ref)) o$codelists[[v]] else .cl_ref_rows_or_cell(ref, v, s$codelists, id)
+      for (i in seq_along(vrows)) {
+        cl <- vrows[[i]]
+        add("codelists", list(output_id = id, variable = v, value = cell(cl$value), label = cell(cl$label),
+                              order = if (is.null(cl$value)) NA_character_ else as.character(i),
+                              under = cell(cl$under), list = if (!is.null(ref)) .cl_ref_cell(ref, paste0("tfl_sheets_from_spec(): ", id, ", ", v)) else NA_character_))
+      }
     }
     # a template report: its name and arguments on the templates sheet, and
     # that is all of the template; the items are made again from them
     if (!is.null(tpl)) {
-      enc <- .tpl_sheets_encode(id, o$kind, .na_scalar(o$label), tpl, .out_population(o))
+      enc <- .tpl_sheets_encode(id, o$kind, .na_scalar(o$label), tpl, .report_set(o))
       trows[[length(trows) + 1L]] <- enc$row
       tparam_rows <- c(tparam_rows, enc$rows)
       # (its condition rows: the conditions sheet's, analysis_id blank)
@@ -456,7 +483,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     }
     # the report's ARD analyses and analysis data, whatever its kind
     for (a in o$ard$analysis_data %||% list()) {
-      a <- .entry_pop_inject(a, .out_population(o), .pop_from(s$data$populations, .out_population(o)))
+      a <- .entry_pop_inject(a, .rows_set(o), .pop_from(s$data$populations, .rows_set(o)))
       m <- lapply(a, cell); m$data_id <- m$id; m$id <- NULL
       if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
       adata[[length(adata) + 1L]] <- c(list(output_id = id), m)
@@ -465,7 +492,11 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       m <- lapply(e, cell); m$object_id <- m$id; m$id <- NULL
       objs[[length(objs) + 1L]] <- c(list(output_id = id), m)
     }
-    for (a in o$ard$analyses %||% list()) {
+    # (an analysis with analysis_ids: an analysis a variable, as a
+    # template's `analyses: {per: variable, ids}`)
+    ans <- unlist(lapply(o$ard$analyses %||% list(), .analysis_ids_split, output_id = id),
+                  recursive = FALSE)
+    for (a in ans) {
       if (!is.null(a$denominator)) a$denominator <- .den_cell(a$denominator)
       # (`by: []`: no columns, said so)
       if ("by" %in% names(a) && !length(a$by)) a$by <- tfl_unset()
@@ -476,6 +507,17 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       a$conditions <- NULL
       a$ards <- NULL
       if (is.list(a$levels) && !is.null(names(a$levels))) a$levels <- .levels_cell(a$levels)
+      # (a map on a column as its pieces, the function's other arguments in
+      # args: nothing left for cell() to drop)
+      # (`name:` / `from:`: the item's R name and its input, columns of the
+      # analyses sheet, written into the ARD program; a nested item is part
+      # of its parent's call and has neither)
+      if (!is.null(a$parent) && (!is.null(a$name) || !is.null(a$from))) {
+        .ard_stop(sprintf(paste0("`name:` / `from:` on a nested item (%s, in %s) cannot be written: ",
+                                 "it is a part of its parent's call, not an object of its own; ",
+                                 "put them on the parent."), a$id %||% "?", a$parent))
+      }
+      a <- .analysis_keys_carried(a, id)
       m <- lapply(a, cell); m$analysis_id <- m$id; m$id <- NULL
       if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
       if (!is.null(a$ref)) note(id, paste0("analyses.", a$id), "a reference to another report's analysis (ref) has no sheet")
@@ -489,7 +531,12 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     } else if (o$kind == "listing") {
       lr <- list(output_id = id)
       for (k in c("dataset", "data", "where", "sort")) if (!is.null(o$data[[k]])) lr[[k]] <- cell(o$data[[k]])
-      if (!is.null(o$data$population)) lr$population_id <- cell(o$data$population)
+      # (its analysis set: its own, else the report's, .data_population();
+      # a listing of an analysis data has that data's, on the data's row:
+      # only a set written beside it is kept, which the checks refuse,
+      # .data_both())
+      pop <- if (is.null(o$data[["data"]])) .data_population(o$data, o) else o$data[["population"]]
+      if (!all(is.na(unlist(pop)))) lr$population_id <- cell(pop)
       # what the listing sheets' columns cannot say is kept as YAML: the
       # items in the listing's content_more, a column's other arguments in
       # its row's more (read back by .conv_output(): nothing lost)
@@ -534,7 +581,8 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       for (k in c("ggplot2_version", "plot", "plots", "compose", "figure")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]
       figures[[id]] <- fd
       # what the design list has no place for is said, by the report
-      lost <- c(setdiff(names(o$data), c("steps", "code", "datasets", "ard", "source")),
+      # (its analysis set is the planner's population column, .report_set())
+      lost <- c(setdiff(names(o$data), c("steps", "code", "datasets", "ard", "source", "population")),
                 if (!is.null(o$data$source) && !identical(o$data$source, "code")) "source")
       lost <- c(lost, setdiff(names(o), c(.output_fields, "template", "ggplot2_version", "plot", "plots", "compose", "figure")))
       if (length(lost)) {
@@ -573,12 +621,17 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
                                " is a built-in configuration or not the study's: no sheet or column holds it"))
     }
   }
-  # (the study's own lists, by name, and its ADaM metadata: no sheet holds them)
-  if (length(s$codelists)) {
-    note(NA_character_, "codelists", paste0(
-      "the study's code lists (defaults.yml: ", paste(names(s$codelists), collapse = ", "),
-      ") stay in YAML, not on the sheets: a study written from the sheets has not got them"))
-  }
+  # the study's own lists, by name (defaults.yml `codelists:`): the
+  # study_codelists sheet, a code a row in its order, its label when the list
+  # has labels (a report's `{list: SEX}` names one); its ADaM metadata: no
+  # sheet holds it
+  scl_rows <- unlist(lapply(names(s$codelists), function(nm) {
+    x <- s$codelists[[nm]]
+    codes <- as.character(names(x) %||% unname(x))
+    lab <- if (is.null(names(x))) rep(NA_character_, length(x)) else as.character(unname(x))
+    lapply(seq_along(codes), function(i) list(name = nm, value = codes[[i]], label = lab[[i]],
+                                              order = as.character(i)))
+  }), recursive = FALSE)
   if (nrow(s$adam_meta$variables %||% data.frame())) {
     note(NA_character_, "adam_meta", paste0(
       "the study's ADaM metadata (defaults.yml adam_meta:) stays in YAML, not on the sheets: ",
@@ -688,6 +741,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
                                      "where", "args")),
        template_rows = .rows_df(tparam_rows, c("output_id", "param", "value", "label")),
        template_maps = .rows_df(tmap_rows, c("output_id", "param")),
+       study_codelists = .rows_df(scl_rows %||% list(), .study_codelists_columns),
        not_converted = if (length(nc)) do.call(rbind, nc) else
          data.frame(output = character(), part = character(), reason = character(), stringsAsFactors = FALSE))
 }
@@ -771,6 +825,97 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     out[v] <- list(val)
   }
   out
+}
+
+# An analysis's keys as the analyses sheet carries them (#924, #925): one
+# rule, so that cell() drops nothing.
+#   - a key the sheet has a column for (or the reader knows, .yaml_known_keys)
+#     whose value is a map (formats: {mean: 2}, derive: {X: <R>}): its
+#     pieces `name = value`, `|` between them, as the column's text says
+#     them (formats: [mean=2], derive: "X = <R>");
+#   - any other key is an argument of the analysis's function (stat_label,
+#     fmt_fun, conf.level, ...): `name = <R>` added to its args, the
+#     function's positional dots (ard_stack()'s analyses) each unnamed; an
+#     !unset argument is not given.
+# What cannot be carried stops, naming the key and the analysis: a map
+# whose values are not single values, a key that args gives too.
+.analysis_keys_carried <- function(a, output_id) {
+  who <- sprintf("analysis %s (report %s)", a$id %||% "?", output_id %||% "?")
+  known <- .yaml_known_keys$analysis
+  for (k in intersect(names(a), setdiff(known, "ref"))) {
+    v <- a[[k]]
+    if (!is.list(v) || is.object(v) || is.null(names(v)) || !length(v)) next
+    one <- vapply(v, function(e) (is.atomic(e) && length(e) == 1L) || inherits(e, "tfl_r"), NA)
+    if (!all(one)) {
+      .ard_stop(sprintf("%s: `%s` is a map of single values (name: value); %s is not one.",
+                        who, k, paste(names(v)[!one], collapse = ", ")))
+    }
+    a[[k]] <- paste(sprintf("%s = %s", names(v), vapply(v, function(e) as.character(unclass(e)), "")),
+                    collapse = " | ")
+  }
+  more <- setdiff(names(a), known)
+  if (!length(more)) return(a)
+  # (an !unset args gives nothing: the keys are the arguments then)
+  args <- if (!is.null(a$args) && !inherits(a$args, "tfl_unset")) .sheet_cell(a$args) else NA_character_
+  twice <- intersect(more, .args_given(args))
+  if (length(twice)) {
+    .ard_stop(sprintf("%s: `%s` is written as a key and in args; write it once.",
+                      who, paste(twice, collapse = "`, `")))
+  }
+  dots <- tryCatch(tfl_schema(as.character(a$method %||% ""))$dots, error = function(e) NULL)
+  pos <- if (identical(dots$style, "positional")) dots$key
+  put <- unlist(lapply(more, function(k) {
+    v <- a[[k]]
+    if (inherits(v, "tfl_unset")) return(character())
+    if (identical(k, pos) && is.list(v) && !is.object(v) && is.null(names(v))) {
+      return(vapply(v, .analysis_arg_r, ""))
+    }
+    paste0(.spec_name(k), " = ", .analysis_arg_r(v))
+  }))
+  a[more] <- NULL
+  if (length(put)) a$args <- paste(c(if (!is.na(args)) args, put), collapse = ", ")
+  a
+}
+
+# A value of an analysis's key as R: an !r its text, a call its function
+# with its arguments, a map list(), a list of single values of one type c()
+.analysis_arg_r <- function(v) {
+  conv <- function(x) {
+    if (inherits(x, "tfl_r")) return(.spec_expr(paste(as.character(unclass(x)), collapse = "\n")))
+    if (inherits(x, "tfl_call")) {
+      fn <- if (!is.null(x$package) && !grepl("::", x$fn, fixed = TRUE)) {
+        paste0(x$package, "::", x$fn)
+      } else x$fn
+      return(do.call(.spec_call, c(list(fn), lapply(x$args, conv))))
+    }
+    if (is.list(x) && !is.object(x)) {
+      flat <- is.null(names(x)) && length(x) &&
+        all(vapply(x, function(e) is.atomic(e) && length(e) == 1L, NA)) &&
+        length(unique(vapply(x, function(e) class(e)[1L], ""))) == 1L
+      return(if (flat) unlist(x) else lapply(x, conv))
+    }
+    x
+  }
+  .spec_code_line(conv(v))
+}
+
+# An analysis with analysis_ids (a variable's analysis_id) as an analysis a
+# variable, as a template's `analyses: {per: variable, ids}` makes them
+# (.item_per_variable()); a list of one analysis without.  An id for a
+# variable the analysis has not stops.
+.analysis_ids_split <- function(a, output_id) {
+  if (!is.list(a)) return(list(a))
+  ids <- a$analysis_ids
+  a$analysis_ids <- NULL
+  if (is.null(ids) || inherits(ids, "tfl_unset") || !length(ids)) return(list(a))
+  vars <- as.character(unlist(a$variables))
+  bad <- setdiff(names(ids), vars)
+  if (is.null(names(ids)) || length(bad)) {
+    .ard_stop(sprintf("analysis %s (report %s): `analysis_ids` is a map of its variables (%s); %s is not one.",
+                      a$id %||% "?", output_id %||% "?", paste(vars, collapse = ", "),
+                      paste(if (length(bad)) bad else "a list", collapse = ", ")))
+  }
+  .item_per_variable(a, ids)
 }
 
 # rows (named lists of cells) as a data frame of text with the columns

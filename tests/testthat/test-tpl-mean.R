@@ -1,16 +1,17 @@
 test_that("mean_se / mean_ci: the design form; the summary the call's step", {
   for (nm in c("mean_se", "mean_ci")) {
-    x <- tfl_template_expand(nm, list(param = "SYSBP", data = "ADVS", population = "SAF"),
+    x <- tfl_template_expand(nm, list(param = "SYSBP", data = "ADVS", population = "SAF", group = "TRT01A"),
                              population = list(list(id = "SAF", dataset = "ADSL",
                                                     where = "SAFFL == \"Y\"")))
     st <- vapply(x$data$steps, `[[`, "", "step")
     # (the call's: the records with an empty group or visit left out, those
     # with no value, the summary)
-    expect_identical(st, c("read", "join", "param", "filter", "levels", "filter", "filter", "summary"), info = nm)
+    # (the analysis set is the data's, no step: the program joins the records to its subjects, A2)
+    expect_identical(st, c("read", "param", "filter", "levels", "filter", "filter", "summary"), info = nm)
     expect_identical(x$call_steps, 3L)
-    expect_identical(x$data$steps[[2L]]$how, "semi")
+    expect_identical(x$data$population, "SAF")
     expect_identical(vapply(x$content, `[[`, "", "fn"), c("line", "point", "errorbar"))
-    expect_identical(x$data$steps[[8L]]$interval, sub("mean_", "", nm))
+    expect_identical(x$data$steps[[7L]]$interval, sub("mean_", "", nm))
   }
   expect_identical(tfl_template_params("mean_se")$value$type, "vars")
 })
@@ -23,7 +24,7 @@ test_that("tpl_mean_se(): the means of the records it is given", {
   expect_s3_class(p, "ggplot")
   expect_identical(p$labels$y, "Mean (+/- SE) SYSBP")
   expect_identical(tplfig_png(p), tplfig_png(tpl_mean_se(df, group = "TRT01A", param = "SYSBP")))
-  expect_identical(suppressWarnings(tpl_mean_ci(df))$labels$y, "Mean (95% CI)")
+  expect_identical(suppressWarnings(tpl_mean_ci(df, group = TRT01A))$labels$y, "Mean (95% CI)")
 })
 
 test_that("in a study: A (the data steps, the call) = B (the design) = the template SPEC", {
@@ -37,15 +38,17 @@ test_that("in a study: A (the data steps, the call) = B (the design) = the templ
     o <- tfl_output(paste0("F-9-", nm), "figure", common = list(population = "SAF"), label = "Mean SBP",
                     extends = "defaults",
                     template = list(name = nm, args = list(param = "SYSBP", data = "ADVS",
-                                                           value = "CHG")),
+                                                           value = "CHG", group = "TRT01A")),
                     content = list(tfl_item("geom_hline", list(yintercept = 0, linetype = "dashed")),
                                    tfl_item("labs", list(x = "Visit (cycle)"))))
     # (a visit with one record: no SD, its interval NaN -- the preset's)
     x <- suppressWarnings(tplfig_check(o, d, data))
     txt <- paste(x$a, collapse = "\n")
-    expect_match(txt, "semi_join(", fixed = TRUE)
+    # (no step keeps the set: the report's data says it, A2)
+    expect_false(grepl("semi_join(", txt, fixed = TRUE))
+    expect_identical(x$ro$data$population, "SAF")
     expect_match(txt, "filter(PARAMCD == \"SYSBP\", ", fixed = TRUE)
     expect_match(txt, sprintf(paste0("content <- tflspec::tfl_tpl(advs_sub, \"%s\", param = \"SYSBP\", ",
-                                     "value = CHG) +"), nm), fixed = TRUE)
+                                     "value = CHG, group = TRT01A) +"), nm), fixed = TRUE)
   }
 })

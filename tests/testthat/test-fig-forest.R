@@ -75,7 +75,7 @@ test_that("the forest template is in parts, with its analyses, and its design ch
   an <- attr(d, "analyses")
   expect_identical(an$analyses$analysis_id, c("HR", "HR_SEX", "HR_AGEGR1"))
   # (the statistics steps are data steps of the design: ard_stats, then the code)
-  expect_identical(vapply(d$data, `[[`, "", "step"), c("read", "param", "flag", "ard_stats", "code"))
+  expect_identical(vapply(d$data, `[[`, "", "step"), c("read", "param", "ard_stats", "code"))
   expect_identical(vapply(d$layers, `[[`, "", "layer"), c("vline", "errorbar_h", "point", "text_column"))
   pr <- tfl_check_fig_design(d)
   expect_equal(nrow(pr), 0L)
@@ -91,7 +91,7 @@ test_that("the forest template is in parts, with its analyses, and its design ch
   expect_match(code, "labs(y = NULL)", fixed = TRUE)
   expect_false(grepl("pal <- ", code, fixed = TRUE))
   # no comparison: every arm but the reference; no subgroups: all subjects
-  d2 <- tfl_fig_template("forest_hr", subgroups = "")
+  d2 <- tfl_fig_template("forest_hr", group = "TRT01P", subgroups = "")
   expect_false(grepl("filter(TRT01P ==", paste(tfl_fig_design_code(d2, "F1", save = FALSE), collapse = "\n"), fixed = TRUE))
   expect_identical(attr(d2, "analyses")$analyses$analysis_id, "HR")
   # no arm chosen: every other arm, each row saying which
@@ -99,10 +99,10 @@ test_that("the forest template is in parts, with its analyses, and its design ch
   expect_match(.forest_est_code("TRT01P", character(), "B"), 'level = "All subjects"', fixed = TRUE)
   expect_false(grepl("heading row", .forest_est_code("TRT01P", character()), fixed = TRUE))
   expect_match(.forest_est_code("TRT01P", "SEX"), "a heading row above each subgroup", fixed = TRUE)
-  # bold headings: one helper (the axis's labels as plotmath), only when asked
+  # bold headings: the axis's labels as plotmath, a code step of their own
+  # (`out: y_labels`: the rows' step keeps `est` only)
   expect_false(grepl("y_labels", .forest_est_code("TRT01P", "SEX"), fixed = TRUE))
-  expect_false(grepl("y_labels", .forest_est_code("TRT01P", character(), bold_headings = TRUE), fixed = TRUE))
-  expect_match(.forest_est_code("TRT01P", "SEX", bold_headings = TRUE),
+  expect_match(.forest_labels_code(),
                "y_labels <- as.expression(Map(function(l, h) if (h) bquote(bold(.(l))) else l,", fixed = TRUE)
 })
 
@@ -114,7 +114,7 @@ test_that("text_column: its columns, a panel at the right; not with one below", 
   pieces <- tfl_fig_parts()
   expect_true("text_column" %in% pieces$piece[pieces$section == "layers"])
   expect_true("errorbar_h" %in% pieces$piece[pieces$section == "layers"])
-  d <- tfl_fig_template("forest_hr")
+  d <- tfl_fig_template("forest_hr", group = "TRT01P")
   d$layers <- c(d$layers, list(list(layer = "n_table", data = "est", x = "y", group = "TRT01P")))
   expect_error(tfl_fig_design_code(d, "F1", save = FALSE), "below it or at its right, not both")
 })

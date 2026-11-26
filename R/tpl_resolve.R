@@ -38,6 +38,13 @@
 #' `!unset` is removed, and the names the report does not write keep the
 #' series' values.
 #'
+#' An argument the report writes `~` (YAML null) is not given: the
+#' default applies, as when it is left out.  None (the argument not
+#' passed) is `!unset`; `NULL` itself is `!r NULL`.  A list argument
+#' (`list<...>`) the report gives is never empty, has no `""` or `NA`
+#' entry, and is not a map where a sequence is declared: such a value
+#' stops, naming the argument.
+#'
 #' An analysis item's `analyses:` (`per`, `ids`) says its analyses: `per:
 #' variable` one a variable (its id the variable's entry in `ids`, else the
 #' variable's name); `per: level` or `per: [columns]` one row whose
@@ -133,6 +140,11 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   defs <- tfl_arg_defs(template = template, study_dir = study_dir)
 
   given <- .tr_given(report$template, defs$name, template, who)
+  # the report's analysis set fills the template's `population` (one rule,
+  # every template: .tr_report_set()); its data map is no rows
+  rs <- .tr_report_set(report, given, defs$name, template, who)
+  report$data <- rs$data
+  given <- rs$given
   env <- list()
   origins <- character()
   missing <- character()
@@ -160,6 +172,7 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
     if (inherits(val, "tfl_unset")) val <- NULL
     if (!is.null(val)) attr(val, "fixed") <- attr(val, "origin") <- attr(val, "origins") <- NULL
     .tr_one_value(val, defs$type[[i]], defs$values[[i]], p, o, template, who)
+    .tr_list_value(val, defs$type[[i]], p, o, template, who)
     if (is.null(val) && isTRUE(defs$required[[i]])) missing <- c(missing, p)
     env[p] <- list(val)
     origins[[p]] <- o
@@ -194,11 +207,15 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
       for (key in names(r)) rows[[k]][key] <- list(r[[key]])
     }
   }
-  rows <- lapply(rows, function(r) {
+  # (each row filled as a map: a key filled with no value -- nothing, or
+  # `!unset` -- is no key.  A figure's data map is one such map, filled
+  # whole: its `population: "{population}"` with no set is no set)
+  fill_row <- function(r) {
     r <- .tr_fill(r, env)
-    r[!vapply(r, function(v) inherits(v, "tfl_unset"), NA)]
-  })
-  rows <- lapply(rows, .derive_map_in)
+    if (is.list(r)) r <- r[!vapply(r, function(v) is.null(v) || inherits(v, "tfl_unset"), NA)]
+    .derive_map_in(r)
+  }
+  rows <- if (!is.null(names(rows))) fill_row(rows) else lapply(rows, fill_row)
 
   items <- list()
   for (it in tpl$analysis %||% list()) {
@@ -472,6 +489,41 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   invisible()
 }
 
+# An argument of a list type (list<...>, alone or beside other members) the
+# report gives: an empty field is "not given" (the argument left out, the
+# template's default) and "(none)" is !unset, so a given list is never empty,
+# has no "" or NA entry, and is not a map where only sequences are declared
+# (a map of "" is what a field read as "name | text" rows gives).  A value
+# from the template, the series or the study is not checked here; R code
+# (!r) and other tagged values are not either.
+.tr_list_value <- function(val, type, p, origin, template, who) {
+  if (is.null(val) || is.na(type) || !identical(origin, "report") || is.object(val)) {
+    return(invisible())
+  }
+  m <- .type_members(type)
+  if (!any(startsWith(m, "list<"))) return(invisible())
+  seq_only <- !any(grepl("^(map|vec|rows|call|step)<", m))
+  blank <- function(e) {
+    is.null(e) || (is.atomic(e) && !is.object(e) &&
+                     (!length(e) || (length(e) == 1L && (is.na(e) || identical(as.character(e), "")))))
+  }
+  entries <- if (is.list(val)) val else as.list(val)
+  why <- if (!length(val)) {
+    "an empty list"
+  } else if (seq_only && any(nzchar(names(val) %||% ""))) {
+    "a map (name: value)"
+  } else if (any(vapply(entries, function(e) is.atomic(e) && length(e) == 1L && !is.object(e) &&
+                          is.na(e), NA))) {
+    "an NA entry"
+  } else if (any(vapply(entries, blank, NA))) {
+    "an empty entry (\"\")"
+  }
+  if (is.null(why)) return(invisible())
+  stop(who, ": ", template, "'s ", p, " is a list (", type, "); the report gives ", why,
+       ". Leave ", p, " out for the template's default, or write !unset for none.",
+       call. = FALSE)
+}
+
 # A map as read (a named list, not a tagged value); an empty list is one too
 .tr_is_map <- function(x) {
   is.list(x) && !is.object(x) && (!length(x) || .series_is_map(x))
@@ -498,6 +550,55 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   if (length(out)) out
 }
 
+# The report's analysis set and the template's `population` argument (A2,
+# canon 11-15: the set lives on the report's data; the template's data-step
+# argument `population` is that value, its default the template's).  One
+# rule for every template:
+# - the report's set as the one reader reads it (.report_set(): its data
+#   map's `population`, `data: {population: SAF}`, else `common:
+#   population` until `common` goes) is the argument's value when the
+#   report does not give the argument itself; given both, they are one
+#   value, or it stops (the header and the program would disagree);
+# - a template with no such argument takes no set on the data map (it
+#   stops: no claim the program does not keep; `common:` is left as it was);
+# - the data map says the set only: it is no data rows (those are a list,
+#   merged by id), and another key stops, naming it.
+# list(data = the report's data rows, given = its arguments)
+.tr_report_set <- function(report, given, names_ok, template, who) {
+  d <- report[["data"]]
+  map <- is.list(d) && length(d) && !is.null(names(d))
+  if (map) {
+    other <- setdiff(names(d), "population")
+    if (length(other)) {
+      stop(who, ": ", template, ": the report's data is a map (", paste(other, collapse = ", "),
+           "); a template report's data map says its analysis set only (data: {population: SAF}), ",
+           "its own data are rows by id (data: [{id: ..., ...}]).", call. = FALSE)
+    }
+  }
+  set <- .report_set(report)
+  rows <- if (!map) d
+  if (is.na(set)) return(list(data = rows, given = given))
+  if (!"population" %in% names_ok) {
+    if (map) {
+      stop(who, ": ", template, " takes no analysis set (it has no argument population); ",
+           "the report's data says ", set, ".", call. = FALSE)
+    }
+    return(list(data = rows, given = given))
+  }
+  if ("population" %in% names(given)) {
+    g <- given[["population"]]
+    gv <- if (inherits(g, "tfl_unset")) NA_character_ else .na_scalar(unlist(g))
+    if (!identical(gv, set)) {
+      stop(who, ": ", template, ": the report's analysis set is ", set, " (its data's, or `common:`) ",
+           "and its template argument population ", if (is.na(gv)) "none" else gv,
+           ": write it once, on the report's data.", call. = FALSE)
+    }
+    return(list(data = rows, given = given))
+  }
+  given$population <- set
+  list(data = rows, given = given)
+}
+
 # The report's arguments: `template:` without `name`, its step sections
 # (data, analysis, content, page) and a flat `args:` read as one map
 .tr_given <- function(t, names_ok, template, who) {
@@ -517,7 +618,10 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
     stop(who, ": ", template, " has no argument ", paste(bad, collapse = ", "),
          " (its arguments: ", paste(names_ok, collapse = ", "), ").", call. = FALSE)
   }
-  out
+  # (an argument written `~`, YAML null, is not given: the template's default,
+  # as when it is left out.  None -- not passed -- is `!unset`; NULL itself
+  # is `!r NULL`.  Canon 2026-11-24, the 318 distinction kept)
+  out[!vapply(out, is.null, NA)]
 }
 
 # One analysis item as its analyses (canon fc7bd00).  `analyses: {per, ids}`:
@@ -678,8 +782,13 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
     }
     return(list(f))
   }
-  ids <- an$ids
-  lapply(as.character(f$variables), function(v) {
+  .item_per_variable(f, an$ids)
+}
+
+# An item as an item a variable: each its variable's id in `ids`, else the
+# variable's name (a template's `per: variable`, an analysis's analysis_ids)
+.item_per_variable <- function(f, ids) {
+  lapply(as.character(unlist(f$variables)), function(v) {
     g <- f
     g$id <- if (!is.null(ids[[v]])) as.character(ids[[v]]) else v
     g$variables <- v

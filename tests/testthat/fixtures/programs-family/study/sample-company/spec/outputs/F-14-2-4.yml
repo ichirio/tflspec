@@ -1,0 +1,207 @@
+id: F-14-2-4
+kind: figure
+label: Hazard ratio of the time to first skin disorder by subgroup (forest plot, its
+  own ARD)
+extends:
+  - defaults
+ard:
+  analysis_data:
+    - id: adtte_saf_ttskin
+      from: ADTTE
+      population: SAF
+      where: !r PARAMCD == "TTSKIN"
+      add:
+        - SEX
+        - AGEGR1
+    - id: adsl_saf
+      from: ADSL
+      population: SAF
+  analyses:
+    - id: HR
+      label: Hazard ratio, all subjects
+      method: custom
+      data: adtte_saf_ttskin
+      code: !r |-
+        cox <- survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = data)
+        cardx::ard_regression(cox, exponentiate = TRUE)
+      purpose: SECONDARY OUTCOME MEASURE
+    - id: HR_SEX
+      label: Hazard ratio by SEX
+      method: custom
+      data: adtte_saf_ttskin
+      code: !r |-
+        cards::ard_strata(
+          data,
+          .strata = SEX,
+          .f = ~ tryCatch(
+            cardx::ard_regression(
+              survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = .x),
+              exponentiate = TRUE
+            ),
+            error = function(e) {
+              warning("HR_SEX: the Cox model of a subgroup failed (",
+                      conditionMessage(e), "); the figure prints its hazard ratio NE",
+                      call. = FALSE)
+              NULL
+            }
+          )
+        )
+      purpose: SECONDARY OUTCOME MEASURE
+    - id: HR_AGEGR1
+      label: Hazard ratio by AGEGR1
+      method: custom
+      data: adtte_saf_ttskin
+      code: !r |-
+        cards::ard_strata(
+          data,
+          .strata = AGEGR1,
+          .f = ~ tryCatch(
+            cardx::ard_regression(
+              survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = .x),
+              exponentiate = TRUE
+            ),
+            error = function(e) {
+              warning("HR_AGEGR1: the Cox model of a subgroup failed (",
+                      conditionMessage(e), "); the figure prints its hazard ratio NE",
+                      call. = FALSE)
+              NULL
+            }
+          )
+        )
+      purpose: SECONDARY OUTCOME MEASURE
+data:
+  source: code
+  steps:
+    - step: read
+      dataset: ADTTE
+    - step: param
+      value: TTSKIN
+    - step: ard_stats
+      name: est
+      analysis_id: HR, HR_SEX, HR_AGEGR1
+      variable: TRT01A
+      stats: n_obs, estimate, conf.low, conf.high
+      by: SEX, AGEGR1
+    - step: code
+      label: 'the rows to draw: the comparison arm, a heading row per subgroup'
+      out: est
+      code: |-
+        # an upper limit above this is a model that did not converge (an arm
+        # with no event in the subgroup): its hazard ratio is NE
+        ne_upper <- 1000
+        # the comparison arm (the reference arm's row has no interval)
+        est <- filter(est, TRT01A == "Drug X")
+        # a subgroup level with no row (its Cox model failed: the ARD program
+        # left it out) is a row of its own, NE
+        est <- bind_rows(
+          est,
+          tibble(SEX = setdiff(names(cl_sex), as.character(est$SEX))),
+          tibble(AGEGR1 = setdiff(names(cl_agegr1), as.character(est$AGEGR1)))
+        )
+        # NE: no estimate, or an interval that is not finite or above ne_upper
+        est <- est |>
+          mutate(
+            subgroup = case_when(
+              !is.na(SEX) ~ "SEX",
+              !is.na(AGEGR1) ~ "AGEGR1",
+              TRUE ~ "All subjects"
+            ),
+            # (the ARD holds the codes: the code lists give the labels)
+            level = coalesce(unname(cl_sex[as.character(SEX)]),
+                         unname(cl_agegr1[as.character(AGEGR1)]), "All subjects"),
+            ok = is.finite(estimate) & is.finite(conf.low) & is.finite(conf.high) &
+              conf.high <= ne_upper,
+            txt = ifelse(ok, sprintf("%.2f (%.2f, %.2f)", estimate, conf.low, conf.high),
+                         "NE"),
+            across(c(estimate, conf.low, conf.high), ~ ifelse(ok, .x, NA))
+          )
+        # a heading row above each subgroup's levels, the levels indented
+        heads <- est |>
+          filter(subgroup != "All subjects") |>
+          distinct(subgroup) |>
+          mutate(level = subgroup, head = TRUE)
+        est <- est |>
+          mutate(head = FALSE) |>
+          bind_rows(heads) |>
+          arrange(factor(subgroup, levels = unique(est$subgroup)), desc(head),
+                  match(SEX, names(cl_sex)), match(AGEGR1, names(cl_agegr1))) |>
+          mutate(
+            label = ifelse(head | subgroup == "All subjects", level, paste0("    ", level)),
+            n = ifelse(head | is.na(n_obs), "", as.character(n_obs)),
+            txt = ifelse(head, "", txt),
+            y = rev(row_number())
+          )
+codelists:
+  TRT01A:
+    - value: Control
+    - value: Drug X
+  SEX:
+    - value: F
+      label: Female
+    - value: M
+      label: Male
+  AGEGR1:
+    - value: <65
+      label: <65 years
+    - value: '>=65'
+      label: '>=65 years'
+content:
+  - vline:
+      xintercept: 1.0
+      linetype: dashed
+      colour: grey50
+  - errorbar_h:
+      data: est
+      'y': 'y'
+      xmin: conf.low
+      xmax: conf.high
+      width: 0.25
+  - point:
+      data: est
+      x: estimate
+      'y': 'y'
+      shape: solid_square
+      size: 2.5
+      na.rm: true
+  - text_column:
+      data: est
+      'y': 'y'
+      columns: N = n | Hazard ratio (95% CI) = txt
+      width: 0.4
+page:
+  footer:
+    '1':
+      left: Hazard ratio of Drug X vs Control (Cox model, unstratified) with its 95%
+        CI, overall and within each subgroup; the figure's own ARD.  NE = not estimable.
+  tokens:
+    OUTPUT_TITLE: Hazard Ratio of Time to First Treatment-Emergent Skin Disorder by
+      Subgroup
+    OUTPUT_POPULATION: Safety Analysis Set
+  rtf_page:
+    orientation: landscape
+  report:
+    ard_source: own
+template: forest_hr
+plot:
+  x_label: Hazard Ratio (95% CI), Drug X vs Control
+  legend: none
+  x_log: true
+  add:
+    - fn: scale_y_continuous
+      args:
+        breaks: !r est$y
+        labels: !r est$label
+        expand: !r expansion(add = 0.6)
+    - fn: labs
+      args:
+        'y': !r 'NULL'
+    - fn: theme
+      args:
+        axis.text.y:
+          fn: element_text
+          args:
+            hjust: 0.0
+  dpi: 300.0
+  base_size: 10.0
+  theme: boxed
+

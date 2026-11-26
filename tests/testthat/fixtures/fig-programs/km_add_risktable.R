@@ -1,7 +1,7 @@
 # ---- data ------------------------------------------------------------------
 adtte_sub <- adtte |>
   order_levels() |>
-  filter(PARAMCD == "OS", FASFL == "Y")
+  filter(PARAMCD == "OS")
 
 # AVAL in months, from each record's unit, AVALU (days when the data has no AVALU)
 adtte_sub <- adtte_sub |>

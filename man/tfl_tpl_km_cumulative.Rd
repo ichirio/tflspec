@@ -9,10 +9,10 @@ The figure template \code{km_cumulative}, layout \code{km}: a variant of \code{k
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
-   \code{time} \tab usual \tab call \tab AVAL \tab  \tab the time variable (Surv(time, ...)), in 'time_unit' \cr
+   \code{time} \tab usual \tab call \tab AVAL \tab  \tab the time variable (Surv(time, ...)), in \code{time_unit} \cr
    \code{time_unit} \tab usual \tab call \tab months \tab  \tab the time's unit: the call's first step converts the days to it; the x axis's title \cr
    \code{censor} \tab usual \tab call \tab CNSR \tab  \tab the censoring variable, 1 censored (Surv(time, censor == 0)) \cr
-   \code{by} \tab required \tab call \tab study: settings.treatment, required \tab settings.treatment \tab the curves' variable (survfit2(~ by), the colours) \cr
+   \code{by} \tab required \tab call \tab  \tab  \tab the curves' variable (survfit2(~ by), the colours) \cr
    \code{y_percent} \tab other \tab call \tab TRUE \tab  \tab TRUE: the y axis in \% (scale_y_continuous(labels = scales::label_percent())) \cr
    \code{ci} \tab usual \tab call \tab bars \tab  \tab the confidence interval: band (add_confidence_interval()), bars at the axis's times (geom_errorbar()) \cr
    \code{ci_times} \tab other \tab call \tab  \tab  \tab the bars' times (summary(fit, times = )); NULL: the x axis's breaks \cr
@@ -34,7 +34,7 @@ The figure template \code{km_cumulative}, layout \code{km}: a variant of \code{k
    \code{legend_title} \tab other \tab call \tab  \tab  \tab the legend's title (labs(colour = )); NULL: none \cr
    \code{legend_median} \tab usual \tab call \tab FALSE \tab  \tab TRUE: each arm's legend text has its median survival and 95\% CI, "Drug X: 12.3 (9.8, 15.1)" (from the fit; NE when not reached) \cr
    \code{legend_median_digits} \tab other \tab call \tab 1 \tab  \tab the decimals of the median and its CI in the legend \cr
-   \code{legend_median_text} \tab other \tab call \tab \{arm\}: \{median\} (\{lcl\}, \{ucl\}) \tab  \tab the wording of that legend text, with \{arm\}, \{median\}, \{lcl\} and \{ucl\} for the arm and its median and 95\% CI limits (any may be left out or repeated): "\{arm\}, Median (95\% CI): \{median\} (\{lcl\}, \{ucl\})"; no effect without 'legend_median' \cr
+   \code{legend_median_text} \tab other \tab call \tab \{arm\}: \{median\} (\{lcl\}, \{ucl\}) \tab  \tab the wording of that legend text, with \{arm\}, \{median\}, \{lcl\} and \{ucl\} for the arm and its median and 95\% CI limits (any may be left out or repeated): "\{arm\}, Median (95\% CI): \{median\} (\{lcl\}, \{ucl\})"; no effect without \code{legend_median} \cr
    \code{pvalue} \tab usual \tab call \tab TRUE \tab  \tab the log-rank p-value (add_pvalue()) \cr
    \code{pvalue_location} \tab other \tab call \tab annotation \tab  \tab where the p-value goes (add_pvalue(location = )) \cr
    \code{title} \tab other \tab call \tab  \tab  \tab the figure's title (labs(title = )) \cr

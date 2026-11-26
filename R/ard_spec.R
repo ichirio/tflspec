@@ -58,7 +58,10 @@
                # a template's item: its type, the params its condition rows
                # give, its own columns and how its analyses are named
                "type", "params", "derive", "levels", "missing_row", "missing_label",
-               "analysis_per"),
+               "analysis_per",
+               # the item's R name (blank: .ard_<id>) and its input object
+               # (the pipe: `name <- from |> method(...)`; blank: its data)
+               "name", "from"),
   # an item's condition rows (an item with params): a row a run, in `row`
   # order; then a column a param, the items' params together (a cell blank
   # where an item has no such param), and row_analysis_id, a row's own id
@@ -1050,9 +1053,11 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #' the study folder, and reads as a person writes it: the tidyverse layout
 #' (a call on one line when it fits in 80 characters, else an argument a
 #' line), dplyr verbs for the data (`filter()`, `mutate()`, `select()`), and
-#' a `custom` analysis's code with the program's names in place of `data`
-#' and `population` (in `local()` only when it needs a scope of its own: it
-#' defines a function, or assigns a name the program has).
+#' a `custom` analysis's code: one expression as it is, with the program's
+#' names in place of `data` and `population`; code of several expressions
+#' (or one that assigns a name) as written, in a scope of its own,
+#' `.ard_<id> <- local({ data <- <analysis data>; ... })`, so what it
+#' assigns (`data$TRT01A <- `, a model) changes nothing of the program's.
 #'
 #' The data comes in three stages: the denominator (ADSL filtered to the
 #' analysis set), the target subjects (the records joined to it), the target
@@ -1074,7 +1079,8 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #' variable's own (`BMIBL:sd=3`) with its own list.  An integer is
 #' that many decimals, `xx.x%` is `label_round(1, scale = 100)`,
 #' `xx.x*1000` is `label_round(1, scale = 1000)` and
-#' `pvalue` the program's `fmt_pvalue()` (`<0.001` or 3 decimals);
+#' `pvalue` the program's `fmt_pvalue()` (`<0.001`, or 3 decimals by the
+#' study's rounding);
 #' `cards::apply_fmt_fun()` then fills `stat_fmt`.  What takes no `fmt_fun`
 #' gets the same formats after the call, from `fmt_ard()`: cardx's tests, CIs
 #' and models, `cards::ard_stack_hierarchical()`, a study's own function,
@@ -1303,11 +1309,12 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
                                                   .ard_read_vars(a))))
                    utils::capture.output(print(un)),
                  # an analysis whose ARD relevel_ard() puts in the lists'
-                 # order (an ARD made before it is made again)
+                 # order (an ARD made before it is made again; ": codes"
+                 # since it matches a named list's codes, not its labels)
                  if (length(lv) && any(vapply(seq_len(nrow(a)), function(i)
                    !.ard_keeps_order(a[i, , drop = FALSE]) &&
                      any(names(lv) %in% .ard_read_vars(a[i, , drop = FALSE])), NA)))
-                   "relevel_ard"),
+                   "relevel_ard: codes"),
                collapse = "\n")
   # (md5sum() reads a file: one file of the session's, written over each
   # time -- a file made and deleted for every report made a study's open

@@ -64,13 +64,14 @@ hier_tpl <- c("  from: ADAE",
               "    hierarchy: [AEBODSYS, AEDECOD]")
 hier_teae <- c("  - id: rec_sub", "    where: !r TRTEMFL == \"Y\"")
 
-test_that("tflspec_hierarchy on ADAE gives ae_soc_pt's ARD and an RTF", {
+test_that("tflspec_hierarchy on ADAE gives the AE code SPEC's ARD (ae_soc_pt's) and an RTF", {
   hier_skip()
   d <- hier_study(file.path(tempdir(), "hier-ae"))
   on.exit(unlink(d, recursive = TRUE))
   h <- hier_run(d, "H-1", hier_report("H-1", hier_tpl, hier_teae))
-  x <- readLines(test_path("fixtures", "twin", "T-14-3-1T.yml"))
-  x <- sub("^id: T-14-3-1T$", "id: A-1", x)
+  # (the code SPEC twin of the retired ae_soc_pt template, test-template-twin.R)
+  x <- readLines(test_path("fixtures", "twin", "T-14-3-1C.yml"))
+  x <- sub("^id: T-14-3-1C$", "id: A-1", x)
   a <- hier_run(d, "A-1", x, rtf = FALSE)
   expect_identical(unique(as.character(h$ard$analysis_id)), c("BIGN", "ANY", "L1", "L2"))
   expect_identical(hier_ard(h$ard), hier_ard(a$ard))
@@ -133,7 +134,7 @@ test_that("tflspec_hierarchy: empty_text prints when no record is left; none whe
   r <- tfl_template_resolve(
     list(id = "X", kind = "table", template = list(
       name = "tflspec_v1/tflspec_hierarchy", from = "ADAE", by = "TRT01A",
-      hierarchy = "AEDECOD", empty_text = NULL)))
+      hierarchy = "AEDECOD", empty_text = tfl_unset())))
   expect_false("plan_empty" %in% vapply(r$content, function(i) i$fn, ""))
   y <- tfl_template_resolve(
     list(id = "X", kind = "table", template = list(

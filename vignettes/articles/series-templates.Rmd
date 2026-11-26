@@ -41,8 +41,10 @@ template:
 ```
 
 The template fills its `"{name}"` spots with these values. Where the
-report gives no value, the template's default applies. The result is an
-ordinary report SPEC.
+report gives no value, the template's default applies; an argument
+written `~` (YAML null) gives no value too. To have none (the argument
+not passed at all), write `!unset`; to pass `NULL` itself, write
+`!r NULL`. The result is an ordinary report SPEC.
 
 A report changes the table in two ways:
 
@@ -359,7 +361,7 @@ changes only the names it writes. With the series's `formats` above,
 
 ```yaml
 template:
-  name: tflspec_v1/demog
+  name: tflspec_v1/tflspec_summary
   analysis:
     formats: {mean: 3, "AGE:sd": !unset}
 ```

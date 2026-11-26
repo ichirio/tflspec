@@ -4,7 +4,7 @@
 \alias{tfl_check_spec}
 \title{Check a study's SPEC against the packages installed: one call}
 \usage{
-tfl_check_spec(study, output_id = NULL, build = FALSE)
+tfl_check_spec(study, output_id = NULL, build = FALSE, adam = TRUE)
 }
 \arguments{
 \item{study}{A study read with \code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}, or its folder.}
@@ -17,14 +17,38 @@ listing or figure object made, no RTF -- so that a report with no
 row can be made; one that cannot has an \code{error} row, \code{part}
 \code{"build"}.  A few seconds a report.  \code{FALSE} (default): the checks
 above only.}
+
+\item{adam}{Where the data for the data check come from.  \code{TRUE}
+(default): the study's own datasets, from the paths of \code{spec/data.yml}
+(from the study folder), read as the study's program reads them and
+only when needed: a study with no \code{!=} condition reads no data, and a
+dataset is read once.  \code{FALSE} (or \code{NULL}): no data check.  Or the ADaM
+data as \code{\link[=tfl_check_fig_design]{tfl_check_fig_design()}}'s \code{adam} takes it (\code{\link[=tfl_read_adam]{tfl_read_adam()}}: a
+folder or a named list of data frames).  The check: a condition of the
+ARD definition (a \code{where} of the populations, records, analysis data or
+analyses) that holds \code{var != value} is looked at in the dataset it
+applies to: where \code{var} has NA there, the condition drops those rows (a
+filter keeps only TRUE), and a \code{warning} row (\code{part} \code{"ard"}) gives the
+count and the form that keeps them, \code{!var \%in\% value}.  No study
+folder, a dataset whose file is not there or is not listed, or a
+variable not in the dataset: no row.  The generated code is not changed.
+The same data check a table's header N (its \code{BIGN} analysis, from
+whatever data or population it names) against its counts: an analysis
+that groups by BIGN's variable and reads another dataset, whose data
+does not take the variable from the subjects (\code{add}), gives a \code{warning}
+row when the two data carry the variable and its value differs for a
+subject (the subject counted under one group in the N, another in the
+rows).  Only a table whose header shows the N (\code{{n}} in a column
+header that gives no values of its own) is looked at, and only the
+datasets of such tables are read.}
 }
 \value{
 A data frame, one row a problem: \code{output_id} (\code{NA} for the
 study's ARD definition as a whole and the study's own rows), \code{part}
 (\code{"file"}, \code{"study"}, \code{"ard"}, \code{"content"}, \code{"program"}, \code{"figure"},
-\code{"build"}), \code{item} (the file, the
-analysis, the function and argument, or the figure's part and
-field), \code{level} (\code{"error"}, \code{"warning"}, \code{"note"}, \code{"check"}) and
+\code{"codelists"}, \code{"build"}), \code{item} (the file, the
+analysis, the function and argument, the figure's part and
+field, or the code list's column), \code{level} (\code{"error"}, \code{"warning"}, \code{"note"}, \code{"check"}) and
 \code{message}.  Its attributes: \code{versions}, a data frame of the key
 packages (\code{package}, \code{installed}, \code{NA} when not installed); \code{ids}, the
 reports checked (the OK ones too); \code{kinds}, each report's kind, named
@@ -43,7 +67,12 @@ value the schema does not have, an analysis the ARD definition
 refuses): the report cannot be copied into the study;
 \item \code{warning}: the SPEC reads, but a program that runs cannot be written
 from it (the ARD program or the table's code stops; a content
-function the installed rtfreporter does not have yet);
+function the installed rtfreporter does not have yet; with \code{adam}, a
+\code{!=} condition that drops the rows where its variable is NA; a
+table whose header N and counts give a subject different groups; a
+report's own code list, for a column the study's \code{adam_meta} maps,
+with a code the define's code list does not have, \code{part}
+\code{"codelists"} -- codes compared, not labels);
 \item \code{note}: the program is written all the same -- an argument the
 installed cards / cardx does not know, a version to look at.
 }
@@ -72,6 +101,30 @@ name given twice in a report or that is a study dataset's or a
 function's are errors (\code{part} \code{"names"} for the last two); an object
 the report names and nothing uses is a note.  The packages' installed versions come with
 it, as an attribute.  A GUI's check button and the AI's run call it.
+
+A table's column header N: a header text with \verb{\{n\}} (and no \code{values} of
+its own) takes each column's N from the report's \code{BIGN} analysis.  A
+report with no \code{BIGN}, or whose \code{BIGN} counts by no column variable of
+the table, is a \code{warning} (\code{part} \code{"content"}, item
+\code{"plan_col_header(header)"}): its header would print \code{N=NA}.
+
+Every \verb{!r} value of the SPEC is read as R once, by one walker; one that
+does not read is an \code{error}, with the parser's message.  It is read, not
+run, by the kind of slot it fills: an item's argument by the schema's
+kind (a guard takes \code{condition ~ text}), the fields of R of the ARD and
+of data.yml by their own (\code{where} one condition, \code{args} a call's
+arguments, \code{derive} pieces \code{name = expression} and \code{post} steps between
+\verb{|}, \code{code} and \code{then} R code); those fields are R whether or not they
+are written \verb{!r}.  A report's value: \code{part} the report's key it is under
+(\code{content}, \code{template}, \code{ard} ...), \code{item} its place
+(\code{"content$plan_filter$args$where"}, \code{"ard$analyses$HR$code"}).  The
+study's own (study.yml \code{setup}, defaults.yml, data.yml's populations,
+records and datasets), on a check of every report only: \code{output_id} NA,
+\code{part} \code{"study"}, \code{item} the file and the place
+(\code{"data.yml: populations$SAF$where"}).  The ARD check's row and the
+\code{program} warning for the same value are not given twice.  A report's
+own program (a file, not a SPEC value) is read by \code{\link[=tfl_check_code]{tfl_check_code()}}
+(rule U01) on the review path.
 }
 \examples{
 if (requireNamespace("haven", quietly = TRUE)) {

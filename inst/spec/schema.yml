@@ -50,6 +50,10 @@
 # `usual` (most tables: offered first) or `other` (added when wanted).  It
 # changes nothing in a spec or its code.
 #
+# `join:`, `first_arg_name:` and `returns:` say what tfl_fn_defs() derives
+# otherwise (the join `|>` or `+`, the argument the pipe fills, what the
+# function gives); written only where the rule is wrong for the function.
+#
 # `print: unnamed` writes an argument without its name in the code
 # (plan_col_header()'s header, as a person writes it); its value is the
 # same by position.
@@ -317,12 +321,12 @@ plan_style:
     table_width_pct_of_writable: {label: {en: "Table width (% of the writable width)", ja: "Table の幅（本文の幅に対する %）"}, help: "The table's width as a fraction (0-1) of the page's writable width (as table_width_pct, by 0-1). e.g. 0.8", type: number}
     table_width_twips: {label: {en: "Table width (twips)", ja: "Table の幅（twip）"}, help: "The table's width in twips (1/1440 inch); it wins over the widths in percent. Blank: the page's writable width. e.g. 12960", type: integer}
     row_height_twips: {label: {en: "Row height (twips)", ja: "行の高さ（twip）"}, help: "The height of the body's rows in twips (1/1440 inch). Blank: from the font size. e.g. 240", type: integer}
-    border_header: {label: {en: "Header borders", ja: "見出しの罫線"}, help: "The rules of the column header's rows, one kind of row's (with border_spanning ... border_last_row: a style of one's own in place of Borders). e.g. \"bottom\"", type: "call<rtf_border>"}
-    border_spanning: {label: {en: "Spanning header borders", ja: "結合見出しの罫線"}, help: "The rules under a spanning header's cells (the header over several columns). e.g. \"bottom\"", type: "call<rtf_border>"}
-    border_body: {label: {en: "Body borders", ja: "本体の罫線"}, help: "The rules of the body's rows. Blank: none between them. e.g. \"none\"", type: "call<rtf_border>"}
-    border_first_row: {label: {en: "First row's border", ja: "最初の行の罫線"}, help: "The rule over the table's first row (the top of the table). e.g. \"top\"", type: "call<rtf_border>"}
-    border_last_row: {label: {en: "Last row's border", ja: "最後の行の罫線"}, help: "The rule under the table's last row (the foot of the table). e.g. \"bottom\"", type: "call<rtf_border>"}
-    border_group: {label: {en: "Row group's border", ja: "行グループの罫線"}, help: "The rule under the last row of each row group. Blank: none. e.g. \"bottom\"", type: "call<rtf_border>"}
+    border_header: {label: {en: "Header borders", ja: "見出しの罫線"}, help: "The rules of the column header's rows, one kind of row's (with border_spanning ... border_last_row: a style of one's own in place of Borders). e.g. rtf_border(bottom = TRUE) (in a sheet: \"bottom\")", type: "call<rtf_border>"}
+    border_spanning: {label: {en: "Spanning header borders", ja: "結合見出しの罫線"}, help: "The rules under a spanning header's cells (the header over several columns). e.g. rtf_border(bottom = TRUE) (in a sheet: \"bottom\")", type: "call<rtf_border>"}
+    border_body: {label: {en: "Body borders", ja: "本体の罫線"}, help: "The rules of the body's rows. Blank: none between them. e.g. rtf_border(inside_h = TRUE)", type: "call<rtf_border>"}
+    border_first_row: {label: {en: "First row's border", ja: "最初の行の罫線"}, help: "The rule over the table's first row (the top of the table). e.g. rtf_border(top = TRUE) (in a sheet: \"top\")", type: "call<rtf_border>"}
+    border_last_row: {label: {en: "Last row's border", ja: "最後の行の罫線"}, help: "The rule under the table's last row (the foot of the table). e.g. rtf_border(bottom = TRUE) (in a sheet: \"bottom\")", type: "call<rtf_border>"}
+    border_group: {label: {en: "Row group's border", ja: "行グループの罫線"}, help: "The rule under the last row of each row group. Blank: none. e.g. rtf_border(bottom = TRUE) (in a sheet: \"bottom\")", type: "call<rtf_border>"}
     align_count_pct: {main: true, label: {en: "Align n (%)", ja: "n (%) を揃える"}, type: "logical", help: "TRUE: the n and the (%) of a count cell line up from row to row. e.g. TRUE"}
     border: {main: true, label: {en: "Borders", ja: "罫線"}, type: "enum[tfl|none]|call<rtf_border>", help: "The table's borders: \"tfl\" (rules over and under the header and under the last row) or \"none\"; another style as a border ({fn: rtf_border, args: {all: true, inside_h: true}}). Blank: tfl. e.g. \"none\""}
     font_size_half_points: {main: true, label: {en: "Font size (half points)", ja: "文字の大きさ（半ポイント）"}, type: "integer", help: "The table's font size in half points (18 = 9 pt). Blank: the document's. e.g. 16"}
@@ -357,7 +361,7 @@ plan_cell_style:
     header: {main: true, label: {en: "The column header", ja: "列見出し"}, help: "TRUE: the column header is styled (not the body). e.g. TRUE", type: logical}
     where: {input: condition, main: true, label: {en: "Rows styled", ja: "書式を付ける行（条件）"}, type: formula, description: "The rows it applies to, R over the table's columns: `!r \"p > 0.5\"`."}
     indent_twips: {label: {en: "Indent (twips)", ja: "字下げ（twips）"}, help: "The left indent of the chosen cells' text in twips (not the header's). e.g. 240", type: integer}
-    border: {label: {en: "Borders", ja: "罫線"}, help: "The chosen cells' borders, as R (rtf_border()). e.g. rtf_border(bottom = \"single\")", type: "call<rtf_border>", input: r}
+    border: {label: {en: "Borders", ja: "罫線"}, help: "The chosen cells' borders (rtf_border()). e.g. rtf_border(bottom = \"single\")", type: "call<rtf_border>"}
     row: {label: {en: "Header rows", ja: "見出しの行"}, help: "With the column header: the header rows styled, 1 the top row (the last the column labels). Blank: every header row. e.g. 1", type: "list<integer>"}
     bold: {main: true, label: {en: "Bold", ja: "太字"}, type: "enum[TRUE|FALSE]|logical", help: "TRUE: the chosen cells in bold; FALSE: not. Blank: as they are. e.g. TRUE"}
     italic: {main: true, label: {en: "Italic", ja: "斜体"}, type: "enum[TRUE|FALSE]|logical", help: "TRUE: the chosen cells in italics; FALSE: not. Blank: as they are. e.g. TRUE"}
@@ -438,6 +442,7 @@ plan_listing:
 
 listing_col:
   package: rtfreporter
+  returns: value
   description: One column of a listing.
   args:
     vars: {type: "list<column>", description: "The variable(s) the column prints; several stack (or flow) in one cell."}
@@ -459,7 +464,7 @@ plan_titles:
   dots: {style: positional, key: titles, type: "list<string>", label: {en: "Titles", ja: "タイトル"}, description: "The title lines over the table, one entry a line, the same on every page. Give this or Pages, not both. e.g. Table 14.1.1"}
   args:
     pages: {label: {en: "Pages", ja: "ページ"}, help: "One block of titles for each page, when the pages do not share one: one entry a page. Give this or Titles, not both. e.g. list(\"Page A\", \"Page B\")", type: "list<string>", input: text}
-    border: {label: {en: "Borders", ja: "罫線"}, help: "The title block's borders on every page of this table, as R (rtf_border()): top above the first row, bottom below the last. Blank: none. e.g. rtf_border(bottom = TRUE)", type: "call<rtf_border>", input: r}
+    border: {label: {en: "Borders", ja: "罫線"}, help: "The title block's borders on every page of this table (rtf_border()): top above the first row, bottom below the last. Blank: none. e.g. rtf_border(bottom = TRUE)", type: "call<rtf_border>"}
 
 plan_footnotes:
   package: rtfreporter
@@ -470,7 +475,7 @@ plan_footnotes:
   dots: {style: positional, key: footnotes, type: "list<string>", label: {en: "Footnotes", ja: "脚注"}, description: "The footnote lines under the table, one entry a line, the same on every page. Give this or Pages, not both. e.g. n (%)"}
   args:
     pages: {label: {en: "Pages", ja: "ページ"}, help: "One block of footnotes for each page, when the pages do not share one: one entry a page. Give this or Footnotes, not both. e.g. list(\"Note A\", \"Note B\")", type: "list<string>", input: text}
-    border: {label: {en: "Borders", ja: "罫線"}, help: "The footnote block's borders on every page of this table, as R (rtf_border()): top above the first row, bottom below the last. Blank: none. e.g. rtf_border(bottom = TRUE)", type: "call<rtf_border>", input: r}
+    border: {label: {en: "Borders", ja: "罫線"}, help: "The footnote block's borders on every page of this table (rtf_border()): top above the first row, bottom below the last. Blank: none. e.g. rtf_border(bottom = TRUE)", type: "call<rtf_border>"}
 
 plan_after:
   package: rtfreporter
@@ -483,24 +488,25 @@ plan_after:
 rtf_border:
   package: rtfreporter
   args:
-    all: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The four outer edges at once; a side named wins over it."}
-    top: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>"}
-    bottom: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>"}
-    left: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>"}
-    right: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>"}
-    inside_h: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The rules between the rows."}
-    inside_v: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The rules between the cells."}
+    all: {main: true, label: {en: "All four edges", ja: "外枠の 4 辺"}, type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The four outer edges at once (top, bottom, left, right); a side named wins over it. TRUE the default line, a style word, or rtf_border_line() for its own weight and colour."}
+    top: {main: true, label: {en: "Top", ja: "上"}, type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The line of this edge: TRUE the default line, a style word, or rtf_border_line() for its own weight and colour; blank: not drawn unless `all` draws it."}
+    bottom: {main: true, label: {en: "Bottom", ja: "下"}, type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The line of this edge: TRUE the default line, a style word, or rtf_border_line() for its own weight and colour; blank: not drawn unless `all` draws it."}
+    left: {main: true, label: {en: "Left", ja: "左"}, type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The line of this edge: TRUE the default line, a style word, or rtf_border_line() for its own weight and colour; blank: not drawn unless `all` draws it."}
+    right: {main: true, label: {en: "Right", ja: "右"}, type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The line of this edge: TRUE the default line, a style word, or rtf_border_line() for its own weight and colour; blank: not drawn unless `all` draws it."}
+    inside_h: {main: true, label: {en: "Inside, between rows", ja: "内側の横線"}, type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The rules between the rows: TRUE the default line, a style word, or rtf_border_line() for its own weight and colour; blank: none."}
+    inside_v: {main: true, label: {en: "Inside, between columns", ja: "内側の縦線"}, type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The rules between the cells: TRUE the default line, a style word, or rtf_border_line() for its own weight and colour; blank: none."}
 
 rtf_border_line:
   package: rtfreporter
   description: "One side of a border with a look of its own: {fn: rtf_border_line, args: {style: double, width: 30, color: \"#003366\"}}."
   args:
-    style: {type: "enum[single|double|thick|dash|dot|none]", description: "The line's style (default single); none removes an inherited rule."}
-    width: {type: integer, description: "The line's weight in twips (default 15, about 0.5 pt)."}
-    color: {type: string, description: "The line's colour as a hex string, e.g. \"#003366\" (default black)."}
+    style: {main: true, label: {en: "Line style", ja: "線の種類"}, type: "enum[single|double|thick|dash|dot|none]", description: "The line's style (default single); none removes an inherited rule."}
+    width: {main: true, label: {en: "Weight (twips)", ja: "太さ（twip）"}, type: integer, description: "The line's weight in twips (default 15, about 0.5 pt)."}
+    color: {main: true, label: {en: "Colour", ja: "色"}, type: string, description: "The line's colour as a hex string, e.g. \"#003366\" (default black)."}
 
 normalize_ard:
   package: rtfreporter
+  returns: data
   rank: 10
   stage: mapping
   label: {en: "Normalize the ARD", ja: "ARD の正規化"}
@@ -524,6 +530,7 @@ rtf_col_header:
 
 cell_rows:
   package: rtfreporter
+  returns: value
   dots: {style: named, type: "template|list<guard|template>", description: "A cell's lines, by the label of the row each sits on."}
 
 # ---- the ARD's analyses: cards and cardx calls -------------------------------
@@ -573,6 +580,7 @@ ard_tabulate_value:
 ard_hierarchical:
   package: cards
   description: Counts in a hierarchy (SOC and PT).
+  returns: ard
   args:
     variables: {type: "list<column>", choices: vars}
     by: {type: "list<column>|column", choices: vars}
@@ -633,7 +641,7 @@ ard_strata:
   args:
     .by: {type: "list<column>|column", choices: vars}
     .strata: {type: "list<column>|column", choices: vars}
-    .f: {type: "r|call"}
+    .f: {type: "r|call", values: [ard_summary, ard_tabulate, ard_tabulate_value, ard_missing, ard_total_n]}
 
 ard_categorical_ci:
   package: cardx
@@ -759,13 +767,13 @@ rtf_watermark:
   package: rtfreporter
   description: The watermark's look, as rtf_document(watermark = ) takes it.
   args:
-    text: {type: string, description: The word drawn behind every page.}
-    font_size_half_points: {type: integer}
-    color: {type: string, description: "A hex colour, \"#C8C8C8\"."}
-    angle: {type: number, description: "Degrees; -45 (the default) rises to the right."}
-    font: {type: string}
-    width_in: {type: number}
-    height_in: {type: number}
+    text: {main: true, label: {en: "Text", ja: "文字"}, type: string, description: The word drawn behind every page.}
+    font_size_half_points: {main: true, label: {en: "Font size (half points)", ja: "文字の大きさ（half-point）"}, type: integer}
+    color: {main: true, label: {en: "Colour", ja: "色"}, type: string, description: "A hex colour, \"#C8C8C8\"."}
+    angle: {main: true, label: {en: "Angle", ja: "角度"}, type: number, description: "Degrees; -45 (the default) rises to the right."}
+    font: {main: true, label: {en: "Font", ja: "フォント"}, type: string}
+    width_in: {main: true, label: {en: "Width (inches)", ja: "幅（インチ）"}, type: number}
+    height_in: {main: true, label: {en: "Height (inches)", ja: "高さ（インチ）"}, type: number}
 
 rtf_tables:
   package: rtfreporter
@@ -817,6 +825,7 @@ rtf_footnotes:
 
 generate_rtfreport:
   package: rtfreporter
+  returns: doc
   description: Writing the report's RTF file.
   args:
     overwrite: {type: logical, description: "FALSE: a report's file already there is not written over (an error); blank: TRUE."}
@@ -1235,6 +1244,16 @@ rtf_footer:
           ids given for some values); level:ANY,L1,L2 (the depths'' ids themselves,
           the any row''s first); blank: the analysis_id.'
         example: PARAMCD | tox_dir
+      - column: name
+        description: 'The R name of the item''s object in the ARD program; blank: .ard_<analysis_id>
+          (a model: the id in lower case). A name is an R name no other object has.'
+        example: ae_soc
+      - column: from
+        description: 'The object the item reads, piped into its call (`name <- from |> method(...)`);
+          an object above it (an analysis data, a named item) or a dataset. Blank: the
+          item makes its own data (data, dataset, records, where). Not
+          with data.'
+        example: adsl_sub
   - sheet: conditions
     description: 'ARD: a template item''s condition rows, one row a run of the
       item (in row order), keyed by output_id and analysis_id. After row, a column
@@ -1450,7 +1469,8 @@ rtf_footer:
       value the list does not have stops the program. Every row names its report in
       `output_id` (a blank one is an error: copy the rows into each report that uses
       them). A variable''s `levels` on the variables sheet, when given, is the order
-      in the table instead; a variable''s heading is the variables sheet''s `label`.'
+      in the table instead; a variable''s heading is the variables sheet''s `label`.
+      A report''s list may be one of the study''s lists, named in the report''s file (`{list: ...}`), which `list` then shows.'
     columns:
       - column: variable
         description: The variable (an analysis variable or a column key).
@@ -1472,6 +1492,16 @@ rtf_footer:
           in the analysis''s `post` shows it with 0 counts when no subject has it; blank:
           none (an outer value is shown without it).'
         example: EYE DISORDERS
+      - column: list
+        description: 'The study''s code list (spec/defaults.yml `codelists:`) the report''s
+          list of this variable is: its name, all its codes in its order (`{list: SEX}`
+          in the report''s file); or its name, a colon and the codes taken, in the order
+          wanted (`SEX: M | F`, `{list: SEX, codes: [M, F]}`). The rows then show the
+          study''s codes and labels and are not read back. To change it: the study''s
+          list, or the report''s file (spec/outputs/<report>.yml, `{list: ...}`). In
+          this screen `list` is read only. A name or a code the study''s list has not
+          got is an error. Blank: the rows are the list.'
+        example: SEX
   - sheet: cells
     description: 'Table: one row a line of a cell (plan_cells()). Rows with the same
       variable / context / row are one chain, tried top down. With stats = rows, a
@@ -2414,7 +2444,7 @@ geom_line:
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
     data: {type: "object|r", label: {en: Data, ja: データ}}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+    position: {type: "call|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
 
 geom_point:
   package: ggplot2
@@ -2427,7 +2457,7 @@ geom_point:
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
     data: {type: "object|r", label: {en: Data, ja: データ}}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+    position: {type: "call|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
 
 geom_errorbar:
   package: ggplot2
@@ -2441,7 +2471,7 @@ geom_errorbar:
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
     data: {type: "object|r", label: {en: Data, ja: データ}}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+    position: {type: "call|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
 
 geom_pointrange:
   package: ggplot2
@@ -2455,7 +2485,7 @@ geom_pointrange:
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
     data: {type: "object|r", label: {en: Data, ja: データ}}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+    position: {type: "call|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
 
 geom_col:
   package: ggplot2
@@ -2469,7 +2499,7 @@ geom_col:
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
     data: {type: "object|r", label: {en: Data, ja: データ}}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+    position: {type: "call|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
 
 geom_text:
   package: ggplot2
@@ -2482,7 +2512,7 @@ geom_text:
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
     data: {type: "object|r", label: {en: Data, ja: データ}}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+    position: {type: "call|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
 
 geom_label:
   package: ggplot2
@@ -2495,7 +2525,7 @@ geom_label:
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
     data: {type: "object|r", label: {en: Data, ja: データ}}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+    position: {type: "call|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
 
 geom_step:
   package: ggplot2
@@ -2571,7 +2601,7 @@ geom_boxplot:
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
     data: {type: "object|r", label: {en: Data, ja: データ}}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+    position: {type: "call|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
 
 geom_violin:
   package: ggplot2
@@ -2584,7 +2614,7 @@ geom_violin:
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
     data: {type: "object|r", label: {en: Data, ja: データ}}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+    position: {type: "call|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
 
 geom_histogram:
   package: ggplot2
@@ -3020,14 +3050,14 @@ guides:
   rank: 800
   stage: finishing
   label: {en: Legends, ja: 凡例}
-  dots: {style: named, type: "call|string|r", description: "A guide by aesthetic: {fn: guide_legend, args: {nrow: 1}}, or none."}
+  dots: {style: named, type: "call|string|r", description: "A guide by aesthetic: {fn: guide_legend, args: {nrow: 1}}, or none.", values: [{value: legend, label: {en: Legend, ja: 凡例}}, {value: colourbar, label: {en: Colour bar, ja: カラーバー}}, {value: coloursteps, label: {en: Colour steps, ja: 段階のカラーバー}}, {value: bins, label: {en: Legend of bins, ja: 区間の凡例}}, {value: axis, label: {en: Axis, ja: 軸}}, {value: none, label: {en: No guide, ja: なし}}]}
   args:
-    colour: {type: "call|string|r", label: {en: Colour legend, ja: 色の凡例}}
-    fill: {type: "call|string|r", label: {en: Fill legend, ja: 塗りの凡例}}
-    shape: {type: "call|string|r", label: {en: Shape legend, ja: 形の凡例}}
-    linetype: {type: "call|string|r", label: {en: Line type legend, ja: 線種の凡例}}
-    x: {type: "call|string|r", label: {en: X axis, ja: x 軸}}
-    "y": {type: "call|string|r", label: {en: Y axis, ja: y 軸}}
+    colour: {type: "call|string|r", label: {en: Colour legend, ja: 色の凡例}, values: [{value: legend, label: {en: Legend, ja: 凡例}}, {value: colourbar, label: {en: Colour bar, ja: カラーバー}}, {value: coloursteps, label: {en: Colour steps, ja: 段階のカラーバー}}, {value: bins, label: {en: Legend of bins, ja: 区間の凡例}}, {value: axis, label: {en: Axis, ja: 軸}}, {value: none, label: {en: No guide, ja: なし}}]}
+    fill: {type: "call|string|r", label: {en: Fill legend, ja: 塗りの凡例}, values: [{value: legend, label: {en: Legend, ja: 凡例}}, {value: colourbar, label: {en: Colour bar, ja: カラーバー}}, {value: coloursteps, label: {en: Colour steps, ja: 段階のカラーバー}}, {value: bins, label: {en: Legend of bins, ja: 区間の凡例}}, {value: axis, label: {en: Axis, ja: 軸}}, {value: none, label: {en: No guide, ja: なし}}]}
+    shape: {type: "call|string|r", label: {en: Shape legend, ja: 形の凡例}, values: [{value: legend, label: {en: Legend, ja: 凡例}}, {value: colourbar, label: {en: Colour bar, ja: カラーバー}}, {value: coloursteps, label: {en: Colour steps, ja: 段階のカラーバー}}, {value: bins, label: {en: Legend of bins, ja: 区間の凡例}}, {value: axis, label: {en: Axis, ja: 軸}}, {value: none, label: {en: No guide, ja: なし}}]}
+    linetype: {type: "call|string|r", label: {en: Line type legend, ja: 線種の凡例}, values: [{value: legend, label: {en: Legend, ja: 凡例}}, {value: colourbar, label: {en: Colour bar, ja: カラーバー}}, {value: coloursteps, label: {en: Colour steps, ja: 段階のカラーバー}}, {value: bins, label: {en: Legend of bins, ja: 区間の凡例}}, {value: axis, label: {en: Axis, ja: 軸}}, {value: none, label: {en: No guide, ja: なし}}]}
+    x: {type: "call|string|r", label: {en: X axis, ja: x 軸}, values: [{value: legend, label: {en: Legend, ja: 凡例}}, {value: colourbar, label: {en: Colour bar, ja: カラーバー}}, {value: coloursteps, label: {en: Colour steps, ja: 段階のカラーバー}}, {value: bins, label: {en: Legend of bins, ja: 区間の凡例}}, {value: axis, label: {en: Axis, ja: 軸}}, {value: none, label: {en: No guide, ja: なし}}]}
+    "y": {type: "call|string|r", label: {en: Y axis, ja: y 軸}, values: [{value: legend, label: {en: Legend, ja: 凡例}}, {value: colourbar, label: {en: Colour bar, ja: カラーバー}}, {value: coloursteps, label: {en: Colour steps, ja: 段階のカラーバー}}, {value: bins, label: {en: Legend of bins, ja: 区間の凡例}}, {value: axis, label: {en: Axis, ja: 軸}}, {value: none, label: {en: No guide, ja: なし}}]}
 
 # -- more of ggplot2's layers (their shared arguments typed by
 #    inst/fig/gg_args.csv; a geom's `stat:` brings the stat's parameters) --
@@ -4586,7 +4616,7 @@ scale_size_binned_area:
   figure: scale
   rank: 387
   stage: finishing
-  label: {en: Sizes (binned, by area), ja: 大きさ（区間、面積比例）}
+  label: {en: "Sizes (binned, by area)", ja: 大きさ（区間、面積比例）}
   visible: [max_size, n.breaks, name]
 
 scale_radius:
@@ -4755,13 +4785,13 @@ labeller:
   label: {en: Strip labels by variable, ja: 変数ごとのストリップのラベル}
   description: "A facet's labeller: each variable its own (PARAMCD: !r label_wrap_gen(20), TRTA: !r label_both), or a lookup table."
   visible: [.default, .multi_line]
-  dots: {style: named, type: "r|call|vec<string, string>", description: "Variable: a labeller (!r label_both) or a lookup {code: label}."}
+  dots: {style: named, type: "r|call|vec<string, string>", description: "Variable: a labeller (!r label_both) or a lookup {code: label}.", values: [{value: label_value, label: {en: Values, ja: 値}}, {value: label_both, label: {en: Variable and value, ja: 変数と値}}, {value: label_context, label: {en: By the number of variables, ja: 変数の数による}}, {value: label_parsed, label: {en: Plotmath, ja: 数式}}, {value: label_wrap_gen, label: {en: Wrapped, ja: 折り返し}}, {value: label_bquote, label: {en: An expression, ja: 式}}]}
   args:
-    .rows: {type: "r|call|string", label: {en: Labeller of the rows, ja: 行のラベル}}
-    .cols: {type: "r|call|string", label: {en: Labeller of the columns, ja: 列のラベル}}
+    .rows: {type: "r|call|string", label: {en: Labeller of the rows, ja: 行のラベル}, values: [{value: label_value, label: {en: Values, ja: 値}}, {value: label_both, label: {en: Variable and value, ja: 変数と値}}, {value: label_context, label: {en: By the number of variables, ja: 変数の数による}}, {value: label_parsed, label: {en: Plotmath, ja: 数式}}, {value: label_wrap_gen, label: {en: Wrapped, ja: 折り返し}}, {value: label_bquote, label: {en: An expression, ja: 式}}]}
+    .cols: {type: "r|call|string", label: {en: Labeller of the columns, ja: 列のラベル}, values: [{value: label_value, label: {en: Values, ja: 値}}, {value: label_both, label: {en: Variable and value, ja: 変数と値}}, {value: label_context, label: {en: By the number of variables, ja: 変数の数による}}, {value: label_parsed, label: {en: Plotmath, ja: 数式}}, {value: label_wrap_gen, label: {en: Wrapped, ja: 折り返し}}, {value: label_bquote, label: {en: An expression, ja: 式}}]}
     keep.as.numeric: {type: logical, label: {en: Keep numbers, ja: 数値のまま}}
     .multi_line: {type: logical, label: {en: One line a variable, ja: 変数ごとに 1 行}}
-    .default: {type: "r|call|string", label: {en: Labeller of the others, ja: そのほかのラベル}, description: "!r label_value (the default)."}
+    .default: {type: "r|call|string", label: {en: Labeller of the others, ja: そのほかのラベル}, description: "!r label_value (the default).", values: [{value: label_value, label: {en: Values, ja: 値}}, {value: label_both, label: {en: Variable and value, ja: 変数と値}}, {value: label_context, label: {en: By the number of variables, ja: 変数の数による}}, {value: label_parsed, label: {en: Plotmath, ja: 数式}}, {value: label_wrap_gen, label: {en: Wrapped, ja: 折り返し}}, {value: label_bquote, label: {en: An expression, ja: 式}}]}
 
 label_value:
   package: ggplot2
@@ -5331,6 +5361,11 @@ wrap_plots:
   figure: compose
   rank: 850
   stage: output
+  # the arrangement: the first call of its object, the plots its first
+  # argument (tfl_fn_defs(); B-11)
+  join: "|>"
+  first_arg_name: plots
+  returns: plot
   label: {en: Arrangement, ja: 配置}
   visible: [plots, ncol, nrow, heights, widths, guides]
   args:

@@ -33,12 +33,17 @@
   invisible(series)
 }
 
-# the folders a series is looked for in, in order
+# the folders a series is looked for in, in order.  While a program's text
+# is made (.with_code_context()) the tflplanner home is not one of them: the
+# series folders are then a value, the context's `series_dir`.
 .series_search_dirs <- function(dir = NULL) {
   c(dir,
     getOption("tflspec.series_dir"),
-    file.path(tools::R_user_dir("tflplanner", "data"), "standards", "series"),
+    if (!.in_code_context()) .series_home_dir(),
     system.file("series", package = "tflspec"))
+}
+.series_home_dir <- function() {
+  file.path(tools::R_user_dir("tflplanner", "data"), "standards", "series")
 }
 
 #' Series of templates
@@ -49,7 +54,7 @@
 #' and, optionally, what each value means under `descriptions:` (a value's
 #' key and one line of English, for a screen that shows the values),
 #' `templates/<name>.yml` and `styles/<name>.yml`.  A report SPEC
-#' names a template as `template: name: tflspec_v1/demog`.
+#' names a template as `template: name: tflspec_v1/tflspec_summary`.
 #'
 #' These folders are the sources (the company's and tflspec's own).  A
 #' study does not read them: it copies the `series.yml` and the templates
@@ -65,7 +70,8 @@
 #'
 #' `tfl_series_dir()` finds the source folder of a series.  It looks in `dir`, then
 #' `getOption("tflspec.series_dir")`, then
-#' `file.path(tools::R_user_dir("tflplanner", "data"), "standards", "series")`,
+#' `file.path(tools::R_user_dir("tflplanner", "data"), "standards", "series")`
+#' (not while a study's program is made: its series are a value then),
 #' then the series that come with tflspec (`system.file("series", package =
 #' "tflspec")`); the first folder that holds `<series>/series.yml` wins.
 #' `tfl_series_read()` reads its `series.yml`.
@@ -106,7 +112,8 @@ tfl_series_dir <- function(series, dir = NULL) {
 # with source "dir", "option", "user" or "package"; NULL when none has it.
 .series_find <- function(series, dir = NULL) {
   opt <- getOption("tflspec.series_dir")
-  src <- c(rep("dir", length(dir)), rep("option", length(opt)), "user", "package")
+  src <- c(rep("dir", length(dir)), rep("option", length(opt)),
+           if (!.in_code_context()) "user", "package")
   dirs <- .series_search_dirs(dir)
   for (i in seq_along(dirs)) {
     d <- dirs[[i]]
@@ -133,7 +140,7 @@ tfl_series_read <- function(series, dir = NULL) {
   # (read with the `!study` tag, only to find one in values:; other tags are
   # not read here)
   y <- .yaml_read_file(file, handlers = c(.yaml_handlers(), list(study = .series_study_tag)))
-  if (is.null(y)) y <- list()
+  if (is.null(y)) y <- stats::setNames(list(), character())
   if (!.series_is_map(y)) stop(fn, ": ", file, " is not a map.", call. = FALSE)
   if (!is.null(y$name) && !identical(y$name, series)) {
     stop(fn, ": series \"", series, "\": its series.yml says name: ", y$name,

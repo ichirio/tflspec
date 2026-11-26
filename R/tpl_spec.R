@@ -130,7 +130,11 @@
   }
   switch(root,
     output = {
-      v <- down(output, path)
+      # (the report's analysis set: the one reader's -- its data's
+      # `population`, its `common:`, its subjects entries', A2)
+      v <- if (identical(path, c("common", "population")) && is.list(output)) {
+        .out_population_or_data(output)
+      } else down(output, path)
       # (none when the report names none: NA is tfl_output()'s "not given")
       if (length(v) == 1L && !is.na(v)) v
     },
@@ -574,8 +578,11 @@ tfl_template_to_spec <- function(output, study) {
     return(out)
   }
   lb <- .tpl_layers_below(output, study)
+  # (a code list that refers to the study's, {list: SEX}: its rows for the
+  # template; the code SPEC keeps the reference)
+  rcl <- .codelists_refs(output$codelists, study$codelists, output$id, "tfl_template_to_spec()")
   # (the resolve below says what `plot:` does not reach, once)
-  e <- .tpl_expand_for(output, study, lb, .merge_map(lb$acc$codelists, output$codelists), warn = FALSE)
+  e <- .tpl_expand_for(output, study, lb, .merge_map(lb$acc$codelists, rcl), warn = FALSE)
   # the content: what the resolved report has from the template and its own
   # file, argument by argument -- the study's layers stay the layers', so
   # the report resolves the same
@@ -589,7 +596,7 @@ tfl_template_to_spec <- function(output, study) {
   # definition does not repeat it (the code SPEC's `data:` says what the
   # report adds to the set)
   if (output$kind %in% c("table", "listing")) {
-    pop <- .na_scalar(as.character(e$args$population %||% output$common$population %||% NA))
+    pop <- .na_scalar(as.character(e$args[["population"]] %||% output[["common"]][["population"]] %||% NA))
     if (!is.na(pop)) {
       output$common <- .common_in(c(list(population = pop), output$common[setdiff(names(output$common), "population")]),
                                   paste0("tfl_template_to_spec(): ", output$id))
@@ -627,7 +634,19 @@ tfl_template_to_spec <- function(output, study) {
   }
   # a figure's design: its settings, the template's under the report's
   if (!is.null(ro$plot)) output$plot <- ro$plot
-  if (!is.null(e$x$codelists)) output$codelists <- .tpl_add_codelists(output$codelists, e$x$codelists)
+  if (!is.null(e$x$codelists)) {
+    # (a reference stays one, unless the template's list adds codes to it)
+    ref <- names(Filter(.cl_is_ref, output$codelists))
+    add <- .tpl_add_codelists(rcl, e$x$codelists)
+    keep <- ref[vapply(ref, function(v) identical(add[[v]], rcl[[v]]), NA)]
+    for (v in setdiff(ref, keep)) {
+      message("tfl_template_to_spec(): ", output$id, ": the template adds codes to ", v,
+              ", a reference to the study's list ", output$codelists[[v]]$list,
+              "; the code SPEC writes the list in place (the study's codes and the template's).")
+    }
+    add[keep] <- output$codelists[keep]
+    output$codelists <- add
+  }
   output$template <- NULL
   output
 }
@@ -658,11 +677,17 @@ tfl_template_to_spec <- function(output, study) {
   if (length(dup)) {
     .ard_stop(sprintf(paste0(
       "%s uses template %s, which makes its own %s step%s (%s); `data.steps` writes %s too. ",
-      "Keep the data stage (read, the analysis set, param, filter, derive) and remove %s; ",
+      "Keep the data stage (read, param, filter, derive; the analysis set is the data's ",
+      "`population:`) and remove %s; ",
       "keep plot and layers."),
       id, name, paste(dup, collapse = " and "), if (length(dup) > 1L) "s" else "",
       paste(unique(kind(call)), collapse = ", "), paste(dup, collapse = ", "),
       paste(dup, collapse = ", ")))
+  }
+  # (the analysis set is the data's `population:`, the template's and the
+  # report's one value: no step of it, A2)
+  if (is.null(data[["population"]]) && !is.null(x$data[["population"]])) {
+    data$population <- x$data[["population"]]
   }
   data$steps <- c(data$steps, call)
   data

@@ -1,5 +1,7 @@
-# tfl_template_resolve(): the 7 SAMPLE-01 reports of the tflspec_v1 series
-# (fictional study) as code SPECs.
+# tfl_template_resolve(): the 7 SAMPLE-01 reports (fictional study) as code
+# SPECs -- tflspec_v1's km_simple and forest_hr, and the purpose templates
+# that left it (canon 2026-11-24) from the test series tflspec_test
+# (local_test_series(); tr_reports() sets it for the calling test).
 
 # (a study given as a list, without its folder: the package's series read;
 # a study's own copies: test-study-template-copy.R)
@@ -15,19 +17,20 @@ tr_report <- function(text) {
 }
 
 tr_reports <- function() {
+  local_test_series(parent.frame())
   list(
     demog = tr_report(c(
       "id: T-14-1-1", "kind: table", "label: Demographic characteristics",
-      "template:", "  name: tflspec_v1/demog", "  analysis:", "    by: TRT01A",
+      "template:", "  name: tflspec_test/demog", "  analysis:", "    by: TRT01A",
       "    continuous: [AGE]", "    categorical: [AGEGR1, SEX, RACE, ETHNIC]")),
     ae = tr_report(c(
       "id: T-14-3-1", "kind: table", "label: TEAEs by SOC / PT",
-      "template:", "  name: tflspec_v1/ae_soc_pt", "  analysis:", "    by: TRT01A")),
+      "template:", "  name: tflspec_test/ae_soc_pt", "  analysis:", "    by: TRT01A")),
     lab = tr_report(c(
       "id: T-14-4-1", "kind: table", "label: Shift in chemistry toxicity grade",
       "data:", "  - id: adlb_sub",
       "    where: !r APHASE == \"P2\" & PARCAT1 == \"CHEMISTRY\"",
-      "template:", "  name: tflspec_v1/lab_tox_shift", "  analysis:", "    by: TRT01A",
+      "template:", "  name: tflspec_test/lab_tox_shift", "  analysis:", "    by: TRT01A",
       "    conditions:", "      - {tox_dir: Low, param: Albumin (g/L)}",
       "      - {tox_dir: High, param: Creatinine (umol/L)}",
       "      - {tox_dir: High, param: Sodium (mmol/L), analysis_id: NA_HIGH2}")),
@@ -36,7 +39,7 @@ tr_reports <- function() {
       "data:", "  - id: adsl_sub", "    from: ADSLX", "    population: none",
       "    where: !r TRT01AN == 1", "  - id: adrs_sub",
       "    where: !r PARAMCD == \"BORC\"",
-      "template:", "  name: tflspec_v1/orr_subgroup", "  data:", "    subgroup_vars: [BRCA, AGEGR1]",
+      "template:", "  name: tflspec_test/orr_subgroup", "  data:", "    subgroup_vars: [BRCA, AGEGR1]",
       "  analysis:", "    by: TR01AG1",
       "    conditions:",
       "      - {subgroup: BRCA, subgroup_lvl: POSITIVE, where: !r BRCA == \"POSITIVE\"}",
@@ -47,7 +50,7 @@ tr_reports <- function() {
       "data:", "  - id: adsl_sub", "    from: ADSLX", "    population: SAFX",
       "  - id: lst_sub", "    from: ADAE", "    where: !r AESEV == \"SEVERE\"",
       "    arrange: [TRT01AN, USUBJID, ASTDT]",
-      "template:", "  name: tflspec_v1/listing", "  data:", "    from: ADAE",
+      "template:", "  name: tflspec_test/listing", "  data:", "    from: ADAE",
       "  content:", "    columns: [USUBJID, AEDECOD, AESEV]")),
     km = tr_report(c(
       "id: F-14-2-3", "kind: figure", "label: KM curves",
@@ -324,4 +327,41 @@ test_that("tflspec_summary: labels and value_labels are one plan_labels, every h
   # a value_labels entry is a map of codes
   sm$template$content <- list(value_labels = list(SEX = "Female"))
   expect_error(tfl_template_resolve(sm, study = tr_study()), "value_labels: SEX is a map")
+})
+
+test_that("a figure's data map: a key filled with no value (nothing, `!unset`) is no key (A2-2, finding 9)", {
+  root <- local_test_series()
+  # a test-only figure template whose data is a map: `population` from an
+  # argument with no default, `note` written `!unset`
+  writeLines(c(
+    "template: fig_map", "label: A figure of its steps", "kind: figure",
+    "params:",
+    "  population:", "    type: string", "    input: pick", "    choices: populations",
+    "    step: data", "    tier: usual", "    description: The analysis set.",
+    "  param:", "    type: string", "    input: text", "    default: OS",
+    "    step: data", "    tier: usual", "    description: The parameter.",
+    "data:", "  source: code", "  population: \"{population}\"", "  note: !unset",
+    "  steps:", "    - {step: read, dataset: ADTTE}", "    - {step: param, value: \"{param}\"}"),
+    file.path(root, "tflspec_test", "templates", "fig_map.yml"))
+  rep <- tr_report(c("id: F-1", "kind: figure", "label: Steps",
+                     "template:", "  name: tflspec_test/fig_map"))
+  o <- tfl_template_resolve(rep, study = tr_study())
+  # no set, no `note`; the other keys kept
+  expect_false("population" %in% names(o$data))
+  expect_false("note" %in% names(o$data))
+  expect_identical(o$data$source, "code")
+  expect_identical(vapply(o$data$steps, `[[`, "", "step"), c("read", "param"))
+  expect_identical(o$data$steps[[2L]]$value, "OS")
+  expect_true(is.na(.out_population_or_data(o)))
+  # the argument given `!unset`: no set either
+  rep$template$data <- list(population = tfl_unset())
+  o <- tfl_template_resolve(rep, study = tr_study())
+  expect_false("population" %in% names(o$data))
+  expect_false("note" %in% names(o$data))
+  # a value: the key, and `note` still none
+  rep$template$data <- list(population = "SAF")
+  o <- tfl_template_resolve(rep, study = tr_study())
+  expect_identical(o$data$population, "SAF")
+  expect_false("note" %in% names(o$data))
+  expect_identical(.out_population_or_data(o), "SAF")
 })

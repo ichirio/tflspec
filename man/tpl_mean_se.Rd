@@ -7,7 +7,7 @@
 \usage{
 tpl_mean_se(
   data,
-  group = "TRT01A",
+  group,
   value = "AVAL",
   visit_var = "AVISIT",
   visit_order = "AVISITN",
@@ -17,7 +17,7 @@ tpl_mean_se(
 
 tpl_mean_ci(
   data,
-  group = "TRT01A",
+  group,
   value = "AVAL",
   visit_var = "AVISIT",
   visit_order = "AVISITN",
@@ -28,7 +28,8 @@ tpl_mean_ci(
 \arguments{
 \item{data}{The records: one a subject and visit, the parameter's.}
 
-\item{group}{The lines' variable (\code{TRT01A}), bare or as text.}
+\item{group}{The lines' variable (\code{TRT01A}), bare or as text; required
+(no default: the report says its group).}
 
 \item{value}{The variable averaged (\code{AVAL}, \code{CHG}).}
 
