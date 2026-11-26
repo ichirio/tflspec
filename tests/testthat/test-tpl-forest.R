@@ -322,7 +322,7 @@ test_that("forest_hr headings: the code list's variable label, subgroup_labels o
   heads <- function(x) x$data$steps[[2L]]$code
   cl <- list(variable = list(list(value = "SEX", label = "Sex at birth"),
                              list(value = "AGEGR1", label = "Age category")))
-  a <- list(param = "OS", population = "ITT", subgroups = c("SEX", "AGEGR1", "STRATA1"))
+  a <- list(param = "OS", population = "ITT", group = "TRT01A", subgroups = c("SEX", "AGEGR1", "STRATA1"))
   # the code list's variable label, over the common ADaM label
   x <- tfl_template_expand("forest_hr", a, codelists = cl)
   expect_match(heads(x), "sg_label <- c(SEX = \"Sex at birth\", AGEGR1 = \"Age category\")", fixed = TRUE)
@@ -338,7 +338,7 @@ test_that("forest_hr headings: the code list's variable label, subgroup_labels o
   expect_match(heads(w), "sg_label <- c(SEX = \"Sex\", AGEGR1 = \"Age group\")", fixed = TRUE)
   expect_false(grepl("STRATA1 =", heads(w), fixed = TRUE))
   # a code list's label for a variable that is not a subgroup is not read
-  v <- tfl_template_expand("forest_hr", list(param = "OS", population = "ITT", subgroups = "SEX"),
+  v <- tfl_template_expand("forest_hr", list(param = "OS", population = "ITT", group = "TRT01A", subgroups = "SEX"),
                            codelists = list(variable = list(list(value = "AGE", label = "Age"))))
   expect_match(heads(v), "SEX = \"Sex\"", fixed = TRUE)
   expect_false(grepl("AGE =", heads(v), fixed = TRUE))
