@@ -98,12 +98,23 @@ report with no \code{BIGN}, or whose \code{BIGN} counts by no column variable of
 the table, is a \code{warning} (\code{part} \code{"content"}, item
 \code{"plan_col_header(header)"}): its header would print \code{N=NA}.
 
-A report's \verb{!r} value (outside its \verb{ard:}, which the ARD check reads)
-that does not read as R is an \code{error}: \code{part} the report's key it is
-under, \code{item} its place (\code{"content$plan_filter$args$where"}), the
-parser's message.  It is read, not run, by the kind of slot the schema
-says it fills (a guard takes \code{condition ~ text}); the report's \code{program}
-warning for the same value is not given twice.
+Every \verb{!r} value of the SPEC is read as R once, by one walker; one that
+does not read is an \code{error}, with the parser's message.  It is read, not
+run, by the kind of slot it fills: an item's argument by the schema's
+kind (a guard takes \code{condition ~ text}), the fields of R of the ARD and
+of data.yml by their own (\code{where} one condition, \code{args} a call's
+arguments, \code{derive} pieces \code{name = expression} and \code{post} steps between
+\verb{|}, \code{code} and \code{then} R code); those fields are R whether or not they
+are written \verb{!r}.  A report's value: \code{part} the report's key it is under
+(\code{content}, \code{template}, \code{ard} ...), \code{item} its place
+(\code{"content$plan_filter$args$where"}, \code{"ard$analyses$HR$code"}).  The
+study's own (study.yml \code{setup}, defaults.yml, data.yml's populations,
+records and datasets), on a check of every report only: \code{output_id} NA,
+\code{part} \code{"study"}, \code{item} the file and the place
+(\code{"data.yml: populations$SAF$where"}).  The ARD check's row and the
+\code{program} warning for the same value are not given twice.  A report's
+own program (a file, not a SPEC value) is read by \code{\link[=tfl_check_code]{tfl_check_code()}}
+(rule U01) on the review path.
 }
 \examples{
 if (requireNamespace("haven", quietly = TRUE)) {
