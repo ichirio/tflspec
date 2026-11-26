@@ -87,7 +87,8 @@
 # NULL when `text` reads as R, else the parser's message (with its line
 # when the text has more than one).  By the slot's kinds: `r`, `formula`,
 # `call` and the rest read as plain R (`~` is plain R, and a `call` that
-# is not the right call is the schema's row); a slot of only `guard` takes
+# is not the right call is the schema's row); a slot of `guard` (and no `r`
+# or `formula`; a `call` alternative names its own function, not `~`) takes
 # `cond ~ text`, so `~ text` alone is no guard.
 .r_parse_problem <- function(text, kinds = character()) {
   ex <- NULL
