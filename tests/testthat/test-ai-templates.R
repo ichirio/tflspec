@@ -253,6 +253,9 @@ test_that("what every request repeats is a file, written once", {
   expect_identical(tflspec:::.ai_templates_likely("Demographic and Baseline Characteristics", "table"),
                    c("demog", "stf_t02_demog"))
   expect_identical(tflspec:::.ai_templates_likely("Listing of Deaths", "table"), "listing")
+  # on a tie, a variant's own word does not put it before its base
+  expect_identical(tflspec:::.ai_templates_likely("Adverse Events by SOC and PT", "table")[1L],
+                   "ae_soc_pt")
   expect_identical(tflspec:::.ai_templates_likely("", "table"), character())
 })
 
