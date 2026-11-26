@@ -307,8 +307,7 @@ test_that("tfl_latest_run(): a bad part stops; an output_id of \"\" never matche
   expect_identical(tfl_latest_run(s, 1)$output_id, "1")
 })
 
-test_that("tfl_run_index(): a batch.txt without a Kind line follows the help (Kind : run is required)", {
-  skip("bug: R/run_index.R:93 counts a run whose batch.txt has no Kind line; the help says `Kind : run` is required")
+test_that("tfl_run_index(): a batch.txt without a Kind line does not count (Kind : run is required)", {
   s <- cr_study()
   cr_run(s, "r1", lines = c("Study : S-1", "Started : 2026-11-20 10:00:00",
                             "Finished : 2026-11-20 10:05:00", "Verified : yes"))

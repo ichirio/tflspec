@@ -724,8 +724,13 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
     }
     return(list(f))
   }
-  ids <- an$ids
-  lapply(as.character(f$variables), function(v) {
+  .item_per_variable(f, an$ids)
+}
+
+# An item as an item a variable: each its variable's id in `ids`, else the
+# variable's name (a template's `per: variable`, an analysis's analysis_ids)
+.item_per_variable <- function(f, ids) {
+  lapply(as.character(unlist(f$variables)), function(v) {
     g <- f
     g$id <- if (!is.null(ids[[v]])) as.character(ids[[v]]) else v
     g$variables <- v
