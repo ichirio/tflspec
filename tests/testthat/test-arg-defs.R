@@ -491,3 +491,38 @@ test_that("the ... row carries how the dots are written; other rows have NA", {
   expect_false("..." %in% e$name)
   expect_true(all(is.na(e$dots_style) & is.na(e$dots_key) & is.na(e$dots_map)))
 })
+
+test_that("a bare call lists the names a person picks, and a border call is not R (field type rules G1, G10)", {
+  skip_on_cran()
+  # (G1) a type whose deciding member is a bare `call`: the function's short
+  # names are the definition's `values:`, the field a pick of them
+  # (theme, strip, first, text_x ...: one call of several functions with no
+  # list of names yet; they stay R)
+  no_names <- c("theme", "strip", "first", "text_x", "text_y", "background_x", "background_y")
+  bare <- character()
+  for (fn in names(tfl_schema())) {
+    d <- tfl_arg_defs(fn = fn)
+    for (i in seq_len(nrow(d))) {
+      if (identical(.type_deciding(d$type[[i]]), "call") && !d$name[[i]] %in% no_names) {
+        bare <- c(bare, paste0(fn, ".", d$name[[i]]))
+        expect_gt(length(d$values[[i]]), 0L, label = paste(fn, d$name[[i]], "values"))
+      }
+    }
+  }
+  expect_gte(length(bare), 21L)
+  # (a layer from the shared catalog, geom_bar, has the names too)
+  expect_true(all(c("dodge", "stack") %in% tfl_arg_defs(fn = "geom_bar")$values[[which(tfl_arg_defs(fn = "geom_bar")$name == "position")]]))
+  expect_true(all(c("geom_line.position", "guides.colour", "labeller..rows", "ard_strata..f") %in% bare))
+  p <- tfl_arg_defs(fn = "geom_line")
+  expect_true(all(c("dodge", "stack", "jitter") %in% p$values[[which(p$name == "position")]]))
+  g <- tfl_arg_defs(fn = "guides")
+  expect_true(all(c("legend", "none") %in% g$values[[which(g$name == "...")]]))
+  # (G10) a border is the rtf_border() group, as the other nine are: its type
+  # decides the input, none is written
+  for (k in list(c("plan_cell_style", "border"), c("plan_titles", "border"),
+                 c("plan_footnotes", "border"))) {
+    d <- tfl_arg_defs(fn = k[[1L]])
+    expect_identical(d$type[d$name == k[[2L]]], "call<rtf_border>")
+    expect_identical(d$input[d$name == k[[2L]]], "text", label = paste(k, collapse = "."))
+  }
+})

@@ -460,7 +460,9 @@ tfl_read_output <- function(path) {
 .yaml_known_keys <- list(
   ard = c("analyses", "objects", "data", "analysis_data"),
   analysis = c("id", setdiff(.ard_spec_sheets$analyses, c("output_id", "analysis_id")),
-               "population", "conditions", "ards", "analysis_ids", "ref", "note"),
+               "population", "conditions", "ards", "analysis_ids", "ref", "note",
+               # the item's R name (default `.ard_<id>`) and its input (the pipe)
+               "name", "from"),
   data = c("id", setdiff(.ard_spec_sheets$analysis_data, c("output_id", "data_id")),
            "population", "subjects_in", "arrange", "note")
 )
@@ -639,10 +641,50 @@ tfl_read_output <- function(path) {
     all(names(d) %in% c("source", "object")) && identical(as.character(d$object %||% "ard"), "ard")
 }
 
+# A content object in the map form: `- {name: km, from: fit, calls: [items]}`.
+# Its keys are within name / from / calls and it holds `calls`, or it holds
+# nothing but those keys.  An ordinary item (`- plan_x: {..}`, a function's
+# name as its one key) is never one.
+.obj_map_keys <- c("name", "from", "calls")
+
+.is_obj_map <- function(el) {
+  is.list(el) && !inherits(el, "tfl_r") && length(el) > 0L && !is.null(names(el)) &&
+    all(nzchar(names(el))) &&
+    ("calls" %in% names(el) || all(names(el) %in% .obj_map_keys))
+}
+
+# the content object (a tfl_plot of form "map"); the checks at reading
+.obj_map_from_list <- function(el) {
+  bad <- setdiff(names(el), .obj_map_keys)
+  if (length(bad)) {
+    stop("A content object has the keys ", paste(.obj_map_keys, collapse = ", "), ": `",
+         bad[1L], "` is not one of them.", call. = FALSE)
+  }
+  nm <- el[["name"]]
+  what <- if (is.character(nm) && length(nm) == 1L) paste0("The content object `", nm, "`")
+          else "A content object"
+  calls <- el[["calls"]]
+  if (!is.list(calls) || !length(calls) || !is.null(names(calls)) ||
+      !all(vapply(calls, function(a) is.list(a) || inherits(a, "tfl_r"), NA))) {
+    stop(what, " needs `calls:`, a sequence of items (not empty).", call. = FALSE)
+  }
+  if (is.null(nm)) {
+    stop("a content object without `name:` is not supported yet: it comes with B-5 ",
+         "(the writers of the object cards).", call. = FALSE)
+  }
+  from <- el[["from"]]
+  if (!is.null(from) && !(is.character(from) && length(from) == 1L && !is.na(from) && nzchar(from))) {
+    stop(what, ": `from:` is one object's name.", call. = FALSE)
+  }
+  tfl_plot(nm, lapply(calls, .item_from_list), input = from, form = "map")
+}
+
 # `- plan_cells: {...}` (a map of one key) as a tfl_item
 .item_from_list <- function(el) {
   # a figure's item that is R (`- !r p + annotate(...)`)
   if (inherits(el, "tfl_r")) return(tfl_item(".r", list(code = el), "own"))
+  # a content object: `{name, from, calls}`
+  if (.is_obj_map(el)) return(.obj_map_from_list(el))
   if (is.list(el) && length(el) == 1L && !is.null(names(el)) && nzchar(names(el))) {
     args <- el[[1L]]
     if (is.null(args)) args <- list()
@@ -914,7 +956,15 @@ tfl_write_output <- function(x, path) {
 # content items as they are written: `- fn: {args}`
 .items_to_list <- function(items) {
   lapply(items, function(it) {
-    if (inherits(it, "tfl_plot")) return(stats::setNames(list(.items_to_list(it$items)), it$fn))
+    if (inherits(it, "tfl_plot")) {
+      calls <- .items_to_list(it$items)
+      # the map form is written back as the map: name, from, calls
+      if (identical(it[["form"]], "map")) {
+        return(c(list(name = it$fn), if (!is.null(it[["input"]])) list(from = it[["input"]]),
+                 list(calls = calls)))
+      }
+      return(stats::setNames(list(calls), it$fn))
+    }
     if (identical(it$fn, ".r")) return(it$args$code)
     if (.is_part(it)) return(stats::setNames(list(.part_out(it$args)), it$fn))
     a <- .calls_out(it$args)

@@ -45,16 +45,13 @@ ep_with <- list(
 
 # A param whose value changes nothing in the code, and why (one a line;
 # `template.param`, or `template.param=value` for one value).
-ep_allow <- c()
+ep_allow <- c(
+  tflspec_listing.formats = "a listing counts nothing: formats is kept as every template has it"
+)
 
 # Cases a GitHub issue holds (each skipped with its number), by
 # `template.param`, or `template.param=!unset` for its !unset only
-ep_issues <- c(
-  # an analysis's formats map never reaches the ARD program
-  as_tag("tflspec#925", paste0(c(
-    "forest_hr", "km_simple", "tflspec_hierarchy", "tflspec_listing", "tflspec_shift",
-    "tflspec_summary"), ".formats"))
-)
+ep_issues <- character()
 
 # the issue a walk's row is held by, or NA
 ep_issue_of <- function(r) {

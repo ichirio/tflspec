@@ -450,7 +450,11 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       m <- lapply(e, cell); m$object_id <- m$id; m$id <- NULL
       objs[[length(objs) + 1L]] <- c(list(output_id = id), m)
     }
-    for (a in o$ard$analyses %||% list()) {
+    # (an analysis with analysis_ids: an analysis a variable, as a
+    # template's `analyses: {per: variable, ids}`)
+    ans <- unlist(lapply(o$ard$analyses %||% list(), .analysis_ids_split, output_id = id),
+                  recursive = FALSE)
+    for (a in ans) {
       if (!is.null(a$denominator)) a$denominator <- .den_cell(a$denominator)
       # (`by: []`: no columns, said so)
       if ("by" %in% names(a) && !length(a$by)) a$by <- tfl_unset()
@@ -461,6 +465,17 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       a$conditions <- NULL
       a$ards <- NULL
       if (is.list(a$levels) && !is.null(names(a$levels))) a$levels <- .levels_cell(a$levels)
+      # (a map on a column as its pieces, the function's other arguments in
+      # args: nothing left for cell() to drop)
+      # (`name:` / `from:`: the item's R name and its input, columns of the
+      # analyses sheet, written into the ARD program; a nested item is part
+      # of its parent's call and has neither)
+      if (!is.null(a$parent) && (!is.null(a$name) || !is.null(a$from))) {
+        .ard_stop(sprintf(paste0("`name:` / `from:` on a nested item (%s, in %s) cannot be written: ",
+                                 "it is a part of its parent's call, not an object of its own; ",
+                                 "put them on the parent."), a$id %||% "?", a$parent))
+      }
+      a <- .analysis_keys_carried(a, id)
       m <- lapply(a, cell); m$analysis_id <- m$id; m$id <- NULL
       if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
       if (!is.null(a$ref)) note(id, paste0("analyses.", a$id), "a reference to another report's analysis (ref) has no sheet")
@@ -756,6 +771,97 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     out[v] <- list(val)
   }
   out
+}
+
+# An analysis's keys as the analyses sheet carries them (#924, #925): one
+# rule, so that cell() drops nothing.
+#   - a key the sheet has a column for (or the reader knows, .yaml_known_keys)
+#     whose value is a map (formats: {mean: 2}, derive: {X: <R>}): its
+#     pieces `name = value`, `|` between them, as the column's text says
+#     them (formats: [mean=2], derive: "X = <R>");
+#   - any other key is an argument of the analysis's function (stat_label,
+#     fmt_fun, conf.level, ...): `name = <R>` added to its args, the
+#     function's positional dots (ard_stack()'s analyses) each unnamed; an
+#     !unset argument is not given.
+# What cannot be carried stops, naming the key and the analysis: a map
+# whose values are not single values, a key that args gives too.
+.analysis_keys_carried <- function(a, output_id) {
+  who <- sprintf("analysis %s (report %s)", a$id %||% "?", output_id %||% "?")
+  known <- .yaml_known_keys$analysis
+  for (k in intersect(names(a), setdiff(known, "ref"))) {
+    v <- a[[k]]
+    if (!is.list(v) || is.object(v) || is.null(names(v)) || !length(v)) next
+    one <- vapply(v, function(e) (is.atomic(e) && length(e) == 1L) || inherits(e, "tfl_r"), NA)
+    if (!all(one)) {
+      .ard_stop(sprintf("%s: `%s` is a map of single values (name: value); %s is not one.",
+                        who, k, paste(names(v)[!one], collapse = ", ")))
+    }
+    a[[k]] <- paste(sprintf("%s = %s", names(v), vapply(v, function(e) as.character(unclass(e)), "")),
+                    collapse = " | ")
+  }
+  more <- setdiff(names(a), known)
+  if (!length(more)) return(a)
+  # (an !unset args gives nothing: the keys are the arguments then)
+  args <- if (!is.null(a$args) && !inherits(a$args, "tfl_unset")) .sheet_cell(a$args) else NA_character_
+  twice <- intersect(more, .args_given(args))
+  if (length(twice)) {
+    .ard_stop(sprintf("%s: `%s` is written as a key and in args; write it once.",
+                      who, paste(twice, collapse = "`, `")))
+  }
+  dots <- tryCatch(tfl_schema(as.character(a$method %||% ""))$dots, error = function(e) NULL)
+  pos <- if (identical(dots$style, "positional")) dots$key
+  put <- unlist(lapply(more, function(k) {
+    v <- a[[k]]
+    if (inherits(v, "tfl_unset")) return(character())
+    if (identical(k, pos) && is.list(v) && !is.object(v) && is.null(names(v))) {
+      return(vapply(v, .analysis_arg_r, ""))
+    }
+    paste0(.spec_name(k), " = ", .analysis_arg_r(v))
+  }))
+  a[more] <- NULL
+  if (length(put)) a$args <- paste(c(if (!is.na(args)) args, put), collapse = ", ")
+  a
+}
+
+# A value of an analysis's key as R: an !r its text, a call its function
+# with its arguments, a map list(), a list of single values of one type c()
+.analysis_arg_r <- function(v) {
+  conv <- function(x) {
+    if (inherits(x, "tfl_r")) return(.spec_expr(paste(as.character(unclass(x)), collapse = "\n")))
+    if (inherits(x, "tfl_call")) {
+      fn <- if (!is.null(x$package) && !grepl("::", x$fn, fixed = TRUE)) {
+        paste0(x$package, "::", x$fn)
+      } else x$fn
+      return(do.call(.spec_call, c(list(fn), lapply(x$args, conv))))
+    }
+    if (is.list(x) && !is.object(x)) {
+      flat <- is.null(names(x)) && length(x) &&
+        all(vapply(x, function(e) is.atomic(e) && length(e) == 1L, NA)) &&
+        length(unique(vapply(x, function(e) class(e)[1L], ""))) == 1L
+      return(if (flat) unlist(x) else lapply(x, conv))
+    }
+    x
+  }
+  .spec_code_line(conv(v))
+}
+
+# An analysis with analysis_ids (a variable's analysis_id) as an analysis a
+# variable, as a template's `analyses: {per: variable, ids}` makes them
+# (.item_per_variable()); a list of one analysis without.  An id for a
+# variable the analysis has not stops.
+.analysis_ids_split <- function(a, output_id) {
+  if (!is.list(a)) return(list(a))
+  ids <- a$analysis_ids
+  a$analysis_ids <- NULL
+  if (is.null(ids) || inherits(ids, "tfl_unset") || !length(ids)) return(list(a))
+  vars <- as.character(unlist(a$variables))
+  bad <- setdiff(names(ids), vars)
+  if (is.null(names(ids)) || length(bad)) {
+    .ard_stop(sprintf("analysis %s (report %s): `analysis_ids` is a map of its variables (%s); %s is not one.",
+                      a$id %||% "?", output_id %||% "?", paste(vars, collapse = ", "),
+                      paste(if (length(bad)) bad else "a list", collapse = ", ")))
+  }
+  .item_per_variable(a, ids)
 }
 
 # rows (named lists of cells) as a data frame of text with the columns

@@ -1728,7 +1728,8 @@ print.tfl_table_spec <- function(x, ...) {
       .ard_stop(sprintf(paste0(
         "`tables$compare` names %s, and no `cells` row has `variable` = %s:
 ",
-        "  write its template there (`{p.value:.3f}`)."), sQuote(v), v))
+        "  write its templates there (a p-value: `<0.001` when `p.value < 0.001`, else `{p.value:.3f}`)."),
+        sQuote(v), v))
     }
     ctx <- s$context[idx]
     if (all(is.na(ctx))) return(chain(idx))

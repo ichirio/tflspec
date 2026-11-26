@@ -36,10 +36,10 @@ variable not in the dataset: no row.  The generated code is not changed.}
 \value{
 A data frame, one row a problem: \code{output_id} (\code{NA} for the
 study's ARD definition as a whole and the study's own rows), \code{part}
-(\code{"file"}, \code{"study"}, \code{"codelists"}, \code{"ard"}, \code{"content"}, \code{"program"},
-\code{"figure"}, \code{"build"}), \code{item} (the file, the
-analysis, the function and argument, or the figure's part and
-field), \code{level} (\code{"error"}, \code{"warning"}, \code{"note"}, \code{"check"}) and
+(\code{"file"}, \code{"study"}, \code{"ard"}, \code{"content"}, \code{"program"}, \code{"figure"},
+\code{"codelists"}, \code{"build"}), \code{item} (the file, the
+analysis, the function and argument, the figure's part and
+field, or the code list's column), \code{level} (\code{"error"}, \code{"warning"}, \code{"note"}, \code{"check"}) and
 \code{message}.  Its attributes: \code{versions}, a data frame of the key
 packages (\code{package}, \code{installed}, \code{NA} when not installed); \code{ids}, the
 reports checked (the OK ones too); \code{kinds}, each report's kind, named
@@ -59,7 +59,10 @@ refuses): the report cannot be copied into the study;
 \item \code{warning}: the SPEC reads, but a program that runs cannot be written
 from it (the ARD program or the table's code stops; a content
 function the installed rtfreporter does not have yet; with \code{adam}, a
-\code{!=} condition that drops the rows where its variable is NA);
+\code{!=} condition that drops the rows where its variable is NA; a
+report's own code list, for a column the study's \code{adam_meta} maps,
+with a code the define's code list does not have, \code{part}
+\code{"codelists"} -- codes compared, not labels);
 \item \code{note}: the program is written all the same -- an argument the
 installed cards / cardx does not know, a version to look at.
 }
@@ -96,6 +99,17 @@ check (each would stop on it).  A template's default reference is not
 the report's and is not checked: a list the study has not got is left
 out of it.  The packages' installed versions come with
 it, as an attribute.  A GUI's check button and the AI's run call it.
+
+A table's column header N: a header text with \verb{\{n\}} (and no \code{values} of
+its own) takes each column's N from the report's \code{BIGN} analysis.  A
+report with no \code{BIGN}, or whose \code{BIGN} counts by no column variable of
+the table, is a \code{warning} (\code{part} \code{"content"}, item
+\code{"plan_col_header(header)"}): its header would print \code{N=NA}.
+
+A report's \verb{!r} value (outside its \verb{ard:}, which the ARD check reads)
+that does not read as R is an \code{error}: \code{part} the report's key it is
+under, \code{item} its place (\code{"content$plan_filter$args$where"}), the
+parser's message.  It is read, not run.
 }
 \examples{
 if (requireNamespace("haven", quietly = TRUE)) {

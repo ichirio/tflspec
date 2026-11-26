@@ -58,7 +58,10 @@
                # a template's item: its type, the params its condition rows
                # give, its own columns and how its analyses are named
                "type", "params", "derive", "levels", "missing_row", "missing_label",
-               "analysis_per"),
+               "analysis_per",
+               # the item's R name (blank: .ard_<id>) and its input object
+               # (the pipe: `name <- from |> method(...)`; blank: its data)
+               "name", "from"),
   # an item's condition rows (an item with params): a row a run, in `row`
   # order; then a column a param, the items' params together (a cell blank
   # where an item has no such param), and row_analysis_id, a row's own id
@@ -1074,7 +1077,8 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #' variable's own (`BMIBL:sd=3`) with its own list.  An integer is
 #' that many decimals, `xx.x%` is `label_round(1, scale = 100)`,
 #' `xx.x*1000` is `label_round(1, scale = 1000)` and
-#' `pvalue` the program's `fmt_pvalue()` (`<0.001` or 3 decimals);
+#' `pvalue` the program's `fmt_pvalue()` (`<0.001`, or 3 decimals by the
+#' study's rounding);
 #' `cards::apply_fmt_fun()` then fills `stat_fmt`.  What takes no `fmt_fun`
 #' gets the same formats after the call, from `fmt_ard()`: cardx's tests, CIs
 #' and models, `cards::ard_stack_hierarchical()`, a study's own function,

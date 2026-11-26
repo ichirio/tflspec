@@ -31,6 +31,13 @@
   hit <- .adata_memo$sheet
   if (!is.null(hit) && identical(hit$raw, d)) return(hit$out)
   out <- .normalize_ard_sheet(d, "analysis_data")
+  # (`subjects_in: none`, the key's fixed value, keeps all: blank -- unless
+  # the report has a row of that name, #927)
+  if (nrow(out) && !is.null(out$subjects_in)) {
+    none <- out$subjects_in %in% "none" &
+      !paste(out$output_id, "none") %in% paste(out$output_id, out$data_id)
+    out$subjects_in[none] <- NA_character_
+  }
   .adata_memo$sheet <- list(raw = d, out = out)
   out
 }
