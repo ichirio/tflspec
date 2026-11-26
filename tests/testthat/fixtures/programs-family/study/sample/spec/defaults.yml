@@ -1,0 +1,173 @@
+content:
+  - normalize_ard: {}
+  - plan_cells:
+      default:
+        - !r n == 0 ~ "0"
+        - '{n:.0f} ({p:.1f%})'
+      na: '-'
+  - plan_digits:
+      rounding: sas
+  - plan_col_header:
+      header:
+        - line: '1'
+          cols: row_label
+        - line: '1'
+          cols: .values
+          span: each
+          text: '{col}'
+        - line: '2'
+          cols: row_label
+          text: Characteristic
+        - line: '2'
+          cols: .values
+          span: each
+          text: (N={n})
+  - plan_stub:
+      name: row_label
+      before: true
+      heading: ''
+  - plan_blanks:
+      where: between_groups
+      first: true
+      last: true
+      counted: true
+  - plan_columns:
+      widths:
+        row_label: 40.0
+        .values: 18.0
+  - plan_style:
+      align_count_pct: true
+# The study's code lists, by name: for display, referred to by name
+# (study$codelists$SEX); none reaches a report through extends:.
+codelists:
+  SEX:
+    - {value: F, label: Female}
+    - {value: M, label: Male}
+  AGEGR1:
+    - {value: '<65', label: <65 years}
+    - {value: '>=65', label: '>=65 years'}
+  RACE:
+    - {value: WHITE, label: White}
+    - {value: BLACK OR AFRICAN AMERICAN, label: Black or African American}
+    - {value: ASIAN, label: Asian}
+    - {value: AMERICAN INDIAN OR ALASKA NATIVE, label: American Indian or Alaska Native}
+    - {value: NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER, label: Native Hawaiian or Other Pacific Islander}
+    - {value: OTHER, label: Other}
+  ETHNIC:
+    - {value: HISPANIC OR LATINO, label: Hispanic or Latino}
+    - {value: NOT HISPANIC OR LATINO, label: Not Hispanic or Latino}
+    - {value: NOT REPORTED, label: Not Reported}
+    - {value: UNKNOWN, label: Unknown}
+# The ADaM metadata read from the define.xml data/adam/define.xml by tflplanner ([Data] -> ADaM levels):
+# each variable's code list and the code lists' values. study$adam gets these levels.
+adam_meta:
+  variables:
+  - dataset: ADSL
+    variable: SEX
+    codelist: CL.SEX
+  - dataset: ADSL
+    variable: AGEGR1
+    codelist: CL.AGEGR1
+  - dataset: ADSL
+    variable: RACE
+    codelist: CL.RACE
+  codelists:
+  - codelist: CL.SEX
+    name: Sex
+    value: F
+    decode: Female
+    order: 1
+  - codelist: CL.SEX
+    name: Sex
+    value: M
+    decode: Male
+    order: 2
+  - codelist: CL.AGEGR1
+    name: Pooled Age Group 1
+    value: '<65'
+    order: 1
+  - codelist: CL.AGEGR1
+    name: Pooled Age Group 1
+    value: '>=65'
+    order: 2
+  - codelist: CL.RACE
+    name: Race
+    value: WHITE
+    order: 1
+  - codelist: CL.RACE
+    name: Race
+    value: BLACK OR AFRICAN AMERICAN
+    order: 2
+  - codelist: CL.RACE
+    name: Race
+    value: ASIAN
+    order: 3
+  - codelist: CL.RACE
+    name: Race
+    value: AMERICAN INDIAN OR ALASKA NATIVE
+    order: 4
+  - codelist: CL.RACE
+    name: Race
+    value: NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER
+    order: 5
+  - codelist: CL.RACE
+    name: Race
+    value: OTHER
+    order: 6
+styles:
+  standard:
+    page:
+      header:
+        first:
+          '1':
+            left: Sample Pharma (tflplanner sample)
+            right: DRAFT
+          '2':
+            left: 'Protocol: SAMPLE-01 (tflspec''s oncology sample data)'
+            right: Page {PAGE} of {TOTAL_PAGES}
+          '3': []
+          '4':
+            center: '{OUTPUT_LABEL}'
+          '5':
+            center: '{OUTPUT_TITLE}'
+          '6':
+            center: ({OUTPUT_POPULATION})
+      footer:
+        last:
+          '98':
+            left: 'Source: tflspec''s oncology sample study XYZ-ONC-01 (simulated
+              ADaM data; not real patients).'
+          '99':
+            left: '{PROGRAM}       Generated on: {DATETIME}'
+  compact:
+    page:
+      header:
+        first:
+          '1':
+            left: Sample Pharma (tflplanner sample)
+            right: DRAFT
+          '2':
+            left: 'Protocol: SAMPLE-01 (tflspec''s oncology sample data)'
+            right: Page {PAGE} of {TOTAL_PAGES}
+          '3': []
+          '4':
+            center: '{OUTPUT_LABEL}'
+          '5':
+            center: '{OUTPUT_TITLE}'
+          '6':
+            center: ({OUTPUT_POPULATION})
+      footer:
+        last:
+          '98':
+            left: 'Source: tflspec''s oncology sample study XYZ-ONC-01 (simulated
+              ADaM data; not real patients).'
+          '99':
+            left: '{PROGRAM}       Generated on: {DATETIME}'
+      rtf_page:
+        margin_top_in: 0.5
+        margin_bottom_in: 0.5
+        margin_left_in: 0.5
+        margin_right_in: 0.5
+      rtf_style:
+        font_size_half_points: 16
+

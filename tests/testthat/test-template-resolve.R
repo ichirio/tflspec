@@ -328,3 +328,40 @@ test_that("tflspec_summary: labels and value_labels are one plan_labels, every h
   sm$template$content <- list(value_labels = list(SEX = "Female"))
   expect_error(tfl_template_resolve(sm, study = tr_study()), "value_labels: SEX is a map")
 })
+
+test_that("a figure's data map: a key filled with no value (nothing, `!unset`) is no key (A2-2, finding 9)", {
+  root <- local_test_series()
+  # a test-only figure template whose data is a map: `population` from an
+  # argument with no default, `note` written `!unset`
+  writeLines(c(
+    "template: fig_map", "label: A figure of its steps", "kind: figure",
+    "params:",
+    "  population:", "    type: string", "    input: pick", "    choices: populations",
+    "    step: data", "    tier: usual", "    description: The analysis set.",
+    "  param:", "    type: string", "    input: text", "    default: OS",
+    "    step: data", "    tier: usual", "    description: The parameter.",
+    "data:", "  source: code", "  population: \"{population}\"", "  note: !unset",
+    "  steps:", "    - {step: read, dataset: ADTTE}", "    - {step: param, value: \"{param}\"}"),
+    file.path(root, "tflspec_test", "templates", "fig_map.yml"))
+  rep <- tr_report(c("id: F-1", "kind: figure", "label: Steps",
+                     "template:", "  name: tflspec_test/fig_map"))
+  o <- tfl_template_resolve(rep, study = tr_study())
+  # no set, no `note`; the other keys kept
+  expect_false("population" %in% names(o$data))
+  expect_false("note" %in% names(o$data))
+  expect_identical(o$data$source, "code")
+  expect_identical(vapply(o$data$steps, `[[`, "", "step"), c("read", "param"))
+  expect_identical(o$data$steps[[2L]]$value, "OS")
+  expect_true(is.na(.out_population_or_data(o)))
+  # the argument given `!unset`: no set either
+  rep$template$data <- list(population = tfl_unset())
+  o <- tfl_template_resolve(rep, study = tr_study())
+  expect_false("population" %in% names(o$data))
+  expect_false("note" %in% names(o$data))
+  # a value: the key, and `note` still none
+  rep$template$data <- list(population = "SAF")
+  o <- tfl_template_resolve(rep, study = tr_study())
+  expect_identical(o$data$population, "SAF")
+  expect_false("note" %in% names(o$data))
+  expect_identical(.out_population_or_data(o), "SAF")
+})

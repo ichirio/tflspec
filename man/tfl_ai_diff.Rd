@@ -42,7 +42,7 @@ figure's plots are compared plot by plot (\code{plots$km/layers} ...).
 }
 }
 \examples{
-cur <- tfl_fig_template("km_simple")
+cur <- tfl_fig_template("km_simple", group = "TRT01P")
 new <- cur
 new$layers <- c(new$layers, list(list(layer = "censor_mark", shape = "x")))
 new$plot$x_label <- "Time (Months)"

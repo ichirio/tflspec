@@ -246,7 +246,7 @@ tfl_data_code <- function(output, study, ard = TRUE) {
     if (!length(v)) NA_character_ else paste(v, collapse = " | ")
   }
   # (a resolved report with no analysis set has NA)
-  pop <- Filter(Negate(is.na), as.list(data[["population"]] %||% .out_population(o)))
+  pop <- Filter(Negate(is.na), as.list(.data_population(data, o)))
   l <- data.frame(output_id = o$id, dataset = txt(data[["dataset"]]), data = txt(data[["data"]]),
                   population_id = txt(pop),
                   where = txt(data[["where"]]), sort = txt(data[["sort"]]), stringsAsFactors = FALSE)

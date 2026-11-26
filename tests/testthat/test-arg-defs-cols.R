@@ -317,7 +317,7 @@ test_that("the plan verbs carry labels in en and ja, their fields a form and a d
   expect_identical(inp("normalize_ard", "drop_contexts"), "text")
   expect_identical(inp("normalize_ard", "stack"), "table")
   expect_identical(inp("normalize_ard", "combine"), "table")
-  expect_identical(inp("plan_cell_style", "border"), "r")
+  expect_identical(inp("plan_cell_style", "border"), "text")
   expect_identical(inp("plan_columns", "column_widths_twips"), "text")
   expect_identical(inp("plan_titles", "pages"), "text")
   expect_identical(inp("plan_footnotes", "pages"), "text")

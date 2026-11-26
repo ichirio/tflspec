@@ -71,7 +71,11 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
 #'   (study.yml's fields), `templates`, `template_rows` and `template_maps`
 #'   (the template reports: [tfl_sheets_from_yaml()]; a template report's
 #'   map arguments, which the sheets do not hold, are taken from its file
-#'   already in `to`, else named in a warning and a note), `not_converted` ([tfl_sheets_from_yaml()]'s notes
+#'   already in `to`, else named in a warning and a note), `study_codelists`
+#'   (the study's code lists, written to `spec/defaults.yml` `codelists:`,
+#'   each in its `order`; without it, the lists of the `spec/defaults.yml`
+#'   already in `to`, else the lists the reports refer to named in a warning
+#'   and a note), `not_converted` ([tfl_sheets_from_yaml()]'s notes
 #'   on what the sheets could not hold: listed in `_not_converted.yml` too,
 #'   with one message saying how many).  What the app holds, or what the
 #'   workbooks read as.
@@ -91,7 +95,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   ard <- sheets$ard
   lf <- sheets$listing
   figs <- sheets$figures %||% list()
-  meta <- sheets$study %||% list()
+  meta <- sheets[["study"]] %||% list()
   # the study sheet's rows no table spec reads (study.yml's `settings:` keys
   # of the app's own: the treatment variable ...) are not the bridge's: set
   # aside here and written back to settings below, not a stop (#689).  The
@@ -324,7 +328,36 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   }
   if (length(pat_styles)) defaults$styles <- c(defaults$styles, pat_styles)
   style_names <- names(defaults$styles)
+  # the study's code lists (the study_codelists sheet), each in its order;
+  # sheets without that element (made by hand, an older caller): the lists
+  # of the defaults.yml being written over, else the lists the reports'
+  # `list` cells name are said (a warning and a note), not lost in silence
+  scl <- .conv_study_codelists(sheets$study_codelists)
+  if (!"study_codelists" %in% names(sheets)) {
+    old <- file.path(to, "spec", "defaults.yml")
+    scl <- if (file.exists(old)) {
+      tryCatch(yaml::read_yaml(old, handlers = .yaml_handlers())$codelists, error = function(e) NULL)
+    }
+    named <- if (!is.null(sp$codelists) && !is.null(sp$codelists[["list"]])) {
+      lc <- trimws(as.character(sp$codelists[["list"]]))
+      unique(trimws(sub(":.*$", "", lc[!is.na(lc) & nzchar(lc)])))
+    }
+    gone <- setdiff(named, names(scl))
+    if (length(gone)) {
+      warning(sprintf(paste0("tfl_yaml_from_sheets(): the sheets have no study_codelists and %s has none ",
+                             "of the study's lists the reports refer to: %s (spec/defaults.yml `codelists:`)"),
+                      old, paste(gone, collapse = ", ")), call. = FALSE)
+      note(NA_character_, "study_codelists", NA, NA, paste0(
+        "the study's lists the reports refer to are not in the sheets (no study_codelists) nor in the ",
+        "defaults.yml written over: ", paste(gone, collapse = ", ")))
+    }
+  }
+  if (length(scl)) defaults$codelists <- scl
   put("spec/defaults.yml", defaults)
+  # (the reports read below: a reference's rows are the study's lists')
+  if (!is.null(sp)) {
+    attr(sp, "study_codelists") <- tryCatch(.study_codelists_read(scl), error = function(e) NULL)
+  }
 
   # spec/toc.yml and spec/outputs/<id>.yml
   ids <- character()
@@ -357,11 +390,12 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if (nrow(rrow)) for (k in c("file", "program")) if (!is.na(rrow[[k]][1L])) entry[[k]] <- rrow[[k]][1L]
     toc[[length(toc) + 1L]] <- entry
 
-    out <- .conv_output(id, kind, entry, sp, ard, lf, figs[[id]], prow, scope, page_of, content_fn, note,
-                        figures = figures, style_names = style_names)
     # a report on the templates sheet is a template report again
     tr <- sheets$templates
-    if (is.data.frame(tr) && id %in% tr$output_id) {
+    is_tpl <- is.data.frame(tr) && id %in% tr$output_id
+    out <- .conv_output(id, kind, entry, sp, ard, lf, figs[[id]], prow, scope, page_of, content_fn, note,
+                        figures = figures, style_names = style_names, template = is_tpl)
+    if (is_tpl) {
       # (the items the other sheets would make of an empty report are not its own)
       # (its condition rows: the conditions sheet's with a blank analysis_id)
       out$template <- .tpl_sheets_decode(tr, sheets$template_rows, ard$conditions)[[id]]$template
@@ -752,10 +786,30 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   page
 }
 
-.conv_codelists <- function(d) {
+# (`refs = FALSE`: a reference's rows as they are, the values a program gets;
+# `study_cl`, `note`: the study's lists, and the note a reference's rows
+# edited get -- they are not read back, and are not dropped in silence)
+.conv_codelists <- function(d, refs = TRUE, study_cl = NULL, note = NULL) {
   out <- list()
   for (v in unique(d$variable)) {
     r <- d[d$variable == v, , drop = FALSE]
+    # (a reference to the study's list, its `list` cell: the reference as
+    # written; its rows are the study's codes and labels, not read back)
+    lc <- if (refs) .cl_list_cell(r)
+    if (!is.null(lc)) {
+      id <- if (is.null(r$output_id)) NA_character_ else r$output_id[1L]
+      out[[v]] <- .cl_ref_from_cell(lc, sprintf("report %s, variable %s", id, v))
+      want <- if (!is.null(study_cl) && !is.null(note)) {
+        tryCatch(.cl_ref_rows(out[[v]], v, study_cl, id, "sheets"), error = function(e) NULL)
+      }
+      if (!is.null(want) && .cl_ref_rows_edited(r, want)) {
+        note(id, "codelists", v, "list", paste0(
+          "the rows of a reference to the study's list ", out[[v]]$list, " are the study's codes and ",
+          "labels and are not read back (their edits are not kept); change the `list` cell or the ",
+          "study's list (the study_codelists sheet)"), lc)
+      }
+      next
+    }
     if (!is.null(r$order)) r <- r[order(suppressWarnings(as.numeric(r$order)), na.last = TRUE), , drop = FALSE]
     out[[v]] <- lapply(seq_len(nrow(r)), function(i) {
       m <- list(value = r$value[i])
@@ -791,9 +845,23 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   .extends_value(out, sprintf("report %s", sQuote(id)))
 }
 
-# one report's file
+# Does a report's analysis set go on its data (`data`, the data map the
+# sheets give back; `kind` the report's)?  When the data reads subjects'
+# records (`source: dataset | code`; a figure's data is its code when it
+# says no source, as a figure of items has it) and names no analysis data
+# of its own (`data: <id>`: that data has the set, .data_population()); a
+# table's set stays in `common` until `common` goes
+.set_on_data <- function(kind, data) {
+  if (!is.null(data) && !is.list(data)) return(FALSE)
+  src <- data[["source"]] %||% if (identical(kind, "figure")) "code"
+  isTRUE(as.character(src)[1L] %in% c("dataset", "code")) && is.null(data[["data"]])
+}
+
+# one report's file (`template`: a report on the templates sheet, whose data
+# the template makes: its set goes where the template reads it, `common`,
+# until the template's reader takes the data's)
 .conv_output <- function(id, kind, entry, sp, ard, lf, fig, prow, scope, page_of, content_fn, note,
-                         figures = "design", style_names = character()) {
+                         figures = "design", style_names = character(), template = FALSE) {
   rrow <- scope(sp$report, id)
   pattern <- if (nrow(rrow) && !is.null(rrow$pattern) && !is.na(rrow$pattern[1L])) rrow$pattern[1L]
   # the `pattern` cell of a pattern that is a page configuration picks it: the report's style
@@ -857,6 +925,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     data <- list(source = "dataset")
     if (nrow(lr)) {
       for (k in c("dataset", "data")) if (!is.na(lr[[k]][1L] %||% NA)) data[[k]] <- lr[[k]][1L]
+      # (its analysis set stays on the data: canon 11-15, the set is the data's)
       if (!is.na(lr$population_id[1L] %||% NA)) data$population <- lr$population_id[1L]
       if (!is.na(lr$where[1L])) { data$where <- tfl_r(gsub("\r\n?", "\n", lr$where[1L])); note(id, "listings", 1, "where", "kept as R text (!r)", lr$where[1L]) }
       if (!is.na(lr$sort[1L])) data$sort <- as.list(.conv_split(lr$sort[1L]))
@@ -946,7 +1015,9 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   # its code lists (a figure's ARD values too)
   if (!is.null(sp)) {
     cl <- scope(sp$codelists, id)
-    if (!is.null(cl) && nrow(cl)) codelists <- .conv_codelists(cl)
+    if (!is.null(cl) && nrow(cl)) {
+      codelists <- .conv_codelists(cl, study_cl = attr(sp, "study_codelists"), note = note)
+    }
   }
   # the listing/figure workbook's figures row: the datasets a report written
   # by hand reads, and whether it reads its ARD (ard TRUE)
@@ -961,6 +1032,14 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   # the report's ARD analyses and their analysis data, whatever its kind (a
   # figure's hazard ratios too): its ard: section, the ARD stage's
   ard_part <- NULL
+  # the planner's analysis set goes on the report's data when the data reads
+  # subjects' records (a listing's or a figure's, .set_on_data()), else on
+  # `common` (below); a template report's on `common` (its data is the
+  # template's)
+  pop_on_data <- !isTRUE(template) && .set_on_data(kind, data)
+  # (a data of one of the report's analysis data has that data's set: on
+  # its row, neither on the data nor in `common`)
+  pop_in_common <- !pop_on_data && (!is.list(data) || is.null(data[["data"]]))
   if (!is.null(ard)) {
     ob <- ard$objects
     if (!is.null(ob) && nrow(ob)) {
@@ -972,11 +1051,6 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if (!is.null(ad$output_id)) ad <- ad[!is.na(ad$output_id) & ad$output_id == id, , drop = FALSE]
     if (nrow(ad)) ard_part$analysis_data <- .conv_rows(ad, note, id, "analysis_data", r_cols = c("where", "derive", "code", "then"),
                                                     list_cols = c("add", "arrange", "keep", "distinct"), rename = c(data_id = "id", population_id = "population"))
-    # (the report's subjects definition has no set of its own: `common: population`)
-    if (!is.null(ard_part$analysis_data)) {
-      ard_part$analysis_data <- lapply(ard_part$analysis_data, .entry_pop_strip, entry$population %||% NA_character_,
-                                      .pop_from(ard$populations, entry$population))
-    }
     an <- ard$analyses[!is.na(ard$analyses$output_id) & ard$analyses$output_id == id, , drop = FALSE]
     if (nrow(an)) {
       ard_part$analyses <- .conv_rows(an, note, id, "analyses", r_cols = c("where", "args", "post", "code", "derive"),
@@ -1027,7 +1101,26 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     tr <- sp$tables[!is.na(sp$tables$output_id) & sp$tables$output_id == id, , drop = FALSE]
     if (nrow(tr) && !is.na(tr$note[1L]) && nzchar(trimws(tr$note[1L]))) tr$note[1L]
   }
-  common <- list(population = entry$population)
+  # the report's analysis set (the planner's column): on its data when the
+  # data reads subjects' records, a listing's or a figure's (canon 11-15:
+  # the set is the data's; the data's own wins); a table's stays in
+  # `common` until `common` goes
+  common <- list()
+  if (pop_on_data) {
+    if (is.null(data[["population"]]) && !is.null(entry$population)) {
+      data <- c(data %||% list(), list(population = entry$population))
+    }
+  } else if (pop_in_common) {
+    common$population <- entry$population
+  }
+  # (the report's subjects definition has no set of its own: the report's,
+  # which the sheets wrote on it, .rows_set() -- its data's, else `common`'s;
+  # one rule both ways, so that a row follows the report's set)
+  if (!is.null(ard_part$analysis_data)) {
+    rset <- .rows_set(list(data = data, common = common))
+    ard_part$analysis_data <- lapply(ard_part$analysis_data, .entry_pop_strip, rset,
+                                    .pop_from(ard$populations, rset))
+  }
   for (k in c("treatment", "population_label")) {
     if (nrow(rrow) && k %in% names(rrow) && !is.na(rrow[[k]][1L]) && nzchar(rrow[[k]][1L])) common[[k]] <- rrow[[k]][1L]
   }

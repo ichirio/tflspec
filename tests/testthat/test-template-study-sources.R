@@ -62,6 +62,19 @@ test_that("study.yml's settings: treatment: the templates' by", {
   ro <- ss_resolve("demog", list(continuous = "AGE", by = "TRT01A"), s)
   expect_identical(ss_an(ro, "CONT")$by, "TRT01A")
   expect_null(tfl_template_params("demog")$by$study)
+  # a required treatment argument with no default (a figure's group, km's
+  # by) is the report's to write: the study's treatment does not fill it,
+  # and not written it stops (canon 1.14, 1.15)
+  for (nm in c("forest_hr", "mean_se", "mean_ci")) {
+    expect_null(tfl_template_params(nm)$group$study, info = nm)
+  }
+  expect_null(tfl_template_params("km")$by$study)
+  fig <- function(name, args) tfl_resolve_output(tfl_output("F-9", "figure", common = list(population = "SAF"),
+                                                            template = list(name = name, args = args)), s)
+  expect_error(fig("forest_hr", list(param = "PFS", population = "SAF")), "needs 'group'")
+  expect_error(fig("km", list(param = "PFS")), "needs 'by'")
+  # (a table template's `by` with a default: the study's treatment, as before)
+  expect_identical(ss_an(ss_resolve("ae_soc_pt", list(), ss_study("TRT01P")), "AE")$by, "TRT01P")
 })
 
 test_that("study.yml's settings: sd_missing: what prints for a missing SD; the report's argument wins (#673)", {
@@ -117,7 +130,7 @@ test_that("tfl_test_templates(): the analysis set or the treatment with no study
   expect_null(tfl_template_params("ss_arm")$by$study)
 })
 
-test_that("km_survival: the analysis set's subjects, by data.yml's definition (a semi join)", {
+test_that("km_survival: the analysis set is the data's, no step keeps it; one the study does not define stops", {
   d <- tempfile()
   on.exit(unlink(d, recursive = TRUE))
   dir.create(d)
@@ -132,11 +145,12 @@ test_that("km_survival: the analysis set's subjects, by data.yml's definition (a
                                                                 pvalue = FALSE)))
   ro <- tfl_resolve_output(o, s)
   st <- ro$data$steps
-  j <- Filter(function(x) identical(x$how, "semi"), st)
-  expect_length(j, 1L)
-  expect_identical(j[[1L]][c("step", "dataset", "where", "by")],
-                   list(step = "join", dataset = "ADSL", where = "SAFFL == \"Y\"", by = "USUBJID"))
+  # (A2: one rule -- the report program makes the set's subjects and joins
+  # the records to them; the template's data says the set, no step of it)
+  expect_identical(ro$data$population, "SAF")
+  expect_length(Filter(function(x) identical(x$how, "semi"), st), 0L)
   expect_false(any(vapply(st, function(x) identical(x$step, "flag"), NA)))
+  expect_identical(tfl_template_to_spec(o, s)$data$population, "SAF")
   # the design form: the designer's layers, the settings in `plot:`; the
   # report's own items after the layers, its own settings over the template's
   o2 <- o
@@ -151,12 +165,7 @@ test_that("km_survival: the analysis set's subjects, by data.yml's definition (a
   expect_identical(fd$layers[[3L]][c("layer", "fn")], list(layer = "call", fn = "geom_hline"))
   expect_identical(fd$plot$add[[1L]]$fn, "labs")
   expect_identical(tfl_template_to_spec(o2, s)$plot$x_label, "Time (Months)")
-  code <- paste(tfl_fig_design_code(tfl_fig_design(data = st)), collapse = "\n")
-  expect_match(code, "semi_join(", fixed = TRUE)
-  expect_match(code, "filter(SAFFL == \"Y\") |> select(USUBJID)", fixed = TRUE)
-  # a semi join takes no variables; a left join still needs them
-  chk <- tfl_check_fig_design(tfl_fig_design(data = st))
-  expect_false(any(chk$field %in% "vars"))
+  # a left join still needs its variables
   left <- list(list(step = "read", dataset = "ADTTE"), list(step = "join", dataset = "ADSL"))
   expect_true(any(tfl_check_fig_design(tfl_fig_design(data = left))$field %in% "vars"))
   # an id the study does not define
@@ -166,9 +175,4 @@ test_that("km_survival: the analysis set's subjects, by data.yml's definition (a
   s$data$populations <- NULL
   o$common$population <- "SAF"
   expect_error(tfl_resolve_output(o, s), "population SAF is not in `populations`")
-  # the semi join keeps the rows of the set's subjects: the same as the flag
-  df <- adtte[adtte$PARAMCD == adtte$PARAMCD[1L], ]
-  saf <- adsl$USUBJID[adsl$SAFFL == "Y"]
-  kept <- dplyr::semi_join(df, dplyr::select(adsl[adsl$SAFFL == "Y", ], USUBJID), by = "USUBJID")
-  expect_identical(sort(unique(kept$USUBJID)), sort(intersect(unique(df$USUBJID), saf)))
 })

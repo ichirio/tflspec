@@ -120,6 +120,12 @@
 # codes in their order, named by the code when a label is given
 # (c(F = "Female")), else the codes alone (defaults.yml's `codelists:`).
 .study_codelists_read <- function(cl) {
+  ref <- names(Filter(.cl_is_ref, cl %||% list()))
+  if (length(ref)) {
+    stop("spec/defaults.yml `codelists:` ", ref[1L], ": a study's list is its codes ",
+         "(`[{value: F, label: Female}, ...]`); a reference ({list: ...}) is a report's.",
+         call. = FALSE)
+  }
   out <- lapply(.codelists_norm(cl), function(rows) {
     codes <- vapply(rows, function(r) as.character(r$value), "")
     lab <- .tpl_cl_dict(rows)
