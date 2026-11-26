@@ -96,7 +96,7 @@
     NULL
   }, error = function(err) conditionMessage(err))
   if (is.null(e)) {
-    if ("guard" %in% kinds && !any(c("r", "formula", "call") %in% kinds) && length(ex) == 1L &&
+    if ("guard" %in% kinds && !any(c("r", "formula") %in% kinds) && length(ex) == 1L &&
         is.call(ex[[1L]]) && identical(ex[[1L]][[1L]], as.name("~")) && length(ex[[1L]]) == 2L) {
       return("a guard is `condition ~ text`, with both sides")
     }
