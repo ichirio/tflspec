@@ -245,16 +245,23 @@
 # takes one (km_fit, made from the data the program's data part made), the
 # ARD (`ard`) and the appearance `params` -- into `content`.  NULL when the
 # report is not one.
+#
+# The report's own cards (its `content:`, after the template's: canon 1.4,
+# the second way to change a report) follow the call, as a table's follow
+# its template's plan: a card of the content function itself (`km_curves:
+# {params: {legend: inside}}`) is folded onto the call argument by argument,
+# the later card winning (.merge_by_arg(), the merge of a table's appended
+# plan card; a map argument -- `params` -- by name; `!unset` takes one
+# away); a tfl_image card says the image's settings (merged the same way);
+# any other card is a piece the call has not, `+`-ed after it in order
+# (.fig_item_term(), the writer of a figure's own content items).
 .content_fig_series_code <- function(output, name = "content") {
   if (is.null(output$figure)) return(NULL)
   tp <- attr(output, "template")
   key <- tryCatch(.fig_content_key(output), error = function(e) .ard_stop(conditionMessage(e)))
-  if (length(output$content)) {
-    .ard_stop(sprintf("%s: a report with `figure:` has no `content:` (the figure content is the call).",
-                      output$id))
-  }
   fig <- key$name
   e <- .fig_content_table()[[fig]]
+  cards <- .fig_series_cards(output, e)
   args <- key$args
   # the model: its call with the template's arguments (a required one the
   # report did not give is the resolve's stop, not here)
@@ -273,25 +280,119 @@
     model <- .fig_series_model_lines(e$model$arg, call)
   }
   given <- Filter(Negate(is.null), args[intersect(e$params, names(args))])
-  params <- if (length(given)) {
-    c("  params = list(",
-      paste0("    ", names(given), " = ", vapply(given, .fig_arg_code, ""),
-             c(rep(",", length(given) - 1L), "")),
-      "  )")
+  # the call's arguments: the model, the ARD, the params; the report's cards
+  # of the function over them, in order
+  fa <- c(if (!is.null(e$model)) stats::setNames(list(tfl_r(e$model$arg)), e$model$arg),
+          list(ard = tfl_r("ard")), if (length(given)) list(params = given))
+  for (card in cards$call) fa <- .merge_by_arg(fa, card$args)
+  fa <- .drop_unset(fa)
+  bad <- setdiff(names(fa$params), e$params)
+  if (length(bad)) {
+    .ard_stop(sprintf("%s: %s() has no params %s; it takes %s.", output$id %||% "report", e$fn,
+                      paste(bad, collapse = ", "), paste(e$params, collapse = ", ")))
   }
+  if (!length(fa$params)) fa$params <- NULL
+  # one argument a line (the params' list one a line inside it); a comma
+  # after each argument but the last
+  call_args <- lapply(names(fa), function(k) {
+    v <- fa[[k]]
+    if (identical(k, "params") && .is_map(v)) {
+      return(c("  params = list(",
+               paste0("    ", names(v), " = ", vapply(v, .fig_arg_code, ""),
+                      c(rep(",", length(v) - 1L), "")),
+               "  )"))
+    }
+    paste0("  ", k, " = ", .fig_arg_code(v))
+  })
+  for (i in seq_len(length(call_args) - 1L)) {
+    n <- length(call_args[[i]])
+    call_args[[i]][n] <- paste0(call_args[[i]][n], ",")
+  }
+  call_args <- unlist(call_args)
   fn <- paste0("tflspec::", e$fn)
-  call_args <- c(if (!is.null(e$model)) paste0("  ", e$model$arg, " = ", e$model$arg),
-                 "  ard = ard")
-  # (a comma after each argument but the last)
-  n_comma <- length(call_args) - if (length(params)) 0L else 1L
-  call_args <- paste0(call_args, c(rep(",", n_comma), rep("", length(call_args) - n_comma)))
+  # the cards the call has not: `+`-ed after it, each on its line
+  pre <- character()
+  terms <- character()
+  libs <- character()
+  needs <- character()
+  k_ard <- 0L
+  for (it in cards$add) {
+    x <- .fig_item_term(it, k_ard)
+    if (isTRUE(x$ard)) k_ard <- k_ard + 1L
+    terms <- c(terms, x$term)
+    pre <- c(pre, x$pre)
+    libs <- c(libs, x$libs)
+    needs <- c(needs, x$needs)
+  }
+  close <- if (length(terms)) {
+    # (the cards are ggplot2's calls as the program attaches it)
+    libs <- c("ggplot2", libs)
+    t <- gsub("\n", "\n  ", terms, fixed = TRUE)
+    c(") +", paste0("  ", t, c(rep(" +", length(t) - 1L), "")))
+  } else ")"
   code <- c(if (is.character(tp)) sprintf("# template %s: the figure content %s()", tp, e$fn)
             else sprintf("# the figure content %s()", e$fn),
+            if (length(pre)) c(pre, ""),
             model,
             sprintf("%s <- %s(", name, fn),
-            call_args, params,
-            ")")
-  .fig_code_out(code, character(), character(), character(), ard = TRUE)
+            call_args,
+            close,
+            .fig_image_save(output, cards$image, name))
+  .fig_code_out(code, character(), unique(libs),
+                setdiff(unique(needs), c("ggplot2", "ggsurvfit", "patchwork")), ard = TRUE)
+}
+
+# A series figure report's own cards (`content:`), as .content_fig_series_code()
+# writes them: `call`, the cards of the template's content function (the
+# item the template has); `image`, the tfl_image cards' settings merged in
+# order; `add`, every other card (a piece the template has not, added
+# after the call).  A card of another figure content function, a named
+# plot or a content of R code (`content: !r`) is not a card after the call:
+# it stops, saying so.
+.fig_series_cards <- function(output, e) {
+  content <- output$content
+  who <- output$id %||% "report"
+  if (inherits(content, "tfl_r")) {
+    .ard_stop(sprintf(paste0("%s: a report with `figure:` changes its figure with cards after the ",
+                             "call (`content:` items), not `content: !r`."), who))
+  }
+  out <- list(call = list(), image = list(), add = list())
+  others <- setdiff(vapply(.fig_content_table(), `[[`, "", "fn"), e$fn)
+  takes <- names(formals(get(e$fn, envir = asNamespace("tflspec"), mode = "function")))
+  for (it in content %||% list()) {
+    if (inherits(it, "tfl_plot")) {
+      .ard_stop(sprintf(paste0("%s: a report with `figure:` adds cards after %s(), not a named plot ",
+                               "(`%s`)."), who, e$fn, it$fn))
+    }
+    fn <- .schema_fn_name(it$fn %||% "")
+    if (identical(fn, e$fn)) {
+      bad <- setdiff(names(it$args), takes)
+      if (length(bad)) {
+        .ard_stop(sprintf("%s: the %s card's %s: %s() takes %s.", who, e$fn, paste(bad, collapse = ", "),
+                          e$fn, paste(takes, collapse = ", ")))
+      }
+      out$call <- c(out$call, list(it))
+    } else if (fn %in% others) {
+      .ard_stop(sprintf("%s: the figure is %s()'s (its template's `figure:`); a %s card does not change it.",
+                        who, e$fn, fn))
+    } else if (identical(fn, "tfl_image")) {
+      out$image <- .merge_by_arg(out$image, it$args)
+    } else {
+      out$add <- c(out$add, list(it))
+    }
+  }
+  out$image <- .drop_unset(out$image)
+  out
+}
+
+# A series figure report's image (its tfl_image cards merged), as the report
+# part sizes it on the page; NULL when it has none (the figure's own size)
+.fig_series_image <- function(output) {
+  has <- is.list(output$content) && !inherits(output$content, "tfl_r") &&
+    any(vapply(output$content, function(it) identical(.schema_fn_name(it$fn %||% ""), "tfl_image"), NA))
+  if (!has) return(NULL)
+  e <- .fig_content_table()[[.fig_content_key(output)$name]]
+  .fig_series_cards(output, e)$image
 }
 
 # `km_fit <- ggsurvfit::survfit2(a, b)` as `km_fit <- f(` one argument a

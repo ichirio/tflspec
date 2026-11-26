@@ -423,3 +423,23 @@ test_that(".tpl_plot_over(): the template's add is joined once", {
                    c("scale_x_continuous", "scale_y_continuous", "annotate"))
   expect_identical(tflspec:::.tpl_plot_over(b, once)$add, once$add)
 })
+
+test_that("tfl_tpl(): a draft's plot$add on km_survival goes after the template's own, not instead of them", {
+  skip_if_not_installed("ggsurvfit")
+  df <- tplkm_ttdisc(adsl)
+  ann <- list(add = list(list(fn = "annotate", args = list(geom = "label", x = -Inf, y = -Inf,
+                                                           label = "Median 40"))))
+  p <- tfl_tpl(df, "km_survival", by = TRT01A, time_unit = "weeks", x_step = 4)
+  q <- tfl_tpl(df, "km_survival", by = TRT01A, time_unit = "weeks", x_step = 4, plot = ann)
+  expect_true(any(vapply(q$layers, function(l) inherits(l$geom, "GeomLabel"), NA)))
+  expect_false(any(vapply(p$layers, function(l) inherits(l$geom, "GeomLabel"), NA)))
+  # the template's own scale_x_continuous (the risk table's times) kept
+  bx <- function(g) ggplot2::ggplot_build(g)$layout$panel_scales_x[[1L]]$get_breaks()
+  expect_equal(bx(q), bx(p))
+  expect_equal(bx(q)[1:3], c(0, 4, 8))
+  # resolved and saved, then resolved again: the template's add once
+  e <- tfl_template_expand("km_survival", list(by = "TRT01A", time_unit = "weeks", x_step = 4, plot = ann))
+  own <- vapply(tfl_template_expand("km_survival", list(by = "TRT01A", time_unit = "weeks",
+                                                        x_step = 4))$plot$add, `[[`, "", "fn")
+  expect_identical(vapply(e$plot$add, `[[`, "", "fn"), c(own, "annotate"))
+})

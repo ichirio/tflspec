@@ -1893,7 +1893,10 @@ tfl_content_run <- function(output, data, study = NULL) {
 #'   (`km_curves`, `forest_hr`): `content <- tflspec::km_curves(km_fit =
 #'   km_fit, ard = ard, params = list(...))` -- the function [tfl_figure_fn()]
 #'   finds, with the report's resolved arguments, one a line (the model
-#'   `km_fit` written before it).
+#'   `km_fit` written before it).  The report's own cards follow it: a
+#'   card of that function (`km_curves: {params: {legend: inside}}`) is
+#'   merged into the call argument by argument, a later card winning; any
+#'   other card is `+`-ed after it.
 #' @param study The study ([tfl_read_study_spec()]) or its folder; for a listing
 #'   of records (`data: {source: dataset}`) the code starts with its data
 #'   part, as [tfl_listing_code()] `part = "data"` writes it (the dataset

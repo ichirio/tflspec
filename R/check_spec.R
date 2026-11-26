@@ -262,6 +262,20 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
       if (inherits(r, "error")) {
         add(output_id = id, part = "figure", item = "figure", level = "error", message = one(r))
       }
+      # (the report's cards after the call, as any figure's items: the
+      # schema's; the card of the content function itself is the call's, above)
+      fe <- tryCatch(.fig_content_table()[[.fig_content_key(ro)$name]]$fn, error = function(e) "")
+      for (it in ro$content) {
+        if (!is.list(it) || inherits(it, "tfl_plot") || identical(.schema_fn_name(it$fn %||% ""), fe)) next
+        p <- tfl_schema_check(it)
+        if (nrow(p)) {
+          add(output_id = id, part = "content",
+              item = ifelse(nzchar(p$arg), paste0(p$fn, "(", p$arg, ")"), p$fn),
+              level = ifelse(p$level == "error" | grepl("has no argument", p$message, fixed = TRUE),
+                             "error", "note"),
+              message = p$message)
+        }
+      }
       next
     }
     if (identical(ro$kind, "figure") && !.fig_new_content(ro$content)) {

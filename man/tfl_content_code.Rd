@@ -50,7 +50,10 @@ of a series template (\verb{<series>/<template>}, resolved by
 \code{\link[=tfl_template_resolve]{tfl_template_resolve()}}) whose template names its content in \verb{figure:}
 (\code{km_curves}, \code{forest_hr}): \code{content <- tflspec::km_curves(km_fit = km_fit, ard = ard, params = list(...))} -- the function \code{\link[=tfl_figure_fn]{tfl_figure_fn()}}
 finds, with the report's resolved arguments, one a line (the model
-\code{km_fit} written before it).}
+\code{km_fit} written before it).  The report's own cards follow it: a
+card of that function (\verb{km_curves: {params: {legend: inside}}}) is
+merged into the call argument by argument, a later card winning; any
+other card is \code{+}-ed after it.}
 
 \item{study}{The study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}) or its folder; for a listing
 of records (\code{data: {source: dataset}}) the code starts with its data

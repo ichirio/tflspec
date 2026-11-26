@@ -173,3 +173,20 @@ test_that("km_cards' figure builds on the package's sample data", {
     expect_no_error(suppressWarnings(suppressMessages(ggplot2::ggplot_build(p))))
   }
 })
+
+test_that("km_cards: a report's card after the template's cards changes only what it writes (C1)", {
+  o <- tfl_template_resolve(kmc_report("content:", "  - labs: {y: Overall Survival}",
+                                       "  - geom_hline: {yintercept: 0.5, linetype: dashed}"),
+                            study = kmc_study)
+  # the template's cards, then the report's, in order
+  expect_identical(kmc_fns(o), c("ggsurvfit", "add_censor_mark", "scale_colour_tfl", "scale_y_continuous",
+                                 "coord_cartesian", "labs", "theme_tfl", "theme", "add_risktable",
+                                 "labs", "geom_hline"))
+  code <- tfl_content_code(o)
+  # the template's labs as it was; the report's after the last of the template's
+  expect_true(any(grepl("labs(x = \"Time (Months)\", y = \"Survival Probability\")", code, fixed = TRUE)))
+  at <- function(pat) which(grepl(pat, code, fixed = TRUE))
+  expect_true(at("add_risktable(") < at("labs(y = \"Overall Survival\")"))
+  expect_true(at("labs(y = \"Overall Survival\")") < at("geom_hline(yintercept = 0.5"))
+  expect_no_error(parse(text = code, keep.source = FALSE))
+})

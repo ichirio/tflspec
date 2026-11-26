@@ -711,30 +711,16 @@ tfl_plot <- function(name, items = list(), from = "own", input = NULL, form = c(
       # receiving function's `join`; R code and the like `+`, as before)
       joins <- character()
       for (it in p$items) {
-        fn <- .schema_fn_name(it$fn)
-        if (identical(fn, ".r")) {
-          terms <- c(terms, as.character(it$args$code))
-          joins <- c(joins, "+")
-          next
-        }
-        if (identical(fn, "tfl_ard_number")) {
+        x <- .fig_item_term(it, k_ard)
+        terms <- c(terms, x$term)
+        joins <- c(joins, if (!is.null(p$input) && !is.null(x$fn)) .fig_fn_join(x$fn) else "+")
+        pre <- c(pre, x$pre)
+        needs <- c(needs, x$needs)
+        libs <- c(libs, x$libs)
+        if (isTRUE(x$ard)) {
           k_ard <- k_ard + 1L
-          own <- .fig_own_ard_number(it, k_ard)
-          pre <- c(pre, own$pre)
-          terms <- c(terms, own$term)
-          joins <- c(joins, "+")
           ard <- TRUE
-          next
         }
-        terms <- c(terms, .fig_term_text(.fig_item_lang(it)))
-        joins <- c(joins, if (!is.null(p$input)) .fig_fn_join(fn) else "+")
-        pk <- if (grepl("::", it$fn, fixed = TRUE)) sub("::.*$", "", it$fn) else .fig_fn_package(fn)
-        if (!is.null(pk) && !pk %in% .fig_attached) needs <- c(needs, pk)
-        if (fn %in% c("ggsurvfit", "ggcuminc") || startsWith(fn, "add_") || identical(pk, "ggsurvfit")) {
-          libs <- c(libs, "ggsurvfit")
-        }
-        # patchwork's inside one plot (p + inset_element(...))
-        if (identical(pk, "patchwork")) libs <- c(libs, "patchwork")
       }
       lines <- .fig_plus_chain(target, terms, p$input, joins)
     }
@@ -766,6 +752,29 @@ tfl_plot <- function(name, items = list(), from = "own", input = NULL, form = c(
   # of the arms, and its items may call the setup's theme_tfl(), which no
   # head carries
   .fig_code_out(code, d$reads, unique(libs), needs, ard = ard)
+}
+
+# One item of a plot's chain as its term: R code (`.r`) as it is written, an
+# ARD number (tfl_ard_number, the `k_ard + 1`th) its layer with its data
+# lines (`pre`, `ard` TRUE), any other item its call.  `fn`: the function
+# whose join it takes (NULL: `+`); `needs`: a package it calls that the
+# program does not attach; `libs`: one the program attaches for it.  The one
+# writer of a content item's term: a figure's own content and the cards a
+# report adds after its template's figure call (.content_fig_series_code()).
+.fig_item_term <- function(it, k_ard = 0L) {
+  fn <- .schema_fn_name(it$fn)
+  if (identical(fn, ".r")) return(list(term = as.character(it$args$code)))
+  if (identical(fn, "tfl_ard_number")) {
+    own <- .fig_own_ard_number(it, k_ard + 1L)
+    return(list(term = own$term, pre = own$pre, ard = TRUE))
+  }
+  pk <- if (grepl("::", it$fn, fixed = TRUE)) sub("::.*$", "", it$fn) else .fig_fn_package(fn)
+  list(term = .fig_term_text(.fig_item_lang(it)), fn = fn,
+       needs = if (!is.null(pk) && !pk %in% .fig_attached) pk,
+       libs = c(if (fn %in% c("ggsurvfit", "ggcuminc") || startsWith(fn, "add_") ||
+                      identical(pk, "ggsurvfit")) "ggsurvfit",
+                # patchwork's inside one plot (p + inset_element(...))
+                if (identical(pk, "patchwork")) "patchwork"))
 }
 
 # `target <- a +` then each term on its line

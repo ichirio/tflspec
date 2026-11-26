@@ -320,3 +320,19 @@ test_that("comparison: shows only that arm, with the HR it has without the filte
                    "TRT01A = factor(TRT01A, levels = c(\"Drug B\", setdiff(levels(factor(TRT01A)), \"Drug B\")))")
   expect_false("derive" %in% names(tfl_fig_forest_analyses("ADTTE", "OS", "FASFL", "TRT01A", "SEX")$analysis_data))
 })
+
+test_that("a forest_hr report's plot: add goes after the template's own add (resolved, its call)", {
+  s <- tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
+  args <- list(param = "PFS", population = "SAF", group = "TRT01A", subgroups = "SEX")
+  own <- vapply(tfl_template_expand("forest_hr", args)$plot$add, `[[`, "", "fn")
+  expect_true(length(own) > 0L)
+  o <- tfl_output("F-9", "figure", extends = "none", template = list(name = "forest_hr", args = args))
+  o$plot <- list(add = list(list(fn = "annotate", args = list(geom = "text", x = 1, y = 0,
+                                                             label = "HR below 1 favours Drug X"))))
+  ro <- tfl_resolve_output(o, s)
+  expect_identical(vapply(ro$plot$add, `[[`, "", "fn"), c(own, "annotate"))
+  # the program writes the draft's piece once (the template's own are its call's)
+  txt <- paste(suppressMessages(tfl_content_code(ro)), collapse = "\n")
+  expect_identical(lengths(regmatches(txt, gregexpr("annotate(", txt, fixed = TRUE))), 1L)
+  expect_false(grepl("plot = list(add", txt, fixed = TRUE))
+})

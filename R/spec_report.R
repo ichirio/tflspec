@@ -99,8 +99,11 @@
     # rtf_tables; the figure's own win)
     ft <- args_of("rtf_tables")
     fa <- c(fa, ft[setdiff(intersect(c("page_break", "space_before"), names(ft)), names(fa))])
-    # a figure of items: its image is its tfl_image item (R/fig_content.R)
-    img <- if (.fig_new_content(output$content)) .fig_split_content(output$content)$image
+    # a figure of items: its image is its tfl_image item (R/fig_content.R);
+    # a figure of a content function (`figure:`), its tfl_image cards
+    img <- if (!is.null(output$figure)) {
+      .fig_series_image(output)
+    } else if (.fig_new_content(output$content)) .fig_split_content(output$content)$image
     # its size on the page: inches as twips, or the page's body (fit)
     # worked out from the page; blank, the figure's own size
     sz <- .fig_image_size(img, pg, length(tt) + length(fn))
