@@ -361,7 +361,7 @@ test_that("listing by, no by: the items as they were", {
   d <- withr::local_tempdir()
   dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)
   writeLines(c("datasets:", "  - dataset: ADAE", "    path: data/adae.rds"), file.path(d, "spec", "data.yml"))
-  writeLines(c("study_id: SS-1", "settings:", "  treatment: TRT01A"), file.path(d, "study.yml"))
+  write_study_yml(d, c("study_id: SS-1", "settings:", "  treatment: TRT01A"))
   o <- tfl_output("L-1", "listing", extends = "none",
                   template = list(name = "listing", args = list(data = "ADAE", columns = lby_cols)))
   ro <- tfl_resolve_output(o, tfl_read_study_spec(d))

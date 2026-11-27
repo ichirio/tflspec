@@ -182,6 +182,12 @@ tfl_ai_unpack <- function(answer, dir, overwrite = FALSE) {
     .ard_stop(sprintf("tfl_ai_unpack(): %s already there; pass `overwrite = TRUE`.",
                       paste(sQuote(paths[file.exists(out)], FALSE), collapse = ", ")))
   }
+  # (the answer is written in the current form: its study.yml says so, the
+  # line put first when the answer left it out)
+  sy <- which(paths == "study.yml")
+  if (length(sy) && !any(grepl("^spec_version:", blocks[[sy]]))) {
+    blocks[[sy]] <- c(paste0("spec_version: ", .spec_version), blocks[[sy]])
+  }
   for (i in seq_along(paths)) {
     dir.create(dirname(out[i]), showWarnings = FALSE, recursive = TRUE)
     .ai_write_text(blocks[[i]], out[i])

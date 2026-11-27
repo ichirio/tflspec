@@ -6,8 +6,8 @@
 conv_study <- function(dir) {
   spec <- file.path(dir, "spec")
   dir.create(file.path(spec, "figures"), recursive = TRUE)
-  writeLines(c("study_id: CV-1", "title: A study", "phase: '2'", "created: '2026-10-14'",
-               "tflplanner: 0.0.2.9222"), file.path(dir, "study.yml"))
+  write_study_yml(dir, c("study_id: CV-1", "title: A study", "phase: '2'", "created: '2026-10-14'",
+               "tflplanner: 0.0.2.9222"))
   tb <- list(
     tables = data.frame(output_id = c(NA, "T-1"), cols = c(NA, "ARM"), rows = c(NA, "group = variable"),
                         stringsAsFactors = FALSE),
@@ -80,7 +80,7 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   expect_identical(st$study_id, "CV-1")
   expect_null(st$tflplanner)
   expect_identical(st$keys$output, "output/ard/ard.rds")
-  expect_identical(st$spec_version, 1L)
+  expect_identical(st$spec_version, tflspec:::.spec_version)
   # every report's file: the report sheet's study row
   expect_identical(st$settings$file, "{output_id}.rtf")
   expect_true("tflspec" %in% names(st$packages))

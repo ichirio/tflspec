@@ -10,10 +10,9 @@ rts_study <- function(files = list(), study = NULL, env = parent.frame()) {
                "  - dataset: ADTTE", "    level: ADaM", "    path: adam/adtte.xpt",
                "populations:", "  - id: SAF", "    dataset: ADSL", "    where: !r SAFFL == \"Y\"",
                "    label: Safety Population"), file.path(d, "spec", "data.yml"))
-  writeLines(study %||% c("study_id: MIN-1", "title: minimal", "settings:", "  rounding: sas",
+  write_study_yml(d, study %||% c("study_id: MIN-1", "title: minimal", "settings:", "  rounding: sas",
                           "  output_path: output/tfl", "  program_dir: programs/tfl",
-                          "  file: '{output_id}.rtf'", "keys:", "  id: USUBJID"),
-             file.path(d, "study.yml"))
+                          "  file: '{output_id}.rtf'", "keys:", "  id: USUBJID"))
   if (is.null(files[["defaults.yml"]])) files[["defaults.yml"]] <- "content: []"
   for (nm in names(files)) {
     f <- file.path(d, "spec", nm)
@@ -155,7 +154,7 @@ rts_cl_study <- function(env = parent.frame()) {
   writeLines(c("datasets:", "  - dataset: ADSL", "    level: ADaM", "    path: adam/adsl.xpt",
                "populations:", "  - id: SAF", "    dataset: ADSL", '    where: !r SAFFL == "Y"',
                "    label: Safety Population"), file.path(d, "data.yml"))
-  writeLines(c("study_id: S-1", "title: t", "keys:", "  id: USUBJID"), file.path(d, "study.yml"))
+  write_study_yml(d, c("study_id: S-1", "title: t", "keys:", "  id: USUBJID"))
   d
 }
 

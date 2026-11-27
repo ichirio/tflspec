@@ -12,8 +12,7 @@ ss_study <- function(treatment = "TRT01P") {
   file.copy(list.files(system.file("extdata", "spec-yaml", package = "tflspec"),
                        full.names = TRUE), d, recursive = TRUE)
   if (!is.null(treatment)) {
-    writeLines(c("study_id: SS-1", "settings:", paste0("  treatment: ", treatment)),
-               file.path(d, "study.yml"))
+    write_study_yml(d, c("study_id: SS-1", "settings:", paste0("  treatment: ", treatment)))
   }
   s <- tfl_read_study_spec(d)
   unlink(d, recursive = TRUE)

@@ -6,8 +6,7 @@
 te_study <- function(defaults, settings = list()) {
   d <- tempfile("te")
   dir.create(file.path(d, "outputs"), recursive = TRUE)
-  yaml::write_yaml(list(study_id = "TE-1", settings = c(list(treatment = "TRT01P"), settings)),
-                   file.path(d, "study.yml"))
+  write_study_yml(d, list(study_id = "TE-1", settings = c(list(treatment = "TRT01P"), settings)))
   writeLines(defaults, file.path(d, "defaults.yml"))
   s <- tfl_read_study_spec(d)
   unlink(d, recursive = TRUE)

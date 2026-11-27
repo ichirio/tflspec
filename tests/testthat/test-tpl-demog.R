@@ -801,8 +801,7 @@ sr_study_b1 <- function(settings) {
   d <- withr::local_tempdir()
   file.copy(list.files(system.file("extdata", "spec-yaml", package = "tflspec"), full.names = TRUE), d,
             recursive = TRUE)
-  yaml::write_yaml(list(study_id = "SR-1", settings = c(list(treatment = "TRT01P"), settings)),
-                   file.path(d, "study.yml"))
+  write_study_yml(d, list(study_id = "SR-1", settings = c(list(treatment = "TRT01P"), settings)))
   tfl_read_study_spec(d)
 }
 

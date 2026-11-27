@@ -93,8 +93,11 @@ tfl_read_study_spec <- function(dir) {
   if (!is.null(study$tokens) && !.is_map(study$tokens)) {
     stop("tfl_read_study_spec(): study.yml: tokens: is a map ({NAME: text}).", call. = FALSE)
   }
-  .check_spec_version(study$spec_version, file.path(dir, "study.yml"))
-  .study_yml_form_check(study, normalizePath(dir, "/", mustWork = FALSE))
+  # (a folder with no study.yml reads as the current form)
+  if (!is.null(study)) {
+    .study_yml_form_check(study, normalizePath(dir, "/", mustWork = FALSE),
+                          file.path(dir, "study.yml"))
+  }
   # (a pattern file is an old form: canon 11-12 :380, :433)
   pat_files <- list.files(file.path(spec, "patterns"), "\\.ya?ml$")
   if (length(pat_files)) {
@@ -900,9 +903,11 @@ tfl_output_extends <- function(output, step = NULL) {
 # -- the spec's version --------------------------------------------------------
 
 # The version of the YAML spec's form (study.yml's `spec_version`): this
-# reader's.  A study of a newer form is refused (update tflspec); an older
-# one is converted (tfl_convert_spec_version(), when there is one).
-.spec_version <- 1L
+# reader's.  A study of a newer form is refused (update tflspec); one of
+# an older form, or with none, stops with the list of the old forms and
+# what to write instead (.old_form_lines(); canon 11-10 :377).  2: the old
+# forms of R/spec_old_forms.R stop.
+.spec_version <- 2L
 
 # the packages a spec is written with: their versions, stamped into
 # study.yml by whatever writes it (the app, the converter, the AI kit)
@@ -916,12 +921,22 @@ tfl_output_extends <- function(output, step = NULL) {
   out
 }
 
+# study.yml's `spec_version` (`v`; `file` the study.yml): none or an older
+# one stops with every old form (an old study is changed by hand, by the
+# list), a newer one asks for a newer tflspec
 .check_spec_version <- function(v, file) {
-  if (is.null(v)) return(invisible())
-  v <- suppressWarnings(as.integer(v))
-  if (is.na(v)) stop("tfl_read_study_spec(): ", file, " has a spec_version that is not a number.", call. = FALSE)
-  if (v > .spec_version) {
-    stop("tfl_read_study_spec(): ", file, " is of spec_version ", v, "; this tflspec reads up to ",
+  n <- if (is.null(v)) 0L else suppressWarnings(as.integer(v[1L]))
+  if (is.na(n)) stop("tfl_read_study_spec(): ", file, " has a spec_version that is not a number.", call. = FALSE)
+  if (n < .spec_version) {
+    f <- .old_forms()
+    .old_form_stop("spec_version", file,
+                   was = if (is.null(v)) "a study.yml with no `spec_version`" else
+                     sprintf("a study.yml of spec_version %d", n),
+                   instead = paste0(f$instead[f$id == "spec_version"], ":\n",
+                                    paste(.old_form_lines(), collapse = "\n")))
+  }
+  if (n > .spec_version) {
+    stop("tfl_read_study_spec(): ", file, " is of spec_version ", n, "; this tflspec reads up to ",
          .spec_version, ". Update tflspec.", call. = FALSE)
   }
   invisible()

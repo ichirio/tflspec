@@ -6,7 +6,7 @@ write_study_yml <- function(dir, x = character()) {
   dir.create(dir, recursive = TRUE, showWarnings = FALSE)
   v <- tflspec:::.spec_version
   if (is.list(x)) {
-    if (is.null(x$spec_version)) x <- c(list(spec_version = v), x)
+    if (is.null(x[["spec_version"]])) x <- c(list(spec_version = v), x)
     yaml::write_yaml(x, f)
   } else {
     if (!any(grepl("^spec_version:", x))) x <- c(paste0("spec_version: ", v), x)

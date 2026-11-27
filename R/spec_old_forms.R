@@ -107,6 +107,7 @@
 .study_yml_form_check <- function(study, dir = NULL, file = NULL) {
   if (!is.list(study)) return(invisible())
   where <- file %||% "study.yml"
+  if (!is.null(file)) .check_spec_version(study[["spec_version"]], file)
   .series_settings_gone(study, dir)
   # (where a title or footnote prints is where it is written: canon 11-12 :433)
   set <- study[["settings"]]

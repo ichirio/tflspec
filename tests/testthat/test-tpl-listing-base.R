@@ -207,7 +207,7 @@ lstb_style <- function(study, name = "tflspec_v1/tflspec_listing", report_style 
 lstb_folder <- function(root, name, settings) {
   st <- file.path(root, name)
   dir.create(file.path(st, "spec", "outputs"), recursive = TRUE)
-  writeLines(c(paste0("study_id: ", name), "settings:", settings), file.path(st, "study.yml"))
+  write_study_yml(st, c(paste0("study_id: ", name), "settings:", settings))
   invisible(tfl_copy_templates(st, "tflspec_v1/tflspec_listing"))
   st
 }

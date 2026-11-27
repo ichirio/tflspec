@@ -70,14 +70,14 @@ test_that("the agent's files: AGENTS.md, run.R, decisions; toc.yml; the paths; t
   sy <- readLines(file.path(d, "study.yml"), encoding = "UTF-8")
   y <- yaml::read_yaml(file.path(d, "study.yml"))
   y$ai$review <- list(listing = "none", table = 3L)
-  yaml::write_yaml(y, file.path(d, "study.yml"))
+  write_study_yml(d, y)
   tflspec:::.ai_agent_files(d, overwrite = TRUE)
   ag1 <- readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8")
   expect_true("- Figures: level **3** -- the check, the program, the facts and the output." %in% ag1)
   expect_true("- Tables: level **3** -- the check, the program, the facts and the output." %in% ag1)
   expect_true("- Listings: not built by you (the person runs the check)." %in% ag1)
   y$ai$review <- "none"
-  yaml::write_yaml(y, file.path(d, "study.yml"))
+  write_study_yml(d, y)
   tflspec:::.ai_agent_files(d, overwrite = TRUE)
   ag0 <- readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8")
   expect_false("## Build and check: each report, yourself" %in% ag0)
@@ -107,7 +107,7 @@ test_that("the agent's files: AGENTS.md, run.R, decisions; toc.yml; the paths; t
   # (review on: the defaults of ai/defaults.md are posted, and ai/reference/ is
   # a common file only when the study has one)
   y$ai$review <- NULL
-  yaml::write_yaml(y, file.path(d, "study.yml"))
+  write_study_yml(d, y)
   tflspec:::.ai_agent_files(d, overwrite = TRUE)
   ag2 <- readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8")
   expect_true(any(grepl("Build and check only the reworked requests", ag2, fixed = TRUE)))
@@ -121,11 +121,11 @@ test_that("the agent's files: AGENTS.md, run.R, decisions; toc.yml; the paths; t
   expect_true(any(grepl("`study_facts.md`, `reference/` and", ag3, fixed = TRUE)))
   unlink(file.path(d, "ai", "reference"), recursive = TRUE)
   y$ai$review <- "none"
-  yaml::write_yaml(y, file.path(d, "study.yml"))
+  write_study_yml(d, y)
   y$ai$review <- list(table = 4L)
-  yaml::write_yaml(y, file.path(d, "study.yml"))
+  write_study_yml(d, y)
   expect_error(tflspec:::.ai_agent_files(d, overwrite = TRUE), "table is 0 to 3, or none; not 4")
-  writeLines(sy, file.path(d, "study.yml"), useBytes = TRUE)
+  write_study_yml(d, sy)
   tflspec:::.ai_agent_files(d, overwrite = TRUE)
   expect_false(any(grepl("{{", ag, fixed = TRUE)))
   # the first message: the first two requests, then a stop
@@ -570,7 +570,7 @@ test_that("tfl_ai_refresh_agents(): AGENTS.md again after study.yml's ai: change
   expect_true(file.exists(file.path(d, "ai", "agent_inputs.yml")))
   y <- yaml::read_yaml(file.path(d, "study.yml"))
   y$ai$review <- list(table = 3L)
-  yaml::write_yaml(y, file.path(d, "study.yml"))
+  write_study_yml(d, y)
   w <- tfl_ai_refresh_agents(d)
   expect_true(any(grepl("AGENTS.md$", w)))
   ag <- readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8")
@@ -585,8 +585,8 @@ test_that("tfl_ai_refresh_agents(): AGENTS.md again after study.yml's ai: change
 test_that("ai: run is one or batch; AGENTS.md holds both ways and the menu; the old setting is gone", {
   agents_for <- function(run, per_chat = 0L) {
     d <- withr::local_tempdir(.local_envir = parent.frame())
-    writeLines(c("study_id: X", "ai:", paste0("  run: ", run),
-                 paste0("  requests_per_chat: ", per_chat)), file.path(d, "study.yml"))
+    write_study_yml(d, c("study_id: X", "ai:", paste0("  run: ", run),
+                 paste0("  requests_per_chat: ", per_chat)))
     tflspec:::.ai_agent_files(d, overwrite = TRUE)
     paste(readLines(file.path(d, "ai", "AGENTS.md"), warn = FALSE, encoding = "UTF-8"),
           collapse = "\n")
@@ -660,7 +660,7 @@ test_that("ai: run reaches agent_prompt.md; requests_per_chat and ai/progress.md
   # batch: the prompt batches all; AGENTS.md still holds both ways
   y$ai$run <- "batch"
   y$ai$requests_per_chat <- 10L
-  yaml::write_yaml(y, file.path(d, "study.yml"))
+  write_study_yml(d, y)
   tfl_ai_refresh_agents(d)
   p2 <- paste(rd("agent_prompt.md"), collapse = "\n")
   expect_match(p2, "Start with a batch of ALL the requests", fixed = TRUE)
@@ -671,10 +671,10 @@ test_that("ai: run reaches agent_prompt.md; requests_per_chat and ai/progress.md
   expect_true(any(grepl("Open a new chat and give it agent_prompt.md", ag, fixed = TRUE)))
   # a request's decisions block: may apply, judged by the report
   y$ai$run <- "sometimes"
-  yaml::write_yaml(y, file.path(d, "study.yml"))
+  write_study_yml(d, y)
   expect_error(tfl_ai_refresh_agents(d), "ai: run is one or batch; not sometimes")
   y$ai$run <- "one"
   y$ai$requests_per_chat <- -2L
-  yaml::write_yaml(y, file.path(d, "study.yml"))
+  write_study_yml(d, y)
   expect_error(tfl_ai_refresh_agents(d), "requests_per_chat is a whole number")
 })

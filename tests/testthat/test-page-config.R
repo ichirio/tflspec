@@ -8,7 +8,7 @@ pc_dir <- function(defaults = NULL, study = NULL, env = parent.frame()) {
   src <- system.file("extdata", "spec-yaml", package = "tflspec")
   file.copy(list.files(src, full.names = TRUE), d, recursive = TRUE)
   if (!is.null(defaults)) writeLines(defaults, file.path(d, "defaults.yml"))
-  if (!is.null(study)) writeLines(study, file.path(d, "study.yml"))
+  if (!is.null(study)) write_study_yml(d, study)
   d
 }
 pc_defaults <- c("content:", "  - plan_cells: {categorical: \"{n} ({p:.1f%})\"}")

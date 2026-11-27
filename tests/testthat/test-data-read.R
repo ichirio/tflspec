@@ -116,7 +116,7 @@ test_that("the subjects definition of the population's own dataset (not only ADS
   on.exit(unlink(d, recursive = TRUE))
   dir.create(d)
   dir.create(file.path(d, "outputs"))
-  writeLines(c("tokens: {COMPANY: Sample Pharma}"), file.path(d, "study.yml"))
+  write_study_yml(d, c("tokens: {COMPANY: Sample Pharma}"))
   writeLines(c("datasets:",
                "  - {dataset: ADSL, level: ADaM, path: data/adsl.rds}",
                "  - {dataset: ADSLX, level: ADaM, path: data/adslx.rds}",

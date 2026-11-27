@@ -242,7 +242,9 @@ plan <- tfl_content_run(o, tfl_ard_for(ard, "T-1"))
 generate_rtfreport(tfl_report(o, content = plan, study = st), "T-1.rtf")
 ```
 
-**study.yml** — `study_id`, `title`; `settings:` the table and report
+**study.yml** — `spec_version: 2` (the SPEC's form: a study.yml with
+none, or an older one, stops and lists the old forms to change);
+`study_id`, `title`; `settings:` the table and report
 study keys (`rounding`: `sas` / `r`; `program_dir`; `program` and
 `file`, each report's program and RTF file, `{output_id}.R` /
 `{output_id}.rtf`; `adam_levels`: `define_xml` or `define_spec` puts on

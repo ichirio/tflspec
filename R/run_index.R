@@ -30,7 +30,7 @@
 #' @examples
 #' d <- tempfile()
 #' dir.create(d)
-#' writeLines("study_id: S-1", file.path(d, "study.yml"))
+#' writeLines(c("spec_version: 2", "study_id: S-1"), file.path(d, "study.yml"))
 #' tfl_latest_run(d, c("T-1", "T-2"))
 #' @export
 tfl_run_index <- function(study_dir) {
