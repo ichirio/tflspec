@@ -316,16 +316,6 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
   as.character(rlang::eval_tidy(q))
 }
 
-# the axis's labels step after the rows' code step; a design's data with no
-# code step: at the end
-.forest_add_y_labels <- function(data) {
-  k <- which(vapply(data, function(st) identical(st$step, "code"), NA))[1L]
-  if (is.na(k)) k <- length(data)
-  append(data, list(list(
-    step = "code", label = "the axis's labels, the subgroups' headings bold",
-    out = "y_labels", code = .forest_y_labels_code())), after = k)
-}
-
 .tpl_forest_design <- function(group, subgroups = c("SEX", "AGEGR1"),
                                comparison = NULL, look = list(), ref = NULL) {
   if (!is.null(ref) && identical(ref[1L], comparison[1L])) {
@@ -346,11 +336,13 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
                                            look$subgroup_labels)
     }
   }
-  # the headings bold: the axis's labels (y_labels, .tpl_forest_look()) made
-  # from the rows by a code step of their own -- a code step keeps its `out`
-  # only (est), and the plot reads both
-  if (isTRUE(look$bold_headings) && length(subgroups) > 0L) {
-    d$data <- .forest_add_y_labels(d$data)
+  # the bold headings' labels: a code step of their own after the rows' (a
+  # code step keeps only its `out`; the axis reads y_labels)
+  if (isTRUE(look$bold_headings) && length(subgroups)) {
+    k <- max(which(vapply(d$data, function(st) identical(st$step, "code"), NA)))
+    d$data <- append(d$data, list(list(
+      step = "code", label = "the axis's labels, the headings bold (plotmath; bquote() keeps the text as it is)",
+      out = "y_labels", code = .forest_labels_code())), after = k)
   }
   # the ARD read and the rows made: all the call's (no data steps)
   keep <- vapply(d$data, function(st) st$step %in% c("ard_stats", "code"), NA)
@@ -435,6 +427,18 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
                           "subgroup_labels"))]
 }
 
+# The subgroups' headings the report gives: `subgroup_labels` over the code
+# lists' `variable` labels (a header is the code list's variable label, #187:
+# the dictionary the tables' plan_labels() reads, .tpl_cl_dict()); what is
+# left is the common ADaM variables' label, else the name (.forest_sub_labels())
+.tpl_forest_heads <- function(subgroups, given = NULL, codelists = NULL) {
+  cl <- .tpl_cl_dict(codelists[["variable"]])
+  cl <- cl[intersect(names(cl), subgroups)]
+  given <- unlist(given)
+  if (!length(given)) return(if (length(cl)) as.list(cl) else NULL)
+  as.list(c(given, cl[setdiff(names(cl), names(given))]))
+}
+
 .tpl_forest_body <- function(a, ctx) {
   set <- paste(tolower(a$data), tolower(a$population), tolower(a$param), sep = "_")
   an <- tfl_fig_forest_analyses(data = a$data, param = a$param, pop = a$population,
@@ -453,8 +457,9 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
     analyses = lapply(seq_len(nrow(an)), function(i) list(
       id = an$analysis_id[i], label = an$label[i], method = "custom", data = set,
       code = tfl_r(an$code[i]), purpose = "SECONDARY OUTCOME MEASURE")))
-  f <- .tpl_forest_design(a$group, a$subgroups, a$comparison, .tpl_forest_look_args(a),
-                          ref = a$ref)
+  look <- .tpl_forest_look_args(a)
+  look$subgroup_labels <- .tpl_forest_heads(a$subgroups, a$subgroup_labels, ctx$codelists)
+  f <- .tpl_forest_design(a$group, a$subgroups, a$comparison, look, ref = a$ref)
   c(list(ard = ard), .tpl_fig_body_of(f, list(), ctx))
 }
 

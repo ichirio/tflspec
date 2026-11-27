@@ -37,7 +37,15 @@
 #'   reference to a list the study has not got is left out when the report is
 #'   resolved.  No list reaches a report through `extends:`: a report's code
 #'   lists are its own (`codelists:` in its file), and a pattern's
-#'   `codelists:` stops the read.
+#'   `codelists:` stops the read.  A report's list of a variable is written
+#'   in place (`SEX: [{value: F, label: Female}, ...]`) or names one of the
+#'   study's lists: `SEX: {list: SEX}` (all its codes, in its order) or `SEX:
+#'   {list: SEX, codes: [M, F]}` (those codes, in the order written).  The
+#'   labels are the study's list's, and the programs are written as from the
+#'   same list written in place ([tfl_resolve_output()]); a list the study
+#'   has not got, or a code its list has not got, stops there, naming the
+#'   report, the variable and the list.  The sheets keep the reference in the
+#'   codelists sheet's `list` column ([tfl_sheets_from_yaml()]).
 #' * `adam_meta:` the ADaM metadata in the shape [tfl_read_define()] gives
 #'   (until a define is read): each part a list of rows, `variables: [{dataset:
 #'   ADSL, variable: SEX, codelist: CL.SEX}, ...]` (the code list's OID) and
@@ -264,6 +272,11 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   if (!inherits(study, "tfl_study_spec")) stop("tfl_resolve_output(): `study` is a tfl_study_spec.", call. = FALSE)
   # a series template (`<series>/<template>`): its code SPEC, resolved as
   # any report from there
+  # (a code list that refers to the study's, `{list: SEX}`: its rows, the
+  # study's codes and labels, as a list written in place has them -- before
+  # a template reads the report's lists)
+  output$codelists <- .codelists_refs(output$codelists, study$codelists, output$id,
+                                      "tfl_resolve_output()")
   output <- .series_as_code(output, study)
   # (a template with an `extends` in its set: the style its `style`
   # parameter names, resolved first)
@@ -984,7 +997,10 @@ tfl_output_extends <- function(output, step = NULL) {
 #'
 #' Writes the study-level file of one part of a [tfl_read_study_spec()]
 #' result -- what a builder changes for the whole study (the rounding of
-#' every table, a pattern) -- in the form the reader reads.
+#' every table, a pattern) -- in the form the reader reads.  For
+#' `"defaults"` written over the study's own `spec/defaults.yml`, the blocks
+#' that are not layers (`codelists:`, `adam_meta:`, `figure_style:`,
+#' `options:`) are kept as the file has them.
 #'
 #' @param study A `tfl_study_spec`.
 #' @param part `"defaults"`, `"patterns"` (one, by `name`),
@@ -1037,9 +1053,50 @@ tfl_write_study_part <- function(study, part = c("defaults", "patterns", "data",
                    file.path(spec, paste0(part, ".yml")))
   }
   dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
-  writeLines(yaml::as.yaml(y, indent.mapping.sequence = TRUE, handlers = .yaml_out_handlers()),
-             path, useBytes = TRUE)
+  txt <- yaml::as.yaml(y, indent.mapping.sequence = TRUE, handlers = .yaml_out_handlers())
+  # (written over the study's own defaults.yml: its blocks that are not
+  # layers -- codelists:, adam_meta:, figure_style:, options: ... -- kept)
+  own <- if (identical(part, "defaults") && !is.null(study$dir)) file.path(.spec_dir(study$dir), "defaults.yml")
+  if (!is.null(own) && file.exists(path) && file.exists(own) &&
+      identical(normalizePath(path, "/"), normalizePath(own, "/"))) {
+    old <- readLines(path, encoding = "UTF-8", warn = FALSE)
+    txt <- paste0(paste(.defaults_keep_blocks(strsplit(txt, "\n", fixed = TRUE)[[1L]], old),
+                        collapse = "\n"), "\n")
+  }
+  writeLines(txt, path, useBytes = TRUE)
   invisible(path)
+}
+
+# `lines` (the writer's defaults.yml) with every top-level block of `old`
+# (the file it writes over) whose key `lines` has not, as `old` has it: the
+# key's line to the next top-level key, the comment lines just above the key
+# included.  The writer's own keys (content, page, data, styles) are not
+# kept: it leaves one out when it is empty.  The kept blocks keep their order
+# and their place by `styles:`: those before the old `styles:` (all, when it
+# has none) just before the new one (at the end when there is none), those
+# after it at the end.
+.defaults_keep_blocks <- function(lines, old) {
+  is_key <- function(x) grepl("^[A-Za-z_][A-Za-z0-9_]*:", x)
+  key_of <- function(x) sub(":.*$", "", x)
+  top <- is_key(old)
+  keys <- ifelse(top, key_of(old), NA_character_)
+  skip <- c(key_of(lines[is_key(lines)]), "content", "page", "data", "styles")
+  st <- which(keys %in% "styles")[1L]
+  before <- character()
+  after <- character()
+  for (i in which(top)) {
+    if (keys[i] %in% skip) next
+    skip <- c(skip, keys[i])
+    nxt <- which(top & seq_along(old) > i)
+    j <- if (length(nxt)) nxt[1L] - 1L else length(old)
+    while (j > i && grepl("^#", old[j])) j <- j - 1L
+    from <- i
+    while (from > 1L && grepl("^#", old[from - 1L])) from <- from - 1L
+    if (!is.na(st) && i > st) after <- c(after, old[from:j]) else before <- c(before, old[from:j])
+  }
+  at <- which(grepl("^styles:", lines))[1L]
+  lines <- if (is.na(at)) c(lines, before) else append(lines, before, after = at - 1L)
+  c(lines, after)
 }
 
 # A table's normalize_ard() without `overall`, of a report whose hierarchy
