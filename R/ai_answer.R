@@ -69,8 +69,8 @@
 }
 
 # The files of a folder, in the answer's form: the folder's spec files in a
-# reading order -- the study, its data, its defaults, the TOC, the patterns,
-# the reports, the assumptions -- each a heading and a yaml block.
+# reading order -- the study, its data, its defaults, the TOC, the reports,
+# the assumptions -- each a heading and a yaml block.
 .ai_answer_md <- function(dir, files = NULL) {
   if (is.null(files)) {
     files <- list.files(dir, pattern = "[.]ya?ml$", recursive = TRUE)
@@ -82,7 +82,6 @@
     if (identical(f, "spec/data.yml")) return(2L)
     if (identical(f, "spec/defaults.yml")) return(3L)
     if (identical(f, "spec/toc.yml")) return(4L)
-    if (startsWith(f, "spec/patterns/")) return(5L)
     if (startsWith(f, "spec/outputs/")) return(6L)
     7L
   }
@@ -115,7 +114,7 @@
 #'
 #' Only spec files are written: `study.yml`, and `.yml` files under `spec/`
 #' (`spec/data.yml`, `spec/toc.yml`, `spec/defaults.yml`,
-#' `spec/patterns/<name>.yml`, `spec/outputs/<id>.yml`,
+#' `spec/outputs/<id>.yml`,
 #' `spec/_assumptions.yml`).  A block under any other heading, a path that
 #' leaves the folder, or a file twice is an error that names it, and nothing
 #' is written.  Each file is checked as YAML before any is written.

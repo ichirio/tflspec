@@ -564,10 +564,8 @@
   }
   # (every file it names, a map's steps' too)
   for (e in unique(as.character(unlist(o[["extends"]])))) {
-    ok <- e %in% c("defaults", "none") ||
-      (startsWith(e, "patterns/") && (is.null(context$patterns) ||
-                                        substring(e, 10L) %in% context$patterns))
-    if (!ok) add("extends", sprintf("%s is not defaults or a pattern of the study", sQuote(e, FALSE)))
+    # (a pattern is an old form: R/spec_old_forms.R)
+    if (!e %in% c("defaults", "none")) add("extends", sprintf("%s is not defaults or none", sQuote(e, FALSE)))
   }
   pops <- context$populations
   chk_pop <- function(where, x) {
@@ -866,8 +864,6 @@
       g <- file.path(src, f)
       if (file.exists(g)) file.copy(g, file.path(d, f))
     }
-    pat <- file.path(.spec_dir(src), "patterns")
-    if (dir.exists(pat)) file.copy(pat, file.path(d, "spec"), recursive = TRUE)
   }
   for (id in names(outs)) {
     tfl_write_output(outs[[id]], file.path(d, "spec", "outputs", paste0(id, ".yml")))

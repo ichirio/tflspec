@@ -20,10 +20,8 @@
   }
   # (every file it names, a map's steps' too)
   for (e in unique(as.character(unlist(o[["extends"]])))) {
-    ok <- e %in% c("defaults", "none") ||
-      (startsWith(e, "patterns/") && (is.null(context$patterns) ||
-                                        substring(e, 10L) %in% context$patterns))
-    if (!ok) add("extends", sprintf("%s is not defaults or a pattern of the study", sQuote(e, FALSE)))
+    # (a pattern is an old form: R/spec_old_forms.R)
+    if (!e %in% c("defaults", "none")) add("extends", sprintf("%s is not defaults or none", sQuote(e, FALSE)))
   }
   pops <- context$populations
   chk_pop <- function(where, x) {
