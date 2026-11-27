@@ -31,7 +31,9 @@ sheets, for what is made from the items (the ARD, the preview).}
 \code{tfl_output} (as written, not resolved), named by id.}
 }
 \value{
-A list: \code{table} (the table and report sheets, with \code{study}),
+A list: \code{table} (the table and report sheets, with \code{study}: its
+key \code{rounding} the study's force, \code{defaults.yml} \verb{force:}, which
+\code{\link[=tfl_yaml_from_sheets]{tfl_yaml_from_sheets()}} writes back there),
 \code{planner} (the \verb{_tflplanner} sheet: the report list and the setup),
 \code{ard} (the ARD sheets), \code{listing} (\code{listings}, \code{listing_cols}),
 \code{figures} (a figure's design list, by id), \code{study} (study.yml's

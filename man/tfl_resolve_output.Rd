@@ -55,7 +55,12 @@ its \verb{ard:} under the report's (an entry of the report's replaces the
 template's of the same id); a template parameter that says where its
 study default is takes it from the layers when the SPEC does not give
 it, and a SPEC value over a different one says so.  Each item's
-\code{from} says where it came from.  The result holds no \code{tfl_unset}.
+\code{from} says where it came from.  The result holds no \code{tfl_unset}.  Over
+all of them, the study's force (\code{spec/defaults.yml} \verb{force:}, canon
+1.33): a table's \code{plan_digits(rounding = )} of another value than the
+forced one, or an \code{!unset} of it, is warned of (a warning of class
+\code{tflspec_force_over}, which \code{\link[=tfl_check_spec]{tfl_check_spec()}} lists) and takes the
+forced value; a listing or a figure is left as it is.
 }
 \examples{
 d <- system.file("extdata", "spec-yaml", package = "tflspec")

@@ -27,8 +27,9 @@ pattern file is an old form, its page a page configuration in
 }
 \description{
 Writes the study-level file of one part of a \code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}
-result -- what a builder changes for the whole study (the rounding of
-every table, a page configuration) -- in the form the reader reads.  For
+result -- what a builder changes for the whole study (the rounding every
+report is forced to, \code{study$force}; a page configuration) -- in the form
+the reader reads.  For
 \code{"defaults"} written over the study's own \code{spec/defaults.yml}, the blocks
 that are not layers (\verb{codelists:}, \verb{adam_meta:}, \verb{figure_style:},
 \verb{options:}) are kept as the file has them.

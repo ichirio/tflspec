@@ -43,7 +43,8 @@ tfl_output(
 \item{package}{The package \code{fn} is in, when its name does not say.}
 
 \item{from}{Where an item came from: \code{"own"}, \code{"defaults"},
-\code{"pattern:<name>"}, \code{"style:<name>"}, \code{"template:<name>"}.}
+\code{"pattern:<name>"}, \code{"style:<name>"}, \code{"template:<name>"}, \code{"force"}
+(the study's force, \code{defaults.yml} \verb{force:}).}
 
 \item{id}{The report's id (letters, digits, \code{.}, \verb{_}, \code{-}); the file is
 \verb{spec/outputs/<id>.yml}.}
