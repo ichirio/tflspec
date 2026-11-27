@@ -26,7 +26,8 @@ vec_code <- function(x, width = 70) {
 # the template may name; `what` names its owner in a stop ("the rate step
 # (rt)").  A line break in the template is a line break in the label.
 .cell_template_code <- function(tpl, known, what) {
-  tpl <- as.character(tpl)
+  # (a typed \n is a line break too: a one-line field cannot hold a real one)
+  tpl <- gsub("\\n", "\n", as.character(tpl), fixed = TRUE)
   re <- "[{][^{}]+[}]"
   toks <- .cell_tokens(tpl)
   lits <- regmatches(tpl, gregexpr(re, tpl), invert = TRUE)[[1L]]

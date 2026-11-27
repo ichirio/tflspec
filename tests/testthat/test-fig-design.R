@@ -695,4 +695,7 @@ test_that("a rate / count step's label is its label_cell, one line by default (#
   p <- tfl_fig_parts()
   expect_identical(p$default[p$piece == "rate" & p$field == "label_cell"], "{rate:.1f}% ({x}/{n})")
   expect_identical(p$default[p$piece == "count" & p$field == "label_cell"], "{pct:.0f}%")
+  # a typed \n (a one-line field) is a line break as a real one is
+  expect_identical(.cell_template_code("{pct:.0f}%\\n{n}", c("pct", "n"), "the count step"),
+                   .cell_template_code("{pct:.0f}%\n{n}", c("pct", "n"), "the count step"))
 })
