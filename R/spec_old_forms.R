@@ -123,16 +123,17 @@
 # it ("" every kind); `field`, a part tfl_output() itself holds (the rest
 # ride on the report as they are).  Beside canon :380's list: `note`, a
 # figure's own parts (`figure`, `plots`, `compose`, `ggplot2_version`,
-# `layers`, the AI kit's figure), and `common` until it goes (A2-T T4).
+# `layers`, the AI kit's figure), `ai` (an AI draft's assumptions and what
+# is to confirm: the AI kit's) and `common` until it goes (A2-T T4).
 # `population` is an old form (.common_old_line); `last_step` is not read
 # yet and stops.  The reader, the writer and .output_fields read it.
 .output_keys <- data.frame(
   key = c("id", "kind", "label", "common", "extends", "style", "template", "ard", "data",
-          "codelists", "content", "contents", "plot", "page", "note",
+          "codelists", "content", "contents", "plot", "page", "note", "ai",
           "figure", "plots", "compose", "ggplot2_version", "layers"),
-  kinds = c(rep("", 15L), rep("figure", 5L)),
+  kinds = c(rep("", 16L), rep("figure", 5L)),
   field = c(TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE,
-            TRUE, TRUE, FALSE, FALSE, TRUE, FALSE,
+            TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE,
             FALSE, FALSE, FALSE, FALSE, FALSE),
   stringsAsFactors = FALSE)
 

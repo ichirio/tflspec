@@ -106,12 +106,9 @@ test_that("a pattern in the sheets stops the conversion: an old form", {
     expect_identical(e$form, "extends_pattern")
     expect_match(conditionMessage(e), "T-none", fixed = TRUE)
   }
-  # a pattern cell that names no page configuration
-  e <- tryCatch(run(set(sh, "pattern", "T-none", "@p")), error = function(e) e)
-  expect_s3_class(e, "tflspec_old_form")
-  expect_identical(e$form, "sheet_pattern")
-  expect_match(conditionMessage(e), "T-none")
-  expect_match(conditionMessage(e), "the `pattern` cell '@p', which names no page configuration", fixed = TRUE)
+  # a pattern cell that names no page configuration: the sheets' own check
+  # stops it first (the conversion's old-form stop is behind it)
+  expect_error(run(set(sh, "pattern", "T-none", "@p")), "no page pattern of that name")
   # the sheets as written convert
   expect_no_error(run(sh))
 })

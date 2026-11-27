@@ -124,7 +124,7 @@ test_that("#7 a report's keys are a closed list (canon :380); the kept ones read
   o$layers <- list(list(layer = "x"))
   expect_error(tfl_write_output(o, g), "`layers:` is a key of a figure, not of a table")
   # the kept keys, beside canon :380's
-  expect_true(all(c("note", "figure", "plots", "compose", "ggplot2_version", "layers", "common") %in%
+  expect_true(all(c("note", "ai", "figure", "plots", "compose", "ggplot2_version", "layers", "common") %in%
                     tflspec:::.output_keys$key))
   expect_identical(tflspec:::.output_fields,
                    c("id", "kind", "label", "common", "extends", "ard", "data", "codelists", "content", "page"))

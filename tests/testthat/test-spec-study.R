@@ -127,7 +127,11 @@ test_that("study.yml's spec_version: 2 is read; none, an older or a newer one st
   expect_error(tfl_read_study_spec(d), class = "tflspec_old_form")
   # the other reader of study.yml, the file and the folder
   writeLines("study_id: V-1", file.path(d, "study.yml"))
-  expect_error(tfl_resolve_output(tfl_output("T-1"), study = d), class = "tflspec_old_form")
+  rep <- list(id = "T-1", kind = "table", template = list(name = "tflspec_v1/demog"))
+  expect_error(tfl_template_resolve(rep, study = d), class = "tflspec_old_form")
+  expect_error(tfl_template_resolve(rep, study = file.path(d, "study.yml")), class = "tflspec_old_form")
+  # (a list given in code has no file to check)
+  expect_identical(tflspec:::.tr_study(list(study_id = "V-1"), "who")$study_id, "V-1")
   # no study.yml: the current form
   file.remove(file.path(d, "study.yml"))
   expect_null(tfl_read_study_spec(d)$study$spec_version)
@@ -233,10 +237,10 @@ test_that("a YAML report's RTF path: a file of the report's own, the study's out
   s <- tfl_read_study_spec(dir)
   expect_identical(tfl_report_path(tfl_output("T-1", "table"), study = s), "../tables/t_T-1.rtf")
   expect_identical(tfl_report_path(tfl_output("T-2", "table"), study = s), "../tables/T-2.rtf")
-  # the report's own settings: file first
+  # (a report's own settings: file is an old form, not read: canon 11-12 :380)
   o <- tfl_output("T-2", "table")
   o$settings <- list(file = "own_{output_id}.rtf")
-  expect_identical(tfl_report_path(o, study = s), "../tables/own_T-2.rtf")
+  expect_identical(tfl_report_path(o, study = s), "../tables/T-2.rtf")
 })
 
 test_that("the defaults' content is a table's: a figure or a listing takes their page, not it", {

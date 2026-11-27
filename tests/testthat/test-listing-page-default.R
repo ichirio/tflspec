@@ -105,14 +105,15 @@ test_that("a report's own page size wins: one item, its rows", {
   expect_lte(b$pages, ceiling(455 / 14))
 })
 
-test_that("a page size of a style wins: one item; the study's defaults do not reach a listing", {
+test_that("a style's or the study's defaults' page size does not reach a listing: its own default", {
   skip_lp()
+  # (a page configuration's content is a table's, as the defaults' is: a
+  # listing takes its page only, so the listing's own default is; a pattern,
+  # whose content a listing took, is an old form: canon 11-12 :380)
   d <- .lp_study(.lp_cols, style = "  - plan_paginate_rows: {max_rows: 35}")
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   expect_identical(.lp_fns(.lp_resolved(d)), c("plan_listing", "plan_paginate_rows"))
-  expect_identical(.lp_rows(d)[2L], "35")
-  # (the defaults' content is a table's, a listing takes its page only: a page
-  # size there is not the listing's, so the listing's own default is)
+  expect_identical(.lp_rows(d)[2L], "22")
   d2 <- .lp_study(.lp_cols, defaults = "  - plan_paginate_rows: {max_rows: 40}",
                   extends = "[defaults]")
   on.exit(unlink(d2, recursive = TRUE), add = TRUE)
