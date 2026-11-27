@@ -96,6 +96,8 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   lf <- sheets$listing
   figs <- sheets$figures %||% list()
   meta <- sheets[["study"]] %||% list()
+  # (an old form the sheets' study carries is not written: R/spec_old_forms.R)
+  .study_yml_form_check(meta)
   # the study sheet's rows no table spec reads (study.yml's `settings:` keys
   # of the app's own: the treatment variable ...) are not the bridge's: set
   # aside here and written back to settings below, not a stop (#689).  The

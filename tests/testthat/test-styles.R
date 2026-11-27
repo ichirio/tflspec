@@ -1,6 +1,6 @@
 # The study's styles (defaults.yml's `styles:`, a report's `style:`), a
-# template's look under the study's layers, and where a report's titles and
-# footnotes print (study.yml's settings titles_at / footnotes_at).
+# template's look under the study's layers; study.yml's settings titles_at /
+# footnotes_at stop (canon 11-12 :433).
 
 st_study <- function() tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
 st_report <- function() tfl_read_outputs(system.file("extdata", "spec-yaml", package = "tflspec"))[["T-14-1-1"]]
@@ -91,26 +91,31 @@ test_that("a template's look is under the study's layers (they say the look), it
   expect_identical(pd$args$max_rows, 40L)
 })
 
-test_that("titles_at / footnotes_at: the report's titles in the running header, its footnotes in the footer", {
+test_that("titles_at / footnotes_at stop (canon :433); titles and footnotes print where they are written", {
   s <- st_study()
   o <- st_report()
   o$page$footnotes <- list(`1` = list(left = "SD: standard deviation."))
   ro <- tfl_resolve_output(o, s)
-  code <- paste(tfl_report_code(ro, content = "plan", study = s), collapse = "\n")
-  expect_match(code, "rtf_titles(", fixed = TRUE)
-  expect_match(code, "rtf_footnotes(", fixed = TRUE)
+  code <- tfl_report_code(ro, content = "plan", study = s)
+  expect_true(any(grepl("rtf_titles(", code, fixed = TRUE)))
+  expect_true(any(grepl("rtf_footnotes(", code, fixed = TRUE)))
+  # (no setting moves them: one given in code is not read)
   s$study$settings <- list(titles_at = "header", footnotes_at = "footer")
-  code <- paste(tfl_report_code(ro, content = "plan", study = s), collapse = "\n")
-  expect_false(grepl("rtf_titles(", code, fixed = TRUE))
-  expect_false(grepl("rtf_footnotes(", code, fixed = TRUE))
-  # the title after the study's header lines, the footnote before its footer lines
-  expect_lt(regexpr("Page {PAGE}", code, fixed = TRUE), regexpr('c(c = "Table 14.1.1")', code, fixed = TRUE))
-  expect_lt(regexpr("SD: standard deviation.", code, fixed = TRUE), regexpr("{PROGRAM}", code, fixed = TRUE))
-  s$study$settings <- list(titles_at = "titles", footnotes_at = "footnotes")
-  expect_match(paste(tfl_report_code(ro, content = "plan", study = s), collapse = "\n"),
-               "rtf_titles(", fixed = TRUE)
-  s$study$settings <- list(titles_at = "top")
-  expect_error(tfl_report_code(ro, content = "plan", study = s), "titles_at")
+  expect_identical(tfl_report_code(ro, content = "plan", study = s), code)
+  # a study.yml that has one stops, in both readers and in the sheets' converter
+  d <- tempfile("st-at-")
+  dir.create(d)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  for (k in c("titles_at", "footnotes_at")) {
+    write_study_yml(d, c("study_id: S-1", "settings:", paste0("  ", k, ": header")))
+    e <- tryCatch(tfl_read_study_spec(d), error = function(e) e)
+    expect_s3_class(e, "tflspec_old_form")
+    expect_identical(e$form, k)
+    expect_match(conditionMessage(e), paste0("`settings: ", k, "` is no longer read: a "))
+    expect_error(tflspec:::.tr_study(d, "tfl_tpl()"), k, class = "tflspec_old_form")
+    expect_error(tfl_yaml_from_sheets(list(study = list(settings = stats::setNames(list("header"), k))),
+                                      file.path(d, "out")), k, class = "tflspec_old_form")
+  }
 })
 
 test_that("tfl_styles() lists the built-in sets and the study's, and marks the default", {

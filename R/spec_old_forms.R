@@ -101,6 +101,12 @@
 # readers of study.yml call it: tfl_read_study_spec() and .tr_study().
 .study_yml_form_check <- function(study, dir = NULL, file = NULL) {
   if (!is.list(study)) return(invisible())
+  where <- file %||% "study.yml"
   .series_settings_gone(study, dir)
+  # (where a title or footnote prints is where it is written: canon 11-12 :433)
+  set <- study[["settings"]]
+  for (k in c("titles_at", "footnotes_at")) {
+    if (is.list(set) && !is.null(set[[k]])) .old_form_stop(k, where, was = sprintf("`settings: %s`", k))
+  }
   invisible()
 }

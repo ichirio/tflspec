@@ -2380,11 +2380,10 @@ tfl_read_report_spec <- function(path, output_id = NULL) {
 #'   pages for a table or listing, figures for a `type = figure` report.
 #' @param study For a YAML report: the study ([tfl_read_study_spec()]), for
 #'   its program (the TOC's `program`, else `settings: program`, in
-#'   `settings: program_dir`), and where the report's titles and footnotes
-#'   print: `settings: titles_at` `header` (the running header, after the
-#'   study's lines) or `titles` (above the table), `footnotes_at` `footer`
-#'   (the running footer, before the study's lines) or `footnotes` (below
-#'   the table); not set, above and below the table.
+#'   `settings: program_dir`).  A report's titles and footnotes print where
+#'   they are written: `page: titles` above the table, `page: footnotes`
+#'   below it, `page: header` / `page: footer` in the running header and
+#'   footer (canon 11-12: no setting moves them).
 #'
 #' @return An [rtfreporter::rtf_document()].
 #'
