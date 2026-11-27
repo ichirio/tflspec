@@ -223,7 +223,7 @@ test_that("a number a figure prints is fmt_num(): the study's rounding, as a tab
     expect_identical(sum(grepl('^if [(]!exists[(]"fmt_num"[)][)] fmt_num <- function', own)), 1L, info = t)
   }
   rate <- paste(tfl_fig_design_code(tfl_fig_template("bar_rate_ci", group = "TRT01P"), "F1", setup = TRUE), collapse = "\n")
-  expect_match(rate, 'label = paste0(fmt_num(rate, 1), "%\\n(", x, "/", n, ")")', fixed = TRUE)
+  expect_match(rate, 'label = paste0(fmt_num(rate, 1), "% (", x, "/", n, ")")', fixed = TRUE)
   count <- paste(tfl_fig_design_code(tfl_fig_template("bar_stacked", group = "TRT01P"), "F1", setup = TRUE), collapse = "\n")
   expect_match(count, 'label = paste0(fmt_num(pct, 0), "%")', fixed = TRUE)
   fr <- tfl_fig_template("forest_hr", data = "ADTTE", param = "TTDE", pop = "SAFFL", group = "TRT01A",
@@ -329,12 +329,15 @@ test_that("a time's unit is a named constant of the setup, never a column", {
   expect_true(any(grepl('if (!exists("days_per_month")) days_per_month <- 30.4375',
                         tfl_fig_setup_code(), fixed = TRUE)))
   # a script of its own: defines what it uses (AVAL from its unit: the
-  # helper tte_time(), no constant; another time, in days: the constant)
+  # helper tte_time(), no constant; another time, in days: the constant;
+  # the ordering helpers besides, as every script of its own)
   own <- strsplit(paste(tfl_fig_design_code(d, "F1"), collapse = "\n"), "\n")[[1]]
+  own <- own[!grepl('^if [(]!exists[(]"(codelist_codes|set_levels|order_levels)"', own)]
   expect_identical(sum(grepl("^if [(]!exists", own)), 1L)
   expect_true(any(grepl("^if [(]!exists[(]\"tte_time\"[)][)] tte_time <- function", own)))
   d$data[[which(vapply(d$data, `[[`, "", "step") == "time_unit")]]$variable <- "ADY"
   own <- strsplit(paste(tfl_fig_design_code(d, "F1"), collapse = "\n"), "\n")[[1]]
+  own <- own[!grepl('^if [(]!exists[(]"(codelist_codes|set_levels|order_levels)"', own)]
   expect_identical(sum(grepl("^if [(]!exists", own)), 1L)
   expect_true(any(grepl("^if [(]!exists[(]\"days_per_month\"[)][)]", own)))
   expect_false(any(grepl("tte_time", own, fixed = TRUE)))
@@ -578,7 +581,7 @@ fd_axis <- function(...) {
   tfl_fig_design(
     data = list(list(step = "read", dataset = "ADSL")),
     plot = list(...),
-    layers = list(list(layer = "point", x = "AGE", y = "TRTDURD")))
+    layers = list(list(layer = "point", x = "TRTDURD", y = "TRTDURD")))
 }
 # the code as one text; a title as the program writes it (its "\n" escaped)
 fd_code <- function(d) paste(tfl_fig_design_code(d, save = FALSE), collapse = "\n")

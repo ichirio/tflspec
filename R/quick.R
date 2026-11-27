@@ -77,8 +77,10 @@ pp_options_df <- function(pid, dots) {
          ". Options are: ", paste(names(pp_default_options()), collapse = ", "), call. = FALSE)
   }
   if (!length(dots)) return(NULL)
+  # (tfl_unset(), `!unset`: "NA", none -- a blank is read as not given)
   data.frame(plot_id = pid, key = names(dots),
-             value = vapply(dots, function(v) paste(v, collapse = ","), character(1)),
+             value = vapply(dots, function(v) if (inherits(v, "tfl_unset")) "NA" else paste(v, collapse = ","),
+                            character(1)),
              stringsAsFactors = FALSE)
 }
 

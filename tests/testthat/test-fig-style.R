@@ -143,8 +143,12 @@ test_that("the built-in style's axis_title_width is 50; a study's figure style i
   old <- options(tflspec.fig_style = s)
   on.exit(options(old), add = TRUE)
   expect_identical(tflspec:::.fs_title_width(), 50)
-  s$settings <- rbind(s$settings, data.frame(type = NA, key = "axis_title_width", value = "30",
-                                             note = "", stringsAsFactors = FALSE))
+  # (a row of the table's own columns, whatever they are)
+  row <- s$settings[1L, , drop = FALSE]
+  row[1L, ] <- NA
+  row$key <- "axis_title_width"
+  row$value <- "30"
+  s$settings <- rbind(s$settings, row)
   options(tflspec.fig_style = s)
   expect_identical(tflspec:::.fs_title_width(), 30)
 })

@@ -27,7 +27,8 @@ test_that("a step into another object: an assignment of its own; a named step re
                       list(step = "filter", expr = "AVAL > 0", out = "df_ev"),
                       list(step = "survfit", time = "AVAL", censor = "CNSR", `in` = "df_ev")))
   code <- code_of(d)
-  expect_match(code, "adtte_sub <- adtte |>\n  filter(PARAMCD == \"OS\")", fixed = TRUE)
+  # (a read: its factors ordered first, order_levels(), #603 6b)
+  expect_match(code, "adtte_sub <- adtte |>\n  order_levels() |>\n  filter(PARAMCD == \"OS\")", fixed = TRUE)
   expect_match(code, "df_ev <- adtte_sub |>\n  filter(AVAL > 0)", fixed = TRUE)
   expect_match(code, "data = df_ev)", fixed = TRUE)
   # the steps after it go on df_ev (the object above them)
@@ -46,7 +47,7 @@ test_that("a second read makes df2; df is kept", {
   expect_identical(tfl_fig_objects(d)$out, c("df", "df2", "df2"))
   code <- code_of(d)
   expect_match(code, "adtte_sub <- adtte", fixed = TRUE)
-  expect_match(code, "df2 <- adsl |>\n  filter(SAFFL == \"Y\")", fixed = TRUE)
+  expect_match(code, "df2 <- adsl |>\n  order_levels() |>\n  filter(SAFFL == \"Y\")", fixed = TRUE)
 })
 
 test_that("any function: its arguments as written, the object it reads as its data", {

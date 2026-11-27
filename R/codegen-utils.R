@@ -125,12 +125,12 @@ pp_opt_num <- function(ctx, key, default = NA_real_) {
 
 # The width a figure's axis titles wrap at: its option axis_title_width
 # (`...` of tfl_fig_km() ..., the options sheet), else the figure style's
-# (.fs_title_width(): the study's or company's, else 50); "NA" (NA given)
-# or "" (`!unset` given, tfl_unset()): NULL, no wrap
+# (.fs_title_width(): the study's or company's, else 50); "NA" (NA or
+# tfl_unset() given, pp_options_df()): NULL, no wrap
 pp_title_width <- function(ctx) {
   v <- pp_opt(ctx, "axis_title_width")
   if (is.na(v)) return(.fs_title_width())
-  if (toupper(trimws(v)) %in% c("NA", "")) return(NULL)
+  if (toupper(trimws(v)) == "NA") return(NULL)
   v
 }
 
