@@ -883,7 +883,7 @@ tfl_read_fig_design <- function(path) {
         # ADSL's arms it brings in their numeric order
         ord <- order && !semi && ds == "ADSL" && any(grepl("^(TRT|ARM|ACTARM)", vars))
         add(paste0(if (semi) "semi_join" else "left_join", "(\n    ", pp_ds_name(ds),
-                   if (ord) " |> order_levels()",
+                   if (ord) paste0(" |> ", .order_levels_step(NULL)),
                    if (!is.null(w)) paste0(" |> filter(", w, ")"),
                    " |> select(", sel, "),\n    by = ", q(by), "\n  )"))
       },
@@ -1762,7 +1762,7 @@ tfl_read_fig_design <- function(path) {
 # reads are the records of the report's subjects.
 .fig_design_body <- function(design, gg, setup = FALSE, name = "fig",
                              levels = NULL, codelists_head = TRUE,
-                             order = isTRUE(setup) || length(levels) > 0L) {
+                             order = TRUE) {
   plot <- design$plot
   d <- .fig_steps_code(design$data, levels, order = order, subjects = attr(design, "subjects"))
   head <- if (length(levels) && codelists_head) .codelists_head(levels)
@@ -1964,10 +1964,6 @@ tfl_read_fig_design <- function(path) {
 #' @param save `FALSE` leaves out saving the PNG: the code makes the
 #'   figure only (a report program writes it into its RTF, at its size on
 #'   the page: [tfl_fig_page_size()]).
-#' @param order_arms `TRUE` puts the arms in their numeric order with
-#'   `order_levels()` (a study helper, see [tfl_helpers_code()]), first step of
-#'   each dataset read; the default, `NULL`, does so with `setup = TRUE` or
-#'   `codelists`, the code that needs the helpers.
 #' @param width_in,height_in The saved PNG's size in inches (`save`): a
 #'   report's figure is its page's ([tfl_fig_page_size()]).
 #' @param name The name the figure is given.
@@ -1979,8 +1975,9 @@ tfl_read_fig_design <- function(path) {
 #'   [tfl_helpers_code()]); a list with labels also gives the legend of the
 #'   colour variable its labels (`labels = cl_<variable>` in the scales).  The arms
 #'   are first put in their numeric order by `order_levels()` (`TRT01P` by
-#'   `TRT01PN`), first step of each dataset read (see `order_arms`); a code
-#'   list wins.
+#'   `TRT01PN`; a study helper, see [tfl_helpers_code()]), first step of each
+#'   dataset read, as the tables' data steps do -- with or without `setup`
+#'   and code lists; a code list wins.
 #'
 #' The script has two sections: `# ---- data ----` (the steps' pipes, one
 #' an object; the axis breaks; a panel's data) and `# ---- plot ----` (the
@@ -1994,14 +1991,15 @@ tfl_read_fig_design <- function(path) {
 #' @export
 tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
                                 setup = FALSE, save = TRUE, name = "fig",
-                                codelists = NULL, width_in = 7.5, height_in = 4.5,
-                                order_arms = NULL) {
+                                codelists = NULL, width_in = 7.5, height_in = 4.5) {
   design <- if (inherits(design, "tfl_fig_design")) design else .fig_design_from_list(design)
   gg <- .fig_target_version(ggplot2_version, design)
   # the report's code lists (its rows of the codelists sheet): on the
   # figure's data, last of its data steps
   lv <- .codelist_levels(codelists, plot_id)
-  order <- if (is.null(order_arms)) isTRUE(setup) || length(lv) > 0L else isTRUE(order_arms)
+  # the arms in their numeric order (order_levels()), first of each read:
+  # the tables' rule, in every program a design writes
+  order <- TRUE
   if (length(design$plots)) {
     return(.fig_compose_code(design, plot_id, gg, setup = setup,
                              save = save, name = name, levels = lv,

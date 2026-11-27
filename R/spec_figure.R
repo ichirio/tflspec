@@ -127,10 +127,9 @@
   design <- .fig_design_from_list(.fig_design_of_output(output))
   attr(design, "subjects") <- attr(output, "fig_subjects")
   # (the report's program runs after the study's helpers: the arms in their
-  # numeric order, as the figure of items has them)
+  # numeric order, order_levels(), as every program a design writes has them)
   tfl_fig_design_code(design, plot_id = output$id, save = FALSE, name = "content",
-                      codelists = .codelists_rows(output$codelists, output$id),
-                      order_arms = TRUE)
+                      codelists = .codelists_rows(output$codelists, output$id))
 }
 
 # the figure made: its code run on the objects it reads (`data`: a named
