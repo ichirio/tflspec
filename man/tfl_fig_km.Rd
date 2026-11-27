@@ -39,10 +39,14 @@ tfl_fig_km(
 
 \item{data}{Dataset name.}
 
-\item{time, censor}{Time and censor (1 = censored) variables.}
+\item{time, censor}{Time and censor variables (CNSR: 0 = the event, any
+other value a censoring).}
 
-\item{time_unit}{Unit of \code{time} in the data is days; the axis is shown in
-\code{days}, \code{weeks}, \code{months} or \code{years}.}
+\item{time_unit}{The unit the analysis and the axis use: \code{days}, \code{weeks},
+\code{months} or \code{years}.  AVAL is converted from its unit, AVALU (days when
+the data has none), by the study helper \code{tte_time()}; a data with two
+units stops the program.  The script defines \code{tte_time()} itself unless
+a study's setup has it.}
 
 \item{title}{Figure title.}
 

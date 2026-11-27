@@ -126,9 +126,12 @@ test_that("the percentages' denominator is BIGN and the items say how analysis i
   expect_identical(cmp$step, "analysis")
   expect_identical(cmp$tier, "usual")
   expect_identical(cmp$description, "The arm compared against the reference")
-  expect_match(ts[["km_simple.yml"]]$data[[2]]$derive,
-               "[[\"{time_unit}\"]]", fixed = TRUE)
-  expect_match(ts[["km_simple.yml"]]$data[[2]]$derive, "months = {days_per_month}", fixed = TRUE)
+  # the time's unit is the study helper's, not a division written in the template
+  expect_identical(as.character(ts[["km_simple.yml"]]$data[[2]]$then), "tte_time(\"{time_unit}\")")
+  expect_null(ts[["km_simple.yml"]]$data[[2]]$derive)
+  expect_null(ts[["km_simple.yml"]]$params$days_per_month)
+  expect_null(ts[["km_cards.yml"]]$params$days_per_month)
+  expect_match(ts[["forest_hr.yml"]]$analysis[[2]]$args, "survival::Surv({time}, {censor} == 0)", fixed = TRUE)
   expect_equal(ts[["ae_soc_pt.yml"]]$params$min_pct$default, 0)
   expect_identical(ts[["orr_subgroup.yml"]]$data[[1]]$population,
                    "population_efficacy")
@@ -203,4 +206,19 @@ test_that("every \"{x}\" in data and analysis names a param or a condition colum
                   info = paste(nm, a$id, paste(bad, collapse = " ")))
     }
   }
+})
+
+test_that("every series template's time_unit enum is the quick figures' pp_time_units", {
+  # one list of time units: quick.R's pp_time_units, the KM template's
+  # choices and the series templates' enums (a fourth place to drift)
+  want <- names(tflspec:::pp_time_units)
+  seen <- 0L
+  for (nm in names(series_templates())) {
+    ty <- series_templates()[[nm]]$params$time_unit$type
+    if (is.null(ty)) next
+    seen <- seen + 1L
+    got <- strsplit(sub("^enum\\[(.*)\\]$", "\\1", ty), "|", fixed = TRUE)[[1L]]
+    expect_identical(got, want, info = nm)
+  }
+  expect_gte(seen, 2L)
 })

@@ -20,9 +20,13 @@ test_that("a figure report's code is its design's", {
   out <- tfl_output("F-1", "figure",
                     data = list(source = "code", steps = design$data),
                     content = list(tfl_item("point", list(x = "AGE", y = "WEIGHTBL"))))
-  expect_identical(tfl_content_code(out),
-                   as.character(tfl_fig_design_code(design, plot_id = "F-1",
-                                                    save = FALSE, name = "content")))
+  # (a report's content is its program's part: no head, the study's setup
+  # has the helpers -- the design written as a report's, .fig_script_head())
+  old <- options(tflspec.fig_in_program = TRUE)
+  want <- as.character(tfl_fig_design_code(design, plot_id = "F-1", save = FALSE,
+                                           name = "content"))
+  options(old)
+  expect_identical(tfl_content_code(out), want)
   skip_if_not_installed("ggplot2")
   skip_if_not_installed("cards")
   p <- tfl_content_run(out, list(adsl = cards::ADSL))

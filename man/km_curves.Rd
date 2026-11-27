@@ -7,7 +7,7 @@
 km_curves(km_fit, ard = NULL, params = list())
 }
 \arguments{
-\item{km_fit}{The fit, \verb{ggsurvfit::survfit2(Surv_CNSR(AVAL, CNSR) ~ <by>, data = adtte_sub)}.}
+\item{km_fit}{The fit, \verb{ggsurvfit::survfit2(survival::Surv(AVAL, CNSR == 0) ~ <by>, data = adtte_sub)}: CNSR 0 is the event, any other value a censoring.}
 
 \item{ard}{The ARD with the subjects per group: the rows of
 \code{analysis_id == "BIGN"} (all rows when the ARD has no \code{analysis_id}),
@@ -17,7 +17,8 @@ without such a row has no N in its legend.  \code{NULL}: no N.}
 \item{params}{The appearance params, a named list; an unset one takes
 its default:
 \itemize{
-\item \code{time_unit}: the time's unit, for the x axis's title (\code{"days"}).
+\item \code{time_unit}: the unit the time is in, for the x axis's title (\code{"days"});
+the data's step (\code{tte_time()}) has converted AVAL to it.
 \item \code{x_label}: the x axis's title (\code{"Time ({time_unit})"}, the unit
 title-cased: \code{Time (Days)}); \code{{time_unit}} is filled.
 \item \code{y_label}: the y axis's title (\code{"Survival Probability"}).
@@ -41,7 +42,7 @@ standard's (\code{\link[=tfl_fig_style]{tfl_fig_style()}}).
 \dontshow{if (requireNamespace("ggsurvfit", quietly = TRUE) && requireNamespace("cards", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 adtte <- data.frame(AVAL = c(5, 8, 12, 20, 3, 9, 15, 30), CNSR = c(0, 1, 0, 0, 0, 0, 1, 1),
                     ARM = rep(c("A", "B"), each = 4))
-fit <- ggsurvfit::survfit2(ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ ARM, data = adtte)
+fit <- ggsurvfit::survfit2(survival::Surv(AVAL, CNSR == 0) ~ ARM, data = adtte)
 bign <- cards::ard_tabulate(adtte, variables = "ARM")
 km_curves(fit, bign, list(time_unit = "months"))
 \dontshow{\}) # examplesIf}

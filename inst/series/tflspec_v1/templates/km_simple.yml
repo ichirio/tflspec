@@ -20,20 +20,13 @@ params:
     tier: required
     description: The group variable; one curve a group.
   time_unit:
-    type: enum[days|months]
+    type: enum[days|weeks|months|years]
     input: pick
     choices: fixed
     default: !series time_unit
     step: data
     tier: usual
-    description: The unit of the time axis; months divides the days by days_per_month.
-  days_per_month:
-    type: number
-    input: text
-    default: !series days_per_month
-    step: data
-    tier: other
-    description: The days in a month, for time_unit months.
+    description: The unit the analysis and the axis use; AVAL is converted from its unit, AVALU, to it (tte_time()).
   time:
     type: column
     input: pick
@@ -42,7 +35,7 @@ params:
     unset: stop
     step: analysis
     tier: other
-    description: The column of the time to event.
+    description: The column of the time to event. AVAL is converted from its unit, AVALU, by tte_time(); another column is used as it is (in the axis's unit already).
   censor:
     type: column
     input: pick
@@ -51,7 +44,7 @@ params:
     unset: stop
     step: analysis
     tier: other
-    description: The censoring column (1 censored, 0 event).
+    description: The censoring column (0 is the event, any other value a censoring).
   formats:
     type: map<string,number|string>
     input: table
@@ -104,7 +97,7 @@ data:
     subjects_in: adsl_sub
     add: ["{by}"]
     where: !r PARAMCD == "OS"
-    derive: !r '{time} = AVAL / c(days = 1, months = {days_per_month})[["{time_unit}"]]'
+    then: !r 'tte_time("{time_unit}")'
 analysis:
   - id: BIGN
     label: Subjects per group

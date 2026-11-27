@@ -30,7 +30,7 @@
       fn = "km_curves",
       model = list(
         arg = "km_fit",
-        call = paste0("ggsurvfit::survfit2(ggsurvfit::Surv_CNSR({time}, {censor}) ~ {by}, ",
+        call = paste0("ggsurvfit::survfit2(", .tte_surv("{time}", "{censor}"), " ~ {by}, ",
                       "data = adtte_sub)")),
       params = c("time_unit", "x_label", "y_label", "axis_title_width", "legend"),
       titles = c("x_label", "y_label"),
@@ -192,15 +192,16 @@ tfl_figure_fn <- function(name) {
 #' The colours, the censor mark and the theme are the figure style
 #' standard's ([tfl_fig_style()]).
 #'
-#' @param km_fit The fit, `ggsurvfit::survfit2(Surv_CNSR(AVAL, CNSR) ~ <by>,
-#'   data = adtte_sub)`.
+#' @param km_fit The fit, `ggsurvfit::survfit2(survival::Surv(AVAL, CNSR == 0) ~
+#'   <by>, data = adtte_sub)`: CNSR 0 is the event, any other value a censoring.
 #' @param ard The ARD with the subjects per group: the rows of
 #'   `analysis_id == "BIGN"` (all rows when the ARD has no `analysis_id`),
 #'   stat `n`, from `cards::ard_tabulate(variables = <by>)`.  A level
 #'   without such a row has no N in its legend.  `NULL`: no N.
 #' @param params The appearance params, a named list; an unset one takes
 #'   its default:
-#'   - `time_unit`: the time's unit, for the x axis's title (`"days"`).
+#'   - `time_unit`: the unit the time is in, for the x axis's title (`"days"`);
+#'     the data's step (`tte_time()`) has converted AVAL to it.
 #'   - `x_label`: the x axis's title (`"Time ({time_unit})"`, the unit
 #'     title-cased: `Time (Days)`); `{time_unit}` is filled.
 #'   - `y_label`: the y axis's title (`"Survival Probability"`).
@@ -213,7 +214,7 @@ tfl_figure_fn <- function(name) {
 #' @examplesIf requireNamespace("ggsurvfit", quietly = TRUE) && requireNamespace("cards", quietly = TRUE)
 #' adtte <- data.frame(AVAL = c(5, 8, 12, 20, 3, 9, 15, 30), CNSR = c(0, 1, 0, 0, 0, 0, 1, 1),
 #'                     ARM = rep(c("A", "B"), each = 4))
-#' fit <- ggsurvfit::survfit2(ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ ARM, data = adtte)
+#' fit <- ggsurvfit::survfit2(survival::Surv(AVAL, CNSR == 0) ~ ARM, data = adtte)
 #' bign <- cards::ard_tabulate(adtte, variables = "ARM")
 #' km_curves(fit, bign, list(time_unit = "months"))
 #' @export
@@ -303,7 +304,7 @@ km_curves <- function(km_fit, ard = NULL, params = list()) {
 #' set.seed(1)
 #' d <- data.frame(AVAL = rexp(60, 0.1), CNSR = rbinom(60, 1, 0.3),
 #'                 ARM = rep(c("Control", "Drug X"), 30))
-#' hr <- cardx::ard_regression(survival::coxph(survival::Surv(AVAL, 1 - CNSR) ~ ARM, data = d),
+#' hr <- cardx::ard_regression(survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ ARM, data = d),
 #'                             exponentiate = TRUE)
 #' forest_hr(hr, list(favours = c("Favours Drug X", "Favours Control")))
 #' @export
@@ -361,6 +362,13 @@ forest_hr <- function(ard, params = list()) {
                    legend.position = "none")
 }
 
+# A number as text with `digits` decimals, rounded by the study's rule
+# (rtfreporter::round_num(), options(rtfreporter.rounding)): the study
+# helper fmt_num()'s arithmetic, for code that runs inside tflspec
+.fmt_num <- function(x, digits) {
+  sprintf(paste0("%.", digits, "f"), rtfreporter::round_num(as.numeric(x), digits))
+}
+
 # The HR rows wide: a row a condition (ARD order), the comparison arm's
 # estimate, interval, the model's N, and each n_by_arm arm's events/subjects
 .forest_hr_rows <- function(ard, comparison = NULL, n_by_arm = NULL) {
@@ -408,7 +416,8 @@ forest_hr <- function(ard, params = list()) {
     out[[paste0("n_arm", i)]] <- ifelse(is.na(n), "", sprintf("%s/%s", ev, n))
   }
   ok <- is.finite(out$estimate) & is.finite(out$conf.low) & is.finite(out$conf.high) & out$conf.high < 1000
-  out$txt <- ifelse(ok, sprintf("%.2f (%.2f, %.2f)", out$estimate, out$conf.low, out$conf.high), "NE")
+  out$txt <- ifelse(ok, sprintf("%s (%s, %s)", .fmt_num(out$estimate, 2L), .fmt_num(out$conf.low, 2L),
+                                .fmt_num(out$conf.high, 2L)), "NE")
   out[!ok, c("estimate", "conf.low", "conf.high")] <- NA_real_
   attr(out, "comparison") <- comparison
   out
