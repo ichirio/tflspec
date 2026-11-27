@@ -1897,12 +1897,20 @@ tfl_content_run <- function(output, data, study = NULL) {
 #'   km_fit, ard = ard, params = list(...))` -- the function [tfl_figure_fn()]
 #'   finds, with the report's resolved arguments, one a line (the model
 #'   `km_fit` written before it).  The report's own cards follow it: a
-#'   card of that function (`km_curves: {params: {legend: inside}}`) is
-#'   merged into the call argument by argument, a later card winning;
-#'   `!unset` (`km_curves: {params: {legend: !unset}}`) leaves it out, the
-#'   function's own default applying.  A scale, coord, facet or guides card
-#'   given again is folded onto the first the same way; any other card is
-#'   `+`-ed after it.
+#'   card of that function (`km_curves: {params: {legend: inside}}`)
+#'   changes the params it writes, by name (and by name inside a param that
+#'   is a named list, `subgroup_labels`), a later card winning; `!unset`
+#'   (`km_curves: {params: {legend: !unset}}`) leaves it out, the
+#'   function's own default applying.  A card of a scale the function draws
+#'   (`scale_y_continuous`, `scale_x_continuous` of km_curves;
+#'   `scale_y_continuous`, `scale_x_log10` of forest_hr) is its `scale_y` /
+#'   `scale_x` param, merged with the function's own scale by argument.  A
+#'   scale card given again (the same function and aesthetics), a guides
+#'   card, a coord or facet card of the same function is folded onto the
+#'   first by argument; a coord or facet of another function replaces it;
+#'   any other card is `+`-ed after the call.  A card that makes a plot
+#'   (`ggplot`, `ggsurvfit` ..., another figure function) or writes the
+#'   call's input (`km_fit`, `ard`) stops.
 #' @param study The study ([tfl_read_study_spec()]) or its folder; for a listing
 #'   of records (`data: {source: dataset}`) the code starts with its data
 #'   part, as [tfl_listing_code()] `part = "data"` writes it (the dataset

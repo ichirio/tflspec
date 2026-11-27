@@ -247,14 +247,16 @@
 # report is not one.
 #
 # The report's own cards (its `content:`, after the template's: canon 1.4,
-# the second way to change a report) follow the call, as a table's follow
-# its template's plan: a card of the content function itself (`km_curves:
-# {params: {legend: inside}}`) is folded onto the call argument by argument,
-# the later card winning (.merge_by_arg(), the merge of a table's appended
-# plan card; a map argument -- `params` -- by name; `!unset` takes one
-# away); a tfl_image card says the image's settings (merged the same way);
-# any other card is a piece the call has not, `+`-ed after it in order
-# (.fig_item_term(), the writer of a figure's own content items).
+# the second way to change a report; L308-309) follow the call, as a
+# table's follow its template's plan: a card of the content function itself
+# (`km_curves: {params: {legend: inside}}`) changes the params it writes,
+# the later card winning (.fig_params_over(): by name, and by name inside a
+# param that is a named list -- subgroup_labels, scale_y; `!unset` takes
+# one away, the function's own default); a card of a scale the function
+# draws itself (km_curves' scale_y_continuous, the function's `scale_y`)
+# is that param's; a tfl_image card says the image's settings (merged the
+# same way); any other card is a piece the call has not, `+`-ed after it in
+# order (.fig_item_term(), the writer of a figure's own content items).
 .content_fig_series_code <- function(output, name = "content") {
   if (is.null(output$figure)) return(NULL)
   tp <- attr(output, "template")
@@ -279,26 +281,28 @@
     }
     model <- .fig_series_model_lines(e$model$arg, call)
   }
-  given <- Filter(Negate(is.null), args[intersect(e$params, names(args))])
-  # the call's arguments: the model, the ARD, the params; the report's cards
-  # of the function over them, in order
-  fa <- c(if (!is.null(e$model)) stats::setNames(list(tfl_r(e$model$arg)), e$model$arg),
-          list(ard = tfl_r("ard")), if (length(given)) list(params = given))
-  for (card in cards$call) fa <- .merge_by_arg(fa, card$args)
-  fa <- .drop_unset(fa)
-  bad <- setdiff(names(fa$params), e$params)
+  # the params: the template's, the report's cards over them, in order
+  who <- output$id %||% "report"
+  params <- Filter(Negate(is.null), args[intersect(e$params, names(args))])
+  for (over in cards$call) params <- .fig_params_over(params, over, who, e$fn)
+  params <- .drop_unset(params)
+  bad <- setdiff(names(params), e$params)
   if (length(bad)) {
-    .ard_stop(sprintf("%s: %s() has no params %s; it takes %s.", output$id %||% "report", e$fn,
+    .ard_stop(sprintf("%s: %s() has no params %s; it takes %s.", who, e$fn,
                       paste(bad, collapse = ", "), paste(e$params, collapse = ", ")))
   }
-  if (!length(fa$params)) fa$params <- NULL
+  # the call's arguments: the model and the ARD (the call's input, the
+  # template's: no card writes them, .fig_series_cards()), the params
+  fa <- c(if (!is.null(e$model)) stats::setNames(list(tfl_r(e$model$arg)), e$model$arg),
+          list(ard = tfl_r("ard")), if (length(params)) list(params = params))
   # one argument a line (the params' list one a line inside it); a comma
   # after each argument but the last
   call_args <- lapply(names(fa), function(k) {
     v <- fa[[k]]
-    if (identical(k, "params") && .is_map(v)) {
+    if (identical(k, "params")) {
       return(c("  params = list(",
-               paste0("    ", names(v), " = ", vapply(v, .fig_arg_code, ""),
+               paste0("    ", names(v), " = ",
+                      vapply(names(v), function(p) .fig_series_param_code(v[[p]], p %in% e$scales), ""),
                       c(rep(",", length(v) - 1L), "")),
                "  )"))
     }
@@ -342,13 +346,41 @@
                 setdiff(unique(needs), c("ggplot2", "ggsurvfit", "patchwork")), ard = TRUE)
 }
 
+# A card's params over the call's: by name, the card's winning; a param
+# that is a named list on both sides (subgroup_labels, scale_y) by name
+# inside it, as a named set merges by name (canon L309); `!unset` takes a
+# param, or one name of a param's list, away (the function's own default);
+# `params: !unset`, every param the template gave
+.fig_params_over <- function(base, over, who = "report", fn = "the function") {
+  if (inherits(over, "tfl_unset")) return(list())
+  if (is.null(over) || !length(over)) return(base)
+  if (!.is_map(over)) {
+    .ard_stop(sprintf("%s: the %s card's params is a map, a param's name to its value.", who, fn))
+  }
+  .merge_by_arg(base %||% list(), over)
+}
+
+# One param's value in the call: a scale's (scale_y: its scale's arguments
+# by name) a list(), any other as .fig_arg_code() writes a value
+.fig_series_param_code <- function(v, as_list = FALSE) {
+  if (!as_list || !is.list(v) || is.object(v)) return(.fig_arg_code(v))
+  if (!length(v)) return("list()")
+  paste0("list(", paste0(vapply(names(v), .fig_arg_name, ""), " = ",
+                         vapply(v, .fig_arg_code, ""), collapse = ", "), ")")
+}
+
 # A series figure report's own cards (`content:`), as .content_fig_series_code()
-# writes them: `call`, the cards of the template's content function (the
-# item the template has); `image`, the tfl_image cards' settings merged in
-# order; `add`, every other card (a piece the template has not, added
-# after the call).  A card of another figure content function, a named
-# plot or a content of R code (`content: !r`) is not a card after the call:
-# it stops, saying so.
+# writes them: `call`, the params each card of the template's content
+# function says -- and each card of a scale the function draws itself
+# (.fig_content_table() `scales`: km_curves' scale_y_continuous is its
+# `scale_y`), in order; `image`, the tfl_image cards' settings merged in
+# order; `add`, every other card (a piece the template has not, added after
+# the call; a scale, coord, facet or guides card given twice folded,
+# .fig_fold_once()).  Not a card after the call -- it stops, saying so: a
+# card that makes a plot of its own (ggplot, ggsurvfit ..., another figure
+# content function: the figure is the call's plot), a named plot, a content
+# of R code (`content: !r`), and a card of the function that writes its
+# input (km_fit, ard: the template wires them).
 .fig_series_cards <- function(output, e) {
   content <- output$content
   who <- output$id %||% "report"
@@ -359,38 +391,59 @@
   out <- list(call = list(), image = list(), add = list())
   others <- setdiff(vapply(.fig_content_table(), `[[`, "", "fn"), e$fn)
   takes <- names(formals(get(e$fn, envir = asNamespace("tflspec"), mode = "function")))
+  wired <- setdiff(takes, "params")
   for (it in content %||% list()) {
     if (inherits(it, "tfl_plot")) {
       .ard_stop(sprintf(paste0("%s: a report with `figure:` adds cards after %s(), not a named plot ",
                                "(`%s`)."), who, e$fn, it$fn))
     }
     fn <- .schema_fn_name(it$fn %||% "")
+    scale <- .fig_once_key(fn, it$args)
     if (identical(fn, e$fn)) {
+      input <- intersect(names(it$args), wired)
+      if (length(input)) {
+        .ard_stop(sprintf(paste0("%s: the %s card writes %s, the call's input (the template's: %s); ",
+                                 "a card of %s() changes its params."),
+                          who, e$fn, paste(input, collapse = ", "), paste(wired, collapse = ", "), e$fn))
+      }
       bad <- setdiff(names(it$args), takes)
       if (length(bad)) {
         .ard_stop(sprintf("%s: the %s card's %s: %s() takes %s.", who, e$fn, paste(bad, collapse = ", "),
                           e$fn, paste(takes, collapse = ", ")))
       }
-      out$call <- c(out$call, list(it))
-    } else if (fn %in% others) {
-      .ard_stop(sprintf("%s: the figure is %s()'s (its template's `figure:`); a %s card does not change it.",
-                        who, e$fn, fn))
+      out$call <- c(out$call, list(it$args$params))
+    } else if (fn %in% c(.fig_p_fns, others)) {
+      .ard_stop(sprintf(paste0("%s: a %s card makes a plot of its own; a report with `figure:` has ",
+                               "its plot from %s() (its template's `figure:`), and its cards change ",
+                               "that plot (a %s card's params, a scale, labs, a layer ...)."),
+                        who, fn, e$fn, e$fn))
     } else if (identical(fn, "tfl_image")) {
       out$image <- .merge_by_arg(out$image, it$args)
+    } else if (scale %in% names(e$scales)) {
+      # (a scale the function draws: its param, by argument)
+      out$call <- c(out$call, list(stats::setNames(list(it$args %||% list()), e$scales[[scale]])))
     } else {
       out$add <- c(out$add, list(it))
     }
   }
   out$image <- .drop_unset(out$image)
-  # (a scale, coord, facet or guides card given twice: one, by argument)
+  # (a scale, coord, facet or guides card given twice: one, .fig_fold_once())
   out$add <- .fig_fold_once(out$add)
   out
+}
+
+# Has a figure of a content function (`figure:`) cards after its call (its
+# `content:` items)?  The sheets keep them as items (tfl_sheets_from_yaml()),
+# not as the designer's pieces.
+.fig_key_cards <- function(output) {
+  !is.null(output$figure) && is.list(output$content) && !inherits(output$content, "tfl_r") &&
+    length(output$content) > 0L
 }
 
 # A series figure report's image (its tfl_image cards merged), as the report
 # part sizes it on the page; NULL when it has none (the figure's own size)
 .fig_series_image <- function(output) {
-  has <- is.list(output$content) && !inherits(output$content, "tfl_r") &&
+  has <- .fig_key_cards(output) &&
     any(vapply(output$content, function(it) identical(.schema_fn_name(it$fn %||% ""), "tfl_image"), NA))
   if (!has) return(NULL)
   e <- .fig_content_table()[[.fig_content_key(output)$name]]

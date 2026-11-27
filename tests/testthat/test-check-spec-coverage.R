@@ -99,6 +99,24 @@ test_that("a figure content key with a name the table does not have: a figure er
   expect_identical(nrow(cv_rows(tfl_check_spec(d, adam = FALSE), "figure")), 0L)
 })
 
+test_that("a figure content key's cards are checked as a figure's items; the function's own card is the call's", {
+  d <- cv_study()
+  o <- tfl_output("F-1", "figure", common = list(population = "SAF"))
+  o$figure <- list(name = "km_curves", args = list(by = "TRT01A", time = "AVAL", censor = "CNSR"))
+  o$content <- list(tfl_item("km_curves", list(params = list(legend = "inside"))),
+                    tfl_item("coord_cartesian", list(xlimit = c(0, 24))))
+  cv_put(d, o)
+  p <- tfl_check_spec(d, adam = FALSE)
+  r <- cv_rows(p, "content")
+  expect_true(any(r$item == "coord_cartesian(xlimit)" & r$level == "error"))
+  expect_false(any(startsWith(r$item, "km_curves")))
+  expect_identical(nrow(cv_rows(p, "figure")), 0L)
+  o$content <- list(tfl_item("km_curves", list(params = list(legend = "inside"))),
+                    tfl_item("coord_cartesian", list(xlim = c(0, 24))))
+  cv_put(d, o)
+  expect_identical(nrow(cv_rows(tfl_check_spec(d, adam = FALSE), "content")), 0L)
+})
+
 test_that("a plan_cells entry named as a plan_stat_groups group is no row's label", {
   d <- cv_study()
   o <- cv_table()

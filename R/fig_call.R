@@ -124,12 +124,28 @@ tfl_fig_calls <- function() .fig_calls()
   q(as.character(x))
 }
 
+# A figure call's arguments as they are written: one that is `!unset` is
+# left out, so the function's own default applies (canon 11-09 L318).  The
+# one rule of every writer of a ggplot2 call -- the design's pieces
+# (.fig_build_call(): a registry template's items after its call, the
+# designer's layers and plot.add) and a content item (.fig_item_lang()) --
+# whatever the layers kept the `!unset` for (.fig_unset_kept()).  NULL and
+# a value that is not a list are as they are.
+.fig_call_args <- function(a) {
+  if (!is.list(a) || is.object(a) || !length(a)) return(a)
+  keep <- !vapply(a, inherits, NA, "tfl_unset")
+  if (all(keep)) a else a[keep]
+}
+
 # One call's code: fn(data = ..., aes(...), pos..., args...). `spec` is a
 # list with fn (required), package, data, aes, pos, args -- from a `call`
 # layer, a `plot.add` element, or a nested {fn: ..., args: ...} value.
+# An `!unset` argument is left out (.fig_call_args()).
 .fig_build_call <- function(spec, needs_env = NULL) {
   fn <- spec$fn
   if (is.null(fn) || !nzchar(fn)) stop("call: `fn` is required", call. = FALSE)
+  spec$args <- .fig_call_args(spec$args)
+  spec$aes <- .fig_call_args(spec$aes)
   rf <- .fig_resolve_fn(fn, spec$package)
   fn_name <- rf$fn
   pkg <- rf$pkg %||% .fig_find_pkg(fn_name) %||% "ggplot2"

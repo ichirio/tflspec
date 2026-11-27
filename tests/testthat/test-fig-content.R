@@ -224,6 +224,25 @@ test_that("tfl_image: the figure drawn at its size on the page and its dpi, save
                "render_width = 6.5, render_height = 4.5, render_dpi = 300", fixed = TRUE)
 })
 
+test_that("a figure content key's tfl_image card: the report part draws it at its size on the page", {
+  skip_if_not_installed("rtfreporter")
+  o <- tfl_output("F-2", "figure", page = list(rtf_page = list(orientation = "landscape"),
+                                               titles = list(`1` = list(center = "Figure 2"))))
+  o$figure <- list(name = "forest_hr", args = list(comparison = "Drug X"))
+  o$content <- list(tfl_item("labs", list(x = "Hazard ratio")),
+                    tfl_item("tfl_image", list(width_in = "fit", height_in = 4, dpi = 150)))
+  st <- structure(list(study = list(), data = list(),
+                       defaults = list(content = list(), page = list()), codelists = list(),
+                       patterns = list(), toc = list(), dir = tempdir()), class = "tfl_study_spec")
+  code <- paste(tfl_report_code(o, study = st, content = "content"), collapse = "\n")
+  expect_match(code, "rtfplot(content, render_width = 9.5, render_height = 4, render_dpi = 150)",
+               fixed = TRUE)
+  # no tfl_image card: the figure's own size
+  o$content <- list(tfl_item("labs", list(x = "Hazard ratio")))
+  expect_false(grepl("rtfplot(", paste(tfl_report_code(o, study = st, content = "content"), collapse = "\n"),
+                     fixed = TRUE))
+})
+
 test_that("tfl_fig_template(form = \"items\"): the content of calls, marked as the template's, with its arguments", {
   x <- tfl_fig_template("km_risk_table", param = "OS", group = "TRT01P", form = "items")
   expect_identical(x$template, "km_risk_table")
@@ -386,6 +405,55 @@ test_that("a scale, coord, facet or guides card given again is folded onto the f
   expect_match(code, "scale_x_continuous(breaks = c(0, 12, 24), limits = c(0, 24), labels = toupper)",
                fixed = TRUE)
   expect_identical(.fig_fold_once(list()), list())
+})
+
+test_that("the fold by kind: a scale by its function and aesthetics; a coord, a facet one a plot (F7)", {
+  plot_fns <- function(...) {
+    s <- .fig_split_content(list(tfl_item("ggplot", list(data = "df")), tfl_item("geom_point", list()), ...))
+    s$plots[[1L]]$items
+  }
+  fns <- function(items) vapply(items, `[[`, "", "fn")
+  # scale_colour_manual(aesthetics = "fill") is not the colour scale: both stay
+  x <- plot_fns(tfl_item("scale_colour_manual", list(values = c("red", "blue"))),
+                tfl_item("scale_colour_manual", list(values = c("grey", "black"), aesthetics = "fill")))
+  expect_identical(fns(x), c("ggplot", "geom_point", "scale_colour_manual", "scale_colour_manual"))
+  expect_identical(x[[3L]]$args, list(values = c("red", "blue")))
+  # ... and two of the same aesthetics are one, by argument
+  x <- plot_fns(tfl_item("scale_colour_manual", list(values = c("red", "blue"), aesthetics = "fill")),
+                tfl_item("scale_colour_manual", list(name = "Arm", aesthetics = "fill")))
+  expect_identical(fns(x), c("ggplot", "geom_point", "scale_colour_manual"))
+  expect_identical(x[[3L]]$args, list(values = c("red", "blue"), aesthetics = "fill", name = "Arm"))
+  # a coord of the same function: by argument
+  x <- plot_fns(tfl_item("coord_cartesian", list(xlim = c(0, 24))), tfl_item("geom_line", list()),
+                tfl_item("coord_cartesian", list(ylim = c(0, 1))))
+  expect_identical(fns(x), c("ggplot", "geom_point", "coord_cartesian", "geom_line"))
+  expect_identical(x[[3L]]$args, list(xlim = c(0, 24), ylim = c(0, 1)))
+  # another coord (coord_flip after coord_cartesian): the later call whole, in the first's place
+  x <- plot_fns(tfl_item("coord_cartesian", list(xlim = c(0, 24))), tfl_item("geom_line", list()),
+                tfl_item("coord_flip", list(clip = "off")))
+  expect_identical(fns(x), c("ggplot", "geom_point", "coord_flip", "geom_line"))
+  expect_identical(x[[3L]]$args, list(clip = "off"))
+  # a facet: the same
+  x <- plot_fns(tfl_item("facet_wrap", list(facets = "SEX")), tfl_item("facet_grid", list(rows = "SEX")))
+  expect_identical(fns(x), c("ggplot", "geom_point", "facet_grid"))
+  expect_identical(x[[3L]]$args, list(rows = "SEX"))
+  # (the kinds)
+  expect_identical(.fig_once_key("coord_flip"), "coord_")
+  expect_identical(.fig_once_key("facet_grid"), "facet_")
+  expect_identical(.fig_once_key("scale_color_manual", list(aesthetics = c("fill", "color"))),
+                   "scale_colour_manual[colour,fill]")
+  expect_identical(.fig_once_key("geom_line"), "")
+})
+
+test_that("an !unset argument left in a figure call is left out where the call is written (F2)", {
+  # a content item (.fig_item_lang())
+  e <- .fig_item_lang(tfl_item("scale_x_continuous", list(limits = tfl_unset(), breaks = c(0, 12))))
+  expect_identical(.fig_deparse(e), "scale_x_continuous(breaks = c(0, 12))")
+  # a design's piece (.fig_build_call())
+  expect_identical(.fig_build_call(list(fn = "scale_x_continuous", args = list(limits = tfl_unset(),
+                                                                               breaks = list(0, 12)))),
+                   "scale_x_continuous(breaks = c(0, 12))")
+  expect_identical(.fig_call_args(list(a = tfl_unset())), list(a = tfl_unset())[0L])
 })
 
 test_that("a figure card its writer folds keeps its !unset through the layers; the others lose it", {

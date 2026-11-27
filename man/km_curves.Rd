@@ -23,6 +23,10 @@ the data's step (\code{tte_time()}) has converted AVAL to it.
 title-cased: \code{Time (Days)}); \code{{time_unit}} is filled.
 \item \code{y_label}: the y axis's title (\code{"Survival Probability"}).
 \item \code{legend}: \code{"inside"} (top right), \code{"bottom"} or \code{"none"}.
+\item \code{scale_x}, \code{scale_y}: the axes' scales' arguments by name, over
+the function's own (\code{scale_x_continuous(limits = c(0, NA), expand = ...)}, \code{scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.2), expand = ...)}), argument by argument: \code{list(breaks = c(0, 0.5, 1))}
+keeps the limits.  A report's \code{scale_y_continuous} card is its
+\code{scale_y} (\code{list()}: the function's own).
 }}
 }
 \value{

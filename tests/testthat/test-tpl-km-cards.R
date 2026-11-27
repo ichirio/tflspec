@@ -220,8 +220,24 @@ test_that("km_cards: a once-a-plot card (scale, coord, facet) merges into the te
                             study = kmc_study)
   one <- gsub("[[:space:]]+", " ", paste(tfl_content_code(u), collapse = " "))
   expect_match(one, "coord_cartesian(xlim = c(0, 24))", fixed = TRUE)
-  # (the same after the study's layers, as the report's program has it)
-  u$content <- .merge_content(list(), u$content)
-  expect_identical(gsub("[[:space:]]+", " ", paste(tfl_content_code(u), collapse = " ")), one)
+  expect_no_error(parse(text = code, keep.source = FALSE))
+})
+
+test_that("km_cards: a once-a-plot card's !unset after the study's layers (a pattern's card under it)", {
+  d <- fcards_study()
+  param <- unique(tfl_example_adam()$ADTTE$PARAMCD)[1L]
+  lines <- c("id: F-32", "kind: figure", "label: Kaplan-Meier",
+             "template:", "  name: tflspec_v1/km_cards",
+             "  data:", "    by: TRT01P", paste0("    param: ", param),
+             "content:", "  - coord_cartesian: {ylim: !unset, xlim: [0, 24]}",
+             "  - geom_hline: {yintercept: 0.5}")
+  ro <- fcards_resolve(d, lines)
+  code <- tfl_content_code(ro)
+  one <- gsub("[[:space:]]+", " ", paste(code, collapse = " "))
+  # the template's coord_cartesian and the report's: one call, its ylim taken away
+  expect_identical(lengths(regmatches(one, gregexpr("coord_cartesian(", one, fixed = TRUE))), 1L)
+  expect_match(one, "coord_cartesian(xlim = c(0, 24))", fixed = TRUE)
+  expect_false(grepl("tfl_unset", one, fixed = TRUE))
+  expect_match(one, "geom_hline(yintercept = 0.5)", fixed = TRUE)
   expect_no_error(parse(text = code, keep.source = FALSE))
 })

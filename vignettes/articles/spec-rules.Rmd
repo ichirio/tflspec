@@ -352,12 +352,19 @@ There are two functions:
 
 - `km_curves`: Kaplan-Meier curves. Its `args` are the model's `by`,
   `time` and `censor`, then the function's params (`time_unit`,
-  `x_label`, `y_label`, `legend`).
+  `x_label`, `y_label`, `legend`, and `scale_x`, `scale_y`: its axes'
+  scales' arguments over its own).
 - `forest_hr`: a forest plot of hazard ratios. It reads the ARD's `HR`
   analysis. Its `args` are its params (`comparison`, `favours` ...).
 
-A report with `figure:` has no `content:`. An unknown name, or a missing
-model argument, stops with a message.
+A report with `figure:` may have `content:`: cards after the call. A
+card of the function (`km_curves: {params: {legend: inside}}`) changes
+only the params it writes, and `!unset` gives the function's own
+default. A card of a scale the function draws (`scale_y_continuous`) is
+merged into that scale by argument. Any other card (`labs`, a layer) is
+added after the plot. A card that makes a plot (`ggplot`, `ggsurvfit`,
+the other figure function) stops. An unknown name, or a missing model
+argument, stops with a message.
 
 ```{cat, engine.opts = list(file = file.path(outputs, "F-1.yml"), lang = "yaml")}
 id: F-1

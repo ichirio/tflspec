@@ -896,7 +896,10 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   # `figures` says -- there is nothing of the designer's to convert
   by_items <- !is.null(y) && is.null(y$layers) && is.list(y$content) && length(y$content) > 0L
   if (by_items) {
-    items <- list(data = if (!is.null(y$data)) list(steps = y$data),
+    # (a figure of a content function, `figure:`, with its cards: its data
+    # is code, as the designer's branch below reads it)
+    items <- list(data = if (!is.null(y$figure)) c(list(source = "code"), if (!is.null(y$data)) list(steps = y$data))
+                         else if (!is.null(y$data)) list(steps = y$data),
                   content = lapply(unname(y$content), .item_from_list), template = y$template)
   } else if (kind == "figure" && !is.null(fig) && identical(figures, "items")) {
     # the design's content of function calls (R/fig_content.R); a design

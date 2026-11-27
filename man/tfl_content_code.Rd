@@ -51,12 +51,20 @@ of a series template (\verb{<series>/<template>}, resolved by
 (\code{km_curves}, \code{forest_hr}): \code{content <- tflspec::km_curves(km_fit = km_fit, ard = ard, params = list(...))} -- the function \code{\link[=tfl_figure_fn]{tfl_figure_fn()}}
 finds, with the report's resolved arguments, one a line (the model
 \code{km_fit} written before it).  The report's own cards follow it: a
-card of that function (\verb{km_curves: {params: {legend: inside}}}) is
-merged into the call argument by argument, a later card winning;
-\code{!unset} (\verb{km_curves: {params: {legend: !unset}}}) leaves it out, the
-function's own default applying.  A scale, coord, facet or guides card
-given again is folded onto the first the same way; any other card is
-\code{+}-ed after it.}
+card of that function (\verb{km_curves: {params: {legend: inside}}})
+changes the params it writes, by name (and by name inside a param that
+is a named list, \code{subgroup_labels}), a later card winning; \code{!unset}
+(\verb{km_curves: {params: {legend: !unset}}}) leaves it out, the
+function's own default applying.  A card of a scale the function draws
+(\code{scale_y_continuous}, \code{scale_x_continuous} of km_curves;
+\code{scale_y_continuous}, \code{scale_x_log10} of forest_hr) is its \code{scale_y} /
+\code{scale_x} param, merged with the function's own scale by argument.  A
+scale card given again (the same function and aesthetics), a guides
+card, a coord or facet card of the same function is folded onto the
+first by argument; a coord or facet of another function replaces it;
+any other card is \code{+}-ed after the call.  A card that makes a plot
+(\code{ggplot}, \code{ggsurvfit} ..., another figure function) or writes the
+call's input (\code{km_fit}, \code{ard}) stops.}
 
 \item{study}{The study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}) or its folder; for a listing
 of records (\code{data: {source: dataset}}) the code starts with its data

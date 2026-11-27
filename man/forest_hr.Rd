@@ -26,6 +26,13 @@ else the subgroup's name).
 \item \code{bold_headings}: \code{TRUE}: the headings bold (\code{FALSE}).
 \item \code{n_by_arm}: arms whose events / subjects are shown, a column each
 (\code{NULL}: none).
+\item \code{scale_x}, \code{scale_y}: the axes' scales' arguments by name, over
+the function's own (\code{scale_x_log10(breaks = x_breaks, limits = ...)},
+\code{scale_y_continuous()} of the rows), argument by argument.  The rows'
+labels stay unless \code{scale_y} gives \code{labels} (with \code{breaks}, the
+rows' breaks are replaced too: \code{breaks} alone stops, the labels
+being the rows').  A report's \code{scale_x_log10} / \code{scale_y_continuous}
+card is its \code{scale_x} / \code{scale_y} (\code{list()}: the function's own).
 }}
 }
 \value{

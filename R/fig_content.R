@@ -134,35 +134,66 @@ tfl_plot <- function(name, items = list(), from = "own", input = NULL, form = c(
 
 # The calls a plot has once: ggplot2 keeps the last scale of an aesthetic,
 # the last coord, facet and guides, replacing the earlier whole.  A later
-# card of one of these is folded onto the plot's first card of the same
-# function, argument by argument (.merge_by_arg(): the later card's
-# arguments win, the others stay, `!unset` takes one away), as an appended
-# card overrides only what it writes (canon 1.4, 11-09); a layer, labs()
-# and theme() add up as ggplot2 adds them.  The one list of these kinds:
-# every writer of a figure's cards folds by it (.fig_split_content(), the
-# cards after a series template's figure call, .fig_series_cards()).
+# card of one of these is folded onto the plot's first card of its kind
+# (.fig_once_key()): of the same function, argument by argument
+# (.merge_by_arg(): the later card's arguments win, the others stay,
+# `!unset` takes one away), as an appended card overrides only what it
+# writes (canon 1.4, 11-09; L308-309); a coord or a facet of another
+# function (coord_flip after coord_cartesian) replaces the first whole, in
+# its place, as ggplot2 does.  A layer, labs() and theme() add up as
+# ggplot2 adds them.  The one list of these kinds and the one fold: the
+# writers of a figure's cards that fold them -- a figure of items
+# (.fig_split_content()) and the cards after a series template's figure
+# call (.fig_series_cards()) -- fold by .fig_fold_once().
 .fig_once_prefixes <- c("scale_", "coord_", "facet_", "guides")
 
-# the kind a call is folded by: its function (scale_color_* is
-# scale_colour_*), "" for one that adds up
-.fig_once_key <- function(fn) {
+# the kind a call is folded by, "" for one that adds up: a scale by its
+# function (scale_color_* is scale_colour_*) and the aesthetics it is
+# written for (`aesthetics = "fill"`: not the function's own one, another
+# scale); a coord and a facet by their kind, one each a plot; guides by
+# itself
+.fig_once_key <- function(fn, args = NULL) {
+  f <- .fig_once_fn(fn)
+  if (!any(startsWith(f, .fig_once_prefixes))) return("")
+  if (startsWith(f, "coord_")) return("coord_")
+  if (startsWith(f, "facet_")) return("facet_")
+  ae <- if (is.list(args)) args$aesthetics
+  if (startsWith(f, "scale_") && !is.null(ae) && !inherits(ae, c("tfl_unset", "tfl_r"))) {
+    ae <- sort(unique(sub("^color$", "colour", as.character(unlist(ae)))))
+    return(sprintf("%s[%s]", f, paste(ae, collapse = ",")))
+  }
+  f
+}
+
+# a call's function as the fold compares it ("" for no function name)
+.fig_once_fn <- function(fn) {
   f <- .schema_fn_name(fn %||% "")
-  if (!is.character(f) || length(f) != 1L || !any(startsWith(f, .fig_once_prefixes))) return("")
+  if (!is.character(f) || length(f) != 1L || is.na(f)) return("")
   sub("_color_", "_colour_", f, fixed = TRUE)
 }
 
-# the items with each once-a-plot call given more than once folded onto
-# the first of its function, in that one's place; their `!unset`s (kept
-# through the layers for this, .fig_unset_kept()) taken out here
+# the items with each once-a-plot kind given more than once folded onto
+# the first of its kind, in that one's place (the same function: by
+# argument; another: the later call whole); their `!unset`s (kept through
+# the layers for this, .fig_unset_kept()) taken out here
 .fig_fold_once <- function(items) {
   if (!length(items)) return(items)
-  key <- vapply(items, function(it) if (inherits(it, "tfl_item")) .fig_once_key(it$fn) else "", "")
+  key <- vapply(items, function(it) {
+    if (inherits(it, "tfl_item") && !inherits(it, "tfl_plot")) .fig_once_key(it$fn, it$args) else ""
+  }, "")
   drop <- integer()
   for (k in unique(key[nzchar(key)])) {
     at <- which(key == k)
     first <- items[[at[1L]]]
-    for (j in at[-1L]) first$args <- .merge_by_arg(first$args, items[[j]]$args)
-    first$args <- .drop_unset(first$args)
+    for (j in at[-1L]) {
+      later <- items[[j]]
+      if (identical(.fig_once_fn(later$fn), .fig_once_fn(first$fn))) {
+        first$args <- .merge_by_arg(first$args, later$args)
+      } else {
+        first <- later
+      }
+    }
+    if (length(first$args)) first$args <- .drop_unset(first$args)
     items[[at[1L]]] <- first
     drop <- c(drop, at[-1L])
   }
@@ -174,7 +205,11 @@ tfl_plot <- function(name, items = list(), from = "own", input = NULL, form = c(
 # and a card of a series figure's content function (km_curves, merged into
 # the call by .content_fig_series_code()): their writer merges them onto
 # the card before, so `!unset` there says "not the template's value, the
-# function's own default" -- taken out first, it would say nothing
+# function's own default" -- taken out first, it would say nothing.  A
+# writer that does not fold the cards (a registry template's items after
+# its call, the designer's pieces) meets the `!unset` where the call is
+# written: an `!unset` argument is left out of every figure call
+# (.fig_call_args(), read by .fig_build_call() and .fig_item_lang())
 .fig_unset_kept <- function(it) {
   if (!inherits(it, "tfl_item") || !is.character(it$fn) || length(it$fn) != 1L) return(FALSE)
   nzchar(.fig_once_key(it$fn)) ||
@@ -365,7 +400,7 @@ tfl_plot <- function(name, items = list(), from = "own", input = NULL, form = c(
 # An item as its call; a card's positional `...` (xlim's limits) written
 # by position, xlim(0, 52)
 .fig_item_lang <- function(it) {
-  a <- it$args %||% list()
+  a <- .fig_call_args(it$args %||% list())
   obj <- .fig_objects_of(it$fn)
   ty <- .fig_arg_types(it$fn, a)
   args <- lapply(stats::setNames(names(a), names(a)), function(k) .fig_value_lang(a[[k]], k, obj, ty[[k]]))

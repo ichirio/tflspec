@@ -113,13 +113,53 @@ test_that("a code SPEC's figure program runs to a ggplot", {
   expect_no_error(ggplot2::ggplot_build(p))
 })
 
-test_that("an unknown figure name, a missing model argument, and figure: with content: stop", {
+test_that("an unknown figure name, a missing model argument, and a card that makes a plot stop", {
   o <- tfl_output("F-9", "figure")
   o$figure <- list(name = "waterfall", args = list())
   expect_error(tfl_content_code(o), "km_curves, forest_hr")
   o$figure <- list(name = "km_curves", args = list(by = "TRT01A"))
   expect_error(tfl_content_code(o), "needs time, censor")
+  # a figure: report's cards follow the call; one that makes a plot of its
+  # own (ggplot) is no card of it
   o$figure <- list(name = "forest_hr", args = list())
   o$content <- list(tfl_item("ggplot", list()))
-  expect_error(tfl_content_code(o), "no `content:`")
+  expect_error(tfl_content_code(o), "a ggplot card makes a plot of its own", fixed = TRUE)
+  o$content <- list(tfl_item("labs", list(x = "Hazard ratio")))
+  code <- tfl_content_code(o)
+  expect_identical(fk_body(code), c("content <- tflspec::forest_hr(", "  ard = ard", ") +",
+                                    "  labs(x = \"Hazard ratio\")"))
+})
+
+test_that("a figure: report's cards go through the sheets as items: the same program back (F4)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  d <- file.path(tempdir(), "fig-key-5")
+  unlink(d, recursive = TRUE)
+  on.exit(unlink(d, recursive = TRUE))
+  tplfig_study(d, c("adsl", "adtte"), id = "FK-5")
+  spec <- fk_spec(fk_lines()$km, d)
+  spec$content <- list(tfl_item("km_curves", list(params = list(legend = "inside"))),
+                       tfl_item("labs", list(y = "Overall Survival")),
+                       tfl_item("annotate", list(geom = "text", x = 100, y = 0.9, label = "HR 0.70")))
+  f <- file.path(d, "spec", "outputs", paste0(spec$id, ".yml"))
+  tfl_write_output(spec, f)
+  want <- fk_body(tfl_content_code(tfl_read_output(f)))
+  expect_true(any(want == "    legend = \"inside\""))
+  expect_true(any(want == "  labs(y = \"Overall Survival\") +"))
+  sh <- suppressWarnings(tfl_sheets_from_yaml(d))
+  # (the design list keeps them as items, not the designer's pieces)
+  expect_null(sh$figures[[spec$id]]$layers)
+  expect_null(sh$figures[[spec$id]]$plot$add)
+  out <- file.path(tempdir(), "fig-key-out-cards")
+  unlink(out, recursive = TRUE)
+  on.exit(unlink(out, recursive = TRUE), add = TRUE)
+  suppressMessages(suppressWarnings(tfl_yaml_from_sheets(sh, out)))
+  g <- list.files(out, paste0("^", spec$id, "[.]yml$"), recursive = TRUE, full.names = TRUE)
+  expect_length(g, 1L)
+  back <- tfl_read_output(g[[1L]])
+  expect_equal(back$figure, spec$figure)
+  expect_identical(vapply(back$content, function(it) .schema_fn_name(it$fn), ""),
+                   c("km_curves", "labs", "annotate"))
+  expect_null(back$plot$add)
+  expect_identical(fk_body(tfl_content_code(back)), want)
 })

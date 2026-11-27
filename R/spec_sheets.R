@@ -546,9 +546,11 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       }
       if (length(more)) lr$content_more <- .sheet_more_out(more, items = TRUE)
       listings[[length(listings) + 1L]] <- lr
-    } else if (o$kind == "figure" && .fig_new_content(o$content)) {
+    } else if (o$kind == "figure" && (.fig_new_content(o$content) || .fig_key_cards(o))) {
       # a figure of items (R/fig_content.R): its data and items as they are,
-      # the design list's `content` (read back by .conv_output(), #689)
+      # the design list's `content` (read back by .conv_output(), #689); a
+      # figure of a content function (`figure:`) with its cards after the
+      # call too -- they are items, not the designer's pieces
       fd <- list(template = o$template, data = o$data$steps, content = .items_to_list(o$content))
       for (k in c("ggplot2_version", "plot", "plots", "compose", "figure")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]
       figures[[id]] <- fd

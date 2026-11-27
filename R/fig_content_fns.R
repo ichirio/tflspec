@@ -19,6 +19,10 @@
 #           the program and the call that makes it, with the template's
 #           arguments in {braces} (NULL: the function takes the ARD only)
 #   params  the template's arguments that go into the function's `params`
+#   scales  the scales the function draws itself, each its param of that
+#           scale's arguments (scale_y_continuous -> scale_y): a report's
+#           card of one is that param's, merged by argument with the
+#           function's own (.fig_series_cards(), canon L308-309)
 .fig_content_table <- function() {
   list(
     km_curves = list(
@@ -27,12 +31,14 @@
         arg = "km_fit",
         call = paste0("ggsurvfit::survfit2(", .tte_surv("{time}", "{censor}"), " ~ {by}, ",
                       "data = adtte_sub)")),
-      params = c("time_unit", "x_label", "y_label", "legend")),
+      params = c("time_unit", "x_label", "y_label", "legend", "scale_x", "scale_y"),
+      scales = c(scale_x_continuous = "scale_x", scale_y_continuous = "scale_y")),
     forest_hr = list(
       fn = "forest_hr",
       model = NULL,
       params = c("comparison", "subgroup_labels", "favours", "x_breaks", "size_by_n",
-                 "bold_headings", "n_by_arm")))
+                 "bold_headings", "n_by_arm", "scale_x", "scale_y"),
+      scales = c(scale_x_log10 = "scale_x", scale_y_continuous = "scale_y")))
 }
 
 # The names a figure content's model call reads ({by}, {time}, {censor})
@@ -118,6 +124,18 @@ tfl_figure_fn <- function(name) {
   defaults
 }
 
+# A scale the function draws (`fun`, ggplot2's): its own arguments `own`,
+# a param's (`over`, the scale's arguments by name: params$scale_y) over
+# them by argument -- the others stay (canon L308-309; NULL is passed as
+# NULL)
+.fig_fn_scale <- function(fun, own, over, fn, what) {
+  if (length(over) && (!is.list(over) || is.null(names(over)) || any(!nzchar(names(over))))) {
+    stop(sprintf("%s(): `params$%s` is a named list of the scale's arguments.", fn, what), call. = FALSE)
+  }
+  for (k in names(over)) own[k] <- list(over[[k]])
+  do.call(fun, own)
+}
+
 .fig_fn_need <- function(pkgs, fn) {
   miss <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]
   if (length(miss)) {
@@ -189,6 +207,12 @@ tfl_figure_fn <- function(name) {
 #'     title-cased: `Time (Days)`); `{time_unit}` is filled.
 #'   - `y_label`: the y axis's title (`"Survival Probability"`).
 #'   - `legend`: `"inside"` (top right), `"bottom"` or `"none"`.
+#'   - `scale_x`, `scale_y`: the axes' scales' arguments by name, over
+#'     the function's own (`scale_x_continuous(limits = c(0, NA), expand =
+#'     ...)`, `scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.2),
+#'     expand = ...)`), argument by argument: `list(breaks = c(0, 0.5, 1))`
+#'     keeps the limits.  A report's `scale_y_continuous` card is its
+#'     `scale_y` (`list()`: the function's own).
 #' @return A ggplot.
 #' @seealso [tfl_figure_fn()], [forest_hr()]
 #' @examplesIf requireNamespace("ggsurvfit", quietly = TRUE) && requireNamespace("cards", quietly = TRUE)
@@ -202,7 +226,8 @@ km_curves <- function(km_fit, ard = NULL, params = list()) {
   .fig_fn_need(c("ggsurvfit", "survival"), "km_curves")
   if (!inherits(km_fit, "survfit")) stop("km_curves(): `km_fit` is a survfit object (survfit2()).", call. = FALSE)
   p <- .fig_fn_params(params, list(time_unit = "days", x_label = "Time ({time_unit})",
-                                   y_label = "Survival Probability", legend = "inside"), "km_curves")
+                                   y_label = "Survival Probability", legend = "inside",
+                                   scale_x = list(), scale_y = list()), "km_curves")
   o <- pp_default_options("km")
   opt <- function(k, d) { x <- o[[k]]; if (is.null(x) || identical(x, "")) d else x }
   # the curves: one a level of the by variable (strata "TRT01A=Drug X")
@@ -217,9 +242,13 @@ km_curves <- function(km_fit, ard = NULL, params = list()) {
     ggsurvfit::add_censor_mark(shape = shape, size = as.numeric(opt("censor_size", 3)),
                                stroke = as.numeric(opt("censor_stroke", 0.6))) +
     ggplot2::scale_colour_manual(values = pal, breaks = lv, labels = lab) +
-    ggplot2::scale_x_continuous(limits = c(0, NA), expand = ggplot2::expansion(mult = c(0, 0.03))) +
-    ggplot2::scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, as.numeric(opt("y_by", 0.2))),
-                                expand = ggplot2::expansion(mult = c(0, 0.02))) +
+    .fig_fn_scale(ggplot2::scale_x_continuous,
+                  list(limits = c(0, NA), expand = ggplot2::expansion(mult = c(0, 0.03))),
+                  p$scale_x, "km_curves", "scale_x") +
+    .fig_fn_scale(ggplot2::scale_y_continuous,
+                  list(limits = c(0, 1), breaks = seq(0, 1, as.numeric(opt("y_by", 0.2))),
+                       expand = ggplot2::expansion(mult = c(0, 0.02))),
+                  p$scale_y, "km_curves", "scale_y") +
     ggplot2::labs(x = x_label, y = p$y_label) +
     .fig_fn_theme(opt("theme", "boxed"), as.numeric(opt("base_size", 10))) +
     .fig_fn_legend(p$legend)
@@ -271,6 +300,13 @@ km_curves <- function(km_fit, ard = NULL, params = list()) {
 #'   - `bold_headings`: `TRUE`: the headings bold (`FALSE`).
 #'   - `n_by_arm`: arms whose events / subjects are shown, a column each
 #'     (`NULL`: none).
+#'   - `scale_x`, `scale_y`: the axes' scales' arguments by name, over
+#'     the function's own (`scale_x_log10(breaks = x_breaks, limits = ...)`,
+#'     `scale_y_continuous()` of the rows), argument by argument.  The rows'
+#'     labels stay unless `scale_y` gives `labels` (with `breaks`, the
+#'     rows' breaks are replaced too: `breaks` alone stops, the labels
+#'     being the rows').  A report's `scale_x_log10` / `scale_y_continuous`
+#'     card is its `scale_x` / `scale_y` (`list()`: the function's own).
 #' @return A ggplot.
 #' @seealso [tfl_figure_fn()], [km_curves()]
 #' @examplesIf requireNamespace("cardx", quietly = TRUE) && requireNamespace("survival", quietly = TRUE) && requireNamespace("broom.helpers", quietly = TRUE)
@@ -284,7 +320,11 @@ km_curves <- function(km_fit, ard = NULL, params = list()) {
 forest_hr <- function(ard, params = list()) {
   p <- .fig_fn_params(params, list(comparison = NULL, subgroup_labels = NULL, favours = NULL,
                                    x_breaks = NULL, size_by_n = FALSE, bold_headings = FALSE,
-                                   n_by_arm = NULL), "forest_hr")
+                                   n_by_arm = NULL, scale_x = list(), scale_y = list()), "forest_hr")
+  if ("breaks" %in% names(p$scale_y) && !"labels" %in% names(p$scale_y)) {
+    stop("forest_hr(): `params$scale_y` gives `breaks` without `labels`: the rows' labels go with the rows' breaks.",
+         call. = FALSE)
+  }
   if (!is.null(p$favours) && length(p$favours) != 2L) {
     stop("forest_hr(): `favours` is two labels, left and right of 1.", call. = FALSE)
   }
@@ -317,15 +357,22 @@ forest_hr <- function(ard, params = list()) {
                                hjust = c(1, 0), size = base_size / ggplot2::.pt * 0.8)
   }
   # the x axis even about 1 (log): the favours' labels a half each
-  m <- max(abs(log(c(pts$conf.low, pts$conf.high, p$x_breaks, 0.5, 2))), na.rm = TRUE) * 1.05
+  xb <- c(p$x_breaks, if (is.numeric(p$scale_x$breaks)) p$scale_x$breaks)
+  m <- max(abs(log(c(pts$conf.low, pts$conf.high, xb, 0.5, 2))), na.rm = TRUE) * 1.05
+  # (the scales over the params' scale_x / scale_y, by argument: the rows'
+  # breaks and labels stay unless scale_y gives labels)
   g +
-    ggplot2::scale_x_log10(breaks = p$x_breaks %||% ggplot2::waiver(), limits = exp(c(-m, m))) +
-    ggplot2::scale_y_continuous(breaks = c(rows$y, top), labels = y_labels,
-                                limits = c(if (is.null(p$favours)) 0.5 else -0.2, top + 0.3),
-                                expand = ggplot2::expansion(add = 0.1),
-                                sec.axis = ggplot2::dup_axis(breaks = c(rows$y, top),
-                                                             labels = c(rows$txt, attr(rows, "heading")),
-                                                             name = NULL)) +
+    .fig_fn_scale(ggplot2::scale_x_log10,
+                  list(breaks = p$x_breaks %||% ggplot2::waiver(), limits = exp(c(-m, m))),
+                  p$scale_x, "forest_hr", "scale_x") +
+    .fig_fn_scale(ggplot2::scale_y_continuous,
+                  list(breaks = c(rows$y, top), labels = y_labels,
+                       limits = c(if (is.null(p$favours)) 0.5 else -0.2, top + 0.3),
+                       expand = ggplot2::expansion(add = 0.1),
+                       sec.axis = ggplot2::dup_axis(breaks = c(rows$y, top),
+                                                    labels = c(rows$txt, attr(rows, "heading")),
+                                                    name = NULL)),
+                  p$scale_y, "forest_hr", "scale_y") +
     ggplot2::labs(x = "Hazard Ratio (95% CI)", y = NULL) +
     .fig_fn_theme("boxed", base_size) +
     ggplot2::theme(axis.text.y.left = ggplot2::element_text(hjust = 0),

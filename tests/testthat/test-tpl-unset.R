@@ -296,6 +296,32 @@ test_that("a figure template's call writes `!unset` the same way", {
   expect_no_match(code, "structure(", fixed = TRUE)
 })
 
+test_that("a registry figure template's report: a scale card's !unset is no tfl_unset() in the program (F2)", {
+  o <- tfl_output("F-9", "figure", data = list(steps = list(
+    list(step = "read", dataset = "ADTTE"), list(step = "param", value = "OS"))),
+    template = list(name = "km_survival", args = list(by = "TRT01A")),
+    content = list(tfl_item("scale_x_continuous", list(limits = tfl_unset(), breaks = list(0, 12)))))
+  r <- tfl_resolve_output(o, us_study())
+  # (the layers kept the card's !unset for its writer)
+  sc <- Filter(function(it) identical(it$fn, "scale_x_continuous"), r$content)
+  expect_s3_class(sc[[1L]]$args$limits, "tfl_unset")
+  code <- paste(tfl_content_code(r), collapse = "\n")
+  expect_no_match(code, "tfl_unset", fixed = TRUE)
+  expect_match(code, "scale_x_continuous(breaks = c(0, 12))", fixed = TRUE)
+  expect_no_match(code, "scale_x_continuous(limits", fixed = TRUE)
+})
+
+test_that("a designer's figure report: a scale card's !unset is no tfl_unset() in the program (F2)", {
+  out <- tfl_output("F-8", "figure",
+                    data = list(source = "code", steps = list(list(step = "read", dataset = "ADSL"))),
+                    content = list(tfl_item("point", list(x = "AGE", y = "WEIGHTBL")),
+                                   tfl_item("scale_x_continuous", list(limits = tfl_unset(), breaks = list(20, 40)))))
+  r <- tfl_resolve_output(out, us_study())
+  code <- paste(tfl_content_code(r), collapse = "\n")
+  expect_no_match(code, "tfl_unset", fixed = TRUE)
+  expect_match(code, "scale_x_continuous(breaks = c(20, 40))", fixed = TRUE)
+})
+
 us_has_unset <- function(x) {
   inherits(x, "tfl_unset") || (is.list(x) && any(vapply(x, us_has_unset, NA)))
 }
