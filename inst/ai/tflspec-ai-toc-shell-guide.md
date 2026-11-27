@@ -320,9 +320,12 @@ named by the shell's label:
   `plan_paginate_rows: {cont_label: (Cont.)}`.
 - Columns that do not fit one page (many visits): `plan_paginate_cols`.
 
-What every table of the study shares (the stub, the blank rows, the
-rounding, `normalize_ard`) can go once in `spec/defaults.yml`'s
-`content:`; a report's own item of the same function replaces it.
+What every table of the study shares (the stub, the blank rows,
+`normalize_ard`) can go once in `spec/defaults.yml`'s `content:`; a
+report's own item of the same function replaces it.  The rounding is not
+a card there: it is the study's force, `spec/defaults.yml` `force:`
+(`force: {content: [{plan_digits: {rounding: sas}}]}`), and a report does
+not write it.
 
 ### 3.6 Footnotes
 

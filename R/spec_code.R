@@ -743,8 +743,10 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 #' @param spec A table definition ([tfl_read_table_spec()], [tfl_table_spec()])
 #'   or the path(s) of its workbook(s).
 #' @param output_id The table, when the definition has several; `NA` for the
-#'   workbook's defaults alone (the rows with no output_id, and the study's
-#'   rounding): the study's `defaults.yml` content, with no table_plan() item.
+#'   workbook's defaults alone (the rows with no output_id): the study's
+#'   `defaults.yml` content, with no table_plan() item.  The study's rounding
+#'   is no item: it is the study's force (`defaults.yml` `force:`), which the
+#'   converter writes.
 #' @param own With `output_id`: `TRUE` for the table's own rows alone, the
 #'   defaults left out -- what its spec file says itself (a value equal to
 #'   the default is kept, as it was written).  `FALSE`: the defaults and the
@@ -770,12 +772,13 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
         sp[[nm]] <- d[keep(d$output_id), , drop = FALSE]
       }
     }
-    # the study's rounding is the defaults', not a table's own
-    if (!defaults) sp$study <- sp$study[0L]
     attr(sp, "output_id") <- if (defaults) NULL else output_id
   } else {
     sp <- .ard_spec_scope(sp, output_id)
   }
+  # the study's rounding is its force (defaults.yml `force:`, canon 1.33),
+  # not a content card of the defaults or of a table
+  sp$study <- sp$study[0L]
   items <- .plan_content_items(sp, ard_spec, derived = FALSE)
   if (defaults && !length(items[[1L]]$args)) items <- items[-1L]
   if (!defaults && !is.null(ard_spec)) {
@@ -2562,8 +2565,8 @@ tfl_report_setup_code <- function(spec) {
   # the study's rounding, once for every report
   # (and the same value for cards, in the same call, as the YAML route writes it)
   # (the study's setup file sets it when option tflspec.study_setup is TRUE)
-  rnd <- .ard_spec_study_value(sp, "rounding")
-  if (!is.na(rnd) && !isTRUE(getOption("tflspec.study_setup"))) {
+  rnd <- .study_rounding(sp)
+  if (!is.null(rnd) && !isTRUE(getOption("tflspec.study_setup"))) {
     ct <- .cards_round_type(rnd)
     ro <- c(list("options", rtfreporter.rounding = rnd), if (!is.null(ct)) list(cards.round_type = ct))
     out <- c(out, .spec_call_code(do.call(.spec_call, ro), 0L))

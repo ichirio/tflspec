@@ -9,7 +9,8 @@
 # The studies:
 #   shipped  the study as tfl_ai_study_init() writes it (its defaults.yml)
 #   plain    no defaults content: no digits, header or stub settings (only
-#            the shipped page and style sets, which study.yml's style names)
+#            the shipped page and style sets, which study.yml's style names,
+#            and the shipped study's rounding, its `force:`)
 #   company  the company standard that tfl_use_company_templates() writes
 #            (inst/standards/defaults.yml) as the study's defaults.yml, with
 #            the shipped page header and footer
@@ -105,9 +106,12 @@ test_that("golden RTFs: every template in three studies, a company's copy the sa
   std <- readLines(file.path(co, "inst", "standards", "defaults.yml"))
   shipped <- readLines(file.path(d, "spec", "defaults.yml"))
   sets <- shipped[seq(grep("^(page|styles):", shipped)[1L], length(shipped))]
+  # (the shipped study's rounding: its force, the lines before its content)
+  force <- shipped[seq_len(grep("^content:", shipped)[1L] - 1L)]
+  expect_true("force:" %in% force)
   company <- c(std, sets)
   studies <- c(shipped = d,
-               plain = golden_study(d, c("content: []", sets), file.path(root, "plain")),
+               plain = golden_study(d, c(force, "content: []", sets), file.path(root, "plain")),
                company = golden_study(d, company, file.path(root, "company")))
   expect_true(all(dir.exists(studies)))
 

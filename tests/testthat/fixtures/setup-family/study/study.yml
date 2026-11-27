@@ -8,7 +8,6 @@ description: 'A fictional two-arm study (Examplumab vs Placebo) for the golden
 spec_version: 2
 tokens: {COMPANY: Example Pharma, STATUS: FINAL, ANALYSIS_TYPE: Week 16 Analysis}
 settings:
-  rounding: r
   style: house
   adam_levels: define_xml
 keys:

@@ -1,8 +1,9 @@
 # The fictional study's defaults (the golden test of the setup programs)
+force:
+  content:
+    - plan_digits: {rounding: r}
 content:
   - normalize_ard: {}
-  - plan_digits:
-      rounding: r
 codelists:
   SEX:
     - {value: F, label: Female}

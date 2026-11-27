@@ -2,7 +2,7 @@
 # call of the figure content function the template's `figure:` names
 # (.fig_content_table()).  Fictional data only.
 
-sfc_study <- list(settings = list(rounding = "sas"))
+sfc_study <- list(settings = list())
 
 sfc_report <- function(text) {
   f <- tempfile(fileext = ".yml")

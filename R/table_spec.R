@@ -1324,8 +1324,8 @@ print.tfl_table_spec <- function(x, ...) {
 # keeps widen_ard()'s own default.
 .ard_spec_table_args <- function(sp) {
   out <- list()
-  r <- .ard_spec_study_value(sp, "rounding")
-  if (!is.na(r)) out$rounding <- r
+  # (the study's rounding, its force: an in-process build applies it here)
+  out$rounding <- .study_rounding(sp)
   t <- sp$tables
   if (!nrow(t)) return(out)
   t <- t[1L, , drop = FALSE]
@@ -2587,7 +2587,7 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
     }
     parts <- lapply(ids, function(id) tfl_as_table_spec(x[[id]], id, compare))
     rnd <- unique(stats::na.omit(vapply(parts, function(s)
-      .ard_spec_study_value(s, "rounding"), "")))
+      .study_rounding(s) %||% NA_character_, "")))
     if (length(rnd) > 1L) {
       .ard_stop(paste0("The plans round differently (",
                        paste(rnd, collapse = " / "), "); a study has one ",

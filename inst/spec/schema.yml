@@ -112,7 +112,7 @@ plan_digits:
   description: The digits of each statistic, as a house rule.
   dots: {editor: digits, input: table, style: named, type: "number|string|vec<stat, number|string>|map<string, number|string|vec<stat, number|string>>", description: "By variable, kind (continuous / categorical) or `default`: one number for every statistic, or one a statistic; \"3s\" for three significant digits. By a row key's value (a lab table's parameter): the key, then each value's digits -- one number, or one a statistic (`PARAM: {\"Alanine Aminotransferase (U/L)\": 1, \"Bilirubin (umol/L)\": {mean: 2, sd: 3}}`); on the `param_change` template the key is `PARAM`, the parameter's label (the name `ai/adam_summary.md` lists), as the table prints it, not `PARAMCD`, which matches nothing there; a value no row has is ignored.", example: {continuous: {mean: 1, sd: 2}, AGE: 0, PARAM: {"Alanine Aminotransferase (U/L)": 1, "Bilirubin (umol/L)": {mean: 2, sd: 3}}}}
   args:
-    rounding: {label: {en: "Rounding", ja: "丸め方 (rounding)"}, type: "enum[sas|r|iec60559]", description: The tie-breaking family.}
+    rounding: {label: {en: "Rounding", ja: "丸め方 (rounding)"}, type: "enum[sas|r|iec60559]", description: "The tie-breaking family. A study's rounding is forced, in spec/defaults.yml `force:` (`force: {content: [{plan_digits: {rounding: sas}}]}`, sas or r): a table's own value that differs is warned of and takes the forced one; the study's content may not hold it."}
     .rows: {label: {en: "Decimals by row", ja: "行ごとの桁"}, type: "vec<string, integer|string>", description: "The digits of a statistic row (a table with stats = rows), by its label."}
 
 plan_levels:
@@ -906,8 +906,9 @@ rtf_footer:
       rounding, output_path, program_dir. ARD keys: id, output, source. No output_id.'
     columns:
       - column: key
-        description: 'The fact: rounding (r: round half to even; sas: round half away
-          from zero; blank: options(rtfreporter.rounding)); output_path (the folder
+        description: 'The fact: rounding (the study''s rounding, forced on every report:
+          r round half to even, sas round half away from zero; the YAML spec holds it in
+          spec/defaults.yml `force:`; blank: none forced); output_path (the folder
           of the RTF files); program_dir (the folder of the programs, for {PROGRAM});
           ARD: id (the subject key; default USUBJID), output (the study ARD''s file;
           default output/ard/ard.rds), source (R files of the study''s own analysis

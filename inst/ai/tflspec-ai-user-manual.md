@@ -245,7 +245,7 @@ generate_rtfreport(tfl_report(o, content = plan, study = st), "T-1.rtf")
 **study.yml** — `spec_version: 2` (the SPEC's form: a study.yml with
 none, or an older one, stops and lists the old forms to change);
 `study_id`, `title`; `settings:` the table and report
-study keys (`rounding`: `sas` / `r`; `program_dir`; `program` and
+study keys (`program_dir`; `program` and
 `file`, each report's program and RTF file, `{output_id}.R` /
 `{output_id}.rtf`; `adam_levels`: `define_xml` or `define_spec` puts on
 `study$adam` the levels of the code lists the study's ADaM metadata maps to
@@ -311,7 +311,13 @@ study's `codelists:` in
 template names where it uses one, `!r study$codelists$SEX`); in `content`, the report's items of one function
 replace every item of that function below it, in the place the first had;
 a function only the report has goes after them.  `defaults.yml` holds the
-study-wide content (the rounding ...) and the page configurations
+study's force, `force:` -- only the rounding, which every report uses
+whatever a layer or the report says (`force: {content: [{plan_digits:
+{rounding: sas}}]}`, `sas` or `r`; written nowhere else: a `rounding` in
+study.yml's `settings:` or a `plan_digits: {rounding: }` card in a
+`content:` of `defaults.yml` stops, and a report's own `plan_digits(rounding
+= )` of another value is warned of and takes the forced one) -- the
+study-wide content and the page configurations
 (`styles:`, a style set each: the page's settings and the fixed lines of the
 header, footer, titles and footnotes in the blocks `first` and `last`; a
 report's own lines print between them; `tfl_styles()` lists the sets and the
@@ -1318,7 +1324,8 @@ sp$ard; sp$report; sp$table       # fill sp$ard$datasets$path before running
 `tfl_table_spec()`, `tfl_read_table_spec()`, `tfl_write_table_spec()`,
 `tfl_table_spec_template(ard)` (scaffolds `tables` / `variables` / `cells`
 from an ARD). A workbook may be split over several files; a sheet is said
-once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `r`;
+once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `r`, the
+study's force, which the YAML spec holds in `spec/defaults.yml` `force:`;
 `output_path`; `program_dir`; `adam_levels`: `define_xml` / `define_spec` / `none`, the default).
 
 **tables** (one row a table) — the roles and the table-wide layers:

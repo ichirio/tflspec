@@ -264,10 +264,15 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
           invokeRestart("muffleWarning")
         })
     }
-    # (a `plot:` key that does nothing in the template: a warning of the report)
+    # (a `plot:` key that does nothing in the template: a warning of the report;
+    # a rounding the study's force replaces, canon 11-10 :366: one too)
     ro <- tryCatch(withCallingHandlers(tfl_resolve_output(o, study),
       tfl_plot_key_unused = function(w) {
         add(output_id = id, part = "plot", item = w$key, level = "warning", message = w$text)
+        invokeRestart("muffleWarning")
+      },
+      tflspec_force_over = function(w) {
+        add(output_id = id, part = "content", item = w$item, level = "warning", message = w$text)
         invokeRestart("muffleWarning")
       }), error = function(e) e)
     if (inherits(ro, "error")) {

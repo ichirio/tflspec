@@ -63,7 +63,7 @@ test_that("a file that cannot be read is an error of that report alone; the leve
   expect_error(tfl_read_outputs(d))
 })
 
-test_that("the study's rounding (study.yml settings) holds for an in-process build: a half away from zero", {
+test_that("the study's rounding (defaults.yml force:) holds for an in-process build: a half away from zero", {
   skip_on_cran()
   d <- cl_study(withr::local_tempdir())
   st <- tfl_read_study_spec(d)
@@ -74,8 +74,8 @@ test_that("the study's rounding (study.yml settings) holds for an in-process bui
   expect_identical(getOption("rtfreporter.rounding"), "sas")
   options(op)
   expect_identical(getOption("rtfreporter.rounding"), "r")
-  # a study that says none leaves the option
-  st$study$settings$rounding <- NULL
+  # a study that forces none leaves the option
+  st$force <- list()
   expect_identical(tflspec:::.study_rounding_option(st), list())
   expect_identical(getOption("rtfreporter.rounding"), "r")
 })

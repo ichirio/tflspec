@@ -389,7 +389,8 @@ print.tfl_ai_adam <- function(x, ...) {
 #' keeps them, so the folder opens there as a study),
 #' `spec/data.yml` (each ADaM file as a dataset, and an analysis set for
 #' each population flag of ADSL -- `SAFFL`, `FASFL`, `ITTFL`, `PPROTFL` ...
-#' -- as `<flag> == "Y"`) and `spec/defaults.yml` (the page every report
+#' -- as `<flag> == "Y"`) and `spec/defaults.yml` (the study's rounding,
+#' `sas`, forced on every report in its `force:`; the page every report
 #' starts from: the running header and footer, and the cell of a count).
 #' Each report file then says `extends: [defaults]` and only what differs.
 #' Check the analysis sets' ids and labels: the table prompt gives them to
@@ -439,7 +440,7 @@ tfl_ai_study_init <- function(dir, adam = "adam", study_id = "STUDY-01", title =
   rel <- gsub("\\\\", "/", file.path(adam, files))
   pops <- .ai_adam_populations(file.path(adam_dir, files[nm == "ADSL"]), fn)
   study <- list(spec_version = .spec_version, study_id = study_id, title = title %||% study_id,
-                settings = list(rounding = "sas", output_path = "output/tfl",
+                settings = list(output_path = "output/tfl",
                                 program_dir = "programs/tfl", file = "{output_id}.rtf",
                                 style = "standard"),
                 keys = list(id = "USUBJID"))
@@ -490,6 +491,7 @@ tfl_ai_study_init <- function(dir, adam = "adam", study_id = "STUDY-01", title =
 .ai_defaults_yml <- function(study_id) {
   c("# What every report starts from; a report file says only what differs",
     "# (extends: [defaults]).",
+    .force_lines("sas"),
     "content:",
     "  - normalize_ard: {}",
     "  - plan_cells: {categorical: [!r \"n == 0 ~ '0'\", \"{n} ({p:.1f%})\"], na: \"-\"}",

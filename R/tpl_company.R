@@ -555,10 +555,10 @@ tfl_use_company_templates <- function(path, package = basename(path),
     paste0("# ", package, "'s company standard: what a new study's standard is copied"),
     "# from, in the form of a study's spec/defaults.yml (the look of every table: the digits, the",
     "# header, the label column, the blank rows, the widths, the style).",
+    .force_lines("sas"),
     "content:",
     "  - normalize_ard: {}",
     "  - plan_cells: {default: [!r \"n == 0 ~ '0'\", \"{n:.0f} ({p:.1f%})\"], na: \"-\"}",
-    "  - plan_digits: {rounding: sas}",
     "  - plan_stub: {name: row_label, heading: \"\", before: true}",
     "  - plan_blanks: {where: between_groups, first: true, last: true}"))
   put("README.md", c(

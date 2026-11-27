@@ -41,7 +41,8 @@
 #' @param args The arguments, a named list.
 #' @param package The package `fn` is in, when its name does not say.
 #' @param from Where an item came from: `"own"`, `"defaults"`,
-#'   `"pattern:<name>"`, `"style:<name>"`, `"template:<name>"`.
+#'   `"pattern:<name>"`, `"style:<name>"`, `"template:<name>"`, `"force"`
+#'   (the study's force, `defaults.yml` `force:`).
 #' @param id The report's id (letters, digits, `.`, `_`, `-`); the file is
 #'   `spec/outputs/<id>.yml`.
 #' @param kind `"table"`, `"figure"` or `"listing"`.
@@ -119,10 +120,10 @@ tfl_item <- function(fn, args = list(), from = "own") {
   .check_fn(fn, "tfl_item()")
   .check_args(args, "tfl_item()")
   if (!is.character(from) || length(from) != 1L ||
-      !(from %in% c("own", "defaults") || startsWith(from, "pattern:") ||
+      !(from %in% c("own", "defaults", "force") || startsWith(from, "pattern:") ||
         startsWith(from, "template:") || startsWith(from, "style:"))) {
     stop(paste0("tfl_item(): `from` is \"own\", \"defaults\", \"pattern:<name>\", ",
-                "\"style:<name>\" or \"template:<name>\"."), call. = FALSE)
+                "\"style:<name>\", \"template:<name>\" or \"force\"."), call. = FALSE)
   }
   structure(list(fn = fn, args = args, from = from), class = "tfl_item")
 }

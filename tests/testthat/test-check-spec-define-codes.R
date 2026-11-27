@@ -129,7 +129,7 @@ dc_two_lists <- function(env = parent.frame()) {
 
 test_that("a template report: its own dataset's list (the template's data rows), not every dataset's", {
   d <- dc_two_lists()
-  write_study_yml(d, c("study_id: DC-1", "settings:", "  rounding: sas"))
+  write_study_yml(d, c("study_id: DC-1"))
   suppressMessages(tfl_copy_templates(d, "tflspec_v1/tflspec_shift"))
   f <- file.path(d, "spec", "outputs", "T-SH.yml")
   # a shift table on ADLB (the template's `from` default) whose list has
