@@ -41,7 +41,8 @@ no set.  A row of another set (a denominator) keeps its own.  Rows
 of several sets and no BIGN analysis to say the report's stop.
 }
 A template report's own data row over the template's subjects row
-gives no set of its own once the argument is written (written once).
+gives no set of its own once the argument is written (written once); a
+data map that says the set beside it (a figure's) says the same set.
 It never writes \verb{common:}; a \code{common: population} the report has is
 taken away (the set is then written once).  A second call with the same
 set changes nothing.

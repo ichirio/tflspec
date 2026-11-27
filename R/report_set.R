@@ -298,7 +298,8 @@ tfl_report_set <- function(output, study = NULL) {
 #'     of several sets and no BIGN analysis to say the report's stop.
 #' }
 #' A template report's own data row over the template's subjects row
-#' gives no set of its own once the argument is written (written once).
+#' gives no set of its own once the argument is written (written once); a
+#' data map that says the set beside it (a figure's) says the same set.
 #' It never writes `common:`; a `common: population` the report has is
 #' taken away (the set is then written once).  A second call with the same
 #' set changes nothing.
@@ -353,6 +354,11 @@ tfl_set_report_set <- function(output, population, study = NULL) {
       })
       if (is.list(o$data) && length(o$data) && is.null(names(o$data))) o$data <- own_off(o$data)
       if (is.list(o$ard$analysis_data)) o$ard$analysis_data <- own_off(o$ard$analysis_data)
+      # (a data map that says the set beside it -- a figure's, canon 11-15 --
+      # says the same set, never another: .tpl_set_fill() would stop)
+      if (is.list(o$data) && !is.null(names(o$data)) && !is.null(o$data[["population"]])) {
+        o$data[["population"]] <- val
+      }
       return(o)
     }
     # (a figure's data written as a map: its key, as any report's map; a
