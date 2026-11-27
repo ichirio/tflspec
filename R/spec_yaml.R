@@ -124,7 +124,8 @@ tfl_item <- function(fn, args = list(), from = "own") {
     stop(paste0("tfl_item(): `from` is \"own\", \"defaults\", \"pattern:<name>\", ",
                 "\"style:<name>\" or \"template:<name>\"."), call. = FALSE)
   }
-  structure(list(fn = fn, args = args, from = from), class = "tfl_item")
+  # (a `~` argument is not written: R/spec_study.R .drop_null(), L463)
+  structure(list(fn = fn, args = .drop_null(args), from = from), class = "tfl_item")
 }
 
 #' @rdname tfl_r
@@ -395,8 +396,12 @@ tfl_read_output <- function(path) {
   # ([[ ]]: `$content` would take `contents` when there is no content)
   content <- if (inherits(y[["content"]], "tfl_r")) y[["content"]] else
     lapply(y[["content"]] %||% list(), .item_from_list)
-  # (a table's verb twice: one call, R/plan_repeats.R)
-  if (y$kind %in% c("table", "listing")) content <- .plan_merge_repeats(content, y$id)
+  # (a table's verb twice: one call, R/plan_repeats.R; a code SPEC file's own
+  # cards of a verb that does not stack stop)
+  if (y$kind %in% c("table", "listing")) {
+    own_file <- if (nzchar(path) && !.is_tpl_spec(y$template)) path
+    content <- .plan_merge_repeats(content, y$id, own_file)
+  }
   # (a template report that writes no `extends` takes its template's: left
   # NULL; any other report's is `defaults`)
   extends <- y$extends
