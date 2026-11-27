@@ -28,7 +28,10 @@ tfl_write_study_part(
 \description{
 Writes the study-level file of one part of a \code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}
 result -- what a builder changes for the whole study (the rounding of
-every table, a pattern) -- in the form the reader reads.
+every table, a pattern) -- in the form the reader reads.  For
+\code{"defaults"} written over the study's own \code{spec/defaults.yml}, the blocks
+that are not layers (\verb{codelists:}, \verb{adam_meta:}, \verb{figure_style:},
+\verb{options:}) are kept as the file has them.
 }
 \examples{
 d <- system.file("extdata", "spec-yaml", package = "tflspec")

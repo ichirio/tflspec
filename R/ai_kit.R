@@ -130,7 +130,7 @@
 .ai_example_listing <- function() {
   list(
     listings = .ai_df(output_id = "L-1", type = "multiline", dataset = "ADAE",
-                      where = "SAFFL == \"Y\" & AESER == \"Y\"",
+                      where = "AESER == \"Y\"",
                       sort = "USUBJID | ASTDY"),
     listing_cols = .ai_df(
       output_id = "L-1",
@@ -173,7 +173,7 @@
                    "Treatment-emergent: TRTEMFL == \"Y\", because the shell says TEAE and no flag",
                    "Treatment variable on ADAE: TRT01A (actual), because the AE table is on the safety set",
                    "Listing columns: USUBJID, TRT01A, AEBODSYS / AEDECOD, ASTDY, AESEV, AEOUT, matched to the shell's headers by name",
-                   "Serious: AESER == \"Y\"; the safety flag SAFFL taken from ADAE",
+                   "Serious: AESER == \"Y\"; the subjects are the report's safety set (SAF), from ADSL",
                    "Parameter: systolic blood pressure is PARAMCD SYSBP, because the shell names the test and no code",
                    "Statistics: the mean and its standard error of AVAL at each AVISIT, because the shell shows mean +/- SE"),
     value = c("SAFFL == \"Y\"",
@@ -197,7 +197,7 @@
                  "Is TRTEMFL the treatment-emergent flag?",
                  "Actual or planned treatment for the AE table?",
                  "Are these the variables behind the shell's columns?",
-                 "Is SAFFL on ADAE, or should the listing keep ADSL's safety subjects?",
+                 "Is serious AESER == \"Y\"?",
                  "Is the parameter code SYSBP?",
                  "Observed values (AVAL) or change from baseline (CHG)?"))
 }

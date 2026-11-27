@@ -119,14 +119,53 @@
 # The study's code lists as the programs have them, by name: each list's
 # codes in their order, named by the code when a label is given
 # (c(F = "Female")), else the codes alone (defaults.yml's `codelists:`).
+# An empty list is kept by its name (a reference to it says it is empty).
+# What is read but wrong does not stop the read, so the study still opens:
+# it is attribute `problems` (`list`, `code`, `level`, `message`), the rows
+# tfl_check_spec() gives (R/check_spec.R).  A code twice in a list: the
+# first row's label is read, an error naming the labels.  A code that is
+# not text after the YAML read (an unquoted 01 reads as 1): a warning to
+# quote it.
 .study_codelists_read <- function(cl) {
-  out <- lapply(.codelists_norm(cl), function(rows) {
+  ref <- names(Filter(.cl_is_ref, cl %||% list()))
+  if (length(ref)) {
+    stop("spec/defaults.yml `codelists:` ", ref[1L], ": a study's list is its codes ",
+         "(`[{value: F, label: Female}, ...]`); a reference ({list: ...}) is a report's.",
+         call. = FALSE)
+  }
+  rows_of <- .codelists_norm(cl, study = TRUE)
+  probs <- list()
+  prob <- function(nm, code, level, message) {
+    probs[[length(probs) + 1L]] <<- data.frame(list = nm, code = code, level = level,
+                                               message = message, stringsAsFactors = FALSE)
+  }
+  out <- lapply(seq_along(rows_of), function(i) {
+    rows <- rows_of[[i]]
+    nm <- names(rows_of)[i]
     codes <- vapply(rows, function(r) as.character(r$value), "")
-    lab <- .tpl_cl_dict(rows)
+    for (k in which(!vapply(rows, function(r) is.character(r$value), NA))) {
+      prob(nm, codes[k], "warning", sprintf(paste0(
+        "code list %s: the code %s is a number in spec/defaults.yml, not text: it is read as \"%s\". ",
+        "Quote it as written (`value: \"%s\"`): unquoted, a code such as 01 or 1.0 loses its form."),
+        nm, codes[k], codes[k], codes[k]))
+    }
+    labs <- vapply(rows, function(r) as.character(r$label %||% r$value)[1L], "")
+    for (k in unique(codes[duplicated(codes)])) {
+      at <- which(codes == k)
+      prob(nm, k, "error", sprintf(paste0(
+        "code list %s: the code \"%s\" is in it %d times, with the labels %s; the study reads the first ",
+        "(\"%s\"). A list has each code once, with one label: keep one row of it."),
+        nm, k, length(at), paste0("\"", labs[at], "\"", collapse = ", "), labs[at[1L]]))
+    }
+    keep <- !duplicated(codes)
+    lab <- .tpl_cl_dict(rows[keep])
+    codes <- codes[keep]
     # (a list whose labels are its codes: the codes alone)
     if (is.null(lab) || all(names(lab) == unname(lab))) codes else lab
   })
-  out[lengths(out) > 0L]
+  names(out) <- names(rows_of)
+  if (length(probs)) attr(out, "problems") <- do.call(rbind, probs)
+  out
 }
 
 # ---- adam_meta in the programs ------------------------------------------------

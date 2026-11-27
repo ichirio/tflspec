@@ -478,7 +478,8 @@ arguments that differ from the default, and the report's own content items
 for what the template does not do), else as a code SPEC. `ai/templates.md`
 lists the templates registered when the requests were written -- tflspec's
 and the company's -- with their arguments, and each request names the ones
-likely for its reports. A template has no study variant: a report changes
+likely for its reports. A template appears to the agent only when its `ai`
+flag is TRUE. A template has no study variant: a report changes
 it with an argument, or with override cards added after it (the last one
 wins).
 `templates = FALSE`: the code SPEC only. The setting is a line near the

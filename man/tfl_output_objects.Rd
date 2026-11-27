@@ -29,11 +29,12 @@ R is \code{unknown}, but the step's final object);
 \code{where} (the stage and the position: \code{data[2]}, \code{analysis[1]},
 \code{content[3]}, \code{data.steps[2]}); \code{name_source} (\code{written}: the SPEC
 writes the name; \code{default}: the stage's default -- an analysis item's
-from its id, a stage's result); \code{changeable} (\code{FALSE}: the report
+from its id, a stage's result; \code{spec}: an analysis item's \code{name:});
+\code{changeable} (\code{FALSE}: the report
 cannot rename it -- the template defines it, it is a stage's result,
 the program makes it, a name read from a step written as R); \code{used} (something names it or reads it; a
 stage's result and an ARD item count as used); \code{from} (what it is made
-from: a dataset or a data above, an item's \code{data}, \code{NA}); \code{used_by}
+from: a dataset or a data above, an item's \code{data} or \code{from}, \code{NA}); \code{used_by}
 (the items that name it or whose R reads it, \code{|} between them).  Its
 attribute \code{uses} is the uses, one row a use: \code{name} (the name as
 written there), \code{stage}, \code{where}, \code{item} (the data row's or the item's

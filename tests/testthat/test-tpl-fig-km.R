@@ -272,13 +272,18 @@ test_that("in a study: km_cumulative (STF Figure 1's sample) from ADTTE and from
   expect_false(grepl("plot = list(add", txt3, fixed = TRUE))
   # (the program runs in a fresh environment and draws the build's plot: the
   # template's scales kept, the draft's layer added)
-  a3 <- tfl_content_code(ro3)
+  # (its analysis set's subjects made from the study, as its program does:
+  # the subjects part reads the study's files, run in the study)
+  st3 <- tfl_read_study_spec(d)
+  a3 <- tfl_content_code(ro3, study = st3)
   env3 <- new.env(parent = .fig_pkg_env(c(attr(a3, "libs"), "tflspec")))
   for (n in names(data)) assign(n, data[[n]], envir = env3)
   eval(parse(text = tfl_fig_setup_code()), env3)
   eval(parse(text = tfl_helpers_code()), env3)
+  wd <- setwd(d)
   eval(parse(text = a3), env3)
-  built <- suppressMessages(tfl_content_run(ro3, data))
+  setwd(wd)
+  built <- suppressMessages(tfl_content_run(ro3, data, study = st3))
   expect_identical(vapply(env3$content$layers, function(l) class(l$geom)[1L], ""),
                    vapply(built$layers, function(l) class(l$geom)[1L], ""))
   expect_identical(tplfig_png(env3$content), tplfig_png(built))
@@ -299,7 +304,7 @@ test_that("in a study: km_cumulative (STF Figure 1's sample) from ADTTE and from
   # the report's whole program's end: its PNG and RTF
   st <- tfl_read_study_spec(d)
   png <- file.path(d, "F-9-disc.png")
-  fig <- suppressMessages(tfl_content_run(x$ro, data))
+  fig <- suppressMessages(tfl_content_run(x$ro, data, study = st))
   ggplot2::ggsave(png, fig, width = 9, height = 6, dpi = 72)
   rtf <- file.path(d, "F-9-disc.rtf")
   suppressMessages(rtfreporter::generate_rtfreport(tfl_report(x$ro, content = fig, study = st), rtf,

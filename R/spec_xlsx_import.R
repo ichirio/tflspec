@@ -19,7 +19,16 @@
 #' (`row_height_twips`), which the workbook has no column for, stays as it
 #' is.  The `records` and `objects` sheets are written but not read back; a
 #' change made to one in the workbook is said in a message and listed in
-#' `ignored`.
+#' `ignored`.  A code list that refers to one of the study's lists (its
+#' `list` cell, [tfl_read_study_spec()]) is read back as the cell says; its
+#' rows are the study's codes and labels, and an edit to them is said in a
+#' message and listed in `ignored` (`codelists: <report> / <variable>`).
+#' The rows of one variable that give different `list` cells (one blank and
+#' one not, too) stop the import.  Before it writes, the references of the
+#' reports it changes to the study's code lists ([tfl_study_refs()]) are
+#' checked as [tfl_check_spec()] checks them: an error the files did not
+#' have already (a list or a code the study has not got) stops the import,
+#' naming each, and nothing is written.
 #'
 #' @param dir The study folder (or its `spec/`).
 #' @param path The workbook.
@@ -27,7 +36,8 @@
 #' @return Invisibly, a list: `changes` (a data frame: `sheet`, `key`,
 #'   `column`, `from`, `to`), `added` (keys new to the spec), `missing`
 #'   (keys of the spec the workbook lacks), `ignored` (the sheets that were
-#'   changed in the workbook but are not read back, `records` and `objects`;
+#'   changed in the workbook but are not read back, `records` and `objects`,
+#'   and the reports' code lists whose rows of a reference were edited;
 #'   each also said in a message), `files` (written).
 #' @export
 tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
@@ -43,7 +53,9 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
   get_file <- function(rel) {
     if (is.null(files[[rel]])) {
       f <- file.path(if (identical(rel, "study.yml")) dir else spec, rel)
-      files[[rel]] <<- list(path = f, y = if (file.exists(f)) yaml::read_yaml(f, handlers = .yaml_handlers()) %||% list() else list())
+      y <- if (file.exists(f)) yaml::read_yaml(f, handlers = .yaml_handlers()) %||% list() else list()
+      # (`y0`: the file as read, for the check before writing)
+      files[[rel]] <<- list(path = f, y = y, y0 = y)
     }
     files[[rel]]$y
   }
@@ -202,13 +214,47 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
     y$content[[k[1L]]]$plan_listing <- pl
     set_file(rel, y)
   })
+  study_cl <- NULL
   by_scope("codelists", function(id, part) {
     if (is.na(id)) return()
     rel <- scope_rel(id)
     y <- get_file(rel)
     for (v in unique(part$variable)) {
       pv <- part[part$variable == v, , drop = FALSE]
-      rows <- y$codelists[[v]] %||% list()
+      # a reference to the study's list (the `list` cell): the reference, as
+      # the cell says it; its rows are the study's, not read back
+      lc <- .cl_list_cell(pv)
+      cw <- paste0("tfl_import_spec_xlsx(): report ", id, ", variable ", v)
+      was <- y$codelists[[v]]
+      was_cell <- if (.cl_is_ref(was)) .cl_ref_cell(.cl_ref_norm(was, v, id))
+      if (!is.null(lc) || !is.null(was_cell)) {
+        to_cell <- if (!is.null(lc)) .cl_ref_cell(.cl_ref_from_cell(lc, cw))
+        if (!identical(was_cell, to_cell)) {
+          st$changes[[length(st$changes) + 1L]] <- data.frame(sheet = "codelists", key = paste(id, v, sep = " / "),
+                                                            column = "list", from = was_cell %||% NA_character_,
+                                                            to = to_cell %||% NA_character_, stringsAsFactors = FALSE)
+        }
+        if (!is.null(lc)) {
+          if (!identical(was_cell, to_cell)) y$codelists[[v]] <- .cl_ref_from_cell(lc, cw)
+          # (its rows edited: not read back, said and listed in `ignored`; the
+          # rows were written from the reference the file had)
+          if (is.null(study_cl)) {
+            study_cl <<- tryCatch(tfl_read_study_spec(dir)$codelists %||% list(), error = function(e) list())
+          }
+          base <- if (!is.null(was_cell)) .cl_ref_norm(was, v, id) else .cl_ref_from_cell(lc, cw)
+          want <- tryCatch(.cl_ref_rows(base, v, study_cl, id, "tfl_import_spec_xlsx()"), error = function(e) NULL)
+          if (!is.null(want) && .cl_ref_rows_edited(pv, want)) {
+            st$ignored <- c(st$ignored, paste0("codelists: ", id, " / ", v))
+            message("tfl_import_spec_xlsx(): codelists ", id, " / ", v, ": the rows of a reference to the study's list ",
+                    base$list, " are the study's codes and labels and are not read back; change the `list` cell ",
+                    "or the study's list (spec/defaults.yml `codelists:`).")
+          }
+          next
+        }
+        # (the reference taken off: the rows, written in place)
+        was <- NULL
+      }
+      rows <- was %||% list()
       for (i in seq_len(nrow(pv))) {
         j <- .find_row(rows, list("value"), pv$value[i])
         m <- list(value = pv$value[i])
@@ -309,6 +355,9 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
 
   written <- character()
   if (write) {
+    # the reports' references to the study's code lists, checked before
+    # anything is written: one the workbook breaks stops the import
+    .imp_refs_check(dir, files[touched])
     for (rel in touched) {
       f <- files[[rel]]$path
       dir.create(dirname(f), recursive = TRUE, showWarnings = FALSE)
@@ -324,6 +373,45 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
 .imp_state <- function() {
   e <- new.env(); e$changes <- list(); e$added <- character(); e$missing <- character()
   e$ignored <- character(); e
+}
+
+# The import's check before it writes (R/check_spec_study_refs.R): the
+# changed report files (`files`: the import's, each its `y` as it will be
+# written and `y0` as read) against the study's code lists; an error row
+# the new text has and the old has not stops, nothing written.  A file that
+# cannot be read as reports is left to the reader's own errors.  A study
+# that cannot be read is said in a message (the check is not made), not
+# passed over in silence.
+.imp_refs_check <- function(dir, files) {
+  rels <- names(files)[startsWith(names(files), "outputs")]
+  if (!length(rels)) return(invisible())
+  study <- tryCatch(suppressWarnings(suppressMessages(tfl_read_study_spec(dir))), error = function(e) e)
+  if (inherits(study, "error")) {
+    message("tfl_import_spec_xlsx(): the references of the changed reports to the study's code lists are ",
+            "not checked: the study cannot be read (", .ai_one_line(conditionMessage(study)), ").")
+    return(invisible())
+  }
+  outs_of <- function(which) {
+    outs <- list()
+    for (rel in rels) {
+      y <- files[[rel]][[which]]
+      if (!length(y)) next
+      r <- tryCatch(suppressWarnings(suppressMessages(.outputs_of_yaml(y, files[[rel]]$path))),
+                    error = function(e) list())
+      for (o in r) outs[[o$id]] <- o
+    }
+    outs
+  }
+  add <- .check_rows_new(tfl_check_study_refs(study, outs_of("y")), tfl_check_study_refs(study, outs_of("y0")))
+  if (nrow(add)) {
+    stop("tfl_import_spec_xlsx(): nothing written: the workbook's changes name the study's code lists ",
+         "wrongly (spec/defaults.yml `codelists:`):
+  ",
+         paste(sprintf("%s, %s: %s", add$output_id, add$item, add$message), collapse = "
+  "),
+         call. = FALSE)
+  }
+  invisible()
 }
 
 # Is a sheet of the workbook other than the rows it was written from?  Text
@@ -353,7 +441,9 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
   if (identical(sheet, "analysis_data") && y$kind %in% c("table", "listing") &&
       (is.null(y$data) || is.null(names(y$data)))) {
     path_in <- "data"
-    pop <- y$common$population
+    # (the set the sheets wrote on it, .rows_set(), of the report as read:
+    # its place map under `ard: data:` is its data map)
+    pop <- .rows_set(list(data = y[["ard"]][["data"]], common = y[["common"]]))
   }
   if (is.null(content_fn)) rows <- .get_in(y, path_in) %||% list()
   else rows <- lapply(Filter(function(it) is.list(it) && identical(names(it), content_fn), y$content %||% list()), function(it) it[[1L]])
@@ -364,7 +454,7 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
       v <- .conv_cell(part[[cn]][i], cn, r_cols, list_cols, function(...) NULL, NA, sheet, i)
       if (!is.null(v)) m[[cn]] <- v
     }
-    if (length(pop)) m <- .entry_pop_strip(m, pop, .pop_from(get_file("data.yml")$populations, pop))
+    if (length(pop) && !is.na(pop)) m <- .entry_pop_strip(m, pop, .pop_from(get_file("data.yml")$populations, pop))
     kv <- .flat_text(m[[key_col]])
     j <- .find_row(rows, list(key_col), kv)
     key <- paste(id, kv, sep = " / ")

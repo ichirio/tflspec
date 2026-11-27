@@ -307,7 +307,8 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
     row(p$name, NA_character_, NA_character_, sprintf("no type (guessed: %s)", p$type))
   }
   # the analysis set or the treatment, not read from the study standard
-  for (p in t$params) if (.tpl_study_kind(p) && is.null(p$study)) {
+  # (but a treatment the report must write: .tpl_report_writes())
+  for (p in t$params) if (.tpl_study_kind(p) && is.null(p$study) && !.tpl_report_writes(p)) {
     row(p$name, NA_character_, NA_character_, "no study source (population / treatment)")
   }
   if (inherits(x0, "error")) {
@@ -407,9 +408,9 @@ tfl_test_templates <- function(names = NULL) {
   # (the KM report types: their data stage is a report's own data: steps)
   km_survival = list(by = "TRT01P"),
   km_cumulative = list(by = "TRT01P", time_unit = "weeks"),
-  forest_hr = list(param = "PFS", population = "SAF"),
-  mean_se = list(param = "SYSBP", data = "ADVS"),
-  mean_ci = list(param = "SYSBP", data = "ADVS"),
+  forest_hr = list(param = "PFS", population = "SAF", group = "TRT01A"),
+  mean_se = list(param = "SYSBP", data = "ADVS", group = "TRT01A"),
+  mean_ci = list(param = "SYSBP", data = "ADVS", group = "TRT01A"),
   waterfall = list(param = "SUMDIAM", where = "AVISIT == \"WEEK 12\""),
   orr = list(),
   stat_block = list(variable = "RESP", cells = list(N = "{N}", "ORR (%)" = "{n} ({estimate:.1f%})")),

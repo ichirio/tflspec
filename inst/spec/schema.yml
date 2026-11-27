@@ -321,12 +321,12 @@ plan_style:
     table_width_pct_of_writable: {label: {en: "Table width (% of the writable width)", ja: "Table の幅（本文の幅に対する %）"}, help: "The table's width as a fraction (0-1) of the page's writable width (as table_width_pct, by 0-1). e.g. 0.8", type: number}
     table_width_twips: {label: {en: "Table width (twips)", ja: "Table の幅（twip）"}, help: "The table's width in twips (1/1440 inch); it wins over the widths in percent. Blank: the page's writable width. e.g. 12960", type: integer}
     row_height_twips: {label: {en: "Row height (twips)", ja: "行の高さ（twip）"}, help: "The height of the body's rows in twips (1/1440 inch). Blank: from the font size. e.g. 240", type: integer}
-    border_header: {label: {en: "Header borders", ja: "見出しの罫線"}, help: "The rules of the column header's rows, one kind of row's (with border_spanning ... border_last_row: a style of one's own in place of Borders). e.g. \"bottom\"", type: "call<rtf_border>"}
-    border_spanning: {label: {en: "Spanning header borders", ja: "結合見出しの罫線"}, help: "The rules under a spanning header's cells (the header over several columns). e.g. \"bottom\"", type: "call<rtf_border>"}
-    border_body: {label: {en: "Body borders", ja: "本体の罫線"}, help: "The rules of the body's rows. Blank: none between them. e.g. \"none\"", type: "call<rtf_border>"}
-    border_first_row: {label: {en: "First row's border", ja: "最初の行の罫線"}, help: "The rule over the table's first row (the top of the table). e.g. \"top\"", type: "call<rtf_border>"}
-    border_last_row: {label: {en: "Last row's border", ja: "最後の行の罫線"}, help: "The rule under the table's last row (the foot of the table). e.g. \"bottom\"", type: "call<rtf_border>"}
-    border_group: {label: {en: "Row group's border", ja: "行グループの罫線"}, help: "The rule under the last row of each row group. Blank: none. e.g. \"bottom\"", type: "call<rtf_border>"}
+    border_header: {label: {en: "Header borders", ja: "見出しの罫線"}, help: "The rules of the column header's rows, one kind of row's (with border_spanning ... border_last_row: a style of one's own in place of Borders). e.g. rtf_border(bottom = TRUE) (in a sheet: \"bottom\")", type: "call<rtf_border>"}
+    border_spanning: {label: {en: "Spanning header borders", ja: "結合見出しの罫線"}, help: "The rules under a spanning header's cells (the header over several columns). e.g. rtf_border(bottom = TRUE) (in a sheet: \"bottom\")", type: "call<rtf_border>"}
+    border_body: {label: {en: "Body borders", ja: "本体の罫線"}, help: "The rules of the body's rows. Blank: none between them. e.g. rtf_border(inside_h = TRUE)", type: "call<rtf_border>"}
+    border_first_row: {label: {en: "First row's border", ja: "最初の行の罫線"}, help: "The rule over the table's first row (the top of the table). e.g. rtf_border(top = TRUE) (in a sheet: \"top\")", type: "call<rtf_border>"}
+    border_last_row: {label: {en: "Last row's border", ja: "最後の行の罫線"}, help: "The rule under the table's last row (the foot of the table). e.g. rtf_border(bottom = TRUE) (in a sheet: \"bottom\")", type: "call<rtf_border>"}
+    border_group: {label: {en: "Row group's border", ja: "行グループの罫線"}, help: "The rule under the last row of each row group. Blank: none. e.g. rtf_border(bottom = TRUE) (in a sheet: \"bottom\")", type: "call<rtf_border>"}
     align_count_pct: {main: true, label: {en: "Align n (%)", ja: "n (%) を揃える"}, type: "logical", help: "TRUE: the n and the (%) of a count cell line up from row to row. e.g. TRUE"}
     border: {main: true, label: {en: "Borders", ja: "罫線"}, type: "enum[tfl|none]|call<rtf_border>", help: "The table's borders: \"tfl\" (rules over and under the header and under the last row) or \"none\"; another style as a border ({fn: rtf_border, args: {all: true, inside_h: true}}). Blank: tfl. e.g. \"none\""}
     font_size_half_points: {main: true, label: {en: "Font size (half points)", ja: "文字の大きさ（半ポイント）"}, type: "integer", help: "The table's font size in half points (18 = 9 pt). Blank: the document's. e.g. 16"}
@@ -1244,6 +1244,16 @@ rtf_footer:
           ids given for some values); level:ANY,L1,L2 (the depths'' ids themselves,
           the any row''s first); blank: the analysis_id.'
         example: PARAMCD | tox_dir
+      - column: name
+        description: 'The R name of the item''s object in the ARD program; blank: .ard_<analysis_id>
+          (a model: the id in lower case). A name is an R name no other object has.'
+        example: ae_soc
+      - column: from
+        description: 'The object the item reads, piped into its call (`name <- from |> method(...)`);
+          an object above it (an analysis data, a named item) or a dataset. Blank: the
+          item makes its own data (data, dataset, records, where). Not
+          with data.'
+        example: adsl_sub
   - sheet: conditions
     description: 'ARD: a template item''s condition rows, one row a run of the
       item (in row order), keyed by output_id and analysis_id. After row, a column
@@ -1459,7 +1469,8 @@ rtf_footer:
       value the list does not have stops the program. Every row names its report in
       `output_id` (a blank one is an error: copy the rows into each report that uses
       them). A variable''s `levels` on the variables sheet, when given, is the order
-      in the table instead; a variable''s heading is the variables sheet''s `label`.'
+      in the table instead; a variable''s heading is the variables sheet''s `label`.
+      A report''s list may be one of the study''s lists, named in the report''s file (`{list: ...}`), which `list` then shows.'
     columns:
       - column: variable
         description: The variable (an analysis variable or a column key).
@@ -1481,6 +1492,16 @@ rtf_footer:
           in the analysis''s `post` shows it with 0 counts when no subject has it; blank:
           none (an outer value is shown without it).'
         example: EYE DISORDERS
+      - column: list
+        description: 'The study''s code list (spec/defaults.yml `codelists:`) the report''s
+          list of this variable is: its name, all its codes in its order (`{list: SEX}`
+          in the report''s file); or its name, a colon and the codes taken, in the order
+          wanted (`SEX: M | F`, `{list: SEX, codes: [M, F]}`). The rows then show the
+          study''s codes and labels and are not read back. To change it: the study''s
+          list, or the report''s file (spec/outputs/<report>.yml, `{list: ...}`). In
+          this screen `list` is read only. A name or a code the study''s list has not
+          got is an error. Blank: the rows are the list.'
+        example: SEX
   - sheet: cells
     description: 'Table: one row a line of a cell (plan_cells()). Rows with the same
       variable / context / row are one chain, tried top down. With stats = rows, a

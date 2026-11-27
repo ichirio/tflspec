@@ -131,6 +131,13 @@
     "the subgroup headings read the common ADaM variables' labels (SEX Sex, AGEGR1 Age ",
     "group, REGION1 Region ...); `subgroup_labels: {ECOGBL: ECOG}` gives the shell's own."))
 
+# The templates the AI sees: the registry's, those whose `ai` flag is TRUE,
+# of these kinds -- the one place the flag is read (the list and the likely ones)
+.ai_templates_shown <- function(kinds = c("table", "listing", "figure")) {
+  tt <- tfl_templates()
+  tt[tt$ai & tt$kind %in% kinds, , drop = FALSE]
+}
+
 # The templates a request may answer with: one block each -- name, what it
 # is, its kind and layout (a variant: of which), then a line a parameter
 # (the target ones marked: population, subset, where).  `kinds`: the kinds
@@ -138,8 +145,7 @@
 # (`short`: each template's arguments on one line, their names only -- a
 # chat's request over `max_chars` with the whole list)
 .ai_templates_list <- function(kinds = c("table", "listing", "figure"), short = FALSE) {
-  tt <- tfl_templates()
-  tt <- tt[tt$kind %in% kinds, , drop = FALSE]
+  tt <- .ai_templates_shown(kinds)
   target <- c("population", "subset", "where")
   out <- character()
   for (i in seq_len(nrow(tt))) {
@@ -291,10 +297,9 @@
 # The templates likely for reports of these titles (at most `n`, the best
 # first): a template's name's words count twice its description's
 .ai_templates_likely <- function(titles, task, n = 3L) {
-  tt <- tfl_templates()
   w <- .ai_tpl_words(titles)
   kinds <- if (identical(task, "figure")) "figure" else if ("listing" %in% w) "listing" else "table"
-  tt <- tt[tt$kind %in% kinds, , drop = FALSE]
+  tt <- .ai_templates_shown(kinds)
   if (!nrow(tt) || !length(w)) return(character())
   score <- vapply(seq_len(nrow(tt)), function(i) {
     nm <- strsplit(tt$name[i], "_", fixed = TRUE)[[1L]]
@@ -491,9 +496,12 @@
   if (!is.null(study)) return(tfl_template_to_spec(o, study))
   tp <- o$template
   args <- tp$args %||% list()
+  # (the report's set by the one reader: its data's `population:`, `common:`
+  # until it goes, its subjects rows' -- A2)
+  pop <- .out_population_or_data(o)
   if (is.null(args$population) && "population" %in% names(tfl_template_params(tp$name)) &&
-      !is.na(.out_population(o))) {
-    args$population <- .out_population(o)
+      !is.na(pop)) {
+    args$population <- pop
   }
   x <- tfl_template_expand(tp$name, args)
   o$ard <- x$ard
@@ -585,8 +593,8 @@
   }, tfl_plot_key_unused = function(w) invokeRestart("muffleWarning")),
   error = function(e) .ai_one_line(conditionMessage(e)))
   if (!is.null(r)) p <- .ai_problem(p, "template", paste("could not be written:", r))
-  # (its data steps, when the report says them: the analysis set kept --
-  # the parameter the template's own check says)
+  # (its data steps, when the report says them: no step keeping the
+  # analysis set, the report's -- the parameter the template's own check says)
   if (length(answer$design$data)) {
     fr <- .ai_fig_required(answer$design$data, answer$design["layers"], context)
     p <- rbind(p, fr[!grepl("keeps no parameter", fr$problem), , drop = FALSE])
@@ -612,7 +620,8 @@
   if (length(o$ard$analyses %||% list())) {
     data$ard <- suppressMessages(tfl_build_ard(st, dir = ".", output_id = o$id, save = FALSE))
   }
-  fig <- suppressMessages(suppressWarnings(tfl_content_run(o, data)))
+  # (its subjects: the report's analysis set, made from the study, A2)
+  fig <- suppressMessages(suppressWarnings(tfl_content_run(o, data, study = st)))
   .ai_fig_nothing_drawn(fig, o$id)
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
   png <- file.path(out_dir, paste0(o$id, ".png"))

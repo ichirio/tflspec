@@ -9,14 +9,178 @@
 #    same piece added as a layer: an error, one of the two;
 #  - a KM figure's time axis label with no unit: a warning;
 #  - a listing whose columns all carry a width: a note, the widths to look
-#    at (a narrow subject id breaks every record over lines).
+#    at (a narrow subject id breaks every record over lines);
+#  - (A2, R5) a figure or listing that reads subjects' records with no
+#    analysis set: a warning; a data step that keeps rows by a variable of a
+#    study population's condition (`flag: SAFFL` on the records): an error
+#    (.step_keeps_population(), the AI's check's rule too), the analysis set
+#    is the report's, its data's `population:`.
+#  - (A2, with the study: .check_set_rows()) a set that is none of
+#    data.yml's, a data that names an analysis data and a set or dataset
+#    beside it: errors; a TOC line naming another set than the report's
+#    data: a warning.
 # ============================================================================
 
+# The variables each study population's condition reads (`populations:` of
+# spec/data.yml: a list of maps, `id` and `where`), by its id; a population
+# with no condition reads none
+.check_pop_vars <- function(pops) {
+  out <- list()
+  for (p in pops) {
+    if (!is.list(p) || is.null(p$id)) next
+    w <- .na_scalar(unlist(p$where))
+    v <- if (!is.na(w)) tryCatch(all.vars(str2lang(w)), error = function(e) character())
+    if (length(v)) out[[as.character(p$id)[1L]]] <- v
+  }
+  out
+}
+
+# The data steps that keep rows by a condition (the figure design's pieces,
+# R/fig_model.R) and the field each one's condition is in: a flag step its
+# variable, a filter its R
+.check_row_keeps <- c(flag = "variable", filter = "expr")
+
+# A data step that keeps the rows of a population by the records' own
+# columns (A2 R5): a `flag` step whose variable, or a `filter` whose R,
+# reads a variable of the population's condition (its flag, or its
+# condition written again).  One rule for tfl_check_spec() and the AI's
+# check (.check_population_rows(), .ai_fig_required()).  `pops`: the
+# populations looked at, a list of maps (`id`, `where`) -- the report's set
+# when it has one, else every one of data.yml's.  NULL when the step keeps
+# none; else list(step, condition, populations, variables)
+.step_keeps_population <- function(step, pops) {
+  if (!is.list(step) || !is.character(step$step) || !step$step[1L] %in% names(.check_row_keeps)) {
+    return(NULL)
+  }
+  v <- .na_scalar(unlist(step[[.check_row_keeps[[step$step[1L]]]]]))
+  if (is.na(v)) return(NULL)
+  used <- tryCatch(all.vars(str2lang(v)), error = function(e) character())
+  pv <- .check_pop_vars(pops)
+  hit <- names(pv)[vapply(pv, function(p) any(used %in% p), NA)]
+  if (!length(hit)) return(NULL)
+  list(step = step$step[1L], condition = v, populations = hit,
+       variables = intersect(used, unlist(pv[hit])))
+}
+
+# ... its message, the same in both checks (an error): step `k` (from 1),
+# `keep` .step_keeps_population()'s, `rp` the report's set (NA: none)
+.step_keeps_population_text <- function(k, keep, rp) {
+  sprintf(paste0(
+    "step %d (`%s: %s`) keeps the rows of population %s by the records' own %s: the analysis set is ",
+    "the report's, its data's `population:`%s (its subjects from their dataset, the records joined to ",
+    "them); remove the step%s (a `flag` step is for a record flag, ANL01FL)"),
+    k, keep$step, keep$condition, paste(keep$populations, collapse = " / "),
+    paste(keep$variables, collapse = ", "),
+    if (!is.na(rp)) sprintf(" (%s)", rp) else "",
+    if (is.na(rp)) sprintf(" and write `data: {population: %s}`", keep$populations[1L]) else "")
+}
+
+# A2 R5: the analysis set of a figure or listing (`o`, as written) and of
+# its data steps: the rows of the check's frame (.check_rows())
+.check_population_rows <- function(o, id, pops) {
+  rows <- list(.check_rows())
+  add <- function(...) rows[[length(rows) + 1L]] <<- .check_rows(output_id = id, ...)
+  if (!identical(o$kind, "figure") && !identical(o$kind, "listing")) return(rows[[1L]])
+  d <- if (is.list(o$data)) o$data else list()
+  # (Q3) subjects' records -- a dataset, an analysis data, the report's code
+  # -- and no analysis set on the data (canon 11-15): on the data, or on
+  # its analysis data rows (the report's own ARD's, a template's rows).
+  # Until `common` goes, its `population` and `population_label` (all
+  # subjects) still count
+  reads <- !is.null(d[["dataset"]]) || !is.null(d[["data"]]) ||
+    (as.character(d[["source"]] %||% "ard")[1L] %in% c("dataset", "code"))
+  row_sets <- unlist(lapply(.data_rows(o), function(a) a[["population"]]))
+  if (reads && is.na(.report_set(o)) && !length(stats::na.omit(row_sets)) &&
+      is.na(.na_scalar(o$common$population_label))) {
+    add(part = "data", item = "data$population", level = "warning", message = paste0(
+      "the ", o$kind, " reads subjects' records and has no analysis set: write `population:` on its ",
+      "data or its analysis data rows (a population of spec/data.yml)"))
+  }
+  # (Q4) a step that keeps the rows of a population by the records' own
+  # columns (the subjects outside it, and a record's own arm, stay): an
+  # error, .step_keeps_population()'s rule -- the report's set (by the one
+  # reader: its data's, `common:`, its entries') when it has one, else
+  # every population of data.yml
+  rp <- .out_population_or_data(o)
+  look <- if (is.na(rp)) pops else Filter(function(p) {
+    is.list(p) && identical(.na_scalar(unlist(p$id)), rp)
+  }, pops)
+  steps <- if (is.list(d$steps)) d$steps else list()
+  for (k in seq_along(steps)) {
+    keep <- .step_keeps_population(steps[[k]], look)
+    if (is.null(keep)) next
+    add(part = "data", item = sprintf("data$steps[%d]", k), level = "error",
+        message = .step_keeps_population_text(k, keep, rp))
+  }
+  do.call(rbind, rows)
+}
+
+# A2 (the Codex review of 2026-11-26): a report's analysis set against the
+# study (`study`, tfl_read_study_spec()'s), `o` as written.  The set its data
+# says (.report_set()) is one of data.yml's (.pop_unknown_text(); its data
+# rows' sets are the ARD definition's check); a data that reads one of the
+# report's analysis data writes no dataset or set beside it (.data_both(),
+# the rule of the sheets and of the AI's check); the TOC's line names the set
+# the report's data names (the data's wins in the sheets)
+.check_set_rows <- function(o, id, study) {
+  rows <- list(.check_rows())
+  add <- function(...) rows[[length(rows) + 1L]] <<- .check_rows(output_id = id, ...)
+  pops <- .study_set_ids(study$data)
+  d <- o[["data"]]
+  map <- if (is.list(d) && !is.null(names(d))) d
+  both <- .data_both(map[["data"]], map[["dataset"]], map[["population"]])
+  if (length(both)) {
+    add(part = "data", item = "data$data", level = "error",
+        message = paste("the", o$kind %||% "report", .data_both_text(both)))
+  } else if (is.na(.na_scalar(unlist(map[["data"]])))) {
+    m <- .pop_unknown_text(.report_set(o), pops)
+    if (!is.null(m)) add(part = "data", item = "data$population", level = "error",
+                         message = paste("the report's analysis set:", m))
+  }
+  # the page's set (.out_population_or_data()) is one its rows carry, as the
+  # ARD program reads them (a subjects row with none takes the report's,
+  # .rows_set()): else the page names a set its numbers are not of
+  op <- .out_population_or_data(o)
+  rs <- .rows_set(o)
+  data_rows <- lapply(.data_rows(o), function(a) {
+    .entry_pop_inject(a, rs, .pop_from(study$data$populations %||% list(), rs))
+  })
+  # (an analysis of a dataset and a set, no analysis data, carries its own)
+  carriers <- c(data_rows, Filter(is.list, o[["ard"]][["analyses"]] %||% list()))
+  row_sets <- unique(stats::na.omit(vapply(carriers, function(a) .na_scalar(unlist(a[["population"]])), "")))
+  if (!is.na(op) && length(data_rows) && !op %in% row_sets) {
+    add(part = "data", item = "data$population", level = "warning", message = sprintf(paste0(
+      "the page names analysis set %s and no data row of the report carries it (%s): the numbers are ",
+      "not of that set. Give the report's subjects row (`from: ADSL`, no `subjects_in`) no set of its ",
+      "own, or the set %s"), op,
+      if (length(row_sets)) paste("its rows' sets:", paste(row_sets, collapse = ", ")) else "its rows name none",
+      op))
+  }
+  toc <- Filter(function(e) identical(e$id, id), study$toc$outputs %||% list())
+  tp <- if (length(toc)) .na_scalar(unlist(toc[[1L]][["population"]])) else NA_character_
+  if (!is.na(tp) && !is.na(op) && !identical(tp, op)) {
+    add(part = "data", item = "toc$population", level = "warning", message = sprintf(paste0(
+      "the TOC says analysis set %s and the report's data %s: the data's is the report's set (the ",
+      "sheets and the page take it); write %s in the TOC, or the set the report means on its data"),
+      tp, op, op))
+  }
+  # a TOC line of a report whose set lives on its data (.planner_set()) and
+  # which names none: the sheets keep the data as it is, not the TOC's line
+  if (!is.na(tp) && is.na(op) && is.na(.planner_set(o, tp, tryCatch(.tpl_spec_of(o), error = function(e) NULL)))) {
+    add(part = "data", item = "toc$population", level = "warning", message = sprintf(paste0(
+      "the TOC says analysis set %s and the report's data names none: the report reads all subjects, and ",
+      "the sheets do not keep the TOC's line; write `population: %s` on its data, or remove it from the TOC"),
+      tp, tp))
+  }
+  do.call(rbind, rows)
+}
+
 # Every text in a report's content and template arguments, with where it is
+# (`r`: an `!r` value, R/check_spec_r_parse.R)
 .check_texts <- function(x, at = character()) {
   if (is.character(x)) {
     return(if (length(x)) data.frame(at = paste(at, collapse = "$"), text = as.character(x),
-                                     stringsAsFactors = FALSE))
+                                     r = inherits(x, "tfl_r"), stringsAsFactors = FALSE))
   }
   if (!is.list(x) || !length(x)) return(NULL)
   nm <- names(x) %||% rep("", length(x))
@@ -33,7 +197,7 @@
   c(own, unlist(lapply(unclass(x), .check_items, fns = fns), recursive = FALSE))
 }
 
-.check_static_rows <- function(o, id) {
+.check_static_rows <- function(o, id, study = NULL) {
   rows <- list(.check_rows())
   add <- function(...) rows[[length(rows) + 1L]] <<- .check_rows(output_id = id, ...)
   # (a template by name alone, `template: km_simple`, or with its arguments)
@@ -43,17 +207,20 @@
   } else {
     list()
   }
-  # the analysis set is the report's `common: population`: a template argument that
-  # differs from it is a conflict (the one equal to it, or with no report
-  # `common: population`, is used and not said)
+  # the analysis set is the report's (the one reader: its data's
+  # `population:`, `common:` until it goes, its subjects rows'): a template
+  # argument that differs from it is a conflict -- two sets for one report,
+  # the header's and the build's (the one equal to it, or with no report
+  # set, is used and not said)
   if ("population" %in% names(args) && is.list(tpl) && is.character(tpl$name) &&
       !is.null(tryCatch(.tpl_get(tpl$name, "tfl_check_spec()")$params$population,
                         error = function(e) NULL))) {
-    rp <- .out_population(o)
-    if (length(rp) == 1L && !is.na(rp) && !identical(as.character(args$population), as.character(rp))) {
+    rp <- .out_population_or_data(o)
+    if (!is.na(rp) && !identical(as.character(args$population)[1L], rp)) {
       add(part = "template", item = "population", level = "warning", message = sprintf(paste0(
-        "template argument `population` (%s) differs from the report's `common: population` (%s): the report is built ",
-        "with the template's; make the report's `common: population` the one to use and remove the template's"),
+        "template argument `population` (%s) differs from the report's analysis set (%s: its data's ",
+        "`population:`, else `common: population`): write the set once, on the report's data, and ",
+        "remove the template's"),
         args$population[1L], rp))
     }
   }
@@ -103,5 +270,7 @@
         "(a subject id on one line), or leave the widths to the default"))
     }
   }
+  # a figure's or listing's analysis set (A2 R5)
+  rows[[length(rows) + 1L]] <- .check_population_rows(o, id, study$data$populations)
   do.call(rbind, rows)
 }

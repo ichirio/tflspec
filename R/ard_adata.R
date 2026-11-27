@@ -31,6 +31,13 @@
   hit <- .adata_memo$sheet
   if (!is.null(hit) && identical(hit$raw, d)) return(hit$out)
   out <- .normalize_ard_sheet(d, "analysis_data")
+  # (`subjects_in: none`, the key's fixed value, keeps all: blank -- unless
+  # the report has a row of that name, #927)
+  if (nrow(out) && !is.null(out$subjects_in)) {
+    none <- out$subjects_in %in% "none" &
+      !paste(out$output_id, "none") %in% paste(out$output_id, out$data_id)
+    out$subjects_in[none] <- NA_character_
+  }
   .adata_memo$sheet <- list(raw = d, out = out)
   out
 }
@@ -238,18 +245,10 @@
       add_d(i, "population_id", sprintf("%s: population %s is not in `populations`", tag(i), p))
     }
     # each derive piece `name = expression`, as R reads it (a `|` of R's own
-    # inside parentheses is not a separator)
-    for (piece in .split_bar(ad$derive[i] %||% NA)) {
-      ok <- !is.null(tryCatch(parse(text = sprintf("list(%s)", piece), keep.source = FALSE),
-                              error = function(e) NULL)) &&
-        grepl("^[A-Za-z.][A-Za-z0-9._]* *=[^=]", piece)
-      if (!ok) {
-        add_d(i, "derive", sprintf(paste(
-          "%s: `derive` piece %s does not read as `name = expression`",
-          "(pieces are separated by `|` outside parentheses; R's own `|` goes inside them)"),
-          tag(i), sQuote(piece, FALSE)))
-      }
-    }
+    # inside parentheses is not a separator): the walker's reading and words
+    # (R/check_spec_r_parse.R), as for `then`, `code` and `where` below
+    m <- .r_ard_problem(ad$derive[i] %||% NA, "derive")
+    if (!is.null(m)) add_d(i, "derive", sprintf("%s: `derive` %s", tag(i), m))
     # `arrange`: each element a column, -column (descending) or desc(column)
     for (piece in .split_bar(ad$arrange[i] %||% NA)) {
       if (!grepl(.arrange_re, piece)) {
@@ -259,11 +258,8 @@
       }
     }
     # `then`: R, piped onto the end of the data
-    thn <- ad$then[i] %||% NA
-    if (!is.na(thn) && is.null(tryCatch(parse(text = thn, keep.source = FALSE),
-                                        error = function(e) NULL))) {
-      add_d(i, "then", sprintf("%s: `then` does not read as R", tag(i)))
-    }
+    m <- .r_ard_problem(ad$then[i] %||% NA, "then")
+    if (!is.null(m)) add_d(i, "then", sprintf("%s: `then` %s", tag(i), m))
     s <- ad$subjects_in[i]
     if (!is.na(s)) {
       if (!s %in% above) {
@@ -278,9 +274,8 @@
     }
     code <- ad$code[i] %||% NA
     if (!is.na(code)) {
-      if (is.null(tryCatch(parse(text = code), error = function(e) NULL))) {
-        add_d(i, "code", sprintf("%s: `code` does not read as R", tag(i)))
-      }
+      m <- .r_ard_problem(code, "code")
+      if (!is.null(m)) add_d(i, "code", sprintf("%s: `code` %s", tag(i), m))
       # (`population_id` with `code`: the set's subjects are made first,
       # in reach as <dataset>_sub; the other columns are for a data the
       # columns make)
@@ -299,12 +294,8 @@
         "%s: `add` takes columns from the population's data or the data of",
         "`subjects_in`, and it has neither (here or above)"), tag(i)))
     }
-    for (cn in c("where")) {
-      v <- ad[[cn]][i]
-      if (!is.na(v) && is.null(tryCatch(str2lang(v), error = function(e) NULL))) {
-        add_d(i, "where", sprintf("%s: `%s` does not read as R", tag(i), cn))
-      }
-    }
+    m <- .r_ard_problem(ad$where[i], "where")
+    if (!is.null(m)) add_d(i, "where", sprintf("%s: `where` %s", tag(i), m))
   }
   }
   # an analysis reads (and divides by) its own report's analysis data
@@ -324,12 +315,8 @@
         t, den[i], a$output_id[i]))
     }
     if (is.na(dcol[i])) next
-    both <- c("dataset", "population_id")[!is.na(c(a$dataset[i], a$population_id[i]))]
-    if (length(both)) {
-      add_a(i, "data", sprintf(paste(
-        "%s: an analysis reads its `data` or a %s; not both (the analysis",
-        "data has them)"), t, paste0("`", both, "`", collapse = " and ")))
-    }
+    both <- .data_both(dcol[i], a$dataset[i], a$population_id[i], c("dataset", "population_id"))
+    if (length(both)) add_a(i, "data", sprintf("%s: an analysis %s", t, .data_both_text(both)))
   }
   do.call(rbind, pr)
 }
@@ -344,20 +331,18 @@
 }
 
 # The lines that make the analysis data `ids` (in their order); `levels`:
-# the code lists, each data made factors again (.derive_steps()); `avoid`:
-# the program's names, which a data's own code does not assign; `reads`:
+# the code lists, each data made factors again (.derive_steps()); `reads`:
 # each data's columns the analyses read (kept whatever `keep` says); `dens`:
 # the data an analysis divides by (the denominators)
-.adata_lines <- function(x, ids, subj, levels = NULL, avoid = character(),
+.adata_lines <- function(x, ids, subj, levels = NULL,
                          reads = list(), needs = list(), dens = character()) {
   ad <- .adata_sheet(x)
   out <- character()
   lv <- if (length(levels)) .levels_step
   for (id in ids) {
     r <- ad[match(id, ad$data_id), ]
-    # written as R: its value is the data.  What comes before its last
-    # expression stays as it is, the last is the data (.code_as_program()); R
-    # that assigns a name the program has runs in local()
+    # written as R: its value is the data (.code_piece(): one expression as
+    # it is, else in a scope of its own, so what else it assigns stays there)
     if (!is.na(r$code %||% NA)) {
       # what it is, from its keys, above it
       out <- c(out, .adata_comment(id, if (!is.na(r$from %||% NA))
@@ -367,13 +352,7 @@
       # already: none after it -- a level its code adds, demog's Missing,
       # stays)
       lv_c <- if (!(r$from %||% NA) %in% ad$data_id) lv
-      made <- .code_as_program(code, id, list(lv_c), c(avoid, ids))
-      if (is.null(made)) {
-        made <- c(sprintf("%s <- local({\n%s\n})", id,
-                          paste0("  ", strsplit(code, "\n", fixed = TRUE)[[1L]],
-                                 collapse = "\n")),
-                  if (length(lv_c)) .make_code(id, id, lv_c))
-      }
+      made <- .code_piece(code, id, "last", steps = list(lv_c))
       out <- c(out, made)
       next
     }
@@ -432,10 +411,11 @@
     }
     what <- switch(kind,
       subjects = paste0("the subjects. ", lab_pop, if (!is.null(whr)) "; subset"),
-      records = sprintf("the records. %s of the subjects of %s%s%s",
+      # (its condition is the filter line below: no "where" of its own, which
+      # ended the comment with nothing after it)
+      records = sprintf("the records. %s of the subjects of %s%s",
                         toupper(if (from_data) .adata_dataset(ad, id) %||% src else r$from),
-                        pop, if (length(take)) sprintf(", %s from ADSL", paste(take, collapse = ", ")) else "",
-                        if (!is.null(whr)) "; where" else ""),
+                        pop, if (length(take)) sprintf(", %s from ADSL", paste(take, collapse = ", ")) else ""),
       made = if (id %in% dens) "the denominator." else sprintf("made from %s.", src))
     out <- c(out, .adata_comment(id, what))
     # what follows the rows: the columns added, derived, the columns kept,
