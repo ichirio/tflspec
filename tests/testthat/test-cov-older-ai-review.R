@@ -11,6 +11,7 @@ cov_airv_base <- function() {
   f <- file.path(d, "base.xlsx")
   if (!file.exists(f)) {
     unlink(d, recursive = TRUE)
+    withr::defer(unlink(d, recursive = TRUE), envir = testthat::teardown_env())
     kit <- suppressMessages(tflspec_ai_manual(file.path(d, "kit")))
     st <- file.path(d, "study")
     tfl_ai_unpack(kit[basename(kit) == "06_example_spec.md"], st)
