@@ -401,7 +401,9 @@ test_that("a scale, coord, facet or guides card given again is folded onto the f
   # (scale_color_* is scale_colour_*: its !unset takes the name away)
   expect_identical(names(s$plots[[1L]]$items[[4L]]$args), "values")
   expect_identical(s$plots[[1L]]$items[[6L]]$args, list(facets = "SEX", ncol = 1L))
+  # (the call's text as one line, however the writer breaks a long call)
   code <- gsub("[[:space:]]+", " ", paste(.fig_content_code(o), collapse = " "))
+  code <- gsub(" \\)", ")", gsub("\\( ", "(", code))
   expect_match(code, "scale_x_continuous(breaks = c(0, 12, 24), limits = c(0, 24), labels = toupper)",
                fixed = TRUE)
   expect_identical(.fig_fold_once(list()), list())

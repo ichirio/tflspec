@@ -1715,7 +1715,7 @@ tfl_content_run <- function(output, data, study = NULL) {
   if (!inherits(output, "tfl_output")) {
     .ard_stop("tfl_content_run(): `output` is a report, tfl_output().")
   }
-  if (inherits(output$content, "tfl_r")) return(.content_own_run(output, data))
+  if (.content_is_own_r(output)) return(.content_own_run(output, data))
   if (identical(output$kind, "figure")) return(.content_fig_run(output, data, study))
   if (!output$kind %in% c("table", "listing")) {
     .ard_stop(sprintf(paste0("tfl_content_run(): a %s's content is not run ",
@@ -1938,6 +1938,13 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
                 template = match.arg(template), study = study)
 }
 
+# A report whose content is its own R code (`content: !r`), written and run
+# as it is -- not a series figure's report (`figure:`): its content is cards
+# after the template's call, and its writer says `content: !r` is not one
+.content_is_own_r <- function(output) {
+  inherits(output$content, "tfl_r") && is.null(output$figure)
+}
+
 # What tfl_content_code() writes.  `piped`: the plan starts from `data` as
 # its input (`plan <- data |> table_plan(...)`: a content object's `from:`),
 # not as table_plan()'s first argument.
@@ -1945,8 +1952,9 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
                           template = c("call", "items"), study = NULL, piped = FALSE) {
   # the content as the report's own code (`content: !r`, the old
   # content_code): written as it is, after the data's steps; it leaves
-  # `content`
-  if (inherits(output$content, "tfl_r")) {
+  # `content`.  (A series figure's report, `figure:`, has cards after the
+  # call only: its writer stops on `content: !r`, .fig_series_cards())
+  if (.content_is_own_r(output)) {
     steps <- .content_steps_code(.content_r_steps(output))
     own <- unlist(strsplit(as.character(output$content), "\n", fixed = TRUE))
     return(c(steps, if (length(steps)) "", own))
