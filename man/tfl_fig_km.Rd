@@ -58,7 +58,10 @@ agree, and checked against the curve's own count.  The risk table's
 times are the ARD's; the ARD's time unit must be the axis's.}
 
 \item{...}{Engine options, e.g. \code{x_max = 24}, \code{x_by = 3}, \code{palette = "grey"},
-\code{theme = "classic"}, \code{width = 7}, \code{height = 5}.}
+\code{theme = "classic"}, \code{width = 7}, \code{height = 5}; \code{axis_title_width = 40}:
+the number of characters after which an axis title wraps onto a new
+line, at the spaces between words (default: the figure style's, 50;
+\code{NA} or \code{tfl_unset()}: no wrap).  The script shows the wrapped title.}
 }
 \value{
 A \code{tfl_code} object (character; printed as the script).

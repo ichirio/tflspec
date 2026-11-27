@@ -132,7 +132,10 @@ pp_prep_adam <- function(adam) if (is.null(adam)) NULL else tfl_read_adam(adam)
 #'   agree, and checked against the curve's own count.  The risk table's
 #'   times are the ARD's; the ARD's time unit must be the axis's.
 #' @param ... Engine options, e.g. `x_max = 24`, `x_by = 3`, `palette = "grey"`,
-#'   `theme = "classic"`, `width = 7`, `height = 5`.
+#'   `theme = "classic"`, `width = 7`, `height = 5`; `axis_title_width = 40`:
+#'   the number of characters after which an axis title wraps onto a new
+#'   line, at the spaces between words (default: the figure style's, 50;
+#'   `NA` or `tfl_unset()`: no wrap).  The script shows the wrapped title.
 #' @return A `tfl_code` object (character; printed as the script).
 #' @export
 tfl_fig_km <- function(adam = NULL, param = "OS", group = "TRT01P",

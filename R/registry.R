@@ -94,6 +94,9 @@ pp_default_options <- function(type = NA) {
   st <- .fs_all(type)
   st <- lapply(st, function(v) if (is.na(v)) "" else v)
   for (k in names(st)) base[[k]] <- st[[k]]
+  # (a company's style with no axis_title_width row: the option is still
+  # one, blank -- pp_title_width() then takes the built-in width)
+  if (is.null(base$axis_title_width)) base$axis_title_width <- ""
   base
 }
 

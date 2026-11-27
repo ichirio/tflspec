@@ -43,8 +43,8 @@ tfl_fig_scatter <- function(adam = NULL, style = c("shift", "xy"), param = "ALT"
     "scale_colour_manual(values = pal_grp)",
     if (style == "shift") "coord_equal(xlim = lims, ylim = lims)",
     sprintf("labs(x = %s, y = %s%s)",
-            q(if (style == "shift") paste("Baseline", plab) else paste(x, "of", plab)),
-            q(if (style == "shift") paste("Post-baseline", plab) else paste(y, "of", plab)),
+            pp_axis_title(if (style == "shift") paste("Baseline", plab) else paste(x, "of", plab)),
+            pp_axis_title(if (style == "shift") paste("Post-baseline", plab) else paste(y, "of", plab)),
             if (!is.null(title)) paste0(", title = ", q(title)) else "")),
     as.list(pp_theme_lines(theme)), as.list(pp_q_legend(legend))))
   pp_q_script(plot_id, "Scatter plot", title, c("dplyr", "ggplot2"),
@@ -96,7 +96,7 @@ tfl_fig_pk <- function(adam = NULL, style = c("mean", "mean_log", "individual"),
       sprintf("geom_errorbar(aes(ymin = %s, ymax = mean + sd), width = 0.3, na.rm = TRUE)", if (log_y) "lo" else "mean - sd"),
       "scale_colour_manual(values = pal_grp)",
       if (log_y) "scale_y_log10()",
-      sprintf("labs(x = %s, y = %s%s)", q(time_label), q(paste("Mean (SD)", plab)),
+      sprintf("labs(x = %s, y = %s%s)", pp_axis_title(time_label), pp_axis_title(paste("Mean (SD)", plab)),
               if (!is.null(title)) paste0(", title = ", q(title)) else "")),
       as.list(pp_theme_lines(theme)), as.list(pp_q_legend(legend))))
   } else {
@@ -107,7 +107,7 @@ tfl_fig_pk <- function(adam = NULL, style = c("mean", "mean_log", "individual"),
       sprintf("facet_wrap(vars(%s))", group),
       "scale_colour_manual(values = pal_grp)",
       "scale_y_log10()",
-      sprintf("labs(x = %s, y = %s%s)", q(time_label), q(plab), if (!is.null(title)) paste0(", title = ", q(title)) else "")),
+      sprintf("labs(x = %s, y = %s%s)", pp_axis_title(time_label), pp_axis_title(plab), if (!is.null(title)) paste0(", title = ", q(title)) else "")),
       as.list(pp_theme_lines(theme)), list('theme(legend.position = "none")')))
   }
   pp_q_script(plot_id, "PK concentration-time plot", title, c("dplyr", "ggplot2"),

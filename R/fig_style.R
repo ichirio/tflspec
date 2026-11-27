@@ -171,7 +171,10 @@
 #'   which an axis title wraps onto a new line, at the spaces between
 #'   words; the default of a figure template's `axis_title_width` and of
 #'   a designed figure's (its `plot` setting `axis_title_width`; `!unset`
-#'   there: no wrap).  The program shows the wrapped title.
+#'   there: no wrap), and of the scripts of [tfl_fig_km()] and the other
+#'   `tfl_fig_*()` (`axis_title_width` in the `...` of `tfl_fig_km()`,
+#'   `tfl_fig_waterfall()` and `tfl_fig_swimmer()`).  The program shows
+#'   the wrapped title.
 #' * `markers` (`marker`, `shape`, `fill`, `colour`, `size`): event markers
 #'   by label (a swimmer event named `Death` takes the `Death` row) and the
 #'   figures' own symbols (`censor`, `assessment`).

@@ -105,7 +105,7 @@ tfl_fig_forest <- function(adam = NULL, style = c("hr", "or", "estimates"), para
       "geom_point(aes(x = est), shape = 15, size = 2.5, na.rm = TRUE)",
       "scale_x_log10()",
       "scale_y_continuous(breaks = est_df$y, labels = est_df$label, expand = expansion(add = 0.6))",
-      sprintf("labs(x = %s, y = NULL%s)", q(x_lab), if (!is.null(title)) paste0(", title = ", q(title)) else "")),
+      sprintf("labs(x = %s, y = NULL%s)", pp_axis_title(x_lab), if (!is.null(title)) paste0(", title = ", q(title)) else "")),
       as.list(pp_theme_lines(theme)),
       list("theme(axis.text.y = element_text(hjust = 0), panel.grid.major.y = element_blank())"))),
     "# ---- text columns: N and estimate (95% CI) ----",
@@ -172,7 +172,7 @@ tfl_fig_bar <- function(adam = NULL, style = c("rate_ci", "stacked", "dodged"), 
       'geom_text(aes(y = ucl, label = sprintf("%.1f%%\\n(%d/%d)", rate, x, n)), vjust = -0.3, size = 3)',
       "scale_fill_manual(values = pal)",
       "scale_y_continuous(limits = c(0, 110), breaks = seq(0, 100, 20), expand = expansion(mult = c(0, 0.02)))",
-      sprintf("labs(x = NULL, y = %s%s)", q(sprintf("Response rate (%%) with 95%% CI [%s]", paste(responders, collapse = "+"))),
+      sprintf("labs(x = NULL, y = %s%s)", pp_axis_title(sprintf("Response rate (%%) with 95%% CI [%s]", paste(responders, collapse = "+"))),
               if (!is.null(title)) paste0(", title = ", q(title)) else "")),
       as.list(pp_theme_lines(theme)), as.list(pp_q_legend(legend))))
   } else {
@@ -195,7 +195,7 @@ tfl_fig_bar <- function(adam = NULL, style = c("rate_ci", "stacked", "dodged"), 
         'geom_text(aes(label = ifelse(pct >= 5, sprintf("%.0f%%", pct), "")), position = position_stack(vjust = 0.5), size = 3)',
         "scale_fill_manual(values = pal, breaks = names(pal))",
         "scale_y_continuous(expand = expansion(mult = c(0, 0.02)))",
-        sprintf("labs(x = NULL, y = \"Subjects (%%)\"%s)", if (!is.null(title)) paste0(", title = ", q(title)) else "")),
+        sprintf("labs(x = NULL, y = %s%s)", pp_axis_title("Subjects (%)"), if (!is.null(title)) paste0(", title = ", q(title)) else "")),
         as.list(pp_theme_lines(theme)), as.list(pp_q_legend(legend))))
     } else {
       plus_code("p", c(list(
@@ -204,7 +204,7 @@ tfl_fig_bar <- function(adam = NULL, style = c("rate_ci", "stacked", "dodged"), 
         'geom_text(aes(label = sprintf("%.0f", pct)), position = position_dodge(width = 0.75), vjust = -0.3, size = 2.8)',
         "scale_fill_manual(values = pal)",
         "scale_y_continuous(expand = expansion(mult = c(0, 0.08)))",
-        sprintf("labs(x = %s, y = \"Subjects (%%)\"%s)", q(lab), if (!is.null(title)) paste0(", title = ", q(title)) else "")),
+        sprintf("labs(x = %s, y = %s%s)", pp_axis_title(lab), pp_axis_title("Subjects (%)"), if (!is.null(title)) paste0(", title = ", q(title)) else "")),
         as.list(pp_theme_lines(theme)), as.list(pp_q_legend(legend))))
     }
   }

@@ -62,7 +62,7 @@ tfl_fig_ae_dot <- function(adam = NULL, style = c("risk_diff", "incidence"), dat
     "geom_point(size = 2.5)",
     "scale_colour_manual(values = pal_grp)",
     "scale_shape_manual(values = setNames(rep_len(c(16, 17, 15, 18), length(pal_grp)), names(pal_grp)))",
-    sprintf("labs(x = \"Incidence (%%)\", y = NULL%s)", if (!is.null(title)) paste0(", title = ", q(title)) else "")),
+    sprintf("labs(x = %s, y = NULL%s)", pp_axis_title("Incidence (%)"), if (!is.null(title)) paste0(", title = ", q(title)) else "")),
     as.list(pp_theme_lines(theme)), as.list(pp_q_legend(legend))))
   if (style == "incidence") {
     plot <- c(inc_plot, "fig <- p")
@@ -123,7 +123,7 @@ tfl_fig_butterfly <- function(adam = NULL, style = c("soc", "pt"), data = "ADAE"
     'geom_text(aes(label = ifelse(pct > 0, sprintf("%.1f", pct), ""), hjust = ifelse(x < 0, 1.15, -0.15)), size = 2.6)',
     "scale_x_continuous(limits = c(-x_lim, x_lim), labels = function(v) abs(v))",
     "scale_fill_manual(values = pal_grp)",
-    sprintf("labs(x = \"Subjects with event (%%)\", y = NULL%s)", if (!is.null(title)) paste0(", title = ", q(title)) else "")),
+    sprintf("labs(x = %s, y = NULL%s)", pp_axis_title("Subjects with event (%)"), if (!is.null(title)) paste0(", title = ", q(title)) else "")),
     as.list(pp_theme_lines(theme)), as.list(pp_q_legend(legend)))), "fig <- p")
   pp_q_script(plot_id, "AE butterfly plot", title, c("dplyr", "ggplot2"),
               data_lines, plot, width, height, dpi, units, file)
@@ -182,7 +182,8 @@ tfl_fig_edish <- function(adam = NULL, style = c("alt", "alt_ast"), data = "ADLB
     "scale_x_log10()",
     "scale_y_log10()",
     "scale_colour_manual(values = pal_grp)",
-    sprintf("labs(x = %s, y = \"Maximum post-baseline total bilirubin (x ULN)\"%s)", q(x_lab),
+    sprintf("labs(x = %s, y = %s%s)", pp_axis_title(x_lab),
+            pp_axis_title("Maximum post-baseline total bilirubin (x ULN)"),
             if (!is.null(title)) paste0(", title = ", q(title)) else "")),
     as.list(pp_theme_lines(theme)), as.list(pp_q_legend(if (legend == "inside") "inside_bl" else legend)))), "fig <- p")
   pp_q_script(plot_id, "eDISH plot", title, c("dplyr", "ggplot2"),

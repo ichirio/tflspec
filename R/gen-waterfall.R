@@ -33,6 +33,7 @@ pp_gen_waterfall <- function(ctx) {
   y_by <- pp_opt_num(ctx, "y_by", 20)
   y_lab <- ctx$prow$y_label %or% pp_var_label_of(ctx, ctx$ds, value) %or% value
   x_lab <- ctx$prow$x_label %or% pp_opt(ctx, "x_label") %or% "Patients"
+  tw <- pp_title_width(ctx)
 
   aes_fill <- if (!is.null(f_var)) sprintf(", fill = %s", f_var) else ""
   base_terms <- list(
@@ -44,7 +45,7 @@ pp_gen_waterfall <- function(ctx) {
             q(pp_opt(ctx, "zero_line_colour")), pp_opt(ctx, "zero_line_width")),
     "scale_y_continuous(breaks = seq(y_min, y_max, by = y_by))",
     'coord_cartesian(ylim = c(y_min, y_max), clip = "off")',
-    sprintf("labs(x = %s, y = %s%s)", q(x_lab), q(y_lab),
+    sprintf("labs(x = %s, y = %s%s)", pp_axis_title(x_lab, tw), pp_axis_title(y_lab, tw),
             if (!is.na(ctx$prow$title)) paste0(", title = ", q(ctx$prow$title)) else ""),
     pp_theme_code(ctx),
     "theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())"
