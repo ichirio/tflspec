@@ -596,7 +596,7 @@
 # (`extends`: its family's `[defaults]`, canon 1.27: the study's defaults are
 # laid under the template's items, and its references read them)
 .tfl_template("summary", ai = TRUE, kind = "table", layout = "summary",
-              label = "Continuous variables by a column key (the layout)",
+              label = "Continuous variables by a column key",
               params = .tpl_summary_params, body = .tpl_demog_body, extends = "defaults",
               parts = .tpl_demog_parts_of(.tpl_summary_params))
 

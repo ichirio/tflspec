@@ -1362,7 +1362,7 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
 
 .tfl_template("hierarchical", ai = TRUE, kind = "table", layout = "hierarchical",
               params = .tpl_hier_params, body = .tpl_hier_body,
-              label = "Counts by a hierarchy (the layout)")
+              label = "Counts by a hierarchy")
 
 # ae_soc_pt: treatment-emergent AEs by SOC and PT -- hierarchical's
 # parameters, its own defaults; FDA's serious and discontinuation tables
@@ -1939,7 +1939,7 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
 
 .tfl_template("shift", ai = TRUE, kind = "table", layout = "shift",
               params = .tpl_shift_params, body = .tpl_shift_body,
-              label = "Shift table (the layout)")
+              label = "Shift table")
 
 # lab_shift: the normal range indicator at baseline by a visit's, on shift
 .tfl_template("lab_shift", ai = TRUE, kind = "table", layout = "shift",
@@ -2007,7 +2007,7 @@ tpl_lab_shift <- function(ard, population, ..., codelists = NULL) {
 # ---- listing: one row a record, the layout ---------------------------------------
 
 .tfl_template("listing", ai = TRUE, kind = "listing", layout = "listing",
-  label = "Listing (the layout)",
+  label = "Listing",
   params = list(
     tfl_param("data", required = TRUE, doc = "the dataset (ADAE)"),
     tfl_param("columns", required = TRUE,
@@ -2618,7 +2618,7 @@ tpl_param_change <- function(ard, population, ..., codelists = NULL) {
 }
 
 .tfl_template("stat_block", ai = TRUE, kind = "table", layout = "stat_block",
-  label = "One record's statistics over rows and columns (the layout)",
+  label = "Statistics by rows and columns",
   params = list(
     tfl_param("by", "TRT01A", doc = "the column key (the arms)"),
     tfl_param("by_levels", NULL, doc = "its values in order; NULL: its code list's"),
