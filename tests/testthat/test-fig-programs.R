@@ -312,7 +312,7 @@ test_that("a filter that drops an arm leaves no unused level in the legend, stra
   expect_identical(names(b$env$fit$strata), c("TRT01P=Placebo", "TRT01P=Drug A"))
   ms <- tfl_fig_template("mean_se", data = "ADLB", param = "ALT", group = "TRT01P")
   a <- lv_fig_run(ms, adlb = adlb, adsl = adsl)
-  b <- lv_fig_run(lv_with_filter(ms, "flag", keep), adlb = adlb, adsl = adsl)
+  b <- lv_fig_run(lv_with_filter(ms, "join", keep), adlb = adlb, adsl = adsl)
   chk(a, b)
   expect_identical(levels(b$env$sm$TRT01P)[levels(b$env$sm$TRT01P) %in% b$env$sm$TRT01P],
                    c("Placebo", "Drug A"))
@@ -325,7 +325,7 @@ test_that("a code list with labels: the data holds the codes, the legend shows t
   env <- new.env(parent = tflspec:::.fig_pkg_env(c("dplyr", "ggplot2")))
   env$adsl <- tflspec::adsl
   env$adsl$TRTA <- c(Control = "Placebo", `Drug X` = "Xanomeline High Dose")[as.character(env$adsl$TRT01A)]
-  # (the figure takes the arm and the flag from ADSL: ADVS has none of its own)
+  # (the figure takes the arm from ADSL: ADVS has none of its own)
   env$advs <- tflspec::advs[setdiff(names(tflspec::advs), c("TRTA", "SAFFL"))]
   eval(parse(text = tfl_fig_setup_code()), env)
   eval(parse(text = tfl_helpers_code()), env)

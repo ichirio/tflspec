@@ -131,7 +131,7 @@ test_that("a figure's ARD pieces: the code reads `ard`, the checks look in it", 
                        stat = "estimate", group = "ARM = A", label = "Median (A): {value}")))
   code <- tfl_fig_design_code(d, "F-1", setup = TRUE, save = FALSE, name = "plot")
   expect_true(attr(code, "ard"))
-  expect_false(attr(tfl_fig_design_code(tfl_fig_template("km_simple"), setup = TRUE), "ard"))
+  expect_false(attr(tfl_fig_design_code(tfl_fig_template("km_simple", group = "TRT01P"), setup = TRUE), "ard"))
   expect_true("nr <- ard_stats(ard, \"KM\", variable = \"time\", stats = \"n.risk\", by = \"ARM\")" %in% code)
   # the number's text in the data part, under a name the plot uses
   i <- which(code == "ard_label_1 <- paste0(")

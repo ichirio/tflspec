@@ -48,8 +48,14 @@ test_that("tfl_tpl(): the same plan as the template's own function; its errors",
   t <- tfl_templates()
   expect_identical(t$call[t$name == "demog"], "tfl_tpl")
   expect_identical(t$call[t$name == "km_survival"], "tfl_tpl")
-  expect_identical(sort(t$name[t$ai]), c("ae_disc_soc_pt", "ae_ser_soc_pt", "ae_soc_pt", "demog",
-                                          "km_cumulative", "km_survival"))
+  expect_identical(sort(t$name[t$ai]), c("ae_disc_soc_pt", "ae_eair", "ae_max_grade",
+                                         "ae_overview", "ae_pt_freq", "ae_ser_soc_pt", "ae_soc_pt",
+                                         "ancova", "demog", "disposition", "forest_hr",
+                                         "hierarchical", "km", "km_cumulative", "km_survival",
+                                         "km_table", "lab_abnormal", "lab_shift", "listing",
+                                         "mean_ci", "mean_se", "orr", "param_change", "pk_conc",
+                                         "shift", "stat_block", "stf_t02_demog", "summary",
+                                         "waterfall"))
   expect_match(t$label[t$name == "ae_ser_soc_pt"], "FDA STF Table 10", fixed = TRUE)
   expect_identical(t$from[t$name == "ae_ser_soc_pt"], "ae_soc_pt")
 })

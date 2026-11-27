@@ -586,3 +586,24 @@ test_that("templates.md never cuts a default, and names the km settings that are
   expect_identical(p$item[p$level == "error"], "plot$censor_shape")
   expect_identical(tfl_check_fig_design(tflspec:::.fig_design_of_output(o))$field, "censor_shape")
 })
+
+test_that("a template is offered to the agent only when its `ai` flag is TRUE", {
+  skip_on_cran()
+  withr::defer(suppressWarnings(rm(list = "aiflag_zq", envir = tflspec:::.tpl_registry)))
+  reg <- function(ai) tfl_template("aiflag_zq", kind = "table", layout = "summary",
+    params = list(tfl_param("population", "SAF")),
+    body = function(a, ctx) tfl_template_expand("summary",
+      list(by = "TRT01A", population = a$population, continuous = "AGE"),
+      codelists = ctx$codelists, population = ctx$population),
+    label = "Aiflag zq", call = "aiflag_zq", ai = ai)
+  shown <- function() {
+    c(any(grepl("`aiflag_zq`", tflspec:::.ai_templates_file_text(), fixed = TRUE)),
+      "aiflag_zq" %in% tflspec:::.ai_templates_likely("Aiflag zq", "table"),
+      "aiflag_zq" %in% tflspec:::.ai_templates_shown()$name)
+  }
+  reg(FALSE)
+  expect_true("aiflag_zq" %in% tfl_templates()$name)
+  expect_identical(shown(), c(FALSE, FALSE, FALSE))
+  suppressMessages(reg(TRUE))
+  expect_identical(shown(), c(TRUE, TRUE, TRUE))
+})

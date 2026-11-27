@@ -70,7 +70,7 @@ test_that("the data section of demog, ae_soc_pt, lab_shift and a listing", {
   expect_snapshot(cat(ds_section(ds_code(d, st, "X-listing", "listing")), sep = "\n"))
 })
 
-test_that("no generated program has pop_ objects, local(), intersect() or a semi_join()", {
+test_that("no generated program has pop_ objects, intersect() or a semi_join(); local() only around SPEC code of several statements", {
   ds_skip()
   d <- ds_study(withr::local_tempdir())
   tp <- tfl_templates()
@@ -86,7 +86,20 @@ test_that("no generated program has pop_ objects, local(), intersect() or a semi
     code <- unlist(strsplit(code, "\n", fixed = TRUE))
     code <- code[seq_along(code) >= match("# ---- data ----", code)]
     expect_false(any(grepl("pop_[a-z]", code)), info = nms[i])
-    expect_false(any(grepl("local(", code, fixed = TRUE)), info = nms[i])
+    # (A1, the user 2026-11-24: SPEC code runs in its own step; one
+    # expression is written as it is, so a local() holds several)
+    locals <- list()
+    find <- function(e) {
+      if (!is.call(e)) return(invisible())
+      if (identical(e[[1L]], as.name("local"))) locals[[length(locals) + 1L]] <<- e[[2L]]
+      a <- as.list(e)[-1L]
+      for (k in seq_along(a)) if (is.call(a[[k]])) find(a[[k]])
+    }
+    ex <- parse(text = code, keep.source = FALSE)
+    for (k in seq_along(ex)) find(ex[[k]])
+    for (b in locals) {
+      expect_true(is.call(b) && identical(b[[1L]], as.name("{")) && length(b) > 2L, info = nms[i])
+    }
     expect_false(any(grepl("intersect(", code, fixed = TRUE)), info = nms[i])
     expect_false(any(grepl("semi_join", code, fixed = TRUE)), info = nms[i])
     expect_equal(sum(code == "# ---- data ----"), 1L, info = nms[i])

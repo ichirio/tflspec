@@ -330,8 +330,10 @@ test_that("a table of records, a report's own data code, a listing and a figure 
   out <- tfl_output("T-1", "table",
     data = list(source = "code", code = tfl_r("data <- normalize_ard(ard)\ndata <- data[data$variable == \"SEX\", ]")),
     content = c(list(tfl_item("normalize_ard", list())), tp))
+  # (two statements: in a scope of their own that leaves `data`, A1)
   expect_identical(no_bign(tfl_content_code(out, pipe = "|>")),
-                   c("data <- normalize_ard(ard)", "data <- data[data$variable == \"SEX\", ]", "",
+                   c("data <- local({", "  data <- normalize_ard(ard)",
+                     "  data <- data[data$variable == \"SEX\", ]", "  data", "})", "",
                      "plan <- table_plan(data, cols = \"ARM\", rows = c(group = \"variable\"))"))
   skip_if_not_installed("cards")
   ard <- cards::ard_stack(cards::ADSL, .by = ARM, cards::ard_tabulate(variables = c(SEX, RACE)))
@@ -379,7 +381,10 @@ test_that("a data step of the report's own code is that code, whatever else data
     source = "code", code = tfl_r("df <- ard\ndata <- df[df$x > 1, , drop = FALSE]"),
     steps = list(list(fn = "geom_point"))))
   out$content <- tfl_r("content <- nrow(data)")
-  expect_identical(tfl_content_code(out), c("df <- ard", "data <- df[df$x > 1, , drop = FALSE]",
+  # (two statements: in a scope of their own that leaves `data`, A1; the
+  # content code itself as it is)
+  expect_identical(tfl_content_code(out), c("data <- local({", "  df <- ard",
+                                            "  data <- df[df$x > 1, , drop = FALSE]", "  data", "})",
                                             "", "content <- nrow(data)"))
   expect_identical(tfl_content_run(out, data.frame(x = 1:3)), 2L)
 })

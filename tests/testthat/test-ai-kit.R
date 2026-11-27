@@ -112,8 +112,10 @@ test_that("the example runs on the sample data: the ARD, the tables, the listing
   expect_identical(vapply(f1$content, `[[`, "", "fn"),
                    c("ggplot", "geom_line", "geom_point", "geom_errorbar", "scale_colour_tfl",
                      "labs", "theme_tfl", "theme", "tfl_image"))
+  # (its analysis set SAF: the study makes its subjects, as the program does)
   p <- suppressMessages(tfl_content_run(f1,
-                                        list(advs = readRDS(file.path(d, "data", "adam", "advs.rds")))))
+                                        list(advs = readRDS(file.path(d, "data", "adam", "advs.rds"))),
+                                        study = st))
   expect_s3_class(p, "ggplot")
 })
 

@@ -17,26 +17,22 @@ adsl <- order_levels(adsl)
 
 # ---- analyses ----
 # INFO: Study information
-facts <- c(
-  "MedDRA version" = "Version 26.1",
-  "WHODrug version" = "Global B3 March 2023",
-  "First dose" = format(min(adsl$TRTSDT, na.rm = TRUE)),
-  "Last dose" = format(max(adsl$TRTEDT, na.rm = TRUE)),
-  "Data cut-off" = format(max(adsl$DCUTDT, na.rm = TRUE))
-)
-.ard_info <- as_card(
-  tibble(
-    variable = "INFO",
-    variable_level = as.list(names(facts)),
-    context = "study_info",
-    stat_name = "value",
-    stat_label = "Value",
-    stat = as.list(unname(facts)),
-    fmt_fun = list(NULL),
-    warning = list(NULL),
-    error = list(NULL)
+.ard_info <- local({
+  data <- adsl
+  facts <- c(
+    "MedDRA version" = "Version 26.1",
+    "WHODrug version" = "Global B3 March 2023",
+    "First dose" = format(min(data$TRTSDT, na.rm = TRUE)),
+    "Last dose" = format(max(data$TRTEDT, na.rm = TRUE)),
+    "Data cut-off" = format(max(data$DCUTDT, na.rm = TRUE))
   )
-) |>
+  as_card(tibble(
+    variable = "INFO", variable_level = as.list(names(facts)),
+    context = "study_info", stat_name = "value", stat_label = "Value",
+    stat = as.list(unname(facts)), fmt_fun = list(NULL),
+    warning = list(NULL), error = list(NULL)
+  ))
+}) |>
   fmt_ard(fmt_default) |>
   tag_ard(report_id, "INFO")
 

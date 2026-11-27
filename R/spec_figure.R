@@ -121,8 +121,11 @@
   series <- .content_fig_series_code(output)
   if (!is.null(series)) return(series)
   if (.fig_new_content(output$content)) return(.fig_content_code(output))
-  # (the design as its list: tfl_fig_design_code() reads it as a design)
-  design <- .fig_design_of_output(output)
+  # (the design as its list: tfl_fig_design_code() reads it as a design;
+  # the report's subjects, when made (.fig_session_subjects()): its reads
+  # joined to them)
+  design <- .fig_design_from_list(.fig_design_of_output(output))
+  attr(design, "subjects") <- attr(output, "fig_subjects")
   # (the report's program runs after the study's helpers: the arms in their
   # numeric order, as the figure of items has them)
   tfl_fig_design_code(design, plot_id = output$id, save = FALSE, name = "content",
@@ -149,13 +152,24 @@
   invisible(TRUE)
 }
 
-.content_fig_run <- function(output, data) {
+.content_fig_run <- function(output, data, study = NULL) {
   if (is.data.frame(data)) data <- list(df = data)
   .fig_reads_given(output, data)
+  if (is.character(study)) study <- tfl_read_study_spec(study)
+  # the report's subjects (its analysis set): made as its program's data
+  # part makes them, the part's own reads of the study's files; the
+  # datasets it reads joined to them (canon 11-15)
+  sj <- local({
+    old <- options(tflspec.plain_ns = TRUE, tflspec.study_setup = FALSE)
+    on.exit(options(old))
+    .fig_session_subjects(output, study, "tfl_content_run()")
+  })
+  attr(output, "fig_subjects") <- sj$subjects
   new <- .fig_new_content(output$content)
   code <- .content_fig_code_out(output)
   # the packages it calls: their exports around it, none attached
   env <- new.env(parent = .fig_pkg_env(attr(code, "libs")))
+  if (!is.null(sj)) .fig_subjects_eval(sj, env, study, output$id)
   for (n in names(data)) assign(n, data[[n]], envir = env)
   # a figure of items runs after the study's figure setup (theme_tfl(),
   # scale_colour_tfl(), tfl_colours()), as its program does

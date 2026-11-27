@@ -35,10 +35,19 @@
   unique(v[nzchar(v) & !is.na(v)])
 }
 
+# Does the report's header show BIGN's N?  A table of its ARD
+# (.bign_applies()) with a plan_col_header() whose text says {n} and that
+# gives no `values` of its own (.bign_header_items(), the rule
+# tfl_content_code() follows): those take BIGN's.  One notion for both
+# checks of the header N: this file's rows and the N check's
+# (R/check_spec_n.R) look only at an N the header shows
+.bign_shown <- function(output) {
+  .bign_applies(output) && is.list(output$content) && !inherits(output$content, "tfl_r") &&
+    isTRUE(attr(.bign_header_items(output$content, TRUE), "used"))
+}
+
 .check_header_n_rows <- function(o, id) {
-  if (!.bign_applies(o) || inherits(o$content, "tfl_r") || !is.list(o$content)) return(NULL)
-  # (the items whose text says {n} and that give no `values`: those take BIGN's)
-  if (!isTRUE(attr(.bign_header_items(o$content, TRUE), "used"))) return(NULL)
+  if (!.bign_shown(o)) return(NULL)
   rows <- list(.check_rows())
   add <- function(...) {
     rows[[length(rows) + 1L]] <<- .check_rows(output_id = id, part = "content",

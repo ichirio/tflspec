@@ -48,8 +48,9 @@ p <- ggplot(sm, aes(AVISIT, mean, colour = TRT01A, group = TRT01A)) +
 |---|---|
 | `df <- adlb` | `{step: read, dataset: ADLB}` |
 | `filter(PARAMCD == "ALT")` | `{step: param, value: ALT}` |
-| `filter(SAFFL == "Y")` | `{step: flag, variable: SAFFL}` |
-| `semi_join(adsl \|> filter(EFFFL == "Y"), by = "USUBJID")` | `{step: join, dataset: ADSL, where: 'EFFFL == "Y"', how: semi}` |
+| `filter(SAFFL == "Y")` or `semi_join(adsl \|> filter(SAFFL == "Y"), by = "USUBJID")` (the analysis set) | `data: {source: code, population: SAF, steps: [...]}` -- the report's set, on its data, never a step: the program joins the records to its subjects |
+| `filter(ANL01FL == "Y")` (a record flag) | `{step: flag, variable: ANL01FL}` |
+| `semi_join(adsl \|> filter(AGE >= 65), by = "USUBJID")` (a subgroup, not the analysis set) | `{step: join, dataset: ADSL, where: 'AGE >= 65', how: semi}` |
 | `left_join(adrs \|> filter(PARAMCD == "BOR") \|> select(USUBJID, BOR = AVALC))` | `{step: join, dataset: ADRS, where: 'PARAMCD == "BOR"', vars: BOR = AVALC}` |
 | any other `filter(...)` | `{step: filter, expr: ...}` |
 | `mutate(X = ...)` | `{step: derive, variable: X, expr: ...}` |

@@ -108,7 +108,7 @@
 }
 
 .tpl_la_register <- function() {
-  .tfl_template("lab_abnormal", kind = "table", layout = "summary",
+  .tfl_template("lab_abnormal", ai = TRUE, kind = "table", layout = "summary",
                 params = .tpl_la_params(), body = .tpl_la_body)
 }
 
