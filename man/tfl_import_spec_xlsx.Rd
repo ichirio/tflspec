@@ -17,7 +17,8 @@ tfl_import_spec_xlsx(dir, path, write = TRUE)
 Invisibly, a list: \code{changes} (a data frame: \code{sheet}, \code{key},
 \code{column}, \code{from}, \code{to}), \code{added} (keys new to the spec), \code{missing}
 (keys of the spec the workbook lacks), \code{ignored} (the sheets that were
-changed in the workbook but are not read back, \code{records} and \code{objects};
+changed in the workbook but are not read back, \code{records} and \code{objects},
+and the reports' code lists whose rows of a reference were edited;
 each also said in a message), \code{files} (written).
 }
 \description{
@@ -34,5 +35,10 @@ Nothing else of the YAML files changes: a line's height
 (\code{row_height_twips}), which the workbook has no column for, stays as it
 is.  The \code{records} and \code{objects} sheets are written but not read back; a
 change made to one in the workbook is said in a message and listed in
-\code{ignored}.
+\code{ignored}.  A code list that refers to one of the study's lists (its
+\code{list} cell, \code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}) is read back as the cell says; its
+rows are the study's codes and labels, and an edit to them is said in a
+message and listed in \code{ignored} (\verb{codelists: <report> / <variable>}).
+The rows of one variable that give different \code{list} cells (one blank and
+one not, too) stop the import.
 }

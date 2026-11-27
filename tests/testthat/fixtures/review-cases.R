@@ -107,7 +107,7 @@ list(
        s
      }, "F-1", "design", "data[2] derive", "expr", level = "hand", data = FALSE),
   rc("F02", function(s) {
-       s$figures <- list(`F-1` = tfl_fig_template("km_simple"))
+       s$figures <- list(`F-1` = tfl_fig_template("km_simple", group = "TRT01A"))
        s
      }, "F-1", "design", "layers", "", data = FALSE),
   rc("F03", function(s) {
