@@ -54,3 +54,31 @@ test_that("defaults.yml page: stops as an old form", {
   expect_s3_class(e, "tflspec_old_form")
   expect_identical(e$form, "defaults_page")
 })
+
+test_that("#11 a content item written as a {fn:, args:, from:} map stops (canon :378)", {
+  d <- withr::local_tempdir()
+  f <- file.path(d, "T-1.yml")
+  writeLines(c("id: T-1", "kind: table", "content:", "  - fn: plan_cells",
+               "    args: {categorical: '{n}'}"), f)
+  e <- tryCatch(tfl_read_output(f), error = function(e) e)
+  expect_s3_class(e, "tflspec_old_form")
+  expect_identical(e$form, "item_fn_map")
+  expect_match(conditionMessage(e), "T-1.yml: a content item written as a map `{fn: plan_cells",
+               fixed = TRUE)
+  expect_match(conditionMessage(e), "write it `- plan_cells: {<args>}`", fixed = TRUE)
+  # (with `from:` too, and in a layer: the same)
+  writeLines(c("id: T-1", "kind: table", "content:", "  - {fn: plan_cells, from: defaults}"), f)
+  expect_error(tfl_read_output(f), class = "tflspec_old_form")
+  expect_error(tflspec:::.layer_from_list(list(content = list(list(fn = "plan_cells"))), "defaults"),
+               class = "tflspec_old_form")
+  # the current form reads, and an item made in code is taken as it is
+  writeLines(c("id: T-1", "kind: table", "content:", "  - plan_cells: {categorical: '{n}'}"), f)
+  expect_identical(tfl_read_output(f)$content[[1]]$fn, "plan_cells")
+  o <- tflspec:::.output_from_list(list(id = "T-2", kind = "table",
+                                        content = list(tfl_item("plan_cells", list(categorical = "{n}")))))
+  expect_identical(o$content[[1]]$args$categorical, "{n}")
+  # (a call's value {fn, args} is a nested call, not an item: untouched)
+  writeLines(c("id: T-1", "kind: table", "content:",
+               "  - plan_style: {border_header: {fn: rtf_border, args: {top: true}}}"), f)
+  expect_s3_class(tfl_read_output(f)$content[[1]]$args$border_header, "tfl_call")
+})

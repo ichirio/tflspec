@@ -799,6 +799,15 @@ tfl_read_output <- function(path) {
   if (inherits(el, "tfl_r")) return(tfl_item(".r", list(code = el), "own"))
   # a content object: `{name, from, calls}`
   if (.is_obj_map(el)) return(.obj_map_from_list(el))
+  # the old `{fn:, args:, from:}` map of an item stops (canon 11-10 :378);
+  # an item already read (a tfl_item) is taken as it is, below
+  if (is.list(el) && !inherits(el, "tfl_item") && "fn" %in% names(el) &&
+      all(names(el) %in% c("fn", "args", "from"))) {
+    fn <- if (is.character(el[["fn"]]) && length(el[["fn"]]) == 1L) el[["fn"]] else "<fn>"
+    .old_form_stop("item_fn_map", .spec_read_file(),
+                   was = sprintf("a content item written as a map `{fn: %s, args: {...}}`", fn),
+                   instead = sprintf("write it `- %s: {<args>}`", fn))
+  }
   if (is.list(el) && length(el) == 1L && !is.null(names(el)) && nzchar(names(el))) {
     args <- el[[1L]]
     if (is.null(args)) args <- list()
@@ -819,7 +828,7 @@ tfl_read_output <- function(path) {
     args <- .r_tag_check(names(el), .neutral_in(names(el), .calls_in(args)))
     return(tfl_item(names(el), .rounding_check(names(el), .logical_strict(names(el), args)), "own"))
   }
-  if (is.list(el) && !is.null(el$fn)) {
+  if (inherits(el, "tfl_item")) {
     args <- .r_tag_check(el$fn, .neutral_in(el$fn, .calls_in(el$args %||% list())))
     return(tfl_item(el$fn, args, el$from %||% "own"))
   }
