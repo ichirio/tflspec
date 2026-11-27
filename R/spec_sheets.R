@@ -365,7 +365,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       warning(sprintf(paste0("%s: the TOC's analysis set %s is not kept: the report's data names ",
                              "%s, and the sheets' population column is the report's set"),
                       id, .na_scalar(unlist(e[["population"]])),
-                      if (is.na(.out_population_or_data(o))) "none" else .out_population_or_data(o)),
+                      if (is.na(.report_set(o))) "none" else .report_set(o)),
               call. = FALSE)
       note(id, "planner", paste0("the TOC's analysis set ", .na_scalar(unlist(e[["population"]])),
                                  " is not kept: the report's data does not name it"))
@@ -449,7 +449,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     # a template report: its name and arguments on the templates sheet, and
     # that is all of the template; the items are made again from them
     if (!is.null(tpl)) {
-      enc <- .tpl_sheets_encode(id, o$kind, .na_scalar(o$label), tpl, .report_set(o))
+      enc <- .tpl_sheets_encode(id, o$kind, .na_scalar(o$label), tpl, .tpl_set_given(o, s$dir))
       trows[[length(trows) + 1L]] <- enc$row
       tparam_rows <- c(tparam_rows, enc$rows)
       # (its condition rows: the conditions sheet's, analysis_id blank)

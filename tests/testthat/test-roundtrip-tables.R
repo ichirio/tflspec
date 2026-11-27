@@ -158,11 +158,11 @@ rt_cases <- list(
                                       tfl_r("data <- data[order(data$variable), ]"))),
   paginate_cols = rt_table(list(rt_nz, rt_head, tfl_item("plan_paginate_cols", list(
     every = 3L, col_header = tfl_r("rtfreporter::rtf_col_header(c(\"A\", \"B\", \"C\"))"))))),
-  labels_two = rt_table(list(rt_nz, rt_head, tfl_item("plan_labels", list(AGE = "Age (y)")),
-                             tfl_item("plan_labels", list(AGE = "Age, years", SEX = "Sex")))),
-  labels_two_variable = rt_table(list(rt_nz, rt_head,
-                                      tfl_item("plan_labels", list(variable = list(AGE = "Age (y)"))),
-                                      tfl_item("plan_labels", list(variable = list(SEX = "Sex"))))),
+  # (plan_labels() in one card: a code SPEC writes a verb that does not
+  # stack once; its two forms)
+  labels_named = rt_table(list(rt_nz, rt_head, tfl_item("plan_labels", list(AGE = "Age, years", SEX = "Sex")))),
+  labels_variable = rt_table(list(rt_nz, rt_head,
+                                  tfl_item("plan_labels", list(variable = list(AGE = "Age (y)", SEX = "Sex"))))),
   listing_step = rt_listing(list(tfl_r("data <- data[data$AGE >= 18, ]"))),
   listing_steps = rt_listing(list(tfl_r("data <- data[data$AGE >= 18, ]"),
                                   tfl_r("data <- data[order(data$AGE), ]"))))

@@ -11,7 +11,7 @@ R08,check,report,catalog,tflplanner,%s names the dataset %s that the catalog doe
 C01,check,codelists,spec,tflspec,The code list of %s is not used by %s.,"Fine when the variable is read by code the review cannot see; else remove the list."
 C02,check,codelists,data,tflspec,"The code list value %s of %s never occurs in the data of %s.","The row prints n = 0; fine when the level is expected, else drop it."
 C03,error,codelists,data,tflspec,"The data value %s of %s is not in the code list of %s.",The program will stop: add the value to the code list.
-C04,check,codelists,spec,tflplanner,The code list of %s in %s differs from the standards.,Copy the code list again from the standards.
+C04,check,codelists,spec,tflplanner,The code list of %s in %s has a code not in the study's list.,"Add the code to the study's list (spec/defaults.yml codelists:), or take it out of the report's list."
 A01,error,ard,data,tflspec,"%s reads the column %s, which %s does not have.",Correct the name or add the column (derive / add).
 A02,error,ard,data,tflspec,"The condition %s on %s cannot be evaluated: %s.",Correct the condition so it names columns the data have and gives TRUE / FALSE.
 A03,check,ard,data,tflspec,"The condition %s on %s keeps no %s.","Fine when nothing is expected yet; else check the values the condition compares with."

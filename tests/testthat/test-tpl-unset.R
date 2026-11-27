@@ -6,7 +6,7 @@ us_study <- function() tfl_read_study_spec(system.file("extdata", "spec-yaml", p
 # a test-only template: `ind` goes straight into an inner call, `lab` has an
 # `!unset` default, `mr` a value
 us_register <- function(name) {
-  tflspec:::.tfl_template(name, "table", "summary",
+  tflspec:::.tfl_template(name, "table", "summary", ai = TRUE,
     params = list(tfl_param("population", "SAF", type = "text"),
                   tfl_param("ind", 2, type = "number", doc = "plan_stub(indent = )"),
                   tfl_param("lab", tfl_unset(), type = "text", doc = "plan_stub(label = )"),
@@ -72,7 +72,9 @@ test_that("a report's `!unset` over a default omits the argument; NA and NULL st
 })
 
 test_that("a required parameter left `!unset` is still needed", {
-  expect_error(tfl_template_expand("summary", list(by = "TRT01A", population = tfl_unset(), continuous = "AGE")),
+  # (disposition's set has no default, A2-T: required)
+  expect_error(tfl_template_expand("disposition", list(by = "TRT01A", population = tfl_unset(),
+                                                        categorical = "EOSSTT")),
                "needs 'population'")
 })
 

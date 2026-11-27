@@ -56,7 +56,6 @@
 "tpl_registry.R","a ""plan_/fig_/tfl_"" literal",1,"schema item or arg def (F1-F3, (c) 11-26)"
 "tpl_registry.R","identical(name, """,1,"the series template definitions ((c) 11-26)"
 "tpl_sheets.R","identical(nm, """,1,"schema item or arg def (F1-F3, (c) 11-26)"
-"tpl_sheets.R","nm %in% c(""",1,"schema item or arg def (F1-F3, (c) 11-26)"
 "tpl_spec.R","a ""plan_/fig_/tfl_"" literal",3,"schema item or arg def (F1-F3, (c) 11-26)"
 "tpl_spec.R","fn %in% c(""",1,"schema item or arg def (F1-F3, (c) 11-26)"
 "tpl_spec.R","identical(fn, """,2,"schema item or arg def (F1-F3, (c) 11-26)"
