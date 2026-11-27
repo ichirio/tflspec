@@ -19,6 +19,10 @@
 #           the program and the call that makes it, with the template's
 #           arguments in {braces} (NULL: the function takes the ARD only)
 #   params  the template's arguments that go into the function's `params`
+#   check   the rules on those params' values (NULL: none): a function of the
+#           params that gives NULL, or what is wrong as text ("favours is two
+#           labels ...; 3 given").  One place: the function itself and
+#           tfl_template_resolve() (a series report's values) read it.
 .fig_content_table <- function() {
   list(
     km_curves = list(
@@ -32,7 +36,17 @@
       fn = "forest_hr",
       model = NULL,
       params = c("comparison", "subgroup_labels", "favours", "x_breaks", "size_by_n",
-                 "bold_headings", "n_by_arm")))
+                 "bold_headings", "n_by_arm"),
+      check = .forest_hr_check))
+}
+
+# forest_hr()'s rules on its params' values (.fig_content_table() `check`)
+.forest_hr_check <- function(p) {
+  n <- length(p$favours)
+  if (!is.null(p$favours) && n != 2L) {
+    return(sprintf("favours is two labels, left and right of 1; %d given.", n))
+  }
+  NULL
 }
 
 # The names a figure content's model call reads ({by}, {time}, {censor})
@@ -285,9 +299,8 @@ forest_hr <- function(ard, params = list()) {
   p <- .fig_fn_params(params, list(comparison = NULL, subgroup_labels = NULL, favours = NULL,
                                    x_breaks = NULL, size_by_n = FALSE, bold_headings = FALSE,
                                    n_by_arm = NULL), "forest_hr")
-  if (!is.null(p$favours) && length(p$favours) != 2L) {
-    stop("forest_hr(): `favours` is two labels, left and right of 1.", call. = FALSE)
-  }
+  m <- .forest_hr_check(p)
+  if (!is.null(m)) stop("forest_hr(): ", m, call. = FALSE)
   est <- .forest_hr_rows(ard, p$comparison, p$n_by_arm)
   rows <- .forest_hr_layout(est, p$subgroup_labels, p$n_by_arm)
   pts <- rows[!rows$head, , drop = FALSE]

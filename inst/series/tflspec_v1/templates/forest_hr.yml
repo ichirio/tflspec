@@ -85,12 +85,12 @@ params:
     type: map<column,string>
     input: table
     columns: {key: {label: {en: "Variable", ja: "変数"}}, value: {label: {en: "Heading", ja: "見出し"}}}
-    choices: vars(adsl_sub)
+    choices: from_args(subgroup_vars)
     default: ~
     step: content
     tier: other
-    description: The heading of each subgroup, by its variable; empty for the
-      common ADaM variables' labels (SEX, AGEGR1, RACE ...), else the variable's name.
+    description: The heading of each subgroup, by its variable (one of subgroup_vars);
+      empty for the common ADaM variables' labels (SEX, AGEGR1, RACE ...), else the variable's name.
   favours:
     type: list<string>
     input: text
@@ -98,7 +98,7 @@ params:
     default: ~
     step: content
     tier: other
-    description: Two labels under the axis, left and right of 1; empty for none.
+    description: Two labels under the axis, left and right of 1 (exactly two); empty for none.
   x_breaks:
     type: list<number>
     input: text

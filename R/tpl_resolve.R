@@ -136,6 +136,9 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   series <- .tr_series(template, tf, study_dir, who)
   tpl <- .series_resolve(.series_read_yaml(tf), series, study, template)
   torig <- attr(tpl, "origins")
+  # (the report's template: as written, its tags not yet resolved: a value
+  # that is none says whether the report wrote `!unset` or a `!study K`)
+  raw_t <- report$template
   report <- .series_resolve(report, series, study, template, origin = "report")
   defs <- tfl_arg_defs(template = template, study_dir = study_dir)
 
@@ -157,12 +160,13 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
              call. = FALSE)
       }
       val <- given[[p]]
-      # none (!unset) for an argument whose `unset: stop` says the template
+      # none for an optional argument whose `unset: stop` says the template
       # needs a value (canon 1.20): it stops here, naming it, for every
-      # template -- not later in a step or a call that lacks it
-      if (inherits(val, "tfl_unset") && identical(defs$unset[[i]], "stop")) {
-        stop(who, ": ", template, "'s ", p, " cannot be none (!unset): the template needs a value ",
-             "(unset: stop). Leave it out for the template's default, or give a value.", call. = FALSE)
+      # template -- not later in a step or a call that lacks it.  A
+      # required argument keeps the required message below.
+      if (inherits(val, "tfl_unset") && identical(defs$unset[[i]], "stop") &&
+          !isTRUE(defs$required[[i]])) {
+        .tr_unset_stop(p, .tr_raw_given(raw_t, p), def, template, who)
       }
       # a map whose default is the series' (!series K) or the study's
       # (!study K, with or without a fallback): the report's names
@@ -188,6 +192,9 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
     stop(who, ": ", template, " needs ", paste(missing, collapse = ", "),
          " (required: the report gives no value and the template no default).", call. = FALSE)
   }
+  # a figure's content function: its rules on its params' values, the same
+  # the function reads (.fig_content_table() `check`), here before a program
+  .tr_fig_check(tpl$figure, env, template, who)
 
   args_env <- env
   env <- .tr_derive(tpl$derive, env, defs$name, template, origins)
@@ -604,6 +611,52 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   }
   given$population <- set
   list(data = rows, given = given)
+}
+
+# A series figure template's content function (`figure:`, a name of
+# .fig_content_table()): its `check` on the arguments it takes, the
+# template's name in the message
+.tr_fig_check <- function(fig, env, template, who) {
+  if (!is.character(fig) || length(fig) != 1L) return(invisible())
+  e <- .fig_content_table()[[fig]]
+  if (is.null(e) || !is.function(e$check)) return(invisible())
+  m <- e$check(env[intersect(e$params, names(env))])
+  if (!is.null(m)) stop(who, ": ", template, "'s ", m, call. = FALSE)
+  invisible()
+}
+
+# The value a report's template: writes for the argument `p`, as written
+# (its tags not resolved): flat, or under args / data / analysis / content /
+# page as .tr_given() reads them; NULL when it does not write it
+.tr_raw_given <- function(t, p) {
+  if (!is.list(t)) return(NULL)
+  if (p %in% names(t)) return(t[[p]])
+  for (k in c("args", "data", "analysis", "content", "page")) {
+    v <- t[[k]]
+    if (is.list(v) && !is.null(names(v)) && p %in% names(v)) return(v[[p]])
+  }
+  NULL
+}
+
+# A report's none for an optional argument whose `unset: stop` (canon 1.20)
+# says the template needs a value; `raw` is what the report wrote.  Its
+# `!unset`, or a `!study K` that finds no value in the study and has no
+# fallback (the report wrote no `!unset`): each says what it was.
+.tr_unset_stop <- function(p, raw, def, template, who) {
+  has_def <- !is.null(def) && !inherits(def, "tfl_unset")
+  if (inherits(raw, "tfl_study_ref")) {
+    k <- raw$key
+    fb <- if ("fallback" %in% names(raw)) " and its fallback is none" else " and gives no fallback"
+    stop(who, ": ", template, "'s ", p, " needs a value (unset: stop); the report's !study ", k,
+         " finds none in the study (missing, ~ or !unset there)", fb, ". ",
+         "Give the study a value at ", k, ", a fallback (!study {key: ", k, ", fallback: ...})",
+         if (has_def) paste0(", or leave ", p, " out for the template's default"), ".",
+         call. = FALSE)
+  }
+  stop(who, ": ", template, "'s ", p, " cannot be none (!unset): the template needs a value ",
+       "(unset: stop). ",
+       if (has_def) paste0("Leave ", p, " out for the template's default, or give a value.") else "Give a value.",
+       call. = FALSE)
 }
 
 # The report's arguments: `template:` without `name`, its step sections

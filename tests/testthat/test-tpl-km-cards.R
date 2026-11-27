@@ -57,7 +57,10 @@ test_that("km_cards resolves: its data the figure's steps filled in, its content
   expect_false(any(grepl("\"OS\"", code, fixed = TRUE)))
   writeLines(c("id: F-9", "kind: figure", "template:", "  name: tflspec_v1/km_cards",
                "  data:", "    by: TRT01P", "    param: !unset"), f)
-  expect_error(tfl_template_resolve(.series_read_yaml(f), study = kmc_study), "param")
+  expect_error(tfl_template_resolve(.series_read_yaml(f), study = kmc_study),
+               paste0("tfl_template_resolve(): tflspec_v1/km_cards's param cannot be none (!unset): ",
+                      "the template needs a value (unset: stop). Leave param out for the template's ",
+                      "default, or give a value."), fixed = TRUE)
 })
 
 test_that("km_cards' program is the card chain, ggsurvfit() + ... + add_risktable()", {
