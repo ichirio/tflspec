@@ -14,7 +14,7 @@ outputs:
     label: Demographic and Baseline Characteristics
     common: {population: SAF}
     extends: [defaults]
-    ard:
+    analysis:
       analyses:
         - {id: N, method: total_n, dataset: ADSL, population: SAF}
         - {id: AGE, method: continuous, dataset: ADSL, population: SAF, by: [TRT01A], overall: true, variables: [AGE]}
@@ -45,7 +45,7 @@ outputs:
     label: Treatment-Emergent Adverse Events by System Organ Class and Preferred Term
     common: {population: SAF}
     extends: [defaults]
-    ard:
+    analysis:
       analyses:
         - {id: AE, method: hierarchical, dataset: ADAE, population: SAF, where: !r TRTEMFL == "Y", by: [TRT01A], variables: [AEBODSYS, AEDECOD], args: !r over_variables = TRUE}
     content:
@@ -67,6 +67,6 @@ outputs:
       footnotes:
         "1": {left: A subject is counted once in a system organ class and once in a preferred term.}
 assumptions:
-  - {output_id: T-14-1-1, where: ard.analyses, item: arm, assumption: "Treatment variable for the columns: TRT01A (actual), because the analysis set is the safety set (SAF)", value: TRT01A, question: "Actual (TRT01A) or planned (TRT01P) treatment?"}
-  - {output_id: T-14-3-1, where: ard.analyses, item: where, assumption: "treatment-emergent is TRTEMFL == 'Y'", question: "Is TRTEMFL the treatment-emergent flag?"}
+  - {output_id: T-14-1-1, where: analysis.analyses, item: arm, assumption: "Treatment variable for the columns: TRT01A (actual), because the analysis set is the safety set (SAF)", value: TRT01A, question: "Actual (TRT01A) or planned (TRT01P) treatment?"}
+  - {output_id: T-14-3-1, where: analysis.analyses, item: where, assumption: "treatment-emergent is TRTEMFL == 'Y'", question: "Is TRTEMFL the treatment-emergent flag?"}
 ```

@@ -8,7 +8,7 @@ outputs:
     label: Demographic and Baseline Characteristics
     common: {population: SAF}
     extends: [defaults]
-    ard:
+    analysis:
       analyses:
         - {id: N, method: total_n, dataset: ADSL, population: SAF}
         - {id: AGE, method: continuous, dataset: ADSL, population: SAF, by: [TRT01A], overall: true, variables: [AGE]}
@@ -41,7 +41,7 @@ outputs:
     extends: [defaults]
     data:
       - {id: adrs_bor, from: ADRS, population: ITT, where: !r PARAMCD == "BOR", derive: !r 'RESP = AVALC %in% c("CR", "PR")'}
-    ard:
+    analysis:
       analyses:
         - {id: BOR, method: categorical, data: adrs_bor, by: [TRT01P], variables: [AVALC]}
         - {id: ORR, method: proportion_ci, data: adrs_bor, by: [TRT01P], variables: [RESP], args: !r method = "clopper-pearson"}
@@ -75,7 +75,7 @@ outputs:
     label: Treatment-Emergent Adverse Events by System Organ Class and Preferred Term
     common: {population: SAF}
     extends: [defaults]
-    ard:
+    analysis:
       analyses:
         - {id: AE, method: hierarchical, dataset: ADAE, population: SAF, where: !r TRTEMFL == "Y", by: [TRT01A], variables: [AEBODSYS, AEDECOD], args: !r over_variables = TRUE}
     content:
@@ -103,7 +103,7 @@ outputs:
     extends: [defaults]
     data:
       - {id: adlb_c2, from: ADLB, population: SAF, where: !r 'AVISIT == "CYCLE 2 DAY 1" & PARAMCD %in% c("ALT", "AST")'}
-    ard:
+    analysis:
       analyses:
         - {id: SHIFT, method: categorical, data: adlb_c2, by: [TRT01A, PARAMCD, BNRIND], variables: [ANRIND]}
     content:
@@ -123,11 +123,11 @@ outputs:
         "2": {center: Shift from Baseline in Laboratory Normal Range Indicator at Cycle 2 Day 1}
         "3": {center: Safety Population}
 assumptions:
-  - {output_id: T-14-1-1, where: ard.analyses, item: arm, assumption: "Treatment variable for the columns: TRT01A (actual), because the analysis set is the safety set (SAF)", value: TRT01A, question: "Actual (TRT01A) or planned (TRT01P) treatment?"}
+  - {output_id: T-14-1-1, where: analysis.analyses, item: arm, assumption: "Treatment variable for the columns: TRT01A (actual), because the analysis set is the safety set (SAF)", value: TRT01A, question: "Actual (TRT01A) or planned (TRT01P) treatment?"}
   - {output_id: T-14-1-1, where: codelists, item: SEX, assumption: "the data code sex as M / F; printed Male, Female", question: "Is this the order the shell wants?"}
-  - {output_id: T-14-2-1, where: ard.analysis_data, item: RESP, assumption: "a responder has a best overall response of CR or PR (PARAMCD BOR)", question: "Confirmed responses only?"}
-  - {output_id: T-14-3-1, where: ard.analyses, item: where, assumption: "treatment-emergent is TRTEMFL == 'Y'", question: "Is TRTEMFL the treatment-emergent flag?"}
-  - {output_id: T-14-3-5, where: ard.analysis_data, item: visit, assumption: "the shell's on-treatment visit is CYCLE 2 DAY 1; ALT and AST only", question: "Which visit, or the worst post-baseline value?"}
+  - {output_id: T-14-2-1, where: analysis.analysis_data, item: RESP, assumption: "a responder has a best overall response of CR or PR (PARAMCD BOR)", question: "Confirmed responses only?"}
+  - {output_id: T-14-3-1, where: analysis.analyses, item: where, assumption: "treatment-emergent is TRTEMFL == 'Y'", question: "Is TRTEMFL the treatment-emergent flag?"}
+  - {output_id: T-14-3-5, where: analysis.analysis_data, item: visit, assumption: "the shell's on-treatment visit is CYCLE 2 DAY 1; ALT and AST only", question: "Which visit, or the worst post-baseline value?"}
 ```
 
 Please check the assumptions before you use the files.

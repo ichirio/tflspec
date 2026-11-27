@@ -373,7 +373,7 @@ data:
     add: [TRT01A]
     where: !r PARAMCD == "OS"
     derive: !r AVAL = AVAL / 30.4375
-ard:
+analysis:
   analyses:
     - {id: BIGN, method: categorical, data: adsl_sub, variables: [TRT01A]}
 figure:
