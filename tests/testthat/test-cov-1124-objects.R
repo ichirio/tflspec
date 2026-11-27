@@ -31,15 +31,49 @@ test_that("a kind with no final object of its own falls back to plan, or content
   expect_identical(.obj_final_of("no_such_kind", TRUE), "content")
 })
 
-test_that("an analysis item that is not a map is passed over by the objects list", {
+test_that("an analysis item that is not a map stops the objects list with a plain message (#1000)", {
   o <- tfl_output("T-1", "table", ard = list(analyses = list("not a map")),
                   content = list(tfl_item("table_plan", list(cols = "ARM"))))
-  # (the object checks skip such an item, R/object_list.R:969, but they are
-  # reached only through the objects list, which stops on it first: the
-  # checks give no row at all)
-  expect_equal(nrow(.check_object_rows(o, "T-1")), 0L)
-  skip("bug: tfl_output_objects() stops with \"$ operator is invalid for atomic vectors\" on an analysis item that is not a map (R/object_list.R:90, .obj_merge())")
-  expect_no_error(tfl_output_objects(o))
+  e <- expect_error(tfl_output_objects(o), class = "tflspec_obj_not_map")
+  expect_identical(conditionMessage(e), paste0(
+    "tfl_output_objects(): analysis item 1 of T-1 is not a map (it is `not a map`): an entry is a map of ",
+    "its keys, e.g. {id: BIGN, method: categorical, data: adsl_saf, variables: [TRT01A]}."))
+  expect_identical(e$output_id, "T-1")
+  expect_identical(e$item, "analysis item 1")
+  # (every reader of the list: the uses, the rename)
+  expect_error(tfl_output_object_uses(o, "ard"), class = "tflspec_obj_not_map")
+  expect_error(tfl_output_rename(o, "x", "y"), class = "tflspec_obj_not_map")
+  # the object checks: one error row for the report, not a silent drop
+  r <- .check_object_rows(o, "T-1")
+  expect_identical(nrow(r), 1L)
+  expect_identical(unlist(r[1L, c("output_id", "part", "item", "level")], use.names = FALSE),
+                   c("T-1", "analysis", "analysis item 1", "error"))
+  expect_match(r$message, "^analysis item 1 of T-1 is not a map")
+})
+
+test_that("a data row or an objects sheet row that is not a map: the same message, its own words", {
+  o <- tfl_output("T-1", "table",
+                  ard = list(analysis_data = list(list(id = "adsl_saf", from = "ADSL"), list("ADSL", "SAF"))),
+                  content = list(tfl_item("table_plan", list(cols = "ARM"))))
+  expect_error(tfl_output_objects(o), paste0(
+    "data row 2 of T-1 is not a map \\(it is a list with no keys\\): .* e.g. \\{id: adsl_saf, from: ADSL"))
+  expect_identical(.check_object_rows(o, "T-1")$part, "data")
+  o$ard$analysis_data <- NULL
+  o$ard$objects <- list(5)
+  expect_error(tfl_output_objects(o), "objects sheet row 1 of T-1 is not a map \\(it is `5`\\)")
+})
+
+test_that("a report whose entries are all maps: the objects list and the checks as before", {
+  o <- tfl_output("T-1", "table",
+                  ard = list(analysis_data = list(list(id = "adsl_saf", from = "ADSL")),
+                             analyses = list(list(id = "BIGN", method = "categorical", data = "adsl_saf",
+                                                  variables = "TRT01A"))),
+                  content = list(tfl_item("table_plan", list(cols = "TRT01A"))))
+  x <- tfl_output_objects(o)
+  expect_identical(x$id[x$stage == "analysis" & !is.na(x$id)], "BIGN")
+  expect_identical(nrow(.check_object_rows(o, "T-1", "ADSL")), 0L)
+  expect_identical(.obj_entries(NULL, "analysis item", "T-1"), list())
+  expect_identical(.obj_entries(list(list()), "analysis item", "T-1"), list(list()))
 })
 
 # ---- the function table (R/fn_defs.R) -------------------------------------------
