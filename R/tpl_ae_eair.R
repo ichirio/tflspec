@@ -104,7 +104,8 @@
 
 .tpl_eair_register <- function() {
   .tfl_template("ae_eair", ai = TRUE, kind = "table", layout = "hierarchical",
-                params = .tpl_eair_params(), body = .tpl_eair_body)
+                params = .tpl_eair_params(), body = .tpl_eair_body,
+                label = "Exposure-adjusted incidence rates by SOC and PT")
 }
 
 #' Exposure-adjusted incidence rates by SOC and PT: the template `ae_eair`

@@ -122,7 +122,8 @@
 
 .tpl_ancova_register <- function() {
   .tfl_template("ancova", ai = TRUE, kind = "table", layout = "summary",
-                params = .tpl_ancova_params(), body = .tpl_ancova_body)
+                params = .tpl_ancova_params(), body = .tpl_ancova_body,
+                label = "ANCOVA of the change from baseline")
 }
 
 #' An ANCOVA of the change from baseline: a table plan from the template `ancova`

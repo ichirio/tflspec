@@ -596,6 +596,7 @@
 # (`extends`: its family's `[defaults]`, canon 1.27: the study's defaults are
 # laid under the template's items, and its references read them)
 .tfl_template("summary", ai = TRUE, kind = "table", layout = "summary",
+              label = "Continuous variables by a column key (the layout)",
               params = .tpl_summary_params, body = .tpl_demog_body, extends = "defaults",
               parts = .tpl_demog_parts_of(.tpl_summary_params))
 
@@ -615,6 +616,7 @@
 # (`extends`: its family's `[defaults]`, canon 1.27: the study's defaults are
 # laid under the template's items, and its references read them)
 .tfl_template("disposition", ai = TRUE, kind = "table", layout = "summary", extends = "defaults",
+              label = "Disposition",
               params = .tpl_disposition_params,
               body = function(a, ctx) {
                 .tpl_demog_body(a, ctx, ids = list(cat = "DISP", cat_label = "Status at end of study"))
