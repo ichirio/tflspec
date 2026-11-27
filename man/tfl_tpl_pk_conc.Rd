@@ -2,7 +2,7 @@
 % Please edit documentation in R/tpl_docs.R
 \name{tfl_tpl_pk_conc}
 \alias{tfl_tpl_pk_conc}
-\title{pk_conc: the template pk_conc}
+\title{PK concentrations by subject with their summary: the template pk_conc}
 \description{
 The table template \code{pk_conc}, layout \code{listing_summary}. Its program is one call, \code{tfl_tpl(ard, "pk_conc", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }

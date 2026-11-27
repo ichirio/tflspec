@@ -115,20 +115,20 @@ first label and still opens), a code that is a number in the YAML (an
 unquoted \code{01}) a \code{warning} to quote it.  The packages' installed versions come with
 it, as an attribute.  A GUI's check button and the AI's run call it.
 
-A table's column header N: a header text with \verb{\{n\}} (and no \code{values} of
+A table's column header N: a header text with \code{{n}} (and no \code{values} of
 its own) takes each column's N from the report's \code{BIGN} analysis.  A
 report with no \code{BIGN}, or whose \code{BIGN} counts by no column variable of
 the table, is a \code{warning} (\code{part} \code{"content"}, item
 \code{"plan_col_header(header)"}): its header would print \code{N=NA}.
 
-Every \verb{!r} value of the SPEC is read as R once, by one walker; one that
+Every \code{!r} value of the SPEC is read as R once, by one walker; one that
 does not read is an \code{error}, with the parser's message.  It is read, not
 run, by the kind of slot it fills: an item's argument by the schema's
 kind (a guard takes \code{condition ~ text}), the fields of R of the ARD and
 of data.yml by their own (\code{where} one condition, \code{args} a call's
 arguments, \code{derive} pieces \code{name = expression} and \code{post} steps between
-\verb{|}, \code{code} and \code{then} R code); those fields are R whether or not they
-are written \verb{!r}.  A report's value: \code{part} the report's key it is under
+\code{|}, \code{code} and \code{then} R code); those fields are R whether or not they
+are written \code{!r}.  A report's value: \code{part} the report's key it is under
 (\code{content}, \code{template}, \code{ard} ...), \code{item} its place
 (\code{"content$plan_filter$args$where"}, \code{"ard$analyses$HR$code"}).  The
 study's own (study.yml \code{setup}, defaults.yml, data.yml's populations,

@@ -2,7 +2,7 @@
 % Please edit documentation in R/tpl_docs.R
 \name{tfl_tpl_ae_max_grade}
 \alias{tfl_tpl_ae_max_grade}
-\title{ae_max_grade: the template ae_max_grade}
+\title{Adverse events by SOC and PT at the maximum severity or grade: the template ae_max_grade}
 \description{
 The table template \code{ae_max_grade}, layout \code{hierarchical}. Its program is one call, \code{tfl_tpl(ard, "ae_max_grade", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }

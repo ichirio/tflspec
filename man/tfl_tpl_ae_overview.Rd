@@ -2,7 +2,7 @@
 % Please edit documentation in R/tpl_docs.R
 \name{tfl_tpl_ae_overview}
 \alias{tfl_tpl_ae_overview}
-\title{ae_overview: the template ae_overview}
+\title{Overview of adverse events: the template ae_overview}
 \description{
 The table template \code{ae_overview}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "ae_overview", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }

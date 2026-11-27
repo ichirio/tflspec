@@ -2,7 +2,7 @@
 % Please edit documentation in R/tpl_docs.R
 \name{tfl_tpl_hierarchical}
 \alias{tfl_tpl_hierarchical}
-\title{hierarchical: the template hierarchical}
+\title{Counts by a hierarchy: the template hierarchical}
 \description{
 The table template \code{hierarchical}, layout \code{hierarchical}. Its program is one call, \code{tfl_tpl(ard, "hierarchical", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }

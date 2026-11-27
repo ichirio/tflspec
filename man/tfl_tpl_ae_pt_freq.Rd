@@ -2,7 +2,7 @@
 % Please edit documentation in R/tpl_docs.R
 \name{tfl_tpl_ae_pt_freq}
 \alias{tfl_tpl_ae_pt_freq}
-\title{ae_pt_freq: the template ae_pt_freq}
+\title{Adverse events by preferred term, most frequent first: the template ae_pt_freq}
 \description{
 The table template \code{ae_pt_freq}, layout \code{hierarchical}. Its program is one call, \code{tfl_tpl(ard, "ae_pt_freq", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/tpl_docs.R
 \name{tfl_tpl_ae_eair}
 \alias{tfl_tpl_ae_eair}
-\title{ae_eair: the template ae_eair}
+\title{Exposure-adjusted incidence rates by SOC and PT: the template ae_eair}
 \description{
 The table template \code{ae_eair}, layout \code{hierarchical}. Its program is one call, \code{tfl_tpl(ard, "ae_eair", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }

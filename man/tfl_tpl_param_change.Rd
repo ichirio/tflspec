@@ -2,7 +2,7 @@
 % Please edit documentation in R/tpl_docs.R
 \name{tfl_tpl_param_change}
 \alias{tfl_tpl_param_change}
-\title{param_change: the template param_change}
+\title{Parameters' value and change by visit: the template param_change}
 \description{
 The table template \code{param_change}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "param_change", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }
