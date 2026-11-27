@@ -2,7 +2,7 @@
 % Please edit documentation in R/tpl_docs.R
 \name{tfl_tpl_summary}
 \alias{tfl_tpl_summary}
-\title{summary: the template summary}
+\title{Continuous variables by a column key: the template summary}
 \description{
 The table template \code{summary}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "summary", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }

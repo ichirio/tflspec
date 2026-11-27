@@ -2,7 +2,7 @@
 % Please edit documentation in R/tpl_docs.R
 \name{tfl_tpl_lab_abnormal}
 \alias{tfl_tpl_lab_abnormal}
-\title{lab_abnormal: the template lab_abnormal}
+\title{Laboratory abnormalities: the template lab_abnormal}
 \description{
 The table template \code{lab_abnormal}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "lab_abnormal", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }

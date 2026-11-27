@@ -2,7 +2,7 @@
 % Please edit documentation in R/tpl_docs.R
 \name{tfl_tpl_ancova}
 \alias{tfl_tpl_ancova}
-\title{ancova: the template ancova}
+\title{ANCOVA of the change from baseline: the template ancova}
 \description{
 The table template \code{ancova}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "ancova", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }
