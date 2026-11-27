@@ -786,7 +786,7 @@ tfl_output_rename <- function(output, old, new, study = NULL) {
       any(x$uses$stage == "template" & x$uses$name == old)) {
     for (a in x$uses$arg[x$uses$stage == "template" & x$uses$name == old]) {
       if (identical(output$template$args[[a]], old)) output$template$args[[a]] <- new
-      for (part in c("ard", "content")) {
+      for (part in .tpl_part_keys) {
         if (identical(output$template[[part]][[a]], old)) output$template[[part]][[a]] <- new
       }
     }

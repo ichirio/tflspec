@@ -442,17 +442,17 @@ test_that("style: demog follows settings.style, stf_t02_demog is fixed; a built-
   expect_identical(r$page$rtf_page$orientation, "landscape")
 })
 
-test_that("the two parts: ard: and content:; flat args: still reads; every parameter in one part", {
+test_that("the two parts: analysis: and content:; flat args: still reads; every parameter in one part", {
   mk <- function(t) tfl_output("T-1", "table", common = list(population = "SAF"), template = t)
-  a <- tflspec:::.tpl_spec_of(mk(list(name = "demog", ard = list(by = "TRT01A", continuous = "AGE"),
+  a <- tflspec:::.tpl_spec_of(mk(list(name = "demog", analysis = list(by = "TRT01A", continuous = "AGE"),
                                       content = list(total_label = "All", widths = "auto"))))
   expect_setequal(names(a$args), c("by", "continuous", "total_label", "widths"))
   flat <- tflspec:::.tpl_spec_of(mk(list(name = "demog", args = list(by = "TRT01A", total_label = "All"))))
   expect_identical(flat$args$total_label, "All")
-  expect_error(tflspec:::.tpl_spec_of(mk(list(name = "demog", ard = list(widths = "auto")))),
-               "'widths' acts in `content:`, not `ard:`")
+  expect_error(tflspec:::.tpl_spec_of(mk(list(name = "demog", analysis = list(widths = "auto")))),
+               "'widths' acts in `content:`, not `analysis:`")
   expect_error(tflspec:::.tpl_spec_of(mk(list(name = "stf_t02_demog", content = list(total = TRUE)))),
-               "'total' acts in `ard:`, not `content:`")
+               "'total' acts in `analysis:`, not `content:`")
   for (n in c("demog", "stf_t02_demog")) {
     p <- names(tfl_template_params(n))
     parts <- tflspec:::.tpl_registry[[n]]$parts
@@ -462,12 +462,12 @@ test_that("the two parts: ard: and content:; flat args: still reads; every param
   # a two-part report runs end to end and reads back
   d <- b1_folder(na = FALSE)
   o <- tfl_output("T-9", "table", common = list(population = "SAF"), extends = "defaults", template = list(
-    name = "demog", ard = list(by = "TRT01A", continuous = "AGE", categorical = c("SEX", "RACE"), total = TRUE),
+    name = "demog", analysis = list(by = "TRT01A", continuous = "AGE", categorical = c("SEX", "RACE"), total = TRUE),
     content = list(total_label = "All subjects", blanks = FALSE, widths = c(40, 20, 20, 20))),
     codelists = list(TRT01A = list(list(value = "Drug X", label = "Drug X"),
                                    list(value = "Control", label = "Control"))))
   r <- b1_run(d, o)
-  expect_identical(names(tfl_read_outputs(d)[["T-9"]]$template), c("name", "ard", "content"))
+  expect_identical(names(tfl_read_outputs(d)[["T-9"]]$template), c("name", "analysis", "content"))
   expect_true("All subjects" %in% names(r$table))
   # A = B: the program and the build give the same table
   code <- tfl_content_code(r$ro, pipe = "|>")

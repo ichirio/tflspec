@@ -19,7 +19,7 @@ tsr_study <- function(root) {
 
 # The catalog's examples this study cannot build as they are -- the same in
 # both forms, so no conversion is at stake: km_table and stat_block take
-# the report's own ARD analyses (`ard:`), which an example has not;
+# the report's own ARD analyses (`analysis:`), which an example has not;
 # param_change's example keeps ANL01FL == "Y", which the bundled ADLB has
 # not (its records are taken as they are here).
 tsr_args <- list(param_change = list(where = NULL))

@@ -41,7 +41,7 @@ test_that("a template SPEC is read and written back: the template's name and arg
   expect_s3_class(tfl_item("plan_cells", list(), from = "template:demog"), "tfl_item")
 })
 
-test_that("resolved: the template's items between the study's layers and the report's own; its ard: under the report's", {
+test_that("resolved: the template's items between the study's layers and the report's own; its analysis: under the report's", {
   s <- ts_study()
   ro <- tfl_resolve_output(ts_output(), s)
   from <- vapply(ro$content, `[[`, "", "from")
@@ -56,7 +56,7 @@ test_that("resolved: the template's items between the study's layers and the rep
   expect_true(all(c("continuous", "categorical") %in% names(pc$args)))
   expect_identical(vapply(ro$ard$analyses, `[[`, "", "id"), c("BIGN", "CONT", "CAT"))
   expect_identical(ro$data$source, "ard")
-  # the report's own ard: entry replaces the template's of the same id
+  # the report's own analysis: entry replaces the template's of the same id
   own_ard <- list(analyses = list(list(id = "CAT", method = "categorical", data = "adsl_sub",
                                        by = "TRT01A", variables = "SEX")))
   o2 <- ts_output(); o2$ard <- own_ard

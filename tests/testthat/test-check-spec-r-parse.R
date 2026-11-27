@@ -1,4 +1,4 @@
-# tfl_check_spec(): every `!r` value of a report (its `ard:` aside, which
+# tfl_check_spec(): every `!r` value of a report (its `analysis:` aside, which
 # the ARD check reads by its own fields) is read as R once; one that does
 # not read is an error row with its place in the SPEC and the parser's
 # message
@@ -107,7 +107,7 @@ test_that("a broken `!r` is one row, and the `program` warning that said the sam
   expect_false(anyDuplicated(g[, c("part", "item", "message")]) > 0L, info = shown)
 })
 
-# Slice 2 (tflspec#986): the report's `ard:` fields of R, by a fixed kind
+# Slice 2 (tflspec#986): the report's `analysis:` fields of R, by a fixed kind
 # each (.r_ard_kinds); slice 3: the study's own files
 
 test_that(".r_walk(): the ARD's fields by their kind: where, derive, then / code, args, post", {
@@ -116,43 +116,43 @@ test_that(".r_walk(): the ARD's fields by their kind: where, derive, then / code
   an <- function(...) list(analyses = list(c(list(id = "AE", method = "custom"), list(...))))
   # where: one condition
   r <- walk(ad(where = tfl_r("TRTEMFL ==")))
-  expect_identical(r$item, "ard$analysis_data$adae_sub$where")
+  expect_identical(r$item, "analysis$analysis_data$adae_sub$where")
   expect_identical(r$part, "ard")
   expect_identical(r$level, "error")
   expect_match(r$message, "`!r TRTEMFL ==` does not read as R (unexpected end of input)", fixed = TRUE)
   expect_match(walk(ad(where = tfl_r("A == 1; B == 2")))$message, "one expression", fixed = TRUE)
   # derive: pieces `name = expression` between `|`
   r <- walk(ad(derive = tfl_r("FLAG = 1 | X = (")))
-  expect_identical(r$item, "ard$analysis_data$adae_sub$derive")
+  expect_identical(r$item, "analysis$analysis_data$adae_sub$derive")
   expect_match(r$message, "piece `X = (`", fixed = TRUE)
   r <- walk(ad(derive = tfl_r("FLAG = ifelse(is.na(AESER) | AESER != \"Y\", 0, 1) | paste(AEDECOD)")))
   expect_match(r$message, "piece `paste(AEDECOD)` is not `name = expression`", fixed = TRUE)
   # then and code: code blocks, several expressions; the line when it has lines
   r <- walk(ad(then = tfl_r("dplyr::filter(")))
-  expect_identical(r$item, "ard$analysis_data$adae_sub$then")
+  expect_identical(r$item, "analysis$analysis_data$adae_sub$then")
   r <- walk(an(code = tfl_r("fit <- lm(AVAL ~ TRT01A, data = data)\ncards::ard_summary(data,")))
-  expect_identical(r$item, "ard$analyses$AE$code")
+  expect_identical(r$item, "analysis$analyses$AE$code")
   expect_match(r$message, "(line 2: unexpected end of input)", fixed = TRUE)
   # args: a call's arguments, which plain R is not
   expect_identical(nrow(walk(an(args = tfl_r("method = \"x\", conf.level = 0.9")))), 0L)
   r <- walk(an(args = tfl_r("method = ")))
-  expect_identical(r$item, "ard$analyses$AE$args")
+  expect_identical(r$item, "analysis$analyses$AE$args")
   expect_match(r$message, "`!r method =` does not read as R (argument `method` has no value)", fixed = TRUE)
   expect_match(walk(an(args = tfl_r("method = \"x\",, conf.level = 0.9")))$message, "argument 2 has no value",
                fixed = TRUE)
   expect_match(walk(an(args = tfl_r("method = (")))$message, "does not read as R (unexpected", fixed = TRUE)
   # post: steps between `|`
   r <- walk(an(post = tfl_r("cards::add_calculated_row(expr = sd / sqrt(N), stat_name = \"se\") | f(")))
-  expect_identical(r$item, "ard$analyses$AE$post")
+  expect_identical(r$item, "analysis$analyses$AE$post")
   expect_match(r$message, "step `f(`", fixed = TRUE)
   # a field of R written without `!r` is R all the same (the ARD program
   # pastes it), and is shown without `!r`
   r <- walk(an(where = "AESEV =="))
-  expect_identical(r$item, "ard$analyses$AE$where")
+  expect_identical(r$item, "analysis$analyses$AE$where")
   expect_match(r$message, "^`AESEV ==` does not read as R")
   # an analysis without an id: its index
   expect_identical(walk(list(analyses = list(list(method = "custom", where = tfl_r("x >")))))$item,
-                   "ard$analyses$1$where")
+                   "analysis$analyses$1$where")
   # valid R, a blank text: nothing
   ok <- c(ad(where = tfl_r("TRTEMFL == \"Y\""), derive = tfl_r("FLAG = 1 | X = ifelse(A | B, 1, 0)"),
              then = tfl_r("dplyr::filter(AESER == \"Y\") |> dplyr::distinct(USUBJID, .keep_all = TRUE)")),
@@ -254,9 +254,9 @@ test_that("no row twice: a bad value in every slot is one row each, and no `prog
   shown <- paste(utils::capture.output(print(p[, c("output_id", "part", "item", "level", "message")])),
                  collapse = "\n")
   g <- p[p$output_id %in% "T-B", , drop = FALSE]
-  want <- c("ard$analysis_data$adsl_sub$where", "ard$analysis_data$adsl_sub$derive",
-            "ard$analysis_data$adsl_sub$then", "ard$analyses$N$where", "ard$analyses$N$args",
-            "ard$analyses$C$code", "content$plan_filter$args$where",
+  want <- c("analysis$analysis_data$adsl_sub$where", "analysis$analysis_data$adsl_sub$derive",
+            "analysis$analysis_data$adsl_sub$then", "analysis$analyses$N$where", "analysis$analyses$N$args",
+            "analysis$analyses$C$code", "content$plan_filter$args$where",
             "content$plan_cells$args$categorical$1")
   r <- g[grepl("does not read as R", g$message, fixed = TRUE), , drop = FALSE]
   expect_setequal(r$item, want)

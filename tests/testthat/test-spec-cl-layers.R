@@ -31,7 +31,7 @@ cll_study <- function(defaults = NULL, pattern = NULL, file = NULL, reports = li
 cll_sex_report <- function(d, id, extends = "[defaults]", codelists = NULL, variables = "SEX") {
   writeLines(c(paste("id:", id), "kind: table", "common: {population: SAF}",
                paste0("extends: ", extends), codelists,
-               "ard:", "  analyses:", "    - id: A1", "      method: categorical",
+               "analysis:", "  analyses:", "    - id: A1", "      method: categorical",
                "      population: SAF", "      by: [ARM]", paste0("      variables: [", variables, "]"),
                "content:", "  - table_plan: {cols: ARM}"),
              file.path(d, "spec", "outputs", paste0(id, ".yml")))

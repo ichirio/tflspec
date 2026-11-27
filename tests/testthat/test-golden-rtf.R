@@ -123,7 +123,7 @@ test_that("golden RTFs: every template in three studies, a company's copy the sa
   tab$md5 <- ifelse(nzchar(tab$md5), tab$md5, strrep("-", 32L))
   skipped <- expand.grid(template = tsr_without, study = names(studies), stringsAsFactors = FALSE)
   skipped$md5 <- strrep("-", 32L)
-  skipped$note <- paste("not built: the example has no ARD analyses of its own (ard:) for the",
+  skipped$note <- paste("not built: the example has no ARD analyses of its own (analysis:) for the",
                         "study to run")
   tab <- rbind(tab[c("template", "study", "md5", "note")], skipped[c("template", "study", "md5", "note")])
   tab <- tab[order(match(tab$template, all_), match(tab$study, names(studies))), ]

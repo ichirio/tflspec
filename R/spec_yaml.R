@@ -56,7 +56,7 @@
 #' @param population Removed: `population` -> `common: population`.
 #' @param extends The files layered under this one, nearest first
 #'   (`"defaults"`, `"patterns/<name>"`); `"none"` for none; or a list by
-#'   step (`data`, `ard`, `content`, `page`), each such a value
+#'   step (`data`, `analysis`, `content`, `page`), each such a value
 #'   (`list(content = "none")`), a step it does not name taking the
 #'   template's, else `"defaults"`.  `NULL`: not written (a template report
 #'   takes its template's); the default for a report with `template`, else
@@ -181,7 +181,7 @@ print.tfl_output <- function(x, ...) {
       if (!is.na(x$label)) paste0(": ", x$label), "\n", sep = "")
   cat("  extends: ", .extends_text(x$extends), "\n", sep = "")
   if (length(x$ard$analyses)) {
-    cat("  ard: ", paste(vapply(x$ard$analyses, function(a) a$id %||% "?", ""), collapse = ", "),
+    cat("  analysis: ", paste(vapply(x$ard$analyses, function(a) a$id %||% "?", ""), collapse = ", "),
         "\n", sep = "")
   }
   if (!is.null(.tpl_spec_of(x))) cat("  template: ", x$template$name, "\n", sep = "")
@@ -220,7 +220,7 @@ print.tfl_item <- function(x, ...) {
 #' @section Several objects in one report:
 #' One report (one RTF) can hold several objects -- tables, figures -- on
 #' its pages: `contents:` in place of `content:` names them.  An object is a
-#' list of items (it reads the report's `data:` / `ard:`), or a map of
+#' list of items (it reads the report's `data:` / `analysis:`), or a map of
 #' `kind`, `data`, `content`, `template`, `plot` (its own data: a figure's
 #' steps, a template).  Its kind, when not said, is what its items make
 #' (`table_plan` a table) or its template's.  The report's `page: layout:`
@@ -383,14 +383,19 @@ tfl_read_output <- function(path) {
   on.exit(.spec_read$id <- old_id, add = TRUE)
   # (the old places, each with a line saying where it moved)
   if (!is.null(y[["population"]])) stop(who, ": ", .common_old_line, call. = FALSE)
+  # moves to .old_forms (old-forms-stop)
+  if ("ard" %in% names(y)) stop(who, ": ", .ard_key_old_line(), call. = FALSE)
+  if (.is_tpl_spec(y$template) && "ard" %in% names(y$template)) {
+    stop(who, ": ", .ard_key_old_line("template: {ard:}", "template: {analysis:}"), call. = FALSE)
+  }
   common <- .common_in(y$common, who)
   .yaml_keys_check(y)
   y <- .data_list_in(y, who)
-  # the ARD's analyses are the report's ard: section (2026-10-15), not data:'s
+  # the ARD's analyses are the report's analysis: section (2026-10-15), not data:'s
   old <- intersect(c("analysis_data", "analyses"), names(y$data))
   if (length(old)) {
     stop("tfl_read_output(): ", y$id, "'s data: has ", paste(old, collapse = " and "),
-         "; a report's ARD analyses are its ard: section (ard: {analysis_data, analyses}).",
+         "; a report's ARD analyses are its analysis: section (analysis: {analysis_data, analyses}).",
          call. = FALSE)
   }
   # ([[ ]]: `$content` would take `contents` when there is no content)
@@ -406,10 +411,10 @@ tfl_read_output <- function(path) {
   out <- tfl_output(
     id = y$id, kind = y$kind, label = y$label, common = common,
     extends = extends,
-    ard = if (!is.null(y$ard)) .calls_in(y$ard),
+    ard = if (!is.null(y[["analysis"]])) .calls_in(y[["analysis"]]),
     data = .data_steps_in(.calls_in(y$data)), codelists = .codelists_norm(y$codelists, y$id),
     content = content, page = .calls_in(y$page %||% list()))
-  for (k in setdiff(names(y), c(.output_fields, "outputs", "base"))) out[[k]] <- .calls_in(y[[k]])
+  for (k in setdiff(names(y), c(.output_yaml_keys, "outputs", "base"))) out[[k]] <- .calls_in(y[[k]])
   # several objects on its pages (R/output_objects.R): their items as items
   if (!is.null(y$contents)) {
     if (length(content)) {
@@ -424,6 +429,14 @@ tfl_read_output <- function(path) {
 # The old top-level `population:` of a report, and where it went
 .common_old_line <- paste0("`population:` -> `common: population`: a report's analysis set ",
                            "is written under `common:` (`common:` / `  population: SAF`).")
+
+# The old key `ard:` of a report (its map, and the part of a `template:` or
+# `extends:` map), and where it went: one line, the old key, the new, the
+# canon's reason.  moves to .old_forms (old-forms-stop)
+.ard_key_old_line <- function(was = "ard:", instead = "analysis:") {
+  paste0("`", was, "` is no longer read: write `", instead, "` (the same map): a report's ",
+         "second step is its analysis step, which makes its ARD (canon 11-15, `ard:` -> `analysis:`).")
+}
 
 # The keys of a report's `common:` (what several steps read): a closed list
 .common_keys <- c("population", "treatment", "population_label")
@@ -452,13 +465,13 @@ tfl_read_output <- function(path) {
   out
 }
 
-# The keys a report's maps are read for, a list a kind: an ard: map, an
+# The keys a report's maps are read for, a list a kind: an analysis: map, an
 # ARD analysis item (the analyses sheet's columns, `id` for analysis_id,
 # and what a YAML item has besides) and a data: line (the analysis_data
 # sheet's, `id` for data_id).  The values of args, codelists and content
 # cards are free and not listed.
 .yaml_known_keys <- list(
-  ard = c("analyses", "objects", "data", "analysis_data"),
+  analysis_part = c("analyses", "objects", "data", "analysis_data"),
   analysis = c("id", setdiff(.ard_spec_sheets$analyses, c("output_id", "analysis_id")),
                "population", "conditions", "ards", "analysis_ids", "ref", "note",
                # the item's R name (default `.ard_<id>`) and its input (the pipe)
@@ -486,9 +499,9 @@ tfl_read_output <- function(path) {
     }
   }
   named <- function(x) is.list(x) && !is.null(names(x))
-  ard <- y[["ard"]]
+  ard <- y[["analysis"]]
   if (named(ard)) {
-    say(out, names(ard), "ard")
+    say(out, names(ard), "analysis_part")
     for (a in if (is.list(ard$analyses) && is.null(names(ard$analyses))) ard$analyses) {
       if (named(a)) say(paste(out, a$id %||% "?", sep = " / "), names(a), "analysis")
     }
@@ -669,27 +682,27 @@ tfl_read_output <- function(path) {
 
 # A table's or listing's `data:` as the file says it (the flat list of
 # definitions) in the model: the definitions are the ARD's `analysis_data`,
-# a listing printing the last one.  The old places stop: `ard: analysis_data:`,
+# a listing printing the last one.  The old places stop: `analysis: analysis_data:`,
 # and a table's `data: {source: ard}` map (a table reads its ARD, said nowhere)
 .data_list_in <- function(y, who) {
   if (!y$kind %in% c("table", "listing")) return(y)
-  ad0 <- y$ard$analysis_data
+  ad0 <- y[["analysis"]]$analysis_data
   if (is.list(ad0) && length(names(ad0)) && .data_map_is_rework(ad0) && identical(y$kind, "table")) {
     stop(who, ": ", .rework_old_line, call. = FALSE)
   }
-  if (!is.null(y$ard$analysis_data)) {
-    stop(who, ": `ard: analysis_data:` moved to `data:`: the report's flat `data:` list ",
-         "of definitions (`data: [{id: adsl_sub, from: ADSL}, ...]`); `ard:` keeps `analyses:` only.",
+  if (!is.null(y[["analysis"]]$analysis_data)) {
+    stop(who, ": `analysis: analysis_data:` moved to `data:`: the report's flat `data:` list ",
+         "of definitions (`data: [{id: adsl_sub, from: ADSL}, ...]`); `analysis:` keeps `analyses:` only.",
          call. = FALSE)
   }
   # (DP-2: place pending, see S1)  The map form that has no place beside the
-  # list: a listing's where / sort is written under `ard: data:` (DP-5 moves
+  # list: a listing's where / sort is written under `analysis: data:` (DP-5 moves
   # it); a table's rework steps are the content's `rework:` item.  Both come
   # into the model's `data` map here, and leave it in .output_to_list()
-  m <- y$ard$data
+  m <- y[["analysis"]]$data
   if (is.list(m) && length(names(m))) {
     if (identical(y$kind, "table") && .data_map_is_rework(m)) stop(who, ": ", .rework_old_line, call. = FALSE)
-    y$ard$data <- NULL
+    y[["analysis"]]$data <- NULL
     y[["place_map"]] <- m
   }
   if (identical(y$kind, "table")) {
@@ -721,7 +734,7 @@ tfl_read_output <- function(path) {
     y[["data"]] <- y[["place_map"]]
     y[["place_map"]] <- NULL
     d <- lapply(d, .derive_map_in)
-    y$ard <- c(list(analysis_data = d), y$ard[setdiff(names(y$ard), "analysis_data")])
+    y[["analysis"]] <- c(list(analysis_data = d), y[["analysis"]][setdiff(names(y[["analysis"]]), "analysis_data")])
     if (identical(y$kind, "listing") && is.null(y[["data"]])) {
       y[["data"]] <- list(source = "dataset", data = as.character(d[[length(d)]]$id %||% ""))
     }
@@ -936,11 +949,11 @@ tfl_write_output <- function(x, path) {
     ard$analysis_data <- NULL
     y$data <- lapply(.calls_out(defs), .seqs_out, .seq_keys$analysis_data)
     # a map that says more than that (a listing's where / sort, a table's
-    # rework steps) has no place beside the list: `ard: data:`
-    # (DP-2: place pending, see S1)  a listing's map: `ard: data:`
+    # rework steps) has no place beside the list: `analysis: data:`
+    # (DP-2: place pending, see S1)  a listing's map: `analysis: data:`
     if (!is.null(x$data) && !.data_map_trivial(x) && !rw_out) ard$data <- x$data
   }
-  if (length(ard)) y$ard <- .ard_seqs_out(.calls_out(ard))
+  if (length(ard)) y[["analysis"]] <- .ard_seqs_out(.calls_out(ard))
   if (!is.null(x$data) && !length(defs) && !rw_out &&
       !(identical(x$kind, "table") && .data_map_bare_ard(x$data))) {
     y$data <- .calls_out(x$data)
@@ -970,8 +983,12 @@ tfl_write_output <- function(x, path) {
   x
 }
 
+# A tfl_output's own fields (the object's names), and the keys of its YAML
+# file that are those fields: the same but `ard`, the object's field, which
+# the file writes `analysis:` (canon 11-15)
 .output_fields <- c("id", "kind", "label", "common", "extends", "ard", "data", "codelists",
                     "content", "page")
+.output_yaml_keys <- replace(.output_fields, .output_fields == "ard", "analysis")
 
 # A report with definitions writes them as its `data:` list: a map beside
 # them has no place.  A table's bare {source: ard} says nothing; a listing's

@@ -56,7 +56,7 @@ test_that("a key the reader does not know warns, naming the close one", {
     "id: T-1", "kind: table",
     "data:",
     "  - id: adsl_sub", "    from: ADSL", "    wher: !r SAFFL == \"Y\"",
-    "ard:",
+    "analysis:",
     "  analyses:",
     "    - id: AGE",
     "      method: continuous",
@@ -225,11 +225,11 @@ test_that("a sequence holding an !r or a call stays a list; one of scalars is a 
   expect_equal(tfl_read_output(g)$content, o$content)
 })
 
-test_that("analyses under data: (the old place) stop the read, naming ard:", {
+test_that("analyses under data: (the old place) stop the read, naming analysis:", {
   f <- withr::local_tempfile(fileext = ".yml")
   writeLines(c("id: T-1", "kind: table", "data:", "  source: ard", "  analyses:",
                "    - id: A", "      method: categorical"), f)
-  expect_error(tfl_read_output(f), "ard: section")
+  expect_error(tfl_read_output(f), "analysis: section")
 })
 
 test_that("an NA argument (table_plan(label = NA)) is written .na and read back NA", {
@@ -243,12 +243,12 @@ test_that("an NA argument (table_plan(label = NA)) is written .na and read back 
   expect_true(any(grepl("label = NA", tfl_content_code(r), fixed = TRUE)))
 })
 
-test_that("one-element sequences of ard: and listing_col vars stay sequences (text round trip)", {
+test_that("one-element sequences of analysis: and listing_col vars stay sequences (text round trip)", {
   txt <- c(
     "id: T-1", "kind: table", "extends:", "  - defaults",
     "data:", "  - id: adsl", "    from: ADSL",
     "    keep:", "      - USUBJID",
-    "ard:", "  analyses:", "    - id: DEM", "      method: categorical", "      data: adsl",
+    "analysis:", "  analyses:", "    - id: DEM", "      method: categorical", "      data: adsl",
     "      by:", "        - TRT01A", "      variables:", "        - SEX",
     "content:", "  - table_plan:", "      cols: TRT01A",
     "  - plan_listing:", "      cols:", "        - fn: listing_col", "          args:",

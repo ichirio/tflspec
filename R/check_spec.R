@@ -247,7 +247,7 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
                   level = "error", message = p$message)
             }
           } else if (!any(wk$level == "error" & wk$part == "ard")) {
-            # (not when an `ard:` value that does not read is the cause: the
+            # (not when an `analysis:` value that does not read is the cause: the
             # walker's row says it)
             add(output_id = id, part = "program", item = "ard", level = "warning",
                 message = paste("the ARD program cannot be written:", one(e)))

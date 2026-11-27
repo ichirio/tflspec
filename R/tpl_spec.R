@@ -4,10 +4,10 @@
 #     name: demog
 #     args: {continuous: AGE, ...}
 #
-# (or `ard: {...}` -- what is computed -- and `content: {...}` -- how it is
+# (or `analysis: {...}` -- what is computed -- and `content: {...}` -- how it is
 # shown -- in place of the flat `args:`, or beside it)
 #
-# with `ard:` / `data:` / `content:` holding only what the report adds or
+# with `analysis:` / `data:` / `content:` holding only what the report adds or
 # changes.  tfl_resolve_output() puts the template's items between the
 # study's layers (defaults, patterns) and the report's own; the program is
 # the template's call (A, tfl_content_code()) with the study's and the
@@ -27,50 +27,60 @@
   list(name = t$name, args = .tpl_spec_args(t))
 }
 
-# A template SPEC's arguments: the flat `args:`, and the two parts -- `ard:`
-# (what is computed) and `content:` (how it is shown) -- as one list.  A name
-# given twice (in `args:` and a part, or in both parts) stops.  A template
-# that declares where its parameters act (`parts` of the registry) has a name
-# in the other part stopped, naming the right one; a template with no parts
-# takes the names as written.
+# A template SPEC's arguments: the flat `args:`, and the two parts --
+# `analysis:` (what is computed) and `content:` (how it is shown) -- as one
+# list.  A name given twice (in `args:` and a part, or in both parts) stops.
+# A template that declares where its parameters act (`parts` of the
+# registry) has a name in the other part stopped, naming the right one; a
+# template with no parts takes the names as written.
 .tpl_spec_args <- function(t) {
   # (the report's fields, not the template's arguments: canon 1.32)
   for (k in intersect(c("extends", "style"), names(t))) {
     .ard_stop(sprintf(paste0("template %s: `%s` is the report's field, not `template:`'s: write it ",
                              "as the report's field (`%s:` beside `template:`)."), t$name, k, k))
   }
+  # moves to .old_forms (old-forms-stop)
+  if ("ard" %in% names(t)) {
+    .ard_stop(sprintf("template %s: %s", t$name, .ard_key_old_line("template: {ard:}", "template: {analysis:}")))
+  }
   args <- as.list(t$args %||% list())
-  tpl <- if (is.null(t$ard) && is.null(t$content)) NULL else
+  tpl <- if (is.null(t[["analysis"]]) && is.null(t$content)) NULL else
     tryCatch(.tpl_get(t$name, "template:"), error = function(e) NULL)
-  for (part in c("ard", "content")) {
-    p <- t[[part]]
+  for (part in names(.tpl_part_keys)) {
+    key <- .tpl_part_keys[[part]]
+    p <- t[[key]]
     if (is.null(p)) next
     if (!is.list(p) || (length(p) && is.null(names(p)))) {
-      .ard_stop(sprintf("template %s: `%s:` is a map of parameters (`%s: {...}`).", t$name, part, part))
+      .ard_stop(sprintf("template %s: `%s:` is a map of parameters (`%s: {...}`).", t$name, key, key))
     }
-    other <- setdiff(c("ard", "content"), part)
+    other <- setdiff(names(.tpl_part_keys), part)
     wrong <- if (!is.null(tpl$parts)) setdiff(names(p), tpl$parts[[part]]) else character()
     wrong <- intersect(wrong, tpl$parts[[other]])
     if (length(wrong)) {
       .ard_stop(sprintf("template %s: %s acts in `%s:`, not `%s:`.", t$name,
-                        paste(sQuote(wrong, FALSE), collapse = ", "), other, part))
+                        paste(sQuote(wrong, FALSE), collapse = ", "), .tpl_part_keys[[other]], key))
     }
     dup <- intersect(names(p), names(args))
     if (length(dup)) {
       .ard_stop(sprintf("template %s: %s is given twice (in `args:` and `%s:`, or in both parts).",
-                        t$name, paste(sQuote(dup, FALSE), collapse = ", "), part))
+                        t$name, paste(sQuote(dup, FALSE), collapse = ", "), key))
     }
     args <- c(args, p)
   }
   args
 }
 
-# The part (`"ard"` or `"content"`) a template's parameter acts in, from its
-# registry entry; NA when the template declares no parts or does not list it
-# (a flat `args:` is read by name, so this is for writers)
+# The key a template SPEC writes each part of a template's registry entry
+# (`parts`: `ard`, `content`) under: the analysis step's is `analysis:`
+# (canon 11-15), the registry's name of it `ard`
+.tpl_part_keys <- c(ard = "analysis", content = "content")
+
+# The key (`"analysis"` or `"content"`) of the part a template's parameter
+# acts in, from its registry entry; NA when the template declares no parts
+# or does not list it (a flat `args:` is read by name, so this is for writers)
 .tpl_part_of <- function(name, param) {
   parts <- tryCatch(.tpl_get(name, "template:")$parts, error = function(e) NULL)
-  for (part in c("ard", "content")) if (param %in% parts[[part]]) return(part)
+  for (part in names(.tpl_part_keys)) if (param %in% parts[[part]]) return(.tpl_part_keys[[part]])
   NA_character_
 }
 
@@ -371,7 +381,7 @@
 }
 
 # A `denominator` that is an analysis data's id: the template makes it, or
-# the report's own `ard:` does (step 1's analysis data)
+# the report's own `analysis:` does (step 1's analysis data)
 .tpl_den_known <- function(t, args, x, output) {
   v <- args$denominator
   # (an `!unset` or a NULL: the analysis set's, nothing to check)
@@ -389,7 +399,7 @@
   if (!v %in% have && !v %in% paste0("adsl_", tolower(pops))) {
     .ard_stop(sprintf(paste0(
       "%s: template %s: denominator \"%s\" is not an analysis data of the report (%s).",
-      " The template makes %s and, for another analysis set, adsl_<id> (the object adsl_den); the report's own come from its `ard:`."),
+      " The template makes %s and, for another analysis set, adsl_<id> (the object adsl_den); the report's own come from its `analysis:`."),
       output$id, t$name, v, paste(have, collapse = ", "), .tpl_subj_id()))
   }
   invisible()
@@ -511,7 +521,7 @@
   cl
 }
 
-# A report's ard: over the template's: an analysis of the report's replaces
+# A report's analysis: over the template's: an analysis of the report's replaces
 # the template's of the same id; a data row merges key by key into the
 # template's row of its id (what the report does not write stays the
 # template's); the others go after
@@ -544,7 +554,7 @@
 #' The B use of a report's template SPEC (`template: {name, args}` in its
 #' YAML file): the template's items -- with the study's defaults for the
 #' parameters that take them, as [tfl_resolve_output()] gives them --
-#' merged with the report's own `ard:`, `data:` and `content:`, and the
+#' merged with the report's own `analysis:`, `data:` and `content:`, and the
 #' `template:` taken out.  Each item the template made keeps the mark
 #' `from = "template:<name>"`.  The report is then a code SPEC: later
 #' changes of the template do not reach it.  A series template

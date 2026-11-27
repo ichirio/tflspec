@@ -33,7 +33,7 @@
   if (!is.na(.out_population(o))) chk_pop("common population", .out_population(o))
   if (is.na(o[["label"]])) add("label", "the report has no label (its title)", "warning")
   if (length(o[["ard"]]$analyses %||% list())) {
-    add("ard analyses", "a listing has no analyses: its records are its `data`")
+    add("analysis analyses", "a listing has no analyses: its records are its `data`")
   }
   known_ds <- if (!is.null(vars)) unique(vars$dataset)
   bds <- if (!is.null(vars)) unique(vars$dataset[vars$variable %in% "PARAMCD"]) else character()
@@ -73,7 +73,7 @@
         seen <- c(seen, id)
         a <- ad[[match(id, ad_ids)]]
         coded <- coded || !is.null(a[["code"]])
-        chk_pop(sprintf("ard.analysis_data %s population", id), .ai_scalar_text(a[["population"]]))
+        chk_pop(sprintf("analysis.analysis_data %s population", id), .ai_scalar_text(a[["population"]]))
         has_pop <- has_pop || !is.null(a[["population"]]) || !is.null(a[["subjects_in"]])
         kept <- kept || says_par(a[["where"]]) || says_par(a[["code"]])
         have <- c(have, .ai_derived_names(a[["derive"]]), unlist(a[["add"]]))
@@ -87,7 +87,7 @@
     add("data dataset", "is missing: the dataset the listing's records are read from")
   }
   if (!is.null(known_ds) && nzchar(ds) && !ds %in% known_ds) {
-    add(if (is.null(data_id)) "data dataset" else "ard.analysis_data from",
+    add(if (is.null(data_id)) "data dataset" else "analysis.analysis_data from",
         sprintf("%s is not among the datasets given (%s)", ds, paste(known_ds, collapse = ", ")))
     ds <- ""
   }

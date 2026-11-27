@@ -1037,7 +1037,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if ("ard" %in% names(fr) && identical(toupper(trimws(fr$ard[1L] %||% "")), "TRUE")) data$ard <- TRUE
   }
   # the report's ARD analyses and their analysis data, whatever its kind (a
-  # figure's hazard ratios too): its ard: section, the ARD stage's
+  # figure's hazard ratios too): its analysis: section, the ARD stage's
   ard_part <- NULL
   # the planner's analysis set goes on the report's data when the data reads
   # subjects' records (a listing's or a figure's, .set_on_data()), else on

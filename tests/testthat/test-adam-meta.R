@@ -133,7 +133,7 @@ amt_run_study <- function(levels = "define_xml", env = parent.frame()) {
       "    - {codelist: CL.SEX, value: U, order: 3}", "",
       sep = "\n", file = file.path(d, "spec", "defaults.yml"), append = TRUE)
   writeLines(c("id: T-AM", "kind: table", "common: {population: SAF}", "extends: none",
-               "ard:", "  analyses:", "    - id: A1", "      method: categorical",
+               "analysis:", "  analyses:", "    - id: A1", "      method: categorical",
                "      population: SAF", "      by: [ARM]", "      variables: [SEX]",
                "content:", "  - table_plan: {cols: ARM}"),
              file.path(d, "spec", "outputs", "T-AM.yml"))
@@ -235,7 +235,7 @@ test_that("a data whose filter keeps one level of an adam_meta column has that l
   d <- amt_run_study()
   writeLines(c("id: T-AN", "kind: table", "common: {population: SAF}", "extends: none",
                "data:", "  - {id: adsl_f, from: ADSL, population: SAF, where: !r SEX == \"F\"}",
-               "ard:", "  analyses:", "    - id: A1", "      method: categorical",
+               "analysis:", "  analyses:", "    - id: A1", "      method: categorical",
                "      data: adsl_f", "      by: [ARM]", "      variables: [SEX]",
                "content:", "  - table_plan: {cols: ARM}"),
              file.path(d, "spec", "outputs", "T-AN.yml"))

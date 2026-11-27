@@ -282,7 +282,7 @@ tfl_ai_migrate <- function(study_dir) {
 #' study file and its draft compared field by field, for the person to see
 #' before adopting again.  The two YAML files are read as they are written
 #' (an `!r` value as its text), each value under its path: `label`,
-#' `page.titles.2.center`, `ard.analyses[AE].where` (an item of a list
+#' `page.titles.2.center`, `analysis.analyses[AE].where` (an item of a list
 #' named by its `id`, else by its place, `[2]`).
 #'
 #' @param study_dir The study folder.
