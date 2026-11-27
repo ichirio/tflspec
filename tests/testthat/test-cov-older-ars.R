@@ -214,13 +214,13 @@ test_that("tfl_ars: a code list's labels name the groups, its codes their condit
                                          levels = "A | B")),
              codelists = cov_ars_df(
                list(output_id = "DM", variable = "TRT01A", value = "A",
-                    label = "Arm Å", order = "1"),
+                    label = "Arm \u00c5", order = "1"),
                list(output_id = "DM", variable = "TRT01A", value = "B",
                     label = "Arm B", order = "2")))
   ars <- tfl_ars(cov_ars_spec(cov_ars_row(method = "continuous", by = "TRT01A",
                                           variables = "AGE")), ts)
   g <- ars$analysisGroupings[[1L]]$groups
-  expect_identical(g[[1L]]$name, "Arm Å")
+  expect_identical(g[[1L]]$name, "Arm \u00c5")
   expect_identical(g[[1L]]$condition$value, list("A"))
 })
 
