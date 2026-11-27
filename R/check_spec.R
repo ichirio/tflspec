@@ -40,7 +40,20 @@
 #' (`wrap_plots`'s `plots`, `ggsurvfit`'s `x`, a `data` or a `fit`), and a
 #' name given twice in a report or that is a study dataset's or a
 #' function's are errors (`part` `"names"` for the last two); an object
-#' the report names and nothing uses is a note.  The packages' installed versions come with
+#' the report names and nothing uses is a note.  The study's code lists a
+#' report names itself ([tfl_study_refs()]: a code list `{list: X}`, a code
+#' its `codes:` picks, a `study$codelists$X` in its own R text) are looked
+#' up in the study's (`spec/defaults.yml` `codelists:`): one the study has
+#' not got is an `error`, `part` `"codelists"`, `item` the variable or the
+#' place of the R text; a report whose code lists name one gets no other
+#' check (each would stop on it).  A template's default reference is not
+#' the report's and is not checked: a list the study has not got is left
+#' out of it.  A list the study has with no code is empty: a reference to
+#' it is an error too, saying so.  The study's lists themselves (when
+#' every report is checked; `output_id` `NA`, `part` `"study"`, `item`
+#' `"codelists: <list>"`): a code twice is an `error` (the study reads its
+#' first label and still opens), a code that is a number in the YAML (an
+#' unquoted `01`) a `warning` to quote it.  The packages' installed versions come with
 #' it, as an attribute.  A GUI's check button and the AI's run call it.
 #'
 #' A table's column header N: a header text with `{n}` (and no `values` of
@@ -127,7 +140,7 @@
 #'   attr(p, "versions")
 #' }
 #' @seealso [tfl_check_reports()], [tfl_check_fix_text()], [tfl_ard_spec()],
-#'   [tfl_schema_check()], [tfl_check_fig_design()]
+#'   [tfl_schema_check()], [tfl_check_fig_design()], [tfl_study_refs()]
 #' @export
 tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) {
   if (is.character(study) && length(study) == 1L) study <- tfl_read_study_spec(study)
@@ -166,6 +179,12 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
   kinds <- vapply(outs, function(o) o$kind %||% "table", "")
   # (the study's datasets: no object of a report takes one's name)
   study_ds <- .obj_study_datasets(study)
+  # the study's code lists the reports name: a list or a code the study has
+  # not got is an error (R/check_spec_study_refs.R); a report whose own code
+  # lists name one cannot be resolved, and its other checks would stop on it
+  refs <- tfl_check_study_refs(study, outs[setdiff(ids, bad)])
+  unresolved <- attr(refs, "unresolved")
+  rows[[length(rows) + 1L]] <- refs[c("output_id", "part", "item", "level", "message")]
   # (the reports whose header shows BIGN's N, .bign_shown())
   n_shown <- character()
 
@@ -187,6 +206,13 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
                 .blank_entry_notes(dd$datasets, "derive", function(e) as.character(e$dataset %||% NA)[1L]))) {
       blank_note(NA_character_, m)
     }
+    # what the study's lists have that their read let through (the study
+    # still opens): a code twice, a code that is a number in the YAML
+    sp <- attr(study$codelists, "problems")
+    for (i in seq_len(NROW(sp))) {
+      add(output_id = NA_character_, part = "study", item = paste0("codelists: ", sp$list[i]),
+          level = sp$level[i], message = sp$message[i])
+    }
     # a study code list named like an ADaM column adam_meta does not map:
     # study$adam has no levels of it (the name is not a mapping)
     for (w in .study_list_unmapped(study)) {
@@ -203,6 +229,7 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
                 .blank_entry_notes(o$ard$analyses, c("where", "post", "code")))) {
       blank_note(id, m)
     }
+    if (id %in% unresolved) next
     rows[[length(rows) + 1L]] <- wk <- .check_r_parse_rows(o, id)  # an `!r` value that is not R
     # its ARD definition, written as its program: the definition's problems
     # are errors; what the installed packages do not know, notes; a program

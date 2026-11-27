@@ -356,7 +356,14 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   put("spec/defaults.yml", defaults)
   # (the reports read below: a reference's rows are the study's lists')
   if (!is.null(sp)) {
-    attr(sp, "study_codelists") <- tryCatch(.study_codelists_read(scl), error = function(e) NULL)
+    attr(sp, "study_codelists") <- tryCatch(.study_codelists_read(scl), error = function(e) {
+      # (said, not passed over: the reports' references are then not made
+      # into the study's rows, and the study's read will stop on the same)
+      note(NA_character_, "study_codelists", NA, NA, paste0(
+        "the study's lists cannot be read, so the reports' references to them are not made into rows: ",
+        .ai_one_line(conditionMessage(e))))
+      NULL
+    })
   }
 
   # spec/toc.yml and spec/outputs/<id>.yml
