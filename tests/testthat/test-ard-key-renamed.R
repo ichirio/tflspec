@@ -84,7 +84,7 @@ test_that("the sheets and the workbook write `analysis:`", {
   openxlsx::writeData(wb, "analyses", x, keepNA = FALSE)
   openxlsx::saveWorkbook(wb, f, overwrite = TRUE)
   tfl_import_spec_xlsx(d, f)
-  txt <- readLines(file.path(d, "spec", "outputs", "T-14-1-1.yml"))
+  txt <- readLines(file.path(d, "outputs", "T-14-1-1.yml"))
   expect_true("analysis:" %in% txt)
   expect_false(any(grepl("^ard:", txt)))
   expect_identical(tfl_read_outputs(d)[["T-14-1-1"]]$ard$analyses[[3L]]$variables, c("AGEGR1", "SEX"))
