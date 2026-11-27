@@ -560,7 +560,7 @@
                           "blanks_last", "blanks_counted", "border_header", "style", "cells",
                           "count_cell", "sd_missing", "widths", "max_rows"),
                 fixed_value = c("formats", "missing_row", "style")),
-              body = .tpl_demog_body, ai = FALSE, parts = .tpl_demog_parts,
+              body = .tpl_demog_body, ai = TRUE, parts = .tpl_demog_parts,
               # (canon 1.27, 1.30: the study's content is not laid, fixed)
               extends = list(content = "none"), extends_fixed = "content",
               example = list(population = "SAF", by = "TRT01A", continuous = "AGE",
@@ -603,7 +603,8 @@
 
 # (`extends`: its family's `[defaults]`, canon 1.27: the study's defaults are
 # laid under the template's items, and its references read them)
-.tfl_template("summary", kind = "table", layout = "summary",
+.tfl_template("summary", ai = TRUE, kind = "table", layout = "summary",
+              label = "Continuous variables by a column key",
               params = .tpl_summary_params, body = .tpl_demog_body, extends = "defaults",
               parts = .tpl_demog_parts_of(.tpl_summary_params))
 
@@ -625,7 +626,8 @@
 
 # (`extends`: its family's `[defaults]`, canon 1.27: the study's defaults are
 # laid under the template's items, and its references read them)
-.tfl_template("disposition", kind = "table", layout = "summary", extends = "defaults",
+.tfl_template("disposition", ai = TRUE, kind = "table", layout = "summary", extends = "defaults",
+              label = "Disposition",
               params = .tpl_disposition_params,
               body = function(a, ctx) {
                 .tpl_demog_body(a, ctx, ids = list(cat = "DISP", cat_label = "Status at end of study"))

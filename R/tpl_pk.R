@@ -124,8 +124,9 @@
            times = list(type = "levels", multiple = TRUE, of = "time"),
            stats = list(type = "list", multiple = FALSE, fields = c("label", "template")))),
     examples = list(pk_conc = list(population = "SAF", blq = "BLQFL == \"Y\"")))
-  .tfl_template("pk_conc", kind = "table", layout = "listing_summary",
-                params = .tpl_pk_params(), body = .tpl_pk_body)
+  .tfl_template("pk_conc", ai = TRUE, kind = "table", layout = "listing_summary",
+                params = .tpl_pk_params(), body = .tpl_pk_body,
+                label = "PK concentrations by subject with their summary")
 }
 
 #' PK concentrations by subject with their summary: a table plan from the

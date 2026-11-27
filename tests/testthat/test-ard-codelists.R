@@ -266,3 +266,17 @@ test_that("the study's program: an analysis data that is its population under a 
     expect_equal(one, ard[ard$output_id == o, names(one)], ignore_attr = TRUE)
   }
 })
+
+test_that("a code list row with a `list` cell and no code stops the program, naming the list (M3)", {
+  # (a reference the study has not got: the sheets keep its `list` cell with
+  # no code; a program written from those rows stops, never drops it)
+  sp <- exact_spec(list(method = "categorical", dataset = "ADSL", population_id = "SAF",
+                        by = "ARM", variables = "ETHNIC"))
+  cl <- data.frame(output_id = "T", variable = "ETHNIC", value = NA, label = NA, order = NA,
+                   list = "ETHNIC")
+  expect_error(tfl_ard_code(sp, part = "body", codelists = cl), "`list` cell \"ETHNIC\"", fixed = TRUE)
+  # (rows with codes and a `list` cell: as given, when the study is not known)
+  ok <- data.frame(output_id = "T", variable = "ETHNIC", value = c("HISPANIC OR LATINO", "NOT HISPANIC OR LATINO"),
+                   label = NA, order = c("1", "2"), list = "ETHNIC")
+  expect_match(paste(tfl_ard_code(sp, part = "body", codelists = ok), collapse = "\n"), "cl_ethnic <- c(", fixed = TRUE)
+})

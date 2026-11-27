@@ -445,9 +445,9 @@
     Filter(Negate(is.null), list(type = p$type, multiple = isTRUE(p$multiple), choices = p$choices,
                                  fields = p$fields))
   }), vapply(new, `[[`, "", "name")))
-  .tfl_template("km", kind = "figure", layout = "km", params = .tpl_km_params(),
+  .tfl_template("km", ai = TRUE, kind = "figure", layout = "km", params = .tpl_km_params(),
                 body = .tpl_km_layout_body, call = "tfl_tpl",
-                label = "Kaplan-Meier curves (the layout)",
+                label = "Kaplan-Meier curves",
                 example = list(param = "PFS", by = "TRT01A"))
   # (hidden: the look, the y axis's type, and the data stage -- a report's
   # own `data:` steps: read, the analysis set's join, param, filter)
