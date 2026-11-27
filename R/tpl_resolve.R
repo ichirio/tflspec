@@ -421,12 +421,12 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
 
 # The study as a list: a list as given, study.yml, or a folder that holds
 # it.  Read from a file or a folder, it has attribute "study_dir" (the
-# study folder: the series are read from its copies).  A study.yml with
-# series_settings: stops (.series_settings_gone()).
+# study folder: the series are read from its copies).  Its old forms stop
+# (.study_yml_form_check()).
 .tr_study <- function(study, who) {
   if (is.null(study)) return(study)
   if (is.list(study)) {
-    .series_settings_gone(study, attr(study, "study_dir"))
+    .study_yml_form_check(study, attr(study, "study_dir"))
     return(study)
   }
   if (!is.character(study) || length(study) != 1L) {
@@ -437,7 +437,7 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   sd <- normalizePath(if (is_dir) study else dirname(study), winslash = "/", mustWork = FALSE)
   if (!file.exists(f)) stop(who, ": no file ", f, call. = FALSE)
   out <- .series_read_yaml(f) %||% list()
-  .series_settings_gone(out, sd)
+  .study_yml_form_check(out, sd, f)
   structure(out, study_dir = sd)
 }
 

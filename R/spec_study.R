@@ -113,12 +113,10 @@ tfl_read_study_spec <- function(dir) {
     stop("tfl_read_study_spec(): study.yml: tokens: is a map ({NAME: text}).", call. = FALSE)
   }
   .check_spec_version(study$spec_version, file.path(dir, "study.yml"))
-  .series_settings_gone(study, normalizePath(dir, "/", mustWork = FALSE))
+  .study_yml_form_check(study, normalizePath(dir, "/", mustWork = FALSE))
   dflt <- rd(file.path(spec, "defaults.yml"))
   if (!is.null(dflt$page)) {
-    stop("tfl_read_study_spec(): defaults.yml `page:` moved to a page configuration (styles:): ",
-         "write the page's settings and lines under `styles: <name>: page:`, and the tokens under ",
-         "study.yml `tokens:`.", call. = FALSE)
+    .old_form_stop("defaults_page", "tfl_read_study_spec(): defaults.yml", was = "`page:`")
   }
   styles <- dflt$styles %||% list()
   reserved <- intersect(names(styles), .tpl_style_builtin_names)

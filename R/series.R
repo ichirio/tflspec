@@ -349,7 +349,8 @@ print.tfl_series <- function(x, ...) {
 }
 
 # study.yml `series_settings:` is no longer read: a study changes a series's
-# values in its copy of series.yml.  Stops naming each series in it.
+# values in its copy of series.yml.  Stops naming each series in it (an
+# old form, R/spec_old_forms.R).
 # `study` is study.yml read as a list; `study_dir` the study folder, or NULL.
 .series_settings_gone <- function(study, study_dir = NULL) {
   if (is.null(study) || !is.list(study) || is.null(study$series_settings)) return(invisible())
@@ -360,8 +361,8 @@ print.tfl_series <- function(x, ...) {
     paste0(s, ": move these values into ", where, "/spec/series/", s,
            "/series.yml values: (tfl_series_values_set()), after tfl_copy_templates()")
   }, "")
-  stop("study.yml series_settings: is no longer read. ", paste(to, collapse = "; "), ".",
-       call. = FALSE)
+  .old_form_stop("series_settings", "study.yml", was = "`series_settings:`",
+                 instead = paste(to, collapse = "; "))
 }
 
 # ---- formats ----------------------------------------------------------------

@@ -35,7 +35,8 @@ pc_report <- function(d) tfl_read_outputs(d)[["T-14-1-1"]]
 
 test_that("a defaults.yml with page: stops, naming the page configuration", {
   d <- pc_dir(c(pc_defaults, "page:", "  header:", "    1: {left: X}"))
-  expect_error(tfl_read_study_spec(d), "`page:` moved to a page configuration \\(styles:\\)")
+  expect_error(tfl_read_study_spec(d), "`page:` is no longer read: it moved to a page configuration \\(styles:\\)",
+               class = "tflspec_old_form")
 })
 
 test_that("extends: {page: ...} stops: the page comes from the page configuration", {

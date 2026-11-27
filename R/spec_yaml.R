@@ -475,13 +475,8 @@ tfl_read_output <- function(path) {
   say <- function(where, keys, kind) {
     known <- .yaml_known_keys[[kind]]
     for (k in setdiff(keys[nzchar(keys)], known)) {
-      d <- drop(utils::adist(k, known))
-      near <- which(d <= 2L | startsWith(known, k) | startsWith(k, known))
-      hint <- if (length(near)) {
-        sprintf("; did you mean %s:?", known[near[which.min(d[near])]])
-      } else {
-        " (not read)"
-      }
+      near <- .near_name(k, known)
+      hint <- if (!is.na(near)) sprintf("; did you mean %s:?", near) else " (not read)"
       warning(sprintf("%s: %s: is not a key%s", where, k, hint), call. = FALSE)
     }
   }
