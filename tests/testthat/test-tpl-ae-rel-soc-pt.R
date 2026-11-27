@@ -3,7 +3,7 @@
 rel_where <- "TRTEMFL == \"Y\" & AEREL == \"RELATED\""
 rel_fn <- function(x) vapply(x$content, `[[`, "", "fn")
 
-test_that("expanded: ae_soc_pt's items, the related filter, its own any-event label, not for the AI", {
+test_that("expanded: ae_soc_pt's items, the related filter, its own any-event label, shown to the AI", {
   x <- tfl_template_expand("ae_rel_soc_pt", list(population = "SAF"))
   y <- tfl_template_expand("ae_soc_pt", list(population = "SAF", where = rel_where,
                                              any_row_label = "Any related TEAE"))
@@ -19,11 +19,11 @@ test_that("expanded: ae_soc_pt's items, the related filter, its own any-event la
   expect_identical(x$ard$analyses[[1L]]$variables, c("AEBODSYS", "AEDECOD"))
   wh <- vapply(x$ard$analysis_data, function(d) paste(as.character(d$where), collapse = ""), "")
   expect_true(rel_where %in% wh)
-  # the registry: a variant of ae_soc_pt, its label, ai = FALSE
+  # the registry: a variant of ae_soc_pt, its label, ai = TRUE (#993)
   t <- tfl_templates()
   expect_identical(t$from[t$name == "ae_rel_soc_pt"], "ae_soc_pt")
   expect_identical(t$label[t$name == "ae_rel_soc_pt"], "Related adverse events by SOC and PT")
-  expect_false(t$ai[t$name == "ae_rel_soc_pt"])
+  expect_true(t$ai[t$name == "ae_rel_soc_pt"])
   p <- tfl_template_params("ae_rel_soc_pt")
   expect_identical(p$where$default, rel_where)
   expect_identical(p$any_row_label$default, "Any related TEAE")
