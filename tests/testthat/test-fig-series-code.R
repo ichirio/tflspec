@@ -78,7 +78,7 @@ test_that("a forest_hr report's program calls forest_hr() on the ARD with its co
   expect_identical(o$figure, "forest_hr")
   code <- tfl_content_code(o)
   expect_identical(code[-1L], c("content <- tflspec::forest_hr(", "  ard = ard,", "  params = list(",
-                                "    comparison = \"Drug X\"", "  )", ")"))
+                                "    comparison = \"Drug X\",", "    axis_title_width = 50", "  )", ")"))
   expect_false(any(grepl("km_fit", code, fixed = TRUE)))
   expect_true(isTRUE(attr(.content_fig_code_out(o), "ard")))
 })
@@ -158,4 +158,89 @@ test_that("km_simple's legend choices and y_label default are km_curves()'s", {
   for (lg in c("inside", "bottom", "none")) {
     expect_no_error(ggplot2::ggplot_build(km_curves(fit, params = list(legend = lg))))
   }
+})
+
+# ---- axis_title_width (tflspec#603-4, canon 11-28) ---------------------------------
+
+sfc_t90 <- "Mean Change from Baseline in Diastolic Blood Pressure (mmHg) with 95% Confidence Intervals"
+sfc_t90_50 <- "Mean Change from Baseline in Diastolic Blood\nPressure (mmHg) with 95% Confidence Intervals"
+
+# km_simple with its content step's arguments (`content:` lines, as written)
+sfc_km_with <- function(...) {
+  sfc_report(c(
+    "id: F-1", "kind: figure", "label: Kaplan-Meier",
+    "template:", "  name: tflspec_v1/km_simple",
+    "  analysis:", "    by: TRT01A", "  data:", "    time_unit: months",
+    "  content:", paste0("    ", c(...))))
+}
+
+# a params line of the call as the program writes it
+sfc_line <- function(name, value, last = FALSE) {
+  v <- if (is.character(value)) encodeString(value, quote = "\"") else format(value)
+  paste0("    ", name, " = ", v, if (!last) ",")
+}
+
+test_that("km_simple writes a long axis title wrapped at axis_title_width, the study's figure style's by default", {
+  o <- tfl_template_resolve(sfc_km_with(sprintf("y_label: \"%s\"", sfc_t90)), study = sfc_study)
+  expect_identical(attr(o, "args")$axis_title_width, 50)
+  code <- tfl_content_code(o)
+  # the program shows the title as drawn: "\n" inside the literal
+  expect_true(sfc_line("y_label", sfc_t90_50) %in% code)
+  expect_true(sfc_line("axis_title_width", 50) %in% code)
+  expect_true(sfc_line("x_label", "Time ({time_unit})") %in% code)
+  expect_no_error(parse(text = code, keep.source = FALSE))
+  # a short title as written; the default too
+  code <- tfl_content_code(tfl_template_resolve(sfc_km(), study = sfc_study))
+  expect_true(sfc_line("y_label", "Survival Probability") %in% code)
+  expect_true(sfc_line("axis_title_width", 50) %in% code)
+  # the report's own width
+  code <- tfl_content_code(tfl_template_resolve(
+    sfc_km_with(sprintf("y_label: \"%s\"", sfc_t90), "axis_title_width: 30"), study = sfc_study))
+  expect_true(sfc_line("axis_title_width", 30) %in% code)
+  expect_true(sfc_line("y_label", paste("Mean Change from Baseline in", "Diastolic Blood Pressure",
+                                        "(mmHg) with 95% Confidence", "Intervals", sep = "\n")) %in% code)
+  # the study's figure style: its axis_title_width is the default
+  st <- structure(sfc_study, figure_style = list(settings = list(
+    list(key = "axis_title_width", value = "40"))))
+  o <- tfl_template_resolve(sfc_km_with(sprintf("y_label: \"%s\"", sfc_t90)), study = st)
+  expect_identical(attr(o, "args")$axis_title_width, 40)
+  expect_identical(attr(o, "origins")[["axis_title_width"]], "study")
+  code <- tfl_content_code(o)
+  expect_true(sfc_line("axis_title_width", 40) %in% code)
+  expect_true(sfc_line("y_label", tflspec:::.fig_wrap_title(sfc_t90, 40)) %in% code)
+})
+
+test_that("km_simple's axis_title_width: !unset keeps the title one line, and says so to km_curves()", {
+  o <- tfl_template_resolve(sfc_km_with(sprintf("y_label: \"%s\"", sfc_t90), "axis_title_width: !unset"),
+                            study = sfc_study)
+  code <- tfl_content_code(o)
+  expect_true(sfc_line("y_label", sfc_t90) %in% code)
+  # (written NULL: left out, km_curves() would wrap at its default)
+  expect_true("    axis_title_width = NULL," %in% code)
+  expect_false(any(grepl("\\n", code, fixed = TRUE)))
+  # the code SPEC the report is: the figure's arguments keep it
+  expect_true("axis_title_width" %in% names(.fig_content_key(o)$args))
+  expect_null(.fig_content_key(o)$args$axis_title_width)
+})
+
+test_that("km_curves() and forest_hr() wrap their axis titles at axis_title_width; NULL: no wrap", {
+  skip_if_not_installed("ggplot2", "3.5.2")
+  skip_if_not_installed("ggsurvfit")
+  skip_if_not_installed("survival")
+  d <- sfc_adtte()
+  fit <- ggsurvfit::survfit2(ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ TRT01A, data = d)
+  y_of <- function(p) ggplot2::get_labs(p)$y
+  expect_identical(y_of(km_curves(fit, params = list(y_label = sfc_t90))), sfc_t90_50)
+  expect_identical(y_of(km_curves(fit, params = list(y_label = sfc_t90, axis_title_width = 50))), sfc_t90_50)
+  expect_identical(y_of(km_curves(fit, params = list(y_label = sfc_t90, axis_title_width = NULL))), sfc_t90)
+  expect_identical(y_of(km_curves(fit, params = list(y_label = sfc_t90, axis_title_width = tfl_unset()))),
+                   sfc_t90)
+  # what the program wrote wrapped is drawn the same
+  expect_identical(y_of(km_curves(fit, params = list(y_label = sfc_t90_50))), sfc_t90_50)
+  expect_identical(y_of(km_curves(fit, params = list(y_label = "Survival Probability"))),
+                   "Survival Probability")
+  x <- ggplot2::get_labs(km_curves(fit, params = list(time_unit = "months", x_label = paste(
+    "Time from Randomization to Death from Any Cause ({time_unit})"), axis_title_width = 30)))$x
+  expect_identical(x, "Time from Randomization to\nDeath from Any Cause (Months)")
+  expect_error(km_curves(fit, params = list(axis_title_width = 0)), "positive whole number")
 })

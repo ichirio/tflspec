@@ -21,6 +21,9 @@ its default:
 \item \code{x_label}: the x axis's title (\code{"Time ({time_unit})"}, the unit
 title-cased: \code{Time (Days)}); \code{{time_unit}} is filled.
 \item \code{y_label}: the y axis's title (\code{"Survival Probability"}).
+\item \code{axis_title_width}: the number of characters after which an axis
+title wraps onto a new line, at the spaces between words (\code{50});
+\code{NULL} or \code{tfl_unset()}: no wrap.
 \item \code{legend}: \code{"inside"} (top right), \code{"bottom"} or \code{"none"}.
 }}
 }

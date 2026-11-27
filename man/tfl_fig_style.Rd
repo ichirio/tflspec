@@ -50,6 +50,11 @@ more arms than rows repeat the colours, with a warning, and
 by default): the arms' point shapes (\verb{16, 17, 15}) and line types
 (\verb{solid, dashed, dotted}) in the same order, for print in black and
 white; a designed figure that colours by the arms maps them too.
+\item \code{settings} \code{axis_title_width} (\code{50}): the number of characters after
+which an axis title wraps onto a new line, at the spaces between
+words; the default of a figure template's \code{axis_title_width} and of
+a designed figure's (its \code{plot} setting \code{axis_title_width}; \code{!unset}
+there: no wrap).  The program shows the wrapped title.
 \item \code{markers} (\code{marker}, \code{shape}, \code{fill}, \code{colour}, \code{size}): event markers
 by label (a swimmer event named \code{Death} takes the \code{Death} row) and the
 figures' own symbols (\code{censor}, \code{assessment}).

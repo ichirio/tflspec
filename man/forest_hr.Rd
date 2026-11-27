@@ -26,6 +26,9 @@ else the subgroup's name).
 \item \code{bold_headings}: \code{TRUE}: the headings bold (\code{FALSE}).
 \item \code{n_by_arm}: arms whose events / subjects are shown, a column each
 (\code{NULL}: none).
+\item \code{axis_title_width}: the number of characters after which the x
+axis's title wraps onto a new line, at the spaces between words
+(\code{50}); \code{NULL} or \code{tfl_unset()}: no wrap.
 }}
 }
 \value{

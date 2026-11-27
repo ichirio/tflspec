@@ -32,6 +32,8 @@
     # ---- every figure
     s(NA, "base_size", "10", "base font size (pt) of the theme"),
     s(NA, "axis_title_size", "10", "axis titles (pt)"),
+    s(NA, "axis_title_width", "50",
+      "characters after which an axis title wraps onto a new line (a template's axis_title_width)"),
     s(NA, "axis_text_size", "8", "axis tick labels (pt)"),
     s(NA, "legend_text_size", "9", "legend text (pt)"),
     s(NA, "legend_key_size", "0.7", "legend key size (lines)"),
@@ -165,6 +167,11 @@
 #'   by default): the arms' point shapes (`16, 17, 15`) and line types
 #'   (`solid, dashed, dotted`) in the same order, for print in black and
 #'   white; a designed figure that colours by the arms maps them too.
+#' * `settings` `axis_title_width` (`50`): the number of characters after
+#'   which an axis title wraps onto a new line, at the spaces between
+#'   words; the default of a figure template's `axis_title_width` and of
+#'   a designed figure's (its `plot` setting `axis_title_width`; `!unset`
+#'   there: no wrap).  The program shows the wrapped title.
 #' * `markers` (`marker`, `shape`, `fill`, `colour`, `size`): event markers
 #'   by label (a swimmer event named `Death` takes the `Death` row) and the
 #'   figures' own symbols (`censor`, `assessment`).
@@ -288,5 +295,73 @@ tfl_read_fig_style <- function(path) {
   type <- if (length(path) == 2L) path[1L] else NA
   v <- .fs_get(key, type, .fig_style_study(study$figure_style))
   if (is.na(v)) v <- .fs_get(key, type, .fig_style_builtin())
-  if (is.na(v)) NULL else v
+  if (is.na(v)) return(NULL)
+  # (the catalog keeps text: a number's text is the number, as a
+  # parameter of type number takes it -- "50" is 50)
+  n <- suppressWarnings(as.numeric(v))
+  if (!is.na(n) && grepl("^\\s*[-+]?[0-9.]+([eE][-+]?[0-9]+)?\\s*$", v)) n else v
+}
+
+# ---- axis titles: wrapped at a width -----------------------------------------------
+
+# The width an axis title wraps at when a figure content function is not
+# given one (km_curves(), forest_hr(): their `axis_title_width`), and the
+# built-in figure style's `axis_title_width`
+.fig_title_width_default <- 50
+
+# An axis title on lines of at most `width` characters: broken with "\n"
+# at the spaces between words, the one rule of every writer of an axis
+# title (the design's labs(), km_curves(), forest_hr(), the programs that
+# call them -- they write the wrapped text, not a step that wraps it).  A
+# "\n" in the text is a line break, kept; a line no longer than the width
+# is kept as written; a word longer than the width stays whole, on a line
+# of its own (a text with no spaces, as Japanese, is not broken).  Text
+# that is NULL, NA, empty or not plain text (R code), and a width that is
+# NULL or `!unset` (no wrap), give the text back unchanged.
+.fig_wrap_title <- function(text, width) {
+  if (is.null(width) || inherits(width, "tfl_unset")) return(text)
+  w <- if (is.character(width)) suppressWarnings(as.numeric(width)) else width
+  if (!is.numeric(w) || length(w) != 1L || is.na(w) || w < 1 || w != round(w)) {
+    stop(sprintf(paste0("axis_title_width: the number of characters after which an axis title ",
+                        "wraps, a positive whole number (50); `!unset` for no wrap. Got %s."),
+                 paste(format(width), collapse = " ")), call. = FALSE)
+  }
+  if (is.null(text) || is.object(text) || !is.character(text) || length(text) != 1L ||
+      is.na(text) || !nzchar(text)) {
+    return(text)
+  }
+  lines <- strsplit(text, "\n", fixed = TRUE)[[1L]]
+  if (endsWith(text, "\n")) lines <- c(lines, "")
+  long <- nchar(lines) > w
+  if (!any(long)) return(text)
+  lines[long] <- vapply(lines[long], .fig_wrap_line, "", width = w, USE.NAMES = FALSE)
+  paste(lines, collapse = "\n")
+}
+
+# One line wrapped: words joined while the line holds them (the spaces
+# between two words kept as written, those at a break dropped)
+.fig_wrap_line <- function(line, width) {
+  out <- character()
+  cur <- NULL
+  for (tok in strsplit(line, " ", fixed = TRUE)[[1L]]) {
+    if (is.null(cur)) {
+      if (nzchar(tok)) cur <- tok
+    } else if (nchar(cur) + 1L + nchar(tok) <= width) {
+      cur <- paste0(cur, " ", tok)
+    } else {
+      out <- c(out, sub(" +$", "", cur))
+      cur <- if (nzchar(tok)) tok
+    }
+  }
+  if (!is.null(cur)) out <- c(out, sub(" +$", "", cur))
+  paste(out, collapse = "\n")
+}
+
+# The width a figure's axis titles wrap at from the figure style standard
+# (options(tflspec.fig_style =), a company's): its `axis_title_width`, else
+# tflspec's built-in one (a style written before the key); a number
+.fs_title_width <- function() {
+  v <- .fs_get("axis_title_width")
+  if (is.na(v)) v <- .fs_get("axis_title_width", NA, .fig_style_builtin())
+  if (is.na(v)) .fig_title_width_default else as.numeric(v)
 }

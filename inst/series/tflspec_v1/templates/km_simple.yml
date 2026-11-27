@@ -77,6 +77,14 @@ params:
     step: content
     tier: usual
     description: The label of the y axis.
+  axis_title_width:
+    type: number
+    input: text
+    default: !study {key: figure_style.axis_title_width, fallback: 50}
+    step: content
+    tier: other
+    description: The number of characters after which an axis title wraps onto a new line
+      (the study's figure style, else 50); `!unset` for no wrap.
   legend:
     type: enum[inside|bottom|none]
     input: pick

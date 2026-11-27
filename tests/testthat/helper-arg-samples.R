@@ -181,6 +181,8 @@ as_special <- list(
   ard_categorical_ci.conf.level = function() list(0.9),
   # the templates' params (tflspec_v1), valid for the walks' study
   `tflspec_v1/*.denominator` = function() list("adsl_all"),
+  # (a width in characters: whole numbers, the template's default 50 aside)
+  `tflspec_v1/*.axis_title_width` = function() list(30L, 70L, tfl_unset()),
   `tflspec_v1/*.formats` = function() list(list(mean = 3L, sd = 4L, p = "xx.xx%"), tfl_unset()),
   `tflspec_v1/*.population` = function() list("ITT", "EFF", tfl_unset()),
   `tflspec_v1/*.continuous` = function() list(c("AGE", "TRTDURD"), tfl_unset()),

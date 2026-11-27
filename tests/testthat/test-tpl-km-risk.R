@@ -43,8 +43,10 @@ test_that("in a study: A (the data steps, the call) = B (the design) = the templ
                     content = list(tfl_item("geom_vline", list(xintercept = 6, linetype = "dotted")),
                                    tfl_item("labs", list(y = "Progression-free"))))
     x <- tplfig_check(o, d, data)
-    expect_match(paste(x$a, collapse = "\n"),
-                 sprintf("content <- tflspec::tfl_tpl(adtte_sub, \"%s\", by = TRT01A) +", nm), fixed = TRUE)
+    # (the axis titles' width, the study's figure style's: written, last)
+    expect_match(gsub("[[:space:]]+", "", paste(x$a, collapse = "\n")),
+                 sprintf("content<-tflspec::tfl_tpl(adtte_sub,\"%s\",by=TRT01A,axis_title_width=50)+", nm),
+                 fixed = TRUE)
   }
 })
 

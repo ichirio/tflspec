@@ -15,7 +15,8 @@
 # The arguments the call takes that are the figure's settings (`plot:`)
 # by the same name: a report's own `plot:` value of one is written as the
 # argument in its program
-.tpl_km_plot_args <- c("title", "x_label", "y_label", "legend", "theme", "base_size", "palette")
+.tpl_km_plot_args <- c("title", "x_label", "y_label", "axis_title_width", "legend", "theme",
+                       "base_size", "palette")
 
 # The figure style standard's keys a parameter takes its study value from
 # (tfl_param(study = "km.<key>")); TRUE: a number
@@ -111,6 +112,10 @@
               doc = "the y axis's step (scale_y_continuous(breaks = )); NULL: the figure style's"),
     tfl_param("y_label", NULL, type = "text", tier = "usual",
               doc = "the y axis's title (labs(y = )); NULL: by y_type"),
+    tfl_param("axis_title_width", 50, type = "number", study = "figure_style.axis_title_width",
+              unset = "step_off",
+              doc = paste0("the number of characters after which an axis title (labs(x = , y = )) wraps ",
+                           "onto a new line, at the spaces between words; NULL: no wrap")),
     tfl_param("linewidth", NULL, type = "number", study = "km.line_width",
               doc = "the curves' width (ggsurvfit(linewidth = )); NULL: the figure style's"),
     tfl_param("palette", NULL, type = "choice", choices = names(tfl_fig_palettes()),
@@ -279,12 +284,15 @@
   # the figure's settings the arguments say
   pl <- list(title = a$title, x_label = a$x_label, legend = a$legend, theme = a$theme,
              base_size = a$base_size, palette = a$palette, y_min = a$y_min, y_max = a$y_max,
-             y_by = a$y_step)
+             y_by = a$y_step, axis_title_width = a$axis_title_width)
   if (identical(a$y_type, "risk") && is.null(a$y_label)) {
     pl$y_label <- if (isTRUE(a$y_percent)) "Cumulative Percentage of Subjects" else "Cumulative Probability"
   }
   if (!is.null(a$y_label)) pl$y_label <- a$y_label
   for (k in names(pl)) if (!is.null(pl[[k]])) f$plot[[k]] <- pl[[k]]
+  # (no width -- NULL, `!unset` -- : the axis titles are not wrapped, not
+  # at the figure style's width the design takes when it has none)
+  if (is.null(a$axis_title_width)) f$plot$axis_title_width <- tfl_unset()
   # the x axis's breaks (the call's, after the fit): the risk table's times,
   # the bars' times, the axis to the last of them
   bars <- identical(a$ci, "bars")

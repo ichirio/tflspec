@@ -130,6 +130,14 @@
                                                                  names(.tpl_shown(t$params))))
   for (k in as_arg) args[[k]] <- own_plot[[k]]
   keep <- c(keep, setdiff(as_arg, keep))
+  # the axis titles as they are drawn: wrapped at the call's
+  # axis_title_width (its default when the call has none; NULL, `!unset`:
+  # none), so the program shows them as on the figure (.fig_wrap_title())
+  if (!is.null(t$params[["axis_title_width"]])) {
+    w <- if ("axis_title_width" %in% names(args)) args[["axis_title_width"]] else
+      t$params[["axis_title_width"]]$default
+    for (k in intersect(c("x_label", "y_label"), names(args))) args[[k]] <- .fig_wrap_title(args[[k]], w)
+  }
   own_plot <- .merge_map(if (generic) args$plot, own_plot[setdiff(names(own_plot), as_arg)])
   # (the draft's `add` pieces are layer specs, not values `plot =` takes:
   # they follow the call as `+` terms, after the template's own, as it joins them)
@@ -266,7 +274,16 @@
     }
     model <- .fig_series_model_lines(e$model$arg, call)
   }
-  given <- Filter(Negate(is.null), args[intersect(e$params, names(args))])
+  # (a NULL is left out, but where the function reads it, `null`: the
+  # template's `!unset`, written `= NULL`)
+  given <- args[intersect(e$params, names(args))]
+  given <- given[!vapply(given, is.null, NA) | names(given) %in% e$null]
+  # the axis titles as they are drawn: wrapped at the width the call passes
+  # (the function's default when it passes none), so the program shows them
+  # as on the figure
+  w <- if ("axis_title_width" %in% names(given)) given[["axis_title_width"]] else
+    if ("axis_title_width" %in% e$params) .fig_title_width_default
+  for (k in intersect(e$titles, names(given))) given[[k]] <- .fig_wrap_title(given[[k]], w)
   params <- if (length(given)) {
     c("  params = list(",
       paste0("    ", names(given), " = ", vapply(given, .fig_arg_code, ""),

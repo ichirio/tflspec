@@ -50,6 +50,10 @@
         !identical(utils::head(over$add, length(base$add)), base$add)) {
     over$add <- c(base$add, over$add)
   }
+  # (no settings over them: the template's as they are -- a setting it
+  # says `!unset`, its processing not done (axis_title_width: no wrap),
+  # stays, where .merge_map() would drop it and the design take its default)
+  if (!length(over)) return(base)
   .merge_map(base, over)
 }
 

@@ -352,3 +352,84 @@ test_that("a figure's group has no default: a template that splits the arms stop
   expect_error(tpl_mean_ci(advs, param = "SYSBP"), "mean_ci: `group` is required", fixed = TRUE)
   expect_error(tpl_forest_hr(data.frame()), "forest_hr: `group` is required", fixed = TRUE)
 })
+
+# ---- axis_title_width (tflspec#603-4, canon 11-28) ---------------------------------
+
+fd_t90 <- "Mean Change from Baseline in Diastolic Blood Pressure (mmHg) with 95% Confidence Intervals"
+fd_t90_50 <- "Mean Change from Baseline in Diastolic Blood\nPressure (mmHg) with 95% Confidence Intervals"
+
+fd_axis <- function(...) {
+  tfl_fig_design(
+    data = list(list(step = "read", dataset = "ADSL")),
+    plot = list(...),
+    layers = list(list(layer = "point", x = "AGE", y = "TRTDURD")))
+}
+# the code as one text; a title as the program writes it (its "\n" escaped)
+fd_code <- function(d) paste(tfl_fig_design_code(d, save = FALSE), collapse = "\n")
+fd_lit <- function(x) encodeString(x, quote = "\"")
+
+test_that("a designed figure writes an axis title longer than axis_title_width wrapped", {
+  # the figure style's width (50): the 90-character title on two lines, in the code
+  code <- fd_code(fd_axis(x_label = "Age (years)", y_label = fd_t90))
+  expect_true(grepl(fd_lit(fd_t90_50), code, fixed = TRUE))
+  expect_false(grepl(fd_lit(fd_t90), code, fixed = TRUE))
+  expect_true(grepl(fd_lit("Age (years)"), code, fixed = TRUE))
+  # a 30-character title: as written
+  t30 <- "Mean Change from Baseline (mm)"
+  code <- fd_code(fd_axis(y_label = t30))
+  expect_true(grepl(fd_lit(t30), code, fixed = TRUE))
+  # the figure's own width; `!unset`: one line
+  code <- fd_code(fd_axis(y_label = fd_t90, axis_title_width = 30))
+  expect_true(grepl(fd_lit(tflspec:::.fig_wrap_title(fd_t90, 30)), code, fixed = TRUE))
+  d_unset <- fd_axis(y_label = fd_t90, axis_title_width = tfl_unset())
+  code <- fd_code(d_unset)
+  expect_true(grepl(fd_lit(fd_t90), code, fixed = TRUE))
+  # (the title, not the figure's title, is wrapped)
+  code <- fd_code(fd_axis(title = fd_t90))
+  expect_true(grepl(fd_lit(fd_t90), code, fixed = TRUE))
+  # the check takes the setting, `!unset` too
+  adam <- tfl_example_adam()
+  n0 <- nrow(tfl_check_fig_design(fd_axis(y_label = fd_t90), adam))
+  expect_identical(nrow(tfl_check_fig_design(d_unset, adam)), n0)
+  expect_identical(nrow(tfl_check_fig_design(fd_axis(y_label = fd_t90, axis_title_width = 30), adam)), n0)
+  expect_gt(nrow(tfl_check_fig_design(fd_axis(axis_title_width = "wide"), adam)), n0)
+  # a company's figure style: its width
+  s <- tfl_fig_style()
+  s$settings$value[s$settings$key == "axis_title_width"] <- "40"
+  old <- options(tflspec.fig_style = s)
+  on.exit(options(old), add = TRUE)
+  code <- fd_code(fd_axis(y_label = fd_t90))
+  expect_true(grepl(fd_lit(tflspec:::.fig_wrap_title(fd_t90, 40)), code, fixed = TRUE))
+})
+
+test_that("a designed figure's wrapped axis title is the drawn one", {
+  skip_if_not_installed("ggplot2", "3.5.2")
+  r <- run_design(fd_axis(y_label = fd_t90))
+  expect_identical(ggplot2::get_labs(r$fig)$y, fd_t90_50)
+  r <- run_design(fd_axis(y_label = fd_t90, axis_title_width = tfl_unset()))
+  expect_identical(ggplot2::get_labs(r$fig)$y, fd_t90)
+})
+
+test_that("the km template's axis_title_width goes to its design; NULL / !unset: no wrap", {
+  x <- function(...) tfl_template_expand("km", list(param = "PFS", by = "TRT01A", ...))$plot
+  expect_identical(x()$axis_title_width, 50)
+  expect_identical(x(axis_title_width = 30)$axis_title_width, 30)
+  expect_s3_class(x(axis_title_width = tfl_unset())$axis_title_width, "tfl_unset")
+  # the study standard's key, its fallback the template's 50
+  p <- tfl_template_params("km")$axis_title_width
+  expect_identical(p$study, "figure_style.axis_title_width")
+  expect_identical(p$default, 50)
+  # (the template's settings with none over them: `!unset` kept)
+  base <- list(y_label = "Y", axis_title_width = tfl_unset())
+  expect_identical(tflspec:::.tpl_plot_over(base, NULL), base)
+  expect_identical(tflspec:::.tpl_plot_over(base, list(axis_title_width = 40))$axis_title_width, 40)
+  # drawn: tfl_tpl()
+  skip_if_not_installed("ggsurvfit")
+  skip_if_not_installed("ggplot2", "3.5.2")
+  adtte <- tflspec::adtte
+  df <- adtte[adtte$PARAMCD == "PFS", ]
+  y_of <- function(...) ggplot2::get_labs(tfl_tpl(df, "km", by = TRT01A, risk_table = FALSE,
+                                                  y_label = fd_t90, ...))$y
+  expect_identical(y_of(), fd_t90_50)
+  expect_identical(y_of(axis_title_width = tfl_unset()), fd_t90)
+})

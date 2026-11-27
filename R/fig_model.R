@@ -463,6 +463,8 @@ tfl_fig_objects <- function(design) {
     .ff("title", "text", "Figure title"),
     .ff("x_label", "text", "X label"),
     .ff("y_label", "text", "Y label"),
+    .ff("axis_title_width", "number", "Axis title width",
+        help = "The number of characters after which an axis title wraps onto a new line; blank: the figure style's (50); !unset: no wrap."),
     .ff("x_min", "number", "X min"),
     .ff("x_max", "number", "X max"),
     .ff("x_by", "number", "X step"),
@@ -712,6 +714,13 @@ tfl_read_fig_design <- function(path) {
   f <- .fig_plot_fields()
   d <- f$default[f$field == field]
   if (!length(d) || is.na(d)) NULL else d
+}
+# The width a figure's axis titles wrap at: its `axis_title_width`, else the
+# figure style standard's (.fs_title_width()); NULL (no wrap) when the
+# figure says `!unset`
+.fig_title_width <- function(plot) {
+  if (inherits(plot[["axis_title_width"]], "tfl_unset")) return(NULL)
+  .pv(plot, "axis_title_width") %||% .fs_title_width()
 }
 .lgl <- function(v) isTRUE(as.logical(v))
 .split_vals <- function(v) {
@@ -1794,10 +1803,14 @@ tfl_read_fig_design <- function(path) {
   needs <- setdiff(unique(c(unlist(lapply(lc, `[[`, "package")), add_res$pkgs)), "ggplot2")
   if (any(kinds %in% c("km_curve", "km_ci", "censor_mark"))) libs <- unique(c(libs, "ggsurvfit"))
   uses_pd <- any(vapply(layers, function(l) .lgl(l$dodge), logical(1)))
-  # (an axis title written empty is no title: NULL, not the variable's name)
+  # (an axis title written empty is no title: NULL, not the variable's
+  # name; one longer than the figure's axis_title_width is written wrapped,
+  # .fig_wrap_title())
+  tw <- .fig_title_width(plot)
   lab <- function(f) {
     if (f != "title" && identical(plot[[f]], "")) return("NULL")
     x <- .pv(plot, f)
+    if (!is.null(x) && f != "title") x <- .fig_wrap_title(x, tw)
     if (!is.null(x)) q(x)
   }
   labs_args <- c(if (!is.null(lab("x_label"))) paste("x =", lab("x_label")),
@@ -2402,6 +2415,8 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
     if (!nrow(r) && nm %in% routed) next
     if (!nrow(r)) { add("plot", nm, "is not a figure setting"); next }
     v <- design$plot[[nm]]
+    # (`!unset`: the setting's processing is not done -- no value to check)
+    if (inherits(v, "tfl_unset")) next
     if (r$kind == "choice" && !is.na(r$choices) &&
         !as.character(v) %in% strsplit(r$choices, " | ", fixed = TRUE)[[1L]]) {
       add("plot", nm, paste0("'", v, "' is not one of ", r$choices))

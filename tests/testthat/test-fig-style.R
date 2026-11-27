@@ -117,3 +117,75 @@ test_that("tfl_km_risk() reads the table's ARD and checks it", {
   ard$stat[[which(ard$stat_name == "n.risk")[2]]] <- -1
   expect_warning(e$tfl_km_risk(ard, fit), "Figure check: the number at risk")
 })
+
+# ---- axis_title_width (tflspec#603-4, canon 11-28) ---------------------------------
+
+test_that("the built-in style's axis_title_width is 50; a study's figure style is read over it", {
+  expect_equal(tflspec:::.fs_get("axis_title_width"), "50")
+  expect_equal(tflspec:::.fs_get("axis_title_width", "km"), "50")
+  expect_identical(tflspec:::.fs_title_width(), 50)
+  # the study reference reads it as a number
+  expect_identical(tflspec:::.tpl_fig_style_read("axis_title_width", NULL), 50)
+  st <- list(figure_style = list(settings = list(
+    list(key = "axis_title_width", value = "40"),
+    list(type = "km", key = "axis_title_width", value = "35"))))
+  expect_identical(tflspec:::.tpl_fig_style_read("axis_title_width", st), 40)
+  expect_identical(tflspec:::.tpl_fig_style_read(c("km", "axis_title_width"), st), 35)
+  # a study's settings table without the key: the built-in one's
+  st2 <- list(figure_style = list(settings = list(list(key = "base_size", value = "11"))))
+  expect_identical(tflspec:::.tpl_fig_style_read("axis_title_width", st2), 50)
+  # a text value stays text
+  expect_identical(tflspec:::.tpl_fig_style_read("theme", NULL), "boxed")
+  # a company's style (options) without the key: the built-in width
+  s <- tfl_fig_style()
+  s$settings <- s$settings[s$settings$key != "axis_title_width", , drop = FALSE]
+  old <- options(tflspec.fig_style = s)
+  on.exit(options(old), add = TRUE)
+  expect_identical(tflspec:::.fs_title_width(), 50)
+  s$settings <- rbind(s$settings, data.frame(type = NA, key = "axis_title_width", value = "30",
+                                             note = "", stringsAsFactors = FALSE))
+  options(tflspec.fig_style = s)
+  expect_identical(tflspec:::.fs_title_width(), 30)
+})
+
+test_that(".fig_wrap_title() wraps an axis title at the spaces between words", {
+  wrap <- tflspec:::.fig_wrap_title
+  t90 <- "Mean Change from Baseline in Diastolic Blood Pressure (mmHg) with 95% Confidence Intervals"
+  expect_identical(nchar(t90), 90L)
+  expect_identical(wrap(t90, 50),
+                   "Mean Change from Baseline in Diastolic Blood\nPressure (mmHg) with 95% Confidence Intervals")
+  expect_identical(wrap(t90, 30), paste("Mean Change from Baseline in", "Diastolic Blood Pressure",
+                                        "(mmHg) with 95% Confidence", "Intervals", sep = "\n"))
+  # a title no longer than the width: as written
+  t30 <- "Mean Change from Baseline (mm)"
+  expect_identical(nchar(t30), 30L)
+  expect_identical(wrap(t30, 50), t30)
+  expect_identical(wrap(t30, 30), t30)
+  # no width (NULL, !unset): no wrap; NULL / NA / empty / R text: unchanged
+  expect_identical(wrap(t90, NULL), t90)
+  expect_identical(wrap(t90, tfl_unset()), t90)
+  expect_null(wrap(NULL, 50))
+  expect_identical(wrap(NA_character_, 50), NA_character_)
+  expect_identical(wrap("", 50), "")
+  r <- tfl_r(paste0("paste(\"", t90, "\")"))
+  expect_identical(wrap(r, 50), r)
+  # a "\n" the title has is kept; only a line longer than the width is wrapped
+  t2 <- "Mean Change from Baseline\nin Diastolic Blood Pressure (mmHg) with 95% Confidence Intervals"
+  expect_identical(wrap(t2, 50),
+                   "Mean Change from Baseline\nin Diastolic Blood Pressure (mmHg) with 95%\nConfidence Intervals")
+  expect_identical(wrap("Short\nTitle", 50), "Short\nTitle")
+  # wrapping what is wrapped changes nothing; the spaces inside a line are kept
+  expect_identical(wrap(wrap(t90, 50), 50), wrap(t90, 50))
+  fav <- "Hazard Ratio\n<- Favours Drug X            Favours Control ->"
+  expect_identical(wrap(fav, 50), fav)
+  expect_identical(wrap(fav, 30), "Hazard Ratio\n<- Favours Drug X\nFavours Control ->")
+  # a word longer than the width stays whole; a text without spaces is one line
+  expect_identical(wrap("Supercalifragilistic word", 10), "Supercalifragilistic\nword")
+  expect_identical(wrap(strrep("x", 60), 50), strrep("x", 60))
+  # the width: a number (or its text), positive and whole
+  expect_identical(wrap(t90, "50"), wrap(t90, 50))
+  expect_error(wrap(t90, 0), "positive whole number")
+  expect_error(wrap(t90, 2.5), "positive whole number")
+  expect_error(wrap(t90, "wide"), "axis_title_width")
+  expect_error(wrap(t90, c(50, 60)), "axis_title_width")
+})
