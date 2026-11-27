@@ -2,7 +2,7 @@
 # (registered at the end of tpl_registry.R: R reads this file before it)
 
 .tpl_la_params <- function() list(
-  tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  tfl_param("population", required = TRUE, choices = "populations", doc = "the analysis set's id (SAF)"),
   .tpl_subset_param(),
   tfl_param("data", "ADLB", doc = "the dataset of records"),
   tfl_param("params", NULL, doc = "the PARAMCD values; NULL: all"),
@@ -109,7 +109,8 @@
 
 .tpl_la_register <- function() {
   .tfl_template("lab_abnormal", ai = TRUE, kind = "table", layout = "summary",
-                params = .tpl_la_params(), body = .tpl_la_body)
+                params = .tpl_la_params(), body = .tpl_la_body,
+                label = "Laboratory abnormalities")
 }
 
 #' Laboratory abnormalities: a table plan from the template `lab_abnormal`

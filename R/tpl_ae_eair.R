@@ -2,7 +2,7 @@
 # (registered at the end of tpl_registry.R: R reads this file before it)
 
 .tpl_eair_params <- function() list(
-  tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  tfl_param("population", required = TRUE, choices = "populations", doc = "the analysis set's id (SAF)"),
   .tpl_subset_param(),
   tfl_param("data", "ADAE", doc = "the dataset of records"),
   tfl_param("where", "TRTEMFL == \"Y\"", doc = "the records kept (R)"),
@@ -104,7 +104,8 @@
 
 .tpl_eair_register <- function() {
   .tfl_template("ae_eair", ai = TRUE, kind = "table", layout = "hierarchical",
-                params = .tpl_eair_params(), body = .tpl_eair_body)
+                params = .tpl_eair_params(), body = .tpl_eair_body,
+                label = "Exposure-adjusted incidence rates by SOC and PT")
 }
 
 #' Exposure-adjusted incidence rates by SOC and PT: the template `ae_eair`

@@ -44,7 +44,7 @@
 #'   * `"figure_style.<key>"` (`"figure_style.km.theme"`: the type, then the
 #'     key): `defaults.yml`'s `figure_style:`, else tflspec's built-in
 #'     figure style;
-#'   * `"output.<field>"`: the report's own field (`"output.common.population"`).
+#'   * `"output.<field>"`: the report's own field (`"output.style"`).
 #'
 #'   A character vector names several keys one setting can be written under
 #'   (`c("plan_cells.categorical", "plan_cells.default")`): read in order, the
@@ -54,7 +54,7 @@
 #'   with neither `default` nor `required`, the study's value else the
 #'   parameter is left unset (the inner function's own default applies:
 #'   a rounding); with `required = TRUE`, the study's value else a stop.
-#'   `NULL`: tflspec's for its name (`population`, `by`, `group`), else the
+#'   `NULL`: tflspec's for its name (`by`, `group`), else the
 #'   template's own default only.  `FALSE`: none, for a parameter that
 #'   shares such a name and is not the study's (the listing's `by`, the
 #'   variables that divide it).
@@ -70,7 +70,10 @@
 #' @param of For `type = "levels"`: whose values they are.  A name of the
 #'   template's parameters first (the variable it names: `by_levels`, `of =
 #'   "by"`), else a variable's name (`params`, `of = "PARAMCD"`).
-#' @param choices For `type = "choice"`: the values it may take.
+#' @param choices For `type = "choice"`: the values it may take.  `"populations"`
+#'   marks the template's analysis set: the parameter that picks one of the
+#'   study's sets (`data.yml`'s populations) and fills the subjects row's
+#'   set; the report's set is that argument ([tfl_report_set()]).
 #' @param fields For `type = "list"`: a record's fields, `c("vars",
 #'   "label", "width")`; a named vector's are `c("name", "text")`.
 #' @param group The input form's group it is shown in: `"target"` (shown
@@ -285,13 +288,13 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
 .tpl_lines <- function(x) if (length(x)) paste(x, collapse = "\n")
 
 # A parameter's study reference by its name, until each family drops it:
-# the analysis set is the report's (`common: population`), the treatment the study's
-# (a parameter's own `study =` wins).  (`by` and `group` are required with
-# no reference in the new design, canon 1.14; each family's batch drops the
-# fill, so this table is the last per-name rule.)  One reader reads them
-# and every other key: .tpl_study_read().
-.tpl_study_by_name <- c(population = "output.common.population", by = "settings.treatment",
-                        group = "settings.treatment")
+# the treatment the study's (a parameter's own `study =` wins).  (`by` and
+# `group` are required with no reference in the new design, canon 1.14;
+# each family's batch drops the fill, so this table is the last per-name
+# rule.)  One reader reads them and every other key: .tpl_study_read().
+# (The analysis set is no study reference: the template's set parameter,
+# `choices = "populations"`, is the report's set, .tpl_set_fill(), A2-T.)
+.tpl_study_by_name <- c(by = "settings.treatment", group = "settings.treatment")
 
 # A treatment argument the report must write: `by` / `group` required with
 # no default (a figure's group and km's by, canon 1.14).  The study's
@@ -1131,7 +1134,7 @@ tfl_templates <- function(source = NULL) {
   "an analysis data (`adsl_itt`, or one of the report's own): its subjects in each column")
 
 .tpl_hier_params <- list(
-  tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  tfl_param("population", required = TRUE, choices = "populations", doc = "the analysis set's id (SAF)"),
   .tpl_subset_param(),
   tfl_param("hierarchy", required = TRUE, doc = "the levels, outer first"),
   tfl_param("data", "ADAE", doc = "the dataset of records"),
@@ -1361,7 +1364,8 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
 }
 
 .tfl_template("hierarchical", ai = TRUE, kind = "table", layout = "hierarchical",
-              params = .tpl_hier_params, body = .tpl_hier_body)
+              params = .tpl_hier_params, body = .tpl_hier_body,
+              label = "Counts by a hierarchy")
 
 # ae_soc_pt: treatment-emergent AEs by SOC and PT -- hierarchical's
 # parameters, its own defaults; FDA's serious and discontinuation tables
@@ -1417,7 +1421,7 @@ tpl_hierarchical <- function(ard, population, hierarchy, ..., codelists = NULL) 
 # ---- ae_pt_freq: PTs alone, by decreasing frequency (>= x%) -----------------
 
 .tpl_pt_params <- list(
-  tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  tfl_param("population", required = TRUE, choices = "populations", doc = "the analysis set's id (SAF)"),
   .tpl_subset_param(),
   tfl_param("term", "AEDECOD", tier = "key", doc = "the term variable (the PT)"),
   tfl_param("by", "TRT01A", doc = "the column variable"),
@@ -1472,7 +1476,8 @@ names(.tpl_pt_params) <- vapply(.tpl_pt_params, `[[`, "", "name")
 }
 
 .tfl_template("ae_pt_freq", ai = TRUE, kind = "table", layout = "hierarchical",
-              params = .tpl_pt_params, body = .tpl_pt_body)
+              params = .tpl_pt_params, body = .tpl_pt_body,
+              label = "Adverse events by preferred term, most frequent first")
 
 #' Adverse events by preferred term, most frequent first: the template `ae_pt_freq`
 #'
@@ -1501,7 +1506,7 @@ tpl_ae_pt_freq <- function(ard, population, ..., codelists = NULL) {
 # ---- ae_max_grade: SOC / PT by the maximum severity or grade -----------------
 
 .tpl_mg_params <- list(
-  tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  tfl_param("population", required = TRUE, choices = "populations", doc = "the analysis set's id (SAF)"),
   .tpl_subset_param(),
   tfl_param("grade", "AESEV", tier = "key", doc = "the severity or grade variable (AESEV, AETOXGR)"),
   tfl_param("grade_levels", NULL,
@@ -1628,7 +1633,8 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
 }
 
 .tfl_template("ae_max_grade", ai = TRUE, kind = "table", layout = "hierarchical",
-              params = .tpl_mg_params, body = .tpl_mg_body)
+              params = .tpl_mg_params, body = .tpl_mg_body,
+              label = "Adverse events by SOC and PT at the maximum severity or grade")
 
 #' Adverse events by SOC and PT at the maximum severity or grade: the template `ae_max_grade`
 #'
@@ -1685,7 +1691,7 @@ tpl_disposition <- function(ard, population, ..., codelists = NULL) {
   "titles by `page_heading`; unset: no page a value, one table, the parameter a row heading")
 
 .tpl_shift_params <- list(
-  tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  tfl_param("population", required = TRUE, choices = "populations", doc = "the analysis set's id (SAF)"),
   .tpl_subset_param(),
   tfl_param("by", "TRT01A", doc = "the column variable"),
   tfl_param("data", "ADLB", doc = "the dataset of records"),
@@ -1935,10 +1941,12 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
 }
 
 .tfl_template("shift", ai = TRUE, kind = "table", layout = "shift",
-              params = .tpl_shift_params, body = .tpl_shift_body)
+              params = .tpl_shift_params, body = .tpl_shift_body,
+              label = "Shift table")
 
 # lab_shift: the normal range indicator at baseline by a visit's, on shift
 .tfl_template("lab_shift", ai = TRUE, kind = "table", layout = "shift",
+  label = "Laboratory normal range shift by visit",
   params = c(.tpl_shift_params[c("population", "subset")],
              list(tfl_param("visit", required = TRUE, doc = "the visit (AVISIT)"),
                   tfl_param("params", required = TRUE, doc = "the PARAMCD values"),
@@ -2002,6 +2010,7 @@ tpl_lab_shift <- function(ard, population, ..., codelists = NULL) {
 # ---- listing: one row a record, the layout ---------------------------------------
 
 .tfl_template("listing", ai = TRUE, kind = "listing", layout = "listing",
+  label = "Listing",
   params = list(
     tfl_param("data", required = TRUE, doc = "the dataset (ADAE)"),
     tfl_param("columns", required = TRUE,
@@ -2207,6 +2216,7 @@ tpl_listing <- function(x, ...) {
 # ard_survival_survfit()): the template does ARD -> table only.
 
 .tfl_template("km_table", ai = TRUE, kind = "table", layout = "km_table",
+  label = "Kaplan-Meier estimates (median and event-free probability by time)",
   params = list(
     tfl_param("by", "TRT01A", doc = "the column variable"),
     tfl_param("by_levels", NULL, doc = "its values in order; NULL: its code list's"),
@@ -2284,7 +2294,7 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
 .tpl_pc_params <- function() {
   p <- c(
     list(
-      tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+      tfl_param("population", required = TRUE, choices = "populations", doc = "the analysis set's id (SAF)"),
       .tpl_subset_param(),
       tfl_param("data", required = TRUE, unset = "stop", doc = "the BDS dataset (ADLB, ADVS, ADEG)"),
       tfl_param("params", NULL, unset = "step_off", doc = "the PARAMCD values, in the data's order; NULL: all"),
@@ -2498,7 +2508,8 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
   # (`extends`: its family's `[defaults]`, canon 1.27: the study's defaults are
   # laid under the template's items, and its references read them)
   .tfl_template("param_change", ai = TRUE, kind = "table", layout = "summary",
-                params = .tpl_pc_params(), body = .tpl_pc_body, extends = "defaults")
+                params = .tpl_pc_params(), body = .tpl_pc_body, extends = "defaults",
+                label = "Parameters' value and change by visit")
 }
 
 #' Parameters' value and change: a table plan from the template `param_change`
@@ -2610,6 +2621,7 @@ tpl_param_change <- function(ard, population, ..., codelists = NULL) {
 }
 
 .tfl_template("stat_block", ai = TRUE, kind = "table", layout = "stat_block",
+  label = "Statistics by rows and columns",
   params = list(
     tfl_param("by", "TRT01A", doc = "the column key (the arms)"),
     tfl_param("by_levels", NULL, doc = "its values in order; NULL: its code list's"),
@@ -2659,8 +2671,9 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
 }
 
 .tfl_template("orr", ai = TRUE, kind = "table", layout = "stat_block",
+  label = "Objective response",
   params = list(
-    tfl_param("population", "ITT", doc = "the analysis set's id"),
+    tfl_param("population", "ITT", choices = "populations", doc = "the analysis set's id"),
     .tpl_subset_param(),
     tfl_param("by", "TRT01P", doc = "the column variable"),
     tfl_param("by_levels", NULL, doc = "its values in order; NULL: its code list's"),
@@ -2801,7 +2814,7 @@ tpl_orr <- function(ard, population = "ITT", ..., codelists = NULL) {
 .tpl_ae_overview_params <- function() c(
   list(
     tfl_param("population", required = TRUE,
-              doc = "the analysis set's id: the report's `common: population`"),
+              choices = "populations", doc = "the analysis set's id (SAF)"),
     .tpl_subset_param(),
     tfl_param("by", required = TRUE, study = FALSE, unset = "stop",
               doc = "the column variable (the arms); not a default and not the study's treatment"),
@@ -2827,6 +2840,7 @@ tpl_orr <- function(ard, population = "ITT", ..., codelists = NULL) {
 # (`extends`: its family's `[defaults]`, canon 1.27: the study's defaults are
 # laid under the template's items, and its references read them)
 .tpl_ae_overview_register <- function() .tfl_template("ae_overview", ai = TRUE, kind = "table", layout = "summary",
+  label = "Overview of adverse events",
   params = .tpl_ae_overview_params(), extends = "defaults",
   body = function(a, ctx) {
     tn <- ctx$template$name %||% "ae_overview"

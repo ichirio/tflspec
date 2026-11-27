@@ -2,7 +2,7 @@
 % Please edit documentation in R/tpl_docs.R
 \name{tfl_tpl_listing}
 \alias{tfl_tpl_listing}
-\title{listing: the template listing}
+\title{Listing: the template listing}
 \description{
 The listing template \code{listing}, layout \code{listing}. Its program is one call, \code{tfl_tpl(adae, "listing", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }

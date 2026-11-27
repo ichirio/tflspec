@@ -16,8 +16,9 @@ study's spec folder; \code{NULL} for none (the \code{study} column is then
 \code{"settings.<name>"} ones (\code{"settings.treatment"} for the \code{by}).}
 
 \item{population}{The report's analysis set: the value of the
-parameters taken from the report's \code{common: population}
-(\code{"output.common.population"}); \code{NULL} for none.}
+template's set parameter (the one of \code{choices = "populations"}, which
+fills its subjects row; \code{\link[=tfl_report_set]{tfl_report_set()}}) when the report does not
+give it; \code{NULL} for none.}
 }
 \value{
 A data frame, one row a parameter in the template's order:

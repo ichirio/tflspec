@@ -43,7 +43,7 @@
   }
   list(
     d(tfl_param("population", NULL, type = "text", tier = "usual",
-                doc = "the analysis set's id (SAF): its subjects kept; NULL: every record")),
+                choices = "populations", doc = "the analysis set's id (SAF): its subjects kept; NULL: every record")),
     d(.tpl_subset_param()),
     d(tfl_param("data", "ADTTE", type = "text", doc = "the dataset (ADTTE; ADSL with `event`)")),
     d(tfl_param("param", NULL, type = "levels", of = "PARAMCD", tier = "usual",
@@ -447,7 +447,7 @@
   }), vapply(new, `[[`, "", "name")))
   .tfl_template("km", ai = TRUE, kind = "figure", layout = "km", params = .tpl_km_params(),
                 body = .tpl_km_layout_body, call = "tfl_tpl",
-                label = "Kaplan-Meier curves (the layout)",
+                label = "Kaplan-Meier curves",
                 example = list(param = "PFS", by = "TRT01A"))
   # (hidden: the look, the y axis's type, and the data stage -- a report's
   # own `data:` steps: read, the analysis set's join, param, filter)

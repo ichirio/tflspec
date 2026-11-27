@@ -1,6 +1,6 @@
 # A2 (one population rule), GT's part: a figure of a report with an analysis
 # set (its data's `population:`; `common: population` until it goes; one
-# reader, .out_population_or_data()) reads the records of its subjects only -- the
+# reader, .report_set()) reads the records of its subjects only -- the
 # subjects made once by the report's data part (.fig_subjects_part(), the
 # ARD programs' .ard_data_part()), every dataset the figure reads joined to
 # them (.subjects_join()).  No step keeps a population: a `flag` step is a
@@ -105,33 +105,33 @@ test_that("a design's read of the report's analysis data: made by the data part,
   expect_false(grepl("inner_join(", a2f_flat(r$code), fixed = TRUE))
 })
 
-test_that("one reader of a report's analysis set (#965's): its data's, its `common:`, its subjects entries'", {
+test_that("one reader of a report's analysis set (.report_set()): its data's first, `common:` last", {
+  # (A2-T (canon 11-15): the data's set first, `common:` last until it goes;
+  # one reader, .report_set(), for every caller: the figure's subjects, the
+  # report programs, the checks)
   subj <- function(pop) list(id = "adsl_sub", from = "ADSL", population = pop)
   o <- list(kind = "figure", common = list(population = "C"),
             data = list(source = "code", population = "D"),
             ard = list(analysis_data = list(subj("E"))))
-  # the data map's own first (.report_set(): that and `common:` alone)
-  expect_identical(.out_population_or_data(o), "D")
+  # the data map's own first
   expect_identical(.report_set(o), "D")
-  # then `common:` until it goes, then the subjects entries (Codex 8A: the
-  # order of the two is the coordinator's)
+  # then the set its subjects rows carry, then `common:` until it goes
   o$data$population <- NULL
-  expect_identical(.out_population_or_data(o), "C")
-  o$common <- NULL
-  expect_identical(.out_population_or_data(o), "E")
-  expect_true(is.na(.report_set(o)))
+  expect_identical(.report_set(o), "E")
   o$ard$analysis_data <- list()
-  expect_true(is.na(.out_population_or_data(o)))
-  # a table's flat `data:` rows: its subjects entry (a records entry is not one)
+  expect_identical(.report_set(o), "C")
+  o$common <- NULL
+  expect_true(is.na(.report_set(o)))
+  # a table's flat `data:` rows: its subjects row (a row of another's subjects is not one)
   t <- list(kind = "table", data = list(subj("SAF"), list(id = "adae_sub", from = "ADAE",
                                                            subjects_in = "adsl_sub")))
-  expect_identical(.out_population_or_data(t), "SAF")
-  # entries naming several sets: none of them (A2: one set a report)
+  expect_identical(.report_set(t), "SAF")
+  # rows naming several sets and no BIGN to say which: none of them (A2: one set a report)
   t$data <- list(subj("SAF"), list(id = "adsl_itt", from = "ADSL", population = "ITT"))
-  expect_true(is.na(.out_population_or_data(t)))
+  expect_true(is.na(.report_set(t)))
   t$common <- list(population = "C")
-  expect_identical(.out_population_or_data(t), "C")
-  # a records part's own map, else the report's `common:`
+  expect_identical(.report_set(t), "C")
+  # a records part's own map, else the report's
   expect_identical(.data_population(list(population = "PKS"), t), "PKS")
   expect_identical(.data_population(list(dataset = "ADAE"), t), "C")
   # the report programs': its spec's, by the same reader

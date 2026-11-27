@@ -313,8 +313,11 @@ test_that("T10: the templates sheet leaves extends unwritten; an stf_t02_demog r
   r <- tfl_read_template_sheets(f)
   expect_true(all(vapply(r, function(x) is.null(x$extends), NA)))
   x <- r[[1L]]
-  o <- tfl_output(x$id, x$kind, label = x$label %||% NA_character_, common = list(population = x$common$population),
-                  template = list(name = "stf_t02_demog", args = list(by = "TRT01A", continuous = "AGE")))
+  # (the row's set: its template's set argument, A2-T)
+  expect_false(is.null(x$template$args$population))
+  o <- tfl_output(x$id, x$kind, label = x$label %||% NA_character_,
+                  template = list(name = "stf_t02_demog", args = list(
+                    population = x$template$args$population, by = "TRT01A", continuous = "AGE")))
   expect_identical(tfl_output_extends(o, "content"), character())
   expect_s3_class(tfl_resolve_output(o, te_layers()), "tfl_output")
 })

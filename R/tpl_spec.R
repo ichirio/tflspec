@@ -27,17 +27,27 @@
   list(name = t$name, args = .tpl_spec_args(t))
 }
 
-# A template SPEC's arguments: the flat `args:`, and the two parts -- `ard:`
-# (what is computed) and `content:` (how it is shown) -- as one list.  A name
-# given twice (in `args:` and a part, or in both parts) stops.  A template
-# that declares where its parameters act (`parts` of the registry) has a name
-# in the other part stopped, naming the right one; a template with no parts
-# takes the names as written.
+# A template SPEC's arguments as one list, wherever they sit
+# (.tpl_arg_secs()): a registered template's flat `args:` and its two parts
+# -- `ard:` (what is computed) and `content:` (how it is shown); a template
+# file's `args:`, its step sections and the arguments directly under
+# `template:`.  A name given twice (in two sections) stops.  A registered
+# template that declares where its parameters act (`parts` of the registry)
+# has a name in the other part stopped, naming the right one; a template
+# with no parts takes the names as written.
 .tpl_spec_args <- function(t) {
   # (the report's fields, not the template's arguments: canon 1.32)
   for (k in intersect(c("extends", "style"), names(t))) {
     .ard_stop(sprintf(paste0("template %s: `%s` is the report's field, not `template:`'s: write it ",
                              "as the report's field (`%s:` beside `template:`)."), t$name, k, k))
+  }
+  if (.tpl_is_file_name(t$name)) {
+    pl <- .tpl_args_placed(t)
+    if (length(pl$dup)) {
+      .ard_stop(sprintf("template %s: %s is given twice (in two of `template:`'s sections).",
+                        t$name, paste(sQuote(pl$dup, FALSE), collapse = ", ")))
+    }
+    return(pl$args)
   }
   args <- as.list(t$args %||% list())
   tpl <- if (is.null(t$ard) && is.null(t$content)) NULL else
@@ -63,6 +73,93 @@
     args <- c(args, p)
   }
   args
+}
+
+# Is a template's name a template file's (`<series>/<template>`), not a
+# registered template's?
+.tpl_is_file_name <- function(name) {
+  is.character(name) && length(name) == 1L && !is.na(name) && grepl("/", name, fixed = TRUE)
+}
+
+# Where a report's template arguments can sit in its `template:` -- the one
+# rule every reader and writer of a template argument goes through
+# (.tpl_args_placed(), .tpl_arg_put(); tflplanner's .tpl_write_args()
+# writes the same form): `args:` and the sections of the template's form --
+# a registered template's two parts `ard:` and `content:`; a template
+# file's (`<series>/<template>`) step sections `data:`, `analysis:`,
+# `content:` and `page:` (.arg_steps) -- and, for a template file, directly
+# under `template:`
+.tpl_arg_secs <- function(name) {
+  c("args", if (.tpl_is_file_name(name)) .arg_steps else c("ard", "content"))
+}
+
+# A template file's own parameter names (a key of a section's name that is
+# one of them is that parameter, not the section): the study's copy first,
+# else the series folders'; none when it cannot be read
+.tpl_file_params <- function(name, study_dir = NULL) {
+  y <- NULL
+  if (!is.null(study_dir)) y <- tryCatch(.template_read(name, study_dir), error = function(e) NULL)
+  if (is.null(y)) y <- tryCatch(.template_read(name), error = function(e) NULL)
+  names(y$params)
+}
+
+# A report's template arguments (`t`, its `template:`; `name`, its
+# template's) and where each sits (.tpl_arg_secs()): `args`, the arguments
+# as one list in the file's order (a name given twice: the later);
+# `where`, an argument's section (`""`: directly under `template:`); `dup`,
+# the names given twice.  A section is a map; a key of a section's name
+# that is one of a template file's own parameters (`own`; NULL: read from
+# the template when such a key is there) is that parameter
+.tpl_args_placed <- function(t, own = NULL, name = t$name, study_dir = NULL) {
+  secs <- .tpl_arg_secs(name)
+  file <- .tpl_is_file_name(name)
+  is_sec <- function(k) k %in% secs && is.list(t[[k]]) && !is.null(names(t[[k]]))
+  keys <- setdiff(names(t), "name")
+  if (file && is.null(own) && any(vapply(keys, is_sec, NA))) own <- .tpl_file_params(name, study_dir)
+  args <- list()
+  where <- character()
+  dup <- character()
+  put <- function(p, v, k) {
+    if (p %in% names(where)) dup <<- c(dup, p)
+    args[p] <<- list(v)
+    where[[p]] <<- k
+  }
+  for (k in keys) {
+    if (is_sec(k) && !k %in% own) {
+      for (p in names(t[[k]])) put(p, t[[k]][[p]], k)
+    } else if (file) {
+      put(k, t[[k]], "")
+    }
+  }
+  list(args = args, where = where, dup = unique(dup))
+}
+
+# A report's `template:` (`t`) with its argument `arg` written `value`
+# (NULL takes it away) where it already sits (.tpl_args_placed()), never a
+# second copy.  One the report does not give goes where a new one goes:
+# a template file's report written by step (a step section, or an argument
+# directly under `template:`, or no argument yet -- the canon's form, as
+# tflplanner writes a new report) in the section of the argument's `step:`
+# (tfl_arg_defs(template =)); else `args:`.  A section left empty is dropped
+.tpl_arg_put <- function(t, arg, value, study_dir = NULL) {
+  name <- as.character(t$name)
+  pl <- .tpl_args_placed(t, study_dir = study_dir)
+  k <- if (arg %in% names(pl$where)) pl$where[[arg]] else "args"
+  if (!arg %in% names(pl$where) && .tpl_is_file_name(name) &&
+      (any(pl$where != "args") || !length(pl$where))) {
+    d <- tryCatch(tfl_arg_defs(template = name, study_dir = study_dir), error = function(e) NULL)
+    if (is.null(d) && !is.null(study_dir)) d <- tryCatch(tfl_arg_defs(template = name), error = function(e) NULL)
+    st <- if (is.data.frame(d)) as.character(d$step[match(arg, d$name)]) else NA_character_
+    if (length(st) == 1L && !is.na(st) && st %in% .arg_steps) k <- st
+  }
+  if (identical(k, "")) {
+    if (is.null(value)) t[[arg]] <- NULL else t[arg] <- list(value)
+    return(t)
+  }
+  s <- if (is.list(t[[k]])) t[[k]] else list()
+  if (is.null(value)) s[[arg]] <- NULL else s[arg] <- list(value)
+  if (length(s)) t[[k]] <- s else t[[k]] <- NULL
+  t
 }
 
 # The part (`"ard"` or `"content"`) a template's parameter acts in, from its
@@ -130,10 +227,10 @@
   }
   switch(root,
     output = {
-      # (the report's analysis set: the one reader's -- its data's
-      # `population`, its `common:`, its subjects entries', A2)
+      # (the report's analysis set: the one reader's, .report_set() -- its
+      # data's `population`, its subjects rows', `common:` last, A2-T)
       v <- if (identical(path, c("common", "population")) && is.list(output)) {
-        .out_population_or_data(output)
+        .report_set(output)
       } else down(output, path)
       # (none when the report names none: NA is tfl_output()'s "not given")
       if (length(v) == 1L && !is.na(v)) v
@@ -215,10 +312,6 @@
                              "`template: args:`."),
                       id, t$name, paste(sQuote(stage, FALSE), collapse = ", ")))
   }
-  if ("population" %in% hidden) {
-    .ard_stop(sprintf(paste0("%s: template %s takes the analysis set from the report's `common: population`, ",
-                             "not from `template:`."), id, t$name))
-  }
   if (length(hidden)) {
     .ard_stop(sprintf(paste0("%s: template %s takes %s from the study standard, not from ",
                              "`template: args:`; a figure setting (`plot:`: the title, axes, legend, theme, palette, ",
@@ -227,6 +320,10 @@
                       id, t$name, paste(sQuote(hidden, FALSE), collapse = ", ")))
   }
   .tpl_data_said(t, output, id)
+  # the template's set parameter (A2-T): the report's set when the report
+  # does not give it (its data map's, until `common` goes its `common:
+  # population`); another set there stops (written twice)
+  args <- .tpl_set_fill(args, .tpl_set_param_of(t, hidden = TRUE), output, id)
   # a template with a `style` parameter: the report's `style:` field is its value
   # when the SPEC does not give one
   if ("style" %in% names(t$params) && !"style" %in% names(args) && length(output$style) == 1L &&
@@ -592,18 +689,10 @@ tfl_template_to_spec <- function(output, study) {
   # (canon: B = A, explicit `extends` and `style:`)
   output$extends <- .extends_compact(lb$extends)
   output$ard <- .merge_ard(e$x$ard, output$ard)
-  # the report's analysis set is its `common: population`, and the subjects
-  # definition does not repeat it (the code SPEC's `data:` says what the
-  # report adds to the set)
-  if (output$kind %in% c("table", "listing")) {
-    pop <- .na_scalar(as.character(e$args[["population"]] %||% output[["common"]][["population"]] %||% NA))
-    if (!is.na(pop)) {
-      output$common <- .common_in(c(list(population = pop), output$common[setdiff(names(output$common), "population")]),
-                                  paste0("tfl_template_to_spec(): ", output$id))
-      if (length(output$ard$analysis_data)) {
-        output$ard$analysis_data <- lapply(output$ard$analysis_data, .entry_pop_strip, pop, .pop_from(study$data$populations, pop))
-      }
-    }
+  # the report's analysis set is on the subjects rows the template made
+  # (A2-T: the set lives on the data), never in `common:`
+  if (is.list(output$common) && !is.null(output$common[["population"]])) {
+    output$common <- output$common[setdiff(names(output$common), "population")]
   }
   own <- if (.tpl_composes(output$data, e$x)) .tpl_compose_data(output$data, e$x) else output$data
   output$data <- .merge_map(e$x$data %||% list(), own %||% list())

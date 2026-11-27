@@ -19,7 +19,7 @@ named list of the objects its code reads: the datasets by their names
 in lower case (\code{adtte}), and \code{ard}.}
 
 \item{study}{For a figure with an analysis set (its data's
-\code{population:}) that reads a dataset: the study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}})
+\verb{population:}) that reads a dataset: the study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}})
 or its folder.  The set's subjects are made as the report's program
 makes them (its data part, from the study's files) and every dataset
 the figure reads is joined to them.  Such a figure given no study, or

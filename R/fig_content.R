@@ -252,6 +252,9 @@ tfl_plot <- function(name, items = list(), from = "own", input = NULL, form = c(
 # A value of an item as the R it stands for (a language object); `type`,
 # the argument's (parsed), says a text that is code (.fig_text_lang())
 .fig_value_lang <- function(v, arg = "", objects = .fig_object_args, type = NULL) {
+  # (a `~` is not written, L463: no `c()`; an argument with it is left out
+  # by .fig_item_lang(), an element of a sequence is NULL there)
+  if (is.null(v)) return(NULL)
   if (inherits(v, "tfl_unset")) {
     warning(sprintf(paste0("A figure's `%s` is !unset, which removes a key in the layering; ",
                            "NULL is !r NULL: written as NULL."), arg), call. = FALSE)
@@ -259,6 +262,7 @@ tfl_plot <- function(name, items = list(), from = "own", input = NULL, form = c(
   }
   if (inherits(v, "tfl_r")) return(str2lang(as.character(unclass(v))))
   if (inherits(v, "tfl_call")) {
+    v$args <- .drop_null(v$args %||% list())
     # a plotmath title: expression(AUC[0-24] ~ (ng/mL)), its expression bare
     if (v$fn %in% .fig_plotmath_fns && identical(names(v$args), "expr") && .fig_is_plotmath(v$args$expr)) {
       return(call(v$fn, str2lang(v$args$expr)))
@@ -268,8 +272,8 @@ tfl_plot <- function(name, items = list(), from = "own", input = NULL, form = c(
       rows <- .fig_data_rows_lang(v)
       if (!is.null(rows)) return(rows)
     }
-    ty <- .fig_arg_types(v$fn, v$args %||% list())
-    a <- lapply(stats::setNames(names(v$args %||% list()), names(v$args %||% list())),
+    ty <- .fig_arg_types(v$fn, v$args)
+    a <- lapply(stats::setNames(names(v$args), names(v$args)),
                 function(k) .fig_value_lang(v$args[[k]], k, type = ty[[k]]))
     # a card's positional `...` (guide_axis_stack()'s guides after its
     # first) by position, where it stood
@@ -448,7 +452,8 @@ tfl_plot <- function(name, items = list(), from = "own", input = NULL, form = c(
 # An item as its call; a card's positional `...` (xlim's limits) written
 # by position, xlim(0, 52)
 .fig_item_lang <- function(it) {
-  a <- it$args %||% list()
+  # (a `~` argument is not written, L463)
+  a <- .drop_null(it$args %||% list())
   obj <- .fig_objects_of(it$fn)
   ty <- .fig_arg_types(it$fn, a)
   args <- lapply(stats::setNames(names(a), names(a)), function(k) .fig_value_lang(a[[k]], k, obj, ty[[k]]))

@@ -47,6 +47,24 @@ test_that("an argument cards does not have, a function it does not have, an item
   expect_error(tfl_check_spec(d, "T-NONE"), "no report")
 })
 
+test_that("an analysis item that is not a map: one error row for the report, not a silent drop (#1000)", {
+  skip_if_not_installed("haven")
+  d <- cs_study()
+  o <- tfl_output("T-AGE", "table", common = list(population = "SAF"), label = "Age",
+    ard = list(analysis_data = list(list(id = "adsl_sub", from = "ADSL", population = "SAF")),
+               analyses = list(list(id = "AGE", method = "continuous", data = "adsl_sub", by = "TRT01A",
+                                    variables = "AGE"), "not a map")),
+    content = list(tfl_item("table_plan", list(cols = "TRT01A"))))
+  tfl_write_output(o, file.path(d, "spec", "outputs", "T-AGE.yml"))
+  p <- tfl_check_spec(d, "T-AGE")
+  r <- p[p$item == "analysis item 2", ]
+  expect_identical(nrow(r), 1L)
+  expect_identical(c(r$output_id, r$part, r$level), c("T-AGE", "analysis", "error"))
+  expect_match(r$message, "^analysis item 2 of T-AGE is not a map \\(it is `not a map`\\)")
+  # (not R's own error from a check that walks the items after it)
+  expect_false(any(grepl("$ operator", p$message, fixed = TRUE)))
+})
+
 test_that("build = TRUE: a report the checks pass is built; one that cannot be made has a build error row (#519)", {
   skip_on_cran()
   skip_if_not_installed("haven")
