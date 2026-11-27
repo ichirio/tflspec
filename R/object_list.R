@@ -839,11 +839,10 @@ tfl_output_rename <- function(output, old, new, study = NULL) {
   # a template's argument that names a data
   if (is.list(output$template) && length(x$uses) &&
       any(x$uses$stage == "template" & x$uses$name == old)) {
+    # (where `template:` gives it, .tpl_args_placed())
+    given <- .tpl_args_placed(output$template, study_dir = study$dir)$args
     for (a in x$uses$arg[x$uses$stage == "template" & x$uses$name == old]) {
-      if (identical(output$template$args[[a]], old)) output$template$args[[a]] <- new
-      for (part in c("ard", "content")) {
-        if (identical(output$template[[part]][[a]], old)) output$template[[part]][[a]] <- new
-      }
+      if (identical(given[[a]], old)) output$template <- .tpl_arg_put(output$template, a, new, study$dir)
     }
   }
   nms <- unique(stats::na.omit(c(r$spec_name, r$code_name)))

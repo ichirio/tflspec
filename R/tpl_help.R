@@ -104,8 +104,9 @@
 #'   `"<verb>.<argument>"` source is read, `study.yml`'s `settings:` the
 #'   `"settings.<name>"` ones (`"settings.treatment"` for the `by`).
 #' @param population The report's analysis set: the value of the
-#'   parameters taken from the report's `common: population`
-#'   (`"output.common.population"`); `NULL` for none.
+#'   template's set parameter (the one of `choices = "populations"`, which
+#'   fills its subjects row; [tfl_report_set()]) when the report does not
+#'   give it; `NULL` for none.
 #' @return A data frame, one row a parameter in the template's order:
 #'   `param`, `tier` (`"required"`, `"key"`, `"usual"`, `"other"`), `step`
 #'   (`"call"`, an argument of the template's call, or `"data"`, of a step
@@ -140,7 +141,10 @@ tfl_tpl_args <- function(name, study = NULL, population = NULL) {
   root <- chain[[length(chain)]]
   root_p <- lapply(root$params, .tpl_param_typed)
   names(root_p) <- vapply(root_p, `[[`, "", "name")
-  output <- list(common = list(population = population))
+  # (the report's set: the template's set parameter, A2-T; no other
+  # parameter reads the report)
+  sp <- .tpl_set_param_of(t)
+  output <- list()
   # (a template with an `extends` in its set reads the range its reports
   # read when they write no `extends` or `style:`: the settings.style set
   # over the defaults, or none under `{content: none}`)
@@ -165,7 +169,11 @@ tfl_tpl_args <- function(name, study = NULL, population = NULL) {
       sv <- hit$value
       if (!is.null(sv)) key <- hit$key
     }
-    layer <- if (!is.null(sv)) {
+    rep_set <- identical(p$name, sp) && length(population) > 0L
+    if (rep_set) sv <- population
+    layer <- if (rep_set) {
+      "report"
+    } else if (!is.null(sv)) {
       if (startsWith(key, "output.")) "report" else paste0("study: ", key)
     } else if (!is.na(vname)) {
       paste0("variant:", vname)
@@ -186,7 +194,8 @@ tfl_tpl_args <- function(name, study = NULL, population = NULL) {
                maps_to = .tpl_maps_to(p), doc = p$doc %||% NA_character_,
                study_key = key, fallback = if (is.na(key)) NA_character_ else .tpl_short(p$default),
                unset = if (.tpl_layered(t$name)) p$unset %||% "omit" else NA_character_,
-               route = .tpl_param_route(p, NULL, if (!is.null(sv)) key else NA_character_),
+               route = .tpl_param_route(p, if (rep_set) list(population),
+                                        if (!is.null(sv) && !rep_set) key else NA_character_),
                stringsAsFactors = FALSE)
   })
   out <- do.call(rbind, unname(rows))

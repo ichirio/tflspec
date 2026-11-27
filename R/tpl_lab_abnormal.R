@@ -2,7 +2,7 @@
 # (registered at the end of tpl_registry.R: R reads this file before it)
 
 .tpl_la_params <- function() list(
-  tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  tfl_param("population", required = TRUE, choices = "populations", doc = "the analysis set's id (SAF)"),
   .tpl_subset_param(),
   tfl_param("data", "ADLB", doc = "the dataset of records"),
   tfl_param("params", NULL, doc = "the PARAMCD values; NULL: all"),

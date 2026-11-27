@@ -6,7 +6,7 @@
                         "hochberg", "BH", "BY", "fdr", "mvt", "scheffe")
 
 .tpl_ancova_params <- function() list(
-  tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  tfl_param("population", required = TRUE, choices = "populations", doc = "the analysis set's id (SAF)"),
   .tpl_subset_param(),
   tfl_param("data", required = TRUE, doc = "the BDS dataset (ADVS, ADLB)"),
   tfl_param("param", required = TRUE, type = "levels", of = "PARAMCD",

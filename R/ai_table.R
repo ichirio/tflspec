@@ -357,7 +357,7 @@
     if (!is.null(id)) at <- paste(at, id)
     for (k in setdiff(names(o), .ai_table_keys)) {
       p <- .ai_problem(p, paste(at, k), if (identical(k, "population")) {
-        "`population:` -> `common: population` (write `common: {population: <analysis set id>}`)"
+        .common_old_line
       } else {
         sprintf("is not a key of a report file; its keys are %s", paste(.ai_table_keys, collapse = ", "))
       })
@@ -574,7 +574,8 @@
     m <- .pop_unknown_text(x, pops)
     if (!is.null(m)) add(where, m)
   }
-  if (!is.na(.out_population(o))) chk_pop("common population", .out_population(o))
+  # (the report's set as its data says it, A2-T: .report_set())
+  if (!is.na(.report_set(o))) chk_pop("common population", .report_set(o))
   if (is.na(o[["label"]])) add("label", "the report has no label (its title)", "warning")
   # a code list under `page:` is ignored there: it belongs under `codelists:`
   for (k in setdiff(names(o[["page"]]), .page_known)) {
@@ -596,7 +597,7 @@
   par_rx <- "\\bPARAM(CD|N)?\\b"
   says_par <- function(x) any(grepl(par_rx, unlist(lapply(x, as.character))))
   ad_par <- list()
-  has_pop <- !is.na(.out_population(o))
+  has_pop <- !is.na(.report_set(o))
   bds <- if (!is.null(vars)) unique(vars$dataset[vars$variable %in% "PARAMCD"]) else character()
   unkept <- character()
   for (j in seq_along(ad)) {

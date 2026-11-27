@@ -9,6 +9,7 @@ The table template \code{disposition}, layout \code{summary}. Its program is one
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
+   \code{population} \tab required \tab data \tab  \tab  \tab the analysis set's id (SAF): the subjects the report is of \cr
    \code{categorical} \tab required \tab call \tab  \tab  \tab the status variables, in order (EOSSTT) \cr
    \code{by} \tab required \tab call \tab  \tab  \tab the column variable (the arms); not a default and not the study's treatment \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1"; unset: all \cr
