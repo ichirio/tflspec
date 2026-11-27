@@ -177,7 +177,7 @@ word, while `read_ard()` stops and names the ARD program to run first.
 | I want to … | Call |
 |---|---|
 | read a study folder (YAML); a report over its layers | `tfl_read_study_spec(dir)`, `tfl_read_outputs(dir)`; `tfl_resolve_output(report, study)` (§5) |
-| a report file's content as code / run it | `tfl_content_code(report)` / `tfl_content_run(report, data)`; an item's arguments: `tfl_schema(fn)`, `tfl_schema_check(item)`, `tfl_schema_help(fn, arg)`; every report's ARD, content and figure against the installed packages: `tfl_check_spec(study)` |
+| a report file's content as code / run it | `tfl_content_code(report)` / `tfl_content_run(report, data)`; an item's arguments: `tfl_schema(fn)`, `tfl_schema_check(item)`, `tfl_schema_help(fn, arg)`; every report's ARD, content and figure against the installed packages: `tfl_check_spec(study)`; the study's code lists a report names (`{list: X}`, `codes:`, `!r study$codelists$X`): `tfl_study_refs(report)`, checked in memory by `tfl_check_study_refs(study, reports)` |
 | the study folder as workbooks and back; workbooks to a folder once | `tfl_sheets_from_yaml(dir)` (`tfl_sheets_from_spec(study, outputs)` from a spec in memory), `tfl_write_spec_xlsx(dir, path)` / `tfl_import_spec_xlsx(dir, path)`; `tfl_convert_sheets_to_yaml(from, to)` |
 | start an ARD spec / read / write it | `tfl_ard_spec_template()` / `tfl_read_ard_spec()` / `tfl_write_ard_spec()` |
 | write the cards code of one output; each analysis's data by the program's name | `tfl_ard_code(spec, output_id)`; `tfl_ard_data_names(spec, output_id)` |
@@ -995,7 +995,7 @@ back): rename the value or choose another separator.
 `tfl_read_outputs` `tfl_resolve_output` `tfl_run_output` `tfl_output_contents` `tfl_output_extends` `tfl_study_value` `tfl_styles` `tfl_output_objects` `tfl_output_object_uses` `tfl_output_rename` `tfl_default_name` `tfl_output_name_check` `tfl_code_refs` `tfl_write_study_part` `tfl_item_code`
 `tfl_item_written` `tfl_item_own` `tfl_convert_sheets_to_yaml`
 `tfl_yaml_from_sheets` `tfl_sheets_from_yaml` `tfl_sheets_from_spec` `tfl_report_codelists` `tfl_write_spec_xlsx`
-`tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_check_spec` `tfl_check_build` `tfl_check_reports` `tfl_check_fix_text` `tfl_data_code` `tfl_schema_help` `tfl_ai_decisions_read` `tfl_ai_decisions_write` `tfl_ai_confirm` `tfl_content_code` `tfl_content_run` `tfl_bign_values` `tfl_bign_drop`
+`tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_check_spec` `tfl_check_build` `tfl_check_reports` `tfl_check_fix_text` `tfl_check_study_refs` `tfl_study_refs` `tfl_data_code` `tfl_schema_help` `tfl_ai_decisions_read` `tfl_ai_decisions_write` `tfl_ai_confirm` `tfl_content_code` `tfl_content_run` `tfl_bign_values` `tfl_bign_drop`
 `tfl_ai_unpack` `tfl_args_to_r` `tfl_args_from_r` `tfl_fig_content_from_design`
 
 **Manual:** `tflspec_ai_manual` `tfl_adam_metadata` `tfl_ai_review`

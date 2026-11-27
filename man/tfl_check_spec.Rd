@@ -99,7 +99,20 @@ a figure's field that names an object nothing above its content makes
 (\code{wrap_plots}'s \code{plots}, \code{ggsurvfit}'s \code{x}, a \code{data} or a \code{fit}), and a
 name given twice in a report or that is a study dataset's or a
 function's are errors (\code{part} \code{"names"} for the last two); an object
-the report names and nothing uses is a note.  The packages' installed versions come with
+the report names and nothing uses is a note.  The study's code lists a
+report names itself (\code{\link[=tfl_study_refs]{tfl_study_refs()}}: a code list \code{{list: X}}, a code
+its \verb{codes:} picks, a \code{study$codelists$X} in its own R text) are looked
+up in the study's (\code{spec/defaults.yml} \verb{codelists:}): one the study has
+not got is an \code{error}, \code{part} \code{"codelists"}, \code{item} the variable or the
+place of the R text; a report whose code lists name one gets no other
+check (each would stop on it).  A template's default reference is not
+the report's and is not checked: a list the study has not got is left
+out of it.  A list the study has with no code is empty: a reference to
+it is an error too, saying so.  The study's lists themselves (when
+every report is checked; \code{output_id} \code{NA}, \code{part} \code{"study"}, \code{item}
+\code{"codelists: <list>"}): a code twice is an \code{error} (the study reads its
+first label and still opens), a code that is a number in the YAML (an
+unquoted \code{01}) a \code{warning} to quote it.  The packages' installed versions come with
 it, as an attribute.  A GUI's check button and the AI's run call it.
 
 A table's column header N: a header text with \verb{\{n\}} (and no \code{values} of
@@ -146,5 +159,5 @@ if (requireNamespace("haven", quietly = TRUE)) {
 }
 \seealso{
 \code{\link[=tfl_check_reports]{tfl_check_reports()}}, \code{\link[=tfl_check_fix_text]{tfl_check_fix_text()}}, \code{\link[=tfl_ard_spec]{tfl_ard_spec()}},
-\code{\link[=tfl_schema_check]{tfl_schema_check()}}, \code{\link[=tfl_check_fig_design]{tfl_check_fig_design()}}
+\code{\link[=tfl_schema_check]{tfl_schema_check()}}, \code{\link[=tfl_check_fig_design]{tfl_check_fig_design()}}, \code{\link[=tfl_study_refs]{tfl_study_refs()}}
 }

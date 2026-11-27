@@ -40,5 +40,9 @@ change made to one in the workbook is said in a message and listed in
 rows are the study's codes and labels, and an edit to them is said in a
 message and listed in \code{ignored} (\verb{codelists: <report> / <variable>}).
 The rows of one variable that give different \code{list} cells (one blank and
-one not, too) stop the import.
+one not, too) stop the import.  Before it writes, the references of the
+reports it changes to the study's code lists (\code{\link[=tfl_study_refs]{tfl_study_refs()}}) are
+checked as \code{\link[=tfl_check_spec]{tfl_check_spec()}} checks them: an error the files did not
+have already (a list or a code the study has not got) stops the import,
+naming each, and nothing is written.
 }

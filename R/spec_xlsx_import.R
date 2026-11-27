@@ -24,7 +24,11 @@
 #' rows are the study's codes and labels, and an edit to them is said in a
 #' message and listed in `ignored` (`codelists: <report> / <variable>`).
 #' The rows of one variable that give different `list` cells (one blank and
-#' one not, too) stop the import.
+#' one not, too) stop the import.  Before it writes, the references of the
+#' reports it changes to the study's code lists ([tfl_study_refs()]) are
+#' checked as [tfl_check_spec()] checks them: an error the files did not
+#' have already (a list or a code the study has not got) stops the import,
+#' naming each, and nothing is written.
 #'
 #' @param dir The study folder (or its `spec/`).
 #' @param path The workbook.
@@ -49,7 +53,9 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
   get_file <- function(rel) {
     if (is.null(files[[rel]])) {
       f <- file.path(if (identical(rel, "study.yml")) dir else spec, rel)
-      files[[rel]] <<- list(path = f, y = if (file.exists(f)) yaml::read_yaml(f, handlers = .yaml_handlers()) %||% list() else list())
+      y <- if (file.exists(f)) yaml::read_yaml(f, handlers = .yaml_handlers()) %||% list() else list()
+      # (`y0`: the file as read, for the check before writing)
+      files[[rel]] <<- list(path = f, y = y, y0 = y)
     }
     files[[rel]]$y
   }
@@ -349,6 +355,9 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
 
   written <- character()
   if (write) {
+    # the reports' references to the study's code lists, checked before
+    # anything is written: one the workbook breaks stops the import
+    .imp_refs_check(dir, files[touched])
     for (rel in touched) {
       f <- files[[rel]]$path
       dir.create(dirname(f), recursive = TRUE, showWarnings = FALSE)
@@ -364,6 +373,45 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
 .imp_state <- function() {
   e <- new.env(); e$changes <- list(); e$added <- character(); e$missing <- character()
   e$ignored <- character(); e
+}
+
+# The import's check before it writes (R/check_spec_study_refs.R): the
+# changed report files (`files`: the import's, each its `y` as it will be
+# written and `y0` as read) against the study's code lists; an error row
+# the new text has and the old has not stops, nothing written.  A file that
+# cannot be read as reports is left to the reader's own errors.  A study
+# that cannot be read is said in a message (the check is not made), not
+# passed over in silence.
+.imp_refs_check <- function(dir, files) {
+  rels <- names(files)[startsWith(names(files), "outputs")]
+  if (!length(rels)) return(invisible())
+  study <- tryCatch(suppressWarnings(suppressMessages(tfl_read_study_spec(dir))), error = function(e) e)
+  if (inherits(study, "error")) {
+    message("tfl_import_spec_xlsx(): the references of the changed reports to the study's code lists are ",
+            "not checked: the study cannot be read (", .ai_one_line(conditionMessage(study)), ").")
+    return(invisible())
+  }
+  outs_of <- function(which) {
+    outs <- list()
+    for (rel in rels) {
+      y <- files[[rel]][[which]]
+      if (!length(y)) next
+      r <- tryCatch(suppressWarnings(suppressMessages(.outputs_of_yaml(y, files[[rel]]$path))),
+                    error = function(e) list())
+      for (o in r) outs[[o$id]] <- o
+    }
+    outs
+  }
+  add <- .check_rows_new(tfl_check_study_refs(study, outs_of("y")), tfl_check_study_refs(study, outs_of("y0")))
+  if (nrow(add)) {
+    stop("tfl_import_spec_xlsx(): nothing written: the workbook's changes name the study's code lists ",
+         "wrongly (spec/defaults.yml `codelists:`):
+  ",
+         paste(sprintf("%s, %s: %s", add$output_id, add$item, add$message), collapse = "
+  "),
+         call. = FALSE)
+  }
+  invisible()
 }
 
 # Is a sheet of the workbook other than the rows it was written from?  Text

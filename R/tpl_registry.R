@@ -1360,8 +1360,9 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
   list(ard = ard, data = list(source = "ard", object = "ard"), content = content)
 }
 
-.tfl_template("hierarchical", kind = "table", layout = "hierarchical",
-              params = .tpl_hier_params, body = .tpl_hier_body)
+.tfl_template("hierarchical", ai = TRUE, kind = "table", layout = "hierarchical",
+              params = .tpl_hier_params, body = .tpl_hier_body,
+              label = "Counts by a hierarchy")
 
 # ae_soc_pt: treatment-emergent AEs by SOC and PT -- hierarchical's
 # parameters, its own defaults; FDA's serious and discontinuation tables
@@ -1471,8 +1472,9 @@ names(.tpl_pt_params) <- vapply(.tpl_pt_params, `[[`, "", "name")
   out
 }
 
-.tfl_template("ae_pt_freq", kind = "table", layout = "hierarchical",
-              params = .tpl_pt_params, body = .tpl_pt_body)
+.tfl_template("ae_pt_freq", ai = TRUE, kind = "table", layout = "hierarchical",
+              params = .tpl_pt_params, body = .tpl_pt_body,
+              label = "Adverse events by preferred term, most frequent first")
 
 #' Adverse events by preferred term, most frequent first: the template `ae_pt_freq`
 #'
@@ -1627,8 +1629,9 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
   list(ard = ard, data = list(source = "ard", object = "ard"), content = content)
 }
 
-.tfl_template("ae_max_grade", kind = "table", layout = "hierarchical",
-              params = .tpl_mg_params, body = .tpl_mg_body)
+.tfl_template("ae_max_grade", ai = TRUE, kind = "table", layout = "hierarchical",
+              params = .tpl_mg_params, body = .tpl_mg_body,
+              label = "Adverse events by SOC and PT at the maximum severity or grade")
 
 #' Adverse events by SOC and PT at the maximum severity or grade: the template `ae_max_grade`
 #'
@@ -1934,11 +1937,13 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
        codelists = .tpl_shift_codelists(a, worst, ctx$codelists))
 }
 
-.tfl_template("shift", kind = "table", layout = "shift",
-              params = .tpl_shift_params, body = .tpl_shift_body)
+.tfl_template("shift", ai = TRUE, kind = "table", layout = "shift",
+              params = .tpl_shift_params, body = .tpl_shift_body,
+              label = "Shift table")
 
 # lab_shift: the normal range indicator at baseline by a visit's, on shift
-.tfl_template("lab_shift", kind = "table", layout = "shift",
+.tfl_template("lab_shift", ai = TRUE, kind = "table", layout = "shift",
+  label = "Laboratory normal range shift by visit",
   params = c(.tpl_shift_params[c("population", "subset")],
              list(tfl_param("visit", required = TRUE, doc = "the visit (AVISIT)"),
                   tfl_param("params", required = TRUE, doc = "the PARAMCD values"),
@@ -2001,7 +2006,8 @@ tpl_lab_shift <- function(ard, population, ..., codelists = NULL) {
 
 # ---- listing: one row a record, the layout ---------------------------------------
 
-.tfl_template("listing", kind = "listing", layout = "listing",
+.tfl_template("listing", ai = TRUE, kind = "listing", layout = "listing",
+  label = "Listing",
   params = list(
     tfl_param("data", required = TRUE, doc = "the dataset (ADAE)"),
     tfl_param("columns", required = TRUE,
@@ -2206,7 +2212,8 @@ tpl_listing <- function(x, ...) {
 # The ARD's survival analyses are the report's own (`ard:`, cardx's
 # ard_survival_survfit()): the template does ARD -> table only.
 
-.tfl_template("km_table", kind = "table", layout = "km_table",
+.tfl_template("km_table", ai = TRUE, kind = "table", layout = "km_table",
+  label = "Kaplan-Meier estimates (median and event-free probability by time)",
   params = list(
     tfl_param("by", "TRT01A", doc = "the column variable"),
     tfl_param("by_levels", NULL, doc = "its values in order; NULL: its code list's"),
@@ -2497,8 +2504,9 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
 .tpl_pc_register <- function() {
   # (`extends`: its family's `[defaults]`, canon 1.27: the study's defaults are
   # laid under the template's items, and its references read them)
-  .tfl_template("param_change", kind = "table", layout = "summary",
-                params = .tpl_pc_params(), body = .tpl_pc_body, extends = "defaults")
+  .tfl_template("param_change", ai = TRUE, kind = "table", layout = "summary",
+                params = .tpl_pc_params(), body = .tpl_pc_body, extends = "defaults",
+                label = "Parameters' value and change by visit")
 }
 
 #' Parameters' value and change: a table plan from the template `param_change`
@@ -2609,7 +2617,8 @@ tpl_param_change <- function(ard, population, ..., codelists = NULL) {
       tfl_item("plan_row_group", list(mode = "value", collapse = as.list(names(keys)))))
 }
 
-.tfl_template("stat_block", kind = "table", layout = "stat_block",
+.tfl_template("stat_block", ai = TRUE, kind = "table", layout = "stat_block",
+  label = "Statistics by rows and columns",
   params = list(
     tfl_param("by", "TRT01A", doc = "the column key (the arms)"),
     tfl_param("by_levels", NULL, doc = "its values in order; NULL: its code list's"),
@@ -2658,7 +2667,8 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
   }
 }
 
-.tfl_template("orr", kind = "table", layout = "stat_block",
+.tfl_template("orr", ai = TRUE, kind = "table", layout = "stat_block",
+  label = "Objective response",
   params = list(
     tfl_param("population", "ITT", doc = "the analysis set's id"),
     .tpl_subset_param(),
@@ -2826,7 +2836,8 @@ tpl_orr <- function(ard, population = "ITT", ..., codelists = NULL) {
 
 # (`extends`: its family's `[defaults]`, canon 1.27: the study's defaults are
 # laid under the template's items, and its references read them)
-.tpl_ae_overview_register <- function() .tfl_template("ae_overview", kind = "table", layout = "summary",
+.tpl_ae_overview_register <- function() .tfl_template("ae_overview", ai = TRUE, kind = "table", layout = "summary",
+  label = "Overview of adverse events",
   params = .tpl_ae_overview_params(), extends = "defaults",
   body = function(a, ctx) {
     tn <- ctx$template$name %||% "ae_overview"

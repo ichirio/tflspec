@@ -76,7 +76,13 @@ test_that("codelists: the study's lists by name, not a layer's", {
     "codelists:",
     "  SEX: [{value: F, label: Female}, {value: M, label: Male}]",
     "  TOXGR: [0, 1, 2]")))
-  expect_identical(st$codelists, list(SEX = c(F = "Female", M = "Male"), TOXGR = c("0", "1", "2")))
+  cl <- st$codelists
+  # (TOXGR's codes are numbers in the YAML, not text: read as text, with a
+  # warning row each to quote them, R/check_spec.R)
+  expect_identical(attr(cl, "problems")$code, c("0", "1", "2"))
+  expect_identical(unique(attr(cl, "problems")$level), "warning")
+  attr(cl, "problems") <- NULL
+  expect_identical(cl, list(SEX = c(F = "Female", M = "Male"), TOXGR = c("0", "1", "2")))
   expect_identical(st$defaults$codelists, list())
 })
 
