@@ -163,7 +163,6 @@ test_that("km_simple and forest_hr: the report's where reaches the program", {
   unlink(d, recursive = TRUE)
   on.exit(unlink(d, recursive = TRUE))
   suppressMessages(tplfig_study(d, c("adsl", "adtte"), id = "SP-1"))
-  invisible(suppressMessages(tfl_copy_templates(d)))
   for (lines in list(sp_km_lines, sp_forest_lines)) {
     id <- sub("^id: ", "", lines[[1L]])
     f <- file.path(d, "spec", "outputs", paste0(id, ".yml"))
@@ -172,10 +171,14 @@ test_that("km_simple and forest_hr: the report's where reaches the program", {
       txt <- c(lines, "data:", "  - id: adsl_sub", "    population: ITT",
                if (pc != "OS") c("  - id: adtte_sub", paste0("    where: !r PARAMCD == \"", pc, "\"")))
       writeLines(txt, f)
+      # (a study reads only its copy of a template: copied once a report uses it)
+      invisible(suppressMessages(tfl_copy_templates(d)))
       st <- tfl_read_study_spec(d)
       code <- suppressMessages(suppressWarnings(c(
         tfl_ard_code(st, output_id = id, save = FALSE),
         tfl_ard_code(st, output_id = id, save = FALSE, part = "data"))))
+      # (the program's own lines: a helper's comment may name a parameter)
+      code <- grep("^[[:space:]]*#", code, value = TRUE, invert = TRUE)
       other <- setdiff(c("OS", "PFS"), pc)
       expect_true(any(grepl(paste0("PARAMCD == \"", pc, "\""), code, fixed = TRUE)), info = paste(id, pc))
       expect_false(any(grepl(paste0("PARAMCD == \"", other, "\""), code, fixed = TRUE)), info = paste(id, pc))
