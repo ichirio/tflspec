@@ -49,7 +49,8 @@ test_that("tfl_tpl(): the same plan as the template's own function; its errors",
   expect_identical(t$call[t$name == "demog"], "tfl_tpl")
   expect_identical(t$call[t$name == "km_survival"], "tfl_tpl")
   expect_identical(sort(t$name[t$ai]), c("ae_disc_soc_pt", "ae_eair", "ae_max_grade",
-                                         "ae_overview", "ae_pt_freq", "ae_ser_soc_pt", "ae_soc_pt",
+                                         "ae_overview", "ae_pt_freq", "ae_rel_soc_pt", "ae_ser_soc_pt",
+                                         "ae_soc_pt",
                                          "ancova", "demog", "disposition", "forest_hr",
                                          "hierarchical", "km", "km_cumulative", "km_survival",
                                          "km_table", "lab_abnormal", "lab_shift", "listing",

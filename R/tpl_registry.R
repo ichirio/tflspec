@@ -1381,7 +1381,7 @@ tfl_template_variant("ae_disc_soc_pt", from = "ae_soc_pt",
   defaults = list(where = "TRTEMFL == \"Y\" & AEACN == \"DRUG WITHDRAWN\"",
                   any_row_label = "Subjects with at least one AE leading to treatment discontinuation"))
 # (AEREL is "RELATED" or "NOT RELATED": the whole value, never a substring)
-tfl_template_variant("ae_rel_soc_pt", from = "ae_soc_pt", ai = FALSE,
+tfl_template_variant("ae_rel_soc_pt", from = "ae_soc_pt", ai = TRUE,
   label = "Related adverse events by SOC and PT",
   defaults = list(where = "TRTEMFL == \"Y\" & AEREL == \"RELATED\"",
                   any_row_label = "Any related TEAE"))
