@@ -82,3 +82,58 @@ test_that("#11 a content item written as a {fn:, args:, from:} map stops (canon 
                "  - plan_style: {border_header: {fn: rtf_border, args: {top: true}}}"), f)
   expect_s3_class(tfl_read_output(f)$content[[1]]$args$border_header, "tfl_call")
 })
+
+test_that("#7 a report's keys are a closed list (canon :380); the kept ones read", {
+  d <- withr::local_tempdir()
+  f <- file.path(d, "T-1.yml")
+  rd <- function(...) {
+    writeLines(c("id: T-1", ..., "content:", "  - plan_cells: {categorical: '{n}'}"), f)
+    tfl_read_output(f)
+  }
+  # an unknown key stops, naming the closest key, else the keys
+  expect_error(rd("kind: table", "lable: A table"),
+               "tfl_read_output(): T-1: `lable:` is not a key of a report; did you mean `label:`?",
+               fixed = TRUE)
+  expect_error(rd("kind: table", "zzz: 1"), "`zzz:` is not a key of a report; the keys are `id`")
+  # `settings:` (a report's file) is an old form; `last_step:` is not read yet
+  e <- tryCatch(rd("kind: table", "settings: {file: x.rtf}"), error = function(e) e)
+  expect_s3_class(e, "tflspec_old_form")
+  expect_identical(e$form, "report_settings")
+  expect_error(rd("kind: table", "last_step: ard"), "`last_step:` is not read yet")
+  # a figure's own parts are a figure's only
+  expect_error(rd("kind: table", "layers: []"), "`layers:` is a key of a figure, not of a table")
+  # the kept keys beside canon :380's list read as they are
+  o <- rd("kind: table", "note: why", "style: tfl_small", "common: {population: SAF}")
+  expect_identical(o$note, "why")
+  expect_identical(o$style, "tfl_small")
+  writeLines(c("id: F-1", "kind: figure", "note: n", "ggplot2_version: '4.0'",
+               "layers: [{layer: point}]"), f)
+  o <- tfl_read_output(f)
+  expect_identical(o$ggplot2_version, "4.0")
+  expect_identical(o$layers[[1]]$layer, "point")
+  # the writer writes the closed list only
+  o <- tfl_output("T-2", "table", content = list(tfl_item("plan_cells", list(categorical = "{n}"))))
+  o$note <- "kept"
+  g <- file.path(d, "T-2.yml")
+  tfl_write_output(o, g)
+  expect_identical(tfl_read_output(g)$note, "kept")
+  o$mystery <- 1
+  expect_error(tfl_write_output(o, g), "tfl_write_output(): T-2: `mystery:` is not a key of a report",
+               fixed = TRUE)
+  o$mystery <- NULL
+  o$layers <- list(list(layer = "x"))
+  expect_error(tfl_write_output(o, g), "`layers:` is a key of a figure, not of a table")
+  # the kept keys, beside canon :380's
+  expect_true(all(c("note", "figure", "plots", "compose", "ggplot2_version", "layers", "common") %in%
+                    tflspec:::.output_keys$key))
+  expect_identical(tflspec:::.output_fields,
+                   c("id", "kind", "label", "common", "extends", "ard", "data", "codelists", "content", "page"))
+})
+
+test_that("#7 a report's own settings: file is not read: its TOC entry's, else the study's", {
+  s <- tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
+  o <- tfl_read_outputs(system.file("extdata", "spec-yaml", package = "tflspec"))[["T-14-1-1"]]
+  base <- tfl_report_path(o, study = s)
+  o$settings <- list(file = "other.rtf")
+  expect_identical(tfl_report_path(o, study = s), base)
+})

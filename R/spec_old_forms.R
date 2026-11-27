@@ -110,3 +110,44 @@
   }
   invisible()
 }
+
+# ---- a report's keys: a closed list (canon 11-12 :380) ----------------------
+
+# The keys of a report file: `key`; `kinds`, the kinds of report that have
+# it ("" every kind); `field`, a part tfl_output() itself holds (the rest
+# ride on the report as they are).  Beside canon :380's list: `note`, a
+# figure's own parts (`figure`, `plots`, `compose`, `ggplot2_version`,
+# `layers`, the AI kit's figure), and `common` until it goes (A2-T T4).
+# `population` is an old form (.common_old_line); `last_step` is not read
+# yet and stops.  The reader, the writer and .output_fields read it.
+.output_keys <- data.frame(
+  key = c("id", "kind", "label", "common", "extends", "style", "template", "ard", "data",
+          "codelists", "content", "contents", "plot", "page", "note",
+          "figure", "plots", "compose", "ggplot2_version", "layers"),
+  kinds = c(rep("", 15L), rep("figure", 5L)),
+  field = c(TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE,
+            TRUE, TRUE, FALSE, FALSE, TRUE, FALSE,
+            FALSE, FALSE, FALSE, FALSE, FALSE),
+  stringsAsFactors = FALSE)
+
+# A report's keys (`keys`; `kind` its kind) checked against .output_keys:
+# a key of another kind, `settings:` (an old form), `last_step:` (not read
+# yet) and any other key stop, the last naming the closest key.  `who` the
+# report ("tfl_read_output(): T-1")
+.output_keys_check <- function(keys, kind, who) {
+  kind <- as.character(kind %||% "")[1L]
+  ok <- .output_keys$key[!nzchar(.output_keys$kinds) | .output_keys$kinds == kind]
+  for (k in setdiff(keys, ok)) {
+    if (k %in% .output_keys$key) {
+      stop(sprintf("%s: `%s:` is a key of a %s, not of a %s.", who, k,
+                   .output_keys$kinds[.output_keys$key == k], kind), call. = FALSE)
+    }
+    if (k %in% "settings") .old_form_stop("report_settings", who)
+    if (k %in% "last_step") {
+      stop(sprintf(paste0("%s: `last_step:` is not read yet: a report is made to its last ",
+                          "step; remove the key."), who), call. = FALSE)
+    }
+    .spec_key_stop(k, ok, who, "a key of a report")
+  }
+  invisible()
+}

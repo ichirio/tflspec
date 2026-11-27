@@ -385,6 +385,8 @@ tfl_read_output <- function(path) {
   if (!is.null(y[["population"]])) stop(who, ": ", .common_old_line, call. = FALSE)
   common <- .common_in(y$common, who)
   .yaml_keys_check(y)
+  # (a report's keys are a closed list: R/spec_old_forms.R)
+  .output_keys_check(names(y), y[["kind"]], who)
   y <- .data_list_in(y, who)
   # the ARD's analyses are the report's ard: section (2026-10-15), not data:'s
   old <- intersect(c("analysis_data", "analyses"), names(y$data))
@@ -955,8 +957,10 @@ tfl_write_output <- function(x, path) {
   if (rw_out) y$content <- c(list(list(rework = .calls_out(x$data))), y$content)
   if (length(x$page)) y$page <- .calls_out(x$page)
   # a kind's own parts beside the common ones (a figure's template, plot,
-  # plots, compose)
-  for (k in setdiff(names(x), .output_fields)) if (!is.null(x[[k]])) y[[k]] <- .calls_out(x[[k]])
+  # plots, compose): the report keys only (.output_keys, as the reader reads)
+  extra <- setdiff(names(x)[!vapply(x, is.null, NA)], .output_fields)
+  .output_keys_check(extra, x$kind, paste0("tfl_write_output(): ", x$id))
+  for (k in extra) y[[k]] <- .calls_out(x[[k]])
   if (!is.null(x$contents)) {
     y$contents <- .contents_out(x$contents)
     if (!length(x$content)) y$content <- NULL
@@ -974,8 +978,8 @@ tfl_write_output <- function(x, path) {
   x
 }
 
-.output_fields <- c("id", "kind", "label", "common", "extends", "ard", "data", "codelists",
-                    "content", "page")
+# (the parts tfl_output() itself holds: R/spec_old_forms.R)
+.output_fields <- .output_keys$key[.output_keys$field]
 
 # A report with definitions writes them as its `data:` list: a map beside
 # them has no place.  A table's bare {source: ard} says nothing; a listing's
