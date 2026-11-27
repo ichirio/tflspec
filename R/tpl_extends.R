@@ -112,10 +112,12 @@
 }
 
 # The step a parameter acts in: "data" (a data-stage parameter), else its
-# part (`ard`, `content`) when the template declares parts; NA otherwise
+# part's step when the template declares parts -- the SPEC's name, so the
+# registry's part `ard` is shown `analysis` (.tpl_part_keys, canon 11-15);
+# NA otherwise
 .tpl_param_step <- function(t, p) {
   if (identical(p$step, "data")) return("data")
-  for (part in c("ard", "content")) if (p$name %in% t$parts[[part]]) return(part)
+  for (part in names(.tpl_part_keys)) if (p$name %in% t$parts[[part]]) return(.tpl_part_keys[[part]])
   NA_character_
 }
 
@@ -250,7 +252,7 @@
 #'
 #' @param output A template report ([tfl_read_output()]).
 #' @param study Its study ([tfl_read_study_spec()]).
-#' @return A data frame: `param`, `step` (`"data"`, `"ard"`, `"content"`;
+#' @return A data frame: `param`, `step` (`"data"`, `"analysis"`, `"content"`;
 #'   `NA` when the template does not say), `value` (a short text), `route`
 #'   (`"own"`, `"study:<key>"`, `"fallback"`, `"template"`, `"fixed"`,
 #'   `"unset"` or `"removed (<param>: <value>)"`), `key` (its reference to

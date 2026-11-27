@@ -272,6 +272,10 @@ test_that("T8: one record -- tfl_template_routes(), the resolved attribute, tfl_
   expect_identical(rt, attr(tfl_resolve_output(o, s), "template")$routes)
   expect_identical(names(rt), c("param", "step", "value", "route", "key", "fallback", "fixed", "reaches"))
   expect_identical(utils::tail(rt$param, 2L), c("extends", "style"))
+  # (the step is the SPEC's name: a registry part `ard` is shown `analysis`)
+  expect_true(all(is.na(rt$step) | rt$step %in% tflspec:::.arg_steps))
+  expect_identical(tflspec:::.tpl_param_step(list(parts = list(ard = "a", content = "b")), list(name = "a")),
+                   "analysis")
   expect_identical(rt$value[rt$param == "extends"], "defaults")
   expect_identical(rt$route[rt$param == "extends"], "template")
   ta <- tfl_tpl_args("demog", study = s, population = "SAF")
