@@ -91,6 +91,17 @@ tfl_time_unit_days <- function() {
 .fig_legends <- c("none", "right", "bottom", "top", "inside", "inside_tl",
                   "inside_br", "inside_bl")
 
+# the label of a rate / count step's rows: its label_cell (a one-cell
+# template, .cell_template_code()), by default on one line, and the columns
+# it may name
+.fig_label_cells <- list(rate = "{rate:.1f}% ({x}/{n})", count = "{pct:.0f}%")
+.fig_label_cols <- list(rate = c("rate", "x", "n", "lcl", "ucl"), count = c("pct", "n"))
+# its code (`v`: the step's field reader, .fv())
+.fig_label_code <- function(v, step) {
+  .cell_template_code(v("label_cell"), .fig_label_cols[[step]],
+                      sprintf("the %s step (%s)", step, v("name")))
+}
+
 # every piece: its section, label, help and fields
 # every piece: built once, then kept (see .fig_cached()); a field lookup
 # asks for it many times a design
@@ -201,14 +212,22 @@ tfl_time_unit_days <- function() {
         .ff("name", "text", "Name", "rt"),
         .ff("category", "variable", "Category", "AVALC", required = TRUE),
         .ff("responders", "text", "Counted as response", "CR, PR", required = TRUE),
-        .ff("by", "variables", "By", required = TRUE))),
+        .ff("by", "variables", "By", required = TRUE),
+        .ff("label_cell", "text", "Label", .fig_label_cells$rate,
+            help = paste0("The label's text: {rate}, {x}, {n}, {lcl} and {ucl}, each with a format ",
+                          "if wanted ({rate:.1f}: one decimal, the study's rounding). ",
+                          "A line break in it makes two lines.")))),
     count = list(section = "data", label = "Counts and percents",
       help = "n and % of each category within each group: n, pct, and a label 'pct%'.",
       fields = rbind(
         .ff("name", "text", "Name", "ct"),
         .ff("category", "variable", "Category", "AVALC", required = TRUE),
         .ff("by", "variables", "By", required = TRUE),
-        .ff("levels", "text", "Categories, in order", help = "| between them; others follow"))),
+        .ff("levels", "text", "Categories, in order", help = "| between them; others follow"),
+        .ff("label_cell", "text", "Label", .fig_label_cells$count,
+            help = paste0("The label's text: {pct} and {n}, each with a format if wanted ",
+                          "({pct:.0f}: no decimal, the study's rounding). ",
+                          "A line break in it makes two lines.")))),
     subset = list(section = "data", label = "Another dataset (as an object)",
       help = "Rows of another dataset (or of `df`), by name, for layers that draw them: the assessments of a swimmer plot, the ongoing subjects ...",
       fields = rbind(
@@ -1246,7 +1265,7 @@ tfl_read_fig_design <- function(path) {
           "    rate  = 100 * x / n,\n",
           "    lcl   = 100 * mapply(function(x, n) binom.test(x, n)$conf.int[1], x, n),\n",
           "    ucl   = 100 * mapply(function(x, n) binom.test(x, n)$conf.int[2], x, n),\n",
-          "    label = sprintf(\"%.1f%%\\n(%d/%d)\", rate, x, n)\n",
+          "    label = ", .fig_label_code(v, "rate"), "\n",
           "  )"), "")
       },
       count = {
@@ -1256,7 +1275,7 @@ tfl_read_fig_design <- function(path) {
         out <- c(out, paste0(v("name"), " <- ", src, " |>\n",
           sprintf("  count(%s, %s) |>\n", paste(by, collapse = ", "), cat),
           sprintf("  group_by(%s) |>\n", paste(by, collapse = ", ")),
-          "  mutate(pct = 100 * n / sum(n), label = sprintf(\"%.0f%%\", pct)) |>\n",
+          "  mutate(pct = 100 * n / sum(n), label = ", .fig_label_code(v, "count"), ") |>\n",
           "  ungroup()",
           if (length(lv)) sprintf(" |>\n  mutate(%s = factor(%s, levels = unique(c(intersect(%s, %s), sort(%s)))))",
                                   cat, cat, vec_code(lv), cat, cat)), "")
@@ -2283,6 +2302,11 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
     miss <- setdiff(vars, where)
     if (length(miss)) add(part, field, paste0("no variable ", paste(miss, collapse = ", "), " in ", what))
   }
+  # a rate / count step's label_cell: the stop its program would make
+  check_label <- function(part, v, k) {
+    tryCatch(.fig_label_code(v, k),
+             error = function(e) add(part, "label_cell", conditionMessage(e)))
+  }
   # the steps, in order, each on the objects .fig_step_io() says: a step
   # on rows changes the object it reads (or makes another), a named step
   # makes one (its columns as far as known)
@@ -2329,11 +2353,13 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
         rate = {
           by <- .split_vals(v("by"))
           need_var(part, "by", c(v("category"), by), df_cols)
+          check_label(part, v, k)
           c(by, "n", "x", "rate", "lcl", "ucl", "label")
         },
         count = {
           by <- .split_vals(v("by"))
           need_var(part, "by", c(v("category"), by), df_cols)
+          check_label(part, v, k)
           c(by, v("category"), "n", "pct", "label")
         },
         ard_stats = {

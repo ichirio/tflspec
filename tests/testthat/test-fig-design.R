@@ -144,7 +144,7 @@ test_that("the new statistics and settings write what they say", {
   d <- tfl_fig_template("bar_rate_ci", group = "TRT01P")
   code <- paste(tfl_fig_design_code(d), collapse = "\n")
   expect_match(code, "binom.test", fixed = TRUE)
-  expect_match(code, 'label = sprintf("%.1f%%', fixed = TRUE)
+  expect_match(code, 'label = paste0(fmt_num(rate, 1), "% (", x, "/", n, ")")', fixed = TRUE)
   d <- tfl_fig_template("pk_individual", group = "TRT01A")
   code <- paste(tfl_fig_design_code(d), collapse = "\n")
   expect_match(code, "scale_y_log10()", fixed = TRUE)
@@ -432,4 +432,51 @@ test_that("the km template's axis_title_width goes to its design; NULL / !unset:
                                                   y_label = fd_t90, ...))$y
   expect_identical(y_of(), fd_t90_50)
   expect_identical(y_of(axis_title_width = tfl_unset()), fd_t90)
+})
+
+test_that("a rate / count step's label is its label_cell, one line by default (#603 6a)", {
+  d <- tfl_fig_template("bar_rate_ci", group = "TRT01P")
+  i <- which(vapply(d$data, function(s) identical(s$step, "rate"), NA))
+  code <- paste(tfl_fig_design_code(d), collapse = "\n")
+  expect_match(code, 'label = paste0(fmt_num(rate, 1), "% (", x, "/", n, ")")', fixed = TRUE)
+  expect_false(grepl("\\n(", code, fixed = TRUE))
+  # its own: other columns, a line break (written as \n in the string)
+  d$data[[i]]$label_cell <- "{rate:.1f}%\n({lcl:.1f}, {ucl:.1f}) n={n}"
+  code <- paste(tfl_fig_design_code(d), collapse = "\n")
+  expect_match(code, paste0('label = paste0(fmt_num(rate, 1), "%\\n(", fmt_num(lcl, 1), ", ", ',
+                            'fmt_num(ucl, 1), ") n=", n)'), fixed = TRUE)
+  expect_false("label_cell" %in% tfl_check_fig_design(d)$field)
+  # a token that is no column of the step stops, naming the step and its columns
+  d$data[[i]]$label_cell <- "{rate:.1f}% ({N})"
+  msg <- tryCatch(tfl_fig_design_code(d), error = conditionMessage)
+  expect_match(msg, "label_cell of the rate step (rt): {N} is not one of its columns", fixed = TRUE)
+  expect_match(msg, "{rate}, {x}, {n}, {lcl}, {ucl}", fixed = TRUE)
+  chk <- tfl_check_fig_design(d)
+  expect_identical(chk$problem[chk$field == "label_cell"], msg)
+  # a format other than .<decimals>f
+  d$data[[i]]$label_cell <- "{rate:d}"
+  expect_error(tfl_fig_design_code(d), "a format is .<decimals>f", fixed = TRUE)
+  # count: its percent, no decimal
+  d <- tfl_fig_template("bar_stacked", group = "TRT01P")
+  code <- paste(tfl_fig_design_code(d), collapse = "\n")
+  expect_match(code, 'label = paste0(fmt_num(pct, 0), "%")', fixed = TRUE)
+  j <- which(vapply(d$data, function(s) identical(s$step, "count"), NA))
+  d$data[[j]]$label_cell <- "{n} ({pct:.1f}%)"
+  code <- paste(tfl_fig_design_code(d), collapse = "\n")
+  expect_match(code, 'label = paste0(n, " (", fmt_num(pct, 1), "%)")', fixed = TRUE)
+  d$data[[j]]$label_cell <- "{x}"
+  expect_error(tfl_fig_design_code(d), "label_cell of the count step (ct): {x}", fixed = TRUE)
+  # the default made from numbers: one line, the study's rounding
+  e <- new.env()
+  eval(parse(text = tfl_helpers_code()), e)
+  e$rate <- 100 * 5 / 15
+  e$x <- 5L
+  e$n <- 15L
+  expect_identical(eval(parse(text = .cell_template_code(.fig_label_cells$rate, .fig_label_cols$rate,
+                                                         "the rate step")), e),
+                   "33.3% (5/15)")
+  # the steps' catalog: the field and its default
+  p <- tfl_fig_parts()
+  expect_identical(p$default[p$piece == "rate" & p$field == "label_cell"], "{rate:.1f}% ({x}/{n})")
+  expect_identical(p$default[p$piece == "count" & p$field == "label_cell"], "{pct:.0f}%")
 })

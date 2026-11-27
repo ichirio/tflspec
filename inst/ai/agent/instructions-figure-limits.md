@@ -10,6 +10,4 @@ The template or step has no argument for these; write the item shown.
 ` in a double-quoted YAML string (not a real line break).
    `plot: {y_label: "Mean Change from Baseline (95% CI)
 in Diastolic BP (mmHg)"}`
-3. A `rate` step's label prints on two lines: a `code` step after it (`rt` is the rate step's `name`).
-   `- {step: code, code: 'rt$label <- sprintf("%.1f%% (%d/%d)", rt$rate, rt$x, rt$n)', label: "One-line label rate (n/N)"}`
-4. `forest_hr` subgroup headings: the argument `subgroup_labels` (`{AGEGR1: Age group, SEX: Sex}`), not a layer; the common ADaM variables read their label without it.
+3. `forest_hr` subgroup headings: the argument `subgroup_labels` (`{AGEGR1: Age group, SEX: Sex}`), not a layer; the common ADaM variables read their label without it.
