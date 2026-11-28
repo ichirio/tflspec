@@ -240,6 +240,45 @@ test_that("the fallback cell takes the template's digits and a parameter's own, 
   expect_identical(t, pc_tab(do.call(tpl_param_change, c(list(ard), a1, list(cells = both)))))
 })
 
+test_that("param_change: a cell with n < 3 prints its mean with the parameter's digits (#968)", {
+  skip_if_not_installed("rtfreporter")
+  # the Mean (SD) cell as a report writes it: a guard for n < 3, then the full cell
+  cells <- tfl_item("plan_cells", list(continuous = list(
+    `Mean (SD)` = list(tfl_r("N < 3 ~ \"{mean} (-)\""), "{mean} ({sd})"))))
+  # the template's digits (1 and 2) and ALT's own by its PARAMCD (2 and 3)
+  digits <- tfl_item("plan_digits", list(
+    continuous = list(mean = 1L, sd = 2L),
+    PARAMCD = list(ALT = list(mean = 2L, sd = 3L))))
+  o <- tfl_output("T", "table", data = list(source = "ard"),
+                  content = list(tfl_item("table_plan", list(cols = "ARM", rows = list(param = "PARAMCD"))),
+                                 cells, digits))
+  # fictional ARD: arm A has n = 2 for both parameters, arm B has n = 10
+  g <- expand.grid(ARM = c("A", "B"), PARAMCD = c("ALT", "BILI"), stringsAsFactors = FALSE)
+  ard <- do.call(rbind, lapply(seq_len(nrow(g)), function(i) {
+    small <- g$ARM[i] == "A"
+    data.frame(g[i, ], variable = "AVAL", stat_name = c("N", "mean", "sd"),
+               stat = if (small) c(2, 8, 1.5) else c(10, 1.23456, 2.34567),
+               .kind = "continuous", .label = "AVAL", stringsAsFactors = FALSE, row.names = NULL)
+  }))
+  tb <- as.data.frame(rtfreporter::plan_apply(suppressMessages(tfl_content_run(o, ard)), "table"))
+  ms <- tb[tb$label == "Mean (SD)", ]
+  # n < 3: the mean to the parameter's digits (ALT two, BILI the template's one), not the default
+  expect_identical(ms$A[ms$param == "ALT"], "8.00 (-)")
+  expect_identical(ms$A[ms$param == "BILI"], "8.0 (-)")
+  # n >= 3: the same parameter's digits, as before
+  expect_identical(ms$B[ms$param == "ALT"], "1.23 (2.346)")
+  expect_identical(ms$B[ms$param == "BILI"], "1.2 (2.35)")
+  # no digits by PARAMCD: the row's own chain still takes the plan's digits
+  digits1 <- tfl_item("plan_digits", list(continuous = list(mean = 1L, sd = 2L)))
+  o1 <- tfl_output("T", "table", data = list(source = "ard"),
+                   content = list(tfl_item("table_plan", list(cols = "ARM", rows = list(param = "PARAMCD"))),
+                                  cells, digits1))
+  tb1 <- as.data.frame(rtfreporter::plan_apply(suppressMessages(tfl_content_run(o1, ard)), "table"))
+  ms1 <- tb1[tb1$label == "Mean (SD)", ]
+  expect_identical(ms1$A[ms1$param == "ALT"], "8.0 (-)")
+  expect_identical(ms1$B[ms1$param == "ALT"], "1.2 (2.35)")
+})
+
 test_that("the arm and its N over its two columns", {
   pc_skip()
   x <- tfl_template_expand("param_change", pc_args)
