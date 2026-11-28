@@ -85,6 +85,12 @@
 #'     these arguments (a default, a series' or a study's value does not
 #'     count), else nothing.  A name that is not a param of the template
 #'     stops.}
+#'   \item{`tokens: x`}{the names of the `{name}` (or `{name:format}`) spots
+#'     in the texts of `x`, a cell template or a map of them, in order, once
+#'     each: the statistics a table's cells show.}
+#'   \item{`unique: x`}{the elements of the list `x` once each, in order
+#'     (`unique: ["{a}", "{b}"]`: those of `a`, then those of `b` not in
+#'     `a`).}
 #' }
 #' Each gives nothing for an empty `x`.  A value that is nothing drops its
 #' key, its list element, and an item whose map is left empty; so a content
@@ -283,7 +289,7 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
 # read them as "{name}".  Nothing (NULL) stays a name whose value is nothing.
 .tr_derive_ops <- list(value = character(), "if" = c("then", "else", "is"), last = character(),
                        but_last = character(), join = "sep", keys = "prefix", each = "to",
-                       given = character())
+                       given = character(), tokens = character(), unique = character())
 
 .tr_derive <- function(derive, env, params, template, origins = character()) {
   if (is.null(derive)) return(env)
@@ -356,7 +362,25 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
     but_last = if (n > 1L) x[-n],
     join = if (n) paste(as.character(unlist(x)), collapse = .tr_option(d$sep, ", ")),
     keys = if (n) stats::setNames(as.list(x), paste0(.tr_option(d$prefix, ""), seq_len(n))),
-    each = if (n) .tr_derive_each(x, d$to, env, where))
+    each = if (n) .tr_derive_each(x, d$to, env, where),
+    tokens = .tr_derive_tokens(x),
+    unique = if (n) {
+      v <- unique(as.character(unlist(x, use.names = FALSE)))
+      v <- v[!is.na(v) & nzchar(v)]
+      if (length(v)) v
+    })
+}
+
+# `tokens:` -- the names of the {name} / {name:format} spots in the texts of
+# x (a cell template, a map of them), in order, once each; nothing for none
+.tr_derive_tokens <- function(x) {
+  s <- unlist(x, use.names = FALSE)
+  s <- as.character(s[vapply(s, is.character, NA)])
+  if (!length(s)) return(NULL)
+  s <- gsub("{{", "", s, fixed = TRUE)
+  m <- unlist(regmatches(s, gregexpr("\\{[A-Za-z_.][A-Za-z0-9_.]*", s)), use.names = FALSE)
+  v <- unique(sub("^\\{", "", m))
+  if (length(v)) v
 }
 
 # `given:` -- TRUE when the report itself set any of the named arguments

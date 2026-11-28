@@ -89,6 +89,12 @@ derived name stops: a name inside \code{t} means one thing.}
 these arguments (a default, a series' or a study's value does not
 count), else nothing.  A name that is not a param of the template
 stops.}
+\item{\code{tokens: x}}{the names of the \code{{name}} (or \code{{name:format}}) spots
+in the texts of \code{x}, a cell template or a map of them, in order, once
+each: the statistics a table's cells show.}
+\item{\code{unique: x}}{the elements of the list \code{x} once each, in order
+(\verb{unique: ["\{a\}", "\{b\}"]}: those of \code{a}, then those of \code{b} not in
+\code{a}).}
 }
 Each gives nothing for an empty \code{x}.  A value that is nothing drops its
 key, its list element, and an item whose map is left empty; so a content

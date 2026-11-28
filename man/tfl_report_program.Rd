@@ -32,7 +32,9 @@ tfl_report_program(
 \code{figure_plot}), \code{ard_statistics}, \code{ard_methods} and \code{settings} (\code{key},
 \code{value}: \code{listing_type}).  One left out is tflspec's own
 (\code{\link[=tfl_builtin_standards]{tfl_builtin_standards()}}, \code{\link[=tfl_ard_statistics]{tfl_ard_statistics()}},
-\code{\link[=tfl_ard_methods]{tfl_ard_methods()}}, \code{"multiline"}).}
+\code{\link[=tfl_ard_methods]{tfl_ard_methods()}}, \code{"multiline"}).  The study's own statistics
+(\code{spec/defaults.yml} \verb{ard_statistics:} of \code{study}'s folder, see
+\code{\link[=tfl_ard_statistics]{tfl_ard_statistics()}}) go over \code{ard_statistics}.}
 
 \item{attached, study_code}{The study's code context, as
 \code{\link[=tfl_setup_program]{tfl_setup_program()}} takes it.}

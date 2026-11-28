@@ -34,3 +34,43 @@ The catalog is the built-in one unless
 \code{options(tflspec.ard_statistics = )} holds another, or a function that
 uses it is given \verb{statistics =}.
 }
+\section{A statistic of one's own}{
+
+A statistic of the package is chosen by its name alone (an analysis's
+\code{statistics}, a template's \code{statistics} param).  Another one is added by
+its name and the function that computes it, in three layers, each over
+the one before: the built-in catalog, the company standard's
+\code{ard_statistics} (a whole catalog, made from the built-in one), and the
+study's own rows, the block \verb{ard_statistics:} of its
+\code{spec/defaults.yml}.  A later row with the same \code{statistic} and \code{kind}
+replaces the earlier one; another is added.  A study's row has the
+company standard's columns: \code{statistic}, \code{kind}, \code{label}, \code{fmt}, \code{fun},
+and \code{group} (optional, default \code{"study"}).  \code{fun} is one R function of
+the non-missing values, \code{function(x) ...} or a function's name
+(\code{stats::mad}): a continuous statistic needs one, unless cards computes
+it itself.  It is written into the ARD program (\code{tfl_stats}), so the
+program runs without tflspec.  A row whose \code{fun} is not one R function
+stops, naming the row.  The study's programs and ARDs are made with its
+rows (\code{\link[=tfl_ard_program]{tfl_ard_program()}}, \code{\link[=tfl_report_program]{tfl_report_program()}}, \code{\link[=tfl_build_ard]{tfl_build_ard()}} and
+\code{\link[=tfl_ard_code]{tfl_ard_code()}} of a \code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}} study); the session's
+options never add one.
+
+A name an analysis asks for that is in none of the layers stops, naming
+this catalog.
+
+\if{html}{\out{<div class="sourceCode yaml">}}\preformatted{# spec/defaults.yml (fictional): the geometric mean of the values > 0
+ard_statistics:
+  - statistic: gmean_pos
+    kind: continuous
+    label: Geometric mean (values > 0)
+    fmt: xx.xx
+    fun: "function(x) exp(mean(log(x[x > 0])))"
+}\if{html}{\out{</div>}}
+
+A report then asks for it by its name, as for a package statistic
+(\verb{statistics: [gmean_pos]}, a cell \code{"{gmean_pos}"}).
+}
+
+\examples{
+tfl_ard_statistics("continuous")[, c("statistic", "label", "fun")]
+}

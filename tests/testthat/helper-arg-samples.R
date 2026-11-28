@@ -218,7 +218,9 @@ as_special <- list(
   `tflspec_v1/tflspec_shift.baseline` = function() list("BTOXGR", tfl_unset()),
   `tflspec_v1/tflspec_shift.post` = function() list("ATOXGR", tfl_unset()),
   `tflspec_v1/tflspec_shift.param_var` = function() list("PARAM", tfl_unset()),
-  `tflspec_v1/tflspec_hierarchy.sort_column` = function() list("AEDECOD", tfl_unset())
+  `tflspec_v1/tflspec_hierarchy.sort_column` = function() list("AEDECOD", tfl_unset()),
+  # (statistics of the catalog the default cells do not name: the ARD has more)
+  `tflspec_v1/tflspec_summary.statistics` = function() list(c("p25", "p75"), "geo_mean", tfl_unset())
 )
 
 #' 2-3 values of an argument, valid for its type and not its default

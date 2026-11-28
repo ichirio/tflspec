@@ -356,15 +356,201 @@ tfl_ard_methods <- function() {
 #' `options(tflspec.ard_statistics = )` holds another, or a function that
 #' uses it is given `statistics =`.
 #'
+#' @section A statistic of one's own:
+#' A statistic of the package is chosen by its name alone (an analysis's
+#' `statistics`, a template's `statistics` param).  Another one is added by
+#' its name and the function that computes it, in three layers, each over
+#' the one before: the built-in catalog, the company standard's
+#' `ard_statistics` (a whole catalog, made from the built-in one), and the
+#' study's own rows, the block `ard_statistics:` of its
+#' `spec/defaults.yml`.  A later row with the same `statistic` and `kind`
+#' replaces the earlier one; another is added.  A study's row has the
+#' company standard's columns: `statistic`, `kind`, `label`, `fmt`, `fun`,
+#' and `group` (optional, default `"study"`).  `fun` is one R function of
+#' the non-missing values, `function(x) ...` or a function's name
+#' (`stats::mad`): a continuous statistic needs one, unless cards computes
+#' it itself.  It is written into the ARD program (`tfl_stats`), so the
+#' program runs without tflspec.  A row whose `fun` is not one R function
+#' stops, naming the row.  The study's programs and ARDs are made with its
+#' rows ([tfl_ard_program()], [tfl_report_program()], [tfl_build_ard()] and
+#' [tfl_ard_code()] of a [tfl_read_study_spec()] study); the session's
+#' options never add one.
+#'
+#' A name an analysis asks for that is in none of the layers stops, naming
+#' this catalog.
+#'
+#' ```yaml
+#' # spec/defaults.yml (fictional): the geometric mean of the values > 0
+#' ard_statistics:
+#'   - statistic: gmean_pos
+#'     kind: continuous
+#'     label: Geometric mean (values > 0)
+#'     fmt: xx.xx
+#'     fun: "function(x) exp(mean(log(x[x > 0])))"
+#' ```
+#'
+#' A report then asks for it by its name, as for a package statistic
+#' (`statistics: [gmean_pos]`, a cell `"{gmean_pos}"`).
+#'
 #' @param kind Only the statistics of these kinds; `NULL` for all.
 #' @return A data frame: `statistic`, `kind`, `group`, `label`, `fmt`,
 #'   `fun`, `note`.
+#' @examples
+#' tfl_ard_statistics("continuous")[, c("statistic", "label", "fun")]
 #' @export
 tfl_ard_statistics <- function(kind = NULL) {
   d <- getOption("tflspec.ard_statistics") %||% .ard_statistics_builtin()
   if (!is.null(kind)) d <- d[d$kind %in% kind, , drop = FALSE]
   rownames(d) <- NULL
   d
+}
+
+# ---- the study's own statistics (spec/defaults.yml ard_statistics:) -------
+
+# (documented with the defaults file, tfl_read_study_spec(); the reader of
+# the study files does not read the block: the programs' makers do)
+#' @name tfl_read_study_spec
+#' @rdname tfl_read_study_spec
+#' @section The study's own statistics:
+#' `spec/defaults.yml` may hold `ard_statistics:`, the statistics the study
+#' adds to the catalog ([tfl_ard_statistics()]): a list of rows with the
+#' company standard's columns, `statistic`, `kind` (`continuous`,
+#' `categorical`, `missing` or `result`), `label`, `fmt`, `fun` (one R
+#' function of the non-missing values, written into the ARD program) and
+#' `group` (optional).  They go over the built-in catalog and the company
+#' standard's, a row with the same `statistic` and `kind` replacing the
+#' earlier one; a report asks for one by its name.  The study's ARD and
+#' report programs are made with them; a row whose `fun` is not one R
+#' function stops, naming the row.  For example (fictional):
+#'
+#' ```yaml
+#' ard_statistics:
+#'   - statistic: gmean_pos
+#'     kind: continuous
+#'     label: Geometric mean (values > 0)
+#'     fmt: xx.xx
+#'     fun: "function(x) exp(mean(log(x[x > 0])))"
+#' ```
+NULL
+
+# the kinds a statistic is of, and the columns of a study's row
+.ard_stat_kinds <- c("continuous", "categorical", "missing", "result")
+.ard_stat_study_cols <- c("statistic", "kind", "group", "label", "fmt", "fun", "note")
+
+# The study's own statistics: its spec/defaults.yml's `ard_statistics:`
+# block as catalog rows (checked), or NULL when it has none.  `dir` is the
+# study folder (or its spec folder).
+.study_ard_statistics <- function(dir) {
+  if (is.null(dir) || !is.character(dir) || length(dir) != 1L || is.na(dir)) return(NULL)
+  f <- file.path(.spec_dir(dir), "defaults.yml")
+  if (!file.exists(f)) return(NULL)
+  y <- yaml::read_yaml(f, handlers = .yaml_handlers())
+  .ard_statistics_rows(y$ard_statistics, "spec/defaults.yml ard_statistics:")
+}
+
+# `x` (a list of rows, each a map of .ard_stat_study_cols) as catalog rows;
+# a row that is not one stops, naming it (`where` says the block)
+.ard_statistics_rows <- function(x, where) {
+  if (is.null(x) || !length(x)) return(NULL)
+  if (!is.list(x) || !is.null(names(x))) {
+    stop(where, " is a list of rows, each with statistic, kind, label, fmt and fun.",
+         call. = FALSE)
+  }
+  # (cards' own: a continuous row of these needs no fun)
+  b <- .ard_statistics_builtin()
+  own <- b$statistic[b$kind == "continuous" & is.na(b$fun)]
+  rows <- lapply(seq_along(x), function(i) {
+    r <- x[[i]]
+    nm <- if (is.list(r) && is.character(r$statistic) && length(r$statistic) == 1L) {
+      sprintf(" (%s)", r$statistic)
+    } else ""
+    at <- sprintf("%s row %d%s", where, i, nm)
+    no <- function(...) stop(at, ": ", ..., call. = FALSE)
+    if (!is.list(r) || is.null(names(r)) || !all(nzchar(names(r)))) {
+      no("a row is a map: statistic, kind, label, fmt, fun (group optional).")
+    }
+    bad <- setdiff(names(r), .ard_stat_study_cols)
+    if (length(bad)) {
+      no(paste(bad, collapse = ", "), " is not a column (the columns: ",
+         paste(.ard_stat_study_cols, collapse = ", "), ").")
+    }
+    one <- function(k) {
+      v <- r[[k]]
+      if (is.null(v)) return(NA_character_)
+      if (!is.atomic(v) || length(v) != 1L) no(k, " is one value.")
+      v <- as.character(v)
+      if (is.na(v) || !nzchar(trimws(v))) NA_character_ else trimws(v)
+    }
+    v <- stats::setNames(lapply(.ard_stat_study_cols, one), .ard_stat_study_cols)
+    for (k in c("statistic", "kind", "label", "fmt")) {
+      if (is.na(v[[k]])) no("it needs its ", k, ".")
+    }
+    if (!grepl("^[A-Za-z.][A-Za-z0-9._]*$", v$statistic)) {
+      no("statistic is a name (letters, digits, `.` and `_`).")
+    }
+    if (!v$kind %in% .ard_stat_kinds) {
+      no("kind is one of ", paste(.ard_stat_kinds, collapse = ", "), ".")
+    }
+    if (!.fmt_ok(v$fmt)) {
+      no("fmt is xx.x, xx.x%, xx.x*1000, a number of decimals or pvalue.")
+    }
+    if (!is.na(v$fun) && !.ard_stat_fun_ok(v$fun)) {
+      no("fun is not one R function (function(x) ... of the non-missing values, ",
+         "or a function's name): ", v$fun)
+    }
+    if (is.na(v$fun) && v$kind == "continuous" && !v$statistic %in% own) {
+      no("a continuous statistic cards does not compute itself needs its fun ",
+         "(function(x) ... of the non-missing values).")
+    }
+    if (is.na(v$group)) v$group <- "study"
+    as.data.frame(v, stringsAsFactors = FALSE)
+  })
+  d <- do.call(rbind, rows)
+  rownames(d) <- NULL
+  d
+}
+
+# Is `f` one R function: a `function(x) ...` (or `\(x) ...`), or a
+# function's name (`sum`, `stats::mad`)?
+.ard_stat_fun_ok <- function(f) {
+  e <- tryCatch(parse(text = f, keep.source = FALSE), error = function(e) NULL)
+  if (length(e) != 1L) return(FALSE)
+  e <- e[[1L]]
+  if (is.name(e)) return(TRUE)
+  is.call(e) && (identical(e[[1L]], as.name("function")) ||
+                   (identical(e[[1L]], as.name("::")) && length(e) == 3L))
+}
+
+# The catalog `layers` make, in order (the company's or the built-in one,
+# then the study's rows): a later row with the same statistic and kind
+# replaces the earlier one in its place, another is added at the end.
+# NULL layers are left out; one layer is returned as it is.
+.ard_statistics_merge <- function(...) {
+  layers <- Filter(Negate(is.null), list(...))
+  if (!length(layers)) return(NULL)
+  out <- layers[[1L]]
+  for (l in layers[-1L]) {
+    for (k in setdiff(names(out), names(l))) l[[k]] <- NA_character_
+    for (k in setdiff(names(l), names(out))) out[[k]] <- NA_character_
+    l <- l[names(out)]
+    key_out <- paste(out$statistic, out$kind, sep = "\r")
+    key_l <- paste(l$statistic, l$kind, sep = "\r")
+    hit <- match(key_l, key_out)
+    for (i in which(!is.na(hit))) out[hit[i], ] <- l[i, ]
+    out <- rbind(out, l[is.na(hit), , drop = FALSE])
+  }
+  rownames(out) <- NULL
+  out
+}
+
+# The catalog a study's programs are made with: `company` (the company
+# standard's, else the current catalog) with the study's own rows over it
+# (`dir`, the study folder); `company` itself (NULL too) when the study has
+# none
+.ard_statistics_of_study <- function(dir, company = NULL) {
+  own <- .study_ard_statistics(dir)
+  if (is.null(own)) return(company)
+  .ard_statistics_merge(company %||% tfl_ard_statistics(), own)
 }
 
 # Use `statistics` / `methods` (when given) for the rest of the CALLER:

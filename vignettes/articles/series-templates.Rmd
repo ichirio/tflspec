@@ -141,6 +141,12 @@ analysis set.
   `!series population_safety`, the series value (`SAF`, see below).
 - `total`, `missing_row`, `formats`, `cells`, `count_cell`, `labels`,
   `max_rows` ... change the look of the table.
+- `statistics`: more statistics of the continuous variables for the
+  ARD. The ARD has the statistics the `cells` name (`{N}`, `{mean}`,
+  `{p25}` ...), then these. A package statistic is chosen by its name
+  (`tfl_ard_statistics()`); a study adds its own by its name and
+  function, in its `spec/defaults.yml` `ard_statistics:`. A name the
+  catalog has not got stops.
 
 The page header prints the analysis set's label through the token
 `{OUTPUT_POPULATION}`. A template report has no `common: population`, so
@@ -390,6 +396,10 @@ The operations:
 | `but_last: x` | all but the last (nothing for fewer than two) |
 | `join: x, sep: s` | the elements as one text, `s` between them (default `", "`) |
 | `keys: x, prefix: p` | a map `p1: x1, p2: x2, ...` |
+| `each: x, to: t` | a list, `t` filled in once an element of `x` |
+| `given: [name, ...]` | `true` when the report itself set any of these arguments |
+| `tokens: x` | the names of the `{name}` spots in the texts of `x` (the statistics a table's cells show), once each |
+| `unique: x` | the elements of the list `x` once each, in order |
 
 Each gives nothing for an empty `x`. A value that is nothing drops its
 key. A content item left with no arguments is dropped, so a step goes
