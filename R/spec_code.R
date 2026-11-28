@@ -1330,6 +1330,16 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
       plan_blanks = {
         map <- c(where = "blank_where", first = "blank_first", last = "blank_last",
                  counted = "blank_counted")
+        # a blank-row rule (blank_rows_by_change() ...) or R: no column
+        # says it, so the item goes whole to content_more (its other
+        # arguments with it: no column is written)
+        w <- named[["where"]]
+        pos <- is.list(w) && length(w) && all(vapply(w, function(v)
+          is.numeric(v) && length(v) == 1L && !is.object(v), NA))
+        if (!is.null(w) && !pos && (is.list(w) || is.object(w) || !is.atomic(w))) {
+          miss(fn, "where: a blank-row rule or R")
+          map <- character()
+        }
         for (k in intersect(names(named), names(map))) lay[[map[[k]]]] <- named[[k]]
       },
       plan_paginate_rows = {

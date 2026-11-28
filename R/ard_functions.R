@@ -212,8 +212,10 @@ tfl_ard_functions <- function(installed = TRUE) {
 #' add up to 1), the levels `ard_pairwise(include =)` compares (a vector),
 #' the format of one statistic (`add_calculated_row(fmt_fun =)`,
 #' `update_ard_fmt_fun(fmt_fun =)`: a whole number of decimals, `"xx.x"` /
-#' `"xx.x%"`, or a function) and the value `replace_null_statistic(value =)`
-#' gives (one value).
+#' `"xx.x%"`, or a function), the value `replace_null_statistic(value =)`
+#' gives (one value) and, since 2026-11-14, tidy_plus_plus()'s
+#' `tidy_post_fun` (a function), `group_by` (columns of the tidied table,
+#' `auto_group_by()` or NULL) and `group_labels` (labels by name).
 #'
 #' A company adds its own rows with `options(tflspec.ard_args = <data
 #' frame>)`: `call` (or `*` for every function), `arg`, `kind`, `hint`,
@@ -223,7 +225,14 @@ tfl_ard_functions <- function(installed = TRUE) {
 #' The arguments a function passes on through `...` to the function that
 #' does the work follow its own, with `passed_to` naming that function:
 #' `ard_regression(exponentiate = TRUE)` (hazard or odds ratios, to
-#' `broom.helpers::tidy_plus_plus()`), `ard_car_anova(type = "III")` (to
+#' `broom.helpers::tidy_plus_plus()`; so are `add_pairwise_contrasts = TRUE`
+#' with `contrasts_adjust = "none"`, each pair of arms compared by emmeans,
+#' `no_reference_row`, `add_estimate_to_reference_rows`, `emmeans_args`,
+#' `term_labels`, `categorical_terms_pattern = "{level} vs
+#' {reference_level}"` and, since 2026-11-14, `quiet`, `strict`,
+#' `relabel_poly`, `disambiguate_terms` / `disambiguate_sep`, `group_by` /
+#' `group_labels`, `tidy_post_fun`, `model_matrix_attr` and
+#' `instrumental_suffix`), `ard_car_anova(type = "III")` (to
 #' `car::Anova()`), `ard_stats_t_test(var.equal = TRUE)`,
 #' `ard_stats_chisq_test(correct = FALSE)`,
 #' `ard_stats_mantelhaen_test(exact = TRUE)` ... (to `stats`' tests),
@@ -232,7 +241,9 @@ tfl_ard_functions <- function(installed = TRUE) {
 #' `ard_effectsize_cohens_d(pooled_sd = FALSE)` (to `effectsize`),
 #' `ard_survival_survdiff(timefix = FALSE)` (to `survival::survdiff()`).  They
 #' are written in `args` like the function's own, and their values are
-#' checked by their kind.  The catalog is `inst/ard/passed_args.csv`
+#' checked by their kind.  A name neither the function nor the one it
+#' reaches has is said when the spec is read (`exponentaite = TRUE` would
+#' be ignored by broom's `tidy()` method of the model: log hazard ratios).  The catalog is `inst/ard/passed_args.csv`
 #' (`call`, `arg`, `passed_to`, `default`, `kind`, `hint`, `choices`); a
 #' company adds rows with `options(tflspec.ard_passed_args = <data frame>)`.
 #'

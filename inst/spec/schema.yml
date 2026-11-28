@@ -272,7 +272,7 @@ plan_blanks:
   label: {en: "Blank rows", ja: "空行"}
   tier: usual
   args:
-    where: {main: true, label: {en: "Where", ja: "置き場"}, help: "Where blank rows go: \"between_groups\" between the outermost row groups, \"between_parts\" between a table's appended parts, \"records\" after each record of a listing, \"none\" none, or as R (the rows' numbers, 0 before the first). e.g. \"between_groups\"", type: "enum[between_groups|between_parts|records|none]|list<integer>|r"}
+    where: {main: true, label: {en: "Where", ja: "置き場"}, help: "Where blank rows go: \"between_groups\" between the outermost row groups, \"between_parts\" between a table's appended parts, \"records\" after each record of a listing, \"none\" none, the rows' numbers (0 before the first), a rule (a blank row at each change of a column's value, blank_rows_by_change(); before or after the rows whose text matches, blank_rows_by_rule()), a list of rules, or as R. e.g. \"between_groups\"", type: "enum[between_groups|between_parts|records|none]|list<integer>|call<blank_rows_by_change>|call<blank_rows_by_rule>|list<call<blank_rows_by_change>|call<blank_rows_by_rule>>|r"}
     first: {main: true, label: {en: "Before the first", ja: "最初の前"}, help: "TRUE: a blank row at the top of every page. Blank: none. e.g. TRUE", type: logical}
     last: {main: true, label: {en: "After the last", ja: "最後の後"}, help: "TRUE: a blank row at the bottom of every page. Blank: none. e.g. TRUE", type: logical}
     counted: {label: {en: "Count blank rows", ja: "空行も数える"}, help: "TRUE: the blank rows count toward a page's rows (plan_paginate_rows()' most rows a page), so a page never overflows. Blank: only the table's rows are counted. e.g. TRUE", type: logical}
@@ -504,6 +504,23 @@ rtf_border_line:
     width: {main: true, label: {en: "Weight (twips)", ja: "太さ（twip）"}, type: integer, description: "The line's weight in twips (default 15, about 0.5 pt)."}
     color: {main: true, label: {en: "Colour", ja: "色"}, type: string, description: "The line's colour as a hex string, e.g. \"#003366\" (default black)."}
 
+blank_rows_by_change:
+  package: rtfreporter
+  description: "A blank-row rule for plan_blanks(where = ): a blank row at each change of a column's value -- each SOC of an AE table, each parameter of a lab table: {fn: blank_rows_by_change, args: {cols: AEBODSYS}}."
+  args:
+    cols: {type: "list<column>", description: "The columns whose change (any of them) starts a block. On a stub's single label column, group_by says what a change is."}
+    group_by: {type: "enum[value|indent|filled|auto]", description: "What counts as a change: value (a run of equal values; the default), indent (a cell with no indent starts a group: a stub's heading), filled (a non-blank cell starts a group) or auto (one of these, picked from the column's content)."}
+    include_before_first: {type: logical, description: "FALSE: no blank row before the first row. Default TRUE."}
+    include_after_last: {type: logical, description: "FALSE: no blank row after the last row. Default TRUE."}
+
+blank_rows_by_rule:
+  package: rtfreporter
+  description: "A blank-row rule for plan_blanks(where = ): a blank row before or after each row whose text in a column matches a regular expression: {fn: blank_rows_by_rule, args: {col: row_label, pattern: \"^Any\", where: after}}."
+  args:
+    col: {type: column, description: "The column the pattern is matched against."}
+    pattern: {type: string, description: "A regular expression (R's grepl()), e.g. \"^Any\" or \"^[^ ]\" (a row with no indent)."}
+    where: {type: "enum[before|after]", description: "Whether the blank row goes before or after a matching row. Default before."}
+
 normalize_ard:
   package: rtfreporter
   returns: data
@@ -731,7 +748,7 @@ rtf_style:
     title_width: {type: "number|string"}
     footnote_width: {type: "number|string"}
     table: {type: "map<string, object>", description: "rtftable()'s style arguments for every content table: {header_row_height_twips: 260, cell_valign: center}."}
-    titles: {type: "map<string, object>", description: "rtf_titles()'s style arguments: font, font_size_half_points, row_height_twips, markup, align."}
+    titles: {type: "map<string, object>", description: "rtf_titles()'s style arguments: font, font_size_half_points, row_height_twips, markup, align, border."}
     footnotes: {type: "map<string, object>", description: "rtf_footnotes()'s style arguments: font, font_size_half_points, row_height_twips, markup, align, border."}
     header: {type: "map<string, object>", description: "rtf_header()'s style arguments: font, font_size_half_points, row_height_twips, markup, the cell padding, border, color."}
     footer: {type: "map<string, object>", description: "rtf_footer()'s style arguments, as header."}
@@ -811,6 +828,7 @@ rtf_titles:
     markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
     font: {input: table, type: "string|vec<enum[latin|east_asian|complex|hansi], string>", columns: {key: {label: {en: "Part", ja: "部分"}, type: "enum[latin|east_asian|complex|hansi]", input: pick}, value: {label: {en: "Font", ja: "フォント"}, type: string, input: text}}}
     align: {type: "enum[left|center|right]"}
+    border: {type: "call<rtf_border>", description: "The title block's border, the block as a whole: {fn: rtf_border, args: {bottom: true}} (a rule under the last title row). Drawn with page.rtf_style.title_format: table."}
 
 rtf_footnotes:
   package: rtfreporter
