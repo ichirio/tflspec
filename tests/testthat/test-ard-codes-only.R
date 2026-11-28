@@ -139,6 +139,26 @@ test_that("a report's code list that no step uses warns once, naming the variabl
                    "TRT01A")
 })
 
+test_that("a list a report's template or the study's layers use is not warned of", {
+  cl <- list(TRT01A = list(list(value = "A", label = "Drug A")),
+             ETHNIC = list(list(value = "HL", label = "Hispanic or Latino")))
+  o <- tfl_output("T-7", "table", codelists = cl)
+  expect_identical(tflspec:::.cl_unused(o), c("TRT01A", "ETHNIC"))
+  # (the study's defaults name ETHNIC: a layer the report extends)
+  st <- structure(list(defaults = list(content = list(list(fn = "plan_labels",
+                                                           args = list(ETHNIC = "Ethnicity"))))),
+                  class = "tfl_study_spec")
+  expect_identical(tflspec:::.cl_unused(o, st), c("TRT01A"))
+  o$extends <- "none"
+  expect_identical(tflspec:::.cl_unused(o, st), c("TRT01A", "ETHNIC"))
+  # (a template's own definition: ae_soc_pt's arms are TRT01A, by default)
+  ot <- o
+  ot$template <- list(name = "ae_soc_pt")
+  expect_identical(tflspec:::.cl_unused(ot), "ETHNIC")
+  ot$template <- "no_such_template"
+  expect_identical(tflspec:::.cl_unused(ot), c("TRT01A", "ETHNIC"))
+})
+
 test_that("tfl_report_codelists() warns of a report's unused list, and gives its rows all the same", {
   d <- system.file("extdata", "spec-yaml", package = "tflspec")
   st <- tfl_read_study_spec(d)

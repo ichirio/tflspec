@@ -44,21 +44,34 @@
   unique(out[!is.na(out) & nzchar(out)])
 }
 
-# A report's listed variables that none of its steps names
-.cl_unused <- function(output) {
+# A report's listed variables that none of its steps names.  What a report
+# does not write itself counts too, so that a list in use is never warned
+# of: its template's definition (its items, parameters, defaults) and,
+# unless it extends none, the study's layers (defaults, styles, patterns).
+.cl_unused <- function(output, study = NULL) {
   vars <- names(output$codelists)
   if (!length(vars)) return(character())
   parts <- unclass(output)[intersect(names(unclass(output)), .cl_step_parts)]
   # (a template's items, when the study has put them on the report)
   said <- c(.cl_said_names(parts), .cl_said_names(attr(output, "template")))
+  tp <- output$template
+  tp <- if (is.character(tp)) tp[1L] else if (is.list(tp)) tp$name
+  if (is.character(tp) && length(tp) == 1L && !is.na(tp)) {
+    said <- c(said, .cl_said_names(tryCatch(unclass(.tpl_get(tp, "codelists")),
+                                            error = function(e) NULL)))
+  }
+  if (!is.null(study) && !identical(output$extends, "none")) {
+    said <- c(said, .cl_said_names(unclass(study)[c("defaults", "styles", "patterns",
+                                                    "figure_style")]))
+  }
   vars[!vars %in% said]
 }
 
 # The warning, once a session for a report and its unused lists
-.cl_unused_warn <- function(outputs) {
+.cl_unused_warn <- function(outputs, study = NULL) {
   for (o in outputs) {
     if (!inherits(o, "tfl_output")) next
-    v <- .cl_unused(o)
+    v <- .cl_unused(o, study)
     if (!length(v)) next
     key <- paste(c(o$id, v), collapse = "\r")
     if (isTRUE(.cl_unused_memo[[key]])) next

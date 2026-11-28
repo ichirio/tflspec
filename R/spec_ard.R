@@ -231,7 +231,7 @@ tfl_report_codelists <- function(study, outputs = NULL, rows = NULL) {
     ids <- ids[ids %in% output_id]
   }
   # (a list that no step of its report uses: a warning, once)
-  .cl_unused_warn(outputs)
+  .cl_unused_warn(outputs, study)
   # (a report's reference with no rows here: the study must have it all the
   # same; rows with no `list` cell are a list written in place -- a
   # template's code SPEC that adds codes to a reference -- and are the list)
