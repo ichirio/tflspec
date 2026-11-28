@@ -66,7 +66,7 @@ test_that("the sheets say the slots and the languages, and give them back", {
   writeLines(c("styles:", "  std:", "    page:", "      rtf_document:", "        font_table:",
                "          - name: {latin: Times New Roman, east_asian: MS Mincho}",
                "        font_lang: {east_asian: ja}"), file.path(d, "spec", "defaults.yml"))
-  writeLines("settings: {style: std}", file.path(d, "study.yml"))
+  write_study_yml(d, "settings: {style: std}")
   tfl_write_output(tfl_output("T-1", "table", extends = "defaults"),
                    file.path(d, "spec", "outputs", "T-1.yml"))
   sh <- tfl_sheets_from_yaml(d)

@@ -52,7 +52,12 @@
           first$args[[k]] <- if (is.list(a[[k]]) || is.list(first$args[[k]])) as.list(v) else v
         }
       } else {
-        # (a later card's `~` is not written: the earlier's value stays, L463)
+        # (a later card's `~` is not written: the earlier's value stays, L463;
+        # one argument of a pair that cannot be together, plan_col_header's
+        # header and lines, takes the earlier's other away: one call, one
+        # structural argument)
+        given <- a[!vapply(a, is.null, NA)]
+        first$args <- .drop_alternatives(fn, first$args, given)
         for (k in names(a)) if (!is.null(a[[k]])) first$args[k] <- list(a[[k]])
       }
     }

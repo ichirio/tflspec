@@ -65,8 +65,9 @@ Reads the definition files of a study folder as tflplanner wrote them --
 \code{study.yml}, \code{spec/table_spec.xlsx}, \code{spec/report_spec.xlsx},
 \code{spec/ard_definition.json} (or \code{spec/ard_spec.xlsx}),
 \code{spec/listing_figure_spec.xlsx}, \verb{spec/figures/<id>.yml} -- and writes
-the YAML spec to \code{to}: \code{study.yml}, \code{spec/data.yml}, \code{spec/defaults.yml},
-\verb{spec/patterns/<name>.yml}, \code{spec/toc.yml} and one
+the YAML spec to \code{to}: \code{study.yml}, \code{spec/data.yml}, \code{spec/defaults.yml}
+(a sheets' \verb{@<name>} is a page configuration there, \verb{styles: <name>:};
+one that names none stops), \code{spec/toc.yml} and one
 \verb{spec/outputs/<id>.yml} a report.  Loose files (a table and a report
 workbook alone) convert too: \code{from} may be a folder holding them.
 }

@@ -3,8 +3,9 @@
 # when the resolved items have plan_listing and no pagination item.
 
 # A study (ADAE and ADSL as xpt) with one listing report, `content` its items
-# (YAML text lines); `defaults` / `pattern` the study's layers' content lines.
-.lp_study <- function(content, defaults = NULL, pattern = NULL, extra = NULL,
+# (YAML text lines); `defaults` / `style` the study's layers' content lines
+# (`style`: a style set `paged` of defaults.yml's styles:, the report's style).
+.lp_study <- function(content, defaults = NULL, style = NULL, extra = NULL,
                       extends = "none") {
   d <- tempfile("lp")
   dir.create(file.path(d, "adam"), recursive = TRUE)
@@ -23,10 +24,12 @@
     writeLines(y, f)
   }
   ext <- paste0("extends: ", extends)
-  if (length(pattern)) {
-    dir.create(file.path(sp, "patterns"), showWarnings = FALSE)
-    writeLines(c("content:", pattern), file.path(sp, "patterns", "paged.yml"))
-    ext <- "extends: [patterns/paged]"
+  if (length(style)) {
+    f <- file.path(sp, "defaults.yml")
+    y <- readLines(f, warn = FALSE)
+    y <- append(y, c("  paged:", "    content:", paste0("    ", style)), after = grep("^styles:", y)[1L])
+    writeLines(y, f)
+    ext <- c(ext, "style: paged")
   }
   writeLines(c("id: L-1", "kind: listing", "label: AEs", "common: {population: SAF}", ext,
                "data: {source: dataset, dataset: ADAE, population: SAF, where: !r 'AESEV == \"MILD\"'}",
@@ -102,14 +105,15 @@ test_that("a report's own page size wins: one item, its rows", {
   expect_lte(b$pages, ceiling(455 / 14))
 })
 
-test_that("a page size of a pattern wins: one item; the study's defaults do not reach a listing", {
+test_that("a style's or the study's defaults' page size does not reach a listing: its own default", {
   skip_lp()
-  d <- .lp_study(.lp_cols, pattern = "  - plan_paginate_rows: {max_rows: 35}")
+  # (a page configuration's content is a table's, as the defaults' is: a
+  # listing takes its page only, so the listing's own default is; a pattern,
+  # whose content a listing took, is an old form: canon 11-12 :380)
+  d <- .lp_study(.lp_cols, style = "  - plan_paginate_rows: {max_rows: 35}")
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   expect_identical(.lp_fns(.lp_resolved(d)), c("plan_listing", "plan_paginate_rows"))
-  expect_identical(.lp_rows(d)[2L], "35")
-  # (the defaults' content is a table's, a listing takes its page only: a page
-  # size there is not the listing's, so the listing's own default is)
+  expect_identical(.lp_rows(d)[2L], "22")
   d2 <- .lp_study(.lp_cols, defaults = "  - plan_paginate_rows: {max_rows: 40}",
                   extends = "[defaults]")
   on.exit(unlink(d2, recursive = TRUE), add = TRUE)

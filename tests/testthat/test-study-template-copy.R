@@ -29,7 +29,7 @@ stc_source <- function(root) {
 stc_study <- function(root) {
   st <- file.path(root, "STUDY-X")
   dir.create(file.path(st, "spec", "outputs", "sub"), recursive = TRUE)
-  writeLines(c("study_id: STUDY-X", "settings:", "  rounding: sas"), file.path(st, "study.yml"))
+  write_study_yml(st, c("study_id: STUDY-X", "settings:", "  rounding: sas"))
   writeLines(c("id: T-1", "kind: table", "template:", "  name: acme_v1/demog"),
              file.path(st, "spec", "outputs", "T-1.yml"))
   writeLines(c("outputs:", "  - id: L-1", "    kind: listing", "    template: {name: acme_v1/listing}",
@@ -268,7 +268,7 @@ test_that("a study reads its own copy only; a template not copied stops with the
   on.exit(unlink(root, recursive = TRUE), add = TRUE)
   st <- file.path(root, "STUDY-R")
   dir.create(st)
-  writeLines(c("study_id: STUDY-R", "settings:", "  rounding: sas"), file.path(st, "study.yml"))
+  write_study_yml(st, c("study_id: STUDY-R", "settings:", "  rounding: sas"))
   rep <- yaml::yaml.load(paste(c(
     "id: T-1", "kind: table",
     "template:", "  name: tflspec_v1/tflspec_summary", "  analysis:", "    by: TRT01A",
@@ -308,8 +308,8 @@ test_that("study.yml series_settings: stops, naming the series and where the val
   on.exit(unlink(root, recursive = TRUE), add = TRUE)
   st <- file.path(root, "STUDY-S")
   dir.create(st)
-  writeLines(c("study_id: STUDY-S", "series_settings:", "  tflspec_v1:", "    max_rows: 25",
-               "  acme_v1:", "    total: true"), file.path(st, "study.yml"))
+  write_study_yml(st, c("study_id: STUDY-S", "series_settings:", "  tflspec_v1:", "    max_rows: 25",
+               "  acme_v1:", "    total: true"))
   msg <- "tflspec_v1: move these values into .*spec/series/tflspec_v1/series.yml values: \\(tfl_series_values_set\\(\\)\\), after tfl_copy_templates\\(\\)"
   expect_error(tfl_read_study_spec(st), msg)
   expect_error(tfl_read_study_spec(st), "acme_v1: move these values")

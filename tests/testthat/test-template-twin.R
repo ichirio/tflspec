@@ -35,10 +35,10 @@ twin_study <- function(d, defaults, style = TRUE) {
   at <- grep("^settings:", sy)
   sy <- if (length(at)) append(sy, "  adam_levels: define_xml", after = at[1L]) else
     c(sy, "settings: {adam_levels: define_xml}")
-  writeLines(sy, file.path(d, "study.yml"))
+  write_study_yml(d, sy)
   if (!style) {
     sy <- readLines(file.path(d, "study.yml"))
-    writeLines(sy[!grepl("^  style:", sy)], file.path(d, "study.yml"))
+    write_study_yml(d, sy[!grepl("^  style:", sy)])
   }
   d
 }

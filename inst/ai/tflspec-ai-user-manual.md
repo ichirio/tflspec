@@ -228,7 +228,6 @@ study.yml                   the study: id, title, settings, keys
 spec/data.yml               the data catalog: datasets, populations
 spec/toc.yml                the reports, in order
 spec/defaults.yml           what every report starts from
-spec/patterns/<name>.yml    a layer a report may extend
 spec/outputs/<id>.yml       one report a file
 spec/_<name>.yml            a note, never read (_assumptions.yml)
 ```
@@ -243,7 +242,9 @@ plan <- tfl_content_run(o, tfl_ard_for(ard, "T-1"))
 generate_rtfreport(tfl_report(o, content = plan, study = st), "T-1.rtf")
 ```
 
-**study.yml** — `study_id`, `title`; `settings:` the table and report
+**study.yml** — `spec_version: 2` (the SPEC's form: a study.yml with
+none, or an older one, stops and lists the old forms to change);
+`study_id`, `title`; `settings:` the table and report
 study keys (`rounding`: `sas` / `r`; `program_dir`; `program` and
 `file`, each report's program and RTF file, `{output_id}.R` /
 `{output_id}.rtf`; `adam_levels`: `define_xml` or `define_spec` puts on
@@ -279,7 +280,7 @@ sections follow this order.
 |---|---|
 | `id`, `kind`, `label` | as in the TOC; the file is named after `id` |
 | `common` | what several steps of the report read: `population` (an analysis set's `id`: the report's subjects; a figure's or a listing's set is on its data, `data: {population: SAF}`, and a template report's data map says only that), `treatment` (its arm variable), `population_label` (the text `{OUTPUT_POPULATION}` prints when the report has no set, or in place of the set's label); a report may have no population.  Any other key stops; so does a top-level `population:` (`population:` -> `common: population`) |
-| `extends` | the layers under it, nearest first: `[defaults]` (the usual), `[patterns/<name>, defaults]`, or `none` |
+| `extends` | the layers under it: `[defaults]` (the usual), `none`, or a map by step (`{content: none}`); a report picks its page configuration with `style:`.  `patterns/<name>` stops (patterns are gone) |
 | `data` (a table, a listing) | the report's datasets: a flat list of definitions (`id`, `from`, `population`, `subjects_in`, `where`, `add`, `derive`, `arrange`, `keep`, `distinct`, `then`, `code`: the `analysis_data` sheet's rows, `data_id` as `id`), in build order, named `<dataset>_sub` / `_den` / `_<noun>` (`adsl_sub`, `adae_sub`, `adlb_den`) -- §A.1.  `then` is R piped onto the end of the definition's data after all its other keys (and the code lists' levels), as written: the data is its first argument, a pipe of several steps is fine (`dplyr::mutate(...) |> dplyr::filter(...)`), and it may do anything R does; it is not written with `code` (an error: `code` makes the whole data).  A report on a template writes a definition of the template's id to change that definition: its keys go over the template's key by key, but a definition with `code` replaces the template's one whole (none of the template's `from`, `subjects_in`, `add`, `where`, `derive` stay).  For example, `tflspec_v1/lab_tox_shift` keeps each subject's worst record by its `record_where` (default `AVISIT == "WORST POST-BASELINE"`, the ADaM's own worst record); for an ADaM with no worst record, set it to TRUE and pick the record with `then` on the template's `adlb_sub`: `template: {name: tflspec_v1/lab_tox_shift, data: {record_where: !r TRUE}, analysis: {...}}` and `data: [{id: adlb_sub, then: !r 'dplyr::slice_max(ATOXGRH, n = 1, with_ties = FALSE, by = USUBJID)'}]` (several tests: `by = c(USUBJID, PARAMCD)`, and each test's own direction, `dplyr::coalesce(ATOXGRH, ATOXGRL)` for `ATOXGRH`).  Likewise `tflspec_v1/tflspec_shift` (a category at baseline by the same after it, `BNRIND` by `ANRIND` by default, a page a `PARAMCD`) computes no worst record: the shell's rule goes on the template's `rec_sub` as `where` and `then`, for example "a subject with both Low and High after baseline counts as High": `data: [{id: rec_sub, where: !r 'PARAMCD %in% c("ALT", "HGB") & !ABLFL %in% "Y"', then: !r 'dplyr::arrange(match(ANRIND, c("HIGH", "LOW", "NORMAL"))) |> dplyr::distinct(USUBJID, PARAMCD, .keep_all = TRUE)'}]` (the order is the study's rule, worst first; one record a subject and parameter).  A subjects definition (`from: ADSL`, no `subjects_in`) without a `population` of its own takes `common: population`.  A table writes no `data: {source: ard}` (it always reads its ARD: that map stops); `ard: analysis_data:` stops (it is `data:`) |
 | `ard` | the report's part of the study ARD: `analyses:` (the `analyses` sheet's rows, `analysis_id` as `id`, `population_id` as `population`) -- §A.1 |
 | `data` (a figure, or a listing's records) | what the report reads, a map.  a table's Rework is not written here: it is the first item of `content:`, `- rework: {steps: [...]}` (optional R after the content's `normalize_ard()` and before `table_plan()`: it starts from `data`, which is the object normalized by the `normalize_ard` item (`data <- ard` when there is none), and leaves `data`; a Rework that never names `data` is an error; `object: ard` names the ARD object; written under `ard: data:` or `data:` it stops); `source: dataset` (a listing: `dataset`, `where`, `sort`); `source: code` (a figure: `steps:`, the design's data steps of §7; or `code: !r ...`, the report's own R) |
@@ -304,8 +305,8 @@ removes what a layer below set. It reads in flow style too: `{b: !unset}`.
 
 **The layers.**  A report says only what differs from what it extends
 (`tfl_resolve_output()`): `page` lines, `tokens` and a call's
-arguments merge by key (no layer gives a report a code list: a
-`codelists:` in a pattern stops; the study's `codelists:` in
+arguments merge by key (no layer gives a report a code list: the
+study's `codelists:` in
 `defaults.yml` are `study$codelists`, by name, which a report or a
 template names where it uses one, `!r study$codelists$SEX`); in `content`, the report's items of one function
 replace every item of that function below it, in the place the first had;
@@ -319,8 +320,8 @@ header, footer, titles and footnotes in the blocks `first` and `last`; a
 report's own lines print between them; `tfl_styles()` lists the sets and the
 built-in `tfl_standard` and `tfl_small`, a study set may not take their names);
 the study's tokens are `study.yml`'s `tokens:`.  There is no page layer of
-files: a `page:` in `defaults.yml`, or `extends: {page: ...}`, stops.  A
-pattern is `patterns/<name>.yml`.
+files: a `page:` in `defaults.yml`, or `extends: {page: ...}`, stops.  There
+are no pattern files: a `spec/patterns/` file stops the read.
 
 ---
 ## 6. A table's report file — the code spec
@@ -1009,7 +1010,7 @@ back): rename the value or choose another separator.
 
 **A study's folders and its programs' files (what the study's program generator reads as values):** `tfl_study_layout` `tfl_study_program_files` `tfl_setup_values` `tfl_setup_program` `tfl_report_program` `tfl_ard_program` `tfl_builtin_standards`
 
-**Template SPEC (prototype):** `tfl_tpl` `tfl_tpl_args` `tfl_tpl_help` `tfl_templates` `tfl_template_expand` `tfl_template_to_spec` `tfl_template_routes` `tfl_template` `tfl_param` `tfl_template_params` `tfl_template_variant` `tfl_template_run` `tfl_test_templates` `tfl_use_company_templates` `tfl_template_resolve` `tfl_arg_defs` `tfl_fn_defs` `tfl_object_defs` `tfl_series_list`
+**Template SPEC (prototype):** `tfl_tpl` `tfl_tpl_args` `tfl_tpl_help` `tfl_templates` `tfl_template_expand` `tfl_template_to_spec` `tfl_template_routes` `tfl_template` `tfl_param` `tfl_template_params` `tfl_template_variant` `tfl_template_run` `tfl_test_templates` `tfl_use_company_templates` `tfl_template_resolve` `tfl_arg_defs` `tfl_choice_sources` `tfl_fn_defs` `tfl_object_defs` `tfl_series_list`
 `tpl_demog` `tpl_summary` `tpl_disposition` `tpl_ae_soc_pt` `tpl_ae_pt_freq` `tpl_ae_max_grade` `tpl_hierarchical`
 `tpl_shift` `tpl_lab_shift` `tpl_listing` `tpl_km_table` `tpl_param_change` `tpl_pk_conc` `tpl_lab_abnormal` `tpl_ae_eair` `tpl_ancova` `tpl_mean_se` `tpl_mean_ci` `tpl_waterfall` `tpl_forest_hr` `tpl_forest_layout` `tpl_orr` `tpl_stat_block` `tpl_ae_overview`
 `tfl_read_template_sheets` `tfl_write_template_yaml`
