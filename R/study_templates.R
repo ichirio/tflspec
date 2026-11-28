@@ -104,6 +104,12 @@
   .series_find(series, unique(c(dir, rec)))
 }
 
+# stops: no source of series `s` in the series folders
+.study_no_series <- function(fn, s, dir = NULL) {
+  stop(fn, ": no series \"", s, "\" in the series folders (", s, "/series.yml in ",
+       paste(.series_search_dirs(dir), collapse = ", "), ").", call. = FALSE)
+}
+
 # copies `from` to `to` (over it) and gives the copy's copied.yml entry
 .copied_copy <- function(from, to, src, template = NULL) {
   dir.create(dirname(to), recursive = TRUE, showWarnings = FALSE)
@@ -173,6 +179,13 @@
 #' or `option`, and tflspec's version for the package's series), when, and
 #' its md5.  It never overwrites a file the study has.
 #'
+#' With `series`, it copies each series named whole: its `series.yml` and
+#' every template in its `templates/` folder, from the same source and with
+#' the same record as one template.  Files the study has already are kept
+#' as they are (`"present"`).  `series` and `templates` together copy both
+#' (each file once); with `series` and no `templates`, no other template is
+#' copied.  [tfl_series_templates()] lists what a study has copied.
+#'
 #' The study changes a template by editing its copy, and a series's values
 #' in its copy's `values:` ([tfl_series_values_set()]).  A report SPEC
 #' still names a template as `template: name: tflspec_v1/tflspec_summary`; a
@@ -191,11 +204,14 @@
 #' @param study_dir The study folder (holds `study.yml` and `spec/`).
 #' @param templates Template ids, `"<series>/<name>"`.  `NULL`
 #'   (`tfl_copy_templates()`): every template the report SPECs
-#'   (`spec/outputs/*.yml`) name that the study has not copied yet.
-#' @param as A new name for the copy (one template only): a template of this
-#'   study only.
+#'   (`spec/outputs/*.yml`) name that the study has not copied yet; with
+#'   `series`, none.
+#' @param as A new name for the copy (one template only, not with
+#'   `series`): a template of this study only.
 #' @param dir A folder (or folders) of series, looked in first for the
 #'   source, as [tfl_series_dir()] does.
+#' @param series Series names (`"tflspec_v1"`): each is copied whole, its
+#'   `series.yml` and all its templates.  `NULL`: none.
 #' @param template One template id, `"<series>/<name>"`.
 #' @return `tfl_copy_templates()` and `tfl_recopy_templates()`: a data
 #'   frame, one row a file -- `series`, `template` (the copy's name; `NA`
@@ -213,8 +229,8 @@
 #'   source, in unified style: `"--- copy"`, `"+++ source"`, then each line
 #'   starting with `" "` (in both), `"-"` (the copy's only) or `"+"` (the
 #'   source's only).
-#' @seealso [tfl_series_values_set()], [tfl_template_resolve()],
-#'   [tfl_series_list()]
+#' @seealso [tfl_series_templates()], [tfl_series_values_set()],
+#'   [tfl_template_resolve()], [tfl_series_list()]
 #' @examples
 #' study <- tempfile("study")
 #' dir.create(file.path(study, "spec", "outputs"), recursive = TRUE)
@@ -225,6 +241,9 @@
 #' tfl_copy_templates(study, "tflspec_v1/tflspec_summary", as = "summary_wide")$status
 #' tfl_template_status(study)[, c("template", "status")]
 #'
+#' # a whole series; the files the study has already are kept
+#' table(tfl_copy_templates(study, series = "tflspec_v1")$status)
+#'
 #' # the study edits its copy; the copy now differs from the source
 #' f <- file.path(study, "spec", "series", "tflspec_v1", "templates", "tflspec_summary.yml")
 #' writeLines(c(readLines(f), "# the study's note"), f)
@@ -233,17 +252,43 @@
 #' suppressWarnings(tfl_recopy_templates(study, "tflspec_v1/tflspec_summary"))$status
 #' unlink(study, recursive = TRUE)
 #' @export
-tfl_copy_templates <- function(study_dir, templates = NULL, as = NULL, dir = NULL) {
+tfl_copy_templates <- function(study_dir, templates = NULL, as = NULL, dir = NULL,
+                               series = NULL) {
   fn <- "tfl_copy_templates()"
   study_dir <- .study_check_dir(study_dir, fn)
   root <- .study_series_root(study_dir)
-  if (is.null(templates)) {
+  if (!is.null(series)) {
+    if (!is.character(series) || anyNA(series)) {
+      stop(fn, ": `series` is series names, e.g. \"tflspec_v1\".", call. = FALSE)
+    }
+    if (!is.null(as)) {
+      stop(fn, ": `as` names the copy of one template in `templates`; not with `series`.",
+           call. = FALSE)
+    }
+    series <- unique(series)
+    for (s in series) .series_check_name(s, fn)
+  }
+  if (is.null(templates) && is.null(series)) {
     reports <- list.files(file.path(.spec_dir(study_dir), "outputs"), "\\.ya?ml$",
                           full.names = TRUE, recursive = TRUE)
     used <- .series_templates_used(reports)
     templates <- if (nrow(used)) paste0(used$series, "/", used$template) else character()
   }
+  templates <- templates %||% character()
   if (!is.character(templates)) stop(fn, ": `templates` is template ids, \"<series>/<name>\".", call. = FALSE)
+  # a whole series: every template in its source's templates/ (found as
+  # one template's source is, below)
+  for (s in series) {
+    src <- .study_source(s, .copied_read(root, s), dir)
+    if (is.null(src)) .study_no_series(fn, s, dir)
+    tpl <- sub("[.]yml$", "", list.files(file.path(src$path, "templates"), "[.]yml$"))
+    tpl <- sort(tpl[grepl(.series_name_re, tpl)])
+    if (!length(tpl)) {
+      stop(fn, ": series ", s, " has no templates (no ", file.path(src$path, "templates", "<name>.yml"),
+           ").", call. = FALSE)
+    }
+    templates <- c(templates, paste0(s, "/", tpl))
+  }
   templates <- unique(templates)
   if (!is.null(as)) {
     if (length(templates) != 1L) {
@@ -265,10 +310,7 @@ tfl_copy_templates <- function(study_dir, templates = NULL, as = NULL, dir = NUL
     src <- NULL
     source_of <- function() {
       if (is.null(src)) src <<- .study_source(s, entries, dir)
-      if (is.null(src)) {
-        stop(fn, ": no series \"", s, "\" in the series folders (", s, "/series.yml in ",
-             paste(.series_search_dirs(dir), collapse = ", "), ").", call. = FALSE)
-      }
+      if (is.null(src)) .study_no_series(fn, s, dir)
       src
     }
     if (!s %in% seen) {
@@ -307,6 +349,71 @@ tfl_copy_templates <- function(study_dir, templates = NULL, as = NULL, dir = NUL
   out <- .copied_rows(rows)
   if (nrow(out)) out$file <- normalizePath(out$file, winslash = "/", mustWork = TRUE)
   out
+}
+
+#' The series and templates a study has copied
+#'
+#' `tfl_series_templates()` lists the templates in a study's own copy of
+#' its series (`<study_dir>/spec/series/<series>/templates/<name>.yml`, made
+#' by [tfl_copy_templates()]): what the study can pick from, its templates
+#' copied under a new name (`as`) too.  A series folder without a
+#' `series.yml` is not a copied series and is left out.
+#'
+#' A template's kind is its `kind:` key.  A template without one is a
+#' `"figure"` when it has a `figure:` key, a `"listing"` when its `style:`
+#' line names a listing style (`style_listing`), else a `"table"`.
+#'
+#' @param study_dir The study folder (holds `study.yml` and `spec/`).
+#' @return A data frame, one row a template, by series and template --
+#'   `series`, `template` (the name; a report SPEC names it as
+#'   `<series>/<template>`), `label` (its `label:`; `NA` when it has none),
+#'   `kind` (`"table"`, `"listing"` or `"figure"`, as above) and `file` (the
+#'   study's copy).  No rows when the study has copied none.
+#' @seealso [tfl_copy_templates()], [tfl_series_list()]
+#' @examples
+#' study <- tempfile("study")
+#' dir.create(study)
+#' invisible(tfl_copy_templates(study, series = "tflspec_v1"))
+#' head(tfl_series_templates(study)[, c("series", "template", "kind")])
+#' unlink(study, recursive = TRUE)
+#' @export
+tfl_series_templates <- function(study_dir) {
+  fn <- "tfl_series_templates()"
+  study_dir <- .study_check_dir(study_dir, fn)
+  root <- .study_series_root(study_dir)
+  series <- if (dir.exists(root)) sort(list.dirs(root, full.names = FALSE, recursive = FALSE)) else character()
+  series <- series[grepl(.series_name_re, series) & file.exists(file.path(root, series, "series.yml"))]
+  rows <- list()
+  for (s in series) {
+    tpl <- sort(sub("[.]yml$", "", list.files(file.path(root, s, "templates"), "[.]yml$")))
+    for (t in tpl) {
+      f <- file.path(root, s, "templates", paste0(t, ".yml"))
+      h <- .study_tpl_head(f)
+      rows[[length(rows) + 1L]] <- data.frame(
+        series = s, template = t, label = h$label,
+        kind = h$kind, file = normalizePath(f, winslash = "/", mustWork = TRUE),
+        stringsAsFactors = FALSE)
+    }
+  }
+  if (length(rows)) return(do.call(rbind, rows))
+  data.frame(series = character(), template = character(), label = character(),
+             kind = character(), file = character(), stringsAsFactors = FALSE)
+}
+
+# A template file's label and kind: `kind:`, else a `figure:` key a figure,
+# a `style:` line naming a listing style a listing, else a table.  A file
+# that cannot be read: no label, its kind by its lines.
+.study_tpl_head <- function(f) {
+  lines <- readLines(f, warn = FALSE, encoding = "UTF-8")
+  y <- tryCatch(.series_read_yaml(f), error = function(e) NULL)
+  if (!is.list(y)) y <- list()
+  one <- function(v) if (is.character(v) && length(v) == 1L && !is.na(v) && nzchar(v)) v else NA_character_
+  kind <- one(y[["kind"]])
+  if (is.na(kind)) {
+    kind <- if (!is.null(y[["figure"]]) || any(grepl("^figure:", lines))) "figure" else
+      if (any(grepl("^style:.*listing", lines))) "listing" else "table"
+  }
+  list(label = one(y[["label"]]), kind = kind)
 }
 
 #' @rdname tfl_copy_templates

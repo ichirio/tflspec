@@ -103,6 +103,20 @@ SPECs name that it has not copied yet. A study that needs a template of
 its own copies one under a new name (`as = "summary_wide"`), then edits
 the copy.
 
+A study can also take a whole series at once: `series = "tflspec_v1"`
+copies its `series.yml` and every template in it, and keeps the files the
+study has already (`"present"`). `tfl_series_templates()` lists what the
+study has copied, with each template's label and kind: what the study can
+pick from.
+
+```{r}
+whole <- tfl_copy_templates(study, series = "tflspec_v1")
+table(whole$status)
+in_study <- tfl_series_templates(study)
+in_study[in_study$template %in% c("tflspec_summary", "tflspec_listing", "km_cards"),
+         c("template", "label", "kind")]
+```
+
 One helper does the same steps for each report. It fills the template in
 (`tfl_template_resolve()`), saves the report in the study, and returns
 the report, its ARD program (`tfl_ard_code()`), its ARD

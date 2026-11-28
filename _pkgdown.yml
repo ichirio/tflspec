@@ -291,6 +291,7 @@ reference:
       - tfl_series_dir
       - tfl_series_list
       - tfl_copy_templates
+      - tfl_series_templates
       - tfl_series_values_set
   - title: Template SPEC, a template's help
     desc: >
