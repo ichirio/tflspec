@@ -62,6 +62,16 @@ listing kind is still covered by `L-16-2-7`, `L-91`, `L-92` and `L-TPL`.
 
 The AI sample study was not frozen: it has no reports.
 
+## spec_version
+
+The study.yml of `sample` and `sample-company` (SAMPLE-01, as tflplanner's
+`create_sample_study()` wrote it) and the setup-family's study.yml
+(`tests/testthat/fixtures/setup-family/study/`, written by hand when
+frozen) say `spec_version: 2` since the old forms stop (canon 11-10
+:377): edited by hand, as no program's text reads the version.  SAMPLE-01
+is tflplanner's one source (#891): a change to it is a PR there, not a
+data-raw run.
+
 ## Changed on purpose since
 
 - 2026-11-28 (CANON-3): the ARD programs write a report's code lists as

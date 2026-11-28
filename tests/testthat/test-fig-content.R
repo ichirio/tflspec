@@ -337,3 +337,23 @@ test_that("tfl_args_from_r(): an integer of the schema back as one, the argument
   expect_identical(names(g), c("linewidth", "mapping", "position"))
   expect_identical(names(tfl_args_from_r("geom_line", tfl_args_to_r("geom_line", g))), names(g))
 })
+
+test_that("a figure of items is its report program's part: the study's helpers and units, none defined (A3)", {
+  # (its program runs after the study's setup, which has tte_time(),
+  # fmt_num() and days_per_*: no head, .fig_script_head() is a script of
+  # its own's)
+  o <- tfl_output("F-1", "figure",
+                  data = list(steps = list(list(step = "read", dataset = "ADTTE"),
+                                           list(step = "time_unit", variable = "AVAL", unit = "months"),
+                                           list(step = "time_unit", variable = "ADY", unit = "weeks"))),
+                  content = list(
+                    tfl_item(".r", list(code = tfl_r("ggplot(df, aes(AVAL, CNSR))"))),
+                    tfl_item(".r", list(code = tfl_r("geom_text(aes(label = fmt_num(AVAL, 1)))")))))
+  code <- unlist(strsplit(as.character(tfl_content_code(o)), "\n", fixed = TRUE))
+  expect_true(any(grepl("tte_time(\"months\")", code, fixed = TRUE)))
+  expect_true(any(grepl("ADY / days_per_week", code, fixed = TRUE)))
+  expect_true(any(grepl("label = fmt_num(AVAL, 1)", code, fixed = TRUE)))
+  expect_false(any(grepl("^if [(]!exists", code)))
+  expect_false(any(grepl("(tte_time|fmt_num|days_per_week) <-", code)))
+  expect_no_error(parse(text = code))
+})

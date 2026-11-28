@@ -1,10 +1,10 @@
 # A report's code lists are its own (canon 2026-11-17): no layer gives one
-# (a pattern's `codelists:` stops; the study's in defaults.yml are
+# (the study's in defaults.yml are
 # study$codelists, named where used).  The report's own lists reach its ARD
 # program as they reach its RTF (#647).  Package fictional data (adsl,
 # adlb); the expectations are counted from the lists written.
 
-cll_study <- function(defaults = NULL, pattern = NULL, file = NULL, reports = list(), shift = FALSE,
+cll_study <- function(defaults = NULL, file = NULL, reports = list(), shift = FALSE,
                       env = parent.frame()) {
   skip_if_not_installed("haven")
   root <- withr::local_tempdir(.local_envir = env)
@@ -17,10 +17,6 @@ cll_study <- function(defaults = NULL, pattern = NULL, file = NULL, reports = li
   spec <- file.path(d, "spec")
   if (length(defaults)) cat(c("codelists:", paste0("  ", defaults), ""), sep = "\n",
                             file = file.path(spec, "defaults.yml"), append = TRUE)
-  if (length(pattern)) {
-    dir.create(file.path(spec, "patterns"), showWarnings = FALSE)
-    writeLines(c("codelists:", paste0("  ", pattern)), file.path(spec, "patterns", "pp.yml"))
-  }
   if (length(file)) writeLines(file, file.path(spec, "codelists.yml"))
   for (id in names(reports)) cll_sex_report(d, id, reports[[id]]$extends, reports[[id]]$codelists,
                                             reports[[id]]$by %||% "SEX")
@@ -76,12 +72,13 @@ test_that("a shift report's own code lists label its rows and columns (#647)", {
                    c("Low", "Normal", "High"))
 })
 
-test_that("a pattern's codelists: stops the study's read: no layer gives a list", {
+test_that("a pattern's codelists: stops the study's read: a pattern file is an old form", {
   skip_on_cran()
   d <- cll_study()
   dir.create(file.path(d, "spec", "patterns"))
   writeLines(c("codelists:", paste0("  ", cll_sex)), file.path(d, "spec", "patterns", "pp.yml"))
-  expect_error(tfl_read_study_spec(d), "pp.yml `codelists:`: a pattern holds no code list", fixed = TRUE)
+  expect_error(tfl_read_study_spec(d), "pp.yml (a pattern file) is no longer read", fixed = TRUE,
+               class = "tflspec_old_form")
 })
 
 test_that("the study's code lists (defaults.yml) reach no report: they are study$codelists", {

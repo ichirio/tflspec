@@ -1178,6 +1178,15 @@
       
       library(dplyr)
       library(ggplot2)
+      # also needs: rtfreporter (called as pkg::fn)
+      
+      # the study helper fmt_num() (tfl_helpers_code()), unless the study's setup has it
+      if (!exists("fmt_num")) fmt_num <- function(x, digits, na = "NE") {
+        x <- as.numeric(x)
+        out <- sprintf(paste0("%.", digits, "f"), rtfreporter::round_num(x, digits))
+        out[is.na(x)] <- na
+        out
+      }
       
       # ---- data ------------------------------------------------------------------
       # Input data frames: adrs, adsl
@@ -1196,7 +1205,7 @@
           rate  = 100 * x / n,
           lcl   = 100 * mapply(function(x, n) binom.test(x, n)$conf.int[1], x, n),
           ucl   = 100 * mapply(function(x, n) binom.test(x, n)$conf.int[2], x, n),
-          label = sprintf("%.1f%%\n(%d/%d)", rate, x, n)
+          label = paste0(fmt_num(rate, 1), "%\n(", x, "/", n, ")")
         )
       
       # ---- plot ------------------------------------------------------------------
@@ -1262,6 +1271,15 @@
       
       library(dplyr)
       library(ggplot2)
+      # also needs: rtfreporter (called as pkg::fn)
+      
+      # the study helper fmt_num() (tfl_helpers_code()), unless the study's setup has it
+      if (!exists("fmt_num")) fmt_num <- function(x, digits, na = "NE") {
+        x <- as.numeric(x)
+        out <- sprintf(paste0("%.", digits, "f"), rtfreporter::round_num(x, digits))
+        out[is.na(x)] <- na
+        out
+      }
       
       # ---- data ------------------------------------------------------------------
       # Input data frames: adrs, adsl
@@ -1276,7 +1294,7 @@
       ct <- adrs_sub |>
         count(TRT01P, AVALC) |>
         group_by(TRT01P) |>
-        mutate(pct = 100 * n / sum(n), label = sprintf("%.0f%%", pct)) |>
+        mutate(pct = 100 * n / sum(n), label = paste0(fmt_num(pct, 0), "%")) |>
         ungroup() |>
         mutate(AVALC = factor(AVALC, levels = unique(c(intersect(c("CR", "PR", "SD", "PD", "NE"), AVALC), sort(AVALC)))))
       
@@ -1348,6 +1366,15 @@
       
       library(dplyr)
       library(ggplot2)
+      # also needs: rtfreporter (called as pkg::fn)
+      
+      # the study helper fmt_num() (tfl_helpers_code()), unless the study's setup has it
+      if (!exists("fmt_num")) fmt_num <- function(x, digits, na = "NE") {
+        x <- as.numeric(x)
+        out <- sprintf(paste0("%.", digits, "f"), rtfreporter::round_num(x, digits))
+        out[is.na(x)] <- na
+        out
+      }
       
       # ---- data ------------------------------------------------------------------
       # Input data frames: adrs, adsl
@@ -1362,7 +1389,7 @@
       ct <- adrs_sub |>
         count(TRT01P, AVALC) |>
         group_by(TRT01P) |>
-        mutate(pct = 100 * n / sum(n), label = sprintf("%.0f%%", pct)) |>
+        mutate(pct = 100 * n / sum(n), label = paste0(fmt_num(pct, 0), "%")) |>
         ungroup()
       
       # ---- plot ------------------------------------------------------------------
@@ -2556,6 +2583,61 @@
       library(dplyr)
       library(ggplot2)
       library(patchwork)
+      # also needs: rtfreporter (called as pkg::fn)
+      
+      # the study helpers fmt_num(), ard_stats() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("fmt_num")) fmt_num <- function(x, digits, na = "NE") {
+        x <- as.numeric(x)
+        out <- sprintf(paste0("%.", digits, "f"), rtfreporter::round_num(x, digits))
+        out[is.na(x)] <- na
+        out
+      }
+      if (!exists("ard_stats")) ard_stats <- function(ard, analysis_id, variable = NULL, stats, by = NULL) {
+        chr <- function(x) {
+          if (!is.list(x)) return(as.character(x))
+          vapply(x, function(v) if (length(v)) as.character(v[[1L]]) else NA_character_, "")
+        }
+        num <- function(x) suppressWarnings(as.numeric(chr(x)))
+        k <- ard$analysis_id %in% analysis_id & ard$stat_name %in% stats
+        if (!is.null(variable)) k <- k & ard$variable %in% variable
+        a <- ard[k, , drop = FALSE]
+        if (!nrow(a)) {
+          stop(sprintf("ard_stats(): the ARD has no rows of %s, %s.",
+                       paste(analysis_id, collapse = ", "), paste(stats, collapse = ", ")),
+               call. = FALSE)
+        }
+        gcols <- grep("^group[0-9]+$", names(a), value = TRUE)
+        if (is.null(by)) by <- unique(stats::na.omit(unlist(lapply(gcols, function(g) chr(a[[g]])))))
+        keys <- data.frame(row.names = seq_len(nrow(a)))
+        if (length(unique(a$analysis_id)) > 1L) keys$analysis_id <- a$analysis_id
+        for (g in by) {
+          v <- rep(NA_character_, nrow(a))
+          for (col in gcols) {
+            at <- chr(a[[col]]) %in% g
+            v[at] <- chr(a[[paste0(col, "_level")]])[at]
+          }
+          keys[[g]] <- v
+        }
+        vars <- unique(a$variable)
+        if (length(vars) > 1L) keys$variable <- a$variable
+        if ("variable_level" %in% names(a)) {
+          lv <- chr(a$variable_level)
+          if (!all(is.na(lv))) {
+            nm <- if (length(vars) == 1L) vars else "level"
+            keys[[nm]] <- if (all(is.na(lv) | !is.na(num(a$variable_level)))) num(a$variable_level) else lv
+          }
+        }
+        id <- do.call(paste, c(lapply(keys, as.character), list(sep = "\r")))
+        if (!ncol(keys)) id <- rep("", nrow(a))
+        first <- !duplicated(id)
+        out <- keys[first, , drop = FALSE]
+        for (s in stats) {
+          at <- a$stat_name == s
+          out[[s]] <- num(a$stat)[at][match(id[first], id[at])]
+        }
+        rownames(out) <- NULL
+        out
+      }
       
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtte
@@ -2587,8 +2669,8 @@
             level = paste(coalesce(SEX, AGEGR1, "All subjects"), TRT01P, sep = ": "),
             ok = is.finite(estimate) & is.finite(conf.low) & is.finite(conf.high) &
               conf.high < 1000,
-            txt = ifelse(ok, sprintf("%.2f (%.2f, %.2f)", estimate, conf.low, conf.high),
-                         "NE"),
+            txt = ifelse(ok, paste0(fmt_num(estimate, 2), " (", fmt_num(conf.low, 2),
+                                    ", ", fmt_num(conf.high, 2), ")"), "NE"),
             across(c(estimate, conf.low, conf.high), ~ ifelse(ok, .x, NA))
           )
         # a heading row above each subgroup's levels, the levels indented
@@ -2696,6 +2778,7 @@
       library(dplyr)
       library(ggplot2)
       library(patchwork)
+      # also needs: rtfreporter (called as pkg::fn)
       
       # ---- data ------------------------------------------------------------------
       # Input data frames: adrs, adsl
@@ -2732,9 +2815,14 @@
       
       est_df <- bind_rows(rows) |>
         mutate(
+          # (numbers even when every model failed: rounding takes no NA logical)
+          across(c(est, lcl, ucl), as.numeric),
           # not estimable (e.g. no events / all responders in a subgroup): no point, "NE"
           ok  = is.finite(est) & is.finite(lcl) & is.finite(ucl) & lcl > 0 & ucl < 1000,
-          txt = ifelse(head, "", ifelse(ok, sprintf("%.2f (%.2f, %.2f)", est, lcl, ucl), "NE")),
+          # (rounded as the tables are: options(rtfreporter.rounding))
+          txt = ifelse(head, "", ifelse(ok, sprintf("%.2f (%.2f, %.2f)",
+            rtfreporter::round_num(est, 2), rtfreporter::round_num(lcl, 2),
+            rtfreporter::round_num(ucl, 2)), "NE")),
           across(c(est, lcl, ucl), ~ ifelse(ok, .x, NA)),
           y   = rev(seq_len(n()))
         )
@@ -3009,6 +3097,7 @@
       
       library(dplyr)
       library(ggplot2)
+      # also needs: rtfreporter (called as pkg::fn)
       
       # ---- data ------------------------------------------------------------------
       # Input data frames: adae, adsl
@@ -3057,7 +3146,7 @@
         ggplot(inc_df, aes(x = x, y = AEBODSYS, fill = TRT01A)) +
         geom_col(width = 0.7) +
         geom_vline(xintercept = 0, colour = "grey30") +
-        geom_text(aes(label = ifelse(pct > 0, sprintf("%.1f", pct), ""), hjust = ifelse(x < 0, 1.15, -0.15)), size = 2.6) +
+        geom_text(aes(label = ifelse(pct > 0, sprintf("%.1f", rtfreporter::round_num(pct, 1)), ""), hjust = ifelse(x < 0, 1.15, -0.15)), size = 2.6) +
         scale_x_continuous(limits = c(-x_lim, x_lim), labels = function(v) abs(v)) +
         scale_fill_manual(values = pal_grp) +
         labs(x = "Subjects with event (%)", y = NULL) +
@@ -3104,6 +3193,7 @@
       
       library(dplyr)
       library(ggplot2)
+      # also needs: rtfreporter (called as pkg::fn)
       
       # ---- data ------------------------------------------------------------------
       # Input data frames: adae, adsl
@@ -3152,7 +3242,7 @@
         ggplot(inc_df, aes(x = x, y = AEDECOD, fill = TRT01A)) +
         geom_col(width = 0.7) +
         geom_vline(xintercept = 0, colour = "grey30") +
-        geom_text(aes(label = ifelse(pct > 0, sprintf("%.1f", pct), ""), hjust = ifelse(x < 0, 1.15, -0.15)), size = 2.6) +
+        geom_text(aes(label = ifelse(pct > 0, sprintf("%.1f", rtfreporter::round_num(pct, 1)), ""), hjust = ifelse(x < 0, 1.15, -0.15)), size = 2.6) +
         scale_x_continuous(limits = c(-x_lim, x_lim), labels = function(v) abs(v)) +
         scale_fill_manual(values = pal_grp) +
         labs(x = "Subjects with event (%)", y = NULL) +

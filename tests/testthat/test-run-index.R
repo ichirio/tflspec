@@ -25,7 +25,7 @@ run_rows <- function(part, id, status = "OK") {
 fake_study <- function() {
   s <- tempfile("study")
   dir.create(s)
-  writeLines("study_id: S-1", file.path(s, "study.yml"))
+  write_study_yml(s, "study_id: S-1")
   s
 }
 

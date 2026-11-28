@@ -333,6 +333,13 @@ forest_hr <- function(ard, params = list()) {
                    legend.position = "none")
 }
 
+# A number as text with `digits` decimals, rounded by the study's rule
+# (rtfreporter::round_num(), options(rtfreporter.rounding)): the study
+# helper fmt_num()'s arithmetic, for code that runs inside tflspec
+.fmt_num <- function(x, digits) {
+  sprintf(paste0("%.", digits, "f"), rtfreporter::round_num(as.numeric(x), digits))
+}
+
 # The HR rows wide: a row a condition (ARD order), the comparison arm's
 # estimate, interval, the model's N, and each n_by_arm arm's events/subjects
 .forest_hr_rows <- function(ard, comparison = NULL, n_by_arm = NULL) {
@@ -380,7 +387,8 @@ forest_hr <- function(ard, params = list()) {
     out[[paste0("n_arm", i)]] <- ifelse(is.na(n), "", sprintf("%s/%s", ev, n))
   }
   ok <- is.finite(out$estimate) & is.finite(out$conf.low) & is.finite(out$conf.high) & out$conf.high < 1000
-  out$txt <- ifelse(ok, sprintf("%.2f (%.2f, %.2f)", out$estimate, out$conf.low, out$conf.high), "NE")
+  out$txt <- ifelse(ok, sprintf("%s (%s, %s)", .fmt_num(out$estimate, 2L), .fmt_num(out$conf.low, 2L),
+                                .fmt_num(out$conf.high, 2L)), "NE")
   out[!ok, c("estimate", "conf.low", "conf.high")] <- NA_real_
   attr(out, "comparison") <- comparison
   out

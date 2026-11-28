@@ -10,10 +10,9 @@ rts_study <- function(files = list(), study = NULL, env = parent.frame()) {
                "  - dataset: ADTTE", "    level: ADaM", "    path: adam/adtte.xpt",
                "populations:", "  - id: SAF", "    dataset: ADSL", "    where: !r SAFFL == \"Y\"",
                "    label: Safety Population"), file.path(d, "spec", "data.yml"))
-  writeLines(study %||% c("study_id: MIN-1", "title: minimal", "settings:", "  rounding: sas",
+  write_study_yml(d, study %||% c("study_id: MIN-1", "title: minimal", "settings:", "  rounding: sas",
                           "  output_path: output/tfl", "  program_dir: programs/tfl",
-                          "  file: '{output_id}.rtf'", "keys:", "  id: USUBJID"),
-             file.path(d, "study.yml"))
+                          "  file: '{output_id}.rtf'", "keys:", "  id: USUBJID"))
   if (is.null(files[["defaults.yml"]])) files[["defaults.yml"]] <- "content: []"
   for (nm in names(files)) {
     f <- file.path(d, "spec", nm)
@@ -155,7 +154,7 @@ rts_cl_study <- function(env = parent.frame()) {
   writeLines(c("datasets:", "  - dataset: ADSL", "    level: ADaM", "    path: adam/adsl.xpt",
                "populations:", "  - id: SAF", "    dataset: ADSL", '    where: !r SAFFL == "Y"',
                "    label: Safety Population"), file.path(d, "data.yml"))
-  writeLines(c("study_id: S-1", "title: t", "keys:", "  id: USUBJID"), file.path(d, "study.yml"))
+  write_study_yml(d, c("study_id: S-1", "title: t", "keys:", "  id: USUBJID"))
   d
 }
 
@@ -188,20 +187,13 @@ test_that("a report's own code list makes the round trip: its program is the sam
 
 # -- item 5: what stopped the whole conversion ---------------------------------------
 
-test_that("a pattern with content items no longer stops the conversion: dropped, named", {
+test_that("a pattern file stops the sheets: an old form, whatever it holds", {
   for (cs in list(c("content:", "  - plan_cells: {categorical: '{n}'}"),
-                  c("content:", "  - plan_footnotes: {pages: [Note]}"))) {
-    d <- rts_study(list("patterns/p.yml" = cs,
-                        "outputs/T-1.yml" = rts_table(extends = c("defaults", "patterns/p"))))
-    x <- rts_trip(d)
-    nc <- x$sh$not_converted
-    expect_identical(nc$output[nc$part == "content"], "@p")
-    expect_match(nc$reason[nc$part == "content"], "a pattern's content (", fixed = TRUE)
-    expect_true("content" %in% vapply(x$nc, function(e) e$sheet, ""))
-    # the pattern's page part stays, the report still extends it
-    back <- tfl_read_outputs(x$to)[["T-1"]]
-    expect_true("patterns/p" %in% back$extends)
-    expect_length(tfl_read_study_spec(x$to)$patterns$p$content, 0L)
+                  c("content:", "  - plan_footnotes: {pages: [Note]}"),
+                  "content: !r 'function(x) x'")) {
+    d <- rts_study(list("patterns/p.yml" = cs, "outputs/T-1.yml" = rts_table()))
+    expect_error(tfl_sheets_from_yaml(d), "spec/patterns/: p.yml (a pattern file) is no longer read",
+                 fixed = TRUE, class = "tflspec_old_form")
   }
 })
 
@@ -240,21 +232,6 @@ test_that("a typed key study.yml never had still stops, with or without sheets$s
   sh <- tfl_sheets_from_yaml(d)
   tfl_yaml_from_sheets(sh, to, overwrite = TRUE)
   expect_identical(yaml::read_yaml(file.path(to, "study.yml"))$settings$treatment, "TRT01A")
-})
-
-test_that("a pattern's content in each form the reader accepts is named, not an error", {
-  forms <- list(
-    calls = c("content:", "  - plan_cells: {categorical: '{n}'}", "  - plan_blanks: {where: records}"),
-    fn_form = c("content:", "  - {fn: plan_cells, args: {categorical: '{n}'}}"),
-    r_item = c("content:", "  - !r 'plan_cells(categorical = \"{n}\")'"),
-    r_content = "content: !r 'function(x) x'")
-  for (nm in names(forms)) {
-    d <- rts_study(list("patterns/p.yml" = forms[[nm]],
-                        "outputs/T-1.yml" = rts_table(extends = c("defaults", "patterns/p"))))
-    x <- rts_trip(d)
-    nc <- x$sh$not_converted
-    expect_identical(nc$output[nc$part == "content"], "@p", info = nm)
-  }
 })
 
 # -- item 6: the flat workbook ----------------------------------------------------------

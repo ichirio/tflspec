@@ -142,3 +142,18 @@ test_that("forest_hr() takes its params", {
   expect_error(forest_hr(hr, list(size = 3)), "unknown params size")
   expect_error(forest_hr(as.data.frame(.fcf_bign(d))), "no HR rows")
 })
+
+test_that("forest_hr()'s text rounds by the study's rule, as a table's {x:.2f}", {
+  skip_if_not_installed("ggplot2", "3.5.2")
+  # (A3) 0.125 is "0.13" under rounding: sas (half away from zero), and
+  # 2.675 (2.67499999... in binary) "2.68"; under "r" 0.125 is "0.12"
+  hr <- data.frame(analysis_id = "HR", variable = "TRT01A", variable_level = "Drug X",
+                   stat_name = c("estimate", "conf.low", "conf.high"),
+                   stat = c(0.125, 0.0625, 2.675), stringsAsFactors = FALSE)
+  old <- options(rtfreporter.rounding = "sas")
+  on.exit(options(old), add = TRUE)
+  p <- forest_hr(hr)
+  expect_true(grepl("0.13 (0.06, 2.68)", p$data$txt, fixed = TRUE))
+  options(rtfreporter.rounding = "r")
+  expect_true(grepl("0.12 (0.06, ", forest_hr(hr)$data$txt, fixed = TRUE))
+})

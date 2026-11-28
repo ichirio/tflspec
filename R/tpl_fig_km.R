@@ -251,9 +251,7 @@
       code = paste0(
         "med <- summary(fit)$table\n",
         "if (!is.matrix(med)) med <- matrix(med, nrow = 1, dimnames = list(\"All\", names(med)))\n",
-        "fmt_med <- function(x) {\n",
-        "  ifelse(is.na(x), \"NE\", formatC(rtfreporter::round_num(x, ", dg, "), format = \"f\", digits = ", dg, "))\n",
-        "}\n",
+        "fmt_med <- function(x) fmt_num(x, ", dg, ")\n",
         "arm_of <- sub(\"^[^=]*=\", \"\", rownames(med))\n",
         "legend_labels <- stats::setNames(", lab, ", arm_of)"))),
       fit)

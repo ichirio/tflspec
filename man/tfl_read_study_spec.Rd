@@ -28,7 +28,9 @@ configurations a report picks with \verb{style:}; a set holds \code{page} and
 of a built-in one), \code{figure_style}
 (\code{defaults.yml}'s \verb{figure_style:}: the study's figure style standard,
 tflspec's built-in one for a part it does not give),
-\code{patterns} (by name), \code{toc}, \code{dir}.  \code{tfl_read_outputs()}: a named list of \code{tfl_output}, by id.
+\code{toc}, \code{dir}.  A \verb{spec/patterns/} file stops the read (an old form:
+a page is a page configuration, \verb{styles:}).  \code{tfl_read_outputs()}: a
+named list of \code{tfl_output}, by id.
 }
 \description{
 \code{tfl_read_study_spec()} reads the study-level files (every one optional)
@@ -48,8 +50,7 @@ argument \verb{!r study$codelists$SEX}, as a \code{tflspec_v1/tflspec_summary}
 report's \code{value_labels} names \code{SEX}, \code{RACE}, \code{ETHNIC} and \code{AGEGR1}); a
 reference to a list the study has not got is left out when the report is
 resolved.  No list reaches a report through \verb{extends:}: a report's code
-lists are its own (\verb{codelists:} in its file), and a pattern's
-\verb{codelists:} stops the read.  A report's list of a variable is written
+lists are its own (\verb{codelists:} in its file).  A report's list of a variable is written
 in place (\verb{SEX: [\{value: F, label: Female\}, ...]}) or names one of the
 study's lists: \code{SEX: {list: SEX}} (all its codes, in its order) or \verb{SEX: \{list: SEX, codes: [M, F]\}} (those codes, in the order written).  The
 labels are the study's list's, and the programs are written as from the
