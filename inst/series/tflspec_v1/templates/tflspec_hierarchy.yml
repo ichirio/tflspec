@@ -69,7 +69,7 @@ params:
   denominator:
     type: string
     input: pick
-    choices: report_data
+    choices: objects(data)
     default: adsl_sub
     step: analysis
     tier: usual
@@ -127,10 +127,63 @@ params:
     tier: usual
     description: The heading of the row-label column, one text a level (a line
       each); empty for none.
+  value_header:
+    type: string
+    input: text
+    default: "{col}\n(N={n})\nn (%)"
+    step: content
+    tier: usual
+    description: "The heading over each value column ({col} the column, {n}
+      its N, \\n a line break); not with col_header."
+  col_header:
+    type: rows<line, cols, span, text>
+    input: table
+    columns:
+      line:
+        label: {en: "Line", ja: "行"}
+        type: string
+        input: text
+        description: The header row, a whole number (1 = the top).
+      cols:
+        label: {en: "Columns", ja: "列"}
+        type: string
+        input: text
+        description: "The columns the cell sits on: a name (row_label), .values (every value column), a position or range, or KEY = value."
+      span:
+        label: {en: "Span", ja: "またがり"}
+        type: string
+        input: text
+        description: "Blank: one cell over cols; each: one cell a column; a key's name: one cell per value of that key (a spanner)."
+      text:
+        label: {en: "Text", ja: "テキスト"}
+        type: string
+        input: text
+        description: "What prints, with the tokens {col} {col1} (the column's keys) and {n} {n1} (its N); \\n a line break."
+    default:
+      - {line: "1", cols: row_label}
+      - {line: "1", cols: .values, span: each, text: "{col}\n(N={n})\nn (%)"}
+      - {line: "2", cols: row_label}
+      - {line: "2", cols: .values}
+    step: content
+    tier: other
+    description: "The whole column header, one row a cell (line, cols, span,
+      text), as the tables sheet's col_header; the default is the header
+      heading and value_header make.  Given, it replaces that header whole:
+      not with heading or value_header."
+  col_header_values:
+    type: map<string,logical|string|r>
+    input: table
+    columns: {key: {label: {en: "Token", ja: "トークン"}}, value: {label: {en: "Value", ja: "値"}}}
+    default: ~
+    step: content
+    tier: other
+    description: "What the header's tokens take, plan_col_header(values = ):
+      {n: page} each page's N, {n: table} the analysis set's; empty for the
+      BIGN item's N for {n}."
   sort_column:
     type: string
     input: pick
-    choices: levels(by)
+    choices: levels(from_args(by))
     default: ~
     step: content
     tier: other
@@ -174,6 +227,19 @@ derive:
   hierarchy_empty: {if: "{empty_text}", then: {text: "{empty_text}"}}
   # the heading, a line a level
   hierarchy_heading: {join: "{heading}", sep: "\n"}
+  # the column header: col_header whole when the report gives it, else the
+  # one heading and value_header make (the two ways a header is made, canon
+  # 11-28: not both)
+  hierarchy_header_given: {given: [col_header]}
+  hierarchy_header_made:
+    value:
+      - {line: "1", cols: row_label}
+      - {line: "1", cols: .values, span: each, text: "{value_header}"}
+      - {line: "2", cols: row_label, text: "{hierarchy_heading}"}
+      - {line: "2", cols: .values}
+  hierarchy_header: {if: "{hierarchy_header_given}", then: "{col_header}", else: "{hierarchy_header_made}"}
+  hierarchy_heading_given: {given: [heading]}
+  hierarchy_value_header_given: {given: [value_header]}
   # plan_sort's keys: the overall row, the outer level by its own count (not
   # for one level), the levels' own rows before those under them, then the
   # most frequent first, the label last; the count is the column
@@ -182,6 +248,11 @@ derive:
   hierarchy_outer_sort: {if: "{hierarchy_outer}", then: ["-n@group1{hierarchy_count}", group1]}
   hierarchy_sort:
     value: [.overall, "{hierarchy_outer_sort}", .depth, "-n{hierarchy_count}", label]
+check:
+  - fail: {if: "{hierarchy_header_given}", then: "{hierarchy_heading_given}"}
+    message: "col_header writes the whole header; heading is a text inside the header the template makes. Give col_header or heading, not both."
+  - fail: {if: "{hierarchy_header_given}", then: "{hierarchy_value_header_given}"}
+    message: "col_header writes the whole header; value_header is a text inside the header the template makes. Give col_header or value_header, not both."
 data:
   - id: adsl_sub
     from: ADSL
@@ -216,12 +287,7 @@ content:
   - plan_sort: {keys: "{hierarchy_sort}"}
   - plan_cells: {categorical: "{count_cell}"}
   - plan_total: "{hierarchy_total}"
-  - plan_col_header:
-      header:
-        - {line: "1", cols: row_label}
-        - {line: "1", cols: .values, span: each, text: "{col}\n(N={n})\nn (%)"}
-        - {line: "2", cols: row_label, text: "{hierarchy_heading}"}
-        - {line: "2", cols: .values}
+  - plan_col_header: {header: "{hierarchy_header}", values: "{col_header_values}"}
   - plan_empty: "{hierarchy_empty}"
   - plan_paginate_rows: {max_rows: "{max_rows}", split: group_force}
 page:

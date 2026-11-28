@@ -61,14 +61,14 @@ of \code{\link[=tfl_param]{tfl_param()}}): \code{omit} (the argument is left out
 (its step is not made) or \code{stop} (it needs a value: "(none)" is not
 offered); by default \code{stop} for a required argument, else \code{omit}.}
 \item{choices}{(a list column) the sources of the choices, in order:
-the closed words \verb{vars(<data>)}, \verb{levels(<var>)}, \verb{codelist(<name>)},
-\code{populations}, \code{report_data}, \code{study_data}, \code{ard}, \verb{columns(<object>)},
-\code{study_info}, \code{tokens}, \code{stats}, \code{fixed}, \code{styles},
-\verb{from_args(<arg>, ...)}, \verb{figure_style(<palette|marker>)} (the
-study's figure style's colours in their order, or its marker
-shapes), \verb{objects(<kind>)} (the objects made above and the
-study's datasets, of one kind of \code{\link[=tfl_fn_defs]{tfl_fn_defs()}}' \code{returns}).
-Another word stops.}
+the closed words of \code{\link[=tfl_choice_sources]{tfl_choice_sources()}} (14: \verb{vars(<data>)},
+\verb{levels(<var>)}, \verb{codelist(<name>)}, \verb{columns(<object>)},
+\code{populations}, \code{study_data}, \verb{objects(<kind>)}, \code{stats},
+\code{format_sets}, \code{styles}, \verb{figure_style(<palette|marker>)}, \code{tokens},
+\code{fixed}, \verb{from_args(<arg>, ...)}).  Another word stops; an old
+word (\code{report_data}, \code{ard}, \code{study_info}) stops naming the new one,
+and so does \verb{levels(<arg>)} of an argument of the card (write
+\verb{levels(from_args(<arg>))}).}
 \item{values}{(a list column) the fixed values (\code{fixed}, an \code{enum}).
 \verb{values:} writes each as a value or \verb{\{value: , label: \{en: , ja: \}\}}.}
 \item{value_labels}{(a list column) the values' labels, a data frame
@@ -124,7 +124,7 @@ the entries as one named vector (\code{plan_labels(c(AGE = "Age"))});
 A definition stops, saying what to write, for an unknown \code{tier} or
 \code{unset} or \code{editor} word, a \code{group} not in \verb{groups:}, a \code{member_of} that is not
 another argument, a malformed \code{passes_to}, a label or help that is
-neither a text nor \verb{\{en: , ja: \}}, and a choice word outside the 15.
+neither a text nor \verb{\{en: , ja: \}}, and a choice word outside the 14.
 }
 \description{
 One definition of every argument, for the code SPEC's cards and the
@@ -139,6 +139,7 @@ d[, c("name", "input", "type", "tier")]
 head(tfl_arg_defs(fn = "plan_cells")[, c("name", "input", "type")])
 }
 \seealso{
-\code{\link[=tfl_schema]{tfl_schema()}} (the schema's functions), \code{\link[=tfl_template_resolve]{tfl_template_resolve()}}
+\code{\link[=tfl_schema]{tfl_schema()}} (the schema's functions), \code{\link[=tfl_choice_sources]{tfl_choice_sources()}} (the choice
+sources), \code{\link[=tfl_template_resolve]{tfl_template_resolve()}}
 (a report's template with its values filled in, and where each came from).
 }
