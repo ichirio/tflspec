@@ -385,6 +385,8 @@ tfl_read_output <- function(path) {
   if (!is.null(y[["population"]])) stop(who, ": ", .common_old_line, call. = FALSE)
   common <- .common_in(y$common, who)
   .yaml_keys_check(y)
+  # (a report's keys are a closed list: R/spec_old_forms.R)
+  .output_keys_check(names(y), y[["kind"]], who)
   y <- .data_list_in(y, who)
   # the ARD's analyses are the report's ard: section (2026-10-15), not data:'s
   old <- intersect(c("analysis_data", "analyses"), names(y$data))
@@ -481,13 +483,8 @@ tfl_read_output <- function(path) {
   say <- function(where, keys, kind) {
     known <- .yaml_known_keys[[kind]]
     for (k in setdiff(keys[nzchar(keys)], known)) {
-      d <- drop(utils::adist(k, known))
-      near <- which(d <= 2L | startsWith(known, k) | startsWith(k, known))
-      hint <- if (length(near)) {
-        sprintf("; did you mean %s:?", known[near[which.min(d[near])]])
-      } else {
-        " (not read)"
-      }
+      near <- .near_name(k, known)
+      hint <- if (!is.na(near)) sprintf("; did you mean %s:?", near) else " (not read)"
       warning(sprintf("%s: %s: is not a key%s", where, k, hint), call. = FALSE)
     }
   }
@@ -833,6 +830,15 @@ tfl_read_output <- function(path) {
   if (inherits(el, "tfl_r")) return(tfl_item(".r", list(code = el), "own"))
   # a content object: `{name, from, calls}`
   if (.is_obj_map(el)) return(.obj_map_from_list(el))
+  # the old `{fn:, args:, from:}` map of an item stops (canon 11-10 :378);
+  # an item already read (a tfl_item) is taken as it is, below
+  if (is.list(el) && !inherits(el, "tfl_item") && "fn" %in% names(el) &&
+      all(names(el) %in% c("fn", "args", "from"))) {
+    fn <- if (is.character(el[["fn"]]) && length(el[["fn"]]) == 1L) el[["fn"]] else "<fn>"
+    .old_form_stop("item_fn_map", .spec_read_file(),
+                   was = sprintf("a content item written as a map `{fn: %s, args: {...}}`", fn),
+                   instead = sprintf("write it `- %s: {<args>}`", fn))
+  }
   if (is.list(el) && length(el) == 1L && !is.null(names(el)) && nzchar(names(el))) {
     args <- el[[1L]]
     if (is.null(args)) args <- list()
@@ -853,7 +859,7 @@ tfl_read_output <- function(path) {
     args <- .r_tag_check(names(el), .neutral_in(names(el), .calls_in(args)))
     return(tfl_item(names(el), .rounding_check(names(el), .logical_strict(names(el), args)), "own"))
   }
-  if (is.list(el) && !is.null(el$fn)) {
+  if (inherits(el, "tfl_item")) {
     args <- .r_tag_check(el$fn, .neutral_in(el$fn, .calls_in(el$args %||% list())))
     return(tfl_item(el$fn, args, el$from %||% "own"))
   }
@@ -980,8 +986,10 @@ tfl_write_output <- function(x, path) {
   if (rw_out) y$content <- c(list(list(rework = .calls_out(x$data))), y$content)
   if (length(x$page)) y$page <- .calls_out(x$page)
   # a kind's own parts beside the common ones (a figure's template, plot,
-  # plots, compose)
-  for (k in setdiff(names(x), .output_fields)) if (!is.null(x[[k]])) y[[k]] <- .calls_out(x[[k]])
+  # plots, compose): the report keys only (.output_keys, as the reader reads)
+  extra <- setdiff(names(x)[!vapply(x, is.null, NA)], .output_fields)
+  .output_keys_check(extra, x$kind, paste0("tfl_write_output(): ", x$id))
+  for (k in extra) y[[k]] <- .calls_out(x[[k]])
   if (!is.null(x$contents)) {
     y$contents <- .contents_out(x$contents)
     if (!length(x$content)) y$content <- NULL
@@ -999,8 +1007,8 @@ tfl_write_output <- function(x, path) {
   x
 }
 
-.output_fields <- c("id", "kind", "label", "common", "extends", "ard", "data", "codelists",
-                    "content", "page")
+# (the parts tfl_output() itself holds: R/spec_old_forms.R)
+.output_fields <- .output_keys$key[.output_keys$field]
 
 # A report with definitions writes them as its `data:` list: a map beside
 # them has no place.  A table's bare {source: ard} says nothing; a listing's

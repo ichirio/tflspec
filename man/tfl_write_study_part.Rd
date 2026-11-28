@@ -6,7 +6,7 @@
 \usage{
 tfl_write_study_part(
   study,
-  part = c("defaults", "patterns", "data", "toc"),
+  part = c("defaults", "data", "toc"),
   path = NULL,
   name = NULL
 )
@@ -14,13 +14,13 @@ tfl_write_study_part(
 \arguments{
 \item{study}{A \code{tfl_study_spec}.}
 
-\item{part}{\code{"defaults"}, \code{"patterns"} (one, by \code{name}),
-\code{"data"} or \code{"toc"}.}
+\item{part}{\code{"defaults"}, \code{"data"} or \code{"toc"}.  (\code{"patterns"} stops: a
+pattern file is an old form, its page a page configuration in
+\code{"defaults"}' \verb{styles:}.)}
 
-\item{path}{The file; \code{NULL}: the study's own (\code{spec/defaults.yml},
-\verb{spec/patterns/<name>.yml} ...).}
+\item{path}{The file; \code{NULL}: the study's own (\code{spec/defaults.yml} ...).}
 
-\item{name}{For \code{part = "patterns"}: the pattern.}
+\item{name}{Removed with \code{part = "patterns"}; a value stops.}
 }
 \value{
 \code{path}, invisibly.
@@ -28,7 +28,7 @@ tfl_write_study_part(
 \description{
 Writes the study-level file of one part of a \code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}
 result -- what a builder changes for the whole study (the rounding of
-every table, a pattern) -- in the form the reader reads.  For
+every table, a page configuration) -- in the form the reader reads.  For
 \code{"defaults"} written over the study's own \code{spec/defaults.yml}, the blocks
 that are not layers (\verb{codelists:}, \verb{adam_meta:}, \verb{figure_style:},
 \verb{options:}) are kept as the file has them.
