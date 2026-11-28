@@ -27,7 +27,7 @@ rr_study <- function(m = rr_manifest()) {
   for (d in c("programs/ard", "programs/tfl", "spec", "data/adam")) {
     dir.create(file.path(s, d), recursive = TRUE)
   }
-  writeLines("study_id: S-1", file.path(s, "study.yml"))
+  write_study_yml(s, "study_id: S-1")
   writeLines("a: 1", file.path(s, "spec", "s.yml"))
   writeLines(c("a,b", "1,2", "3,4"), file.path(s, "data", "adam", "x.csv"))
   writeLines(c("# nothing here reaches outside the study",

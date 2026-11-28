@@ -53,27 +53,8 @@ adtte_sub <- adtte |>
     by = "USUBJID",
     relationship = "many-to-one"
   ) |>
-  filter(PARAMCD == "TTSKIN")
-
-# AVAL in days, from each record's unit, AVALU (days when the data has no AVALU)
-adtte_sub <- adtte_sub |>
-  mutate(AVALU = if ("AVALU" %in% names(adtte_sub)) toupper(AVALU) else "DAYS")
-units_unknown <- setdiff(adtte_sub$AVALU, c("DAYS", "WEEKS", "MONTHS", "YEARS"))
-if (length(units_unknown)) {
-  stop("AVALU: a unit not DAYS, WEEKS, MONTHS or YEARS: ", toString(units_unknown), call. = FALSE)
-}
-adtte_sub <- adtte_sub |>
-  mutate(
-    AVAL = AVAL * case_when(
-      AVALU == "DAYS"   ~ 1,
-      AVALU == "WEEKS"  ~ days_per_week,
-      AVALU == "MONTHS" ~ days_per_month,
-      AVALU == "YEARS"  ~ days_per_year
-    ),
-    AVALU = "DAYS"
-  )
-
-adtte_sub <- adtte_sub |>
+  filter(PARAMCD == "TTSKIN") |>
+  tte_time("days") |>
   set_levels(TRT01A = cl_trt01a)
 
 fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01A, data = adtte_sub)

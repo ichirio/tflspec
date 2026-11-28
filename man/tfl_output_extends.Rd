@@ -17,7 +17,7 @@ none); \code{NULL} \code{step}: a list by step (\code{data}, \code{ard}, \code{c
 }
 \description{
 What a report extends, step by step: the files laid under it -- the
-study's \code{defaults}, its patterns (\verb{patterns/<name>}) -- in each of the
+study's \code{defaults} -- in each of the
 steps a report is made in (\code{data}, \code{ard}, \code{content}), nearest
 first.  The report's \verb{extends:} says it, as a list of files for every
 step, \code{none}, or a map by step (\code{{content: none}}).  A step the map does

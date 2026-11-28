@@ -106,7 +106,7 @@ test_that("defaults.yml with no styles: the kept blocks at the end", {
 test_that("tfl_write_study_part() over the study's defaults.yml keeps its code lists block", {
   st <- withr_tempdir()
   dir.create(file.path(st, "spec"))
-  writeLines(c("study_id: STUDY-D"), file.path(st, "study.yml"))
+  writeLines(c("spec_version: 2", "study_id: STUDY-D"), file.path(st, "study.yml"))
   writeLines(c("content:", "  - table_plan: {}", "# the study's own", "options:", "  digits: 2"),
              file.path(st, "spec", "defaults.yml"))
   s <- tfl_read_study_spec(st)

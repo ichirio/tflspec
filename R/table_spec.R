@@ -2395,11 +2395,10 @@ tfl_read_report_spec <- function(path, output_id = NULL) {
 #'   pages for a table or listing, figures for a `type = figure` report.
 #' @param study For a YAML report: the study ([tfl_read_study_spec()]), for
 #'   its program (the TOC's `program`, else `settings: program`, in
-#'   `settings: program_dir`), and where the report's titles and footnotes
-#'   print: `settings: titles_at` `header` (the running header, after the
-#'   study's lines) or `titles` (above the table), `footnotes_at` `footer`
-#'   (the running footer, before the study's lines) or `footnotes` (below
-#'   the table); not set, above and below the table.
+#'   `settings: program_dir`).  A report's titles and footnotes print where
+#'   they are written: `page: titles` above the table, `page: footnotes`
+#'   below it, `page: header` / `page: footer` in the running header and
+#'   footer (canon 11-12: no setting moves them).
 #'
 #' @return An [rtfreporter::rtf_document()].
 #'
@@ -2451,8 +2450,8 @@ tfl_report <- function(spec, output_id = NULL, content, study = NULL) {
 #'
 #' `file.path(study$output_path, report$file)`, with `{output_id}` filled:
 #' the path [rtfreporter::generate_rtfreport()] writes to.  For a report of
-#' the YAML spec ([tfl_output()]): its own `file` (its `settings: file`,
-#' else its TOC entry's), else `study.yml`'s `settings: file`
+#' the YAML spec ([tfl_output()]): its own `file` (its TOC entry's), else
+#' `study.yml`'s `settings: file`
 #' (`"{output_id}.rtf"` when none says it), in `settings: output_path` as
 #' it is written (a relative one from the working directory).
 #'
@@ -3094,16 +3093,17 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
 }
 
 # A YAML report's RTF path (tfl_report_path(); the document's file too):
-# the report's own file (its settings: file, else its TOC entry's -- where
-# the converter puts a report row's file), else the study's settings: file,
-# else "{output_id}.rtf"; in the study's output_path (as it is: a relative
-# one from the working directory), or bare when it has none
+# the report's own file (its TOC entry's -- where the converter puts a
+# report row's file; a report file has no `settings:`, canon 11-12 :380),
+# else the study's settings: file, else "{output_id}.rtf"; in the study's
+# output_path (as it is: a relative one from the working directory), or
+# bare when it has none
 .output_rtf_path <- function(output, study) {
   id <- output$id
   set <- study$study$settings
   # (a part's entry is its number's: its shell_code)
   entry <- .file_toc_entry(study, id)
-  file <- .file_name_fill(output$settings$file %||% .page_toc_entry(study, id)[["file"]] %||%
+  file <- .file_name_fill(.page_toc_entry(study, id)[["file"]] %||%
                             set$file %||% "{output_id}.rtf", id, entry)
   out <- set$output_path %||% NA_character_
   if (is.na(out)) file else file.path(out, file)

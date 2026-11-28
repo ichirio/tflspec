@@ -57,11 +57,11 @@ test_that("the analyses make an ARD whose hazard ratios are coxph()'s, overall a
   d <- adam$ADTTE[adam$ADTTE$PARAMCD == unique(adam$ADTTE$PARAMCD)[1], ]
   d <- d[d$USUBJID %in% adsl$USUBJID[adsl$SAFFL == "Y"], ]
   d$SEX <- adsl$SEX[match(d$USUBJID, adsl$USUBJID)]
-  fit <- survival::coxph(survival::Surv(AVAL, 1 - CNSR) ~ TRTA, data = d)
+  fit <- survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRTA, data = d)
   hr <- ard[ard$analysis_id == "HR" & ard$stat_name == "estimate", ]
   expect_equal(sort(unname(unlist(hr$stat)))[-1], sort(unname(exp(coef(fit)))), tolerance = 1e-6)
   f <- d[d$SEX == "F", ]
-  fit_f <- survival::coxph(survival::Surv(AVAL, 1 - CNSR) ~ TRTA, data = f)
+  fit_f <- survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRTA, data = f)
   hr_f <- ard[ard$analysis_id == "HR_SEX" & ard$stat_name == "estimate" &
                 vapply(ard$group1_level, function(v) identical(as.character(v), "F"), NA), ]
   expect_equal(sort(unname(unlist(hr_f$stat)))[-1], sort(unname(exp(coef(fit_f)))), tolerance = 1e-6)
@@ -100,10 +100,19 @@ test_that("the forest template is in parts, with its analyses, and its design ch
   expect_false(grepl("heading row", .forest_est_code("TRT01P", character()), fixed = TRUE))
   expect_match(.forest_est_code("TRT01P", "SEX"), "a heading row above each subgroup", fixed = TRUE)
   # bold headings: the axis's labels as plotmath, a code step of their own
-  # (`out: y_labels`: the rows' step keeps `est` only)
+  # (`out: y_labels`; the rows' step keeps `est` only), only when asked and
+  # with subgroups
   expect_false(grepl("y_labels", .forest_est_code("TRT01P", "SEX"), fixed = TRUE))
-  expect_match(.forest_labels_code(),
+  steps <- function(sub, bold) .tpl_forest_design("TRT01P", sub, look = list(bold_headings = bold))$stats
+  outs <- function(s) vapply(s, function(st) st$out %||% NA_character_, "")
+  bold <- steps("SEX", TRUE)
+  expect_identical(vapply(bold, `[[`, "", "step"), c("ard_stats", "code", "code"))
+  expect_identical(outs(bold)[2:3], c("est", "y_labels"))
+  expect_match(bold[[3L]]$code,
                "y_labels <- as.expression(Map(function(l, h) if (h) bquote(bold(.(l))) else l,", fixed = TRUE)
+  expect_false(grepl("y_labels", bold[[2L]]$code, fixed = TRUE))
+  expect_length(steps("SEX", FALSE), 2L)
+  expect_length(steps(character(), TRUE), 2L)
 })
 
 test_that("text_column: its columns, a panel at the right; not with one below", {

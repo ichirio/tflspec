@@ -12,7 +12,7 @@ test_that("the study spec reads its files; missing ones are empty", {
   expect_identical(s$defaults$page, list())
   expect_identical(tflspec:::.tpl_style_set("tfl_standard", s)$page$header$first[["2"]]$left, "Protocol: {STUDY_ID}")
   expect_identical(s$study$tokens$COMPANY, "Sample Pharma")
-  expect_identical(s$patterns, stats::setNames(list(), character()))
+  expect_null(s$patterns)
   expect_identical(s$toc, list())
   outs <- tfl_read_outputs(yml_dir())
   expect_identical(names(outs), "T-14-1-1")
@@ -77,38 +77,88 @@ test_that("!unset removes a key of the layers; extends: none uses no layer", {
   expect_identical(r0$page$header[["1"]]$left, "{COMPANY}")
 })
 
-test_that("a pattern between the defaults and the report, nearest last", {
+test_that("a pattern stops: spec/patterns/ and extends: patterns/<name> are old forms (canon :380)", {
   d <- withr::local_tempdir()
   dir.create(file.path(d, "patterns"))
   dir.create(file.path(d, "outputs"))
-  writeLines(c("content:", "  - plan_stub: {name: row_label}", "  - plan_blanks: {first: true}"),
-             file.path(d, "defaults.yml"))
-  writeLines("tokens: {A: study, B: study}", file.path(d, "study.yml"))
-  writeLines(c("content:", "  - plan_blanks: {first: false, last: true}"),
-             file.path(d, "patterns", "compact.yml"))
-  writeLines(c("id: T-1", "kind: table", "extends: [patterns/compact, defaults]",
-               "content:", "  - table_plan: {cols: ARM}",
-               "page:", "  tokens: {C: own}"), file.path(d, "outputs", "T-1.yml"))
+  writeLines(c("content:", "  - plan_stub: {name: row_label}"), file.path(d, "defaults.yml"))
+  write_study_yml(d, "tokens: {A: study}")
+  # (an empty folder holds no old form: nothing to stop on)
   s <- tfl_read_study_spec(d)
-  r <- tfl_resolve_output(tfl_read_outputs(d)[["T-1"]], s)
-  expect_identical(vapply(r$content, function(it) paste(it$fn, it$from), ""),
-                   c("table_plan own", "plan_stub defaults", "plan_blanks pattern:compact"))
-  expect_identical(r$content[[3L]]$args, list(first = FALSE, last = TRUE))
-  expect_identical(r$page$tokens, list(A = "study", B = "study", C = "own"))
-  expect_error(tfl_resolve_output(tfl_output("T-2", "table", extends = "patterns/nope"), s), "No pattern")
+  writeLines(c("content:", "  - plan_blanks: {first: false}"), file.path(d, "patterns", "compact.yml"))
+  e <- tryCatch(tfl_read_study_spec(d), error = function(e) e)
+  expect_s3_class(e, "tflspec_old_form")
+  expect_identical(e$form, "patterns_dir")
+  expect_match(conditionMessage(e), "styles: <name>:", fixed = TRUE)
+  e <- tryCatch(tfl_output("T-2", "table", extends = c("patterns/compact", "defaults")), error = function(e) e)
+  expect_s3_class(e, "tflspec_old_form")
+  expect_identical(e$form, "extends_pattern")
+  expect_error(tfl_output("T-2", "table", extends = list(content = "patterns/compact")),
+               "`extends: patterns/compact` is no longer read", fixed = TRUE)
+  expect_error(tflspec:::.layer_of("patterns/compact", s), class = "tflspec_old_form")
+  expect_error(tflspec:::.layer_of("other", s), "names \"defaults\" or \"none\"")
+  expect_error(tfl_write_study_part(s, "patterns"), class = "tflspec_old_form")
+  expect_error(tfl_write_study_part(s, "defaults", tempfile(), name = "compact"), class = "tflspec_old_form")
 })
 
-test_that("study.yml's spec_version: this reader's is read, a newer one is refused", {
+test_that("study.yml's spec_version: 2 is read; none, an older or a newer one stops", {
   d <- withr::local_tempdir()
-  writeLines(c("study_id: V-1", "spec_version: 1"), file.path(d, "study.yml"))
-  expect_identical(tfl_read_study_spec(d)$study$spec_version, 1L)
+  writeLines(c("study_id: V-1", "spec_version: 2"), file.path(d, "study.yml"))
+  expect_identical(tfl_read_study_spec(d)$study$spec_version, 2L)
   writeLines(c("study_id: V-1", "spec_version: 99"), file.path(d, "study.yml"))
   expect_error(tfl_read_study_spec(d), "Update tflspec")
   writeLines(c("study_id: V-1", "spec_version: new"), file.path(d, "study.yml"))
   expect_error(tfl_read_study_spec(d), "not a number")
-  # none: an old study.yml reads
+  # an older one, and none: an old form, with the list of every old form
+  # and what to write instead (canon 11-10 :377)
+  for (x in list(c("study_id: V-1", "spec_version: 1"), "study_id: V-1")) {
+    writeLines(x, file.path(d, "study.yml"))
+    e <- tryCatch(tfl_read_study_spec(d), error = function(e) e)
+    expect_s3_class(e, "tflspec_old_form")
+    expect_identical(e$form, "spec_version")
+    m <- conditionMessage(e)
+    expect_match(m, "write `spec_version: 2` in study.yml", fixed = TRUE)
+    for (l in tflspec:::.old_form_lines()) expect_true(grepl(l, m, fixed = TRUE), info = l)
+  }
+  expect_match(conditionMessage(tryCatch(tfl_read_study_spec(d), error = function(e) e)),
+               "a study.yml with no `spec_version`", fixed = TRUE)
+  # an empty study.yml says no version either
+  writeLines(character(), file.path(d, "study.yml"))
+  expect_error(tfl_read_study_spec(d), class = "tflspec_old_form")
+  # the other reader of study.yml, the file and the folder
   writeLines("study_id: V-1", file.path(d, "study.yml"))
-  expect_identical(tfl_read_study_spec(d)$study$study_id, "V-1")
+  rep <- list(id = "T-1", kind = "table", template = list(name = "tflspec_v1/demog"))
+  expect_error(tfl_template_resolve(rep, study = d), class = "tflspec_old_form")
+  expect_error(tfl_template_resolve(rep, study = file.path(d, "study.yml")), class = "tflspec_old_form")
+  # (a list given in code has no file to check)
+  expect_identical(tflspec:::.tr_study(list(study_id = "V-1"), "who")$study_id, "V-1")
+  # no study.yml: the current form
+  file.remove(file.path(d, "study.yml"))
+  expect_null(tfl_read_study_spec(d)$study$spec_version)
+})
+
+test_that("the writers of study.yml stamp the current spec_version", {
+  d <- withr::local_tempdir()
+  sample <- system.file("extdata", "spec-yaml", package = "tflspec")
+  expect_identical(tfl_read_study_spec(sample)$study$spec_version, tflspec:::.spec_version)
+  # an answer's study.yml without the line gets it
+  ans <- c("### study.yml", "", "```yaml", "study_id: U-1", "```", "")
+  suppressMessages(tfl_ai_unpack(ans, d))
+  expect_identical(readLines(file.path(d, "study.yml"))[1L], "spec_version: 2")
+  expect_identical(tfl_read_study_spec(d)$study$study_id, "U-1")
+  # one with it keeps its own
+  ans[4L] <- "spec_version: 2\nstudy_id: U-2"
+  suppressMessages(tfl_ai_unpack(ans, d, overwrite = TRUE))
+  expect_identical(sum(grepl("^spec_version:", readLines(file.path(d, "study.yml")))), 1L)
+  # the AI kit's blank study says it
+  expect_true("spec_version: 2" %in% trimws(sub("#.*", "", tflspec:::.ai_blank_spec_md())))
+  # a new study's
+  skip_if_not_installed("haven")
+  s <- file.path(d, "new")
+  dir.create(file.path(s, "adam"), recursive = TRUE)
+  haven::write_xpt(tflspec:::.ai_chr(tflspec::adsl), file.path(s, "adam", "adsl.xpt"))
+  suppressMessages(tfl_ai_study_init(s, adam = "adam", study_id = "N-1"))
+  expect_identical(tfl_read_study_spec(s)$study$spec_version, tflspec:::.spec_version)
 })
 
 test_that("a named-dots verb (plan_cells) merges by key; another verb is replaced whole", {
@@ -162,8 +212,8 @@ test_that("a report's content as R code (one !r) is read, written and wins whole
 test_that("a YAML report's RTF path: the TOC's file, else the study's, in output_path", {
   dir <- withr::local_tempdir()
   dir.create(file.path(dir, "spec", "outputs"), recursive = TRUE)
-  writeLines(c("study_id: S-1", "settings:", "  output_path: output/tfl",
-               "  file: '{output_id}.rtf'"), file.path(dir, "study.yml"))
+  write_study_yml(dir, c("study_id: S-1", "settings:", "  output_path: output/tfl",
+               "  file: '{output_id}.rtf'"))
   writeLines(c("outputs:", "  - id: T-1", "    kind: table",
                "  - id: T-2", "    kind: table", "    file: t2_{output_id}.rtf"),
              file.path(dir, "spec", "toc.yml"))
@@ -181,16 +231,16 @@ test_that("a YAML report's RTF path: a file of the report's own, the study's out
   dir.create(file.path(dir, "spec", "outputs"), recursive = TRUE)
   # (as a study converted from sheets with no default file: each report's
   # own file in the TOC, the study's output_path relative)
-  writeLines(c("study_id: S-1", "settings:", "  output_path: ../tables"), file.path(dir, "study.yml"))
+  write_study_yml(dir, c("study_id: S-1", "settings:", "  output_path: ../tables"))
   writeLines(c("outputs:", "  - id: T-1", "    kind: table", "    file: t_{output_id}.rtf",
                "  - id: T-2", "    kind: table"), file.path(dir, "spec", "toc.yml"))
   s <- tfl_read_study_spec(dir)
   expect_identical(tfl_report_path(tfl_output("T-1", "table"), study = s), "../tables/t_T-1.rtf")
   expect_identical(tfl_report_path(tfl_output("T-2", "table"), study = s), "../tables/T-2.rtf")
-  # the report's own settings: file first
+  # (a report's own settings: file is an old form, not read: canon 11-12 :380)
   o <- tfl_output("T-2", "table")
   o$settings <- list(file = "own_{output_id}.rtf")
-  expect_identical(tfl_report_path(o, study = s), "../tables/own_T-2.rtf")
+  expect_identical(tfl_report_path(o, study = s), "../tables/T-2.rtf")
 })
 
 test_that("the defaults' content is a table's: a figure or a listing takes their page, not it", {

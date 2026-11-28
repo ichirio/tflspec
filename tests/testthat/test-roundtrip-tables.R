@@ -9,7 +9,7 @@
 rt_study <- function(outputs, env = parent.frame()) {
   d <- withr::local_tempdir(.local_envir = env)
   dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)
-  writeLines(c("study_id: RT-689", "title: rt689", "settings:", "  rounding: sas",
+  writeLines(c("spec_version: 2", "study_id: RT-689", "title: rt689", "settings:", "  rounding: sas",
                "  output_path: output/tfl", "  program_dir: programs/tfl",
                "  file: '{output_id}.rtf'", "keys:", "  id: USUBJID"),
              file.path(d, "study.yml"))

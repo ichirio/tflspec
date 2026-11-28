@@ -1,10 +1,23 @@
 pp_time_mutate <- function(ctx, vars) {
   unit <- pp_opt(ctx, "time_unit")
   if (!unit %in% names(pp_time_divisor)) stop("Unknown time_unit: ", unit, call. = FALSE)
-  if (unit == "as_is" || !length(vars)) return(NULL)
+  # (a time in days kept in days: no step)
+  if (is.na(pp_time_divisor[[unit]]) || pp_time_divisor[[unit]] == 1 || !length(vars)) return(NULL)
   d <- format(pp_time_divisor[[unit]])
   if (length(vars) == 1) return(sprintf("mutate(%s = %s / %s)", vars, vars, d))
   sprintf("mutate(across(c(%s), ~ .x / %s))", paste(vars, collapse = ", "), d)
+}
+
+# A time to event's AVAL in the sheet's unit: the study helper tte_time()
+# converts it from its AVALU (days when there is none), one unit in the data.
+# "as_is" (the old default) keeps AVAL as it is: no step (NULL).  Another
+# variable is a time in days.
+pp_tte_mutate <- function(ctx, var) {
+  if (!identical(var, "AVAL")) return(pp_time_mutate(ctx, var))
+  unit <- pp_opt(ctx, "time_unit")
+  if (!unit %in% names(pp_time_unit_name)) stop("Unknown time_unit: ", unit, call. = FALSE)
+  if (unit == "as_is") return(NULL)
+  sprintf("tte_time(%s)", q(pp_time_unit_name[[unit]]))
 }
 
 pp_time_label <- function(ctx) unname(pp_time_axis_label[pp_opt(ctx, "time_unit")])
@@ -44,7 +57,13 @@ pp_gen_km <- function(ctx) {
       s_values <- pp_values_or_null(pp_filtered_data(ctx, ctx$ds, flist), s_var)
     }
   }
-  steps <- c(steps, list(pp_time_mutate(ctx, time)))
+  # the number at risk from the KM table's ARD: its times are AVAL's own unit
+  # (AVALU), so the risk table converts them as the curve's AVAL is
+  risk_ard <- pp_opt(ctx, "risk_ard")
+  tte_step <- pp_tte_mutate(ctx, time)
+  risk_tte <- has_layer(ctx, "n_at_risk") && !is.na(risk_ard) &&
+    identical(time, "AVAL") && !is.null(tte_step)
+  post <- list()
 
   # colours: one per stratum (single arm: arm_label)
   if (is.null(s_var)) {
@@ -54,11 +73,15 @@ pp_gen_km <- function(ctx) {
                name = "pal_strata", values = arm, colours = unname(pal[1]), labels = arm)
   } else {
     sv <- pp_scale_values(ctx, "pal_strata", s_var, s_values, "km_df", "treatment")
-    if (!is.null(sv$values)) steps <- c(steps, sprintf("mutate(%s = factor(%s, levels = names(pal_strata)))", s_var, s_var))
+    if (!is.null(sv$values)) post <- c(post, sprintf("mutate(%s = factor(%s, levels = names(pal_strata)))", s_var, s_var))
   }
 
-  data <- c(pipe_code("km_df", steps))
-  fit <- sprintf("km_fit <- survfit2(Surv(%s, %s == 0) ~ %s, data = km_df)", time, cnsr, s_var %or% "1")
+  data <- if (risk_tte) paste(c(
+    pipe_code("km_df", steps),
+    "km_unit <- if (\"AVALU\" %in% names(km_df)) km_df$AVALU[1] else \"DAYS\"   # AVAL's unit, before tte_time()",
+    pipe_code("km_df", c(list("km_df", tte_step), post))
+  ), collapse = "\n") else pipe_code("km_df", c(steps, list(tte_step), post))
+  fit <- sprintf("km_fit <- survfit2(%s ~ %s, data = km_df)", .tte_surv(time, cnsr, pkg = FALSE), s_var %or% "1")
 
   lw <- pp_opt(ctx, "line_width")
   cshape <- pp_shape_code(pp_opt(ctx, "censor_shape"), "x")
@@ -97,7 +120,6 @@ pp_gen_km <- function(ctx) {
   }
 
   panels <- list()
-  risk_ard <- pp_opt(ctx, "risk_ard")
   if (has_layer(ctx, "n_at_risk")) {
     single <- is.null(s_var)
     risk_code <- if (is.na(risk_ard)) c(
@@ -113,13 +135,18 @@ pp_gen_km <- function(ctx) {
       "km_ard  <- km_ard[km_ard$variable == \"time\" & km_ard$stat_name == \"n.risk\", ]",
       paste0("risk_df <- data.frame(\n",
              "  time   = as.numeric(unlist(km_ard$variable_level))",
-             if (!identical(pp_opt(ctx, "time_unit"), "as_is"))
+             if (!risk_tte && !is.na(pp_time_divisor[[pp_opt(ctx, "time_unit")]]) &&
+                 pp_time_divisor[[pp_opt(ctx, "time_unit")]] != 1)
                paste0(" / ", format(pp_time_divisor[[pp_opt(ctx, "time_unit")]]),
                       ",   # in the axis's unit\n")
              else ",\n",
              if (single) sprintf("  strata = %s,\n", q(sv$values[1]))
              else "  strata = as.character(unlist(km_ard$group1_level)),\n",
              "  n_risk = as.numeric(unlist(km_ard$stat))\n)"),
+      if (risk_tte) c(
+        "# the ARD's times are in AVAL's own unit (km_unit): in the axis's, as the curve's",
+        sprintf("risk_df$time <- tte_time(data.frame(AVAL = risk_df$time, AVALU = km_unit), %s)$AVAL",
+                q(pp_time_unit_name[[pp_opt(ctx, "time_unit")]]))),
       "sr <- summary(km_fit, times = sort(unique(risk_df$time)), extend = TRUE)",
       paste0("curve_n <- data.frame(time = sr$time, n = sr$n.risk, strata = ",
              if (single) q(sv$values[1])

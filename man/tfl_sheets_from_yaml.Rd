@@ -47,20 +47,21 @@ code a row, \code{label} blank when the list has none), \code{not_converted}
 \code{tfl_sheets_from_yaml()} reads a study's YAML spec and gives the sheets
 the workbooks held: for the app's grids and for the generators that
 still read sheets.  The study's defaults are the rows with a blank
-\code{output_id}, a pattern's the \verb{@<name>} rows, a report's its own rows (the
-files as written, not layered -- the sheets' readers layer them as they
-always did).  \code{tfl_sheets_from_spec()} does the same from a spec already
-read (or changed in memory, not written yet): \code{tfl_sheets_from_yaml(dir)}
-is \code{tfl_sheets_from_spec(tfl_read_study_spec(dir), tfl_read_outputs(dir))}.
+\code{output_id}, a page configuration's the \verb{@<name>} rows, a report's its own
+rows (the files as written, not layered -- the sheets' readers layer them
+as they always did).  \code{tfl_sheets_from_spec()} does the same from a spec
+already read (or changed in memory, not written yet):
+\code{tfl_sheets_from_yaml(dir)} is
+\code{tfl_sheets_from_spec(tfl_read_study_spec(dir), tfl_read_outputs(dir))}.
 }
 \details{
 What a report extends: its row on the \code{report} sheet has a \code{pattern} cell
-(the first pattern, \verb{@<name>}), and an \code{extends} cell (\code{a | b}, or \code{none})
-only when the chain is not \verb{[<pattern>, defaults]} as the \code{pattern} cell
-alone says it: \code{extends: none}, a pattern after the defaults, a pattern
-alone, two patterns; a map by step as \verb{content=none; page=patterns/a | defaults}.  \code{tfl_yaml_from_sheets()} reads the cell as the chain,
-in its order; an \code{extends} cell whose first pattern is not the \code{pattern}
-cell's is an error (one of the two was edited).
+(the page configuration it picks, its \verb{style:}, \verb{@<name>}), and an
+\code{extends} cell only when the chain is not \verb{[defaults]}: \code{none}, or a map
+by step as \verb{content=none; data=defaults}.  \code{tfl_yaml_from_sheets()} reads
+the cell as written.  A \code{pattern} cell that names no page configuration,
+and a pattern in the \code{extends} cell (\verb{patterns/<name>}), stop: a pattern
+file is an old form.
 }
 \examples{
 d <- system.file("extdata", "spec-yaml", package = "tflspec")

@@ -54,9 +54,9 @@
     tfl_param("time", "AVAL", type = "vars", tier = "usual",
               doc = "the time variable (Surv(time, ...)), in `time_unit`"),
     tfl_param("time_unit", "months", type = "choice", choices = c("days", "weeks", "months", "years"),
-              tier = "usual", doc = "the time's unit: the call's first step converts the days to it; the x axis's title"),
+              tier = "usual", doc = "the unit the analysis and the axis use: the call's first step converts AVAL from its unit, AVALU, to it (tte_time()); the x axis's title"),
     tfl_param("censor", "CNSR", type = "vars", tier = "usual",
-              doc = "the censoring variable, 1 censored (Surv(time, censor == 0))"),
+              doc = "the censoring variable, 0 the event, any other value a censoring (Surv(time, censor == 0))"),
     tfl_param("by", NULL, required = TRUE, type = "vars",
               doc = "the curves' variable (survfit2(~ by), the colours)"),
     tfl_param("y_type", "survival", type = "choice", choices = c("survival", "risk"), tier = "usual",
@@ -251,9 +251,7 @@
       code = paste0(
         "med <- summary(fit)$table\n",
         "if (!is.matrix(med)) med <- matrix(med, nrow = 1, dimnames = list(\"All\", names(med)))\n",
-        "fmt_med <- function(x) {\n",
-        "  ifelse(is.na(x), \"NE\", formatC(rtfreporter::round_num(x, ", dg, "), format = \"f\", digits = ", dg, "))\n",
-        "}\n",
+        "fmt_med <- function(x) fmt_num(x, ", dg, ")\n",
         "arm_of <- sub(\"^[^=]*=\", \"\", rownames(med))\n",
         "legend_labels <- stats::setNames(", lab, ", arm_of)"))),
       fit)

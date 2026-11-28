@@ -168,7 +168,8 @@ tfl_write_report_spec(report, "spec/report.xlsx")
 # the parameter, the group, the population flag and its own arguments.
 # tfl_fig_list_template() adds the sheets of styles and arguments, and
 # reads the groups' values and colours from the data.  The KM plots draw
-# AVAL as it is (time_unit "days" means no conversion): ADTTE is in months.
+# AVAL in months: ADTTE is in months (AVALU), time_unit says the unit the
+# figure uses and tte_time() converts to it.
 source("prepare_data.R")     # the data, as the programs will read them
 q <- function(x) paste0("'", x, "'")
 plots <- df(
@@ -185,8 +186,8 @@ plots <- df(
   group   = c("TRT01P", "TRT01P", "ARMCMP", NA, NA, NA),
   pop     = c("ITTFL", "ITTFL", "ITTFL", "EFFFL", "RSPFL", "EFFFL"),
   legend  = NA,
-  args    = c('time_unit = "days", x_label = "Time (Months)", x_by = 3',
-              'time_unit = "days", x_label = "Time (Months)", x_by = 3',
+  args    = c('time_unit = "months", x_by = 3',
+              'time_unit = "months", x_by = 3',
               'subgroups = c("AGEGR1", "SEX", "ECOGBL", "REGION1")',
               'y_label = "Best change from baseline in sum of diameters (%)"',
               'events = c(Death = "DTHADY"), ongoing = c(EOTSTT = "ONGOING"), x_by = 3',
