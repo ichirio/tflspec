@@ -146,8 +146,14 @@
 # other), NA when none is close
 .near_name <- function(k, known) {
   if (!length(known)) return(NA_character_)
-  d <- drop(utils::adist(k, known))
-  near <- which(d <= 2L | startsWith(known, k) | startsWith(k, known))
+  # (the edits a typo may have scale with the key: a short key one letter
+  # added or dropped -- a letter changed makes another word, `date` / `data`
+  # --, a longer one two edits)
+  a <- utils::adist(k, known, counts = TRUE)
+  d <- drop(a)
+  sub <- drop(attr(a, "counts")[, , "sub"])
+  ok <- if (nchar(k) < 5L) d <= 1L & sub == 0L else d <= 2L
+  near <- which(ok | startsWith(known, k) | startsWith(k, known))
   if (length(near)) known[near[which.min(d[near])]] else NA_character_
 }
 
@@ -156,12 +162,15 @@
 # take -- an old form among them -- in one stop.  `file`, the study.yml it
 # was read from, also checks its spec_version (a list given in code has
 # none to check).  Both readers of study.yml call it: tfl_read_study_spec()
-# and .tr_study(); so does the converter, on the sheets' study.
+# and .tr_study(); so does the converter, on the sheets' study.  Its
+# value: `study` without the keys it does not take (what a reader that
+# gathers the problems, .spec_keys_collect(), goes on with).
 .study_yml_form_check <- function(study, dir = NULL, file = NULL) {
-  if (!is.list(study)) return(invisible())
+  if (!is.list(study)) return(invisible(study))
   if (!is.null(file)) .check_spec_version(study[["spec_version"]], file)
-  .spec_keys_raise(.study_yml_key_problems(study, dir, file %||% "study.yml"))
-  invisible()
+  p <- .study_yml_key_problems(study, dir, file %||% "study.yml")
+  .spec_keys_raise(p)
+  invisible(.study_yml_clean(study, p))
 }
 
 # ---- a report's keys: a closed list (R/spec_keys.R) -------------------------

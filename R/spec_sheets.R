@@ -556,11 +556,16 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       fd <- .fig_design_of_output(oc)
       if (!is.null(o$template)) fd$template <- o$template
       if (!is.null(o$figure)) fd$figure <- o$figure
-      # (its note: the design list's, as a table's is its tables row's)
-      if (!is.null(o$note)) fd$note <- o$note
       # a figure that is its own code and nothing of the designer's has no
-      # design
-      if (!(code_content && identical(names(fd), "layers"))) figures[[id]] <- fd
+      # design (its note none to ride on); else its note is the design
+      # list's, as a table's is its tables row's
+      if (!(code_content && identical(names(fd), "layers"))) {
+        if (!is.null(o$note)) fd$note <- o$note
+        figures[[id]] <- fd
+      } else if (!is.null(o$note)) {
+        note(id, "note", paste0("the figure's note is not kept: a figure of its own code has no ",
+                                "design list to hold it"))
+      }
     }
   }
   # defaults.yml's options: and styles:, and the style: a report picks, have
@@ -688,7 +693,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
        listing = list(listings = .rows_df(listings, .listing_sheets$listings),
                       listing_cols = .rows_df(listing_cols, .listing_sheets$listing_cols),
                       figures = .rows_df(fig_rows, c("output_id", "datasets", "ard"))),
-       figures = figures, study = s$study,
+       figures = figures, study = if (!is.null(s$study)) structure(s$study, study_dir = s$dir),
        templates = .rows_df(trows, c("output_id", "kind", "label", "population", "template", "by",
                                      "where", "args")),
        template_rows = .rows_df(tparam_rows, c("output_id", "param", "value", "label")),

@@ -37,7 +37,8 @@
   bad <- function(key, what) {
     .spec_keys_raise(.spec_keys_rows(where, key, "value", sprintf("%s; %s.", what, .force_only),
                                      more = paste(.force_yaml("sas"), collapse = "\n")))
-    list()
+    # (marked: a writer of the spec read without it keeps the file's block)
+    structure(list(), stopped = TRUE)
   }
   if (!.is_map(x)) return(bad("force", "is a map by step"))
   other <- setdiff(names(x), "content")
@@ -46,8 +47,8 @@
   if (!is.list(cont) || !length(cont) || !is.null(names(cont)) || inherits(cont, "tfl_r")) {
     return(bad("force: content", "is a list of cards, as `content:` is"))
   }
-  bad_value <- function(r) {
-    bad("force: content: plan_digits: rounding", sprintf(
+  bad_value <- function(r, fn = "plan_digits") {
+    bad(paste0("force: content: ", fn, ": rounding"), sprintf(
       "takes \"sas\" or \"r\", not %s",
       if (is.character(r)) paste0("\"", paste(r, collapse = ", "), "\"") else "that value"))
   }
@@ -55,7 +56,9 @@
   # rounding, with its own words)
   for (cd in cont) {
     a <- if (.is_map(cd) && length(cd) == 1L) cd[[1L]]
-    if (.is_map(a) && "rounding" %in% names(a) && !.force_ok(a$rounding)) return(bad_value(a$rounding))
+    if (.is_map(a) && "rounding" %in% names(a) && !.force_ok(a$rounding)) {
+      return(bad_value(a$rounding, names(cd)[1L]))
+    }
   }
   items <- tryCatch(lapply(cont, .item_from_list), error = function(e) e)
   if (inherits(items, "error")) return(bad("force: content", conditionMessage(items)))
@@ -139,6 +142,9 @@ tfl_study_rounding <- function(study, value) {
     .ard_stop("tfl_study_rounding(): `study` is a study read with tfl_read_study_spec().")
   }
   if (missing(value)) return(.study_rounding(study))
+  if (!is.null(value) && length(value) != 1L) {
+    .ard_stop("tfl_study_rounding(): `value` is one value, \"sas\" or \"r\" (NULL: none).")
+  }
   study$force <- .force_of(value)
   study
 }

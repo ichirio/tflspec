@@ -243,7 +243,7 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
           # (its rows edited: not read back, said and listed in `ignored`; the
           # rows were written from the reference the file had)
           if (is.null(study_cl)) {
-            study_cl <<- tryCatch(tfl_read_study_spec(dir)$codelists %||% list(), error = function(e) list())
+            study_cl <<- .study_spec_or_null(dir)$codelists %||% list()
           }
           base <- if (!is.null(was_cell)) .cl_ref_norm(was, v, id) else .cl_ref_from_cell(lc, cw)
           want <- tryCatch(.cl_ref_rows(base, v, study_cl, id, "tfl_import_spec_xlsx()"), error = function(e) NULL)

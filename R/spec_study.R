@@ -133,9 +133,10 @@ tfl_read_study_spec <- function(dir) {
     stop("tfl_read_study_spec(): study.yml: tokens: is a map ({NAME: text}).", call. = FALSE)
   }
   # (a folder with no study.yml reads as the current form)
+  # (what the spec holds: study.yml without the keys it does not take)
   if (!is.null(study)) {
-    .study_yml_form_check(study, normalizePath(dir, "/", mustWork = FALSE),
-                          file.path(dir, "study.yml"))
+    study <- .study_yml_form_check(study, normalizePath(dir, "/", mustWork = FALSE),
+                                   file.path(dir, "study.yml"))
   }
   # (a pattern file is an old form: canon 11-12 :380, :433)
   pat_files <- list.files(file.path(spec, "patterns"), "\\.ya?ml$")
@@ -144,6 +145,9 @@ tfl_read_study_spec <- function(dir) {
                    was = sprintf("%s (a pattern file)", paste(pat_files, collapse = ", ")))
   }
   dflt <- rd(file.path(spec, "defaults.yml"))
+  # (the study standard's `ai:`: the keys study.yml's `ai:` takes; the rest
+  # of defaults.yml's top level is keys v2 part b)
+  if (.is_map(dflt$ai)) .spec_keys_raise(.ai_key_problems(dflt$ai, "spec/defaults.yml"))
   if (!is.null(dflt$page)) {
     .old_form_stop("defaults_page", "tfl_read_study_spec(): defaults.yml", was = "`page:`")
   }
@@ -1111,11 +1115,15 @@ tfl_write_study_part <- function(study, part = c("defaults", "data", "toc"),
     if (length(l$codelists)) y$codelists <- l$codelists
     y
   }
+  keep_force <- FALSE
   y <- switch(part,
     defaults = {
       # (the study's force first: the rounding, canon 1.33)
       y <- c(if (length(study$force$content)) list(force = .force_out(study$force)),
              layer_out(study$defaults))
+      # (a force the read stopped at, tflspec_spec_keys' spec: the file's
+      # own block is kept, not dropped)
+      keep_force <- isTRUE(attr(study$force, "stopped"))
       if (length(study$styles)) y$styles <- lapply(study$styles, layer_out)
       y
     },
@@ -1130,7 +1138,8 @@ tfl_write_study_part <- function(study, part = c("defaults", "data", "toc"),
   if (!is.null(own) && file.exists(path) && file.exists(own) &&
       identical(normalizePath(path, "/"), normalizePath(own, "/"))) {
     old <- readLines(path, encoding = "UTF-8", warn = FALSE)
-    txt <- paste0(paste(.defaults_keep_blocks(strsplit(txt, "\n", fixed = TRUE)[[1L]], old),
+    txt <- paste0(paste(.defaults_keep_blocks(strsplit(txt, "\n", fixed = TRUE)[[1L]], old,
+                                              keep = if (isTRUE(keep_force)) "force"),
                         collapse = "\n"), "\n")
   }
   writeLines(txt, path, useBytes = TRUE)
@@ -1144,13 +1153,14 @@ tfl_write_study_part <- function(study, part = c("defaults", "data", "toc"),
 # not kept: it leaves one out when it is empty.  The kept blocks keep their order
 # and their place by `styles:`: those before the old `styles:` (all, when it
 # has none) just before the new one (at the end when there is none), those
-# after it at the end.
-.defaults_keep_blocks <- function(lines, old) {
+# after it at the end.  `keep`, the writer's keys kept all the same (force,
+# when the read stopped at it).
+.defaults_keep_blocks <- function(lines, old, keep = NULL) {
   is_key <- function(x) grepl("^[A-Za-z_][A-Za-z0-9_]*:", x)
   key_of <- function(x) sub(":.*$", "", x)
   top <- is_key(old)
   keys <- ifelse(top, key_of(old), NA_character_)
-  skip <- c(key_of(lines[is_key(lines)]), "force", "content", "page", "data", "styles")
+  skip <- setdiff(c(key_of(lines[is_key(lines)]), "force", "content", "page", "data", "styles"), keep)
   st <- which(keys %in% "styles")[1L]
   before <- character()
   after <- character()

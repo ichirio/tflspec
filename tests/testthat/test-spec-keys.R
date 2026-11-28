@@ -10,7 +10,7 @@ test_that("one list: study.yml, its settings, ai and keys, a report and its ai",
   expect_false(anyDuplicated(paste(k$part, k$key)) > 0L)
   expect_setequal(k$key[k$part == "ai"], c("run", "review", "language", "requests_per_chat", "carry",
                                            "max_rounds", "shell_footnotes", "shell_code"))
-  expect_identical(k$key[k$part == "keys"], c("id", "output", "source"))
+  expect_identical(k$key[k$part == "keys"], c("id", "output", "source", "study_id"))
   expect_false(any(c("series", "rounding", "shell_code", "layers") %in% k$key[k$part %in% c("study", "settings", "report")]))
   # (the report's in the writer's order: codelists before data, last_step last)
   r <- k$key[k$part == "report"]
@@ -57,6 +57,15 @@ test_that("study.yml: every key it does not take in one classed stop, each with 
   expect_identical(nrow(kr), 10L)
   expect_true(all(kr$level == "error" & is.na(kr$output_id)))
   expect_true("study.yml: settings: output_pth" %in% kr$item)
+  # (a row keeps the YAML to write: the force: block of an old rounding)
+  expect_match(kr$message[kr$item == "study.yml: settings: rounding"], "rounding: r", fixed = TRUE)
+  # (the spec beside the stop holds none of them: a reader of it goes on)
+  expect_null(e$spec$study$titel)
+  expect_null(e$spec$study$settings$rounding)
+  expect_null(e$spec$study$ai$ask_when)
+  expect_identical(e$spec$study$keys$id, "USUBJID")
+  expect_identical(tflspec:::.tr_study(e$spec$study, "x"), e$spec$study)
+  expect_s3_class(tflspec:::.study_spec_or_null(d), "tfl_study_spec")
 })
 
 test_that("study.yml settings: the keys a study's templates declare they read are taken", {
@@ -69,6 +78,99 @@ test_that("study.yml settings: the keys a study's templates declare they read ar
   expect_s3_class(tfl_read_study_spec(d), "tfl_study_spec")
   expect_true("house_rule" %in% tflspec:::.settings_declared(d))
   expect_true(all(c("sd_missing", "style") %in% tflspec:::.settings_declared()))
+  # (`!study {...}` with its keys in any order; a series of the option
+  # tflspec.series_dir)
+  writeLines(c("name: t", "args:", "  rule: !study {fallback: 1, key: settings.house_rule}"),
+             file.path(d, "spec", "series", "acme_v1", "templates", "t.yml"))
+  expect_true("house_rule" %in% tflspec:::.settings_declared(d))
+  od <- withr::local_tempdir()
+  dir.create(file.path(od, "own_v1"))
+  writeLines("  x: !study 'settings.own_rule'", file.path(od, "own_v1", "t.yml"))
+  withr::local_options(tflspec.series_dir = od)
+  expect_true("own_rule" %in% tflspec:::.settings_declared())
+  # (the converter's study, its folder not known: only the old settings stop)
+  expect_identical(tflspec:::.study_yml_form_check(list(settings = list(house = 1))),
+                   list(settings = list(house = 1)))
+  expect_identical(keys_err(tflspec:::.study_yml_form_check(list(settings = list(rounding = "r"))))$keys,
+                   "settings: rounding")
+})
+
+test_that("keys: study_id is taken (the ARS reader's and writer's)", {
+  expect_identical(NROW(tflspec:::.study_yml_key_problems(list(keys = list(study_id = "S-1")))), 0L)
+})
+
+test_that("spec/defaults.yml ai: the same keys, named as defaults.yml's", {
+  d <- withr::local_tempdir()
+  write_study_yml(d, "study_id: S-1")
+  dir.create(file.path(d, "spec"))
+  writeLines(c("ai:", "  shell_footnotes: table", "  mystery: 1"), file.path(d, "spec", "defaults.yml"))
+  e <- keys_err(tfl_read_study_spec(d))
+  expect_identical(e$keys, "ai: mystery")
+  expect_identical(e$file, "spec/defaults.yml")
+  expect_match(conditionMessage(e), "spec/defaults.yml `ai:` takes `run`", fixed = TRUE)
+  expect_identical(keys_err(tflspec:::.ai_spec_settings(d))$file, "spec/defaults.yml")
+  r <- tfl_check_spec(d)
+  expect_true("defaults.yml: ai: mystery" %in% r$item[r$part == "file"])
+})
+
+test_that("a typo's near name: the edits scale with the key's length", {
+  nn <- tflspec:::.near_name
+  expect_true(is.na(nn("by", c("id", "data"))))
+  expect_true(is.na(nn("date", c("data", "id"))))
+  expect_true(is.na(nn("rule", c("run", "review"))))
+  expect_identical(nn("titel", c("title", "tokens")), "title")
+  expect_identical(nn("wher", c("where", "id")), "where")
+  expect_identical(nn("contnet", c("content", "contents")), "content")
+  expect_identical(nn("idd", c("id", "data")), "id")
+})
+
+test_that("a study one key stops is checked without it: the key once, the reports' checks run", {
+  d <- withr::local_tempdir()
+  file.copy(list.files(system.file("extdata", "spec-yaml", package = "tflspec"), full.names = TRUE), d,
+            recursive = TRUE)
+  writeLines(c("id: T-SUM", "kind: table", "label: Demographics", "common:", "  population: SAF",
+               "  treatment: TRT01A", "template:", "  name: tflspec_v1/tflspec_summary", "  analysis:",
+               "    by: [TRT01A]", "    continuous: [AGE]",
+               "content:", "  - plan_cells: {categorical: '{n:.0f} ({p:.1%})'}"),
+             file.path(d, "outputs", "T-SUM.yml"))
+  invisible(tfl_copy_templates(d))
+  write_study_yml(d, c("spec_version: 2", "settings: {adam_levels: define_xml, rouding: r}"))
+  r <- tfl_check_spec(d)
+  hit <- grepl("rouding", paste(r$item, r$message))
+  expect_identical(sum(hit), 1L)
+  expect_identical(r$item[hit], "study.yml: settings: rouding")
+  expect_true(any(r$output_id %in% "T-SUM" & grepl("plan_cells", r$item)))
+})
+
+test_that("plot: a figure's settings of maps are plot:, plots: {} is none", {
+  d <- withr::local_tempdir()
+  f <- file.path(d, "F-1.yml")
+  for (p in c("plot: {colours: {CR: darkgreen}}", "plot: {legend_labels: {A: Drug A}}", "plots: {}")) {
+    writeLines(c("id: F-1", "kind: figure", p), f)
+    expect_s3_class(tfl_read_output(f), "tfl_output")
+  }
+  writeLines(c("id: F-1", "kind: figure", "plot: {colours: {CR: x}, km: {data: [], content: []}}"), f)
+  expect_identical(keys_err(tfl_read_output(f))$keys, "plot")
+})
+
+test_that("force: the key names the card; the spec beside the stop keeps the file's block", {
+  d <- withr::local_tempdir()
+  write_study_yml(d, "study_id: S-1")
+  dir.create(file.path(d, "spec"))
+  f <- file.path(d, "spec", "defaults.yml")
+  writeLines(c("force:", "  content:", "    - plan_digit: {rounding: half}", "content:",
+               "  - plan_blanks: {where: between_groups}"), f)
+  e <- keys_err(tfl_read_study_spec(d))
+  expect_identical(e$keys, "force: content: plan_digit: rounding")
+  tfl_write_study_part(e$spec, "defaults")
+  expect_true(any(grepl("rounding: half", readLines(f), fixed = TRUE)))
+  # tfl_study_rounding(): one value
+  s <- tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
+  expect_error(tfl_study_rounding(s, c("sas", "r")), "one value")
+  # a report with no kind: "?"
+  g <- file.path(d, "T-1.yml")
+  writeLines(c("id: T-1", "plot: {x_label: a}"), g)
+  expect_match(conditionMessage(keys_err(tfl_read_output(g))), "not of a ? one", fixed = TRUE)
 })
 
 test_that("ai: the keys it takes; shell_footnotes read, the old names stop", {

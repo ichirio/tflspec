@@ -524,7 +524,7 @@
       # (shift: `levels` / `worst` against the data's values, when the kit has
       # them; the code lists are the report's own)
       if (is.null(st) && !is.null(context$study_dir)) {
-        st <- tryCatch(tfl_read_study_spec(context$study_dir), error = function(e) NULL)
+        st <- .study_spec_or_null(context$study_dir)
       }
       cl <- .ai_draft_codelists(o, st)
       if (!is.null(cl)) p <- rbind(p, .ai_check_shift_levels(tp, cl, vars, at))
@@ -950,7 +950,7 @@
   if (length(known)) {
     old <- setwd(dir)
     tryCatch({
-      st <- tryCatch(tfl_read_study_spec("."), error = function(e) NULL)
+      st <- .study_spec_or_null(".")
       answer$outputs <- lapply(answer$outputs, .ai_widths_again, known = known, st = st)
     }, finally = setwd(old))
   }

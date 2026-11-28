@@ -46,7 +46,7 @@
   for (f in file.path(study_dir, c(file.path("spec", "defaults.yml"), "study.yml"))) {
     y <- if (file.exists(f)) tryCatch(yaml::read_yaml(f), error = function(e) NULL)
     if (is.list(y) && identical(basename(f), "defaults.yml")) {
-      st <- tryCatch(tfl_read_study_spec(study_dir), error = function(e) NULL)
+      st <- .study_spec_or_null(study_dir)
       pg <- if (!is.null(st)) .page_config_flat(list(page = .study_default_page(st)))
       if (length(pg)) s$titles_in_header <- .page_output_tokens_used(pg)
     }

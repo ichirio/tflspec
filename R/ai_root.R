@@ -14,7 +14,7 @@
 # The study's facts an agent needs, as markdown: from spec/data.yml and
 # spec/defaults.yml as they are now
 .ai_study_facts <- function(dir) {
-  st <- tryCatch(tfl_read_study_spec(dir), error = function(e) NULL)
+  st <- .study_spec_or_null(dir)
   if (is.null(st)) return(NULL)
   pops <- st$data$populations %||% list()
   pop_lines <- vapply(pops, function(p) {

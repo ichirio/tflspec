@@ -268,8 +268,15 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
             # (a field of R that does not read: the walker's row says it)
             p <- .r_ard_problems_left(p, rbind(wk, wks))
             if (nrow(p)) {
-              add(output_id = ifelse(is.na(p$output_id), id, p$output_id), part = "ard",
-                  item = ifelse(nzchar(p$row %||% ""), paste0(p$row, "$", p$field), p$field),
+              # (a problem frame may lack a column: the report's id, no row)
+              col <- function(k) {
+                if (is.null(p[[k]])) rep(NA_character_, nrow(p)) else as.character(p[[k]])
+              }
+              oid <- col("output_id")
+              prow <- col("row")
+              fld <- col("field")
+              add(output_id = ifelse(is.na(oid), id, oid), part = "ard",
+                  item = ifelse(!is.na(prow) & nzchar(prow), paste0(prow, "$", fld), fld),
                   level = "error", message = p$message)
             }
           } else if (!any(wk$level == "error" & wk$part == "ard")) {

@@ -122,7 +122,7 @@
   if (!length(todo)) return(list(outs = outs, written = written, fitted = fitted))
   old <- tryCatch(setwd(dir), error = function(e) NULL)
   if (!is.null(old)) on.exit(setwd(old), add = TRUE)
-  st <- if (!is.null(old)) tryCatch(tfl_read_study_spec("."), error = function(e) NULL)
+  st <- if (!is.null(old)) .study_spec_or_null(".")
   # (the study read into sheets once for all the listings, not once a listing)
   sh <- sheets
   if (is.null(sh) && !is.null(st)) sh <- tryCatch(tfl_sheets_from_yaml(".", templates = "expand"), error = function(e) NULL)

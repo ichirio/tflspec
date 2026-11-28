@@ -38,7 +38,7 @@
                        "formats", "params")),
     part("ai", c("run", "review", "language", "requests_per_chat", "carry", "max_rounds",
                  "shell_footnotes", "shell_code")),
-    part("keys", c("id", "output", "source")),
+    part("keys", c("id", "output", "source", "study_id")),
     part("report", c("id", "kind", "label"), field = TRUE),
     part("report", c("template", "style")),
     part("report", c("extends", "codelists", "common", "data", "analysis", "content"), field = TRUE),
@@ -116,8 +116,13 @@
   pre <- if (length(path)) paste0(paste(path, collapse = ": "), ": ") else ""
   takes <- sprintf("%s takes %s.", label %||% .spec_keys_label(part, kind),
                    paste0("`", ok, "`", collapse = ", "))
-  memo <- if (part %in% c("report", "report_ai") || !is.null(label)) "under `note:` or in a `#` comment" else
+  # (a report's maps: its `note:` holds a memo; study.yml, a `#` comment)
+  memo <- if (part %in% c("report", "report_ai", "common", "analysis", "data")) {
+    "under `note:` or in a `#` comment"
+  } else {
     "in a `#` comment"
+  }
+  kind_shown <- if (length(kind) && !is.na(kind[1L]) && nzchar(kind[1L])) kind[1L] else "?"
   rows <- lapply(bad, function(k) {
     old <- .spec_keys_old$form[.spec_keys_old$part == part & .spec_keys_old$key == k]
     if (length(old)) {
@@ -130,7 +135,7 @@
     if (nrow(all_kinds)) {
       return(.spec_keys_rows(file, paste0(pre, k), "kind",
                              sprintf("a key of a %s report, not of a %s one; remove it.",
-                                     all_kinds$kinds[1L], kind %||% "?"), takes = takes))
+                                     all_kinds$kinds[1L], kind_shown), takes = takes))
     }
     near <- .near_name(k, ok)
     if (!is.na(near)) {
@@ -208,8 +213,19 @@
 # the key's path, level error
 .spec_keys_check_rows <- function(p, output_id = NA_character_) {
   if (!NROW(p)) return(.check_rows())
+  # (the YAML to write, an old form's, below the line)
+  more <- ifelse(nzchar(p$more), paste0("\n", p$more), "")
   .check_rows(output_id = output_id, part = "file", item = paste0(basename(p$file), ": ", p$key),
-              level = "error", message = paste0("`", p$key, "`: ", p$text))
+              level = "error", message = paste0("`", p$key, "`: ", p$text, more))
+}
+
+# A study's spec where a reader goes on without one: the study read, or,
+# when only its keys stop (tflspec_spec_keys), the study read without
+# them (the error's `spec`); NULL when it cannot be read
+.study_spec_or_null <- function(dir) {
+  tryCatch(tfl_read_study_spec(dir),
+           tflspec_spec_keys = function(e) e$spec,
+           error = function(e) NULL)
 }
 
 # ---- study.yml ---------------------------------------------------------------
@@ -217,19 +233,22 @@
 # The study's `settings:` keys its templates declare they read, beyond the
 # list: a registered template's parameter (`tfl_param(study =
 # "settings.<k>")`) and a series template copied into the study (`!study
-# settings.<k>`, `!study {key: settings.<k>, ...}`; `dir` the study folder)
+# settings.<k>`, `!study {key: settings.<k>, ...}` with its keys in any
+# order) -- the study's copies (`dir` the study folder) and the series
+# folders of the option tflspec.series_dir
 .settings_declared <- function(dir = NULL) {
   out <- character()
   for (nm in ls(.tpl_registry)) {
     t <- get0(nm, envir = .tpl_registry, inherits = FALSE)
     for (p in t$params %||% list()) out <- c(out, as.character(unlist(p$study)))
   }
-  sd <- if (!is.null(dir)) file.path(.spec_dir(dir), "series")
-  if (!is.null(sd) && dir.exists(sd)) {
-    for (f in list.files(sd, "\\.ya?ml$", recursive = TRUE, full.names = TRUE)) {
+  sd <- c(if (!is.null(dir)) file.path(.spec_dir(dir), "series"),
+          as.character(unlist(getOption("tflspec.series_dir"))))
+  for (s in sd[nzchar(sd) & dir.exists(sd)]) {
+    for (f in list.files(s, "\\.ya?ml$", recursive = TRUE, full.names = TRUE)) {
       txt <- readLines(f, warn = FALSE, encoding = "UTF-8")
       hit <- regmatches(txt, gregexpr(
-        "!study\\s*(\\{\\s*key:\\s*)?['\"]?settings[.][A-Za-z][A-Za-z0-9_]*", txt, perl = TRUE))
+        "!study\\s*(\\{[^}]*?\\bkey:\\s*)?['\"]?settings[.][A-Za-z][A-Za-z0-9_]*", txt, perl = TRUE))
       out <- c(out, unlist(hit))
     }
   }
@@ -239,13 +258,16 @@
 
 # study.yml read as a list (`study`; `dir` the study folder, NULL when not
 # known; `file` its name in the lines): the keys it, its `settings:`, `ai:`
-# and `keys:` do not take
+# and `keys:` do not take.  With no folder the settings its series declare
+# are not known: only the old `settings:` keys stop there.
 .study_yml_key_problems <- function(study, dir = NULL, file = "study.yml") {
   if (!is.list(study)) return(.spec_keys_rows())
   p <- .spec_keys_find(study, "study", file, dir = dir)
-  if (.is_map(study[["settings"]])) {
-    p <- rbind(p, .spec_keys_find(study[["settings"]], "settings", file, "settings",
-                                  more = .settings_declared(dir), dir = dir))
+  st <- study[["settings"]]
+  if (.is_map(st)) {
+    more <- if (!is.null(dir)) .settings_declared(dir) else
+      setdiff(names(st), .spec_keys_old$key[.spec_keys_old$part == "settings"])
+    p <- rbind(p, .spec_keys_find(st, "settings", file, "settings", more = more, dir = dir))
   }
   for (k in c("ai", "keys")) {
     if (.is_map(study[[k]])) p <- rbind(p, .spec_keys_find(study[[k]], k, file, k, dir = dir))
@@ -253,13 +275,42 @@
   p
 }
 
-# A study's `ai:` (`ai`, from `file`): the keys it does not take stop
+# `study` (study.yml read as a list) without the keys of the problems `p`
+# (.study_yml_key_problems(): a top-level key, or one of `settings:`,
+# `ai:`, `keys:`), its attributes kept
+.study_yml_clean <- function(study, p) {
+  if (!is.list(study) || !NROW(p)) return(study)
+  for (k in p$key) {
+    path <- strsplit(k, ": ", fixed = TRUE)[[1L]]
+    if (length(path) == 1L) {
+      study[[path]] <- NULL
+    } else if (length(path) == 2L && .is_map(study[[path[1L]]])) {
+      study[[path[1L]]][[path[2L]]] <- NULL
+    }
+  }
+  study
+}
+
+# A study's `ai:` (`ai`, from `file`: study.yml or spec/defaults.yml, the
+# study standard's): the keys it does not take
+.ai_key_problems <- function(ai, file) {
+  if (identical(basename(file), "defaults.yml")) {
+    return(.spec_keys_find(ai, "ai", "spec/defaults.yml", "ai", label = "spec/defaults.yml `ai:`"))
+  }
+  .spec_keys_find(ai, "ai", file, "ai")
+}
 .ai_keys_check <- function(ai, file) {
-  .spec_keys_raise(.spec_keys_find(ai, "ai", file, "ai"))
+  .spec_keys_raise(.ai_key_problems(ai, file))
   invisible()
 }
 
 # ---- a report ----------------------------------------------------------------
+
+# The names a figure's `plot:` holds: the designer's figure-wide settings
+# (.fig_plot_fields()) and the ones a template reads from it
+.plot_setting_names <- function() {
+  unique(c(.fig_plot_fields()$field, "risk_title", "facet", "scales"))
+}
 
 # The problems of a report's keys (`y`, its file read as a list; `file`):
 # the top-level keys (.spec_keys, by its kind), `last_step` other than
@@ -309,14 +360,21 @@
       }
     }
   }
-  # (two keys a letter apart, both right: the value's shape says which)
+  # (two keys a letter apart, both right: the value's shape says which.  A
+  # `plot:` of maps is one figure's when a name of it is a setting --
+  # `colours: {CR: darkgreen}` -- and none of its maps holds a plot's parts)
   maps_of_maps <- function(x) .is_map(x) && length(x) && all(vapply(x, .is_map, NA))
-  if (!is.null(y[["plot"]]) && maps_of_maps(y[["plot"]])) {
+  plot_parts <- c("data", "content", "template")
+  plots_like <- function(x) {
+    maps_of_maps(x) && (!any(names(x) %in% .plot_setting_names()) ||
+                          any(vapply(x, function(m) any(names(m) %in% plot_parts), NA)))
+  }
+  if (!is.null(y[["plot"]]) && plots_like(y[["plot"]])) {
     p <- rbind(p, row("plot", "shape", paste0(
       "holds plots by name, which is `plots:` (a composed figure); `plot:` is one figure's ",
       "settings (`theme`, `base_size` ...).")))
   }
-  if (!is.null(y[["plots"]]) && !maps_of_maps(y[["plots"]])) {
+  if (length(y[["plots"]]) && !maps_of_maps(y[["plots"]])) {
     p <- rbind(p, row("plots", "shape", paste0(
       "is the plots of a composed figure, by name (`plots: {km: {...}}`); one figure's ",
       "settings are `plot:`.")))

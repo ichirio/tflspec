@@ -59,7 +59,10 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
     ard = if (!is.null(src$ard)) .conv_read_ard(src$ard),
     listing = if (!is.null(src$lf)) .conv_read_lf(src$lf),
     figures = lapply(src$figs, .conv_read_fig),
-    study = if (!is.null(src$study)) yaml::read_yaml(src$study) else list())
+    # (with its folder: the settings the study's series declare are known)
+    study = if (!is.null(src$study)) {
+      structure(yaml::read_yaml(src$study), study_dir = normalizePath(dirname(src$study), "/"))
+    } else list())
   tfl_yaml_from_sheets(sheets, to, content_fn = content_fn, overwrite = overwrite,
                        figures = figures)
 }
@@ -99,7 +102,9 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   figs <- sheets$figures %||% list()
   meta <- sheets[["study"]] %||% list()
   # (an old form the sheets' study carries is not written: R/spec_old_forms.R)
-  .study_yml_form_check(meta)
+  # (its folder, where the sheets came from a study: attribute study_dir;
+  # none, and only the old `settings:` keys stop)
+  .study_yml_form_check(meta, attr(meta, "study_dir"))
   # the study sheet's rows no table spec reads (study.yml's `settings:` keys
   # of the app's own: the treatment variable ...) are not the bridge's: set
   # aside here and written back to settings below, not a stop (#689).  The
@@ -956,7 +961,11 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     blank_row <- NULL
     more_items <- list()
     if (nrow(lr)) {
-      more <- .conv_rows(lr[1L, , drop = FALSE], note, id, "listings",
+      # (its note is the report's `note:`, kept: not one of the row's
+      # arguments, so not said to be lost)
+      lr1 <- lr[1L, , drop = FALSE]
+      lr1$note <- NULL
+      more <- .conv_rows(lr1, note, id, "listings",
                          drop = c("output_id", "note", "dataset", "data", "population_id", "where", "sort", "max_rows", "blank_row",
                                   "content_more"))[[1L]]
       # (record: TRUE / FALSE, or the record column's name)
