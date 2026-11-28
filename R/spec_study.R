@@ -354,6 +354,11 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   output$content <- .study_refs_prune(output$content, names(study$codelists))
   attr(output, "study_codelists") <- study$codelists %||% list()
   output$content <- .listing_rows_default(output$content, output$kind, provenance)
+  # a figure's render settings: the study's figure settings under its
+  # tfl_image's (study.yml settings: figure:)
+  if (identical(output$kind, "figure") && .fig_new_content(output$content)) {
+    output$content <- .fig_image_fill(output$content, study)
+  }
   # the study's rounding: the setup's option, so the program leaves it out
   attr(output, "study_rounding") <- .study_rounding(study)
   # the page: the report's configuration < the template < the report < force;
