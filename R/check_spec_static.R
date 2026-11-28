@@ -15,8 +15,9 @@
 #    study population's condition (`flag: SAFFL` on the records): an error
 #    (.step_keeps_population(), the AI's check's rule too), the analysis set
 #    is the report's, its data's `population:`.
-#  - (A2-T Q3) a report whose data rows carry several sets and that has no
-#    BIGN analysis (the heading's set is BIGN's row's): a warning.
+#  - (A2-T Q3, tflspec#997) a report whose data rows carry several sets
+#    and that has no BIGN analysis to say which is the report's (a report
+#    has one set; a second needs a BIGN analysis): an error.
 #  - (A2-T Q6) a template report's own row over the template's subjects row
 #    naming another set than its template argument: an error.
 #  - (A2, with the study: .check_set_rows()) a set that is none of
@@ -84,17 +85,20 @@
 .check_population_rows <- function(o, id, pops) {
   rows <- list(.check_rows())
   add <- function(...) rows[[length(rows) + 1L]] <<- .check_rows(output_id = id, ...)
-  # (A2-T Q3) several sets on the rows that make subjects: the heading's is
-  # that of the row BIGN reads; no BIGN, none
+  # (A2-T Q3, tflspec#997) several sets on the rows that make subjects: the
+  # report's is that of the row BIGN reads; no BIGN, the report has no one
+  # set (one set a report, canon 11-15; a second needs a BIGN analysis):
+  # an error, whatever the heading says (`population_label` names the
+  # heading's set, not the data's)
   # (the rows as the ARD program reads them: .data_population()'s)
   as_read <- lapply(.data_rows(o), .entry_pop_inject, .rows_set(o))
   sets <- .rows_sets(as_read)
-  if (length(sets) > 1L && is.na(.rows_carried_set(as_read, o[["ard"]][["analyses"]])) &&
-      is.na(.na_scalar(o$common$population_label))) {
-    add(part = "data", item = "data$population", level = "warning", message = sprintf(paste0(
-      "the %s's data rows carry several analysis sets (%s) and no BIGN analysis says which is the ",
-      "report's: the page heading names none; add the BIGN analysis of the report's set, or write ",
-      "the heading's set (`common: population_label`)"), o$kind %||% "report", paste(sets, collapse = ", ")))
+  if (length(sets) > 1L && is.na(.rows_carried_set(as_read, o[["ard"]][["analyses"]]))) {
+    add(part = "data", item = "data$population", level = "error", message = sprintf(paste0(
+      "%s %s: its data rows carry several analysis sets (%s) and no BIGN analysis says which is the ",
+      "report's: a report has one set; write it on every subjects row (tfl_set_report_set()), or ",
+      "add the BIGN analysis of the report's set when the other is a denominator's"),
+      o$kind %||% "report", id %||% o$id %||% "", paste(sets, collapse = ", ")))
   }
   if (!identical(o$kind, "figure") && !identical(o$kind, "listing")) return(do.call(rbind, rows))
   d <- if (is.list(o$data)) o$data else list()

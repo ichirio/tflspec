@@ -294,8 +294,11 @@ tfl_report_set <- function(output, study = NULL) {
 #'     carry the report's current set (a row of no other's subjects that
 #'     names it); none: every row that makes its subjects -- of ADSL or of
 #'     the set's dataset, of no other's subjects and no code -- and names
-#'     no set.  A row of another set (a denominator) keeps its own.  Rows
-#'     of several sets and no BIGN analysis to say the report's stop.
+#'     no set.  A row of another set (a denominator) keeps its own when
+#'     a BIGN analysis says the report's set.  Rows of several sets and no
+#'     BIGN analysis to say the report's are all the report's (one set a
+#'     report; a second needs a BIGN analysis): each takes the set, which
+#'     replaces theirs, so the report has one set again.
 #' }
 #' A template report's own data row over the template's subjects row
 #' gives no set of its own once the argument is written (written once); a
@@ -380,7 +383,8 @@ tfl_set_report_set <- function(output, population, study = NULL) {
     r <- tfl_resolve_output(o, study)
     rold <- .report_set(r, study$dir)
     rr <- .data_rows(r)
-    takes <- .set_row_taker(rr, rold, unique(c(.pop_from(pops, pop), .pop_from(pops, rold))), fn, o$id)
+    takes <- .set_row_taker(rr, rold, unique(c(.pop_from(pops, pop), .pop_from(pops, rold))), fn, o$id,
+                            replace = TRUE)
     ids <- unlist(lapply(rr, function(a) if (takes(a)) .na_scalar(unlist(a[["id"]]))))
     own <- if (is.list(o$data) && is.null(names(o$data))) o$data else list()
     for (i in stats::na.omit(ids)) {
@@ -394,7 +398,8 @@ tfl_set_report_set <- function(output, population, study = NULL) {
   }
   d <- o[["data"]]
   rows <- .data_rows(o)
-  takes <- .set_row_taker(rows, old, unique(c(.pop_from(pops, pop), .pop_from(pops, old))), fn, o$id)
+  takes <- .set_row_taker(rows, old, unique(c(.pop_from(pops, pop), .pop_from(pops, old))), fn, o$id,
+                          replace = TRUE)
   rows_carry <- any(vapply(rows, function(a) takes(a) && .set_row_carries(a), NA))
   if (is.list(d) && !is.null(names(d)) && .set_on_data(o$kind, d) &&
       (!is.null(d[["population"]]) || !rows_carry)) {
@@ -420,14 +425,19 @@ tfl_set_report_set <- function(output, population, study = NULL) {
 # row: the rows that carry the set it has (`old`, .set_row_carries()) --
 # the rows the reader reads it from; none: the rows that make its subjects
 # (.entry_is_subjects(); `from`, the datasets one reads, .pop_from()) and
-# name no set.  Rows of several sets and no set the report has (no BIGN
-# analysis to say which) stop: the writer cannot tell which rows are the
-# report's.  `fn`, `id` head the stop
-.set_row_taker <- function(rows, old, from, fn = "tfl_set_report_set()", id = NULL) {
+# name no set.  Rows of several sets and none of them the set the report
+# has (no BIGN analysis to say which, A2-T Q3): with `replace` (the
+# writer's), every row that carries a set -- a report has one set and a
+# second needs a BIGN analysis (tflspec#997), so they are all the
+# report's, and the set replaces theirs, never adds one; without (the
+# sheets', whose `old` is the planner's set), as above, and no set the
+# report has stops.  `fn`, `id` head the stop
+.set_row_taker <- function(rows, old, from, fn = "tfl_set_report_set()", id = NULL, replace = FALSE) {
   own <- function(a) .na_scalar(unlist(a[["population"]]))
   carries <- function(a) .set_row_carries(a) && !is.na(old) && identical(own(a), old)
   if (any(vapply(rows, carries, NA))) return(carries)
   sets <- .rows_sets(rows)
+  if (replace && length(sets) > 1L) return(.set_row_carries)
   if (is.na(old) && length(sets) > 1L) {
     stop(sprintf(paste0("%s: %s's data rows carry several analysis sets (%s) and no BIGN analysis says ",
                         "which is the report's: add the BIGN analysis of the report's set first"),

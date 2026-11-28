@@ -37,8 +37,11 @@ subjects row's id, over the template's (\code{study} needed);
 carry the report's current set (a row of no other's subjects that
 names it); none: every row that makes its subjects -- of ADSL or of
 the set's dataset, of no other's subjects and no code -- and names
-no set.  A row of another set (a denominator) keeps its own.  Rows
-of several sets and no BIGN analysis to say the report's stop.
+no set.  A row of another set (a denominator) keeps its own when
+a BIGN analysis says the report's set.  Rows of several sets and no
+BIGN analysis to say the report's are all the report's (one set a
+report; a second needs a BIGN analysis): each takes the set, which
+replaces theirs, so the report has one set again.
 }
 A template report's own data row over the template's subjects row
 gives no set of its own once the argument is written (written once); a
