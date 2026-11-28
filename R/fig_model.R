@@ -1089,7 +1089,7 @@ tfl_read_fig_design <- function(path) {
 # cannot be made -- none of the study's, no study, no ARD definition --
 # stops (class `tfl_fig_subjects`).  `fn`: the call, for the message.
 .fig_output_subjects <- function(output, study, fn, data = character(), sheets = NULL) {
-  pop <- .out_population_or_data(output)
+  pop <- .report_set(output, if (is.list(study)) study$dir)
   if (is.na(pop)) return(NULL)
   id <- output$id
   if (is.null(study)) .fig_subjects_stop(.fig_subjects_no_study(id, pop, fn))

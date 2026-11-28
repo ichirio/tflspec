@@ -2,13 +2,14 @@
 % Please edit documentation in R/tpl_docs.R
 \name{tfl_tpl_summary}
 \alias{tfl_tpl_summary}
-\title{summary: the template summary}
+\title{Continuous variables by a column key: the template summary}
 \description{
 The table template \code{summary}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "summary", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
+   \code{population} \tab key \tab data \tab SAF \tab  \tab the analysis set's id (SAF): the subjects the report is of \cr
    \code{continuous} \tab required \tab call \tab  \tab  \tab the continuous variables, in order (required: this or \code{categorical}) \cr
    \code{categorical} \tab required \tab call \tab  \tab  \tab the categorical variables, in order (required: this or \code{continuous}) \cr
    \code{by} \tab required \tab call \tab  \tab  \tab the column variable (the arms); not a default and not the study's treatment \cr

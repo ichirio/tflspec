@@ -131,6 +131,13 @@
     "the subgroup headings read the common ADaM variables' labels (SEX Sex, AGEGR1 Age ",
     "group, REGION1 Region ...); `subgroup_labels: {ECOGBL: ECOG}` gives the shell's own."))
 
+# The templates the AI sees: the registry's, those whose `ai` flag is TRUE,
+# of these kinds -- the one place the flag is read (the list and the likely ones)
+.ai_templates_shown <- function(kinds = c("table", "listing", "figure")) {
+  tt <- tfl_templates()
+  tt[tt$ai & tt$kind %in% kinds, , drop = FALSE]
+}
+
 # The templates a request may answer with: one block each -- name, what it
 # is, its kind and layout (a variant: of which), then a line a parameter
 # (the target ones marked: population, subset, where).  `kinds`: the kinds
@@ -138,8 +145,7 @@
 # (`short`: each template's arguments on one line, their names only -- a
 # chat's request over `max_chars` with the whole list)
 .ai_templates_list <- function(kinds = c("table", "listing", "figure"), short = FALSE) {
-  tt <- tfl_templates()
-  tt <- tt[tt$kind %in% kinds, , drop = FALSE]
+  tt <- .ai_templates_shown(kinds)
   target <- c("population", "subset", "where")
   out <- character()
   for (i in seq_len(nrow(tt))) {
@@ -291,10 +297,9 @@
 # The templates likely for reports of these titles (at most `n`, the best
 # first): a template's name's words count twice its description's
 .ai_templates_likely <- function(titles, task, n = 3L) {
-  tt <- tfl_templates()
   w <- .ai_tpl_words(titles)
   kinds <- if (identical(task, "figure")) "figure" else if ("listing" %in% w) "listing" else "table"
-  tt <- tt[tt$kind %in% kinds, , drop = FALSE]
+  tt <- .ai_templates_shown(kinds)
   if (!nrow(tt) || !length(w)) return(character())
   score <- vapply(seq_len(nrow(tt)), function(i) {
     nm <- strsplit(tt$name[i], "_", fixed = TRUE)[[1L]]
@@ -490,14 +495,8 @@
 .ai_template_items <- function(o, study = NULL) {
   if (!is.null(study)) return(tfl_template_to_spec(o, study))
   tp <- o$template
-  args <- tp$args %||% list()
-  # (the report's set by the one reader: its data's `population:`, `common:`
-  # until it goes, its subjects rows' -- A2)
-  pop <- .out_population_or_data(o)
-  if (is.null(args$population) && "population" %in% names(tfl_template_params(tp$name)) &&
-      !is.na(pop)) {
-    args$population <- pop
-  }
+  # (its set parameter: the report's set when it does not give it, A2-T)
+  args <- .tpl_set_fill(tp$args %||% list(), .tpl_set_param(tp$name), o, o$id %||% "the report")
   x <- tfl_template_expand(tp$name, args)
   o$ard <- x$ard
   if (!is.null(x$data)) o$data <- x$data
@@ -549,11 +548,19 @@
     tfl_item(l$layer, l[setdiff(names(l), "layer")])
   })
   o <- tfl_output(id, kind = "figure", label = if (length(ttl)) ttl[1L] else NA_character_,
-                  common = list(population = if (length(pop)) pop else NA_character_),
                   template = list(name = tp$name, args = tp$args %||% list()), content = content,
                   data = if (length(design$data)) list(steps = design$data) else NULL,
                   page = if (length(ttl)) list(titles = as.list(ttl)) else list())
   if (length(design$plot)) o$plot <- design$plot
+  # (the request's set where the template reads it, A2-T: its set argument
+  # unless the answer gives one)
+  # (a template the kit does not know: on its data, where the checks find it)
+  if (length(pop) && is.na(.tpl_set_arg(o))) {
+    o <- tryCatch(tfl_set_report_set(o, pop), error = function(e) {
+      o$data[["population"]] <- pop
+      o
+    })
+  }
   o
 }
 

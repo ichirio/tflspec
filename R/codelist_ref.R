@@ -49,20 +49,15 @@
 .cl_ref_rows <- function(ref, v, study_cl, id, what) {
   where <- sprintf("%s: report %s, the code list of %s", what, id %||% "(no id)", v)
   x <- study_cl[[ref$list]]
-  if (is.null(x)) {
-    have <- names(study_cl)
-    stop(where, " refers to the study's list ", ref$list, ", which the study has not got ",
-         "(spec/defaults.yml `codelists:` has ",
-         if (length(have)) paste(have, collapse = ", ") else "none", ").", call. = FALSE)
+  if (!length(x)) {
+    stop(where, " refers to ", .cl_ref_no_list(ref$list, study_cl), ".", call. = FALSE)
   }
-  codes <- as.character(names(x) %||% unname(x))
+  codes <- .study_list_codes(x)
   lab <- stats::setNames(as.character(unname(x)), codes)
   want <- if (is.null(ref$codes)) codes else unlist(ref$codes, use.names = FALSE)
   miss <- setdiff(want, codes)
   if (length(miss)) {
-    stop(where, " picks ", paste0("\"", miss, "\"", collapse = ", "), " from the study's list ",
-         ref$list, ", which has not got ", if (length(miss) > 1L) "them" else "it",
-         " (its codes: ", paste(codes, collapse = ", "), ").", call. = FALSE)
+    stop(where, " picks ", .cl_ref_no_codes(ref$list, miss, codes), ".", call. = FALSE)
   }
   lapply(want, function(k) list(value = k, label = lab[[k]]))
 }
@@ -72,6 +67,29 @@
 # check, and the programs, say it)
 .cl_ref_rows_or_cell <- function(ref, v, study_cl, id) {
   tryCatch(.cl_ref_rows(ref, v, study_cl, id, "sheets"), error = function(e) list(list()))
+}
+
+# A study's list's codes, in its order (study$codelists$X: the codes, named
+# by the code when labelled)
+.study_list_codes <- function(x) as.character(names(x) %||% unname(x))
+
+# The words for a list the study has not got and for codes its list has
+# not got: one text for the reader that stops and for tfl_check_spec()'s
+# row (R/check_spec_study_refs.R).  `lists`: the study's lists; one it has
+# with no code is empty, not missing.
+.cl_ref_no_list <- function(name, lists) {
+  have <- names(lists)
+  if (name %in% have) {
+    return(paste0("the study's list ", name, ", which is empty (spec/defaults.yml `codelists:` ", name,
+                  " has no codes)"))
+  }
+  paste0("the study's list ", name, ", which the study has not got (spec/defaults.yml `codelists:` has ",
+         if (length(have)) paste(have, collapse = ", ") else "none", ")")
+}
+.cl_ref_no_codes <- function(name, miss, codes) {
+  paste0(paste0("\"", miss, "\"", collapse = ", "), " from the study's list ", name,
+         ", which has not got ", if (length(miss) > 1L) "them" else "it",
+         " (its codes: ", paste(codes, collapse = ", "), ")")
 }
 
 # A report's code lists with each reference made into its rows

@@ -48,15 +48,23 @@ test_that("tfl_tpl(): the same plan as the template's own function; its errors",
   t <- tfl_templates()
   expect_identical(t$call[t$name == "demog"], "tfl_tpl")
   expect_identical(t$call[t$name == "km_survival"], "tfl_tpl")
-  expect_identical(sort(t$name[t$ai]), c("ae_disc_soc_pt", "ae_ser_soc_pt", "ae_soc_pt", "demog",
-                                          "km_cumulative", "km_survival"))
+  expect_identical(sort(t$name[t$ai]), c("ae_disc_soc_pt", "ae_eair", "ae_max_grade",
+                                         "ae_overview", "ae_pt_freq", "ae_ser_soc_pt", "ae_soc_pt",
+                                         "ancova", "demog", "disposition", "forest_hr",
+                                         "hierarchical", "km", "km_cumulative", "km_survival",
+                                         "km_table", "lab_abnormal", "lab_shift", "listing",
+                                         "mean_ci", "mean_se", "orr", "param_change", "pk_conc",
+                                         "shift", "stat_block", "stf_t02_demog", "summary",
+                                         "waterfall"))
   expect_match(t$label[t$name == "ae_ser_soc_pt"], "FDA STF Table 10", fixed = TRUE)
   expect_identical(t$from[t$name == "ae_ser_soc_pt"], "ae_soc_pt")
 })
 
 test_that("the layouts' parameters: what a report changes, the look too (summary: batch 2)", {
   p <- tfl_template_params("summary")
-  expect_identical(p$population$tier, "required")
+  # (the template's own set, canon 11-15 (1): a key parameter with its default)
+  expect_identical(p$population$tier, "key")
+  expect_identical(p$population$default, "SAF")
   expect_identical(p$by$tier, "required")
   # demog's parameters (one body), with `where` and `denominator`, without `rounding`
   # and `style` (the study's force; the report's `style:` until the flip)
@@ -67,7 +75,9 @@ test_that("the layouts' parameters: what a report changes, the look too (summary
     "heading", "sort",
     "min_pct", "min_pct_in", "count_cell", "denominator", "total", "header_n", "split")))
   # every parameter's step: an argument of the call, unless it says "data"
-  expect_true(all(vapply(p, `[[`, "", "step") == "call"))
+  # (the analysis set: the data's, A2-T Q2)
+  expect_identical(p$population$step, "data")
+  expect_true(all(vapply(p[setdiff(names(p), "population")], `[[`, "", "step") == "call"))
   expect_identical(tfl_param("x", step = "data")$step, "data")
   expect_error(tfl_param("x", step = "plot"), "should be one of")
   # the look is a parameter with a default (canon 1.2, 1.23)
