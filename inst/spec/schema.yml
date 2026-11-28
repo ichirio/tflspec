@@ -2347,7 +2347,7 @@ ggplot:
   layers: [layer]
   visible: [data, mapping]
   args:
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
     mapping: {type: "map<string, column|r>", label: {en: Mapping shared by the layers, ja: レイヤー共通のマッピング}}
 
 ggsurvfit:
@@ -2443,8 +2443,8 @@ geom_line:
   visible: [mapping, linewidth, alpha, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
+    position: {type: "call<position_*>|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
 
 geom_point:
   package: ggplot2
@@ -2456,8 +2456,8 @@ geom_point:
   visible: [mapping, shape, size, alpha, na.rm, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
+    position: {type: "call<position_*>|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
 
 geom_errorbar:
   package: ggplot2
@@ -2470,8 +2470,8 @@ geom_errorbar:
   visible: [mapping, width, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
+    position: {type: "call<position_*>|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
 
 geom_pointrange:
   package: ggplot2
@@ -2484,8 +2484,8 @@ geom_pointrange:
   visible: [mapping, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
+    position: {type: "call<position_*>|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
 
 geom_col:
   package: ggplot2
@@ -2498,8 +2498,8 @@ geom_col:
   visible: [mapping, width, position, colour, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
+    position: {type: "call<position_*>|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
 
 geom_text:
   package: ggplot2
@@ -2511,8 +2511,8 @@ geom_text:
   visible: [mapping, size, position, vjust, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
+    position: {type: "call<position_*>|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
 
 geom_label:
   package: ggplot2
@@ -2524,8 +2524,8 @@ geom_label:
   visible: [mapping, size, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
+    position: {type: "call<position_*>|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
 
 geom_step:
   package: ggplot2
@@ -2537,7 +2537,7 @@ geom_step:
   visible: [mapping]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
 
 geom_area:
   package: ggplot2
@@ -2549,7 +2549,7 @@ geom_area:
   visible: [mapping, alpha]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
 
 geom_ribbon:
   package: ggplot2
@@ -2562,7 +2562,7 @@ geom_ribbon:
   visible: [mapping, alpha]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
 
 geom_segment:
   package: ggplot2
@@ -2575,7 +2575,7 @@ geom_segment:
   visible: [mapping, linewidth, arrow, alpha]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
 
 geom_tile:
   package: ggplot2
@@ -2588,7 +2588,7 @@ geom_tile:
   visible: [mapping]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
 
 geom_boxplot:
   package: ggplot2
@@ -2600,8 +2600,8 @@ geom_boxplot:
   visible: [mapping, width, outlier.shape, alpha, position, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
+    position: {type: "call<position_*>|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
 
 geom_violin:
   package: ggplot2
@@ -2613,8 +2613,8 @@ geom_violin:
   visible: [mapping, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
-    position: {type: "call|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
+    position: {type: "call<position_*>|string|r", label: {en: Position, ja: 位置}, values: [{value: dodge, label: {en: Side by side, ja: "横に並べる"}}, {value: dodge2, label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}}, {value: stack, label: {en: Stacked, ja: "積み上げ"}}, {value: fill, label: {en: Stacked to 100%, ja: "100% 積み上げ"}}, {value: identity, label: {en: As they are, ja: "そのまま"}}, {value: jitter, label: {en: Jittered, ja: "ばらす"}}, {value: jitterdodge, label: {en: Jittered side by side, ja: "横に並べてばらす"}}, {value: nudge, label: {en: Nudged, ja: "ずらす"}}]}
 
 geom_histogram:
   package: ggplot2
@@ -2626,7 +2626,7 @@ geom_histogram:
   visible: [mapping, bins]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
 
 geom_density:
   package: ggplot2
@@ -2638,7 +2638,7 @@ geom_density:
   visible: [mapping]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
 
 geom_jitter:
   package: ggplot2
@@ -2650,7 +2650,7 @@ geom_jitter:
   visible: [mapping, width, height, alpha, size]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
 
 geom_smooth:
   package: ggplot2
@@ -2663,7 +2663,7 @@ geom_smooth:
   visible: [mapping, method, se]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
 
 geom_hline:
   package: ggplot2
@@ -2675,8 +2675,12 @@ geom_hline:
   aes: {yintercept: {required: true}}
   visible: [mapping, yintercept, linetype, colour, linewidth]
   args:
+    linetype: {type: "string|number|list<string|number>", label: {en: Line type, ja: 線種}, description: "One for all, or one a line in their order (yintercept: [-30, 0, 20], linetype: [dashed, solid, dashed])."}
+    colour: {type: "string|call<alpha>|list<string>|r", label: {en: Colour, ja: 色}, description: "One for all, or one a line in their order."}
+    linewidth: {type: "number|list<number>", label: {en: Line width, ja: 線の太さ}, description: "One for all, or one a line in their order."}
+    alpha: {type: "number|list<number>", label: {en: Transparency, ja: 透明度}, description: "One for all, or one a line in their order."}
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
 
 geom_vline:
   package: ggplot2
@@ -2687,8 +2691,12 @@ geom_vline:
   aes: {xintercept: {required: true}}
   visible: [mapping, xintercept, linetype, colour, linewidth]
   args:
+    linetype: {type: "string|number|list<string|number>", label: {en: Line type, ja: 線種}, description: "One for all, or one a line in their order (yintercept: [-30, 0, 20], linetype: [dashed, solid, dashed])."}
+    colour: {type: "string|call<alpha>|list<string>|r", label: {en: Colour, ja: 色}, description: "One for all, or one a line in their order."}
+    linewidth: {type: "number|list<number>", label: {en: Line width, ja: 線の太さ}, description: "One for all, or one a line in their order."}
+    alpha: {type: "number|list<number>", label: {en: Transparency, ja: 透明度}, description: "One for all, or one a line in their order."}
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
 
 geom_abline:
   package: ggplot2
@@ -2699,8 +2707,12 @@ geom_abline:
   aes: {slope: {required: true}, intercept: {required: true}}
   visible: [mapping, intercept, slope, linetype, colour]
   args:
+    linetype: {type: "string|number|list<string|number>", label: {en: Line type, ja: 線種}, description: "One for all, or one a line in their order (yintercept: [-30, 0, 20], linetype: [dashed, solid, dashed])."}
+    colour: {type: "string|call<alpha>|list<string>|r", label: {en: Colour, ja: 色}, description: "One for all, or one a line in their order."}
+    linewidth: {type: "number|list<number>", label: {en: Line width, ja: 線の太さ}, description: "One for all, or one a line in their order."}
+    alpha: {type: "number|list<number>", label: {en: Transparency, ja: 透明度}, description: "One for all, or one a line in their order."}
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
 
 geom_text_repel:
   package: ggrepel
@@ -2713,7 +2725,7 @@ geom_text_repel:
   visible: [mapping, size]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
     direction: {type: "enum[both|y|x]", label: {en: Moved along, ja: 動かす向き}}
 
 geom_sina:
@@ -2727,7 +2739,7 @@ geom_sina:
   visible: [mapping, size, alpha]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
 
 
 # -- layers beyond the geoms --
@@ -2855,8 +2867,8 @@ scale_x_continuous:
     - {id: range, label: {en: Range and breaks, ja: 範囲と刻み}}
   args:
     limits: {type: "list<number>|r", group: range, label: {en: Range, ja: 範囲}}
-    breaks: {type: "list<number>|call<seq, breaks_*, extended_breaks, pretty_breaks>|r", group: range, label: {en: Breaks, ja: 目盛り}}
-    labels: {type: "list<string>|call<label_*, *_format>|r", label: {en: Tick labels, ja: 目盛りのラベル}}
+    breaks: {type: "list<number>|call<seq, breaks_*, extended_breaks, pretty_breaks>|tilde|lambda|r", group: range, label: {en: Breaks, ja: 目盛り}}
+    labels: {type: "function<abs, toupper, tolower, format, percent, comma, scientific, dollar, number, pvalue>|list<string>|call<label_*, *_format>|tilde|lambda|r", label: {en: Tick labels, ja: 目盛りのラベル}}
     expand: {type: "call<expansion, expand_scale, waiver>|list<number>|r", label: {en: Expansion, ja: 余白}}
 
 scale_y_continuous:
@@ -2870,8 +2882,8 @@ scale_y_continuous:
     - {id: range, label: {en: Range and breaks, ja: 範囲と刻み}}
   args:
     limits: {type: "list<number>|r", group: range, label: {en: Range, ja: 範囲}}
-    breaks: {type: "list<number>|call<seq, breaks_*, extended_breaks, pretty_breaks>|r", group: range, label: {en: Breaks, ja: 目盛り}}
-    labels: {type: "list<string>|call<label_*, *_format>|r", label: {en: Tick labels, ja: 目盛りのラベル}}
+    breaks: {type: "list<number>|call<seq, breaks_*, extended_breaks, pretty_breaks>|tilde|lambda|r", group: range, label: {en: Breaks, ja: 目盛り}}
+    labels: {type: "function<abs, toupper, tolower, format, percent, comma, scientific, dollar, number, pvalue>|list<string>|call<label_*, *_format>|tilde|lambda|r", label: {en: Tick labels, ja: 目盛りのラベル}}
     expand: {type: "call<expansion, expand_scale, waiver>|list<number>|r", label: {en: Expansion, ja: 余白}}
 
 scale_x_log10:
@@ -2897,6 +2909,8 @@ scale_x_discrete:
   stage: finishing
   label: {en: X axis (groups), ja: x 軸（群）}
   visible: [limits, labels]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_colour_tfl:
   package: tflspec
@@ -2931,7 +2945,8 @@ scale_colour_manual:
   label: {en: Colours, ja: 色の割り当て}
   visible: [values, breaks]
   args:
-    values: {type: "vec<string, string>|list<string>|call<hcl.colors, gray.colors, grey.colors, rainbow, heat.colors, terrain.colors, topo.colors, cm.colors, palette.colors>|r", label: {en: Colours, ja: 色}}
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
+    values: {type: "vec<string, string>|list<string>|call<hcl.colors, gray.colors, grey.colors, rainbow, heat.colors, terrain.colors, topo.colors, cm.colors, palette.colors, brewer.pal, viridis, magma, inferno, plasma, cividis, turbo>|r", label: {en: Colours, ja: 色}}
 
 scale_fill_manual:
   package: ggplot2
@@ -2941,7 +2956,8 @@ scale_fill_manual:
   label: {en: Fill colours, ja: 塗りの割り当て}
   visible: [values, breaks]
   args:
-    values: {type: "vec<string, string>|list<string>|call<hcl.colors, gray.colors, grey.colors, rainbow, heat.colors, terrain.colors, topo.colors, cm.colors, palette.colors>|r", label: {en: Colours, ja: 色}}
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
+    values: {type: "vec<string, string>|list<string>|call<hcl.colors, gray.colors, grey.colors, rainbow, heat.colors, terrain.colors, topo.colors, cm.colors, palette.colors, brewer.pal, viridis, magma, inferno, plasma, cividis, turbo>|r", label: {en: Colours, ja: 色}}
 
 scale_shape_manual:
   package: ggplot2
@@ -2950,6 +2966,8 @@ scale_shape_manual:
   stage: finishing
   label: {en: Shapes, ja: 形の割り当て}
   visible: [values, breaks]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_linetype_manual:
   package: ggplot2
@@ -2958,6 +2976,8 @@ scale_linetype_manual:
   stage: finishing
   label: {en: Line types, ja: 線種の割り当て}
   visible: [values, breaks]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 coord_cartesian:
   package: ggplot2
@@ -2967,8 +2987,8 @@ coord_cartesian:
   label: {en: Visible range, ja: 表示の範囲}
   visible: [xlim, ylim, clip]
   args:
-    xlim: {type: "list<number>|r", label: {en: X range, ja: x の範囲}}
-    ylim: {type: "list<number>|r", label: {en: Y range, ja: y の範囲}}
+    xlim: {type: "list<number|date>|r", label: {en: X range, ja: x の範囲}, help: "Two numbers, or two dates on a date axis, 2024-01-01 (NA: the data's)."}
+    ylim: {type: "list<number|date>|r", label: {en: Y range, ja: y の範囲}}
     clip: {type: "enum[on|off]", label: {en: Clip, ja: はみ出し}}
 
 coord_equal:
@@ -3015,11 +3035,11 @@ labs:
   stage: finishing
   label: {en: Labels, ja: ラベル}
   visible: [x, "y", title, colour]
-  dots: {style: named, type: "string|r", description: "The labels by aesthetic (x, y, colour, fill ...); !r NULL for none."}
+  dots: {style: named, type: "string|call<expression, quote, bquote>|r", description: "The labels by aesthetic (x, y, colour, fill ...); !r NULL for none."}
   args:
-    title: {type: "string|r", label: {en: Title, ja: 題}}
-    subtitle: {type: "string|r", label: {en: Subtitle, ja: 副題}}
-    caption: {type: "string|r", label: {en: Caption, ja: 注}}
+    title: {type: "string|call<expression, quote, bquote>|r", label: {en: Title, ja: 題}}
+    subtitle: {type: "string|call<expression, quote, bquote>|r", label: {en: Subtitle, ja: 副題}}
+    caption: {type: "string|call<expression, quote, bquote>|r", label: {en: Caption, ja: 注}}
 
 theme_tfl:
   package: tflspec
@@ -3324,6 +3344,9 @@ geom_bin_2d:
   description: "Counts in rectangles of (x, y), filled by the count."
   aes: {x: {required: true}, "y": {required: true}, fill: {}}
   visible: [mapping, bins, binwidth]
+  args:
+    bins: {type: "integer|list<integer>|map<string, integer>|r", label: {en: Number of bins, ja: ビンの数}, description: "One number for both axes, or one an axis: [30, 10] or {x: 30, y: 10}, written list(x = 30, y = 10)."}
+    binwidth: {type: "number|list<number>|map<string, number>|lambda|tilde|r", label: {en: Bin width, ja: ビンの幅}, description: "One width for both axes, or one an axis: [0.5, 2] or {x: 0.5, y: 2}, written list(x = 0.5, y = 2)."}
 
 geom_function:
   package: ggplot2
@@ -3521,6 +3544,8 @@ scale_y_discrete:
   stage: finishing
   label: {en: Y axis (groups), ja: y 軸（群）}
   visible: [limits, labels]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_x_reverse:
   package: ggplot2
@@ -3563,7 +3588,7 @@ scale_x_date:
   visible: [date_breaks, date_labels, limits]
   args:
     limits: {type: "list<date|string|number>|r", label: {en: Range, ja: 範囲}, help: "Two dates, 2024-01-01 (NA: the data's); written as.Date(c(...))."}
-    breaks: {type: "list<date|string|number>|call<breaks_*, extended_breaks, pretty_breaks>|r", label: {en: Breaks, ja: 目盛り}, help: "Dates, 2024-01-01; or date_breaks (\"1 month\")."}
+    breaks: {type: "list<date|string|number>|call<breaks_*, extended_breaks, pretty_breaks>|tilde|lambda|r", label: {en: Breaks, ja: 目盛り}, help: "Dates, 2024-01-01; or date_breaks (\"1 month\")."}
 
 scale_y_date:
   package: ggplot2
@@ -3574,7 +3599,7 @@ scale_y_date:
   visible: [date_breaks, date_labels, limits]
   args:
     limits: {type: "list<date|string|number>|r", label: {en: Range, ja: 範囲}, help: "Two dates, 2024-01-01 (NA: the data's); written as.Date(c(...))."}
-    breaks: {type: "list<date|string|number>|call<breaks_*, extended_breaks, pretty_breaks>|r", label: {en: Breaks, ja: 目盛り}, help: "Dates, 2024-01-01; or date_breaks (\"1 month\")."}
+    breaks: {type: "list<date|string|number>|call<breaks_*, extended_breaks, pretty_breaks>|tilde|lambda|r", label: {en: Breaks, ja: 目盛り}, help: "Dates, 2024-01-01; or date_breaks (\"1 month\")."}
 
 scale_x_datetime:
   package: ggplot2
@@ -3591,6 +3616,8 @@ scale_colour_brewer:
   stage: finishing
   label: {en: Colours (ColorBrewer), ja: 色（ColorBrewer）}
   visible: [palette, type, direction]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_fill_brewer:
   package: ggplot2
@@ -3599,6 +3626,8 @@ scale_fill_brewer:
   stage: finishing
   label: {en: Fill colours (ColorBrewer), ja: 塗り（ColorBrewer）}
   visible: [palette, type, direction]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_colour_distiller:
   package: ggplot2
@@ -3673,6 +3702,8 @@ scale_colour_viridis_d:
   stage: finishing
   label: {en: Colours (viridis), ja: 色（viridis）}
   visible: [option, begin, end]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_fill_viridis_d:
   package: ggplot2
@@ -3681,6 +3712,8 @@ scale_fill_viridis_d:
   stage: finishing
   label: {en: Fill colours (viridis), ja: 塗り（viridis）}
   visible: [option, begin, end]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_colour_viridis_c:
   package: ggplot2
@@ -3705,6 +3738,8 @@ scale_colour_grey:
   stage: finishing
   label: {en: Colours (greys), ja: 色（灰色）}
   visible: [start, end]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_fill_grey:
   package: ggplot2
@@ -3713,6 +3748,8 @@ scale_fill_grey:
   stage: finishing
   label: {en: Fill colours (greys), ja: 塗り（灰色）}
   visible: [start, end]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_colour_hue:
   package: ggplot2
@@ -3721,6 +3758,8 @@ scale_colour_hue:
   stage: finishing
   label: {en: Colours (hues), ja: 色（色相）}
   visible: [l, c, h.start]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_fill_hue:
   package: ggplot2
@@ -3729,6 +3768,8 @@ scale_fill_hue:
   stage: finishing
   label: {en: Fill colours (hues), ja: 塗り（色相）}
   visible: [l, c, h.start]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_colour_identity:
   package: ggplot2
@@ -3753,6 +3794,8 @@ scale_shape:
   stage: finishing
   label: {en: Shapes (default), ja: 形（既定）}
   visible: [solid, name]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_linetype:
   package: ggplot2
@@ -3761,6 +3804,8 @@ scale_linetype:
   stage: finishing
   label: {en: Line types (default), ja: 線種（既定）}
   visible: [name]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_size:
   package: ggplot2
@@ -3825,6 +3870,9 @@ scale_colour_discrete:
   stage: finishing
   label: {en: Colours (discrete default), ja: 色（離散の既定）}
   visible: [name, labels, limits]
+  args:
+    type: {type: "list<string>|function|r", label: {en: Colours, ja: 色}, description: "The colours in the order of the levels ([grey40, \"#1F78B4\"]), or a palette function by its name; ggplot2 3.3."}
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_fill_discrete:
   package: ggplot2
@@ -3833,6 +3881,9 @@ scale_fill_discrete:
   stage: finishing
   label: {en: Fills (discrete default), ja: 塗り（離散の既定）}
   visible: [name, labels, limits]
+  args:
+    type: {type: "list<string>|function|r", label: {en: Colours, ja: 色}, description: "The colours in the order of the levels ([grey40, \"#1F78B4\"]), or a palette function by its name; ggplot2 3.3."}
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_colour_continuous:
   package: ggplot2
@@ -3841,6 +3892,8 @@ scale_colour_continuous:
   stage: finishing
   label: {en: Colours (continuous default), ja: 色（連続の既定）}
   visible: [name, type, limits]
+  args:
+    type: {type: "enum[gradient|viridis]|function|r", label: {en: Palette type, ja: パレットの種類}, description: "gradient (scale_*_gradient()) or viridis (scale_*_viridis_c()), or a scale function by its name."}
 
 scale_fill_continuous:
   package: ggplot2
@@ -3849,6 +3902,8 @@ scale_fill_continuous:
   stage: finishing
   label: {en: Fills (continuous default), ja: 塗り（連続の既定）}
   visible: [name, type, limits]
+  args:
+    type: {type: "enum[gradient|viridis]|function|r", label: {en: Palette type, ja: パレットの種類}, description: "gradient (scale_*_gradient()) or viridis (scale_*_viridis_c()), or a scale function by its name."}
 
 scale_x_binned:
   package: ggplot2
@@ -4192,6 +4247,7 @@ guide_axis_stack:
   label: {en: Stacked axes, ja: 重ねた軸}
   description: "Two axis guides on one side (first, then the others)."
   visible: [first, spacing]
+  dots: {style: positional, key: guides, type: "list<string|call<guide_axis, guide_axis_logticks, guide_axis_theta, guide_none>>|r", description: "The axes stacked after the first, outwards: [axis, {fn: guide_axis_logticks}] (written guide_axis_stack(\"axis\", \"axis\", guide_axis_logticks()), by position)."}
 
 
 # -- round 3 of the figure SPEC coverage: the rest of ggplot2's functions of a plot --
@@ -4207,6 +4263,9 @@ geom_hex:
   description: "Counts in hexagons of (x, y), filled by the count (needs the hexbin package)."
   aes: {x: {required: true}, "y": {required: true}, fill: {}}
   visible: [mapping, bins, binwidth]
+  args:
+    bins: {type: "integer|list<integer>|map<string, integer>|r", label: {en: Number of bins, ja: ビンの数}, description: "One number for both axes, or one an axis: [30, 10] or {x: 30, y: 10}, written list(x = 30, y = 10)."}
+    binwidth: {type: "number|list<number>|map<string, number>|lambda|tilde|r", label: {en: Bin width, ja: ビンの幅}, description: "One width for both axes, or one an axis: [0.5, 2] or {x: 0.5, y: 2}, written list(x = 0.5, y = 2)."}
 
 stat_bin_2d:
   package: ggplot2
@@ -4216,6 +4275,9 @@ stat_bin_2d:
   label: {en: 2-d bins (stat), ja: "2 次元の区間（stat）"}
   aes: {x: {required: true}, "y": {required: true}, fill: {}}
   visible: [mapping, bins, binwidth, geom]
+  args:
+    bins: {type: "integer|list<integer>|map<string, integer>|r", label: {en: Number of bins, ja: ビンの数}, description: "One number for both axes, or one an axis: [30, 10] or {x: 30, y: 10}, written list(x = 30, y = 10)."}
+    binwidth: {type: "number|list<number>|map<string, number>|lambda|tilde|r", label: {en: Bin width, ja: ビンの幅}, description: "One width for both axes, or one an axis: [0.5, 2] or {x: 0.5, y: 2}, written list(x = 0.5, y = 2)."}
 
 stat_bin_hex:
   package: ggplot2
@@ -4225,6 +4287,9 @@ stat_bin_hex:
   label: {en: Hexagonal bins (stat), ja: "六角形の区間（stat）"}
   aes: {x: {required: true}, "y": {required: true}, fill: {}}
   visible: [mapping, bins, binwidth, geom]
+  args:
+    bins: {type: "integer|list<integer>|map<string, integer>|r", label: {en: Number of bins, ja: ビンの数}, description: "One number for both axes, or one an axis: [30, 10] or {x: 30, y: 10}, written list(x = 30, y = 10)."}
+    binwidth: {type: "number|list<number>|map<string, number>|lambda|tilde|r", label: {en: Bin width, ja: ビンの幅}, description: "One width for both axes, or one an axis: [0.5, 2] or {x: 0.5, y: 2}, written list(x = 0.5, y = 2)."}
 
 stat_contour:
   package: ggplot2
@@ -4271,6 +4336,9 @@ stat_summary_2d:
   description: "A summary of z (fun, by default the mean) in rectangles of (x, y): a heat map of a value."
   aes: {x: {required: true}, "y": {required: true}, z: {required: true}, fill: {}}
   visible: [mapping, fun, bins, binwidth]
+  args:
+    bins: {type: "integer|list<integer>|map<string, integer>|r", label: {en: Number of bins, ja: ビンの数}, description: "One number for both axes, or one an axis: [30, 10] or {x: 30, y: 10}, written list(x = 30, y = 10)."}
+    binwidth: {type: "number|list<number>|map<string, number>|lambda|tilde|r", label: {en: Bin width, ja: ビンの幅}, description: "One width for both axes, or one an axis: [0.5, 2] or {x: 0.5, y: 2}, written list(x = 0.5, y = 2)."}
 
 stat_summary_hex:
   package: ggplot2
@@ -4280,6 +4348,9 @@ stat_summary_hex:
   label: {en: Summary in hexagons, ja: "六角形の区間ごとの要約"}
   aes: {x: {required: true}, "y": {required: true}, z: {required: true}, fill: {}}
   visible: [mapping, fun, bins, binwidth]
+  args:
+    bins: {type: "integer|list<integer>|map<string, integer>|r", label: {en: Number of bins, ja: ビンの数}, description: "One number for both axes, or one an axis: [30, 10] or {x: 30, y: 10}, written list(x = 30, y = 10)."}
+    binwidth: {type: "number|list<number>|map<string, number>|lambda|tilde|r", label: {en: Bin width, ja: ビンの幅}, description: "One width for both axes, or one an axis: [0.5, 2] or {x: 0.5, y: 2}, written list(x = 0.5, y = 2)."}
 
 stat_quantile:
   package: ggplot2
@@ -4348,7 +4419,7 @@ annotation_custom:
   description: "A grid grob (a table, a logo, a text block) drawn in a box of the data's coordinates (-Inf / Inf: the whole panel)."
   visible: [grob, xmin, xmax, ymin, ymax]
   args:
-    grob: {type: r, label: {en: Grob, ja: グロブ}, description: "!r grid::textGrob(\"Favours drug\") or a ggplotGrob()."}
+    grob: {type: "call<textGrob, rectGrob, roundrectGrob, circleGrob, linesGrob, polylineGrob, segmentsGrob, pointsGrob, polygonGrob, nullGrob>|r", label: {en: Grob, ja: グロブ}, description: "One of grid's grobs, {fn: grid::textGrob, args: {label: Favours drug, x: 0.25, gp: {fn: grid::gpar, args: {fontsize: 9}}}} (written grid::textGrob(\"Favours drug\", x = 0.25, gp = grid::gpar(fontsize = 9))): textGrob, rectGrob, roundrectGrob, circleGrob, linesGrob, polylineGrob, segmentsGrob, pointsGrob, polygonGrob, nullGrob; or !r for another (a table's grob, a ggplotGrob())."}
     xmin: {type: number|r, label: {en: Left, ja: 左}}
     xmax: {type: number|r, label: {en: Right, ja: 右}}
     ymin: {type: number|r, label: {en: Bottom, ja: 下}}
@@ -4783,15 +4854,15 @@ labeller:
   rank: 509
   stage: finishing
   label: {en: Strip labels by variable, ja: 変数ごとのストリップのラベル}
-  description: "A facet's labeller: each variable its own (PARAMCD: !r label_wrap_gen(20), TRTA: !r label_both), or a lookup table."
+  description: "A facet's labeller: each variable its own (PARAMCD: {fn: label_wrap_gen, args: {width: 20}}, TRTA: label_both), or a lookup table."
   visible: [.default, .multi_line]
-  dots: {style: named, type: "r|call|vec<string, string>", description: "Variable: a labeller (!r label_both) or a lookup {code: label}.", values: [{value: label_value, label: {en: Values, ja: 値}}, {value: label_both, label: {en: Variable and value, ja: 変数と値}}, {value: label_context, label: {en: By the number of variables, ja: 変数の数による}}, {value: label_parsed, label: {en: Plotmath, ja: 数式}}, {value: label_wrap_gen, label: {en: Wrapped, ja: 折り返し}}, {value: label_bquote, label: {en: An expression, ja: 式}}]}
+  dots: {style: named, type: "function<label_value, label_both, label_context, label_parsed>|call<label_wrap_gen, label_bquote, as_labeller, label_value, label_both, label_context, label_parsed>|vec<string, string>|r|call", description: "Variable: a labeller by its name (label_both, written bare), a labeller's call ({fn: label_wrap_gen, args: {width: 20}}) or a lookup {code: label}.", values: [{value: label_value, label: {en: Values, ja: 値}}, {value: label_both, label: {en: Variable and value, ja: 変数と値}}, {value: label_context, label: {en: By the number of variables, ja: 変数の数による}}, {value: label_parsed, label: {en: Plotmath, ja: 数式}}, {value: label_wrap_gen, label: {en: Wrapped, ja: 折り返し}}, {value: label_bquote, label: {en: An expression, ja: 式}}]}
   args:
-    .rows: {type: "r|call|string", label: {en: Labeller of the rows, ja: 行のラベル}, values: [{value: label_value, label: {en: Values, ja: 値}}, {value: label_both, label: {en: Variable and value, ja: 変数と値}}, {value: label_context, label: {en: By the number of variables, ja: 変数の数による}}, {value: label_parsed, label: {en: Plotmath, ja: 数式}}, {value: label_wrap_gen, label: {en: Wrapped, ja: 折り返し}}, {value: label_bquote, label: {en: An expression, ja: 式}}]}
-    .cols: {type: "r|call|string", label: {en: Labeller of the columns, ja: 列のラベル}, values: [{value: label_value, label: {en: Values, ja: 値}}, {value: label_both, label: {en: Variable and value, ja: 変数と値}}, {value: label_context, label: {en: By the number of variables, ja: 変数の数による}}, {value: label_parsed, label: {en: Plotmath, ja: 数式}}, {value: label_wrap_gen, label: {en: Wrapped, ja: 折り返し}}, {value: label_bquote, label: {en: An expression, ja: 式}}]}
+    .rows: {type: "function<label_value, label_both, label_context, label_parsed>|call<label_wrap_gen, label_bquote, as_labeller, label_value, label_both, label_context, label_parsed>|r|call|string", label: {en: Labeller of the rows, ja: 行のラベル}, values: [{value: label_value, label: {en: Values, ja: 値}}, {value: label_both, label: {en: Variable and value, ja: 変数と値}}, {value: label_context, label: {en: By the number of variables, ja: 変数の数による}}, {value: label_parsed, label: {en: Plotmath, ja: 数式}}, {value: label_wrap_gen, label: {en: Wrapped, ja: 折り返し}}, {value: label_bquote, label: {en: An expression, ja: 式}}]}
+    .cols: {type: "function<label_value, label_both, label_context, label_parsed>|call<label_wrap_gen, label_bquote, as_labeller, label_value, label_both, label_context, label_parsed>|r|call|string", label: {en: Labeller of the columns, ja: 列のラベル}, values: [{value: label_value, label: {en: Values, ja: 値}}, {value: label_both, label: {en: Variable and value, ja: 変数と値}}, {value: label_context, label: {en: By the number of variables, ja: 変数の数による}}, {value: label_parsed, label: {en: Plotmath, ja: 数式}}, {value: label_wrap_gen, label: {en: Wrapped, ja: 折り返し}}, {value: label_bquote, label: {en: An expression, ja: 式}}]}
     keep.as.numeric: {type: logical, label: {en: Keep numbers, ja: 数値のまま}}
     .multi_line: {type: logical, label: {en: One line a variable, ja: 変数ごとに 1 行}}
-    .default: {type: "r|call|string", label: {en: Labeller of the others, ja: そのほかのラベル}, description: "!r label_value (the default).", values: [{value: label_value, label: {en: Values, ja: 値}}, {value: label_both, label: {en: Variable and value, ja: 変数と値}}, {value: label_context, label: {en: By the number of variables, ja: 変数の数による}}, {value: label_parsed, label: {en: Plotmath, ja: 数式}}, {value: label_wrap_gen, label: {en: Wrapped, ja: 折り返し}}, {value: label_bquote, label: {en: An expression, ja: 式}}]}
+    .default: {type: "function<label_value, label_both, label_context, label_parsed>|call<label_wrap_gen, label_bquote, as_labeller, label_value, label_both, label_context, label_parsed>|r|call|string", label: {en: Labeller of the others, ja: そのほかのラベル}, description: "label_value (the default).", values: [{value: label_value, label: {en: Values, ja: 値}}, {value: label_both, label: {en: Variable and value, ja: 変数と値}}, {value: label_context, label: {en: By the number of variables, ja: 変数の数による}}, {value: label_parsed, label: {en: Plotmath, ja: 数式}}, {value: label_wrap_gen, label: {en: Wrapped, ja: 折り返し}}, {value: label_bquote, label: {en: An expression, ja: 式}}]}
 
 label_value:
   package: ggplot2
@@ -4861,12 +4932,12 @@ label_bquote:
   rank: 515
   stage: finishing
   label: {en: "Strip labels: an expression", ja: "ストリップ：式"}
-  description: "Strip labels made by an expression of the value: rows: !r alpha ^ .(AVISITN)."
+  description: "Strip labels made by a plotmath expression of the value, written bare: rows: alpha^.(AVISITN)."
   visible: [rows, cols]
   args:
-    rows: {type: r, label: {en: Rows, ja: 行}}
-    cols: {type: r, label: {en: Columns, ja: 列}}
-    default: {type: r, label: {en: Default, ja: 既定}}
+    rows: {type: "math|tilde|r", label: {en: Rows, ja: 行}, description: "A plotmath expression of the rows' value in .(), written bare: alpha^.(vs)."}
+    cols: {type: "math|tilde|r", label: {en: Columns, ja: 列}, description: "As rows: .(am) ~ transmission."}
+    default: {type: "math|tilde|r", label: {en: Default, ja: 既定}}
 
 # a theme of its own, the parts of theme() by ggplot2 4.0's theme_sub_*()
 
@@ -5079,7 +5150,7 @@ guide_custom:
   description: "A legend of a grob of its own (a key to the marks of a swimmer plot drawn by hand)."
   visible: [grob, title, width, height]
   args:
-    grob: {type: r, label: {en: Grob, ja: グロブ}}
+    grob: {type: "call<textGrob, rectGrob, roundrectGrob, circleGrob, linesGrob, polylineGrob, segmentsGrob, pointsGrob, polygonGrob, nullGrob>|r", label: {en: Grob, ja: グロブ}, description: "One of grid's grobs ({fn: grid::pointsGrob, args: {x: 0.5, y: 0.5, pch: 17}}), or !r for another."}
     width: {type: "call<unit>|r", label: {en: Width, ja: 幅}}
     height: {type: "call<unit>|r", label: {en: Height, ja: 高さ}}
     theme: {type: "call<theme>|r", label: {en: Theme, ja: テーマ}}
@@ -5098,7 +5169,7 @@ geom_label_repel:
   visible: [mapping, size, max.overlaps, box.padding]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
     max.overlaps: {type: number, label: {en: Overlaps allowed, ja: 許す重なりの数}}
     direction: {type: "enum[both|y|x]", label: {en: Moved along, ja: 動かす向き}}
 
@@ -5113,7 +5184,7 @@ geom_richtext:
   visible: [mapping, size, label.padding]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|lambda|call<data.frame, subset>|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored), or as a function of it written out, function(d) subset(d, censored); or a table of constants, {fn: data.frame, args: {y: [-30, 20]}}; or rows of a data by name, {fn: subset, args: {x: km, subset: censored}}."}
 
 new_scale_fill:
   package: ggnewscale
@@ -5144,7 +5215,7 @@ facet_nested_wrap:
   label: {en: Nested panels (wrapped), ja: 入れ子の面（折り返し）}
   visible: [facets, ncol, scales]
   args:
-    facets: {type: r, label: {en: Variables (vars()), ja: 変数（vars()）}}
+    facets: {type: "r|call<vars>|list<column>|column", label: {en: Variables (vars()), ja: 変数（vars()）}, description: "!r vars(SOC, PT), or the columns [SOC, PT] (SOC)."}
     scales: {type: "enum[fixed|free|free_x|free_y]", label: {en: Axes, ja: 軸}}
 
 facetted_pos_scales:
@@ -5156,8 +5227,8 @@ facetted_pos_scales:
   description: "A different x or y scale for each panel: y = list(scale_y_continuous(...), ...)."
   visible: [x, "y"]
   args:
-    x: {type: r, label: {en: X scales, ja: x の軸}}
-    "y": {type: r, label: {en: Y scales, ja: y の軸}}
+    x: {type: "list<call<scale_x_*>|r>|r", label: {en: X scales, ja: x の軸}, description: "A scale a panel, in the panels' order, !r NULL for a panel of the plot's own: [!r NULL, {fn: scale_x_continuous, args: {trans: reverse}}] (written list(NULL, scale_x_continuous(trans = \"reverse\"))); or !r for scales by a condition (a formula)."}
+    "y": {type: "list<call<scale_y_*>|r>|r", label: {en: Y scales, ja: y の軸}, description: "A scale a panel, in the panels' order, !r NULL for a panel of the plot's own: [!r NULL, {fn: scale_y_continuous, args: {trans: reverse}}] (written list(NULL, scale_y_continuous(trans = \"reverse\"))); or !r for scales by a condition (a formula)."}
 
 element_markdown:
   package: ggtext
@@ -5178,6 +5249,8 @@ element_textbox_simple:
   label: {en: Markdown text box, ja: "Markdown の文字の箱"}
   description: "A title or caption that wraps inside a box: {fn: element_textbox_simple} as a theme setting's value."
   visible: [size, width, padding]
+  args:
+    r: {type: "call<unit>|r", label: {en: Rounded corners, ja: 角の丸み}, description: "{fn: unit, args: {x: 8, units: pt}}."}
 
 stat_stepribbon:
   package: ggsurvfit
@@ -5304,7 +5377,7 @@ elem_list_text:
   stage: finishing
   label: {en: Texts by strip, ja: ストリップごとの文字}
   description: "element_text()'s arguments, each a list a strip: {colour: [red, blue]}."
-  dots: {style: named, type: "string|number|logical|list<number|string|logical>|call|r", description: "element_text()'s arguments, a value a strip."}
+  dots: {style: named, type: "string|number|logical|list<number|string|logical>|list<call<margin, margin_auto, margin_part, unit>|r>|call|r", description: "element_text()'s arguments, a value a strip; margins a strip each, [!r NULL, {fn: margin, args: {t: 5}}] (written list(NULL, margin(t = 5)))."}
 
 elem_list_rect:
   package: ggh4x
@@ -5369,7 +5442,7 @@ wrap_plots:
   label: {en: Arrangement, ja: 配置}
   visible: [plots, ncol, nrow, heights, widths, guides]
   args:
-    plots: {type: "list<string>", label: {en: Plots (by name), ja: plot（名前）}}
+    plots: {type: "list<string>|map<string, string>|string", label: {en: Plots (by name), ja: plot（名前）}, description: "The plots by name, in order ([km, risk], written wrap_plots(p_km, p_risk)); by a design's letters, {A: km, B: risk} with design: AAB (written A = p_km, B = p_risk); or one list of plots by its name."}
     ncol: {type: integer, label: {en: Columns, ja: 列の数}}
     nrow: {type: integer, label: {en: Rows, ja: 行の数}}
     heights: {type: "list<number>", label: {en: Heights, ja: 高さ}}
@@ -5443,6 +5516,8 @@ free:
   label: {en: Not aligned, ja: 揃えない}
   description: "A plot left out of the alignment of the others (its long axis labels)."
   visible: [type, side]
+  args:
+    x: {type: "object|r", label: {en: Plot (by name), ja: plot（名前）}, description: "The plot left out of the alignment, by its name."}
 
 tfl_image:
   package: tflspec

@@ -37,6 +37,16 @@ name, a facet's variables as its columns (\code{facet_grid(SEX ~ TRTA)} is
 an element, \code{theme()}, \code{unit()}, \code{rel()}, \code{sec_axis()} ...) as
 \verb{\{fn:, args:\}} with its arguments named and any that is no constant as
 \code{!r} in it, \code{1:5} as the numbers.
+
+ggplot2's spellings of before 3.4 / 3.5 are read as ggplot2 4.0 writes
+them, where ggplot2 takes the old one as the new: a line's \code{size} is its
+\code{linewidth} (\code{geom_line()}, \code{geom_hline()}, \code{element_rect()} ...),
+\code{stat_summary(fun.y =)} is \code{fun}, \code{..count..} and \code{stat(count)} are
+\code{after_stat(count)}, a guide's \code{title.position}, \code{keywidth},
+\code{label.hjust} ... its \code{theme = theme(legend.title.position =, ...)},
+\code{guide = FALSE} is \code{"none"}, \code{theme(legend.position = c(x, y))} is
+\code{"inside"} with \code{legend.position.inside}, \code{expand_scale()} is
+\code{expansion()}.
 }
 \examples{
 tfl_args_to_r("plan_cells", list(categorical = "{n} ({p:.1f\%})"))
