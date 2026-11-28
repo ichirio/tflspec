@@ -202,6 +202,12 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
     env["formats"] <- list(.fmtset_std_prune(env[["formats"]], names(given$formats),
                                              env[setdiff(names(env), "formats")]))
   }
+  # (a header's cells the report gives, col_header: their {name}s of the
+  # template's arguments filled, as the written-out default's span: "{by}")
+  for (p in defs$name[defs$type %in% .tr_header_cells_type & defs$name %in% names(given)]) {
+    env[p] <- list(.tr_fill(env[[p]], env[setdiff(names(env), p)]))
+  }
+  .tr_header_cells(env, defs, given, template, who)
   args_env <- env
   env <- .tr_derive(tpl$derive, env, defs$name, template, origins)
   .tr_check(tpl$check, env, defs$name, origins, template, who)
@@ -449,12 +455,12 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
 
 # The study as a list: a list as given, study.yml, or a folder that holds
 # it.  Read from a file or a folder, it has attribute "study_dir" (the
-# study folder: the series are read from its copies).  A study.yml with
-# series_settings: stops (.series_settings_gone()).
+# study folder: the series are read from its copies).  Its old forms stop
+# (.study_yml_form_check()).
 .tr_study <- function(study, who) {
   if (is.null(study)) return(study)
   if (is.list(study)) {
-    .series_settings_gone(study, attr(study, "study_dir"))
+    .study_yml_form_check(study, attr(study, "study_dir"))
     return(study)
   }
   if (!is.character(study) || length(study) != 1L) {
@@ -465,7 +471,7 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   sd <- normalizePath(if (is_dir) study else dirname(study), winslash = "/", mustWork = FALSE)
   if (!file.exists(f)) stop(who, ": no file ", f, call. = FALSE)
   out <- .series_read_yaml(f) %||% list()
-  .series_settings_gone(out, sd)
+  .study_yml_form_check(out, sd, f)
   structure(out, study_dir = sd)
 }
 
@@ -550,6 +556,36 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   stop(who, ": ", template, "'s ", p, " is a list (", type, "); the report gives ", why,
        ". Leave ", p, " out for the template's default, or write !unset for none.",
        call. = FALSE)
+}
+
+# The type of a header's cells (col_header): the tables sheet's col_header
+# columns, plan_col_header(header = )
+.tr_header_cells_type <- "rows<line, cols, span, text>"
+
+# A header's cells the report gives: each a map of line, cols, span and
+# text, with a line and cols.  The old row form of tflspec_summary's
+# col_header ({row_label: , .values: }, plan_col_header(lines = )) stops,
+# saying how a cell is written (canon 11-28: no alias for the old shape)
+.tr_header_cells <- function(env, defs, given, template, who) {
+  ok <- c("line", "cols", "span", "text")
+  for (p in defs$name[defs$type %in% .tr_header_cells_type & defs$name %in% names(given)]) {
+    v <- env[[p]]
+    if (is.null(v) || is.object(v)) next
+    rows <- if (is.list(v) && is.null(names(v))) v else list(v)
+    keys <- unique(unlist(lapply(rows, function(r) if (is.list(r)) names(r) else NA_character_)))
+    bad <- setdiff(keys, ok)
+    miss <- !all(vapply(rows, function(r) is.list(r) && all(c("line", "cols") %in% names(r)), NA))
+    if (!length(bad) && !miss) next
+    stop(who, ": ", template, "'s ", p, " is the header's cells, one row a cell (",
+         paste(ok, collapse = ", "), "; a line and cols in each), as the tables sheet's col_header",
+         if (length(bad)) paste0("; not a cell's key: ", paste(bad[!is.na(bad)], collapse = ", ")),
+         if (any(c("row_label", ".values") %in% bad))
+           paste0(". The old row form ({row_label: , .values: }) is gone: write each cell as a row,",
+                  " {line: \"1\", cols: row_label, text: \"\"} and",
+                  " {line: \"1\", cols: .values, text: \"{col}\"}"),
+         ".", call. = FALSE)
+  }
+  invisible()
 }
 
 # A map as read (a named list, not a tagged value); an empty list is one too

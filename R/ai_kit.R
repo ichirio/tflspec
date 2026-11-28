@@ -389,6 +389,7 @@
     "What each function's arguments take is `03_spec_schema.yml`.",
     "",
     blk("study.yml",
+        sprintf("spec_version: %d                # the SPEC's form (kept as written)", .spec_version),
         "study_id: XYZ-001              # the study's id, as the TOC writes it",
         "title: A study title",
         "settings:",

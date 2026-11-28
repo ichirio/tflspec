@@ -111,8 +111,8 @@ test_that("a YAML study's ARD setup carries its rounding", {
   for (v in c("sas", "r")) {
     dir <- withr::local_tempdir()
     dir.create(file.path(dir, "spec", "outputs"), recursive = TRUE)
-    writeLines(c("study_id: SR-1", "keys:", "  id: USUBJID", "settings:",
-                 paste("  rounding:", v)), file.path(dir, "study.yml"))
+    write_study_yml(dir, c("study_id: SR-1", "keys:", "  id: USUBJID", "settings:",
+                 paste("  rounding:", v)))
     writeLines(c("datasets:", "  - dataset: ADSL", "    level: ADaM", "    path: data/adam/adsl.rds",
                  "populations:", "  - id: SAF", "    dataset: ADSL", "    where: !r SAFFL == \"Y\""),
                file.path(dir, "spec", "data.yml"))

@@ -126,7 +126,7 @@ test_that("page: titles under a study header that prints the label, title and po
   tfl_write_output(o, file.path(d, "spec", "outputs", "T-DM.yml"))
   expect_false("page" %in% tfl_check_spec(d)$part)
   # the agent's instructions say so (the study's default configuration prints them)
-  yaml::write_yaml(list(settings = list(style = "tfl_standard")), file.path(d, "study.yml"))
+  write_study_yml(d, list(settings = list(style = "tfl_standard")))
   s <- tflspec:::.ai_spec_settings(d)
   expect_identical(s$titles_in_header, c("OUTPUT_LABEL", "OUTPUT_TITLE", "OUTPUT_POPULATION"))
   expect_match(tflspec:::.ai_titles_text(s$titles_in_header), "no `page: titles`", fixed = TRUE)

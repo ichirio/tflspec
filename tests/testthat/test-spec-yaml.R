@@ -134,7 +134,7 @@ test_that("flow-style !unset fix leaves quotes, comments, !r and blocks alone", 
 
 test_that("a report with flow-style !unset is read by tfl_read_output()", {
   f <- withr::local_tempfile(fileext = ".yml")
-  writeLines(c("id: T-1", "kind: table", "content:", "  - {fn: plan_stub, args: {before: !unset}}"), f)
+  writeLines(c("id: T-1", "kind: table", "content:", "  - plan_stub: {before: !unset}"), f)
   out <- tfl_read_output(f)
   expect_s3_class(out$content[[1L]]$args$before, "tfl_unset")
 })

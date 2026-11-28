@@ -6,7 +6,6 @@
 #   spec/defaults.yml         what every report starts from (a report's shape),
 #                             and the study's styles: the look a report picks
 #                             (`styles: {compact: {content, page}}`, `style:`)
-#   spec/patterns/<name>.yml  a layer a report may extend (a report's shape)
 #   spec/toc.yml              the reports in order
 #   spec/outputs/**/*.yml     one report a file (or several, `outputs:`)
 #   spec/series/<series>/     the study's copy of a series and of the templates
@@ -36,8 +35,7 @@
 #'   report's `value_labels` names `SEX`, `RACE`, `ETHNIC` and `AGEGR1`); a
 #'   reference to a list the study has not got is left out when the report is
 #'   resolved.  No list reaches a report through `extends:`: a report's code
-#'   lists are its own (`codelists:` in its file), and a pattern's
-#'   `codelists:` stops the read.  A report's list of a variable is written
+#'   lists are its own (`codelists:` in its file).  A report's list of a variable is written
 #'   in place (`SEX: [{value: F, label: Female}, ...]`) or names one of the
 #'   study's lists: `SEX: {list: SEX}` (all its codes, in its order) or `SEX:
 #'   {list: SEX, codes: [M, F]}` (those codes, in the order written).  The
@@ -75,7 +73,9 @@
 #'   of a built-in one), `figure_style`
 #'   (`defaults.yml`'s `figure_style:`: the study's figure style standard,
 #'   tflspec's built-in one for a part it does not give),
-#'   `patterns` (by name), `toc`, `dir`.  `tfl_read_outputs()`: a named list of `tfl_output`, by id.
+#'   `toc`, `dir`.  A `spec/patterns/` file stops the read (an old form:
+#'   a page is a page configuration, `styles:`).  `tfl_read_outputs()`: a
+#'   named list of `tfl_output`, by id.
 #' @examples
 #' d <- system.file("extdata", "spec-yaml", package = "tflspec")
 #' s <- tfl_read_study_spec(d)
@@ -89,36 +89,24 @@ tfl_read_study_spec <- function(dir) {
     y <- yaml::read_yaml(f, handlers = .yaml_handlers())
     if (is.null(y)) list() else y
   }
-  pat_files <- list.files(file.path(spec, "patterns"), "\\.ya?ml$", full.names = TRUE)
-  patterns <- stats::setNames(
-    lapply(pat_files, function(f) {
-      y <- rd(f)
-      if (!is.null(y$page)) {
-        stop("tfl_read_study_spec(): ", basename(f), " `page:` moved to a page configuration ",
-             "(styles:): the page comes from the report's configuration, not from a pattern.",
-             call. = FALSE)
-      }
-      # (a code list is the study's or a report's own: no layer passes one on)
-      if (!is.null(y$codelists)) {
-        stop("tfl_read_study_spec(): ", basename(f), " `codelists:`: a pattern holds no code ",
-             "list. A code list is the study's (spec/defaults.yml `codelists:`, which a report ",
-             "or template names, study$codelists$<name>) or a report's own (its `codelists:`).",
-             call. = FALSE)
-      }
-      .layer_from_list(y, paste0("pattern:", tools::file_path_sans_ext(basename(f))))
-    }),
-    tools::file_path_sans_ext(basename(pat_files)))
   study <- rd(file.path(dir, "study.yml"))
   if (!is.null(study$tokens) && !.is_map(study$tokens)) {
     stop("tfl_read_study_spec(): study.yml: tokens: is a map ({NAME: text}).", call. = FALSE)
   }
-  .check_spec_version(study$spec_version, file.path(dir, "study.yml"))
-  .series_settings_gone(study, normalizePath(dir, "/", mustWork = FALSE))
+  # (a folder with no study.yml reads as the current form)
+  if (!is.null(study)) {
+    .study_yml_form_check(study, normalizePath(dir, "/", mustWork = FALSE),
+                          file.path(dir, "study.yml"))
+  }
+  # (a pattern file is an old form: canon 11-12 :380, :433)
+  pat_files <- list.files(file.path(spec, "patterns"), "\\.ya?ml$")
+  if (length(pat_files)) {
+    .old_form_stop("patterns_dir", "tfl_read_study_spec(): spec/patterns/",
+                   was = sprintf("%s (a pattern file)", paste(pat_files, collapse = ", ")))
+  }
   dflt <- rd(file.path(spec, "defaults.yml"))
   if (!is.null(dflt$page)) {
-    stop("tfl_read_study_spec(): defaults.yml `page:` moved to a page configuration (styles:): ",
-         "write the page's settings and lines under `styles: <name>: page:`, and the tokens under ",
-         "study.yml `tokens:`.", call. = FALSE)
+    .old_form_stop("defaults_page", "tfl_read_study_spec(): defaults.yml", was = "`page:`")
   }
   styles <- dflt$styles %||% list()
   reserved <- intersect(names(styles), .tpl_style_builtin_names)
@@ -148,7 +136,6 @@ tfl_read_study_spec <- function(dir) {
     adam_meta = .adam_meta_read(dflt$adam_meta, "defaults.yml"),
     styles = stats::setNames(lapply(names(styles), function(nm)
       .style_set_from_list(styles[[nm]], nm)), names(styles)),
-    patterns = patterns,
     # the figure style standard the study keeps (defaults.yml's figure_style:)
     figure_style = dflt$figure_style %||% list(),
     toc = rd(file.path(spec, "toc.yml")) %||% list(),
@@ -165,7 +152,7 @@ tfl_read_study_spec <- function(dir) {
   if (dir.exists(file.path(dir, "spec"))) file.path(dir, "spec") else dir
 }
 
-# a defaults or pattern file as a layer: content items marked `from`, the
+# the defaults file as a layer: content items marked `from`, the
 # rest (data, page) as plain lists with calls resolved.  A layer has no code
 # lists (`codelists` is always empty): the study's are study$codelists, by
 # name, and a report's are its own.
@@ -216,7 +203,7 @@ tfl_read_outputs <- function(dir, skip_bad = FALSE) {
 #' A report over the layers it extends
 #'
 #' `tfl_resolve_output()` puts a report's own file over the layers its
-#' `extends` names (`defaults`, `patterns/<name>`), nearest last.  The
+#' `extends` names (`defaults`), nearest last.  The
 #' page has no file layer: it is the report's page configuration (its style
 #' set, `style:`) under the template's and the report's own `page:`, with
 #' the study's `tokens:` (`study.yml`) under the report's tokens; a band
@@ -230,8 +217,7 @@ tfl_read_outputs <- function(dir, skip_bad = FALSE) {
 #' report does not have keeps the layers' items; a function only the
 #' report has goes after them.  The `content` of `defaults` is a table's
 #' (normalize_ard, the digits ...): a figure or a listing takes its other
-#' parts (`page`, `codelists`), not its content.  A pattern's content
-#' (`patterns/<name>`, chosen report by report) layers onto any kind.
+#' parts (`page`, `codelists`), not its content.
 #' `extends: none` uses no layer.  The report's style (`style: compact`, a
 #' set of `defaults.yml`'s `styles:`, or a built-in one; the study's
 #' `settings.style`, else `tfl_standard`, when it names none) is the
@@ -252,10 +238,10 @@ tfl_read_outputs <- function(dir, skip_bad = FALSE) {
 #' `from` says where it came from.  The result holds no `tfl_unset`.
 #'
 #' @param output A `tfl_output` as read from its file.
-#' @param study A `tfl_study_spec` (its `defaults` and `patterns`).
+#' @param study A `tfl_study_spec` (its `defaults` and `styles`).
 #' @param provenance `TRUE` to say where each content item's arguments come
 #'   from: each item gets `arg_from` (a named character vector, one an
-#'   argument: `"own"`, `"defaults"` or `"pattern:<name>"`; a verb whose
+#'   argument: `"own"`, `"defaults"`, `"style:<name>"` or `"template:<name>"`; a verb whose
 #'   `...` is named, such as `plan_cells()`, by top-level key, any other verb
 #'   one layer's whole) and `below` (the same verb's item with the report's
 #'   own layer left out, `NULL` when no layer has it: what a revert goes
@@ -423,7 +409,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 }
 
 # Each resolved item's provenance, argument by argument (`arg_from`: "own",
-# "defaults", "pattern:<name>", in the order of its args), and `below`: the
+# "defaults", "style:<name>" ..., in the order of its args), and `below`: the
 # same verb's item with the report's own layer left out (the k-th of that
 # verb), NULL when no layer has it.  A named-dots verb (plan_cells ...)
 # takes each top-level key from the nearest layer that has it; any other
@@ -514,13 +500,16 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 .extends_part_step <- c(data = "data", codelists = "data", content = "content", page = "page")
 
 # `extends` as written, checked: NULL (not written); the files, nearest
-# first ("defaults", "patterns/<name>"), or "none"; or a map by step, each
+# first ("defaults"), or "none"; or a map by step, each
 # step such a value.  The files as a character vector; a map's steps too.
 .extends_value <- function(x, who) {
   if (is.null(x)) return(NULL)
-  bad <- sprintf(paste0("%s: `extends` is the files laid under the report (\"defaults\", ",
-                        "\"patterns/<name>\"), \"none\", or a map by step ({content: none}; the ",
-                        "steps: %s)."), who, paste(setdiff(.extends_steps, "page"), collapse = ", "))
+  bad <- sprintf(paste0("%s: `extends` is the files laid under the report (\"defaults\"), ",
+                        "\"none\", or a map by step ({content: none}; the steps: %s)."),
+                 who, paste(setdiff(.extends_steps, "page"), collapse = ", "))
+  # (a pattern is an old form: canon 11-12 :342, :380)
+  pat <- grep("^patterns/", as.character(unlist(x)), value = TRUE)
+  if (length(pat)) .old_form_stop("extends_pattern", who, was = sprintf("`extends: %s`", pat[1L]))
   files <- function(v) {
     v <- if (is.list(v) && is.null(names(v))) unlist(v) else v
     is.character(v) && length(v) > 0L && !anyNA(v) && all(nzchar(v))
@@ -583,7 +572,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   lapply(norm[d], one)
 }
 
-# A written value as text: "defaults, patterns/x", "content: none; page: ..."
+# A written value as text: "defaults", "content: none; data: ..."
 .extends_text <- function(x) {
   if (is.null(x)) return("(the template's)")
   if (!is.list(x)) return(paste(x, collapse = ", "))
@@ -607,7 +596,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   for (s in t$extends_fixed) {
     if (identical(out[[s]], set[[s]])) next
     .ard_stop(sprintf(paste0("%s: template %s fixes extends' %s step to %s; write the other steps ",
-                             "as a map ({data: [patterns/x, defaults]})."),
+                             "as a map ({data: none})."),
                       output$id, t$name, s, .extends_text(.extends_compact(list(set[[s]])))))
   }
   out
@@ -618,7 +607,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 #' What a report extends
 #'
 #' What a report extends, step by step: the files laid under it -- the
-#' study's `defaults`, its patterns (`patterns/<name>`) -- in each of the
+#' study's `defaults` -- in each of the
 #' steps a report is made in (`data`, `ard`, `content`), nearest
 #' first.  The report's `extends:` says it, as a list of files for every
 #' step, `none`, or a map by step (`{content: none}`).  A step the map does
@@ -650,13 +639,8 @@ tfl_output_extends <- function(output, step = NULL) {
 
 .layer_of <- function(nm, study) {
   if (identical(nm, "defaults")) return(study$defaults)
-  if (startsWith(nm, "patterns/")) {
-    p <- study$patterns[[substring(nm, 10L)]]
-    if (is.null(p)) stop("No pattern ", sQuote(nm), " in spec/patterns/.", call. = FALSE)
-    return(p)
-  }
-  stop("`extends` names \"defaults\" or \"patterns/<name>\", not ", sQuote(nm), ".",
-       call. = FALSE)
+  if (startsWith(nm, "patterns/")) .old_form_stop("extends_pattern", "`extends`", was = sQuote(nm, FALSE))
+  stop("`extends` names \"defaults\" or \"none\", not ", sQuote(nm), ".", call. = FALSE)
 }
 
 # `over` on top of `base`, part by part
@@ -949,9 +933,11 @@ tfl_output_extends <- function(output, step = NULL) {
 # -- the spec's version --------------------------------------------------------
 
 # The version of the YAML spec's form (study.yml's `spec_version`): this
-# reader's.  A study of a newer form is refused (update tflspec); an older
-# one is converted (tfl_convert_spec_version(), when there is one).
-.spec_version <- 1L
+# reader's.  A study of a newer form is refused (update tflspec); one of
+# an older form, or with none, stops with the list of the old forms and
+# what to write instead (.old_form_lines(); canon 11-10 :377).  2: the old
+# forms of R/spec_old_forms.R stop.
+.spec_version <- 2L
 
 # the packages a spec is written with: their versions, stamped into
 # study.yml by whatever writes it (the app, the converter, the AI kit)
@@ -965,12 +951,22 @@ tfl_output_extends <- function(output, step = NULL) {
   out
 }
 
+# study.yml's `spec_version` (`v`; `file` the study.yml): none or an older
+# one stops with every old form (an old study is changed by hand, by the
+# list), a newer one asks for a newer tflspec
 .check_spec_version <- function(v, file) {
-  if (is.null(v)) return(invisible())
-  v <- suppressWarnings(as.integer(v))
-  if (is.na(v)) stop("tfl_read_study_spec(): ", file, " has a spec_version that is not a number.", call. = FALSE)
-  if (v > .spec_version) {
-    stop("tfl_read_study_spec(): ", file, " is of spec_version ", v, "; this tflspec reads up to ",
+  n <- if (is.null(v)) 0L else suppressWarnings(as.integer(v[1L]))
+  if (is.na(n)) stop("tfl_read_study_spec(): ", file, " has a spec_version that is not a number.", call. = FALSE)
+  if (n < .spec_version) {
+    f <- .old_forms()
+    .old_form_stop("spec_version", file,
+                   was = if (is.null(v)) "a study.yml with no `spec_version`" else
+                     sprintf("a study.yml of spec_version %d", n),
+                   instead = paste0(f$instead[f$id == "spec_version"], ":\n",
+                                    paste(.old_form_lines(), collapse = "\n")))
+  }
+  if (n > .spec_version) {
+    stop("tfl_read_study_spec(): ", file, " is of spec_version ", n, "; this tflspec reads up to ",
          .spec_version, ". Update tflspec.", call. = FALSE)
   }
   invisible()
@@ -1026,17 +1022,17 @@ tfl_output_extends <- function(output, step = NULL) {
 #'
 #' Writes the study-level file of one part of a [tfl_read_study_spec()]
 #' result -- what a builder changes for the whole study (the rounding of
-#' every table, a pattern) -- in the form the reader reads.  For
+#' every table, a page configuration) -- in the form the reader reads.  For
 #' `"defaults"` written over the study's own `spec/defaults.yml`, the blocks
 #' that are not layers (`codelists:`, `adam_meta:`, `figure_style:`,
 #' `options:`) are kept as the file has them.
 #'
 #' @param study A `tfl_study_spec`.
-#' @param part `"defaults"`, `"patterns"` (one, by `name`),
-#'   `"data"` or `"toc"`.
-#' @param path The file; `NULL`: the study's own (`spec/defaults.yml`,
-#'   `spec/patterns/<name>.yml` ...).
-#' @param name For `part = "patterns"`: the pattern.
+#' @param part `"defaults"`, `"data"` or `"toc"`.  (`"patterns"` stops: a
+#'   pattern file is an old form, its page a page configuration in
+#'   `"defaults"`' `styles:`.)
+#' @param path The file; `NULL`: the study's own (`spec/defaults.yml` ...).
+#' @param name Removed with `part = "patterns"`; a value stops.
 #' @return `path`, invisibly.
 #' @examples
 #' d <- system.file("extdata", "spec-yaml", package = "tflspec")
@@ -1046,10 +1042,13 @@ tfl_output_extends <- function(output, step = NULL) {
 #' identical(tfl_read_study_spec(d)$defaults$content[[1]]$fn,
 #'           yaml::read_yaml(f)$content[[1]] |> names())
 #' @export
-tfl_write_study_part <- function(study, part = c("defaults", "patterns", "data", "toc"),
+tfl_write_study_part <- function(study, part = c("defaults", "data", "toc"),
                                  path = NULL, name = NULL) {
   fn <- "tfl_write_study_part()"
   if (!inherits(study, "tfl_study_spec")) .ard_stop(sprintf("%s: `study` is a tfl_study_spec.", fn))
+  if (identical(part, "patterns") || !is.null(name)) {
+    .old_form_stop("patterns_dir", fn, was = "a pattern file (`part = \"patterns\"`, `name`)")
+  }
   part <- match.arg(part)
   layer_out <- function(l) {
     y <- list()
@@ -1067,20 +1066,9 @@ tfl_write_study_part <- function(study, part = c("defaults", "patterns", "data",
       if (length(study$styles)) y$styles <- lapply(study$styles, layer_out)
       y
     },
-    patterns = {
-      if (is.null(name) || is.null(study$patterns[[name]])) {
-        .ard_stop(sprintf("%s: `name` is one of the study's patterns: %s.", fn,
-                          paste(names(study$patterns), collapse = ", ")))
-      }
-      layer_out(study$patterns[[name]])
-    },
     data = .calls_out(study$data),
     toc = study$toc)
-  if (is.null(path)) {
-    spec <- .spec_dir(study$dir)
-    path <- switch(part, patterns = file.path(spec, "patterns", paste0(name, ".yml")),
-                   file.path(spec, paste0(part, ".yml")))
-  }
+  if (is.null(path)) path <- file.path(.spec_dir(study$dir), paste0(part, ".yml"))
   dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
   txt <- yaml::as.yaml(y, indent.mapping.sequence = TRUE, handlers = .yaml_out_handlers())
   # (written over the study's own defaults.yml: its blocks that are not
@@ -1152,7 +1140,7 @@ tfl_write_study_part <- function(study, part = c("defaults", "patterns", "data",
 # A listing with no page size pages at the rows a page the retired `listing`
 # template had (.listing_rows_a_page): a plan_listing and no plan_paginate_rows or
 # plan_paginate_group among the resolved items (the report's, a template's or
-# a pattern's say it; the study's defaults do not reach a listing) gets
+# a style's say it; the study's defaults do not reach a listing) gets
 # plan_paginate_rows(max_rows) last, from the "defaults".  Built and written
 # in the program, not in the report's file; code (`tfl_r`) and a figure are
 # left alone.

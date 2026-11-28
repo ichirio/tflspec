@@ -148,9 +148,8 @@ test_that("a series.yml with !study under values: stops", {
 sf_study <- function(root, formats = NULL) {
   st <- file.path(root, "STUDY-SF")
   dir.create(st)
-  writeLines(c("study_id: STUDY-SF", "settings:", "  rounding: sas",
-               if (!is.null(formats)) paste0("  formats: ", formats)),
-             file.path(st, "study.yml"))
+  write_study_yml(st, c("study_id: STUDY-SF", "settings:", "  rounding: sas",
+               if (!is.null(formats)) paste0("  formats: ", formats)))
   tfl_copy_templates(st, "tflspec_v1/tflspec_summary")
   f <- file.path(st, "spec", "series", "tflspec_v1", "templates", "tflspec_summary.yml")
   ln <- readLines(f, warn = FALSE)

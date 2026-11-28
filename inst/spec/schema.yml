@@ -262,7 +262,7 @@ plan_append:
   args:
     name: {label: {en: "Part name", ja: "部の名前"}, type: string, description: "The part's name; part2, part3, ... by default."}
     absent: {label: {en: "Page without the part", ja: "部の無いページ"}, type: "enum[error|skip]", description: "A page group the part has no rows for: an error, or the page without the part."}
-    data: {type: "step<data>", columns: {source: {type: "enum[ard|dataset]", label: {en: Source, ja: 元}}, dataset: {type: string, input: pick, choices: report_data, label: {en: Dataset, ja: データ}}}, label: {en: "Part's data", ja: "部のデータ"}, description: "Where the part's rows come from: source: ard, or source: dataset with its dataset."}
+    data: {type: "step<data>", columns: {source: {type: "enum[ard|dataset]", label: {en: Source, ja: 元}}, dataset: {type: string, input: pick, choices: "objects(data)", label: {en: Dataset, ja: データ}}}, label: {en: "Part's data", ja: "部のデータ"}, description: "Where the part's rows come from: source: ard, or source: dataset with its dataset."}
     content: {type: "step<content>", label: {en: "Part's items", ja: "部の項目"}, description: "The part's own table items: table_plan and the verbs that make its rows."}
 
 plan_blanks:
@@ -513,8 +513,8 @@ normalize_ard:
   tier: required
   description: The ARD flattened -- groups and hierarchy as key columns -- before the plan.
   args:
-    keys: {label: {en: "Keys", ja: "キー"}, help: "The group variables made into columns of their own (TRT01A, SEX ...). Blank: every group of the ARD, which is what a table usually needs. e.g. TRT01A", type: "list<column>", choices: ard}
-    hierarchy: {label: {en: "Hierarchy", ja: "階層"}, help: "The nested row keys, outermost first: each level's own summary rows become its rows (a SOC's row over its PTs). Blank: step 1's hierarchical analysis's, which is usually right; another may not match the ARD. e.g. AEBODSYS, AEDECOD", type: "list<column>", choices: ard, ordered: true}
+    keys: {label: {en: "Keys", ja: "キー"}, help: "The group variables made into columns of their own (TRT01A, SEX ...). Blank: every group of the ARD, which is what a table usually needs. e.g. TRT01A", type: "list<column>", choices: "columns(ard)"}
+    hierarchy: {label: {en: "Hierarchy", ja: "階層"}, help: "The nested row keys, outermost first: each level's own summary rows become its rows (a SOC's row over its PTs). Blank: step 1's hierarchical analysis's, which is usually right; another may not match the ARD. e.g. AEBODSYS, AEDECOD", type: "list<column>", choices: "columns(ard)", ordered: true}
     overall: {main: true, label: {en: "Overall row", ja: "全体の行"}, help: "The text of the row a hierarchical analysis makes over all its terms (the subjects with any event), put on the first hierarchy column. Blank: that row is left as it is. e.g. Any TEAE", type: string}
     drop_contexts: {label: {en: "Contexts dropped", ja: "除く context"}, help: "The kinds of ARD rows (context) left out before the table. Blank: the attributes rows and the total_n row, which no cell prints (the total N is still kept for a header). e.g. attributes", type: "list<string>", input: text}
     drop_key_variables: {label: {en: "Drop the key variables", ja: "キー変数の行を除く"}, help: "The rows that count a group variable itself (the subjects per arm): TRUE takes them out; blank (FALSE) keeps them out of the body for a header's (N=n). Usually left blank. e.g. TRUE", type: logical}
@@ -2021,11 +2021,11 @@ rtf_footer:
           differs from Standard. The report''s own rows go over its pattern''s.'
         example: Compact
       - column: extends
-        description: 'What the report extends, when the pattern cell alone doesn''t
-          say it: a | b in order (defaults | patterns/p), or none. Blank: the pattern
-          cell''s pattern, then the defaults. Its first pattern has to be the pattern
-          cell''s.'
-        example: defaults | patterns/Compact
+        description: 'What the report extends, when it is not the defaults: none, or
+          a map by step (content=none). Blank: the defaults. A pattern (patterns/p)
+          stops: there are no pattern files; a page configuration is picked with the
+          pattern cell.'
+        example: none
       - column: data_code
         description: 'The report''s own code for its data step, instead of the definition:
           R that leaves data (a table, a listing) or df (a figure); the datasets the

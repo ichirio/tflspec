@@ -287,11 +287,12 @@ test_that("tflspec_summary: nest, value_labels and col_header are optional steps
   n <- tfl_template_resolve(sm, study = tr_study())
   expect_identical(item(n, "plan_nest"), list(ETHNIC = list(RACE = "ASIAN")))
   expect_identical(fns(n), c("table_plan", "plan_nest", "plan_cells", "plan_paginate_rows"))
-  # col_header: the lines
-  ln <- list(list(row_label = "", .values = "{col}"), list(row_label = "Item", .values = "(N={n})"))
+  # col_header: the header's cells (canon 11-28)
+  ln <- list(list(line = "1", cols = "row_label", text = ""), list(line = "1", cols = ".values", text = "{col}"),
+             list(line = "2", cols = "row_label", text = "Item"), list(line = "2", cols = ".values", text = "(N={n})"))
   sm$template$content <- list(col_header = ln)
   h <- tfl_template_resolve(sm, study = tr_study())
-  expect_identical(item(h, "plan_col_header"), list(lines = ln))
+  expect_identical(item(h, "plan_col_header"), list(header = ln))
   expect_identical(fns(h), c("table_plan", "plan_cells", "plan_col_header", "plan_paginate_rows"))
 })
 
