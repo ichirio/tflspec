@@ -1,7 +1,12 @@
 ## The skeleton (what a draft holds)
 
 A draft is a report file, `ai/spec/outputs/<id>.yml`, in the form above
-(one report; no `tflspec_ai` header, no `reports` list).  It holds the
+(one report; no `tflspec_ai` header, no `reports` list).  Its keys are
+these only: `id`, `kind`, `label`, `common`, `template`, `style`,
+`extends`, `codelists` (before `data`), `data`, `analysis`, `content` (or
+`contents`), `page`, `note`, and `ai` last; a figure also `plot`,
+`figure`, `plots`, `compose`, `ggplot2_version`.  Any other key stops the
+read: one message a file, each key and how to fix it.  It holds the
 report's skeleton and nothing of its look:
 
 - `id`, `kind` (`table`, `listing`, `figure`), `label` (the TOC's title;
@@ -20,6 +25,9 @@ report's skeleton and nothing of its look:
   (only the arguments that differ from the default; the content then holds
   only what the template does not do), else `content:` with `table_plan`
   (`cols`, `rows`, `label`) and `plan_cells` -- and nothing else;
+- a figure's layers (a design's `layers`): `content:` items, one a layer,
+  the layer's name the key -- `{layer: hline, yintercept: 40, linetype:
+  dashed}` is `- hline: {yintercept: 40, linetype: dashed}`;
 - the digits, only when the shell shows them (`xx.x`): in the cell
   templates (`{mean:.1f} ({sd:.2f})`) or a `plan_digits` item; a shell
   without them takes the study's default -- do not ask, and do not invent
@@ -395,8 +403,9 @@ Group: {RENALGR}"`.
   `colours` work only in `plot:`; `km_survival` and `km_cumulative` also
   take `x_label`, `y_label`, `x_max`, `x_step`, `y_min`, `y_max`,
   `y_step`, `legend` and `legend_title` as `template: args:` items;
-  set one thing in one place only.  A `layers:` item is for what no argument or
-  setting does -- never both for one thing.
+  set one thing in one place only.  A `content:` item (a layer of the
+  figure's own, `- geom_hline: {yintercept: 0.5, linetype: dashed}`) is for
+  what no argument or setting does -- never both for one thing.
 - **A listing**: a listing column's `width:` in the shell's proportions,
   wide enough for its longest value (a subject id on one line) and its
   heading's longest word -- a short column too (`Age/Sex`, `64/M`: about
@@ -455,6 +464,7 @@ otherwise, and a condition copied as it is can keep no record.
 | `ard: {analyses: [...]}` (and `template: {ard: ...}`, `extends: {ard: ...}`) | `analysis: {analyses: [...]}`: the same map under `analysis:`; `ard:` is not read |
 | `data: {source: ard}` in a table | nothing: a table always reads its ARD |
 | a table's rework steps under `data:` or `ard: data:` | the first item of `content:`: `- rework: {steps: [...]}` |
+| a figure's `layers: [{layer: hline, yintercept: 40}]` | `content: [{hline: {yintercept: 40}}]`: one `content:` item a layer; `layers:` is not read |
 | `kind: Table` | `kind: table` |
 
 ## Before you save a draft: read it once more

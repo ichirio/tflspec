@@ -5,6 +5,18 @@ common:
   population: ITT
 extends:
   - defaults
+codelists:
+  AVALC:
+    - value: CR
+      label: Complete response (CR)
+    - value: PR
+      label: Partial response (PR)
+    - value: SD
+      label: Stable disease (SD)
+    - value: PD
+      label: Progressive disease (PD)
+    - value: NE
+      label: Not evaluable (NE)
 data:
   - id: adrs_bor
     from: ADRS
@@ -28,18 +40,6 @@ analysis:
       variables:
         - RESP
       args: !r method = "clopper-pearson"
-codelists:
-  AVALC:
-    - value: CR
-      label: Complete response (CR)
-    - value: PR
-      label: Partial response (PR)
-    - value: SD
-      label: Stable disease (SD)
-    - value: PD
-      label: Progressive disease (PD)
-    - value: NE
-      label: Not evaluable (NE)
 content:
   - table_plan:
       cols: TRT01P

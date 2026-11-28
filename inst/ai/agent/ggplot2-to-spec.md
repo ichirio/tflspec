@@ -1,7 +1,8 @@
 # From ggplot2 code to a figure SPEC
 
 A figure draft is a SPEC (`instructions-figure.md`: `data`, `plot`,
-`layers`). Write the SPEC directly when you can see it. When you are unsure
+and its layers as `content:` items). Write the SPEC directly when you can
+see it. When you are unsure
 how the shell's figure is said in the SPEC, write it first as ggplot2 code,
 the way you would for a program, then convert that code to the SPEC with
 the table below. The SPEC is the answer; the code is your working.
@@ -63,7 +64,10 @@ p <- ggplot(sm, aes(AVISIT, mean, colour = TRT01A, group = TRT01A)) +
 | AVAL in days shown in months / weeks | `{step: time_unit, variable: AVAL, unit: months}` |
 | anything else that makes a data frame | `{step: code, code: 'df <- ...'}` (the datasets by their lower-case names) |
 
-### The layers (`layers:`, in the chain's order)
+### The layers (`content:` items, in the chain's order)
+
+Each layer is one `content:` item, the layer's name its key:
+`{layer: line, data: sm, x: AVISIT}` is written `- line: {data: sm, x: AVISIT}`.
 
 | ggplot2 | SPEC |
 |---|---|
