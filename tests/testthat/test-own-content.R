@@ -125,7 +125,7 @@ test_that("a table's own content code: a data frame and rtftable pages still wor
                      class = "tfl_content_contract")
   expect_match(conditionMessage(e1), conditionMessage(e3), fixed = TRUE)
   # an item of a list: said which
-  expect_error(tflspec:::.own_content_contract(list(data$adsl, 1), "T-9"),
+  expect_error(tflspec:::.own_content_contract(list(data.frame(a = 1), 1), "T-9"),
                "T-9: `content` (item 2) is numeric", fixed = TRUE, class = "tfl_content_contract")
 })
 
