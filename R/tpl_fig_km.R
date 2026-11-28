@@ -44,7 +44,7 @@
   }
   list(
     d(tfl_param("population", NULL, type = "text", tier = "usual",
-                doc = "the analysis set's id (SAF): its subjects kept; NULL: every record")),
+                choices = "populations", doc = "the analysis set's id (SAF): its subjects kept; NULL: every record")),
     d(.tpl_subset_param()),
     d(tfl_param("data", "ADTTE", type = "text", doc = "the dataset (ADTTE; ADSL with `event`)")),
     d(tfl_param("param", NULL, type = "levels", of = "PARAMCD", tier = "usual",

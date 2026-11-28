@@ -2,7 +2,7 @@
 % Please edit documentation in R/tpl_docs.R
 \name{tfl_tpl_stat_block}
 \alias{tfl_tpl_stat_block}
-\title{stat_block: the template stat_block}
+\title{Statistics by rows and columns: the template stat_block}
 \description{
 The table template \code{stat_block}, layout \code{stat_block}. Its program is one call, \code{tfl_tpl(ard, "stat_block", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }

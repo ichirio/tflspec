@@ -90,7 +90,7 @@ test_that("km_cards' x label follows each of the four time units", {
 
 test_that("km_cards' set is its data's: the records joined to the set's subjects, no flag step (A2)", {
   o <- tfl_template_resolve(kmc_report(), study = kmc_study)
-  expect_identical(.out_population_or_data(o), "FAS")
+  expect_identical(.report_set(o), "FAS")
   # the subjects as the report program makes them, from a study's
   # populations (.fig_subjects_part()), and the program's read of ADTTE
   # joined to them, as every A2 figure's
@@ -101,7 +101,7 @@ test_that("km_cards' set is its data's: the records joined to the set's subjects
     analyses = data.frame(output_id = "T-1", analysis_id = "A1", method = "categorical",
                           dataset = "ADSL", population_id = "SAF", by = "TRT01A",
                           variables = "SEX")))
-  sj <- .fig_subjects_part(x, "F-9", .out_population_or_data(o))
+  sj <- .fig_subjects_part(x, "F-9", .report_set(o))
   expect_identical(sj$subjects$object, "adsl_sub")
   expect_match(paste(unlist(sj$code), collapse = "\n"), "FASFL == \"Y\"", fixed = TRUE)
   r <- .fig_steps_code(o$data$steps, subjects = sj$subjects)
@@ -126,7 +126,7 @@ test_that("km_cards' set: the argument population -- its default, a value, the r
   rep$data <- list(population = "SAF")
   o <- tfl_template_resolve(rep, study = kmc_study)
   expect_identical(o$data$population, "SAF")
-  expect_identical(.out_population_or_data(o), "SAF")
+  expect_identical(.report_set(o), "SAF")
   expect_identical(attr(o, "origins")[["population"]], "report")
   # `common: population` (until it goes): the same
   rep <- kmc_report()

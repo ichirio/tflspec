@@ -119,16 +119,17 @@ test_that("forest_hr's subgroup headings are the code lists' variable labels", {
 
 # ---- a template report's analysis set (R/tpl_resolve.R) -------------------------
 
-test_that("a template with no population argument takes no set on the data map", {
+test_that("a template with no set parameter takes no set on the data map", {
+  # (A2-T: the set parameter is found from the template, NA none)
   rep <- list(id = "T-1", data = list(population = "SAF"))
-  expect_error(.tr_report_set(rep, list(), "group", "tpl_x", "who"),
-               "who: tpl_x takes no analysis set \\(it has no argument population\\); the report's data says SAF")
+  expect_error(.tr_report_set(rep, list(), NA_character_, "tpl_x", "who"),
+               "who: tpl_x takes no analysis set \\(it fills none from an argument\\); the report's data says SAF")
 })
 
 test_that("a population argument of !unset against the data's set stops, saying none", {
   rep <- list(id = "T-1", data = list(population = "SAF"))
   expect_error(.tr_report_set(rep, list(population = tfl_unset()), "population", "tpl_x", "who"),
-               "its template argument population none: write it once")
+               "the set is written twice: the template argument `population` \\(none\\) and the report's data \\(SAF\\)")
 })
 
 test_that("a population argument the same as the data's set is kept", {
@@ -140,14 +141,19 @@ test_that("a population argument the same as the data's set is kept", {
 
 # ---- the AI's checks (R/ai_listing.R, R/ai_figure.R) ------------------------------
 
-test_that("the AI's listing check: an unknown common set and data with dataset and set are errors", {
+test_that("the AI's listing check: an unknown report set and data with dataset and set are errors", {
+  # (A2-T: the report's set is its data's -- .report_set(); `common:` is not read)
   o <- list(id = "L-1", kind = "listing", label = "L", common = list(population = "NOPE"),
             data = list(source = "dataset", data = "adae_x", dataset = "ADAE", population = "SAF"),
             ard = list(analysis_data = list(list(id = "adae_x", from = "ADAE"))),
             content = list(tfl_item("plan_listing", list(cols = list()))))
   p <- .ai_check_listing_output(o, "L-1", list(populations = "SAF"), NULL)
-  expect_true(any(p$where == "L-1 common population" & grepl("'NOPE' is not an analysis set", p$problem)))
+  expect_false(any(grepl("'NOPE' is not an analysis set", p$problem)))
   expect_true(any(p$where == "L-1 data" & grepl("not both", p$problem)))
+  # a set that only `common:` says is no set of the report: the check asks for one
+  o$data$population <- NULL
+  p <- .ai_check_listing_output(o, "L-1", list(populations = "SAF"), NULL)
+  expect_true(any(p$where == "L-1 data population" & grepl("names no analysis set", p$problem)))
 })
 
 test_that("the AI's figure draw of a report the folder has not got has no subjects", {

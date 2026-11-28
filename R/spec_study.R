@@ -667,13 +667,15 @@ tfl_output_extends <- function(output, step = NULL) {
        page = .merge_map(.page_style_norm(base$page), .page_style_norm(over$page)))
 }
 
-# a map over a map: by key; an !unset removes the key; two maps recurse; a
-# sequence (unnamed list or vector) replaces whole
+# a map over a map: by key; an !unset removes the key; a `~` (NULL) key is
+# not written, the base's stays (PRINCIPLES 11-24, L463); two maps recurse;
+# a sequence (unnamed list or vector) replaces whole
 .merge_map <- function(base, over) {
   if (is.null(over) || !length(over)) return(.drop_unset(base))
   if (is.null(base) || !length(base) || !.is_map(base) || !.is_map(over)) return(.drop_unset(over))
   for (k in names(over)) {
     v <- over[[k]]
+    if (is.null(v)) next
     if (inherits(v, "tfl_unset")) {
       base[[k]] <- NULL
     } else if (.is_map(v) && .is_map(base[[k]])) {
@@ -705,6 +707,28 @@ tfl_output_extends <- function(output, step = NULL) {
   x
 }
 
+# A card's arguments with every `~` (YAML null, an R NULL) left out, in the
+# maps inside them and a call's arguments too: `~` is "not written" -- the
+# layer below or the function's default applies, as when the argument is
+# left out (PRINCIPLES 11-24, L463).  The one place: tfl_item() makes every
+# card through it, so each path (the code, the merges, the cards) sees an
+# argument it does not have.  `!unset` leaves the argument out of the call
+# whatever is below; `!r NULL` passes NULL.  A sequence keeps its elements.
+.drop_null <- function(x) {
+  if (inherits(x, "tfl_call")) {
+    if (length(x$args)) x$args <- .drop_null(x$args)
+    return(x)
+  }
+  if (!is.list(x) || is.object(x) || !length(x)) return(x)
+  nm <- names(x)
+  if (!is.null(nm)) {
+    x <- x[!(nzchar(nm) & vapply(x, is.null, NA))]
+    if (!length(x)) return(x)
+  }
+  x[] <- lapply(x, .drop_null)
+  x
+}
+
 # The content, a layer over the layers below (S1's finding on the sample's
 # 12 tables, 2026-10-14; widened to every plan verb 2026-11-09).  An
 # appended card overrides only what it writes.  By the verb's merge kind
@@ -723,9 +747,9 @@ tfl_output_extends <- function(output, step = NULL) {
 #   leaves out stays (a template's page_by, decimal, where survive a
 #   report's max_rows, widths, a style key; titles are replaced whole, as a
 #   positional argument is one argument).  rtfreporter merges two calls of
-#   these the same way, last wins per argument.  `NULL` or `!unset` takes
-#   the layers' argument away.  With several items below, the report's
-#   replace them;
+#   these the same way, last wins per argument.  `!unset` takes the
+#   layers' argument away; a `~` is no argument (.drop_null()).  With
+#   several items below, the report's replace them;
 # * "whole": anything else (a figure's ggplot calls, table_plan ...): the
 #   report's items replace every item of that verb below, in the place the
 #   first of them had;
@@ -847,21 +871,24 @@ tfl_output_extends <- function(output, step = NULL) {
 }
 
 # the base's arguments updated by the over's, by name: the over's value
-# replaces the base's whole; an argument over leaves out stays; NULL and
-# !unset take it away.  When both values are maps (a named list, all names
-# set: widths = list(...), a style's keys), they merge by key, one level:
-# the over's key wins, an !unset or NULL key goes
+# replaces the base's whole; an argument over leaves out stays, and one it
+# writes `~` (NULL: not written, L463); !unset takes it away.  When both
+# values are maps (a named list, all names set: widths = list(...), a
+# style's keys), they merge by key, one level:
+# the over's key wins, an !unset key goes, a NULL key leaves the base's
 .merge_by_arg <- function(base, over) {
   base <- base %||% list()
   for (k in names(over)) {
     if (!nzchar(k)) next
     v <- over[[k]]
-    if (is.null(v) || inherits(v, "tfl_unset")) {
+    if (is.null(v)) next
+    if (inherits(v, "tfl_unset")) {
       base[[k]] <- NULL
     } else if (.is_map(v) && .is_map(base[[k]])) {
       b <- base[[k]]
       for (kk in names(v)) {
         vv <- v[[kk]]
+        if (is.null(vv)) next
         b[[kk]] <- if (inherits(vv, "tfl_unset")) NULL else vv
       }
       base[[k]] <- b
