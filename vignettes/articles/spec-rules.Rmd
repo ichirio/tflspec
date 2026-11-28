@@ -244,8 +244,8 @@ On an item with condition rows (`conditions:`), a row may give its own
 Each report has one `BIGN` analysis: the subjects of each column, the
 column header's N. The templates write it first, on the data row their
 `col_header_n_data` param names (`adsl_sub`, unless the report gives
-another). That row has one row a subject in each column; another stops
-when the ARD is made:
+another). That row should have one row a subject in each column, as
+`adsl_sub` has:
 
 ```{r, echo = FALSE, comment = ""}
 x <- tpl("tflspec_hierarchy")

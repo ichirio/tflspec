@@ -200,7 +200,6 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
     env[p] <- list(.tr_fill(env[[p]], env[setdiff(names(env), p)]))
   }
   .tr_header_cells(env, defs, given, template, who)
-  .tr_header_n_moved(env, origins, defs, report$id, template)
   args_env <- env
   env <- .tr_derive(tpl$derive, env, defs$name, template, origins)
   .tr_check(tpl$check, env, defs$name, origins, template, who)
@@ -298,30 +297,6 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   # (the template's page layer, for tfl_page_origins())
   attr(out, "page_template") <- tpl_page
   out
-}
-
-# A report written before the column headers' N had its own param (canon
-# 11-28, CANON-6): its `denominator: X` meant both the header's N and the
-# percentages' denominator; now it is the percentages' only.  When it gives
-# denominator and not col_header_n_data, and the row is another than
-# col_header_n_data's, the header's N no longer follows it: a warning, once a
-# session for the report, the template and the row.
-.tr_header_n_moved <- function(env, origins, defs, id, template) {
-  if (!all(c("col_header_n_data", "denominator") %in% defs$name)) return(invisible())
-  if (!identical(unname(origins["denominator"]), "report") ||
-      identical(unname(origins["col_header_n_data"]), "report")) return(invisible())
-  den <- env$denominator
-  hdr <- env$col_header_n_data
-  if (!is.character(den) || length(den) != 1L || identical(den, hdr)) return(invisible())
-  who <- if (length(id) && !is.na(id[1L])) paste0(id[1L], ": ") else ""
-  hdr <- hdr %||% "adsl_sub"
-  rlang::warn(sprintf(paste0(
-    "%s%s: denominator: %s is now the percentages' denominator only; the column ",
-    "headers' N counts col_header_n_data (%s). Write col_header_n_data: %s if the ",
-    "header N should follow it (col_header_n_data: %s keeps the header's N, with no warning)."),
-    who, template, den, hdr, den, hdr),
-    .frequency = "once", .frequency_id = paste("tflspec-header-n", who, template, den))
-  invisible()
 }
 
 # The percentages' denominator a report's data row of one row a subject and

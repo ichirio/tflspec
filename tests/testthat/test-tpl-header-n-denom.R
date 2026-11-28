@@ -47,29 +47,12 @@ test_that("the two params: defaults, each alone, the row's name written out", {
     expect_identical(hnd_pct(it)$denominator, "rec_den", info = k)
     dens <- unlist(lapply(it, `[[`, "denominator"))
     expect_false("BIGN" %in% dens, info = k)
+    # (a denominator alone is the canon's own use, the subjects tested:
+    # nothing said)
+    expect_no_warning(tfl_template_resolve(list(id = "X", kind = "table", template = c(list(
+      name = paste0("tflspec_v1/", hnd_tpls[[k]]), by = "TRT01A"), hnd_need[[hnd_tpls[[k]]]],
+      list(denominator = "rec_den")))))
   }
-})
-
-test_that("a report of the old meaning (denominator, no col_header_n_data) warns once, with the guidance", {
-  rep <- function(...) list(id = "OLD-1", kind = "table", template = list(
-    name = "tflspec_v1/tflspec_hierarchy", by = "TRT01A", from = "ADAE",
-    hierarchy = c("AEBODSYS", "AEDECOD"), ...))
-  expect_warning(tfl_template_resolve(rep(denominator = "adsl_all")),
-                 "write col_header_n_data: adsl_all if the header N should follow it", ignore.case = TRUE)
-  # (once: the same report again says nothing)
-  expect_no_warning(tfl_template_resolve(rep(denominator = "adsl_all")))
-  # (said with the report and the template)
-  r2 <- rep(denominator = "adsl_all")
-  r2$id <- "OLD-2"
-  w <- testthat::capture_warnings(tfl_template_resolve(r2))
-  expect_length(w, 1L)
-  expect_match(w, "^OLD-2: tflspec_v1/tflspec_hierarchy: denominator: adsl_all")
-  # (no warning: col_header_n_data given, the same row as the header's, or
-  # no denominator)
-  expect_no_warning(tfl_template_resolve(rep(denominator = "adsl_all", col_header_n_data = "adsl_sub")))
-  expect_no_warning(tfl_template_resolve(rep(denominator = "adsl_sub")))
-  expect_no_warning(tfl_template_resolve(rep(col_header_n_data = "adsl_all")))
-  expect_no_warning(tfl_template_resolve(rep()))
 })
 
 test_that("a denominator row of one row a subject and parameter keeps its distinct columns and the groups", {
@@ -218,64 +201,6 @@ test_that("the shift corner: each parameter's numerator and denominator its own,
   prog <- tfl_ard_code(tflspec:::.ard_spec_of_study(tfl_read_study_spec(d), output_id = "S-2")$spec,
                        output_id = "S-2", save = FALSE)
   expect_true(any(grepl("a value of PARAMCD at a time", prog, fixed = TRUE)))
-})
-
-test_that("BIGN's data row of more than one row a subject stops, naming the row", {
-  hnd_skip()
-  d <- hnd_study(file.path(tempdir(), "hnd-bign"))
-  on.exit(unlink(d, recursive = TRUE))
-  expect_error(hnd_run(d, "S-4", "    col_header_n_data: rec_sub"),
-               "BIGN, the column headers' N, counts the data row rec_sub", fixed = TRUE)
-  # (one row a subject: as before)
-  expect_no_error(hnd_run(d, "S-5", "    col_header_n_data: adsl_sub"))
-})
-
-# ---- the N against BIGN's ---------------------------------------------------
-
-hnd_ard <- function(n_cat, n_bign = c(4, 3)) {
-  arms <- c("Arm A", "Arm B")
-  bign <- data.frame(output_id = "T-1", analysis_id = "BIGN", group1 = NA_character_,
-                     group1_level = I(list(NULL, NULL)), variable = "TRT01A",
-                     variable_level = I(as.list(arms)), context = "tabulate",
-                     stat_name = "n", stat = I(as.list(n_bign)), stringsAsFactors = FALSE)
-  cat <- data.frame(output_id = "T-1", analysis_id = "SEX", group1 = "TRT01A",
-                    group1_level = I(as.list(arms)), variable = "SEX",
-                    variable_level = I(list("F", "F")), context = "tabulate",
-                    stat_name = "N", stat = I(as.list(n_cat)), stringsAsFactors = FALSE)
-  cont <- cat
-  cont$analysis_id <- "AGE"
-  cont$variable <- "AGE"
-  cont$context <- "summary"
-  cont$stat <- I(list(1, 1))
-  rbind(bign, cat, cont)
-}
-
-hnd_spec <- function(den = "adsl_sub") {
-  data.frame(output_id = "T-1", analysis_id = c("BIGN", "CONT", "CAT"),
-             data = "adsl_sub", denominator = c(NA, NA, den),
-             analysis_per = c(NA, "variable", "variable"),
-             variables = c("TRT01A", "AGE", "SEX"), by = c(NA, "TRT01A", "TRT01A"),
-             stringsAsFactors = FALSE)
-}
-
-test_that("an analysis on the header's row whose N is not BIGN's warns once, naming it", {
-  hd <- data.frame(USUBJID = paste0("S", 1:7), TRT01A = c(rep("Arm A", 4), rep("Arm B", 3)),
-                   SEX = "F")
-  chk <- function(a, ard) tflspec:::.bign_den_n_check(a, ard, "adsl_sub", "TRT01A", hd, "T-1")
-  # (the same N: nothing; a continuous summary's N is not looked at)
-  expect_no_warning(chk(hnd_spec(), hnd_ard(c(4, 3))))
-  w <- testthat::capture_warnings(chk(hnd_spec(), hnd_ard(c(4, 2))))
-  expect_length(w, 1L)
-  expect_match(w, "T-1 / CAT: its percentages divide by adsl_sub", fixed = TRUE)
-  expect_match(w, "2 for Arm B, BIGN 3", fixed = TRUE)
-  # (another row named on purpose: no warning)
-  expect_no_warning(chk(hnd_spec("rec_den"), hnd_ard(c(4, 2))))
-  # (a finer slice the row has -- by SEX too: that slice's own N)
-  ard <- hnd_ard(c(4, 2))
-  ard$group2 <- "SEX"
-  ard$group2_level <- I(list(NULL, NULL, "F", "F", "F", "F"))
-  ard$group2[ard$analysis_id == "BIGN"] <- NA
-  expect_no_warning(chk(hnd_spec(), ard))
 })
 
 test_that("ARS: a denominator row of the subjects tested is not mapped as the analysis set's", {
