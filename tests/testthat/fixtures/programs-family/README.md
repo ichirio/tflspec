@@ -61,3 +61,10 @@ is gone) and the titles with quotes (`set_page_line()` is gone).  The
 listing kind is still covered by `L-16-2-7`, `L-91`, `L-92` and `L-TPL`.
 
 The AI sample study was not frozen: it has no reports.
+
+## Changed on purpose since
+
+- 2026-11-28 (CANON-3): the ARD programs write a report's code lists as
+  codes only (`cl_sex <- c("F", "M")`), so `out/*/ard/<id>.R` of the
+  reports with labelled lists were written again; only their `cl_*` lines,
+  the `#  Checksum` line and the fingerprint changed.

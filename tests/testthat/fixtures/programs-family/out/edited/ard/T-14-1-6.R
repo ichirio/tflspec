@@ -17,26 +17,21 @@ report_id <- "T-14-1-6"
 # (a value a list does not have stops the program: add it to the list)
 cl_armgrp <- c("Drug X", "Control", "Screen Failure")
 cl_race <- c(
-  WHITE = "White",
-  "BLACK OR AFRICAN AMERICAN" = "Black or African American",
-  ASIAN = "Asian",
-  "AMERICAN INDIAN OR ALASKA NATIVE" = "American Indian or Alaska Native",
-  "NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER" = "Native Hawaiian or Other Pacific Islander",
-  OTHER = "Other"
+  "WHITE",
+  "BLACK OR AFRICAN AMERICAN",
+  "ASIAN",
+  "AMERICAN INDIAN OR ALASKA NATIVE",
+  "NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER",
+  "OTHER"
 )
-cl_asiansub <- c(
-  CHINESE = "Chinese",
-  JAPANESE = "Japanese",
-  KOREAN = "Korean",
-  OTHER = "Other"
-)
-cl_sex <- c(F = "Female", M = "Male")
-cl_agegr1 <- c("<65" = "<65 years", ">=65" = ">=65 years")
+cl_asiansub <- c("CHINESE", "JAPANESE", "KOREAN", "OTHER")
+cl_sex <- c("F", "M")
+cl_agegr1 <- c("<65", ">=65")
 cl_ethnic <- c(
-  "HISPANIC OR LATINO" = "Hispanic or Latino",
-  "NOT HISPANIC OR LATINO" = "Not Hispanic or Latino",
-  "NOT REPORTED" = "Not reported",
-  UNKNOWN = "Unknown"
+  "HISPANIC OR LATINO",
+  "NOT HISPANIC OR LATINO",
+  "NOT REPORTED",
+  "UNKNOWN"
 )
 
 # ---- data ----
@@ -176,7 +171,7 @@ adsl_enr <- adsl_sub |>
 # the report's rows of the study ARD, with the fingerprint of its
 # definition (tfl_ard_spec_hash())
 bind_items(.ard_bign, .ard_race, .ard_asiansub, .ard_cont, .ard_cat) |>
-  save_ard(report_id, definition = "e0645001621efa7b1224a96f42fc6325")
+  save_ard(report_id, definition = "cd757bd36bc5fa251e6ec3e3f8e63987")
 
 # the end of this run
 options(tflplanner.run = NULL)

@@ -268,7 +268,8 @@ test_that("a data whose filter keeps one level of an adam_meta column has that l
              file.path(d, "spec", "outputs", "T-AN.yml"))
   code <- tfl_ard_code(tfl_read_study_spec(d), "T-AN", save = FALSE)
   expect_false(any(grepl("intersect(adam_codes", code, fixed = TRUE)))
-  expect_true(any(grepl('cl_sex[c("F")]', code, fixed = TRUE)))
+  # (the ARD program's list is codes only: narrowed by its values)
+  expect_true(any(grepl('intersect(cl_sex, c("F"))', code, fixed = TRUE)))
 })
 
 test_that("adam_meta's columns count as listed for the analysis's dataset and ADSL", {

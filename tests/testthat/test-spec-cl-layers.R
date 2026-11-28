@@ -42,8 +42,9 @@ cll_codes <- function(ard, id) {
   x <- ard[ard$output_id == id & ard$variable == "SEX", ]
   unique(unlist(lapply(x$variable_level, as.character)))
 }
-# the labels of the list that wins for a report: the program's head, `cl_sex <- c(M = "DefM", ...)`
-cll_labels <- function(d, id) {
+# the list that wins for a report, as its ARD program's head has it: its
+# codes, `cl_sex <- c("M", "F")` (NULL: none)
+cll_list <- function(d, id) {
   code <- tfl_ard_code(tfl_read_study_spec(d), id, save = FALSE)
   line <- grep("^cl_sex <- ", code, value = TRUE)
   if (length(line)) unname(eval(parse(text = line[1L])))
@@ -88,7 +89,7 @@ test_that("the study's code lists (defaults.yml) reach no report: they are study
   d <- cll_study(defaults = cll_sex, reports = list("T-A" = list(extends = "[defaults]")))
   st <- tfl_read_study_spec(d)
   expect_identical(st$codelists$SEX, c(M = "DefM", F = "DefF"))
-  expect_null(cll_labels(d, "T-A"))
+  expect_null(cll_list(d, "T-A"))
   expect_identical(nrow(tfl_report_codelists(st)), 0L)
   # (no list: the data's own order)
   expect_identical(cll_codes(cll_build(d), "T-A"), c("F", "M"))
@@ -101,11 +102,12 @@ test_that("a report's own list: the program carries it, puts it on, and runs (#6
   st <- tfl_read_study_spec(d)
   code <- tfl_ard_code(st, "T-D", save = FALSE)
   expect_length(grep("^cl_sex <- ", code), 1L)
-  expect_true(any(grepl('c(M = "OwnM", F = "OwnF")', code, fixed = TRUE)))
+  # (codes only, in the list's order: the labels are the report program's)
+  expect_true('cl_sex <- c("M", "F")' %in% code)
   expect_true(any(grepl("set_levels(", code, fixed = TRUE)))
   cl <- tfl_report_codelists(st)
   expect_identical(cl$label, c("OwnM", "OwnF"))
-  expect_identical(cll_labels(d, "T-D"), c("OwnM", "OwnF"))
+  expect_identical(cll_list(d, "T-D"), c("M", "F"))
   ard <- cll_build(d, output_id = "T-D")
   expect_identical(cll_codes(ard, "T-D"), c("M", "F"))
   # a level the data lacks is counted as the list has it: two levels, three arms
@@ -124,17 +126,21 @@ test_that("a resolved table keeps its own lists, in their order", {
   expect_true(any(grepl("DefM", tfl_content_code(r), fixed = TRUE)))
 })
 
-test_that("a changed list of the report changes its ARD fingerprint (#647)", {
+test_that("a changed list of the report changes its ARD fingerprint; a label alone does not (#647, CANON-3)", {
   skip_on_cran()
-  own <- function(m) c("codelists:", sprintf("  SEX: [{value: M, label: %s}, {value: F, label: DefF}]", m))
+  own <- function(m, v = "M") {
+    c("codelists:", sprintf("  SEX: [{value: %s, label: %s}, {value: F, label: DefF}]", v, m))
+  }
   a <- cll_study(reports = list("T-A" = list(extends = "[defaults]", codelists = own("DefM"))))
   b <- cll_study(reports = list("T-A" = list(extends = "[defaults]", codelists = own("Mmm"))))
+  c <- cll_study(reports = list("T-A" = list(extends = "[defaults]", codelists = own("DefM", "U"))))
   hash <- function(d) {
     code <- tfl_ard_code(tfl_read_study_spec(d), "T-A", save = TRUE, part = "body")
     grep("definition = ", code, value = TRUE)
   }
   expect_length(hash(a), 1L)
-  expect_false(identical(hash(a), hash(b)))
+  expect_identical(hash(a), hash(b))
+  expect_false(identical(hash(a), hash(c)))
 })
 
 test_that("a report's list that does not cover the data's values stops that report's ARD (#647)", {
@@ -158,7 +164,7 @@ test_that("a spec/codelists.yml left in the study is ignored (#647, #659)", {
   expect_message(st <- tfl_read_study_spec(d), "spec/codelists.yml is not read", fixed = TRUE)
   expect_identical(nrow(tfl_sheets_from_yaml(d)$table$codelists), 0L)
   expect_identical(nrow(tfl_report_codelists(st)), 0L)
-  expect_null(cll_labels(d, "T-A"))
+  expect_null(cll_list(d, "T-A"))
   expect_identical(cll_codes(cll_build(d), "T-A"), c("F", "M"))
 })
 
@@ -186,7 +192,11 @@ test_that("tfl_report_codelists(rows =): the caller's own rows, the sheets not m
                                 "T-B" = list(extends = "[defaults]")))
   st <- tfl_read_study_spec(d)
   sheets <- tfl_sheets_from_yaml(d)$table$codelists
-  base <- tfl_report_codelists(st)
+  # (T-A's analyses do not read RACE: its list is used by no step, a
+  # warning once)
+  rm(list = ls(tflspec:::.cl_unused_memo), envir = tflspec:::.cl_unused_memo)
+  expect_warning(base <- tfl_report_codelists(st), "T-A: the code list of RACE is used by no step",
+                 fixed = TRUE)
   expect_identical(tfl_report_codelists(st, rows = sheets), base)
   testthat::local_mocked_bindings(tfl_sheets_from_spec = function(...) stop("sheets made"),
                                   .package = "tflspec")
