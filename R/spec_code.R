@@ -628,13 +628,13 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 # kinds, the contexts, `default`) as they come; stats / value / na after.
 # A layered content has the study default's keys first, which the sheets
 # give after the table's own variables.
-.content_cells_order <- function(content, fns) {
+.content_cells_order <- function(content, fns, bridge = .plan_sheets_from_content) {
   i <- which(fns == "plan_cells")
   if (length(i) != 1L) return(content)
   args <- content[[i]]$args
   nm <- names(args)
   if (is.null(nm) || length(args) < 2L) return(content)
-  sh <- tryCatch(.plan_sheets_from_content(content), error = function(e) NULL)
+  sh <- tryCatch(bridge(content), error = function(e) NULL)
   v <- sh$variables
   ord <- if (is.data.frame(v) && nrow(v)) {
     if ("order" %in% names(v) && any(!is.na(v$order))) {
@@ -785,35 +785,54 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   .plan_content_more(items, sp$tables)
 }
 
-# the verbs whose columns say a part of an item and content_more the rest
-.rest_verbs <- c("plan_columns", "plan_col_header", "plan_labels")
-
 # the items the sheets cannot say, from the tables rows' content_more (YAML,
 # tfl_sheets_from_spec()): each put by its verb's rank among the sheets'
 # items; a table_plan() there is the table's whole (its row says none of it)
 .plan_content_more <- function(items, tables) {
   if (!is.data.frame(tables) || !"content_more" %in% names(tables)) return(items)
   more <- do.call(c, c(list(list()), lapply(tables$content_more, .sheet_more_in, items = TRUE)))
+  # (a report's data steps the planner row cannot hold are the converter's,
+  # not an item; an argument marked `!sheet` is the sheets' item's, read in
+  # its own form, .sheet_marks_take())
+  more <- Filter(function(it) !identical(it$fn, "rework"), more)
+  if (!length(more)) return(items)
+  mk <- .sheet_marks_take(items, more)
+  items <- mk$items
+  more <- mk$more
   if (!length(more)) return(items)
   if (any(vapply(more, function(it) identical(it$fn, "table_plan"), NA))) {
     items <- Filter(function(it) !identical(it$fn, "table_plan"), items)
   }
   # (a verb's rest -- what its columns could not say -- is put with the
-  # sheets' item of that verb: one item, as it was written)
-  for (fn in .rest_verbs) {
+  # sheets' item of that verb: one item, as it was written.  Not a verb
+  # whose items are layers of their own, plan_filter() ...  An argument on
+  # both sides is one argument: the sheets' value, the grid's edit, is
+  # used, and that is said)
+  said <- character()
+  named <- function(a) length(a) && !is.null(names(a)) && all(nzchar(names(a)))
+  fns <- unique(vapply(more, function(it) it$fn, ""))
+  for (fn in setdiff(fns, c(.plan_repeat_kept, "table_plan", "normalize_ard"))) {
     im <- which(vapply(more, function(it) identical(it$fn, fn), NA))
     ix <- which(vapply(items, function(it) identical(it$fn, fn), NA))
-    if (length(im) == 1L && length(ix) == 1L &&
-        !length(intersect(names(items[[ix]]$args), names(more[[im]]$args)))) {
-      items[[ix]]$args <- c(items[[ix]]$args, more[[im]]$args)
-      more <- more[-im]
+    if (length(im) != 1L || length(ix) != 1L) next
+    a <- items[[ix]]$args
+    r <- more[[im]]$args
+    both <- intersect(names(a), names(r))
+    if (length(both) && !(named(a) && named(r))) next
+    if (length(both)) {
+      said <- c(said, sprintf("%s(%s): on the sheets and in content_more; the sheets' value is used",
+                              fn, paste(both, collapse = ", ")))
     }
+    items[[ix]]$args <- c(a, r[!names(r) %in% both])
+    more <- more[-im]
   }
   for (it in more) items <- .insert_by_rank(items, it)
   # (a normalize_ard() there is the table's own, the tables row's overall_label /
   # stack cells on it: tfl_table_code(), the YAML converter and the
   # app's reading of the sheets all come through here)
-  .table_plan_first(.nz_with_row(items, tables))
+  out <- .table_plan_first(.nz_with_row(items, tables))
+  if (length(said)) attr(out, "content_more_said") <- said
+  out
 }
 
 # A call as the program writes it: an argument the schema marks
@@ -882,57 +901,6 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   FALSE
 }
 
-# The arguments of an item that .plan_sheets_from_content() has no place
-# for: the named ones its verb's branch does not read, and unnamed ones
-# where the verb takes none.  The bridge notes them as a miss, so the caller
-# keeps the item whole in content_more instead of dropping them (#689).
-# `NULL` below: the verb's names are data (a variable's, a statistic's), or
-# the verb is no sheet's (it is a miss anyway).
-.bridge_unread <- function(fn, arg_names, n_pos) {
-  layer <- function(prefix) {
-    cn <- names(.ard_spec_types$layout)
-    sub(paste0("^", prefix), "", cn[startsWith(cn, prefix)])
-  }
-  reads <- switch(fn,
-    table_plan = c("cols", "rows", "label", "show_keys", "stat", "value"),
-    plan_sort = c("stat", "keep"),
-    plan_total = c("label", "position"),
-    plan_filter = c("any", "parents", "by"),
-    plan_stub = c("vars", "name", "indent", "group_summary", "before", "heading"),
-    plan_paginate_group = c("col", "keep", "heading", "heading_at"),
-    plan_row_group = c("mode", "collapse", "group_col"),
-    plan_blanks = c("where", "first", "last", "counted"),
-    plan_paginate_rows = layer("pages_"),
-    plan_paginate_cols = layer("colpages_"),
-    plan_style = names(.ard_spec_types$style),
-    plan_cell_style = c(names(.ard_spec_types$cell_styles), "border"),
-    plan_hide = character(),
-    plan_col_header = c("header", "lines", "values", "col_header_align"),
-    plan_columns = c("widths", "decimal", "row_title", "auto_width", "sep"),
-    NULL)
-  # (the verbs whose names are data: plan_levels, plan_labels, plan_nest,
-  # plan_stat_groups, plan_compare, plan_digits, plan_cells -- no name guard)
-  by_name <- c("plan_levels", "plan_labels", "plan_nest", "plan_stat_groups",
-               "plan_compare", "plan_digits", "plan_cells")
-  out <- if (is.null(reads)) character() else setdiff(arg_names, reads)
-  if (n_pos && (!is.null(reads) || fn %in% by_name) &&
-      !fn %in% c("plan_sort", "plan_hide", "plan_filter", "plan_cells")) {
-    out <- c(out, "an unnamed argument")
-  }
-  out
-}
-
-# The arguments of these verbs that no sheet has a column for, and that the
-# bridge keeps apart as the item's rest instead of sending the whole item out
-# (#689): what the columns can say stays on the sheets' rows.  `span` is
-# the header lines', kept with them when the cells cannot say it.
-.bridge_rest_names <- function(fn) {
-  switch(fn,
-    plan_columns = c("cell_format", "column_widths_twips"),
-    plan_col_header = c("header_sep", "span"),
-    character())
-}
-
 # Whether an item's arguments (those the sheets say) hold a text a cell does
 # not keep: a blank, or a blank at either end (a separator " / ", a heading
 # "  Total"), which the sheets read trimmed.  The item with a rest then goes
@@ -944,11 +912,12 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
     x <- unlist(x, use.names = FALSE)
     is.character(x) && any(!is.na(x) & grepl("^\\s|\\s$", x))
   }
+  # (`[[`: `$` would take header_sep for a missing header)
   switch(fn,
-    plan_columns = edge(args$sep),
+    plan_columns = edge(args[["sep"]]),
     plan_col_header = {
-      h <- args$header
-      edge(args$lines) || edge(if (is.data.frame(h)) h$text else lapply(h, function(cl) cl[["text"]]))
+      h <- args[["header"]]
+      edge(args[["lines"]]) || edge(if (is.data.frame(h)) h[["text"]] else lapply(h, function(cl) cl[["text"]]))
     },
     plan_labels = {
       x <- unlist(args, use.names = FALSE)
@@ -991,11 +960,11 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 # attr(, "not_converted") and left out, never written approximately.  The
 # app reads its grids from this while the workbook form is still its own.
 #
-# plan_columns(), plan_col_header() and plan_labels() are the exception to
-# "an item the sheets cannot say goes whole" (#689): what their columns can
-# say is written, and the arguments they cannot are the item's rest, an
-# item of the same verb in attr(, "not_converted_rest") -- not lost, so no
-# note.  An item with nothing the sheets can say goes whole as for any verb.
+# An argument a verb's branch does not read is not written; a branch that
+# keeps an argument apart (rest_add()) gives it as the item's rest, an item
+# of the same verb in attr(, "not_converted_rest").  tfl_sheets_from_spec()
+# reads the sheets back and compares (.sheets_said()), so whatever does not
+# come back is kept in content_more (#689).
 .plan_sheets_from_content <- function(items, output_id = NULL) {
   id <- if (is.null(output_id)) NA_character_ else output_id
   lost <- character()
@@ -1095,8 +1064,8 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   # the key columns the plan makes (a stack's pair, the statistics' groups):
   # their values' labels are the report's code list rows
   own <- ".stat_group"
-  for (it in items) if (identical(it$fn, "normalize_ard") && length(it$args$stack)) {
-    own <- c(own, names(it$args$stack), paste0(names(it$args$stack), "_level"))
+  for (it in items) if (identical(it$fn, "normalize_ard") && length(it$args[["stack"]])) {
+    own <- c(own, names(it$args[["stack"]]), paste0(names(it$args[["stack"]]), "_level"))
   }
   items <- Filter(function(it) !identical(it$fn, "normalize_ard"), items)
   codes <- list()
@@ -1125,50 +1094,39 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
     orig <- items[[cur]]$args %||% list()
     ra <- list()
     ra_why <- character()
-    # (the arguments of these verbs no sheet has a column for are the item's
-    # rest; `span` with header lines is the branch's)
-    span_here <- identical(fn, "plan_col_header") && !is.null(named$lines)
-    take <- setdiff(intersect(names(named), .bridge_rest_names(fn)), if (span_here) "span")
-    # an argument no branch below reads, or a positional one the verb's
-    # branch does not take, would be dropped without a word: the item goes
-    # whole to the caller's content_more instead (#689)
-    unread <- .bridge_unread(fn, setdiff(names(named), c(take, if (span_here) "span")), length(pos))
-    if (length(unread)) {
-      miss(fn, sprintf("%s: no sheet says it", paste(unread, collapse = ", ")))
-      next
-    }
+    # (an argument no branch below reads is not written:
+    # tfl_sheets_from_spec() reads the sheets back and keeps what does not
+    # come back in content_more, #689)
     if (fn %in% seen && !fn %in% c("plan_cell_style", "plan_levels", "plan_labels",
                                    "plan_digits")) {
       miss(fn, "a second call (a sheet holds one)"); next
     }
     seen <- c(seen, fn)
-    for (k in take) rest_add(k)
-    named <- named[setdiff(names(named), take)]
     snap <- list(tb, study, vars, cells, lay, sty, cols, cstyles, hdr, codes, labelled)
     switch(fn,
       table_plan = {
-        if (!is.null(named$cols)) tb$cols <- bar(named$cols)
-        if (!is.null(named$rows)) tb$rows <- refs(named$rows)
+        if (!is.null(named[["cols"]])) tb$cols <- bar(named[["cols"]])
+        if (!is.null(named[["rows"]])) tb$rows <- refs(named[["rows"]])
         if ("label" %in% names(named)) {
-          lb <- named$label
+          lb <- named[["label"]]
           tb$label <- if (length(lb) == 1L && !is.list(lb) && is.na(lb)) "NA" else refs(lb)
         }
-        if (!is.null(named$show_keys)) tb$show_keys <- bar(named$show_keys)
-        if (!is.null(named$stat)) miss(fn, "stat (your statistic columns) stays in code")
-        if (!is.null(named$value)) miss(fn, "value (a records plan) stays in code")
+        if (!is.null(named[["show_keys"]])) tb$show_keys <- bar(named[["show_keys"]])
+        if (!is.null(named[["stat"]])) miss(fn, "stat (your statistic columns) stays in code")
+        if (!is.null(named[["value"]])) miss(fn, "value (a records plan) stays in code")
       },
       plan_sort = {
         if (length(pos)) {
           v <- unlist(pos, use.names = FALSE)
           tb$sort <- if (is.logical(v)) lgl(v) else bar(v)
         }
-        if (!is.null(named$stat)) tb$sort_stat <- named$stat
-        if (!is.null(named$keep)) miss(fn, "keep")
+        if (!is.null(named[["stat"]])) tb$sort_stat <- named[["stat"]]
+        if (!is.null(named[["keep"]])) miss(fn, "keep")
       },
       plan_digits = {
-        if (!is.null(named$rounding)) study$rounding <- named$rounding
-        if (!is.null(named$.rows)) {
-          r <- named$.rows
+        if (!is.null(named[["rounding"]])) study$rounding <- named[["rounding"]]
+        if (!is.null(named[[".rows"]])) {
+          r <- named[[".rows"]]
           for (lb in names(r)) {
             v <- as.character(r[[lb]])
             if (grepl("s$", v)) cell(row = lb, signif = sub("s$", "", v))
@@ -1182,9 +1140,9 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
       plan_levels = {
         # the variables' order: the variables sheet's `order` (read after
         # the values' levels, whose rows keep the sheet's place)
-        vo <- named$variable
+        vo <- named[["variable"]]
         if (is.list(vo) && all(vapply(vo, is.character, NA))) vo <- unlist(vo)
-        if (is.character(vo)) named$variable <- NULL else vo <- NULL
+        if (is.character(vo)) named[["variable"]] <- NULL else vo <- NULL
         # a named order (value = text): its text in the cell, `F = Female`
         lv_cell <- function(x) {
           nm <- names(x)
@@ -1197,7 +1155,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
           if (!is.character(x)) { miss(fn, v); next }
           var_row(v); vars[[v]]$levels <- lv_cell(x)
         }
-        for (v in named$.drop_empty) { var_row(v); vars[[v]]$empty_levels <- "hide" }
+        for (v in named[[".drop_empty"]]) { var_row(v); vars[[v]]$empty_levels <- "hide" }
         # the variables: their order, and a heading a named element gives
         # (plan_labels(), read after, has the last word)
         vnm <- names(vo)
@@ -1267,8 +1225,8 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
         }
       },
       plan_total = {
-        tb$total <- named$label %||% "Total"
-        if (!is.null(named$position)) tb$total_position <- named$position
+        tb$total <- named[["label"]] %||% "Total"
+        if (!is.null(named[["position"]])) tb$total_position <- named[["position"]]
       },
       plan_stat_groups = {
         tb$stat_groups <- paste(vapply(names(named), function(g)
@@ -1276,8 +1234,8 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
       },
       plan_cells = {
         for (k in c("stats", "value")) if (!is.null(named[[k]])) tb[[k]] <- named[[k]]
-        if (!is.null(named$na)) tb$na <- esc(named$na)
-        if (!is.null(named$notes)) miss(fn, "notes")
+        if (!is.null(named[["na"]])) tb$na <- esc(named[["na"]])
+        if (!is.null(named[["notes"]])) miss(fn, "notes")
         for (k in setdiff(names(named), c("stats", "value", "na", "notes"))) {
           entry_rows(fn, k, named[[k]])
         }
@@ -1290,15 +1248,15 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
         w <- vapply(pos, function(e) if (inherits(e, "tfl_spec_expr")) e$text
                     else paste(deparse(e), collapse = " "), "")
         tb$keep_where <- if (length(w) > 1L) paste0("(", w, ")", collapse = " & ") else w
-        if (identical(named$any, FALSE)) tb$keep_any <- "FALSE"
-        if (identical(named$parents, "drop")) tb$keep_parents <- "drop"
-        if (!is.null(named$by)) miss(fn, "by")
+        if (identical(named[["any"]], FALSE)) tb$keep_any <- "FALSE"
+        if (identical(named[["parents"]], "drop")) tb$keep_parents <- "drop"
+        if (!is.null(named[["by"]])) miss(fn, "by")
       },
       plan_compare = {
         cn <- setdiff(names(named), c("by", "position"))
         tb$compare <- bar(cn)
-        if (!is.null(named$by)) tb$compare_by <- named$by
-        if (!is.null(named$position)) tb$compare_position <- named$position
+        if (!is.null(named[["by"]])) tb$compare_by <- named[["by"]]
+        if (!is.null(named[["position"]])) tb$compare_position <- named[["position"]]
         for (k in cn) {
           v <- named[[k]]
           if (is.character(v) && !is.null(names(v))) {
@@ -1313,33 +1271,41 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
                  group_summary = "stub_summary", before = "stub_before", heading = "stub_heading")
         for (k in intersect(names(named), names(map))) lay[[map[[k]]]] <- named[[k]]
         # (no heading, "", is a quoted cell: a blank one is the default)
-        if (identical(named$heading, "")) lay$stub_heading <- "\"\""
+        if (identical(named[["heading"]], "")) lay$stub_heading <- "\"\""
       },
       plan_paginate_group = {
         lay$group_page <- TRUE
-        if (!is.null(named$col)) lay$group_col <- named$col
-        if (!is.null(named$keep)) lay$group_keep <- named$keep
+        if (!is.null(named[["col"]])) lay$group_col <- named[["col"]]
+        if (!is.null(named[["keep"]])) lay$group_keep <- named[["keep"]]
         if (!is.null(named[["heading"]])) lay$group_heading <- named[["heading"]]
         if (!is.null(named[["heading_at"]])) lay$group_heading_at <- named[["heading_at"]]
       },
       plan_row_group = {
-        if (!is.null(named$mode)) lay$group_mode <- named$mode
-        if (!is.null(named$collapse)) lay$group_collapse <- named$collapse
-        if (!is.null(named$group_col)) miss(fn, "group_col")
+        if (!is.null(named[["mode"]])) lay$group_mode <- named[["mode"]]
+        if (!is.null(named[["collapse"]])) lay$group_collapse <- named[["collapse"]]
+        if (!is.null(named[["group_col"]])) miss(fn, "group_col")
       },
       plan_blanks = {
         map <- c(where = "blank_where", first = "blank_first", last = "blank_last",
                  counted = "blank_counted")
         for (k in intersect(names(named), names(map))) lay[[map[[k]]]] <- named[[k]]
       },
+      # (the layout and style sheets' columns: an argument with none is not
+      # written, and is kept by the check that reads the sheets back)
       plan_paginate_rows = {
-        for (k in names(named)) lay[[paste0("pages_", k)]] <- named[[k]]
+        for (k in names(named)) {
+          cn <- paste0("pages_", k)
+          if (cn %in% names(.ard_spec_types$layout)) lay[[cn]] <- named[[k]]
+        }
       },
       plan_paginate_cols = {
-        for (k in names(named)) lay[[paste0("colpages_", k)]] <- named[[k]]
+        for (k in names(named)) {
+          cn <- paste0("colpages_", k)
+          if (cn %in% names(.ard_spec_types$layout)) lay[[cn]] <- named[[k]]
+        }
       },
       plan_style = {
-        for (k in names(named)) {
+        for (k in intersect(names(named), names(.ard_spec_types$style))) {
           v <- named[[k]]
           if (startsWith(k, "border_")) {
             if (!inherits(v, "tfl_spec_call") || !identical(v$fun, "rtf_border") ||
@@ -1354,23 +1320,23 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
         r <- named
         if (!is.null(r$where)) r$where <- if (inherits(r$where, "tfl_spec_formula")) r$where$text
                                          else paste(deparse(r$where), collapse = " ")
-        if (!is.null(r$border)) { miss(fn, "border"); r$border <- NULL }
+        if (!is.null(r[["border"]])) { miss(fn, "border"); r[["border"]] <- NULL }
         cstyles[[length(cstyles) + 1L]] <- r
       },
       plan_hide = {
         for (cn in unlist(pos, use.names = FALSE)) { col_row(cn); cols[[cn]]$hide <- TRUE }
       },
       plan_col_header = {
-        h <- named$header
-        lines <- named$lines
+        h <- named[["header"]]
+        lines <- named[["lines"]]
         # a span over the header lines is a cell of the `span` column, as
         # .plan_header_lines() makes it; one that is no plain value, or with no
         # lines to span, stays the rest -- with the lines it belongs to
         csp <- NULL
         # (`lines` with no span is "each" in rtfreporter; a blank span cell is "one")
-        if (is.null(named$span) && !is.null(lines)) csp <- .lines_span(lines, "each")
-        if (!is.null(named$span)) {
-          csp <- if (!is.null(lines)) .lines_span(lines, named$span)
+        if (is.null(named[["span"]]) && !is.null(lines)) csp <- .lines_span(lines, "each")
+        if (!is.null(named[["span"]])) {
+          csp <- if (!is.null(lines)) .lines_span(lines, named[["span"]])
           if (is.null(csp)) {
             rest_add("span")
             if (!is.null(lines)) { rest_add("lines"); lines <- NULL }
@@ -1391,27 +1357,27 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
             hdr[[length(hdr) + 1L]] <- r
           }
         }
-        if (!is.null(named$values)) {
-          v <- named$values
+        if (!is.null(named[["values"]])) {
+          v <- named[["values"]]
           if (all(vapply(v, function(e) is.character(e) && length(e) == 1L, NA))) {
             tb$header_n <- if (identical(names(v), "n")) v$n
                            else paste(paste(names(v), "=", unlist(v)), collapse = " | ")
           } else rest_add("values", "values other than page / table")
         }
-        if (!is.null(named$col_header_align)) sty$col_header_align <- named$col_header_align
+        if (!is.null(named[["col_header_align"]])) sty$col_header_align <- named[["col_header_align"]]
       },
       plan_columns = {
-        w <- named$widths
+        w <- named[["widths"]]
         if (!is.null(w)) {
           if (is.null(names(w)) || !all(nzchar(names(w)))) rest_add("widths", "widths by position (a sheet names its columns)")
           else for (cn in names(w)) { col_row(cn); cols[[cn]]$rel_width <- w[[cn]] }
         }
-        for (cn in named$decimal) { col_row(cn); cols[[cn]]$decimal_split <- TRUE }
-        rt <- named$row_title
+        for (cn in named[["decimal"]]) { col_row(cn); cols[[cn]]$decimal_split <- TRUE }
+        rt <- named[["row_title"]]
         if (is.numeric(unlist(rt))) rest_add("row_title", "row_title by position")
         else for (cn in rt) { col_row(cn); cols[[cn]]$row_title <- TRUE }
-        if (!is.null(named$auto_width)) sty$auto_width <- named$auto_width
-        if (!is.null(named$sep)) tb$sep <- named$sep
+        if (!is.null(named[["auto_width"]])) sty$auto_width <- named[["auto_width"]]
+        if (!is.null(named[["sep"]])) tb$sep <- named[["sep"]]
       },
       miss(fn, "a verb no sheet holds"))
     # an R value the branch put on a sheet as it is (plan_style(border =

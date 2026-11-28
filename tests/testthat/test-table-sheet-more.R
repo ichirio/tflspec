@@ -102,7 +102,12 @@ test_that("a table the sheets say whole: no content_more, as before", {
   d <- tsm_study()
   sh <- tfl_sheets_from_yaml(d)
   tb <- sh$table$tables
-  expect_true(is.null(tb$content_more) || all(is.na(tb$content_more)))
+  # (the report's row has none; the defaults' header `lines` are on the
+  # col_header sheet, which gives them back as header rows: content_more
+  # holds only its mark, the value is the grid's)
+  expect_true(all(is.na(tb$content_more[tb$output_id %in% "T-14-1-1"])))
+  expect_identical(tb$content_more[is.na(tb$output_id)], "- plan_col_header:\n    lines: !sheet ''")
+  expect_identical(nrow(sh$table$col_header), 4L)
   back <- tfl_read_outputs(tsm_back(sh))[["T-14-1-1"]]
   expect_identical(tsm_key(back$content), tsm_key(tfl_read_outputs(d)[["T-14-1-1"]]$content))
 })
@@ -182,37 +187,25 @@ test_that("plan_columns / plan_col_header with an argument no sheet says: the re
   expect_identical(t689_code(r$to), t689_code(d))
 })
 
-test_that("the bridge's guard: an argument no branch reads is named, never dropped", {
-  un <- tflspec:::.bridge_unread
-  expect_identical(un("plan_columns", c("widths", "cell_format", "column_widths_twips"), 0L),
-                   c("cell_format", "column_widths_twips"))
-  expect_identical(un("plan_col_header", c("lines", "span", "header_sep"), 0L),
-                   c("span", "header_sep"))
-  expect_identical(un("plan_paginate_cols", c("at", "col_header"), 0L), "col_header")
-  expect_identical(un("plan_paginate_rows", c("max_rows", "page_by"), 0L), character())
-  expect_identical(un("plan_labels", "AGE", 1L), "an unnamed argument")
-  expect_identical(un("plan_hide", character(), 2L), character())
-  # every argument the schema lists for these verbs is read or named
-  for (fn in c("plan_columns", "plan_col_header", "plan_stub", "plan_blanks", "plan_total",
-               "plan_row_group", "plan_paginate_group", "plan_style")) {
-    args <- names(tfl_schema(fn)$args)
-    expect_type(un(fn, args, 0L), "character")
-  }
-  # the bridge itself: the item's other rows are not written
-  # an item with an argument no sheet says and one a sheet does: the sheet's is
-  # written, the other is the item's rest (test-table-sheet-rest.R); with
-  # nothing a sheet says, the item goes whole
-  items <- list(tfl_item("plan_columns", list(widths = list(row_label = 3), cell_format = "x")))
-  sp <- tflspec:::.plan_sheets_from_content(items, "T-1")
-  expect_identical(attr(sp, "not_converted_at"), integer())
-  expect_identical(sp$columns$rel_width, "3")
-  expect_identical(attr(sp, "not_converted_rest")[[1L]]$args, list(cell_format = "x"))
-  expect_length(attr(sp, "not_converted"), 0L)
-  items <- list(tfl_item("plan_columns", list(cell_format = "x")))
-  sp <- tflspec:::.plan_sheets_from_content(items, "T-1")
-  expect_identical(attr(sp, "not_converted_at"), 1L)
-  expect_match(attr(sp, "not_converted"), "cell_format", fixed = TRUE)
-  expect_true(is.null(sp$columns) || !nrow(sp$columns))
+test_that("no list of names: an argument the sheets do not give back is kept, never dropped", {
+  # the bridge writes what its branches read; tfl_sheets_from_spec() reads
+  # the sheets back (.sheets_said()) and keeps the rest -- every argument of
+  # the schema's verbs, whatever its name
+  said <- function(items) tflspec:::.sheets_said(items, list(), "T-1", tflspec:::.plan_sheets_from_content)
+  rest_of <- function(r) stats::setNames(lapply(r$more, function(it) names(it$args)),
+                                         vapply(r$more, function(it) it$fn, ""))
+  head <- tfl_item("table_plan", list(cols = "TRT01A", rows = list(group = "variable")))
+  r <- said(list(head, tfl_item("plan_columns", list(widths = list(row_label = 3), cell_format = "x"))))
+  expect_identical(r$sp$columns$rel_width, "3")
+  expect_identical(rest_of(r), list(plan_columns = "cell_format"))
+  expect_length(r$notes, 0L)
+  r <- said(list(head, tfl_item("plan_paginate_cols", list(every = 3L, col_header = tfl_r("x")))))
+  expect_identical(rest_of(r), list(plan_paginate_cols = "col_header"))
+  # an item with nothing the sheets say goes whole, and is not on them
+  r <- said(list(head, tfl_item("plan_columns", list(cell_format = "x"))))
+  expect_identical(rest_of(r), list(plan_columns = "cell_format"))
+  expect_true(is.null(r$sp$columns) || !nrow(r$sp$columns))
+  expect_length(r$notes, 0L)
 })
 
 test_that("normalize_ard(): keys, hierarchy, drop_contexts, drop_key_variables go whole", {
@@ -295,7 +288,7 @@ test_that("a template's hierarchy (ae_max_grade) comes back whole", {
   expect_identical(hier(tfl_read_outputs(r$to)[["T-mg"]]), c("AEBODSYS", "AEDECOD", "AESEV"))
 })
 
-test_that("plan_paginate_cols(col_header = ): that item goes whole, the rest of the report stays", {
+test_that("plan_paginate_cols(col_header = ): its col_header is the item's rest, the rest of the report stays", {
   content <- c(t689_head, list(tfl_item("plan_paginate_cols", list(at = 2L, col_header = "Continued"))))
   d <- t689_study(content)
   r <- t689_trip(d)
@@ -305,8 +298,11 @@ test_that("plan_paginate_cols(col_header = ): that item goes whole, the rest of 
   expect_identical(tb$cols[i], "TRT01A")
   expect_identical(tb$rows[i], "group = variable")
   expect_false(any(r$sh$not_converted$output %in% "T-1"))
+  # (`at` has its column; col_header, R, none: it alone in content_more)
   lay <- r$sh$table$layout
-  expect_false(any(!is.na(lay$colpages_at[lay$output_id %in% "T-1"])))
+  expect_identical(lay$colpages_at[lay$output_id %in% "T-1"], "2")
+  expect_false(grepl("at: 2", tb$content_more[i], fixed = TRUE))
+  expect_match(tb$content_more[i], "col_header: Continued", fixed = TRUE)
   expect_setequal(t689_items(r$to), t689_items(d))
   expect_identical(t689_code(r$to), t689_code(d))
 })
@@ -345,11 +341,24 @@ test_that("a plan_labels item naming a heading twice: the second stays whole", {
   expect_identical(labs[[1L]]$args$variable$RESP, "Response rate")
   expect_setequal(t689_items(r$to), t689_items(d))
   expect_identical(t689_code(r$to), t689_code(d))
-  # an item naming each variable once is put on the sheets whole
-  content2 <- c(t689_head, list(tfl_item("plan_labels", list(AGE = "Age (y)", SEX = "Sex"))))
+  # one item naming each variable once: as plan_labels(variable = ) on the
+  # sheets with nothing in content_more; as plan_labels(AGE = ) on the sheets
+  # too (read back as `variable`: content_more marks them, `AGE: !sheet`,
+  # and the reader gives them back as written)
+  content2 <- c(t689_head, list(tfl_item("plan_labels", list(variable = list(AGE = "Age (y)", SEX = "Sex")))))
   r2 <- t689_trip(t689_study(content2))
   tb2 <- r2$sh$table$tables
   expect_true(is.null(tb2$content_more) || all(is.na(tb2$content_more)))
+  content3 <- c(t689_head, list(tfl_item("plan_labels", list(AGE = "Age (y)", SEX = "Sex"))))
+  d3 <- t689_study(content3)
+  r3 <- t689_trip(d3)
+  v3 <- r3$sh$table$variables
+  expect_identical(v3$label[v3$output_id %in% "T-1"], c("Age (y)", "Sex"))
+  cm3 <- r3$sh$table$tables$content_more[r3$sh$table$tables$output_id %in% "T-1"]
+  expect_false(grepl("Age (y)", cm3, fixed = TRUE))
+  expect_match(cm3, "AGE: !sheet", fixed = TRUE)
+  expect_setequal(t689_items(r3$to), t689_items(d3))
+  expect_identical(t689_code(r3$to), t689_code(d3))
 })
 
 # ---- normalize_ard(): what the columns can say is on the tables row, always ----

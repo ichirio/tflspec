@@ -95,10 +95,16 @@ trc_col <- function(sh, sheet, col, by = NULL) {
 }
 
 # the items of the content_more cell as a list
+# content_more's items: the arguments kept as YAML (an argument marked
+# `!sheet` is on the sheets, in another form: not the rest)
 trc_rest <- function(sh) {
   cm <- trc_cm(sh)
   if (is.na(cm)) return(list())
-  tflspec:::.sheet_more_in(cm, items = TRUE)
+  more <- lapply(tflspec:::.sheet_more_in(cm, items = TRUE), function(it) {
+    it$args <- it$args[!vapply(it$args, inherits, NA, "tfl_sheet")]
+    it
+  })
+  Filter(function(it) length(it$args) > 0L, more)
 }
 
 trc_route <- function(d, route, env = parent.frame()) {
@@ -181,6 +187,17 @@ trc_cases <- list(
       expect_identical(trc_col(sh, "col_header", "line"), c("1", "1", "1", "2", "2", "2"))
       expect_identical(trc_col(sh, "col_header", "span"), c("each", "each", NA, "each", "each", "each"))
       expect_identical(trc_col(sh, "col_header", "text"), c(NA, NA, "Treatment", NA, "Parameter", "{col}"))
+      # (the span's shape -- the cells each line names -- is its mark's)
+      expect_match(trc_cm(sh), "span: !sheet\n", fixed = TRUE)
+    },
+    rest = list()),
+  lines_span_lines = list(
+    content = list(trc_head, tfl_item("plan_col_header", list(
+      lines = list(list(group = "", label = "", .values = "Treatment"),
+                   list(group = "", label = "Parameter", .values = "{col}")),
+      span = list(list(group = "each", label = "each", .values = "one"), "each")))),
+    cells = function(sh) {
+      expect_identical(trc_col(sh, "col_header", "span"), c("each", "each", NA, "each", "each", "each"))
     },
     rest = list()),
   lines_span_key = list(
@@ -338,18 +355,23 @@ test_that("an item with nothing the sheets can say goes whole, as before", {
   }
 })
 
-test_that("an item with a text a cell would not keep goes whole, so that nothing it says changes", {
+test_that("a text a cell would not keep is the item's rest, so that nothing it says changes", {
   skip_if_not_installed("cards")
-  for (it in list(tfl_item("plan_columns", list(sep = " / ", row_title = "group", cell_format = trc_cf)),
-                  tfl_item("plan_col_header", list(
-                    header = list(list(line = 1L, cols = "label", text = "  Category")), header_sep = " / ")),
-                  tfl_item("plan_labels", list(variable = list(AGE = "Age "), SEX = list(F = "Female", M = "Male"))))) {
+  # (the sheets are read back as a workbook gives them, trimmed: a text with
+  # a blank at an end does not come back, and is kept as written)
+  items <- list(tfl_item("plan_columns", list(sep = " / ", row_title = "group", cell_format = trc_cf)),
+                tfl_item("plan_col_header", list(
+                  header = list(list(line = 1L, cols = "label", text = "  Category")), header_sep = " / ")),
+                tfl_item("plan_labels", list(variable = list(AGE = "Age "), SEX = list(F = "Female", M = "Male"))))
+  want <- list(c("sep", "cell_format"), c("header", "header_sep"), c("variable", "SEX"))
+  for (k in seq_along(items)) {
+    it <- items[[k]]
     keyed <- identical(it$fn, "plan_labels")
     d <- trc_study(list(if (keyed) trc_head_keyed else trc_head, it))
     sh <- tfl_sheets_from_yaml(d)
     rest <- trc_rest(sh)
     expect_identical(vapply(rest, function(x) x$fn, ""), it$fn, info = it$fn)
-    expect_identical(names(rest[[1L]]$args), names(it$args), info = it$fn)
+    expect_identical(names(rest[[1L]]$args), want[[k]], info = it$fn)
     expect_identical(trc_args(trc_trip(d, sh)$to, it$fn)[[1L]], trc_args(d, it$fn)[[1L]], info = it$fn)
   }
 })
@@ -408,11 +430,16 @@ test_that("two calls: the bridge gives the second's rest, and the reader puts th
   lb <- Filter(function(it) identical(it$fn, "plan_labels"), sp2)
   expect_length(lb, 1L)
   expect_identical(names(lb[[1L]]$args), c("variable", "AGE"))
-  # a name both have: separate, in order, the later one winning as written
+  # a name both have is one argument: the sheets' value (the grid's edit)
+  # is used, and that is said
   tb2 <- data.frame(output_id = "T-1", content_more = tflspec:::.sheet_more_out(
     list(tfl_item("plan_labels", list(variable = list(AGE = "x")))), items = TRUE))
   sp3 <- tflspec:::.plan_content_more(tflspec:::.plan_content_items(sp), tb2)
-  expect_identical(sum(vapply(sp3, function(it) identical(it$fn, "plan_labels"), NA)), 2L)
+  lb3 <- Filter(function(it) identical(it$fn, "plan_labels"), sp3)
+  expect_length(lb3, 1L)
+  expect_identical(lb3[[1L]]$args$variable$AGE, "Age (years)")
+  expect_match(attr(sp3, "content_more_said"), "plan_labels(variable): on the sheets and in content_more",
+               fixed = TRUE)
   # `variable` is never split: a heading twice inside it sends the item whole
   sp4 <- tflspec:::.plan_sheets_from_content(list(
     tfl_item("plan_labels", list(AGE = "Age at baseline", variable = list(AGE = "Age (years)", BMIBL = "BMI")))), "T-1")

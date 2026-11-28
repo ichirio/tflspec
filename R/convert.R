@@ -270,7 +270,11 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   if (!is.null(sp)) {
     if (!is.null(content_fn)) {
       # (the bridge's scope of the defaults: the rows with no report)
-      items <- tryCatch(.conv_items(content_fn(sp, NA_character_)), error = function(e) e)
+      items <- tryCatch({
+        got <- content_fn(sp, NA_character_)
+        for (x in attr(got, "content_more_said")) note(NA, "tables", "(defaults)", "content_more", x)
+        .conv_items(got)
+      }, error = function(e) e)
       if (inherits(items, "error")) {
         note(NA, "table sheets", "(defaults)", NA, paste0("defaults content: not converted -- ", conditionMessage(items)))
       } else {
@@ -935,8 +939,9 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     }
     # its rework step (the planner row's process_code, a table's too): data.steps
     if (!is.null(prow) && nrow(prow) && !is.na(prow$process_code[1L])) {
-      data$steps <- list(tfl_r(gsub("\r\n?", "\n", prow$process_code[1L])))
-      note(id, "_tflplanner", id, "process_code", "the listing's rework step kept as R text (data.steps)", prow$process_code[1L])
+      data$steps <- .steps_from_cell(prow$process_code[1L])
+      note(id, "_tflplanner", id, "process_code", sprintf("the listing's rework %s kept as R text (data.steps)",
+           if (length(data$steps) > 1L) "steps" else "step"), prow$process_code[1L])
     }
     # rtfreporter's chain: plan_listing(listing_col(...), ..., type, sep ...)
     # |> plan_blanks(where = "records") |> plan_paginate_rows(max_rows)
@@ -962,6 +967,10 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
         args <- c(args, it$args[setdiff(names(it$args), names(args))])
       }
       more_items <- Filter(function(it) !identical(it$fn, "plan_listing"), more_items)
+      # (steps that are not all R: kept whole in content_more, not in process_code)
+      st <- Filter(function(it) identical(it$fn, "rework"), more_items)
+      if (length(st) && is.null(data$steps)) data$steps <- st[[1L]]$args$steps
+      more_items <- Filter(function(it) !identical(it$fn, "rework"), more_items)
     }
     content <- list(tfl_item("plan_listing", args))
     # its font size (the report sheet's, on the style sheet): the plan's
@@ -987,12 +996,20 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
                  nzchar(rrow$ard_object[1L])) rrow$ard_object[1L] else "ard"
     data <- list(source = "ard", object = obj)
     if (!is.null(prow) && nrow(prow) && !is.na(prow$process_code[1L])) {
-      data$steps <- list(tfl_r(gsub("\r\n?", "\n", prow$process_code[1L])))
-      note(id, "_tflplanner", id, "process_code", "the table's rework step kept as R text (data.steps)", prow$process_code[1L])
+      data$steps <- .steps_from_cell(prow$process_code[1L])
+      note(id, "_tflplanner", id, "process_code", sprintf("the table's rework %s kept as R text (data.steps)",
+           if (length(data$steps) > 1L) "steps" else "step"), prow$process_code[1L])
+    }
+    # (steps that are not all R: kept whole in the tables row's content_more)
+    if (is.null(data$steps) && !is.null(sp) && "content_more" %in% names(sp$tables)) {
+      st <- .steps_from_more(scope(sp$tables, id)$content_more)
+      if (!is.null(st)) data$steps <- st
     }
     if (!is.null(sp)) {
       if (!is.null(content_fn)) {
-        content <- .conv_items(content_fn(sp, id))
+        got <- content_fn(sp, id)
+        for (x in attr(got, "content_more_said")) note(id, "tables", id, "content_more", x)
+        content <- .conv_items(got)
         nz <- .conv_normalize_args(sp, ard, id, note)
         # (a normalize_ard() the sheets could not say, in content_more, is the
         # table's: not another from its hierarchical analysis as well; at
