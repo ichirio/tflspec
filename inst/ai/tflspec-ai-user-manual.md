@@ -309,7 +309,10 @@ arguments merge by key (no layer gives a report a code list: a
 `defaults.yml` are `study$codelists`, by name, which a report or a
 template names where it uses one, `!r study$codelists$SEX`); in `content`, the report's items of one function
 replace every item of that function below it, in the place the first had;
-a function only the report has goes after them.  `defaults.yml` holds the
+a function only the report has goes after them.  A template's `page:`
+holds the page's defaults; the report's `page:` changes only the lines
+(by number), cells and call arguments it writes (`tfl_page_origins()`
+says which layer gave each field).  `defaults.yml` holds the
 study-wide content (the rounding ...) and the page configurations
 (`styles:`, a style set each: the page's settings and the fixed lines of the
 header, footer, titles and footnotes in the blocks `first` and `last`; a
@@ -992,7 +995,7 @@ back): rename the value or choose another separator.
 
 **Spec files (YAML, one file a report):** `tfl_output` `tfl_item` `tfl_plot` `tfl_call` `tfl_r`
 `tfl_unset` `tfl_read_output` `tfl_write_output` `tfl_read_study_spec`
-`tfl_read_outputs` `tfl_resolve_output` `tfl_report_set` `tfl_set_report_set` `tfl_run_output` `tfl_output_contents` `tfl_output_extends` `tfl_study_value` `tfl_styles` `tfl_output_objects` `tfl_output_object_uses` `tfl_output_rename` `tfl_default_name` `tfl_output_name_check` `tfl_code_refs` `tfl_write_study_part` `tfl_item_code`
+`tfl_read_outputs` `tfl_resolve_output` `tfl_page_origins` `tfl_report_set` `tfl_set_report_set` `tfl_run_output` `tfl_output_contents` `tfl_output_extends` `tfl_study_value` `tfl_styles` `tfl_output_objects` `tfl_output_object_uses` `tfl_output_rename` `tfl_default_name` `tfl_output_name_check` `tfl_code_refs` `tfl_write_study_part` `tfl_item_code`
 `tfl_item_written` `tfl_item_own` `tfl_convert_sheets_to_yaml`
 `tfl_yaml_from_sheets` `tfl_sheets_from_yaml` `tfl_sheets_from_spec` `tfl_report_codelists` `tfl_write_spec_xlsx`
 `tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_check_spec` `tfl_check_build` `tfl_check_reports` `tfl_check_fix_text` `tfl_check_study_refs` `tfl_study_refs` `tfl_data_code` `tfl_schema_help` `tfl_ai_decisions_read` `tfl_ai_decisions_write` `tfl_ai_confirm` `tfl_content_code` `tfl_content_run` `tfl_bign_values` `tfl_bign_drop`
