@@ -67,7 +67,7 @@ test_that("a copy of a retired template whose source is gone: the stop says it w
   root <- withr_tempdir()
   st <- file.path(root, "STUDY-R")
   dir.create(st)
-  writeLines(c("study_id: STUDY-R", "settings:", "  rounding: sas"), file.path(st, "study.yml"))
+  writeLines(c("spec_version: 2", "study_id: STUDY-R"), file.path(st, "study.yml"))
   suppressMessages(invisible(tfl_copy_templates(st, "tflspec_v1/tflspec_summary")))
   sd <- file.path(st, "spec", "series", "tflspec_v1")
   # (the copy made, in an earlier tflspec, from tflspec_v1/demog)
