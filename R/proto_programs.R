@@ -98,14 +98,21 @@
 }
 
 # what a prototype program sources after the study's setup (an ARD program:
-# the ARD's setup always, the study's setup and data come with it), then
+# the ARD's setup, the study's setup and data come with it; with no ARD
+# definition, report_setup.R, which sources the study's setup), then
 # its old ARD file removed: an ARD the run does not make again is not left
 # behind
 .op_source_lines <- function(ctx) {
   lay <- ctx$layout
-  c(if (.op_has_analyses(ctx) || identical(ctx$onepass$kind, "ard")) c(
+  ard_prog <- identical(ctx$onepass$kind, "ard")
+  c(if (.op_has_analyses(ctx) || (ard_prog && !is.null(ctx$onepass$spec))) c(
       "# the ARD's statistics and formats (what every ARD program starts with)",
-      sprintf("source(%s)", .rp_r_string(file.path(lay[["programs_ard"]], .rp_ard_setup_file)))),
+      sprintf("source(%s)", .rp_r_string(file.path(lay[["programs_ard"]], .rp_ard_setup_file))))
+    else if (ard_prog) c(
+      # (a study with no ARD definition has no ard_setup.R)
+      "# the study's setup and its data",
+      sprintf("source(%s)", .rp_r_string(file.path(lay[["programs_tfl"]],
+                                                    .setup_file_names[["report_setup"]])))),
     "# the reports' ARD files: save_report_ard(), read_report_ard(), collect_ard()",
     sprintf("source(%s)", .rp_r_string(.op_helpers_path(lay))),
     "# (this report's ARD file, from an earlier run, removed: the run makes it again)",

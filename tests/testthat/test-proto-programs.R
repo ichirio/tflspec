@@ -225,6 +225,9 @@ test_that("a study with no ARD definition: a step of its own code is its ARD pro
                              generator = "tflspec 0.0.0")
     if (id %in% own) {
       expect_false(any(grepl("^Analyses", pp_lines(a))), info = id)
+      # (no ard_setup.R in such a study: the study's setup through report_setup.R)
+      expect_true("source(\"programs/tfl/report_setup.R\")" %in% pp_lines(a), info = id)
+      expect_false(any(grepl("ard_setup.R", pp_lines(a), fixed = TRUE)), info = id)
     } else {
       expect_null(a, info = id)
     }

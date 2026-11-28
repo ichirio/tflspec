@@ -65,9 +65,14 @@ pp_compare <- function(d, ids) {
   ka <- lapply(d, function(x) pp_keyed(pp_read_ard(x)))
   ard_today_full <- pp_ard_diff(ka$today, ka$full)
   ard_full_ard <- pp_ard_diff(ka$full, ka$ard)
+  # (a report of the sheets writes its RTF in the study folder)
+  rtf_of <- function(dir, id) {
+    f <- file.path(dir, "output", "tfl", paste0(id, ".rtf"))
+    if (file.exists(f)) f else file.path(dir, paste0(id, ".rtf"))
+  }
   rtf <- do.call(rbind, lapply(ids, function(id) {
-    a <- pp_rtf_text(file.path(d[["today"]], "output", "tfl", paste0(id, ".rtf")))
-    b <- pp_rtf_text(file.path(d[["full"]], "output", "tfl", paste0(id, ".rtf")))
+    a <- pp_rtf_text(rtf_of(d[["today"]], id))
+    b <- pp_rtf_text(rtf_of(d[["full"]], id))
     data.frame(output_id = id, today = !is.na(a), full = !is.na(b),
                same = if (is.na(a) || is.na(b)) is.na(a) && is.na(b) else identical(a, b),
                stringsAsFactors = FALSE)
