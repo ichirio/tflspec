@@ -368,10 +368,15 @@ test_that("the content as the report's own code is written as it is and runs to 
   out <- tfl_output("F-1", "figure",
                     data = list(source = "ard", object = "ard",
                                 steps = list(tfl_r("data <- ard[ard$x > 1, , drop = FALSE]"))))
-  out$content <- tfl_r("content <- nrow(data)\ncontent <- content * 10")
+  out$content <- tfl_r("content <- nrow(data)\ncontent <- data.frame(n = content * 10)")
   expect_identical(no_bign(tfl_content_code(out)), c("data <- ard[ard$x > 1, , drop = FALSE]", "",
-                                            "content <- nrow(data)", "content <- content * 10"))
-  expect_identical(tfl_content_run(out, data.frame(x = 1:3)), 20)
+                                            "content <- nrow(data)",
+                                            "content <- data.frame(n = content * 10)"))
+  expect_identical(tfl_content_run(out, data.frame(x = 1:3)), data.frame(n = 20))
+  # (what the content leaves is held to the figure's contract, tflspec#1018)
+  out$content <- tfl_r("content <- nrow(data)")
+  expect_error(tfl_content_run(out, data.frame(x = 1:3)), "it returned a integer.", fixed = TRUE,
+               class = "tfl_content_contract")
   out$content <- tfl_r("plan <- 1")
   expect_error(tfl_content_run(out, data.frame(x = 1)), "leaves no `content`")
 })
@@ -380,13 +385,13 @@ test_that("a data step of the report's own code is that code, whatever else data
   out <- tfl_output("F-1", "figure", data = list(
     source = "code", code = tfl_r("df <- ard\ndata <- df[df$x > 1, , drop = FALSE]"),
     steps = list(list(fn = "geom_point"))))
-  out$content <- tfl_r("content <- nrow(data)")
+  out$content <- tfl_r("content <- data.frame(n = nrow(data))")
   # (two statements: in a scope of their own that leaves `data`, A1; the
   # content code itself as it is)
   expect_identical(tfl_content_code(out), c("data <- local({", "  df <- ard",
                                             "  data <- df[df$x > 1, , drop = FALSE]", "  data", "})",
-                                            "", "content <- nrow(data)"))
-  expect_identical(tfl_content_run(out, data.frame(x = 1:3)), 2L)
+                                            "", "content <- data.frame(n = nrow(data))"))
+  expect_identical(tfl_content_run(out, data.frame(x = 1:3)), data.frame(n = 2L))
 })
 
 test_that("a nested variable with no heading keeps its place after its parent, back from the content (#273)", {
