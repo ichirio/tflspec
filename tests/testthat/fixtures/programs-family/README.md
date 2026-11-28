@@ -71,3 +71,10 @@ frozen) say `spec_version: 2` since the old forms stop (canon 11-10
 :377): edited by hand, as no program's text reads the version.  SAMPLE-01
 is tflplanner's one source (#891): a change to it is a PR there, not a
 data-raw run.
+
+## Changed on purpose since
+
+- 2026-11-28 (CANON-3): the ARD programs write a report's code lists as
+  codes only (`cl_sex <- c("F", "M")`), so `out/*/ard/<id>.R` of the
+  reports with labelled lists were written again; only their `cl_*` lines,
+  the `#  Checksum` line and the fingerprint changed.

@@ -14,7 +14,7 @@ report_id <- "T-14-1-1C"
 
 # ---- code lists: each value in its order, as it is in the ARD ----
 # (a value a list does not have stops the program: add it to the list)
-cl_trt01a <- c("Drug X" = "Drug X 200 mg", Control = "Control 100 mg")
+cl_trt01a <- c("Drug X", "Control")
 
 # ---- data ----
 adsl <- order_levels(adsl, c("AGEGR1", "SEX", "RACE", "ECOGBL"))
@@ -181,7 +181,7 @@ bind_items(
   .ard_race,
   .ard_ecogbl
 ) |>
-  save_ard(report_id, definition = "5293abc268da42743e5a4f986d5e2ad0")
+  save_ard(report_id, definition = "986ce840efceeae7ec1d0037496fafa8")
 
 # the end of this run
 options(tflplanner.run = NULL)

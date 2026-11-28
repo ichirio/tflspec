@@ -43,7 +43,9 @@ study ARD, with the definition's fingerprint), \code{FALSE} in \code{ard}.}
 names its report (a blank \code{output_id} stops).  A report's rows of the
 variables its analyses read (\code{by}, \code{strata}, \code{variables}, and the
 names in \code{args}, \code{code} and \code{post}) count: the program writes them at
-its head (\code{cl_sex <- c(F = "Female", M = "Male")}) and puts them on
+its head, codes only (\code{cl_sex <- c("F", "M")}: no label is the ARD's,
+so a label-only change leaves the program and its fingerprint as they
+were), and puts them on
 the data the analyses read (\code{set_levels(SEX = cl_sex)}): each column a
 factor of the codes in the list's order -- the ARD holds \code{"F"}, not
 \code{"Female"}, and counts a level no record has (\code{n = 0}).  The factor is

@@ -180,9 +180,9 @@ test_that("a report's own code list makes the round trip: its program is the sam
   }
   before <- ard(d)
   expect_match(before, "set_levels(TRT01A = cl_trt01a", fixed = TRUE)
-  expect_match(before, "Drug X 200 mg", fixed = TRUE)
-  expect_match(ard(x$to), "set_levels(TRT01A = cl_trt01a", fixed = TRUE)
-  expect_match(ard(x$to), "Drug X 200 mg", fixed = TRUE)
+  # (the ARD program's list: codes only, CANON-3)
+  expect_match(before, "cl_trt01a <- c(\"Drug X\", \"Control\")", fixed = TRUE)
+  expect_identical(ard(x$to), before)
 })
 
 # -- item 5: what stopped the whole conversion ---------------------------------------

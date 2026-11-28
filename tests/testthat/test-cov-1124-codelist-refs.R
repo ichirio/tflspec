@@ -184,9 +184,12 @@ test_that("tfl_build_ard() given rows with a `list` cell the study has not got s
 test_that("tfl_report_codelists(): a report's reference with no rows given must be the study's", {
   st <- tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
   none <- data.frame(output_id = character())
-  ok <- tfl_output("T-9", "table", codelists = list(SEX = list(list = "SEX")))
+  # (a report whose content uses its list: one no step uses warns)
+  ok <- tfl_output("T-9", "table", codelists = list(SEX = list(list = "SEX")),
+                   content = list(tfl_item("plan_labels", list(SEX = "Sex"))))
   expect_silent(tfl_report_codelists(st, list(ok), rows = none))
-  bad <- tfl_output("T-9", "table", codelists = list(SEX = list(list = "GENDER")))
+  bad <- tfl_output("T-9", "table", codelists = list(SEX = list(list = "GENDER")),
+                    content = ok$content)
   expect_error(tfl_report_codelists(st, list(bad), rows = none),
                "tfl_report_codelists(): report T-9, the code list of SEX refers to the study's list GENDER",
                fixed = TRUE)

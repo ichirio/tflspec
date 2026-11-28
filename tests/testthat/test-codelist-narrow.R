@@ -97,10 +97,14 @@ test_that("the program writes the narrowed list in set_levels(), and the ARD has
   sp <- narrow_spec("PARAMCD %in% c(\"AST\", \"ALT\") & AVISIT == \"Week 2\"")
   cl <- narrow_cl()
   code <- paste(tfl_ard_code(sp, part = "body", codelists = cl), collapse = "\n")
-  expect_match(code, "  set_levels(PARAMCD = cl_paramcd[c(\"ALT\", \"AST\")], SEX = cl_sex)", fixed = TRUE)
-  # the lists are written whole at the head; the dataset is read with no step of theirs
-  expect_match(code, "cl_paramcd <- c(", fixed = TRUE)
-  expect_match(code, "  GLUC = \"Glucose\"", fixed = TRUE)
+  # (the ARD program takes the codes only: a list with labels is narrowed by
+  # its values, as one without)
+  expect_match(code, "  set_levels(PARAMCD = intersect(cl_paramcd, c(\"ALT\", \"AST\")), SEX = cl_sex)",
+               fixed = TRUE)
+  # the lists are written whole at the head, codes only; the dataset is read
+  # with no step of theirs
+  expect_match(code, "cl_paramcd <- c(\"ALT\", \"AST\", \"BILI\", \"CREAT\", \"GLUC\")", fixed = TRUE)
+  expect_false(grepl("Glucose", code, fixed = TRUE))
   expect_match(code, "adlb <- readRDS(\"adam/ADLB.rds\") |>\n  blank_as_na() |>\n  order_levels(from = adsl)", fixed = TRUE)
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, codelists = cl))
   # two parameters, not the list's five: the filter left two
@@ -110,14 +114,14 @@ test_that("the program writes the narrowed list in set_levels(), and the ARD has
   # an exclusion
   spx <- narrow_spec("!PARAMCD %in% c(\"GLUC\", \"BILI\")")
   expect_match(paste(tfl_ard_code(spx, part = "body", codelists = cl), collapse = "\n"),
-               "PARAMCD = cl_paramcd[setdiff(names(cl_paramcd), c(\"BILI\", \"GLUC\"))]",
+               "PARAMCD = setdiff(cl_paramcd, c(\"BILI\", \"GLUC\"))",
                fixed = TRUE)
   # an include and an exclude together
   spi <- narrow_spec(paste("PARAMCD %in% c(\"ALT\", \"AST\", \"CREAT\", \"BILI\", \"GLUC\") &",
                            "!PARAMCD %in% c(\"GLUC\", \"BILI\")"))
   expect_match(paste(tfl_ard_code(spi, part = "body", codelists = cl), collapse = "
 "),
-               "cl_paramcd[c(\"ALT\", \"AST\", \"CREAT\")]", fixed = TRUE)
+               "intersect(cl_paramcd, c(\"ALT\", \"AST\", \"CREAT\"))", fixed = TRUE)
   ardx <- suppressMessages(tfl_build_ard(spi, dir = dir, save = FALSE, codelists = cl))
   expect_identical(narrow_levels(ardx, "A"), c("ALT", "AST", "CREAT"))
 })
@@ -175,7 +179,7 @@ test_that("an analysis data made from a filtered one inherits its narrowing", {
                            S$analyses)))
   cl <- narrow_cl()
   code <- paste(tfl_ard_code(sp, part = "body", codelists = cl), collapse = "\n")
-  expect_match(code, "set_levels(PARAMCD = cl_paramcd[c(\"ALT\", \"AST\")])", fixed = TRUE)
+  expect_match(code, "set_levels(PARAMCD = intersect(cl_paramcd, c(\"ALT\", \"AST\")))", fixed = TRUE)
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, codelists = cl))
   expect_identical(narrow_levels(ard, "A"), c("ALT", "AST"))
 })

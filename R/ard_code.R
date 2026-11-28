@@ -903,8 +903,8 @@
 
 # The report's code lists at its program's head: `cl_sex <- c(F =
 # "Female", M = "Male")`, each code (a name) and its label -- the label the
-# table plan applies; the ARD holds the codes; a list without labels, its
-# values
+# table plan applies, in a report program; a list without labels, its
+# values -- what the ARD program has, codes only (.codelist_codes_only())
 .codelists_lines <- function(levels) {
   nm <- function(v) ifelse(make.names(v) == v, v, encodeString(v, quote = "\""))
   unlist(lapply(names(levels), function(v) {

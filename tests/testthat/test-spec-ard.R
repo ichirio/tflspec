@@ -134,7 +134,8 @@ test_that("a report's own code list applies, not the file's of the same variable
   writeLines(c(readLines(f), "codelists:", "  SEX:", "    - {value: M, label: Men}",
                "    - {value: F, label: Women}"), f)
   base <- tfl_ard_code(tfl_read_study_spec(dir), "T-2", save = FALSE)
-  expect_true(any(grepl("Women", base)))
+  # (the report's own order; the ARD program takes the codes only)
+  expect_true("cl_sex <- c(\"M\", \"F\")" %in% base)
   sa_codelists_file(dir, "SEX: [{value: F, label: Girls}, {value: M, label: Boys}]")
   code <- tfl_ard_code(suppressMessages(tfl_read_study_spec(dir)), "T-2", save = FALSE)
   expect_identical(code, base)
