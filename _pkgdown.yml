@@ -175,6 +175,7 @@ reference:
       - tfl_read_study_spec
       - tfl_read_output
       - tfl_resolve_output
+      - tfl_page_origins
       - tfl_report_set
       - tfl_set_report_set
       - tfl_styles

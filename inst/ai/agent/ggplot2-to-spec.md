@@ -59,8 +59,8 @@ p <- ggplot(sm, aes(AVISIT, mean, colour = TRT01A, group = TRT01A)) +
 | `group_by(...) \|> summarise(n, mean, sd, se ...)` | `{step: summary, name: sm, ...}` (`summary_by`: by group only) |
 | responders / n with a binomial CI | `{step: rate, ...}` |
 | `count(group, category)` with % | `{step: count, ...}` |
-| `survfit(Surv(AVAL, 1 - CNSR) ~ TRT01P)` | `{step: survfit, name: fit, time: AVAL, censor: CNSR, by: TRT01P}` |
-| AVAL in days shown in months / weeks | `{step: time_unit, variable: AVAL, unit: months}` |
+| `survfit(Surv(AVAL, CNSR == 0) ~ TRT01P)` (CNSR 0 is the event, any other value a censoring) | `{step: survfit, name: fit, time: AVAL, censor: CNSR, by: TRT01P}` |
+| AVAL shown in days / weeks / months / years (from its AVALU: `tte_time("months")`) | `{step: time_unit, variable: AVAL, unit: months}` |
 | anything else that makes a data frame | `{step: code, code: 'df <- ...'}` (the datasets by their lower-case names) |
 
 ### The layers (`layers:`, in the chain's order)

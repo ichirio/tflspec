@@ -120,7 +120,7 @@ tfl_fig_butterfly <- function(adam = NULL, style = c("soc", "pt"), data = "ADAE"
     sprintf("ggplot(inc_df, aes(x = x, y = %s, fill = %s))", term, group),
     "geom_col(width = 0.7)",
     'geom_vline(xintercept = 0, colour = "grey30")',
-    'geom_text(aes(label = ifelse(pct > 0, sprintf("%.1f", pct), ""), hjust = ifelse(x < 0, 1.15, -0.15)), size = 2.6)',
+    'geom_text(aes(label = ifelse(pct > 0, sprintf("%.1f", rtfreporter::round_num(pct, 1)), ""), hjust = ifelse(x < 0, 1.15, -0.15)), size = 2.6)',
     "scale_x_continuous(limits = c(-x_lim, x_lim), labels = function(v) abs(v))",
     "scale_fill_manual(values = pal_grp)",
     sprintf("labs(x = \"Subjects with event (%%)\", y = NULL%s)", if (!is.null(title)) paste0(", title = ", q(title)) else "")),

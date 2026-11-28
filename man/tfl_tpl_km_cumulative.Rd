@@ -10,8 +10,8 @@ The figure template \code{km_cumulative}, layout \code{km}: a variant of \code{k
 \tabular{llllll}{
    Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
    \code{time} \tab usual \tab call \tab AVAL \tab  \tab the time variable (Surv(time, ...)), in \code{time_unit} \cr
-   \code{time_unit} \tab usual \tab call \tab months \tab  \tab the time's unit: the call's first step converts the days to it; the x axis's title \cr
-   \code{censor} \tab usual \tab call \tab CNSR \tab  \tab the censoring variable, 1 censored (Surv(time, censor == 0)) \cr
+   \code{time_unit} \tab usual \tab call \tab months \tab  \tab the unit the analysis and the axis use: the call's first step converts AVAL from its unit, AVALU, to it (tte_time()); the x axis's title \cr
+   \code{censor} \tab usual \tab call \tab CNSR \tab  \tab the censoring variable, 0 the event, any other value a censoring (Surv(time, censor == 0)) \cr
    \code{by} \tab required \tab call \tab  \tab  \tab the curves' variable (survfit2(~ by), the colours) \cr
    \code{y_percent} \tab other \tab call \tab TRUE \tab  \tab TRUE: the y axis in \% (scale_y_continuous(labels = scales::label_percent())) \cr
    \code{ci} \tab usual \tab call \tab bars \tab  \tab the confidence interval: band (add_confidence_interval()), bars at the axis's times (geom_errorbar()) \cr

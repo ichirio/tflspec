@@ -194,6 +194,9 @@ test_that("subgroup_labels: the headings by label; the levels' rows and the orde
                       STRATA1 = NA_character_, TRT01A = "Drug", estimate = 1, conf.low = 0.5, conf.high = 2, n_obs = 10L)
     est <- rbind(est, transform(est, SEX = NA, AGEGR1 = NA)[1L, ])
     env <- list2env(list(est = est), parent = asNamespace("dplyr"))
+    # (the step's code is a part of the report's program: after what the
+    # study's setup gives it, fmt_num() ...)
+    tflspec:::.study_setup_eval(env)
     eval(parse(text = code), env)
     env$est
   }
@@ -292,8 +295,12 @@ test_that("ref: the default reference is Placebo (the first level); ref = Drug B
 test_that("comparison: shows only that arm, with the HR it has without the filter; the reference is refused", {
   fr_skip()
   r <- fr_hr()
-  run <- function(code, est) eval(parse(text = code), list2env(list(est = est),
-                                                              parent = asNamespace("dplyr")))
+  # (the step's code after what the study's setup gives it, fmt_num() ...)
+  run <- function(code, est) {
+    env <- list2env(list(est = est), parent = asNamespace("dplyr"))
+    tflspec:::.study_setup_eval(env)
+    eval(parse(text = code), env)
+  }
   all <- run(tflspec:::.forest_est_code("TRT01A", character()), r$est)
   one <- run(tflspec:::.forest_est_code("TRT01A", character(), "Drug A"), r$est)
   expect_identical(nrow(all), 2L)

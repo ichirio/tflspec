@@ -144,7 +144,7 @@ test_that("the new statistics and settings write what they say", {
   d <- tfl_fig_template("bar_rate_ci", group = "TRT01P")
   code <- paste(tfl_fig_design_code(d), collapse = "\n")
   expect_match(code, "binom.test", fixed = TRUE)
-  expect_match(code, 'label = sprintf("%.1f%%', fixed = TRUE)
+  expect_match(code, 'label = paste0(fmt_num(rate, 1), "%\\n(', fixed = TRUE)
   d <- tfl_fig_template("pk_individual", group = "TRT01A")
   code <- paste(tfl_fig_design_code(d), collapse = "\n")
   expect_match(code, "scale_y_log10()", fixed = TRUE)
@@ -213,25 +213,131 @@ test_that("a report program's figure: no save, its own name, the study's palette
   expect_identical(unname(e$pal), unname(e$tfl_colours("treatment", c("A", "B"))))
 })
 
+test_that("a number a figure prints is fmt_num(): the study's rounding, as a table's", {
+  # (A3) the rate, count and forest steps; a study's program has fmt_num()
+  # from its setup, a script of its own defines it (unless the setup has)
+  for (t in c("bar_rate_ci", "bar_stacked")) {
+    prog <- paste(tfl_fig_design_code(tfl_fig_template(t, group = "TRT01P"), "F1", setup = TRUE), collapse = "\n")
+    expect_false(grepl("fmt_num <- function", prog, fixed = TRUE), info = t)
+    own <- strsplit(paste(tfl_fig_design_code(tfl_fig_template(t, group = "TRT01P"), "F1"), collapse = "\n"), "\n")[[1]]
+    expect_identical(sum(grepl('^if [(]!exists[(]"fmt_num"[)][)] fmt_num <- function', own)), 1L, info = t)
+  }
+  rate <- paste(tfl_fig_design_code(tfl_fig_template("bar_rate_ci", group = "TRT01P"), "F1", setup = TRUE), collapse = "\n")
+  expect_match(rate, 'label = paste0(fmt_num(rate, 1), "%\\n(", x, "/", n, ")")', fixed = TRUE)
+  count <- paste(tfl_fig_design_code(tfl_fig_template("bar_stacked", group = "TRT01P"), "F1", setup = TRUE), collapse = "\n")
+  expect_match(count, 'label = paste0(fmt_num(pct, 0), "%")', fixed = TRUE)
+  fr <- tfl_fig_template("forest_hr", data = "ADTTE", param = "TTDE", pop = "SAFFL", group = "TRT01A",
+                         subgroups = "SEX, AGEGR1", comparison = "Xanomeline High Dose")
+  forest <- paste(tfl_fig_design_code(fr, "F1", setup = TRUE, save = FALSE), collapse = "\n")
+  expect_match(forest, 'txt = ifelse(ok, paste0(fmt_num(estimate, 2), " (", fmt_num(conf.low, 2),', fixed = TRUE)
+  expect_false(grepl("%.2f", forest, fixed = TRUE))
+  # the programs are R that parses
+  for (prog in list(rate, count, forest, paste(own, collapse = "\n"))) {
+    expect_no_error(parse(text = prog))
+  }
+  # the script's own fmt_num() is the study helper's: 1/8 is 12.5%, "13" under "sas"
+  a <- grep('^if [(]!exists[(]"fmt_num"[)][)]', own)
+  b <- a - 1L + which(own[a:length(own)] == "}")[1L]
+  e <- new.env(parent = globalenv())
+  eval(parse(text = own[a:b]), e)
+  old <- options(rtfreporter.rounding = "sas")
+  on.exit(options(old), add = TRUE)
+  expect_identical(e$fmt_num(100 * 1 / 8, 0), "13")
+  expect_identical(e$fmt_num(NA, 1), "NE")
+  # a time to event's helper and fmt_num() together: one comment, both defined
+  both <- tflspec:::.fig_helper_used(c("df |> tte_time(\"months\")", "lab <- fmt_num(x, 1)"))
+  expect_identical(both[2L], "# the study helpers tte_time(), fmt_num() (tfl_helpers_code()), unless the study's setup has them")
+  expect_identical(sum(grepl("^if [(]!exists", both)), 2L)
+  # a helper a used helper calls comes with it: fmt_pvalue() needs fmt_num()
+  pv <- tflspec:::.fig_helper_used("lab <- fmt_pvalue(p)")
+  expect_identical(sum(grepl('^if [(]!exists[(]"(fmt_num|fmt_pvalue)"', pv)), 2L)
+  e2 <- new.env(parent = globalenv())
+  eval(parse(text = pv), e2)
+  expect_identical(e2$fmt_pvalue(c(0.0004, 0.0125)), c("<0.001", "0.013"))
+  # a name that only ends with a helper's is not a call of it
+  expect_length(tflspec:::.fig_helper_used("my_fmt_num(x, 1)"), 0L)
+  # nor is a comment or a string that names one (the ARD figure's "# Input
+  # ARD" line; bind_items()'s message naming tag_ard())
+  expect_length(tflspec:::.fig_helper_used(c("# read with ard_value() / ard_stats()",
+                                             "msg <- \"fmt_num(x, 1)\"")), 0L)
+  bi <- tflspec:::.fig_helper_used("ard <- bind_items(a, b)")
+  expect_identical(sum(grepl("^if [(]!exists", bi)), 1L)
+  # every helper of the study's file, not a fixed few: the ones it calls
+  # with it, in the file's order (order_arms(), one line, calls
+  # order_levels(), which calls set_levels(), which calls codelist_codes())
+  arms <- tflspec:::.fig_helper_used("adsl <- adsl |> order_arms()")
+  expect_identical(arms[2L], paste("# the study helpers codelist_codes(), set_levels(), order_levels(), order_arms()",
+                                   "(tfl_helpers_code()), unless the study's setup has them"))
+  expect_identical(sum(grepl("^if [(]!exists", arms)), 4L)
+  # each one's whole definition, as the file has it
+  h <- new.env(parent = globalenv())
+  eval(parse(text = tfl_helpers_code()), h)
+  fns <- tflspec:::.study_helper_fns()
+  expect_true(all(c("set_levels", "order_levels", "order_arms", "tte_time", "fmt_num",
+                    "fmt_pvalue", "ard_value", "ard_stats", "read_ard") %in% fns))
+  expect_setequal(fns, ls(h, all.names = TRUE))
+  for (f in fns) {
+    one <- tflspec:::.fig_helper_used(sprintf("y <- %s(x)", f))
+    e3 <- new.env(parent = globalenv())
+    # (the guard off: a function of that name elsewhere would skip it)
+    eval(parse(text = sub("^if [(]!exists[(]\"[^\"]+\"[)][)] ", "", one)), e3)
+    expect_true(f %in% ls(e3, all.names = TRUE), info = f)
+    expect_true(all(ls(e3, all.names = TRUE) %in% fns), info = f)
+    for (g in ls(e3, all.names = TRUE)) expect_identical(deparse(e3[[g]]), deparse(h[[g]]), info = g)
+  }
+  expect_true(tflspec:::.calls_helper("lab <- fmt_num(x, 1)"))
+  expect_false(tflspec:::.calls_helper("lab <- sprintf(\"%.1f\", x)"))
+})
+
+test_that("a script of its own carries every study helper it calls: the arms' order_levels() (A3)", {
+  lines <- function(x) unlist(strsplit(paste(as.character(x), collapse = "\n"), "\n", fixed = TRUE))
+  d <- tfl_fig_template("mean_se", group = "TRT01P")
+  own <- lines(tfl_fig_design_code(d, "F1", save = FALSE, name = "fig", order_arms = TRUE))
+  def <- function(f) sum(grepl(sprintf('^if [(]!exists[(]"%s"[)][)] %s <- function', f, f), own))
+  expect_true(any(grepl("order_levels(", own, fixed = TRUE)))
+  # order_levels() once, and set_levels(), which it calls
+  expect_identical(def("order_levels"), 1L)
+  expect_identical(def("set_levels"), 1L)
+  expect_identical(sum(startsWith(own, "# the study helper")), 1L)
+  expect_no_error(parse(text = own))
+  # a study's program: its setup has them, none defined
+  prog <- lines(tfl_fig_design_code(d, "F1", setup = TRUE, save = FALSE, name = "fig"))
+  expect_false(any(grepl("^if [(]!exists", prog)))
+  # it runs alone: no study helpers but its own
+  skip_if_not_installed("ggplot2")
+  e <- new.env(parent = globalenv())
+  for (n in names(adam <- tfl_example_adam())) assign(tolower(n), adam[[n]], envir = e)
+  pdf(NULL)
+  on.exit(dev.off(), add = TRUE)
+  suppressMessages(eval(parse(text = own), envir = e))
+  expect_true(is.function(e$order_levels))
+  # (ADSL's arm by its number, TRT01PN)
+  expect_identical(levels(e$adlb_sub$TRT01P), c("Drug A", "Drug B"))
+  expect_s3_class(e$fig, "ggplot")
+})
+
 test_that("a time's unit is a named constant of the setup, never a column", {
   expect_identical(tfl_time_unit_days(),
                    c(days_per_week = 7, days_per_month = 30.4375, days_per_year = 365.25))
   d <- tfl_fig_template("km_simple", data = "ADTTE", param = "TTDE", pop = "SAFFL", group = "TRT01A")
   # a study's program: the figure setup defines it (unless the study's setup has)
   prog <- strsplit(paste(tfl_fig_design_code(d, "F1", setup = TRUE), collapse = "\n"), "\n")[[1]]
-  # (AVAL from each record's unit, AVALU)
-  expect_true(any(grepl("AVALU == \"MONTHS\" ~ days_per_month", prog, fixed = TRUE)))
-  expect_true(any(grepl("    ) / days_per_month,", prog, fixed = TRUE)))
+  # (AVAL from its unit, AVALU: the study helper, one pipe step)
+  expect_true(any(grepl("  tte_time(\"months\")", prog, fixed = TRUE)))
+  expect_false(any(grepl("days_per_month", prog, fixed = TRUE)))
   expect_false(any(grepl("30.4375", prog, fixed = TRUE)))
   expect_true(any(grepl('if (!exists("days_per_month")) days_per_month <- 30.4375',
                         tfl_fig_setup_code(), fixed = TRUE)))
-  # a script of its own: defines the ones it uses (AVAL from its unit: all
-  # three; another time, in days: the one)
+  # a script of its own: defines what it uses (AVAL from its unit: the
+  # helper tte_time(), no constant; another time, in days: the constant)
   own <- strsplit(paste(tfl_fig_design_code(d, "F1"), collapse = "\n"), "\n")[[1]]
-  expect_identical(sum(grepl("^if [(]!exists", own)), 3L)
+  expect_identical(sum(grepl("^if [(]!exists", own)), 1L)
+  expect_true(any(grepl("^if [(]!exists[(]\"tte_time\"[)][)] tte_time <- function", own)))
   d$data[[which(vapply(d$data, `[[`, "", "step") == "time_unit")]]$variable <- "ADY"
   own <- strsplit(paste(tfl_fig_design_code(d, "F1"), collapse = "\n"), "\n")[[1]]
   expect_identical(sum(grepl("^if [(]!exists", own)), 1L)
+  expect_true(any(grepl("^if [(]!exists[(]\"days_per_month\"[)][)]", own)))
+  expect_false(any(grepl("tte_time", own, fixed = TRUE)))
   expect_true(any(grepl("mutate(ADY = ADY / days_per_month)", own, fixed = TRUE)))
   # the study's value wins
   e <- new.env()
@@ -324,6 +430,116 @@ test_that("plot.colours as text: split at the commas between pairs, and a call i
   expect_error(own("X = blue, Y = rgb(1,0,0)"), "hex code")
   expect_error(own("X = blue, Y"), "value = colour pairs")
   expect_identical(own(c(X = "blue")), c(X = "blue"))
+})
+
+test_that("a report's content code carries no study helper: the program's setup has them (A3)", {
+  code <- c("adlb_sub <- order_levels(adlb_sub)", "lab <- fmt_num(x, 2)")
+  expect_true(length(tflspec:::.fig_script_head(code)) > 0L)
+  expect_length(tflspec:::.fig_script_head(code, setup = TRUE), 0L)
+  old <- options(tflspec.fig_in_program = TRUE)
+  on.exit(options(old), add = TRUE)
+  expect_length(tflspec:::.fig_script_head(code), 0L)
+})
+
+test_that("a script of its own names the packages its carried helpers call", {
+  needs_line <- function(code) grep("^# also needs:", code, value = TRUE)
+  # fmt_num() calls rtfreporter::round_num(): the script needs rtfreporter
+  own <- tfl_fig_design_code(tfl_fig_template("bar_rate_ci", group = "TRT01P"), "F1")
+  expect_true(any(grepl("rtfreporter", needs_line(own))))
+  expect_true("rtfreporter" %in% attr(own, "needs"))
+  # the helpers' own base packages and the attached ones are not named
+  nl <- needs_line(own)
+  expect_length(nl, 1L)
+  expect_false(grepl("\\b(stats|utils|tools|base|ggplot2)\\b", nl))
+  # what carries fmt_num() carries its need (fmt_pvalue(), ard_value())
+  for (f in c("fmt_pvalue(p)", "ard_value(a, 1)")) {
+    expect_true("rtfreporter" %in% tflspec:::.fig_script_needs(paste0("x <- ", f)), info = f)
+  }
+  # a pkg:: in the program's own comment adds nothing: no helper is carried
+  expect_length(tflspec:::.fig_script_needs("x <- 1 # rtfreporter::round_num"), 0L)
+  expect_length(tflspec:::.fig_script_needs("order_arms(d) # rtfreporter::round_num"), 0L)
+  # a carried helper names exactly the packages its code calls with pkg::
+  # (fmt_num() calls rtfreporter::round_num() and nothing else)
+  expect_true("rtfreporter" %in% tflspec:::.fig_script_needs("fmt_num(x, 1)"))
+  # tag_ard() calls dplyr::mutate(); the cards:: of the comment above it in
+  # the helper file (cards::ard_stack()) and the ard_summary() of its error
+  # text are not calls
+  expect_true("dplyr" %in% tflspec:::.fig_script_needs("tag_ard(a, 'R', 'A')"))
+  # a helper that calls no other package needs none (order_arms() -> order_levels())
+  expect_false(any(c(tflspec:::.r_base_pkgs) %in% tflspec:::.fig_script_needs("order_arms(d)")))
+  expect_identical(tflspec:::.fig_script_needs("x <- 1", needs = "ggtext"), "ggtext")
+  # a package the script attaches is not named twice
+  expect_false("rtfreporter" %in% tflspec:::.fig_script_needs("fmt_num(x, 1)", libs = "rtfreporter"))
+  # with the study's setup, nothing changes
+  st <- tfl_fig_design_code(tfl_fig_template("bar_rate_ci", group = "TRT01P"), "F1", setup = TRUE)
+  expect_length(needs_line(st), 0L)
+  expect_false("rtfreporter" %in% attr(st, "needs"))
+  expect_identical(tflspec:::.fig_script_needs("fmt_num(x, 1)", setup = TRUE), character())
+})
+
+test_that("a script of its own names every package its own code calls as pkg::fn", {
+  # forest_or's own code calls rtfreporter::round_num(): the script needs it
+  expect_identical(tflspec:::.fig_script_needs("lab <- rtfreporter::round_num(x, 1)"),
+                   "rtfreporter")
+  # pkg:::fn is a call of the package too
+  expect_identical(tflspec:::.fig_script_needs("y <- scales:::percent(x)"), "scales")
+  # R's base packages are installed with R: not named
+  expect_identical(tflspec:::.fig_script_needs("m <- stats::median(x)"), character())
+  expect_identical(tflspec:::.fig_script_needs(c("m <- stats::median(x)",
+                                                 "g <- grid::unit(1, 'mm')",
+                                                 "v <- utils::head(x)")), character())
+  # a package the script attaches with library() is not named
+  expect_identical(tflspec:::.fig_script_needs("y <- scales::percent(x)", libs = "scales"),
+                   character())
+  # a pkg:: in a comment or a string is not a call
+  expect_length(tflspec:::.fig_script_needs("x <- 1 # scales::percent"), 0L)
+  expect_length(tflspec:::.fig_script_needs("x <- 'scales::percent(y)'"), 0L)
+  # the own code's packages, the writer's and the carried helpers' together, once
+  expect_setequal(tflspec:::.fig_script_needs(c("a <- rtfreporter::round_num(x, 1)",
+                                                "b <- fmt_num(x, 1)"), needs = "ggtext"),
+                  c("ggtext", "rtfreporter"))
+  # code in pieces that do not parse together is read piece by piece
+  expect_identical(tflspec:::.fig_script_needs(c("p <- f(", "y <- scales::percent(x)")),
+                   "scales")
+  # with the study's setup, or in a program: what the writer recorded, as is
+  expect_identical(tflspec:::.fig_script_needs("a <- rtfreporter::round_num(x, 1)", setup = TRUE),
+                   character())
+  old <- options(tflspec.fig_in_program = TRUE)
+  on.exit(options(old), add = TRUE)
+  expect_identical(tflspec:::.fig_script_needs("a <- rtfreporter::round_num(x, 1)",
+                                               needs = "ggtext"), "ggtext")
+})
+
+test_that("a template whose own code calls rtfreporter:: names it in its script", {
+  needs_line <- function(code) grep("^# also needs:", unlist(strsplit(code, "\n", fixed = TRUE)), value = TRUE)
+  for (tpl in c("forest_or", "butterfly_soc", "butterfly_pt")) {
+    own <- tfl_fig_design_code(tfl_fig_template(tpl), "F1")
+    expect_true(any(grepl("rtfreporter", needs_line(own))), info = tpl)
+    st <- tfl_fig_design_code(tfl_fig_template(tpl), "F1", setup = TRUE)
+    # the code is there, only the line is gone
+    expect_true(any(grepl("rtfreporter::round_num", st, fixed = TRUE)), info = tpl)
+    expect_length(needs_line(st), 0L)
+  }
+})
+
+test_that("the in-program option works end to end: a report's content code has no helper definitions (A3)", {
+  old0 <- options(tflspec.fig_in_program = NULL)
+  on.exit(options(old0), add = TRUE)
+  expect_null(getOption("tflspec.fig_in_program"))
+  design <- tfl_fig_template("bar_rate_ci", group = "TRT01P")
+  # outside a program the design's own script carries the helper it calls
+  own <- tfl_fig_design_code(design, "F1")
+  expect_true(any(grepl("if (!exists(\"fmt_num\")) ", own, fixed = TRUE)))
+  out <- list(id = "F1", template = "bar_rate_ci")
+  code <- tflspec:::.content_fig_code_out(out)
+  # the program's setup has the helpers: no definition lines, and the option is back
+  expect_false(any(grepl("if (!exists(", code, fixed = TRUE)))
+  expect_null(getOption("tflspec.fig_in_program"))
+  # with the option set, the needs line adds no helper package
+  old <- options(tflspec.fig_in_program = TRUE)
+  on.exit(options(old), add = TRUE)
+  expect_identical(tflspec:::.fig_script_needs("fmt_num(x, 1)"), character())
+  expect_identical(tflspec:::.fig_script_needs("fmt_num(x, 1)", needs = "ggtext"), "ggtext")
 })
 
 test_that("a figure's group has no default: a template that splits the arms stops, naming itself (PRINCIPLES 1.14)", {
