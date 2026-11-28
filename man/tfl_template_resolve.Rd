@@ -43,7 +43,7 @@ the series' map of that name, in the same way), a name whose value is
 \code{!unset} is removed, and the names the report does not write keep the
 series' values.
 
-An argument the report writes \verb{~} (YAML null) is not given: the
+An argument the report writes \code{~} (YAML null) is not given: the
 default applies, as when it is left out.  None (the argument not
 passed) is \code{!unset}; \code{NULL} itself is \verb{!r NULL}.  A list argument
 (\verb{list<...>}) the report gives is never empty, has no \code{""} or \code{NA}

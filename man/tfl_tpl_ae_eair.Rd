@@ -2,14 +2,14 @@
 % Please edit documentation in R/tpl_docs.R
 \name{tfl_tpl_ae_eair}
 \alias{tfl_tpl_ae_eair}
-\title{ae_eair: the template ae_eair}
+\title{Exposure-adjusted incidence rates by SOC and PT: the template ae_eair}
 \description{
 The table template \code{ae_eair}, layout \code{hierarchical}. Its program is one call, \code{tfl_tpl(ard, "ae_eair", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab required \tab call \tab report: common.population, required \tab output.common.population \tab the analysis set's id (SAF) \cr
+   \code{population} \tab required \tab call \tab  \tab  \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
    \code{data} \tab other \tab call \tab ADAE \tab  \tab the dataset of records \cr
    \code{where} \tab other \tab call \tab TRTEMFL == "Y" \tab  \tab the records kept (R) \cr

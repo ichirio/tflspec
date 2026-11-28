@@ -57,7 +57,7 @@ set are not read;
 \item \code{"figure_style.<key>"} (\code{"figure_style.km.theme"}: the type, then the
 key): \code{defaults.yml}'s \verb{figure_style:}, else tflspec's built-in
 figure style;
-\item \code{"output.<field>"}: the report's own field (\code{"output.common.population"}).
+\item \code{"output.<field>"}: the report's own field (\code{"output.style"}).
 }
 
 A character vector names several keys one setting can be written under
@@ -68,7 +68,7 @@ Three forms: with \code{default}, the study's value else that fallback;
 with neither \code{default} nor \code{required}, the study's value else the
 parameter is left unset (the inner function's own default applies:
 a rounding); with \code{required = TRUE}, the study's value else a stop.
-\code{NULL}: tflspec's for its name (\code{population}, \code{by}, \code{group}), else the
+\code{NULL}: tflspec's for its name (\code{by}, \code{group}), else the
 template's own default only.  \code{FALSE}: none, for a parameter that
 shares such a name and is not the study's (the listing's \code{by}, the
 variables that divide it).}
@@ -87,7 +87,10 @@ default.}
 \item{of}{For \code{type = "levels"}: whose values they are.  A name of the
 template's parameters first (the variable it names: \code{by_levels}, \code{of = "by"}), else a variable's name (\code{params}, \code{of = "PARAMCD"}).}
 
-\item{choices}{For \code{type = "choice"}: the values it may take.}
+\item{choices}{For \code{type = "choice"}: the values it may take.  \code{"populations"}
+marks the template's analysis set: the parameter that picks one of the
+study's sets (\code{data.yml}'s populations) and fills the subjects row's
+set; the report's set is that argument (\code{\link[=tfl_report_set]{tfl_report_set()}}).}
 
 \item{fields}{For \code{type = "list"}: a record's fields, \code{c("vars", "label", "width")}; a named vector's are \code{c("name", "text")}.}
 

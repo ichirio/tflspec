@@ -125,8 +125,8 @@ test_that("tfl_tpl_args(): the reference, its fallback and where the value is fr
   expect_identical(r(b, "sd_missing")$layer, "study: settings.sd_missing")
   expect_identical(r(b, "sd_missing")$effective, "NA")
   expect_identical(r(b, "count_cell")$layer, "study: plan_cells.categorical")
-  # demog's analysis set is the report's, not a parameter of the table; summary's is
-  expect_identical(nrow(r(b, "population")), 0L)
+  # demog's analysis set is its set parameter (A2-T Q2): the report's set fills it
+  expect_identical(r(b, "population")$layer, "report")
   expect_identical(r(tfl_tpl_args("ae_soc_pt", study = s, population = "SAF"), "population")$layer, "report")
   # the Rd table and the help say it too
   rd <- paste(.tpl_rd("demog"), collapse = "\n")

@@ -16,10 +16,13 @@ list of \code{tfl_output}, named by id (an unnamed one by its id), or one
 }
 \value{
 A data frame as \code{\link[=tfl_check_spec]{tfl_check_spec()}}'s (\code{output_id}, \code{part},
-\code{item}, \code{level}, \code{message}), a row a name or a code the study has not
-got: \code{level} \code{"error"}, \code{part} \code{"codelists"}, \code{item} the variable of a
-code list or the place of the R text (\verb{content: plan_labels / RACE}).
-Zero rows when every reference is the study's.  Attribute
+\code{item}, \code{level}, \code{message}) and \code{list} and \code{code}, a row a name or a
+code the study has not got, or a list of it that is empty: \code{level}
+\code{"error"}, \code{part} \code{"codelists"}, \code{item} the variable of a code list or
+the place of the R text (\code{content: plan_labels / RACE}), \code{list} the
+study's list named, \code{code} the codes picked it has not got (\code{" | "}
+between two; \code{NA} for a list).  Zero rows when every reference is the
+study's.  Attribute
 \code{unresolved}: the reports whose own code lists name a list or a code
 the study has not got (they cannot be resolved).
 }
@@ -32,8 +35,9 @@ held in memory: what a writer has before it writes.
 \code{\link[=tfl_check_spec]{tfl_check_spec()}} reads the study folder and gives the same rows; the
 xlsx import (\code{\link[=tfl_import_spec_xlsx]{tfl_import_spec_xlsx()}}) runs it before it writes, on the
 files as read and as it would write them, and stops on a row the new
-text has and the old has not.  A template's default reference is not the
-report's and is not checked.
+text has and the old has not (the same report, \code{part}, \code{item}, \code{list}
+and \code{code}; the message is not compared, as it names the study's lists).
+A template's default reference is not the report's and is not checked.
 }
 \examples{
 d <- system.file("extdata", "spec-yaml", package = "tflspec")

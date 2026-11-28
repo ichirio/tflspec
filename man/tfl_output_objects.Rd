@@ -29,7 +29,7 @@ R is \code{unknown}, but the step's final object);
 \code{where} (the stage and the position: \code{data[2]}, \code{analysis[1]},
 \code{content[3]}, \code{data.steps[2]}); \code{name_source} (\code{written}: the SPEC
 writes the name; \code{default}: the stage's default -- an analysis item's
-from its id, a stage's result; \code{spec}: an analysis item's \code{name:});
+from its id, a stage's result; \code{spec}: an analysis item's \verb{name:});
 \code{changeable} (\code{FALSE}: the report
 cannot rename it -- the template defines it, it is a stage's result,
 the program makes it, a name read from a step written as R); \code{used} (something names it or reads it; a

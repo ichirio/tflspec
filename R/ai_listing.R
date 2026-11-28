@@ -28,7 +28,8 @@
     m <- .pop_unknown_text(x, pops)
     if (!is.null(m)) add(where, m)
   }
-  if (!is.na(.out_population(o))) chk_pop("common population", .out_population(o))
+  # (the report's set as its data says it, A2-T: .report_set())
+  if (!is.na(.report_set(o))) chk_pop("population", .report_set(o))
   if (is.na(o[["label"]])) add("label", "the report has no label (its title)", "warning")
   if (length(o[["ard"]]$analyses %||% list())) {
     add("ard analyses", "a listing has no analyses: its records are its `data`")
