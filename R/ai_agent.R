@@ -380,7 +380,10 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
           } else {
             # (a table with parts -- a listing with its summary, pk_conc --
             # reads each object by name: the ARD, the records)
-            ard <- if (any(vapply(o$content, .is_part, NA))) .parts_objects(o, st, ".") else {
+            # (a table of its own content code: what it reads, as its program
+            # reads it, .own_content_data())
+            ard <- if (inherits(o$content, "tfl_r")) .own_content_data(o, st, ".") else
+              if (any(vapply(o$content, .is_part, NA))) .parts_objects(o, st, ".") else {
               a <- suppressMessages(tfl_build_ard(st, dir = ".", output_id = id, save = FALSE))
               if (!is.null(a$output_id)) a[a$output_id %in% id, , drop = FALSE] else a
             }

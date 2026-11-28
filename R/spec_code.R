@@ -1542,6 +1542,10 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 # keys), one unnamed number for a BIGN with no by; NULL when the ARD has
 # none
 .bign_n <- function(ard) {
+  # (an ARD whose BIGN rows were taken out keeps them aside, .bign_drop():
+  # a second table of a report from the same ARD reads them there)
+  kept <- attr(ard, "tfl_bign", exact = TRUE)
+  if (!any(as.character(ard$analysis_id) %in% .bign_id) && is.data.frame(kept)) ard <- kept
   if (!all(c("analysis_id", "stat_name", "stat") %in% names(ard))) return(NULL)
   b <- ard[as.character(ard$analysis_id) %in% .bign_id &
              as.character(ard$stat_name) %in% "n", , drop = FALSE]
@@ -1619,7 +1623,13 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 # The ARD without BIGN's rows
 .bign_drop <- function(ard) {
   if (!"analysis_id" %in% names(ard)) return(ard)
-  ard[!as.character(ard$analysis_id) %in% .bign_id, , drop = FALSE]
+  is_b <- as.character(ard$analysis_id) %in% .bign_id
+  if (!any(is_b)) return(ard)
+  out <- ard[!is_b, , drop = FALSE]
+  # (kept aside: a report of several tables from one ARD takes the headings'
+  # N for each, its program dropping them from the ARD once, R/page_objects.R)
+  attr(out, "tfl_bign") <- ard[is_b, , drop = FALSE]
+  out
 }
 
 # The same, as the program's lines on its ARD object `obj`: `bign`, the
@@ -1692,7 +1702,19 @@ tfl_bign_drop <- function(ard) .bign_drop(ard)
 #' list of calls, so running the written code gives the same object; it is
 #' the quick way for a preview, the app or an assistant's check.  A report
 #' whose content is its own code (`content: !r`) runs it, after the
-#' data's steps, and gives what it leaves in `content`.
+#' data's steps, and gives what it leaves in `content`: a table's code a
+#' `table_plan`, a figure's a ggplot (or a list of them), as its program's
+#' `report_content()` checks; anything else stops with an error of class
+#' `tfl_content_contract` that names the report and what it gave.
+#'
+#' A table's or listing's content that makes named objects (object cards,
+#' `- {name, from, calls}`) makes each in order, as its program writes
+#' them: an object the page places with the table's own rules, the others
+#' as their statements.  With `page: layout:` it gives every object by name
+#' (the layout's are checked: each made, each a table) -- what
+#' [tfl_report()] takes; with none, the last object, the plan.  So does a
+#' report's own code that leaves a named list, with a layout (see
+#' [tfl_read_output()], "Several objects in one report").
 #'
 #' @param output A report ([tfl_output()]), resolved.
 #' @param data The data the content starts from: the ARD (or the normalized
@@ -1702,8 +1724,16 @@ tfl_bign_drop <- function(ard) .bign_drop(ard)
 #'   content's `normalize_ard()` (as it is when the content has none), and
 #'   the steps start from `data`.  For a figure, a
 #'   named list of the objects its code reads: the datasets by their names
-#'   in lower case (`adtte`), and `ard`.
-#' @param study For a figure with an analysis set (its data's
+#'   in lower case (`adtte`), and `ard`.  For a report whose content is
+#'   its own code, a named list of the objects it reads, by name: the
+#'   report's analysis data (`ard.analysis_data`, by id), the study's
+#'   datasets it names (`adsl`), and `ard` when the report has analyses
+#'   ([tfl_run_output()] gives them so).  A sample dataset of tflspec's it
+#'   names and is not given stops (class `tfl_content_data`): never the
+#'   sample data.
+#' @param study For content objects whose `from:` names a study dataset
+#'   (`from: adae`): the study, whose `spec/data.yml` says where it is (read
+#'   from the working directory, the study folder).  For a figure with an analysis set (its data's
 #'   `population:`) that reads a dataset: the study ([tfl_read_study_spec()])
 #'   or its folder.  The set's subjects are made as the report's program
 #'   makes them (its data part, from the study's files) and every dataset
@@ -1711,7 +1741,8 @@ tfl_bign_drop <- function(ard) .bign_drop(ard)
 #'   a set the study does not define, is an error: never a figure of every
 #'   subject.
 #' @return For a table, the [rtfreporter::table_plan()]; for a figure, the
-#'   ggplot.
+#'   ggplot; for a report that places several objects (`page: layout:`),
+#'   the objects its content makes, a named list.
 #' @examples
 #' if (requireNamespace("cards", quietly = TRUE)) {
 #'   ard <- cards::ard_stack(cards::ADSL, .by = ARM,
@@ -1735,9 +1766,13 @@ tfl_content_run <- function(output, data, study = NULL) {
     .ard_stop(sprintf(paste0("tfl_content_run(): a %s's content is not run ",
                              "yet; tables, listings and figures, for now."), output$kind))
   }
+  # the content that holds objects (`name:`, `from:`, `calls:`): each made in
+  # order, as the program writes them; a layout's objects by name (all that
+  # the content made), else the last one, the plan
   if (.content_has_objects(output$content)) {
-    .ard_stop(paste0("tfl_content_run(): a content that holds objects (`name:`, `from:`, ",
-                     "`calls:`) is not run yet; run the program tfl_content_code() writes."))
+    objs <- .content_objects_run(output, data, study = study)
+    if (.has_layout(output)) return(.layout_objects_check(output, objs))
+    return(objs[[length(objs)]])
   }
   for (it in output$content) .schema_need_version(it)
   # the study's code lists the content names (`!r study$codelists$SEX`): their
@@ -1796,36 +1831,6 @@ tfl_content_run <- function(output, data, study = NULL) {
                               kind = output$kind))
   }
   .content_table_run(output$content, data, kind = output$kind)
-}
-
-# the content as the report's own code, run as the program runs it: the
-# output's object bound, the data's steps, then the code; what it leaves
-# in `content` is the content
-.content_own_run <- function(output, data) {
-  env <- new.env(parent = globalenv())
-  if (identical(output$kind, "figure")) .fig_reads_given(output, data)
-  if (identical(output$kind, "figure") && is.list(data) && !is.data.frame(data) &&
-      !is.null(names(data))) {
-    # a figure's own code reads the datasets by their names (adsl, adae),
-    # after the study's figure setup, as its program does
-    for (n in names(data)) assign(n, data[[n]], envir = env)
-    eval(parse(text = tfl_fig_setup_code()), env)
-    # (the study's helpers: the ARD's readers; any the code calls, tte_time()
-    # of a time to event, fmt_num() of a number)
-    steps <- .content_r_steps(output)
-    if (!is.null(data$ard) || .calls_helper(c(steps, as.character(output$content)))) {
-      eval(parse(text = tfl_helpers_code()), env)
-    }
-  } else {
-    assign(output$data$object %||% "ard", data, envir = env)
-  }
-  steps <- .content_r_steps(output)
-  if (length(steps)) eval(parse(text = steps), env)
-  eval(parse(text = as.character(output$content)), env)
-  if (!exists("content", envir = env, inherits = FALSE)) {
-    .ard_stop("tfl_content_run(): the report's own code leaves no `content`.")
-  }
-  get("content", envir = env, inherits = FALSE)
 }
 
 .content_table_run <- function(content, data, kind = "table") {
@@ -2072,83 +2077,6 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
   c(recs, if (length(recs)) "", bign_pre(data),
     .content_table_code(output$content, data = data, plan = plan, pipe = pipe,
                         kind = output$kind, piped = piped))
-}
-
-# ---- content objects (B-5) -------------------------------------------------
-
-# A table's or listing's content that holds objects in the map form
-# (`- {name: plan, from: ard, calls: [...]}`, a tfl_plot of form "map")
-.content_is_object <- function(it) inherits(it, "tfl_plot") && identical(it[["form"]], "map")
-
-.content_has_objects <- function(content) {
-  is.list(content) && !inherits(content, "tfl_r") && length(content) > 0L &&
-    any(vapply(content, .content_is_object, NA))
-}
-
-# The program of a content that holds objects: each object its statement, in
-# order, the last one the plan the program reads (`plan`).  The last object
-# is written as a table's content is -- the table's own rules (the study's
-# rounding, labels, BIGN, `data:`) -- from its `from:` (piped) or, without
-# one, from the report's data as today's content is; the objects above it
-# are its helpers.
-.content_objects_code <- function(output, data, plan, pipe, template, study) {
-  ct <- output$content
-  if (!all(vapply(ct, .content_is_object, NA))) {
-    .ard_stop(paste0("tfl_content_code(): a ", output$kind, "'s content holds objects ",
-                     "(`name:`, `from:`, `calls:`) or a flat list of calls, not both."))
-  }
-  last <- ct[[length(ct)]]
-  if (!identical(last$fn, plan)) {
-    .ard_stop(sprintf(paste0("tfl_content_code(): the last object of a %s's content is `%s`; the ",
-                             "program reads `%s`: name it `%s`."),
-                      output$kind, last$fn, plan, plan))
-  }
-  if (!is.null(last[["input"]]) && !is.null(output$data$object)) {
-    .ard_stop(sprintf(paste0("tfl_content_code(): `%s` takes `from: %s` and the report's `data: ",
-                             "{object: %s}` is written too: two inputs; drop one of them."),
-                      last$fn, last[["input"]], output$data$object))
-  }
-  if (!is.null(last[["input"]]) && (length(.content_r_steps(output)) || .content_rework(output))) {
-    .ard_stop(sprintf(paste0("tfl_content_code(): `%s` takes `from: %s` and the report's data steps ",
-                             "are written too: two inputs; drop one of them."),
-                      last$fn, last[["input"]]))
-  }
-  out <- character()
-  for (o in ct[-length(ct)]) out <- c(out, .content_object_lines(o, pipe), "")
-  sub <- output
-  sub$content <- last$items
-  piped <- !is.null(last[["input"]])
-  c(out, .content_code(sub, data = if (piped) last[["input"]] else data, plan = plan, pipe = pipe,
-                       template = template, study = study, piped = piped))
-}
-
-# A helper object (not the plan): `name <- from |> call1() |> call2()`, or
-# `name <- call1(...) |> call2()` without a `from:`; each call joined as its
-# function's `join` says (tfl_fn_defs(); `|>` for R), the same chain as a
-# figure's plot with `from:` (.fig_pipe_chain())
-.content_object_lines <- function(o, pipe = NULL) {
-  op <- .ard_pipe_op(pipe)
-  input <- o[["input"]]
-  is_r <- vapply(o$items, function(it) identical(it$fn, ".r"), NA)
-  calls <- .content_calls(o$items[!is_r])
-  k <- 0L
-  txt <- character()
-  joins <- character()
-  for (i in seq_along(o$items)) {
-    it <- o$items[[i]]
-    if (is_r[i]) {
-      txt <- c(txt, as.character(it$args$code))
-      joins <- c(joins, "|>")
-      next
-    }
-    k <- k + 1L
-    head <- is.null(input) && !length(txt)
-    txt <- c(txt, .spec_call_code(.content_print(calls[[k]]), if (head) 0L else 2L,
-                                  lead = if (head) nchar(o$fn) + 4L else 2L))
-    joins <- c(joins, .fig_fn_join(.schema_fn_name(it$fn)))
-  }
-  lines <- .fig_pipe_chain(o$fn, input, txt, joins)
-  unlist(strsplit(sub(" \\|>$", paste0(" ", op), lines), "\n", fixed = TRUE))
 }
 
 # A listing's data part for its content code: tfl_listing_code(part =

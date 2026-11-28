@@ -908,32 +908,40 @@ content:
 
 The listing sheets of Appendix A.4 say the same.
 
-### 11.1 Several objects in one report (`contents:`)
+### 11.1 Several objects in one report (`content:` objects, `page: layout:`)
 
-One report (one RTF) can hold several tables and figures on its pages.
-Write `contents:` (a map of named objects) in place of `content:`, and say
-each object's place in `page: layout:`:
+One report is one template (one RTF). Its content can make several named
+objects, and its `page: layout:` places them, by name, in order:
 
 ```yaml
-contents:
-  demog: [{table_plan: {cols: TRT01A}}, ...]      # reads the report's ard:
-  km:                                              # its own data (a figure)
-    data: {steps: [{step: read, dataset: ADTTE}, {step: param, value: OS}]}
-    template: {name: km_survival, args: {by: TRT01A}}
+content:
+  - {name: demog, from: ard, calls: [{table_plan: {cols: TRT01A}}, ...]}
+  - {name: severe, from: adae, calls: [!r 'subset(AESEV == "SEVERE")']}   # a helper
+  - {name: ae_list, from: severe, calls: [{plan_listing: {cols: [...]}}]}
 page:
-  titles: {"1": {center: Table 14.1.9}}            # above the first object
+  titles: {"1": {center: Table 14.3.1}}            # above the first object
   footnotes: {"1": {left: ...}}                    # below the last
   layout:
     - {object: demog}
-    - {object: km, page_break: false, space_before: 1, height_in: 3,
-       titles: {"1": {left: Overall survival}}}
+    - {object: ae_list, page_break: false, space_before: 1,
+       titles: {"1": {left: Severe adverse events}}}
 ```
 
-A layout row takes `object`, `page_break` (each object after the first
-goes on under the one before unless `true`), `space_before`, `first_rows`,
-`cont_title` (a table's), `titles`, `footnotes`, `width_in`, `height_in`
-(a figure's). Tables share the report's ARD: keep each table to its own
-analyses with `plan_filter: {where: !r 'analysis_id %in% c("AGE", "SEX")'}`.
+A layout row takes `object`, `page_break`, `space_before`, `first_rows`
+(with `page_break: false`), `cont_title`, `titles`, `footnotes`.
+`page_break` not written is a new page (as rtfreporter's); write
+`page_break: false` for an object that goes on under the one before. One
+object may keep the fixed name `plan`; with two or more, name each. No
+`layout:`: the last object is placed. `from:` names `ard`, an object made
+above, or a study dataset. The study's defaults go into each placed table
+(not into helpers). A content code (`content: !r`) can leave a named list
+in `content` instead. Stops: a name the content does not make, a name
+placed twice, an object that is not a table (a table_plan, a data frame,
+rtftable pages), `first_rows` on a row that starts a page. A table made and
+not placed gives a note in `tfl_check_build()`. Tables and listings only
+for now: a figure placed stops ("phase 2"). The old `contents:` key stops
+with the new form. Tables share the report's ARD: keep each table to its
+own analyses with `plan_filter: {where: !r 'analysis_id %in% c("AGE", "SEX")'}`.
 `tfl_run_output("<id>")` writes the RTF. Not yet in the workbooks (sheets).
 
 ---
@@ -996,7 +1004,7 @@ back): rename the value or choose another separator.
 
 **Spec files (YAML, one file a report):** `tfl_output` `tfl_item` `tfl_plot` `tfl_call` `tfl_r`
 `tfl_unset` `tfl_read_output` `tfl_write_output` `tfl_read_study_spec`
-`tfl_read_outputs` `tfl_resolve_output` `tfl_page_origins` `tfl_report_set` `tfl_set_report_set` `tfl_run_output` `tfl_output_contents` `tfl_output_extends` `tfl_study_value` `tfl_styles` `tfl_output_objects` `tfl_output_object_uses` `tfl_output_rename` `tfl_default_name` `tfl_output_name_check` `tfl_code_refs` `tfl_write_study_part` `tfl_item_code`
+`tfl_read_outputs` `tfl_resolve_output` `tfl_page_origins` `tfl_report_set` `tfl_set_report_set` `tfl_run_output` `tfl_output_extends` `tfl_study_value` `tfl_styles` `tfl_output_objects` `tfl_output_object_uses` `tfl_output_rename` `tfl_default_name` `tfl_output_name_check` `tfl_code_refs` `tfl_write_study_part` `tfl_item_code`
 `tfl_item_written` `tfl_item_own` `tfl_convert_sheets_to_yaml`
 `tfl_yaml_from_sheets` `tfl_sheets_from_yaml` `tfl_sheets_from_spec` `tfl_report_codelists` `tfl_write_spec_xlsx`
 `tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_check_spec` `tfl_check_build` `tfl_check_reports` `tfl_check_fix_text` `tfl_check_study_refs` `tfl_study_refs` `tfl_data_code` `tfl_schema_help` `tfl_ai_decisions_read` `tfl_ai_decisions_write` `tfl_ai_confirm` `tfl_content_code` `tfl_content_run` `tfl_bign_values` `tfl_bign_drop`

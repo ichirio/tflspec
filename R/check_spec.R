@@ -461,14 +461,26 @@ tfl_check_build <- function(study, output_id = NULL) {
   on.exit(options(old_r), add = TRUE)
   rows <- list(.check_rows())
   for (id in names(outs)) {
+    built <- NULL
     e <- tryCatch({
-      .output_build_content(outs[[id]], study)
+      built <- .output_build_content(outs[[id]], study)
       NULL
     }, error = function(e) e)
     if (!is.null(e)) {
       rows[[length(rows) + 1L]] <- .check_rows(
         output_id = id, part = "build", item = "", level = "error",
         message = paste("the report cannot be made:", .ai_one_line(conditionMessage(e))))
+      next
+    }
+    # a table, listing or figure made, not placed (`page: layout:`) and not
+    # used by another object: a note, not a stop (canon 11-28); a helper
+    # object (a data frame) says nothing
+    for (nm in .layout_unplaced(outs[[id]], built)) {
+      rows[[length(rows) + 1L]] <- .check_rows(
+        output_id = id, part = "build", item = "page.layout", level = "note",
+        message = sprintf(paste0("the content makes %s (%s), which the page layout does not place ",
+                                 "and no other object reads: place it (`- {object: %s}`) or ",
+                                 "leave it out."), nm, .what(built[[nm]]), nm))
     }
   }
   do.call(rbind, rows)

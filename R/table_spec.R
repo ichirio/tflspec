@@ -2377,7 +2377,10 @@ tfl_read_report_spec <- function(path, output_id = NULL) {
 #' @param output_id The report, when `spec` is a path or still defines
 #'   several.
 #' @param content The report's content: an [rtfreporter::table_plan()] or `rtftable`
-#'   pages for a table or listing, figures for a `type = figure` report.
+#'   pages for a table or listing, figures for a `type = figure` report.  A
+#'   YAML report that places several objects (`page: layout:`): its objects
+#'   by name ([tfl_content_run()]), each the layout places checked before
+#'   anything is rendered (class `tfl_page_layout`).
 #' @param study For a YAML report: the study ([tfl_read_study_spec()]), for
 #'   its program (the TOC's `program`, else `settings: program`, in
 #'   `settings: program_dir`).  A report's titles and footnotes print where
@@ -2406,13 +2409,15 @@ tfl_report <- function(spec, output_id = NULL, content, study = NULL) {
   }
   # the rtfreporter calls the definition stands for (R/spec_code.R): run
   # here, written out by tfl_report_code() -- one list, so the two agree
-  # (a report of several objects: each object its own name, tfl_output_contents())
+  # (a report that places several objects, `page: layout:`: its content the
+  # objects by name, tfl_content_run(); each placed one checked before
+  # anything is rendered, R/page_objects.R)
   cname <- "content"
-  if (inherits(spec, "tfl_output") && !is.null(spec$contents)) {
-    if (!is.list(content) || inherits(content, c("table_plan", "rtftable")) || is.null(names(content))) {
-      .ard_stop(sprintf("tfl_report(): %s has several objects: its `content` is their list by name (tfl_output_contents()).",
-                        spec$id))
-    }
+  if (inherits(spec, "tfl_output") && !isTRUE(attr(spec, "resolved")) && !is.null(study)) {
+    spec <- tfl_resolve_output(spec, study)
+  }
+  if (inherits(spec, "tfl_output") && .has_layout(spec)) {
+    content <- .layout_objects_check(spec, content)
     cname <- stats::setNames(paste0(".object_", names(content)), names(content))
   }
   steps <- if (inherits(spec, "tfl_output")) {

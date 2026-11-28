@@ -154,21 +154,12 @@
   out
 }
 
-# The report's parts each object of it has: a one-object report is its
-# own; one with `contents:` each object (its name in `object`)
+# The report's parts: one report, one template (canon 11-28) -- its
+# content's objects are its content's rows
 .obj_parts <- function(output) {
-  if (is.null(output$contents)) {
-    return(list(list(object = NA_character_, kind = output$kind %||% "table",
-                     content = output$content, steps = output$data$steps %||% list(),
-                     data_object = output$data$object)))
-  }
-  objs <- tryCatch(.output_objects(output), error = function(e) NULL)
-  if (is.null(objs)) return(list())
-  lapply(names(objs), function(nm) {
-    o <- objs[[nm]]
-    list(object = nm, kind = o$kind %||% "table", content = o$content,
-         steps = output$contents[[nm]]$data$steps %||% list(), data_object = o$data$object)
-  })
+  list(list(object = NA_character_, kind = output$kind %||% "table",
+            content = output$content, steps = output$data$steps %||% list(),
+            data_object = output$data$object))
 }
 
 # A figure's data steps that name what they make: the step, its name, the
@@ -338,7 +329,7 @@
   # ---- content: a figure's data steps and named plots, the result ----
   parts <- .obj_parts(output)
   for (p in parts) {
-    sw <- if (is.na(p$object)) "data.steps" else sprintf("contents.%s.data.steps", p$object)
+    sw <- "data.steps"
     named <- .obj_fig_steps(p$steps)
     at_i <- vapply(named, function(s) s$i, 0L)
     for (i in seq_along(p$steps)) {
@@ -352,9 +343,8 @@
       use(.obj_chr(s[["in"]]), "data", sprintf("%s[%d]", sw, i), s$step %||% NA_character_, "in", "ref",
           if (!is.na(j)) length(rows) else length(rows) + 1L)
     }
-    cw <- if (is.na(p$object)) "content" else sprintf("contents.%s.content", p$object)
-    use(.obj_chr(p$data_object), "content", if (is.na(p$object)) "data" else
-      sprintf("contents.%s.data", p$object), "data", "object", "ref", length(rows) + 1L)
+    cw <- "content"
+    use(.obj_chr(p$data_object), "content", "data", "data", "object", "ref", length(rows) + 1L)
     ct <- p$content
     if (inherits(ct, "tfl_r")) {
       txt <- paste(as.character(ct), collapse = "\n")
@@ -396,14 +386,16 @@
         it <- ct[[i]]
         w <- sprintf("%s[%d]", cw, i)
         # a table's or listing's content object (`{name, from, calls}`): its
-        # name, made by its calls, and its `from:`; the last one is the plan
-        # the program reads, which the report cannot rename.  (A short
+        # name, made by its calls, and its `from:`; with no `page: layout:`
+        # the last one is the plan the program reads, which the report
+        # cannot rename (a layout places objects by their own names, canon
+        # 11-28: each can be renamed, the layout following).  (A short
         # `- name: [items]` there is read as a figure's plot today, B-6.)
         if (is_plot[i] && !identical(p$kind, "figure")) {
           if (identical(it[["form"]], "map")) {
             lastfn <- if (length(it$items)) it$items[[length(it$items)]]$fn else NULL
             row(p$object, it$fn, it$fn, "content", .obj_returns_kind(lastfn, "content", "object"), w,
-                i == length(ct), .obj_chr(it[["input"]]))
+                i == length(ct) && !.has_layout(output), .obj_chr(it[["input"]]))
             use(.obj_chr(it[["input"]]), "content", w, it$fn, "from", "ref")
           }
           next
@@ -558,7 +550,7 @@
 #'   a registry template's rows are expanded with the study's analysis
 #'   sets.
 #' @return A data frame, one row an object: `output_id`; `object` (the
-#'   object of a report with `contents:`, else `NA`); `name` (`adsl_sub`,
+#'   object of a report part: `NA`, one report is one template); `name` (`adsl_sub`,
 #'   `km`, an ARD item's default name, `ard`); `id` (an analysis item's id,
 #'   the ARS analysis id; else `NA`); `stage` (`data`, `analysis`,
 #'   `content`, `page`); `kind` (`data`, `object`, `ard`, `model`, `value`,
@@ -827,15 +819,15 @@ tfl_output_rename <- function(output, old, new, study = NULL) {
     output$content <- rn_items(output$content)
   } else if (.content_has_objects(output$content)) {
     output$content <- rn_items(output$content, tbl = TRUE)
+    # (the layout places the objects by name: it follows)
+    if (.has_layout(output)) {
+      output$page$layout <- lapply(output$page$layout, function(r) {
+        if (is.list(r) && is.character(r$object)) r$object <- swap(r$object)
+        r
+      })
+    }
   }
   if (is.list(output$data) && !is.null(output$data$object)) output$data$object <- swap(output$data$object)
-  for (nm in names(output$contents)) {
-    co <- output$contents[[nm]]
-    if (!is.null(co$data$steps)) co$data$steps <- rn_steps(co$data$steps)
-    if (!is.null(co$data$object)) co$data$object <- swap(co$data$object)
-    co$content <- rn_items(co$content)
-    output$contents[[nm]] <- co
-  }
   # a template's argument that names a data
   if (is.list(output$template) && length(x$uses) &&
       any(x$uses$stage == "template" & x$uses$name == old)) {
@@ -868,9 +860,6 @@ tfl_output_rename <- function(output, old, new, study = NULL) {
   }
   if (r$stage == "analysis") output$ard[[key]] <- new else output[[key]] <- new
   if (is.list(output$data) && identical(output$data$object, old)) output$data$object <- new
-  for (nm in names(output$contents)) {
-    if (identical(output$contents[[nm]]$data$object, old)) output$contents[[nm]]$data$object <- new
-  }
   ru <- x$uses[x$uses$how == "r" & x$uses$name == old, setdiff(names(x$uses), "pos"), drop = FALSE]
   rownames(ru) <- NULL
   structure(output, r_uses = ru)
@@ -1085,7 +1074,7 @@ tfl_output_name_check <- function(output, study = NULL) {
       "df", "ard", vapply(io, function(z) as.character(z$out %||% NA_character_), ""),
       tryCatch(tfl_fig_data_name(list(data = p$steps)), error = function(e) NULL))))
     u <- x$uses[x$uses$how == "ref" & x$uses$stage == "content", , drop = FALSE]
-    pre <- if (is.na(p$object)) "^content\\[" else paste0("^contents\\.", p$object, "\\.content\\[")
+    pre <- "^content\\["
     u <- u[grepl(pre, u$where), , drop = FALSE]
     for (i in seq_len(nrow(u))) {
       fn <- sub("^.*\\$", "", u$item[i])
