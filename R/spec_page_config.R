@@ -172,10 +172,203 @@
     ob <- .page_own_band(o)
     first <- if (inherits(ob$first, "tfl_unset")) list() else .merge_map(first, ob$first)
     last <- if (inherits(ob$last, "tfl_unset")) list() else .merge_map(last, ob$last)
-    lines <- c(unname(.page_sorted(first)), unname(.page_sorted(ob$body)), unname(.page_sorted(last)))
+    body <- Filter(Negate(is.null), lapply(.page_sorted(ob$body), .page_line_drop))
+    lines <- c(unname(.page_sorted(first)), unname(body), unname(.page_sorted(last)))
     if (length(lines)) out[[b]] <- stats::setNames(lines, seq_along(lines))
   }
   out
+}
+
+# ---- the layers of a report's page ---------------------------------------------
+#
+# The page step layers as the other steps do (PRINCIPLES 2, 11-28): the
+# study's page settings (the set `style:` chooses) < the template's `page:`
+# (the defaults, the report's shape) < the report's `page:` < force.  One
+# layer over another changes only what it writes: a call's arguments
+# (rtf_page, rtf_style ...) and `tokens` by name, a band by its blocks and
+# its lines by number, a line by its cells.  An unnamed sequence of lines
+# replaces the body of that band (or that block) on purpose.  `~` says
+# nothing; `!unset` stays a marker over the layers, so it can still drop a
+# cell, a line, a block or a band of a layer below: .page_resolve(), the
+# final step over the page settings, takes the markers out.
+
+# A page layer over the page below it (template < report, report < force)
+.page_over <- function(base, over) {
+  if (inherits(over, "tfl_unset")) return(over)
+  if (is.null(over) || !is.list(over) || !length(over)) return(base)
+  if (is.null(base) || inherits(base, "tfl_unset") || !is.list(base) || !length(base)) return(over)
+  base <- .page_style_norm(base)
+  over <- .page_style_norm(over)
+  for (k in names(over)) {
+    v <- over[[k]]
+    if (is.null(v)) next
+    base[k] <- list(if (k %in% .page_bands) .page_band_over(base[[k]], v) else .page_keep_over(base[[k]], v))
+  }
+  base
+}
+
+# A map over a map by name, recursively, its `!unset` kept as a marker (not
+# a removed key: the layer below the base may still have the key); a
+# value that is not a map replaces
+.page_keep_over <- function(base, over) {
+  if (is.null(over)) return(base)
+  if (!.is_map(over) || !.is_map(base)) return(over)
+  for (k in names(over)) {
+    v <- over[[k]]
+    if (is.null(v)) next
+    base[k] <- list(.page_keep_over(base[[k]], v))
+  }
+  base
+}
+
+# A band (or one block of a band) over the one below: its blocks `first`
+# and `last` one by one, its lines by number, a line by its cells; an
+# unnamed sequence replaces the numbered lines (the blocks stay)
+.page_band_over <- function(base, over, blocks = TRUE) {
+  if (inherits(over, "tfl_unset") || !is.list(over)) return(over)
+  if (is.null(base) || inherits(base, "tfl_unset") || !is.list(base)) return(over)
+  base <- .page_lines_norm(base)
+  if (is.null(names(over))) {
+    keep <- if (blocks) base[intersect(names(base), .page_blocks)] else list()
+    return(c(keep, .page_lines_norm(over)))
+  }
+  for (k in names(over)) {
+    v <- over[[k]]
+    if (is.null(v)) next
+    base[k] <- list(if (blocks && k %in% .page_blocks) {
+      .page_band_over(base[[k]], v, blocks = FALSE)
+    } else .page_keep_over(base[[k]], v))
+  }
+  base
+}
+
+# A body line with its `!unset` cells taken out; a line left with no cell
+# is no line
+.page_line_drop <- function(line) {
+  if (!.is_map(line)) return(line)
+  line <- .drop_unset(line)
+  if (length(line)) line
+}
+
+# The page layers of a report as read: `style` (the page settings of its
+# set), `template` (the template's `page:`, its "{name}" filled; NULL for a
+# report on no template, or on a registry template, which writes no page)
+# and `report` (its own `page:`)
+.page_layers_of <- function(output, study) {
+  ts <- .tpl_spec_of(output)
+  tpl <- if (!is.null(ts) && grepl("/", ts$name, fixed = TRUE)) {
+    # (its code lists' references to the study's read first, as
+    # tfl_resolve_output() reads them before the template)
+    output$codelists <- .codelists_refs(output$codelists, study$codelists, output$id,
+                                        "tfl_page_origins()")
+    attr(tfl_template_resolve(.output_to_list(output), study = .tr_study_of(study)), "page_template")
+  }
+  list(style = .report_style(output, study)$set$page %||% list(), template = tpl,
+       report = output$page)
+}
+
+#' Where each field of a report's page comes from
+#'
+#' `tfl_page_origins()` resolves a report's page as [tfl_resolve_output()]
+#' does -- the study's page settings (the set `style:` chooses) < the
+#' template's `page:` < the report's `page:` -- and says, for each resolved
+#' field, which layer gave it: a call's argument (`rtf_page`
+#' `margin_left_in`), a token, or a cell of a band's line.  A band's lines
+#' are numbered as the resolved page numbers them: the page settings'
+#' `first` lines, the body (the template's and the report's lines), the
+#' page settings' `last` lines.
+#'
+#' @param output A `tfl_output` as read from its file (not resolved).
+#' @param study A `tfl_study_spec`.
+#' @return A data frame, one row a resolved field: `key` (a band, a
+#'   setting function or `tokens`), `block` (`"first"`, `"body"` or
+#'   `"last"` for a band's line, else `NA`), `line` (the line's number in
+#'   the resolved band, else `NA`), `name` (the cell, `left` / `center` /
+#'   `right`, or the argument or token name), `value` (as text) and
+#'   `origin` (`"style"`, `"template"`, `"report"`, or `"study"` for a token
+#'   of study.yml).
+#' @examples
+#' d <- system.file("extdata", "spec-yaml", package = "tflspec")
+#' s <- tfl_read_study_spec(d)
+#' tfl_page_origins(tfl_read_outputs(d)[["T-14-1-1"]], s)
+#' @export
+tfl_page_origins <- function(output, study) {
+  if (!inherits(output, "tfl_output")) stop("tfl_page_origins(): `output` is a tfl_output.", call. = FALSE)
+  if (!inherits(study, "tfl_study_spec")) stop("tfl_page_origins(): `study` is a tfl_study_spec.", call. = FALSE)
+  if (isTRUE(attr(output, "resolved"))) {
+    stop("tfl_page_origins(): give the report as read (tfl_read_output(), not resolved).", call. = FALSE)
+  }
+  lay <- .page_layers_of(output, study)
+  tokens <- .study_tokens(study)
+  run <- function(f) {
+    .page_resolve(f(lay$style, "style"), f(tokens, "study", map = TRUE),
+                  .page_over(f(lay$template, "template"), f(lay$report, "report")))
+  }
+  val <- run(function(x, lab, map = FALSE) x)
+  org <- run(function(x, lab, map = FALSE) .page_tag(x, lab, map = map))
+  blk <- run(function(x, lab, map = FALSE) .page_tag(x, NA_character_, blocks = TRUE, map = map))
+  rows <- list()
+  walk <- function(v, o, b, path) {
+    if (.is_map(v)) {
+      for (k in names(v)) walk(v[[k]], o[[k]], b[[k]], c(path, k))
+      return(invisible())
+    }
+    band <- path[1L] %in% .page_bands
+    rows[[length(rows) + 1L]] <<- data.frame(
+      key = path[1L], block = if (band) as.character(b) else NA_character_,
+      line = if (band) as.integer(path[2L]) else NA_integer_,
+      name = if (band) path[3L] %||% NA_character_ else paste(path[-1L], collapse = "."),
+      value = .page_value_text(v), origin = as.character(o), stringsAsFactors = FALSE)
+  }
+  for (k in names(val)) walk(val[[k]], org[[k]], blk[[k]], k)
+  if (!length(rows)) {
+    return(data.frame(key = character(), block = character(), line = integer(), name = character(),
+                      value = character(), origin = character(), stringsAsFactors = FALSE))
+  }
+  out <- do.call(rbind, rows)
+  rownames(out) <- NULL
+  out
+}
+
+# A page layer with each value replaced by `lab` (its maps, blocks and lines
+# kept, its `~` and `!unset` as they are), so the same resolve that puts
+# the values in place puts the labels there.  `blocks = TRUE`: a band's
+# value is labelled by its block (`first`, `last`, the lines by number
+# `body`).  `map = TRUE`: the layer is one map (the tokens).
+.page_tag <- function(page, lab, blocks = FALSE, map = FALSE) {
+  leaf <- function(v, l = lab) if (is.null(v) || inherits(v, "tfl_unset")) v else l
+  tag_map <- function(x, l = lab) {
+    if (!.is_map(x)) return(leaf(x, l))
+    x[] <- lapply(x, tag_map, l = l)
+    x
+  }
+  tag_lines <- function(x, l) {
+    if (!is.list(x) || inherits(x, "tfl_unset")) return(leaf(x, l))
+    x[] <- lapply(x, tag_map, l = l)
+    x
+  }
+  tag_band <- function(x) {
+    if (!is.list(x) || inherits(x, "tfl_unset")) return(leaf(x))
+    nm <- names(x) %||% rep("", length(x))
+    x[] <- lapply(seq_along(x), function(i) {
+      is_blk <- nm[i] %in% .page_blocks
+      l <- if (blocks) if (is_blk) nm[i] else "body" else lab
+      if (is_blk) tag_lines(x[[i]], l) else tag_map(x[[i]], l)
+    })
+    x
+  }
+  if (is.null(page) || inherits(page, "tfl_unset") || !is.list(page)) return(page)
+  if (map) return(tag_map(page))
+  for (k in names(page)) {
+    page[k] <- list(if (k %in% .page_bands) tag_band(page[[k]]) else tag_map(page[[k]]))
+  }
+  page
+}
+
+# A page value as text (a number, a word, a call)
+.page_value_text <- function(v) {
+  if (is.atomic(v) && !is.object(v)) return(paste(as.character(v), collapse = ", "))
+  paste(deparse(v), collapse = " ")
 }
 
 # A style set's page as a resolved page: its blocks in order, with no
