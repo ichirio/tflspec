@@ -58,7 +58,7 @@ test_that("the figure's answer: its report file in the design's form, the same d
   o <- tfl_read_output(file.path(d, fr$file))
   expect_identical(o$kind, "figure")
   expect_identical(o$label, "Kaplan-Meier Plot of Overall Survival")
-  # (the analysis set on its data, not `common:`)
+  # (its set on its data, A2-T: never `common:`)
   expect_identical(o$data$population, "ITT")
   expect_null(o$common$population)
   expect_identical(o$data$source, "code")

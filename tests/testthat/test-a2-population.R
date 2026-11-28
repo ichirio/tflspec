@@ -368,14 +368,15 @@ test_that("a figure's set written in one place comes back in that place (Codex 4
   expect_null(back[["F-3"]]$common[["population"]])
 })
 
-test_that("a template report keeps its set through the sheets, where its template reads it (Codex 4)", {
+test_that("a template report keeps its set through the sheets, as its template's set argument (Codex 4, A2-T)", {
   l <- tfl_output("L-9", "listing", label = "Records", common = list(population = "SAF"),
                   template = list(name = "tflspec_v1/tflspec_listing", args = list(from = "ADVS")))
   r <- a2_back(a2_dir(list(l)))
   expect_identical(r$sheets$planner$population[match("L-9", r$sheets$planner$output_id)], "SAF")
   back <- r$back[["L-9"]]
   expect_identical(back$template$name, "tflspec_v1/tflspec_listing")
-  expect_identical(back$common[["population"]], "SAF")
+  expect_identical(back$template$args[["population"]], "SAF")
+  expect_null(back$common[["population"]])
 })
 
 test_that("the sheets take the data's set over the TOC's line; the check says the TOC's (Codex 3A)", {
@@ -599,7 +600,7 @@ test_that("a TOC set the report does not name: the sheets keep the data as it is
   expect_null(back[["L-1"]]$data[["population"]])
   expect_null(back[["L-1"]]$common[["population"]])
   # the figure's set and its TOC line kept
-  expect_identical(.out_population_or_data(back[["F-4"]]), "SAF")
+  expect_identical(.report_set(back[["F-4"]]), "SAF")
   toc_back <- yaml::read_yaml(file.path(to, "spec", "toc.yml"))$outputs
   pop_of <- function(id) Filter(function(e) identical(e$id, id), toc_back)[[1L]]$population
   expect_identical(pop_of("F-4"), "SAF")
@@ -610,8 +611,12 @@ test_that("a TOC set the report does not name: the sheets keep the data as it is
   p <- .check_set_rows(l, "L-1", st)
   expect_identical(c(p$item, p$level), c("toc$population", "warning"))
   expect_match(p$message, "the TOC says analysis set SAF and the report's data names none", fixed = TRUE)
-  # a table's set is still `common`'s: its TOC line goes there as before
-  expect_identical(.planner_set(list(kind = "table", data = list(source = "ard")), "SAF"), "SAF")
+  # a table whose data names no set: the TOC's line is not added either (A2-T
+  # M2: it would go on its rows and count another set's subjects); one its
+  # rows carry is kept
+  expect_true(is.na(.planner_set(list(kind = "table", data = list(source = "ard")), "SAF")))
+  expect_identical(.planner_set(list(kind = "table", ard = list(analysis_data = list(
+    list(id = "adsl_saf", from = "ADSL", population = "SAF")))), "SAF"), "SAF")
 })
 
 test_that("tfl_check_spec() says a report's set rows: the TOC's line, an unknown set, a set beside an analysis data (S8)", {

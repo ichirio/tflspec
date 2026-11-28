@@ -2,7 +2,7 @@
 % Please edit documentation in R/tpl_docs.R
 \name{tfl_tpl_km_table}
 \alias{tfl_tpl_km_table}
-\title{km_table: the template km_table}
+\title{Kaplan-Meier estimates (median and event-free probability by time): the template km_table}
 \description{
 The table template \code{km_table}, layout \code{km_table}. Its program is one call, \code{tfl_tpl(ard, "km_table", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }

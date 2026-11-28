@@ -128,18 +128,22 @@ pull request.
 
 ## 3. The `ai` trap
 
+A new template starts at `ai = FALSE` and is switched on (`ai = TRUE`) after
+its review; only then does the agent see it. The AI requests that answer with
+templates (`tfl_ai_prepare(templates = TRUE)`) list only the templates whose
+`ai` is `TRUE`, in `ai/templates.md` and in the likely ones.
+
 A variant takes `ai` from the template it comes from when you leave it
 `NULL`. `ae_soc_pt` has `ai = TRUE`, so `ae_ser_soc_pt` and `ae_disc_soc_pt`
-are listed in the AI requests that answer with templates
-(`tfl_ai_prepare(templates = TRUE)`). If you do not set `ai`, your variant
-joins that list without anyone choosing it, and `tests/testthat/test-tfl-tpl.R`
-fails: it compares `sort(t$name[t$ai])` with a fixed list of names.
+are listed too. If you do not set `ai`, your variant joins that list without
+anyone choosing it, and `tests/testthat/test-tfl-tpl.R` fails: it compares
+`sort(t$name[t$ai])` with a fixed list of names.
 
 You have two ways out:
 
-- Set `ai = FALSE` in the definition. Nothing else changes. **A first
-  contribution should do this.** What the AI is offered is the maintainers'
-  decision, and they can switch it on in a later change.
+- Set `ai = FALSE` in the definition. The agent does not see the template.
+  **A first contribution should do this.** What the AI is offered is the
+  maintainers' decision, and they can switch it on in a later change.
 - Set `ai = TRUE` (or leave it inherited) and add your name to the sorted
   list in `test-tfl-tpl.R`, in the test "tfl_tpl(): the same plan as the
   template's own function; its errors". Do this only if the maintainers
@@ -173,7 +177,8 @@ You have two ways out:
 5. **Its tests.** Model `tests/testthat/test-tpl-lab-abnormal.R`: the
    expanded items, the table against a key, the call equal to the report's
    items, the RTF.
-6. **Set `ai`.** `.tfl_template()` defaults to `ai = FALSE`. Leave it.
+6. **Set `ai`.** `.tfl_template()` defaults to `ai = FALSE`: the agent does not
+   see the template until its review switches `ai` on. Leave it.
 
 ## 5. Computing the key
 

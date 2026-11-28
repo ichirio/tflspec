@@ -175,6 +175,8 @@ reference:
       - tfl_read_study_spec
       - tfl_read_output
       - tfl_resolve_output
+      - tfl_report_set
+      - tfl_set_report_set
       - tfl_styles
       - tfl_run_output
       - tfl_output_contents
@@ -193,6 +195,8 @@ reference:
       - tfl_check_build
       - tfl_check_reports
       - tfl_check_fix_text
+      - tfl_study_refs
+      - tfl_check_study_refs
       - tfl_data_code
       - tfl_schema_help
       - tfl_content_code

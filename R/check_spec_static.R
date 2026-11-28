@@ -15,6 +15,10 @@
 #    study population's condition (`flag: SAFFL` on the records): an error
 #    (.step_keeps_population(), the AI's check's rule too), the analysis set
 #    is the report's, its data's `population:`.
+#  - (A2-T Q3) a report whose data rows carry several sets and that has no
+#    BIGN analysis (the heading's set is BIGN's row's): a warning.
+#  - (A2-T Q6) a template report's own row over the template's subjects row
+#    naming another set than its template argument: an error.
 #  - (A2, with the study: .check_set_rows()) a set that is none of
 #    data.yml's, a data that names an analysis data and a set or dataset
 #    beside it: errors; a TOC line naming another set than the report's
@@ -80,7 +84,19 @@
 .check_population_rows <- function(o, id, pops) {
   rows <- list(.check_rows())
   add <- function(...) rows[[length(rows) + 1L]] <<- .check_rows(output_id = id, ...)
-  if (!identical(o$kind, "figure") && !identical(o$kind, "listing")) return(rows[[1L]])
+  # (A2-T Q3) several sets on the rows that make subjects: the heading's is
+  # that of the row BIGN reads; no BIGN, none
+  # (the rows as the ARD program reads them: .data_population()'s)
+  as_read <- lapply(.data_rows(o), .entry_pop_inject, .rows_set(o))
+  sets <- .rows_sets(as_read)
+  if (length(sets) > 1L && is.na(.rows_carried_set(as_read, o[["ard"]][["analyses"]])) &&
+      is.na(.na_scalar(o$common$population_label))) {
+    add(part = "data", item = "data$population", level = "warning", message = sprintf(paste0(
+      "the %s's data rows carry several analysis sets (%s) and no BIGN analysis says which is the ",
+      "report's: the page heading names none; add the BIGN analysis of the report's set, or write ",
+      "the heading's set (`common: population_label`)"), o$kind %||% "report", paste(sets, collapse = ", ")))
+  }
+  if (!identical(o$kind, "figure") && !identical(o$kind, "listing")) return(do.call(rbind, rows))
   d <- if (is.list(o$data)) o$data else list()
   # (Q3) subjects' records -- a dataset, an analysis data, the report's code
   # -- and no analysis set on the data (canon 11-15): on the data, or on
@@ -99,9 +115,9 @@
   # (Q4) a step that keeps the rows of a population by the records' own
   # columns (the subjects outside it, and a record's own arm, stay): an
   # error, .step_keeps_population()'s rule -- the report's set (by the one
-  # reader: its data's, `common:`, its entries') when it has one, else
-  # every population of data.yml
-  rp <- .out_population_or_data(o)
+  # reader, .report_set(): its data's, `common:` last until it goes) when it
+  # has one, else every population of data.yml
+  rp <- .report_set(o)
   look <- if (is.na(rp)) pops else Filter(function(p) {
     is.list(p) && identical(.na_scalar(unlist(p$id)), rp)
   }, pops)
@@ -133,14 +149,14 @@
     add(part = "data", item = "data$data", level = "error",
         message = paste("the", o$kind %||% "report", .data_both_text(both)))
   } else if (is.na(.na_scalar(unlist(map[["data"]])))) {
-    m <- .pop_unknown_text(.report_set(o), pops)
+    m <- .pop_unknown_text(.report_set(o, study$dir), pops)
     if (!is.null(m)) add(part = "data", item = "data$population", level = "error",
                          message = paste("the report's analysis set:", m))
   }
-  # the page's set (.out_population_or_data()) is one its rows carry, as the
+  # the page's set (.report_set()) is one its rows carry, as the
   # ARD program reads them (a subjects row with none takes the report's,
   # .rows_set()): else the page names a set its numbers are not of
-  op <- .out_population_or_data(o)
+  op <- .report_set(o, study$dir)
   rs <- .rows_set(o)
   data_rows <- lapply(.data_rows(o), function(a) {
     .entry_pop_inject(a, rs, .pop_from(study$data$populations %||% list(), rs))
@@ -164,12 +180,13 @@
       "sheets and the page take it); write %s in the TOC, or the set the report means on its data"),
       tp, op, op))
   }
-  # a TOC line of a report whose set lives on its data (.planner_set()) and
-  # which names none: the sheets keep the data as it is, not the TOC's line
+  # a TOC line of a report whose data names no set (.planner_set(), any
+  # kind): the sheets keep the data as it is, not the TOC's line
   if (!is.na(tp) && is.na(op) && is.na(.planner_set(o, tp, tryCatch(.tpl_spec_of(o), error = function(e) NULL)))) {
     add(part = "data", item = "toc$population", level = "warning", message = sprintf(paste0(
       "the TOC says analysis set %s and the report's data names none: the report reads all subjects, and ",
-      "the sheets do not keep the TOC's line; write `population: %s` on its data, or remove it from the TOC"),
+      "the sheets do not keep the TOC's line; write `population: %s` on its data (a table's: on its ",
+      "subjects row, tfl_set_report_set()), or remove it from the TOC"),
       tp, tp))
   }
   do.call(rbind, rows)
@@ -207,23 +224,14 @@
   } else {
     list()
   }
-  # the analysis set is the report's (the one reader: its data's
-  # `population:`, `common:` until it goes, its subjects rows'): a template
-  # argument that differs from it is a conflict -- two sets for one report,
-  # the header's and the build's (the one equal to it, or with no report
-  # set, is used and not said)
-  if ("population" %in% names(args) && is.list(tpl) && is.character(tpl$name) &&
-      !is.null(tryCatch(.tpl_get(tpl$name, "tfl_check_spec()")$params$population,
-                        error = function(e) NULL))) {
-    rp <- .out_population_or_data(o)
-    if (!is.na(rp) && !identical(as.character(args$population)[1L], rp)) {
-      add(part = "template", item = "population", level = "warning", message = sprintf(paste0(
-        "template argument `population` (%s) differs from the report's analysis set (%s: its data's ",
-        "`population:`, else `common: population`): write the set once, on the report's data, and ",
-        "remove the template's"),
-        args$population[1L], rp))
-    }
-  }
+  # (A2-T Q6) the template's set argument and the report's own row over the
+  # template's subjects row: one set, written once
+  # (a template that cannot be read: said, a note, not passed over)
+  tw <- tryCatch(.tpl_set_twice_rows(o, id, study$dir), error = function(e) .check_rows(
+    output_id = id, part = "data", item = "data$population", level = "note",
+    message = paste("the set of the report's own rows against its template's argument is not checked:",
+                    conditionMessage(e))))
+  if (!is.null(tw) && nrow(tw)) rows[[length(rows) + 1L]] <- tw
   tx <- .check_texts(list(content = o$content, template = args, layers = o$layers))
   # {p:.1%}: a precision then `%`, no type between them
   bad <- if (!is.null(tx)) tx[grepl("[{][^{}:]+:[^{}]*[.][0-9]+%[}]", tx$text), , drop = FALSE]
