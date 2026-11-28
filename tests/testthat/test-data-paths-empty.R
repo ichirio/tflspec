@@ -63,7 +63,7 @@ test_that("a where with no is.na() gets no hint about blanks", {
   expect_false(grepl("transport file", conditionMessage(e), fixed = TRUE))
 })
 
-test_that("an analysis of an ard: analyses report on no records: named too", {
+test_that("an analysis of an analysis: analyses report on no records: named too", {
   skip_on_cran()
   skip_if_not_installed("haven")
   skip_if_not_installed("cards")

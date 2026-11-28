@@ -190,7 +190,7 @@ shell is a sketch: axes, groups, a legend, sometimes a number-at-risk
 table below.
 
 A table's report file is then: its `common:` (`population`, `treatment`), its
-`ard:` (§4; a table always reads the study ARD, so it writes no `data:` map; its
+`analysis:` (§4; a table always reads the study ARD, so it writes no `data:` map; its
 datasets, when it needs more than a dataset and a condition, are the flat
 `data:` list), its `content:` -- the items below,
 in this order -- and its `page:`.
@@ -357,7 +357,7 @@ prints a 0 row by default; `plan_levels: {.drop_empty: [RACE]}` drops it.
 
 ---
 
-## 4. Shells → the ARD: `spec/data.yml` and each report's `ard:`
+## 4. Shells → the ARD: `spec/data.yml` and each report's `analysis:`
 
 The content says how to print; the ARD says what to compute.  Every
 number a shell shows must have an analysis that computes it.
@@ -387,7 +387,7 @@ number a shell shows must have an analysis that computes it.
 
 ### 4.2 One analysis per block of rows
 
-A report's analyses are its file's `ard: {analyses: [...]}`.  Each
+A report's analyses are its file's `analysis: {analyses: [...]}`.  Each
 variable of `plan_labels` needs an analysis that produces its statistics
 for the right `by`.  Group the shell's blocks by method:
 
@@ -413,7 +413,7 @@ analysis may cover several variables of the same method (`[AGE,
 WEIGHTBL]`); it may not mix methods.
 
 ```yaml
-ard:
+analysis:
   analyses:
     - id: AGE
       label: Age (years)
@@ -449,7 +449,7 @@ The standard AE table -- each SOC with its PTs, subjects counted once
 per SOC and once per PT, `n (%)` of the analysis set:
 
 ```yaml
-ard:
+analysis:
   analyses:
     - id: AE
       method: hierarchical
@@ -580,7 +580,7 @@ shells:
   that table's ARD: `tfl_ard_number` (`analysis_id`, `variable`, `level`,
   `stat`, `group`, `label: "Median: {value}"`); name the table in the
   assumptions.  A figure's own analyses (a forest plot's models) are its
-  `ard:`, as a table's.
+  `analysis:`, as a table's.
 - Write `y` as `'y'` (quoted): YAML reads a bare y as true.
 
 The figure's titles and footnotes are its `page:`, as a table's.
@@ -613,7 +613,7 @@ Run through it; the review will.
    the shell is an entry of `plan_labels`, in the shell's order; every
    statistic row of the shell has a template that an analysis can fill.
 4. Every variable the content prints has an analysis in the same report's
-   `ard:` that analyses it (or groups by it); every analysis is printed by
+   `analysis:` that analyses it (or groups by it); every analysis is printed by
    its report.
 5. Every `n (%)` has a denominator you can name.
 6. Every `population` an analysis names is a population `id` of
@@ -687,13 +687,13 @@ Run through it; the review will.
     value: SAFFL == "Y"
     question: Is the safety set flagged by SAFFL?
   - output_id: T-1
-    where: ard.analyses
+    where: analysis.analyses
     item: arm
     assumption: "Treatment variable for the columns: TRT01A (actual), because the analysis set is the safety set (SAF)"
     value: TRT01A
     question: Actual (TRT01A) or planned (TRT01P) treatment?
   - output_id: T-2
-    where: ard.analyses
+    where: analysis.analyses
     item: AE denominator
     assumption: "AE denominator: the analysis set of each column (SAF), because the shell does not say"
     value: SAF
@@ -780,7 +780,7 @@ data codes (the table shows the labels); the codes are an assumption.
 → `plan_stub: {name: row_label, before: true}`, `plan_blanks: {where:
 between_groups}`.
 → `plan_col_header`: the four cells of §3.4, `Parameter` on line 2.
-→ `ard.analyses`: `N` `total_n` ADSL SAF (the Total column's N); `AGE`
+→ `analysis.analyses`: `N` `total_n` ADSL SAF (the Total column's N); `AGE`
 `continuous` ADSL SAF `by: [TRT01A]` `overall: true` `variables: [AGE]`;
 `CAT` `categorical` ADSL SAF `by: [TRT01A]` `overall: true` `variables:
 [SEX, AGEGR1]`.
@@ -813,7 +813,7 @@ with at least one TEAE}`.
 → `plan_col_header`: line 1 `row_label` "System Organ Class", `.values`
 `each` `{col}`; line 2 `row_label` "Preferred Term", `.values` `each`
 `(N={n})`.
-→ `ard.analyses`: `AE` `hierarchical` ADAE SAF `where: !r TRTEMFL == "Y"`
+→ `analysis.analyses`: `AE` `hierarchical` ADAE SAF `where: !r TRTEMFL == "Y"`
 `by: [TRT01A]` `variables: [AEBODSYS, AEDECOD]` `args: !r over_variables
 = TRUE`.
 Assumptions: the denominator is the analysis set per column; TEAE is

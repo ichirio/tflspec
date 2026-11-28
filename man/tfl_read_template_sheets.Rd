@@ -11,8 +11,10 @@ tfl_read_template_sheets(path)
 }
 \value{
 A list of reports, by id: each \code{id}, \code{kind}, \code{label},
-\code{population}, \code{extends} and \code{template} (\code{name}, \code{args}), as a report
-file (\code{\link[=tfl_write_template_yaml]{tfl_write_template_yaml()}}) holds it.
+\code{extends} and \code{template} (\code{name}, \code{args}), as a report file
+(\code{\link[=tfl_write_template_yaml]{tfl_write_template_yaml()}}) holds it.  The \code{population} column is
+the argument of the template's set parameter (the one that fills its
+subjects row's set; \code{\link[=tfl_report_set]{tfl_report_set()}}).
 }
 \description{
 A workbook of two sheets, many reports at once:

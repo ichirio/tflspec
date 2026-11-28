@@ -171,21 +171,43 @@ test_that("continuous_statistics, categorical_statistics, stack and where are go
   }
 })
 
-test_that("population is not a template parameter: the report's `population:` drives the analysis set", {
-  for (n in c("demog", "stf_t02_demog")) {
-    expect_true(tflspec:::.tpl_registry[[n]]$params$population$hidden)
-    expect_false("population" %in% names(tflspec:::.tpl_shown(tflspec:::.tpl_registry[[n]]$params)))
-    expect_false("population" %in% tfl_templates()$params[tfl_templates()$name == n])
+test_that("population is a shown data-step parameter, the template's set (A2-T Q2)", {
+  for (n in c("demog", "stf_t02_demog", "summary", "disposition")) {
+    p <- tflspec:::.tpl_get(n, "test")$params$population
+    expect_false(isTRUE(p$hidden), info = n)
+    expect_identical(p$step, "data", info = n)
+    expect_identical(p$choices, "populations", info = n)
+    expect_identical(tflspec:::.tpl_set_param(n), "population", info = n)
   }
+  # (the template holds the set's default, canon 11-15 (1): DM's SAF;
+  # disposition's set has no one id: required)
+  for (n in c("demog", "stf_t02_demog", "summary")) {
+    p <- tflspec:::.tpl_get(n, "test")$params$population
+    expect_identical(p$default, "SAF", info = n)
+    expect_identical(p$tier, "key", info = n)
+    expect_false(p$required, info = n)
+  }
+  p <- tflspec:::.tpl_get("disposition", "test")$params$population
+  expect_null(p$default)
+  expect_true(p$required)
   s <- b1_study()
+  # (the set from `common: population` until it goes: the argument filled, not a study default)
   o <- tfl_output("T-9", "table", common = list(population = "SAF"),
                   template = list(name = "demog", args = b1_args()[-1L]))
   r <- tfl_resolve_output(o, s)
   expect_identical(r$ard$analysis_data[[1L]]$population, "SAF")
-  expect_true("population" %in% attr(r, "template")$study)
-  # written in the template SPEC it stops, naming the report's field
-  o2 <- tfl_output("T-9", "table", common = list(population = "SAF"), template = list(name = "demog", args = b1_args()))
-  expect_error(tfl_resolve_output(o2, s), "the report's `common: population`")
+  expect_false("population" %in% attr(r, "template")$study)
+  # written as the argument: the same report
+  o2 <- tfl_output("T-9", "table", template = list(name = "demog", args = b1_args()))
+  r2 <- tfl_resolve_output(o2, s)
+  expect_identical(r2$ard, r$ard)
+  expect_identical(r2$content, r$content)
+  # no set anywhere: the template's own, SAF
+  o4 <- tfl_output("T-9", "table", template = list(name = "demog", args = b1_args()[-1L]))
+  expect_identical(tfl_resolve_output(o4, s)$ard$analysis_data[[1L]]$population, "SAF")
+  # the argument and another `common: population`: written twice
+  o3 <- tfl_output("T-9", "table", common = list(population = "ITT"), template = list(name = "demog", args = b1_args()))
+  expect_error(tfl_resolve_output(o3, s), "the set is written twice")
 })
 
 test_that("formats: the default is the active statistics catalog's (a company catalog's digits)", {
@@ -343,7 +365,8 @@ test_that("the study standard reaches demog through its references; other verbs 
   r <- tfl_resolve_output(o, s)
   tp <- attr(r, "template")
   # the fixture's defaults.yml: the heading lines, the stub, the blank rows, the rule, the cell
-  expect_setequal(tp$study, c("population", "count_cell", "col_header", "stub_name", "stub_before", "blanks",
+  # (the analysis set is no study reference: the report's, A2-T)
+  expect_setequal(tp$study, c("count_cell", "col_header", "stub_name", "stub_before", "blanks",
                               "blanks_first", "blanks_last", "blanks_counted", "border_header"))
   expect_identical(tp$args$blanks, "between_groups")
   expect_identical(vapply(tp$args$count_cell, as.character, ""), c("n == 0 ~ '0'", "{n:.0f} ({p:.1f%})"))
@@ -361,7 +384,7 @@ test_that("the study standard reaches demog through its references; other verbs 
   r2 <- tfl_resolve_output(o, s2)
   expect_setequal(vapply(r2$content, `[[`, "", "fn"),
                   c("normalize_ard", "table_plan", "plan_cells", "plan_labels", "plan_paginate_rows"))
-  expect_length(attr(r2, "template")$study, 1L)
+  expect_length(attr(r2, "template")$study, 0L)
   # the report's value wins over the study's reference
   o3 <- b1_out("demog", c(b1_args()[-1L], list(blanks = FALSE)))
   b <- Filter(function(it) it$fn == "plan_blanks", tfl_resolve_output(o3, s)$content)[[1L]]$args
@@ -397,7 +420,8 @@ test_that("tfl_tpl_args(): where each demog value comes from", {
   b <- tfl_tpl_args("demog")
   # (max_rows refers to the study (canon 1.29): with none, its fallback)
   expect_identical(b$layer[b$param == "max_rows"], "fallback")
-  expect_false("population" %in% b$param)
+  # (the analysis set: a shown parameter, the report's, A2-T Q2)
+  expect_true("population" %in% b$param)
 })
 
 test_that("style: demog follows settings.style, stf_t02_demog is fixed; a built-in name is always the built-in", {
@@ -442,17 +466,17 @@ test_that("style: demog follows settings.style, stf_t02_demog is fixed; a built-
   expect_identical(r$page$rtf_page$orientation, "landscape")
 })
 
-test_that("the two parts: ard: and content:; flat args: still reads; every parameter in one part", {
+test_that("the two parts: analysis: and content:; flat args: still reads; every parameter in one part", {
   mk <- function(t) tfl_output("T-1", "table", common = list(population = "SAF"), template = t)
-  a <- tflspec:::.tpl_spec_of(mk(list(name = "demog", ard = list(by = "TRT01A", continuous = "AGE"),
+  a <- tflspec:::.tpl_spec_of(mk(list(name = "demog", analysis = list(by = "TRT01A", continuous = "AGE"),
                                       content = list(total_label = "All", widths = "auto"))))
   expect_setequal(names(a$args), c("by", "continuous", "total_label", "widths"))
   flat <- tflspec:::.tpl_spec_of(mk(list(name = "demog", args = list(by = "TRT01A", total_label = "All"))))
   expect_identical(flat$args$total_label, "All")
-  expect_error(tflspec:::.tpl_spec_of(mk(list(name = "demog", ard = list(widths = "auto")))),
-               "'widths' acts in `content:`, not `ard:`")
+  expect_error(tflspec:::.tpl_spec_of(mk(list(name = "demog", analysis = list(widths = "auto")))),
+               "'widths' acts in `content:`, not `analysis:`")
   expect_error(tflspec:::.tpl_spec_of(mk(list(name = "stf_t02_demog", content = list(total = TRUE)))),
-               "'total' acts in `ard:`, not `content:`")
+               "'total' acts in `analysis:`, not `content:`")
   for (n in c("demog", "stf_t02_demog")) {
     p <- names(tfl_template_params(n))
     parts <- tflspec:::.tpl_registry[[n]]$parts
@@ -462,12 +486,12 @@ test_that("the two parts: ard: and content:; flat args: still reads; every param
   # a two-part report runs end to end and reads back
   d <- b1_folder(na = FALSE)
   o <- tfl_output("T-9", "table", common = list(population = "SAF"), extends = "defaults", template = list(
-    name = "demog", ard = list(by = "TRT01A", continuous = "AGE", categorical = c("SEX", "RACE"), total = TRUE),
+    name = "demog", analysis = list(by = "TRT01A", continuous = "AGE", categorical = c("SEX", "RACE"), total = TRUE),
     content = list(total_label = "All subjects", blanks = FALSE, widths = c(40, 20, 20, 20))),
     codelists = list(TRT01A = list(list(value = "Drug X", label = "Drug X"),
                                    list(value = "Control", label = "Control"))))
   r <- b1_run(d, o)
-  expect_identical(names(tfl_read_outputs(d)[["T-9"]]$template), c("name", "ard", "content"))
+  expect_identical(names(tfl_read_outputs(d)[["T-9"]]$template), c("name", "analysis", "content"))
   expect_true("All subjects" %in% names(r$table))
   # A = B: the program and the build give the same table
   code <- tfl_content_code(r$ro, pipe = "|>")
@@ -495,7 +519,7 @@ test_that("stf_t02_demog: the FDA look as its own defaults; it runs", {
   # the study's look does not reach it: its look is fixed
   s <- b1_study()
   tp <- attr(tfl_resolve_output(b1_out("stf_t02_demog", b1_fda()[-1L]), s), "template")
-  expect_setequal(tp$study, "population")
+  expect_length(tp$study, 0L)
   r <- b1_run(d, b1_out("stf_t02_demog", b1_fda()[-1L],
                         codelists = list(TRT01A = list(list(value = "Drug X", label = "Drug X"),
                                                        list(value = "Control", label = "Control")))))

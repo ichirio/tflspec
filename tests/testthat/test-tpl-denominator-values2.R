@@ -77,7 +77,7 @@ test_that("summary family: a number, numbers by arm, an analysis data's id", {
     y <- d2_expand(tpl, denominator = "adsl_sub")
     expect_identical(d2_an(y, cat)$denominator, "adsl_sub", info = tpl)
     expect_identical(d2_ids(y), d2_ids(d2_expand(tpl)), info = tpl)
-    # (a report's own analysis data: its `ard:` makes it)
+    # (a report's own analysis data: its `analysis:` makes it)
     z <- d2_expand(tpl, denominator = "adsl_part")
     expect_identical(d2_ids(z), d2_ids(d2_expand(tpl)), info = tpl)
     expect_identical(d2_an(z, cat)$denominator, "adsl_part", info = tpl)
@@ -363,7 +363,7 @@ test_that("an analysis data the report does not have stops, naming what it has",
     expect_error(tfl_resolve_output(o, st),
                  sprintf(paste0("T-DV: template %s: denominator \"adsl_zzz\" is not an analysis data ",
                                 "of the report (%s). The template makes adsl_sub and, for another ",
-                                "analysis set, adsl_<id> (the object adsl_den); the report's own come from its `ard:`."),
+                                "analysis set, adsl_<id> (the object adsl_den); the report's own come from its `analysis:`."),
                          tpl, have[[tpl]]), fixed = TRUE, info = tpl)
     # (a number, an analysis set of the study, the records' subjects: no complaint)
     for (v in list(5, "adsl_itt", if (tpl == "ae_overview") "data")) {

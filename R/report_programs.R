@@ -390,11 +390,12 @@
 }
 
 # The report's analysis set (A2 R1): its spec's, by the one reader
-# (.out_population_or_data(): its data's `population`, its `common:` until
-# `common` goes, else its subjects entries'); NA when it has none
+# (.report_set(): its data's `population` -- a data map's, the set its
+# subjects rows carry, a template's set argument --, `common:` last until
+# `common` goes); NA when it has none
 .rp_population <- function(ctx) {
   r <- ctx$report
-  .out_population_or_data(r$spec_output %||% r$output %||% list())
+  .report_set(r$spec_output %||% r$output %||% list())
 }
 
 # A figure's subjects (A2 R1, R4): the subjects of the report's analysis set,

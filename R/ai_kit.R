@@ -345,7 +345,7 @@
   a <- .ai_example_assumptions()
   where <- c(populations = "spec/data.yml populations", datasets = "spec/data.yml datasets",
              variables = "content", codelists = "codelists", tables = "content",
-             analyses = "ard.analyses", listing_cols = "content", listings = "data",
+             analyses = "analysis.analyses", listing_cols = "content", listings = "data",
              data = "data")
   rows <- lapply(seq_len(nrow(a)), function(i) {
     r <- list(output_id = if (nzchar(a$output_id[i])) a$output_id[i],
@@ -434,7 +434,7 @@
         "common:                        # what several steps of the report read",
         "  population: SAF",
         "extends: [defaults]            # the study's defaults under this report",
-        "ard:                           # the report's part of the study ARD",
+        "analysis:                      # the report's analyses: its part of the study ARD",
         "  analyses:",
         "    - id: AGE",
         "      method: continuous       # continuous | categorical | hierarchical | ...",
@@ -505,7 +505,7 @@
     blk("spec/_assumptions.yml",
         "# one item for everything decided without being told",
         "- output_id: T-1",
-        "  where: ard.analyses",
+        "  where: analysis.analyses",
         "  item: arm",
         "  assumption: \"Treatment variable for the columns: TRT01A (actual), because the analysis set is the safety set (SAF)\"",
         "  value: TRT01A",

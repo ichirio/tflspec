@@ -352,7 +352,7 @@ test_that("a figure's data map: a key filled with no value (nothing, `!unset`) i
   expect_identical(o$data$source, "code")
   expect_identical(vapply(o$data$steps, `[[`, "", "step"), c("read", "param"))
   expect_identical(o$data$steps[[2L]]$value, "OS")
-  expect_true(is.na(.out_population_or_data(o)))
+  expect_true(is.na(.report_set(o)))
   # the argument given `!unset`: no set either
   rep$template$data <- list(population = tfl_unset())
   o <- tfl_template_resolve(rep, study = tr_study())
@@ -363,5 +363,5 @@ test_that("a figure's data map: a key filled with no value (nothing, `!unset`) i
   o <- tfl_template_resolve(rep, study = tr_study())
   expect_identical(o$data$population, "SAF")
   expect_false("note" %in% names(o$data))
-  expect_identical(.out_population_or_data(o), "SAF")
+  expect_identical(.report_set(o), "SAF")
 })

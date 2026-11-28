@@ -57,3 +57,9 @@ test_that("the branches by name are the listed ones, no more and no fewer", {
   expect(length(fewer) == 0L, paste0("branches removed -- take them off name-branches-allowed.csv: ",
                                      paste(fewer, collapse = "; ")))
 })
+
+test_that("the analysis set is no study reference by name (A2-T): the template's set parameter is", {
+  expect_false("population" %in% names(.tpl_study_by_name))
+  # (which parameter it is comes from the template: choices "populations")
+  expect_identical(.tpl_set_param("demog"), "population")
+})

@@ -13,7 +13,7 @@
 #  kind for the fields of R of the ARD and of data.yml (.r_ard_kinds).
 # ============================================================================
 
-# The fields of R of a report's `ard:` (analysis_data, analyses) and of
+# The fields of R of a report's `analysis:` (analysis_data, analyses) and of
 # data.yml (populations, records, datasets): no schema (they are a sheet's
 # columns), a fixed kind each.  `where` one condition; `derive` pieces
 # `name = expression` between `|`; `then` and `code` R code, several
@@ -34,22 +34,25 @@
 }
 
 # One report, one row per `!r` that does not read: `part` the report's key
-# it is under, `item` its place.  A key the walker cannot go through (a
-# form the reader refuses) is left to the reader's row.
+# it is under (its `analysis:`'s rows part "ard", the ARD stage's), `item`
+# its place, by the file's keys (`analysis$analyses$<id>$where`).  A key the
+# walker cannot go through (a form the reader refuses) is left to the
+# reader's row.
 .r_walk_report <- function(o, id) {
   x <- unclass(o)
   lv <- list()
   for (k in names(x)) {
-    # (a table's `data:` list of definitions not yet read into `ard:`: by
+    # (a table's `data:` list of definitions not yet read into `analysis:`: by
     # the same fields of R)
     defs <- identical(k, "data") && is.list(x[[k]]) && is.null(names(x[[k]])) &&
       all(vapply(x[[k]], is.list, NA))
     lv <- c(lv, tryCatch(
-      if (identical(k, "ard")) .r_ard_leaves(x[[k]], k) else if (defs) .r_entry_leaves(x[[k]], k)
+      if (identical(k, "ard")) .r_ard_leaves(x[[k]], "analysis") else if (defs) .r_entry_leaves(x[[k]], k)
       else .r_leaves(x[k], character(), NULL),
       error = function(e) list()))
   }
-  .r_rows(lv, id, function(at) at[1L], function(at) paste(at, collapse = "$"))
+  .r_rows(lv, id, function(at) if (identical(at[1L], "analysis")) "ard" else at[1L],
+          function(at) paste(at, collapse = "$"))
 }
 
 # The study's own `!r` values, `output_id` NA and `part` "study": study.yml
@@ -140,7 +143,7 @@
   out
 }
 
-# A report's `ard:`: its analysis data and analyses by their fields of R
+# A report's `analysis:`: its analysis data and analyses by their fields of R
 # (.r_entry_leaves()), any other key as the rest of the report
 .r_ard_leaves <- function(a, at) {
   if (!is.list(a) || inherits(a, "tfl_r")) return(.r_leaves(a, at, NULL))
@@ -214,7 +217,7 @@
 .r_ard_problems_left <- function(p, wk) {
   if (!is.data.frame(p) || !nrow(p) || !nrow(wk)) return(p)
   at <- ifelse(p$sheet %in% c("analysis_data", "analyses"),
-               paste("ard", p$sheet, p$row, p$field, sep = "$"),
+               paste("analysis", p$sheet, p$row, p$field, sep = "$"),
                paste0("data.yml: ", p$sheet, "$", p$row, "$", p$field))
   said <- at %in% wk$item[wk$level == "error"] & p$field %in% names(.r_ard_kinds) &
     grepl("does not read as R|is not a call|the condition is not R", p$message)

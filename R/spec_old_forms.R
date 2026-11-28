@@ -52,6 +52,12 @@
              "spec/series/<series>/series.yml `values:` (tfl_series_values_set()), after ",
              "tfl_copy_templates()"),
       "778"),
+    c("ard_key", "a report's `ard:`",
+      paste0("write `analysis:` (the same map): ", .ard_why), "587, 312"),
+    c("template_ard", "`template: {ard:}`",
+      paste0("write `template: {analysis:}` (the same map): ", .ard_why), "587, 312"),
+    c("extends_ard", "`extends: {ard:}`",
+      paste0("write `extends: {analysis:}` (the same map): ", .ard_why), "587, 312"),
     c("report_settings", "a report's `settings:` (its `file:`)",
       paste0("a report's RTF file and program are its TOC entry's (spec/toc.yml `file:`, ",
              "`program:`), else the study's (study.yml `settings: file`, `program`)"),
@@ -65,6 +71,19 @@
   m <- do.call(rbind, rows)
   data.frame(id = m[, 1L], was = m[, 2L], instead = m[, 3L], canon = m[, 4L],
              stringsAsFactors = FALSE)
+}
+
+# Why the old key `ard:` went (the report's map, a template SPEC's part, a
+# step of `extends`)
+.ard_why <- "a report's second step is its analysis step, which makes its ARD (canon 11-15, `ard:` -> `analysis:`)"
+
+# The old form `id` as one line, "<was> is no longer read: <instead>." (a
+# check's problem text, where nothing stops)
+.old_form_text <- function(id) {
+  f <- .old_forms()
+  r <- f[f$id == id, , drop = FALSE]
+  if (!nrow(r)) stop(".old_form_text(): no old form ", id, call. = FALSE)
+  sprintf("%s is no longer read: %s.", r$was, r$instead)
 }
 
 # Stop on the old form `id` found at `where` (a file, a report: "tfl_read_
@@ -145,7 +164,7 @@
 # `population` is an old form (.common_old_line); `last_step` is not read
 # yet and stops.  The reader, the writer and .output_fields read it.
 .output_keys <- data.frame(
-  key = c("id", "kind", "label", "common", "extends", "style", "template", "ard", "data",
+  key = c("id", "kind", "label", "common", "extends", "style", "template", "analysis", "data",
           "codelists", "content", "contents", "plot", "page", "note", "ai",
           "figure", "plots", "compose", "ggplot2_version", "layers"),
   kinds = c(rep("", 16L), rep("figure", 5L)),
@@ -167,6 +186,7 @@
                    .output_keys$kinds[.output_keys$key == k], kind), call. = FALSE)
     }
     if (k %in% "settings") .old_form_stop("report_settings", who)
+    if (k %in% "ard") .old_form_stop("ard_key", who)
     if (k %in% "last_step") {
       stop(sprintf(paste0("%s: `last_step:` is not read yet: a report is made to its last ",
                           "step; remove the key."), who), call. = FALSE)

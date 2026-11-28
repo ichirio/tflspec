@@ -13,7 +13,7 @@ dr_table <- c(
   "data:",
   "  - id: adsl_sub", "    from: ADSL", "    where: !r SEX == \"F\"",
   "  - id: adae_sub", "    from: ADAE", "    subjects_in: adsl_sub", "    where: !r TRTEMFL == \"Y\"",
-  "ard:", "  analyses:",
+  "analysis:", "  analyses:",
   "    - {id: AE, method: hierarchical, data: adae_sub, by: [TRT01A], variables: [AEBODSYS, AEDECOD]}",
   "content:", "  - table_plan: {cols: TRT01A, rows: {group1: AEBODSYS}}")
 
@@ -31,7 +31,7 @@ test_that("common: is read as the report's common part, a report may have none",
   expect_identical(tfl_output("T-3", "table", common = list(population = NA))$common, list())
 })
 
-test_that("the data: list is the report's definitions, written back as data:, not under ard:", {
+test_that("the data: list is the report's definitions, written back as data:, not under analysis:", {
   f <- dr_write(dr_table)
   on.exit(unlink(f))
   o <- tfl_read_output(f)
@@ -52,15 +52,15 @@ test_that("the data: list is the report's definitions, written back as data:, no
 
 test_that("each old place stops with a line saying where it went", {
   old_pop <- dr_write(c("id: T-1", "kind: table", "population: SAF", "content: []"))
-  expect_error(tfl_read_output(old_pop), "`population:` -> `common: population`", fixed = TRUE)
-  old_ard <- dr_write(c("id: T-1", "kind: table", "ard:", "  analysis_data:", "    - {id: adsl_sub, from: ADSL}",
+  expect_error(tfl_read_output(old_pop), "`population:` -> the report's data", fixed = TRUE)
+  old_ard <- dr_write(c("id: T-1", "kind: table", "analysis:", "  analysis_data:", "    - {id: adsl_sub, from: ADSL}",
                         "  analyses: []", "content: []"))
-  expect_error(tfl_read_output(old_ard), "`ard: analysis_data:` moved to `data:`", fixed = TRUE)
+  expect_error(tfl_read_output(old_ard), "`analysis: analysis_data:` moved to `data:`", fixed = TRUE)
   old_map <- dr_write(c("id: T-1", "kind: table", "data: {source: ard}", "content: []"))
   expect_error(tfl_read_output(old_map), "a table reads its ARD", fixed = TRUE)
-  old_lst <- dr_write(c("id: L-1", "kind: listing", "ard:", "  analysis_data:", "    - {id: a, from: ADAE}", "content: []"))
+  old_lst <- dr_write(c("id: L-1", "kind: listing", "analysis:", "  analysis_data:", "    - {id: a, from: ADAE}", "content: []"))
   expect_error(tfl_read_output(old_lst), "moved to `data:`", fixed = TRUE)
-  expect_error(tfl_output("T-1", "table", population = "SAF"), "`population` -> `common: population`", fixed = TRUE)
+  expect_error(tfl_output("T-1", "table", population = "SAF"), "`population:` -> the report's data", fixed = TRUE)
   unlink(c(old_pop, old_ard, old_map, old_lst))
 })
 
@@ -86,7 +86,7 @@ test_that("a listing with a data: list prints its last definition; written back 
   txt <- readLines(out)
   expect_false(any(grepl("source: dataset", txt)))
   expect_identical(tfl_read_output(out)$data, o$data)
-  # a map that says more than that has no place beside the list: `ard: data:`
+  # a map that says more than that has no place beside the list: `analysis: data:`
   o$data$where <- "AESER == 'Y'"
   tfl_write_output(o, out)
   txt2 <- readLines(out)
@@ -153,7 +153,7 @@ test_that("the subjects definition of the population's own dataset (not only ADS
   expect_null(tflspec:::.entry_pop_strip(c(a, population = "SAFX"), "SAFX", c("ADSL", "ADSLX"))$population)
 })
 
-test_that("YAML -> sheets -> YAML keeps common: and data: of the sample report", {
+test_that("YAML -> sheets -> YAML keeps data: of the sample report, its set moved onto its rows (A2-T)", {
   skip_if_not_installed("openxlsx")
   d0 <- system.file("extdata", "spec-yaml", package = "tflspec")
   d <- tempfile("dr-rt-")
@@ -176,26 +176,29 @@ test_that("YAML -> sheets -> YAML keeps common: and data: of the sample report",
   expect_identical(rep_row$treatment, "TRT01A")
   tfl_yaml_from_sheets(sh, to, overwrite = TRUE)
   back <- tfl_read_output(file.path(to, "spec", "outputs", "T-14-1-1.yml"))
-  expect_identical(back$common, o0$common)
-  expect_identical(back$ard$analysis_data, o0$ard$analysis_data)
+  # (the set on the subjects row, as the sheet has it; `common:` keeps the rest)
+  expect_identical(back$common, o0$common[setdiff(names(o0$common), "population")])
+  expect_identical(back$ard$analysis_data[[1L]]$population, "SAF")
+  expect_identical(tfl_report_set(back), "SAF")
   txt <- readLines(file.path(to, "spec", "outputs", "T-14-1-1.yml"))
   expect_true(any(grepl("^common:", txt)))
   expect_true(any(grepl("^data:", txt)))
   expect_false(any(grepl("analysis_data|^population:", txt)))
 })
 
-test_that("a template report written as a code SPEC: common: kept, the subjects definition says no set", {
+test_that("a template report written as a code SPEC: its set on the subjects definition, not in common: (A2-T)", {
   d <- system.file("extdata", "spec-yaml", package = "tflspec")
   s <- tfl_read_study_spec(d)
   o <- tfl_output("T-9", "table", common = list(population = "SAF", treatment = "TRT01A"),
                   template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE")))
   b <- tfl_template_to_spec(o, s)
-  expect_identical(b$common$population, "SAF")
+  expect_null(b$common$population)
   expect_identical(b$common$treatment, "TRT01A")
   ad <- b$ard$analysis_data
-  subj <- Filter(function(e) identical(toupper(e$from), "ADSL") && is.null(e$subjects), ad)
+  subj <- Filter(function(e) identical(toupper(e$from), "ADSL") && is.null(e$subjects_in) && is.null(e$code), ad)
   expect_true(length(subj) >= 1L)
-  expect_true(all(vapply(subj, function(e) is.null(e$population), NA)))
+  expect_true(all(vapply(subj, function(e) identical(e$population, "SAF"), NA)))
+  expect_identical(tfl_report_set(b), "SAF")
   f <- tempfile(fileext = ".yml")
   on.exit(unlink(f))
   tfl_write_output(b, f)
@@ -231,9 +234,9 @@ test_that("a table's rework steps are the content's rework: item; the old places
   expect_false(any(grepl("^  data:", txt)))
   expect_identical(tfl_read_output(out)$data, o$data)
   expect_identical(tfl_read_output(out)$content, o$content)
-  # under `ard: data:` or `ard: analysis_data:` a table's rework map stops
-  for (ard in list(c("ard:", "  data: {source: ard, object: ard, steps: []}"),
-                   c("ard:", "  analysis_data: {source: ard, object: x}"),
+  # under `analysis: data:` or `analysis: analysis_data:` a table's rework map stops
+  for (ard in list(c("analysis:", "  data: {source: ard, object: ard, steps: []}"),
+                   c("analysis:", "  analysis_data: {source: ard, object: x}"),
                    "data: {source: ard, object: x}")) {
     g <- dr_write(c("id: T-1", "kind: table", ard, "content: []"))
     expect_error(tfl_read_output(g), "write them under `content: rework:`", fixed = TRUE)

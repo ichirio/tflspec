@@ -282,7 +282,7 @@ tfl_ai_migrate <- function(study_dir) {
 #' study file and its draft compared field by field, for the person to see
 #' before adopting again.  The two YAML files are read as they are written
 #' (an `!r` value as its text), each value under its path: `label`,
-#' `page.titles.2.center`, `ard.analyses[AE].where` (an item of a list
+#' `page.titles.2.center`, `analysis.analyses[AE].where` (an item of a list
 #' named by its `id`, else by its place, `[2]`).
 #'
 #' @param study_dir The study folder.
@@ -390,7 +390,7 @@ tfl_ai_adopted_diff <- function(study_dir = ".", output_id = NULL) {
     e <- list(id = id, kind = o$kind %||% "table")
     if (!is.null(o) && !is.na(o$label %||% NA)) e$label <- o$label
     # (the report's set as the page reads it: its data's, its rows', `common`'s)
-    if (!is.null(o) && !is.na(.out_population_or_data(o))) e$population <- .out_population_or_data(o)
+    if (!is.null(o) && !is.na(.report_set(o))) e$population <- .report_set(o)
     b <- base_key(id)
     near <- which(vapply(toc, function(x) identical(base_key(x$id %||% ""), b), NA))
     if (!is.na(b) && length(near)) {

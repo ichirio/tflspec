@@ -39,7 +39,7 @@ test_that("forest_hr and km_simple: the subjects' set is the series' efficacy se
     o <- tfl_template_resolve(mk(), study = fp_study)
     expect_identical(fp_subjects_row(o)$population, "FAS")
     expect_identical(attr(o, "args")$population, "FAS")
-    expect_identical(.out_population_or_data(o), "FAS")
+    expect_identical(.report_set(o), "FAS")
   }
 })
 
@@ -56,13 +56,13 @@ test_that("forest_hr and km_simple: the argument population, given as an argumen
     rep$data <- list(population = "SAF")
     o <- tfl_template_resolve(rep, study = fp_study)
     expect_identical(fp_subjects_row(o)$population, "SAF")
-    expect_identical(.out_population_or_data(o), "SAF")
+    expect_identical(.report_set(o), "SAF")
     # `common: population` (until it goes): no longer shadowed by the default
     rep <- mk()
     rep$common <- list(population = "SAF")
     o <- tfl_template_resolve(rep, study = fp_study)
     expect_identical(fp_subjects_row(o)$population, "SAF")
-    expect_identical(.out_population_or_data(o), "SAF")
+    expect_identical(.report_set(o), "SAF")
   }
 })
 

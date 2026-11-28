@@ -17,7 +17,7 @@ data:
     from: ADAE
     subjects_in: adsl_sub
     where: !r TRTEMFL == "Y"
-ard:
+analysis:
   analyses:
     - id: BIGN
       label: Subjects per group

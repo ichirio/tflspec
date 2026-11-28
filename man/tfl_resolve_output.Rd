@@ -51,7 +51,7 @@ and the files each step of \code{extends} names (\code{\link[=tfl_output_extends
 with what a parameter's stop value turns off (\code{\link[=tfl_param]{tfl_param()}}\verb{(maps_to = )}) taken out of those; for a template not yet migrated, its look
 (plan_style, the widths, the rows a page ...) under the study's layers,
 which say the look and win -- and
-its \verb{ard:} under the report's (an entry of the report's replaces the
+its \verb{analysis:} under the report's (an entry of the report's replaces the
 template's of the same id); a template parameter that says where its
 study default is takes it from the layers when the SPEC does not give
 it, and a SPEC value over a different one says so.  Each item's

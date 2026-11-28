@@ -197,7 +197,7 @@ ADaM の要約で、データではありません。`AGENTS.md` に、開いて
    TOC の節で、`carry` の指定どおり）は聞かずに、そうでないときは「ここも同じか」と
    聞きます。始める前に自分で行を書いておくこともできます（範囲のない行は `all`）。
 4. エージェントは各帳票の**骨組み**を `ai/spec/outputs/<id>.yml` に書きます:
-   `id`、`kind`、`label`、`population`、`data`、`ard`（解析データ、解析）、内容
+   `id`、`kind`、`label`、`population`、`data`、`analysis`（解析データ、解析）、内容
    （合うテンプレートがあればテンプレート、なければ `table_plan` と `plan_cells`）、
    シェルに桁数があればその桁数、`plan_columns: {widths}`（シェルの比率から）、
    `page: titles` とシェルの脚注（`footnotes_at`）。

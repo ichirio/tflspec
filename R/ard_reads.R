@@ -8,7 +8,7 @@
 #' Works out, from the study's SPEC, whose ARD each report reads, so that a
 #' run builds those ARD before the report:
 #'
-#' * a report with analyses of its own (its `ard: analyses:`, or a
+#' * a report with analyses of its own (its `analysis: analyses:`, or a
 #'   template's) reads its own ARD;
 #' * a figure whose ARD source (`page: report: ard_source:`) is `own` or
 #'   `table:<id>` reads that report's ARD; one with no source but a

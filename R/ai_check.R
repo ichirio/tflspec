@@ -23,7 +23,7 @@
 #'   not have, a content function that is not a table's, an argument the
 #'   function does not have ([tfl_schema_check()], an error here: the AI's
 #'   invention), a value of the wrong type, a required argument missing; its
-#'   `ard:` fields and method; the analysis sets of `spec/data.yml` (with
+#'   `analysis:` fields and method; the analysis sets of `spec/data.yml` (with
 #'   `study_dir`); with the context's `datasets` (the ADaM summary), every
 #'   dataset and variable an analysis names (made by `derive` or `add`
 #'   aside); a report asked for and missing.  Then the answer is put in a

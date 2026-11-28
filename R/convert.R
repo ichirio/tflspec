@@ -416,6 +416,15 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       maps <- if (is.data.frame(tm) && nrow(tm)) tm$param[tm$output_id %in% id] else character()
       out$template <- .tpl_maps_back(out$template, file.path(to, "spec", "outputs", paste0(id, ".yml")),
                                      maps, id, note)
+      # (the planner's set and the template report's set -- its argument,
+      # else the template's default: .report_set() -- one, A2-T)
+      ta <- .report_set(out)
+      if (!is.null(entry$population) && !identical(ta, as.character(entry$population))) {
+        note(id, "report", id, "population", sprintf(paste0(
+          "the planner's analysis set %s is not the template report's set (%s: the templates ",
+          "sheet's population column, else the template's default): the template's is kept"), entry$population,
+          if (is.na(ta)) "none" else ta))
+      }
     }
     f <- file.path(to, "spec", "outputs", paste0(id, ".yml"))
     tfl_write_output(out, f)
@@ -857,7 +866,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
 # records (`source: dataset | code`; a figure's data is its code when it
 # says no source, as a figure of items has it) and names no analysis data
 # of its own (`data: <id>`: that data has the set, .data_population()); a
-# table's set stays in `common` until `common` goes
+# table's is on its subjects rows, as the analysis_data sheet has it (A2-T)
 .set_on_data <- function(kind, data) {
   if (!is.null(data) && !is.list(data)) return(FALSE)
   src <- data[["source"]] %||% if (identical(kind, "figure")) "code"
@@ -865,8 +874,8 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
 }
 
 # one report's file (`template`: a report on the templates sheet, whose data
-# the template makes: its set goes where the template reads it, `common`,
-# until the template's reader takes the data's)
+# the template makes: its set is the template's set argument, the templates
+# sheet's `population` column, A2-T)
 .conv_output <- function(id, kind, entry, sp, ard, lf, fig, prow, scope, page_of, content_fn, note,
                          figures = "design", style_names = character(), template = FALSE) {
   rrow <- scope(sp$report, id)
@@ -1028,16 +1037,17 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if ("ard" %in% names(fr) && identical(toupper(trimws(fr$ard[1L] %||% "")), "TRUE")) data$ard <- TRUE
   }
   # the report's ARD analyses and their analysis data, whatever its kind (a
-  # figure's hazard ratios too): its ard: section, the ARD stage's
+  # figure's hazard ratios too): its analysis: section, the ARD stage's
   ard_part <- NULL
   # the planner's analysis set goes on the report's data when the data reads
-  # subjects' records (a listing's or a figure's, .set_on_data()), else on
-  # `common` (below); a template report's on `common` (its data is the
-  # template's)
+  # subjects' records (a listing's or a figure's, .set_on_data()); else it is
+  # on the subjects rows, as the analysis_data sheet has it (a table's, A2-T:
+  # never `common:`); a template report's is its template's argument (the
+  # templates sheet's `population` column)
   pop_on_data <- !isTRUE(template) && .set_on_data(kind, data)
   # (a data of one of the report's analysis data has that data's set: on
-  # its row, neither on the data nor in `common`)
-  pop_in_common <- !pop_on_data && (!is.list(data) || is.null(data[["data"]]))
+  # its row, not on the data)
+  pop_on_rows <- !isTRUE(template) && !pop_on_data && (!is.list(data) || is.null(data[["data"]]))
   if (!is.null(ard)) {
     ob <- ard$objects
     if (!is.null(ob) && nrow(ob)) {
@@ -1101,15 +1111,35 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   }
   # the report's analysis set (the planner's column): on its data when the
   # data reads subjects' records, a listing's or a figure's (canon 11-15:
-  # the set is the data's; the data's own wins); a table's stays in
-  # `common` until `common` goes
+  # the set is the data's; the data's own wins); a table's on its subjects
+  # rows (A2-T); never in `common`
   common <- list()
+  # (the planner's set -- the report's own, .planner_set(), or one typed
+  # in the sheet -- on the rows tfl_set_report_set() writes it on
+  # (.set_row_taker()); a planner set its rows do not carry -- another set
+  # on them, or no subjects row -- is said, not written: the rows are what
+  # the program reads, A2-T Q7)
+  if (pop_on_rows && !is.null(entry$population)) {
+    from <- .pop_from(ard$populations, entry$population)
+    if (length(ard_part$analysis_data)) {
+      takes <- .set_row_taker(ard_part$analysis_data, as.character(entry$population), from)
+      ard_part$analysis_data <- lapply(ard_part$analysis_data, function(a) {
+        if (takes(a)) a$population <- entry$population
+        a
+      })
+    }
+    rs <- .rows_carried_set(ard_part$analysis_data %||% list(), ard_part$analyses %||% list())
+    if (!identical(rs, as.character(entry$population))) {
+      note(id, "report", id, "population", sprintf(paste0(
+        "the planner's analysis set %s is not the set its subjects rows carry (%s): the rows' is kept; ",
+        "write %s on the analysis_data row that makes its subjects"), entry$population,
+        if (is.na(rs)) "none" else rs, entry$population))
+    }
+  }
   if (pop_on_data) {
     if (is.null(data[["population"]]) && !is.null(entry$population)) {
       data <- c(data %||% list(), list(population = entry$population))
     }
-  } else if (pop_in_common) {
-    common$population <- entry$population
   }
   # (the report's subjects definition has no set of its own: the report's,
   # which the sheets wrote on it, .rows_set() -- its data's, else `common`'s;

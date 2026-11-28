@@ -11,9 +11,9 @@ asm_rows <- function(d, rows) {
 
 asm_five <- function() {
   list(
-    list(output_id = "T-1", where = "ard.analyses", item = "arm", assumption = "TRT01A",
+    list(output_id = "T-1", where = "analysis.analyses", item = "arm", assumption = "TRT01A",
          question = "Actual or planned?"),
-    list(output_id = "T-2", where = "ard.analyses", item = "arm", assumption = "TRT01A",
+    list(output_id = "T-2", where = "analysis.analyses", item = "arm", assumption = "TRT01A",
          question = "actual  or planned ?"),
     list(output_id = "T-1", where = "codelists", item = "SEX", assumption = "M / F"),
     list(output_id = "T-3", where = "codelists", item = "sex", assumption = "M/F"),

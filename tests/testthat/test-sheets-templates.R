@@ -44,10 +44,12 @@ test_that("a template report is a row of the templates sheet, read back as the s
   expect_identical(names(back), "T-9")
   expect_identical(back[["T-9"]]$template$name, "demog")
   expect_identical(back[["T-9"]]$label, "Demographics")
-  # (demog takes the analysis set from the report's `common: population`: the
-  # sheet's population column, not an argument)
-  expect_identical(back[["T-9"]]$common$population, "SAF")
+  # (the sheet's population column is demog's set parameter, A2-T: the
+  # report's `common: population` is written there, never `common:`)
+  expect_null(back[["T-9"]]$common)
   a <- back[["T-9"]]$template$args
+  expect_identical(a$population, "SAF")
+  a$population <- NULL
   b <- o$template$args
   expect_identical(a[sort(names(a))], b[sort(names(b))])
   # the code report is as ever: its rows, its ARD
