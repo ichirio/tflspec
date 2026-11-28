@@ -672,22 +672,10 @@
     .rp_code_block(r$steps[[step]]),
     "",
     sized,
-    if (identical(step, "content")) .rp_content_check_line(r$type) else
+    # (the content contract, one for every kind: report_content(), which a
+    # session's run holds to as well, .own_content_contract())
+    if (identical(step, "content")) "content <- report_content(content)" else
       sprintf("%s <- report_data(%s, \"%s\")", leaves, leaves, leaves))
-}
-
-# The check of what a report's own content code leaves (the content
-# contract, canon 11-28): a table's a table_plan --
-# report_content_check(content, "table", report_id), which a session's run
-# holds to as well (.own_content_contract()), and the plan goes to the
-# report as it is; a figure's and a listing's report_content(), as before
-# (a figure's rule is the contract's too)
-.rp_content_check_line <- function(type) {
-  if (identical(type, "table")) {
-    "content <- report_content_check(content, \"table\", report_id)"
-  } else {
-    "content <- report_content(content)"
-  }
 }
 
 # Does the report have analyses of its own: an ARD to read?  By the study's

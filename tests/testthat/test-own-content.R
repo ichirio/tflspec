@@ -1,6 +1,6 @@
 # A report's own R content (`content: !r`, canon 11-28, tflspec#1018): one
-# content contract (a table's code gives a table_plan, a figure's a
-# ggplot) and one way its code sees the report's data (the report's data
+# content contract for every kind (a ggplot, an rtfplot, a table_plan, a
+# data frame or rtftable pages, or a list of them) and one way its code sees the report's data (the report's data
 # rows, the study's ADaM it names, `ard` when it has analyses; never
 # tflspec's sample data), the same in a session (the preview,
 # tfl_run_output(), tfl_check_build()) and in the report's program.  A
@@ -46,15 +46,13 @@ oc_program <- function(d, id, type = "table") {
 
 # the program's data and content parts run as the program runs them: after
 # the study's setup (which reads the study's ADaM: `adsl`), with
-# fig_setup.R's report_content_check() and report_content()
+# fig_setup.R's report_content()
 oc_run_parts <- function(code, objects) {
   from <- grep("^# ---- data", code)[1L]
   to <- grep("^# ---- report", code)[1L] - 1L
   env <- new.env(parent = globalenv())
-  eval(parse(text = tflspec:::.setup_content_contract), env)
   eval(parse(text = tflspec:::.setup_report_content), env)
   for (n in names(objects)) assign(n, objects[[n]], envir = env)
-  assign("report_id", attr(code, "id") %||% "T-1", envir = env)
   eval(parse(text = code[from:to]), env)
   get("content", envir = env)
 }
@@ -84,37 +82,51 @@ test_that("a table of its own content code, no data or analysis: the study's ADS
   code <- oc_program(d, "T-1")
   expect_false(any(grepl("readRDS(file.path(path_ard", code, fixed = TRUE)))
   expect_false(any(grepl("The study ARD has no rows", code, fixed = TRUE)))
-  expect_true("content <- report_content_check(content, \"table\", report_id)" %in% code)
+  expect_true("content <- report_content(content)" %in% code)
   p2 <- suppressMessages(oc_run_parts(code, list(adsl = data$adsl)))
   expect_s3_class(p2, "table_plan")
   expect_true(oc_has_u(p2))
 })
 
-test_that("a table's own content code that gives a data frame: the same classed stop in both paths", {
+test_that("a table's own content code: a data frame and rtftable pages still work; a number gives the classed stop", {
   skip_on_cran()
   d <- oc_study()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
-  oc_write(d, tfl_output("T-2", "table", content = tfl_r("content <- adsl[adsl$SEX == \"U\", ]")))
+  # a data frame and rtftable pages, as report_content() took them before:
+  # in the session, tfl_run_output(), tfl_check_build() and the program
+  df_code <- "content <- adsl[adsl$SEX == \"U\", c(\"USUBJID\", \"SEX\")]"
+  for (code in c(df_code, paste0(df_code, "\ncontent <- rtfreporter::as_rtftables(content)"))) {
+    oc_write(d, tfl_output("T-2", "table", content = tfl_r(code)))
+    x <- oc_resolved(d, "T-2")
+    data <- tflspec:::.own_content_data(x$ro, x$st, d)
+    got <- suppressMessages(tfl_content_run(x$ro, data))
+    expect_true(is.data.frame(got) || inherits(got[[1L]], "rtftable"), info = code)
+    rtf <- tfl_run_output("T-2", d)
+    expect_match(paste(readLines(rtf, warn = FALSE), collapse = " "), "\\bU\\b", info = code)
+    expect_identical(nrow(tfl_check_build(d, "T-2")), 0L, info = code)
+    p2 <- suppressMessages(oc_run_parts(oc_program(d, "T-2"), list(adsl = data$adsl)))
+    expect_true(is.data.frame(p2) || inherits(p2[[1L]], "rtftable"), info = code)
+  }
+  # a number: the same classed stop in the session, tfl_run_output(),
+  # tfl_check_build() and the program (which says the same words)
+  oc_write(d, tfl_output("T-2", "table", content = tfl_r("content <- 1")))
   x <- oc_resolved(d, "T-2")
   data <- tflspec:::.own_content_data(x$ro, x$st, d)
   e1 <- expect_error(tfl_content_run(x$ro, data), class = "tfl_content_contract")
   expect_identical(conditionMessage(e1), paste0(
-    "T-2: a table's content code must return a table_plan (rtfreporter::table_plan()); ",
-    "it returned a data.frame."))
+    "T-2: `content` is numeric: make it a ggplot, an rtfplot, a table_plan, a data frame ",
+    "or rtftable pages (or a list of them)."))
   e2 <- expect_error(tfl_run_output("T-2", d), class = "tfl_content_contract")
   expect_match(conditionMessage(e2), conditionMessage(e1), fixed = TRUE)
   cb <- tfl_check_build(d, "T-2")
   expect_identical(cb$level, "error")
   expect_match(cb$message, conditionMessage(e1), fixed = TRUE)
-  # the program: report_content_check() stops with the same class and words
-  code <- oc_program(d, "T-2")
-  attr(code, "id") <- "T-2"
-  e3 <- expect_error(oc_run_parts(code, list(adsl = data$adsl)), class = "tfl_content_contract")
-  expect_identical(conditionMessage(e3), conditionMessage(e1))
-  # a list, a number: said so
-  expect_error(tflspec:::.own_content_contract(list(1), "table", "T-9"),
-               "T-9: a table's content code must return a table_plan .*it returned a list\\.$",
-               class = "tfl_content_contract")
+  e3 <- expect_error(oc_run_parts(oc_program(d, "T-2"), list(adsl = data$adsl)),
+                     class = "tfl_content_contract")
+  expect_match(conditionMessage(e1), conditionMessage(e3), fixed = TRUE)
+  # an item of a list: said which
+  expect_error(tflspec:::.own_content_contract(list(data$adsl, 1), "T-9"),
+               "T-9: `content` (item 2) is numeric", fixed = TRUE, class = "tfl_content_contract")
 })
 
 test_that("own content code never reads tflspec's sample data: a classed stop names the dataset", {
@@ -177,17 +189,18 @@ test_that("a figure of its own content code: unchanged, its contract the same in
   code <- oc_program(d, "F-1", type = "figure")
   # (its program's check is report_content(), as before)
   expect_true("content <- report_content(content)" %in% code)
-  # ggplots, alone or in a list, and (as before) a data frame hold; a number
-  # does not
-  expect_error(tflspec:::.own_content_contract(list(p, p), "figure", "F-1"), NA)
-  expect_error(tflspec:::.own_content_contract(list(p, data$adsl), "figure", "F-1"), NA)
-  expect_error(tflspec:::.own_content_contract(list(), "figure", "F-1"), NA)
-  expect_error(tflspec:::.own_content_contract(list(p, 1), "figure", "F-1"),
-               "F-1: a figure's content code must return a ggplot .*it returned a list whose item 2 is a numeric\\.$",
-               class = "tfl_content_contract")
+  # ggplots, alone or in a list, a data frame and a table_plan hold (one
+  # contract for every kind); a number does not
+  plan <- rtfreporter::table_plan(data$adsl[1:2, c("USUBJID", "SEX")])
+  expect_error(tflspec:::.own_content_contract(list(p, p), "F-1"), NA)
+  expect_error(tflspec:::.own_content_contract(list(p, data$adsl), "F-1"), NA)
+  expect_error(tflspec:::.own_content_contract(list(p, plan), "F-1"), NA)
+  expect_error(tflspec:::.own_content_contract(list(), "F-1"), NA)
+  expect_error(tflspec:::.own_content_contract(list(p, 1), "F-1"),
+               "F-1: `content` (item 2) is numeric", fixed = TRUE, class = "tfl_content_contract")
   o <- x$ro
   o$content <- tfl_r("content <- 1")
-  expect_error(tfl_content_run(o, data), "it returned a numeric.", fixed = TRUE,
+  expect_error(tfl_content_run(o, data), "`content` is numeric", fixed = TRUE,
                class = "tfl_content_contract")
 })
 

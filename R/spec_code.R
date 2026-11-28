@@ -1692,9 +1692,10 @@ tfl_bign_drop <- function(ard) .bign_drop(ard)
 #' list of calls, so running the written code gives the same object; it is
 #' the quick way for a preview, the app or an assistant's check.  A report
 #' whose content is its own code (`content: !r`) runs it, after the
-#' data's steps, and gives what it leaves in `content`: a table's code a
-#' `table_plan`, a figure's a ggplot (or a list of them), as its program's
-#' `report_content()` checks; anything else stops with an error of class
+#' data's steps, and gives what it leaves in `content`: a ggplot, an
+#' rtfplot, a `table_plan`, a data frame or rtftable pages, or a list of
+#' them, for any kind of report, as its program's `report_content()`
+#' checks; anything else stops with an error of class
 #' `tfl_content_contract` that names the report and what it gave.
 #'
 #' @param output A report ([tfl_output()]), resolved.

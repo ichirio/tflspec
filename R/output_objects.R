@@ -149,7 +149,7 @@ tfl_output_contents <- function(output, study, dir = ".") {
   }
   lapply(objs, function(o) {
     ro <- tfl_resolve_output(o, study)
-    if (inherits(ro$content, "tfl_r") && o$kind %in% .own_contract_kinds &&
+    if (inherits(ro$content, "tfl_r") && o$kind %in% .own_data_kinds &&
         !identical(ro$data$source, "dataset")) {
       # an object of its own code: what it reads, as a report's (.own_content_data())
       data <- .own_content_data(ro, study, dir)
@@ -285,7 +285,7 @@ tfl_output_contents <- function(output, study, dir = ".") {
   }
   ro <- stage("resolving the report", tfl_resolve_output(output, st))
   own <- inherits(ro$content, "tfl_r")
-  if (own && kind %in% .own_contract_kinds && !identical(ro$data$source, "dataset")) {
+  if (own && kind %in% .own_data_kinds && !identical(ro$data$source, "dataset")) {
     # the report's own content code: the objects it reads, as its program
     # reads them (.own_content_data()), never tflspec's sample data
     data <- stage(paste0("the ", kind, "'s data"), .own_content_data(ro, st, "."))

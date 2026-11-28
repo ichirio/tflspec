@@ -471,62 +471,37 @@ tfl_setup_program <- function(file, meta = list(), study = NULL, standards = lis
     "",
     rest,
     "",
-    .setup_content_contract,
-    "",
     .setup_report_content)
 }
 
-# The content contract of a report's own code (canon 11-28), written once in
-# fig_setup.R before report_content() (whose text stays as it was: the
-# app's preview has a copy of it): report_content_check() -- a table's code
-# gives a table_plan; a figure's a ggplot, an rtfplot, a data frame or
-# rtftable pages (or a list of them), as report_content() takes them.
-# Anything else stops with a condition of class `tfl_content_contract` that
-# names the report and what it gave.  A session runs this same text
-# (.own_content_contract()).
-.setup_content_contract <- c(
-  "# ---- the content contract of a report's own code: a table's code gives a",
-  "# table_plan; a figure's a ggplot, an rtfplot, a data frame or rtftable pages",
-  "# (or a list of them); anything else stops (class tfl_content_contract)",
-  "report_content_check <- function(x, kind, id) {",
-  "  fig <- identical(kind, \"figure\")",
-  "  ok <- function(p) if (fig) is.data.frame(p) || inherits(p, c(\"rtftable\", \"rtfplot\", \"ggplot\")) else",
-  "    inherits(p, \"table_plan\")",
-  "  items <- if (fig && is.list(x) && !ok(x)) x else list(x)",
-  "  bad <- which(!vapply(items, ok, NA))[1L]",
-  "  if (!is.na(bad)) {",
-  "    got <- if (!identical(items, list(x)))",
-  "      sprintf(\"a list whose item %d is a %s\", bad, class(items[[bad]])[1L]) else",
-  "      sprintf(\"a %s\", class(x)[1L])",
-  "    want <- if (fig) \"a ggplot (or rtfplot figures, a data frame or rtftable pages, or a list of them)\" else",
-  "      \"a table_plan (rtfreporter::table_plan())\"",
-  "    stop(structure(class = c(\"tfl_content_contract\", \"error\", \"condition\"), list(",
-  "      message = sprintf(\"%s: a %s's content code must return %s; it returned %s.\", id, kind, want, got),",
-  "      call = NULL)))",
-  "  }",
-  "  x",
-  "}")
-
 # The small functions a report's own code is checked with, written once in
-# fig_setup.R (which those reports source): report_content() -- a ggplot
-# (alone or in a list) becomes a figure; anything else than the contract's
-# -- a data frame, rtftable pages, a ggplot, an rtfplot, or a list of them
-# -- stops, saying which item it is and what it was; fig_sized(); and
-# report_data() -- the data step left a data frame.
+# fig_setup.R (which those reports source): report_content() -- the content
+# contract of a report's own code (canon 11-28), one for every kind: a
+# ggplot, an rtfplot, a table_plan, a data frame or rtftable pages, or a
+# list of them; a ggplot (alone or in a list) becomes a figure, and the
+# rest goes to the report as rtfreporter takes it (a table_plan and a data
+# frame through as_rtftables()).  Anything else stops with a condition of
+# class `tfl_content_contract`, saying which item it is and what it was
+# (and the report, given `id`).  A session runs this same text
+# (.own_content_contract()), and the app's preview has a copy of it;
+# fig_sized(); and report_data() -- the data step left a data frame.
 .setup_report_content <- c(
   "# ---- a report of your own code: its `content` as rtfreporter takes it",
-  "# (a ggplot becomes a figure; what is not a data frame, rtftable pages, a",
-  "# ggplot or an rtfplot, or a list of them, stops, saying which item)",
-  "report_content <- function(x) {",
+  "# (a ggplot becomes a figure; what is not a ggplot, an rtfplot, a table_plan,",
+  "# a data frame or rtftable pages, or a list of them, stops, saying which item)",
+  "report_content <- function(x, id = NULL) {",
   "  ok <- function(p) is.data.frame(p) ||",
-  "    inherits(p, c(\"rtftable\", \"rtfplot\", \"ggplot\"))",
+  "    inherits(p, c(\"rtftable\", \"rtfplot\", \"ggplot\", \"table_plan\"))",
   "  fig <- function(p) if (inherits(p, \"ggplot\")) rtfplot(p) else p",
   "  one <- ok(x)",
   "  items <- if (one) list(x) else if (is.list(x)) x else list(x)",
   "  for (i in seq_along(items)) if (!ok(items[[i]])) {",
-  "    stop(sprintf(\"`content`%s is %s: make it a data frame, rtftable pages, a ggplot or an rtfplot (or a list of them).\",",
-  "                 if (one || !is.list(x)) \"\" else sprintf(\" (item %d)\", i),",
-  "                 class(items[[i]])[1L]), call. = FALSE)",
+  "    msg <- sprintf(\"%s`content`%s is %s: make it a ggplot, an rtfplot, a table_plan, a data frame or rtftable pages (or a list of them).\",",
+  "                   if (length(id)) paste0(id, \": \") else \"\",",
+  "                   if (one || !is.list(x)) \"\" else sprintf(\" (item %d)\", i),",
+  "                   class(items[[i]])[1L])",
+  "    stop(structure(class = c(\"tfl_content_contract\", \"error\", \"condition\"),",
+  "                   list(message = msg, call = NULL)))",
   "  }",
   "  if (one) fig(x) else lapply(items, fig)",
   "}",

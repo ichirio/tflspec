@@ -373,9 +373,9 @@ test_that("the content as the report's own code is written as it is and runs to 
                                             "content <- nrow(data)",
                                             "content <- data.frame(n = content * 10)"))
   expect_identical(tfl_content_run(out, data.frame(x = 1:3)), data.frame(n = 20))
-  # (what the content leaves is held to the figure's contract, tflspec#1018)
+  # (what the content leaves is held to the content contract, tflspec#1018)
   out$content <- tfl_r("content <- nrow(data)")
-  expect_error(tfl_content_run(out, data.frame(x = 1:3)), "it returned a integer.", fixed = TRUE,
+  expect_error(tfl_content_run(out, data.frame(x = 1:3)), "`content` is integer", fixed = TRUE,
                class = "tfl_content_contract")
   out$content <- tfl_r("plan <- 1")
   expect_error(tfl_content_run(out, data.frame(x = 1)), "leaves no `content`")

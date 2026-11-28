@@ -9,31 +9,32 @@
 #     analyses -- never tflspec's sample data on the search path
 #     (.own_content_data(), .own_reads_given(); the program:
 #     .rp_own_content_inputs());
-#   * one contract for what it gives: a table's code a table_plan; a
-#     figure's a ggplot (also, as before, rtfplot figures, a data frame or
-#     rtftable pages, or a list of them); anything else stops with a
-#     condition of class `tfl_content_contract` naming the report and what
-#     it gave (report_content_check(), written once in fig_setup.R; the
-#     session runs that same text).
+#   * one contract for what it gives, for every kind: a ggplot, an rtfplot,
+#     a table_plan, a data frame or rtftable pages, or a list of them;
+#     anything else stops with a condition of class `tfl_content_contract`
+#     naming the report and what it gave (report_content(), written once in
+#     fig_setup.R; the session runs that same text).
 
 # ---- the contract ---------------------------------------------------------------
 
-# The kinds whose own content has a contract (a listing's own code gives
-# its rtftable pages, as before)
-.own_contract_kinds <- c("table", "figure")
+# The kinds whose own content code reads the report's data by name (a
+# listing's own code reads its records, as before)
+.own_data_kinds <- c("table", "figure")
 
-# The program's check of a report's own content (report_content_check() in
-# fig_setup.R, .setup_content_contract), run here as the program runs it:
-# the same text, so the same rule and the same message
+# The program's check of a report's own content (report_content() in
+# fig_setup.R, .setup_report_content), run here as the program runs it:
+# the same text, so the same rule and the same message.  Only the check:
+# what the session gives is what the code left (a ggplot stays a ggplot).
 .own_contract_env <- new.env(parent = emptyenv())
-.own_content_contract <- function(x, kind, id) {
-  if (!kind %in% .own_contract_kinds) return(invisible(x))
+.own_content_contract <- function(x, id) {
   if (is.null(.own_contract_env$check)) {
     env <- new.env(parent = baseenv())
-    eval(parse(text = .setup_content_contract), env)
-    .own_contract_env$check <- get("report_content_check", envir = env)
+    # (the check only: a ggplot is not drawn here)
+    assign("rtfplot", function(p, ...) p, envir = env)
+    eval(parse(text = .setup_report_content), env)
+    .own_contract_env$check <- get("report_content", envir = env)
   }
-  .own_contract_env$check(x, kind, id)
+  .own_contract_env$check(x, id)
   invisible(x)
 }
 
@@ -177,6 +178,6 @@
     .ard_stop("tfl_content_run(): the report's own code leaves no `content`.")
   }
   content <- get("content", envir = env, inherits = FALSE)
-  .own_content_contract(content, output$kind, output$id %||% "the report")
+  .own_content_contract(content, output$id %||% "the report")
   content
 }

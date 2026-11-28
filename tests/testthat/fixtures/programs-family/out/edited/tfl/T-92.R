@@ -39,7 +39,7 @@ data <- report_data(data, "data")
 # your code: leaves `content`
 content <- head(data)
 
-content <- report_content_check(content, "table", report_id)
+content <- report_content(content)
 
 # ---- report ----------------------------------------------------------------
 # the report, as spec/outputs/T-92.yml defines it
