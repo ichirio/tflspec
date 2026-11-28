@@ -24,7 +24,8 @@
 
 # the company's inputs the report and ARD programs read (the company
 # standards' tables)
-.rp_standard_keys <- c("code_templates", "ard_statistics", "ard_methods", "settings")
+.rp_standard_keys <- c("code_templates", "ard_statistics", "ard_methods", "settings",
+                       "figure_settings", "figure_colors", "figure_markers")
 
 # a table of the company's inputs; one left out: tflspec's own (NULL for the
 # ARD catalogs: tfl_ard_code() takes its own then)
@@ -1048,9 +1049,13 @@
 #' @param standards The company's inputs: a list with any of
 #'   `code_templates` (`name`, `code`: `table_data`, `table_process`,
 #'   `figure_plot`), `ard_statistics`, `ard_methods` and `settings` (`key`,
-#'   `value`: `listing_type`).  One left out is tflspec's own
+#'   `value`: `listing_type`), and the figure style's tables
+#'   `figure_settings`, `figure_colors` and `figure_markers`
+#'   ([tfl_fig_style()]).  One left out is tflspec's own
 #'   ([tfl_builtin_standards()], [tfl_ard_statistics()],
-#'   [tfl_ard_methods()], `"multiline"`).
+#'   [tfl_ard_methods()], `"multiline"`, the built-in figure style).  A
+#'   figure is made with the study's figure style (its spec's
+#'   `figure_style`) over the company's, as its `fig_setup.R` draws it.
 #' @param attached,study_code The study's code context, as
 #'   [tfl_setup_program()] takes it.
 #' @param series_dir The folders the template series are looked for in
@@ -1118,7 +1123,10 @@ tfl_report_program <- function(report, study = NULL, shared = list(), standards 
   .with_code_context(switch(part,
     program = .rp_program(ctx, date, generator),
     data = .rp_data_lines(ctx, todo = todo)),
-    .rp_context(attached, study_code, series_dir, layout))
+    c(.rp_context(attached, study_code, series_dir, layout),
+      # (the figure style the figures are made with: the study's over the
+      # company's over tflspec's, as fig_setup.R sets it for the run)
+      list(fig_style = tfl_fig_style(study, standards))))
 }
 
 #' A study's ARD program

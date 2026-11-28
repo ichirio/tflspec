@@ -30,9 +30,13 @@ tfl_report_program(
 \item{standards}{The company's inputs: a list with any of
 \code{code_templates} (\code{name}, \code{code}: \code{table_data}, \code{table_process},
 \code{figure_plot}), \code{ard_statistics}, \code{ard_methods} and \code{settings} (\code{key},
-\code{value}: \code{listing_type}).  One left out is tflspec's own
+\code{value}: \code{listing_type}), and the figure style's tables
+\code{figure_settings}, \code{figure_colors} and \code{figure_markers}
+(\code{\link[=tfl_fig_style]{tfl_fig_style()}}).  One left out is tflspec's own
 (\code{\link[=tfl_builtin_standards]{tfl_builtin_standards()}}, \code{\link[=tfl_ard_statistics]{tfl_ard_statistics()}},
-\code{\link[=tfl_ard_methods]{tfl_ard_methods()}}, \code{"multiline"}).}
+\code{\link[=tfl_ard_methods]{tfl_ard_methods()}}, \code{"multiline"}, the built-in figure style).  A
+figure is made with the study's figure style (its spec's
+\code{figure_style}) over the company's, as its \code{fig_setup.R} draws it.}
 
 \item{attached, study_code}{The study's code context, as
 \code{\link[=tfl_setup_program]{tfl_setup_program()}} takes it.}

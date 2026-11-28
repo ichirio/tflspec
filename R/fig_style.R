@@ -179,11 +179,33 @@
 #'   by label (a swimmer event named `Death` takes the `Death` row) and the
 #'   figures' own symbols (`censor`, `assessment`).
 #'
+#' A study keeps its own copy in its spec (`spec/defaults.yml`'s
+#' `figure_style:`).  One rule gives every table and key: the study's over
+#' the company's over the built-in one.  A table the study gives is its
+#' whole table, a key its table lacks is the company's.
+#' `tfl_fig_style(study)` is that style, the one a study's programs are made
+#' with ([tfl_report_program()]) and its `fig_setup.R` draws with
+#' ([tfl_setup_program()]).
+#'
+#' @param study A study's spec ([tfl_read_study_spec()]): its figure style
+#'   over the company's.  `NULL`: the company's.
+#' @param standards The company's figure style as a program maker takes it:
+#'   a list with any of `figure_settings`, `figure_colors` and
+#'   `figure_markers` (a table left out: the built-in one).  `NULL`: the
+#'   option `tflspec.fig_style`, else the built-in style.
 #' @param path A workbook.
 #' @return `tfl_fig_style()` and `tfl_read_fig_style()`: a list of three data frames;
 #'   `tfl_fig_style_template()`: `path`, invisibly.
 #' @export
-tfl_fig_style <- function() {
+tfl_fig_style <- function(study = NULL, standards = NULL) {
+  company <- if (!is.null(standards)) .fig_style_of(standards) else .fig_style_option()
+  if (is.null(study)) return(company)
+  .fig_style_study(if (is.list(study)) study$figure_style, company)
+}
+
+# The company's figure style the session has set (options(tflspec.fig_style
+# =)), each table it lacks the built-in one; none set: the built-in style
+.fig_style_option <- function() {
   s <- getOption("tflspec.fig_style")
   if (is.null(s)) return(.fig_style_builtin())
   b <- .fig_style_builtin()
@@ -267,16 +289,24 @@ tfl_read_fig_style <- function(path) {
 #     markers: [...]  # marker, shape, fill, colour, size
 #
 # (tflplanner copies the company's at the study's start, as it does the
-# rest of the defaults).  A table the study gives is the study's whole
-# table, as tfl_read_fig_style() reads a workbook's sheet; one it does not
-# give is tflspec's built-in one.  NULL part: the built-in style itself.
-.fig_style_study <- function(figure_style = NULL) {
-  b <- .fig_style_builtin()
+# rest of the defaults).
+#
+# One rule for every table and key of a figure style, the standards'
+# layering: the study's over the company's (`base`: tfl_fig_style(),
+# options(tflspec.fig_style =), else the built-in; a program maker passes
+# the company's tables it is given, .fig_style_of()) over tflspec's
+# built-in one.  The study's rows replace the company's of the same item
+# (.fig_style_items: a setting by its type and key, a palette whole, a
+# marker by its name); the company's other rows stay, so a key the study's
+# copy lacks (a copy made before the key) is the company's.
+.fig_style_study <- function(figure_style = NULL, base = tfl_fig_style()) {
+  b <- base
   if (!length(figure_style)) return(b)
-  for (k in intersect(names(b), names(figure_style))) {
+  builtin <- .fig_style_builtin()
+  for (k in intersect(names(builtin), names(figure_style))) {
     rows <- figure_style[[k]]
     if (!is.list(rows) || !length(rows)) next
-    cols <- names(b[[k]])
+    cols <- names(builtin[[k]])
     one <- function(r) {
       v <- lapply(cols, function(cn) {
         x <- r[[cn]]
@@ -284,20 +314,61 @@ tfl_read_fig_style <- function(path) {
       })
       .fs_df(stats::setNames(v, cols))
     }
-    b[[k]] <- do.call(rbind, lapply(rows, one))
+    top <- do.call(rbind, lapply(rows, one))
+    rest <- .fs_align(b[[k]], cols)
+    if (!is.null(rest) && nrow(rest)) {
+      id <- function(d) do.call(paste, c(lapply(.fig_style_items[[k]], function(cn) d[[cn]]), sep = "\r"))
+      rest <- rest[!id(rest) %in% id(top), , drop = FALSE]
+    }
+    b[[k]] <- rbind(top, rest)
+    rownames(b[[k]]) <- NULL
   }
   b
 }
 
+# The columns that name one item of each table: a study's row replaces the
+# company's rows of the same item (.fig_style_study())
+.fig_style_items <- list(settings = c("type", "key"), colors = "palette", markers = "marker")
+
+# A table with the columns `cols` (one it lacks: NA), as text
+.fs_align <- function(d, cols) {
+  if (is.null(d)) return(NULL)
+  d <- as.data.frame(d, stringsAsFactors = FALSE)
+  for (cn in setdiff(cols, names(d))) d[[cn]] <- rep(NA_character_, nrow(d))
+  d <- d[cols]
+  d[] <- lapply(d, as.character)
+  d
+}
+
+# The company's figure style from a program maker's `standards`
+# (figure_settings, figure_colors, figure_markers, as tfl_setup_program()
+# takes them); a table not given: tflspec's built-in one (never the
+# session's option: a program's text is a function of its values)
+.fig_style_of <- function(standards) {
+  b <- .fig_style_builtin()
+  pick <- function(key, part) standards[[key]] %||% b[[part]]
+  list(settings = pick("figure_settings", "settings"),
+       colors = pick("figure_colors", "colors"),
+       markers = pick("figure_markers", "markers"))
+}
+
+# A key's value by the layering: the study's style, the company's
+# (tfl_fig_style()), tflspec's built-in; NA when none has it
+.fs_get_layered <- function(key, type = NA, study_style = tfl_fig_style()) {
+  v <- .fs_get(key, type, study_style)
+  if (is.na(v)) v <- .fs_get(key, type, tfl_fig_style())
+  if (is.na(v)) v <- .fs_get(key, type, .fig_style_builtin())
+  v
+}
+
 # A `figure_style.<key>` (or `figure_style.<type>.<key>`) reference's
-# value: the study's figure style, else tflspec's built-in one; NULL when
-# neither has it
+# value: the study's figure style over the company's over the built-in one
+# (.fig_style_study()); NULL when none has it
 .tpl_fig_style_read <- function(path, study = NULL) {
   if (!length(path) || length(path) > 2L) return(NULL)
   key <- path[length(path)]
   type <- if (length(path) == 2L) path[1L] else NA
-  v <- .fs_get(key, type, .fig_style_study(study$figure_style))
-  if (is.na(v)) v <- .fs_get(key, type, .fig_style_builtin())
+  v <- .fs_get_layered(key, type, .fig_style_study(study$figure_style))
   if (is.na(v)) return(NULL)
   # (the catalog keeps text: a number's text is the number, as a
   # parameter of type number takes it -- "50" is 50)
@@ -377,11 +448,12 @@ tfl_read_fig_style <- function(path) {
   paste(out, collapse = "\n")
 }
 
-# The width a figure's axis titles wrap at from the figure style standard
-# (options(tflspec.fig_style =), a company's): its `axis_title_width`, else
-# tflspec's built-in one (a style written before the key); a number
+# The width a figure's axis titles wrap at from the figure style in force
+# (options(tflspec.fig_style =): while a study's program is made, the
+# study's over the company's, tfl_report_program(); else the company's):
+# its `axis_title_width`, else tflspec's built-in one (a style written
+# before the key); a number
 .fs_title_width <- function() {
-  v <- .fs_get("axis_title_width")
-  if (is.na(v)) v <- .fs_get("axis_title_width", NA, .fig_style_builtin())
+  v <- .fs_get_layered("axis_title_width")
   if (is.na(v)) .fig_title_width_default else as.numeric(v)
 }

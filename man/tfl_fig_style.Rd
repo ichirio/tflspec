@@ -6,13 +6,21 @@
 \alias{tfl_read_fig_style}
 \title{The figure style standard}
 \usage{
-tfl_fig_style()
+tfl_fig_style(study = NULL, standards = NULL)
 
 tfl_fig_style_template(path)
 
 tfl_read_fig_style(path)
 }
 \arguments{
+\item{study}{A study's spec (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}): its figure style
+over the company's.  \code{NULL}: the company's.}
+
+\item{standards}{The company's figure style as a program maker takes it:
+a list with any of \code{figure_settings}, \code{figure_colors} and
+\code{figure_markers} (a table left out: the built-in one).  \code{NULL}: the
+option \code{tflspec.fig_style}, else the built-in style.}
+
 \item{path}{A workbook.}
 }
 \value{
@@ -62,4 +70,12 @@ the wrapped title.
 by label (a swimmer event named \code{Death} takes the \code{Death} row) and the
 figures' own symbols (\code{censor}, \code{assessment}).
 }
+
+A study keeps its own copy in its spec (\code{spec/defaults.yml}'s
+\verb{figure_style:}).  One rule gives every table and key: the study's over
+the company's over the built-in one.  A table the study gives is its
+whole table, a key its table lacks is the company's.
+\code{tfl_fig_style(study)} is that style, the one a study's programs are made
+with (\code{\link[=tfl_report_program]{tfl_report_program()}}) and its \code{fig_setup.R} draws with
+(\code{\link[=tfl_setup_program]{tfl_setup_program()}}).
 }
