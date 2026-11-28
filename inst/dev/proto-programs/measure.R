@@ -2,7 +2,14 @@
 # (c/proto-programs): each fixture study run today's way and the
 # prototype's, in folders of their own, then compared.
 #
-#   Rscript inst/dev/proto-programs/measure.R <out-dir> [study ...]
+#   PP_ROOT=. PP_ADAM=<SAMPLE-01's data/adam> \
+#     Rscript inst/dev/proto-programs/measure.R <out-dir> [study ...]
+#
+# PP_ADAM: the sample study's ADaM files and define.xml (tflplanner's
+# inst/sample/SAMPLE-01/data/adam, fictional; read, not changed).  Studies:
+# the programs-family fixtures (sample, sample-company, edited, sheets) and
+# "extra" (SAMPLE-01 and two reports the fixtures lack: study.R).  Run
+# with LANG=C.UTF-8 (the spec's YAML is UTF-8).
 #
 # Today:     every ARD program, then every report program (an official
 #            run's "all": ARD before the reports).
@@ -14,7 +21,7 @@
 
 args <- commandArgs(TRUE)
 out_dir <- normalizePath(args[1L], "/", mustWork = FALSE)
-studies <- if (length(args) > 1L) args[-1L] else c("sample", "edited")
+studies <- if (length(args) > 1L) args[-1L] else c("sample", "sample-company", "edited", "sheets", "extra")
 pp_root <- normalizePath(Sys.getenv("PP_ROOT", "."), "/")
 adam <- Sys.getenv("PP_ADAM")
 source(file.path(pp_root, "inst", "dev", "proto-programs", "study.R"))
