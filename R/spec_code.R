@@ -1508,20 +1508,34 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 # A header text's population token: {n}, {n1}, {n:Placebo}
 .bign_token_re <- "[{]n[0-9]*(:[^}]*)?[}]"
 
-# The content with `value` as the values of each plan_col_header() whose
-# text says {n} and that gives none; attr "used": whether one took it
+# The content with `value` (list(n = ), or the program's `bign`) as the `n`
+# of each plan_col_header() whose text says {n} and whose values give no
+# `n` of their own: values with other tokens only (`list(N = "table")`)
+# keep them and get BIGN's n beside them.  attr "used": whether one took it
 .bign_header_items <- function(content, value) {
   used <- FALSE
   out <- lapply(content, function(it) {
-    if (!identical(.schema_fn_name(it$fn), "plan_col_header") || !is.null(it$args$values)) return(it)
+    if (!identical(.schema_fn_name(it$fn), "plan_col_header")) return(it)
+    v <- it$args$values
+    if (!is.null(v) && !(is.list(v) && !is.object(v) && length(v) &&
+                         !is.null(names(v)) && all(nzchar(names(v))) && !"n" %in% names(v))) {
+      return(it)
+    }
     txt <- as.character(unlist(list(it$args$header, it$args$lines), use.names = FALSE))
     if (!any(grepl(.bign_token_re, txt))) return(it)
-    it$args$values <- value
+    it$args$values <- if (is.null(v)) value else c(v, list(n = .bign_n_of(value)))
     used <<- TRUE
     it
   })
   attr(out, "used") <- used
   out
+}
+
+# the `n` of BIGN's values: the program's `bign$n`, a list's own `n`
+.bign_n_of <- function(value) {
+  if (inherits(value, "tfl_r")) return(tfl_r(paste0(unclass(value), "$n")))
+  if (is.list(value) && !is.object(value)) return(value$n)
+  value
 }
 
 # BIGN's n of each group (the by variable's values, as the table's column
