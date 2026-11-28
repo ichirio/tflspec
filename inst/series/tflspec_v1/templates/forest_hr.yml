@@ -125,7 +125,7 @@ params:
   n_by_arm:
     type: list<level>
     input: pick
-    choices: levels(by)
+    choices: levels(from_args(by))
     ordered: true
     default: ~
     step: content
