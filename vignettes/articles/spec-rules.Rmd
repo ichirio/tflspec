@@ -241,10 +241,11 @@ On an item with condition rows (`conditions:`), a row may give its own
 
 ### BIGN
 
-Each report has one `BIGN` analysis: the subjects of each column. It is
-the column header's N, and the denominator of the percentages. The
-templates write it first, on the data their `denominator` param names
-(`adsl_sub` by default):
+Each report has one `BIGN` analysis: the subjects of each column, the
+column header's N. The templates write it first, on the data row their
+`col_header_n_data` param names (`adsl_sub`, unless the report gives
+another). That row should have one row a subject in each column, as
+`adsl_sub` has:
 
 ```{r, echo = FALSE, comment = ""}
 x <- tpl("tflspec_hierarchy")
@@ -252,8 +253,10 @@ i <- grep("id: BIGN", x, fixed = TRUE)
 cat(x[i:(i + 5L)], sep = "\n")
 ```
 
-The other items say `denominator: BIGN`. In the program that is BIGN's
-data, so the percentages and the header N count the same subjects:
+The percentages' denominator is the template's `denominator` param, a
+data row of its own. Left empty, it is `col_header_n_data`'s row, so the
+percentages and the header N count the same subjects. The program names
+the row:
 
 ```{r, opts.label = "code"}
 code <- section(ae$code, "analyses")
@@ -263,6 +266,22 @@ cat(code[2:7], grep("denominator", code, value = TRUE), sep = "\n")
 ```{r}
 bign <- ae$ard[ae$ard$analysis_id == "BIGN" & ae$ard$stat_name == "n", ]
 data.frame(arm = unlist(bign$variable_level), N = unlist(bign$stat))
+```
+
+A lab table whose percentages are of the subjects tested for each
+parameter, with the header's N still the analysis set's, adds a data row of
+one row a subject and parameter and names it in `denominator`. Each
+parameter's count comes from the analysis's `by`:
+
+```yaml
+data:
+  - id: rec_den
+    from: rec_sub
+    distinct: [USUBJID, PARAMCD]
+template:
+  name: tflspec_v1/tflspec_shift
+  analysis:
+    denominator: rec_den
 ```
 
 ## 3. Study data: `study$adam` and `study$adam_org`

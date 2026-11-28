@@ -234,6 +234,7 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
     .derive_map_in(r)
   }
   rows <- if (!is.null(names(rows))) fill_row(rows) else lapply(rows, fill_row)
+  rows <- .tr_den_keep(rows, env, defs$name)
 
   items <- list()
   for (it in tpl$analysis %||% list()) {
@@ -296,6 +297,25 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   # (the template's page layer, for tfl_page_origins())
   attr(out, "page_template") <- tpl_page
   out
+}
+
+# The percentages' denominator a report's data row of one row a subject and
+# parameter (`distinct: [USUBJID, PARAMCD]`, the subjects tested, CANON-6):
+# cards counts a denominator by every column of the call's by it has, so
+# the row keeps its distinct columns and the groups (`by`) only -- not the
+# category the row's record has (ANRIND), which would make each cell's N its
+# own category's.  Written as the row's `keep:`, when the row gives none.
+.tr_den_keep <- function(rows, env, params) {
+  if (!all(c("col_header_n_data", "denominator", "by") %in% params)) return(rows)
+  den <- env$denominator
+  if (!is.character(den) || length(den) != 1L || !is.null(names(rows))) return(rows)
+  k <- match(den, vapply(rows, function(e) as.character(e$id %||% NA_character_), ""))
+  if (is.na(k)) return(rows)
+  r <- rows[[k]]
+  dis <- as.character(unlist(r$distinct))
+  if (!length(dis) || !is.null(r$keep) || !is.null(r$code)) return(rows)
+  rows[[k]]$keep <- unique(c(dis, as.character(unlist(env$by))))
+  rows
 }
 
 # The template's derive: names, in order, each one operation of

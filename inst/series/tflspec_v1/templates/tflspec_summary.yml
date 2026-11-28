@@ -65,15 +65,26 @@ params:
     step: analysis
     tier: other
     description: The label of the missing row.
-  denominator:
+  col_header_n_data:
     type: string
     input: pick
     choices: objects(data)
     default: adsl_sub
     step: analysis
     tier: usual
-    description: The data row whose subjects are the group Ns (BIGN) and the
-      percentages' denominator; both come from the one BIGN item.
+    description: The data row whose subjects are the column headers' N (the
+      BIGN item counts it; one row a subject in each group).
+  denominator:
+    type: string
+    input: pick
+    choices: objects(data)
+    default: ~
+    step: analysis
+    tier: usual
+    description: "The data row the percentages divide by; empty for
+      col_header_n_data's row.  For the subjects tested, a row of one record
+      a subject and parameter (from the records row, distinct: [USUBJID,
+      PARAMCD]): each parameter's count comes from the analysis's by."
   analysis_ids:
     type: map<column,string>
     input: table
@@ -198,6 +209,11 @@ params:
     description: The most rows a page holds.
 extends: !series extends
 style: !series style
+derive:
+  # the percentages' denominator: the row denominator names, else the one
+  # the header's N counts (canon 11-28, CANON-6: two params, the same row
+  # by default)
+  denominator_row: {if: "{denominator}", then: "{denominator}", else: "{col_header_n_data}"}
 data:
   - id: adsl_sub
     from: ADSL
@@ -206,7 +222,7 @@ analysis:
   - id: BIGN
     label: Subjects per group
     method: categorical
-    data: "{denominator}"
+    data: "{col_header_n_data}"
     variables: ["{by}"]
     formats: "{formats}"
   - id: CONT
@@ -229,7 +245,7 @@ analysis:
     variables: "{categorical}"
     # (N, the analysis's own denominator, stays in the ARD: canon 2026-11-16)
     statistics: [n, N, p]
-    denominator: BIGN
+    denominator: "{denominator_row}"
     missing_row: "{missing_row}"
     missing_label: "{missing_label}"
     formats: "{formats}"
