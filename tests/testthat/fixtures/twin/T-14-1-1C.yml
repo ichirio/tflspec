@@ -14,7 +14,7 @@ extends: [defaults]
 data:
   - id: adsl_sub
     from: ADSL
-ard:
+analysis:
   analyses:
     - id: BIGN
       method: cards::ard_tabulate

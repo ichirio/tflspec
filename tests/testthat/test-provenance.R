@@ -9,7 +9,7 @@ prov_study <- function() {
   writeLines(c(readLines(system.file("extdata", "spec-yaml", "defaults.yml", package = "tflspec")),
                "styles:", "  Tight:", "    content:",
                "      - plan_cells: {continuous: {n: '{N}'}}",
-               "      - plan_digits: {rounding: r}"),
+               "      - plan_digits: {AGE: 1}"),
              file.path(d, "spec", "defaults.yml"))
   d
 }

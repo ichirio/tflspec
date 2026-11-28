@@ -25,6 +25,25 @@
 #' the study's, `codelists:` in `spec/defaults.yml`, or a report's), with a
 #' message.
 #'
+#' `spec/defaults.yml` `force:` holds what every report of the study uses,
+#' whatever a layer, a template or the report says (canon 1.33): only the
+#' rounding, `force: {content: [{plan_digits: {rounding: sas}}]}` (`sas`, a
+#' half away from zero, or `r`, a half to even), written
+#'
+#' ```yaml
+#' force:
+#'   content:
+#'     - plan_digits: {rounding: sas}
+#' ```
+#'
+#' Every report and ARD program's setup sets it (`options(rtfreporter.rounding
+#' = , cards.round_type = )`); a table's own `plan_digits(rounding = )` of
+#' another value, or its `!unset`, is warned of and takes the forced value
+#' ([tfl_resolve_output()]).  Any other step or card under `force:` stops;
+#' so do the old places of the rounding, study.yml's `settings: rounding`
+#' and a `plan_digits: {rounding: }` card in `defaults.yml`'s `content:` or a
+#' style set's.
+#'
 #' `spec/defaults.yml` holds the study's code lists and its ADaM metadata,
 #' two things kept apart:
 #'
@@ -63,7 +82,9 @@
 #'   warning naming it (`tfl_read_outputs()`); `FALSE` (default) to stop there.
 #' @return `tfl_read_study_spec()`: a list of class `tfl_study_spec` --
 #'   `study` (`study.yml`, its `tokens:` the study's tokens), `data`,
-#'   `defaults`, `codelists` (the study's code lists by name, each a
+#'   `defaults`, `force` (`defaults.yml`'s `force:`: `content`, the one
+#'   `plan_digits(rounding = )` item; empty when the study forces none),
+#'   `codelists` (the study's code lists by name, each a
 #'   character vector of the codes in order, named by the code when the list
 #'   has labels: `c(F = "Female", M = "Male")`), `adam_meta` (a
 #'   `tfl_define`, its tables empty when `defaults.yml` has no `adam_meta:`),
@@ -131,7 +152,10 @@ tfl_read_study_spec <- function(dir) {
     data = .calls_in(rd(file.path(spec, "data.yml")) %||% list()),
     # (the study's code lists are not a layer's: a report refers to them by
     # name, study$codelists, and none reaches it through extends:)
-    defaults = .layer_from_list(dflt[setdiff(names(dflt), c("codelists", "adam_meta"))], "defaults"),
+    defaults = .layer_from_list(dflt[setdiff(names(dflt), c("codelists", "adam_meta", "force"))], "defaults"),
+    # what every report uses, whatever a layer or the report says: the
+    # rounding (defaults.yml's force:, canon 1.33; R/spec_force.R)
+    force = .force_read(dflt$force, "spec/defaults.yml"),
     codelists = .study_codelists_read(dflt$codelists),
     adam_meta = .adam_meta_read(dflt$adam_meta, "defaults.yml"),
     styles = stats::setNames(lapply(names(styles), function(nm)
@@ -162,6 +186,8 @@ tfl_read_study_spec <- function(dir) {
     its <- lapply(y$content %||% list(), .item_from_list)
     lapply(its, function(it) { it$from <- from; it })
   }
+  # (the study's rounding is its force, not a layer's card: canon 11-10 :369)
+  .layer_rounding_gone(items, from)
   list(data = .calls_in(y$data %||% list()), codelists = list(),
        content = items, page = .calls_in(y$page %||% list()))
 }
@@ -231,11 +257,16 @@ tfl_read_outputs <- function(dir, skip_bad = FALSE) {
 #' )`) taken out of those; for a template not yet migrated, its look
 #' (plan_style, the widths, the rows a page ...) under the study's layers,
 #' which say the look and win -- and
-#' its `ard:` under the report's (an entry of the report's replaces the
+#' its `analysis:` under the report's (an entry of the report's replaces the
 #' template's of the same id); a template parameter that says where its
 #' study default is takes it from the layers when the SPEC does not give
 #' it, and a SPEC value over a different one says so.  Each item's
-#' `from` says where it came from.  The result holds no `tfl_unset`.
+#' `from` says where it came from.  The result holds no `tfl_unset`.  Over
+#' all of them, the study's force (`spec/defaults.yml` `force:`, canon
+#' 1.33): a table's `plan_digits(rounding = )` of another value than the
+#' forced one, or an `!unset` of it, is warned of (a warning of class
+#' `tflspec_force_over`, which [tfl_check_spec()] lists) and takes the
+#' forced value; a listing or a figure is left as it is.
 #'
 #' @param output A `tfl_output` as read from its file.
 #' @param study A `tfl_study_spec` (its `defaults` and `styles`).
@@ -270,7 +301,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   layers <- lb$layers
   acc <- lb$acc
   # a template SPEC: the template's items between the layers and the
-  # report's own (its ard: under the report's ard:)
+  # report's own (its analysis: under the report's analysis:)
   tpl <- NULL
   if (!is.null(.tpl_spec_of(output))) {
     tpl <- .tpl_expand_for(output, study, lb, .merge_map(acc$codelists, output$codelists))
@@ -354,6 +385,9 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   output$content <- .study_refs_prune(output$content, names(study$codelists))
   attr(output, "study_codelists") <- study$codelists %||% list()
   output$content <- .listing_rows_default(output$content, output$kind, provenance)
+  # the study's force (layer 5, canon 1.33): a table's own rounding takes
+  # the forced one, warned of when it differs
+  output$content <- .force_over(output$content, study, output, own = own$content)
   # the study's rounding: the setup's option, so the program leaves it out
   attr(output, "study_rounding") <- .study_rounding(study)
   # the page: the report's configuration < the template < the report < force;
@@ -491,9 +525,9 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 
 # The steps a report is made in (canon 1.32), which `extends` may name one
 # by one; and the step each part of a layer goes with (`codelists` is
-# always empty in a layer; `ard` lays nothing yet, defaults.yml has no
-# `ard:`)
-.extends_steps <- c("data", "ard", "content", "page")
+# always empty in a layer; `analysis` lays nothing yet, defaults.yml has no
+# `analysis:`)
+.extends_steps <- c("data", "analysis", "content", "page")
 .extends_part_step <- c(data = "data", codelists = "data", content = "content", page = "page")
 
 # `extends` as written, checked: NULL (not written); the files, nearest
@@ -516,6 +550,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
       stop(sprintf(paste0("%s: `extends` has no step page: the page comes from the page ",
                           "configuration (styles:), picked with `style:`."), who), call. = FALSE)
     }
+    if ("ard" %in% names(x)) .old_form_stop("extends_ard", who)
     unknown <- setdiff(names(x), .extends_steps)
     if (length(unknown) || !all(nzchar(names(x))) || anyDuplicated(names(x))) {
       stop(sprintf("%s: `extends` has no step %s; the steps: %s.", who,
@@ -605,7 +640,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 #'
 #' What a report extends, step by step: the files laid under it -- the
 #' study's `defaults` -- in each of the
-#' steps a report is made in (`data`, `ard`, `content`), nearest
+#' steps a report is made in (`data`, `analysis`, `content`), nearest
 #' first.  The report's `extends:` says it, as a list of files for every
 #' step, `none`, or a map by step (`{content: none}`).  A step the map does
 #' not name, or a template report that writes none, takes its template's
@@ -617,7 +652,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 #' @param output A `tfl_output` ([tfl_read_output()]).
 #' @param step One step's name; `NULL` for all.
 #' @return The files laid under `step`, nearest first (`character(0)`:
-#'   none); `NULL` `step`: a list by step (`data`, `ard`, `content`).
+#'   none); `NULL` `step`: a list by step (`data`, `analysis`, `content`).
 #' @examples
 #' o <- tfl_output("T-1", "table", extends = list(content = "none"))
 #' tfl_output_extends(o)
@@ -1018,8 +1053,9 @@ tfl_output_extends <- function(output, step = NULL) {
 #' Write one part of a study's YAML spec
 #'
 #' Writes the study-level file of one part of a [tfl_read_study_spec()]
-#' result -- what a builder changes for the whole study (the rounding of
-#' every table, a page configuration) -- in the form the reader reads.  For
+#' result -- what a builder changes for the whole study (the rounding every
+#' report is forced to, `study$force`; a page configuration) -- in the form
+#' the reader reads.  For
 #' `"defaults"` written over the study's own `spec/defaults.yml`, the blocks
 #' that are not layers (`codelists:`, `adam_meta:`, `figure_style:`,
 #' `options:`) are kept as the file has them.
@@ -1059,7 +1095,9 @@ tfl_write_study_part <- function(study, part = c("defaults", "data", "toc"),
   }
   y <- switch(part,
     defaults = {
-      y <- layer_out(study$defaults)
+      # (the study's force first: the rounding, canon 1.33)
+      y <- c(if (length(study$force$content)) list(force = .force_out(study$force)),
+             layer_out(study$defaults))
       if (length(study$styles)) y$styles <- lapply(study$styles, layer_out)
       y
     },
@@ -1084,8 +1122,8 @@ tfl_write_study_part <- function(study, part = c("defaults", "data", "toc"),
 # `lines` (the writer's defaults.yml) with every top-level block of `old`
 # (the file it writes over) whose key `lines` has not, as `old` has it: the
 # key's line to the next top-level key, the comment lines just above the key
-# included.  The writer's own keys (content, page, data, styles) are not
-# kept: it leaves one out when it is empty.  The kept blocks keep their order
+# included.  The writer's own keys (force, content, page, data, styles) are
+# not kept: it leaves one out when it is empty.  The kept blocks keep their order
 # and their place by `styles:`: those before the old `styles:` (all, when it
 # has none) just before the new one (at the end when there is none), those
 # after it at the end.
@@ -1094,7 +1132,7 @@ tfl_write_study_part <- function(study, part = c("defaults", "data", "toc"),
   key_of <- function(x) sub(":.*$", "", x)
   top <- is_key(old)
   keys <- ifelse(top, key_of(old), NA_character_)
-  skip <- c(key_of(lines[is_key(lines)]), "content", "page", "data", "styles")
+  skip <- c(key_of(lines[is_key(lines)]), "force", "content", "page", "data", "styles")
   st <- which(keys %in% "styles")[1L]
   before <- character()
   after <- character()

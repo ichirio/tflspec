@@ -86,7 +86,7 @@ test_that("an analysis set's data id: the template makes it from ADSL, narrowed 
       expect_match(as.character(s$ard$analysis_data[[k]]$where), "SEX", fixed = TRUE, info = tpl)
     }
   }
-  # (another report's own data: the report's `ard:` makes it, so it is not added)
+  # (another report's own data: the report's `analysis:` makes it, so it is not added)
   x <- dv_expand("ae_soc_pt", denominator = "adsl_part")
   expect_identical(dv_ids(x), dv_ids(dv_expand("ae_soc_pt")))
   expect_identical(dv_dens(x)[[1L]], "adsl_part")
@@ -308,7 +308,7 @@ test_that("an analysis data the report does not have stops, naming what it has",
   expect_error(tfl_resolve_output(o, st),
                  paste0("T-DV: template ae_soc_pt: denominator \"adsl_zzz\" is not an analysis data ",
                         "of the report (adsl_sub, adae_sub). The template makes adsl_sub and, for another ",
-                        "analysis set, adsl_<id> (the object adsl_den); the report's own come from its `ard:`."),
+                        "analysis set, adsl_<id> (the object adsl_den); the report's own come from its `analysis:`."),
                  fixed = TRUE)
   # (a number, "data", an analysis set of the study: no complaint)
   for (v in list(5, "data", "adsl_itt")) {

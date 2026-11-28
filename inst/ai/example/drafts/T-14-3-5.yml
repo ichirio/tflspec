@@ -10,7 +10,7 @@ data:
     from: ADLB
     population: SAF
     where: !r AVISIT == "CYCLE 2 DAY 1" & PARAMCD %in% c("ALT", "AST")
-ard:
+analysis:
   analyses:
     - id: SHIFT
       method: categorical
@@ -77,7 +77,7 @@ page:
       center: Safety Population
 ai:
   assumptions:
-    - where: ard.analysis_data
+    - where: analysis.analysis_data
       item: visit
       assumption: the shell's on-treatment visit is CYCLE 2 DAY 1; ALT and AST only
       question: Which visit, or the worst post-baseline value?

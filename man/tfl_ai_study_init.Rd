@@ -33,7 +33,8 @@ files to \code{output/tfl}, the programs to \code{programs/tfl}, as tflplanner
 keeps them, so the folder opens there as a study),
 \code{spec/data.yml} (each ADaM file as a dataset, and an analysis set for
 each population flag of ADSL -- \code{SAFFL}, \code{FASFL}, \code{ITTFL}, \code{PPROTFL} ...
--- as \verb{<flag> == "Y"}) and \code{spec/defaults.yml} (the page every report
+-- as \verb{<flag> == "Y"}) and \code{spec/defaults.yml} (the study's rounding,
+\code{sas}, forced on every report in its \verb{force:}; the page every report
 starts from: the running header and footer, and the cell of a count).
 Each report file then says \verb{extends: [defaults]} and only what differs.
 Check the analysis sets' ids and labels: the table prompt gives them to

@@ -23,7 +23,7 @@ tflspec's checks reads its answer, and what its items are matched by.
 \item \code{figure}: one report's whole figure design (\code{\link[=tfl_fig_design]{tfl_fig_design()}}),
 checked by \code{\link[=tfl_check_fig_design]{tfl_check_fig_design()}}.
 \item \code{table}: the report files of the YAML spec (\verb{spec/outputs/<id>.yml})
-of a batch of 5 to 10 tables -- each its \verb{ard:} analyses, \verb{data:},
+of a batch of 5 to 10 tables -- each its \verb{analysis:} analyses, \verb{data:},
 \verb{codelists:}, \verb{content:} items (one call each: \code{normalize_ard},
 \code{table_plan}, \verb{plan_*}) and \verb{page:} -- over the study's defaults; read
 by \code{\link[=tfl_read_output]{tfl_read_output()}}, checked item by item against the schema

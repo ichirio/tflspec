@@ -45,9 +45,9 @@
       listing                    shipped  dd2046be97489963ca94866ad3de0045
       listing                    plain    dd2046be97489963ca94866ad3de0045
       listing                    company  dd2046be97489963ca94866ad3de0045
-      km_table                   shipped  -------------------------------- not built: the example has no ARD analyses of its own (ard:) for the study to run
-      km_table                   plain    -------------------------------- not built: the example has no ARD analyses of its own (ard:) for the study to run
-      km_table                   company  -------------------------------- not built: the example has no ARD analyses of its own (ard:) for the study to run
+      km_table                   shipped  -------------------------------- not built: the example has no ARD analyses of its own (analysis:) for the study to run
+      km_table                   plain    -------------------------------- not built: the example has no ARD analyses of its own (analysis:) for the study to run
+      km_table                   company  -------------------------------- not built: the example has no ARD analyses of its own (analysis:) for the study to run
       km_survival                shipped  95c3880da9dca66833a1157d675085e7
       km_survival                plain    95c3880da9dca66833a1157d675085e7
       km_survival                company  95c3880da9dca66833a1157d675085e7
@@ -69,9 +69,9 @@
       orr                        shipped  2cdff2b6e53b9fde4d19585b241a2f45
       orr                        plain    -------------------------------- not built: `col_header`: no column 'row_label' on the page. Columns: group, label, Drug X, Control
       orr                        company  560077c04e1afccdc33107898e54ceaf
-      stat_block                 shipped  -------------------------------- not built: the example has no ARD analyses of its own (ard:) for the study to run
-      stat_block                 plain    -------------------------------- not built: the example has no ARD analyses of its own (ard:) for the study to run
-      stat_block                 company  -------------------------------- not built: the example has no ARD analyses of its own (ard:) for the study to run
+      stat_block                 shipped  -------------------------------- not built: the example has no ARD analyses of its own (analysis:) for the study to run
+      stat_block                 plain    -------------------------------- not built: the example has no ARD analyses of its own (analysis:) for the study to run
+      stat_block                 company  -------------------------------- not built: the example has no ARD analyses of its own (analysis:) for the study to run
       param_change               shipped  52bdf41e88c4297593e7fb4e642ea387
       param_change               plain    64a4dbee1045ce927ebafc9778ff74e9
       param_change               company  97a0e8ddf7bca94a43044bd5001c3372

@@ -222,14 +222,14 @@ test_that("the listing template writes the style as the study's, else the series
 
 test_that("a listing's style: the study's settings.style (origin study)", {
   for (t in "tflspec_v1/tflspec_listing") {
-    s <- lstb_style(list(settings = list(rounding = "sas", style = "standard")), t)
+    s <- lstb_style(list(settings = list(style = "standard")), t)
     expect_identical(s, list(style = "standard", origin = "study"), info = t)
   }
 })
 
 test_that("a listing's style: no settings.style, or no study, is tfl_small (origin series)", {
   for (t in "tflspec_v1/tflspec_listing") {
-    expect_identical(lstb_style(list(settings = list(rounding = "sas")), t),
+    expect_identical(lstb_style(list(settings = list()), t),
                      list(style = "tfl_small", origin = "series"), info = t)
     expect_identical(lstb_style(list(), t), list(style = "tfl_small", origin = "series"), info = t)
     expect_identical(lstb_style(NULL, t), list(style = "tfl_small", origin = "series"), info = t)
@@ -272,8 +272,8 @@ test_that("a listing's style: the study's copy keeps the line and resolves the s
   root <- tempfile("lsty")
   on.exit(unlink(root, recursive = TRUE), add = TRUE)
   dir.create(root)
-  a <- lstb_folder(root, "STUDY-A", c("  rounding: sas", "  style: standard"))
-  b <- lstb_folder(root, "STUDY-B", "  rounding: sas")
+  a <- lstb_folder(root, "STUDY-A", "  style: standard")
+  b <- lstb_folder(root, "STUDY-B", character())
   for (t in "tflspec_listing") {
     copy <- file.path(a, "spec", "series", "tflspec_v1", "templates", paste0(t, ".yml"))
     expect_true("style: !study {key: settings.style, fallback: !series style_listing}" %in%
@@ -290,8 +290,8 @@ test_that("a listing's style: style_listing set in the study's copy is used with
   root <- tempfile("lsty")
   on.exit(unlink(root, recursive = TRUE), add = TRUE)
   dir.create(root)
-  a <- lstb_folder(root, "STUDY-A", c("  rounding: sas", "  style: standard"))
-  b <- lstb_folder(root, "STUDY-B", "  rounding: sas")
+  a <- lstb_folder(root, "STUDY-A", "  style: standard")
+  b <- lstb_folder(root, "STUDY-B", character())
   for (st in c(a, b)) tfl_series_values_set(st, "tflspec_v1", list(style_listing = "compact"))
   # no settings.style: the copy's series value
   expect_identical(lstb_style(b), list(style = "compact", origin = "series"))
@@ -303,7 +303,7 @@ test_that("a listing's style: the report's own style: wins over the study's and 
   root <- tempfile("lsty")
   on.exit(unlink(root, recursive = TRUE), add = TRUE)
   dir.create(root)
-  b <- lstb_folder(root, "STUDY-B", "  rounding: sas")
+  b <- lstb_folder(root, "STUDY-B", character())
   tfl_series_values_set(b, "tflspec_v1", list(style_listing = "compact"))
   own <- "landscape"
   expect_identical(lstb_style(list(settings = list(style = "standard")), report_style = own)$style, own)

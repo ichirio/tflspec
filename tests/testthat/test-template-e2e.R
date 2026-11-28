@@ -18,7 +18,7 @@ e2e_rd <- function(text) {
   .series_read_yaml(f)
 }
 
-e2e_settings <- list(settings = list(rounding = "sas"))
+e2e_settings <- list(settings = list())
 
 e2e_reports <- function() {
   local_test_series(parent.frame())

@@ -254,7 +254,7 @@ stop is *Running the requests*, below: one, or a batch.  For each request:
 5. **Write the skeleton** of each report as `ai/spec/outputs/<id>.yml`
    (UTF-8), the forms of the instructions exactly:
    - `id`, `kind`, `label`, `population`, `extends: [defaults]`;
-   - `data`, and `ard` (the analysis data and the analyses: method, by,
+   - `data`, and `analysis` (the analysis data and the analyses: method, by,
      variables, the denominator);
    - the content: a template with its arguments when one fits
      (`template: {name: ..., args: {...}}`, only the arguments that differ
@@ -335,8 +335,8 @@ stop is *Running the requests*, below: one, or a batch.  For each request:
    ```yaml
    ai:
      assumptions:
-       - {where: ard.analyses, item: where, assumption: "treatment-emergent is TRTEMFL == 'Y'", value: "TRTEMFL == \"Y\"", from: D3}
-       - {where: ard.analyses, item: denominator, assumption: "the percent is of the arm's subjects in the safety set, the usual denominator of an AE table", value: "SAF by TRT01A", from: "programmer convention"}
+       - {where: analysis.analyses, item: where, assumption: "treatment-emergent is TRTEMFL == 'Y'", value: "TRTEMFL == \"Y\"", from: D3}
+       - {where: analysis.analyses, item: denominator, assumption: "the percent is of the arm's subjects in the safety set, the usual denominator of an AE table", value: "SAF by TRT01A", from: "programmer convention"}
      confirm:
        - {where: content, item: plan_cells, why: "the shell shows n (%) but not whether the % is of the arm or of all"}
    ```
@@ -347,7 +347,7 @@ stop is *Running the requests*, below: one, or a batch.  For each request:
 7. **Read the draft once more before you save it**, against the list
    *Before you save a draft* at the end of the instructions
    (`ai/instructions-table.md`): the keys, the indentation, the quotes,
-   the forms of `data` and `ard`.  A draft the check refuses comes back
+   the forms of `data` and `analysis`.  A draft the check refuses comes back
    to you with its problems; one you checked yourself seldom does.
 8. Set the request's row in `ai/progress.md`, and go on as *Running the
    requests* says.  A question about the work rather than a report (a file

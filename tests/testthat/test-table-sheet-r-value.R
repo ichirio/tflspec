@@ -21,7 +21,7 @@ tsr_data <- function() {
 tsr_study <- function(content, env = parent.frame()) {
   d <- withr::local_tempdir(.local_envir = env)
   dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)
-  write_study_yml(d, c("study_id: T-RV", "title: trv", "settings:", "  rounding: sas",
+  write_study_yml(d, c("study_id: T-RV", "title: trv", "settings:",
                "  output_path: output/tfl", "  program_dir: programs/tfl",
                "  file: '{output_id}.rtf'", "keys:", "  id: USUBJID"))
   writeLines(c("datasets:", "  - dataset: ADSL", "    level: ADaM", "    path: adam/adsl.xpt",

@@ -63,7 +63,7 @@
 #' * `figure`: one report's whole figure design ([tfl_fig_design()]),
 #'   checked by [tfl_check_fig_design()].
 #' * `table`: the report files of the YAML spec (`spec/outputs/<id>.yml`)
-#'   of a batch of 5 to 10 tables -- each its `ard:` analyses, `data:`,
+#'   of a batch of 5 to 10 tables -- each its `analysis:` analyses, `data:`,
 #'   `codelists:`, `content:` items (one call each: `normalize_ard`,
 #'   `table_plan`, `plan_*`) and `page:` -- over the study's defaults; read
 #'   by [tfl_read_output()], checked item by item against the schema

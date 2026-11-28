@@ -5,7 +5,7 @@
 # `data: {population: SAF}`, `common:` until it goes, or a data row of the
 # subjects' id -- goes over it.  Fictional data only.
 
-fp_study <- list(settings = list(rounding = "sas"))
+fp_study <- list(settings = list())
 
 fp_report <- function(text) {
   f <- tempfile(fileext = ".yml")

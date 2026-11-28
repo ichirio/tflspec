@@ -1,5 +1,5 @@
 # A data row's `derive` (a new column, `name = expression`) in a template
-# report: the same mutate() as in a report that writes its own `ard:`, in
+# report: the same mutate() as in a report that writes its own `analysis:`, in
 # the same place, and the ARD builds with the column.  The map form
 # (`derive: {AGEGR2: <R>}`) says the same pieces.
 
@@ -17,7 +17,7 @@ dd_study <- function(derive_lines, template) {
          if (template) c("template:", "  name: demog",
                          "  args: {by: TRT01A, continuous: AGE, categorical: [AGEGR2, SEX]}"),
          "data:", "  - id: adsl_sub", "    from: ADSL", "    population: SAF", derive_lines,
-         if (!template) c("ard:", "  analyses:",
+         if (!template) c("analysis:", "  analyses:",
                           "    - {id: CAT, method: cards::ard_tabulate, data: adsl_sub, by: [TRT01A], variables: [AGEGR2, SEX]}"))
   writeLines(y, file.path(d, "outputs", "T-9.yml"))
   d

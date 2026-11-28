@@ -20,7 +20,7 @@ as it is.
 The B use of a report's template SPEC (\verb{template: \{name, args\}} in its
 YAML file): the template's items -- with the study's defaults for the
 parameters that take them, as \code{\link[=tfl_resolve_output]{tfl_resolve_output()}} gives them --
-merged with the report's own \verb{ard:}, \verb{data:} and \verb{content:}, and the
+merged with the report's own \verb{analysis:}, \verb{data:} and \verb{content:}, and the
 \verb{template:} taken out.  Each item the template made keeps the mark
 \code{from = "template:<name>"}.  The report is then a code SPEC: later
 changes of the template do not reach it.  A series template

@@ -2,7 +2,7 @@
 # cards (the code SPEC form), its data the figure's steps.  Fictional data
 # only.
 
-kmc_study <- list(settings = list(rounding = "sas"))
+kmc_study <- list(settings = list())
 
 kmc_report <- function(...) {
   f <- tempfile(fileext = ".yml")

@@ -2,13 +2,10 @@
 # tfl_study_setup_code() writes it; option tflspec.study_setup leaves it out of
 # the ARD and report setups (#782 step 1).
 
+# (the study's rounding is its force: defaults.yml `force:`)
 ssc_study <- function(rounding = NULL) {
   st <- tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
-  if (!is.null(rounding)) {
-    it <- tfl_item("plan_digits", list(rounding = rounding))
-    it$from <- "defaults"
-    st$defaults$content <- c(st$defaults$content, list(it))
-  }
+  st$force <- tflspec:::.force_of(rounding)
   st
 }
 ssc_ard_spec <- function(rounding = NULL) {
@@ -168,7 +165,7 @@ test_that("tfl_study_setup_code() reads the study's datasets: the YAML study", {
                 "study$adam_org")))
   expect_true(all(nchar(code) <= 100L))
   # the rounding first, as it was
-  st$study$settings$rounding <- "sas"
+  st$force <- tflspec:::.force_of("sas")
   both <- tfl_study_setup_code(st)
   # (the setting's line first, then the rounding)
   expect_identical(both[1:2], code[1:2])
@@ -526,7 +523,7 @@ test_that("adam_levels: none -- the lists are written, study$adam is blank_as_na
   expect_no_error(parse(text = code))
   # with the rounding: the setting, then the rounding, then the data
   st <- ssc_levels_study("none")
-  st$study$settings$rounding <- "sas"
+  st$force <- tflspec:::.force_of("sas")
   both <- tfl_study_setup_code(st)
   expect_identical(both[1:2], c("# ADaM levels: none", ""))
   expect_match(both[3L], "^# the study's rounding")

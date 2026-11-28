@@ -71,3 +71,16 @@ frozen) say `spec_version: 2` since the old forms stop (canon 11-10
 :377): edited by hand, as no program's text reads the version.  SAMPLE-01
 is tflplanner's one source (#891): a change to it is a PR there, not a
 data-raw run.
+
+## The rounding: `force:`
+
+The study's rounding has one place since canon 1.33 (11-10 :368, :369):
+`spec/defaults.yml` `force: {content: [{plan_digits: {rounding: sas}}]}`.
+The `sample` and `sample-company` copies (study.yml, spec/defaults.yml)
+and the setup-family's study were moved to it by hand (study.yml's
+`settings: rounding` and the defaults' `plan_digits: {rounding: sas}` card
+taken out, `force:` added), and so was the study spec frozen in
+`in/sample.rds` and `in/sample-company.rds` (its `study$study$settings$rounding`
+and that defaults card taken out, `study$force` added; every other value
+checked identical when rewritten).  No program's text in
+`out/` changed.

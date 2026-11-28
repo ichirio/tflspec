@@ -28,6 +28,13 @@ twin_study <- function(d, defaults, style = TRUE) {
   if (!any(grepl("normalize_ard", dl, fixed = TRUE))) {
     dl <- append(dl, "  - normalize_ard: {}", after = match("content:", dl))
   }
+  # (the study's rounding, as tfl_ai_study_init() forces it, where the
+  # defaults given say none)
+  if (!any(grepl("^force:", dl))) {
+    init <- readLines(file.path(d, "spec", "defaults.yml"))
+    at <- grep("^force:", init)
+    dl <- c(init[at + 0:2], dl)
+  }
   writeLines(dl, file.path(d, "spec", "defaults.yml"))
   # (the sample defaults.yml's adam_meta levels apply as in the sample
   # study.yml: settings: {adam_levels: define_xml}; none, the default, applies none)

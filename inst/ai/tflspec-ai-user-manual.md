@@ -49,7 +49,7 @@ differ, trust the package, not this file, and fetch the matching copy with
    whose keys are that function's arguments (`tfl_schema()`).  An argument
    the function does not have is an error.  A table's items are
    rtfreporter's `normalize_ard`, `table_plan` and `plan_*`; its numbers
-   come from its `ard:` analyses (cards / cardx).  This is the **code
+   come from its `analysis:` analyses (cards / cardx).  This is the **code
    spec**, and the main path; §6 shows a table's file key by key.
 5. **`id` (`output_id`) is the key.**  A report file says only what
    differs from what it extends (`extends: [defaults]`): the study's
@@ -75,13 +75,13 @@ differ, trust the package, not this file, and fetch the matching copy with
 
 ```text
 TOC / SHELL ──(AI chat: the table task, §9.1)──> spec/outputs/<id>.yml
-ADaM ──(each report's ard:)──> study ARD ──(content:)──> plan ──(page:)──> RTF
+ADaM ──(each report's analysis:)──> study ARD ──(content:)──> plan ──(page:)──> RTF
          tfl_build_ard(study)          tfl_content_run()        tfl_report()
                                        tfl_content_code()       tfl_report_path()
 ```
 
 A study folder (§5) holds the code spec, a report a file:
-`tfl_build_ard(study)` makes the study ARD from every report's `ard:`,
+`tfl_build_ard(study)` makes the study ARD from every report's `analysis:`,
 `tfl_content_code(report)` / `tfl_content_run(report, data)` write / run
 its content (the table's plan), and `tfl_report(report, content, study = )`
 its document.  Each step can be **run** or **written out as a program**
@@ -236,7 +236,7 @@ spec/_<name>.yml            a note, never read (_assumptions.yml)
 st   <- tfl_read_study_spec("XYZ-001")          # the study's files
 outs <- tfl_read_outputs("XYZ-001")             # the reports, by id
 o    <- tfl_resolve_output(outs[["T-1"]], st)   # the report over its layers
-ard  <- tfl_build_ard(st, dir = "XYZ-001")      # the study ARD: every report's ard:
+ard  <- tfl_build_ard(st, dir = "XYZ-001")      # the study ARD: every report's analysis:
 cat(tfl_content_code(o), sep = "\n")            # the table's plan, as code
 plan <- tfl_content_run(o, tfl_ard_for(ard, "T-1"))
 generate_rtfreport(tfl_report(o, content = plan, study = st), "T-1.rtf")
@@ -245,7 +245,7 @@ generate_rtfreport(tfl_report(o, content = plan, study = st), "T-1.rtf")
 **study.yml** — `spec_version: 2` (the SPEC's form: a study.yml with
 none, or an older one, stops and lists the old forms to change);
 `study_id`, `title`; `settings:` the table and report
-study keys (`rounding`: `sas` / `r`; `program_dir`; `program` and
+study keys (`program_dir`; `program` and
 `file`, each report's program and RTF file, `{output_id}.R` /
 `{output_id}.rtf`; `adam_levels`: `define_xml` or `define_spec` puts on
 `study$adam` the levels of the code lists the study's ADaM metadata maps to
@@ -282,7 +282,7 @@ sections follow this order.
 | `common` | what several steps of the report read: `population` (an analysis set's `id`: the report's subjects; a figure's or a listing's set is on its data, `data: {population: SAF}`, and a template report's data map says only that), `treatment` (its arm variable), `population_label` (the text `{OUTPUT_POPULATION}` prints when the report has no set, or in place of the set's label); a report may have no population.  Any other key stops; so does a top-level `population:` (`population:` -> `common: population`) |
 | `extends` | the layers under it: `[defaults]` (the usual), `none`, or a map by step (`{content: none}`); a report picks its page configuration with `style:`.  `patterns/<name>` stops (patterns are gone) |
 | `data` (a table, a listing) | the report's datasets: a flat list of definitions (`id`, `from`, `population`, `subjects_in`, `where`, `add`, `derive`, `arrange`, `keep`, `distinct`, `then`, `code`: the `analysis_data` sheet's rows, `data_id` as `id`), in build order, named `<dataset>_sub` / `_den` / `_<noun>` (`adsl_sub`, `adae_sub`, `adlb_den`) -- §A.1.  `then` is R piped onto the end of the definition's data after all its other keys (and the code lists' levels), as written: the data is its first argument, a pipe of several steps is fine (`dplyr::mutate(...) |> dplyr::filter(...)`), and it may do anything R does; it is not written with `code` (an error: `code` makes the whole data).  A report on a template writes a definition of the template's id to change that definition: its keys go over the template's key by key, but a definition with `code` replaces the template's one whole (none of the template's `from`, `subjects_in`, `add`, `where`, `derive` stay).  For example, `tflspec_v1/lab_tox_shift` keeps each subject's worst record by its `record_where` (default `AVISIT == "WORST POST-BASELINE"`, the ADaM's own worst record); for an ADaM with no worst record, set it to TRUE and pick the record with `then` on the template's `adlb_sub`: `template: {name: tflspec_v1/lab_tox_shift, data: {record_where: !r TRUE}, analysis: {...}}` and `data: [{id: adlb_sub, then: !r 'dplyr::slice_max(ATOXGRH, n = 1, with_ties = FALSE, by = USUBJID)'}]` (several tests: `by = c(USUBJID, PARAMCD)`, and each test's own direction, `dplyr::coalesce(ATOXGRH, ATOXGRL)` for `ATOXGRH`).  Likewise `tflspec_v1/tflspec_shift` (a category at baseline by the same after it, `BNRIND` by `ANRIND` by default, a page a `PARAMCD`) computes no worst record: the shell's rule goes on the template's `rec_sub` as `where` and `then`, for example "a subject with both Low and High after baseline counts as High": `data: [{id: rec_sub, where: !r 'PARAMCD %in% c("ALT", "HGB") & !ABLFL %in% "Y"', then: !r 'dplyr::arrange(match(ANRIND, c("HIGH", "LOW", "NORMAL"))) |> dplyr::distinct(USUBJID, PARAMCD, .keep_all = TRUE)'}]` (the order is the study's rule, worst first; one record a subject and parameter).  A subjects definition (`from: ADSL`, no `subjects_in`) without a `population` of its own takes `common: population`.  A table writes no `data: {source: ard}` (it always reads its ARD: that map stops); `ard: analysis_data:` stops (it is `data:`) |
-| `ard` | the report's part of the study ARD: `analyses:` (the `analyses` sheet's rows, `analysis_id` as `id`, `population_id` as `population`) -- §A.1 |
+| `analysis` | the report's part of the study ARD: `analyses:` (the `analyses` sheet's rows, `analysis_id` as `id`, `population_id` as `population`) -- §A.1 |
 | `data` (a figure, or a listing's records) | what the report reads, a map.  a table's Rework is not written here: it is the first item of `content:`, `- rework: {steps: [...]}` (optional R after the content's `normalize_ard()` and before `table_plan()`: it starts from `data`, which is the object normalized by the `normalize_ard` item (`data <- ard` when there is none), and leaves `data`; a Rework that never names `data` is an error; `object: ard` names the ARD object; written under `ard: data:` or `data:` it stops); `source: dataset` (a listing: `dataset`, `where`, `sort`); `source: code` (a figure: `steps:`, the design's data steps of §7; or `code: !r ...`, the report's own R) |
 | `codelists` | the report's own, by variable, a list of `{value, label}` in the order printed (the `codelists` sheet); a nested count's inner value may say `under:` (its parent's value, for `complete_hierarchy()`).  No layer gives a report a list: the study's lists (`spec/defaults.yml` `codelists:`, by name) are named where used, in R: `plan_labels: {SEX: !r study$codelists$SEX}` (the template `tflspec_v1/demog` does so by default, its `value_labels`; a list the study has not got is left out) |
 | `content` | the report, a list of items, each one call: `- plan_cells: {categorical: '{n} ({p:.1f%})'}`.  A table's items are rtfreporter's `normalize_ard()`, `table_plan()` and `plan_*()` verbs; a listing's `plan_listing()` (its columns `listing_col()` calls); a figure's the calls of its plot -- `ggplot`, `geom_*`, `scale_*`, `labs`, `theme` ..., and `tfl_image` last (§7.1).  Or `content: !r ...`, the report's own R |
@@ -314,7 +314,13 @@ a function only the report has goes after them.  A template's `page:`
 holds the page's defaults; the report's `page:` changes only the lines
 (by number), cells and call arguments it writes (`tfl_page_origins()`
 says which layer gave each field).  `defaults.yml` holds the
-study-wide content (the rounding ...) and the page configurations
+study's force, `force:` -- only the rounding, which every report uses
+whatever a layer or the report says (`force: {content: [{plan_digits:
+{rounding: sas}}]}`, `sas` or `r`; written nowhere else: a `rounding` in
+study.yml's `settings:` or a `plan_digits: {rounding: }` card in a
+`content:` of `defaults.yml` stops, and a report's own `plan_digits(rounding
+= )` of another value is warned of and takes the forced one) -- the
+study-wide content and the page configurations
 (`styles:`, a style set each: the page's settings and the fixed lines of the
 header, footer, titles and footnotes in the blocks `first` and `last`; a
 report's own lines print between them; `tfl_styles()` lists the sets and the
@@ -335,7 +341,7 @@ kind: table
 label: Demographic and Baseline Characteristics
 common: {population: SAF, treatment: TRT01A}
 extends: [defaults]
-ard:
+analysis:
   analyses:
     - {id: N, method: total_n, dataset: ADSL, population: SAF}
     - {id: AGE, method: continuous, dataset: ADSL, population: SAF, by: [TRT01A], overall: true, variables: [AGE]}
@@ -367,7 +373,7 @@ page:
 
 | The shell shows | The file says |
 |---|---|
-| the arms across, `(N=xx)` under them | `ard`: `by: [TRT01A]`; `table_plan: {cols: TRT01A}`; the header's `(N={n})` |
+| the arms across, `(N=xx)` under them | `analysis`: `by: [TRT01A]`; `table_plan: {cols: TRT01A}`; the header's `(N={n})` |
 | a Total column | `overall: true` on the analyses; `plan_total: {label: Total}` |
 | a block of rows per variable | one analysis for the variables one method summarises (`continuous`, `categorical`); `rows: {group: variable}` |
 | SOC / PT rows | `method: hierarchical`, `variables: [AEBODSYS, AEDECOD]`; `normalize_ard: {hierarchy: [AEBODSYS, AEDECOD], overall: <the any-AE row>}`; `rows: {group1: AEBODSYS}`; `plan_sort: {keys: [.overall, group1, .depth, -n, label]}` |
@@ -385,7 +391,7 @@ page:
 | every subject, no flag | `common: {population: ALL}` (in `spec/data.yml` beside the flags' sets) |
 | the KM legend with each arm's median (95% CI) | the template: `template: {name: km_survival, args: {by: TRT01A, legend_median: true}}`; the wording is `legend_median_text` with `{arm}`, `{median}`, `{lcl}`, `{ucl}` (default `"{arm}: {median} ({lcl}, {ucl})"`), e.g. `args: {legend_median: true, legend_median_text: "{arm}, Median (95% CI): {median} ({lcl}, {ucl})"}`; by hand, the plot's `legend_labels` (R: a vector named by the arms) |
 
-The keys of `ard:` are the ARD sheets' columns (Appendix A.1) under their
+The keys of `analysis:` are the ARD sheets' columns (Appendix A.1) under their
 YAML names (`id`, `population`); the methods are `tfl_ard_methods()`.  The
 content's functions and their arguments are `tfl_schema()` (the file
 `inst/spec/schema.yml`); `tfl_schema_check(item)` checks one item.  A
@@ -506,7 +512,7 @@ layers:                                 # what is drawn, in order
 ```
 
 A read may take one of the report's own analysis data instead of a dataset
-(`{step: read, data: adtte_os}`, its `ard: analysis_data:` row `adtte_os`; a figure keeps its definitions under `ard:` until its own batch):
+(`{step: read, data: adtte_os}`, its `analysis: analysis_data:` row `adtte_os`; a figure keeps its definitions under `analysis:` until its own batch):
 the program makes it first (`tfl_ard_code(part = "data")`), as a table's
 analyses do, and the figure starts from it.
 
@@ -916,7 +922,7 @@ each object's place in `page: layout:`:
 
 ```yaml
 contents:
-  demog: [{table_plan: {cols: TRT01A}}, ...]      # reads the report's ard:
+  demog: [{table_plan: {cols: TRT01A}}, ...]      # reads the report's analysis:
   km:                                              # its own data (a figure)
     data: {steps: [{step: read, dataset: ADTTE}, {step: param, value: OS}]}
     template: {name: km_survival, args: {by: TRT01A}}
@@ -1130,7 +1136,7 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
 | `datasets` | `dataset`, `level`, `path`, `derive` | a name for the data, its level (`SDTM` / `ADaM`), its file relative to the study folder, new columns (`NAME = R expression`, `|` between them) |
 | `populations` | `population_id`, `dataset`, `where`, `derive`, `label` | an analysis set: the subjects of `dataset` for which `where` (R) holds; `derive` adds columns (`TRTA = TRT01A`); `label` is the text a header prints (Safety Analysis Set) and the set's name in ARS (blank: the id). "Population" is tflspec's word for what ICH E9 and CDISC ARS call an analysis set: `tfl_ars()` writes it as an `AnalysisSet`, an analysis's `population_id` as `analysisSetId` |
 | `records` | `record_id`, `dataset`, `where`, `label`, `any_label` | named sets of records (CDISC ARS data subsets): an analysis's `records` reads the set's dataset under its condition (the analysis's `where` on top), instead of `dataset` and `where`; the program's data of it is commented with the set (`# adae_sub: TESAE — Treatment-emergent SAEs (...)`); `any_label` names the "any" row of a hierarchy of them (`normalize_ard(overall = )`) when the table says none, else `Any <record_id>` |
-| `objects` | `output_id`, `object_id`, `code`, `label` | named values the ARD program makes at its top (`object_id <- code`, `label` a comment above): the study's (`output_id` blank; data.yml `objects:`) before a report's own (its `ard: objects:`); an analysis names one as its `denominator`, or in its `args` / `where`. YAML: `objects: [{id: n_saf_jp, code: !r 'c("Drug X" = 40, "Placebo" = 38)', label: ...}]` |
+| `objects` | `output_id`, `object_id`, `code`, `label` | named values the ARD program makes at its top (`object_id <- code`, `label` a comment above): the study's (`output_id` blank; data.yml `objects:`) before a report's own (its `analysis: objects:`); an analysis names one as its `denominator`, or in its `args` / `where`. YAML: `objects: [{id: n_saf_jp, code: !r 'c("Drug X" = 40, "Placebo" = 38)', label: ...}]` |
 | `groups` | `group_id`, `label`, `level`, `where` | condition-defined groups (CDISC ARS grouping factors; data.yml `groups:`, each with its `levels:`): a row a level, the condition (R) its records meet -- levels may overlap ("1 or 2", ">= 3 months"), a level with no `where` is every record ("All"). An analysis's `groups` runs it once in each level of each group named; its rows say the group's `label` in `group2` and the level in `group2_level`, in this sheet's order |
 | `analysis_data` | `output_id`, `data_id`, `from`, `population_id`, `subjects_in`, `where`, `add`, `derive`, `arrange`, `keep`, `distinct`, `code`, `then` | named data a report's analyses read (a report's, by `output_id`: the same `data_id` may mean something else in another report; a row names only its own report's rows above it): made `from` a dataset or an analysis data above, kept to a population's subjects and the records `where` keeps, with columns of the population's data added by the subject key (`add`), columns derived, the rows put in order (`arrange`: `USUBJID | -ASTDT`, `-` for descending), and one row per set of values (`distinct`: `USUBJID | APHASE`, a denominator per subject and phase) -- in that order; `subjects` (instead of `population_id`) keeps the subjects of an analysis data above, a report's own subjects (the numerator kept to the denominator's), and `keep` the columns kept (after `derive`: a derived column may be named). `data_id` is the object's name in the ARD program (lower case, not a dataset's or the program's own `<dataset>_sub`). `then` is R piped onto the end of the data after all that (and the code lists' levels), as written (several steps in one pipe; `dplyr::slice_max(ATOXGRH, n = 1, with_ties = FALSE, by = USUBJID)`). When the columns cannot say it, `code` is R that makes the data itself (its value is the data; the datasets, the analysis set's data `<dataset>_sub` and the analysis data above are in reach); then the other columns but `from` stay blank (`then` too) |
 | `analyses` | `output_id`, `analysis_id`, `parent`, `label`, `method`, `data`, `dataset`, `records`, `population_id`, `where`, `by`, `overall`, `strata`, `groups`, `variables`, `optional`, `statistics`, `denominator`, `formats`, `args`, `post`, `code`, `purpose`, `reason` | one analysis a row; `parent`: the analysis this one runs inside (a `stack`, `subgroups` or `pairwise` analysis of the same report; it takes the parent's dataset, population and `where`); `records`: a `records` sheet set instead of `dataset` and `where`; `groups`: the condition-defined groups it runs in (each level's rows in `group2` / `group2_level`); both ids become ARD columns; `optional` (`TRUE`): the variables are the ones the data has of them (`any_of()`); `post`: steps on the ARD after the call, `\|` between them (`cards::add_calculated_row()`, `complete_hierarchy()` ...); `purpose` / `reason` (CDISC terms) only for `tfl_ars()` |
@@ -1321,7 +1327,8 @@ sp$ard; sp$report; sp$table       # fill sp$ard$datasets$path before running
 `tfl_table_spec()`, `tfl_read_table_spec()`, `tfl_write_table_spec()`,
 `tfl_table_spec_template(ard)` (scaffolds `tables` / `variables` / `cells`
 from an ARD). A workbook may be split over several files; a sheet is said
-once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `r`;
+once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `r`, the
+study's force, which the YAML spec holds in `spec/defaults.yml` `force:`;
 `output_path`; `program_dir`; `adam_levels`: `define_xml` / `define_spec` / `none`, the default).
 
 **tables** (one row a table) — the roles and the table-wide layers:

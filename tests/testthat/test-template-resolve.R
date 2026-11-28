@@ -6,7 +6,7 @@
 # (a study given as a list, without its folder: the package's series read;
 # a study's own copies: test-study-template-copy.R)
 tr_study <- function() {
-  list(settings = list(rounding = "sas", output_path = "output/tfl"))
+  list(settings = list(output_path = "output/tfl"))
 }
 
 tr_report <- function(text) {

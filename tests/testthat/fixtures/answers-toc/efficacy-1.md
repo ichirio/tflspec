@@ -10,7 +10,7 @@ outputs:
     extends: [defaults]
     data:
       - {id: adrs_bor, from: ADRS, population: ITT, where: !r PARAMCD == "BOR", derive: !r 'RESP = AVALC %in% c("CR", "PR")'}
-    ard:
+    analysis:
       analyses:
         - {id: BOR, method: categorical, data: adrs_bor, by: [TRT01P], variables: [AVALC]}
         - {id: ORR, method: proportion_ci, data: adrs_bor, by: [TRT01P], variables: [RESP], args: !r method = "clopper-pearson"}
@@ -40,7 +40,7 @@ outputs:
       footnotes:
         "1": {left: "95% CI: Clopper-Pearson exact confidence interval."}
 assumptions:
-  - {output_id: T-14-2-1, where: ard.analysis_data, item: RESP, assumption: "a responder has a best overall response of CR or PR (PARAMCD BOR)", question: "Confirmed responses only?"}
+  - {output_id: T-14-2-1, where: analysis.analysis_data, item: RESP, assumption: "a responder has a best overall response of CR or PR (PARAMCD BOR)", question: "Confirmed responses only?"}
 ```
 
 Please check the assumptions before you use the file.

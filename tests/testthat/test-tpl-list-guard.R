@@ -89,7 +89,7 @@ test_that("km_cards: x_breaks as a map, empty or with an NA entry stops", {
       name = "tflspec_v1/km_cards", data = list(by = "TRT01P", param = "OS"),
       content = list(x_breaks = x_breaks)))
   }
-  kst <- list(settings = list(rounding = "sas"))
+  kst <- list(settings = list())
   # "0\n30" read as "name | text" rows: {"0": "", "30": ""}
   expect_error(tfl_template_resolve(kmc(list(`0` = "", `30` = "")), study = kst),
                "tflspec_v1/km_cards's x_breaks is a list (list<number>); the report gives a map",

@@ -10,7 +10,7 @@ rts_study <- function(files = list(), study = NULL, env = parent.frame()) {
                "  - dataset: ADTTE", "    level: ADaM", "    path: adam/adtte.xpt",
                "populations:", "  - id: SAF", "    dataset: ADSL", "    where: !r SAFFL == \"Y\"",
                "    label: Safety Population"), file.path(d, "spec", "data.yml"))
-  write_study_yml(d, study %||% c("study_id: MIN-1", "title: minimal", "settings:", "  rounding: sas",
+  write_study_yml(d, study %||% c("study_id: MIN-1", "title: minimal", "settings:",
                           "  output_path: output/tfl", "  program_dir: programs/tfl",
                           "  file: '{output_id}.rtf'", "keys:", "  id: USUBJID"))
   if (is.null(files[["defaults.yml"]])) files[["defaults.yml"]] <- "content: []"
@@ -198,12 +198,13 @@ test_that("a pattern file stops the sheets: an old form, whatever it holds", {
 })
 
 test_that("a study.yml settings: key the sheet does not read is kept, not a stop", {
-  study <- c("study_id: MIN-1", "title: minimal", "settings:", "  rounding: sas",
+  study <- c("study_id: MIN-1", "title: minimal", "settings:",
              "  treatment: TRT01A", "  retries: 3", "  custom: {a: 1, b: [x, y]}")
   d <- rts_study(list("outputs/T-1.yml" = rts_table()), study = study)
   x <- rts_trip(d)
   st <- yaml::read_yaml(file.path(x$to, "study.yml"))$settings
-  expect_identical(st$rounding, "sas")
+  # (the rounding is the study's force, defaults.yml `force:`: not a setting)
+  expect_null(st$rounding)
   expect_identical(st$treatment, "TRT01A")
   # (the value as study.yml had it, where the sheet's text says the same)
   expect_identical(st$retries, 3L)
@@ -212,16 +213,17 @@ test_that("a study.yml settings: key the sheet does not read is kept, not a stop
 })
 
 test_that("a vector setting is written back as the vector", {
-  study <- c("study_id: MIN-1", "title: minimal", "settings:", "  rounding: sas", "  foo: [a, b]")
+  study <- c("study_id: MIN-1", "title: minimal", "settings:", "  foo: [a, b]")
   x <- rts_trip(rts_study(list("outputs/T-1.yml" = rts_table()), study = study))
   st <- yaml::read_yaml(file.path(x$to, "study.yml"))$settings
   expect_identical(st$foo, c("a", "b"))
-  expect_identical(st$rounding, "sas")
+  # (the rounding is the study's force, defaults.yml `force:`: not a setting)
+  expect_null(st$rounding)
 })
 
 test_that("a typed key study.yml never had still stops, with or without sheets$study", {
   d <- rts_study(list("outputs/T-1.yml" = rts_table()),
-                 study = c("study_id: MIN-1", "title: minimal", "settings:", "  rounding: sas", "  treatment: TRT01A"))
+                 study = c("study_id: MIN-1", "title: minimal", "settings:", "  treatment: TRT01A"))
   sh <- tfl_sheets_from_yaml(d)
   sh$table$study <- rbind(sh$table$study, data.frame(key = "roundng", value = "sas"))
   to <- withr::local_tempdir()
@@ -255,7 +257,7 @@ rts_flat_study <- function(env = parent.frame()) {
     "outputs/T-1.yml" = rts_table(),
     "outputs/T-2.yml" = c(rts_table("T-2")[1:5], "page:", "  titles:", "    1: {center: Own, row_height_twips: 500}",
                           rts_table("T-2")[-(1:5)])),
-    study = c("study_id: MIN-1", "title: minimal", "settings:", "  rounding: sas",
+    study = c("study_id: MIN-1", "title: minimal", "settings:",
               "  output_path: output/tfl", "  program_dir: programs/tfl",
               "  file: '{output_id}.rtf'", "  style: std", "keys:", "  id: USUBJID"),
     env = env)

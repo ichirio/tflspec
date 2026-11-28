@@ -235,8 +235,8 @@ test_that("tfl_set_report_set(): writes where the reader reads, once, never in c
   expect_null(tfl_set_report_set(d2, NA)$template$args$population)
   # (in the part that gives it)
   d3 <- d
-  d3$template$ard <- list(population = "SAF")
-  expect_identical(tfl_set_report_set(d3, "ENR")$template$ard$population, "ENR")
+  d3$template$analysis <- list(population = "SAF")
+  expect_identical(tfl_set_report_set(d3, "ENR")$template$analysis$population, "ENR")
   # (km_survival: its set is a hidden data stage; the data map the template reads)
   k <- tfl_output("F-K", "figure", template = list(name = "km_survival", args = list(by = "TRT01A")))
   k2 <- tfl_set_report_set(k, "SAF")
@@ -293,10 +293,10 @@ test_that("a template argument is read and written where it sits: args:, a part,
   expect_error(.tpl_spec_of(two), "'population' is given twice")
   # a registered template: `args:` and its parts, as before
   dm <- tfl_output("T-D", "table", template = list(name = "demog", args = list(by = "TRT01A"),
-                                                   ard = list(population = "ENR")))
+                                                   analysis = list(population = "ENR")))
   expect_identical(tfl_report_set(dm), "ENR")
   dm2 <- tfl_set_report_set(dm, "FAS")
-  expect_identical(dm2$template$ard$population, "FAS")
+  expect_identical(dm2$template$analysis$population, "FAS")
   expect_null(dm2$template$args$population)
   # the reader of a YAML file reads the same (the step sections kept)
   f <- withr::local_tempfile(fileext = ".yml")

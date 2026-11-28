@@ -52,25 +52,54 @@
              "spec/series/<series>/series.yml `values:` (tfl_series_values_set()), after ",
              "tfl_copy_templates()"),
       "778"),
+    c("ard_key", "a report's `ard:`",
+      paste0("write `analysis:` (the same map): ", .ard_why), "587, 312"),
+    c("template_ard", "`template: {ard:}`",
+      paste0("write `template: {analysis:}` (the same map): ", .ard_why), "587, 312"),
+    c("extends_ard", "`extends: {ard:}`",
+      paste0("write `extends: {analysis:}` (the same map): ", .ard_why), "587, 312"),
     c("report_settings", "a report's `settings:` (its `file:`)",
       paste0("a report's RTF file and program are its TOC entry's (spec/toc.yml `file:`, ",
              "`program:`), else the study's (study.yml `settings: file`, `program`)"),
-      "380"))
+      "380"),
+    # (the study's rounding has one place, defaults.yml `force:`: R/spec_force.R)
+    c("settings_rounding", "study.yml `settings: rounding`",
+      .force_instead("sas", "and remove the setting"), "368, 369, 378"),
+    c("content_rounding", paste0("a `plan_digits: {rounding: }` card in the study's content ",
+                                 "(spec/defaults.yml `content:`, a style set's `content:`)"),
+      .force_instead("sas", "and take `rounding` out of the card"), "369, 378"))
   m <- do.call(rbind, rows)
   data.frame(id = m[, 1L], was = m[, 2L], instead = m[, 3L], canon = m[, 4L],
              stringsAsFactors = FALSE)
 }
 
+# Why the old key `ard:` went (the report's map, a template SPEC's part, a
+# step of `extends`)
+.ard_why <- "a report's second step is its analysis step, which makes its ARD (canon 11-15, `ard:` -> `analysis:`)"
+
+# The old form `id` as one line, "<was> is no longer read: <instead>." (a
+# check's problem text, where nothing stops)
+.old_form_text <- function(id) {
+  f <- .old_forms()
+  r <- f[f$id == id, , drop = FALSE]
+  if (!nrow(r)) stop(".old_form_text(): no old form ", id, call. = FALSE)
+  sprintf("%s is no longer read: %s.", r$was, r$instead)
+}
+
 # Stop on the old form `id` found at `where` (a file, a report: "tfl_read_
 # study_spec(): spec/patterns/"); `was` and `instead` replace the table's
-# text where the place knows better (a series by name)
-.old_form_stop <- function(id, where, was = NULL, instead = NULL) {
+# text where the place knows better (a series by name); `more`, lines
+# printed under the one line (the YAML to write, indented)
+.old_form_stop <- function(id, where, was = NULL, instead = NULL, more = NULL) {
   f <- .old_forms()
   r <- f[f$id == id, , drop = FALSE]
   if (!nrow(r)) stop(".old_form_stop(): no old form ", id, call. = FALSE)
-  msg <- sprintf("%s: %s is no longer read: %s.", where, was %||% r$was, instead %||% r$instead)
+  msg <- sub("[.]+$", ".", sprintf("%s: %s is no longer read: %s.", where, was %||% r$was,
+                                   instead %||% r$instead))
+  if (length(more)) msg <- paste(c(msg, paste0("  ", more)), collapse = "
+")
   stop(structure(class = c("tflspec_old_form", "error", "condition"),
-                 list(message = sub("[.]+$", ".", msg), call = NULL, form = id, where = where)))
+                 list(message = msg, call = NULL, form = id, where = where)))
 }
 
 # Every old form and what to write instead, one line each ("- was -> instead"):
@@ -114,6 +143,13 @@
   for (k in c("titles_at", "footnotes_at")) {
     if (is.list(set) && !is.null(set[[k]])) .old_form_stop(k, where, was = sprintf("`settings: %s`", k))
   }
+  # (the study's rounding is forced, in defaults.yml `force:`: canon 11-10 :369, :378)
+  if (is.list(set) && !is.null(set[["rounding"]])) {
+    r <- set[["rounding"]]
+    r <- if (is.character(r) && length(r) == 1L && r %in% c("sas", "r")) r else "sas"
+    .old_form_stop("settings_rounding", where, was = "`settings: rounding`",
+                   instead = .force_instead(r, "and remove the setting"), more = .force_yaml(r))
+  }
   invisible()
 }
 
@@ -128,7 +164,7 @@
 # `population` is an old form (.common_old_line); `last_step` is not read
 # yet and stops.  The reader, the writer and .output_fields read it.
 .output_keys <- data.frame(
-  key = c("id", "kind", "label", "common", "extends", "style", "template", "ard", "data",
+  key = c("id", "kind", "label", "common", "extends", "style", "template", "analysis", "data",
           "codelists", "content", "contents", "plot", "page", "note", "ai",
           "figure", "plots", "compose", "ggplot2_version", "layers"),
   kinds = c(rep("", 16L), rep("figure", 5L)),
@@ -150,6 +186,7 @@
                    .output_keys$kinds[.output_keys$key == k], kind), call. = FALSE)
     }
     if (k %in% "settings") .old_form_stop("report_settings", who)
+    if (k %in% "ard") .old_form_stop("ard_key", who)
     if (k %in% "last_step") {
       stop(sprintf(paste0("%s: `last_step:` is not read yet: a report is made to its last ",
                           "step; remove the key."), who), call. = FALSE)

@@ -1,19 +1,102 @@
-# The study's rounding is written once, in the setup every report sources
-# (options(rtfreporter.rounding = )); a report's program writes its own
-# plan_digits(rounding = ) only when it differs from the study's.
+# The study's rounding has one place, spec/defaults.yml `force:` (canon
+# 1.33; PRINCIPLES.md 11-10 :363-:369, :378, 11-11 :400).  It is written once,
+# in the setup every report and ARD program sources (options(
+# rtfreporter.rounding = , cards.round_type = )); a table's own
+# plan_digits(rounding = ) of another value is warned of and takes the forced
+# one; the old places of the rounding stop.
 
 sr_study <- function(rounding = "sas") {
   st <- tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
-  it <- tfl_item("plan_digits", list(rounding = rounding))
-  it$from <- "defaults"
-  st$defaults$content <- c(st$defaults$content, list(it))
+  st$force <- tflspec:::.force_of(rounding)
   st
 }
-sr_output <- function(content = list()) {
-  tfl_output("T-9", "table", common = list(population = "SAF"), content = c(list(
+sr_output <- function(content = list(), kind = "table") {
+  tfl_output("T-9", kind, common = list(population = "SAF"), content = c(list(
     tfl_item("table_plan", list(cols = "TRT01A")),
     tfl_item("plan_digits", list(AGE = 0))), content))
 }
+# a copy of the spec-yaml study (its files beside outputs/), defaults.yml
+# with `dflt` lines over its own first lines and study.yml with `study` lines
+sr_dir <- function(dflt = character(), study = character()) {
+  d <- tempfile("sr-study")
+  dir.create(file.path(d, "outputs"), recursive = TRUE)
+  src <- system.file("extdata", "spec-yaml", package = "tflspec")
+  file.copy(file.path(src, "outputs", "T-14-1-1.yml"), file.path(d, "outputs"))
+  writeLines(c(dflt, readLines(file.path(src, "defaults.yml"))), file.path(d, "defaults.yml"))
+  writeLines(c(readLines(file.path(src, "study.yml")), study), file.path(d, "study.yml"))
+  d
+}
+
+test_that("defaults.yml `force:` holds the study's rounding; the setup writes it", {
+  d <- sr_dir(c("force:", "  content:", "    - plan_digits: {rounding: r}"))
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  st <- tfl_read_study_spec(d)
+  expect_identical(tflspec:::.study_rounding(st), "r")
+  expect_identical(st$force$content[[1L]]$fn, "plan_digits")
+  # (no layer's card: the defaults' content does not have it)
+  expect_false(any(vapply(st$defaults$content, function(it) identical(it$fn, "plan_digits"), NA)))
+  setup <- tfl_report_setup_code(st)
+  expect_true(any(grepl("rtfreporter.rounding = \"r\"", setup, fixed = TRUE)))
+  expect_true(any(grepl("cards.round_type = \"round-to-even\"", setup, fixed = TRUE)))
+  expect_identical(tfl_study_setup_code(st)[1:2], c(
+    "# the study's rounding (every ARD and report program)",
+    "options(rtfreporter.rounding = \"r\", cards.round_type = \"round-to-even\")"))
+  # a study that forces none: no options()
+  st0 <- tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
+  expect_null(tflspec:::.study_rounding(st0))
+  expect_false(any(grepl("rounding|round_type", tfl_report_setup_code(st0))))
+})
+
+test_that("only the rounding is forced: another step or card under `force:` stops", {
+  bad <- list(
+    c("force:", "  page:", "    orientation: landscape"),
+    c("force:", "  content:", "    - plan_stub: {name: row_label}"),
+    c("force:", "  content:", "    - plan_digits: {rounding: sas, AGE: 0}"),
+    c("force:", "  content:", "    - plan_digits: {rounding: sas}", "    - plan_digits: {rounding: r}"),
+    c("force:", "  content: {plan_digits: {rounding: sas}}"),
+    c("force: sas"))
+  for (b in bad) {
+    d <- sr_dir(b)
+    expect_error(tfl_read_study_spec(d), "only the rounding is forced (canon 1.33)", fixed = TRUE)
+    unlink(d, recursive = TRUE)
+  }
+  # the value is sas or r, spelled so
+  d <- sr_dir(c("force:", "  content:", "    - plan_digits: {rounding: iec60559}"))
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  expect_error(tfl_read_study_spec(d), "force: plan_digits rounding takes \"sas\" or \"r\"", fixed = TRUE)
+})
+
+test_that("the old places of the rounding stop, naming the file and `force:`", {
+  # study.yml `settings: rounding`
+  d <- sr_dir(study = "  rounding: r")
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  writeLines(sub("^settings: \\{adam_levels: define_xml\\}$", "settings:\n  adam_levels: define_xml",
+                 readLines(file.path(d, "study.yml"))), file.path(d, "study.yml"))
+  e <- tryCatch(tfl_read_study_spec(d), error = function(e) e)
+  expect_s3_class(e, "tflspec_old_form")
+  expect_identical(e$form, "settings_rounding")
+  expect_match(conditionMessage(e), "study.yml: `settings: rounding` is no longer read", fixed = TRUE)
+  expect_match(conditionMessage(e), "write it in spec/defaults.yml `force:`", fixed = TRUE)
+  expect_match(conditionMessage(e), "force:\n    content:\n      - plan_digits: {rounding: r}", fixed = TRUE)
+  # a plan_digits(rounding = ) card in defaults.yml's content
+  d2 <- sr_dir(c("content:", "  - plan_digits: {rounding: sas}"))
+  on.exit(unlink(d2, recursive = TRUE), add = TRUE)
+  x <- readLines(file.path(d2, "defaults.yml"))
+  x <- x[-(grep("^content:", x)[2L])]
+  writeLines(x, file.path(d2, "defaults.yml"))
+  e <- tryCatch(tfl_read_study_spec(d2), error = function(e) e)
+  expect_identical(e$form, "content_rounding")
+  expect_match(conditionMessage(e), "spec/defaults.yml `content:`", fixed = TRUE)
+  expect_match(conditionMessage(e), "force: {content: [{plan_digits: {rounding: sas}}]}", fixed = TRUE)
+  # ... and in a style set's content
+  d3 <- sr_dir(c("styles:", "  house:", "    content:", "      - plan_digits: {rounding: r, AGE: 1}"))
+  on.exit(unlink(d3, recursive = TRUE), add = TRUE)
+  e <- tryCatch(tfl_read_study_spec(d3), error = function(e) e)
+  expect_identical(e$form, "content_rounding")
+  expect_match(conditionMessage(e), "`styles: house: content:`", fixed = TRUE)
+  # both are in the old forms' list the spec_version stop gives
+  expect_true(all(c("settings_rounding", "content_rounding") %in% tflspec:::.old_forms()$id))
+})
 
 test_that("the study's rounding is the setup's option, not the report's code", {
   st <- sr_study("sas")
@@ -22,33 +105,113 @@ test_that("the study's rounding is the setup's option, not the report's code", {
   code <- tfl_content_code(tfl_resolve_output(sr_output(), st))
   expect_false(any(grepl("rounding", code, fixed = TRUE)))
   expect_true(any(grepl("plan_digits(AGE = 0)", code, fixed = TRUE)))
-  # the run in hand keeps it: the same numbers with no option set
+  # the resolved report has no card of it: an in-process run sets the
+  # option as the setup does (.study_rounding_option())
   ro <- tfl_resolve_output(sr_output(), st)
   r <- unlist(lapply(Filter(function(it) it$fn == "plan_digits", ro$content), function(it) it$args$rounding))
-  expect_identical(r, "sas")
+  expect_null(r)
 })
 
-test_that("changing the study's rounding changes the setup only; a report's own rounding stays", {
+test_that("a table's own rounding: the forced one, warned of when it differs; a listing is left alone", {
   a <- sr_study("sas")
   b <- sr_study("r")
   expect_false(identical(tfl_report_setup_code(a), tfl_report_setup_code(b)))
   expect_identical(tfl_content_code(tfl_resolve_output(sr_output(), a)),
                    tfl_content_code(tfl_resolve_output(sr_output(), b)))
-  # a report that differs from the study says so in its own code
+  # another value: a warning, and the forced value (the setup's: not in the code)
   own <- sr_output(list(tfl_item("plan_digits", list(rounding = "r"))))
-  code <- tfl_content_code(tfl_resolve_output(own, a))
-  expect_true(any(grepl("rounding = \"r\"", code, fixed = TRUE)))
-  # a study without one: no option
-  st0 <- tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
+  expect_warning(ro <- tfl_resolve_output(own, a), class = "tflspec_force_over")
+  expect_warning(tfl_resolve_output(own, a), "the study forces the rounding \"sas\"", fixed = TRUE)
+  r <- unlist(lapply(Filter(function(it) it$fn == "plan_digits", ro$content), function(it) it$args$rounding))
+  expect_identical(r, "sas")
+  code <- suppressWarnings(tfl_content_code(tfl_resolve_output(own, a)))
+  expect_false(any(grepl("rounding", code, fixed = TRUE)))
+  # the forced value itself: nothing to say
+  expect_no_warning(ro <- tfl_resolve_output(own, b))
+  expect_false(any(grepl("rounding", tfl_content_code(ro), fixed = TRUE)))
+  # an !unset of it cannot take it off: a warning, the forced value
+  un <- sr_output(list(tfl_item("plan_digits", list(rounding = tfl_unset()))))
+  expect_warning(tfl_resolve_output(un, a), "plan_digits(rounding = !unset) is not used", fixed = TRUE)
+  # (the provenance says where the value came from)
+  ro <- suppressWarnings(tfl_resolve_output(own, a, provenance = TRUE))
+  pd <- Filter(function(it) it$fn == "plan_digits" && !is.null(it$args$rounding), ro$content)
+  expect_identical(pd[[1L]]$arg_from[["rounding"]], "force")
+  # a listing has no table content: skipped, in silence
+  li <- sr_output(list(tfl_item("plan_digits", list(rounding = "r"))), kind = "listing")
+  expect_no_warning(tfl_resolve_output(li, a))
+  # a study that forces none: a report's own rounding stays, in its code
+  st0 <- sr_study(NULL)
+  expect_no_warning(ro <- tfl_resolve_output(own, st0))
+  expect_true(any(grepl("rounding = \"r\"", tfl_content_code(ro), fixed = TRUE)))
   expect_false(any(grepl("rtfreporter.rounding", tfl_report_setup_code(st0), fixed = TRUE)))
+})
+
+test_that("tfl_check_spec() lists a rounding the force replaces", {
+  skip_on_cran()
+  d <- sr_dir(c("force:", "  content:", "    - plan_digits: {rounding: sas}"))
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  f <- file.path(d, "outputs", "T-14-1-1.yml")
+  x <- readLines(f)
+  at <- grep("^  - plan_digits: \\{continuous:", x)
+  expect_length(at, 1L)
+  x[at] <- sub("{continuous:", "{rounding: r, continuous:", x[at], fixed = TRUE)
+  writeLines(x, f)
+  p <- tfl_check_spec(d, adam = FALSE)
+  hit <- p[p$output_id %in% "T-14-1-1" & p$item %in% "plan_digits$rounding", , drop = FALSE]
+  expect_identical(nrow(hit), 1L)
+  expect_identical(hit$level, "warning")
+  expect_match(hit$message, "the study forces the rounding \"sas\"", fixed = TRUE)
+})
+
+test_that("the writers write `force:`: tfl_write_study_part(), the converter, the sheets", {
+  d <- sr_dir(c("force:", "  content:", "    - plan_digits: {rounding: r}"))
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  st <- tfl_read_study_spec(d)
+  # the builder's path: study$force, written by tfl_write_study_part()
+  st$force <- tflspec:::.force_of("sas")
+  tfl_write_study_part(st, "defaults")
+  y <- yaml::read_yaml(file.path(d, "defaults.yml"))
+  expect_identical(y$force, list(content = list(list(plan_digits = list(rounding = "sas")))))
+  expect_identical(tflspec:::.study_rounding(tfl_read_study_spec(d)), "sas")
+  # (none: the block is gone, not kept from the file written over)
+  st$force <- list()
+  tfl_write_study_part(st, "defaults")
+  expect_null(yaml::read_yaml(file.path(d, "defaults.yml"))$force)
+  expect_null(tflspec:::.study_rounding(tfl_read_study_spec(d)))
+  # the sheets: the study sheet's key `rounding` is the force, both ways
+  st$force <- tflspec:::.force_of("r")
+  sh <- tfl_sheets_from_spec(st, tfl_read_outputs(d))
+  expect_identical(sh$table$study$value[sh$table$study$key == "rounding"], "r")
+  expect_null(sh$study$settings$rounding)
+  to <- tempfile("sr-yaml")
+  on.exit(unlink(to, recursive = TRUE), add = TRUE)
+  suppressWarnings(suppressMessages(tfl_yaml_from_sheets(sh, to)))
+  expect_null(yaml::read_yaml(file.path(to, "study.yml"))$settings$rounding)
+  y <- yaml::read_yaml(file.path(to, "spec", "defaults.yml"))
+  expect_identical(y$force, list(content = list(list(plan_digits = list(rounding = "r")))))
+  expect_false(any(grepl("rounding", unlist(y$content), fixed = TRUE)))
+  expect_false(any(vapply(y$content, function(it) identical(names(it), "plan_digits") &&
+                            !is.null(it$plan_digits$rounding), NA)))
+  # tfl_ai_study_init(): the rounding in defaults.yml's force:, not in study.yml
+  ai <- tempfile("sr-ai")
+  on.exit(unlink(ai, recursive = TRUE), add = TRUE)
+  dir.create(file.path(ai, "adam"), recursive = TRUE)
+  saveRDS(tflspec::adsl, file.path(ai, "adam", "adsl.rds"))
+  tfl_ai_study_init(ai, adam = "adam", study_id = "SR-AI")
+  expect_null(yaml::read_yaml(file.path(ai, "study.yml"))$settings$rounding)
+  expect_identical(tflspec:::.study_rounding(tfl_read_study_spec(ai)), "sas")
 })
 
 test_that("the workbook's study rounding: in the setup, not in each table's code", {
   sp <- tfl_table_spec(
     tables = data.frame(output_id = "T1", cols = "TRT01A", stringsAsFactors = FALSE),
     study = data.frame(key = "rounding", value = "sas", stringsAsFactors = FALSE))
+  expect_identical(tflspec:::.study_rounding(sp), "sas")
   expect_true(any(grepl("rtfreporter.rounding = \"sas\"", tfl_report_setup_code(sp), fixed = TRUE)))
   expect_false(any(grepl("rounding", tfl_table_code(sp, "T1", normalize = FALSE), fixed = TRUE)))
+  # the defaults' content the converter writes has no card of it
+  items <- tflspec:::.plan_content_from_sheets(sp, NA)
+  expect_false(any(vapply(items, function(it) identical(it$fn, "plan_digits"), NA)))
 })
 
 # ---- cards formats the ARD's numbers: the study's rounding reaches it ----
@@ -106,18 +269,19 @@ test_that("the ARD program's setup sets cards' rounding with the study's", {
   expect_identical(sr_cards_under(s, 0.25), "0.3")
 })
 
-test_that("a YAML study's ARD setup carries its rounding", {
+test_that("a YAML study's ARD setup carries its forced rounding", {
   skip_on_cran()
   for (v in c("sas", "r")) {
-    dir <- withr::local_tempdir()
+    dir <- tempfile("sr-ard")
     dir.create(file.path(dir, "spec", "outputs"), recursive = TRUE)
-    write_study_yml(dir, c("study_id: SR-1", "keys:", "  id: USUBJID", "settings:",
-                 paste("  rounding:", v)))
+    write_study_yml(dir, c("study_id: SR-1", "keys:", "  id: USUBJID"))
+    writeLines(c("force:", "  content:", paste0("    - plan_digits: {rounding: ", v, "}")),
+               file.path(dir, "spec", "defaults.yml"))
     writeLines(c("datasets:", "  - dataset: ADSL", "    level: ADaM", "    path: data/adam/adsl.rds",
                  "populations:", "  - id: SAF", "    dataset: ADSL", "    where: !r SAFFL == \"Y\""),
                file.path(dir, "spec", "data.yml"))
     writeLines(c("outputs:", "  - id: T-1", "    kind: table"), file.path(dir, "spec", "toc.yml"))
-    writeLines(c("id: T-1", "kind: table", "extends: none", "ard:", "  analyses:",
+    writeLines(c("id: T-1", "kind: table", "extends: none", "analysis:", "  analyses:",
                  "    - id: AGE", "      method: continuous", "      population: SAF",
                  "      by: [ARM]", "      variables: [AGE]", "content:", "  - table_plan: {cols: ARM}"),
                file.path(dir, "spec", "outputs", "T-1.yml"))
@@ -126,6 +290,7 @@ test_that("a YAML study's ARD setup carries its rounding", {
     setup <- tfl_ard_code(st, part = "setup")
     expect_true(any(grepl(if (v == "r") "cards.round_type = \"round-to-even\"" else
                             "cards.round_type = \"round-half-up\"", setup, fixed = TRUE)))
+    unlink(dir, recursive = TRUE)
   }
 })
 
@@ -144,11 +309,9 @@ test_that("an in-process run sets cards' rounding and puts the options back", {
   expect_identical(cards::label_round(1)(0.25), "0.3")
   options(op)
   expect_null(getOption("cards.round_type"))
-  # a study that says none leaves both
+  # a study that forces none leaves both
   options(cards.round_type = "round-to-even")
-  st <- sr_study("sas")
-  st$defaults$content <- NULL
-  st$study$settings$rounding <- NULL
+  st <- sr_study(NULL)
   expect_identical(tflspec:::.study_rounding_option(st), list())
   expect_identical(getOption("cards.round_type"), "round-to-even")
   # tfl_build_ard() leaves cards' option as it found it

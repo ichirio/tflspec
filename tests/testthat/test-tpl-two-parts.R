@@ -1,4 +1,4 @@
-# A template SPEC in two parts (`template: {name, ard:, content:}`) beside the
+# A template SPEC in two parts (`template: {name, analysis:, content:}`) beside the
 # flat `args:`, and the analysis set from the report's `population:` field
 # (migration batch 0: the machinery, no output change)
 
@@ -10,16 +10,16 @@ tp_output <- function(template, population = "SAF", id = "T-9") {
              template = template)
 }
 
-# The example of a template with its names shared between `ard:` and `content:`
+# The example of a template with its names shared between `analysis:` and `content:`
 # (every other name, so both parts are used)
 # (a template that declares its parts: each name in its own part)
 tp_split <- function(ex, t) {
   part <- vapply(names(ex), function(n) tflspec:::.tpl_part_of(t, n), "")
-  i <- if (anyNA(part)) seq_along(ex) %% 2L == 1L else part == "ard"
-  list(ard = ex[i], content = ex[!i])
+  i <- if (anyNA(part)) seq_along(ex) %% 2L == 1L else part == "analysis"
+  list(analysis = ex[i], content = ex[!i])
 }
 
-test_that("every table template: the example as flat args: and as ard:/content: resolves the same", {
+test_that("every table template: the example as flat args: and as analysis:/content: resolves the same", {
   s <- tp_study()
   nm <- tfl_templates()$name[tfl_templates()$kind == "table"]
   expect_gt(length(nm), 15L)
@@ -49,16 +49,16 @@ test_that("every table template: the example as flat args: and as ard:/content: 
 
 test_that("both forms together are read; a name in both stops, naming it", {
   o <- tp_output(list(name = "demog", args = list(continuous = "AGE"), content = list(total_label = "All"),
-                      ard = list(categorical = "SEX")))
+                      analysis = list(categorical = "SEX")))
   a <- tflspec:::.tpl_spec_of(o)$args
   expect_identical(a[c("continuous", "total_label", "categorical")],
                    list(continuous = "AGE", total_label = "All", categorical = "SEX"))
-  o <- tp_output(list(name = "demog", args = list(continuous = "AGE"), ard = list(continuous = "AGE")))
+  o <- tp_output(list(name = "demog", args = list(continuous = "AGE"), analysis = list(continuous = "AGE")))
   expect_error(tflspec:::.tpl_spec_of(o), "'continuous' is given twice")
-  o <- tp_output(list(name = "demog", args = list(by = "ARM"), ard = list(by = "ARM")))
+  o <- tp_output(list(name = "demog", args = list(by = "ARM"), analysis = list(by = "ARM")))
   expect_error(tflspec:::.tpl_spec_of(o), "'by' is given twice")
-  o <- tp_output(list(name = "demog", ard = "SEX"))
-  expect_error(tflspec:::.tpl_spec_of(o), "`ard:` is a map")
+  o <- tp_output(list(name = "demog", analysis = "SEX"))
+  expect_error(tflspec:::.tpl_spec_of(o), "`analysis:` is a map")
 })
 
 test_that("a template that declares its parts: a name in the other part stops, naming the right one", {
@@ -67,18 +67,18 @@ test_that("a template that declares its parts: a name in the other part stops, n
     params = list(tfl_param("population", "SAF"), tfl_param("continuous", "AGE"),
                   tfl_param("widths", NULL, type = "number")),
     body = function(a, ctx) list(), parts = list(ard = c("population", "continuous"), content = "widths"))
-  expect_identical(tflspec:::.tpl_part_of("tp_parts", "continuous"), "ard")
+  expect_identical(tflspec:::.tpl_part_of("tp_parts", "continuous"), "analysis")
   expect_identical(tflspec:::.tpl_part_of("tp_parts", "widths"), "content")
   expect_true(is.na(tflspec:::.tpl_part_of("tp_parts", "nope")))
   # (demog declares its parts too)
-  expect_identical(tflspec:::.tpl_part_of("demog", "continuous"), "ard")
+  expect_identical(tflspec:::.tpl_part_of("demog", "continuous"), "analysis")
   expect_identical(tflspec:::.tpl_part_of("demog", "widths"), "content")
-  ok <- tp_output(list(name = "tp_parts", ard = list(continuous = "AGE"), content = list(widths = 5)))
+  ok <- tp_output(list(name = "tp_parts", analysis = list(continuous = "AGE"), content = list(widths = 5)))
   expect_identical(tflspec:::.tpl_spec_of(ok)$args, list(continuous = "AGE", widths = 5))
   bad <- tp_output(list(name = "tp_parts", content = list(continuous = "AGE")))
-  expect_error(tflspec:::.tpl_spec_of(bad), "'continuous' acts in `ard:`, not `content:`")
-  bad <- tp_output(list(name = "tp_parts", ard = list(widths = 5)))
-  expect_error(tflspec:::.tpl_spec_of(bad), "'widths' acts in `content:`, not `ard:`")
+  expect_error(tflspec:::.tpl_spec_of(bad), "'continuous' acts in `analysis:`, not `content:`")
+  bad <- tp_output(list(name = "tp_parts", analysis = list(widths = 5)))
+  expect_error(tflspec:::.tpl_spec_of(bad), "'widths' acts in `content:`, not `analysis:`")
   # the flat form is read as written
   flat <- tp_output(list(name = "tp_parts", args = list(continuous = "AGE", widths = 5)))
   expect_identical(tflspec:::.tpl_spec_of(flat)$args, list(continuous = "AGE", widths = 5))
@@ -89,7 +89,7 @@ test_that("a template that declares its parts: a name in the other part stops, n
 })
 
 test_that("a two-part SPEC survives a YAML round trip", {
-  o <- tp_output(list(name = "demog", ard = list(by = "TRT01A", continuous = "AGE", total = TRUE),
+  o <- tp_output(list(name = "demog", analysis = list(by = "TRT01A", continuous = "AGE", total = TRUE),
                       content = list(labels = c(AGE = "Age (years)"), total_label = "All")))
   f <- withr::local_tempfile(fileext = ".yml")
   tfl_write_output(o, f)
@@ -115,8 +115,8 @@ test_that("population: args equal to the report's, or the report has none: used,
   expect_no_message(r <- tfl_resolve_output(same, s))
   expect_identical(r$content, base$content)
   expect_identical(r$ard, base$ard)
-  # ard: says it too
-  two <- tp_output(list(name = "ae_soc_pt", ard = list(population = "SAF")))
+  # analysis: says it too
+  two <- tp_output(list(name = "ae_soc_pt", analysis = list(population = "SAF")))
   expect_identical(tfl_resolve_output(two, s)$content, base$content)
   # the report has no `population:`: the template's is used
   none <- tp_output(list(name = "ae_soc_pt", args = list(population = "SAF")),
@@ -131,7 +131,7 @@ test_that("population: args differing from the report's `common: population`: wr
   s <- tp_study()
   o <- tp_output(list(name = "ae_soc_pt", args = list(population = "ITT")))
   expect_error(tfl_resolve_output(o, s), "the set is written twice")
-  o <- tp_output(list(name = "ae_soc_pt", ard = list(population = "ITT")))
+  o <- tp_output(list(name = "ae_soc_pt", analysis = list(population = "ITT")))
   expect_error(tfl_resolve_output(o, s), "the set is written twice")
   # the argument alone: built with it
   r <- tfl_resolve_output(tp_output(list(name = "ae_soc_pt", args = list(population = "ITT")), population = NULL), s)
@@ -182,7 +182,7 @@ test_that("demog's `population` parameter (A2-T Q2): given in either part, the s
   ok <- tp_output(list(name = "demog", args = list(by = "TRT01A", continuous = "AGE")))
   r <- tfl_resolve_output(ok, s)
   expect_identical(r$ard$analysis_data[[1L]]$population, "SAF")
-  for (key in c("args", "ard")) {
+  for (key in c("args", "analysis")) {
     own <- tp_output(list(name = "demog", args = list(by = "TRT01A", continuous = "AGE")), population = NULL)
     own$template[[key]] <- c(own$template[[key]], list(population = "SAF"))
     r2 <- tfl_resolve_output(own, s)

@@ -11,7 +11,8 @@
 #' `spec/listing_figure_spec.xlsx`, `spec/figures/<id>.yml` -- and writes
 #' the YAML spec to `to`: `study.yml`, `spec/data.yml`, `spec/defaults.yml`
 #' (a sheets' `@<name>` is a page configuration there, `styles: <name>:`;
-#' one that names none stops), `spec/toc.yml` and one
+#' one that names none stops; the `study` sheet's `rounding` is the study's
+#' force, `force: {content: [{plan_digits: {rounding: sas}}]}`), `spec/toc.yml` and one
 #' `spec/outputs/<id>.yml` a report.  Loose files (a table and a report
 #' workbook alone) convert too: `from` may be a folder holding them.
 #'
@@ -162,10 +163,12 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   study <- meta[setdiff(names(meta), c("created", "updated", "tflplanner"))]
   study$spec_version <- .spec_version
   study$packages <- .spec_packages()
-  # the table / report workbooks' study sheet (rounding, output_path,
-  # program_dir): the study's settings
+  # the table / report workbooks' study sheet (output_path, program_dir):
+  # the study's settings; its rounding is the study's force (defaults.yml
+  # `force:`, canon 1.33), written below
   if (!is.null(sp$study) && nrow(sp$study)) {
-    st <- sp$study[!is.na(sp$study$key) & !is.na(sp$study$value), , drop = FALSE]
+    st <- sp$study[!is.na(sp$study$key) & !is.na(sp$study$value) & sp$study$key != "rounding", ,
+                   drop = FALSE]
     if (nrow(st)) study$settings <- stats::setNames(as.list(st$value), st$key)
   }
   # every report's file and program (the report sheet's study row: "{output_id}.rtf")
@@ -265,8 +268,9 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     pg
   }
 
-  # spec/defaults.yml
+  # spec/defaults.yml: the study's force first (the study sheet's rounding)
   defaults <- list()
+  if (!is.null(sp)) defaults$force <- .force_out(.force_of(.study_rounding(sp)))
   if (!is.null(sp)) {
     if (!is.null(content_fn)) {
       # (the bridge's scope of the defaults: the rows with no report)
@@ -1033,7 +1037,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if ("ard" %in% names(fr) && identical(toupper(trimws(fr$ard[1L] %||% "")), "TRUE")) data$ard <- TRUE
   }
   # the report's ARD analyses and their analysis data, whatever its kind (a
-  # figure's hazard ratios too): its ard: section, the ARD stage's
+  # figure's hazard ratios too): its analysis: section, the ARD stage's
   ard_part <- NULL
   # the planner's analysis set goes on the report's data when the data reads
   # subjects' records (a listing's or a figure's, .set_on_data()); else it is

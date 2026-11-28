@@ -31,7 +31,7 @@ trc_head_keyed <- tfl_item("table_plan", list(cols = "ARM", rows = list(group = 
 trc_study <- function(content, env = parent.frame()) {
   d <- withr::local_tempdir(.local_envir = env)
   dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)
-  write_study_yml(d, c("study_id: T-689", "title: t689", "settings:", "  rounding: sas",
+  write_study_yml(d, c("study_id: T-689", "title: t689", "settings:",
                "  output_path: output/tfl", "  program_dir: programs/tfl",
                "  file: '{output_id}.rtf'", "keys:", "  id: USUBJID"))
   writeLines(c("datasets:", "  - dataset: ADSL", "    level: ADaM", "    path: adam/adsl.xpt",

@@ -23,8 +23,9 @@ two parts:
 }
 \details{
 \itemize{
-\item the study's rounding as one \code{options()} call, \code{rtfreporter.rounding} and
-(for "sas" and "r") \code{cards.round_type};
+\item the study's rounding (its force, \code{spec/defaults.yml} \verb{force:}; see
+\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}) as one \code{options()} call, \code{rtfreporter.rounding}
+and \code{cards.round_type}; none when the study forces no rounding;
 \item the study's lists: \code{study$codelists}, its code lists by name
 (\code{spec/defaults.yml} \verb{codelists:}, \code{list(SEX = c(F = "Female", M = "Male"), ...)}), which a report or a template refers to by name, and
 \code{study$adam_meta}, its ADaM metadata in a define's shape
