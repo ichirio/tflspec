@@ -319,18 +319,21 @@ tfl_km_risk <- function(ard, fit = NULL, divisor = 1) {
 
 
 # ---- a report of your own code: its `content` as rtfreporter takes it
-# (a ggplot becomes a figure; what is not a data frame, rtftable pages, a
-# ggplot or an rtfplot, or a list of them, stops, saying which item)
-report_content <- function(x) {
+# (a ggplot becomes a figure; what is not a ggplot, an rtfplot, a table_plan,
+# a data frame or rtftable pages, or a list of them, stops, saying which item)
+report_content <- function(x, id = NULL) {
   ok <- function(p) is.data.frame(p) ||
-    inherits(p, c("rtftable", "rtfplot", "ggplot"))
+    inherits(p, c("rtftable", "rtfplot", "ggplot", "table_plan"))
   fig <- function(p) if (inherits(p, "ggplot")) rtfplot(p) else p
   one <- ok(x)
   items <- if (one) list(x) else if (is.list(x)) x else list(x)
   for (i in seq_along(items)) if (!ok(items[[i]])) {
-    stop(sprintf("`content`%s is %s: make it a data frame, rtftable pages, a ggplot or an rtfplot (or a list of them).",
-                 if (one || !is.list(x)) "" else sprintf(" (item %d)", i),
-                 class(items[[i]])[1L]), call. = FALSE)
+    msg <- sprintf("%s`content`%s is %s: make it a ggplot, an rtfplot, a table_plan, a data frame or rtftable pages (or a list of them).",
+                   if (length(id)) paste0(id, ": ") else "",
+                   if (one || !is.list(x)) "" else sprintf(" (item %d)", i),
+                   class(items[[i]])[1L])
+    stop(structure(class = c("tfl_content_contract", "error", "condition"),
+                   list(message = msg, call = NULL)))
   }
   if (one) fig(x) else lapply(items, fig)
 }

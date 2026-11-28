@@ -672,8 +672,73 @@
     .rp_code_block(r$steps[[step]]),
     "",
     sized,
+    # (the content contract, one for every kind: report_content(), which a
+    # session's run holds to as well, .own_content_contract())
     if (identical(step, "content")) "content <- report_content(content)" else
       sprintf("%s <- report_data(%s, \"%s\")", leaves, leaves, leaves))
+}
+
+# Does the report have analyses of its own: an ARD to read?  By the study's
+# ARD definition (its analyses' output ids); an ARD taken in counts.  With
+# no definition to ask, yes (the ARD is read, as before).
+.rp_has_analyses <- function(ctx) {
+  r <- ctx$report
+  if (!is.null(r$ard_import)) return(TRUE)
+  y <- .rp_y(ctx)
+  if (!is.null(y) && .own_has_analyses(y$output)) return(TRUE)
+  a <- tryCatch(.rp_value(ctx$shared$ard), error = function(e) NULL)
+  if (is.null(a) || !is.data.frame(a$analyses)) return(is.null(y))
+  r$id %in% a$analyses$output_id
+}
+
+# A table's own content code with no data code of its own: what it reads,
+# the same objects a session gives it (.own_content_data()) -- the
+# report's analysis data (its data rows, by id: the ARD definition's data
+# part), each dataset of the catalog the report registers or its code names
+# (adsl, adae), read; a sample dataset of tflspec's the code names and the
+# catalog does not hold, a stop() line (never the sample data); NULL when
+# it reads none
+.rp_own_content_inputs <- function(ctx) {
+  r <- ctx$report
+  code <- c(r$steps$content, if (!is.na(r$process)) r$process)
+  nm <- .own_code_names(code) %||% list(reads = character(), assigned = character())
+  a <- tryCatch(.rp_value(ctx$shared$ard), error = function(e) NULL)
+  cat_ds <- if (is.data.frame(a$datasets)) a$datasets$dataset else character()
+  y <- .rp_y(ctx)
+  ids <- if (!is.null(y)) .own_adata_ids(y$output) else character()
+  if (!length(ids) && is.data.frame(a$analysis_data)) {
+    ad <- a$analysis_data
+    ids <- unique(stats::na.omit(ad$data_id[ad$output_id %in% r$id]))
+  }
+  part <- if (length(ids) && !is.null(a)) {
+    x <- .as_spec(a, "ard", "tfl_report_program")
+    user <- .attached()
+    old <- options(tflspec.user_attached = user,
+                   tflspec.attached = union(user, c(.ard_pkgs, .ard_base_pkgs)))
+    on.exit(options(old), add = TRUE)
+    p <- .rp_ard_code(ctx, x, output_id = r$id, part = "data", data = ids)
+    .drop_attached_ns(as.character(p))
+  }
+  made <- function(d) any(grepl(sprintf("^%s <- ", tolower(d)), unlist(strsplit(part %||% "", "\n"))))
+  named <- cat_ds[tolower(cat_ds) %in% setdiff(nm$reads, nm$assigned)]
+  ds <- unique(toupper(c(r$datasets, named)))
+  ds <- ds[toupper(ds) %in% toupper(cat_ds) & !vapply(ds, made, NA)]
+  miss <- setdiff(intersect(setdiff(nm$reads, nm$assigned), .own_bundled_names()),
+                  c(tolower(cat_ds), ids, "ard"))
+  stop_line <- if (length(miss)) {
+    sprintf("stop(%s)", .rp_r_string(sprintf(paste0(
+      "%s: the report's own code reads %s, which is not among the report's data: list it ",
+      "in the data catalog or in the report's analysis data; tflspec's sample data is never a ",
+      "report's."), r$id, paste(toupper(miss), collapse = ", "))))
+  }
+  # (none when the study's setup has read the catalog: tflspec.study_setup)
+  reads <- unlist(lapply(ds, function(d) .rp_read_dataset_lines(ctx, d)))
+  if (!length(part) && !length(reads) && is.null(stop_line)) return(NULL)
+  c(stop_line,
+    if (length(reads)) c(
+      paste0("# the report's data: ", paste(ds, collapse = ", "), " (data catalog)"), reads),
+    if (length(part)) c("# the report's analysis data (its ARD definition)", part),
+    "")
 }
 
 # The part of a program between its setup and its report when a step is
@@ -707,13 +772,24 @@
     table = {
       a <- .rp_ard_code_of(ctx)
       recs <- .rp_table_dataset_lines(ctx)
-      ard_lines <- c(.rp_section(if (.rp_table_norm_builtin(ctx, a, proc)) "data: this report's ARD"
+      # own content code: what it reads, and the ARD only when the report
+      # has analyses (all its code in content: no ARD to read)
+      own <- if (cc && is.null(recs)) .rp_own_content_inputs(ctx)
+      ard <- !cc || !is.null(recs) || .rp_has_analyses(ctx)
+      ard_lines <- if (ard) c(.rp_section(if (.rp_table_norm_builtin(ctx, a, proc)) "data: this report's ARD"
                                  else "data: this report's normalized ARD"),
                      if (is.na(a)) todo("ARD") else c(.rp_code_block(a), .rp_table_process_lines(ctx, a, proc)))
       # a table of records: its records as `data`; its ARD too when it has
       # analyses (a part's rows: plan_append())
-      if (is.null(recs)) ard_lines
-      else c(.rp_section("data: this report's records"), recs, if (!is.na(a)) c("", ard_lines))
+      if (!is.null(recs)) {
+        c(.rp_section("data: this report's records"), recs, if (!is.na(a)) c("", ard_lines))
+      } else if (!is.null(own)) {
+        c(.rp_section("data: the report's data"), own, if (ard) c("", ard_lines))
+      } else if (ard) {
+        ard_lines
+      } else {
+        .rp_section("data: the study's ADaM, read by its setup (the content code makes the rest)")
+      }
     },
     listing = c(.rp_section("data: the listing's data"),
                 .rp_listing_lines(ctx, rework = proc, part = "data") %||%

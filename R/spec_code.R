@@ -1692,7 +1692,11 @@ tfl_bign_drop <- function(ard) .bign_drop(ard)
 #' list of calls, so running the written code gives the same object; it is
 #' the quick way for a preview, the app or an assistant's check.  A report
 #' whose content is its own code (`content: !r`) runs it, after the
-#' data's steps, and gives what it leaves in `content`.
+#' data's steps, and gives what it leaves in `content`: a ggplot, an
+#' rtfplot, a `table_plan`, a data frame or rtftable pages, or a list of
+#' them, for any kind of report, as its program's `report_content()`
+#' checks; anything else stops with an error of class
+#' `tfl_content_contract` that names the report and what it gave.
 #'
 #' @param output A report ([tfl_output()]), resolved.
 #' @param data The data the content starts from: the ARD (or the normalized
@@ -1702,7 +1706,13 @@ tfl_bign_drop <- function(ard) .bign_drop(ard)
 #'   content's `normalize_ard()` (as it is when the content has none), and
 #'   the steps start from `data`.  For a figure, a
 #'   named list of the objects its code reads: the datasets by their names
-#'   in lower case (`adtte`), and `ard`.
+#'   in lower case (`adtte`), and `ard`.  For a report whose content is
+#'   its own code, a named list of the objects it reads, by name: the
+#'   report's analysis data (`ard.analysis_data`, by id), the study's
+#'   datasets it names (`adsl`), and `ard` when the report has analyses
+#'   ([tfl_run_output()] gives them so).  A sample dataset of tflspec's it
+#'   names and is not given stops (class `tfl_content_data`): never the
+#'   sample data.
 #' @param study For a figure with an analysis set (its data's
 #'   `population:`) that reads a dataset: the study ([tfl_read_study_spec()])
 #'   or its folder.  The set's subjects are made as the report's program
@@ -1796,36 +1806,6 @@ tfl_content_run <- function(output, data, study = NULL) {
                               kind = output$kind))
   }
   .content_table_run(output$content, data, kind = output$kind)
-}
-
-# the content as the report's own code, run as the program runs it: the
-# output's object bound, the data's steps, then the code; what it leaves
-# in `content` is the content
-.content_own_run <- function(output, data) {
-  env <- new.env(parent = globalenv())
-  if (identical(output$kind, "figure")) .fig_reads_given(output, data)
-  if (identical(output$kind, "figure") && is.list(data) && !is.data.frame(data) &&
-      !is.null(names(data))) {
-    # a figure's own code reads the datasets by their names (adsl, adae),
-    # after the study's figure setup, as its program does
-    for (n in names(data)) assign(n, data[[n]], envir = env)
-    eval(parse(text = tfl_fig_setup_code()), env)
-    # (the study's helpers: the ARD's readers; any the code calls, tte_time()
-    # of a time to event, fmt_num() of a number)
-    steps <- .content_r_steps(output)
-    if (!is.null(data$ard) || .calls_helper(c(steps, as.character(output$content)))) {
-      eval(parse(text = tfl_helpers_code()), env)
-    }
-  } else {
-    assign(output$data$object %||% "ard", data, envir = env)
-  }
-  steps <- .content_r_steps(output)
-  if (length(steps)) eval(parse(text = steps), env)
-  eval(parse(text = as.character(output$content)), env)
-  if (!exists("content", envir = env, inherits = FALSE)) {
-    .ard_stop("tfl_content_run(): the report's own code leaves no `content`.")
-  }
-  get("content", envir = env, inherits = FALSE)
 }
 
 .content_table_run <- function(content, data, kind = "table") {

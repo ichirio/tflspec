@@ -149,6 +149,13 @@ tfl_output_contents <- function(output, study, dir = ".") {
   }
   lapply(objs, function(o) {
     ro <- tfl_resolve_output(o, study)
+    if (inherits(ro$content, "tfl_r") && o$kind %in% .own_data_kinds &&
+        !identical(ro$data$source, "dataset")) {
+      # an object of its own code: what it reads, as a report's (.own_content_data())
+      data <- .own_content_data(ro, study, dir)
+      if (is.null(data$ard) && identical(ro$data$source, "ard")) data$ard <- get_ard()
+      return(suppressMessages(tfl_content_run(ro, data, study = study)))
+    }
     if (identical(o$kind, "table")) {
       return(suppressMessages(tfl_content_run(ro, get_ard())))
     }
@@ -264,15 +271,26 @@ tfl_output_contents <- function(output, study, dir = ".") {
 # that the report can be made.
 .output_build_content <- function(output, st) {
   # (each stage named in what stops it: "the ARD: ...", "the table: ...")
+  # (the content contract's stop and the own code's data stop keep their
+  # class: tfl_content_contract, tfl_content_data)
   stage <- function(what, expr) {
-    tryCatch(expr, error = function(e) .ard_stop(paste0(what, ": ", conditionMessage(e))))
+    tryCatch(expr, error = function(e) {
+      if (inherits(e, c("tfl_content_contract", "tfl_content_data"))) .own_restop(e, what)
+      .ard_stop(paste0(what, ": ", conditionMessage(e)))
+    })
   }
   kind <- output$kind %||% "table"
   if (!is.null(output$contents)) {
     return(stage("the report's objects", tfl_output_contents(output, st, ".")))
   }
   ro <- stage("resolving the report", tfl_resolve_output(output, st))
-  if (any(vapply(ro$content, .is_part, NA))) {
+  own <- inherits(ro$content, "tfl_r")
+  if (own && kind %in% .own_data_kinds && !identical(ro$data$source, "dataset")) {
+    # the report's own content code: the objects it reads, as its program
+    # reads them (.own_content_data()), never tflspec's sample data
+    data <- stage(paste0("the ", kind, "'s data"), .own_content_data(ro, st, "."))
+    stage(paste("the", kind), suppressMessages(tfl_content_run(ro, data, study = st)))
+  } else if (!own && any(vapply(ro$content, .is_part, NA))) {
     # a table with parts: each object it reads, by name -- the ARD, a
     # listing's records (the table's own data, a part's)
     objects <- stage("the parts' data", .parts_objects(ro, st, "."))
@@ -297,6 +315,13 @@ tfl_output_contents <- function(output, study, dir = ".") {
     if (!is.null(ard$output_id)) ard <- ard[ard$output_id %in% ro$id, , drop = FALSE]
     stage(paste("the", kind), suppressMessages(tfl_content_run(ro, ard)))
   }
+}
+
+# a classed stop of a report's own content, again with the stage it
+# stopped in before its message (its class kept)
+.own_restop <- function(e, what) {
+  e$message <- paste0(what, ": ", conditionMessage(e))
+  stop(e)
 }
 
 #' Build a report's RTF from its YAML file
