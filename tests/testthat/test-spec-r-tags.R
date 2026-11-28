@@ -47,9 +47,9 @@ test_that("a guard read as a quoted string into a guard-only argument stops", {
   expect_error(rt_read(c("  - plan_zero:",
                          "      cells: [!r 'n == 0 ~ \"0\"', 'p < 0.001 ~ \"<0.1%\"']")),
                "plan_zero(cells = ) takes R here", fixed = TRUE)
-  # `{fn:, args:}` form
+  # the old `{fn:, args:}` form is not read (canon 11-10 :378)
   expect_error(rt_read(c("  - fn: plan_zero", "    args: {zero: 'n == 0 ~ \"0\"'}")),
-               "plan_zero(zero = )", fixed = TRUE)
+               "write it `- plan_zero: {<args>}`", fixed = TRUE, class = "tflspec_old_form")
   # an item whose map is itself a call (`- call: {fn:, args:}`): checked as that call
   expect_error(rt_read(c("  - call: {fn: plan_zero, args: {zero: 'n == 0 ~ \"0\"'}}")),
                "plan_zero(zero = )", fixed = TRUE)

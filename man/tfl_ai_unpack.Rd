@@ -39,7 +39,7 @@ could not be read is not written.
 
 Only spec files are written: \code{study.yml}, and \code{.yml} files under \verb{spec/}
 (\code{spec/data.yml}, \code{spec/toc.yml}, \code{spec/defaults.yml},
-\verb{spec/patterns/<name>.yml}, \verb{spec/outputs/<id>.yml},
+\verb{spec/outputs/<id>.yml},
 \verb{spec/_assumptions.yml}).  A block under any other heading, a path that
 leaves the folder, or a file twice is an error that names it, and nothing
 is written.  Each file is checked as YAML before any is written.

@@ -22,7 +22,7 @@ params:
   ref:
     type: level
     input: pick
-    choices: levels(by)
+    choices: levels(from_args(by))
     default: ~
     step: data
     tier: usual
@@ -30,7 +30,7 @@ params:
   comparison:
     type: string
     input: pick
-    choices: levels(by)
+    choices: levels(from_args(by))
     default: ~
     step: analysis
     tier: usual

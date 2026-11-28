@@ -184,7 +184,7 @@ cr_study <- function(env = parent.frame(), study_yml = "study_id: S-1") {
   s <- tempfile("cov-run")
   dir.create(s)
   do.call(on.exit, list(bquote(unlink(.(s), recursive = TRUE)), add = TRUE), envir = env)
-  if (!is.null(study_yml)) writeLines(study_yml, file.path(s, "study.yml"))
+  if (!is.null(study_yml)) write_study_yml(s, study_yml)
   s
 }
 
@@ -211,9 +211,9 @@ test_that("a study.yml that is not YAML, or has no study_id, gives an empty inde
   s <- cr_study(study_yml = c("study_id: [", "x"))
   cr_run(s, "r1")
   expect_identical(nrow(tfl_run_index(s)), 0L)
-  writeLines("title: A study", file.path(s, "study.yml"))
+  write_study_yml(s, "title: A study")
   expect_identical(nrow(tfl_run_index(s)), 0L)
-  writeLines("study_id: ~", file.path(s, "study.yml"))
+  write_study_yml(s, "study_id: ~")
   expect_identical(nrow(tfl_run_index(s)), 0L)
 })
 
@@ -230,7 +230,7 @@ test_that("a numeric study_id is compared as text; a list of two takes the first
   cr_run(s, "r1", lines = c("Study : 1234", "Started : 2026-11-20 10:00:00",
                             "Finished : 2026-11-20 10:05:00", "Kind : run", "Verified : yes"))
   expect_identical(tfl_run_index(s)$run, "r1")
-  writeLines("study_id: [1234, 999]", file.path(s, "study.yml"))
+  write_study_yml(s, "study_id: [1234, 999]")
   expect_identical(tfl_run_index(s)$run, "r1")
 })
 

@@ -433,7 +433,7 @@
   if (!is.null(ts) && length(ts$args)) {
     defs <- tryCatch(tfl_arg_defs(template = ts$name), error = function(e) NULL)
     if (is.data.frame(defs) && "choices" %in% names(defs)) {
-      on <- defs$name[grepl("report_data", as.character(defs$choices), fixed = TRUE)]
+      on <- defs$name[grepl("objects(data)", as.character(defs$choices), fixed = TRUE)]
       for (k in intersect(on, names(ts$args))) {
         v <- ts$args[[k]]
         if (is.character(v) && length(v) == 1L) {
