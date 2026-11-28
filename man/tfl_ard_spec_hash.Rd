@@ -14,7 +14,8 @@ tfl_ard_spec_hash(spec, output_id, dir = ".", codelists = NULL)
 \item{dir}{The study folder, which \code{source} files are relative to.}
 
 \item{codelists}{As \code{\link[=tfl_ard_code]{tfl_ard_code()}}: they change the ARD, so they are
-part of the fingerprint (only when there are some).}
+part of the fingerprint (only when there are some): their codes, order
+and \code{under}, not their labels.}
 }
 \value{
 A single string.

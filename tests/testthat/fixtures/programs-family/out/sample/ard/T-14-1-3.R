@@ -15,8 +15,8 @@ report_id <- "T-14-1-3"
 # ---- code lists: each value in its order, as it is in the ARD ----
 # (a value a list does not have stops the program: add it to the list)
 cl_trt01a <- c("Drug X", "Control")
-cl_sex <- c(F = "Female", M = "Male")
-cl_agegr1 <- c("<65" = "<65 years", ">=65" = ">=65 years")
+cl_sex <- c("F", "M")
+cl_agegr1 <- c("<65", ">=65")
 
 # ---- data ----
 adsl <- order_levels(adsl)
@@ -48,7 +48,7 @@ adsl_saf <- adsl |>
 # the report's rows of the study ARD, with the fingerprint of its
 # definition (tfl_ard_spec_hash())
 bind_items(.ard_bign, .ard_cat) |>
-  save_ard(report_id, definition = "b4e094f2bace2b986e67f4796dc010ab")
+  save_ard(report_id, definition = "81c812f3eecc357fc1811067a44c7314")
 
 # the end of this run
 options(tflplanner.run = NULL)

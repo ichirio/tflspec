@@ -167,6 +167,14 @@
 #' The ARD holds each row's `value` (the code); its `label` is applied by the
 #' report's table plan (`plan_labels`), and by a figure's legend.
 #'
+#' The ARD side takes the codes only: the ARD program writes each list as
+#' its codes in their order (`cl_sex <- c("F", "M")`), and the ARD's
+#' fingerprint ([tfl_ard_spec_hash()]) counts the codes, their order and
+#' `under`, never a label.  A change of labels alone leaves the ARD up to
+#' date; the labels go into the report program's `plan_labels()`.  A
+#' report's list that none of its steps uses (its data, analyses, content or
+#' figure) is a warning, naming the variable.
+#'
 #' @param study The study's spec, as [tfl_read_study_spec()] reads it.
 #' @param outputs The reports, as [tfl_sheets_from_spec()] takes them: a
 #'   list of `tfl_output` named by id.  `NULL` (default): the study's own
@@ -222,6 +230,8 @@ tfl_report_codelists <- function(study, outputs = NULL, rows = NULL) {
     outputs <- outputs[ids %in% output_id]
     ids <- ids[ids %in% output_id]
   }
+  # (a list that no step of its report uses: a warning, once)
+  .cl_unused_warn(outputs, study)
   # (a report's reference with no rows here: the study must have it all the
   # same; rows with no `list` cell are a list written in place -- a
   # template's code SPEC that adds codes to a reference -- and are the list)

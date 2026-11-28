@@ -915,6 +915,17 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   unique(c(cols, syms))
 }
 
+# The code lists as the ARD program and its fingerprint take them: each
+# variable's codes in their order, no labels (canon 11-28, CANON-3: a
+# label reaches a table only through the report program's plan_labels(),
+# so a label-only change leaves the ARD as it was).  An unnamed vector, the
+# shape of a list without labels: set_levels() and relevel_ard() read its
+# values, and a narrowed list is `intersect(cl_x, c(...))` (.narrow_expr()).
+.codelist_codes_only <- function(levels) {
+  if (!length(levels)) return(levels)
+  lapply(levels, function(cl) if (is.null(names(cl))) cl else names(cl))
+}
+
 # Each report's code lists for its ARD (NULL when none has any)
 .codelist_levels_by <- function(codelists, a) {
   outs <- unique(a$output_id)
@@ -1132,7 +1143,9 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #'   names its report (a blank `output_id` stops).  A report's rows of the
 #'   variables its analyses read (`by`, `strata`, `variables`, and the
 #'   names in `args`, `code` and `post`) count: the program writes them at
-#'   its head (`cl_sex <- c(F = "Female", M = "Male")`) and puts them on
+#'   its head, codes only (`cl_sex <- c("F", "M")`: no label is the ARD's,
+#'   so a label-only change leaves the program and its fingerprint as they
+#'   were), and puts them on
 #'   the data the analyses read (`set_levels(SEX = cl_sex)`): each column a
 #'   factor of the codes in the list's order -- the ARD holds `"F"`, not
 #'   `"Female"`, and counts a level no record has (`n = 0`).  The factor is
@@ -1185,6 +1198,9 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   # each report's code lists, of the variables its analyses read
   lv <- .codelist_levels_by(codelists, a)
   .check_where_labels(a, lv)
+  # (the ARD program takes the codes only: the labels are the report
+  # program's, plan_labels())
+  lv <- if (!is.null(lv)) lapply(lv, .codelist_codes_only)
   # (what complete_hierarchy() in `post` is written with: the lists and
   # their `under`)
   attr(x, "levels") <- lv
@@ -1269,7 +1285,8 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
 #' @param output_id The output.
 #' @param dir The study folder, which `source` files are relative to.
 #' @param codelists As [tfl_ard_code()]: they change the ARD, so they are
-#'   part of the fingerprint (only when there are some).
+#'   part of the fingerprint (only when there are some): their codes, order
+#'   and `under`, not their labels.
 #' @return A single string.
 #' @export
 tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
@@ -1309,9 +1326,10 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
                  if (!identical(al, "none")) .adam_meta_hash_lines(spec$adam_meta, dss$dataset),
                  if (length(src)) paste(src, src_md5),
                  # the code lists, only when there are some: a study without
-                 # keeps the fingerprints it had
-                 if (length(lv <- .codelist_levels(codelists, output_id,
-                                                   .ard_read_vars(a))))
+                 # keeps the fingerprints it had (their codes and order only:
+                 # a label-only change leaves the ARD up to date)
+                 if (length(lv <- .codelist_codes_only(
+                   .codelist_levels(codelists, output_id, .ard_read_vars(a)))))
                    utils::capture.output(print(lv)),
                  # (and their `under`, only when some value has one)
                  if (length(un <- .codelist_under(codelists, output_id,

@@ -16,21 +16,21 @@ report_id <- "T-14-1-1"
 # ---- code lists: each value in its order, as it is in the ARD ----
 # (a value a list does not have stops the program: add it to the list)
 cl_trt01a <- c("Drug X", "Control")
-cl_sex <- c(F = "Female", M = "Male")
-cl_agegr1 <- c("<65" = "<65 years", ">=65" = ">=65 years")
+cl_sex <- c("F", "M")
+cl_agegr1 <- c("<65", ">=65")
 cl_race <- c(
-  WHITE = "White",
-  "BLACK OR AFRICAN AMERICAN" = "Black or African American",
-  ASIAN = "Asian",
-  "AMERICAN INDIAN OR ALASKA NATIVE" = "American Indian or Alaska Native",
-  "NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER" = "Native Hawaiian or Other Pacific Islander",
-  OTHER = "Other"
+  "WHITE",
+  "BLACK OR AFRICAN AMERICAN",
+  "ASIAN",
+  "AMERICAN INDIAN OR ALASKA NATIVE",
+  "NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER",
+  "OTHER"
 )
 cl_ethnic <- c(
-  "HISPANIC OR LATINO" = "Hispanic or Latino",
-  "NOT HISPANIC OR LATINO" = "Not Hispanic or Latino",
-  "NOT REPORTED" = "Not reported",
-  UNKNOWN = "Unknown"
+  "HISPANIC OR LATINO",
+  "NOT HISPANIC OR LATINO",
+  "NOT REPORTED",
+  "UNKNOWN"
 )
 
 # ---- data ----
@@ -83,7 +83,7 @@ adsl_saf <- adsl |>
 # the report's rows of the study ARD, with the fingerprint of its
 # definition (tfl_ard_spec_hash())
 bind_items(.ard_bign, .ard_cont, .ard_cat) |>
-  save_ard(report_id, definition = "2c0946d99b113d81dd85d0df0477b25f")
+  save_ard(report_id, definition = "9e24e6a5e1692953e0f12175fb26f5df")
 
 # the end of this run
 options(tflplanner.run = NULL)

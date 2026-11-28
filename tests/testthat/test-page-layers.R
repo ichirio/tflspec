@@ -83,7 +83,7 @@ test_that("a band prints style first, the merged body, style last", {
 pl_study <- function(root, page) {
   st <- file.path(root, "STUDY-PL")
   dir.create(st)
-  writeLines(c("study_id: STUDY-PL", "settings:", "  rounding: sas"), file.path(st, "study.yml"))
+  writeLines(c("spec_version: 2", "study_id: STUDY-PL", "settings:", "  rounding: sas"), file.path(st, "study.yml"))
   tfl_copy_templates(st, "tflspec_v1/tflspec_summary")
   f <- list.files(st, "^tflspec_summary[.]yml$", recursive = TRUE, full.names = TRUE)
   stopifnot(length(f) == 1L)
