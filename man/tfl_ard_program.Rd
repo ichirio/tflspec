@@ -28,7 +28,9 @@ tfl_ard_program(
 tflspec's own.}
 
 \item{dir}{The study folder: the fingerprint recorded with the ARD reads
-the study's own analysis functions from it.}
+the study's own analysis functions from it, and the statistics are its
+own (\code{spec/defaults.yml} \verb{ard_statistics:}, see \code{\link[=tfl_ard_statistics]{tfl_ard_statistics()}})
+over the company's.}
 
 \item{codelists}{The reports' code lists, as \code{\link[=tfl_ard_code]{tfl_ard_code()}} takes
 them.}

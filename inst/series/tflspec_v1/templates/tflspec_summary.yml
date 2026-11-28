@@ -83,6 +83,17 @@ params:
     step: analysis
     tier: other
     description: An analysis id for each variable; empty for the variable's name.
+  statistics:
+    type: list<string>
+    input: pick
+    choices: stats
+    ordered: true
+    default: ~
+    step: analysis
+    tier: other
+    description: More statistics of the continuous variables for the ARD, by
+      their names in tfl_ard_statistics() (with the company's and the study's
+      own); the ARD has the statistics the cells name, then these.
   formats:
     type: map<string,number|string>
     input: table
@@ -196,6 +207,11 @@ params:
     step: content
     tier: other
     description: The most rows a page holds.
+derive:
+  # the continuous variables' statistics: those the cells name, then the
+  # report's more (statistics)
+  cell_statistics: {tokens: "{cells}"}
+  continuous_statistics: {unique: ["{cell_statistics}", "{statistics}"]}
 extends: !series extends
 style: !series style
 data:
@@ -217,7 +233,7 @@ analysis:
     by: ["{by}"]
     overall: "{total}"
     variables: "{continuous}"
-    statistics: [N, mean, sd, median, min, max]
+    statistics: "{continuous_statistics}"
     formats: "{formats}"
   - id: CAT
     analyses: {per: variable, ids: "{analysis_ids}"}

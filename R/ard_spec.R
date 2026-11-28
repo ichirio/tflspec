@@ -631,8 +631,11 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
     s <- .split_bar(a$statistics[i])
     if (!is.na(k) && keys$kind[k] == "continuous") {
       bad <- setdiff(s, st$statistic[st$kind == "continuous"])
-      if (length(bad)) add(i, "statistics", sprintf(
-        "%s / %s: no continuous statistic %s (see tfl_ard_statistics())",
+      if (length(bad)) add(i, "statistics", sprintf(paste(
+        "%s / %s: no continuous statistic %s in the catalog, tfl_ard_statistics()",
+        "(a package statistic is chosen by its name; add another by its name and",
+        "function, a row of the company standard's ard_statistics or of the study's",
+        "spec/defaults.yml ard_statistics:)"),
         a$output_id[i], a$analysis_id[i], paste(bad, collapse = ", ")))
     }
     f <- .parse_formats(a$formats[i])
@@ -1165,8 +1168,14 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
                           statistics = NULL, methods = NULL, dir = ".",
                           codelists = NULL, data = NULL) {
   part <- match.arg(part)
-  # a study of the YAML spec: its ARD definition and code lists from its
-  # files (R/spec_ard.R)
+  # a study of the YAML spec: its own statistics over the catalog
+  # (spec/defaults.yml ard_statistics:), its ARD definition and code lists
+  # from its files (R/spec_ard.R)
+  if (inherits(spec, "tfl_study_spec")) {
+    statistics <- .ard_statistics_of_study(spec$dir, statistics)
+  }
+  old <- .set_catalogs(statistics, methods)
+  on.exit(options(old), add = TRUE)
   if (inherits(spec, "tfl_study_spec")) {
     st <- .ard_spec_of_study(spec, output_id = output_id)
     # (rows given with a `list` cell: made again from the study's lists, not
@@ -1177,8 +1186,6 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
     spec <- st$spec
     codelists <- codelists %||% st$codelists
   }
-  old <- .set_catalogs(statistics, methods)
-  on.exit(options(old), add = TRUE)
   x <- .as_spec(spec, "ard", "tfl_ard_code")
   a <- .records_expand(x, x$analyses)
   if (!is.null(output_id)) a <- a[a$output_id %in% output_id, , drop = FALSE]
@@ -1391,6 +1398,10 @@ tfl_build_ard <- function(spec, dir = ".", output_id = NULL, save = TRUE,
   # files, once (tfl_ard_code() would read them again, and so would the note)
   ard <- spec
   if (inherits(spec, "tfl_study_spec")) {
+    # (its own statistics over the catalog: spec/defaults.yml ard_statistics:)
+    statistics <- .ard_statistics_of_study(spec$dir, statistics)
+    old_st <- .set_catalogs(statistics, methods)
+    on.exit(options(old_st), add = TRUE)
     st <- .ard_spec_of_study(spec, output_id = output_id, sheets = sheets)
     ard <- st$spec
     # (rows given with a `list` cell: the study's lists', as tfl_ard_code())

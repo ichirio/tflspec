@@ -143,7 +143,10 @@
   if (!is.null(rnd) && !"rounding" %in% ard$study$key) {
     ard$study <- rbind(ard$study, data.frame(key = "rounding", value = rnd, stringsAsFactors = FALSE))
   }
-  spec <- .tfl_ard_spec(ard, blank_notes = FALSE)
+  # (checked against the catalog with the study's own statistics over it:
+  # spec/defaults.yml ard_statistics:)
+  spec <- .tfl_ard_spec(ard, statistics = .ard_statistics_of_study(study$dir),
+                        blank_notes = FALSE)
   # (the study's ADaM metadata, for the datasets of its catalog: the levels
   # study$adam has, which the program's own reads put on too, and its
   # fingerprint counts)

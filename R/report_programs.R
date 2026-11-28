@@ -48,10 +48,18 @@
   out[name]
 }
 
-# The report's ARD code (tfl_ard_code()) with the company's catalogs
+# The report's ARD code (tfl_ard_code()) with the company's catalogs, the
+# study's own statistics over the company's (`ctx$dir`, the study folder:
+# its spec/defaults.yml ard_statistics:)
 .rp_ard_code <- function(ctx, spec, ...) {
-  tfl_ard_code(spec, ..., statistics = .rp_standard(ctx$standards, "ard_statistics"),
+  tfl_ard_code(spec, ..., statistics = .rp_statistics(ctx),
                methods = .rp_standard(ctx$standards, "ard_methods"))
+}
+
+# the statistics catalog of the context: the company's (NULL: tflspec's
+# own), the study's rows over it
+.rp_statistics <- function(ctx) {
+  .ard_statistics_of_study(ctx$dir, .rp_standard(ctx$standards, "ard_statistics"))
 }
 
 # ---- the pieces every program has ------------------------------------------
@@ -1050,7 +1058,9 @@
 #'   `figure_plot`), `ard_statistics`, `ard_methods` and `settings` (`key`,
 #'   `value`: `listing_type`).  One left out is tflspec's own
 #'   ([tfl_builtin_standards()], [tfl_ard_statistics()],
-#'   [tfl_ard_methods()], `"multiline"`).
+#'   [tfl_ard_methods()], `"multiline"`).  The study's own statistics
+#'   (`spec/defaults.yml` `ard_statistics:` of `study`'s folder, see
+#'   [tfl_ard_statistics()]) go over `ard_statistics`.
 #' @param attached,study_code The study's code context, as
 #'   [tfl_setup_program()] takes it.
 #' @param series_dir The folders the template series are looked for in
@@ -1114,7 +1124,7 @@ tfl_report_program <- function(report, study = NULL, shared = list(), standards 
   shared$report_setup <- shared$report_setup %||% FALSE
   shared$study_ard <- shared$study_ard %||% "output/ard/ard.rds"
   ctx <- list(report = report, study = study, shared = shared, standards = standards,
-              layout = layout)
+              layout = layout, dir = study$dir)
   .with_code_context(switch(part,
     program = .rp_program(ctx, date, generator),
     data = .rp_data_lines(ctx, todo = todo)),
@@ -1138,7 +1148,9 @@ tfl_report_program <- function(report, study = NULL, shared = list(), standards 
 #'   [tfl_ard_statistics()], [tfl_ard_methods()]); one left out is
 #'   tflspec's own.
 #' @param dir The study folder: the fingerprint recorded with the ARD reads
-#'   the study's own analysis functions from it.
+#'   the study's own analysis functions from it, and the statistics are its
+#'   own (`spec/defaults.yml` `ard_statistics:`, see [tfl_ard_statistics()])
+#'   over the company's.
 #' @param codelists The reports' code lists, as [tfl_ard_code()] takes
 #'   them.
 #' @inheritParams tfl_report_program
@@ -1174,7 +1186,7 @@ tfl_ard_program <- function(spec, output_id = NULL, standards = list(), dir = ".
     stop(fn, ": `output_id` is one output's id, or NULL for ard_setup.R.", call. = FALSE)
   }
   layout <- .rp_check_common(fn, standards, layout, c("programs_ard", "programs_tfl"))
-  ctx <- list(standards = standards, layout = layout)
+  ctx <- list(standards = standards, layout = layout, dir = dir)
   .with_code_context(
     if (is.null(output_id)) .rp_ard_setup(ctx, spec, date, generator) else
       .rp_ard_one(ctx, spec, output_id, date, generator, dir, codelists),
