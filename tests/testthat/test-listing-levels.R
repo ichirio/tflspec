@@ -20,7 +20,7 @@ ll_study <- function(defaults = NULL, levels = NULL) {
   if (!is.null(levels)) {
     st <- yaml::read_yaml(file.path(d, "study.yml"))
     st$settings$adam_levels <- levels
-    yaml::write_yaml(st, file.path(d, "study.yml"))
+    write_study_yml(d, st)
   }
   if (length(defaults)) cat(c(defaults, ""), sep = "\n",
                             file = file.path(d, "spec", "defaults.yml"), append = TRUE)

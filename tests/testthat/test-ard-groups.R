@@ -85,7 +85,7 @@ test_that("data.yml `groups:` <-> the groups sheet", {
          "      - {level: \">=65 years\", where: !r AGE >= 65}",
          "  - id: ALL", "    label: All", "    levels:", "      - {level: \"\"}")
   writeLines(y, f)
-  writeLines(c("study_id: GRP-1", "keys:", "  id: USUBJID"), file.path(d, "study.yml"))
+  write_study_yml(d, c("study_id: GRP-1", "keys:", "  id: USUBJID"))
   sh <- tfl_sheets_from_yaml(d)
   g <- sh$ard$groups
   expect_identical(g$group_id, c("AGE", "AGE", "ALL"))

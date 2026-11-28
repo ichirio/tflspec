@@ -35,6 +35,15 @@ data, and replaces the template's row of its id.  The result is a plain
 code SPEC, as \code{\link[=tfl_read_output]{tfl_read_output()}} reads one.
 }
 \details{
+The template's \verb{page:} holds the page's defaults; the report's \verb{page:}
+changes only what it writes: a call's arguments (\code{rtf_page}, ...) and
+\code{tokens} name by name, a band's lines by number (and the blocks \code{first}
+and \code{last}), a line's cells one by one.  An unnamed sequence of lines
+replaces the band's numbered lines.  \code{!unset} stays in the page, to drop
+that cell, line, block or band when the page is resolved over the page
+settings (\code{\link[=tfl_resolve_output]{tfl_resolve_output()}}); \code{\link[=tfl_page_origins]{tfl_page_origins()}} says which layer
+gave each field.
+
 A report's value replaces the default, but for an argument of a map type
 whose default is the series' (\verb{!series K}, such as \code{formats}): the
 report's map is put over the series' map name by name.  A name the report

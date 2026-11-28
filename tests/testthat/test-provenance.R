@@ -4,30 +4,31 @@
 
 prov_study <- function() {
   d <- withr::local_tempdir(.local_envir = parent.frame())
-  dir.create(file.path(d, "spec", "patterns"), recursive = TRUE)
-  file.copy(system.file("extdata", "spec-yaml", "defaults.yml", package = "tflspec"),
-            file.path(d, "spec"))
-  writeLines(c("content:", "  - plan_cells: {continuous: {n: \"{N}\"}}",
-               "  - plan_digits: {rounding: r}"),
-             file.path(d, "spec", "patterns", "Tight.yml"))
+  dir.create(file.path(d, "spec"), recursive = TRUE)
+  # (the layer between the defaults and the report: a style set, Tight)
+  writeLines(c(readLines(system.file("extdata", "spec-yaml", "defaults.yml", package = "tflspec")),
+               "styles:", "  Tight:", "    content:",
+               "      - plan_cells: {continuous: {n: '{N}'}}",
+               "      - plan_digits: {rounding: r}"),
+             file.path(d, "spec", "defaults.yml"))
   d
 }
 
 test_that("provenance: argument by argument, and the item below", {
   d <- prov_study()
   st <- tfl_read_study_spec(d)
-  o <- tfl_output("T", extends = c("patterns/Tight", "defaults"),
+  o <- tfl_output("T", style = "Tight",
                   content = list(tfl_item("table_plan", list(cols = "TRT01A")),
                                  tfl_item("plan_cells", list(default = "{n}"))))
   r <- tfl_resolve_output(o, st, provenance = TRUE)
   pc <- Filter(function(it) it$fn == "plan_cells", r$content)[[1L]]
   expect_identical(pc$arg_from[["default"]], "own")
-  expect_identical(pc$arg_from[["continuous"]], "pattern:Tight")
+  expect_identical(pc$arg_from[["continuous"]], "style:Tight")
   expect_identical(pc$arg_from[["categorical"]], "defaults")
   expect_identical(pc$below$args$continuous, list(n = "{N}"))
   expect_null(pc$below$args$default)
   dg <- Filter(function(it) it$fn == "plan_digits", r$content)[[1L]]
-  expect_identical(unname(dg$arg_from), "pattern:Tight")
+  expect_identical(unname(dg$arg_from), "style:Tight")
   tp <- Filter(function(it) it$fn == "table_plan", r$content)[[1L]]
   expect_null(tp$below)
   # without it, nothing is added
@@ -71,9 +72,9 @@ test_that("tfl_write_study_part(): each part written back reads the same", {
   st2 <- st
   st2$dir <- t
   tfl_write_study_part(st2, "defaults")
-  tfl_write_study_part(st2, "patterns", name = "Tight")
   back <- tfl_read_study_spec(t)
   expect_identical(back$defaults, st$defaults)
-  expect_identical(back$patterns, st$patterns)
-  expect_error(tfl_write_study_part(st2, "patterns", name = "Nope"), "one of the study's patterns")
+  expect_identical(back$styles, st$styles)
+  # (a pattern file is an old form)
+  expect_error(tfl_write_study_part(st2, "patterns", name = "Tight"), class = "tflspec_old_form")
 })

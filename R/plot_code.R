@@ -81,6 +81,11 @@ pp_plot_code1 <- function(spec, pid, adam) {
   assemble <- c(assemble, sprintf("fig <- %s", fig), "fig")
 
   fig_path <- gsub("{plot_id}", pid, pp_opt(ctx, "fig_path"), fixed = TRUE)
+  # every package the script's code calls as pkg::fn (the legend's
+  # dplyr::bind_rows(), tibble::tibble()) and not attached
+  body <- c(g$data, g$plot, lg$pre, lg$inset, unlist(lg$theme))
+  needs <- .fig_script_needs(body,
+                             libs = c(libs, if (ctx$type == "km") "survival"))
   lines <- c(
     sprintf("# %s: %s", pid, ctx$def$title),
     if (!is.na(ctx$prow$title)) sprintf("# %s", ctx$prow$title),
@@ -88,7 +93,9 @@ pp_plot_code1 <- function(spec, pid, adam) {
     "",
     paste0("library(", libs, ")"),
     if (ctx$type == "km") "library(survival)",
-    .fig_helper_used(g$data),
+    if (length(needs))
+      sprintf("# also needs: %s (called as pkg::fn)", paste(needs, collapse = ", ")),
+    .fig_script_head(body),
     "",
     section("data"),
     pp_load_lines(ctx),

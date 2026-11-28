@@ -70,8 +70,7 @@ test_that("an analysis's code, run, is what its calls make", {
 # a YAML study of two tables, the TOC listing the second first
 sa_yaml_study <- function(dir) {
   dir.create(file.path(dir, "spec", "outputs"), recursive = TRUE)
-  writeLines(c("study_id: SA-1", "keys:", "  id: USUBJID", "  output: output/ard/ard.rds"),
-             file.path(dir, "study.yml"))
+  write_study_yml(dir, c("study_id: SA-1", "keys:", "  id: USUBJID", "  output: output/ard/ard.rds"))
   writeLines(c("datasets:", "  - dataset: ADSL", "    level: ADaM", "    path: data/adam/adsl.rds",
                "populations:", "  - id: SAF", "    dataset: ADSL", "    where: !r SAFFL == \"Y\""),
              file.path(dir, "spec", "data.yml"))

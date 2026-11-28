@@ -30,6 +30,15 @@
 #' data, and replaces the template's row of its id.  The result is a plain
 #' code SPEC, as [tfl_read_output()] reads one.
 #'
+#' The template's `page:` holds the page's defaults; the report's `page:`
+#' changes only what it writes: a call's arguments (`rtf_page`, ...) and
+#' `tokens` name by name, a band's lines by number (and the blocks `first`
+#' and `last`), a line's cells one by one.  An unnamed sequence of lines
+#' replaces the band's numbered lines.  `!unset` stays in the page, to drop
+#' that cell, line, block or band when the page is resolved over the page
+#' settings ([tfl_resolve_output()]); [tfl_page_origins()] says which layer
+#' gave each field.
+#'
 #' A report's value replaces the default, but for an argument of a map type
 #' whose default is the series' (`!series K`, such as `formats`): the
 #' report's map is put over the series' map name by name.  A name the report
@@ -260,8 +269,12 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   # (a variable's heading under `variable`, as every path writes it)
   content <- .tr_labels_args(content)
   if (is.list(report$content)) content <- c(content, report$content)
-  page <- .tr_fill(tpl$page %||% list(), env)
-  for (k in names(report$page)) page[k] <- list(report$page[[k]])
+  # the page: the template's `page:` (the defaults) under the report's,
+  # which changes only what it writes (.page_over(): a call's arguments by
+  # name, a band's lines by number, a line's cells); `!unset` stays a marker
+  # for the final resolve over the page settings (.page_resolve())
+  tpl_page <- .tr_fill(tpl$page %||% list(), env)
+  page <- .page_over(tpl_page %||% list(), report$page)
   # the style: the report's, else the template's; `!unset` (a study's
   # `settings.style: !unset` read by the template's `!study`) is no style,
   # so the report gets the study's default as a report without one does
@@ -282,6 +295,8 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   attr(out, "template") <- template
   attr(out, "args") <- args_env
   attr(out, "origins") <- origins
+  # (the template's page layer, for tfl_page_origins())
+  attr(out, "page_template") <- tpl_page
   out
 }
 
@@ -477,12 +492,12 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
 
 # The study as a list: a list as given, study.yml, or a folder that holds
 # it.  Read from a file or a folder, it has attribute "study_dir" (the
-# study folder: the series are read from its copies).  A study.yml with
-# series_settings: stops (.series_settings_gone()).
+# study folder: the series are read from its copies).  Its old forms stop
+# (.study_yml_form_check()).
 .tr_study <- function(study, who) {
   if (is.null(study)) return(study)
   if (is.list(study)) {
-    .series_settings_gone(study, attr(study, "study_dir"))
+    .study_yml_form_check(study, attr(study, "study_dir"))
     return(study)
   }
   if (!is.character(study) || length(study) != 1L) {
@@ -493,7 +508,7 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   sd <- normalizePath(if (is_dir) study else dirname(study), winslash = "/", mustWork = FALSE)
   if (!file.exists(f)) stop(who, ": no file ", f, call. = FALSE)
   out <- .series_read_yaml(f) %||% list()
-  .series_settings_gone(out, sd)
+  .study_yml_form_check(out, sd, f)
   structure(out, study_dir = sd)
 }
 

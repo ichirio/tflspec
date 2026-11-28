@@ -1210,7 +1210,7 @@ tfl_read_fig_design <- function(path) {
           "    rate  = 100 * x / n,\n",
           "    lcl   = 100 * mapply(function(x, n) binom.test(x, n)$conf.int[1], x, n),\n",
           "    ucl   = 100 * mapply(function(x, n) binom.test(x, n)$conf.int[2], x, n),\n",
-          "    label = sprintf(\"%.1f%%\\n(%d/%d)\", rate, x, n)\n",
+          "    label = paste0(fmt_num(rate, 1), \"%\\n(\", x, \"/\", n, \")\")\n",
           "  )"), "")
       },
       count = {
@@ -1220,7 +1220,7 @@ tfl_read_fig_design <- function(path) {
         out <- c(out, paste0(v("name"), " <- ", src, " |>\n",
           sprintf("  count(%s, %s) |>\n", paste(by, collapse = ", "), cat),
           sprintf("  group_by(%s) |>\n", paste(by, collapse = ", ")),
-          "  mutate(pct = 100 * n / sum(n), label = sprintf(\"%.0f%%\", pct)) |>\n",
+          "  mutate(pct = 100 * n / sum(n), label = paste0(fmt_num(pct, 0), \"%\")) |>\n",
           "  ungroup()",
           if (length(lv)) sprintf(" |>\n  mutate(%s = factor(%s, levels = unique(c(intersect(%s, %s), sort(%s)))))",
                                   cat, cat, vec_code(lv), cat, cat)), "")
@@ -1971,6 +1971,12 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
   whole <- Filter(function(l) identical(l$layer, "figure"), design$layers)
   if (length(whole)) {
     w <- whole[[1L]]
+    # with the study's setup the script is the program's part, as a report's
+    # content is: the same rule for its head and its needs line
+    if (isTRUE(setup)) {
+      old <- options(tflspec.fig_in_program = TRUE)
+      on.exit(options(old), add = TRUE)
+    }
     fn <- getExportedValue("tflspec", .fig_fun(w$type))
     args <- lapply(w$args %||% list(), function(v) if (is.list(v)) unlist(v) else v)
     return(.drop_attached_ns(do.call(fn, c(list(style = w$style %||% NULL,
@@ -1978,6 +1984,7 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
   }
   b <- .fig_design_body(design, gg, setup = setup, name = name, levels = lv,
                         order = order)
+  b$needs <- .fig_script_needs(c(b$step1, b$step2), b$needs, b$libs, setup)
   code <- c(
     # a script of its own says what it is and attaches its packages; with
     # the study's setup, the program around it does both
@@ -1991,7 +1998,7 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
       if (length(b$needs)) sprintf("# also needs: %s (called as pkg::fn)", paste(b$needs, collapse = ", "))),
     if (setup && gg$explicit) sprintf("# Written for ggplot2 %s", gg$version),
     if (length(b$guard)) c("", b$guard),
-    if (!setup) c(.fig_units_used(c(b$step1, b$step2)), .fig_helper_used(c(b$step1, b$step2))),
+    .fig_script_head(c(b$step1, b$step2), setup),
     "",
     section("data"),
     b$step1,
@@ -2077,25 +2084,6 @@ tfl_fig_data_name <- function(design) {
                        substring(lines[l], hit$col2[i] + 1L))
   }
   lines
-}
-
-# a script of its own: the time-unit constants its code uses, defined
-# (the figure setup defines them for a study's programs)
-.fig_units_used <- function(code) {
-  used <- unique(unlist(regmatches(code, gregexpr("days_per_(week|month|year)", code))))
-  if (length(used)) c("", .fig_unit_guard(used)) else character()
-}
-
-# a script of its own: the study helper tte_time() its code calls, defined
-# unless the study's setup has it (a study's programs get it from
-# programs/study_helpers.R, sourced by their setup)
-.fig_helper_used <- function(code) {
-  if (!any(grepl("tte_time(", code, fixed = TRUE))) return(character())
-  h <- tfl_helpers_code()
-  a <- grep("^tte_time <- function", h)[1L]
-  b <- a - 1L + which(h[a:length(h)] == "}")[1L]
-  c("", "# the study helper tte_time() (tfl_helpers_code()), unless the study's setup has it",
-    paste0("if (!exists(\"tte_time\")) ", h[a]), h[seq(a + 1L, b)])
 }
 
 #' Whether a figure's design reads an ARD
@@ -3055,8 +3043,8 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
     sprintf("    level = %s,", lvl),
     "    ok = is.finite(estimate) & is.finite(conf.low) & is.finite(conf.high) &",
     "      conf.high < 1000,",
-    "    txt = ifelse(ok, sprintf(\"%.2f (%.2f, %.2f)\", estimate, conf.low, conf.high),",
-    "                 \"NE\"),",
+    "    txt = ifelse(ok, paste0(fmt_num(estimate, 2), \" (\", fmt_num(conf.low, 2),",
+    "                            \", \", fmt_num(conf.high, 2), \")\"), \"NE\"),",
     "    across(c(estimate, conf.low, conf.high), ~ ifelse(ok, .x, NA))",
     "  )",
     if (length(subgroups)) c(

@@ -1810,10 +1810,10 @@ tfl_content_run <- function(output, data, study = NULL) {
     # after the study's figure setup, as its program does
     for (n in names(data)) assign(n, data[[n]], envir = env)
     eval(parse(text = tfl_fig_setup_code()), env)
-    # (the study's helpers: the ARD's readers; tte_time() of a time to event)
+    # (the study's helpers: the ARD's readers; any the code calls, tte_time()
+    # of a time to event, fmt_num() of a number)
     steps <- .content_r_steps(output)
-    if (!is.null(data$ard) ||
-        any(grepl("tte_time(", c(steps, as.character(output$content)), fixed = TRUE))) {
+    if (!is.null(data$ard) || .calls_helper(c(steps, as.character(output$content)))) {
       eval(parse(text = tfl_helpers_code()), env)
     }
   } else {

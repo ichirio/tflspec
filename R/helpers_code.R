@@ -60,3 +60,46 @@ tfl_helpers_code <- function() {
   readLines(system.file("helpers", "study_helpers.R", package = "tflspec"),
             encoding = "UTF-8")
 }
+
+# The functions the study helpers define, in the file's order: each
+# top-level `name <- function(...)` of tfl_helpers_code(), its lines as the
+# file has them, by name.  Parsed, so a one-line function (order_arms()),
+# a dot-named one and a body's own braces are read right
+.study_helper_defs <- function() {
+  ex <- parse(text = tfl_helpers_code(), keep.source = TRUE)
+  is_fn <- vapply(ex, function(e) {
+    op <- if (is.call(e)) e[[1L]]
+    is.name(op) && as.character(op) %in% c("<-", "=") && is.name(e[[2L]]) &&
+      is.call(e[[3L]]) && identical(e[[3L]][[1L]], as.name("function"))
+  }, NA)
+  defs <- lapply(attr(ex, "srcref")[is_fn], as.character)
+  names(defs) <- vapply(ex[is_fn], function(e) as.character(e[[2L]]), "")
+  defs
+}
+
+# The functions the study helpers define, by name, in the file's order
+.study_helper_fns <- function() names(.study_helper_defs())
+
+# Whether `code` calls one of the functions `fns` (its name, then "("; not
+# a longer name that ends with it).  By default the study helpers: code run
+# in the session that calls one (set_levels(), tte_time(), fmt_num() ...)
+# gets them first, eval(tfl_helpers_code()), as a study's programs get them
+# from their setup
+.calls_helper <- function(code, fns = .study_helper_fns()) {
+  if (!length(fns) || !length(code)) return(FALSE)
+  # (a name's dots are dots, not any character)
+  pat <- paste0("(^|[^A-Za-z0-9._])(", paste(gsub(".", "\\.", fns, fixed = TRUE), collapse = "|"),
+                ")\\(")
+  any(grepl(pat, code, perl = TRUE))
+}
+
+# The functions of `fns` that `code` calls, in fns's order: the names its
+# code uses, parsed (a comment or a string that names one is not a call);
+# code that does not parse alone, by .calls_helper()'s name and "("
+.helpers_called <- function(code, fns = .study_helper_fns()) {
+  # (no code: none; parse(text = NULL) would read the console)
+  if (!length(code) || !length(fns)) return(character())
+  ex <- tryCatch(parse(text = code, keep.source = FALSE), error = function(e) NULL)
+  if (is.null(ex)) return(Filter(function(f) .calls_helper(code, f), fns))
+  intersect(fns, all.names(ex))
+}

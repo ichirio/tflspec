@@ -438,7 +438,7 @@ tfl_ai_study_init <- function(dir, adam = "adam", study_id = "STUDY-01", title =
   }
   rel <- gsub("\\\\", "/", file.path(adam, files))
   pops <- .ai_adam_populations(file.path(adam_dir, files[nm == "ADSL"]), fn)
-  study <- list(study_id = study_id, title = title %||% study_id,
+  study <- list(spec_version = .spec_version, study_id = study_id, title = title %||% study_id,
                 settings = list(rounding = "sas", output_path = "output/tfl",
                                 program_dir = "programs/tfl", file = "{output_id}.rtf",
                                 style = "standard"),

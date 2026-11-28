@@ -126,11 +126,23 @@
   # joined to them)
   design <- .fig_design_from_list(.fig_design_of_output(output))
   attr(design, "subjects") <- attr(output, "fig_subjects")
-  # (the report's program runs after the study's helpers: the arms in their
-  # numeric order, as the figure of items has them)
-  tfl_fig_design_code(design, plot_id = output$id, save = FALSE, name = "content",
-                      codelists = .codelists_rows(output$codelists, output$id),
-                      order_arms = TRUE)
+  .fig_design_content_code(design, output$id,
+                           .codelists_rows(output$codelists, output$id))
+}
+
+# A report's figure written from a designer's design: the code that makes
+# `content` (the report's program writes it into its RTF).  It is a part of
+# the report's program, run after the study's helpers: the arms in their
+# numeric order, as the figure of items has them, and no head -- the setup
+# defines the helpers and the units (.fig_script_head()).  The one writer of
+# it: a report's content and a designer's design of that report give the
+# same text.  (tfl_fig_design_code() called by itself, `setup = FALSE`, is a
+# script of its own and carries them.)
+.fig_design_content_code <- function(design, plot_id, codelists = NULL) {
+  old <- options(tflspec.fig_in_program = TRUE)
+  on.exit(options(old), add = TRUE)
+  tfl_fig_design_code(design, plot_id = plot_id, save = FALSE, name = "content",
+                      codelists = codelists, order_arms = TRUE)
 }
 
 # the figure made: its code run on the objects it reads (`data`: a named
@@ -165,22 +177,18 @@
     .fig_session_subjects(output, study, "tfl_content_run()")
   })
   attr(output, "fig_subjects") <- sj$subjects
-  new <- .fig_new_content(output$content)
   code <- .content_fig_code_out(output)
   # the packages it calls: their exports around it, none attached
   env <- new.env(parent = .fig_pkg_env(attr(code, "libs")))
   if (!is.null(sj)) .fig_subjects_eval(sj, env, study, output$id)
   for (n in names(data)) assign(n, data[[n]], envir = env)
-  # a figure of items runs after the study's figure setup (theme_tfl(),
-  # scale_colour_tfl(), tfl_colours()), as its program does
-  if (new) .fig_setup_eval(env)
-  # (the study's helpers: the ARD's readers, and set_levels() of the code
-  # lists, order_levels() of the arms and tte_time() of a time to event)
-  if (!is.null(data$ard) || any(grepl("set_levels(", code, fixed = TRUE)) ||
-      any(grepl("order_levels(", code, fixed = TRUE)) ||
-      any(grepl("tte_time(", code, fixed = TRUE))) {
-    eval(parse(text = tfl_helpers_code()), env)
-  }
+  # the content is a part of the report's program, run after the study's
+  # setup, and carries nothing of it (.fig_script_head()): the setup's
+  # helpers (the ARD's readers, order_levels(), tte_time(), fmt_num() ...)
+  # and figure setup (theme_tfl() ..., the days_per_* constants) first,
+  # as its program has them -- a figure of items, a template's design, a
+  # designer's design alike
+  .study_setup_eval(env)
   eval(parse(text = .fig_strip_library(code)), env)
   get("content", envir = env, inherits = FALSE)
 }
