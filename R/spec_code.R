@@ -223,6 +223,16 @@
   sa[intersect(.plan_role_names, names(sa))]
 }
 
+# The outer row key of a table's roles: the first of `rows`, by the column
+# name the plan gives it (`Analyte = ANALYTE`: "Analyte"); NULL when the
+# table has no rows
+.spec_outer_row_key <- function(roles) {
+  r <- roles[["rows"]]
+  if (!length(r)) return(NULL)
+  nm <- names(r)
+  if (!is.null(nm) && nzchar(nm[1L])) nm[1L] else as.character(unlist(r[1L]))[1L]
+}
+
 # The label column's name the roles give, as the plan will call it: one
 # column is itself, several coalesce into `label` (or the name given).
 .spec_label_name <- function(roles) {
@@ -376,6 +386,13 @@
         heading = lay[["group_heading"]], heading_at = lay[["group_heading_at"]])
   }
   a <- pick("group_", c(mode = "mode", collapse = "collapse"))
+  # group_collapse TRUE: the outer row key (the first of table_plan(rows = ),
+  # by its column name) -- plan_row_group(collapse = ) takes names or
+  # positions (rtfreporter#850), the sheet says "the groups"
+  if (isTRUE(a$collapse) || identical(toupper(as.character(a$collapse)), "TRUE")) {
+    a$collapse <- .spec_outer_row_key(roles)
+  }
+
   if (length(a)) do.call(add, c(list("plan_row_group"), a))
   a <- pick("blank_", c(where = "where", first = "first", last = "last",
                         counted = "counted"))
