@@ -295,18 +295,22 @@
 }
 
 # The templates likely for reports of these titles (at most `n`, the best
-# first): a template's name's words count twice its description's
+# first): a template's name's words count twice its description's; on a
+# tie, the name with fewer words the titles do not have comes first (a
+# variant's own word, `ser` or `rel`, does not put it before its base)
 .ai_templates_likely <- function(titles, task, n = 3L) {
   w <- .ai_tpl_words(titles)
   kinds <- if (identical(task, "figure")) "figure" else if ("listing" %in% w) "listing" else "table"
   tt <- .ai_templates_shown(kinds)
   if (!nrow(tt) || !length(w)) return(character())
+  nms <- strsplit(tt$name, "_", fixed = TRUE)
   score <- vapply(seq_len(nrow(tt)), function(i) {
-    nm <- strsplit(tt$name[i], "_", fixed = TRUE)[[1L]]
+    nm <- nms[[i]]
     d <- .ai_tpl_words(.ai_tpl_description(.tpl_get(tt$name[i], "tfl_ai_prepare()")))
     2 * sum(nm %in% w) + sum(setdiff(d, nm) %in% w)
   }, 0)
-  o <- order(-score, tt$name)
+  extra <- vapply(nms, function(nm) sum(!nm %in% w), 0L)
+  o <- order(-score, extra, tt$name)
   o <- o[score[o] > 0]
   tt$name[utils::head(o, n)]
 }

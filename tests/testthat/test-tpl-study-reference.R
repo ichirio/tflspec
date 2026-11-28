@@ -196,12 +196,12 @@ test_that("the style helper: defaults.yml's styles: first, then the built-in set
   expect_length(.tpl_style_set("tfl_standard", NULL)$content, 0L)
 })
 
-test_that("the set's extends: demog, summary, disposition, ae_overview, param_change [defaults], stf_t02_demog {content: none}; the other 23 the old order", {
+test_that("the set's extends: demog, summary, disposition, ae_overview, param_change [defaults], stf_t02_demog {content: none}; the other 24 the old order", {
   # (extends [defaults], batch 2 (ii)): summary, disposition, ae_overview and
-  # param_change are layered; 29 templates, 6 layered, 23 the old order
+  # param_change are layered; 30 templates, 6 layered, 24 the old order
   expect_identical(sort(Filter(function(n) .tpl_layered(n), tfl_templates()$name)),
                    c("ae_overview", "demog", "disposition", "param_change", "stf_t02_demog", "summary"))
-  expect_length(Filter(function(n) !.tpl_layered(n), tfl_templates()$name), 23L)
+  expect_length(Filter(function(n) !.tpl_layered(n), tfl_templates()$name), 24L)
   # (an alias is its template: stf_t14_ae_soc_pt is ae_soc_pt's, not migrated)
   expect_false(.tpl_layered("stf_t14_ae_soc_pt"))
   expect_identical(.tpl_get("demog", "test")$extends, "defaults")
