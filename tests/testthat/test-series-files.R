@@ -143,9 +143,7 @@ test_that("every param is an argument definition with closed words", {
   skip_if(!nzchar(series_dir()), "the series folder is not installed")
   inputs <- c("pick", "text", "condition", "table")
   steps <- c("data", "analysis", "content", "page")
-  sources <- c("vars", "levels", "codelist", "populations", "report_data",
-               "study_data", "ard", "columns", "study_info", "tokens",
-               "stats", "fixed", "styles", "from_args")
+  sources <- tfl_choice_sources()$word
   for (nm in names(series_templates())) {
     ps <- series_templates()[[nm]]$params
     expect_true(length(ps) > 0L && !is.null(names(ps)), info = nm)
