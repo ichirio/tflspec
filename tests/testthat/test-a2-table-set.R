@@ -79,7 +79,7 @@ test_that(".report_set() / tfl_report_set(): a table's set is the set its subjec
   expect_identical(tfl_report_set(l), "ENR")
 })
 
-test_that("two sets on the subjects rows: BIGN's row's; no BIGN, none and a warning (Q3)", {
+test_that("two sets on the subjects rows: BIGN's row's; no BIGN, none and an error (Q3, #997)", {
   ad <- list(list(id = "adsl_saf", from = "ADSL", population = "SAF"),
              list(id = "adsl_enr", from = "ADSL", population = "ENR"))
   an <- list(list(id = "N", method = "categorical", data = "adsl_enr", variables = list("TRT01A")))
@@ -87,8 +87,14 @@ test_that("two sets on the subjects rows: BIGN's row's; no BIGN, none and a warn
   expect_true(is.na(tfl_report_set(o)))
   p <- .check_static_rows(o, "T-2")
   w <- p[p$item == "data$population", ]
-  expect_identical(w$level, "warning")
-  expect_match(w$message, "carry several analysis sets (SAF, ENR) and no BIGN analysis", fixed = TRUE)
+  expect_identical(w$level, "error")
+  expect_match(w$message, "table T-2: its data rows carry several analysis sets (SAF, ENR) and no BIGN analysis",
+               fixed = TRUE)
+  # (the heading's set names the heading, not the data's: still an error)
+  o$common <- list(population_label = "Safety Analysis Set")
+  expect_identical(.check_static_rows(o, "T-2")[.check_static_rows(o, "T-2")$item == "data$population", ]$level,
+                   "error")
+  o$common <- NULL
   # BIGN of the ENR row: ENR, no warning
   o$ard$analyses <- c(list(ts_bign("adsl_enr")), an)
   expect_identical(tfl_report_set(o), "ENR")
@@ -203,10 +209,13 @@ test_that("tfl_set_report_set(): writes where the reader reads, once, never in c
   cd <- tfl_output("T-K", "table", ard = list(analysis_data = list(
     list(id = "adsl_k", code = tfl_r("adsl |> dplyr::filter(SAFFL == \"Y\")"), population = "SAF"))))
   expect_identical(tfl_set_report_set(cd, "ENR")$ard$analysis_data[[1L]]$population, "ENR")
-  # (two sets and no BIGN to say the report's: the writer cannot tell, it stops)
+  # (two sets and no BIGN to say the report's: both rows are the report's,
+  # the set replaces theirs -- one set a report, #997)
   two <- tfl_output("T-2", "table", ard = list(analysis_data = list(
     list(id = "adsl_saf", from = "ADSL", population = "SAF"), list(id = "adsl_enr", from = "ADSL", population = "ENR"))))
-  expect_error(tfl_set_report_set(two, "FAS"), "carry several analysis sets (SAF, ENR) and no BIGN", fixed = TRUE)
+  two2 <- tfl_set_report_set(two, "FAS")
+  expect_identical(vapply(two2$ard$analysis_data, `[[`, "", "population"), c("FAS", "FAS"))
+  expect_identical(tfl_report_set(two2), "FAS")
   # (a set the study does not register: stops, canon 11-15 (2) -- S3)
   expect_error(tfl_set_report_set(b, "SAFFL", st), "'SAFFL' is not an analysis set of spec/data.yml", fixed = TRUE)
   # (the old form with a denominator row: the set as the ARD reads it -- common
@@ -482,4 +491,48 @@ test_that("the sheets add no set to a table whose data names none: the TOC's lin
   file.copy(file.path(dir, "spec", "data.yml"), file.path(to, "spec", "data.yml"), overwrite = TRUE)
   expect_identical(suppressWarnings(tfl_ard_code(tfl_read_study_spec(to), "T-N", save = TRUE)),
                    suppressWarnings(tfl_ard_code(st, "T-N", save = TRUE)))
+})
+
+test_that("a report of its own rows set to another set has one set, not two (#997)", {
+  # (the issue's steps, a fictional study: T-14-1-1 written by hand, no
+  # template and no data map, its subjects row of SAF and its toc line SAF)
+  saf <- list(id = "adsl_saf", from = "ADSL", population = "SAF")
+  an <- list(list(id = "AGE", method = "continuous", data = "adsl_saf", variables = list("AGE")))
+  o <- tfl_output("T-14-1-1", "table", content = ts_content, ard = list(analysis_data = list(saf), analyses = an))
+  expect_identical(tfl_report_set(o), "SAF")
+  # the set written: the subjects row's set is replaced, no second row
+  w <- tfl_set_report_set(o, "ITT")
+  expect_length(w$ard$analysis_data, 1L)
+  expect_identical(w$ard$analysis_data[[1L]]$population, "ITT")
+  expect_identical(tfl_report_set(w), "ITT")
+  expect_false(any(.check_static_rows(w, "T-14-1-1")$level == "error"))
+  # the planner's view synced its rows first: a subjects row of SAF and one
+  # of ITT, the analyses on the ITT row, no BIGN analysis
+  two <- o
+  two$ard$analysis_data <- list(saf, list(id = "adsl_itt", from = "ADSL", population = "ITT"))
+  two$ard$analyses[[1L]]$data <- "adsl_itt"
+  # (the check: an error naming the report and both sets)
+  p <- .check_static_rows(two, "T-14-1-1")
+  e <- p[p$item == "data$population", ]
+  expect_identical(e$level, "error")
+  expect_match(e$message, "table T-14-1-1: its data rows carry several analysis sets (SAF, ITT)", fixed = TRUE)
+  # (the writer: it no longer stops; every subjects row takes the set)
+  w2 <- tfl_set_report_set(two, "ITT")
+  expect_identical(vapply(w2$ard$analysis_data, `[[`, "", "population"), c("ITT", "ITT"))
+  expect_identical(tfl_report_set(w2), "ITT")
+  expect_false(any(.check_static_rows(w2, "T-14-1-1")$item == "data$population"))
+  expect_identical(tfl_set_report_set(w2, "ITT"), w2)
+  # (the same in a flat `data:` of rows)
+  f <- tfl_output("T-14-1-1", "table", content = ts_content)
+  f$data <- list(saf, list(id = "adsl_itt", from = "ADSL", population = "ITT"),
+                 list(id = "adae_sub", from = "ADAE", subjects_in = "adsl_itt"))
+  f2 <- tfl_set_report_set(f, "ITT")
+  expect_identical(vapply(f2$data[1:2], `[[`, "", "population"), c("ITT", "ITT"))
+  expect_null(f2$data[[3L]]$population)
+  # (with a BIGN analysis the other set is a denominator's: it keeps its own)
+  b <- two
+  b$ard$analyses <- c(list(ts_bign("adsl_itt")), two$ard$analyses)
+  b2 <- tfl_set_report_set(b, "FAS")
+  expect_identical(vapply(b2$ard$analysis_data, `[[`, "", "population"), c("SAF", "FAS"))
+  expect_false(any(.check_static_rows(b, "T-14-1-1")$item == "data$population"))
 })
