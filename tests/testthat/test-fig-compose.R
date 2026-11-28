@@ -184,3 +184,23 @@ test_that("an empty axis label is untitled: ggplot2 4.0's label attribute advice
   }
   expect_false("gg_label_attr" %in% tfl_fig_advice(b, adam, ggplot2_version = "3.5")$rule)
 })
+
+test_that("a composed figure's script defines each study helper it calls once (A3)", {
+  # two KM figures call tte_time(), the rate bars fmt_num(): one head
+  d <- tfl_fig_design(
+    plot = list(dpi = 300),
+    plots = list(a = km_part(), b = km_part(), rate = tfl_fig_template("bar_rate_ci", group = "TRT01P")),
+    compose = list(layout = "a | b | rate"))
+  lines <- function(x) unlist(strsplit(paste(as.character(x), collapse = "\n"), "\n", fixed = TRUE))
+  code <- lines(tfl_fig_design_code(d, "c"))
+  expect_gte(sum(grepl("tte_time(\"", code, fixed = TRUE)), 2L)
+  expect_true(any(grepl("fmt_num(rate, 1)", code, fixed = TRUE)))
+  def <- function(f) sum(grepl(sprintf('^if [(]!exists[(]"%s"[)][)] %s <- function', f, f), code))
+  expect_identical(def("tte_time"), 1L)
+  expect_identical(def("fmt_num"), 1L)
+  expect_identical(sum(startsWith(code, "# the study helper")), 1L)
+  expect_no_error(parse(text = code))
+  # a study's program: its setup has them, none defined
+  prog <- lines(tfl_fig_design_code(d, "c", setup = TRUE))
+  expect_false(any(grepl("^if [(]!exists", prog)))
+})

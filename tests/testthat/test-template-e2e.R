@@ -439,13 +439,13 @@ test_that("planner: the ARD of each series report from its sheets, the ids as de
   expect_identical(unique(fo$ard$analysis_id), c("BIGN", "HR"))
   expect_identical(e2e_levels(fo$ard, "HR", "group1_level"), c("ALL", "SEX"))
 
-  # KM: BIGN; the time unit's derive kept on the analysis_data sheet (the
+  # KM: BIGN; the time unit's step kept on the analysis_data sheet (the
   # ARD reads adsl_sub only, so its program has no adtte_sub)
   km <- e2e_planner(reps$km, d)
   expect_identical(unique(km$ard$analysis_id), "BIGN")
   ad <- km$sheets$ard$analysis_data
-  der <- ad$derive[ad$output_id == "F-11" & ad$data_id == "adtte_sub"]
-  expect_identical(der, "AVAL = AVAL / c(days = 1, months = 30.4375)[[\"days\"]]")
+  thn <- ad$then[ad$output_id == "F-11" & ad$data_id == "adtte_sub"]
+  expect_identical(thn, "tte_time(\"days\")")
 })
 
 test_that("a step's if / else is laid out as R, not as a call", {

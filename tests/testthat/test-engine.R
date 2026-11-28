@@ -110,3 +110,10 @@ test_that("unknown layer is an error", {
   spec$plots$layers[1] <- "censor_mark, sparkles"
   expect_error(tfl_fig_code(spec, "F-KM-1"), "unknown layer")
 })
+
+test_that("a plot spec's script defines tte_time() once, and parses (A3)", {
+  code <- strsplit(tfl_fig_code(tfl_example_fig_spec(), "F-KM-1")[[1L]], "\n", fixed = TRUE)[[1L]]
+  expect_true(any(grepl("tte_time(\"", code, fixed = TRUE)))
+  expect_identical(sum(grepl('^if [(]!exists[(]"tte_time"[)][)] tte_time <- function', code)), 1L)
+  expect_no_error(parse(text = code))
+})

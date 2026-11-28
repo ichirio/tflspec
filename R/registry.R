@@ -97,8 +97,14 @@ pp_default_options <- function(type = NA) {
   base
 }
 
-pp_time_divisor <- c(as_is = NA, days_to_weeks = 7, days_to_months = 30.4375, days_to_years = 365.25)
+# "as_is": AVAL as it is (no conversion); "days": AVAL converted to days
+# from its AVALU (tte_time()), the quick figures' time_unit = "days"; a time
+# in days other than AVAL is as it is for both
+pp_time_divisor <- c(as_is = NA, days = 1, days_to_weeks = 7, days_to_months = 30.4375, days_to_years = 365.25)
+# the unit tte_time() is given for each option value
+pp_time_unit_name <- c(as_is = "days", days = "days", days_to_weeks = "weeks",
+                       days_to_months = "months", days_to_years = "years")
 pp_time_axis_label <- c(
-  as_is = "Time", days_to_weeks = "Time (Weeks)",
+  as_is = "Time", days = "Time", days_to_weeks = "Time (Weeks)",
   days_to_months = "Time (Months)", days_to_years = "Time (Years)"
 )

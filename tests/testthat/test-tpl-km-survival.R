@@ -97,10 +97,14 @@ test_that("the B file in the figure designer: the report's own items seen, saved
   tfl_write_fig_design(back, f2)
   expect_identical(readLines(f2), readLines(f1))
   expect_identical(unclass(back), unclass(design))
-  # the design read back writes the report's figure
-  expect_identical(as.character(tfl_fig_design_code(back, plot_id = "F-14-2-3", save = FALSE,
-                                                    name = "content", order_arms = TRUE)),
+  # the design read back writes the report's figure (the one writer of a
+  # report's figure from a design: a part of the program, no head)
+  expect_identical(as.character(tflspec:::.fig_design_content_code(back, "F-14-2-3")),
                    tflspec:::.content_fig_code(tfl_resolve_output(b, st)))
+  # the same design as a script of its own carries the study helpers it calls
+  own <- tfl_fig_design_code(back, plot_id = "F-14-2-3", save = FALSE, name = "content",
+                             order_arms = TRUE)
+  expect_true(any(grepl("^if [(]!exists[(]\"order_levels\"[)][)] ", own)))
 })
 
 test_that("a report that replaces a template's layer: its design, not the call", {
@@ -278,4 +282,32 @@ test_that("a report's own layer_code with a template: statements on p after the 
   expect_true(any(startsWith(b, "p <- ggsurvfit(")))
   expect_false(any(b == "p <- ggplot() +"))
   expect_false(inherits(tryCatch(parse(text = b), error = function(e) e), "error"))
+})
+
+test_that("a template's call is its report program's part: the study helpers its code calls, none defined (A3)", {
+  km_skip()
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  dir.create(d)
+  file.copy(list.files(system.file("extdata", "spec-yaml", package = "tflspec"),
+                       full.names = TRUE), d, recursive = TRUE)
+  s <- tfl_read_study_spec(d)
+  own <- tfl_item("layer_code", list(label = "a number", code = paste(
+    "txt <- fmt_num(0.5, 2)",
+    "p <- p + ggplot2::annotate('text', x = 1, y = 0.1, label = paste(txt, fmt_num(0.25, 1)))",
+    sep = "\n")))
+  o <- tfl_output("F-9", "figure",
+                  data = list(steps = list(list(step = "read", dataset = "ADTTE"),
+                                           list(step = "param", value = "PFS"))),
+                  template = list(name = "km_survival", args = list(by = "TRT01A")),
+                  content = list(own))
+  ro <- tfl_resolve_output(o, s)
+  # the program with the template's call (A): after the study's setup, which
+  # has fmt_num() (no head: .fig_script_head() is a script of its own's)
+  a <- unlist(strsplit(as.character(tfl_content_code(ro)), "\n", fixed = TRUE))
+  expect_true(any(startsWith(a, "p <- tflspec::tfl_tpl(")))
+  expect_true(any(grepl("fmt_num(0.25, 1)", a, fixed = TRUE)))
+  expect_false(any(grepl("^if [(]!exists", a)))
+  expect_false(any(grepl("fmt_num <- function", a, fixed = TRUE)))
+  expect_no_error(parse(text = a))
 })

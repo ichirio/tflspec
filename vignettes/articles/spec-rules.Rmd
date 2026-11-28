@@ -372,7 +372,7 @@ data:
     subjects: adsl_sub
     add: [TRT01A]
     where: !r PARAMCD == "OS"
-    derive: !r AVAL = AVAL / 30.4375
+    then: !r tte_time("months")
 analysis:
   analyses:
     - {id: BIGN, method: categorical, data: adsl_sub, variables: [TRT01A]}
@@ -413,11 +413,11 @@ example data. The legend shows each arm's N from BIGN:
 adsl_sub <- adsl[adsl$ITTFL == "Y", ]
 adtte_sub <- merge(adtte[adtte$PARAMCD == "OS", setdiff(names(adtte), "TRT01A")],
                    adsl_sub[, c("USUBJID", "TRT01A")], by = "USUBJID")
-adtte_sub$AVAL <- adtte_sub$AVAL / 30.4375
+# OS is in months (AVALU); a study's program converts AVAL with tte_time(adtte_sub, "months")
 
 ard <- cards::ard_tabulate(adsl_sub, variables = TRT01A)
 ard$analysis_id <- "BIGN"
 
-km_fit <- ggsurvfit::survfit2(ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ TRT01A, data = adtte_sub)
+km_fit <- ggsurvfit::survfit2(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = adtte_sub)
 km_curves(km_fit, ard = ard, params = list(time_unit = "months", legend = "bottom"))
 ```

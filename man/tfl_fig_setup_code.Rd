@@ -42,9 +42,11 @@ line types of the standard (\code{treatment_shapes}, \code{treatment_linetypes};
 \code{NULL} when it has none);
 \item \code{tfl_marker(name)} -- an event or symbol marker (\code{Death}, \code{censor} ...);
 \item \code{tfl_save(plot, file, type)} -- \code{ggsave()} at the standard's size;
-\item \code{tfl_km_risk(ard, fit)} -- a KM figure's number at risk from the KM
-table's ARD (\code{cardx::ard_survival_survfit(times = )}), checked against
-the curve;
+\item \code{tfl_km_risk(ard, fit, divisor = 1)} -- a KM figure's number at risk
+from the KM table's ARD (\code{cardx::ard_survival_survfit(times = )}),
+checked against the curve.  The ARD's times are in the analysis data's
+unit; \code{divisor} turns them into the axis's (1 when they already are,
+e.g. when the table's data was converted by \code{tte_time()});
 \item \code{tfl_check(plot, levels = )} -- the checks of \code{\link[=tfl_check_fig]{tfl_check_fig()}}.
 }
 

@@ -31,7 +31,8 @@ tflplanner names a data by.}
 \item{subgroups}{The subgroup variables (of the population's data), a
 character vector or one string with \verb{,} between them.}
 
-\item{time, censor}{The time and the censoring indicator (1 = censored).}
+\item{time, censor}{The time and the censoring variable (CNSR: 0 = the event,
+any other value a censoring).}
 
 \item{id}{The analysis id of the overall estimate; a subgroup's is
 \verb{<id>_<variable>}.}
