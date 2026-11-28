@@ -149,25 +149,46 @@ params:
       study's, the plan_cells of its defaults.yml (an n (%) template has no
       default of its own, canon 2026-11-16).
   col_header:
-    type: list<map<string,string>>
+    type: rows<line, cols, span, text>
     input: table
     columns:
-      row_label:
-        label: {en: "Row labels", ja: "行ラベル"}
+      line:
+        label: {en: "Line", ja: "行"}
         type: string
         input: text
-        description: The text over the row labels' column.
-      .values:
-        label: {en: "Value columns", ja: "値の列"}
+        description: The header row, a whole number (1 = the top).
+      cols:
+        label: {en: "Columns", ja: "列"}
         type: string
         input: text
-        description: "The text over each value column ({col} the column's value)."
+        description: "The columns the cell sits on: a name (row_label), .values (every value column), a position or range, or KEY = value."
+      span:
+        label: {en: "Span", ja: "またがり"}
+        type: string
+        input: text
+        description: "Blank: one cell over cols; each: one cell a column; a key's name: one cell per value of that key (a spanner)."
+      text:
+        label: {en: "Text", ja: "テキスト"}
+        type: string
+        input: text
+        description: "What prints, with the tokens {col} {col1} (the column's keys) and {n} {n1} (its N); \\n a line break."
     default: ~
     step: content
     tier: other
-    description: "The column header lines, each a map of cell texts ({row_label:
-      '', .values: '{col}'}); empty for the study's, the plan_col_header of its
-      defaults.yml (the arm name line and the (N={n}) line there)."
+    description: "The whole column header, one row a cell (line, cols, span,
+      text), as the tables sheet's col_header; empty for the study's, the
+      plan_col_header of its defaults.yml (the arm name line and the (N={n})
+      line there)."
+  col_header_values:
+    type: map<string,logical|string|r>
+    input: table
+    columns: {key: {label: {en: "Token", ja: "トークン"}}, value: {label: {en: "Value", ja: "値"}}}
+    default: ~
+    step: content
+    tier: other
+    description: "What the header's tokens take, plan_col_header(values = ):
+      {n: page} each page's N, {n: table} the analysis set's; empty for the
+      BIGN item's N for {n}."
   max_rows:
     type: number
     input: text
@@ -219,7 +240,7 @@ content:
   - plan_cells:
       continuous: "{cells}"
       categorical: "{count_cell}"
-  - plan_col_header: {lines: "{col_header}"}
+  - plan_col_header: {header: "{col_header}", values: "{col_header_values}"}
   - plan_paginate_rows: {max_rows: "{max_rows}", split: group_safe}
 page:
   titles: ~
