@@ -827,7 +827,7 @@ tfl_tpl <- function(x, name, ..., study = NULL, codelists = NULL, sets = NULL) {
       out <- c(out, list(tfl_item(v, study[[i]], from = "defaults")))
     } else {
       out[[j]]$args <- if (k == "dots") .merge_dots(out[[j]]$args, study[[i]])
-                       else .merge_by_arg(out[[j]]$args, study[[i]])
+                       else .merge_by_arg(.drop_alternatives(v, out[[j]]$args, study[[i]]), study[[i]])
     }
   }
   out
