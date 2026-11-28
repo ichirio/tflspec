@@ -138,7 +138,10 @@
     o(type, "x_by", "axes", "number", "X step", "The x axis breaks every ..."),
     o(type, "y_min", "axes", "number", "Y min", ""),
     o(type, "y_max", "axes", "number", "Y max", ""),
-    o(type, "y_by", "axes", "number", "Y step", ""))
+    o(type, "y_by", "axes", "number", "Y step", ""),
+    o(type, "axis_title_width", "axes", "number", "Axis title width",
+      paste("The number of characters after which an axis title wraps onto a new line;",
+            "blank: the figure style's (50).")))
   rbind(
     axes("km"),
     o("km", "censor_shape", "style", "choice", "Censor mark", ""),

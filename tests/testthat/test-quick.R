@@ -58,3 +58,36 @@ test_that("plot list rows run through the quick API", {
   bad <- data.frame(plot_id = "x", type = "km", args = "x_max = ")
   expect_error(tfl_fig_list_code(bad), "cannot read args")
 })
+
+test_that("the quick generators write an axis title past axis_title_width wrapped (the figure style's, 50)", {
+  long <- "Change from baseline in the sum of the longest diameters of target lesions (%)"
+  # the built-in width, 50: two lines at the spaces between words
+  code <- paste(tfl_fig_waterfall(y_label = long), collapse = "\n")
+  expect_match(code, 'y = "Change from baseline in the sum of the longest\\ndiameters of target lesions (%)"',
+               fixed = TRUE)
+  # NA, or tfl_unset(): no wrap, one line
+  code <- paste(tfl_fig_waterfall(y_label = long, axis_title_width = NA), collapse = "\n")
+  expect_match(code, paste0('y = "', long, '"'), fixed = TRUE)
+  code <- paste(tfl_fig_km(y_label = long, axis_title_width = tfl_unset()), collapse = "\n")
+  expect_match(code, paste0('y = "', long, '"'), fixed = TRUE)
+  # a width of its own; the x title the same, the figure title never
+  code <- paste(tfl_fig_km(x_label = long, y_label = long, title = long, axis_title_width = 30),
+                collapse = "\n")
+  w30 <- "Change from baseline in the\\nsum of the longest diameters\\nof target lesions (%)"
+  expect_match(code, paste0('labs(x = "', w30, '", y = "', w30, '", title = "', long, '")'), fixed = TRUE)
+  code <- paste(tfl_fig_swimmer(y_label = long, axis_title_width = 30), collapse = "\n")
+  expect_match(code, paste0('y = "', w30, '"'), fixed = TRUE)
+  # a short title is as written
+  expect_match(paste(tfl_fig_km(), collapse = "\n"), 'labs(x = "Time (Months)", y = "Survival Probability")',
+               fixed = TRUE)
+  # a script of its own (tfl_fig_edish() ...): the figure style's width
+  s <- tfl_fig_style()
+  s$settings$value[s$settings$key == "axis_title_width"] <- "20"
+  old <- options(tflspec.fig_style = s)
+  on.exit(options(old), add = TRUE)
+  code <- paste(tfl_fig_edish(), collapse = "\n")
+  expect_match(code, 'y = "Maximum\\npost-baseline total\\nbilirubin (x ULN)"', fixed = TRUE)
+  # and of a quick generator given none
+  code <- paste(tfl_fig_waterfall(y_label = "Best percent change from baseline"), collapse = "\n")
+  expect_match(code, 'y = "Best percent change\\nfrom baseline"', fixed = TRUE)
+})

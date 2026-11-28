@@ -142,7 +142,7 @@
   old <- options(tflspec.fig_in_program = TRUE)
   on.exit(options(old), add = TRUE)
   tfl_fig_design_code(design, plot_id = plot_id, save = FALSE, name = "content",
-                      codelists = codelists, order_arms = TRUE)
+                      codelists = codelists)
 }
 
 # the figure made: its code run on the objects it reads (`data`: a named

@@ -107,6 +107,10 @@ test_that("the former km_simple / km_risk_table / km_ci: km_survival with argume
            label = "the subjects with no AVAL or CNSR have no place on a curve: left out, with a warning",
            warn = "km_survival: {n} subjects with a missing AVAL or CNSR were left out")), at - 1L)
     want$call_steps <- want$call_steps + 3L
+    # (the axis titles' width, a parameter since canon 11-28: the
+    # template's default, 50; where it sits among the settings aside)
+    want$plot$axis_title_width <- 50
+    if (setequal(names(x$plot), names(want$plot))) want$plot <- want$plot[names(x$plot)]
     for (k in c("content", "plot", "data", "call_steps")) {
       expect_identical(x[[k]], want[[k]], info = paste(nm, k))
     }
@@ -248,7 +252,10 @@ test_that("in a study: km_cumulative (STF Figure 1's sample) from ADTTE and from
   expect_false(grepl("days_per_week", txt, fixed = TRUE))
   expect_match(txt, paste0("\"km_cumulative\", time_unit = \"weeks\", by = TRT01A, x_max = 52, ",
                            "x_step = 4, x_label = \"Time (Weeks)\""), fixed = TRUE)
-  expect_match(txt, "y_label = \"Cumulative Percentage of Subjects Discontinued\") +", fixed = TRUE)
+  # (the axis titles' width, the study's figure style's: written, last)
+  expect_match(gsub("[[:space:]]+", "", txt),
+               gsub(" ", "", "y_label = \"Cumulative Percentage of Subjects Discontinued\", axis_title_width = 50) +"),
+               fixed = TRUE)
   expect_match(txt, "labs(caption = \"Log-rank test.\")", fixed = TRUE)
   items <- paste(tfl_content_code(x$ro, template = "items"), collapse = "\n")
   expect_match(items, "ggsurvfit(fit, type = \"risk\"", fixed = TRUE)
@@ -299,7 +306,10 @@ test_that("in a study: km_cumulative (STF Figure 1's sample) from ADTTE and from
   y <- tplfig_check(o2, d, data)
   txt <- paste(y$a, collapse = "\n")
   expect_match(txt, "mutate(CNSR = as.integer(!(EOTSTT == \"DISCONTINUED\")))", fixed = TRUE)
-  expect_match(txt, "\"km_cumulative\", time = TRTDURD, time_unit = \"weeks\", by = TRT01A)", fixed = TRUE)
+  # (the axis titles' width, the study's figure style's: written, last)
+  expect_match(gsub("[[:space:]]+", "", txt),
+               gsub(" ", "", "\"km_cumulative\", time = TRTDURD, time_unit = \"weeks\", by = TRT01A, axis_title_width = 50)"),
+               fixed = TRUE)
   expect_false(grepl("PARAMCD", txt, fixed = TRUE))
   # the report's whole program's end: its PNG and RTF
   st <- tfl_read_study_spec(d)

@@ -58,7 +58,7 @@ tfl_fig_mean <- function(adam = NULL, style = c("se", "sd", "ci", "se_n"), param
       "geom_point(position = pd, size = 2)",
       "geom_errorbar(aes(ymin = lo, ymax = hi), width = 0.2, position = pd, na.rm = TRUE)",
       "scale_colour_manual(values = pal_grp)",
-      sprintf("labs(x = \"Visit\", y = %s%s)", q(y_lab), if (!is.null(title)) paste0(", title = ", q(title)) else "")),
+      sprintf("labs(x = %s, y = %s%s)", pp_axis_title("Visit"), pp_axis_title(y_lab), if (!is.null(title)) paste0(", title = ", q(title)) else "")),
       as.list(pp_theme_lines(theme)), as.list(pp_q_legend(legend)))))
   if (style == "se_n") {
     plot <- c(plot, "# ---- n at each visit ----",
@@ -140,7 +140,7 @@ tfl_fig_individual <- function(adam = NULL, style = c("spaghetti", "spider"), pa
     if (spider) "geom_point(size = 1)",
     if (!spider) sprintf('stat_summary(aes(group = %s), fun = mean, geom = "line", linewidth = 1.2)', group),
     sprintf("scale_colour_manual(values = pal, na.value = \"grey70\"%s)", if (spider) ", breaks = names(pal)" else ""),
-    sprintf("labs(x = %s, y = %s%s)", q(x_lab), q(y_lab), if (!is.null(title)) paste0(", title = ", q(title)) else "")),
+    sprintf("labs(x = %s, y = %s%s)", pp_axis_title(x_lab), pp_axis_title(y_lab), if (!is.null(title)) paste0(", title = ", q(title)) else "")),
     as.list(pp_theme_lines(theme)), as.list(pp_q_legend(legend))))
   pp_q_script(plot_id, if (spider) "Spider plot" else "Spaghetti plot", title, c("dplyr", "ggplot2"),
               data_lines, c(plot, "fig <- p"), width, height, dpi, units, file)
@@ -189,7 +189,7 @@ tfl_fig_box <- function(adam = NULL, style = c("by_visit", "by_group", "change")
       "geom_jitter(width = 0.12, size = 1.2, alpha = 0.6)",
       'stat_summary(fun = mean, geom = "point", shape = 3, size = 3)',
       "scale_fill_manual(values = pal_grp)",
-      sprintf("labs(x = NULL, y = %s%s)", q(y_lab), if (!is.null(title)) paste0(", title = ", q(title)) else "")),
+      sprintf("labs(x = NULL, y = %s%s)", pp_axis_title(y_lab), if (!is.null(title)) paste0(", title = ", q(title)) else "")),
       as.list(pp_theme_lines(theme)), list('theme(legend.position = "none")')))
   } else {
     plus_code("p", c(list(
@@ -198,7 +198,7 @@ tfl_fig_box <- function(adam = NULL, style = c("by_visit", "by_group", "change")
       "geom_boxplot(position = position_dodge(width = 0.8), width = 0.7, outlier.size = 0.8)",
       'stat_summary(fun = mean, geom = "point", shape = 3, size = 2, position = position_dodge(width = 0.8))',
       "scale_fill_manual(values = pal_grp)",
-      sprintf("labs(x = \"Visit\", y = %s%s)", q(y_lab), if (!is.null(title)) paste0(", title = ", q(title)) else "")),
+      sprintf("labs(x = %s, y = %s%s)", pp_axis_title("Visit"), pp_axis_title(y_lab), if (!is.null(title)) paste0(", title = ", q(title)) else "")),
       as.list(pp_theme_lines(theme)), as.list(pp_q_legend(legend))))
   }
   pp_q_script(plot_id, "Box plot", title, c("dplyr", "ggplot2"),

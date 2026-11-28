@@ -29,6 +29,7 @@ The figure template \code{km_cumulative}, layout \code{km}: a variant of \code{k
    \code{y_max} \tab other \tab call \tab  \tab  \tab the y axis's end; NULL: 1 \cr
    \code{y_step} \tab other \tab call \tab study: km.y_by, no fallback \tab km.y_by \tab the y axis's step (scale_y_continuous(breaks = )); NULL: the figure style's \cr
    \code{y_label} \tab usual \tab call \tab  \tab  \tab the y axis's title (labs(y = )); NULL: by y_type \cr
+   \code{axis_title_width} \tab other \tab call \tab study: figure_style.axis_title_width, else 50 \tab figure_style.axis_title_width \tab the number of characters after which an axis title (labs(x = , y = )) wraps onto a new line, at the spaces between words; NULL: no wrap \cr
    \code{linetype_by} \tab other \tab call \tab FALSE \tab  \tab TRUE: a line type an arm too (ggsurvfit(linetype_aes = TRUE)) \cr
    \code{legend} \tab usual \tab call \tab bottom \tab  \tab the legend's place (theme(legend.position = )); NULL: inside \cr
    \code{legend_title} \tab other \tab call \tab  \tab  \tab the legend's title (labs(colour = )); NULL: none \cr

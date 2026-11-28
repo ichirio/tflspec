@@ -50,8 +50,22 @@
         !identical(utils::head(over$add, length(base$add)), base$add)) {
     over$add <- c(base$add, over$add)
   }
-  .merge_map(base, over)
+  # (no settings over them: the template's as they are -- a setting it
+  # says `!unset`, its processing not done (axis_title_width: no wrap),
+  # stays, where .merge_map() would drop it and the design take its default)
+  if (!length(over)) return(base)
+  out <- .merge_map(base, over)
+  # (and a setting the report says `!unset` whose `!unset` the design reads
+  # as a value of its own -- axis_title_width: no wrap -- keeps it, where
+  # .merge_map() would drop the key and the design take its default width)
+  for (k in intersect(.fig_plot_unset_values, names(over))) {
+    if (inherits(over[[k]], "tfl_unset")) out[[k]] <- tfl_unset()
+  }
+  out
 }
+# The plot settings whose `!unset` is a value the design reads (not "the
+# default"): axis_title_width, no wrap
+.fig_plot_unset_values <- "axis_title_width"
 
 # The figure a tpl_<name>() call draws: the design's own steps and layers
 # on the data the program made, the settings `plot` over the template's

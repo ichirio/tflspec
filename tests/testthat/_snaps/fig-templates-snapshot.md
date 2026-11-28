@@ -11,7 +11,65 @@
       library(ggsurvfit)
       library(patchwork)
       
-      # the study helper tte_time() (tfl_helpers_code()), unless the study's setup has it
+      # the study helpers codelist_codes(), set_levels(), order_levels(), tte_time() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
       if (!exists("tte_time")) tte_time <- function(data, unit = "days") {
         days <- c(DAYS = 1,
                   WEEKS = get0("days_per_week", mode = "numeric", ifnotfound = 7),
@@ -52,6 +110,7 @@
       # Input data frames: adtte
       
       adtte_sub <- adtte |>
+        order_levels() |>
         filter(PARAMCD == "OS") |>
         tte_time("months")
       
@@ -153,7 +212,65 @@
       library(ggplot2)
       library(ggsurvfit)
       
-      # the study helper tte_time() (tfl_helpers_code()), unless the study's setup has it
+      # the study helpers codelist_codes(), set_levels(), order_levels(), tte_time() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
       if (!exists("tte_time")) tte_time <- function(data, unit = "days") {
         days <- c(DAYS = 1,
                   WEEKS = get0("days_per_week", mode = "numeric", ifnotfound = 7),
@@ -194,6 +311,7 @@
       # Input data frames: adtte
       
       adtte_sub <- adtte |>
+        order_levels() |>
         filter(PARAMCD == "OS") |>
         tte_time("months")
       
@@ -261,7 +379,65 @@
       library(ggsurvfit)
       library(patchwork)
       
-      # the study helper tte_time() (tfl_helpers_code()), unless the study's setup has it
+      # the study helpers codelist_codes(), set_levels(), order_levels(), tte_time() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
       if (!exists("tte_time")) tte_time <- function(data, unit = "days") {
         days <- c(DAYS = 1,
                   WEEKS = get0("days_per_week", mode = "numeric", ifnotfound = 7),
@@ -302,6 +478,7 @@
       # Input data frames: adtte
       
       adtte_sub <- adtte |>
+        order_levels() |>
         filter(PARAMCD == "OS") |>
         tte_time("months")
       
@@ -406,7 +583,65 @@
       library(ggsurvfit)
       library(patchwork)
       
-      # the study helper tte_time() (tfl_helpers_code()), unless the study's setup has it
+      # the study helpers codelist_codes(), set_levels(), order_levels(), tte_time() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
       if (!exists("tte_time")) tte_time <- function(data, unit = "days") {
         days <- c(DAYS = 1,
                   WEEKS = get0("days_per_week", mode = "numeric", ifnotfound = 7),
@@ -447,6 +682,7 @@
       # Input data frames: adtte
       
       adtte_sub <- adtte |>
+        order_levels() |>
         filter(PARAMCD == "OS") |>
         tte_time("months")
       
@@ -538,10 +774,71 @@
       library(dplyr)
       library(ggplot2)
       
+      # the study helpers codelist_codes(), set_levels(), order_levels() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtr, adrs
       
       adtr_sub <- adtr |>
+        order_levels() |>
         filter(PARAMCD == "BPCHG") |>
         left_join(
           adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
@@ -637,10 +934,71 @@
       library(dplyr)
       library(ggplot2)
       
+      # the study helpers codelist_codes(), set_levels(), order_levels() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtr
       
       adtr_sub <- adtr |>
+        order_levels() |>
         filter(PARAMCD == "BPCHG", !is.na(AVAL)) |>
         arrange(desc(AVAL)) |>
         mutate(INDEX = row_number())
@@ -717,10 +1075,71 @@
       # the days in a week, a month, a year (the study's setup may set them)
       if (!exists("days_per_month")) days_per_month <- 30.4375
       
+      # the study helpers codelist_codes(), set_levels(), order_levels() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adsl
       
       adsl_sub <- adsl |>
+        order_levels() |>
         filter(!is.na(TRTDURD)) |>
         # days -> months
         mutate(TRTDURD = TRTDURD / days_per_month) |>
@@ -791,10 +1210,71 @@
       # the days in a week, a month, a year (the study's setup may set them)
       if (!exists("days_per_month")) days_per_month <- 30.4375
       
+      # the study helpers codelist_codes(), set_levels(), order_levels() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adsl, adrs
       
       adsl_sub <- adsl |>
+        order_levels() |>
         left_join(
           adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
           by = "USUBJID"
@@ -880,10 +1360,71 @@
       # the days in a week, a month, a year (the study's setup may set them)
       if (!exists("days_per_month")) days_per_month <- 30.4375
       
+      # the study helpers codelist_codes(), set_levels(), order_levels() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adsl, adrs
       
       adsl_sub <- adsl |>
+        order_levels() |>
         left_join(
           adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
           by = "USUBJID"
@@ -980,10 +1521,71 @@
       # the days in a week, a month, a year (the study's setup may set them)
       if (!exists("days_per_month")) days_per_month <- 30.4375
       
+      # the study helpers codelist_codes(), set_levels(), order_levels() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adsl, adrs
       
       adsl_sub <- adsl |>
+        order_levels() |>
         left_join(
           adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
           by = "USUBJID"
@@ -1087,10 +1689,71 @@
       # the days in a week, a month, a year (the study's setup may set them)
       if (!exists("days_per_month")) days_per_month <- 30.4375
       
+      # the study helpers codelist_codes(), set_levels(), order_levels() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtr, adrs
       
       adtr_sub <- adtr |>
+        order_levels() |>
         filter(PARAMCD == "SDIAM") |>
         left_join(
           adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
@@ -1180,7 +1843,65 @@
       library(ggplot2)
       # also needs: rtfreporter (called as pkg::fn)
       
-      # the study helper fmt_num() (tfl_helpers_code()), unless the study's setup has it
+      # the study helpers codelist_codes(), set_levels(), order_levels(), fmt_num() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
       if (!exists("fmt_num")) fmt_num <- function(x, digits, na = "NE") {
         x <- as.numeric(x)
         out <- sprintf(paste0("%.", digits, "f"), rtfreporter::round_num(x, digits))
@@ -1192,9 +1913,10 @@
       # Input data frames: adrs, adsl
       
       adrs_sub <- adrs |>
+        order_levels(from = adsl) |>
         filter(PARAMCD == "BOR") |>
         left_join(
-          adsl |> select(USUBJID, TRT01P),
+          adsl |> order_levels() |> select(USUBJID, TRT01P),
           by = "USUBJID"
         )
       
@@ -1205,7 +1927,7 @@
           rate  = 100 * x / n,
           lcl   = 100 * mapply(function(x, n) binom.test(x, n)$conf.int[1], x, n),
           ucl   = 100 * mapply(function(x, n) binom.test(x, n)$conf.int[2], x, n),
-          label = paste0(fmt_num(rate, 1), "%\n(", x, "/", n, ")")
+          label = paste0(fmt_num(rate, 1), "% (", x, "/", n, ")")
         )
       
       # ---- plot ------------------------------------------------------------------
@@ -1273,7 +1995,65 @@
       library(ggplot2)
       # also needs: rtfreporter (called as pkg::fn)
       
-      # the study helper fmt_num() (tfl_helpers_code()), unless the study's setup has it
+      # the study helpers codelist_codes(), set_levels(), order_levels(), fmt_num() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
       if (!exists("fmt_num")) fmt_num <- function(x, digits, na = "NE") {
         x <- as.numeric(x)
         out <- sprintf(paste0("%.", digits, "f"), rtfreporter::round_num(x, digits))
@@ -1285,9 +2065,10 @@
       # Input data frames: adrs, adsl
       
       adrs_sub <- adrs |>
+        order_levels(from = adsl) |>
         filter(PARAMCD == "BOR") |>
         left_join(
-          adsl |> select(USUBJID, TRT01P),
+          adsl |> order_levels() |> select(USUBJID, TRT01P),
           by = "USUBJID"
         )
       
@@ -1368,7 +2149,65 @@
       library(ggplot2)
       # also needs: rtfreporter (called as pkg::fn)
       
-      # the study helper fmt_num() (tfl_helpers_code()), unless the study's setup has it
+      # the study helpers codelist_codes(), set_levels(), order_levels(), fmt_num() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
       if (!exists("fmt_num")) fmt_num <- function(x, digits, na = "NE") {
         x <- as.numeric(x)
         out <- sprintf(paste0("%.", digits, "f"), rtfreporter::round_num(x, digits))
@@ -1380,9 +2219,10 @@
       # Input data frames: adrs, adsl
       
       adrs_sub <- adrs |>
+        order_levels(from = adsl) |>
         filter(PARAMCD == "BOR") |>
         left_join(
-          adsl |> select(USUBJID, TRT01P),
+          adsl |> order_levels() |> select(USUBJID, TRT01P),
           by = "USUBJID"
         )
       
@@ -1456,13 +2296,74 @@
       library(dplyr)
       library(ggplot2)
       
+      # the study helpers codelist_codes(), set_levels(), order_levels() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
       adlb_sub <- adlb |>
+        order_levels(from = adsl) |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A),
+          adsl |> order_levels() |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
         filter(!is.na(AVAL) & !is.na(AVISITN)) |>
@@ -1545,13 +2446,74 @@
       library(dplyr)
       library(ggplot2)
       
+      # the study helpers codelist_codes(), set_levels(), order_levels() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
       adlb_sub <- adlb |>
+        order_levels(from = adsl) |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A),
+          adsl |> order_levels() |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
         filter(!is.na(AVAL) & !is.na(AVISITN)) |>
@@ -1634,13 +2596,74 @@
       library(dplyr)
       library(ggplot2)
       
+      # the study helpers codelist_codes(), set_levels(), order_levels() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
       adlb_sub <- adlb |>
+        order_levels(from = adsl) |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A),
+          adsl |> order_levels() |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
         filter(!is.na(AVAL) & !is.na(AVISITN)) |>
@@ -1724,13 +2747,74 @@
       library(ggplot2)
       library(patchwork)
       
+      # the study helpers codelist_codes(), set_levels(), order_levels() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
       adlb_sub <- adlb |>
+        order_levels(from = adsl) |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A),
+          adsl |> order_levels() |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
         filter(!is.na(AVAL) & !is.na(AVISITN)) |>
@@ -1833,13 +2917,74 @@
       library(dplyr)
       library(ggplot2)
       
+      # the study helpers codelist_codes(), set_levels(), order_levels() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
       adlb_sub <- adlb |>
+        order_levels(from = adsl) |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A),
+          adsl |> order_levels() |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
         filter(!is.na(AVAL) & !is.na(AVISIT)) |>
@@ -1913,13 +3058,74 @@
       library(dplyr)
       library(ggplot2)
       
+      # the study helpers codelist_codes(), set_levels(), order_levels() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
       adlb_sub <- adlb |>
+        order_levels(from = adsl) |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A),
+          adsl |> order_levels() |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
         filter(!is.na(AVAL)) |>
@@ -1997,13 +3203,74 @@
       library(dplyr)
       library(ggplot2)
       
+      # the study helpers codelist_codes(), set_levels(), order_levels() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
       adlb_sub <- adlb |>
+        order_levels(from = adsl) |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A),
+          adsl |> order_levels() |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
         filter(!is.na(AVAL), AVISITN == max(AVISITN))
@@ -2081,13 +3348,74 @@
       library(dplyr)
       library(ggplot2)
       
+      # the study helpers codelist_codes(), set_levels(), order_levels() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
       adlb_sub <- adlb |>
+        order_levels(from = adsl) |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A),
+          adsl |> order_levels() |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
         filter(!is.na(CHG), AVISITN > 0) |>
@@ -2167,13 +3495,74 @@
       library(dplyr)
       library(ggplot2)
       
+      # the study helpers codelist_codes(), set_levels(), order_levels() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
       adlb_sub <- adlb |>
+        order_levels(from = adsl) |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A),
+          adsl |> order_levels() |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
         filter(AVISITN > 0 & !is.na(BASE) & !is.na(AVAL), AVISITN == max(AVISITN))
@@ -2244,13 +3633,74 @@
       library(dplyr)
       library(ggplot2)
       
+      # the study helpers codelist_codes(), set_levels(), order_levels() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
       adlb_sub <- adlb |>
+        order_levels(from = adsl) |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A),
+          adsl |> order_levels() |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
         filter(AVISITN > 0 & !is.na(BASE) & !is.na(CHG), AVISITN == max(AVISITN))
@@ -2327,12 +3777,73 @@
       library(dplyr)
       library(ggplot2)
       
+      # the study helpers codelist_codes(), set_levels(), order_levels() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adpc, adsl
       
       adpc_sub <- adpc |>
+        order_levels(from = adsl) |>
         left_join(
-          adsl |> select(USUBJID, TRT01A),
+          adsl |> order_levels() |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
         filter(!is.na(AVAL))
@@ -2416,12 +3927,73 @@
       library(dplyr)
       library(ggplot2)
       
+      # the study helpers codelist_codes(), set_levels(), order_levels() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adpc, adsl
       
       adpc_sub <- adpc |>
+        order_levels(from = adsl) |>
         left_join(
-          adsl |> select(USUBJID, TRT01A),
+          adsl |> order_levels() |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
         filter(!is.na(AVAL), AVAL > 0)
@@ -2507,12 +4079,73 @@
       library(dplyr)
       library(ggplot2)
       
+      # the study helpers codelist_codes(), set_levels(), order_levels() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adpc, adsl
       
       adpc_sub <- adpc |>
+        order_levels(from = adsl) |>
         left_join(
-          adsl |> select(USUBJID, TRT01A),
+          adsl |> order_levels() |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
         filter(!is.na(AVAL), AVAL > 0)
@@ -2585,7 +4218,65 @@
       library(patchwork)
       # also needs: rtfreporter (called as pkg::fn)
       
-      # the study helpers fmt_num(), ard_stats() (tfl_helpers_code()), unless the study's setup has them
+      # the study helpers codelist_codes(), set_levels(), order_levels(), fmt_num(), ard_stats() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("codelist_codes")) codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
+      if (!exists("set_levels")) set_levels <- function(data, ...) {
+        lists <- list(...)
+        for (v in intersect(names(lists), names(data))) {
+          values <- codelist_codes(lists[[v]])
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          unknown <- setdiff(unique(x[!is.na(x)]), values)
+          if (length(unknown)) {
+            stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
+                         v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
+          }
+          data[[v]] <- factor(x, levels = values)
+        }
+        data
+      }
+      if (!exists("order_levels")) order_levels <- function(data, vars = NULL, from = NULL, ...) {
+        lists <- list(...)
+        if (length(lists)) data <- set_levels(data, ...)
+        arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+        arms <- arms[!grepl("N$", arms)]
+        for (v in unique(c(arms, vars))) {
+          if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+          n <- paste0(v, "N")
+          src <- data
+          pair <- n
+          if (!n %in% names(data) || !is.numeric(data[[n]])) {
+            # the records' arm with no pair of its own: the order of the matching
+            # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+            # through ADSL's TRT01A and TRT01AN); the records' values are kept
+            if (!v %in% arms || !is.data.frame(from)) next
+            x0 <- unique(as.character(data[[v]]))
+            cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+            cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                           paste0(cand, "N") %in% names(from)]
+            cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+            if (!length(cand)) next
+            src <- from
+            pair <- paste0(cand[1L], "N")
+            key <- as.character(from[[cand[1L]]])
+            # the map of the value to its number is one to one: a value with two
+            # numbers has no order
+            nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+            if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+              stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                           v, pair), call. = FALSE)
+            }
+          }
+          if (!v %in% arms && !is.character(data[[v]])) next
+          x <- as.character(data[[v]])
+          x[!is.na(x) & !nzchar(trimws(x))] <- NA
+          lv <- unique(x[!is.na(x)])
+          if (identical(src, data)) key <- x
+          first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+          data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+        }
+        data
+      }
       if (!exists("fmt_num")) fmt_num <- function(x, digits, na = "NE") {
         x <- as.numeric(x)
         out <- sprintf(paste0("%.", digits, "f"), rtfreporter::round_num(x, digits))
@@ -2644,6 +4335,7 @@
       # Input ARD: ard (read with ard_value() / ard_stats(), tfl_helpers_code())
       
       adtte_sub <- adtte |>
+        order_levels() |>
         filter(PARAMCD == "OS")
       
       est <- ard_stats(

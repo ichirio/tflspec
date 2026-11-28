@@ -87,6 +87,7 @@ pp_gen_km <- function(ctx) {
   cshape <- pp_shape_code(pp_opt(ctx, "censor_shape"), "x")
   y_lab <- ctx$prow$y_label %or% "Survival Probability"
   x_lab <- ctx$prow$x_label %or% pp_time_label(ctx)
+  tw <- pp_title_width(ctx)
 
   base_terms <- list(
     if (is.null(s_var)) sprintf("ggsurvfit(km_fit, colour = pal_strata[[1]], linewidth = %s)", lw)
@@ -95,7 +96,7 @@ pp_gen_km <- function(ctx) {
     "scale_x_continuous(breaks = x_breaks, expand = expansion(mult = c(0.02, 0.02)))",
     sprintf("scale_y_continuous(breaks = seq(0, 1, by = %s))", pp_opt(ctx, "y_by")),
     "coord_cartesian(xlim = c(0, x_max), ylim = c(0, 1))",
-    sprintf("labs(x = %s, y = %s%s)", q(x_lab), q(y_lab),
+    sprintf("labs(x = %s, y = %s%s)", pp_axis_title(x_lab, tw), pp_axis_title(y_lab, tw),
             if (!is.na(ctx$prow$title)) paste0(", title = ", q(ctx$prow$title)) else "")
   )
   plot <- c("# ---- base: km ----", plus_code("p", c(base_terms, list(pp_theme_code(ctx)))))

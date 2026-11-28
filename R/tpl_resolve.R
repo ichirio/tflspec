@@ -447,12 +447,18 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
 
 # The study as a list: a list as given, study.yml, or a folder that holds
 # it.  Read from a file or a folder, it has attribute "study_dir" (the
-# study folder: the series are read from its copies).  Its old forms stop
+# study folder: the series are read from its copies) and "figure_style"
+# (its spec/defaults.yml `figure_style:`, which a `!study
+# figure_style.<key>` reads).  Its old forms stop
 # (.study_yml_form_check()).
 .tr_study <- function(study, who) {
   if (is.null(study)) return(study)
   if (is.list(study)) {
     .study_yml_form_check(study, attr(study, "study_dir"))
+    # (a list with its folder and no figure style given: the folder's)
+    if (is.null(attr(study, "figure_style")) && !is.null(attr(study, "study_dir"))) {
+      attr(study, "figure_style") <- .tr_figure_style(attr(study, "study_dir"))
+    }
     return(study)
   }
   if (!is.character(study) || length(study) != 1L) {
@@ -464,13 +470,20 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   if (!file.exists(f)) stop(who, ": no file ", f, call. = FALSE)
   out <- .series_read_yaml(f) %||% list()
   .study_yml_form_check(out, sd, f)
-  structure(out, study_dir = sd)
+  structure(out, study_dir = sd, figure_style = .tr_figure_style(sd))
+}
+
+# A study folder's figure style standard: its spec/defaults.yml
+# `figure_style:` (NULL: none)
+.tr_figure_style <- function(dir) {
+  f <- file.path(.spec_dir(dir), "defaults.yml")
+  if (file.exists(f)) .series_read_yaml(f)$figure_style
 }
 
 # A study spec's study.yml as .tr_study() gives it: with its folder, so
-# that its series are read from its copies
+# that its series are read from its copies, and its figure style
 .tr_study_of <- function(study) {
-  structure(study$study %||% list(), study_dir = study$dir)
+  structure(study$study %||% list(), study_dir = study$dir, figure_style = study$figure_style)
 }
 
 # The series of a template file `tf`: the study's copy of series.yml (next

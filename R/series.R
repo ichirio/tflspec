@@ -14,7 +14,8 @@
 # Tags (the handlers below, added to .yaml_handlers()):
 #   !series K   values[[K]] of the series.yml read (the study's copy)
 #   !study K    study.yml at key path K (dotted, from the top: settings.formats);
-#               unset if missing
+#               unset if missing.  figure_style.K: the study's figure style
+#               (defaults.yml figure_style:) over tflspec's built-in one
 #   !study {key: K, fallback: V}
 #               the same, but a study without K gives V (a value, or a
 #               `!series K2`): first the study, else the fallback
@@ -338,10 +339,18 @@ print.tfl_series <- function(x, ...) {
 
 # study.yml at a dotted key path from its top (settings.formats); a
 # `tfl_absent` marker if a step is missing or there is no study (a value of
-# NULL is YAML null)
+# NULL is YAML null).  A `figure_style.<key>` (`figure_style.<type>.<key>`)
+# is the study's figure style standard -- its defaults.yml `figure_style:`,
+# the study's attribute "figure_style" (.tr_study()) -- over tflspec's
+# built-in one, read as every template reads it (.tpl_fig_style_read())
 .series_study_value <- function(study, key) {
+  path <- strsplit(key, ".", fixed = TRUE)[[1L]]
+  if (identical(path[1L], "figure_style") && !is.null(study)) {
+    v <- .tpl_fig_style_read(path[-1L], list(figure_style = attr(study, "figure_style")))
+    return(if (is.null(v)) structure(list(), class = "tfl_absent") else v)
+  }
   v <- study
-  for (k in strsplit(key, ".", fixed = TRUE)[[1L]]) {
+  for (k in path) {
     if (!is.list(v) || !k %in% names(v)) return(structure(list(), class = "tfl_absent"))
     v <- v[[k]]
   }

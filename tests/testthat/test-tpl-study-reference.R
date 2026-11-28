@@ -161,7 +161,8 @@ test_that("the figure style the study keeps: defaults.yml's figure_style:, the b
       "    - {type: km, key: theme, value: classic}", "    - {key: base_size, value: 12}")
   s <- tfl_read_study_spec(d)
   expect_identical(.tpl_study_read("figure_style.km.theme", NULL, s), "classic")
-  expect_identical(.tpl_study_read("figure_style.base_size", NULL, s), "12")
+  # (a number's text is the number, as a parameter of type number takes it)
+  expect_identical(.tpl_study_read("figure_style.base_size", NULL, s), 12)
   # a key the study's table lacks: the built-in one
   expect_identical(.tpl_study_read("figure_style.km.censor_shape", NULL, s),
                    .fs_get("censor_shape", "km", .fig_style_builtin()))

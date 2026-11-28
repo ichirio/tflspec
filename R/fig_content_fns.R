@@ -19,6 +19,11 @@
 #           the program and the call that makes it, with the template's
 #           arguments in {braces} (NULL: the function takes the ARD only)
 #   params  the template's arguments that go into the function's `params`
+#   titles  those of them that are axis titles: the program writes them
+#           wrapped at the `axis_title_width` it passes (.fig_wrap_title())
+#   null    those of them whose NULL is a value the function reads (the
+#           template's `!unset`): written `= NULL`, not left out (left out,
+#           the function would take its default)
 .fig_content_table <- function() {
   list(
     km_curves = list(
@@ -27,12 +32,15 @@
         arg = "km_fit",
         call = paste0("ggsurvfit::survfit2(", .tte_surv("{time}", "{censor}"), " ~ {by}, ",
                       "data = adtte_sub)")),
-      params = c("time_unit", "x_label", "y_label", "legend")),
+      params = c("time_unit", "x_label", "y_label", "axis_title_width", "legend"),
+      titles = c("x_label", "y_label"),
+      null = "axis_title_width"),
     forest_hr = list(
       fn = "forest_hr",
       model = NULL,
       params = c("comparison", "subgroup_labels", "favours", "x_breaks", "size_by_n",
-                 "bold_headings", "n_by_arm")))
+                 "bold_headings", "n_by_arm", "axis_title_width"),
+      null = "axis_title_width"))
 }
 
 # The names a figure content's model call reads ({by}, {time}, {censor})
@@ -66,7 +74,9 @@
   if (is.null(args)) {
     given <- attr(output, "args") %||% list()
     keep <- c(.fig_model_args(tb[[name]]), tb[[name]]$params)
-    args <- Filter(Negate(is.null), given[intersect(keep, names(given))])
+    args <- given[intersect(keep, names(given))]
+    # (a NULL is left out, but where the function reads it: `null`)
+    args <- args[!vapply(args, is.null, NA) | names(args) %in% tb[[name]]$null]
   }
   list(name = name, args = args)
 }
@@ -116,6 +126,17 @@ tfl_figure_fn <- function(name) {
   }
   for (k in names(params)) if (!is.null(params[[k]])) defaults[[k]] <- params[[k]]
   defaults
+}
+
+# km_curves()' time unit when its params give none (the series program
+# measures the x title with it, .content_fig_series_code())
+.km_time_unit_default <- "days"
+
+# The width the axis titles wrap at: the params' `axis_title_width` (the
+# defaults' when left out); NULL or `tfl_unset()` given there: no wrap
+.fig_fn_width <- function(params, p) {
+  if ("axis_title_width" %in% names(params) && is.null(params[["axis_title_width"]])) return(NULL)
+  p$axis_title_width
 }
 
 .fig_fn_need <- function(pkgs, fn) {
@@ -188,6 +209,9 @@ tfl_figure_fn <- function(name) {
 #'   - `x_label`: the x axis's title (`"Time ({time_unit})"`, the unit
 #'     title-cased: `Time (Days)`); `{time_unit}` is filled.
 #'   - `y_label`: the y axis's title (`"Survival Probability"`).
+#'   - `axis_title_width`: the number of characters after which an axis
+#'     title wraps onto a new line, at the spaces between words (`50`);
+#'     `NULL`, `NA` or `tfl_unset()`: no wrap.
 #'   - `legend`: `"inside"` (top right), `"bottom"` or `"none"`.
 #' @return A ggplot.
 #' @seealso [tfl_figure_fn()], [forest_hr()]
@@ -201,8 +225,11 @@ tfl_figure_fn <- function(name) {
 km_curves <- function(km_fit, ard = NULL, params = list()) {
   .fig_fn_need(c("ggsurvfit", "survival"), "km_curves")
   if (!inherits(km_fit, "survfit")) stop("km_curves(): `km_fit` is a survfit object (survfit2()).", call. = FALSE)
-  p <- .fig_fn_params(params, list(time_unit = "days", x_label = "Time ({time_unit})",
-                                   y_label = "Survival Probability", legend = "inside"), "km_curves")
+  p <- .fig_fn_params(params, list(time_unit = .km_time_unit_default, x_label = "Time ({time_unit})",
+                                   y_label = "Survival Probability",
+                                   axis_title_width = .fig_title_width_default, legend = "inside"),
+                      "km_curves")
+  w <- .fig_fn_width(params, p)
   o <- pp_default_options("km")
   opt <- function(k, d) { x <- o[[k]]; if (is.null(x) || identical(x, "")) d else x }
   # the curves: one a level of the by variable (strata "TRT01A=Drug X")
@@ -213,6 +240,7 @@ km_curves <- function(km_fit, ard = NULL, params = list()) {
   shape <- opt("censor_shape", "x")
   shape <- if (shape %in% names(pp_shape_names)) pp_shape_names[[shape]] else shape
   x_label <- gsub("{time_unit}", tools::toTitleCase(as.character(p$time_unit)), p$x_label, fixed = TRUE)
+  x_label <- .fig_wrap_title(x_label, w)
   ggsurvfit::ggsurvfit(km_fit, linewidth = as.numeric(opt("line_width", 0.3))) +
     ggsurvfit::add_censor_mark(shape = shape, size = as.numeric(opt("censor_size", 3)),
                                stroke = as.numeric(opt("censor_stroke", 0.6))) +
@@ -220,7 +248,7 @@ km_curves <- function(km_fit, ard = NULL, params = list()) {
     ggplot2::scale_x_continuous(limits = c(0, NA), expand = ggplot2::expansion(mult = c(0, 0.03))) +
     ggplot2::scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, as.numeric(opt("y_by", 0.2))),
                                 expand = ggplot2::expansion(mult = c(0, 0.02))) +
-    ggplot2::labs(x = x_label, y = p$y_label) +
+    ggplot2::labs(x = x_label, y = .fig_wrap_title(p$y_label, w)) +
     .fig_fn_theme(opt("theme", "boxed"), as.numeric(opt("base_size", 10))) +
     .fig_fn_legend(p$legend)
 }
@@ -271,6 +299,9 @@ km_curves <- function(km_fit, ard = NULL, params = list()) {
 #'   - `bold_headings`: `TRUE`: the headings bold (`FALSE`).
 #'   - `n_by_arm`: arms whose events / subjects are shown, a column each
 #'     (`NULL`: none).
+#'   - `axis_title_width`: the number of characters after which the x
+#'     axis's title wraps onto a new line, at the spaces between words
+#'     (`50`); `NULL`, `NA` or `tfl_unset()`: no wrap.
 #' @return A ggplot.
 #' @seealso [tfl_figure_fn()], [km_curves()]
 #' @examplesIf requireNamespace("cardx", quietly = TRUE) && requireNamespace("survival", quietly = TRUE) && requireNamespace("broom.helpers", quietly = TRUE)
@@ -284,7 +315,9 @@ km_curves <- function(km_fit, ard = NULL, params = list()) {
 forest_hr <- function(ard, params = list()) {
   p <- .fig_fn_params(params, list(comparison = NULL, subgroup_labels = NULL, favours = NULL,
                                    x_breaks = NULL, size_by_n = FALSE, bold_headings = FALSE,
-                                   n_by_arm = NULL), "forest_hr")
+                                   n_by_arm = NULL, axis_title_width = .fig_title_width_default),
+                      "forest_hr")
+  w <- .fig_fn_width(params, p)
   if (!is.null(p$favours) && length(p$favours) != 2L) {
     stop("forest_hr(): `favours` is two labels, left and right of 1.", call. = FALSE)
   }
@@ -326,7 +359,7 @@ forest_hr <- function(ard, params = list()) {
                                 sec.axis = ggplot2::dup_axis(breaks = c(rows$y, top),
                                                              labels = c(rows$txt, attr(rows, "heading")),
                                                              name = NULL)) +
-    ggplot2::labs(x = "Hazard Ratio (95% CI)", y = NULL) +
+    ggplot2::labs(x = .fig_wrap_title("Hazard Ratio (95% CI)", w), y = NULL) +
     .fig_fn_theme("boxed", base_size) +
     ggplot2::theme(axis.text.y.left = ggplot2::element_text(hjust = 0),
                    axis.text.y.right = ggplot2::element_text(hjust = 0, family = "mono"),

@@ -104,6 +104,7 @@ pp_gen_swimmer <- function(ctx) {
   ms <- pp_opt(ctx, "marker_size")
   x_lab <- ctx$prow$x_label %or% pp_time_label(ctx)
   y_lab <- ctx$prow$y_label
+  tw <- pp_title_width(ctx)
   base_terms <- list(
     "ggplot(bar_df, aes(y = Y_ID))",
     if (!is.null(c_var)) {
@@ -119,7 +120,8 @@ pp_gen_swimmer <- function(ctx) {
 )")
     } else "scale_x_continuous(breaks = x_breaks, expand = expansion(mult = c(0, 0.02)))",
     "coord_cartesian(xlim = c(0, x_max))",
-    sprintf("labs(x = %s, y = %s%s)", q(x_lab), if (is.na(y_lab)) "NULL" else q(y_lab),
+    sprintf("labs(x = %s, y = %s%s)", pp_axis_title(x_lab, tw),
+            if (is.na(y_lab)) "NULL" else pp_axis_title(y_lab, tw),
             if (!is.na(ctx$prow$title)) paste0(", title = ", q(ctx$prow$title)) else ""),
     pp_theme_code(ctx),
     "theme(axis.text.y = element_text(size = rel(0.7)))"
