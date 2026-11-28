@@ -35,7 +35,7 @@ report that reads none has no row.
 Works out, from the study's SPEC, whose ARD each report reads, so that a
 run builds those ARD before the report:
 \itemize{
-\item a report with analyses of its own (its \verb{ard: analyses:}, or a
+\item a report with analyses of its own (its \verb{analysis: analyses:}, or a
 template's) reads its own ARD;
 \item a figure whose ARD source (\verb{page: report: ard_source:}) is \code{own} or
 \verb{table:<id>} reads that report's ARD; one with no source but a

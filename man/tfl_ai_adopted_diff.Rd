@@ -25,7 +25,7 @@ the AI since (\code{\link[=tfl_ai_outputs]{tfl_ai_outputs()}}'s \code{adopted} \
 study file and its draft compared field by field, for the person to see
 before adopting again.  The two YAML files are read as they are written
 (an \code{!r} value as its text), each value under its path: \code{label},
-\code{page.titles.2.center}, \verb{ard.analyses[AE].where} (an item of a list
+\code{page.titles.2.center}, \verb{analysis.analyses[AE].where} (an item of a list
 named by its \code{id}, else by its place, \verb{[2]}).
 }
 \seealso{

@@ -13,7 +13,7 @@
 # ============================================================================
 
 # The report file's keys an answer may write, in the order written.
-.ai_table_keys <- c("id", "kind", "label", "common", "extends", "data", "ard",
+.ai_table_keys <- c("id", "kind", "label", "common", "extends", "data", "analysis",
                     "codelists", "content", "page", "template")
 
 # The functions a table's content may call: the table's stage of the schema
@@ -224,7 +224,7 @@
       "- `common`: what several steps read: `population`, the analysis set's `id` (spec/data.yml); `treatment`, the arm variable (`TRT01A`); `population_label`, the text `{OUTPUT_POPULATION}` prints when the report has no set. Never a top-level `population:`.",
       "- `extends`: `[defaults]`: the study's defaults under this report.",
       "- `data`: the report's datasets, a flat list of definitions made before any table (one dataset each; named data the analyses read). Below. A table writes no `data: {source: ard}`: it always reads its ARD.",
-      "- `ard`: the report's analyses, made before any table: `analyses` (one cards / cardx call each). Below. Never `ard: analysis_data` (that is `data:`).",
+      "- `analysis`: the report's analyses, made before any table: `analyses` (one cards / cardx call each). Below. Never `analysis: analysis_data` (that is `data:`).",
       "- `codelists`: by variable, its values in the order printed, each `{value: <as in the data>, label: <as printed>}`; the ARD then holds the labels, in that order.",
       "- `content`: the table: a list of items, one a function call written `- <function>: {<argument>: <value>, ...}` (the functions below). `table_plan` first.",
       "- `page`: `titles` and `footnotes`, each a mapping by line number (`\"1\": {center: Table 14.1.1}`, `\"1\": {left: <footnote>}`); the line keys are quoted.",
@@ -236,7 +236,7 @@
     out <- c(out, "### data: the definitions", "",
              "Each a mapping with these fields (all optional but `id` and `from`); named `<dataset>_sub` (the report's part of a dataset: `adsl_sub` its subjects, `adae_sub` its records), `<dataset>_den` (a denominator) or `<dataset>_<noun>`:", "",
              sprintf("- `%s`: %s", f$analysis_data$field, f$analysis_data$description), "",
-             "### ard: analyses", "",
+             "### analysis: analyses", "",
              "Each a mapping with these fields (`id`, `method` and, but for `total_n`, `variables` required):", "",
              sprintf("- `%s`: %s", f$analyses$field, f$analyses$description), "",
              "The methods (`method`):", "",
@@ -274,7 +274,7 @@
   }
   if ("listing" %in% parts) {
     out <- c(out, "### A listing", "",
-      "A listing (`kind: listing`) prints records, not statistics: it has no `ard: analyses` and no `table_plan`.", "",
+      "A listing (`kind: listing`) prints records, not statistics: it has no `analysis: analyses` and no `table_plan`.", "",
       "- `data`*: the records: `{source: dataset, dataset: <ADaM dataset>, population: <analysis set id>, where: !r '<R condition on its columns>', sort: [<variable>, -<variable, descending>]}`; or, when the records need more than a condition (ADSL's columns added, derived columns), a flat list of definitions (as a table's `data:`), the listing printing the last one.",
       "- The analysis set is required: `data.population`, or the analysis data's. A dataset of parameters (PARAMCD: ADLB, ADVS ...) is kept to the shell's (`where: !r 'PARAMCD == \"ALT\"'`) or shows PARAM / PARAMCD in a column. When the shell does not say them, ask -- do not guess.",
       "- `content`*: one `plan_listing` item, its `cols` the shell's columns in order, each `{fn: listing_col, args: {vars: [<variables stacked in the column>], label: <header>, width: <characters>, collapse_repeats: true}}` (`collapse_repeats`: a value printed once while it repeats, as a subject's id; that column has to be wide enough for its longest value on one line: a value that wraps repeats on every record); `type: multiline` unless the shell is one line a record. A listing with no page size pages at 22 rows (the header on every page); write `plan_paginate_rows: {max_rows: <n>}` only when the shell says otherwise.",
@@ -358,6 +358,8 @@
     for (k in setdiff(names(o), .ai_table_keys)) {
       p <- .ai_problem(p, paste(at, k), if (identical(k, "population")) {
         .common_old_line
+      } else if (identical(k, "ard")) {
+        .old_form_text("ard_key")
       } else {
         sprintf("is not a key of a report file; its keys are %s", paste(.ai_table_keys, collapse = ", "))
       })
@@ -528,8 +530,8 @@
       if (!is.null(cl)) p <- rbind(p, .ai_check_shift_levels(tp, cl, vars, at))
       if (!is.null(o$ard)) {
         bad <- c(bad, names(outs)[i])
-        p <- .ai_problem(p, paste(at, "ard"), paste(
-          "a report has `template` or `ard`, not both: the template makes the analyses"))
+        p <- .ai_problem(p, paste(at, "analysis"), paste(
+          "a report has `template` or `analysis`, not both: the template makes the analyses"))
         next
       }
       o <- tryCatch(.ai_template_items(o, st), error = function(e) e)
@@ -600,7 +602,7 @@
   unkept <- character()
   for (j in seq_along(ad)) {
     a <- ad[[j]]
-    w <- sprintf("ard.analysis_data[%d]", j)
+    w <- sprintf("analysis.analysis_data[%d]", j)
     if (!is.list(a) || is.null(names(a))) {
       add(w, "is not a mapping")
       next
@@ -634,11 +636,11 @@
       p <- rbind(p, .ai_check_vars(unlist(a[["add"]]), vars, "ADSL", character(), paste(at, w, "add")))
     }
   }
-  if (!length(an)) add("ard", "has no analyses: the table has nothing to show")
+  if (!length(an)) add("analysis", "has no analyses: the table has nothing to show")
   methods <- tfl_ard_methods()$method
   for (j in seq_along(an)) {
     a <- an[[j]]
-    w <- sprintf("ard.analyses[%d]", j)
+    w <- sprintf("analysis.analyses[%d]", j)
     if (!is.list(a) || is.null(names(a))) {
       add(w, "is not a mapping")
       next

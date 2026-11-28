@@ -138,7 +138,7 @@ test_that("a listing's answer: no analysis set, a dataset of parameters not kept
   p <- one(sub("population: SAF, sort", "population: SAF, where: !r 'PARAMCD == \"ALT\"', sort", lab, fixed = TRUE))
   expect_false(any(grepl("keeps no parameter", p$problem)))
   # analyses in a listing; a table function in its content
-  p <- one(c(lst_answer("L-1")[1:7], "    ard: {analyses: [{id: A, method: categorical, dataset: ADAE, variables: [AESER]}]}",
+  p <- one(c(lst_answer("L-1")[1:7], "    analysis: {analyses: [{id: A, method: categorical, dataset: ADAE, variables: [AESER]}]}",
              lst_answer("L-1")[-(1:7)]))
   expect_true(any(grepl("a listing has no analyses", p$problem)))
 })

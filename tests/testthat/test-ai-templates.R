@@ -177,7 +177,7 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
     "    label: Sex by arm",
     "    common: {population: ITT}",
     "    extends: [defaults]",
-    "    ard:",
+    "    analysis:",
     "      analyses:",
     "        - {id: SEX, method: categorical, dataset: ADSL, population: ITT, by: [TRT01A], variables: [SEX]}",
     "    content:",

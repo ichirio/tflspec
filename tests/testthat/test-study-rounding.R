@@ -117,7 +117,7 @@ test_that("a YAML study's ARD setup carries its rounding", {
                  "populations:", "  - id: SAF", "    dataset: ADSL", "    where: !r SAFFL == \"Y\""),
                file.path(dir, "spec", "data.yml"))
     writeLines(c("outputs:", "  - id: T-1", "    kind: table"), file.path(dir, "spec", "toc.yml"))
-    writeLines(c("id: T-1", "kind: table", "extends: none", "ard:", "  analyses:",
+    writeLines(c("id: T-1", "kind: table", "extends: none", "analysis:", "  analyses:",
                  "    - id: AGE", "      method: continuous", "      population: SAF",
                  "      by: [ARM]", "      variables: [AGE]", "content:", "  - table_plan: {cols: ARM}"),
                file.path(dir, "spec", "outputs", "T-1.yml"))

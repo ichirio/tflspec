@@ -5,7 +5,7 @@ common:
   population: SAF
 extends:
   - defaults
-ard:
+analysis:
   analyses:
     - id: 'N'
       method: total_n
@@ -87,7 +87,7 @@ page:
       center: Safety Population
 ai:
   assumptions:
-    - where: ard.analyses
+    - where: analysis.analyses
       item: arm
       assumption: 'Treatment variable for the columns: TRT01A (actual), because the
         analysis set is the safety set (SAF)'

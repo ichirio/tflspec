@@ -32,7 +32,7 @@ writes one report back in the same form.
 
 One report (one RTF) can hold several objects -- tables, figures -- on
 its pages: \verb{contents:} in place of \verb{content:} names them.  An object is a
-list of items (it reads the report's \verb{data:} / \verb{ard:}), or a map of
+list of items (it reads the report's \verb{data:} / \verb{analysis:}), or a map of
 \code{kind}, \code{data}, \code{content}, \code{template}, \code{plot} (its own data: a figure's
 steps, a template).  Its kind, when not said, is what its items make
 (\code{table_plan} a table) or its template's.  The report's \verb{page: layout:}

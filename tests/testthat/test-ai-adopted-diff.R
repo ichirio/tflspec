@@ -52,9 +52,9 @@ test_that("tfl_ai_adopted_diff(): each value that differs, by its path; every ne
   expect_true(all(x$output_id == "T-1"))
   w <- stats::setNames(x$change, x$where)
   expect_identical(w[["label"]], "changed")
-  expect_identical(w[["ard.analyses[AE].where"]], "changed")
+  expect_identical(w[["analysis.analyses[AE].where"]], "changed")
   expect_identical(w[["page.footnotes.1.left"]], "added")
-  expect_identical(x$draft[x$where == "ard.analyses[AE].where"],
+  expect_identical(x$draft[x$where == "analysis.analyses[AE].where"],
                    "!r TRTEMFL == \"Y\" & AESER == \"Y\"")
   expect_match(attr(x, "text"), "differences in 1 report", fixed = TRUE)
   # one report asked for

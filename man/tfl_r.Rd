@@ -62,7 +62,7 @@ key stops.  The old \code{population} argument stops: write
 
 \item{extends}{The files layered under this one, nearest first
 (\code{"defaults"}, \code{"patterns/<name>"}); \code{"none"} for none; or a list by
-step (\code{data}, \code{ard}, \code{content}, \code{page}), each such a value
+step (\code{data}, \code{analysis}, \code{content}, \code{page}), each such a value
 (\code{list(content = "none")}), a step it does not name taking the
 template's, else \code{"defaults"}.  \code{NULL}: not written (a template report
 takes its template's); the default for a report with \code{template}, else

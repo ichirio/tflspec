@@ -128,7 +128,7 @@ test_that("tfl_ai_parse() checks its arguments", {
 })
 
 test_that("an answer's assumption mappings carry `value` into the rows", {
-  x <- list(list(output_id = "T-1", where = "ard.analyses", item = "arm",
+  x <- list(list(output_id = "T-1", where = "analysis.analyses", item = "arm",
                  assumption = "Treatment variable: TRT01P (planned), because the set is FAS",
                  value = "TRT01P", question = "Planned or actual?"),
             list(output_id = "T-1", item = "arms", assumption = "the arms in the shell's order",

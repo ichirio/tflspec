@@ -419,7 +419,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
         note(id, "template", paste0("template arguments the templates sheet cannot hold: ",
                                     paste(enc$lost, collapse = ", ")))
       }
-      own <- c(if (length(o$content)) "content", if (length(o$ard)) "ard",
+      own <- c(if (length(o$content)) "content", if (length(o$ard)) "analysis",
                if (length(o$data$steps)) "data steps")
       if (length(own)) {
         warning(sprintf("%s: the report's own %s stay in YAML; the templates sheet has no place for them",

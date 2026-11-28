@@ -216,7 +216,7 @@ the names of the files to read. A request longer than `max_chars` is split.
    can write lines of your own there before it starts (a line without a
    scope is `all`).
 4. It writes each report's **skeleton** as `ai/spec/outputs/<id>.yml`:
-   `id`, `kind`, `label`, `population`, `data`, `ard` (the analysis data,
+   `id`, `kind`, `label`, `population`, `data`, `analysis` (the analysis data,
    the analyses), the content (a template where one fits, else
    `table_plan` and `plan_cells`), the digits when the shell shows them,
    `plan_columns: {widths}` (from the shell's proportions),

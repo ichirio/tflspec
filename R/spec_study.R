@@ -231,7 +231,7 @@ tfl_read_outputs <- function(dir, skip_bad = FALSE) {
 #' )`) taken out of those; for a template not yet migrated, its look
 #' (plan_style, the widths, the rows a page ...) under the study's layers,
 #' which say the look and win -- and
-#' its `ard:` under the report's (an entry of the report's replaces the
+#' its `analysis:` under the report's (an entry of the report's replaces the
 #' template's of the same id); a template parameter that says where its
 #' study default is takes it from the layers when the SPEC does not give
 #' it, and a SPEC value over a different one says so.  Each item's
@@ -270,7 +270,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   layers <- lb$layers
   acc <- lb$acc
   # a template SPEC: the template's items between the layers and the
-  # report's own (its ard: under the report's ard:)
+  # report's own (its analysis: under the report's analysis:)
   tpl <- NULL
   if (!is.null(.tpl_spec_of(output))) {
     tpl <- .tpl_expand_for(output, study, lb, .merge_map(acc$codelists, output$codelists))
@@ -491,9 +491,9 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 
 # The steps a report is made in (canon 1.32), which `extends` may name one
 # by one; and the step each part of a layer goes with (`codelists` is
-# always empty in a layer; `ard` lays nothing yet, defaults.yml has no
-# `ard:`)
-.extends_steps <- c("data", "ard", "content", "page")
+# always empty in a layer; `analysis` lays nothing yet, defaults.yml has no
+# `analysis:`)
+.extends_steps <- c("data", "analysis", "content", "page")
 .extends_part_step <- c(data = "data", codelists = "data", content = "content", page = "page")
 
 # `extends` as written, checked: NULL (not written); the files, nearest
@@ -516,6 +516,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
       stop(sprintf(paste0("%s: `extends` has no step page: the page comes from the page ",
                           "configuration (styles:), picked with `style:`."), who), call. = FALSE)
     }
+    if ("ard" %in% names(x)) .old_form_stop("extends_ard", who)
     unknown <- setdiff(names(x), .extends_steps)
     if (length(unknown) || !all(nzchar(names(x))) || anyDuplicated(names(x))) {
       stop(sprintf("%s: `extends` has no step %s; the steps: %s.", who,
@@ -605,7 +606,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 #'
 #' What a report extends, step by step: the files laid under it -- the
 #' study's `defaults` -- in each of the
-#' steps a report is made in (`data`, `ard`, `content`), nearest
+#' steps a report is made in (`data`, `analysis`, `content`), nearest
 #' first.  The report's `extends:` says it, as a list of files for every
 #' step, `none`, or a map by step (`{content: none}`).  A step the map does
 #' not name, or a template report that writes none, takes its template's
@@ -617,7 +618,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 #' @param output A `tfl_output` ([tfl_read_output()]).
 #' @param step One step's name; `NULL` for all.
 #' @return The files laid under `step`, nearest first (`character(0)`:
-#'   none); `NULL` `step`: a list by step (`data`, `ard`, `content`).
+#'   none); `NULL` `step`: a list by step (`data`, `analysis`, `content`).
 #' @examples
 #' o <- tfl_output("T-1", "table", extends = list(content = "none"))
 #' tfl_output_extends(o)

@@ -141,7 +141,7 @@ test_that("prepare(): AGENTS.md asks and writes the drafts; the requests carry t
   a <- tfl_ai_parse(readLines(test_path("fixtures", "answers-toc", "ae-1.md"), warn = FALSE), "table")
   o <- a$outputs[["T-14-3-1"]]
   o$ai <- list(
-    assumptions = list(list(where = "ard.analyses", item = "where", assumption = "treatment-emergent is TRTEMFL == \"Y\"",
+    assumptions = list(list(where = "analysis.analyses", item = "where", assumption = "treatment-emergent is TRTEMFL == \"Y\"",
                             value = "TRTEMFL == \"Y\"", from = "D1")),
     confirm = list(list(where = "content", item = "plan_cells", why = "the shell shows n (%) but not its denominator")))
   area <- file.path(d, "ai", "spec", "outputs")

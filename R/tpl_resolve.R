@@ -285,8 +285,8 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
             common = if (length(report$common)) report$common[setdiff(names(report$common), "population")],
             extends = report$extends %||% tpl$extends, style = style,
             figure = tpl$figure, data = rows,
-            ard = if (length(items)) c(if (identical(kind, "figure")) list(analysis_data = rows),
-                                       list(analyses = items)),
+            analysis = if (length(items)) c(if (identical(kind, "figure")) list(analysis_data = rows),
+                                            list(analyses = items)),
             codelists = report$codelists, content = content, page = page)
   y <- y[!vapply(y, is.null, NA)]
   out <- .output_from_list(y)

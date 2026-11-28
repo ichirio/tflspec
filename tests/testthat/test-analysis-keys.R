@@ -13,7 +13,7 @@ ak_table <- function(extra_a = character(), extra_b = character()) ak_read(c(
   "id: T-1", "kind: table", "label: AE",
   "data:",
   "  - id: adsl_sub", "    from: ADSL",
-  "ard:", "  analyses:",
+  "analysis:", "  analyses:",
   "    - id: BIGN", "      method: categorical", "      data: adsl_sub", "      variables: [TRT01A]",
   extra_a,
   "    - id: AGE", "      method: continuous",
@@ -89,7 +89,7 @@ test_that("the checks: `from:` with `data:`, a name that is not an R name, a nam
                                               r$message)))
   # `from:` alone: no error of this kind
   one <- ak_read(c("id: T-1", "kind: table", "data:", "  - id: adsl_sub", "    from: ADSL",
-                   "ard:", "  analyses:", "    - id: AGE", "      method: continuous",
+                   "analysis:", "  analyses:", "    - id: AGE", "      method: continuous",
                    "      from: adsl_sub", "      variables: [AGE]",
                    "content:", "  - table_plan: {rows: [AGE]}"))
   expect_false(any(grepl("not both", tfl_output_name_check(one)$message)))
