@@ -45,6 +45,14 @@ list.
 \details{
 The ARD holds each row's \code{value} (the code); its \code{label} is applied by the
 report's table plan (\code{plan_labels}), and by a figure's legend.
+
+The ARD side takes the codes only: the ARD program writes each list as
+its codes in their order (\code{cl_sex <- c("F", "M")}), and the ARD's
+fingerprint (\code{\link[=tfl_ard_spec_hash]{tfl_ard_spec_hash()}}) counts the codes, their order and
+\code{under}, never a label.  A change of labels alone leaves the ARD up to
+date; the labels go into the report program's \code{plan_labels()}.  A
+report's list that none of its steps uses (its data, analyses, content or
+figure) is a warning, naming the variable.
 }
 \examples{
 d <- system.file("extdata", "spec-yaml", package = "tflspec")
