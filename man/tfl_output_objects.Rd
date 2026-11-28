@@ -18,7 +18,7 @@ sets.}
 }
 \value{
 A data frame, one row an object: \code{output_id}; \code{object} (the
-object of a report with \verb{contents:}, else \code{NA}); \code{name} (\code{adsl_sub},
+object of a report part: \code{NA}, one report is one template); \code{name} (\code{adsl_sub},
 \code{km}, an ARD item's default name, \code{ard}); \code{id} (an analysis item's id,
 the ARS analysis id; else \code{NA}); \code{stage} (\code{data}, \code{analysis},
 \code{content}, \code{page}); \code{kind} (\code{data}, \code{object}, \code{ard}, \code{model}, \code{value},

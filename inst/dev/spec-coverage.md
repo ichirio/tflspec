@@ -632,7 +632,8 @@ stand for: a SPEC says the plan, not these calls.  The gaps that a SPEC
 could usefully close next:
 
 1. `rtf_section(page =)`: a section of its own header from a page on (a
-   report of several objects, `contents:`, could give each its own).
+   report of several objects, placed by `page: layout:`, could give each
+   its own).
 2. `rtfplot(width_twips =, height_twips =)` (the figure SPEC's).
 3. `rtf_table_style()` as a value (`plan_style(style = )` of a company's
    own style object): its fields are said one by one today.

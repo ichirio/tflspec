@@ -19,7 +19,10 @@ and the \code{tokens}.}
 several.}
 
 \item{content}{The report's content: an \code{\link[rtfreporter:table_plan]{rtfreporter::table_plan()}} or \code{rtftable}
-pages for a table or listing, figures for a \code{type = figure} report.}
+pages for a table or listing, figures for a \code{type = figure} report.  A
+YAML report that places several objects (\verb{page: layout:}): its objects
+by name (\code{\link[=tfl_content_run]{tfl_content_run()}}), each the layout places checked before
+anything is rendered (class \code{tfl_page_layout}).}
 
 \item{study}{For a YAML report: the study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}), for
 its program (the TOC's \code{program}, else \code{settings: program}, in

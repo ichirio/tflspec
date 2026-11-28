@@ -24,7 +24,9 @@ datasets it names (\code{adsl}), and \code{ard} when the report has analyses
 names and is not given stops (class \code{tfl_content_data}): never the
 sample data.}
 
-\item{study}{For a figure with an analysis set (its data's
+\item{study}{For content objects whose \verb{from:} names a study dataset
+(\code{from: adae}): the study, whose \code{spec/data.yml} says where it is (read
+from the working directory, the study folder).  For a figure with an analysis set (its data's
 \verb{population:}) that reads a dataset: the study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}})
 or its folder.  The set's subjects are made as the report's program
 makes them (its data part, from the study's files) and every dataset
@@ -34,7 +36,8 @@ subject.}
 }
 \value{
 For a table, the \code{\link[rtfreporter:table_plan]{rtfreporter::table_plan()}}; for a figure, the
-ggplot.
+ggplot; for a report that places several objects (\verb{page: layout:}),
+the objects its content makes, a named list.
 }
 \description{
 Runs what \code{\link[=tfl_content_code]{tfl_content_code()}} writes: the same items, in the same order,
@@ -47,6 +50,16 @@ data's steps, and gives what it leaves in \code{content}: a table's code a
 \code{table_plan}, a figure's a ggplot (or a list of them), as its program's
 \code{report_content()} checks; anything else stops with an error of class
 \code{tfl_content_contract} that names the report and what it gave.
+}
+\details{
+A table's or listing's content that makes named objects (object cards,
+\verb{- \{name, from, calls\}}) makes each in order, as its program writes
+them: an object the page places with the table's own rules, the others
+as their statements.  With \verb{page: layout:} it gives every object by name
+(the layout's are checked: each made, each a table) -- what
+\code{\link[=tfl_report]{tfl_report()}} takes; with none, the last object, the plan.  So does a
+report's own code that leaves a named list, with a layout (see
+\code{\link[=tfl_read_output]{tfl_read_output()}}, "Several objects in one report").
 }
 \examples{
 if (requireNamespace("cards", quietly = TRUE)) {

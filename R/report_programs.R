@@ -672,7 +672,7 @@
     .rp_code_block(r$steps[[step]]),
     "",
     sized,
-    if (identical(step, "content")) .rp_content_check_line(r$type) else
+    if (identical(step, "content")) .rp_content_check_line(r$type, ctx) else
       sprintf("%s <- report_data(%s, \"%s\")", leaves, leaves, leaves))
 }
 
@@ -682,7 +682,23 @@
 # holds to as well (.own_content_contract()), and the plan goes to the
 # report as it is; a figure's and a listing's report_content(), as before
 # (a figure's rule is the contract's too)
-.rp_content_check_line <- function(type) {
+.rp_content_check_line <- function(type, ctx = NULL) {
+  # a report that places several objects (`page: layout:`): the code leaves
+  # them as a named list; each the layout places taken from it by its name
+  # (the report part places them by name, R/page_objects.R)
+  y <- if (!is.null(ctx) && type %in% c("table", "listing")) .rp_y(ctx)
+  if (!is.null(y)) {
+    ro <- .rp_code_content(y)
+    if (.has_layout(ro)) {
+      objs <- names(.page_layout_rows(ro))
+      return(c("# the objects the layout places: the list your code leaves, by name",
+               sprintf(paste0("for (nm in %s) if (is.null(content[[nm]])) stop(report_id, ",
+                              "\": page.layout: places \", nm, \", which the content code does ",
+                              "not make.\", call. = FALSE)"),
+                       paste(deparse(objs), collapse = "")),
+               sprintf("%s <- content[[\"%s\"]]", objs, objs)))
+    }
+  }
   if (identical(type, "table")) {
     "content <- report_content_check(content, \"table\", report_id)"
   } else {
@@ -906,7 +922,29 @@
   proc_lines <- if (table) .rp_table_process_lines(ctx, code, proc)
   c(setup,
     .rp_code_block(code),
-    proc_lines)
+    proc_lines,
+    .rp_card_dataset_lines(ctx))
+}
+
+# The study datasets a report's content objects start from (a card's
+# `from: adae` that no object above makes), read as the data catalog says,
+# for the objects the report part makes (R/page_objects.R); NULL: none
+.rp_card_dataset_lines <- function(ctx) {
+  y <- .rp_y(ctx)
+  if (is.null(y)) return(NULL)
+  ct <- y$output$content
+  if (!.content_cards(ct, y$output$kind)) return(NULL)
+  made <- vapply(ct, function(o) as.character(o$fn), "")
+  from <- unique(unlist(lapply(ct, function(o) o[["input"]])))
+  cat_ds <- ctx$shared$ard$datasets
+  have <- if (is.data.frame(cat_ds)) toupper(cat_ds$dataset) else character()
+  ds <- setdiff(from, c(made, "ard", "data", y$output$data$object))
+  ds <- toupper(ds[toupper(ds) %in% have])
+  # (none when the study's setup has read the catalog: tflspec.study_setup)
+  reads <- unlist(lapply(ds, function(d) .rp_read_dataset_lines(ctx, d)))
+  if (!length(reads)) return(NULL)
+  c("", paste0("# the data the content objects start from: ", paste(ds, collapse = ", "),
+               " (data catalog)"), reads)
 }
 
 # The report part of a report program, written out from its definition: the

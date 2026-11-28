@@ -311,8 +311,23 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   composed <- !is.null(tpl) && .tpl_composes(own$data, tpl$x)
   if (composed) own$data <- .tpl_compose_data(own$data, tpl$x, output$id, tpl$name)
   below <- acc$content
-  own$content <- .stub_keep_name(own$content, below)
-  if (!is.null(tpl)) own$content <- .hdr_keep_stub(own$content, below)
+  if (.content_cards(own$content, output$kind)) {
+    # content objects (canon 11-28): the layers' items go into each object
+    # the page places (the layout's, else the last) that is of the report's
+    # kind, as into a flat content; a helper object, and a listing placed
+    # in a table report, is its own calls (R/page_objects.R)
+    placed <- .placed_objects(output)
+    own$content <- lapply(own$content, function(card) {
+      if (!.content_is_object(card) || !card$fn %in% placed ||
+          !identical(.card_kind(card, output$kind), output$kind %||% "table")) return(card)
+      card$items <- .merge_content(below, .stub_keep_name(card$items, below))
+      card
+    })
+    acc$content <- list()
+  } else {
+    own$content <- .stub_keep_name(own$content, below)
+    if (!is.null(tpl)) own$content <- .hdr_keep_stub(own$content, below)
+  }
   acc <- .layer_over(acc, own)
   if ((isTRUE(provenance) || !is.null(tpl)) && !inherits(acc$content, "tfl_r")) {
     prov <- .content_provenance(acc$content, output$content, layers, below)
@@ -345,15 +360,18 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   # (the report's own code lists: no layer gives one)
   output$codelists <- .codelists_read(acc$codelists, own$codelists, output)
   if (!is.null(tpl$x$codelists)) output$codelists <- .tpl_add_codelists(acc$codelists, tpl$x$codelists)
-  output$content <- .any_label_default(acc$content, output, study)
+  output$content <- .cards_apply(acc$content, output$kind,
+                                 function(items) .any_label_default(items, output, study))
   # the study's code lists the content names (study$codelists$SEX): one the
   # study has not got is taken out (a template's default may name one); the
   # lists go with the report, for the package's runners, which have no setup
   # to make `study`.  The report's own references are checked, not taken
   # out in silence: tfl_check_spec() (tfl_check_study_refs()).
-  output$content <- .study_refs_prune(output$content, names(study$codelists))
+  output$content <- .cards_apply(output$content, output$kind,
+                                 function(items) .study_refs_prune(items, names(study$codelists)))
   attr(output, "study_codelists") <- study$codelists %||% list()
-  output$content <- .listing_rows_default(output$content, output$kind, provenance)
+  output$content <- .cards_apply(output$content, output$kind,
+                                 function(items) .listing_rows_default(items, output$kind, provenance))
   # the study's rounding: the setup's option, so the program leaves it out
   attr(output, "study_rounding") <- .study_rounding(study)
   # the page: the report's configuration < the template < the report < force;
@@ -363,6 +381,22 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   output <- .page_font_to_plan(output)
   attr(output, "resolved") <- TRUE
   output
+}
+
+# Is a content a table's or a listing's content objects (`{name, from,
+# calls}`, R/page_objects.R)?
+.content_cards <- function(content, kind) {
+  !inherits(content, "tfl_r") && !identical(kind, "figure") && .content_has_objects(content)
+}
+
+# `f` on a content's items: on each object's calls when it holds objects
+# (a table's or a listing's), else on the items
+.cards_apply <- function(content, kind, f) {
+  if (!.content_cards(content, kind)) return(f(content))
+  lapply(content, function(card) {
+    if (.content_is_object(card)) card$items <- f(card$items)
+    card
+  })
 }
 
 # A report's own plan_stub with no `name` keeps the name of the plan_stub it

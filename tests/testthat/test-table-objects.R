@@ -168,9 +168,14 @@ test_that("the program runs: the objects make the plan the flat content makes", 
                    to_pages(to_run(to_code(lf), list(data = d))$plan))
 })
 
-test_that("a content that holds objects is not run or measured from its items", {
-  o <- to_out(tfl_plot("plan", to_calls(), input = "ard", form = "map"))
-  expect_error(tfl_content_run(o, to_ard()), "not run yet")
+test_that("a content that holds objects runs as its program does; it is not measured from its items", {
+  skip_if_not_installed("cards")
+  # (tflspec#1025: the objects are made in order, the last is the plan)
+  o <- to_out(tfl_plot("data", list(tfl_item("normalize_ard", list())), input = "ard", form = "map"),
+              tfl_plot("plan", to_calls(), input = "data", form = "map"))
+  p <- tfl_content_run(o, to_ard())
+  expect_s3_class(p, "table_plan")
+  expect_identical(to_pages(p), to_pages(to_run(to_code(o), list(ard = to_ard()))$plan))
   expect_error(.content_table_pipeline(o$content), "not run or measured")
 })
 

@@ -218,31 +218,39 @@ print.tfl_item <- function(x, ...) {
 #' writes one report back in the same form.
 #'
 #' @section Several objects in one report:
-#' One report (one RTF) can hold several objects -- tables, figures -- on
-#' its pages: `contents:` in place of `content:` names them.  An object is a
-#' list of items (it reads the report's `data:` / `ard:`), or a map of
-#' `kind`, `data`, `content`, `template`, `plot` (its own data: a figure's
-#' steps, a template).  Its kind, when not said, is what its items make
-#' (`table_plan` a table) or its template's.  The report's `page: layout:`
-#' rows say each object's place, as `rtfreporter::rtf_tables()` /
-#' `rtf_figures()` take it: `object` (its name), `page_break` (each after
-#' the first goes on under the one before unless `true`), `space_before`,
-#' `first_rows`, `cont_title` (a table's), `titles`, `footnotes` (the
-#' object's own, as `page: titles:` writes them), `width_in`, `height_in`
-#' (a figure's).  The report's `page: titles:` go above the first object,
-#' its `page: footnotes:` below the last.  [tfl_run_output()] makes the RTF;
-#' [tfl_output_contents()] builds the objects.
+#' One report (one RTF, one template) can hold several objects on its pages
+#' (canon 11-28).  Its content makes them, each named: object cards
+#' (`- {name, from, calls}`: `from` the object it starts from -- `ard`, the
+#' report's `data`, an object made above or a study dataset of
+#' `spec/data.yml` -- and `calls` its items), or its own code
+#' (`content: !r`) that leaves a named list in `content`.  Its
+#' `page: layout:` places them, by name, in order, each row with
+#' `rtfreporter::rtf_tables()`'s items: `object` (its name), `page_break`
+#' (not written: a new page, `TRUE` as rtfreporter's; `false`: on under
+#' the object before), `space_before`, `first_rows` (with
+#' `page_break: false`), `cont_title`, `titles`, `footnotes` (the object's
+#' own, as `page: titles:` writes them).  The report's `page: titles:` go
+#' above the first object, its `page: footnotes:` below the last.  One
+#' object may keep the fixed name `plan`; two or more are named.  No
+#' `layout:`: the last object is placed (it is `plan`).  An object the
+#' layout places that the content does not make, one placed twice, or one
+#' that is not a table (a `table_plan`, a data frame, `rtftable` pages)
+#' stops (class `tfl_page_layout`); a table made, not placed and not used
+#' by another object is a note of [tfl_check_build()].  Tables and
+#' listings for now; figures in a layout come later (a figure placed
+#' stops, class `tfl_page_layout_phase2`).  The old `contents:` key stops
+#' with the form to write instead.  [tfl_run_output()] makes the RTF;
+#' [tfl_content_run()] makes the objects.
 #'
 #' ```yaml
-#' contents:
-#'   demog: [{table_plan: {cols: TRT01A}}, ...]
-#'   km:
-#'     data: {steps: [{step: read, dataset: ADTTE}, {step: param, value: OS}]}
-#'     template: {name: km_survival, args: {by: TRT01A}}
+#' content:
+#'   - {name: demog, from: ard, calls: [{normalize_ard: {}}, {table_plan: {cols: TRT01A}}]}
+#'   - {name: severe, from: adae, calls: [!r 'dplyr::filter(AESEV == "SEVERE")']}
+#'   - {name: ae_list, from: severe, calls: [{table_plan: {}}, {plan_paginate_rows: {max_rows: 20}}]}
 #' page:
 #'   layout:
 #'     - {object: demog}
-#'     - {object: km, page_break: false, space_before: 1, height_in: 3}
+#'     - {object: ae_list, page_break: false, space_before: 1}
 #' ```
 #'
 #' @param path The file.
@@ -395,7 +403,7 @@ tfl_read_output <- function(path) {
          "; a report's ARD analyses are its ard: section (ard: {analysis_data, analyses}).",
          call. = FALSE)
   }
-  # ([[ ]]: `$content` would take `contents` when there is no content)
+  # ([[ ]]: `$content` would take a key that starts with it)
   content <- if (inherits(y[["content"]], "tfl_r")) y[["content"]] else
     lapply(y[["content"]] %||% list(), .item_from_list)
   # (a table's verb twice: one call, R/plan_repeats.R; a code SPEC file's own
@@ -416,14 +424,6 @@ tfl_read_output <- function(path) {
     data = .data_steps_in(.calls_in(y$data)), codelists = .codelists_norm(y$codelists, y$id),
     content = content, page = .calls_in(y$page %||% list()))
   for (k in setdiff(names(y), c(.output_fields, "outputs", "base"))) out[[k]] <- .calls_in(y[[k]])
-  # several objects on its pages (R/output_objects.R): their items as items
-  if (!is.null(y$contents)) {
-    if (length(content)) {
-      stop("tfl_read_output(): ", y$id, " has both content: and contents:; one of them.",
-           call. = FALSE)
-    }
-    out$contents <- .contents_in(y$contents, y$id)
-  }
   out
 }
 
@@ -934,7 +934,6 @@ tfl_write_output <- function(x, path) {
   if (!inherits(x, "tfl_output")) stop("tfl_write_output(): `x` is a tfl_output.", call. = FALSE)
   # (a neutral condition of a slot of only R untagged: R/neutral.R)
   if (is.list(x$content) && !inherits(x$content, "tfl_r")) x$content <- .neutral_out_items(x$content)
-  for (i in seq_along(x$contents)) x$contents[[i]]$content <- .neutral_out_items(x$contents[[i]]$content)
   y <- .output_to_list(x)
   txt <- yaml::as.yaml(y, indent.mapping.sequence = TRUE, handlers = .yaml_out_handlers())
   dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
@@ -990,10 +989,6 @@ tfl_write_output <- function(x, path) {
   extra <- setdiff(names(x)[!vapply(x, is.null, NA)], .output_fields)
   .output_keys_check(extra, x$kind, paste0("tfl_write_output(): ", x$id))
   for (k in extra) y[[k]] <- .calls_out(x[[k]])
-  if (!is.null(x$contents)) {
-    y$contents <- .contents_out(x$contents)
-    if (!length(x$content)) y$content <- NULL
-  }
   # a template SPEC's arguments: a named vector as a map (`labels: {AGE: ...}`)
   if (!is.null(.tpl_spec_of(x))) y$template <- .named_as_map(y$template)
   y

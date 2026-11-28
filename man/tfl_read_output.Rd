@@ -30,30 +30,38 @@ writes one report back in the same form.
 }
 \section{Several objects in one report}{
 
-One report (one RTF) can hold several objects -- tables, figures -- on
-its pages: \verb{contents:} in place of \verb{content:} names them.  An object is a
-list of items (it reads the report's \verb{data:} / \verb{ard:}), or a map of
-\code{kind}, \code{data}, \code{content}, \code{template}, \code{plot} (its own data: a figure's
-steps, a template).  Its kind, when not said, is what its items make
-(\code{table_plan} a table) or its template's.  The report's \verb{page: layout:}
-rows say each object's place, as \code{rtfreporter::rtf_tables()} /
-\code{rtf_figures()} take it: \code{object} (its name), \code{page_break} (each after
-the first goes on under the one before unless \code{true}), \code{space_before},
-\code{first_rows}, \code{cont_title} (a table's), \code{titles}, \code{footnotes} (the
-object's own, as \verb{page: titles:} writes them), \code{width_in}, \code{height_in}
-(a figure's).  The report's \verb{page: titles:} go above the first object,
-its \verb{page: footnotes:} below the last.  \code{\link[=tfl_run_output]{tfl_run_output()}} makes the RTF;
-\code{\link[=tfl_output_contents]{tfl_output_contents()}} builds the objects.
+One report (one RTF, one template) can hold several objects on its pages
+(canon 11-28).  Its content makes them, each named: object cards
+(\verb{- \{name, from, calls\}}: \code{from} the object it starts from -- \code{ard}, the
+report's \code{data}, an object made above or a study dataset of
+\code{spec/data.yml} -- and \code{calls} its items), or its own code
+(\code{content: !r}) that leaves a named list in \code{content}.  Its
+\verb{page: layout:} places them, by name, in order, each row with
+\code{rtfreporter::rtf_tables()}'s items: \code{object} (its name), \code{page_break}
+(not written: a new page, \code{TRUE} as rtfreporter's; \code{false}: on under
+the object before), \code{space_before}, \code{first_rows} (with
+\code{page_break: false}), \code{cont_title}, \code{titles}, \code{footnotes} (the object's
+own, as \verb{page: titles:} writes them).  The report's \verb{page: titles:} go
+above the first object, its \verb{page: footnotes:} below the last.  One
+object may keep the fixed name \code{plan}; two or more are named.  No
+\verb{layout:}: the last object is placed (it is \code{plan}).  An object the
+layout places that the content does not make, one placed twice, or one
+that is not a table (a \code{table_plan}, a data frame, \code{rtftable} pages)
+stops (class \code{tfl_page_layout}); a table made, not placed and not used
+by another object is a note of \code{\link[=tfl_check_build]{tfl_check_build()}}.  Tables and
+listings for now; figures in a layout come later (a figure placed
+stops, class \code{tfl_page_layout_phase2}).  The old \verb{contents:} key stops
+with the form to write instead.  \code{\link[=tfl_run_output]{tfl_run_output()}} makes the RTF;
+\code{\link[=tfl_content_run]{tfl_content_run()}} makes the objects.
 
-\if{html}{\out{<div class="sourceCode yaml">}}\preformatted{contents:
-  demog: [\{table_plan: \{cols: TRT01A\}\}, ...]
-  km:
-    data: \{steps: [\{step: read, dataset: ADTTE\}, \{step: param, value: OS\}]\}
-    template: \{name: km_survival, args: \{by: TRT01A\}\}
+\if{html}{\out{<div class="sourceCode yaml">}}\preformatted{content:
+  - \{name: demog, from: ard, calls: [\{normalize_ard: \{\}\}, \{table_plan: \{cols: TRT01A\}\}]\}
+  - \{name: severe, from: adae, calls: [!r 'dplyr::filter(AESEV == "SEVERE")']\}
+  - \{name: ae_list, from: severe, calls: [\{table_plan: \{\}\}, \{plan_paginate_rows: \{max_rows: 20\}\}]\}
 page:
   layout:
     - \{object: demog\}
-    - \{object: km, page_break: false, space_before: 1, height_in: 3\}
+    - \{object: ae_list, page_break: false, space_before: 1\}
 }\if{html}{\out{</div>}}
 }
 

@@ -52,6 +52,13 @@
              "spec/series/<series>/series.yml `values:` (tfl_series_values_set()), after ",
              "tfl_copy_templates()"),
       "778"),
+    c("contents", "a report's `contents: {<name>: [items]}` (an object each, its own `template:`)",
+      paste0("one report is one template: its content makes named objects, ",
+             "`content: [{name: demog, from: ard, calls: [...]}, {name: ae_list, from: adae, ",
+             "calls: [...]}]`, and its `page: layout:` places them by name, `[{object: demog}, ",
+             "{object: ae_list, page_break: false}]` (a row with no `page_break: false` starts a ",
+             "new page)"),
+      "11-28"),
     c("report_settings", "a report's `settings:` (its `file:`)",
       paste0("a report's RTF file and program are its TOC entry's (spec/toc.yml `file:`, ",
              "`program:`), else the study's (study.yml `settings: file`, `program`)"),
@@ -125,15 +132,16 @@
 # figure's own parts (`figure`, `plots`, `compose`, `ggplot2_version`,
 # `layers`, the AI kit's figure), `ai` (an AI draft's assumptions and what
 # is to confirm: the AI kit's) and `common` until it goes (A2-T T4).
-# `population` is an old form (.common_old_line); `last_step` is not read
+# `population` and `contents` are old forms (.common_old_line, canon
+# 11-28); `last_step` is not read
 # yet and stops.  The reader, the writer and .output_fields read it.
 .output_keys <- data.frame(
   key = c("id", "kind", "label", "common", "extends", "style", "template", "ard", "data",
-          "codelists", "content", "contents", "plot", "page", "note", "ai",
+          "codelists", "content", "plot", "page", "note", "ai",
           "figure", "plots", "compose", "ggplot2_version", "layers"),
-  kinds = c(rep("", 16L), rep("figure", 5L)),
+  kinds = c(rep("", 15L), rep("figure", 5L)),
   field = c(TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE,
-            TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE,
+            TRUE, TRUE, FALSE, TRUE, FALSE, FALSE,
             FALSE, FALSE, FALSE, FALSE, FALSE),
   stringsAsFactors = FALSE)
 
@@ -150,6 +158,8 @@
                    .output_keys$kinds[.output_keys$key == k], kind), call. = FALSE)
     }
     if (k %in% "settings") .old_form_stop("report_settings", who)
+    # (several objects: content makes them, page: layout: places them, canon 11-28)
+    if (k %in% "contents") .old_form_stop("contents", who)
     if (k %in% "last_step") {
       stop(sprintf(paste0("%s: `last_step:` is not read yet: a report is made to its last ",
                           "step; remove the key."), who), call. = FALSE)

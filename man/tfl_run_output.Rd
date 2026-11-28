@@ -19,9 +19,10 @@ The RTF's path, invisibly.
 \description{
 One line to make a report's RTF from the study's files: the report read
 from \verb{spec/outputs/}, its ARD built, its content run, its RTF written
-where \code{\link[=tfl_report_path]{tfl_report_path()}} says.  A report with several objects
-(\verb{contents:}) has them on its pages as its \verb{page.layout:} says.
+where \code{\link[=tfl_report_path]{tfl_report_path()}} says.  A report whose content makes several
+objects has them on its pages as its \verb{page: layout:} places them
+(see \code{\link[=tfl_read_output]{tfl_read_output()}}, "Several objects in one report").
 }
 \seealso{
-\code{\link[=tfl_output_contents]{tfl_output_contents()}}, \code{\link[=tfl_report]{tfl_report()}}
+\code{\link[=tfl_report]{tfl_report()}}, \code{\link[=tfl_content_run]{tfl_content_run()}}
 }

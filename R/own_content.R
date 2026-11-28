@@ -177,6 +177,9 @@
     .ard_stop("tfl_content_run(): the report's own code leaves no `content`.")
   }
   content <- get("content", envir = env, inherits = FALSE)
+  # a report that places several objects (`page: layout:`): its code leaves
+  # them as a named list, each held to the layout's rule (R/page_objects.R)
+  if (.has_layout(output)) return(.layout_objects_check(output, content))
   .own_content_contract(content, output$kind, output$id %||% "the report")
   content
 }
