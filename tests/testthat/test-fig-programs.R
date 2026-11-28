@@ -218,8 +218,11 @@ test_that("a figure's data puts the arms in their number order first, a code lis
   cl <- data.frame(output_id = "F-9", variable = "TRT01P",
                    value = c("Drug A", "Drug B", "Placebo"), label = NA, order = 1:3)
   code2 <- tfl_fig_design_code(d, "F-9", codelists = cl)
-  expect_lt(grep("order_levels()", code2, fixed = TRUE)[1],
-            grep("set_levels(", code2, fixed = TRUE)[1])
+  # (in the data part: the head's helper comment and definitions name both)
+  txt2 <- sub("(?s)^.*?adtte_sub <- adtte [|]>", "", paste(code2, collapse = "\n"), perl = TRUE)
+  expect_match(paste(code2, collapse = "\n"), "adtte_sub <- adtte |>", fixed = TRUE)
+  expect_lt(regexpr("order_levels()", txt2, fixed = TRUE)[[1L]],
+            regexpr("set_levels(", txt2, fixed = TRUE)[[1L]])
   env2 <- lv_fig_data(code2)
   expect_identical(levels(env2$adtte_sub$TRT01P), c("Drug A", "Drug B", "Placebo"))
 })

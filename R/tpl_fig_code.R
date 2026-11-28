@@ -214,7 +214,13 @@
   code <- .code_lines(code)
   code <- .fig_rename_df(code, tfl_fig_data_name(list(data = steps)))
   code <- .fig_tidy_names(code)
-  .fig_code_out(c(.fig_units_used(code), code), d$reads, unique(libs),
+  # no head (.fig_script_head() is a script of its own's): the template's
+  # call is a part of the report's program, run after the study's setup,
+  # whose programs/study_helpers.R and figure setup define the helpers it
+  # calls (tte_time(), fmt_num(), order_levels() ...) and the days_per_*
+  # constants; it calls tflspec::tfl_tpl() and order_levels() too, which no
+  # head could carry
+  .fig_code_out(code, d$reads, unique(libs),
                 setdiff(unique(needs), c("ggplot2", "ggsurvfit", "patchwork")),
                 ard = length(pre) > 0L)
 }
