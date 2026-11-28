@@ -181,6 +181,7 @@ test_that("a figure of its own content code: unchanged, its contract the same in
   # does not
   expect_error(tflspec:::.own_content_contract(list(p, p), "figure", "F-1"), NA)
   expect_error(tflspec:::.own_content_contract(list(p, data$adsl), "figure", "F-1"), NA)
+  expect_error(tflspec:::.own_content_contract(list(), "figure", "F-1"), NA)
   expect_error(tflspec:::.own_content_contract(list(p, 1), "figure", "F-1"),
                "F-1: a figure's content code must return a ggplot .*it returned a list whose item 2 is a numeric\\.$",
                class = "tfl_content_contract")
