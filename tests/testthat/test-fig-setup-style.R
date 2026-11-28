@@ -27,7 +27,7 @@ test_that("the figure setup sets the style option: km_curves() takes its treatme
   d <- data.frame(AVAL = c(5, 8, 12, 20, 3, 6, 9, 15),
                   CNSR = c(0, 1, 0, 0, 0, 0, 1, 0),
                   ARM = rep(c("Arm A", "Arm B"), each = 4))
-  fit <- ggsurvfit::survfit2(ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ ARM, data = d)
+  fit <- ggsurvfit::survfit2(survival::Surv(AVAL, CNSR == 0) ~ ARM, data = d)
   b <- ggplot2::ggplot_build(km_curves(fit))
   drawn <- unique(unlist(lapply(b$data, function(x) x$colour)))
   expect_setequal(drawn[!is.na(drawn)], pal[1:2])

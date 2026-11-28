@@ -26,7 +26,7 @@
   conds <- list(c("ALL", "ALL"), c("SEX", "F"), c("SEX", "M"))
   rows <- lapply(conds, function(cnd) {
     sub <- if (cnd[[1L]] == "ALL") d else d[d[[cnd[[1L]]]] == cnd[[2L]], , drop = FALSE]
-    fit <- survival::coxph(ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ TRT01A, data = sub)
+    fit <- survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = sub)
     a <- cardx::ard_regression(fit, exponentiate = TRUE)
     a$group1 <- "subgroup"
     a$group1_level <- list(cnd[[1L]])
@@ -53,7 +53,7 @@ test_that("km_curves() draws the KM curves with N in the legend", {
   skip_if_not_installed("survival")
   skip_if_not_installed("cards")
   d <- .fcf_adtte()
-  fit <- ggsurvfit::survfit2(ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ TRT01A, data = d)
+  fit <- ggsurvfit::survfit2(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = d)
   p <- km_curves(fit, .fcf_bign(d), list(time_unit = "days"))
   expect_s3_class(p, "ggplot")
   expect_no_error(b <- ggplot2::ggplot_build(p))
@@ -68,7 +68,7 @@ test_that("km_curves() takes its params; an unknown one stops", {
   skip_if_not_installed("ggsurvfit")
   skip_if_not_installed("survival")
   d <- .fcf_adtte()
-  fit <- ggsurvfit::survfit2(ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ TRT01A, data = d)
+  fit <- ggsurvfit::survfit2(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = d)
   for (lg in c("inside", "bottom", "none")) {
     p <- km_curves(fit, NULL, list(legend = lg, x_label = "Months ({time_unit})",
                                    time_unit = "months", y_label = "S(t)"))

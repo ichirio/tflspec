@@ -25,7 +25,7 @@
       fn = "km_curves",
       model = list(
         arg = "km_fit",
-        call = paste0("ggsurvfit::survfit2(ggsurvfit::Surv_CNSR({time}, {censor}) ~ {by}, ",
+        call = paste0("ggsurvfit::survfit2(", .tte_surv("{time}", "{censor}"), " ~ {by}, ",
                       "data = adtte_sub)")),
       params = c("time_unit", "x_label", "y_label", "legend")),
     forest_hr = list(
@@ -175,15 +175,16 @@ tfl_figure_fn <- function(name) {
 #' The colours, the censor mark and the theme are the figure style
 #' standard's ([tfl_fig_style()]).
 #'
-#' @param km_fit The fit, `ggsurvfit::survfit2(Surv_CNSR(AVAL, CNSR) ~ <by>,
-#'   data = adtte_sub)`.
+#' @param km_fit The fit, `ggsurvfit::survfit2(survival::Surv(AVAL, CNSR == 0) ~
+#'   <by>, data = adtte_sub)`: CNSR 0 is the event, any other value a censoring.
 #' @param ard The ARD with the subjects per group: the rows of
 #'   `analysis_id == "BIGN"` (all rows when the ARD has no `analysis_id`),
 #'   stat `n`, from `cards::ard_tabulate(variables = <by>)`.  A level
 #'   without such a row has no N in its legend.  `NULL`: no N.
 #' @param params The appearance params, a named list; an unset one takes
 #'   its default:
-#'   - `time_unit`: the time's unit, for the x axis's title (`"days"`).
+#'   - `time_unit`: the unit the time is in, for the x axis's title (`"days"`);
+#'     the data's step (`tte_time()`) has converted AVAL to it.
 #'   - `x_label`: the x axis's title (`"Time ({time_unit})"`, the unit
 #'     title-cased: `Time (Days)`); `{time_unit}` is filled.
 #'   - `y_label`: the y axis's title (`"Survival Probability"`).
@@ -193,7 +194,7 @@ tfl_figure_fn <- function(name) {
 #' @examplesIf requireNamespace("ggsurvfit", quietly = TRUE) && requireNamespace("cards", quietly = TRUE)
 #' adtte <- data.frame(AVAL = c(5, 8, 12, 20, 3, 9, 15, 30), CNSR = c(0, 1, 0, 0, 0, 0, 1, 1),
 #'                     ARM = rep(c("A", "B"), each = 4))
-#' fit <- ggsurvfit::survfit2(ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ ARM, data = adtte)
+#' fit <- ggsurvfit::survfit2(survival::Surv(AVAL, CNSR == 0) ~ ARM, data = adtte)
 #' bign <- cards::ard_tabulate(adtte, variables = "ARM")
 #' km_curves(fit, bign, list(time_unit = "months"))
 #' @export
@@ -276,7 +277,7 @@ km_curves <- function(km_fit, ard = NULL, params = list()) {
 #' set.seed(1)
 #' d <- data.frame(AVAL = rexp(60, 0.1), CNSR = rbinom(60, 1, 0.3),
 #'                 ARM = rep(c("Control", "Drug X"), 30))
-#' hr <- cardx::ard_regression(survival::coxph(survival::Surv(AVAL, 1 - CNSR) ~ ARM, data = d),
+#' hr <- cardx::ard_regression(survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ ARM, data = d),
 #'                             exponentiate = TRUE)
 #' forest_hr(hr, list(favours = c("Favours Drug X", "Favours Control")))
 #' @export

@@ -57,11 +57,11 @@ test_that("the analyses make an ARD whose hazard ratios are coxph()'s, overall a
   d <- adam$ADTTE[adam$ADTTE$PARAMCD == unique(adam$ADTTE$PARAMCD)[1], ]
   d <- d[d$USUBJID %in% adsl$USUBJID[adsl$SAFFL == "Y"], ]
   d$SEX <- adsl$SEX[match(d$USUBJID, adsl$USUBJID)]
-  fit <- survival::coxph(survival::Surv(AVAL, 1 - CNSR) ~ TRTA, data = d)
+  fit <- survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRTA, data = d)
   hr <- ard[ard$analysis_id == "HR" & ard$stat_name == "estimate", ]
   expect_equal(sort(unname(unlist(hr$stat)))[-1], sort(unname(exp(coef(fit)))), tolerance = 1e-6)
   f <- d[d$SEX == "F", ]
-  fit_f <- survival::coxph(survival::Surv(AVAL, 1 - CNSR) ~ TRTA, data = f)
+  fit_f <- survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRTA, data = f)
   hr_f <- ard[ard$analysis_id == "HR_SEX" & ard$stat_name == "estimate" &
                 vapply(ard$group1_level, function(v) identical(as.character(v), "F"), NA), ]
   expect_equal(sort(unname(unlist(hr_f$stat)))[-1], sort(unname(exp(coef(fit_f)))), tolerance = 1e-6)

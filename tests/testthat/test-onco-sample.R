@@ -153,7 +153,7 @@ test_that("the numbers are those of a plausible phase 2/3 study", {
   tte <- onco$ADTTE
   med <- function(cd) {
     d <- tte[tte$PARAMCD == cd, ]
-    f <- survival::survfit(survival::Surv(AVAL, 1 - CNSR) ~ TRT01P, data = d)
+    f <- survival::survfit(survival::Surv(AVAL, CNSR == 0) ~ TRT01P, data = d)
     m <- summary(f)$table[, "median"]
     stats::setNames(m, sub("TRT01P=", "", names(m), fixed = TRUE))
   }
@@ -162,7 +162,7 @@ test_that("the numbers are those of a plausible phase 2/3 study", {
   expect_true(pfs[["Control"]] >= 3 && pfs[["Control"]] <= 5)
   os <- tte[tte$PARAMCD == "OS", ]
   os$DRUG <- os$TRT01P == "Drug X"
-  hr <- exp(stats::coef(survival::coxph(survival::Surv(AVAL, 1 - CNSR) ~ DRUG, data = os)))
+  hr <- exp(stats::coef(survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ DRUG, data = os)))
   expect_true(hr >= 0.65 && hr <= 0.85)
   deaths <- mean(adsl$DTHFL[adsl$ITTFL == "Y"] == "Y")
   expect_true(deaths >= 0.40 && deaths <= 0.60)

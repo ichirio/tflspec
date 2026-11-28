@@ -48,7 +48,7 @@ tfl_fig_forest <- function(adam = NULL, style = c("hr", "or", "estimates"), para
       c("fit_est <- function(d) {",
         sprintf("  if (n_distinct(d$%s) < 2 || sum(d$CNSR == 0) < 2) return(data.frame(est = NA, lcl = NA, ucl = NA))", group),
         "  # a model that does not converge (e.g. no events in one arm) is not estimable",
-        sprintf("  fit <- tryCatch(coxph(Surv(AVAL, CNSR == 0) ~ %s, data = d), warning = function(w) NULL)", group),
+        sprintf("  fit <- tryCatch(coxph(%s ~ %s, data = d), warning = function(w) NULL)", .tte_surv("AVAL", "CNSR", pkg = FALSE), group),
         "  if (is.null(fit)) return(data.frame(est = NA, lcl = NA, ucl = NA))",
         "  s <- summary(fit)$conf.int",
         "  data.frame(est = s[1, 1], lcl = s[1, 3], ucl = s[1, 4])",

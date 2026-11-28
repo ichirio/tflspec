@@ -37,20 +37,13 @@ params:
     tier: required
     description: The parameter (PARAMCD) whose time to event is drawn.
   time_unit:
-    type: enum[days|months]
+    type: enum[days|weeks|months|years]
     input: pick
     choices: fixed
     default: !series time_unit
     step: data
     tier: usual
-    description: The unit of the time axis; months divides the days by days_per_month.
-  days_per_month:
-    type: number
-    input: text
-    default: !series days_per_month
-    step: data
-    tier: other
-    description: The days in a month, for time_unit months.
+    description: The unit the analysis and the axis use; AVAL is converted from its unit, AVALU, to it (tte_time()).
   x_breaks:
     type: list<number>
     input: text
@@ -74,7 +67,11 @@ params:
     tier: other
     description: Where the legend goes (inside at the top right, bottom); none for no legend.
 derive:
-  x_label: {if: "{time_unit}", is: months, then: Time (Months), else: Time (Days)}
+  x_label_days: {if: "{time_unit}", is: days, then: Time (Days)}
+  x_label_weeks: {if: "{time_unit}", is: weeks, then: Time (Weeks)}
+  x_label_months: {if: "{time_unit}", is: months, then: Time (Months)}
+  x_label_years: {if: "{time_unit}", is: years, then: Time (Years)}
+  x_label: {last: ["{x_label_days}", "{x_label_weeks}", "{x_label_months}", "{x_label_years}"]}
   risk_item: {if: "{risk_table}", then: {risktable_stats: n.risk, times: "{x_breaks}"}}
   legend_inside: {if: "{legend}", is: inside, then: [0.98, 0.98]}
   legend_corner: {if: "{legend}", is: inside, then: [1, 1]}
@@ -87,9 +84,7 @@ data:
   steps:
     - {step: read, dataset: ADTTE}
     - {step: param, value: "{param}"}
-    - step: derive
-      variable: AVAL
-      expr: !r 'AVAL / c(days = 1, months = {days_per_month})[["{time_unit}"]]'
+    - {step: time_unit, variable: AVAL, unit: "{time_unit}"}
     - {step: survfit, name: fit, time: AVAL, censor: CNSR, by: "{by}"}
 content:
   - ggsurvfit: {x: fit, linewidth: 0.3}

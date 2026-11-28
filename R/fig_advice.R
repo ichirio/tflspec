@@ -85,6 +85,28 @@
       .fix("add_step", step = list(step = "time_unit", variable = sf[[1L]]$time %||% "AVAL",
                                    unit = "months")))
   },
+  tte_order = function(d, ctx) {
+    # (A4) a time_unit step on AVAL writes tte_time(), which converts AVAL
+    # from AVALU and stops when the rows hold two or more units -- and
+    # ADTTE's parameters often do (OS in months, TTSKIN in days).  The step
+    # that keeps the parameter (`param`, or a `filter` on PARAMCD) belongs
+    # before it.  No fix: a fix adds or changes a piece, none moves one.
+    k <- .step_kinds(d)
+    tu <- which(k == "time_unit" & vapply(d$data, function(s)
+      identical(.fv(s, "variable", "time_unit"), "AVAL"), logical(1)))
+    keep <- which(k == "param" | (k == "filter" & vapply(d$data, function(s)
+      grepl("\\bPARAMCD\\b", paste(s$expr %||% "", collapse = " ")), logical(1))))
+    if (!length(tu) || !length(keep)) return(NULL)
+    i <- tu[1L]
+    # a parameter kept before the conversion: one unit, as far as the steps go
+    if (any(keep < i)) return(NULL)
+    j <- min(keep)
+    .adv("tte_order", "warning", "data", paste(
+      "Step %d changes AVAL's unit with tte_time() before step %d keeps the parameter:",
+      "tte_time() needs one unit (AVALU) and stops when the rows hold two or more,",
+      "as ADTTE's parameters often do. Keep the parameter first: move step %d after step %d."),
+      args = list(i, j, i, j))
+  },
   # ---- groups, colours, legend
   palette_short = function(d, ctx) {
     n <- length(ctx$levels)

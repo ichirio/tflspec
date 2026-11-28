@@ -304,9 +304,10 @@
 
 # The event of a time to event, as every writer writes it: CNSR 0 is the
 # event, any other value (1, 2, ... one a censoring reason) a censoring.
-# `1 - CNSR` holds only while CNSR is 0 or 1.
-.tte_surv <- function(time = "AVAL", censor = "CNSR") {
-  sprintf("survival::Surv(%s, %s == 0)", time, censor)
+# `1 - CNSR` holds only while CNSR is 0 or 1.  `pkg = FALSE`: a bare
+# `Surv(...)`, for a program that has attached survival or ggsurvfit.
+.tte_surv <- function(time = "AVAL", censor = "CNSR", pkg = TRUE) {
+  sprintf("%sSurv(%s, %s == 0)", if (pkg) "survival::" else "", time, censor)
 }
 
 # the packages an ARD program attaches (its setup's library() calls), and

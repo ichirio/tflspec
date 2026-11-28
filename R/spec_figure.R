@@ -175,9 +175,10 @@
   # scale_colour_tfl(), tfl_colours()), as its program does
   if (new) .fig_setup_eval(env)
   # (the study's helpers: the ARD's readers, and set_levels() of the code
-  # lists and order_levels() of the arms)
+  # lists, order_levels() of the arms and tte_time() of a time to event)
   if (!is.null(data$ard) || any(grepl("set_levels(", code, fixed = TRUE)) ||
-      any(grepl("order_levels(", code, fixed = TRUE))) {
+      any(grepl("order_levels(", code, fixed = TRUE)) ||
+      any(grepl("tte_time(", code, fixed = TRUE))) {
     eval(parse(text = tfl_helpers_code()), env)
   }
   eval(parse(text = .fig_strip_library(code)), env)
