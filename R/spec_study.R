@@ -356,6 +356,9 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   output$content <- .listing_rows_default(output$content, output$kind, provenance)
   # the study's rounding: the setup's option, so the program leaves it out
   attr(output, "study_rounding") <- .study_rounding(study)
+  # the study's format sets (settings.format_sets): plan_digits()' set names
+  # opened, the parameters' sets of settings.params (R/format_sets.R)
+  output <- .fmtsets_output(output, study)
   # the page: the report's configuration < the template < the report < force;
   # the study's tokens under the report's
   cfg <- (lb$style %||% .style_of(output, study))$page

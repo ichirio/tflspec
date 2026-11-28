@@ -174,6 +174,9 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
       # over that map, the rest as the series has them (canon e023312)
       if (defs$default_kind[[i]] %in% c("series", "study") && startsWith(defs$type[[i]], "map<") &&
           .tr_is_map(val)) {
+        # (formats: a set the report names takes the place of the
+        # standard's keys it covers, R/format_sets.R)
+        if (identical(p, "formats")) def <- .fmtset_over(def, val)
         val <- .tr_merge_map(def, val)
       }
       o <- "report"
@@ -194,6 +197,11 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
          " (required: the report gives no value and the template no default).", call. = FALSE)
   }
 
+  # (a standard's variable set for a variable the report does not use: not read)
+  if (!is.null(env[["formats"]])) {
+    env["formats"] <- list(.fmtset_std_prune(env[["formats"]], names(given$formats),
+                                             env[setdiff(names(env), "formats")]))
+  }
   # (a header's cells the report gives, col_header: their {name}s of the
   # template's arguments filled, as the written-out default's span: "{by}")
   for (p in defs$name[defs$type %in% .tr_header_cells_type & defs$name %in% names(given)]) {

@@ -425,12 +425,19 @@
   # (the statistics computed: those `formats` names, and any the cells name)
   # (NULL: the active catalog's; `!unset`: none, the ARD's own)
   # (a fixed `formats`, stf_t02_demog's, is the whole set: no catalog under it)
+  # (a set the report names, `"*": continuous_1`, takes the place of the
+  # catalog's statistics: R/format_sets.R)
   fm <- if ("formats" %in% ctx$unset) list() else if ("formats" %in% names(fx)) a$formats else
-    .tpl_merge_named(.tpl_demog_formats_active(), a$formats)
+    .tpl_merge_named(.fmtset_over(.tpl_demog_formats_active(), a$formats), a$formats)
   nested <- fm[vapply(fm, is.list, NA)]
   flat <- fm[!vapply(fm, is.list, NA)]
   cont_flat <- flat[!names(flat) %in% c("n", "p")]
-  stats <- unique(c(names(cont_flat), .tpl_cell_stats(a$cells)))
+  # (the statistics: those formats names -- a set's name is no statistic, the
+  # catalog's under it -- and any the cells name)
+  set_k <- names(cont_flat)[vapply(cont_flat, .fmtset_is_ref, NA)]
+  stats <- unique(c(if (length(set_k)) names(.tpl_demog_formats_active())[
+    !names(.tpl_demog_formats_active()) %in% c("n", "p")],
+    setdiff(names(cont_flat), set_k), .tpl_cell_stats(a$cells)))
   fmt_text <- function(vars, keep) {
     one <- function(v) as.character(v)[1L]
     k <- flat[names(flat) %in% keep]

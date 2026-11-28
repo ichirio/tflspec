@@ -437,10 +437,17 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     if (inherits(v, "tfl_unset")) return(v)
     if (.tpl_is_name_text(p)) v <- .tpl_name_text_map(v, t$name, p$name, fn)
     if (isTRUE(p$merge) && length(p$default) && length(v) && !is.null(names(v))) {
-      v <- .tpl_merge_named(p$default, v)
+      # (formats: a set the report names takes the place of the default's
+      # keys it covers, R/format_sets.R)
+      d <- if (identical(p$name, "formats")) .fmtset_over(p$default, v) else p$default
+      v <- .tpl_merge_named(d, v)
     }
     v
   })
+  if (is.list(out$formats) || (is.atomic(out$formats) && !is.null(names(out$formats)))) {
+    out["formats"] <- list(.fmtset_std_prune(out$formats, names(args$formats),
+                                             out[setdiff(names(out), "formats")]))
+  }
   # `!unset` (a report's value or a template's default): the parameter is
   # left out -- the body reads it as NULL, and the call written omits it, so
   # the inner function's own default applies.  Recorded in `unset`.
@@ -2478,9 +2485,20 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
     .ard_stop(sprintf(paste0("template %s: `formats` is named: by statistic {mean: 1}, or by a ",
                              "parameter's PARAMCD {GLUC: {mean: 2}}."), tn))
   }
-  map <- vapply(f, function(x) is.list(x) || length(x) > 1L || !is.null(names(x)), NA)
-  f <- c(utils::modifyList(.tpl_pc_digits, f[!map]), f[map])
-  map <- vapply(f, function(x) is.list(x) || length(x) > 1L || !is.null(names(x)), NA)
+  # (a key by parameter: a map of its own, or the name of a format set --
+  # `ALT: continuous_0`; `"*"`: the set of every statistic, R/format_sets.R)
+  is_map <- function(f) {
+    vapply(names(f), function(k) {
+      x <- f[[k]]
+      k != "*" && (is.list(x) || length(x) > 1L || !is.null(names(x)) || .fmtset_is_ref(x))
+    }, NA)
+  }
+  map <- is_map(f)
+  f <- c(utils::modifyList(.fmtset_over(.tpl_pc_digits, f) %||% list(), f[!map]), f[map])
+  map <- is_map(f)
+  star <- f[["*"]]
+  f <- f[names(f) != "*"]
+  map <- map[names(map) != "*"]
   one <- function(x, what) {
     if (!length(x)) return(NULL)
     if (is.null(names(x)) || !all(nzchar(names(x)))) {
@@ -2494,12 +2512,16 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
     lapply(x, as.integer)
   }
   cont <- one(f[!map], "formats")
+  # (the set and the statistics over it, opened when the report is resolved)
+  if (!is.null(star)) cont <- c(list("*" = star), cont)
   by <- f[map]
   bad <- setdiff(names(by), a$params)
   if (length(a$params) && length(bad)) {
     .ard_stop(sprintf("template %s: `formats` names %s, not in `params`.", tn, paste(bad, collapse = ", ")))
   }
-  by <- if (length(by)) stats::setNames(lapply(names(by), function(k) one(as.list(by[[k]]), "formats")), names(by))
+  by <- if (length(by)) stats::setNames(lapply(names(by), function(k) {
+    if (.fmtset_is_ref(by[[k]])) by[[k]] else one(as.list(by[[k]]), "formats")
+  }), names(by))
   args <- Filter(length, list(continuous = cont, PARAMCD = by))
   if (length(args)) list(tfl_item("plan_digits", args))
 }
