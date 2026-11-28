@@ -140,12 +140,19 @@
 }
 
 # The objects the layout places, from what the content made (`objects`, a
-# named list): each there, each a table or a listing (a figure: phase 2), as
-# rtf_tables() takes it -- checked before anything is rendered
+# named list; a flat content's one plan, by its fixed name): each there,
+# each a table or a listing (a figure: phase 2), as rtf_tables() takes it --
+# checked before anything is rendered.  The objects, by name.
 .layout_objects_check <- function(output, objects) {
   id <- output$id
   rows <- .page_layout_rows(output)
   if (is.null(rows)) return(invisible(objects))
+  # (one object by its fixed name, a flat content's `plan`: that object)
+  made <- .content_object_names(output)
+  if (identical(made, "plan") && !.content_has_objects(output$content) &&
+      !(is.list(objects) && !is.object(objects) && !is.null(names(objects)))) {
+    objects <- list(plan = objects)
+  }
   if (!is.list(objects) || is.object(objects) || is.null(names(objects))) {
     .layout_stop(id, sprintf(paste0("the content leaves %s, not its objects by name; it makes ",
                                     "the objects the layout places (%s), each named."),

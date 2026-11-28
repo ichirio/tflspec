@@ -145,6 +145,13 @@ test_that("run: the objects made as the program makes them; the layout's checks 
   # helper data frame is not
   more <- c(objs, list(spare = objs$demog, df = data.frame(x = 1)))
   expect_identical(.layout_unplaced(o, more), "spare")
+  # one object, a flat content: placed by its fixed name, `plan`
+  flat <- tfl_output("T-1", "table", content = c(list(tfl_item("normalize_ard", list())), po_cols()))
+  flat$page <- list(layout = list(list(object = "plan", space_before = 1L)))
+  p <- tfl_content_run(flat, ard)
+  expect_s3_class(tfl_report(flat, content = p), "rtf_document")
+  expect_match(paste(tfl_report_code(flat, content = "plan"), collapse = "\n"), "rtf_tables(plan)",
+               fixed = TRUE)
 })
 
 test_that("own content code that leaves a named list: the layout places its objects", {
@@ -269,7 +276,10 @@ test_that("two tables in one RTF: titles and footnotes where the layout says, th
   g <- tempfile(fileext = ".rtf")
   on.exit(unlink(g), add = TRUE)
   suppressMessages(rtfreporter::generate_rtfreport(env$doc, g, overwrite = TRUE))
-  strip <- function(s) gsub("[0-9]{4}-[0-9]{2}-[0-9]{2}[T ][0-9:]+", "", s)
+  strip <- function(s) {
+    # (the time each was written: {DATETIME})
+    gsub("[0-9]{2}[A-Z][a-z]{2}[0-9]{4} +[0-9:]+|[0-9]{4}-[0-9]{2}-[0-9]{2}[T ][0-9:]+", "", s)
+  }
   expect_identical(strip(po_rtf(g)), strip(x))
   # own content code that leaves the objects as a named list: the program
   # takes each the layout places from it by name, and places it

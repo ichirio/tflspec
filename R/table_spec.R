@@ -2417,7 +2417,7 @@ tfl_report <- function(spec, output_id = NULL, content, study = NULL) {
     spec <- tfl_resolve_output(spec, study)
   }
   if (inherits(spec, "tfl_output") && .has_layout(spec)) {
-    .layout_objects_check(spec, content)
+    content <- .layout_objects_check(spec, content)
     cname <- stats::setNames(paste0(".object_", names(content)), names(content))
   }
   steps <- if (inherits(spec, "tfl_output")) {
