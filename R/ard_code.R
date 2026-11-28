@@ -2332,7 +2332,13 @@
   for (k in seq_along(ar)) {
     rk <- r
     for (key in names(ar[[k]])) rk[[key]] <- ar[[k]][[key]]
-    out <- c(out, .ard_analysis_lines(x, rk, keys, subj, data, nm[k]),
+    # (a shift table's corner with each parameter's own denominator: a
+    # value at a time, R/ard_corner.R)
+    sl <- .item_corner_sliced(x, r, rk)
+    one <- if (is.null(sl)) .ard_analysis_lines(x, rk, keys, subj, data, nm[k]) else
+      .item_corner_lines(.ard_analysis_lines(x, rk, keys, subj, ".d", ".a"), sl, data, nm[k],
+                         r$analysis_id)
+    out <- c(out, one,
              if (per_cols) .item_per_cols_lines(r, rk, nm[k]))
   }
   c(out, sprintf("# %s: its %d calls, one analysis", r$analysis_id, length(ar)),

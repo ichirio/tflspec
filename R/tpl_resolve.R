@@ -191,6 +191,7 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
     env[p] <- list(.tr_fill(env[[p]], env[setdiff(names(env), p)]))
   }
   .tr_header_cells(env, defs, given, template, who)
+  .tr_header_n_moved(env, origins, defs, report$id, template)
   args_env <- env
   env <- .tr_derive(tpl$derive, env, defs$name, template, origins)
   .tr_check(tpl$check, env, defs$name, origins, template, who)
@@ -225,6 +226,7 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
     .derive_map_in(r)
   }
   rows <- if (!is.null(names(rows))) fill_row(rows) else lapply(rows, fill_row)
+  rows <- .tr_den_keep(rows, env, defs$name)
 
   items <- list()
   for (it in tpl$analysis %||% list()) {
@@ -281,6 +283,49 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   attr(out, "args") <- args_env
   attr(out, "origins") <- origins
   out
+}
+
+# A report written before the column headers' N had its own param (canon
+# 11-28, CANON-6): its `denominator: X` meant both the header's N and the
+# percentages' denominator; now it is the percentages' only.  When it gives
+# denominator and not col_header_n_data, and the row is another than
+# col_header_n_data's, the header's N no longer follows it: a warning, once a
+# session for the report, the template and the row.
+.tr_header_n_moved <- function(env, origins, defs, id, template) {
+  if (!all(c("col_header_n_data", "denominator") %in% defs$name)) return(invisible())
+  if (!identical(unname(origins["denominator"]), "report") ||
+      identical(unname(origins["col_header_n_data"]), "report")) return(invisible())
+  den <- env$denominator
+  hdr <- env$col_header_n_data
+  if (!is.character(den) || length(den) != 1L || identical(den, hdr)) return(invisible())
+  who <- if (length(id) && !is.na(id[1L])) paste0(id[1L], ": ") else ""
+  hdr <- hdr %||% "adsl_sub"
+  rlang::warn(sprintf(paste0(
+    "%s%s: denominator: %s is now the percentages' denominator only; the column ",
+    "headers' N counts col_header_n_data (%s). Write col_header_n_data: %s if the ",
+    "header N should follow it (col_header_n_data: %s keeps the header's N, with no warning)."),
+    who, template, den, hdr, den, hdr),
+    .frequency = "once", .frequency_id = paste("tflspec-header-n", who, template, den))
+  invisible()
+}
+
+# The percentages' denominator a report's data row of one row a subject and
+# parameter (`distinct: [USUBJID, PARAMCD]`, the subjects tested, CANON-6):
+# cards counts a denominator by every column of the call's by it has, so
+# the row keeps its distinct columns and the groups (`by`) only -- not the
+# category the row's record has (ANRIND), which would make each cell's N its
+# own category's.  Written as the row's `keep:`, when the row gives none.
+.tr_den_keep <- function(rows, env, params) {
+  if (!all(c("col_header_n_data", "denominator", "by") %in% params)) return(rows)
+  den <- env$denominator
+  if (!is.character(den) || length(den) != 1L || !is.null(names(rows))) return(rows)
+  k <- match(den, vapply(rows, function(e) as.character(e$id %||% NA_character_), ""))
+  if (is.na(k)) return(rows)
+  r <- rows[[k]]
+  dis <- as.character(unlist(r$distinct))
+  if (!length(dis) || !is.null(r$keep) || !is.null(r$code)) return(rows)
+  rows[[k]]$keep <- unique(c(dis, as.character(unlist(env$by))))
+  rows
 }
 
 # The template's derive: names, in order, each one operation of

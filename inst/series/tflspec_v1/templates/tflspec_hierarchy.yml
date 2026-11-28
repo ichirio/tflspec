@@ -66,15 +66,26 @@ params:
     step: analysis
     tier: usual
     description: A Total column from the overall rows.
-  denominator:
+  col_header_n_data:
     type: string
     input: pick
     choices: report_data
     default: adsl_sub
     step: analysis
     tier: usual
-    description: The data row whose subjects are the group Ns (BIGN) and the
-      percentages' denominator; both come from the one BIGN item.
+    description: The data row whose subjects are the column headers' N (the
+      BIGN item counts it; one row a subject in each group).
+  denominator:
+    type: string
+    input: pick
+    choices: report_data
+    default: ~
+    step: analysis
+    tier: usual
+    description: "The data row the percentages divide by; empty for
+      col_header_n_data's row.  For the subjects tested, a row of one record
+      a subject and parameter (from the records row, distinct: [USUBJID,
+      PARAMCD]): each parameter's count comes from the analysis's by."
   min_pct:
     type: number
     input: text
@@ -217,6 +228,10 @@ params:
 extends: !series extends
 style: !series style
 derive:
+  # the percentages' denominator: the row denominator names, else the one
+  # the header's N counts (canon 11-28, CANON-6: two params, the same row
+  # by default)
+  denominator_row: {if: "{denominator}", then: "{denominator}", else: "{col_header_n_data}"}
   # the outer levels, the row keys group1, group2, ... (nothing for one level)
   hierarchy_outer: {but_last: "{hierarchy}"}
   hierarchy_rows: {keys: "{hierarchy_outer}", prefix: group}
@@ -266,7 +281,7 @@ analysis:
   - id: BIGN
     label: Subjects per group
     method: categorical
-    data: "{denominator}"
+    data: "{col_header_n_data}"
     variables: ["{by}"]
     formats: "{formats}"
   - id: HIER
@@ -277,7 +292,7 @@ analysis:
     by: ["{by}"]
     overall: "{total}"
     variables: "{hierarchy}"
-    denominator: BIGN
+    denominator: "{denominator_row}"
     args: !r over_variables = {any_row}
     post: !r keep_min_pct({min_pct}, "{min_pct_in}")
     formats: "{formats}"

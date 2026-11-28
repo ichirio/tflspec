@@ -137,7 +137,8 @@ test_that("lab: a condition row a test and a direction, its id by PARAMCD and to
   expect_identical(sh$conditions$analysis_id, c(NA, NA, "NA_HIGH2"))
   expect_identical(sh$analysis_per, "PARAMCD|tox_dir")
   expect_identical(sh$levels$PARAM, "{param}")
-  expect_length(sh$ards, 4L)})
+  expect_length(sh$ards, 4L)
+})
 
 test_that("a conditions row may name its own analysis_id", {
   rows <- list(list(tox_dir = "High", analysis_id = "ALT_HIGH"), list(tox_dir = "Low"))
@@ -250,7 +251,12 @@ test_that("tflspec_summary: demog's arguments give demog's code SPEC; the analys
     expect_identical(b[[k]], a[[k]], info = k)
   }
   expect_identical(attr(b, "template"), "tflspec_v1/tflspec_summary")
-  expect_identical(attr(b, "args")[names(attr(a, "args"))], attr(a, "args"))
+  # (demog's one denominator is the summary's two, canon 11-28 CANON-6: the
+  # header's N on that row, the percentages' empty for the same row)
+  same <- setdiff(names(attr(a, "args")), "denominator")
+  expect_identical(attr(b, "args")[same], attr(a, "args")[same])
+  expect_identical(attr(b, "args")$col_header_n_data, attr(a, "args")$denominator)
+  expect_null(attr(b, "args")$denominator)
   # the analysis set: a param, its default the series' population_safety
   expect_identical(attr(b, "args")$population, "SAF")
   expect_identical(attr(b, "origins")[["population"]], "series")

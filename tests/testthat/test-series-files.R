@@ -75,18 +75,26 @@ test_that("every template has its keys, a BIGN item and ids on its items", {
   }
 })
 
-test_that("the percentages' denominator is BIGN and the items say how analysis ids are made", {
+test_that("the percentages' denominator is BIGN's or its own row and the items say how analysis ids are made", {
   skip_if(!nzchar(series_dir()), "the series folder is not installed")
   # (the shipped templates and the test series' ones: demog, ae_soc_pt,
   # lab_tox_shift, orr_subgroup, listing)
   ts <- c(series_templates(), series_templates(test_path("fixtures", "series", "tflspec_test")))
   expect_length(ts, 12L)
-  for (nm in c("demog", "ae_soc_pt", "lab_tox_shift", "tflspec_shift")) {
+  for (nm in c("demog", "ae_soc_pt", "lab_tox_shift", "tflspec_shift", "tflspec_summary",
+               "tflspec_hierarchy")) {
     a <- ts[[paste0(nm, ".yml")]]$analysis
     ids <- vapply(a, function(x) x$id, character(1))
     den <- unlist(lapply(a, function(x) x$denominator))
-    expect_identical(unique(den), "BIGN", info = nm)
     expect_identical(sum(ids == "BIGN"), 1L, info = nm)
+    # (the shipped three: the header's N and the percentages' denominator
+    # two params, canon 11-28 CANON-6; the test series': the BIGN item)
+    if (startsWith(nm, "tflspec_")) {
+      expect_identical(unique(den), "{denominator_row}", info = nm)
+      expect_identical(a[[match("BIGN", ids)]]$data, "{col_header_n_data}", info = nm)
+    } else {
+      expect_identical(unique(den), "BIGN", info = nm)
+    }
   }
   lab <- ts[["lab_tox_shift.yml"]]
   expect_identical(lab$params$conditions$type,

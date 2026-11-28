@@ -117,15 +117,26 @@ params:
     tier: usual
     description: A Total column under each group, the subjects of all the
       categories after baseline.
-  denominator:
+  col_header_n_data:
     type: string
     input: pick
     choices: report_data
     default: adsl_sub
     step: analysis
     tier: usual
-    description: The data row whose subjects are the group Ns (BIGN) and the
-      percentages' denominator; both come from the one BIGN item.
+    description: The data row whose subjects are the column headers' N (the
+      BIGN item counts it; one row a subject in each group).
+  denominator:
+    type: string
+    input: pick
+    choices: report_data
+    default: ~
+    step: analysis
+    tier: usual
+    description: "The data row the percentages divide by; empty for
+      col_header_n_data's row.  For the subjects tested, a row of one record
+      a subject and parameter (from the records row, distinct: [USUBJID,
+      PARAMCD]): each parameter's count comes from the analysis's by."
   analysis_ids:
     type: map<string,string>
     input: table
@@ -251,6 +262,10 @@ params:
 extends: !series extends
 style: !series style
 derive:
+  # the percentages' denominator: the row denominator names, else the one
+  # the header's N counts (canon 11-28, CANON-6: two params, the same row
+  # by default)
+  denominator_row: {if: "{denominator}", then: "{denominator}", else: "{col_header_n_data}"}
   # the calls besides the cells: the Total row (the categories after
   # baseline by the parameter), the Total column (the categories at
   # baseline by the parameter) and, with both, their corner; nothing when off
@@ -297,7 +312,7 @@ analysis:
   - id: BIGN
     label: Subjects per group
     method: categorical
-    data: "{denominator}"
+    data: "{col_header_n_data}"
     variables: ["{by}"]
     formats: "{formats}"
   - id: SHIFT
@@ -310,7 +325,7 @@ analysis:
     variables: ["{baseline}"]
     # (N, the analysis's own denominator, stays in the ARD: canon 2026-11-16)
     statistics: [n, N, p]
-    denominator: BIGN
+    denominator: "{denominator_row}"
     missing_row: "{missing_row}"
     missing_label: "{missing_label}"
     formats: "{formats}"

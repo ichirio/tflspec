@@ -510,8 +510,13 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
   # nm: the variable whose non-missing values the percentage divides by
   # (cards' own denominator), with the analysis's dataset, data subset and
   # groupings
+  # (den_other: the analysis's denominator is a data row other than its
+  # analysis set's subjects -- the subjects tested for each parameter: its
+  # percentages are not of BIGN, so they name no denominator, said in
+  # `unmapped`)
+  den_other <- FALSE
   need_den <- function(id, r, by, mz, ds, pur, rea, nm = NULL) {
-    if (!"p" %in% names(mz$op)) return(invisible())
+    if (!"p" %in% names(mz$op) || den_other) return(invisible())
     pending_den[[length(pending_den) + 1L]] <<- list(
       id = id, out = r$output_id, pop = r$population_id, by = by, mz = mz,
       ds = ds, r = r, pur = pur, rea = rea, nm = nm)
@@ -593,14 +598,22 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
               collapse = ", ", sep = "")))
     }
     # (a denominator that is the analysis data of the analysis's own set --
-    # an analysis_data row with that population, what BIGN counts -- is the
-    # analysis set's subject count: nothing to say)
+    # an analysis_data row with that population, of the set's own dataset,
+    # what BIGN counts -- is the analysis set's subject count: nothing to say)
     ad_o <- .adata_of(ad, out)
-    den_set <- !is.na(r$denominator %||% NA) && r$denominator %in% ad_o$data_id &&
-      !is.na(r$population_id) &&
+    den_row <- !is.na(r$denominator %||% NA) && r$denominator %in% ad_o$data_id
+    den_set <- den_row && !is.na(r$population_id) &&
       identical(ad_o$population_id[match(r$denominator, ad_o$data_id)],
-                r$population_id)
-    if (!is.na(r$denominator %||% NA) && r$denominator != "population" &&
+                r$population_id) &&
+      identical(toupper(.adata_dataset(ad_o, r$denominator) %||% NA_character_),
+                toupper(pds %||% NA_character_))
+    den_other <- den_row && !den_set
+    if (den_other) {
+      miss(tag, "denominator", sprintf(paste(
+        "`%s`: the percentages divide by this data row's subjects (each",
+        "parameter's, by the analysis's by), not by the analysis set's subject",
+        "count; ARS has no denominator for it, so none is mapped"), r$denominator))
+    } else if (!is.na(r$denominator %||% NA) && r$denominator != "population" &&
         !den_set) {
       miss(tag, "denominator", sprintf(paste(
         "`%s`: a percentage's denominator in ARS is the analysis set's",

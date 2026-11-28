@@ -1389,6 +1389,8 @@ tfl_build_ard <- function(spec, dir = ".", output_id = NULL, save = TRUE,
   e <- new.env(parent = globalenv())
   .eval_study_code(code, e, spec, ".", output_id = output_id)
   .ard_optional_note(ard, e, output_id)
+  # (the header's N and the percentages' denominator: R/ard_bign_check.R)
+  .ard_bign_checks(ard, e, output_id)
   invisible(e$ard)
 }
 
