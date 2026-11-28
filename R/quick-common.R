@@ -187,7 +187,7 @@ pp_q_group_pal <- function(obj, df, var, df_name, palette) {
 pp_q_script <- function(pid, what, title, libs, data, plot, width, height, dpi = 300, units = "in",
                         file = NULL) {
   code <- paste(c(
-    pp_seq_header(pid, what, title, libs),
+    pp_seq_header(pid, what, title, libs, code = c(unlist(data), plot)),
     section("data"),
     paste(data[!vapply(data, is.null, logical(1))], collapse = "\n\n"),
     "",

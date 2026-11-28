@@ -31,8 +31,8 @@ est <- local({
       level = coalesce(SEX, AGEGR1, "All subjects"),
       ok = is.finite(estimate) & is.finite(conf.low) & is.finite(conf.high) &
         conf.high < 1000,
-      txt = ifelse(ok, sprintf("%.2f (%.2f, %.2f)", estimate, conf.low, conf.high),
-                   "NE"),
+      txt = ifelse(ok, paste0(fmt_num(estimate, 2), " (", fmt_num(conf.low, 2),
+                              ", ", fmt_num(conf.high, 2), ")"), "NE"),
       across(c(estimate, conf.low, conf.high), ~ ifelse(ok, .x, NA))
     )
   # a heading row above each subgroup's levels, the levels indented

@@ -27,6 +27,7 @@
   # the resolved arguments, .fig_content_key())
   args <- if (!is.null(out$figure)) attr(out, "args")
   attr(out, "template") <- attr(out, "args") <- attr(out, "origins") <- NULL
+  attr(out, "page_template") <- NULL
   if (!is.null(args)) attr(out, "args") <- args
   out
 }

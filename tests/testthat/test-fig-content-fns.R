@@ -26,7 +26,7 @@
   conds <- list(c("ALL", "ALL"), c("SEX", "F"), c("SEX", "M"))
   rows <- lapply(conds, function(cnd) {
     sub <- if (cnd[[1L]] == "ALL") d else d[d[[cnd[[1L]]]] == cnd[[2L]], , drop = FALSE]
-    fit <- survival::coxph(ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ TRT01A, data = sub)
+    fit <- survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = sub)
     a <- cardx::ard_regression(fit, exponentiate = TRUE)
     a$group1 <- "subgroup"
     a$group1_level <- list(cnd[[1L]])
@@ -53,7 +53,7 @@ test_that("km_curves() draws the KM curves with N in the legend", {
   skip_if_not_installed("survival")
   skip_if_not_installed("cards")
   d <- .fcf_adtte()
-  fit <- ggsurvfit::survfit2(ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ TRT01A, data = d)
+  fit <- ggsurvfit::survfit2(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = d)
   p <- km_curves(fit, .fcf_bign(d), list(time_unit = "days"))
   expect_s3_class(p, "ggplot")
   expect_no_error(b <- ggplot2::ggplot_build(p))
@@ -68,7 +68,7 @@ test_that("km_curves() takes its params; an unknown one stops", {
   skip_if_not_installed("ggsurvfit")
   skip_if_not_installed("survival")
   d <- .fcf_adtte()
-  fit <- ggsurvfit::survfit2(ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ TRT01A, data = d)
+  fit <- ggsurvfit::survfit2(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = d)
   for (lg in c("inside", "bottom", "none")) {
     p <- km_curves(fit, NULL, list(legend = lg, x_label = "Months ({time_unit})",
                                    time_unit = "months", y_label = "S(t)"))
@@ -141,4 +141,19 @@ test_that("forest_hr() takes its params", {
   expect_error(forest_hr(hr, list(favours = "x")), "two labels")
   expect_error(forest_hr(hr, list(size = 3)), "unknown params size")
   expect_error(forest_hr(as.data.frame(.fcf_bign(d))), "no HR rows")
+})
+
+test_that("forest_hr()'s text rounds by the study's rule, as a table's {x:.2f}", {
+  skip_if_not_installed("ggplot2", "3.5.2")
+  # (A3) 0.125 is "0.13" under rounding: sas (half away from zero), and
+  # 2.675 (2.67499999... in binary) "2.68"; under "r" 0.125 is "0.12"
+  hr <- data.frame(analysis_id = "HR", variable = "TRT01A", variable_level = "Drug X",
+                   stat_name = c("estimate", "conf.low", "conf.high"),
+                   stat = c(0.125, 0.0625, 2.675), stringsAsFactors = FALSE)
+  old <- options(rtfreporter.rounding = "sas")
+  on.exit(options(old), add = TRUE)
+  p <- forest_hr(hr)
+  expect_true(grepl("0.13 (0.06, 2.68)", p$data$txt, fixed = TRUE))
+  options(rtfreporter.rounding = "r")
+  expect_true(grepl("0.12 (0.06, ", forest_hr(hr)$data$txt, fixed = TRUE))
 })

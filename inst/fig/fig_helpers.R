@@ -235,8 +235,9 @@ tfl_check <- function(plot, levels = NULL, quiet = FALSE) {
 # (cardx::ard_survival_survfit(times = ) -- e.g. its rows of the study ARD),
 # so the figure and the table agree.  With `fit`, the curve's own count at
 # the same times is checked against it (a warning when they differ).
-# `divisor` turns the ARD's time unit into the axis's (30.4375: days to
-# months).  A data frame: time, strata, n_risk.
+# The ARD's times are in the analysis data's unit; `divisor` turns them into
+# the axis's (1 when they already are, e.g. when the table's data was
+# converted by tte_time()).  A data frame: time, strata, n_risk.
 tfl_km_risk <- function(ard, fit = NULL, divisor = 1) {
   a <- ard[ard$variable == "time" & ard$stat_name == "n.risk", , drop = FALSE]
   strata <- if ("group1_level" %in% names(a)) {

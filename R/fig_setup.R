@@ -19,9 +19,11 @@
 #'   `NULL` when it has none);
 #' * `tfl_marker(name)` -- an event or symbol marker (`Death`, `censor` ...);
 #' * `tfl_save(plot, file, type)` -- `ggsave()` at the standard's size;
-#' * `tfl_km_risk(ard, fit)` -- a KM figure's number at risk from the KM
-#'   table's ARD (`cardx::ard_survival_survfit(times = )`), checked against
-#'   the curve;
+#' * `tfl_km_risk(ard, fit, divisor = 1)` -- a KM figure's number at risk
+#'   from the KM table's ARD (`cardx::ard_survival_survfit(times = )`),
+#'   checked against the curve.  The ARD's times are in the analysis data's
+#'   unit; `divisor` turns them into the axis's (1 when they already are,
+#'   e.g. when the table's data was converted by `tte_time()`);
 #' * `tfl_check(plot, levels = )` -- the checks of [tfl_check_fig()].
 #'
 #' The script also sets `options(tflspec.fig_style =)` to the same tables
@@ -112,4 +114,16 @@ tfl_check_fig <- function(plot, levels = NULL, quiet = FALSE) {
   on.exit(options(old), add = TRUE)
   eval(parse(text = tfl_fig_setup_code(style), encoding = "UTF-8"), envir = env)
   invisible(env)
+}
+
+# What a study's setup gives a figure report's code before it runs, evaluated
+# into `env`: programs/study_helpers.R (tfl_helpers_code(): fmt_num(),
+# order_levels(), tte_time() ...), then programs/tfl/fig_setup.R
+# (tfl_fig_setup_code(): theme_tfl() ... and the days_per_* constants, each
+# unless the session has it -- a study's own value, set in its setup, wins).
+# A report's content code carries none of them (.fig_script_head()): what
+# runs it outside the study's program gives them here, the same lines.
+.study_setup_eval <- function(env) {
+  eval(parse(text = tfl_helpers_code(), encoding = "UTF-8"), envir = env)
+  .fig_setup_eval(env)
 }
