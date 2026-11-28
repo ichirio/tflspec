@@ -8,7 +8,7 @@ test_that("page arguments without a column: in page_more, and back", {
   page <- list(
     rtf_titles = list(font_size_half_points = 20L, row_height_twips = 300L, align = "left"),
     rtf_header = list(border = tfl_call("rtf_border", list(bottom = TRUE)), font_size_half_points = 16L),
-    rtf_figures = list(align = "left"),
+    rtf_figures = list(space_before = 2L),
     titles = list(`1` = list(center = "Table 1")))
   tfl_write_output(tfl_output("T-1", "table", extends = "none", page = page),
                    file.path(d, "spec", "outputs", "T-1.yml"))

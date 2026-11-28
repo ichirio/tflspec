@@ -147,6 +147,31 @@ yet, with the values of `tfl_time_unit_days()`.
 tfl_time_unit_days()
 ```
 
+## Its size, alignment and resolution: `tfl_image`
+
+A figure report's content makes the figure object (a ggplot, or a
+patchwork of several); its last item, `tfl_image`, holds how that object
+is drawn and placed -- its render settings: `width_in` and `height_in`
+(inches, or `fit`, the page's body), `align`, `dpi`, `png_device`, and the
+`format` and `file` of a saved copy. A setting it leaves out is the
+study's, `study.yml`'s `settings: figure:` (`!study figure.dpi`), else the
+built-in one (the figure's own size, 300 dpi, centred). The report's
+`page:` keeps only what tables and figures share -- the titles, the
+footnotes, `page_break`, `space_before`; a size or an alignment written
+under `page: rtf_figures:` stops the program, and `tfl_check_spec()` says
+where it moved.
+
+```yaml
+# study.yml
+settings:
+  figure: {width_in: fit, dpi: 300}
+# spec/outputs/F-14-2-1.yml
+content:
+  - ggplot: {data: sm, mapping: {x: AVISIT, 'y': mean, colour: TRTA}}
+  - geom_line: {}
+  - tfl_image: {height_in: 4.5, align: center}
+```
+
 ## A forest plot from the figure's own ARD
 
 The `forest_hr` template draws hazard ratios that are statistics of an

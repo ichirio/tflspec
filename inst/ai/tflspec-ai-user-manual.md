@@ -472,14 +472,21 @@ content:
   report's objects with their R names; `tfl_default_name(report, "plot")`
   names a new one (`plot_1`, `model_1`; a data row `<dataset>_sub`, then
   `_sub2`).
-- `tfl_image: {width_in, height_in, dpi, format, file}` is the image:
-  its size on the page (inches, or `fit` -- the page's body; left out: the
-  page's `rtf_figures` size, else the figure's own 6.5 x 4.5 in) and its
-  resolution (300 dpi when not said).  The report draws the figure at that
-  size and resolution (`rtf_figures(doc, rtfplot(content, render_width =,
-  render_height =, render_dpi =))`), so it is never stretched into its box;
-  with `file` (`{output_id}.png`) the figure's code saves the image there
-  too, in `format` (png, svg, pdf).
+- `tfl_image: {width_in, height_in, align, dpi, png_device, format, file}`
+  is the figure's render settings -- every setting that is a figure's own:
+  its size on the page (inches, or `fit` -- the page's body), where it sits
+  across the page (`align`), its resolution and PNG device.  A setting left
+  out is the study's (`study.yml` `settings: {figure: {width_in: fit, dpi:
+  300}}`, read as `!study figure.<setting>`), else the built-in one (the
+  figure's own 6.5 x 4.5 in, 300 dpi, centred).  The report draws the figure
+  at that size and resolution (`rtf_figures(doc, rtfplot(content,
+  render_width =, render_height =, render_dpi =), align =)`), so it is never
+  stretched into its box; with `file` (`{output_id}.png`) the figure's code
+  saves the image there too, in `format` (png, svg, pdf).  The page keeps
+  only what tables and figures share (titles, footnotes, `page_break`,
+  `space_before`): `page: rtf_figures:` takes no size, `align`, `render_*`
+  or `png_device` -- written there they stop the program, and
+  `tfl_check_spec()` says where they moved.
 - The data steps (`data: {source: code, steps: [...]}`) are the
   designer's, below; the x axis's breaks a figure shares with its panel
   (`x_breaks`) are a `code` step.
@@ -920,19 +927,20 @@ contents:
   km:                                              # its own data (a figure)
     data: {steps: [{step: read, dataset: ADTTE}, {step: param, value: OS}]}
     template: {name: km_survival, args: {by: TRT01A}}
+    content: [{tfl_image: {height_in: 3}}]         # its render settings
 page:
   titles: {"1": {center: Table 14.1.9}}            # above the first object
   footnotes: {"1": {left: ...}}                    # below the last
   layout:
     - {object: demog}
-    - {object: km, page_break: false, space_before: 1, height_in: 3,
+    - {object: km, page_break: false, space_before: 1,
        titles: {"1": {left: Overall survival}}}
 ```
 
 A layout row takes `object`, `page_break` (each object after the first
 goes on under the one before unless `true`), `space_before`, `first_rows`,
-`cont_title` (a table's), `titles`, `footnotes`, `width_in`, `height_in`
-(a figure's). Tables share the report's ARD: keep each table to its own
+`cont_title` (a table's), `titles`, `footnotes`; a figure's size is its
+content's `tfl_image` (§7.1), not the layout row's. Tables share the report's ARD: keep each table to its own
 analyses with `plan_filter: {where: !r 'analysis_id %in% c("AGE", "SEX")'}`.
 `tfl_run_output("<id>")` writes the RTF. Not yet in the workbooks (sheets).
 
@@ -1432,7 +1440,7 @@ file.
 
 | Sheet | Columns |
 |---|---|
-| `report` | `type` (`table` / `listing` / `figure`), `file` (`{output_id}.rtf`), `program`, `auto_section`, `section_align`, `auto_title`, `title_align`, `table_font_size_half_points`, `title_font_size_half_points`, `footnote_font_size_half_points`, `page_header`, `page_footer`, `watermark` (`DRAFT`), `figure_width_in`, `figure_height_in` (a figure's size on the page: a number of inches, `fit` -- the page's body -- or blank, the figure's own size as rtfreporter places it -- `tfl_fig_page_size()`; a design's `plot` has only `dpi`, the resolution), `ard_source`, `pattern`, `ard_object` (the ARD's name in the report's program, default `ard`), `page_break`, `space_before`, `first_rows`, `cont_title` (as in a layout row, §11.1), `data_code` and `content_code` (a step that is the report's own R instead of the definition: the data step leaves `data`, a figure's `df`; the content step leaves `content`; the report's datasets by their names in lower case, and `ard` when it reads its ARD, are in reach -- `tfl_check_code()`) |
+| `report` | `type` (`table` / `listing` / `figure`), `file` (`{output_id}.rtf`), `program`, `auto_section`, `section_align`, `auto_title`, `title_align`, `table_font_size_half_points`, `title_font_size_half_points`, `footnote_font_size_half_points`, `page_header`, `page_footer`, `watermark` (`DRAFT`), `figure_width_in`, `figure_height_in` (a figure's size on the page: a number of inches, `fit` -- the page's body -- or blank, the figure's own size as rtfreporter places it -- `tfl_fig_page_size()`; in the YAML spec the figure content's `tfl_image`; a design's `plot` has only `dpi`, the resolution), `ard_source`, `pattern`, `ard_object` (the ARD's name in the report's program, default `ard`), `page_break`, `space_before`, `first_rows`, `cont_title` (as in a layout row, §11.1), `data_code` and `content_code` (a step that is the report's own R instead of the definition: the data step leaves `data`, a figure's `df`; the content step leaves `content`; the report's datasets by their names in lower case, and `ard` when it reads its ARD, are in reach -- `tfl_check_code()`) |
 | `page` | `paper_size`, `orientation`, `width_in`, `height_in`, margins `margin_*_in`, `header_dist_in`, `footer_dist_in`, `font` (the document's font; the study's row goes to the setup's `options()`), `font_lang` (the language of a font slot: `east_asian = ja`), `font_size_half_points`, `title_format`, `footnote_format`, `title_width`, `footnote_width`, `markup`, `page_more` (the page's rtfreporter arguments no column says, as YAML: `{rtf_header: {font_size_half_points: 16}}`) |
 | `header`, `footer`, `titles`, `footnotes` | `line`, `left`, `center`, `right` — a report's line replaces the default line of the same number; a report's line that says `(none)` takes it out |
 | `tokens` | `name`, `value` — a token of one's own, `{STUDY}` in any of the cells above (`rtf_document(tokens = )`); a report's row replaces the default of the same name, `(none)` takes it out; names upper case, not rtfreporter's own. A report's own tokens work without a row: `{OUTPUT_ID}`, `{OUTPUT_LABEL}` ("Table 14.1.1" from the ID; rows `OUTPUT_KIND_TABLE` / `_LISTING` / `_FIGURE` change the words), `{OUTPUT_TITLE}` `{OUTPUT_POPULATION}` `{OUTPUT_SECTION}` `{STUDY_ID}` (blank unless a row gives them); a line left with only empty tokens is not printed. What every report shares (the default token rows, the default header / footer) can be written once: `tfl_report_setup_code(spec)` (`options(rtfreporter.tokens = )`, `study_header`, `study_footer`; for the YAML spec `tfl_report_setup_code(study)`, from the study's page configurations, `header_<name>` and `footer_<name>` each, and `study.yml`'s `tokens:`), and each program with `tfl_report_code(..., setup = TRUE)` |

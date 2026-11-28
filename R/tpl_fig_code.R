@@ -249,9 +249,10 @@
   if (is.null(output$figure)) return(NULL)
   tp <- attr(output, "template")
   key <- tryCatch(.fig_content_key(output), error = function(e) .ard_stop(conditionMessage(e)))
-  if (length(output$content)) {
-    .ard_stop(sprintf("%s: a report with `figure:` has no `content:` (the figure content is the call).",
-                      output$id))
+  # (its render settings only: a tfl_image item, read by the page step)
+  if (length(Filter(Negate(.fig_is_image), output$content))) {
+    .ard_stop(sprintf(paste0("%s: a report with `figure:` has no `content:` but its render settings ",
+                             "(tfl_image): the figure content is the call."), output$id))
   }
   fig <- key$name
   e <- .fig_content_table()[[fig]]

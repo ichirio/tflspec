@@ -63,13 +63,15 @@ test_that("two tables and a KM plot in one RTF: the titles and footnotes where t
     km = list(kind = "figure",
               data = list(steps = list(list(step = "read", dataset = "ADTTE"),
                                        list(step = "param", value = "OS"))),
-              template = list(name = "km_survival", args = list(by = "TRT01A")), short = FALSE))
+              template = list(name = "km_survival", args = list(by = "TRT01A")),
+              # (its size: its content's tfl_image)
+              content = list(tfl_item("tfl_image", list(height_in = 3))), short = FALSE))
   m$page$titles <- list(`1` = list(center = "Table M-1"), `2` = list(center = "OUTPUT TITLE"))
   m$page$footnotes <- list(`1` = list(left = "OUTPUT FOOT"))
   m$page$layout <- list(list(object = "demog"),
                         list(object = "again", space_before = 1L,
                              titles = list(`1` = list(left = "SECOND TITLE"))),
-                        list(object = "km", page_break = TRUE, height_in = 3,
+                        list(object = "km", page_break = TRUE,
                              footnotes = list(`1` = list(left = "KM FOOT"))))
   tfl_write_output(m, file.path(d, "spec", "outputs", "M-1.yml"))
   st <- tfl_read_study_spec(d)
@@ -80,6 +82,7 @@ test_that("two tables and a KM plot in one RTF: the titles and footnotes where t
   code <- paste(tfl_report_code(tfl_read_outputs(d)[["M-1"]], study = st), collapse = "\n")
   expect_match(code, "rtf_tables[(][[:space:]]*demog")
   expect_match(code, "rtf_figures[(][[:space:]]*km")
+  expect_match(code, "height_twips = 4320", fixed = TRUE)
   expect_false(grepl("rtf_titles(", code, fixed = TRUE))
   f <- tfl_run_output("M-1", d)
   expect_true(file.exists(f))

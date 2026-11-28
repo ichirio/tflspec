@@ -214,7 +214,6 @@ test_that("a union's input: the first member that is not r, the exceptions writt
     c("rtf_border", "top", "pick"),               # logical|enum[..]|call<..>
     c("plan_listing", "wrap", "pick"),            # logical|string
     c("tfl_image", "width_in", "text"),           # number|enum[fit]
-    c("rtf_figures", "width_twips", "text"),      # integer|enum[fit]
     c("plan_sort", "keys", "text"),               # list<string>|logical (the dots' type)
     c("scale_x_continuous", "breaks", "text"),    # list<number>|call<..>|r
     c("ggplot", "data", "text"),                  # object|r (drawn by the type)

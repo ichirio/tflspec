@@ -296,6 +296,11 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
                               paste0("{", tok, "}", collapse = ", ")))
       }
     }
+    # a figure's own setting said in the page (its own, its configuration's):
+    # it moved to the content's tfl_image, no alias -- the program stops
+    for (m in .fig_page_moved_said(ro$page)) {
+      add(output_id = id, part = "page", item = sub(" .*$", "", m), level = "error", message = m)
+    }
     # what the AI marked to confirm (`ai: confirm`): to look at
     cf <- .ai_confirm_rows(ro)
     if (nrow(cf)) {
