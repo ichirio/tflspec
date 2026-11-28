@@ -5,13 +5,25 @@ common:
   population: ITT
 extends:
   - defaults
+codelists:
+  AVALC:
+    - value: CR
+      label: Complete response (CR)
+    - value: PR
+      label: Partial response (PR)
+    - value: SD
+      label: Stable disease (SD)
+    - value: PD
+      label: Progressive disease (PD)
+    - value: NE
+      label: Not evaluable (NE)
 data:
   - id: adrs_bor
     from: ADRS
     population: ITT
     where: !r PARAMCD == "BOR"
     derive: !r RESP = AVALC %in% c("CR", "PR")
-ard:
+analysis:
   analyses:
     - id: BOR
       method: categorical
@@ -28,18 +40,6 @@ ard:
       variables:
         - RESP
       args: !r method = "clopper-pearson"
-codelists:
-  AVALC:
-    - value: CR
-      label: Complete response (CR)
-    - value: PR
-      label: Partial response (PR)
-    - value: SD
-      label: Stable disease (SD)
-    - value: PD
-      label: Progressive disease (PD)
-    - value: NE
-      label: Not evaluable (NE)
 content:
   - table_plan:
       cols: TRT01P
@@ -85,7 +85,7 @@ page:
       left: '95% CI: Clopper-Pearson exact confidence interval.'
 ai:
   assumptions:
-    - where: ard.analysis_data
+    - where: analysis.analysis_data
       item: RESP
       assumption: a responder has a best overall response of CR or PR (PARAMCD BOR)
       question: Confirmed responses only?

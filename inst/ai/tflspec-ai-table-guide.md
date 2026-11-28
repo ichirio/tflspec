@@ -157,8 +157,8 @@ a candidate of each. The correction is saved as
 too once the study's `ai/` folder exists, and makes nothing else), and
 used by the next calls until `numbers` is given again.
 
-**The agent's rules** are `study.yml`'s `ai:` keys (the study standard's
-`spec/defaults.yml` may say them first; `study.yml` wins):
+**The agent's rules** are `study.yml`'s `ai:` keys (these names only: an
+unknown one stops the read):
 
 ```yaml
 ai:
@@ -167,7 +167,8 @@ ai:
   requests_per_chat: 0  # stop after this many requests and ask for a new chat (0: no limit)
   carry: [all, dataset, section]   # which decisions apply to a later report without asking
   max_rounds: 3         # one item asked again at most this many times, then marked to confirm
-  footnotes_at: footer  # where the shell's footnotes go: "footer", or "table"
+  shell_footnotes: footer  # where the shell's footnotes go: "footer", or "table"
+  shell_code: '^([0-9]+_)?[tlf]_[A-Za-z0-9_]+$'  # the form of the code at the top of each shell (a file name's {shell_code})
   review: {figure: 3, table: 2, listing: 1}  # how deep the agent checks what it built: 0-3, or none
 ```
 
@@ -216,11 +217,11 @@ the names of the files to read. A request longer than `max_chars` is split.
    can write lines of your own there before it starts (a line without a
    scope is `all`).
 4. It writes each report's **skeleton** as `ai/spec/outputs/<id>.yml`:
-   `id`, `kind`, `label`, `population`, `data`, `ard` (the analysis data,
+   `id`, `kind`, `label`, `common` (its `population`), `data`, `analysis` (the analysis data,
    the analyses), the content (a template where one fits, else
    `table_plan` and `plan_cells`), the digits when the shell shows them,
    `plan_columns: {widths}` (from the shell's proportions),
-   `page: titles` and the shell's footnotes (`footnotes_at`) -- and under
+   `page: titles` and the shell's footnotes (`shell_footnotes`) -- and under
    `ai:`, its `assumptions` (each `from: D<n>`) and what is to `confirm`.
    No header rows, pages, borders or fonts: the study's
    defaults and your builder do those. Then it goes on as `run` says (below).
@@ -374,8 +375,7 @@ table keeps its draft and the difference is marked *to confirm*.
 
 The defaults are figures 3, tables 2 (the pages too when a table runs over
 one page) and listings 1. Set them in `study.yml`:
-`ai: review: {figure: 3, table: 2, listing: 1}`; the study standard's
-`spec/defaults.yml` may give the company's default. After changing them,
+`ai: review: {figure: 3, table: 2, listing: 1}`. After changing them,
 write the agent's instructions again:
 
 ```r

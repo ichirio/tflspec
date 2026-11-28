@@ -40,7 +40,12 @@ row when the two data carry the variable and its value differs for a
 subject (the subject counted under one group in the N, another in the
 rows).  Only a table whose header shows the N (\code{{n}} in a column
 header that gives no values of its own) is looked at, and only the
-datasets of such tables are read.}
+datasets of such tables are read.
+
+A key a file does not take (\code{study.yml}, a report file, \code{defaults.yml}'s
+\verb{force:}: the closed list, spec-keys-v2) is an \code{error} row of part
+\code{"file"}, its item the file and the key's path (\code{study.yml: settings: rouding}), its message what to write instead; the study is checked as
+read without it, and a report with one is not checked further.}
 }
 \value{
 A data frame, one row a problem: \code{output_id} (\code{NA} for the

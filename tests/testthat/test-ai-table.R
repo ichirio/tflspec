@@ -330,11 +330,11 @@ test_that("a flawed answer: each problem names the report, the item and the key"
     any(grepl(where, p$where, fixed = TRUE) & grepl(what, p$problem, fixed = TRUE))
   }
   expect_true(has("outputs[1] T-14-1-1 colour", "is not a key of a report file"))
-  expect_true(has("ard.analyses[3] CAT variables", "AGEGRP is not a variable of ADSL"))
+  expect_true(has("analysis.analyses[3] CAT variables", "AGEGRP is not a variable of ADSL"))
   expect_true(has("content[1] table_plan field colz", "table_plan has no argument `colz`"))
   expect_true(has("content[3] plan_magic", "not a function of a table's content"))
-  expect_true(has("ard.analysis_data[1] population", "'FULL' is not an analysis set"))
-  expect_true(has("ard.analyses[2] ORR method", "'proportion' is not a method"))
+  expect_true(has("analysis.analysis_data[1] population", "'FULL' is not an analysis set"))
+  expect_true(has("analysis.analyses[2] ORR method", "'proportion' is not a method"))
   expect_true(has("outputs T-14-3-1", "was not asked for"))
   expect_true(all(p$severity[!grepl("not asked", p$problem)] == "error"))
   # the repair prompt: the problems, the schema of the parts they are in

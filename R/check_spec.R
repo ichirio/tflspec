@@ -111,6 +111,12 @@
 #'   rows).  Only a table whose header shows the N (`{n}` in a column
 #'   header that gives no values of its own) is looked at, and only the
 #'   datasets of such tables are read.
+#'
+#'   A key a file does not take (`study.yml`, a report file, `defaults.yml`'s
+#'   `force:`: the closed list, spec-keys-v2) is an `error` row of part
+#'   `"file"`, its item the file and the key's path (`study.yml: settings:
+#'   rouding`), its message what to write instead; the study is checked as
+#'   read without it, and a report with one is not checked further.
 #' @return A data frame, one row a problem: `output_id` (`NA` for the
 #'   study's ARD definition as a whole and the study's own rows), `part`
 #'   (`"file"`, `"study"`, `"ard"`, `"content"`, `"program"`, `"figure"`,
@@ -143,11 +149,19 @@
 #'   [tfl_schema_check()], [tfl_check_fig_design()], [tfl_study_refs()]
 #' @export
 tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) {
-  if (is.character(study) && length(study) == 1L) study <- tfl_read_study_spec(study)
+  # (a key the study's files do not take: a row each, the study checked as
+  # read without it -- R/spec_keys.R)
+  key_rows <- .check_rows()
+  if (is.character(study) && length(study) == 1L) {
+    study <- tryCatch(tfl_read_study_spec(study), tflspec_spec_keys = function(e) {
+      key_rows <<- .spec_keys_check_rows(e$problems)
+      e$spec
+    })
+  }
   if (!inherits(study, "tfl_study_spec")) {
     .ard_stop("tfl_check_spec(): `study` is a study read with tfl_read_study_spec(), or its folder.")
   }
-  rows <- list(.check_rows())
+  rows <- list(.check_rows(), key_rows)
   add <- function(...) rows[[length(rows) + 1L]] <<- .check_rows(...)
   one <- function(x) .ai_one_line(conditionMessage(x))
 
@@ -162,8 +176,13 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
       if (inherits(r, "error")) {
         id <- sub("\\.ya?ml$", "", basename(f))
         bad <- c(bad, id)
-        add(output_id = id, part = "file", item = basename(f), level = "error",
-            message = paste("the YAML cannot be read as a report file:", one(r)))
+        # (keys it does not take: a row a key, R/spec_keys.R)
+        if (inherits(r, "tflspec_spec_keys")) {
+          rows[[length(rows) + 1L]] <- .spec_keys_check_rows(r$problems, id)
+        } else {
+          add(output_id = id, part = "file", item = basename(f), level = "error",
+              message = paste("the YAML cannot be read as a report file:", one(r)))
+        }
         next
       }
       if (inherits(r, "tfl_output")) r <- list(r)
@@ -249,12 +268,19 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
             # (a field of R that does not read: the walker's row says it)
             p <- .r_ard_problems_left(p, rbind(wk, wks))
             if (nrow(p)) {
-              add(output_id = ifelse(is.na(p$output_id), id, p$output_id), part = "ard",
-                  item = ifelse(nzchar(p$row %||% ""), paste0(p$row, "$", p$field), p$field),
+              # (a problem frame may lack a column: the report's id, no row)
+              col <- function(k) {
+                if (is.null(p[[k]])) rep(NA_character_, nrow(p)) else as.character(p[[k]])
+              }
+              oid <- col("output_id")
+              prow <- col("row")
+              fld <- col("field")
+              add(output_id = ifelse(is.na(oid), id, oid), part = "ard",
+                  item = ifelse(!is.na(prow) & nzchar(prow), paste0(prow, "$", fld), fld),
                   level = "error", message = p$message)
             }
           } else if (!any(wk$level == "error" & wk$part == "ard")) {
-            # (not when an `ard:` value that does not read is the cause: the
+            # (not when an `analysis:` value that does not read is the cause: the
             # walker's row says it)
             add(output_id = id, part = "program", item = "ard", level = "warning",
                 message = paste("the ARD program cannot be written:", one(e)))
@@ -271,10 +297,15 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
           invokeRestart("muffleWarning")
         })
     }
-    # (a `plot:` key that does nothing in the template: a warning of the report)
+    # (a `plot:` key that does nothing in the template: a warning of the report;
+    # a rounding the study's force replaces, canon 11-10 :366: one too)
     ro <- tryCatch(withCallingHandlers(tfl_resolve_output(o, study),
       tfl_plot_key_unused = function(w) {
         add(output_id = id, part = "plot", item = w$key, level = "warning", message = w$text)
+        invokeRestart("muffleWarning")
+      },
+      tflspec_force_over = function(w) {
+        add(output_id = id, part = "content", item = w$item, level = "warning", message = w$text)
         invokeRestart("muffleWarning")
       }), error = function(e) e)
     if (inherits(ro, "error")) {

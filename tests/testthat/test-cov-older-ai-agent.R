@@ -241,7 +241,7 @@ cov_toc_shell <- function() {
 test_that(".ai_toc_yml(): a report in parts is one entry a part; no type is a table", {
   d <- withr_tempdir()
   dir.create(file.path(d, "spec"))
-  writeLines(c("settings:", "  shell_code: '^S[0-9]+$'"), file.path(d, "spec", "study.yml"))
+  writeLines(c("ai:", "  shell_code: '^S[0-9]+$'"), file.path(d, "study.yml"))
   f <- cov_ns()$.ai_toc_yml(d, cov_toc_shell())
   y <- yaml::read_yaml(f)$outputs
   expect_identical(vapply(y, `[[`, "", "id"), c("T-14-1-1a", "T-14-1-1b", "L-16-2-1"))

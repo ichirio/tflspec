@@ -264,7 +264,7 @@
   paths <- normalizePath(paths, winslash = "/", mustWork = FALSE)
   old <- setwd(dir)
   on.exit(setwd(old), add = TRUE)
-  st <- tryCatch(tfl_read_study_spec("."), error = function(e) NULL)
+  st <- .study_spec_or_null(".")
   if (is.null(st)) return(invisible(set))
   # the tables to build: resolved first (one the study's defaults give widths,
   # or that cannot be resolved, is not built)

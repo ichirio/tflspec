@@ -41,7 +41,9 @@
 #' @param study The study's spec, as [tfl_read_study_spec()] reads it.
 #' @param outputs The reports, as [tfl_read_outputs()] reads them: a list of
 #'   `tfl_output` (as written, not resolved), named by id.
-#' @return A list: `table` (the table and report sheets, with `study`),
+#' @return A list: `table` (the table and report sheets, with `study`: its
+#'   key `rounding` the study's force, `defaults.yml` `force:`, which
+#'   [tfl_yaml_from_sheets()] writes back there),
 #'   `planner` (the `_tflplanner` sheet: the report list and the setup),
 #'   `ard` (the ARD sheets), `listing` (`listings`, `listing_cols`),
 #'   `figures` (a figure's design list, by id), `study` (study.yml's
@@ -419,7 +421,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
         note(id, "template", paste0("template arguments the templates sheet cannot hold: ",
                                     paste(enc$lost, collapse = ", ")))
       }
-      own <- c(if (length(o$content)) "content", if (length(o$ard)) "ard",
+      own <- c(if (length(o$content)) "content", if (length(o$ard)) "analysis",
                if (length(o$data$steps)) "data steps")
       if (length(own)) {
         warning(sprintf("%s: the report's own %s stay in YAML; the templates sheet has no place for them",
@@ -528,18 +530,21 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
         } else more <- c(more, list(it))
       }
       if (length(more)) lr$content_more <- .sheet_more_out(more, items = TRUE)
+      # (its note: its listings row's, as a table's is its tables row's)
+      if (!is.null(o$note)) lr$note <- cell(o$note)
       listings[[length(listings) + 1L]] <- lr
     } else if (o$kind == "figure" && .fig_new_content(o$content)) {
       # a figure of items (R/fig_content.R): its data and items as they are,
       # the design list's `content` (read back by .conv_output(), #689)
       fd <- list(template = o$template, data = o$data$steps, content = .items_to_list(o$content))
-      for (k in c("ggplot2_version", "plot", "plots", "compose", "figure")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]
+      for (k in c("ggplot2_version", "plot", "plots", "compose", "figure", "note")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]
       figures[[id]] <- fd
       # what the design list has no place for is said, by the report
       # (its analysis set is the planner's population column, .report_set())
       lost <- c(setdiff(names(o$data), c("steps", "code", "datasets", "ard", "source", "population")),
                 if (!is.null(o$data$source) && !identical(o$data$source, "code")) "source")
-      lost <- c(lost, setdiff(names(o), c(.output_fields, "template", "ggplot2_version", "plot", "plots", "compose", "figure")))
+      lost <- c(lost, setdiff(names(o), c(.output_fields, "template", "ggplot2_version", "plot", "plots", "compose",
+                                          "figure", "note")))
       if (length(lost)) {
         note(id, "figure", paste0("a figure of items: ", paste(unique(lost), collapse = ", "),
                                    " is not kept (the design list has no place for it)"))
@@ -552,8 +557,15 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       if (!is.null(o$template)) fd$template <- o$template
       if (!is.null(o$figure)) fd$figure <- o$figure
       # a figure that is its own code and nothing of the designer's has no
-      # design
-      if (!(code_content && identical(names(fd), "layers"))) figures[[id]] <- fd
+      # design (its note none to ride on); else its note is the design
+      # list's, as a table's is its tables row's
+      if (!(code_content && identical(names(fd), "layers"))) {
+        if (!is.null(o$note)) fd$note <- o$note
+        figures[[id]] <- fd
+      } else if (!is.null(o$note)) {
+        note(id, "note", paste0("the figure's note is not kept: a figure of its own code has no ",
+                                "design list to hold it"))
+      }
     }
   }
   # defaults.yml's options: and styles:, and the style: a report picks, have
@@ -596,9 +608,11 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
   ard$conditions <- .rows_df(cond_rows, .ard_spec_sheets$conditions)
   ard$ards <- .rows_df(ards_rows, .ard_spec_sheets$ards)
 
-  # the table and report sheets as data frames (the study sheet from study.yml's settings)
+  # the table and report sheets as data frames (the study sheet from study.yml's
+  # settings, and its key `rounding` from the study's force, defaults.yml `force:`)
   table <- list()
-  settings <- s$study$settings %||% list()
+  settings <- c(if (!is.null(.study_rounding(s))) list(rounding = .study_rounding(s)),
+                s$study$settings %||% list())
   # every report's file and program go back to the report sheet's study row
   fp <- settings[intersect(c("file", "program"), names(settings))]
   # (the default style is the default rows' page configuration; its name stays a study row)
@@ -679,7 +693,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
        listing = list(listings = .rows_df(listings, .listing_sheets$listings),
                       listing_cols = .rows_df(listing_cols, .listing_sheets$listing_cols),
                       figures = .rows_df(fig_rows, c("output_id", "datasets", "ard"))),
-       figures = figures, study = s$study,
+       figures = figures, study = if (!is.null(s$study)) structure(s$study, study_dir = s$dir),
        templates = .rows_df(trows, c("output_id", "kind", "label", "population", "template", "by",
                                      "where", "args")),
        template_rows = .rows_df(tparam_rows, c("output_id", "param", "value", "label")),

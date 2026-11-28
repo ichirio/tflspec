@@ -83,7 +83,7 @@
 
 # The id written at the top of a shell sheet (its first rows): the whole
 # of `151_t_dem_sub_01` or `t_dem_sub_01`; `pattern` the study's own
-# (settings: shell_code), else this form.  NA when none.
+# (study.yml `ai: shell_code`), else this form.  NA when none.
 .shell_code_pattern <- "^([0-9]+_)?[tlf]_[A-Za-z0-9_]+$"
 
 .shell_code_of <- function(cells, pattern = NULL, rows = 5L) {

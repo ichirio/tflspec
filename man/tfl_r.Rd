@@ -43,7 +43,8 @@ tfl_output(
 \item{package}{The package \code{fn} is in, when its name does not say.}
 
 \item{from}{Where an item came from: \code{"own"}, \code{"defaults"},
-\code{"pattern:<name>"}, \code{"style:<name>"}, \code{"template:<name>"}.}
+\code{"pattern:<name>"}, \code{"style:<name>"}, \code{"template:<name>"}, \code{"force"}
+(the study's force, \code{defaults.yml} \verb{force:}).}
 
 \item{id}{The report's id (letters, digits, \code{.}, \verb{_}, \code{-}); the file is
 \verb{spec/outputs/<id>.yml}.}
@@ -62,7 +63,7 @@ key stops.  The old \code{population} argument stops: write
 
 \item{extends}{The files layered under this one, nearest first
 (\code{"defaults"}, \code{"patterns/<name>"}); \code{"none"} for none; or a list by
-step (\code{data}, \code{ard}, \code{content}, \code{page}), each such a value
+step (\code{data}, \code{analysis}, \code{content}, \code{page}), each such a value
 (\code{list(content = "none")}), a step it does not name taking the
 template's, else \code{"defaults"}.  \code{NULL}: not written (a template report
 takes its template's); the default for a report with \code{template}, else

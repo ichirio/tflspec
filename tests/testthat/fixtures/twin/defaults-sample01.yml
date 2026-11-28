@@ -1,9 +1,11 @@
+force:
+  content:
+    - plan_digits:
+        rounding: sas
 content:
   - normalize_ard: {}
   - plan_cells:
       default: '{n:.0f} ({p:.1f%})'
-  - plan_digits:
-      rounding: sas
   - plan_col_header:
       header:
         - line: '1'

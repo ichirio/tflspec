@@ -37,7 +37,7 @@ error.
 not have, a content function that is not a table's, an argument the
 function does not have (\code{\link[=tfl_schema_check]{tfl_schema_check()}}, an error here: the AI's
 invention), a value of the wrong type, a required argument missing; its
-\verb{ard:} fields and method; the analysis sets of \code{spec/data.yml} (with
+\verb{analysis:} fields and method; the analysis sets of \code{spec/data.yml} (with
 \code{study_dir}); with the context's \code{datasets} (the ADaM summary), every
 dataset and variable an analysis names (made by \code{derive} or \code{add}
 aside); a report asked for and missing.  Then the answer is put in a

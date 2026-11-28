@@ -10,7 +10,7 @@ outputs:
     extends: [defaults]
     data:
       - {id: adlb_c2, from: ADLB, population: SAF, where: !r 'AVISIT == "CYCLE 2 DAY 1" & PARAMCD %in% c("ALT", "AST")'}
-    ard:
+    analysis:
       analyses:
         - {id: SHIFT, method: categorical, data: adlb_c2, by: [TRT01A, PARAMCD, BNRIND], variables: [ANRIND]}
     content:
@@ -30,7 +30,7 @@ outputs:
         "2": {center: Shift from Baseline in Laboratory Normal Range Indicator at Cycle 2 Day 1}
         "3": {center: Safety Population}
 assumptions:
-  - {output_id: T-14-3-5, where: ard.analysis_data, item: visit, assumption: "the shell's on-treatment visit is CYCLE 2 DAY 1; ALT and AST only", question: "Which visit, or the worst post-baseline value?"}
+  - {output_id: T-14-3-5, where: analysis.analysis_data, item: visit, assumption: "the shell's on-treatment visit is CYCLE 2 DAY 1; ALT and AST only", question: "Which visit, or the worst post-baseline value?"}
 ```
 
 Please check the assumptions before you use the file.

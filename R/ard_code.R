@@ -333,7 +333,7 @@
     setdiff(.ard_pkgs, getOption("tflspec.user_attached"))
   # (the study's setup file sets it when option tflspec.study_setup is TRUE)
   ct <- if (isTRUE(getOption("tflspec.study_setup"))) NULL else
-    .cards_round_type(.study_value(x, "rounding", NA))
+    .cards_round_type(.study_rounding(x))
   c(if (length(libs)) sprintf("library(%s)", libs),
     if (length(src)) c(
       "",

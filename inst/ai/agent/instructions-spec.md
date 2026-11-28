@@ -1,7 +1,12 @@
 ## The skeleton (what a draft holds)
 
 A draft is a report file, `ai/spec/outputs/<id>.yml`, in the form above
-(one report; no `tflspec_ai` header, no `reports` list).  It holds the
+(one report; no `tflspec_ai` header, no `reports` list).  Its keys are
+these only: `id`, `kind`, `label`, `common`, `template`, `style`,
+`extends`, `codelists` (before `data`), `data`, `analysis`, `content` (or
+`contents`), `page`, `note`, and `ai` last; a figure also `plot`,
+`figure`, `plots`, `compose`, `ggplot2_version`.  Any other key stops the
+read: one message a file, each key and how to fix it.  It holds the
 report's skeleton and nothing of its look:
 
 - `id`, `kind` (`table`, `listing`, `figure`), `label` (the TOC's title;
@@ -14,12 +19,15 @@ report's skeleton and nothing of its look:
   each (the analysis set's subjects with a condition; a table of statistics
   writes no `data: {source: ard}`; a listing's records as the listing
   section says);
-- `ard`: `analyses` (`method`, `by`, `variables`, `denominator`, `where`) --
-  never `ard: analysis_data`, which is `data:`;
+- `analysis`: `analyses` (`method`, `by`, `variables`, `denominator`, `where`) --
+  never `analysis: analysis_data`, which is `data:`;
 - the content: `template: {name: <template>, args: {...}}` when one fits
   (only the arguments that differ from the default; the content then holds
   only what the template does not do), else `content:` with `table_plan`
   (`cols`, `rows`, `label`) and `plan_cells` -- and nothing else;
+- a figure's layers (a design's `layers`): `content:` items, one a layer,
+  the layer's name the key -- `{layer: hline, yintercept: 40, linetype:
+  dashed}` is `- hline: {yintercept: 40, linetype: dashed}`;
 - the digits, only when the shell shows them (`xx.x`): in the cell
   templates (`{mean:.1f} ({sd:.2f})`) or a `plan_digits` item; a shell
   without them takes the study's default -- do not ask, and do not invent
@@ -43,7 +51,7 @@ report's skeleton and nothing of its look:
   (a third line with the analysis set) is written when this shell leaves
   it out, as the other shells write it: an assumption, `item: titles`,
   `from:` the conventions' section.  And the shell's footnotes:
-  {{footnotes_at}}
+  {{shell_footnotes}}
   A footnote is the shell's text as it is: never reworded, none added.  A
   footnote of a statistic the table does not show (`SD = Standard
   deviation.` under an AE table) is dropped, with an assumption that says
@@ -124,7 +132,7 @@ label: Treatment-Emergent Adverse Events by System Organ Class and Preferred Ter
 common:
   population: SAF
 extends: [defaults]
-ard:
+analysis:
   analyses:
     - id: AE
       method: hierarchical
@@ -148,9 +156,9 @@ page:
     "1": {left: "MedDRA version 27.0, fictional dictionary."}
 ai:
   assumptions:
-    - {where: ard.analyses, item: where, assumption: "treatment-emergent is TRTEMFL == 'Y'", value: "TRTEMFL == \"Y\"", from: D3}
+    - {where: analysis.analyses, item: where, assumption: "treatment-emergent is TRTEMFL == 'Y'", value: "TRTEMFL == \"Y\"", from: D3}
   confirm:
-    - {where: ard.analyses, item: denominator, why: "the shell shows n (%) but not whether the % is of the arm or of all"}
+    - {where: analysis.analyses, item: denominator, why: "the shell shows n (%) but not whether the % is of the arm or of all"}
 ```
 
 The same table with a template (only the arguments that differ from the
@@ -182,7 +190,7 @@ data:
     from: ADLB
     population: SAF
     code: !r 'post <- dplyr::filter(adlb, USUBJID %in% adsl_sub$USUBJID, ONTRTFL == "Y"); dplyr::summarise(dplyr::group_by(post, USUBJID, TRT01A, PARAMCD), WORST = max(ANRIND), .groups = "drop")'
-ard:
+analysis:
   analyses:
     - {id: SHIFT, method: categorical, data: lb_worst, by: [TRT01A, PARAMCD], variables: [WORST], denominator: column}
 ```
@@ -246,7 +254,7 @@ it to these rules (every agent of tflspec#512 tripped on them):
 `-COL` for descending (`arrange: [USUBJID, -ASTDT]`): write a listing's sort here, in
 the data, not in `code`; `distinct` then keeps the first row in that order.
 
-`ard.analyses`, one item each: `id`, `method`, then **either** `data`
+`analysis.analyses`, one item each: `id`, `method`, then **either** `data`
 (an analysis data's id of this report) **or** `dataset` with
 `population` -- never both --, `where`, `by`, `variables`, `strata`,
 `overall`, `denominator`, `args`, `statistics`, `label`, `parent`,
@@ -395,8 +403,9 @@ Group: {RENALGR}"`.
   `colours` work only in `plot:`; `km_survival` and `km_cumulative` also
   take `x_label`, `y_label`, `x_max`, `x_step`, `y_min`, `y_max`,
   `y_step`, `legend` and `legend_title` as `template: args:` items;
-  set one thing in one place only.  A `layers:` item is for what no argument or
-  setting does -- never both for one thing.
+  set one thing in one place only.  A `content:` item (a layer of the
+  figure's own, `- geom_hline: {yintercept: 0.5, linetype: dashed}`) is for
+  what no argument or setting does -- never both for one thing.
 - **A listing**: a listing column's `width:` in the shell's proportions,
   wide enough for its longest value (a subject id on one line) and its
   heading's longest word -- a short column too (`Age/Sex`, `64/M`: about
@@ -451,9 +460,11 @@ otherwise, and a condition copied as it is can keep no record.
 | a key of your own (`notes:`, `comment:`, `denominator_note:`) | none: a key the schema does not have is refused; a note is an `ai: assumptions` or `ai: confirm` item |
 | `extends: defaults` | `extends: [defaults]` |
 | `population: Safety Analysis Set` | `common: {population: SAF}` -- the id from `spec/data.yml`; never a top-level `population:` |
-| `ard: {analysis_data: [...], analyses: [...]}` | `data: [...]` (the definitions) and `ard: {analyses: [...]}` |
+| `ard: {analysis_data: [...], analyses: [...]}` | `data: [...]` (the definitions) and `analysis: {analyses: [...]}` |
+| `ard: {analyses: [...]}` (and `template: {ard: ...}`, `extends: {ard: ...}`) | `analysis: {analyses: [...]}`: the same map under `analysis:`; `ard:` is not read |
 | `data: {source: ard}` in a table | nothing: a table always reads its ARD |
 | a table's rework steps under `data:` or `ard: data:` | the first item of `content:`: `- rework: {steps: [...]}` |
+| a figure's `layers: [{layer: hline, yintercept: 40}]` | `content: [{hline: {yintercept: 40}}]`: one `content:` item a layer; `layers:` is not read |
 | `kind: Table` | `kind: table` |
 
 ## Before you save a draft: read it once more

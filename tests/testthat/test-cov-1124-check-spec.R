@@ -175,10 +175,11 @@ test_that("a key of an item that is not its arguments is read with no slot kind"
   expect_identical(lv[[1L]]$kinds, character())
 })
 
-test_that("a report's `ard:` key other than its analysis data and analyses is read as the rest", {
+test_that("a report's analysis step's key other than its analysis data and analyses is read as the rest", {
+  # (its item named as the file writes it, `analysis`; part "ard", the ARD stage's, #3)
   p <- .r_walk_report(list(id = "T-9", ard = list(notes = tfl_r("1 +"))), "T-9")
   expect_identical(nrow(p), 1L)
-  expect_identical(c(p$part, p$item), c("ard", "ard$notes"))
+  expect_identical(c(p$part, p$item), c("ard", "analysis$notes"))
 })
 
 test_that("an entry of a named map of definitions is placed by its name", {

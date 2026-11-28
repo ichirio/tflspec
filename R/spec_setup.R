@@ -14,8 +14,9 @@
 #' every ARD and report program.  This gives the lines tflspec writes in it,
 #' two parts:
 #'
-#' * the study's rounding as one `options()` call, `rtfreporter.rounding` and
-#'   (for "sas" and "r") `cards.round_type`;
+#' * the study's rounding (its force, `spec/defaults.yml` `force:`; see
+#'   [tfl_read_study_spec()]) as one `options()` call, `rtfreporter.rounding`
+#'   and `cards.round_type`; none when the study forces no rounding;
 #' * the study's lists: `study$codelists`, its code lists by name
 #'   (`spec/defaults.yml` `codelists:`, `list(SEX = c(F = "Female", M =
 #'   "Male"), ...)`), which a report or a template refers to by name, and
@@ -79,12 +80,11 @@
 #' tfl_study_setup_code(st)
 #' @export
 tfl_study_setup_code <- function(study) {
-  rnd <- if (inherits(study, "tfl_study_spec")) .study_rounding(study) else {
-    v <- if (is.list(study) && is.data.frame(study$study)) .ard_spec_study_value(study, "rounding") else
-      stop("tfl_study_setup_code(): `study` must be a study spec (tfl_read_study_spec()) ",
-           "or a table / report spec of the sheets.", call. = FALSE)
-    if (is.na(v)) NULL else v
+  if (!inherits(study, "tfl_study_spec") && !(is.list(study) && is.data.frame(study$study))) {
+    stop("tfl_study_setup_code(): `study` must be a study spec (tfl_read_study_spec()) ",
+         "or a table / report spec of the sheets.", call. = FALSE)
   }
+  rnd <- .study_rounding(study)
   out <- character()
   if (!is.null(rnd)) {
     ct <- .cards_round_type(rnd)
@@ -262,8 +262,8 @@ tfl_study_setup_code <- function(study) {
     v <- study$options[[k]]
     opts[[k]] <- if (is.list(v) && !is.null(names(v))) unlist(v) else v
   }
-  # the study's rounding, once for every report (a report's own plan_digits(
-  # rounding = ) wins where it differs)
+  # the study's rounding, once for every report: its force (a report's own
+  # plan_digits(rounding = ) takes it, .force_over())
   # (the study's setup file sets it when option tflspec.study_setup is TRUE)
   if (!isTRUE(getOption("tflspec.study_setup"))) {
     rnd <- .study_rounding(study)
@@ -332,9 +332,8 @@ tfl_study_setup_code <- function(study) {
   vapply(tk, as.character, "")
 }
 
-# The study's rounding (rtfreporter's half to even "r", or "sas"): the last
-# plan_digits(rounding = ) of the study's defaults.yml; NULL when it says none
-# The study's rounding set as rtfreporter's option for an in-process build
+# The study's rounding (.study_rounding(), its force) set as rtfreporter's
+# option for an in-process build
 # (tfl_run_output(), tfl_ai_run()), as the programs' setup sets it; the
 # options as they were, to put back.  A study that says none leaves the
 # option as it is.
@@ -372,26 +371,15 @@ tfl_study_setup_code <- function(study) {
   x
 }
 
-.study_rounding <- function(study) {
-  # study.yml's `settings: rounding` (tfl_ai_study_init() writes it); the
-  # defaults' plan_digits(rounding = ) over it
-  r <- study$study$settings$rounding
-  if (!is.null(r)) r <- .check_rounding(as.character(r)[1L], "study.yml: settings: rounding")
-  for (it in study$defaults$content %||% list()) {
-    if (identical(.schema_fn_name(it$fn %||% ""), "plan_digits") && !is.null(it$args$rounding)) {
-      r <- .check_rounding(as.character(it$args$rounding), "plan_digits rounding")
-    }
-  }
-  r
-}
-
 # The items as a report's program writes them: the study's rounding is the
 # setup's (options(rtfreporter.rounding = ), report_setup.R, every report
 # sources it), so a plan_digits() rounding that is the study's is left out
-# (the item out when nothing else is left); a report's own rounding that
-# differs stays.  `rounding`: the study's (NULL: every rounding is the
-# study's -- a workbook's, one per study).  The run in hand keeps the items
-# as they are (the same numbers, with no option set).
+# (the item out when nothing else is left); a table's own rounding is the
+# forced one once resolved (.force_over()), and one that differs stays only
+# where nothing is forced (a listing's, a figure's).  `rounding`: the
+# study's (NULL: every rounding is the study's -- a workbook's, one per
+# study).  The run in hand keeps the items as they are (the same numbers,
+# with no option set).
 .items_for_program <- function(content, rounding = NULL) {
   if (inherits(content, "tfl_r") || !length(content)) return(content)
   out <- lapply(content, function(it) {

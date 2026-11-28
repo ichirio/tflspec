@@ -78,12 +78,12 @@ test_that("a required parameter left `!unset` is still needed", {
                "needs 'population'")
 })
 
-test_that("a SPEC's `!unset` (flat args:, ard:, content:) reaches the body as absent", {
+test_that("a SPEC's `!unset` (flat args:, analysis:, content:) reaches the body as absent", {
   us_register("us_t")
   withr::defer(rm("us_t", envir = tflspec:::.tpl_registry))
   s <- us_study()
   for (template in list(list(name = "us_t", args = list(mr = tfl_unset())),
-                        list(name = "us_t", ard = list(mr = tfl_unset())),
+                        list(name = "us_t", analysis = list(mr = tfl_unset())),
                         list(name = "us_t", content = list(mr = tfl_unset())))) {
     o <- tfl_output("T-9", "table", common = list(population = "SAF"), template = template)
     r <- tfl_resolve_output(o, s)

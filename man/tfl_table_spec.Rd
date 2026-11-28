@@ -125,7 +125,7 @@ frequency order (\code{\link[rtfreporter:plan_sort]{rtfreporter::plan_sort()}}'s
 \item{\code{sep}}{What joins several column keys into one column's name
 (\code{Placebo____n} by default; \verb{_} gives \code{Placebo_n}), the name the
 \code{columns} sheet refers to (\code{\link[rtfreporter:plan_columns]{rtfreporter::plan_columns()}}'s \code{sep}).}
-\item{\code{header_n}}{Which population a \code{col_header} text's \code{{n}} is,
+\item{\code{col_header_values}}{Which population a \code{col_header} text's \code{{n}} is,
 on pages split by a group value: \code{page} (each page's own --- the
 subjects with that lab test) or \code{table} (the analysis set, the
 ARD rows without the page key).  Several at once name their

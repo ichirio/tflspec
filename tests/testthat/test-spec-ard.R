@@ -77,7 +77,7 @@ sa_yaml_study <- function(dir) {
   writeLines(c("outputs:", "  - id: T-2", "    kind: table", "  - id: T-1", "    kind: table"),
              file.path(dir, "spec", "toc.yml"))
   one <- function(id, an, method, vars) {
-    writeLines(c(paste("id:", id), "kind: table", "extends: none", "ard:", "  analyses:",
+    writeLines(c(paste("id:", id), "kind: table", "extends: none", "analysis:", "  analyses:",
                  paste("    - id:", an), paste("      method:", method),
                  "      population: SAF", "      by: [ARM]", paste0("      variables: [", vars, "]"),
                  "content:", "  - table_plan: {cols: ARM}"),

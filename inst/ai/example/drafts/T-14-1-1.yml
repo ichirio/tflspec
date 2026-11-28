@@ -5,7 +5,13 @@ common:
   population: SAF
 extends:
   - defaults
-ard:
+codelists:
+  SEX:
+    - value: M
+      label: Male
+    - value: F
+      label: Female
+analysis:
   analyses:
     - id: 'N'
       method: total_n
@@ -31,12 +37,6 @@ ard:
         - SEX
         - AGEGR1
         - RACE
-codelists:
-  SEX:
-    - value: M
-      label: Male
-    - value: F
-      label: Female
 content:
   - table_plan:
       cols: TRT01A
@@ -87,7 +87,7 @@ page:
       center: Safety Population
 ai:
   assumptions:
-    - where: ard.analyses
+    - where: analysis.analyses
       item: arm
       assumption: 'Treatment variable for the columns: TRT01A (actual), because the
         analysis set is the safety set (SAF)'

@@ -5,7 +5,7 @@
 sr_study <- function(root) {
   st <- file.path(root, "STUDY-RET")
   dir.create(st)
-  write_study_yml(st, c("study_id: STUDY-RET", "settings:", "  rounding: sas"))
+  write_study_yml(st, c("study_id: STUDY-RET"))
   st
 }
 

@@ -55,7 +55,7 @@
 #' `requests_per_chat` (0, no limit: after that many requests the agent stops
 #' and asks for a new chat), `carry` (which decision scopes apply to a later
 #' report without asking: `all`, `dataset`, `section`), `max_rounds` (how
-#' many times one item is asked again, 3), `footnotes_at` (`"footer"`, the
+#' many times one item is asked again, 3), `shell_footnotes` (`"footer"`, the
 #' default, or `"table"`: where the shell's footnotes go), `review` (how
 #' deep the agent checks each report it builds itself, by kind: `0` the
 #' check, `1` and the program, `2` and the facts -- what R made, in words

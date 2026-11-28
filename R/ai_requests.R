@@ -997,7 +997,7 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
     an[[j]][["args"]] <- tfl_r(if (is.null(old) || !length(old)) "over_variables = TRUE" else
       paste0(paste(unlist(old), collapse = ", "), ", over_variables = TRUE"))
     a$outputs[[i]]$ard$analyses <- an
-    row <- data.frame(output_id = names(a$outputs)[i], where = "ard.analyses",
+    row <- data.frame(output_id = names(a$outputs)[i], where = "analysis.analyses",
                       item = an[[j]][["id"]] %||% "over_variables",
                       assumption = if (.ai_is_ja(language)) {
                         paste0("tflspec \u304c over_variables = TRUE \u3092\u8ffd\u52a0\u3057\u307e\u3057\u305f: ",

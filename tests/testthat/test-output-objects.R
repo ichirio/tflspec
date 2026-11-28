@@ -15,7 +15,7 @@ oo_table <- function() oo_read(c(
   "  - id: adsl_sub", "    from: ADSL",
   "  - id: adae_sub", "    from: ADAE", "    subjects_in: adsl_sub",
   "    where: TRTEMFL == \"Y\" & USUBJID %in% adsl_sub$USUBJID",
-  "ard:", "  analyses:",
+  "analysis:", "  analyses:",
   "    - id: BIGN", "      method: categorical", "      data: adsl_sub", "      variables: [TRT01A]",
   "    - id: AE", "      method: hierarchical", "      data: adae_sub", "      denominator: adsl_sub",
   "      variables: [AEBODSYS, AEDECOD]",

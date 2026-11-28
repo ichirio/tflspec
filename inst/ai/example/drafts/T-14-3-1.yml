@@ -5,7 +5,7 @@ common:
   population: SAF
 extends:
   - defaults
-ard:
+analysis:
   analyses:
     - id: AE
       method: hierarchical
@@ -76,7 +76,7 @@ page:
         term.
 ai:
   assumptions:
-    - where: ard.analyses
+    - where: analysis.analyses
       item: where
       assumption: "treatment-emergent is TRTEMFL == 'Y'"
       question: Is TRTEMFL the treatment-emergent flag?

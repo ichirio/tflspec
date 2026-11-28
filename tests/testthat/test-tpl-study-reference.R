@@ -48,9 +48,10 @@ test_that("one generic reader: any settings.<key> works with no code change", {
   expect_message(ro2 <- sr_resolve("sr_any", list(zeta = "own"), s),
                  "overrides the study standard \\(settings.zeta\\)")
   expect_identical(attr(ro2, "template")$args$zeta, "own")
-  # a nested settings key by its path
-  expect_equal(.tpl_study_read("settings.a.b", NULL, sr_study(list(a = list(b = 3)))), 3)
-  expect_null(.tpl_study_read("settings.a.c", NULL, sr_study(list(a = list(b = 3)))))
+  # a nested settings key by its path (settings: a closed list; `params`
+  # one of it, its inner keys open)
+  expect_equal(.tpl_study_read("settings.params.b", NULL, sr_study(list(params = list(b = 3)))), 3)
+  expect_null(.tpl_study_read("settings.params.c", NULL, sr_study(list(params = list(b = 3)))))
 })
 
 test_that("the three forms: with a fallback, with none (unset), required (stops)", {

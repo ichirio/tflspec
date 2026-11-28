@@ -142,7 +142,7 @@ tfl_fill_widths <- function(study_dir = ".", output_id = NULL, assumption = TRUE
   if (!length(tabs)) return(character())
   old <- setwd(dir)
   on.exit(setwd(old), add = TRUE)
-  st <- tryCatch(tfl_read_study_spec("."), error = function(e) NULL)
+  st <- .study_spec_or_null(".")
   if (is.null(st)) return(character())
   tabs[vapply(tabs, function(id) {
     ro <- tryCatch(tfl_resolve_output(outs[[id]], st), error = function(e) NULL)

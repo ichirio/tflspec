@@ -11,7 +11,8 @@
 #' `spec/listing_figure_spec.xlsx`, `spec/figures/<id>.yml` -- and writes
 #' the YAML spec to `to`: `study.yml`, `spec/data.yml`, `spec/defaults.yml`
 #' (a sheets' `@<name>` is a page configuration there, `styles: <name>:`;
-#' one that names none stops), `spec/toc.yml` and one
+#' one that names none stops; the `study` sheet's `rounding` is the study's
+#' force, `force: {content: [{plan_digits: {rounding: sas}}]}`), `spec/toc.yml` and one
 #' `spec/outputs/<id>.yml` a report.  Loose files (a table and a report
 #' workbook alone) convert too: `from` may be a folder holding them.
 #'
@@ -58,7 +59,10 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
     ard = if (!is.null(src$ard)) .conv_read_ard(src$ard),
     listing = if (!is.null(src$lf)) .conv_read_lf(src$lf),
     figures = lapply(src$figs, .conv_read_fig),
-    study = if (!is.null(src$study)) yaml::read_yaml(src$study) else list())
+    # (with its folder: the settings the study's series declare are known)
+    study = if (!is.null(src$study)) {
+      structure(yaml::read_yaml(src$study), study_dir = normalizePath(dirname(src$study), "/"))
+    } else list())
   tfl_yaml_from_sheets(sheets, to, content_fn = content_fn, overwrite = overwrite,
                        figures = figures)
 }
@@ -98,7 +102,9 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   figs <- sheets$figures %||% list()
   meta <- sheets[["study"]] %||% list()
   # (an old form the sheets' study carries is not written: R/spec_old_forms.R)
-  .study_yml_form_check(meta)
+  # (its folder, where the sheets came from a study: attribute study_dir;
+  # none, and only the old `settings:` keys stop)
+  .study_yml_form_check(meta, attr(meta, "study_dir"))
   # the study sheet's rows no table spec reads (study.yml's `settings:` keys
   # of the app's own: the treatment variable ...) are not the bridge's: set
   # aside here and written back to settings below, not a stop (#689).  The
@@ -162,10 +168,12 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   study <- meta[setdiff(names(meta), c("created", "updated", "tflplanner"))]
   study$spec_version <- .spec_version
   study$packages <- .spec_packages()
-  # the table / report workbooks' study sheet (rounding, output_path,
-  # program_dir): the study's settings
+  # the table / report workbooks' study sheet (output_path, program_dir):
+  # the study's settings; its rounding is the study's force (defaults.yml
+  # `force:`, canon 1.33), written below
   if (!is.null(sp$study) && nrow(sp$study)) {
-    st <- sp$study[!is.na(sp$study$key) & !is.na(sp$study$value), , drop = FALSE]
+    st <- sp$study[!is.na(sp$study$key) & !is.na(sp$study$value) & sp$study$key != "rounding", ,
+                   drop = FALSE]
     if (nrow(st)) study$settings <- stats::setNames(as.list(st$value), st$key)
   }
   # every report's file and program (the report sheet's study row: "{output_id}.rtf")
@@ -183,6 +191,10 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   }
   if (!is.null(ard$study) && nrow(ard$study)) {
     keys <- stats::setNames(as.list(ard$study$value), ard$study$key)
+    # (the ARD's study keys are study.yml `keys:`, a closed list: its
+    # `rounding` is an old form, the study's force; R/spec_keys.R)
+    .spec_keys_raise(.spec_keys_find(keys, "keys", "the ARD sheets' study sheet", "keys",
+                                     ok = c(.spec_keys_of("keys"), "adam_levels")))
     keys <- keys[!vapply(keys, is.na, NA)]
     # (adam_levels is a setting: the ARD's study sheet only carries it)
     if (!is.null(keys$adam_levels) && is.null(study$settings$adam_levels)) {
@@ -265,8 +277,9 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     pg
   }
 
-  # spec/defaults.yml
+  # spec/defaults.yml: the study's force first (the study sheet's rounding)
   defaults <- list()
+  if (!is.null(sp)) defaults$force <- .force_out(.force_of(.study_rounding(sp)))
   if (!is.null(sp)) {
     if (!is.null(content_fn)) {
       # (the bridge's scope of the defaults: the rows with no report)
@@ -948,7 +961,11 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     blank_row <- NULL
     more_items <- list()
     if (nrow(lr)) {
-      more <- .conv_rows(lr[1L, , drop = FALSE], note, id, "listings",
+      # (its note is the report's `note:`, kept: not one of the row's
+      # arguments, so not said to be lost)
+      lr1 <- lr[1L, , drop = FALSE]
+      lr1$note <- NULL
+      more <- .conv_rows(lr1, note, id, "listings",
                          drop = c("output_id", "note", "dataset", "data", "population_id", "where", "sort", "max_rows", "blank_row",
                                   "content_more"))[[1L]]
       # (record: TRUE / FALSE, or the record column's name)
@@ -1033,7 +1050,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if ("ard" %in% names(fr) && identical(toupper(trimws(fr$ard[1L] %||% "")), "TRUE")) data$ard <- TRUE
   }
   # the report's ARD analyses and their analysis data, whatever its kind (a
-  # figure's hazard ratios too): its ard: section, the ARD stage's
+  # figure's hazard ratios too): its analysis: section, the ARD stage's
   ard_part <- NULL
   # the planner's analysis set goes on the report's data when the data reads
   # subjects' records (a listing's or a figure's, .set_on_data()); else it is
@@ -1100,11 +1117,17 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       content <- tfl_r(gsub("\r\n?", "\n", cc))
     }
   }
-  # the note of a table's tables row (free text): the report's
-  tnote <- if (!is.null(sp$tables) && "note" %in% names(sp$tables)) {
-    tr <- sp$tables[!is.na(sp$tables$output_id) & sp$tables$output_id == id, , drop = FALSE]
-    if (nrow(tr) && !is.na(tr$note[1L]) && nzchar(trimws(tr$note[1L]))) tr$note[1L]
+  # the report's note (free text): a table's tables row's, a listing's
+  # listings row's, a figure's design list's
+  note_of <- function(d) {
+    if (is.null(d) || !"note" %in% names(d)) return(NULL)
+    r <- d[!is.na(d$output_id) & d$output_id == id, , drop = FALSE]
+    if (nrow(r) && !is.na(r$note[1L]) && nzchar(trimws(r$note[1L]))) r$note[1L]
   }
+  tnote <- switch(kind,
+                  listing = note_of(lf$listings),
+                  figure = if (is.character(y$note) && length(y$note) == 1L && nzchar(y$note)) y$note,
+                  note_of(sp$tables))
   # the report's analysis set (the planner's column): on its data when the
   # data reads subjects' records, a listing's or a figure's (canon 11-15:
   # the set is the data's; the data's own wins); a table's on its subjects

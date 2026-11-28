@@ -9,7 +9,7 @@ common:
 extends: [defaults]
 template:
   name: demog
-  ard: {by: TRT01A, continuous: [AGE], categorical: [AGEGR1, SEX, RACE]}
+  analysis: {by: TRT01A, continuous: [AGE], categorical: [AGEGR1, SEX, RACE]}
 page:
   titles:
     "1": {center: "Table 14.1.1"}

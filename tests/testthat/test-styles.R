@@ -109,12 +109,12 @@ test_that("titles_at / footnotes_at stop (canon :433); titles and footnotes prin
   for (k in c("titles_at", "footnotes_at")) {
     write_study_yml(d, c("study_id: S-1", "settings:", paste0("  ", k, ": header")))
     e <- tryCatch(tfl_read_study_spec(d), error = function(e) e)
-    expect_s3_class(e, "tflspec_old_form")
-    expect_identical(e$form, k)
-    expect_match(conditionMessage(e), paste0("`settings: ", k, "` is no longer read: a "))
-    expect_error(tflspec:::.tr_study(d, "tfl_tpl()"), k, class = "tflspec_old_form")
+    expect_s3_class(e, "tflspec_spec_keys")
+    expect_identical(e$problems$form, k)
+    expect_match(conditionMessage(e), paste0("`settings: ", k, "`: an old form, no longer read: a "))
+    expect_error(tflspec:::.tr_study(d, "tfl_tpl()"), k, class = "tflspec_spec_form")
     expect_error(tfl_yaml_from_sheets(list(study = list(settings = stats::setNames(list("header"), k))),
-                                      file.path(d, "out")), k, class = "tflspec_old_form")
+                                      file.path(d, "out")), k, class = "tflspec_spec_form")
   }
 })
 

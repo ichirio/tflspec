@@ -12,7 +12,7 @@ tfl_template_routes(output, study)
 \item{study}{Its study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}).}
 }
 \value{
-A data frame: \code{param}, \code{step} (\code{"data"}, \code{"ard"}, \code{"content"};
+A data frame: \code{param}, \code{step} (\code{"data"}, \code{"analysis"}, \code{"content"};
 \code{NA} when the template does not say), \code{value} (a short text), \code{route}
 (\code{"own"}, \code{"study:<key>"}, \code{"fallback"}, \code{"template"}, \code{"fixed"},
 \code{"unset"} or \code{"removed (<param>: <value>)"}), \code{key} (its reference to

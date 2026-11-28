@@ -347,7 +347,8 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
 # function(args, context) returning list(ard = , data = , content = ): the
 # report's items, `content` a list of tfl_item().  `parts`: where each
 # parameter acts, list(ard = <names>, content = <names>), for a SPEC written
-# as `template: {name, ard:, content:}`; NULL: the template takes the two
+# as `template: {name, analysis:, content:}` (the `ard` part's key is
+# `analysis:`, .tpl_part_keys); NULL: the template takes the two
 # parts' names as written (every name in either).  `extends`: what its
 # reports extend when they write none (its set's value, canon 1.27; NULL: a
 # template not yet migrated, the old layer order); `extends_fixed`: the
@@ -2212,7 +2213,7 @@ tpl_listing <- function(x, ...) {
 }
 
 # ---- km_table: Kaplan-Meier estimates (median, rates by time), from the ARD -----
-# The ARD's survival analyses are the report's own (`ard:`, cardx's
+# The ARD's survival analyses are the report's own (`analysis:`, cardx's
 # ard_survival_survfit()): the template does ARD -> table only.
 
 .tfl_template("km_table", ai = TRUE, kind = "table", layout = "km_table",

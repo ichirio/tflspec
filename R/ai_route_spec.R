@@ -27,7 +27,8 @@
   requests_per_chat = 0L,               # stop after this many requests in one chat (0: no limit)
   carry = c("all", "dataset", "section"),  # a decision applies without asking when its scope is one of these (and the agent is sure)
   max_rounds = 3L,                      # asking again about one item: this many times, then "to confirm"
-  footnotes_at = "footer",              # the shell's footnotes: the page's "footer" band, or the "table"'s footnotes
+  shell_footnotes = "footer",           # the shell's footnotes: the page's "footer" band, or the "table"'s footnotes
+
   language = "en",
   titles_in_header = character(),       # the output tokens the study standard's header prints (none: the report writes its titles)
   # how deep the agent checks each kind of report it built itself (run.R):
@@ -36,19 +37,22 @@
 )
 
 # The settings, under the study standard's `ai:` keys (spec/defaults.yml:
-# the footnotes' place) and then study.yml's `ai:` keys
+# the footnotes' place) and then study.yml's `ai:` keys.  The keys `ai:`
+# takes are the list's (R/spec_keys.R): any other stops, an old one
+# (`ask_when`, `footnotes_at`, `titles_in_header`) saying where it went.
+# `titles_in_header` is the study's page's, never a file's.
 .ai_spec_settings <- function(study_dir) {
   s <- .ai_spec_defaults
   for (f in file.path(study_dir, c(file.path("spec", "defaults.yml"), "study.yml"))) {
     y <- if (file.exists(f)) tryCatch(yaml::read_yaml(f), error = function(e) NULL)
     if (is.list(y) && identical(basename(f), "defaults.yml")) {
-      st <- tryCatch(tfl_read_study_spec(study_dir), error = function(e) NULL)
+      st <- .study_spec_or_null(study_dir)
       pg <- if (!is.null(st)) .page_config_flat(list(page = .study_default_page(st)))
       if (length(pg)) s$titles_in_header <- .page_output_tokens_used(pg)
     }
     ai <- if (is.list(y)) y$ai else NULL
     if (!is.list(ai)) next
-    .ai_say_ask_when(ai, f)
+    .ai_keys_check(ai, f)
     for (k in intersect(names(s), names(ai))) if (!is.null(ai[[k]])) {
       # (review: kind by kind, the ones not said as before)
       s[[k]] <- if (identical(k, "review") && is.list(ai[[k]])) utils::modifyList(s[[k]], ai[[k]]) else ai[[k]]
@@ -59,19 +63,9 @@
   s$review <- .ai_review_levels(s$review)
   s$run <- .ai_run(s$run)
   s$requests_per_chat <- .ai_requests_per_chat(s$requests_per_chat)
-  s$footnotes_at <- match.arg(as.character(s$footnotes_at)[1L], c("footer", "table"))
-  s
-}
+  s$shell_footnotes <- match.arg(as.character(s$shell_footnotes)[1L], c("footer", "table"))
 
-# `ai: ask_when` was removed (#606; `run` replaces it) and is ignored: say so,
-# once a session for each file, as the settings are read many times
-.ai_said <- new.env(parent = emptyenv())
-.ai_say_ask_when <- function(ai, file) {
-  key <- normalizePath(file, winslash = "/", mustWork = FALSE)
-  if (!"ask_when" %in% names(ai) || isTRUE(.ai_said[[key]])) return(invisible())
-  .ai_said[[key]] <- TRUE
-  message(basename(file), " ai: ask_when is ignored; `ai: run` (one or batch) replaces it.")
-  invisible()
+  s
 }
 
 # study.yml ai: run, checked: "one" or "batch"
@@ -142,7 +136,7 @@
       "it goes on from ai/progress.md\"."), n) else "",
     language = lang,
     carry_section = if ("section" %in% s$carry) " or its TOC section" else "",
-    footnotes_at = .ai_footnotes_text(s$footnotes_at),
+    shell_footnotes = .ai_footnotes_text(s$shell_footnotes),
     titles_rule = .ai_titles_text(s$titles_in_header)))
 }
 
@@ -569,7 +563,7 @@ tfl_ai_confirm <- function(study_dir, where = c("both", "drafts", "adopted")) {
   txt <- paste(readLines(system.file("ai", "agent", "instructions-spec.md", package = "tflspec"),
                          warn = FALSE, encoding = "UTF-8"), collapse = "
 ")
-  txt <- .ai_fill(txt, list(footnotes_at = .ai_footnotes_text(.ai_spec_settings(study_dir)$footnotes_at)))
+  txt <- .ai_fill(txt, list(shell_footnotes = .ai_footnotes_text(.ai_spec_settings(study_dir)$shell_footnotes)))
   for (f in list.files(file.path(study_dir, "ai"), "^instructions-.*[.]md$", full.names = TRUE)) {
     old <- readLines(f, warn = FALSE, encoding = "UTF-8")
     if (any(grepl("^## The skeleton (what a draft holds)", old, fixed = TRUE))) next

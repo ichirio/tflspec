@@ -18,7 +18,9 @@ warning naming it (\code{tfl_read_outputs()}); \code{FALSE} (default) to stop th
 \value{
 \code{tfl_read_study_spec()}: a list of class \code{tfl_study_spec} --
 \code{study} (\code{study.yml}, its \verb{tokens:} the study's tokens), \code{data},
-\code{defaults}, \code{codelists} (the study's code lists by name, each a
+\code{defaults}, \code{force} (\code{defaults.yml}'s \verb{force:}: \code{content}, the one
+\code{plan_digits(rounding = )} item; empty when the study forces none),
+\code{codelists} (the study's code lists by name, each a
 character vector of the codes in order, named by the code when the list
 has labels: \code{c(F = "Female", M = "Male")}), \code{adam_meta} (a
 \code{tfl_define}, its tables empty when \code{defaults.yml} has no \verb{adam_meta:}),
@@ -31,6 +33,15 @@ tflspec's built-in one for a part it does not give),
 \code{toc}, \code{dir}.  A \verb{spec/patterns/} file stops the read (an old form:
 a page is a page configuration, \verb{styles:}).  \code{tfl_read_outputs()}: a
 named list of \code{tfl_output}, by id.
+
+The keys a file takes are a closed list (spec-keys-v2): a key of
+\code{study.yml} (its top level, \verb{settings:}, \verb{ai:}, \verb{keys:}), a report file
+or \code{defaults.yml}'s \verb{force:} that the list does not have stops the
+read, every such key of the read in one error of class
+\code{tflspec_spec_keys} (fields \code{file}, \code{keys}, \code{problems}: a row a key,
+with what to write instead; for \code{tfl_read_study_spec()} also \code{spec},
+the study read with those keys left out).  \code{\link[=tfl_check_spec]{tfl_check_spec()}} gives
+them as rows.
 }
 \description{
 \code{tfl_read_study_spec()} reads the study-level files (every one optional)
@@ -41,6 +52,23 @@ the study's, \verb{codelists:} in \code{spec/defaults.yml}, or a report's), with
 message.
 }
 \details{
+\code{spec/defaults.yml} \verb{force:} holds what every report of the study uses,
+whatever a layer, a template or the report says (canon 1.33): only the
+rounding, \verb{force: \{content: [\{plan_digits: \{rounding: sas\}\}]\}} (\code{sas}, a
+half away from zero, or \code{r}, a half to even), written
+
+\if{html}{\out{<div class="sourceCode yaml">}}\preformatted{force:
+  content:
+    - plan_digits: \{rounding: sas\}
+}\if{html}{\out{</div>}}
+
+Every report and ARD program's setup sets it (\code{options(rtfreporter.rounding = , cards.round_type = )}); a table's own \code{plan_digits(rounding = )} of
+another value, or its \code{!unset}, is warned of and takes the forced value
+(\code{\link[=tfl_resolve_output]{tfl_resolve_output()}}).  Any other step or card under \verb{force:} stops;
+so do the old places of the rounding, study.yml's \code{settings: rounding}
+and a \verb{plan_digits: \{rounding: \}} card in \code{defaults.yml}'s \verb{content:} or a
+style set's.
+
 \code{spec/defaults.yml} holds the study's code lists and its ADaM metadata,
 two things kept apart:
 \itemize{

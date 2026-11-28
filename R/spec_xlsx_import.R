@@ -165,7 +165,7 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
     if (!is.null(d) && .flat_sheet_edited(d, was[[sh]])) {
       st$ignored <- c(st$ignored, sh)
       message("tfl_import_spec_xlsx(): the ", sh, " sheet was changed in the workbook; the import does not read it, ",
-              "so the change is not taken in (edit data.yml, or the report's ard: objects).")
+              "so the change is not taken in (edit data.yml, or the report's analysis: objects).")
     }
   }
 
@@ -185,10 +185,10 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
   }
   by_scope("analysis_data", function(id, part) {
     .adata_label_check(part)
-    .imp_rows_of(st, part, "analysis_data", scope_rel(id), c("ard", "analysis_data"), "id",
+    .imp_rows_of(st, part, "analysis_data", scope_rel(id), c("analysis", "analysis_data"), "id",
                                                             r_cols = c("where", "derive", "code", "then"), list_cols = c("add", "arrange", "keep", "distinct"), get_file = get_file, set_file = set_file)
   })
-  by_scope("analyses", function(id, part) .imp_rows_of(st, part, "analyses", scope_rel(id), c("ard", "analyses"), "id",
+  by_scope("analyses", function(id, part) .imp_rows_of(st, part, "analyses", scope_rel(id), c("analysis", "analyses"), "id",
                                                         r_cols = c("where", "args", "post", "code"), list_cols = c("by", "strata", "variables", "statistics", "formats"), get_file = get_file, set_file = set_file))
   by_scope("listing_cols", function(id, part) {
     # best-effort: the listing_col calls of plan_listing, by vars
@@ -243,7 +243,7 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
           # (its rows edited: not read back, said and listed in `ignored`; the
           # rows were written from the reference the file had)
           if (is.null(study_cl)) {
-            study_cl <<- tryCatch(tfl_read_study_spec(dir)$codelists %||% list(), error = function(e) list())
+            study_cl <<- .study_spec_or_null(dir)$codelists %||% list()
           }
           base <- if (!is.null(was_cell)) .cl_ref_norm(was, v, id) else .cl_ref_from_cell(lc, cw)
           want <- tryCatch(.cl_ref_rows(base, v, study_cl, id, "tfl_import_spec_xlsx()"), error = function(e) NULL)
@@ -434,7 +434,7 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
   FALSE
 }
 
-# the rows of one report's list (ard.analyses ...) or its content items of
+# the rows of one report's list (analysis.analyses ...) or its content items of
 # one function (a listing's columns), updated by key
 .imp_rows_of <- function(st, part, sheet, rel, path_in, key_col, r_cols = character(), list_cols = character(),
                          get_file, set_file, content_fn = NULL) {
@@ -446,8 +446,8 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
       (is.null(y$data) || is.null(names(y$data)))) {
     path_in <- "data"
     # (the set the sheets wrote on it, .rows_set(), of the report as read:
-    # its place map under `ard: data:` is its data map)
-    pop <- .rows_set(list(data = y[["ard"]][["data"]], common = y[["common"]]))
+    # its place map under `analysis: data:` is its data map)
+    pop <- .rows_set(list(data = y[["analysis"]][["data"]], common = y[["common"]]))
   }
   if (is.null(content_fn)) rows <- .get_in(y, path_in) %||% list()
   else rows <- lapply(Filter(function(it) is.list(it) && identical(names(it), content_fn), y$content %||% list()), function(it) it[[1L]])

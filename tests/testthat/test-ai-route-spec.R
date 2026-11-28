@@ -57,7 +57,7 @@ test_that("the settings: the package's, under study.yml's ai: keys; the language
   expect_identical(s$run, "one")
   expect_identical(s$requests_per_chat, 0L)
   expect_null(s[[paste0("ask_", "when")]])
-  expect_identical(s$footnotes_at, "footer")
+  expect_identical(s$shell_footnotes, "footer")
   write_study_yml(d, c("study_id: X", "ai:", "  language: ja", "  max_rounds: 2", "  carry: [all]"))
   s2 <- tflspec:::.ai_spec_settings(d)
   expect_identical(s2$language, "ja")
@@ -65,12 +65,16 @@ test_that("the settings: the package's, under study.yml's ai: keys; the language
   expect_identical(s2$carry, "all")
   # the study standard says where the footnotes go; study.yml wins over it
   dir.create(file.path(d, "spec"))
-  writeLines(c("ai:", "  footnotes_at: table"), file.path(d, "spec", "defaults.yml"))
-  expect_identical(tflspec:::.ai_spec_settings(d)$footnotes_at, "table")
+  writeLines(c("ai:", "  shell_footnotes: table"), file.path(d, "spec", "defaults.yml"))
+  expect_identical(tflspec:::.ai_spec_settings(d)$shell_footnotes, "table")
   expect_match(tflspec:::.ai_footnotes_text("table"), "page: footnotes", fixed = TRUE)
   expect_match(tflspec:::.ai_footnotes_text("footer"), "page: footer", fixed = TRUE)
+  write_study_yml(d, c("study_id: X", "ai:", "  shell_footnotes: footer"))
+  expect_identical(tflspec:::.ai_spec_settings(d)$shell_footnotes, "footer")
+  # (the old name stops, naming the new one)
   write_study_yml(d, c("study_id: X", "ai:", "  footnotes_at: footer"))
-  expect_identical(tflspec:::.ai_spec_settings(d)$footnotes_at, "footer")
+  expect_error(tflspec:::.ai_spec_settings(d), "write `ai: shell_footnotes:`", fixed = TRUE,
+               class = "tflspec_spec_keys")
   expect_identical(tflspec:::.ai_language_name("ja"), "Japanese")
   expect_identical(tflspec:::.ai_language_name("Deutsch"), "Deutsch")
 })
@@ -141,7 +145,7 @@ test_that("prepare(): AGENTS.md asks and writes the drafts; the requests carry t
   a <- tfl_ai_parse(readLines(test_path("fixtures", "answers-toc", "ae-1.md"), warn = FALSE), "table")
   o <- a$outputs[["T-14-3-1"]]
   o$ai <- list(
-    assumptions = list(list(where = "ard.analyses", item = "where", assumption = "treatment-emergent is TRTEMFL == \"Y\"",
+    assumptions = list(list(where = "analysis.analyses", item = "where", assumption = "treatment-emergent is TRTEMFL == \"Y\"",
                             value = "TRTEMFL == \"Y\"", from = "D1")),
     confirm = list(list(where = "content", item = "plan_cells", why = "the shell shows n (%) but not its denominator")))
   area <- file.path(d, "ai", "spec", "outputs")
@@ -181,7 +185,7 @@ test_that("prepare(): AGENTS.md asks and writes the drafts; the requests carry t
   expect_match(r2$next_args[[req2]]$drafts, "ai/spec/outputs/T-14-3-5.yml", fixed = TRUE)
   # a draft YAML reads but that is no report file (a call's args as a text):
   # refused alone with why; the other drafts are read as before
-  writeLines(c("id: T-14-3-5", "kind: table", "label: Lab",
+  writeLines(c("id: T-14-3-5", "kind: figure", "label: Lab",
                "plot: {add: [{fn: theme, args: 'axis.text.x = element_blank()'}]}"),
              file.path(area, "T-14-3-5.yml"))
   r4 <- suppressMessages(tfl_ai_collect_answers(d))
@@ -263,18 +267,18 @@ test_that("the quote hint is given only when a value's own quote is inside its t
   expect_false(grepl("double-quoted", err("\"k\"x: 1"), fixed = TRUE))
 })
 
-test_that("ai: ask_when was removed: it is ignored, with one message that run replaces it", {
+test_that("ai: ask_when was removed: it stops as an old form, `run` replaces it", {
   d <- file.path(withr::local_tempdir(), "study")
   dir.create(d)
   write_study_yml(d, c("study_id: X", "ai:", "  ask_when: always", "  max_rounds: 2"))
-  expect_message(s <- tflspec:::.ai_spec_settings(d), "ask_when is ignored; `ai: run`")
-  expect_identical(s$max_rounds, 2L)
-  expect_null(s$ask_when)
-  # (said once for the file in a session)
-  expect_no_message(tflspec:::.ai_spec_settings(d))
-  # no ask_when: no message
+  e <- tryCatch(tflspec:::.ai_spec_settings(d), error = function(e) e)
+  expect_s3_class(e, "tflspec_spec_keys")
+  expect_identical(e$problems$form, "ai_ask_when")
+  expect_match(conditionMessage(e), "`ai: run` (one or batch) replaces it", fixed = TRUE)
+  # no ask_when: read
   d2 <- file.path(withr::local_tempdir(), "study")
   dir.create(d2)
   write_study_yml(d2, c("study_id: X", "ai:", "  max_rounds: 2"))
-  expect_no_message(tflspec:::.ai_spec_settings(d2))
+  expect_no_message(s <- tflspec:::.ai_spec_settings(d2))
+  expect_identical(s$max_rounds, 2L)
 })

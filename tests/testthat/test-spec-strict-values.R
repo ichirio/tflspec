@@ -39,15 +39,16 @@ test_that("a rounding spelled \"SAS\" stops, naming the values", {
   s <- strict_read("  - plan_digits: {rounding: SAS}")
   expect_error(s$out(), 'plan_digits rounding takes one of "sas", "r"', fixed = TRUE)
   expect_error(s$out(), 'not "SAS"', fixed = TRUE)
-  study <- list(study = list(settings = list(rounding = "SAS")))
-  expect_error(tflspec:::.study_rounding(study), "settings: rounding takes one of", fixed = TRUE)
+  # (the study's: defaults.yml force:)
+  force <- list(content = list(list(plan_digits = list(rounding = "SAS"))))
+  expect_error(tflspec:::.force_read(force), "plan_digits rounding takes one of", fixed = TRUE)
 })
 
 test_that("rounding sas and r pass", {
   for (v in c("sas", "r")) {
     s <- strict_read(paste0("  - plan_digits: {rounding: ", v, "}"))
     expect_identical(s$out()$content[[2L]]$args$rounding, v)
-    study <- list(study = list(settings = list(rounding = v)))
+    study <- list(force = tflspec:::.force_read(list(content = list(list(plan_digits = list(rounding = v))))))
     expect_identical(tflspec:::.study_rounding(study), v)
   }
 })
