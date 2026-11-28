@@ -88,6 +88,8 @@ data:
     from: ADTTE
     subjects_in: adsl_sub
     add: ["{by}"]
+    # (the parameter: this row's default; a report's row of this id gives
+    # its own, data: [{id: adtte_sub, where: !r PARAMCD == "PFS"}])
     where: !r PARAMCD == "OS"
     then: !r 'tte_time("{time_unit}")'
 analysis:

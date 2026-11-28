@@ -37,12 +37,30 @@ test_that("km_cards resolves: its data the figure's steps filled in, its content
   bad <- kmc_report()
   bad$data <- list(list(id = "adsl_sub", from = "ADSL"))
   expect_error(tfl_template_resolve(bad, study = kmc_study), "a report adds no data rows")
-  # the parameter is required
+  # the parameter: not required, OS by default (C5), a report's own value;
+  # none (!unset) is no KM: it stops
   f <- tempfile(fileext = ".yml")
   on.exit(unlink(f))
   writeLines(c("id: F-9", "kind: figure", "template:", "  name: tflspec_v1/km_cards",
                "  data:", "    by: TRT01P"), f)
-  expect_error(tfl_template_resolve(.series_read_yaml(f), study = kmc_study), "param")
+  o <- tfl_template_resolve(.series_read_yaml(f), study = kmc_study)
+  expect_identical(o$data$steps[[2L]]$step, "param")
+  expect_identical(o$data$steps[[2L]]$value, "OS")
+  expect_identical(attr(o, "origins")[["param"]], "template")
+  expect_true(any(grepl("filter(PARAMCD == \"OS\")", tfl_content_code(o), fixed = TRUE)))
+  writeLines(c("id: F-9", "kind: figure", "template:", "  name: tflspec_v1/km_cards",
+               "  data:", "    by: TRT01P", "    param: PFS"), f)
+  o <- tfl_template_resolve(.series_read_yaml(f), study = kmc_study)
+  expect_identical(o$data$steps[[2L]]$value, "PFS")
+  code <- tfl_content_code(o)
+  expect_true(any(grepl("filter(PARAMCD == \"PFS\")", code, fixed = TRUE)))
+  expect_false(any(grepl("\"OS\"", code, fixed = TRUE)))
+  writeLines(c("id: F-9", "kind: figure", "template:", "  name: tflspec_v1/km_cards",
+               "  data:", "    by: TRT01P", "    param: !unset"), f)
+  expect_error(tfl_template_resolve(.series_read_yaml(f), study = kmc_study),
+               paste0("tfl_template_resolve(): tflspec_v1/km_cards's param cannot be none (!unset): ",
+                      "the template needs a value (unset: stop). Leave param out for the template's ",
+                      "default, or give a value."), fixed = TRUE)
 })
 
 test_that("km_cards' program is the card chain, ggsurvfit() + ... + add_risktable()", {

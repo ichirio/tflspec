@@ -79,6 +79,58 @@ params:
     tier: other
     description: The decimals (or the format) of each statistic.
       A report's names go over the series' formats; `!unset` removes one.
+  # (the look: forest_hr()'s params with its defaults; the call writes each
+  # one the report or the default gives, .fig_content_table())
+  subgroup_labels:
+    type: map<column,string>
+    input: table
+    columns: {key: {label: {en: "Variable", ja: "変数"}}, value: {label: {en: "Heading", ja: "見出し"}}}
+    choices: from_args(subgroup_vars)
+    default: ~
+    step: content
+    tier: other
+    description: The heading of each subgroup, by its variable (one of subgroup_vars);
+      empty for the common ADaM variables' labels (SEX, AGEGR1, RACE ...), else the variable's name.
+  favours:
+    type: list<string>
+    input: text
+    ordered: true
+    default: ~
+    step: content
+    tier: other
+    description: Two labels under the axis, left and right of 1 (exactly two); empty for none.
+  x_breaks:
+    type: list<number>
+    input: text
+    default: ~
+    step: content
+    tier: other
+    description: The ticks of the hazard ratio axis; empty for ggplot2's.
+  size_by_n:
+    type: logical
+    input: pick
+    choices: fixed
+    default: false
+    step: content
+    tier: other
+    description: A point's size by its subjects (N).
+  bold_headings:
+    type: logical
+    input: pick
+    choices: fixed
+    default: false
+    step: content
+    tier: other
+    description: The subgroups' headings in bold.
+  n_by_arm:
+    type: list<level>
+    input: pick
+    choices: levels(from_args(by))
+    ordered: true
+    default: ~
+    step: content
+    tier: other
+    description: The arms whose events / subjects are shown, a column each after N; empty for none.
 extends: !series extends
 style: !series style
 data:
@@ -89,6 +141,8 @@ data:
     from: ADTTE
     subjects_in: adsl_sub
     add: ["{by}", "{subgroup_vars}"]
+    # (the parameter: this row's default; a report's row of this id gives
+    # its own, data: [{id: adtte_sub, where: !r PARAMCD == "PFS"}])
     where: !r PARAMCD == "OS"
     derive: !r '{by} = stats::relevel(factor({by}), ref = c(intersect("{ref}", {by}), levels(factor({by})))[1])'
 analysis:

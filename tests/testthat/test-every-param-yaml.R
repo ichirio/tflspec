@@ -20,7 +20,7 @@ ep_reports <- list(
                 "  analysis:", "    by: TRT01A",
                 "    conditions:", "      - {subgroup: SEX, subgroup_lvl: F, where: !r SEX == \"F\"}"),
   km_cards = c("kind: figure", "template:", "  name: tflspec_v1/km_cards",
-               "  data:", "    by: TRT01A", "    param: PFS"),
+               "  data:", "    by: TRT01A"),
   km_simple = c("kind: figure", "template:", "  name: tflspec_v1/km_simple",
                 "  analysis:", "    by: TRT01A"),
   tflspec_hierarchy = c("kind: table", "template:", "  name: tflspec_v1/tflspec_hierarchy",
