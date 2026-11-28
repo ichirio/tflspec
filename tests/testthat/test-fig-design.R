@@ -612,6 +612,17 @@ test_that("a designed figure writes an axis title longer than axis_title_width w
   expect_identical(nrow(tfl_check_fig_design(d_unset, adam)), n0)
   expect_identical(nrow(tfl_check_fig_design(fd_axis(y_label = fd_t90, axis_title_width = 30), adam)), n0)
   expect_gt(nrow(tfl_check_fig_design(fd_axis(axis_title_width = "wide"), adam)), n0)
+  # (a number that is no width -- 0, 2.5 -- is caught by the check, as the
+  # program would stop)
+  expect_gt(nrow(tfl_check_fig_design(fd_axis(axis_title_width = 0), adam)), n0)
+  expect_gt(nrow(tfl_check_fig_design(fd_axis(axis_title_width = 2.5), adam)), n0)
+  # a design file keeps the `!unset`: written as the tag, read back as it
+  f <- tempfile(fileext = ".yml")
+  tfl_write_fig_design(d_unset, f)
+  expect_true(any(grepl("axis_title_width: !unset", readLines(f), fixed = TRUE)))
+  back <- tfl_read_fig_design(f)
+  expect_s3_class(back$plot$axis_title_width, "tfl_unset")
+  expect_true(grepl(fd_lit(fd_t90), fd_code(back), fixed = TRUE))
   # a company's figure style: its width
   s <- tfl_fig_style()
   s$settings$value[s$settings$key == "axis_title_width"] <- "40"
@@ -642,6 +653,13 @@ test_that("the km template's axis_title_width goes to its design; NULL / !unset:
   base <- list(y_label = "Y", axis_title_width = tfl_unset())
   expect_identical(tflspec:::.tpl_plot_over(base, NULL), base)
   expect_identical(tflspec:::.tpl_plot_over(base, list(axis_title_width = 40))$axis_title_width, 40)
+  # a report's `plot:` saying `!unset` over the template's width: no wrap, kept
+  base50 <- list(y_label = "Y", axis_title_width = 50)
+  expect_s3_class(tflspec:::.tpl_plot_over(base50, list(axis_title_width = tfl_unset()))$axis_title_width,
+                  "tfl_unset")
+  expect_s3_class(x(plot = list(axis_title_width = tfl_unset()))$axis_title_width, "tfl_unset")
+  # (another setting's `!unset` removes it, as before)
+  expect_null(tflspec:::.tpl_plot_over(base50, list(y_label = tfl_unset()))$y_label)
   # drawn: tfl_tpl()
   skip_if_not_installed("ggsurvfit")
   skip_if_not_installed("ggplot2", "3.5.2")

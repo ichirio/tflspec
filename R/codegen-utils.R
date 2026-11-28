@@ -45,7 +45,7 @@ vec_code <- function(x, width = 70) {
     if (is.null(sp)) {
       parts <- c(parts, nms[i])
     } else {
-      d <- regmatches(sp, regexec("^[.]([0-9]+)f$", sp))[[1L]]
+      d <- regmatches(sp, regexec("^[.]([0-9]{1,2})f$", sp))[[1L]]
       if (!length(d)) {
         stop(sprintf("label_cell of %s: {%s:%s} -- a format is .<decimals>f ({%s:.1f}).",
                      what, nms[i], sp, nms[i]), call. = FALSE)

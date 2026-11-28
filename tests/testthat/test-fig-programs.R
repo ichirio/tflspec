@@ -255,6 +255,14 @@ test_that("a drawn design's arms: order_levels() on its read and its ADSL join, 
        env)
   expect_identical(levels(env$adsl_sub$TRT01A), c("Placebo", "Drug B", "Drug A"))
   expect_s3_class(env$fig, "ggplot")
+  # a script of its own (setup = FALSE) runs with no study helpers given:
+  # it carries its order_levels()
+  env2 <- new.env(parent = .fig_pkg_env(c("dplyr", "ggplot2")))
+  env2$adsl <- adsl
+  eval(parse(text = .fig_strip_library(as.character(
+    tfl_fig_design_code(d, "F-1", setup = FALSE, save = FALSE)))), env2)
+  expect_true(exists("order_levels", envir = env2, inherits = FALSE))
+  expect_identical(levels(env2$adsl_sub$TRT01A), c("Placebo", "Drug B", "Drug A"))
 })
 
 test_that("a figure that joins ADSL orders a records data's arm by ADSL's", {

@@ -28,7 +28,7 @@ else the subgroup's name).
 (\code{NULL}: none).
 \item \code{axis_title_width}: the number of characters after which the x
 axis's title wraps onto a new line, at the spaces between words
-(\code{50}); \code{NULL} or \code{tfl_unset()}: no wrap.
+(\code{50}); \code{NULL}, \code{NA} or \code{tfl_unset()}: no wrap.
 }}
 }
 \value{

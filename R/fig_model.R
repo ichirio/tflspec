@@ -687,9 +687,13 @@ print.tfl_fig_design <- function(x, ...) {
 #' @export
 tfl_write_fig_design <- function(design, path) {
   x <- .fig_design_list(design)
-  # (a figure's items: their `!r` and `!unset` written as tags)
-  txt <- if (length(x$content)) yaml::as.yaml(x, indent.mapping.sequence = TRUE,
-                                              handlers = .yaml_out_handlers()) else yaml::as.yaml(x)
+  # (a figure's items, and a plot's `!unset` -- axis_title_width: no wrap:
+  # their `!r` and `!unset` written as tags)
+  txt <- if (length(x$content) || .fig_has_unset(x)) {
+    yaml::as.yaml(x, indent.mapping.sequence = TRUE, handlers = .yaml_out_handlers())
+  } else {
+    yaml::as.yaml(x)
+  }
   writeLines(enc2utf8(txt), path, useBytes = TRUE)
   invisible(path)
 }
@@ -697,8 +701,15 @@ tfl_write_fig_design <- function(design, path) {
 #' @rdname tfl_fig_design
 #' @export
 tfl_read_fig_design <- function(path) {
-  x <- yaml::read_yaml(path, handlers = list(r = tfl_r))
+  x <- yaml::read_yaml(path, handlers = list(r = tfl_r, unset = function(x) tfl_unset()))
   .fig_design_from_list(x)
+}
+
+# Whether a design list holds an `!unset` anywhere (its plot's, a panel's)
+.fig_has_unset <- function(x) {
+  if (inherits(x, "tfl_unset")) return(TRUE)
+  is.list(x) && !inherits(x, c("tfl_r", "tfl_call", "tfl_item")) &&
+    any(vapply(x, .fig_has_unset, NA))
 }
 
 .fig_design_from_list <- function(x) {
@@ -2418,7 +2429,12 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
         !as.character(v) %in% strsplit(r$choices, " | ", fixed = TRUE)[[1L]]) {
       add("plot", nm, paste0("'", v, "' is not one of ", r$choices))
     }
-    if (r$kind == "number" && suppressWarnings(anyNA(as.numeric(v)))) add("plot", nm, "is not a number")
+    if (r$kind == "number" && suppressWarnings(anyNA(as.numeric(v)))) {
+      add("plot", nm, "is not a number")
+    } else if (nm == "axis_title_width") {
+      # (the stop its program would make: a positive whole number)
+      tryCatch(.fig_wrap_title("x", v), error = function(e) add("plot", nm, conditionMessage(e)))
+    }
   }
   if (!is.null(design$plot$colour_by)) need_var("plot", "colour_by", design$plot$colour_by)
   kinds <- vapply(design$layers, function(l) l$layer %||% "", "")

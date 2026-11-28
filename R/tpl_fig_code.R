@@ -286,10 +286,14 @@
   given <- given[!vapply(given, is.null, NA) | names(given) %in% e$null]
   # the axis titles as they are drawn: wrapped at the width the call passes
   # (the function's default when it passes none), so the program shows them
-  # as on the figure
+  # as on the figure -- measured with the `{time_unit}` the function fills
+  # (km_curves(): "Time ({time_unit})" is drawn "Time (Days)")
   w <- if ("axis_title_width" %in% names(given)) given[["axis_title_width"]] else
     if ("axis_title_width" %in% e$params) .fig_title_width_default
-  for (k in intersect(e$titles, names(given))) given[[k]] <- .fig_wrap_title(given[[k]], w)
+  fill <- if ("time_unit" %in% e$params) {
+    c("{time_unit}" = tools::toTitleCase(as.character(given[["time_unit"]] %||% .km_time_unit_default)))
+  }
+  for (k in intersect(e$titles, names(given))) given[[k]] <- .fig_wrap_title(given[[k]], w, fill)
   params <- if (length(given)) {
     c("  params = list(",
       paste0("    ", names(given), " = ", vapply(given, .fig_arg_code, ""),

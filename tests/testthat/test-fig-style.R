@@ -181,9 +181,25 @@ test_that(".fig_wrap_title() wraps an axis title at the spaces between words", {
   expect_identical(wrap("Short\nTitle", 50), "Short\nTitle")
   # wrapping what is wrapped changes nothing; the spaces inside a line are kept
   expect_identical(wrap(wrap(t90, 50), 50), wrap(t90, 50))
+  # a line laid out with a run of spaces (the forest's favours) stays whole,
+  # however long the arms' names; the other lines wrap
   fav <- "Hazard Ratio\n<- Favours Drug X            Favours Control ->"
   expect_identical(wrap(fav, 50), fav)
-  expect_identical(wrap(fav, 30), "Hazard Ratio\n<- Favours Drug X\nFavours Control ->")
+  expect_identical(wrap(fav, 30), fav)
+  fav2 <- paste0("Hazard Ratio (95% Confidence Interval) for Overall Survival\n",
+                 "<- Favours Xanomeline High Dose            Favours Placebo ->")
+  expect_identical(wrap(fav2, 50), paste0(
+    "Hazard Ratio (95% Confidence Interval) for Overall\nSurvival\n",
+    "<- Favours Xanomeline High Dose            Favours Placebo ->"))
+  # NA (and "NA", an options sheet's): no wrap, as NULL and !unset
+  expect_identical(wrap(t90, NA), t90)
+  expect_identical(wrap(t90, "NA"), t90)
+  # measured as drawn: a placeholder counts as its value, and stays
+  tu <- "Time from Randomization to Death or Relapse ({time_unit})"
+  expect_identical(wrap(tu, 50), "Time from Randomization to Death or Relapse\n({time_unit})")
+  expect_identical(wrap(tu, 50, c("{time_unit}" = "Days")), tu)
+  expect_identical(wrap(tu, 50, c("{time_unit}" = "Months")),
+                   "Time from Randomization to Death or Relapse\n({time_unit})")
   # a word longer than the width stays whole; a text without spaces is one line
   expect_identical(wrap("Supercalifragilistic word", 10), "Supercalifragilistic\nword")
   expect_identical(wrap(strrep("x", 60), 50), strrep("x", 60))

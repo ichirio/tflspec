@@ -318,11 +318,15 @@ tfl_read_fig_style <- function(path) {
 # call them -- they write the wrapped text, not a step that wraps it).  A
 # "\n" in the text is a line break, kept; a line no longer than the width
 # is kept as written; a word longer than the width stays whole, on a line
-# of its own (a text with no spaces, as Japanese, is not broken).  Text
-# that is NULL, NA, empty or not plain text (R code), and a width that is
-# NULL or `!unset` (no wrap), give the text back unchanged.
-.fig_wrap_title <- function(text, width) {
-  if (is.null(width) || inherits(width, "tfl_unset")) return(text)
+# of its own (a text with no spaces, as Japanese, is not broken); a line
+# laid out with a run of two or more spaces (the forest's "<- Favours A
+# ...  Favours B ->") is kept whole.  Text that is NULL, NA, empty or not
+# plain text (R code), and a width that is NULL, NA or `!unset` (no wrap),
+# give the text back unchanged.  `fill`, placeholders and their values
+# (c("{time_unit}" = "Days")): the lengths are those of the text as drawn,
+# with the values in, and the text comes back with its placeholders.
+.fig_wrap_title <- function(text, width, fill = NULL) {
+  if (.fig_no_wrap(width)) return(text)
   w <- if (is.character(width)) suppressWarnings(as.numeric(width)) else width
   if (!is.numeric(w) || length(w) != 1L || is.na(w) || w < 1 || w != round(w)) {
     stop(sprintf(paste0("axis_title_width: the number of characters after which an axis title ",
@@ -335,21 +339,34 @@ tfl_read_fig_style <- function(path) {
   }
   lines <- strsplit(text, "\n", fixed = TRUE)[[1L]]
   if (endsWith(text, "\n")) lines <- c(lines, "")
-  long <- nchar(lines) > w
+  len <- function(x) {
+    for (k in names(fill)) x <- gsub(k, fill[[k]], x, fixed = TRUE)
+    nchar(x)
+  }
+  long <- len(lines) > w & !grepl("  ", lines, fixed = TRUE)
   if (!any(long)) return(text)
-  lines[long] <- vapply(lines[long], .fig_wrap_line, "", width = w, USE.NAMES = FALSE)
+  lines[long] <- vapply(lines[long], .fig_wrap_line, "", width = w, len = len, USE.NAMES = FALSE)
   paste(lines, collapse = "\n")
 }
 
+# Whether an axis_title_width says "no wrap": NULL, NA (also "NA", as an
+# options sheet writes it) or `!unset`
+.fig_no_wrap <- function(width) {
+  is.null(width) || inherits(width, "tfl_unset") ||
+    (length(width) == 1L && !is.object(width) &&
+       (is.na(width) || identical(toupper(trimws(as.character(width))), "NA")))
+}
+
 # One line wrapped: words joined while the line holds them (the spaces
-# between two words kept as written, those at a break dropped)
-.fig_wrap_line <- function(line, width) {
+# between two words kept as written, those at a break dropped); `len`, a
+# text's length as drawn
+.fig_wrap_line <- function(line, width, len = nchar) {
   out <- character()
   cur <- NULL
   for (tok in strsplit(line, " ", fixed = TRUE)[[1L]]) {
     if (is.null(cur)) {
       if (nzchar(tok)) cur <- tok
-    } else if (nchar(cur) + 1L + nchar(tok) <= width) {
+    } else if (len(cur) + 1L + len(tok) <= width) {
       cur <- paste0(cur, " ", tok)
     } else {
       out <- c(out, sub(" +$", "", cur))

@@ -128,6 +128,10 @@ tfl_figure_fn <- function(name) {
   defaults
 }
 
+# km_curves()' time unit when its params give none (the series program
+# measures the x title with it, .content_fig_series_code())
+.km_time_unit_default <- "days"
+
 # The width the axis titles wrap at: the params' `axis_title_width` (the
 # defaults' when left out); NULL or `tfl_unset()` given there: no wrap
 .fig_fn_width <- function(params, p) {
@@ -207,7 +211,7 @@ tfl_figure_fn <- function(name) {
 #'   - `y_label`: the y axis's title (`"Survival Probability"`).
 #'   - `axis_title_width`: the number of characters after which an axis
 #'     title wraps onto a new line, at the spaces between words (`50`);
-#'     `NULL` or `tfl_unset()`: no wrap.
+#'     `NULL`, `NA` or `tfl_unset()`: no wrap.
 #'   - `legend`: `"inside"` (top right), `"bottom"` or `"none"`.
 #' @return A ggplot.
 #' @seealso [tfl_figure_fn()], [forest_hr()]
@@ -221,7 +225,7 @@ tfl_figure_fn <- function(name) {
 km_curves <- function(km_fit, ard = NULL, params = list()) {
   .fig_fn_need(c("ggsurvfit", "survival"), "km_curves")
   if (!inherits(km_fit, "survfit")) stop("km_curves(): `km_fit` is a survfit object (survfit2()).", call. = FALSE)
-  p <- .fig_fn_params(params, list(time_unit = "days", x_label = "Time ({time_unit})",
+  p <- .fig_fn_params(params, list(time_unit = .km_time_unit_default, x_label = "Time ({time_unit})",
                                    y_label = "Survival Probability",
                                    axis_title_width = .fig_title_width_default, legend = "inside"),
                       "km_curves")
@@ -297,7 +301,7 @@ km_curves <- function(km_fit, ard = NULL, params = list()) {
 #'     (`NULL`: none).
 #'   - `axis_title_width`: the number of characters after which the x
 #'     axis's title wraps onto a new line, at the spaces between words
-#'     (`50`); `NULL` or `tfl_unset()`: no wrap.
+#'     (`50`); `NULL`, `NA` or `tfl_unset()`: no wrap.
 #' @return A ggplot.
 #' @seealso [tfl_figure_fn()], [km_curves()]
 #' @examplesIf requireNamespace("cardx", quietly = TRUE) && requireNamespace("survival", quietly = TRUE) && requireNamespace("broom.helpers", quietly = TRUE)
