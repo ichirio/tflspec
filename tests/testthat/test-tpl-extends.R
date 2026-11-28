@@ -3,14 +3,11 @@
 # the step_off rule (maps_to), the route record and the one reader.  demog's
 # set is [defaults] (5b-2), stf_t02_demog's a fixed {content: none}.
 
-te_study <- function(defaults, patterns = list(), settings = list()) {
+te_study <- function(defaults, settings = list()) {
   d <- tempfile("te")
   dir.create(file.path(d, "outputs"), recursive = TRUE)
-  yaml::write_yaml(list(study_id = "TE-1", settings = c(list(treatment = "TRT01P"), settings)),
-                   file.path(d, "study.yml"))
+  write_study_yml(d, list(study_id = "TE-1", settings = c(list(treatment = "TRT01P"), settings)))
   writeLines(defaults, file.path(d, "defaults.yml"))
-  if (length(patterns)) dir.create(file.path(d, "patterns"))
-  for (nm in names(patterns)) writeLines(patterns[[nm]], file.path(d, "patterns", paste0(nm, ".yml")))
   s <- tfl_read_study_spec(d)
   unlink(d, recursive = TRUE)
   s
@@ -28,9 +25,6 @@ te_layers <- function(settings = list()) {
     "  compact:",
     "    content:",
     "      - plan_style: {font: S, header_align: center}"),
-    patterns = list(x = c(
-      "content:",
-      "  - plan_style: {font: P, align: right}")),
     settings = settings)
 }
 
@@ -44,13 +38,16 @@ te_item <- function(ro, fn) Filter(function(it) identical(it$fn, fn), ro$content
 test_that("extends' forms: files, none, a map by step; NULL for a template report; checked", {
   expect_identical(tfl_output("T-1", "table")$extends, "defaults")
   expect_null(te_demog()$extends)
-  o <- tfl_output("T-1", "table", extends = list(content = "none", data = list("patterns/x", "defaults")))
-  expect_identical(o$extends, list(content = "none", data = c("patterns/x", "defaults")))
+  o <- tfl_output("T-1", "table", extends = list(content = "none", data = list("defaults")))
+  expect_identical(o$extends, list(content = "none", data = "defaults"))
   e <- tfl_output_extends(o)
   expect_identical(names(e), c("data", "ard", "content"))
   expect_identical(e$content, character())
-  expect_identical(e$data, c("patterns/x", "defaults"))
-  expect_identical(tfl_output_extends(o, "data"), c("patterns/x", "defaults"))
+  expect_identical(e$data, "defaults")
+  expect_identical(tfl_output_extends(o, "data"), "defaults")
+  # a pattern is an old form (canon 11-12 :380)
+  expect_error(tfl_output("T-1", "table", extends = list(data = list("patterns/x", "defaults"))),
+               class = "tflspec_old_form")
   # the page step has no files: the page comes from the page configuration
   expect_error(tfl_output("T-1", "table", extends = list(page = "none")), "no step page")
   expect_identical(tfl_output_extends(tfl_output("T-1", "table", extends = "none"), "data"), character())
@@ -83,25 +80,25 @@ test_that("extends' forms: files, none, a map by step; NULL for a template repor
   expect_identical(tfl_read_output(f)$extends, "defaults")
 })
 
-test_that("T1: one order -- report > template > style > pattern > defaults; a code SPEC the same", {
+test_that("T1: one order -- report > template > style > defaults; a code SPEC the same", {
   s <- te_layers()
-  o <- te_demog(extends = c("patterns/x", "defaults"), style = "compact",
+  o <- te_demog(extends = "defaults", style = "compact",
                 content = list(tfl_item("plan_style", list(font = "R"))))
   ro <- tfl_resolve_output(o, s, provenance = TRUE)
   ps <- te_item(ro, "plan_style")
   expect_identical(ps$args$font, "R")
-  expect_identical(unname(ps$arg_from[c("font", "border_header", "header_align", "align", "header_bold")]),
-                   c("own", "template:demog", "style:compact", "pattern:x", "defaults"))
+  expect_identical(unname(ps$arg_from[c("font", "border_header", "header_align", "header_bold")]),
+                   c("own", "template:demog", "style:compact", "defaults"))
   # (border_header: the template's, as its reference read it -- the one rule)
   rt <- attr(ro, "template")$routes
   expect_identical(rt$route[rt$param == "border_header"], "study:plan_style.border_header")
   # a code SPEC: the same layers, no template
-  c0 <- tfl_output("T-1", "table", extends = c("patterns/x", "defaults"), style = "compact",
+  c0 <- tfl_output("T-1", "table", extends = "defaults", style = "compact",
                    content = list(tfl_item("plan_style", list(font = "R"))))
   rc <- tfl_resolve_output(c0, s, provenance = TRUE)
   pc <- te_item(rc, "plan_style")
-  expect_identical(unname(pc$arg_from[c("font", "header_align", "align", "header_bold", "border_header")]),
-                   c("own", "style:compact", "pattern:x", "defaults", "defaults"))
+  expect_identical(unname(pc$arg_from[c("font", "header_align", "header_bold", "border_header")]),
+                   c("own", "style:compact", "defaults", "defaults"))
 })
 
 test_that("T2: the map forms on demog and stf_t02_demog; an unknown step stops", {
@@ -109,7 +106,7 @@ test_that("T2: the map forms on demog and stf_t02_demog; an unknown step stops",
   from <- function(ro) vapply(ro$content, function(it) it$from %||% "", "")
   # {content: none} written on demog: no study content, the page kept
   r1 <- tfl_resolve_output(te_demog(extends = list(content = "none")), s)
-  expect_false(any(c("defaults", "pattern:x") %in% from(r1)))
+  expect_false("defaults" %in% from(r1))
   expect_identical(r1$page$header[["1"]]$left, "{COMPANY}")
   # none written: its set's [defaults], the same as written
   r0 <- tfl_resolve_output(te_demog(), s, provenance = TRUE)
@@ -117,12 +114,9 @@ test_that("T2: the map forms on demog and stf_t02_demog; an unknown step stops",
   expect_identical(lapply(r0$content, unclass),
                    lapply(tfl_resolve_output(te_demog(extends = "defaults"), s, provenance = TRUE)$content,
                           unclass))
-  # [patterns/x, defaults] lays the pattern
-  r2 <- tfl_resolve_output(te_demog(extends = c("patterns/x", "defaults")), s, provenance = TRUE)
-  expect_true("pattern:x" %in% unlist(lapply(r2$content, function(it) it$arg_from)))
   # stf_: its content still none, whatever the other steps lay
-  r3 <- tfl_resolve_output(te_demog(name = "stf_t02_demog", extends = list(data = "patterns/x")), s)
-  expect_false(any(c("defaults", "pattern:x") %in% from(r3)))
+  r3 <- tfl_resolve_output(te_demog(name = "stf_t02_demog", extends = list(data = "defaults")), s)
+  expect_false("defaults" %in% from(r3))
   expect_true("style:stf_t02" %in% from(r3))
   expect_error(te_demog(extends = list(contents = "none")), "no step 'contents'")
 })
@@ -130,11 +124,9 @@ test_that("T2: the map forms on demog and stf_t02_demog; an unknown step stops",
 test_that("T3: stf_t02_demog fixes the content step; `template:` holds no extends or style", {
   s <- te_layers()
   msg <- "template stf_t02_demog fixes extends' content step to none; write the other steps as a map"
-  expect_error(tfl_resolve_output(te_demog(name = "stf_t02_demog", extends = c("patterns/x", "defaults")), s),
-               msg)
   expect_error(tfl_resolve_output(te_demog(name = "stf_t02_demog", extends = list(content = "defaults")), s),
                msg)
-  expect_error(tfl_output_extends(te_demog(name = "stf_t02_demog", extends = "patterns/x")), msg)
+  expect_error(tfl_output_extends(te_demog(name = "stf_t02_demog", extends = list(content = "defaults"))), msg)
   # (a plain [defaults], as saved files write it, reads as not written)
   expect_identical(tfl_output_extends(te_demog(name = "stf_t02_demog", extends = "defaults")),
                    tfl_output_extends(te_demog(name = "stf_t02_demog")))
@@ -173,7 +165,7 @@ test_that("T4: one rule -- a reference wins, the study's argument does not reach
   expect_null(tfl_study_value(s, "plan_stub.name", te_demog(extends = list(content = "none")))$value)
 })
 
-test_that("T5: the range -- the pattern over the defaults, the style set, !unset, no value", {
+test_that("T5: the range -- the style set over the defaults, !unset, no value", {
   s <- te_study(c(
     "content:",
     "  - plan_stub: {name: Dstub}",
@@ -181,19 +173,24 @@ test_that("T5: the range -- the pattern over the defaults, the style set, !unset
     "styles:",
     "  compact:",
     "    content:",
-    "      - plan_stub: {name: Sstub}"),
-    patterns = list(x = c("content:", "  - plan_stub: {name: Pstub}"),
-                    u = c("content:", "  - plan_paginate_rows:", "      max_rows: !unset")))
-  o <- te_demog(extends = c("patterns/x", "defaults"))
+    "      - plan_stub: {name: Sstub}",
+    "  px:",
+    "    content:",
+    "      - plan_stub: {name: Pstub}",
+    "  pu:",
+    "    content:",
+    "      - plan_paginate_rows:",
+    "          max_rows: !unset"))
+  o <- te_demog(style = "px")
   rt <- tfl_template_routes(o, s)
   expect_identical(rt$value[rt$param == "stub_name"], "Pstub")
   expect_identical(tfl_study_value(s, "plan_stub.name", o)[c("value", "key", "from")],
-                   list(value = "Pstub", key = "plan_stub.name", from = "pattern:x"))
+                   list(value = "Pstub", key = "plan_stub.name", from = "style:px"))
   # the style set's value is read, nearest
-  rs <- tfl_template_routes(te_demog(extends = c("patterns/x", "defaults"), style = "compact"), s)
+  rs <- tfl_template_routes(te_demog(style = "compact"), s)
   expect_identical(rs$value[rs$param == "stub_name"], "Sstub")
-  # !unset in the pattern: the fallback
-  ru <- tfl_template_routes(te_demog(extends = c("patterns/u", "defaults")), s)
+  # !unset in the style set: the fallback
+  ru <- tfl_template_routes(te_demog(style = "pu"), s)
   expect_identical(ru$route[ru$param == "max_rows"], "fallback")
   expect_identical(ru$value[ru$param == "max_rows"], "30")
   expect_identical(rt$route[rt$param == "max_rows"], "study:plan_paginate_rows.max_rows")

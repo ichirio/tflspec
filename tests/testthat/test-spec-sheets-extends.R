@@ -1,18 +1,15 @@
 # What a report extends goes through the sheets: the report row's `extends`
-# cell (#689, part 2).  The `pattern` cell says the first pattern; the
-# `extends` cell is there only when the chain is not what that alone reads
-# back as, [first pattern, defaults].
+# cell (#689, part 2), there only when the chain is not [defaults], which a
+# blank cell reads back as.  A pattern is an old form (canon 11-12 :380): a
+# `patterns/<name>` in the extends cell and a `pattern` cell that names no
+# page configuration stop the conversion.
 
-# a study of fictional reports, one per chain (the page has no file layer:
-# a pattern holds content only)
+# a study of fictional reports, one per chain
 ex_study <- function(chains) {
   d <- withr::local_tempdir(.local_envir = parent.frame())
   src <- system.file("extdata", "spec-yaml", package = "tflspec")
   dir.create(file.path(d, "outputs"))
-  dir.create(file.path(d, "patterns"))
   file.copy(file.path(src, "defaults.yml"), file.path(d, "defaults.yml"))
-  writeLines(c("content:", "  - plan_blanks: {first: true}"), file.path(d, "patterns", "p.yml"))
-  writeLines(c("content:", "  - plan_blanks: {first: false}"), file.path(d, "patterns", "q.yml"))
   ol <- readLines(file.path(src, "outputs", "T-14-1-1.yml"))
   for (id in names(chains)) {
     x <- sub("id: T-14-1-1", paste0("id: ", id), ol, fixed = TRUE)
@@ -23,15 +20,11 @@ ex_study <- function(chains) {
 }
 
 ex_chains <- list(
-  "T-flip" = "extends: [defaults, patterns/p]",
   "T-none" = "extends: none",
-  "T-alone" = "extends: [patterns/p]",
-  "T-two" = "extends: [patterns/p, patterns/q, defaults]",
-  "T-twoflip" = "extends: [patterns/q, patterns/p]",
-  "T-def" = "extends: [defaults]",
-  "T-pdef" = "extends: [patterns/p, defaults]")
+  "T-map" = "extends: {content: none}",
+  "T-def" = "extends: [defaults]")
 
-ex_chain <- function(d, id) as.character(tfl_read_outputs(d)[[id]]$extends)
+ex_chain <- function(d, id) tfl_read_outputs(d)[[id]]$extends
 
 ex_roundtrip <- function(d) {
   sh <- suppressMessages(tfl_sheets_from_yaml(d))
@@ -40,35 +33,26 @@ ex_roundtrip <- function(d) {
   list(sheets = sh, dir = to)
 }
 
-test_that("the chains of the issue's table come back as written, in memory", {
+test_that("the chains come back as written, in memory", {
   d <- ex_study(ex_chains)
   rt <- ex_roundtrip(d)
   for (id in names(ex_chains)) {
     expect_identical(ex_chain(rt$dir, id), ex_chain(d, id), info = id)
   }
-  expect_identical(ex_chain(rt$dir, "T-flip"), c("defaults", "patterns/p"))
   expect_identical(ex_chain(rt$dir, "T-none"), "none")
-  expect_identical(ex_chain(rt$dir, "T-alone"), "patterns/p")
-  expect_identical(ex_chain(rt$dir, "T-two"), c("patterns/p", "patterns/q", "defaults"))
+  expect_identical(ex_chain(rt$dir, "T-map"), list(content = "none"))
 })
 
-test_that("the unchanged forms get no extends cell; the others do", {
+test_that("the unchanged form gets no extends cell; the others do", {
   d <- ex_study(ex_chains)
   rp <- suppressMessages(tfl_sheets_from_yaml(d))$table$report
   cell <- function(id) rp$extends[rp$output_id %in% id]
-  for (id in c("T-def", "T-pdef")) expect_true(is.na(cell(id)), info = id)
-  expect_identical(cell("T-flip"), "defaults | patterns/p")
+  expect_true(is.na(cell("T-def")))
   expect_identical(cell("T-none"), "none")
-  expect_identical(cell("T-alone"), "patterns/p")
-  expect_identical(cell("T-two"), "patterns/p | patterns/q | defaults")
-  # the pattern cell is the first pattern as before, for the app
-  expect_identical(rp$pattern[rp$output_id %in% "T-two"], "@p")
-  expect_identical(rp$pattern[rp$output_id %in% "T-alone"], "@p")
-  expect_identical(rp$pattern[rp$output_id %in% "T-twoflip"], "@q")
-  expect_true(is.na(rp$pattern[rp$output_id %in% "T-none"]))
-  expect_identical(rp$pattern[rp$output_id %in% "T-flip"], "@p")
-  # a study of only the unchanged forms: the cell is blank everywhere
-  d2 <- ex_study(ex_chains[c("T-def", "T-pdef")])
+  expect_identical(cell("T-map"), "content=none")
+  # (no report picks a page configuration of its own: no pattern cell)
+  expect_true(all(is.na(rp$pattern[rp$output_id %in% names(ex_chains)])))
+  d2 <- ex_study(ex_chains["T-def"])
   rp2 <- suppressMessages(tfl_sheets_from_yaml(d2))$table$report
   expect_true(all(is.na(rp2$extends)))
 })
@@ -85,10 +69,10 @@ test_that("the chains also go through the spec workbook", {
   openxlsx::saveWorkbook(wb, f, overwrite = TRUE)
   # the workbook holds the report sheet's cell
   rb <- tfl_read_report_spec(f)$report
-  expect_identical(rb$extends[rb$output_id %in% "T-two"], "patterns/p | patterns/q | defaults")
+  expect_identical(rb$extends[rb$output_id %in% "T-none"], "none")
   from <- withr::local_tempdir()
   file.copy(f, file.path(from, "table_spec.xlsx"))
-  writeLines(c("study_id: EX-1", "title: A study", "phase: '2'"), file.path(from, "study.yml"))
+  write_study_yml(from, c("study_id: EX-1", "title: A study", "phase: '2'"))
   to <- withr::local_tempdir()
   suppressMessages(tfl_convert_sheets_to_yaml(from, to, overwrite = TRUE))
   for (id in names(ex_chains)) {
@@ -106,8 +90,8 @@ test_that("a report with no extends: reads as [defaults] and comes back unchange
   expect_true(is.na(rt$sheets$table$report$extends[rt$sheets$table$report$output_id %in% "T-x"]))
 })
 
-test_that("a pattern cell and an extends cell naming different patterns stop the conversion", {
-  d <- ex_study(ex_chains[c("T-two", "T-none")])
+test_that("a pattern in the sheets stops the conversion: an old form", {
+  d <- ex_study(ex_chains)
   sh <- suppressMessages(tfl_sheets_from_yaml(d))
   to <- withr::local_tempdir()
   run <- function(s) suppressMessages(tfl_yaml_from_sheets(s, to, overwrite = TRUE))
@@ -115,23 +99,16 @@ test_that("a pattern cell and an extends cell naming different patterns stop the
     s$table$report[[col]][s$table$report$output_id %in% id] <- v
     s
   }
-  # extends edited to another first pattern
-  err <- tryCatch(run(set(sh, "extends", "T-two", "patterns/q | defaults")), error = conditionMessage)
-  expect_match(err, "T-two", fixed = TRUE)
-  expect_match(err, "@p", fixed = TRUE)
-  expect_match(err, "patterns/q", fixed = TRUE)
-  # pattern edited to another one
-  expect_match(tryCatch(run(set(sh, "pattern", "T-two", "@q")), error = conditionMessage),
-               "T-two", fixed = TRUE)
-  # a blank pattern cell with an extends cell naming a pattern
-  err3 <- tryCatch(run(set(sh, "pattern", "T-two", NA)), error = conditionMessage)
-  expect_match(err3, "T-two", fixed = TRUE)
-  expect_match(err3, "blank", fixed = TRUE)
-  # a pattern in the pattern cell, an extends cell with none in it
-  expect_match(tryCatch(run(set(sh, "extends", "T-two", "defaults")), error = conditionMessage),
-               "T-two", fixed = TRUE)
-  # an extends cell with no pattern in it and a blank pattern cell is fine
+  # a pattern in the extends cell, a chain or a step's
+  for (v in c("patterns/p | defaults", "content=patterns/p")) {
+    e <- tryCatch(run(set(sh, "extends", "T-none", v)), error = function(e) e)
+    expect_s3_class(e, "tflspec_old_form")
+    expect_identical(e$form, "extends_pattern")
+    expect_match(conditionMessage(e), "T-none", fixed = TRUE)
+  }
+  # a pattern cell that names no page configuration: the sheets' own check
+  # stops it first (the conversion's old-form stop is behind it)
+  expect_error(run(set(sh, "pattern", "T-none", "@p")), "no page pattern of that name")
+  # the sheets as written convert
   expect_no_error(run(sh))
-  expect_no_error(run(set(sh, "extends", "T-none", "defaults")))
-  expect_identical(ex_chain(to, "T-none"), "defaults")
 })

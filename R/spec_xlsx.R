@@ -2,7 +2,7 @@
 # the data catalog, the analyses, code lists, tokens, the lines of a header
 # or footer, a listing's columns) written to a workbook to be read in Excel,
 # one row a thing, keyed as today's sheets are (output_id blank: the
-# defaults; @<name>: a pattern; else the report).  What a sheet cannot
+# defaults; else the report).  What a sheet cannot
 # hold -- the layers of `content:`, `!r` values, nested calls, a figure's
 # plot -- is listed on `_not_in_xlsx`.  Design: spec-format-redesign 5.
 
@@ -48,13 +48,12 @@ tfl_write_spec_xlsx <- function(dir, path) {
   if (length(s$data$groups)) {
     note(NA_character_, "groups", "condition-defined groups (data.yml groups:) have no sheet in this workbook")
   }
-  # the defaults and patterns: the page parts, the code list templates
+  # the defaults: the page parts, the code list templates
   # (the default rows are the study's default page configuration, when it is
   # the study's own, and its tokens)
   dflt <- .style_default_name(s)
   dpage <- .page_resolve(if (dflt %in% names(s$styles)) s$styles[[dflt]]$page, .study_tokens(s), NULL)
-  scopes <- c(list(list(id = NA_character_, layer = list(page = dpage, content = s$defaults$content))),
-              lapply(names(s$patterns), function(n) list(id = paste0("@", n), layer = s$patterns[[n]])))
+  scopes <- list(list(id = NA_character_, layer = list(page = dpage, content = s$defaults$content)))
   for (sc in scopes) {
     .flat_page(sc$layer$page, sc$id, add_rows, note)
     if (length(sc$layer$content)) note(sc$id, "content", "the layers (content) are not rows")
