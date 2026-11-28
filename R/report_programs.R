@@ -85,8 +85,11 @@
 # Does this code assign `data` itself?  (Then it needs no default
 # normalization after it.)
 .rp_makes_data <- function(code) {
-  any(grepl("(^|[^A-Za-z0-9_.])data[[:space:]]*(<-|=)[^=]",
-            strsplit(code, "\n", fixed = TRUE)[[1L]]))
+  lines <- strsplit(code, "\n", fixed = TRUE)[[1L]]
+  # (the prototype's analysis block runs in local(): what it assigns stays
+  # in it; R/proto_programs.R)
+  lines <- .op_outside_analysis(lines)
+  any(grepl("(^|[^A-Za-z0-9_.])data[[:space:]]*(<-|=)[^=]", lines))
 }
 
 # A path as the report programs' own lines write it: through the variable
@@ -248,6 +251,8 @@
 .rp_ard_code_of <- function(ctx) {
   r <- ctx$report
   if (!identical(r$type, "table")) return(NA_character_)
+  # (the prototype's full program: its ARD made here, not read; R/proto_programs.R)
+  if (is.null(r$ard_import) && !is.null(op <- .op_table_ard_code(ctx))) return(op)
   if (is.null(r$ard_import)) .rp_fill_template(ctx, "table_data") else
     .rp_imported_ard_code(r$ard_import, r$id)
 }
@@ -479,6 +484,9 @@
   r <- ctx$report
   src <- r$ard_source
   lay <- ctx$layout
+  # (the prototype's full program: its own ARD made here, another's read
+  # from its file; R/proto_programs.R)
+  if (!is.null(ctx$onepass) && src$kind %in% c("own", "table")) return(.op_fig_ard_lines(ctx, src))
   path <- .rp_path_lit(ctx$shared$study_ard)
   switch(src$kind,
     none = if (.rp_fig_reads_ard(design)) c(
@@ -699,10 +707,12 @@
         c(if (identical(leaves, "ard")) "# your code: leaves `ard` (normalized in the table's plan) or `data`"
           else "# your code: leaves `data` (or `ard`, normalized below)",
           .rp_code_block(code),
+          if (!is.null(ctx$onepass)) .op_keep_ard_lines(ctx),
           .rp_table_process_lines(ctx, code, proc),
           "", sprintf("%s <- report_data(%s, \"%s\")", leaves, leaves, leaves))
       }
-      else .rp_code_step_lines(ctx, "data"))
+      else c(.rp_code_step_lines(ctx, "data"),
+             if (!is.null(ctx$onepass)) .op_keep_ard_lines(ctx)))
   } else switch(type,
     table = {
       a <- .rp_ard_code_of(ctx)
@@ -967,6 +977,7 @@
     sprintf("source(%s)", .rp_r_string(file.path(lay[["programs_tfl"]],
                                                   .setup_file_names[["report_setup"]]))),
     if (!is.null(design)) .rp_fig_source_lines(lay),
+    if (!is.null(ctx$onepass)) .op_source_lines(ctx),
     "",
     .rp_report_id_line(id),
     "",
