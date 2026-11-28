@@ -1341,7 +1341,7 @@ rtf_footer:
         description: 'What a cell no template could fill prints (plan_cells(na = ));
           blank: empty.'
         example: '-'
-      - column: header_n
+      - column: col_header_values
         description: 'Which population {n} in the column header is, for a table split
           by page (a lab parameter): page (those with that page''s data), table (the
           population), or both as n = page | N = table for {n} and {N}; blank: page

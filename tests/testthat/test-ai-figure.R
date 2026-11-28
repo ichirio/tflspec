@@ -112,7 +112,7 @@ test_that("tfl_ai_run(): the figure drawn, its PNG and RTF; agent_prompt", {
   expect_true(all(!is.na(res$reports$rtf)))
 })
 
-test_that("an agent's figure draft with its layers as `layers:` (the instructions' form) is drawn", {
+test_that("an agent's figure draft with its layers as content items (the instructions' form) is drawn", {
   skip_on_cran()
   skip_if_not_installed("haven")
   skip_if_not_installed("rtfreporter")
@@ -128,9 +128,8 @@ test_that("an agent's figure draft with its layers as `layers:` (the instruction
     "data:", "  source: code", "  population: ITT", "  steps:",
     "    - {step: read, dataset: ADRS}",
     "    - {step: param, value: OVR}",
-    "content: []",
+    "content:", "  - point: {x: AVISITN, y: AVAL}",
     "plot: {x_label: Arm, y_label: Subjects}",
-    "layers:", "  - {layer: point, x: AVISITN, y: AVAL}",
     "page:", "  titles:", "    '1': {center: Figure 14.2.2}"), f)
   o <- tfl_read_output(f)
   fd <- tflspec:::.fig_design_of_output(o)
@@ -175,9 +174,8 @@ test_that("a built figure's facts beside its PNG; a figure of the agent's own co
     "data:", "  source: code", "  population: ITT", "  steps:",
     "    - {step: read, dataset: ADRS}",
     "    - {step: param, value: OVR}",
-    "content: []",
-    "layers:",
-    "  - {layer: layer_code, code: 'p <- ggplot(df, aes(AVISITN, AVAL, colour = TRT01P)) + geom_point() + labs(x = \"Visit\", y = \"Value\")'}",
+    "content:",
+    "  - layer_code: {code: 'p <- ggplot(df, aes(AVISITN, AVAL, colour = TRT01P)) + geom_point() + labs(x = \"Visit\", y = \"Value\")'}",
     "page:", "  titles:", "    '1': {center: Figure 14.2.2}"), f)
   res <- suppressMessages(tfl_ai_run(d, requests = "figure-1"))
   fr <- res$reports[res$reports$output_id == "F-14-2-2", ]
@@ -335,11 +333,10 @@ fig_codelists_study <- function(own = FALSE) {
                "    - {step: param, value: OS}") else
       c("    - {step: read, dataset: ADRS}",
         "    - {step: param, value: OVR}"),
-    "content: []",
     if (own) c("codelists:", "  TRT01P:",
                "    - {value: Control, label: Own Control}", "    - {value: Drug X, label: Own Drug X}"),
-    if (own) c("template:", "  name: km_survival", "  args: {by: TRT01P, time_unit: months}") else c("layers:",
-    "  - {layer: layer_code, code: 'p <- ggplot(df, aes(AVISITN, AVAL, colour = TRT01P)) + geom_point() + labs(x = \"Visit\", y = \"Value\")'}"),
+    if (own) c("content: []", "template:", "  name: km_survival", "  args: {by: TRT01P, time_unit: months}") else c("content:",
+    "  - layer_code: {code: 'p <- ggplot(df, aes(AVISITN, AVAL, colour = TRT01P)) + geom_point() + labs(x = \"Visit\", y = \"Value\")'}"),
     "page:", "  titles:", "    '1': {center: Figure 14.2.2}"), f)
   d
 }
@@ -391,10 +388,9 @@ fig_cl_study <- function(own = NULL, layer = NULL) {
     "data:", "  source: code", "  population: ITT", "  steps:",
     "    - {step: read, dataset: ADRS}",
     "    - {step: param, value: OVR}",
-    "content: []",
     if (length(own)) c("codelists:", own),
-    "layers:",
-    "  - {layer: layer_code, code: 'p <- ggplot(df, aes(AVISITN, AVAL, colour = TRT01P)) + geom_point()'}",
+    "content:",
+    "  - layer_code: {code: 'p <- ggplot(df, aes(AVISITN, AVAL, colour = TRT01P)) + geom_point()'}",
     "page:", "  titles:", "    '1': {center: Figure 14.2.2}"),
     file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml"))
   d

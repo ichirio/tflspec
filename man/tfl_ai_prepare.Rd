@@ -291,7 +291,7 @@ only the reports an answer changes are then written again),
 \code{requests_per_chat} (0, no limit: after that many requests the agent stops
 and asks for a new chat), \code{carry} (which decision scopes apply to a later
 report without asking: \code{all}, \code{dataset}, \code{section}), \code{max_rounds} (how
-many times one item is asked again, 3), \code{footnotes_at} (\code{"footer"}, the
+many times one item is asked again, 3), \code{shell_footnotes} (\code{"footer"}, the
 default, or \code{"table"}: where the shell's footnotes go), \code{review} (how
 deep the agent checks each report it builds itself, by kind: \code{0} the
 check, \code{1} and the program, \code{2} and the facts -- what R made, in words

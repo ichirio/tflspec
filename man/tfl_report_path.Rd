@@ -35,7 +35,7 @@ number fill it: \code{{type}} (\code{t}, \code{f}, \code{l}), \code{{num}} (\ver
 \code{{part_no}} (\code{1}); and \code{{shell_code}}, the id written at the top of the
 report's shell (its TOC entry's \code{shell_code}, which \code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}
 reads: a cell of the shell's first rows in the form \code{t_dem_01} or
-\verb{151_t_dem_01}, or \code{study.yml}'s \code{settings: shell_code}, a regular
+\verb{151_t_dem_01}, or \code{study.yml}'s \code{ai: shell_code}, a regular
 expression).  A part's entry is its number's.  \verb{[ ... ]} is left out
 when a field in it is empty: \verb{[m\{part_no\}_]\{shell_code\}.rtf} is
 \code{m1_151_t_dem_01.rtf} for part a, \verb{151_t_dem_01.rtf} for a report with

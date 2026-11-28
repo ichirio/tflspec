@@ -33,6 +33,15 @@ tflspec's built-in one for a part it does not give),
 \code{toc}, \code{dir}.  A \verb{spec/patterns/} file stops the read (an old form:
 a page is a page configuration, \verb{styles:}).  \code{tfl_read_outputs()}: a
 named list of \code{tfl_output}, by id.
+
+The keys a file takes are a closed list (spec-keys-v2): a key of
+\code{study.yml} (its top level, \verb{settings:}, \verb{ai:}, \verb{keys:}), a report file
+or \code{defaults.yml}'s \verb{force:} that the list does not have stops the
+read, every such key of the read in one error of class
+\code{tflspec_spec_keys} (fields \code{file}, \code{keys}, \code{problems}: a row a key,
+with what to write instead; for \code{tfl_read_study_spec()} also \code{spec},
+the study read with those keys left out).  \code{\link[=tfl_check_spec]{tfl_check_spec()}} gives
+them as rows.
 }
 \description{
 \code{tfl_read_study_spec()} reads the study-level files (every one optional)

@@ -33,7 +33,8 @@ twin_study <- function(d, defaults, style = TRUE) {
   if (!any(grepl("^force:", dl))) {
     init <- readLines(file.path(d, "spec", "defaults.yml"))
     at <- grep("^force:", init)
-    dl <- c(init[at + 0:2], dl)
+    to <- c(grep("^[^ #]", init), length(init) + 1L)
+    dl <- c(init[at:(min(to[to > at]) - 1L)], dl)
   }
   writeLines(dl, file.path(d, "spec", "defaults.yml"))
   # (the sample defaults.yml's adam_meta levels apply as in the sample

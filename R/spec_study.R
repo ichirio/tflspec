@@ -97,6 +97,15 @@
 #'   `toc`, `dir`.  A `spec/patterns/` file stops the read (an old form:
 #'   a page is a page configuration, `styles:`).  `tfl_read_outputs()`: a
 #'   named list of `tfl_output`, by id.
+#'
+#'   The keys a file takes are a closed list (spec-keys-v2): a key of
+#'   `study.yml` (its top level, `settings:`, `ai:`, `keys:`), a report file
+#'   or `defaults.yml`'s `force:` that the list does not have stops the
+#'   read, every such key of the read in one error of class
+#'   `tflspec_spec_keys` (fields `file`, `keys`, `problems`: a row a key,
+#'   with what to write instead; for `tfl_read_study_spec()` also `spec`,
+#'   the study read with those keys left out).  [tfl_check_spec()] gives
+#'   them as rows.
 #' @examples
 #' d <- system.file("extdata", "spec-yaml", package = "tflspec")
 #' s <- tfl_read_study_spec(d)
@@ -104,6 +113,15 @@
 #' @export
 tfl_read_study_spec <- function(dir) {
   if (!dir.exists(dir)) stop("tfl_read_study_spec(): no folder ", dir, call. = FALSE)
+  # (every key the study's files do not take, gathered: one stop, the study
+  # read without them beside it, R/spec_keys.R)
+  r <- .spec_keys_collect(.read_study_spec(dir))
+  if (NROW(r$problems)) .spec_keys_stop(r$problems, spec = r$value)
+  r$value
+}
+
+# tfl_read_study_spec()'s read (its keys' problems raised: .spec_keys_raise())
+.read_study_spec <- function(dir) {
   spec <- .spec_dir(dir)
   rd <- function(f) {
     if (!file.exists(f)) return(NULL)

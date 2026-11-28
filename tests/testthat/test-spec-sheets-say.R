@@ -198,8 +198,10 @@ test_that("a pattern file stops the sheets: an old form, whatever it holds", {
 })
 
 test_that("a study.yml settings: key the sheet does not read is kept, not a stop", {
+  # (settings: is a closed list, spec-keys-v2: `params` is one of it, its
+  # inner form open)
   study <- c("study_id: MIN-1", "title: minimal", "settings:",
-             "  treatment: TRT01A", "  retries: 3", "  custom: {a: 1, b: [x, y]}")
+             "  treatment: TRT01A", "  params:", "    retries: 3", "    custom: {a: 1, b: [x, y]}")
   d <- rts_study(list("outputs/T-1.yml" = rts_table()), study = study)
   x <- rts_trip(d)
   st <- yaml::read_yaml(file.path(x$to, "study.yml"))$settings
@@ -207,16 +209,16 @@ test_that("a study.yml settings: key the sheet does not read is kept, not a stop
   expect_null(st$rounding)
   expect_identical(st$treatment, "TRT01A")
   # (the value as study.yml had it, where the sheet's text says the same)
-  expect_identical(st$retries, 3L)
-  expect_identical(st$custom, list(a = 1L, b = c("x", "y")))
+  expect_identical(st$params$retries, 3L)
+  expect_identical(st$params$custom, list(a = 1L, b = c("x", "y")))
   expect_identical(length(x$msgs), 0L)
 })
 
 test_that("a vector setting is written back as the vector", {
-  study <- c("study_id: MIN-1", "title: minimal", "settings:", "  foo: [a, b]")
+  study <- c("study_id: MIN-1", "title: minimal", "settings:", "  params: [a, b]")
   x <- rts_trip(rts_study(list("outputs/T-1.yml" = rts_table()), study = study))
   st <- yaml::read_yaml(file.path(x$to, "study.yml"))$settings
-  expect_identical(st$foo, c("a", "b"))
+  expect_identical(st$params, c("a", "b"))
   # (the rounding is the study's force, defaults.yml `force:`: not a setting)
   expect_null(st$rounding)
 })

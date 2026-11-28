@@ -6,12 +6,16 @@
 #    spec/defaults.yml
 #      force:
 #        content:
-#          - plan_digits: {rounding: sas}      # or r
+#          - plan_digits:
+#              rounding: sas                 # or r
 #
 #  `force:` is a map by step; its content part has the form of `content:`.
-#  Any other step or card stops ("only the rounding is forced").  The one
-#  reader of the study's rounding is .study_rounding(); the writers write it
-#  through .force_of() / .force_out() (YAML lists) or .force_lines() (text).
+#  Any other step or card stops ("only the rounding is forced"), as a row
+#  of the file's one stop of its keys (R/spec_keys.R).  The one reader of
+#  the study's rounding is .study_rounding() (exported: tfl_study_rounding(),
+#  which also sets it); the writers write it in one form, the block form
+#  above, through .force_of() / .force_out() (YAML lists) or .force_lines()
+#  (text).
 #  The rounding goes to every program's setup, the reports' and the ARDs'
 #  (options(rtfreporter.rounding = , cards.round_type = )), to an in-process
 #  build's options (.study_rounding_option()), and over a table's own
@@ -19,41 +23,63 @@
 #  that forces no rounding writes no options().
 # ============================================================================
 
-# What the force may hold, said where anything else is written
-.force_only <- paste0("only the rounding is forced (canon 1.33): ",
-                      "force: {content: [{plan_digits: {rounding: sas}}]} (sas or r)")
+# What the force may hold, said where anything else is written (the block
+# form under it: .force_yaml())
+.force_only <- "only the rounding is forced (canon 1.33), sas or r"
 
 # defaults.yml's `force:` (`x`, as YAML read it) as the study holds it:
 # list(content = <the one plan_digits(rounding = ) item>), list() for none.
-# `where`: the file, for the messages.
+# `where`: the file, for the messages.  A force that holds anything else is
+# a problem of the file's keys (.spec_keys_raise(): one classed stop; while
+# a study is read, gathered with study.yml's), and reads as none.
 .force_read <- function(x, where = "spec/defaults.yml") {
   if (is.null(x)) return(list())
-  stop_only <- function(what) {
-    stop(sprintf("%s: `force:` %s; %s.", where, what, .force_only), call. = FALSE)
+  bad <- function(key, what) {
+    .spec_keys_raise(.spec_keys_rows(where, key, "value", sprintf("%s; %s.", what, .force_only),
+                                     more = paste(.force_yaml("sas"), collapse = "\n")))
+    list()
   }
-  if (!.is_map(x)) stop_only("is a map by step")
-  for (k in setdiff(names(x), "content")) stop_only(sprintf("has `%s:`", k))
+  if (!.is_map(x)) return(bad("force", "is a map by step"))
+  other <- setdiff(names(x), "content")
+  if (length(other)) return(bad(paste0("force: ", other[1L]), "is not a step the force holds"))
   cont <- x$content
   if (!is.list(cont) || !length(cont) || !is.null(names(cont)) || inherits(cont, "tfl_r")) {
-    stop_only("`content:` is a list of cards, as `content:` is")
+    return(bad("force: content", "is a list of cards, as `content:` is"))
   }
-  items <- lapply(cont, .item_from_list)
+  bad_value <- function(r) {
+    bad("force: content: plan_digits: rounding", sprintf(
+      "takes \"sas\" or \"r\", not %s",
+      if (is.character(r)) paste0("\"", paste(r, collapse = ", "), "\"") else "that value"))
+  }
+  # (the value checked before the card is made: a card checks its own
+  # rounding, with its own words)
+  for (cd in cont) {
+    a <- if (.is_map(cd) && length(cd) == 1L) cd[[1L]]
+    if (.is_map(a) && "rounding" %in% names(a) && !.force_ok(a$rounding)) return(bad_value(a$rounding))
+  }
+  items <- tryCatch(lapply(cont, .item_from_list), error = function(e) e)
+  if (inherits(items, "error")) return(bad("force: content", conditionMessage(items)))
   for (it in items) {
     if (!identical(.schema_fn_name(it$fn %||% ""), "plan_digits") ||
         !identical(names(it$args), "rounding")) {
-      stop_only(sprintf("has `%s: {%s}`", it$fn %||% "?", paste(names(it$args), collapse = ", ")))
+      return(bad(paste0("force: content: ", it$fn %||% "?"),
+                 sprintf("is `%s: {%s}`", it$fn %||% "?", paste(names(it$args), collapse = ", "))))
     }
   }
-  if (length(items) > 1L) stop_only("has more than one card")
+  if (length(items) > 1L) return(bad("force: content", "has more than one card"))
   it <- items[[1L]]
-  it$args$rounding <- .force_check(it$args$rounding, paste0(where, ": force: plan_digits rounding"))
+  r <- it$args$rounding
+  if (!.force_ok(r)) return(bad_value(r))
   it$from <- "force"
   list(content = list(it))
 }
 
+# A forced rounding as it is spelled: "sas" or "r"
+.force_ok <- function(x) is.character(x) && length(x) == 1L && !is.na(x) && x %in% c("sas", "r")
+
 # The forced rounding is "sas" or "r" (canon 11-10 :368), spelled so
 .force_check <- function(x, where) {
-  if (!(is.character(x) && length(x) == 1L && !is.na(x) && x %in% c("sas", "r"))) {
+  if (!.force_ok(x)) {
     stop(where, " takes \"sas\" or \"r\", not ",
          if (is.character(x)) paste0("\"", paste(x, collapse = ", "), "\"") else "that value",
          call. = FALSE)
@@ -77,6 +103,44 @@
     }
   }
   NULL
+}
+
+#' The study's rounding, forced on every report
+#'
+#' The one public reader and writer of the study's rounding: `spec/defaults.yml`
+#' `force:` (canon 1.33), which every report and ARD program of the study uses
+#' (`options(rtfreporter.rounding = , cards.round_type = )` in their setup),
+#' whatever a layer, a template or the report itself says.
+#' [tfl_write_study_part()] writes it, in its one form:
+#'
+#' ```yaml
+#' force:
+#'   content:
+#'     - plan_digits:
+#'         rounding: sas
+#' ```
+#'
+#' @param study A study read with [tfl_read_study_spec()].
+#' @param value `"sas"` (half away from zero) or `"r"` (half to even) to set
+#'   the rounding; `NULL` (or `NA`, `""`) to force none.  Missing: the
+#'   study's rounding is returned.
+#' @return With `value` missing: `"sas"`, `"r"`, or `NULL` when the study
+#'   forces none.  Else the study, its `force` set (write it with
+#'   [tfl_write_study_part()]).
+#' @examples
+#' d <- system.file("extdata", "spec-yaml", package = "tflspec")
+#' s <- tfl_read_study_spec(d)
+#' tfl_study_rounding(s)
+#' s <- tfl_study_rounding(s, "r")
+#' tfl_study_rounding(s)
+#' @export
+tfl_study_rounding <- function(study, value) {
+  if (!inherits(study, "tfl_study_spec")) {
+    .ard_stop("tfl_study_rounding(): `study` is a study read with tfl_read_study_spec().")
+  }
+  if (missing(value)) return(.study_rounding(study))
+  study$force <- .force_of(value)
+  study
 }
 
 # ---- the writers: one form ---------------------------------------------------
@@ -105,17 +169,13 @@
     .force_yaml(f$content[[1L]]$args$rounding))
 }
 
-# defaults.yml's `force:` of `rounding`, its YAML lines
+# defaults.yml's `force:` of `rounding`, its YAML lines: the one form, the
+# block form tfl_write_study_part() writes
 .force_yaml <- function(rounding) {
-  c("force:", "  content:", sprintf("    - plan_digits: {rounding: %s}", rounding))
+  c("force:", "  content:", "    - plan_digits:", sprintf("        rounding: %s", rounding))
 }
 
 # ---- the old forms of the rounding -------------------------------------------
-
-# The `force:` that says `rounding`, as text for an old form's message
-.force_text <- function(rounding = "sas") {
-  sprintf("force: {content: [{plan_digits: {rounding: %s}}]}", rounding)
-}
 
 # A study's content layer (spec/defaults.yml `content:`, a style set's
 # `content:`): a plan_digits(rounding = ) card there is an old form (canon
@@ -137,11 +197,12 @@
   invisible()
 }
 
-# What to write instead of an old rounding: defaults.yml's `force:`, its
-# YAML on one line (the stop gives the block form, .force_yaml(), below)
+# What to write instead of an old rounding: defaults.yml's `force:` (the
+# stop gives its YAML, the block form, .force_yaml(), below the line)
 .force_instead <- function(rounding = "sas", more = NULL) {
   paste0("the study's rounding is forced (canon 1.33): write it in spec/defaults.yml `force:`",
-         if (!is.null(more)) paste0(", ", more), " -- ", .force_text(rounding))
+         if (!is.null(more)) paste0(", ", more), " (", rounding,
+         "; tfl_study_rounding() sets it)")
 }
 
 # ---- layer 5: over a report's own rounding -----------------------------------

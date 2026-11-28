@@ -1,7 +1,8 @@
 # The fictional study's defaults (the golden test of the setup programs)
 force:
   content:
-    - plan_digits: {rounding: r}
+    - plan_digits:
+        rounding: r
 content:
   - normalize_ard: {}
 codelists:

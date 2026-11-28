@@ -63,7 +63,9 @@ test_that("only the rounding is forced: another step or card under `force:` stop
   # the value is sas or r, spelled so
   d <- sr_dir(c("force:", "  content:", "    - plan_digits: {rounding: iec60559}"))
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
-  expect_error(tfl_read_study_spec(d), "force: plan_digits rounding takes \"sas\" or \"r\"", fixed = TRUE)
+  e <- tryCatch(tfl_read_study_spec(d), tflspec_spec_keys = function(e) e)
+  expect_identical(e$keys, "force: content: plan_digits: rounding")
+  expect_match(conditionMessage(e), "takes \"sas\" or \"r\", not \"iec60559\"", fixed = TRUE)
 })
 
 test_that("the old places of the rounding stop, naming the file and `force:`", {
@@ -73,11 +75,14 @@ test_that("the old places of the rounding stop, naming the file and `force:`", {
   writeLines(sub("^settings: \\{adam_levels: define_xml\\}$", "settings:\n  adam_levels: define_xml",
                  readLines(file.path(d, "study.yml"))), file.path(d, "study.yml"))
   e <- tryCatch(tfl_read_study_spec(d), error = function(e) e)
-  expect_s3_class(e, "tflspec_old_form")
-  expect_identical(e$form, "settings_rounding")
-  expect_match(conditionMessage(e), "study.yml: `settings: rounding` is no longer read", fixed = TRUE)
+  expect_s3_class(e, "tflspec_spec_keys")
+  expect_identical(e$problems$form, "settings_rounding")
+  expect_match(conditionMessage(e), "study.yml: a key it does not take:", fixed = TRUE)
+  expect_match(conditionMessage(e), "`settings: rounding`: an old form, no longer read", fixed = TRUE)
   expect_match(conditionMessage(e), "write it in spec/defaults.yml `force:`", fixed = TRUE)
-  expect_match(conditionMessage(e), "force:\n    content:\n      - plan_digits: {rounding: r}", fixed = TRUE)
+  expect_match(conditionMessage(e), paste(
+    "      force:", "        content:", "          - plan_digits:", "              rounding: r", sep = "\n"),
+    fixed = TRUE)
   # a plan_digits(rounding = ) card in defaults.yml's content
   d2 <- sr_dir(c("content:", "  - plan_digits: {rounding: sas}"))
   on.exit(unlink(d2, recursive = TRUE), add = TRUE)
@@ -87,7 +92,8 @@ test_that("the old places of the rounding stop, naming the file and `force:`", {
   e <- tryCatch(tfl_read_study_spec(d2), error = function(e) e)
   expect_identical(e$form, "content_rounding")
   expect_match(conditionMessage(e), "spec/defaults.yml `content:`", fixed = TRUE)
-  expect_match(conditionMessage(e), "force: {content: [{plan_digits: {rounding: sas}}]}", fixed = TRUE)
+  expect_match(conditionMessage(e), "force:\n    content:\n      - plan_digits:\n          rounding: sas",
+               fixed = TRUE)
   # ... and in a style set's content
   d3 <- sr_dir(c("styles:", "  house:", "    content:", "      - plan_digits: {rounding: r, AGE: 1}"))
   on.exit(unlink(d3, recursive = TRUE), add = TRUE)

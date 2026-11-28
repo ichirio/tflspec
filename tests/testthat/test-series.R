@@ -186,12 +186,18 @@ test_that("!fixed keeps the value's type; tags in flow style and sequences", {
   expect_identical(o[["d.1"]], "series")
 })
 
-test_that("study.yml series_settings: stops, naming each series and the next step", {
-  study <- list(series_settings = list(demo_v1 = list(max_rows = 25L), other_v1 = list(a = 1L)))
-  expect_error(tflspec:::.series_settings_gone(study, "C:/st"),
-               "demo_v1: move these values into C:/st/spec/series/demo_v1/series.yml values:")
-  expect_error(tflspec:::.series_settings_gone(study), "other_v1: move these values into <study>")
-  expect_null(tflspec:::.series_settings_gone(list(settings = list(a = 1))))
+test_that("study.yml series_settings: an old form naming each series and the next step", {
+  ss <- list(demo_v1 = list(max_rows = 25L), other_v1 = list(a = 1L))
+  expect_match(tflspec:::.series_settings_instead(ss, "C:/st"),
+               "demo_v1: move these values into C:/st/spec/series/demo_v1/series.yml values:", fixed = TRUE)
+  expect_match(tflspec:::.series_settings_instead(ss), "other_v1: move these values into <study>",
+               fixed = TRUE)
+  p <- tflspec:::.study_yml_key_problems(list(series_settings = ss), "C:/st", "study.yml")
+  expect_identical(p$key, "series_settings")
+  expect_identical(p$kind, "old_form")
+  expect_match(p$text, "demo_v1: move these values into C:/st/spec/series/demo_v1", fixed = TRUE)
+  expect_identical(NROW(tflspec:::.study_yml_key_problems(list(settings = list(treatment = "TRT01P")),
+                                                          "C:/st", "study.yml")), 0L)
 })
 
 test_that(".series_fmt_list() splits base and VAR:stat formats", {

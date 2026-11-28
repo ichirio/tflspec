@@ -17,7 +17,8 @@ test_that("a cell template in Python's percent form: an error with the tflspec f
 test_that("a figure: an argument off with its layer added; a time axis with no unit", {
   o <- list(kind = "figure", template = list(name = "km_survival", args = list(
     censor_marks = FALSE, risk_table = FALSE, x_label = "Time")),
-    layers = list(list(layer = "censor_mark", shape = "plus"), list(layer = "risk_table")))
+    content = list(list(fn = "censor_mark", args = list(shape = "plus")),
+                   list(fn = "tfl_risk_panel", args = list())))
   p <- .check_static_rows(o, "F1")
   expect_identical(p$level, c("error", "error", "warning"))
   expect_match(p$message[1L], "`censor_marks: false` and a `censor_mark` layer", fixed = TRUE)

@@ -232,7 +232,7 @@
     message = paste("the set of the report's own rows against its template's argument is not checked:",
                     conditionMessage(e))))
   if (!is.null(tw) && nrow(tw)) rows[[length(rows) + 1L]] <- tw
-  tx <- .check_texts(list(content = o$content, template = args, layers = o$layers))
+  tx <- .check_texts(list(content = o$content, template = args))
   # {p:.1%}: a precision then `%`, no type between them
   bad <- if (!is.null(tx)) tx[grepl("[{][^{}:]+:[^{}]*[.][0-9]+%[}]", tx$text), , drop = FALSE]
   for (i in seq_len(NROW(bad))) {
@@ -245,12 +245,21 @@
   }
   # every cell template: its statistics, its formats (R/check_spec_cells.R)
   rows[[length(rows) + 1L]] <- .check_cell_rows(o, id)
-  # a figure's piece turned off by its argument and added as a layer
-  if (identical(o$kind, "figure") && length(o$layers)) {
-    lay <- vapply(o$layers, function(l) as.character(l$layer %||% ""), "")
+  # a figure's piece turned off by its argument and added as a layer: a
+  # content item (in a named plot too), the piece by its name or by the
+  # function that draws it
+  fns <- function(x) {
+    if (!is.list(x)) return(NULL)
+    f <- x[["fn"]]
+    c(if (is.character(f) && length(f) == 1L) .schema_fn_name(f), unlist(lapply(x, fns)))
+  }
+  lay <- if (identical(o$kind, "figure") && is.list(o$content)) fns(o$content)
+  if (length(lay)) {
     both <- c(censor_marks = "censor_mark", risk_table = "risk_table")
+    drawn <- list(censor_mark = c("censor_mark", "add_censor_mark"),
+                  risk_table = c("risk_table", "add_risktable", "tfl_risk_panel"))
     for (a in names(both)) {
-      if (isFALSE(args[[a]]) && both[[a]] %in% lay) {
+      if (isFALSE(args[[a]]) && any(drawn[[both[[a]]]] %in% lay)) {
         add(part = "figure", item = paste0("template$args$", a), level = "error",
             message = sprintf(paste0(
               "`%s: false` and a `%s` layer say opposite things: the figure shows neither. ",

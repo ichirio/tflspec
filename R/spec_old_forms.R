@@ -3,9 +3,11 @@
 #  :377-:379, 11-12 :380, :433).  A reader reads the current form only: an
 #  old form stops with the one line that says what to write instead -- a
 #  classed condition, `tflspec_old_form` (`cnd$form` the form's id,
-#  `cnd$where` the file or report), that a GUI reads as data.  The
-#  spec_version stop lists every line (.old_form_lines()).  One table, one
-#  place: a reader that finds an old form calls .old_form_stop().
+#  `cnd$where` the file or report; of the family `tflspec_spec_form`), that
+#  a GUI reads as data.  The spec_version stop lists every line
+#  (.old_form_lines()).  One table, one place: a reader that finds an old
+#  form calls .old_form_stop(); an old key of a file is a row of that
+#  file's one stop of its keys (R/spec_keys.R).
 # ============================================================================
 
 # The old forms: `id`; the form as it was written (`was`); what to write
@@ -62,6 +64,30 @@
       paste0("a report's RTF file and program are its TOC entry's (spec/toc.yml `file:`, ",
              "`program:`), else the study's (study.yml `settings: file`, `program`)"),
       "380"),
+    c("study_series", "study.yml `series:`",
+      paste0("a study's series are copied, whole, into spec/series/<series>/ ",
+             "(tfl_copy_templates()), which the study reads; remove the key"),
+      "462, 782, 465"),
+    c("settings_shell_code", "study.yml `settings: shell_code`",
+      "the AI kit's settings are study.yml `ai:`: write it `ai: shell_code:` (the same value)",
+      "465"),
+    c("ai_ask_when", "study.yml `ai: ask_when`",
+      "`ai: run` (one or batch) replaces it; remove the key", "465"),
+    c("ai_footnotes_at", "study.yml `ai: footnotes_at`",
+      "write `ai: shell_footnotes:` (footer or table, the same value)", "465"),
+    c("ai_titles_in_header", "study.yml `ai: titles_in_header`",
+      paste0("it is taken from the study's page configuration (the tokens its header ",
+             "prints); remove the key"), "465"),
+    c("report_layers", "a report's top-level `layers:`",
+      paste0("a figure's layers are its content's items: write each under `content:` ",
+             "(`- <layer>: {...}`), after the template's"), "465, 308, 311"),
+    c("report_outputs", "a report file's `outputs:` and `base:` (several reports in one file)",
+      "one report a file: write each in its own spec/outputs/<id>.yml", "465"),
+    c("ard_study_rounding", "the ARD sheets' `study` key `rounding` (study.yml `keys: rounding`)",
+      .force_instead("sas", "and remove the row"), "368, 465"),
+    c("header_n_column", "the tables sheet's column `header_n`",
+      paste0("it is named `col_header_values` (the same value, plan_col_header(values = )): ",
+             "rename the column"), "472"),
     # (the study's rounding has one place, defaults.yml `force:`: R/spec_force.R)
     c("settings_rounding", "study.yml `settings: rounding`",
       .force_instead("sas", "and remove the setting"), "368, 369, 378"),
@@ -76,6 +102,12 @@
 # Why the old key `ard:` went (the report's map, a template SPEC's part, a
 # step of `extends`)
 .ard_why <- "a report's second step is its analysis step, which makes its ARD (canon 11-15, `ard:` -> `analysis:`)"
+
+# What to write instead of the old form `id`, one sentence
+.old_form_instead <- function(id) {
+  f <- .old_forms()
+  sub("[.]+$", ".", paste0(f$instead[f$id == id], "."))
+}
 
 # The old form `id` as one line, "<was> is no longer read: <instead>." (a
 # check's problem text, where nothing stops)
@@ -98,7 +130,7 @@
                                    instead %||% r$instead))
   if (length(more)) msg <- paste(c(msg, paste0("  ", more)), collapse = "
 ")
-  stop(structure(class = c("tflspec_old_form", "error", "condition"),
+  stop(structure(class = c("tflspec_old_form", "tflspec_spec_form", "error", "condition"),
                  list(message = msg, call = NULL, form = id, where = where)))
 }
 
@@ -119,79 +151,30 @@
   if (length(near)) known[near[which.min(d[near])]] else NA_character_
 }
 
-# Stop on a key `k` that is not one of `known` (a closed list: canon 11-10
-# :379, an unknown name stops and says how to fix it in one line), naming
-# the closest known one when one is close, else the known ones
-.spec_key_stop <- function(k, known, where, what = "a key") {
-  near <- .near_name(k, known)
-  hint <- if (!is.na(near)) sprintf("did you mean `%s:`?", near) else
-    sprintf("the keys are %s.", paste0("`", known, "`", collapse = ", "))
-  stop(sprintf("%s: `%s:` is not %s; %s", where, k, what, hint), call. = FALSE)
-}
-
 # study.yml read as a list (`study`; `dir` the study folder, NULL when not
-# known): its old forms stop.  `file`, the study.yml it was read from, also
-# checks its spec_version (a list given in code has none to check).  Both
-# readers of study.yml call it: tfl_read_study_spec() and .tr_study().
+# known): its keys are the list's (R/spec_keys.R), every one it does not
+# take -- an old form among them -- in one stop.  `file`, the study.yml it
+# was read from, also checks its spec_version (a list given in code has
+# none to check).  Both readers of study.yml call it: tfl_read_study_spec()
+# and .tr_study(); so does the converter, on the sheets' study.
 .study_yml_form_check <- function(study, dir = NULL, file = NULL) {
   if (!is.list(study)) return(invisible())
-  where <- file %||% "study.yml"
   if (!is.null(file)) .check_spec_version(study[["spec_version"]], file)
-  .series_settings_gone(study, dir)
-  # (where a title or footnote prints is where it is written: canon 11-12 :433)
-  set <- study[["settings"]]
-  for (k in c("titles_at", "footnotes_at")) {
-    if (is.list(set) && !is.null(set[[k]])) .old_form_stop(k, where, was = sprintf("`settings: %s`", k))
-  }
-  # (the study's rounding is forced, in defaults.yml `force:`: canon 11-10 :369, :378)
-  if (is.list(set) && !is.null(set[["rounding"]])) {
-    r <- set[["rounding"]]
-    r <- if (is.character(r) && length(r) == 1L && r %in% c("sas", "r")) r else "sas"
-    .old_form_stop("settings_rounding", where, was = "`settings: rounding`",
-                   instead = .force_instead(r, "and remove the setting"), more = .force_yaml(r))
-  }
+  .spec_keys_raise(.study_yml_key_problems(study, dir, file %||% "study.yml"))
   invisible()
 }
 
-# ---- a report's keys: a closed list (canon 11-12 :380) ----------------------
+# ---- a report's keys: a closed list (R/spec_keys.R) -------------------------
 
-# The keys of a report file: `key`; `kinds`, the kinds of report that have
-# it ("" every kind); `field`, a part tfl_output() itself holds (the rest
-# ride on the report as they are).  Beside canon :380's list: `note`, a
-# figure's own parts (`figure`, `plots`, `compose`, `ggplot2_version`,
-# `layers`, the AI kit's figure), `ai` (an AI draft's assumptions and what
-# is to confirm: the AI kit's) and `common` until it goes (A2-T T4).
-# `population` is an old form (.common_old_line); `last_step` is not read
-# yet and stops.  The reader, the writer and .output_fields read it.
-.output_keys <- data.frame(
-  key = c("id", "kind", "label", "common", "extends", "style", "template", "analysis", "data",
-          "codelists", "content", "contents", "plot", "page", "note", "ai",
-          "figure", "plots", "compose", "ggplot2_version", "layers"),
-  kinds = c(rep("", 16L), rep("figure", 5L)),
-  field = c(TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE,
-            TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE,
-            FALSE, FALSE, FALSE, FALSE, FALSE),
-  stringsAsFactors = FALSE)
+# The keys of a report file (.spec_keys' part "report"): `key`, `kinds`,
+# `field`.  The reader, the writer and .output_fields read it.
+.output_keys <- .spec_keys[.spec_keys$part == "report", c("key", "kinds", "field")]
 
-# A report's keys (`keys`; `kind` its kind) checked against .output_keys:
-# a key of another kind, `settings:` (an old form), `last_step:` (not read
-# yet) and any other key stop, the last naming the closest key.  `who` the
-# report ("tfl_read_output(): T-1")
+# A report's keys (`keys`; `kind` its kind) checked against the list: the
+# writer's, of the parts a report holds beside its fields (`who` the
+# report, "tfl_write_output(): T-1"); every key it does not take in one stop
 .output_keys_check <- function(keys, kind, who) {
-  kind <- as.character(kind %||% "")[1L]
-  ok <- .output_keys$key[!nzchar(.output_keys$kinds) | .output_keys$kinds == kind]
-  for (k in setdiff(keys, ok)) {
-    if (k %in% .output_keys$key) {
-      stop(sprintf("%s: `%s:` is a key of a %s, not of a %s.", who, k,
-                   .output_keys$kinds[.output_keys$key == k], kind), call. = FALSE)
-    }
-    if (k %in% "settings") .old_form_stop("report_settings", who)
-    if (k %in% "ard") .old_form_stop("ard_key", who)
-    if (k %in% "last_step") {
-      stop(sprintf(paste0("%s: `last_step:` is not read yet: a report is made to its last ",
-                          "step; remove the key."), who), call. = FALSE)
-    }
-    .spec_key_stop(k, ok, who, "a key of a report")
-  }
+  x <- stats::setNames(vector("list", length(keys)), keys)
+  .spec_keys_raise(.spec_keys_find(x, "report", who, kind = as.character(kind %||% "")[1L]))
   invisible()
 }

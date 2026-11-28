@@ -206,7 +206,7 @@
 .ard_spec_schema <- function() {
   list(
     tables    = c("output_id", "cols", "rows", "label", "stats", "value",
-                  "sep", "sort", "sort_stat", "na", "header_n", "total",
+                  "sep", "sort", "sort_stat", "na", "col_header_values", "total",
                   "total_position", "overall_label", "stat_groups", "stack",
                   "stack_sep", "stack_nest", "compare", "compare_by", "compare_position",
                   "show_keys", "keep_where", "keep_any", "keep_parents", "content_more"),
@@ -319,7 +319,11 @@
   extra <- setdiff(names(d), c(allowed, "note"))
   if (length(extra)) {
     home <- vapply(extra, function(cn) {
-      why <- .ard_spec_retired[[sheet]][cn]
+      # (an old form of the sheets: R/spec_old_forms.R)
+      why <- if (identical(sheet, "tables") && identical(cn, "header_n")) {
+        sub("^the tables sheet's column `header_n` is no longer read: ", "",
+            .old_form_text("header_n_column"))
+      } else .ard_spec_retired[[sheet]][cn]
       if (!is.null(why) && !is.na(why)) return(paste0(" (", why, ")"))
       if (cn %in% names(.ard_spec_study_keys)) {
         return(" (one per study: a key of the `study` sheet)")
@@ -616,7 +620,7 @@
 #'   \item{`sep`}{What joins several column keys into one column's name
 #'     (`Placebo____n` by default; `_` gives `Placebo_n`), the name the
 #'     `columns` sheet refers to ([rtfreporter::plan_columns()]'s `sep`).}
-#'   \item{`header_n`}{Which population a `col_header` text's `{n}` is,
+#'   \item{`col_header_values`}{Which population a `col_header` text's `{n}` is,
 #'     on pages split by a group value: `page` (each page's own --- the
 #'     subjects with that lab test) or `table` (the analysis set, the
 #'     ARD rows without the page key).  Several at once name their
@@ -1346,8 +1350,8 @@ print.tfl_table_spec <- function(x, ...) {
     out$sort <- switch(toupper(t$sort), "TRUE" = TRUE, "FALSE" = FALSE,
                        .ard_spec_split(t$sort))
   }
-  if ("header_n" %in% names(t) && !is.na(t$header_n)) {
-    out$header_n <- .ard_spec_header_n(t$header_n)
+  if ("col_header_values" %in% names(t) && !is.na(t$col_header_values)) {
+    out$col_header_values <- .ard_spec_col_header_values(t$col_header_values)
   }
   # a record's statistics in groups (plan_stat_groups())
   if ("stat_groups" %in% names(t) && !is.na(t$stat_groups) && nzchar(trimws(t$stat_groups))) {
@@ -1386,13 +1390,14 @@ print.tfl_table_spec <- function(x, ...) {
   stats::setNames(st, nm)
 }
 
-# `header_n`: which population a header's {n} is -- `page` or `table` --
-# or several tokens at once, `n = page | N = table`.
-.ard_spec_header_n <- function(x) {
+# `col_header_values`: which population a header's {n} is -- `page` or
+# `table` -- or several tokens at once, `n = page | N = table`: as it is,
+# plan_col_header(values = ) (canon 11-28 CG-3)
+.ard_spec_col_header_values <- function(x) {
   items <- .ard_spec_split(x)
   ok <- c("page", "table")
   bad <- function(v) .ard_stop(sprintf(paste0(
-    "`tables$header_n`: %s is not a population.  Write `page` (each ",
+    "`tables$col_header_values`: %s is not a population.  Write `page` (each ",
     "page's own, e.g. the\n  subjects with that lab test), `table` (the ",
     "population), or several:\n  `n = page | N = table`."), sQuote(v)))
   named <- grepl("=", items, fixed = TRUE)
@@ -2446,7 +2451,7 @@ tfl_report <- function(spec, output_id = NULL, content, study = NULL) {
 #' `{part_no}` (`1`); and `{shell_code}`, the id written at the top of the
 #' report's shell (its TOC entry's `shell_code`, which [tfl_ai_prepare()]
 #' reads: a cell of the shell's first rows in the form `t_dem_01` or
-#' `151_t_dem_01`, or `study.yml`'s `settings: shell_code`, a regular
+#' `151_t_dem_01`, or `study.yml`'s `ai: shell_code`, a regular
 #' expression).  A part's entry is its number's.  `[ ... ]` is left out
 #' when a field in it is empty: `[m{part_no}_]{shell_code}.rtf` is
 #' `m1_151_t_dem_01.rtf` for part a, `151_t_dem_01.rtf` for a report with
@@ -2999,7 +3004,7 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
   if (identical(H$source, "resolved") && isTRUE(H$literal_n)) {
     miss("plan_col_header(values = ): a literal N stays in code (use {n})")
   }
-  tables$header_n <- H$n_text %||% NA_character_
+  tables$col_header_values <- H$n_text %||% NA_character_
   # plan_stat_groups(): the statistics in groups
   sg <- ly$stat_groups$stat_groups
   tables$stat_groups <- if (length(sg)) paste(sprintf("%s = %s", names(sg),

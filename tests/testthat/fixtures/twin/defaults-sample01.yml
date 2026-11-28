@@ -1,6 +1,7 @@
 force:
   content:
-    - plan_digits: {rounding: sas}
+    - plan_digits:
+        rounding: sas
 content:
   - normalize_ard: {}
   - plan_cells:

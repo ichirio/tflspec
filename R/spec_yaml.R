@@ -264,17 +264,12 @@ tfl_read_output <- function(path) {
   on.exit(.spec_read$file <- NULL, add = TRUE)
   y <- .yaml_read_file(path, handlers = .yaml_handlers())
   if (!is.list(y)) stop("tfl_read_output(): ", path, " is not a map.", call. = FALSE)
-  out <- .outputs_of_yaml(y, path)
-  if (is.null(y$outputs)) out[[1L]] else out
+  .output_from_list(y, path)
 }
 
-# A report file's plain list as its reports: a list of tfl_output (one, or
-# a family's `outputs:` each over its `base:`)
+# A report file's plain list as its reports: a list of the one tfl_output
+# (one report a file: `outputs:` / `base:` are an old form, R/spec_keys.R)
 .outputs_of_yaml <- function(y, path = "") {
-  if (!is.null(y$outputs)) {
-    base <- y$base %||% list()
-    return(lapply(y$outputs, function(o) .output_from_list(.merge_plain(base, o), path)))
-  }
   list(.output_from_list(y, path))
 }
 
@@ -366,34 +361,22 @@ tfl_read_output <- function(path) {
 
 # the plain list of a report file as a tfl_output
 .output_from_list <- function(y, path = "") {
+  # (the keys a report takes: R/spec_keys.R; every one it does not take, an
+  # old form among them, in one stop naming its file)
+  .spec_keys_raise(.output_key_problems(y, if (nzchar(path)) basename(path) else
+    sprintf("report %s", y$id %||% "?")))
   need <- c("id", "kind")
   miss <- need[!need %in% names(y)]
   if (length(miss)) {
     stop("tfl_read_output(): ", path, " lacks ", paste(miss, collapse = ", "), ".",
          call. = FALSE)
   }
-  if (nzchar(path) && is.null(attr(y, "multi")) &&
-      !identical(tools::file_path_sans_ext(basename(path)), y$id) &&
-      !grepl("^outputs?$", basename(path))) {
-    # (a multi-report file is named as its author likes)
-  }
   who <- paste0("tfl_read_output(): ", y$id)
   # (the report named in a value's message: .r_tag_stop())
   old_id <- .spec_read$id
   .spec_read$id <- y$id
   on.exit(.spec_read$id <- old_id, add = TRUE)
-  # (the old places, each with a line saying where it moved)
-  if (!is.null(y[["population"]])) stop(who, ": ", .common_old_line, call. = FALSE)
-  # (`ard:`: an old form, .output_keys_check(); a registered template's
-  # part, .tpl_spec_args())
-  if ("ard" %in% names(y)) .old_form_stop("ard_key", who)
-  if (.is_tpl_spec(y$template) && !.tpl_is_file_name(y$template$name) && "ard" %in% names(y$template)) {
-    .old_form_stop("template_ard", who)
-  }
   common <- .common_in(y$common, who)
-  .yaml_keys_check(y)
-  # (a report's keys are a closed list: R/spec_old_forms.R)
-  .output_keys_check(names(y), y[["kind"]], who)
   y <- .data_list_in(y, who)
   # the ARD's analyses are the report's analysis: section (2026-10-15), not data:'s
   old <- intersect(c("analysis_data", "analyses"), names(y$data))
@@ -422,7 +405,7 @@ tfl_read_output <- function(path) {
     ard = if (!is.null(y[["analysis"]])) .calls_in(y[["analysis"]]),
     data = .data_steps_in(.calls_in(y$data)), codelists = .codelists_norm(y$codelists, y$id),
     content = content, page = .calls_in(y$page %||% list()))
-  for (k in setdiff(names(y), c(.output_yaml_keys, "outputs", "base"))) out[[k]] <- .calls_in(y[[k]])
+  for (k in setdiff(names(y), .output_yaml_keys)) out[[k]] <- .calls_in(y[[k]])
   # several objects on its pages (R/output_objects.R): their items as items
   if (!is.null(y$contents)) {
     if (length(content)) {
@@ -481,36 +464,6 @@ tfl_read_output <- function(path) {
   data = c("id", setdiff(.ard_spec_sheets$analysis_data, c("output_id", "data_id")),
            "population", "subjects_in", "arrange", "note")
 )
-
-# A key a report's map has that the reader does not know: a warning, with
-# the closest known key when it is close (2 edits or fewer, or one is the
-# start of the other), else "(not read)"
-.yaml_keys_check <- function(y) {
-  out <- as.character(y$id %||% "?")
-  say <- function(where, keys, kind) {
-    known <- .yaml_known_keys[[kind]]
-    for (k in setdiff(keys[nzchar(keys)], known)) {
-      near <- .near_name(k, known)
-      hint <- if (!is.na(near)) sprintf("; did you mean %s:?", near) else " (not read)"
-      warning(sprintf("%s: %s: is not a key%s", where, k, hint), call. = FALSE)
-    }
-  }
-  named <- function(x) is.list(x) && !is.null(names(x))
-  ard <- y[["analysis"]]
-  if (named(ard)) {
-    say(out, names(ard), "analysis_part")
-    for (a in if (is.list(ard$analyses) && is.null(names(ard$analyses))) ard$analyses) {
-      if (named(a)) say(paste(out, a$id %||% "?", sep = " / "), names(a), "analysis")
-    }
-  }
-  d <- y[["data"]]
-  if (is.list(d) && is.null(names(d))) {
-    for (r in d) {
-      if (named(r)) say(paste(out, r$id %||% "?", sep = " / "), names(r), "data")
-    }
-  }
-  invisible()
-}
 
 # The report's analysis set (NA when it has none)
 # (`[[`: a `$` would read `population_label` when the set is not written)
@@ -926,13 +879,6 @@ tfl_read_output <- function(path) {
   x
 }
 
-# a report's own keys over a family's base (plain lists, no layering rules
-# yet: a key the report has replaces the base's)
-.merge_plain <- function(base, own) {
-  for (k in names(own)) base[[k]] <- own[[k]]
-  base
-}
-
 # -- writing ----------------------------------------------------------------
 
 #' @rdname tfl_read_output
@@ -1003,7 +949,10 @@ tfl_write_output <- function(x, path) {
   }
   # a template SPEC's arguments: a named vector as a map (`labels: {AGE: ...}`)
   if (!is.null(.tpl_spec_of(x))) y$template <- .named_as_map(y$template)
-  y
+  # (in the list's order, canon 11-28 CANON-3: who it is, the layers it
+  # picks, the named things several steps use -- codelists before data --,
+  # the steps, the rest, the run control last)
+  y[order(match(names(y), .output_keys$key))]
 }
 
 # a value's named vectors as maps, through lists

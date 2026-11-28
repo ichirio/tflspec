@@ -242,7 +242,7 @@ test_that("a KM figure: the time axis from `plot:`; the risk table off with its 
   expect_identical(nrow(sr(list(kind = "table", template = km, plot = list(x_label = "Days")))), 0L)
   # risk_table: false and a risk_table layer
   o <- list(kind = "figure", template = list(name = "km_survival", args = list(risk_table = FALSE)),
-            layers = list(list(layer = "risk_table")))
+            content = list(list(fn = "risk_table", args = list())))
   p <- sr(o)
   expect_identical(p$item, "template$args$risk_table")
   expect_identical(p$level, "error")

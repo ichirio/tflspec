@@ -65,7 +65,7 @@ test_that("the first message starts with AGENTS.md; so does the new-chat text; A
   expect_false(grepl("ai/AGENTS.md", p, fixed = TRUE))
   expect_true(startsWith(tflspec:::.ai_agent_prompt("s"), "First read ai/AGENTS.md in this folder and follow it. "))
   x <- tflspec:::.ai_spec_agents("{{per_chat}}", list(requests_per_chat = 5L, language = "en", carry = "x",
-                                                      review = c(table = 1L), footnotes_at = "bottom",
+                                                      review = c(table = 1L), shell_footnotes = "bottom",
                                                       titles_in_header = character()),
                                  list(one = "", batch = ""))
   expect_match(x, "Open a new chat and give it ai/agent_prompt.md (it starts: First read AGENTS.md in this folder and follow it)",

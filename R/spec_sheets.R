@@ -530,18 +530,21 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
         } else more <- c(more, list(it))
       }
       if (length(more)) lr$content_more <- .sheet_more_out(more, items = TRUE)
+      # (its note: its listings row's, as a table's is its tables row's)
+      if (!is.null(o$note)) lr$note <- cell(o$note)
       listings[[length(listings) + 1L]] <- lr
     } else if (o$kind == "figure" && .fig_new_content(o$content)) {
       # a figure of items (R/fig_content.R): its data and items as they are,
       # the design list's `content` (read back by .conv_output(), #689)
       fd <- list(template = o$template, data = o$data$steps, content = .items_to_list(o$content))
-      for (k in c("ggplot2_version", "plot", "plots", "compose", "figure")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]
+      for (k in c("ggplot2_version", "plot", "plots", "compose", "figure", "note")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]
       figures[[id]] <- fd
       # what the design list has no place for is said, by the report
       # (its analysis set is the planner's population column, .report_set())
       lost <- c(setdiff(names(o$data), c("steps", "code", "datasets", "ard", "source", "population")),
                 if (!is.null(o$data$source) && !identical(o$data$source, "code")) "source")
-      lost <- c(lost, setdiff(names(o), c(.output_fields, "template", "ggplot2_version", "plot", "plots", "compose", "figure")))
+      lost <- c(lost, setdiff(names(o), c(.output_fields, "template", "ggplot2_version", "plot", "plots", "compose",
+                                          "figure", "note")))
       if (length(lost)) {
         note(id, "figure", paste0("a figure of items: ", paste(unique(lost), collapse = ", "),
                                    " is not kept (the design list has no place for it)"))
@@ -553,6 +556,8 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       fd <- .fig_design_of_output(oc)
       if (!is.null(o$template)) fd$template <- o$template
       if (!is.null(o$figure)) fd$figure <- o$figure
+      # (its note: the design list's, as a table's is its tables row's)
+      if (!is.null(o$note)) fd$note <- o$note
       # a figure that is its own code and nothing of the designer's has no
       # design
       if (!(code_content && identical(names(fd), "layers"))) figures[[id]] <- fd

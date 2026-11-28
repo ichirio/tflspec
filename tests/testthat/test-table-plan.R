@@ -679,7 +679,7 @@ test_that("both populations in one header, from code and from a workbook", {
   sp <- tfl_table_spec(
     tables = data.frame(cols = "BGRADE", rows = "PARAM = PARAM",
                         label = "label = .label",
-                        header_n = "n = page | N = table"),
+                        col_header_values = "n = page | N = table"),
     cells = data.frame(template = "{n}"),
     layout = data.frame(group_page = "TRUE", group_keep = "FALSE"),
     col_header = data.frame(
@@ -695,19 +695,19 @@ test_that("both populations in one header, from code and from a workbook", {
   }, "")
   expect_identical(unname(lab), want)
   expect_error(tfl_table_spec(tables = data.frame(
-    cols = "BGRADE", header_n = "tested")) |>
+    cols = "BGRADE", col_header_values = "tested")) |>
       tflspec:::.ard_spec_table_args(), "not a population")
   expect_error(rtfreporter:::.plan_n_values(two_pop_plan(x$d, "x"), "x"),
                "a population is")
 })
 
-test_that("tfl_as_table_spec() writes the population to tables$header_n", {
+test_that("tfl_as_table_spec() writes the population to tables$col_header_values", {
   expect_identical(rtfreporter:::.plan_scope_text("table"), "table")
   expect_identical(rtfreporter:::.plan_scope_text(
     list(n = "page", N = "table")), "n = page | N = table")
   expect_null(rtfreporter:::.plan_scope_text(TRUE))
   expect_null(rtfreporter:::.plan_scope_text(c(A = 86)))
-  expect_identical(tflspec:::.ard_spec_header_n("n = page | N = table"),
+  expect_identical(tflspec:::.ard_spec_col_header_values("n = page | N = table"),
                    list(n = "page", N = "table"))
 })
 

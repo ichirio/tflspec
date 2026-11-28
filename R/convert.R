@@ -186,6 +186,10 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   }
   if (!is.null(ard$study) && nrow(ard$study)) {
     keys <- stats::setNames(as.list(ard$study$value), ard$study$key)
+    # (the ARD's study keys are study.yml `keys:`, a closed list: its
+    # `rounding` is an old form, the study's force; R/spec_keys.R)
+    .spec_keys_raise(.spec_keys_find(keys, "keys", "the ARD sheets' study sheet", "keys",
+                                     ok = c(.spec_keys_of("keys"), "adam_levels")))
     keys <- keys[!vapply(keys, is.na, NA)]
     # (adam_levels is a setting: the ARD's study sheet only carries it)
     if (!is.null(keys$adam_levels) && is.null(study$settings$adam_levels)) {
@@ -1104,11 +1108,17 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       content <- tfl_r(gsub("\r\n?", "\n", cc))
     }
   }
-  # the note of a table's tables row (free text): the report's
-  tnote <- if (!is.null(sp$tables) && "note" %in% names(sp$tables)) {
-    tr <- sp$tables[!is.na(sp$tables$output_id) & sp$tables$output_id == id, , drop = FALSE]
-    if (nrow(tr) && !is.na(tr$note[1L]) && nzchar(trimws(tr$note[1L]))) tr$note[1L]
+  # the report's note (free text): a table's tables row's, a listing's
+  # listings row's, a figure's design list's
+  note_of <- function(d) {
+    if (is.null(d) || !"note" %in% names(d)) return(NULL)
+    r <- d[!is.na(d$output_id) & d$output_id == id, , drop = FALSE]
+    if (nrow(r) && !is.na(r$note[1L]) && nzchar(trimws(r$note[1L]))) r$note[1L]
   }
+  tnote <- switch(kind,
+                  listing = note_of(lf$listings),
+                  figure = if (is.character(y$note) && length(y$note) == 1L && nzchar(y$note)) y$note,
+                  note_of(sp$tables))
   # the report's analysis set (the planner's column): on its data when the
   # data reads subjects' records, a listing's or a figure's (canon 11-15:
   # the set is the data's; the data's own wins); a table's on its subjects

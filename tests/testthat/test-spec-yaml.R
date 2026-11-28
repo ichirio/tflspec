@@ -49,7 +49,7 @@ test_that("a report file reads: tags, nested calls, content items", {
   expect_identical(out$codelists$TRT01A[[2L]]$label, "Control 100 mg")
 })
 
-test_that("a key the reader does not know warns, naming the close one", {
+test_that("a key the reader does not know stops, naming the close one", {
   f <- tempfile(fileext = ".yml")
   on.exit(unlink(f))
   writeLines(c(
@@ -65,19 +65,16 @@ test_that("a key the reader does not know warns, naming the close one", {
     "      statistic: [N, mean]",
     "      zzzzzz: 1",
     "      args: !r foo = 1"), f)
-  w <- character()
-  out <- withCallingHandlers(tfl_read_output(f), warning = function(e) {
-    w <<- c(w, conditionMessage(e))
-    invokeRestart("muffleWarning")
-  })
-  expect_identical(w, c(
-    "T-1 / AGE: statistic: is not a key; did you mean statistics:?",
-    "T-1 / AGE: zzzzzz: is not a key (not read)",
-    "T-1 / adsl_sub: wher: is not a key; did you mean where:?"))
-  expect_s3_class(out, "tfl_output")
+  e <- tryCatch(tfl_read_output(f), tflspec_spec_keys = function(e) e)
+  expect_s3_class(e, "tflspec_spec_keys")
+  expect_setequal(e$keys, c("analysis: analyses: AGE: statistic", "analysis: analyses: AGE: zzzzzz",
+                            "data: adsl_sub: wher"))
+  m <- conditionMessage(e)
+  expect_match(m, "did you mean `analysis: analyses: AGE: statistics:`?", fixed = TRUE)
+  expect_match(m, "did you mean `data: adsl_sub: where:`?", fixed = TRUE)
   # the package's report files have none
   for (g in list.files(yml_fixture("outputs"), full.names = TRUE)) {
-    expect_no_warning(tfl_read_output(g))
+    expect_s3_class(tfl_read_output(g), "tfl_output")
   }
 })
 
@@ -158,7 +155,7 @@ test_that("a report written and read again is the same", {
   expect_equal(back, out, ignore_attr = FALSE)
 })
 
-test_that("a file of several reports gives a list, each over the file's base", {
+test_that("a file of several reports (outputs:, base:) is an old form: one report a file", {
   f <- withr::local_tempfile(fileext = ".yml")
   writeLines(c(
     "base:",
@@ -172,12 +169,11 @@ test_that("a file of several reports gives a list, each over the file's base", {
     "  - id: T-B",
     "    label: B",
     "    common: {population: ITT}"), f)
-  outs <- tfl_read_output(f)
-  expect_length(outs, 2L)
-  expect_identical(vapply(outs, `[[`, "", "id"), c("T-A", "T-B"))
-  expect_identical(outs[[1L]]$common$population, "SAF")
-  expect_identical(outs[[2L]]$common$population, "ITT")
-  expect_identical(outs[[2L]]$content[[1L]]$fn, "table_plan")
+  e <- tryCatch(tfl_read_output(f), error = function(e) e)
+  expect_s3_class(e, "tflspec_spec_keys")
+  expect_setequal(e$keys, c("base", "outputs"))
+  expect_true(all(e$problems$form == "report_outputs"))
+  expect_match(conditionMessage(e), "one report a file", fixed = TRUE)
 })
 
 test_that("n, N, y, yes, no, off stay text as keys and values; only true / false are logical", {
@@ -278,9 +274,9 @@ test_that("a data row with `label:` stops, naming the report and the row", {
                "  - id: adsl_sub", "    from: ADSL", "    population: SAF",
                "  - id: adsl_p2", "    label: Safety set, phase 2", "    from: ADSL",
                "content:", "  - table_plan: {cols: TRT01A}"), f)
-  expect_error(tfl_read_output(f),
-               "T-1: data row `adsl_p2`: `label:` is no longer a key of a data row (the id names it; write a YAML comment if you want a note).",
-               fixed = TRUE)
+  e <- tryCatch(tfl_read_output(f), tflspec_spec_keys = function(e) e)
+  expect_identical(e$keys, "data: adsl_p2: label")
+  expect_match(conditionMessage(e), "Your own memo: write it under `note:` or in a `#` comment", fixed = TRUE)
   writeLines(c("id: T-1", "kind: table", "data:",
                "  - id: adsl_p2", "    # Safety set, phase 2", "    from: ADSL",
                "content:", "  - table_plan: {cols: TRT01A}"), f)

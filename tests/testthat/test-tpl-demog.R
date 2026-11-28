@@ -874,5 +874,5 @@ test_that("a reference may name several keys: plan_cells.default and plan_col_he
   expect_match(tflspec:::.tpl_ref_text(c("plan_cells.categorical", "plan_cells.default")),
                "plan_cells.categorical, plan_cells.default", fixed = TRUE)
   # a single key: as before
-  expect_identical(tflspec:::.tpl_study_find("settings.a", NULL, sr_study_b1(list(a = 1)))$value, 1)
+  expect_identical(tflspec:::.tpl_study_find("settings.params", NULL, sr_study_b1(list(params = 1)))$value, 1)
 })

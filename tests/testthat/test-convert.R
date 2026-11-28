@@ -291,7 +291,7 @@ test_that("an AE table with no ARD definition: its hierarchy from its rows and l
   tb <- list(
     tables = data.frame(output_id = "AE-1", cols = "TRTA", rows = "group1 = AEBODSYS",
                         label = "label = AEDECOD", overall_label = "Any TEAE",
-                        sort = ".overall | group1 | .depth | -n | label", header_n = "table",
+                        sort = ".overall | group1 | .depth | -n | label", col_header_values = "table",
                         stringsAsFactors = FALSE),
     cells = data.frame(output_id = "AE-1", variable = NA, row = NA, template = "{n:d} ({p:.1f%})",
                        stringsAsFactors = FALSE),

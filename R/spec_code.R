@@ -436,7 +436,7 @@
     keep <- vapply(cells, function(v) any(!is.na(v)), NA)
     cells <- cells[keep]
     rownames(cells) <- NULL
-    hn <- sa[["header_n"]]
+    hn <- sa[["col_header_values"]]
     add("plan_col_header", header = cells,
         values = if (!is.null(hn))
           if (is.null(names(hn))) list(n = hn) else as.list(hn),
@@ -1397,7 +1397,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
         if (!is.null(named$values)) {
           v <- named$values
           if (all(vapply(v, function(e) is.character(e) && length(e) == 1L, NA))) {
-            tb$header_n <- if (identical(names(v), "n")) v$n
+            tb$col_header_values <- if (identical(names(v), "n")) v$n
                            else paste(paste(names(v), "=", unlist(v)), collapse = " | ")
           } else rest_add("values", "values other than page / table")
         }

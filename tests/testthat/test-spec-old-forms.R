@@ -3,7 +3,7 @@
 
 test_that("an old form stops with a classed condition that names the form and the place", {
   e <- tryCatch(tflspec:::.old_form_stop("item_fn_map", "T-1.yml"), error = function(e) e)
-  expect_s3_class(e, "tflspec_old_form")
+  expect_s3_class(e, c("tflspec_old_form", "tflspec_spec_form"))
   expect_identical(e$form, "item_fn_map")
   expect_identical(e$where, "T-1.yml")
   expect_match(conditionMessage(e), "^T-1.yml: a content item written as a map .* is no longer read: write it")
@@ -25,24 +25,23 @@ test_that("the old forms' table: one row a form, each with what to write instead
   expect_false(any(grepl("no `spec_version`", l, fixed = TRUE)))
 })
 
-test_that("a key not in a closed list stops naming the closest one, else the list", {
+test_that("the name closest to a key that is not in a closed list", {
   expect_identical(tflspec:::.near_name("contnet", c("content", "codelists")), "content")
   expect_identical(tflspec:::.near_name("zzz", c("content", "codelists")), NA_character_)
   expect_identical(tflspec:::.near_name("x", character()), NA_character_)
-  expect_error(tflspec:::.spec_key_stop("contnet", c("content", "page"), "T-1"),
-               "T-1: `contnet:` is not a key; did you mean `content:`\\?")
-  expect_error(tflspec:::.spec_key_stop("zzz", c("content", "page"), "T-1", "a report key"),
-               "`zzz:` is not a report key; the keys are `content`, `page`.")
 })
 
-test_that("study.yml series_settings: stops in both readers, as an old form", {
+test_that("study.yml series_settings: stops in both readers, as an old form of its keys", {
   d <- withr::local_tempdir()
   write_study_yml(d, c("study_id: S-1", "series_settings:", "  demo_v1: {max_rows: 25}"))
-  expect_error(tfl_read_study_spec(d), "demo_v1: move these values into", class = "tflspec_old_form")
+  expect_error(tfl_read_study_spec(d), "demo_v1: move these values into", class = "tflspec_spec_keys")
   expect_error(tflspec:::.tr_study(d, "tfl_tpl()"), "demo_v1: move these values into",
-               class = "tflspec_old_form")
-  expect_error(tflspec:::.tr_study(list(series_settings = list(a_v1 = list())), "tfl_tpl()"),
-               "a_v1: move", class = "tflspec_old_form")
+               class = "tflspec_spec_keys")
+  e <- tryCatch(tflspec:::.tr_study(list(series_settings = list(a_v1 = list())), "tfl_tpl()"),
+                error = function(e) e)
+  expect_s3_class(e, c("tflspec_spec_keys", "tflspec_spec_form"))
+  expect_match(conditionMessage(e), "a_v1: move", fixed = TRUE)
+  expect_identical(e$problems$form, "series_settings")
 })
 
 test_that("defaults.yml page: stops as an old form", {
@@ -92,25 +91,27 @@ test_that("#7 a report's keys are a closed list (canon :380); the kept ones read
   }
   # an unknown key stops, naming the closest key, else the keys
   expect_error(rd("kind: table", "lable: A table"),
-               "tfl_read_output(): T-1: `lable:` is not a key of a report; did you mean `label:`?",
+               "T-1.yml: a key it does not take:\n  - `lable`: not a key: a typo? did you mean `label:`?",
                fixed = TRUE)
-  expect_error(rd("kind: table", "zzz: 1"), "`zzz:` is not a key of a report; the keys are `id`")
-  # `settings:` (a report's file) is an old form; `last_step:` is not read yet
+  expect_error(rd("kind: table", "zzz: 1"), "a table report takes `id`, `kind`", fixed = TRUE)
+  # `settings:` (a report's file) is an old form; `last_step:` takes page only
   e <- tryCatch(rd("kind: table", "settings: {file: x.rtf}"), error = function(e) e)
-  expect_s3_class(e, "tflspec_old_form")
-  expect_identical(e$form, "report_settings")
-  expect_error(rd("kind: table", "last_step: ard"), "`last_step:` is not read yet")
-  # a figure's own parts are a figure's only
-  expect_error(rd("kind: table", "layers: []"), "`layers:` is a key of a figure, not of a table")
+  expect_s3_class(e, "tflspec_spec_keys")
+  expect_identical(e$problems$form, "report_settings")
+  expect_error(rd("kind: table", "last_step: ard"), "`last_step`: not built yet", fixed = TRUE)
+  # a figure's own parts are a figure's only; `layers:` is an old form
+  expect_error(rd("kind: table", "plots: {a: {}}"), "`plots`: a key of a figure report, not of a table one",
+               fixed = TRUE)
+  expect_error(rd("kind: table", "layers: []"), "a figure's layers are its content's items", fixed = TRUE)
   # the kept keys beside canon :380's list read as they are
   o <- rd("kind: table", "note: why", "style: tfl_small", "common: {population: SAF}")
   expect_identical(o$note, "why")
   expect_identical(o$style, "tfl_small")
   writeLines(c("id: F-1", "kind: figure", "note: n", "ggplot2_version: '4.0'",
-               "layers: [{layer: point}]"), f)
+               "content: [{point: {}}]"), f)
   o <- tfl_read_output(f)
   expect_identical(o$ggplot2_version, "4.0")
-  expect_identical(o$layers[[1]]$layer, "point")
+  expect_identical(o$content[[1]]$fn, "point")
   # the writer writes the closed list only
   o <- tfl_output("T-2", "table", content = list(tfl_item("plan_cells", list(categorical = "{n}"))))
   o$note <- "kept"
@@ -118,16 +119,17 @@ test_that("#7 a report's keys are a closed list (canon :380); the kept ones read
   tfl_write_output(o, g)
   expect_identical(tfl_read_output(g)$note, "kept")
   o$mystery <- 1
-  expect_error(tfl_write_output(o, g), "tfl_write_output(): T-2: `mystery:` is not a key of a report",
+  expect_error(tfl_write_output(o, g), "tfl_write_output(): T-2: a key it does not take:\n  - `mystery`",
                fixed = TRUE)
   o$mystery <- NULL
-  o$layers <- list(list(layer = "x"))
-  expect_error(tfl_write_output(o, g), "`layers:` is a key of a figure, not of a table")
+  o$plots <- list(a = list())
+  expect_error(tfl_write_output(o, g), "`plots`: a key of a figure report, not of a table one", fixed = TRUE)
   # the kept keys, beside canon :380's
-  expect_true(all(c("note", "ai", "figure", "plots", "compose", "ggplot2_version", "layers", "common") %in%
+  expect_true(all(c("note", "ai", "figure", "plots", "compose", "ggplot2_version", "common", "last_step") %in%
                     tflspec:::.output_keys$key))
-  expect_identical(tflspec:::.output_fields,
-                   c("id", "kind", "label", "common", "extends", "ard", "data", "codelists", "content", "page"))
+  expect_false("layers" %in% tflspec:::.output_keys$key)
+  expect_setequal(tflspec:::.output_fields,
+                  c("id", "kind", "label", "common", "extends", "ard", "data", "codelists", "content", "page"))
 })
 
 test_that("#7 a report's own settings: file is not read: its TOC entry's, else the study's", {

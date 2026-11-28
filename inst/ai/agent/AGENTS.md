@@ -316,7 +316,7 @@ stop is *Running the requests*, below: one, or a batch.  For each request:
      leaves the study's blank.  An assumption, `item: stub heading`,
      `from: shell`;
    - {{titles_rule}}
-   - the **footnotes**, from the shell: {{footnotes_at}}
+   - the **footnotes**, from the shell: {{shell_footnotes}}
      A footnote that states what a decision replaced (the shell's old
      rule, after the person chose the SAP's) is written to the decision,
      with an assumption `from: D<n>`; never left saying the old rule;

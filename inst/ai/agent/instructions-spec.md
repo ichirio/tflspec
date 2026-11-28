@@ -43,7 +43,7 @@ report's skeleton and nothing of its look:
   (a third line with the analysis set) is written when this shell leaves
   it out, as the other shells write it: an assumption, `item: titles`,
   `from:` the conventions' section.  And the shell's footnotes:
-  {{footnotes_at}}
+  {{shell_footnotes}}
   A footnote is the shell's text as it is: never reworded, none added.  A
   footnote of a statistic the table does not show (`SD = Standard
   deviation.` under an AE table) is dropped, with an assumption that says
