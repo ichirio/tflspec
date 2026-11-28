@@ -68,7 +68,7 @@ params:
   col_header_n_data:
     type: string
     input: pick
-    choices: report_data
+    choices: objects(data)
     default: adsl_sub
     step: analysis
     tier: usual
@@ -77,7 +77,7 @@ params:
   denominator:
     type: string
     input: pick
-    choices: report_data
+    choices: objects(data)
     default: ~
     step: analysis
     tier: usual
