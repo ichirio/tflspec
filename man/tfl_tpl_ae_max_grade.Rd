@@ -2,14 +2,14 @@
 % Please edit documentation in R/tpl_docs.R
 \name{tfl_tpl_ae_max_grade}
 \alias{tfl_tpl_ae_max_grade}
-\title{ae_max_grade: the template ae_max_grade}
+\title{Adverse events by SOC and PT at the maximum severity or grade: the template ae_max_grade}
 \description{
 The table template \code{ae_max_grade}, layout \code{hierarchical}. Its program is one call, \code{tfl_tpl(ard, "ae_max_grade", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab required \tab call \tab report: common.population, required \tab output.common.population \tab the analysis set's id (SAF) \cr
+   \code{population} \tab required \tab call \tab  \tab  \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
    \code{grade} \tab key \tab call \tab AESEV \tab  \tab the severity or grade variable (AESEV, AETOXGR) \cr
    \code{grade_levels} \tab other \tab call \tab  \tab  \tab its values, lowest first: the rank of the maximum, and the order the table shows them in; NULL: the code list of \code{grade} \cr

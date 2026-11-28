@@ -193,7 +193,7 @@
   k <- which(tolower(names(sheets)) == "_assumptions")
   if (!length(k)) return(NULL)
   d <- sheets[[k[1L]]]
-  for (c in cols) if (is.null(d[[c]])) d[[c]] <- NA_character_
+  for (c in cols) if (is.null(d[[c]])) d[[c]] <- rep(NA_character_, nrow(d))
   d <- d[cols]
   d[] <- lapply(d, function(x) ifelse(is.na(x), "", as.character(x)))
   d$output_id[!nzchar(d$output_id)] <- NA_character_

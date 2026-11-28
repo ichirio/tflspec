@@ -9,8 +9,9 @@
 #' `study.yml`, `spec/table_spec.xlsx`, `spec/report_spec.xlsx`,
 #' `spec/ard_definition.json` (or `spec/ard_spec.xlsx`),
 #' `spec/listing_figure_spec.xlsx`, `spec/figures/<id>.yml` -- and writes
-#' the YAML spec to `to`: `study.yml`, `spec/data.yml`, `spec/defaults.yml`,
-#' `spec/patterns/<name>.yml`, `spec/toc.yml` and one
+#' the YAML spec to `to`: `study.yml`, `spec/data.yml`, `spec/defaults.yml`
+#' (a sheets' `@<name>` is a page configuration there, `styles: <name>:`;
+#' one that names none stops), `spec/toc.yml` and one
 #' `spec/outputs/<id>.yml` a report.  Loose files (a table and a report
 #' workbook alone) convert too: `from` may be a folder holding them.
 #'
@@ -96,6 +97,8 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   lf <- sheets$listing
   figs <- sheets$figures %||% list()
   meta <- sheets[["study"]] %||% list()
+  # (an old form the sheets' study carries is not written: R/spec_old_forms.R)
+  .study_yml_form_check(meta)
   # the study sheet's rows no table spec reads (study.yml's `settings:` keys
   # of the app's own: the treatment variable ...) are not the bridge's: set
   # aside here and written back to settings below, not a stop (#689).  The
@@ -228,8 +231,8 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     put("spec/data.yml", data)
   }
 
-  # the report-half sheets by scope: defaults (blank output_id), patterns
-  # (@name), each report
+  # the report-half sheets by scope: defaults (blank output_id), page
+  # configurations (@name), each report
   scope <- function(d, id) {
     if (is.null(d) || !nrow(d)) return(d[0, , drop = FALSE])
     oid <- d$output_id
@@ -300,31 +303,26 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   }
   put("study.yml", study)
 
-  # spec/patterns/<name>.yml
+  # the `@<name>` rows: page configurations, each a style set of its name (no
+  # pattern file: canon 11-12 :380)
   pats <- unique(unlist(lapply(.ard_spec_pattern_sheets, function(s) {
     d <- sp[[s]]
     if (is.null(d) || !nrow(d)) return(character())
     oid <- d$output_id
     oid[!is.na(oid) & startsWith(oid, "@")]
   })))
-  # (a pattern's page rows are a page configuration, a style set of the
-  # pattern's name; the pattern file holds nothing else)
   pat_styles <- list()
-  named_pats <- .conv_extends_patterns(sp$report)
   for (p in pats) {
     pg <- page_of(p)
     pg$tokens <- NULL
-    # (a pattern's rows lie over the default rows, as the sheets layer them: its
-    # configuration is complete)
-    if (length(pg)) pg <- .conv_page_layer(dpg, pg)
+    # (a configuration's rows lie over the default rows, as the sheets layer
+    # them: it is complete; one row and nothing else, the default's)
+    pg <- .conv_page_layer(dpg, pg)
+    pg$tokens <- NULL
     pg <- split_page(pg, substring(p, 2L))
     set <- .conv_style_set(pg, note, substring(p, 2L))
-    if (length(set)) pat_styles[[substring(p, 2L)]] <- set
-    # (a page configuration has no pattern file: only a pattern that is none,
-    # or one a report's `extends` cell names)
-    if (!length(set) || substring(p, 2L) %in% named_pats) {
-      put(file.path("spec", "patterns", paste0(substring(p, 2L), ".yml")), list())
-    }
+    # (a set with nothing in it keeps its name, as the default's does)
+    pat_styles[[substring(p, 2L)]] <- if (length(set)) set else list(page = list())
   }
   if (length(pat_styles)) defaults$styles <- c(defaults$styles, pat_styles)
   style_names <- names(defaults$styles)
@@ -414,6 +412,15 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       maps <- if (is.data.frame(tm) && nrow(tm)) tm$param[tm$output_id %in% id] else character()
       out$template <- .tpl_maps_back(out$template, file.path(to, "spec", "outputs", paste0(id, ".yml")),
                                      maps, id, note)
+      # (the planner's set and the template report's set -- its argument,
+      # else the template's default: .report_set() -- one, A2-T)
+      ta <- .report_set(out)
+      if (!is.null(entry$population) && !identical(ta, as.character(entry$population))) {
+        note(id, "report", id, "population", sprintf(paste0(
+          "the planner's analysis set %s is not the template report's set (%s: the templates ",
+          "sheet's population column, else the template's default): the template's is kept"), entry$population,
+          if (is.na(ta)) "none" else ta))
+      }
     }
     f <- file.path(to, "spec", "outputs", paste0(id, ".yml"))
     tfl_write_output(out, f)
@@ -670,14 +677,12 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   out
 }
 
-# The patterns the report sheet's `extends` cells name (patterns/<name>): the
-# pattern files a study written from the sheets needs
-.conv_extends_patterns <- function(report) {
-  cells <- if (is.data.frame(report)) report$extends
-  cells <- cells[!is.na(cells)]
-  if (!length(cells)) return(character())
-  m <- unlist(regmatches(cells, gregexpr("patterns/[A-Za-z][A-Za-z0-9_]*", cells)))
-  unique(substring(m, nchar("patterns/") + 1L))
+# A report's `pattern` cell (`p`, `@<name>`) that names no page configuration
+# -- no row of the page sheets has it -- was a pattern file: an old form
+# (canon 11-12 :380), stopped at `where`
+.conv_bare_pattern_stop <- function(p, where) {
+  .old_form_stop("sheet_pattern", where,
+                 was = sprintf("the `pattern` cell %s, which names no page configuration", sQuote(p, FALSE)))
 }
 
 # The patterns of the sheets (the `@<name>` rows) that are page configurations:
@@ -833,14 +838,14 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   items
 }
 
-# A report's `extends` cell: a chain (`a | b`, `none`), or a map by step
-# (`content=none; page=patterns/a | defaults`)
+# A report's `extends` cell: a chain (`defaults`, `none`), or a map by step
+# (`content=none; data=defaults`); checked as `extends` is (a pattern stops)
 .conv_extends_cell <- function(cell, id) {
   one <- function(x) {
     x <- trimws(strsplit(x, "|", fixed = TRUE)[[1L]])
     x[nzchar(x)]
   }
-  if (!grepl("=", cell, fixed = TRUE)) return(one(cell))
+  if (!grepl("=", cell, fixed = TRUE)) return(.extends_value(one(cell), sprintf("report %s", sQuote(id))))
   parts <- trimws(strsplit(cell, ";", fixed = TRUE)[[1L]])
   parts <- parts[nzchar(parts)]
   if (!all(grepl("^[a-z]+ *=", parts))) {
@@ -857,7 +862,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
 # records (`source: dataset | code`; a figure's data is its code when it
 # says no source, as a figure of items has it) and names no analysis data
 # of its own (`data: <id>`: that data has the set, .data_population()); a
-# table's set stays in `common` until `common` goes
+# table's is on its subjects rows, as the analysis_data sheet has it (A2-T)
 .set_on_data <- function(kind, data) {
   if (!is.null(data) && !is.list(data)) return(FALSE)
   src <- data[["source"]] %||% if (identical(kind, "figure")) "code"
@@ -865,30 +870,21 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
 }
 
 # one report's file (`template`: a report on the templates sheet, whose data
-# the template makes: its set goes where the template reads it, `common`,
-# until the template's reader takes the data's)
+# the template makes: its set is the template's set argument, the templates
+# sheet's `population` column, A2-T)
 .conv_output <- function(id, kind, entry, sp, ard, lf, fig, prow, scope, page_of, content_fn, note,
                          figures = "design", style_names = character(), template = FALSE) {
   rrow <- scope(sp$report, id)
   pattern <- if (nrow(rrow) && !is.null(rrow$pattern) && !is.na(rrow$pattern[1L])) rrow$pattern[1L]
-  # the `pattern` cell of a pattern that is a page configuration picks it: the report's style
-  # (the report then extends the defaults alone: a page configuration is no pattern file)
+  # the `pattern` cell picks a page configuration: the report's style.  One
+  # that names none (a pattern file) is an old form (canon 11-12 :380)
   style <- if (!is.null(pattern) && sub("^@", "", pattern) %in% style_names) sub("^@", "", pattern)
-  extends <- c(if (!is.null(pattern) && is.null(style)) paste0("patterns/", sub("^@", "", pattern)), "defaults")
+  if (!is.null(pattern) && is.null(style)) .conv_bare_pattern_stop(pattern, sprintf("report %s", sQuote(id)))
+  extends <- "defaults"
   # the `extends` cell, when the report has one, says the chain as written
-  # (`none` stays `none`); its first pattern has to be the `pattern` cell's
+  # (`none` stays `none`; a map by step, `content=none`)
   if (nrow(rrow) && !is.null(rrow$extends) && !is.na(rrow$extends[1L]) && nzchar(trimws(rrow$extends[1L]))) {
-    chain <- .conv_extends_cell(rrow$extends[1L], id)
-    # (a map by step, `content=none; page=a | b`: as written, no pattern cell to agree with)
-    if (is.list(chain)) pattern <- NULL
-    first <- grep("^patterns/", unlist(chain), value = TRUE)[1L]
-    said <- if (is.null(pattern)) NA_character_ else paste0("patterns/", sub("^@", "", pattern))
-    if (!is.list(chain) && !identical(first, said)) {
-      stop("report ", sQuote(id), ": the `pattern` cell (", if (is.na(said)) "blank" else sQuote(sub("^patterns/", "@", said)),
-           ") and the `extends` cell (", sQuote(paste(chain, collapse = " | ")),
-           ") name different patterns; change one of them.", call. = FALSE)
-    }
-    extends <- chain
+    extends <- .conv_extends_cell(rrow$extends[1L], id)
   }
   data <- NULL
   content <- list()
@@ -1040,13 +1036,14 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   # figure's hazard ratios too): its analysis: section, the ARD stage's
   ard_part <- NULL
   # the planner's analysis set goes on the report's data when the data reads
-  # subjects' records (a listing's or a figure's, .set_on_data()), else on
-  # `common` (below); a template report's on `common` (its data is the
-  # template's)
+  # subjects' records (a listing's or a figure's, .set_on_data()); else it is
+  # on the subjects rows, as the analysis_data sheet has it (a table's, A2-T:
+  # never `common:`); a template report's is its template's argument (the
+  # templates sheet's `population` column)
   pop_on_data <- !isTRUE(template) && .set_on_data(kind, data)
   # (a data of one of the report's analysis data has that data's set: on
-  # its row, neither on the data nor in `common`)
-  pop_in_common <- !pop_on_data && (!is.list(data) || is.null(data[["data"]]))
+  # its row, not on the data)
+  pop_on_rows <- !isTRUE(template) && !pop_on_data && (!is.list(data) || is.null(data[["data"]]))
   if (!is.null(ard)) {
     ob <- ard$objects
     if (!is.null(ob) && nrow(ob)) {
@@ -1110,15 +1107,35 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   }
   # the report's analysis set (the planner's column): on its data when the
   # data reads subjects' records, a listing's or a figure's (canon 11-15:
-  # the set is the data's; the data's own wins); a table's stays in
-  # `common` until `common` goes
+  # the set is the data's; the data's own wins); a table's on its subjects
+  # rows (A2-T); never in `common`
   common <- list()
+  # (the planner's set -- the report's own, .planner_set(), or one typed
+  # in the sheet -- on the rows tfl_set_report_set() writes it on
+  # (.set_row_taker()); a planner set its rows do not carry -- another set
+  # on them, or no subjects row -- is said, not written: the rows are what
+  # the program reads, A2-T Q7)
+  if (pop_on_rows && !is.null(entry$population)) {
+    from <- .pop_from(ard$populations, entry$population)
+    if (length(ard_part$analysis_data)) {
+      takes <- .set_row_taker(ard_part$analysis_data, as.character(entry$population), from)
+      ard_part$analysis_data <- lapply(ard_part$analysis_data, function(a) {
+        if (takes(a)) a$population <- entry$population
+        a
+      })
+    }
+    rs <- .rows_carried_set(ard_part$analysis_data %||% list(), ard_part$analyses %||% list())
+    if (!identical(rs, as.character(entry$population))) {
+      note(id, "report", id, "population", sprintf(paste0(
+        "the planner's analysis set %s is not the set its subjects rows carry (%s): the rows' is kept; ",
+        "write %s on the analysis_data row that makes its subjects"), entry$population,
+        if (is.na(rs)) "none" else rs, entry$population))
+    }
+  }
   if (pop_on_data) {
     if (is.null(data[["population"]]) && !is.null(entry$population)) {
       data <- c(data %||% list(), list(population = entry$population))
     }
-  } else if (pop_in_common) {
-    common$population <- entry$population
   }
   # (the report's subjects definition has no set of its own: the report's,
   # which the sheets wrote on it, .rows_set() -- its data's, else `common`'s;

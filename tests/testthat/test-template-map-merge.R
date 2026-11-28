@@ -47,7 +47,7 @@ test_that("a name whose value is !unset is removed from the series' map", {
 mm_study <- function(root, v1_formats = NULL, v2_formats = NULL) {
   st <- file.path(root, "STUDY-MM")
   dir.create(st)
-  writeLines(c("study_id: STUDY-MM", "settings:", "  rounding: sas"), file.path(st, "study.yml"))
+  write_study_yml(st, c("study_id: STUDY-MM", "settings:", "  rounding: sas"))
   tfl_copy_templates(st, "tflspec_v1/tflspec_summary")
   if (!is.null(v1_formats)) tfl_series_values_set(st, "tflspec_v1", list(formats = v1_formats))
   if (!is.null(v2_formats)) {

@@ -1,6 +1,8 @@
-# pattern (a marker row) and the pattern's code lists (on the report), so
-# tfl_table_spec() and the save work and nothing in the output changes (#662).
-# Package fictional data (adsl, adlb); a study per case.
+# Patterns are gone (canon 11-12 :380, :433): a spec/patterns/ file and a
+# report's `extends: patterns/<name>` stop as old forms.  What the sheets
+# carry of a study without them: the study's code lists (study_codelists)
+# and a report's own (#662).  Package fictional data (adsl, adlb); a study
+# per case.
 
 pnp_study <- function(pattern = NULL, page = NULL, defaults = NULL, own = NULL, extends = NULL,
                       env = parent.frame()) {
@@ -52,8 +54,7 @@ pnp_code <- function(d) {
 pnp_check <- function(d, same = TRUE, env = parent.frame()) {
   rt <- pnp_round(d, env)
   expect_no_error(tfl_table_spec(rt$sheets$table))
-  expect_true("pp" %in% names(tfl_read_study_spec(rt$dir)$patterns))
-  expect_true("patterns/pp" %in% tfl_read_outputs(rt$dir)[["T-A"]]$extends)
+  expect_false(dir.exists(file.path(rt$dir, "spec", "patterns")))
   if (same) {
     a <- pnp_code(d)
     b <- pnp_code(rt$dir)
@@ -67,26 +68,26 @@ pnp_pat <- "SEX: [{value: M, label: PatM}, {value: F, label: PatF}]"
 pnp_def <- "SEX: [{value: M, label: DefM}, {value: F, label: DefF}]"
 pnp_notes <- function(sh) sh$not_converted[sh$not_converted$part == "codelists", ]
 
-test_that("a pattern with no rows: it keeps its place and the output does not change (#662)", {
+test_that("a pattern file stops the read: an old form, whatever it holds", {
   skip_on_cran()
-  d <- pnp_study(page = "content: []")
-  rt <- pnp_check(d)
-  r <- rt$sheets$table$report
-  expect_identical(r$output_id[!is.na(r$output_id)], c("T-A", "@pp"))
-  expect_true(all(is.na(r[r$output_id %in% "@pp", setdiff(names(r), "output_id")])))
-  expect_identical(nrow(pnp_notes(rt$sheets)), 0L)
-})
-
-test_that("a pattern's `page:` stops: the page is the page configuration's, not a pattern's", {
-  skip_on_cran()
-  d <- pnp_study(page = c("page:", "  rtf_page: {orientation: landscape}"))
-  expect_error(tfl_read_study_spec(d), "pp.yml `page:` moved to a page configuration")
-})
-
-test_that("a pattern with code lists stops: no layer gives a report a list", {
-  skip_on_cran()
+  for (page in list("content: []", c("page:", "  rtf_page: {orientation: landscape}"))) {
+    d <- pnp_study(page = page)
+    e <- tryCatch(tfl_read_study_spec(d), error = function(e) e)
+    expect_s3_class(e, "tflspec_old_form")
+    expect_identical(e$form, "patterns_dir")
+    expect_match(conditionMessage(e), "spec/patterns/: pp.yml (a pattern file) is no longer read", fixed = TRUE)
+  }
   d <- pnp_study(pattern = pnp_pat)
-  expect_error(tfl_read_study_spec(d), "a pattern holds no code list", fixed = TRUE)
+  expect_error(tfl_read_study_spec(d), class = "tflspec_old_form")
+})
+
+test_that("a report's extends: patterns/<name> stops: an old form", {
+  skip_on_cran()
+  d <- pnp_study(extends = "[patterns/pp, defaults]")
+  e <- tryCatch(tfl_read_outputs(d), error = function(e) e)
+  expect_s3_class(e, "tflspec_old_form")
+  expect_identical(e$form, "extends_pattern")
+  expect_match(conditionMessage(e), "`extends: patterns/pp` is no longer read", fixed = TRUE)
 })
 
 test_that("the defaults' code lists cross the sheets as study_codelists (#662, A7)", {
@@ -108,37 +109,9 @@ test_that("the defaults' code lists cross the sheets as study_codelists (#662, A
 test_that("a report's own list is a row, and says nothing (#662)", {
   skip_on_cran()
   own <- c("codelists:", "  SEX: [{value: M, label: OwnM}, {value: F, label: OwnF}]")
-  d <- pnp_study(page = "content: []", own = own)
+  d <- pnp_study(own = own)
   rt <- pnp_check(d)
   expect_identical(rt$sheets$table$codelists$label, c("OwnM", "OwnF"))
   expect_identical(nrow(pnp_notes(rt$sheets)), 0L)
   expect_identical(names(tfl_read_outputs(rt$dir)[["T-A"]]$codelists), "SEX")
-})
-
-test_that("the marker row changes no default: the report's rows come out the same (#662)", {
-  skip_on_cran()
-  d <- pnp_study(page = "content: []")
-  sp <- tfl_table_spec(tfl_sheets_from_yaml(d)$table)
-  r <- sp$report
-  own <- r[!is.na(r$output_id) & r$output_id == "T-A", , drop = FALSE]
-  marker <- r[!is.na(r$output_id) & r$output_id == "@pp", , drop = FALSE]
-  expect_identical(nrow(marker), 1L)
-  over <- tflspec:::.ard_spec_over_pattern(r[is.na(r$output_id), , drop = FALSE]
-                                           , marker, "report", "T-A")
-  # (the default row, then the report's row: its cells as the marker's blanks
-  # leave them)
-  expect_identical(over[nrow(over), setdiff(names(over), "output_id")],
-                   marker[1L, setdiff(names(marker), "output_id")], ignore_attr = TRUE)
-  one <- tflspec:::.ard_spec_scope(sp, "T-A")$report
-  expect_identical(one$output_id, "T-A")
-  expect_identical(one$type[1L], "table")
-})
-
-test_that("a report naming a pattern that does not exist still stops (#662)", {
-  skip_on_cran()
-  d <- pnp_study(page = "content: []")
-  f <- file.path(d, "spec", "outputs", "T-A.yml")
-  writeLines(sub("patterns/pp", "patterns/pq", readLines(f)), f)
-  sh <- suppressWarnings(tfl_sheets_from_yaml(d))
-  expect_error(tfl_table_spec(sh$table), "no page pattern of that name")
 })

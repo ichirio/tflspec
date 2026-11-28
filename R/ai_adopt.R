@@ -390,7 +390,7 @@ tfl_ai_adopted_diff <- function(study_dir = ".", output_id = NULL) {
     e <- list(id = id, kind = o$kind %||% "table")
     if (!is.null(o) && !is.na(o$label %||% NA)) e$label <- o$label
     # (the report's set as the page reads it: its data's, its rows', `common`'s)
-    if (!is.null(o) && !is.na(.out_population_or_data(o))) e$population <- .out_population_or_data(o)
+    if (!is.null(o) && !is.na(.report_set(o))) e$population <- .report_set(o)
     b <- base_key(id)
     near <- which(vapply(toc, function(x) identical(base_key(x$id %||% ""), b), NA))
     if (!is.na(b) && length(near)) {

@@ -6,7 +6,7 @@ ricv_study <- function(study_yml = "study_id: S-1", env = parent.frame()) {
   s <- tempfile("ricv-study")
   dir.create(s)
   do.call(on.exit, list(bquote(unlink(.(s), recursive = TRUE)), add = TRUE), envir = env)
-  if (!is.null(study_yml)) writeLines(study_yml, file.path(s, "study.yml"))
+  if (!is.null(study_yml)) write_study_yml(s, study_yml)
   s
 }
 

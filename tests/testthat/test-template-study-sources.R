@@ -12,8 +12,7 @@ ss_study <- function(treatment = "TRT01P") {
   file.copy(list.files(system.file("extdata", "spec-yaml", package = "tflspec"),
                        full.names = TRUE), d, recursive = TRUE)
   if (!is.null(treatment)) {
-    writeLines(c("study_id: SS-1", "settings:", paste0("  treatment: ", treatment)),
-               file.path(d, "study.yml"))
+    write_study_yml(d, c("study_id: SS-1", "settings:", paste0("  treatment: ", treatment)))
   }
   s <- tfl_read_study_spec(d)
   unlink(d, recursive = TRUE)
@@ -30,19 +29,20 @@ test_that("the report's population: the template's population, written in its pr
   s <- ss_study(NULL)
   ro <- ss_resolve("ae_soc_pt", list(), s)
   expect_identical(attr(ro, "template")$args$population, "SAF")
-  # (with the study standard's look: its plan_stub, plan_blanks ... too)
-  expect_identical(attr(ro, "template")$study[1L], "population")
+  # (the set is the report's, A2-T: no study default)
+  expect_false("population" %in% attr(ro, "template")$study)
   code <- tfl_content_code(ro, pipe = "|>")
   expect_match(paste(code, collapse = "\n"), "\"ae_soc_pt\",\\s+population = \"SAF\"")
-  # the report's own argument wins, and says so
-  expect_message(ro2 <- ss_resolve("ae_soc_pt", list(population = "SCRF"), s),
-                 "overrides the study standard \\(output.common.population\\)")
+  # the report's own argument and another `common: population`: the set is
+  # written twice (A2-T Q6), an error
+  expect_error(ss_resolve("ae_soc_pt", list(population = "SCRF"), s), "the set is written twice")
+  ro2 <- ss_resolve("ae_soc_pt", list(population = "SCRF"), s, population = "SCRF")
   expect_identical(attr(ro2, "template")$args$population, "SCRF")
-  # demog: the analysis set is the report's `population:` only, never an argument
+  # demog: its set parameter (A2-T Q2), the report's `common: population` until it goes
   ro3 <- ss_resolve("demog", list(by = "TRT01A", continuous = "AGE"), s)
   expect_identical(attr(ro3, "template")$args$population, "SAF")
   expect_error(ss_resolve("demog", list(by = "TRT01A", continuous = "AGE", population = "SCRF"), s),
-               "takes the analysis set from the report's `common: population`")
+               "the set is written twice")
 })
 
 test_that("study.yml's settings: treatment: the templates' by", {

@@ -66,11 +66,15 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
   }
   scope_rel <- function(output_id) {
     if (is.na(output_id) || !nzchar(output_id)) "defaults.yml"
-    else if (startsWith(output_id, "@")) file.path("patterns", paste0(substring(output_id, 2L), ".yml"))
+    # (a `@<name>` scope was a pattern file: an old form, canon 11-12 :380)
+    else if (startsWith(output_id, "@")) {
+      .old_form_stop("patterns_dir", "tfl_import_spec_xlsx()",
+                     was = sprintf("the rows of %s (a pattern file)", sQuote(output_id, FALSE)))
+    }
     else out_rel(output_id)
   }
 
-  # the page of a scope: a report's or a pattern's `page:`; the defaults' is the
+  # the page of a scope: a report's `page:`; the defaults' is the
   # study's default page configuration (a set of defaults.yml's styles:, its
   # lines as one numbered list: the first block), its tokens study.yml's
   default_name <- function() {
@@ -169,7 +173,7 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
   update_rows("toc", "toc.yml", "outputs", "id", list_cols = c("sets", "datasets"))
   update_rows("datasets", "data.yml", "datasets", "dataset", r_cols = "derive")
   update_rows("populations", "data.yml", "populations", "id", r_cols = c("where", "derive"))
-  # rows by report (or defaults / pattern)
+  # rows by report (or defaults)
   by_scope <- function(sheet, fun) {
     d <- rd(sheet)
     if (is.null(d) || !nrow(d)) return()

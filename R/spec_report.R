@@ -26,7 +26,7 @@
   if (!isTRUE(attr(output, "resolved")) && !is.null(study)) {
     output <- tfl_resolve_output(output, study)
   }
-  pg <- .page_place(output$page %||% list(), study$study$settings, output$id)
+  pg <- output$page %||% list()
   id <- output$id %||% NA_character_
   kind <- output$kind %||% "table"
   tokens <- .page_tokens(pg, id, kind, .page_own_tokens(output, study))
@@ -190,45 +190,6 @@
   steps
 }
 
-# Where a report's titles and footnotes print: the study's settings
-# `titles_at: header | titles` and `footnotes_at: footer | footnotes`
-# (decided 10/17).  The words are the report's, in its `page.titles` /
-# `page.footnotes`; `header` puts the titles' lines in the running header
-# after the study's lines, `footer` the footnotes' lines in the running
-# footer before them; `titles` / `footnotes` (and no setting) keep them
-# above and below the table (rtf_titles(), rtf_footnotes()).
-.page_place <- function(pg, settings, id = NA_character_) {
-  at <- function(key, ok) {
-    v <- settings[[key]]
-    if (is.null(v)) return(NULL)
-    if (!is.character(v) || length(v) != 1L || !v %in% ok) {
-      .ard_stop(sprintf("study.yml's settings: %s is %s.", key,
-                        paste(sprintf("\"%s\"", ok), collapse = " or ")))
-    }
-    v
-  }
-  move <- function(pg, from, to, after) {
-    lines <- .page_args(pg[[from]])
-    if (!length(lines)) return(pg)
-    lines <- lines[order(suppressWarnings(as.numeric(names(lines))))]
-    band <- .page_args(pg[[to]])
-    num <- suppressWarnings(as.numeric(names(band)))
-    num <- num[!is.na(num)]
-    keys <- if (after) max(c(0, num)) + seq_along(lines)
-            else min(c(1, num)) - rev(seq_along(lines)) / (length(lines) + 1)
-    pg[[to]] <- c(band, stats::setNames(unname(lines), format(keys, trim = TRUE)))
-    pg[[from]] <- NULL
-    pg
-  }
-  if (identical(at("titles_at", c("header", "titles")), "header")) {
-    pg <- move(pg, "titles", "header", after = TRUE)
-  }
-  if (identical(at("footnotes_at", c("footer", "footnotes")), "footer")) {
-    pg <- move(pg, "footnotes", "footer", after = FALSE)
-  }
-  pg
-}
-
 # The running header or footer as rtf_section() takes it: rtf_header(lines).
 # After the study's setup code (`split`), a report whose band is its
 # configuration's lines as they are (no body line, no line changed) says the
@@ -370,25 +331,6 @@
   })
 }
 
-# The report's analysis set: its data's own `population` (canon 11-15: the
-# set is the data's; `common: population` read until `common` goes), else
-# (a report built from a template has none) the one set its subjects data
-# entries name; NA for none or for several
-.out_population_or_data <- function(output) {
-  pop <- .report_set(output)
-  if (!is.na(pop)) return(pop)
-  # (a resolved report has them as its ARD's analysis_data, a file's as
-  # `data:`; the rows only, never the keys of a data map, .data_rows())
-  d <- .data_rows(output)
-  if (!length(d)) return(NA_character_)
-  v <- unlist(lapply(d, function(a) {
-    p <- a[["population"]]
-    if (.entry_is_subjects(a) && is.character(p) && length(p) == 1L && !is.na(p) && nzchar(p)) p
-  }))
-  v <- unique(v)
-  if (length(v) == 1L) v else NA_character_
-}
-
 # a function's arguments as page: says them: a map, unset ones gone
 # The report's own values for the bands' tokens besides its id and label:
 # its title (`label:`) and its analysis set's label (data.yml's), so that
@@ -399,7 +341,9 @@
   lab <- output$label
   if (is.character(lab) && length(lab) == 1L && !is.na(lab) && nzchar(lab)) own$OUTPUT_TITLE <- lab
   # (`common: population_label` is the text when there is no set, and wins when there is one)
-  pop <- .out_population_or_data(output)
+  # (the report's analysis set as its data says it, .report_set(): a
+  # template report read as written, its set argument)
+  pop <- .report_set(output, study$dir)
   if (is.character(pop) && length(pop) == 1L && !is.na(pop) && nzchar(pop)) {
     def <- Filter(function(p) identical(p$id, pop), study$data$populations %||% list())
     pl <- if (length(def)) def[[1L]]$label

@@ -58,8 +58,7 @@ test_that("the settings: the package's, under study.yml's ai: keys; the language
   expect_identical(s$requests_per_chat, 0L)
   expect_null(s[[paste0("ask_", "when")]])
   expect_identical(s$footnotes_at, "footer")
-  writeLines(c("study_id: X", "ai:", "  language: ja", "  max_rounds: 2", "  carry: [all]"),
-             file.path(d, "study.yml"))
+  write_study_yml(d, c("study_id: X", "ai:", "  language: ja", "  max_rounds: 2", "  carry: [all]"))
   s2 <- tflspec:::.ai_spec_settings(d)
   expect_identical(s2$language, "ja")
   expect_identical(s2$max_rounds, 2L)
@@ -70,7 +69,7 @@ test_that("the settings: the package's, under study.yml's ai: keys; the language
   expect_identical(tflspec:::.ai_spec_settings(d)$footnotes_at, "table")
   expect_match(tflspec:::.ai_footnotes_text("table"), "page: footnotes", fixed = TRUE)
   expect_match(tflspec:::.ai_footnotes_text("footer"), "page: footer", fixed = TRUE)
-  writeLines(c("study_id: X", "ai:", "  footnotes_at: footer"), file.path(d, "study.yml"))
+  write_study_yml(d, c("study_id: X", "ai:", "  footnotes_at: footer"))
   expect_identical(tflspec:::.ai_spec_settings(d)$footnotes_at, "footer")
   expect_identical(tflspec:::.ai_language_name("ja"), "Japanese")
   expect_identical(tflspec:::.ai_language_name("Deutsch"), "Deutsch")
@@ -267,7 +266,7 @@ test_that("the quote hint is given only when a value's own quote is inside its t
 test_that("ai: ask_when was removed: it is ignored, with one message that run replaces it", {
   d <- file.path(withr::local_tempdir(), "study")
   dir.create(d)
-  writeLines(c("study_id: X", "ai:", "  ask_when: always", "  max_rounds: 2"), file.path(d, "study.yml"))
+  write_study_yml(d, c("study_id: X", "ai:", "  ask_when: always", "  max_rounds: 2"))
   expect_message(s <- tflspec:::.ai_spec_settings(d), "ask_when is ignored; `ai: run`")
   expect_identical(s$max_rounds, 2L)
   expect_null(s$ask_when)
@@ -276,6 +275,6 @@ test_that("ai: ask_when was removed: it is ignored, with one message that run re
   # no ask_when: no message
   d2 <- file.path(withr::local_tempdir(), "study")
   dir.create(d2)
-  writeLines(c("study_id: X", "ai:", "  max_rounds: 2"), file.path(d2, "study.yml"))
+  write_study_yml(d2, c("study_id: X", "ai:", "  max_rounds: 2"))
   expect_no_message(tflspec:::.ai_spec_settings(d2))
 })

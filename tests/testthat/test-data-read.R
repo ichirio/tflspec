@@ -52,7 +52,7 @@ test_that("the data: list is the report's definitions, written back as data:, no
 
 test_that("each old place stops with a line saying where it went", {
   old_pop <- dr_write(c("id: T-1", "kind: table", "population: SAF", "content: []"))
-  expect_error(tfl_read_output(old_pop), "`population:` -> `common: population`", fixed = TRUE)
+  expect_error(tfl_read_output(old_pop), "`population:` -> the report's data", fixed = TRUE)
   old_ard <- dr_write(c("id: T-1", "kind: table", "analysis:", "  analysis_data:", "    - {id: adsl_sub, from: ADSL}",
                         "  analyses: []", "content: []"))
   expect_error(tfl_read_output(old_ard), "`analysis: analysis_data:` moved to `data:`", fixed = TRUE)
@@ -60,7 +60,7 @@ test_that("each old place stops with a line saying where it went", {
   expect_error(tfl_read_output(old_map), "a table reads its ARD", fixed = TRUE)
   old_lst <- dr_write(c("id: L-1", "kind: listing", "analysis:", "  analysis_data:", "    - {id: a, from: ADAE}", "content: []"))
   expect_error(tfl_read_output(old_lst), "moved to `data:`", fixed = TRUE)
-  expect_error(tfl_output("T-1", "table", population = "SAF"), "`population` -> `common: population`", fixed = TRUE)
+  expect_error(tfl_output("T-1", "table", population = "SAF"), "`population:` -> the report's data", fixed = TRUE)
   unlink(c(old_pop, old_ard, old_map, old_lst))
 })
 
@@ -116,7 +116,7 @@ test_that("the subjects definition of the population's own dataset (not only ADS
   on.exit(unlink(d, recursive = TRUE))
   dir.create(d)
   dir.create(file.path(d, "outputs"))
-  writeLines(c("tokens: {COMPANY: Sample Pharma}"), file.path(d, "study.yml"))
+  write_study_yml(d, c("tokens: {COMPANY: Sample Pharma}"))
   writeLines(c("datasets:",
                "  - {dataset: ADSL, level: ADaM, path: data/adsl.rds}",
                "  - {dataset: ADSLX, level: ADaM, path: data/adslx.rds}",
@@ -153,7 +153,7 @@ test_that("the subjects definition of the population's own dataset (not only ADS
   expect_null(tflspec:::.entry_pop_strip(c(a, population = "SAFX"), "SAFX", c("ADSL", "ADSLX"))$population)
 })
 
-test_that("YAML -> sheets -> YAML keeps common: and data: of the sample report", {
+test_that("YAML -> sheets -> YAML keeps data: of the sample report, its set moved onto its rows (A2-T)", {
   skip_if_not_installed("openxlsx")
   d0 <- system.file("extdata", "spec-yaml", package = "tflspec")
   d <- tempfile("dr-rt-")
@@ -176,26 +176,29 @@ test_that("YAML -> sheets -> YAML keeps common: and data: of the sample report",
   expect_identical(rep_row$treatment, "TRT01A")
   tfl_yaml_from_sheets(sh, to, overwrite = TRUE)
   back <- tfl_read_output(file.path(to, "spec", "outputs", "T-14-1-1.yml"))
-  expect_identical(back$common, o0$common)
-  expect_identical(back$ard$analysis_data, o0$ard$analysis_data)
+  # (the set on the subjects row, as the sheet has it; `common:` keeps the rest)
+  expect_identical(back$common, o0$common[setdiff(names(o0$common), "population")])
+  expect_identical(back$ard$analysis_data[[1L]]$population, "SAF")
+  expect_identical(tfl_report_set(back), "SAF")
   txt <- readLines(file.path(to, "spec", "outputs", "T-14-1-1.yml"))
   expect_true(any(grepl("^common:", txt)))
   expect_true(any(grepl("^data:", txt)))
   expect_false(any(grepl("analysis_data|^population:", txt)))
 })
 
-test_that("a template report written as a code SPEC: common: kept, the subjects definition says no set", {
+test_that("a template report written as a code SPEC: its set on the subjects definition, not in common: (A2-T)", {
   d <- system.file("extdata", "spec-yaml", package = "tflspec")
   s <- tfl_read_study_spec(d)
   o <- tfl_output("T-9", "table", common = list(population = "SAF", treatment = "TRT01A"),
                   template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE")))
   b <- tfl_template_to_spec(o, s)
-  expect_identical(b$common$population, "SAF")
+  expect_null(b$common$population)
   expect_identical(b$common$treatment, "TRT01A")
   ad <- b$ard$analysis_data
-  subj <- Filter(function(e) identical(toupper(e$from), "ADSL") && is.null(e$subjects), ad)
+  subj <- Filter(function(e) identical(toupper(e$from), "ADSL") && is.null(e$subjects_in) && is.null(e$code), ad)
   expect_true(length(subj) >= 1L)
-  expect_true(all(vapply(subj, function(e) is.null(e$population), NA)))
+  expect_true(all(vapply(subj, function(e) identical(e$population, "SAF"), NA)))
+  expect_identical(tfl_report_set(b), "SAF")
   f <- tempfile(fileext = ".yml")
   on.exit(unlink(f))
   tfl_write_output(b, f)

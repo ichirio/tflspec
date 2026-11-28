@@ -105,7 +105,7 @@ test_that("population: not given, it is the report's `population:`", {
   r <- tfl_resolve_output(o, s)
   expect_identical(r$ard$analysis_data[[1L]]$population, "SAF")
   expect_identical(attr(r, "template")$args$population, "SAF")
-  expect_true("population" %in% attr(r, "template")$study)
+  expect_false("population" %in% attr(r, "template")$study)
 })
 
 test_that("population: args equal to the report's, or the report has none: used, no message", {
@@ -127,46 +127,66 @@ test_that("population: args equal to the report's, or the report has none: used,
   expect_identical(r$content, base$content)
 })
 
-test_that("population: args differing from the report's: built with the template's, with the message (as before)", {
+test_that("population: args differing from the report's `common: population`: written twice, an error (A2-T Q6)", {
   s <- tp_study()
   o <- tp_output(list(name = "ae_soc_pt", args = list(population = "ITT")))
-  expect_message(r <- tfl_resolve_output(o, s), "overrides the study standard \\(output.common.population\\)")
-  expect_identical(r$ard$analysis_data[[1L]]$population, "ITT")
+  expect_error(tfl_resolve_output(o, s), "the set is written twice")
   o <- tp_output(list(name = "ae_soc_pt", analysis = list(population = "ITT")))
-  expect_message(r <- tfl_resolve_output(o, s), "overrides the study standard")
+  expect_error(tfl_resolve_output(o, s), "the set is written twice")
+  # the argument alone: built with it
+  r <- tfl_resolve_output(tp_output(list(name = "ae_soc_pt", args = list(population = "ITT")), population = NULL), s)
   expect_identical(r$ard$analysis_data[[1L]]$population, "ITT")
 })
 
-test_that("tfl_check_spec(): a template's population that differs from the report's gives a warning row naming both", {
-  mk <- function(args, population = "SAF") tp_output(list(name = "ae_soc_pt", args = args), population)
-  p <- tflspec:::.check_static_rows(mk(list()), "T1")
-  expect_identical(nrow(p), 0L)
-  # equal to the report's, or the report has none: used, no row
+test_that("tfl_check_spec(): a template's set argument and the report's own row over its subjects row: an error (A2-T Q6)", {
+  mk <- function(args, population = NULL) tp_output(list(name = "ae_soc_pt", args = args), population)
   expect_identical(nrow(tflspec:::.check_static_rows(mk(list(population = "SAF")), "T1")), 0L)
-  expect_identical(nrow(tflspec:::.check_static_rows(mk(list(population = "SAF"), population = NULL), "T1")), 0L)
-  expect_identical(nrow(tflspec:::.check_static_rows(
-    tp_output(list(name = "ae_soc_pt", analysis = list(population = "SAF"))), "T1")), 0L)
-  p <- tflspec:::.check_static_rows(mk(list(population = "ITT")), "T1")
-  expect_identical(p$level, "warning")
-  expect_identical(p$item, "population")
-  expect_match(p$message, "(ITT) differs from the report's analysis set (SAF", fixed = TRUE)
-  expect_match(p$message, "write the set once, on the report's data", fixed = TRUE)
-  # the report's set on its data (the canon's place) is read too (the one reader)
+  # the template's subjects row (its id) written over with another set
+  x <- tfl_template_expand("ae_soc_pt", list(population = "SAF"))
+  subj <- Filter(function(a) identical(a$population, "SAF") && is.null(a$subjects_in),
+                 c(if (is.null(names(x$data))) x$data, x$ard$analysis_data))[[1L]]$id
+  o <- mk(list(population = "SAF"))
+  o$ard <- list(analysis_data = list(list(id = subj, from = "ADSL", population = "ITT")))
+  p <- tflspec:::.check_static_rows(o, "T1")
+  expect_identical(p$level, "error")
+  expect_identical(p$item, paste0("data$", subj))
+  expect_match(p$message, "the set is written twice: the template argument `population` (SAF) and ",
+               fixed = TRUE)
+  # the same set there, or a row of its own (another set's denominator): no row
+  o$ard$analysis_data[[1L]]$population <- "SAF"
+  expect_identical(nrow(tflspec:::.check_static_rows(o, "T1")), 0L)
+  o$ard$analysis_data <- list(list(id = "adsl_itt", from = "ADSL", population = "ITT"))
+  expect_identical(nrow(tflspec:::.check_static_rows(o, "T1")), 0L)
+  # the template's argument and another set beside it (`common:` until it
+  # goes, the data map, the canon's place): one report, one message -- the
+  # resolve's stop, which tfl_check_spec() says as an error row; no row of
+  # the look before the build
+  expect_identical(nrow(tflspec:::.check_static_rows(mk(list(population = "ITT"), population = "SAF"), "T1")), 0L)
   f <- tp_output(list(name = "ae_soc_pt", args = list(population = "ITT")), NULL)
   f$data <- list(source = "code", population = "SAF")
-  expect_match(tflspec:::.check_static_rows(f, "T1")$message, "(ITT) differs from the report's analysis set (SAF",
-               fixed = TRUE)
+  expect_identical(nrow(tflspec:::.check_static_rows(f, "T1")), 0L)
+  expect_error(tfl_resolve_output(f, tp_study()), "the set is written twice", fixed = TRUE)
+  d <- withr::local_tempdir()
+  file.copy(list.files(system.file("extdata", "spec-yaml", package = "tflspec"), full.names = TRUE), d,
+            recursive = TRUE)
+  tfl_write_output(mk(list(population = "ITT"), population = "SAF"), file.path(d, "outputs", "T-9.yml"))
+  ck <- suppressWarnings(tfl_check_spec(d, output_id = "T-9", adam = FALSE))
+  ck <- ck[ck$output_id == "T-9" & grepl("written twice", ck$message, fixed = TRUE), , drop = FALSE]
+  expect_identical(ck$level, "error")
+  expect_match(ck$message, "the template argument `population` (ITT) and the report's data (SAF)", fixed = TRUE)
+  expect_match(ck$message, "write it once, on the report's data", fixed = TRUE)
 })
 
-test_that("demog has no `population` parameter: the report's `population:` drives it, args naming it stop", {
+test_that("demog's `population` parameter (A2-T Q2): given in either part, the same report", {
   s <- tp_study()
   ok <- tp_output(list(name = "demog", args = list(by = "TRT01A", continuous = "AGE")))
   r <- tfl_resolve_output(ok, s)
   expect_identical(r$ard$analysis_data[[1L]]$population, "SAF")
   for (key in c("args", "analysis")) {
-    bad <- tp_output(list(name = "demog", args = list(by = "TRT01A", continuous = "AGE")))
-    bad$template[[key]] <- c(bad$template[[key]], list(population = "SAF"))
-    expect_error(tfl_resolve_output(bad, s), "takes the analysis set from the report's `common: population`")
+    own <- tp_output(list(name = "demog", args = list(by = "TRT01A", continuous = "AGE")), population = NULL)
+    own$template[[key]] <- c(own$template[[key]], list(population = "SAF"))
+    r2 <- tfl_resolve_output(own, s)
+    expect_identical(r2$ard, r$ard, info = key)
   }
 })
 

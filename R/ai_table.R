@@ -357,9 +357,9 @@
     if (!is.null(id)) at <- paste(at, id)
     for (k in setdiff(names(o), .ai_table_keys)) {
       p <- .ai_problem(p, paste(at, k), if (identical(k, "population")) {
-        "`population:` -> `common: population` (write `common: {population: <analysis set id>}`)"
+        .common_old_line
       } else if (identical(k, "ard")) {
-        .ard_key_old_line()
+        .old_form_text("ard_key")
       } else {
         sprintf("is not a key of a report file; its keys are %s", paste(.ai_table_keys, collapse = ", "))
       })
@@ -566,17 +566,16 @@
   }
   # (every file it names, a map's steps' too)
   for (e in unique(as.character(unlist(o[["extends"]])))) {
-    ok <- e %in% c("defaults", "none") ||
-      (startsWith(e, "patterns/") && (is.null(context$patterns) ||
-                                        substring(e, 10L) %in% context$patterns))
-    if (!ok) add("extends", sprintf("%s is not defaults or a pattern of the study", sQuote(e, FALSE)))
+    # (a pattern is an old form: R/spec_old_forms.R)
+    if (!e %in% c("defaults", "none")) add("extends", sprintf("%s is not defaults or none", sQuote(e, FALSE)))
   }
   pops <- context$populations
   chk_pop <- function(where, x) {
     m <- .pop_unknown_text(x, pops)
     if (!is.null(m)) add(where, m)
   }
-  if (!is.na(.out_population(o))) chk_pop("common population", .out_population(o))
+  # (the report's set as its data says it, A2-T: .report_set())
+  if (!is.na(.report_set(o))) chk_pop("common population", .report_set(o))
   if (is.na(o[["label"]])) add("label", "the report has no label (its title)", "warning")
   # a code list under `page:` is ignored there: it belongs under `codelists:`
   for (k in setdiff(names(o[["page"]]), .page_known)) {
@@ -598,7 +597,7 @@
   par_rx <- "\\bPARAM(CD|N)?\\b"
   says_par <- function(x) any(grepl(par_rx, unlist(lapply(x, as.character))))
   ad_par <- list()
-  has_pop <- !is.na(.out_population(o))
+  has_pop <- !is.na(.report_set(o))
   bds <- if (!is.null(vars)) unique(vars$dataset[vars$variable %in% "PARAMCD"]) else character()
   unkept <- character()
   for (j in seq_along(ad)) {
@@ -868,8 +867,6 @@
       g <- file.path(src, f)
       if (file.exists(g)) file.copy(g, file.path(d, f))
     }
-    pat <- file.path(.spec_dir(src), "patterns")
-    if (dir.exists(pat)) file.copy(pat, file.path(d, "spec"), recursive = TRUE)
   }
   for (id in names(outs)) {
     tfl_write_output(outs[[id]], file.path(d, "spec", "outputs", paste0(id, ".yml")))

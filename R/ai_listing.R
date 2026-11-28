@@ -20,17 +20,16 @@
   }
   # (every file it names, a map's steps' too)
   for (e in unique(as.character(unlist(o[["extends"]])))) {
-    ok <- e %in% c("defaults", "none") ||
-      (startsWith(e, "patterns/") && (is.null(context$patterns) ||
-                                        substring(e, 10L) %in% context$patterns))
-    if (!ok) add("extends", sprintf("%s is not defaults or a pattern of the study", sQuote(e, FALSE)))
+    # (a pattern is an old form: R/spec_old_forms.R)
+    if (!e %in% c("defaults", "none")) add("extends", sprintf("%s is not defaults or none", sQuote(e, FALSE)))
   }
   pops <- context$populations
   chk_pop <- function(where, x) {
     m <- .pop_unknown_text(x, pops)
     if (!is.null(m)) add(where, m)
   }
-  if (!is.na(.out_population(o))) chk_pop("common population", .out_population(o))
+  # (the report's set as its data says it, A2-T: .report_set())
+  if (!is.na(.report_set(o))) chk_pop("population", .report_set(o))
   if (is.na(o[["label"]])) add("label", "the report has no label (its title)", "warning")
   if (length(o[["ard"]]$analyses %||% list())) {
     add("analysis analyses", "a listing has no analyses: its records are its `data`")

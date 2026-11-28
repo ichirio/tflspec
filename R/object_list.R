@@ -84,6 +84,59 @@
   list(name = ts$name, data = x$ard$analysis_data %||% list(), analyses = x$ard$analyses %||% list())
 }
 
+# What one entry of each list is, for the message of one that is not a map
+.obj_entry_shapes <- c(
+  "objects sheet row" = "{id: adsl_saf, code: ...}",
+  "data row" = "{id: adsl_saf, from: ADSL, where: SAFFL == \"Y\"}",
+  "analysis item" = "{id: BIGN, method: categorical, data: adsl_saf, variables: [TRT01A]}"
+)
+
+# A report's list of entries (the objects sheet, its data rows, its analysis
+# items), each a map, as every reader here walks them.  One that is not
+# stops with a plain message (class `tflspec_obj_not_map`, with `output_id`
+# and `item`): the report, the entry and what one looks like, not R's `$`
+# error (#1000).  `of`: the template the list is from, or NULL (the report's)
+.obj_entries <- function(l, what, output_id, of = NULL) {
+  if (is.null(l)) return(list())
+  if (!is.list(l)) l <- as.list(l)
+  for (i in seq_along(l)) {
+    e <- l[[i]]
+    if (is.list(e) && (!length(e) || !is.null(names(e)))) next
+    item <- sprintf("%s %d", what, i)
+    shown <- if (is.list(e)) "a list with no keys" else
+      paste0("`", paste(utils::head(as.character(e), 3L), collapse = ", "), "`")
+    msg <- sprintf("tfl_output_objects(): %s of %s%s is not a map (it is %s): an entry is a map of its keys, e.g. %s.",
+                   item, output_id, if (is.null(of)) "" else sprintf(" (template %s)", of),
+                   shown, .obj_entry_shapes[[what]])
+    stop(structure(class = c("tflspec_obj_not_map", "error", "condition"),
+                   list(message = msg, call = NULL, output_id = output_id, item = item)))
+  }
+  l
+}
+
+# A report's own lists of entries, each checked (.obj_entries())
+.obj_own_entries <- function(output) {
+  list(data = .obj_entries(output$ard$analysis_data, "data row", output$id),
+       analyses = .obj_entries(output$ard$analyses, "analysis item", output$id),
+       objects = .obj_entries(output$ard$objects, "objects sheet row", output$id))
+}
+
+# The check row of an entry that is not a map (.obj_entries()'s condition)
+.obj_not_map_row <- function(e, id) {
+  .check_rows(output_id = id, part = if (startsWith(e$item, "analysis")) "analysis" else "data",
+              item = e$item, level = "error", message = sub("^tfl_output_objects\\(\\): ", "", conditionMessage(e)))
+}
+
+# tfl_check_spec(): a report whose own entries are not all maps has this one
+# error row (every other check of it would stop on R's `$` error), else none
+.check_entry_rows <- function(o, id) {
+  e <- tryCatch({
+    .obj_own_entries(o)
+    NULL
+  }, tflspec_obj_not_map = function(e) e)
+  if (is.null(e)) .check_rows() else .obj_not_map_row(e, id)
+}
+
 # A report's entries (the template's first, the report's own merged in by
 # id, as the template resolves them), each with `fixed` (the template's)
 .obj_merge <- function(tpl, own) {
@@ -158,9 +211,11 @@
     .ard_stop("tfl_output_objects(): `output` is a report (tfl_read_output()).")
   }
   tpl <- .obj_template_defs(output, study)
-  data <- .obj_merge(tpl$data, output$ard$analysis_data)
-  an <- .obj_merge(tpl$analyses, output$ard$analyses)
-  obs <- output$ard$objects %||% list()
+  # (each list's entries are maps, else a plain stop: .obj_entries())
+  own <- .obj_own_entries(output)
+  data <- .obj_merge(.obj_entries(tpl$data, "data row", output$id, tpl$name), own$data)
+  an <- .obj_merge(.obj_entries(tpl$analyses, "analysis item", output$id, tpl$name), own$analyses)
+  obs <- own$objects
   rows <- list()
   row <- function(object, spec_name, code_name, stage, kind, where, fixed, from = NA_character_,
                   name_source = "written", item_id = NA_character_) {
@@ -784,11 +839,10 @@ tfl_output_rename <- function(output, old, new, study = NULL) {
   # a template's argument that names a data
   if (is.list(output$template) && length(x$uses) &&
       any(x$uses$stage == "template" & x$uses$name == old)) {
+    # (where `template:` gives it, .tpl_args_placed())
+    given <- .tpl_args_placed(output$template, study_dir = study$dir)$args
     for (a in x$uses$arg[x$uses$stage == "template" & x$uses$name == old]) {
-      if (identical(output$template$args[[a]], old)) output$template$args[[a]] <- new
-      for (part in .tpl_part_keys) {
-        if (identical(output$template[[part]][[a]], old)) output$template[[part]][[a]] <- new
-      }
+      if (identical(given[[a]], old)) output$template <- .tpl_arg_put(output$template, a, new, study$dir)
     }
   }
   nms <- unique(stats::na.omit(c(r$spec_name, r$code_name)))
@@ -926,7 +980,10 @@ tfl_output_name_check <- function(output, study = NULL) {
 .check_object_rows <- function(o, id, datasets = character()) {
   rows <- list(.check_rows())
   add <- function(...) rows[[length(rows) + 1L]] <<- .check_rows(output_id = id, ...)
-  x <- tryCatch(.obj_table(o), error = function(e) NULL)
+  # (an entry that is not a map: one error row for the report, not a silent
+  # drop of its object rows, #1000)
+  x <- tryCatch(.obj_table(o), tflspec_obj_not_map = function(e) e, error = function(e) NULL)
+  if (inherits(x, "tflspec_obj_not_map")) return(.obj_not_map_row(x, id))
   if (is.null(x)) return(rows[[1L]])
   ob <- x$objects
   u_ref <- x$uses[x$uses$how == "ref", , drop = FALSE]
@@ -965,8 +1022,7 @@ tfl_output_name_check <- function(output, study = NULL) {
   # an analysis item's input is its `from:` (the pipe) or its `data:` (the
   # first argument), not both (B-7 for analyses); a `from:` names an object
   # made above (made below: rule 5) or a study dataset
-  for (a in o$ard$analyses %||% list()) {
-    if (!is.list(a)) next
+  for (a in .obj_entries(o$ard$analyses, "analysis item", id)) {
     who <- .obj_chr(a$id)
     if (!is.null(a[["from"]]) && !is.null(a[["data"]])) {
       add(part = "analysis", item = who, level = "error", message = sprintf(

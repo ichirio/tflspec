@@ -4,7 +4,7 @@
 test_that("page arguments without a column: in page_more, and back", {
   d <- withr::local_tempdir()
   dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)
-  writeLines(c("id: PM-1", "title: Page more"), file.path(d, "study.yml"))
+  write_study_yml(d, c("id: PM-1", "title: Page more"))
   page <- list(
     rtf_titles = list(font_size_half_points = 20L, row_height_twips = 300L, align = "left"),
     rtf_header = list(border = tfl_call("rtf_border", list(bottom = TRUE)), font_size_half_points = 16L),
@@ -30,7 +30,7 @@ test_that("page arguments without a column: in page_more, and back", {
 test_that("a page the columns say whole: no page_more", {
   d <- withr::local_tempdir()
   dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)
-  writeLines(c("id: PM-1", "title: Page more"), file.path(d, "study.yml"))
+  write_study_yml(d, c("id: PM-1", "title: Page more"))
   tfl_write_output(tfl_output("T-1", "table", extends = "none", page = list(
     rtf_page = list(orientation = "portrait"), rtf_titles = list(font_size_half_points = 20L))),
     file.path(d, "spec", "outputs", "T-1.yml"))
@@ -41,7 +41,7 @@ test_that("a page the columns say whole: no page_more", {
 test_that("a watermark's look (an rtf_watermark() call): in page_more, and back; a word in its column", {
   d <- withr::local_tempdir()
   dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)
-  writeLines(c("id: PM-1", "title: Page more"), file.path(d, "study.yml"))
+  write_study_yml(d, c("id: PM-1", "title: Page more"))
   wm <- tfl_call("rtf_watermark", list(text = "DRAFT", color = "#FF0000"))
   tfl_write_output(tfl_output("T-1", "table", extends = "none",
                               page = list(rtf_document = list(watermark = wm))),

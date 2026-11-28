@@ -53,7 +53,7 @@
 #'   to replace the set's label); a report may have none of them.  Any other
 #'   key stops.  The old `population` argument stops: write
 #'   `common = list(population = )`.
-#' @param population Removed: `population` -> `common: population`.
+#' @param population Removed: the set is the data's ([tfl_set_report_set()]).
 #' @param extends The files layered under this one, nearest first
 #'   (`"defaults"`, `"patterns/<name>"`); `"none"` for none; or a list by
 #'   step (`data`, `analysis`, `content`, `page`), each such a value
@@ -124,7 +124,8 @@ tfl_item <- function(fn, args = list(), from = "own") {
     stop(paste0("tfl_item(): `from` is \"own\", \"defaults\", \"pattern:<name>\", ",
                 "\"style:<name>\" or \"template:<name>\"."), call. = FALSE)
   }
-  structure(list(fn = fn, args = args, from = from), class = "tfl_item")
+  # (a `~` argument is not written: R/spec_study.R .drop_null(), L463)
+  structure(list(fn = fn, args = .drop_null(args), from = from), class = "tfl_item")
 }
 
 #' @rdname tfl_r
@@ -141,8 +142,7 @@ tfl_output <- function(id, kind = c("table", "figure", "listing"),
   }
   kind <- match.arg(kind)
   if (!is.null(population)) {
-    stop("tfl_output(): ", id, ": `population` -> `common: population`; write ",
-         "`common = list(population = ...)`.", call. = FALSE)
+    stop("tfl_output(): ", id, ": ", .common_old_line, call. = FALSE)
   }
   common <- .common_in(common, paste0("tfl_output(): ", id))
   if (!inherits(content, "tfl_r") &&
@@ -383,13 +383,16 @@ tfl_read_output <- function(path) {
   on.exit(.spec_read$id <- old_id, add = TRUE)
   # (the old places, each with a line saying where it moved)
   if (!is.null(y[["population"]])) stop(who, ": ", .common_old_line, call. = FALSE)
-  # moves to .old_forms (old-forms-stop)
-  if ("ard" %in% names(y)) stop(who, ": ", .ard_key_old_line(), call. = FALSE)
-  if (.is_tpl_spec(y$template) && "ard" %in% names(y$template)) {
-    stop(who, ": ", .ard_key_old_line("template: {ard:}", "template: {analysis:}"), call. = FALSE)
+  # (`ard:`: an old form, .output_keys_check(); a registered template's
+  # part, .tpl_spec_args())
+  if ("ard" %in% names(y)) .old_form_stop("ard_key", who)
+  if (.is_tpl_spec(y$template) && !.tpl_is_file_name(y$template$name) && "ard" %in% names(y$template)) {
+    .old_form_stop("template_ard", who)
   }
   common <- .common_in(y$common, who)
   .yaml_keys_check(y)
+  # (a report's keys are a closed list: R/spec_old_forms.R)
+  .output_keys_check(names(y), y[["kind"]], who)
   y <- .data_list_in(y, who)
   # the ARD's analyses are the report's analysis: section (2026-10-15), not data:'s
   old <- intersect(c("analysis_data", "analyses"), names(y$data))
@@ -401,8 +404,12 @@ tfl_read_output <- function(path) {
   # ([[ ]]: `$content` would take `contents` when there is no content)
   content <- if (inherits(y[["content"]], "tfl_r")) y[["content"]] else
     lapply(y[["content"]] %||% list(), .item_from_list)
-  # (a table's verb twice: one call, R/plan_repeats.R)
-  if (y$kind %in% c("table", "listing")) content <- .plan_merge_repeats(content, y$id)
+  # (a table's verb twice: one call, R/plan_repeats.R; a code SPEC file's own
+  # cards of a verb that does not stack stop)
+  if (y$kind %in% c("table", "listing")) {
+    own_file <- if (nzchar(path) && !.is_tpl_spec(y$template)) path
+    content <- .plan_merge_repeats(content, y$id, own_file)
+  }
   # (a template report that writes no `extends` takes its template's: left
   # NULL; any other report's is `defaults`)
   extends <- y$extends
@@ -427,16 +434,10 @@ tfl_read_output <- function(path) {
 }
 
 # The old top-level `population:` of a report, and where it went
-.common_old_line <- paste0("`population:` -> `common: population`: a report's analysis set ",
-                           "is written under `common:` (`common:` / `  population: SAF`).")
-
-# The old key `ard:` of a report (its map, and the part of a `template:` or
-# `extends:` map), and where it went: one line, the old key, the new, the
-# canon's reason.  moves to .old_forms (old-forms-stop)
-.ard_key_old_line <- function(was = "ard:", instead = "analysis:") {
-  paste0("`", was, "` is no longer read: write `", instead, "` (the same map): a report's ",
-         "second step is its analysis step, which makes its ARD (canon 11-15, `ard:` -> `analysis:`).")
-}
+.common_old_line <- paste0("`population:` -> the report's data: its analysis set is written where ",
+                           "its data says it -- a subjects row's `population:`, a data map's ",
+                           "`population:`, or the template's set argument (tfl_set_report_set() ",
+                           "writes it).")
 
 # The keys of a report's `common:` (what several steps read): a closed list
 .common_keys <- c("population", "treatment", "population_label")
@@ -488,13 +489,8 @@ tfl_read_output <- function(path) {
   say <- function(where, keys, kind) {
     known <- .yaml_known_keys[[kind]]
     for (k in setdiff(keys[nzchar(keys)], known)) {
-      d <- drop(utils::adist(k, known))
-      near <- which(d <= 2L | startsWith(known, k) | startsWith(k, known))
-      hint <- if (length(near)) {
-        sprintf("; did you mean %s:?", known[near[which.min(d[near])]])
-      } else {
-        " (not read)"
-      }
+      near <- .near_name(k, known)
+      hint <- if (!is.na(near)) sprintf("; did you mean %s:?", near) else " (not read)"
       warning(sprintf("%s: %s: is not a key%s", where, k, hint), call. = FALSE)
     }
   }
@@ -520,58 +516,81 @@ tfl_read_output <- function(path) {
 .out_population <- function(o) .na_scalar(o[["common"]][["population"]])
 
 # The analysis set of a report's data (a listing's, a records part's): the
-# data's own `population` (canon 11-15: the set lives on the data); the
-# report's `common: population` is read only until `common` goes (NA when
-# none) -- one rule, the sheets' and the YAML's alike (A2 Q7).  A data that
-# reads one of the report's analysis data (`data: <id>`) has that data's set
-# (.adata_pop(): its own, else that of the subjects it keeps, else the
-# nearest above it), never one written beside it (.data_both()); its rows
-# as the ARD program reads them (a subjects row with no set has the
-# report's `common: population`, .entry_pop_inject(), until `common` goes)
-.data_population <- function(data, o) {
+# data's own `population` (canon 11-15: the set lives on the data), else the
+# one set its data rows carry (`rows`, the report's: .rows_carried_set(), A2-T);
+# the report's `common: population` is read only until `common` goes, last
+# (NA when none) -- one rule, the sheets' and the YAML's alike (A2 Q7).  A
+# data that reads one of the report's analysis data (`data: <id>`) has that
+# data's set (.adata_pop(): its own, else that of the subjects it keeps,
+# else the nearest above it), never one written beside it (.data_both());
+# its rows -- here and for the set they carry -- as the ARD program reads
+# them (a subjects row with no set has the report's `common: population`,
+# .rows_set() / .entry_pop_inject(), until `common` goes)
+.data_population <- function(data, o, rows = .data_rows(o)) {
   id <- .na_scalar(if (is.list(data)) unlist(data[["data"]]))
   if (!is.na(id)) {
     rows <- lapply(.data_rows(o), .entry_pop_inject, .rows_set(o))
     return(.rows_adata_pop(rows, id))
   }
-  data[["population"]] %||% .out_population(o)
+  if (!is.null(data[["population"]])) return(data[["population"]])
+  rs <- .rows_carried_set(lapply(rows, .entry_pop_inject, .rows_set(o)), o[["ard"]][["analyses"]])
+  if (!is.na(rs)) rs else .out_population(o)
 }
 
 # The set a report's subjects rows that name none take (.entry_pop_inject()),
-# as the ARD program reads them: the report's set as its data map says it
-# (.report_set(): a figure's or listing's `data: {population:}`, else
-# `common: population` until `common` goes); a map that reads one of the
-# report's analysis data (`data: <id>`) has that data's set, which comes from
-# the rows themselves: `common` only.  One rule for every path that writes the
-# rows out (the sheets, the workbook) and reads them back (NA when none)
+# as the ARD program reads them: the set the report says beside its rows --
+# its data map's `population:` (a figure's, a listing's), else `common:
+# population` until `common` goes (the one transition read,
+# .out_population()); a map that reads one of the report's analysis data
+# (`data: <id>`) has that data's set, which comes from the rows themselves:
+# `common` only.  Never the set the rows carry (.rows_carried_set(), which
+# .report_set() reads): a row of no set is not given its neighbour's
+# (A2-T).  One rule for every path that writes the rows out (the sheets,
+# the workbook) and reads them back (NA when none)
 .rows_set <- function(o) {
   d <- o[["data"]]
   map <- if (is.list(d) && !is.null(names(d))) d
   if (!is.na(.na_scalar(unlist(map[["data"]])))) return(.out_population(o))
-  .report_set(o)
+  p <- .na_scalar(unlist(map[["population"]]))
+  if (!is.na(p)) p else .out_population(o)
 }
 
 # The sheets' population column of a report (the planner's: the TOC's line
 # and the report's set in one cell; `tp` its TOC line's set, `tpl` its
-# template SPEC): the report's set as its data says it (.report_set()), else
-# the TOC's line.  A report whose set lives on its data (a listing's, a
-# figure's: .set_on_data()) takes this column back onto its data, so there
-# the TOC's line is written only when the report carries that set already
-# (its subjects rows', .out_population_or_data()): the sheets add no set to
-# a report.  NA when none
+# template SPEC): the report's set as its data says it (.report_set()).  A
+# report whose set lives on its data (a listing's, a figure's:
+# .set_on_data()) takes this column back onto its data map, so there it is
+# the set the map says (.rows_set(): a set its subjects rows carry stays on
+# them, written once).  The TOC's line only when the report carries that
+# set already: the sheets add no set to a report of any kind (a table's
+# column goes on its rows, which would then count another set's subjects;
+# the sheets warn, tfl_check_spec() says it before).  NA when none
 .planner_set <- function(o, tp, tpl = NULL) {
-  rs <- .report_set(o)
-  if (!is.na(rs)) return(rs)
-  tp <- .na_scalar(unlist(tp))
   d <- o[["data"]]
   on_data <- is.null(tpl) && .set_on_data(o[["kind"]], if (is.list(d) && !is.null(names(d))) d)
-  if (on_data && !identical(.out_population_or_data(o), tp)) NA_character_ else tp
+  rs <- if (on_data) .rows_set(o) else .report_set(o)
+  if (!is.na(rs)) return(rs)
+  tp <- .na_scalar(unlist(tp))
+  if (identical(.report_set(o), tp)) tp else NA_character_
 }
 
-# The report's analysis set as its data says it (.data_population() of its
-# data map; NA when none): the sheets' population column, the page's set
-# line and the checks read it alike
-.report_set <- function(o) {
+# The report's analysis set as its data says it (A2-T, R/report_set.R),
+# one reader for every report, as written or resolved: a template report's
+# set argument (.tpl_set_arg()), else what its data says beside it
+# (.tpl_set_beside()), else the set its own row over the template's
+# subjects row carries (.tpl_set_rows_set(); a resolved report's row as
+# the template filled it), else the template's own default
+# (.tpl_set_default(), canon 11-15 (1)); any other report's data map's set,
+# else its rows' (.data_population(); NA when none).  The sheets'
+# population column, the page's set line and the checks read it alike;
+# `study_dir`, a study whose template copies it reads
+.report_set <- function(o, study_dir = NULL) {
+  ts <- tryCatch(.tpl_spec_of(o), error = function(e) NULL)
+  sp <- if (!is.null(ts)) .tpl_set_param(ts$name, study_dir) else NA_character_
+  if (!is.na(sp)) {
+    g <- .tpl_set_given(o, study_dir)
+    return(if (!is.na(g)) g else .tpl_set_default(ts$name, sp, study_dir))
+  }
   d <- o[["data"]]
   .na_scalar(unlist(.data_population(if (is.list(d) && !is.null(names(d))) d, o)))
 }
@@ -817,6 +836,15 @@ tfl_read_output <- function(path) {
   if (inherits(el, "tfl_r")) return(tfl_item(".r", list(code = el), "own"))
   # a content object: `{name, from, calls}`
   if (.is_obj_map(el)) return(.obj_map_from_list(el))
+  # the old `{fn:, args:, from:}` map of an item stops (canon 11-10 :378);
+  # an item already read (a tfl_item) is taken as it is, below
+  if (is.list(el) && !inherits(el, "tfl_item") && "fn" %in% names(el) &&
+      all(names(el) %in% c("fn", "args", "from"))) {
+    fn <- if (is.character(el[["fn"]]) && length(el[["fn"]]) == 1L) el[["fn"]] else "<fn>"
+    .old_form_stop("item_fn_map", .spec_read_file(),
+                   was = sprintf("a content item written as a map `{fn: %s, args: {...}}`", fn),
+                   instead = sprintf("write it `- %s: {<args>}`", fn))
+  }
   if (is.list(el) && length(el) == 1L && !is.null(names(el)) && nzchar(names(el))) {
     args <- el[[1L]]
     if (is.null(args)) args <- list()
@@ -837,7 +865,7 @@ tfl_read_output <- function(path) {
     args <- .r_tag_check(names(el), .neutral_in(names(el), .calls_in(args)))
     return(tfl_item(names(el), .rounding_check(names(el), .logical_strict(names(el), args)), "own"))
   }
-  if (is.list(el) && !is.null(el$fn)) {
+  if (inherits(el, "tfl_item")) {
     args <- .r_tag_check(el$fn, .neutral_in(el$fn, .calls_in(el$args %||% list())))
     return(tfl_item(el$fn, args, el$from %||% "own"))
   }
@@ -964,8 +992,10 @@ tfl_write_output <- function(x, path) {
   if (rw_out) y$content <- c(list(list(rework = .calls_out(x$data))), y$content)
   if (length(x$page)) y$page <- .calls_out(x$page)
   # a kind's own parts beside the common ones (a figure's template, plot,
-  # plots, compose)
-  for (k in setdiff(names(x), .output_fields)) if (!is.null(x[[k]])) y[[k]] <- .calls_out(x[[k]])
+  # plots, compose): the report keys only (.output_keys, as the reader reads)
+  extra <- setdiff(names(x)[!vapply(x, is.null, NA)], .output_fields)
+  .output_keys_check(extra, x$kind, paste0("tfl_write_output(): ", x$id))
+  for (k in extra) y[[k]] <- .calls_out(x[[k]])
   if (!is.null(x$contents)) {
     y$contents <- .contents_out(x$contents)
     if (!length(x$content)) y$content <- NULL
@@ -983,12 +1013,12 @@ tfl_write_output <- function(x, path) {
   x
 }
 
-# A tfl_output's own fields (the object's names), and the keys of its YAML
-# file that are those fields: the same but `ard`, the object's field, which
-# the file writes `analysis:` (canon 11-15)
-.output_fields <- c("id", "kind", "label", "common", "extends", "ard", "data", "codelists",
-                    "content", "page")
-.output_yaml_keys <- replace(.output_fields, .output_fields == "ard", "analysis")
+# (the parts tfl_output() itself holds: R/spec_old_forms.R): the keys of a
+# report file that are its fields, and the fields -- the same but the
+# analysis step, which the file writes `analysis:` and the object holds as
+# its field `ard` (canon 11-15)
+.output_yaml_keys <- .output_keys$key[.output_keys$field]
+.output_fields <- replace(.output_yaml_keys, .output_yaml_keys == "analysis", "ard")
 
 # A report with definitions writes them as its `data:` list: a map beside
 # them has no place.  A table's bare {source: ard} says nothing; a listing's

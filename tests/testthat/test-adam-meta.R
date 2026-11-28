@@ -123,7 +123,7 @@ amt_run_study <- function(levels = "define_xml", env = parent.frame()) {
   if (!is.null(levels)) {
     st <- yaml::read_yaml(file.path(d, "study.yml"))
     st$settings$adam_levels <- levels
-    yaml::write_yaml(st, file.path(d, "study.yml"))
+    write_study_yml(d, st)
   }
   cat("adam_meta:",
       "  variables: [{dataset: ADSL, variable: SEX, codelist: CL.SEX}]",
@@ -299,7 +299,7 @@ test_that("tfl_check_spec() warns of a study code list named like an ADaM column
   # under adam_levels: none, nothing
   st <- yaml::read_yaml(file.path(d, "study.yml"))
   st$settings$adam_levels <- "none"
-  yaml::write_yaml(st, file.path(d, "study.yml"))
+  write_study_yml(d, st)
   p <- suppressMessages(tfl_check_spec(d))
   expect_identical(sum(p$part %in% "study"), 0L)
 })

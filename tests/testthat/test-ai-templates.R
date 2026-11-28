@@ -493,7 +493,7 @@ test_that("shift, lab_shift: a draft with `post_header` passes the kit check; th
 aitpl_layer_study <- function(defaults = NULL, env = parent.frame()) {
   d <- withr::local_tempdir(.local_envir = env)
   dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)
-  writeLines("study_id: CL-1", file.path(d, "study.yml"))
+  write_study_yml(d, "study_id: CL-1")
   writeLines(c("content: []", if (length(defaults)) c("codelists:", paste0("  ", defaults))),
              file.path(d, "spec", "defaults.yml"))
   d

@@ -10,20 +10,20 @@
 #' `tfl_sheets_from_yaml()` reads a study's YAML spec and gives the sheets
 #' the workbooks held: for the app's grids and for the generators that
 #' still read sheets.  The study's defaults are the rows with a blank
-#' `output_id`, a pattern's the `@<name>` rows, a report's its own rows (the
-#' files as written, not layered -- the sheets' readers layer them as they
-#' always did).  `tfl_sheets_from_spec()` does the same from a spec already
-#' read (or changed in memory, not written yet): `tfl_sheets_from_yaml(dir)`
-#' is `tfl_sheets_from_spec(tfl_read_study_spec(dir), tfl_read_outputs(dir))`.
+#' `output_id`, a page configuration's the `@<name>` rows, a report's its own
+#' rows (the files as written, not layered -- the sheets' readers layer them
+#' as they always did).  `tfl_sheets_from_spec()` does the same from a spec
+#' already read (or changed in memory, not written yet):
+#' `tfl_sheets_from_yaml(dir)` is
+#' `tfl_sheets_from_spec(tfl_read_study_spec(dir), tfl_read_outputs(dir))`.
 #'
 #' What a report extends: its row on the `report` sheet has a `pattern` cell
-#' (the first pattern, `@<name>`), and an `extends` cell (`a | b`, or `none`)
-#' only when the chain is not `[<pattern>, defaults]` as the `pattern` cell
-#' alone says it: `extends: none`, a pattern after the defaults, a pattern
-#' alone, two patterns; a map by step as `content=none; page=patterns/a |
-#' defaults`.  `tfl_yaml_from_sheets()` reads the cell as the chain,
-#' in its order; an `extends` cell whose first pattern is not the `pattern`
-#' cell's is an error (one of the two was edited).
+#' (the page configuration it picks, its `style:`, `@<name>`), and an
+#' `extends` cell only when the chain is not `[defaults]`: `none`, or a map
+#' by step as `content=none; data=defaults`.  `tfl_yaml_from_sheets()` reads
+#' the cell as written.  A `pattern` cell that names no page configuration,
+#' and a pattern in the `extends` cell (`patterns/<name>`), stop: a pattern
+#' file is an old form.
 #'
 #' @param dir The study folder (or its `spec/`).
 #' @param templates What a report written as a template SPEC becomes.
@@ -166,17 +166,6 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
   norm_rows <- list()
   more_rows <- list()
   table_rows(s$defaults$content, NA_character_)
-  # (a pattern has rows of the report and page sheets only -- no tables row
-  # -- so its content cannot be put on the sheets: said, by pattern, #689)
-  for (nm in names(s$patterns)) {
-    pc <- s$patterns[[nm]]$content
-    if (inherits(pc, "tfl_r") || length(pc)) {
-      fns <- if (inherits(pc, "tfl_r")) "R code" else unique(vapply(pc, function(it) it$fn, ""))
-      note(paste0("@", nm), "content", paste0(
-        "a pattern's content (", paste(fns, collapse = ", "), ") is not kept: a pattern's rows are the ",
-        "report and page sheets', none holds its layers; the reports that extend it do not get them back"))
-    }
-  }
 
   # -- the page parts ----------------------------------------------------------
   # the highest line number of a band among the reports' own (body) lines:
@@ -338,7 +327,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       warning(sprintf(paste0("%s: the TOC's analysis set %s is not kept: the report's data names ",
                              "%s, and the sheets' population column is the report's set"),
                       id, .na_scalar(unlist(e[["population"]])),
-                      if (is.na(.out_population_or_data(o))) "none" else .out_population_or_data(o)),
+                      if (is.na(.report_set(o))) "none" else .report_set(o)),
               call. = FALSE)
       note(id, "planner", paste0("the TOC's analysis set ", .na_scalar(unlist(e[["population"]])),
                                  " is not kept: the report's data does not name it"))
@@ -367,23 +356,17 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       rr$extends <- paste(sprintf("%s=%s", names(o$extends),
                                   vapply(o$extends, paste, "", collapse = " | ")), collapse = "; ")
     }
-    pat <- if (!is.list(o$extends)) grep("^patterns/", o$extends, value = TRUE)
     # (a report's own configuration, a study set that is not the default, is
-    # the `@name` of its rows: the pattern cell says it, the extends cell the
-    # chain when that is not [<pattern>, defaults])
+    # the `@name` of its rows: the pattern cell says it; the extends cell the
+    # chain when that is not [defaults], which the pattern cell alone reads
+    # back as)
     sty <- if (is.character(o$style) && length(o$style) == 1L && o$style != dflt &&
-               o$style %in% names(s$styles) && !length(pat) &&
+               o$style %in% names(s$styles) &&
                (is.null(o$extends) || identical(as.character(unlist(o$extends)), "defaults")) &&
                !is.list(o$extends)) o$style
-    if (length(pat)) rr$pattern <- paste0("@", substring(pat[1L], 10L))
-    else if (!is.null(sty)) rr$pattern <- paste0("@", sty)
-    pat_cell <- if (length(pat)) pat[1L] else if (!is.null(sty)) paste0("patterns/", sty)
-    # (the pattern cell alone reads back as [<pattern>, defaults], a style's too)
-    # (what the pattern cell alone reads back as is [first pattern, defaults];
-    # any other chain -- the order flipped, `none`, a pattern alone, two
-    # patterns -- is said in the `extends` cell)
+    if (!is.null(sty)) rr$pattern <- paste0("@", sty)
     if (!is.null(o$extends) && !is.list(o$extends) && is.null(sty) &&
-        !identical(as.character(unlist(o$extends)), c(pat_cell, "defaults"))) {
+        !identical(as.character(unlist(o$extends)), "defaults")) {
       rr$extends <- .sheet_cell(o$extends)
     }
     for (k in c("file", "program")) if (!is.null(e[[k]])) rr[[k]] <- cell(e[[k]])
@@ -422,7 +405,7 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
     # a template report: its name and arguments on the templates sheet, and
     # that is all of the template; the items are made again from them
     if (!is.null(tpl)) {
-      enc <- .tpl_sheets_encode(id, o$kind, .na_scalar(o$label), tpl, .report_set(o))
+      enc <- .tpl_sheets_encode(id, o$kind, .na_scalar(o$label), tpl, .tpl_set_given(o, s$dir))
       trows[[length(trows) + 1L]] <- enc$row
       tparam_rows <- c(tparam_rows, enc$rows)
       # (its condition rows: the conditions sheet's, analysis_id blank)
@@ -572,13 +555,6 @@ tfl_sheets_from_spec <- function(study, outputs, templates = c("sheet", "expand"
       # design
       if (!(code_content && identical(names(fd), "layers"))) figures[[id]] <- fd
     }
-  }
-  # a pattern with no page rows keeps its place: one report row, `@<name>`
-  # and nothing else (#662)
-  for (nm in names(s$patterns)) {
-    has <- any(vapply(.ard_spec_pattern_sheets, function(sh) any(vapply(
-      rows[[sh]] %||% list(), function(r) identical(r$output_id, paste0("@", nm)), NA)), NA))
-    if (!has) add("report", list(output_id = paste0("@", nm)))
   }
   # defaults.yml's options: and styles:, and the style: a report picks, have
   # no sheet or column to be put on: said (#689)

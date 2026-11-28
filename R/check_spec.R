@@ -230,6 +230,13 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
       blank_note(id, m)
     }
     if (id %in% unresolved) next
+    # an entry of its lists that is not a map: one error row, the report's
+    # other checks would stop on R's `$` error (R/object_list.R, #1000)
+    sh <- .check_entry_rows(o, id)
+    if (nrow(sh)) {
+      rows[[length(rows) + 1L]] <- sh
+      next
+    }
     rows[[length(rows) + 1L]] <- wk <- .check_r_parse_rows(o, id)  # an `!r` value that is not R
     # its ARD definition, written as its program: the definition's problems
     # are errors; what the installed packages do not know, notes; a program
