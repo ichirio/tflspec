@@ -42,18 +42,36 @@
 #'
 #' @param name The plot's name (`km`; the code calls it `p_km`).
 #' @param items Its items ([tfl_item()]), the plot's first item first.
-#' @param from Where it came from, as an item's.
+#' @param from Where it came from, as an item's: `"own"` or the template
+#'   (the provenance).  It is not the object the plot pipes from: that is
+#'   `input`.
+#' @param input The object the plot's calls pipe from (a content object's
+#'   From), one object name, or `NULL` for none.  In a report file it is
+#'   the key `from:` of the map form `{name, from, calls}`; the R object
+#'   calls it `input` because its field `from` already means the
+#'   provenance.
+#' @param form `"short"` (`- km: [calls]`, the default) or `"map"`
+#'   (`{name, from, calls}`): the form a report file read it in, and
+#'   writes it back in.
 #' @return A `tfl_plot`: a [tfl_item()] whose `fn` is the name, with
-#'   `items`.
+#'   `items`, `input` (when there is one) and `form`.
 #' @examples
 #' tfl_plot("risk", list(tfl_item("tfl_risk_panel", list(fit = "fit"))))
 #' @export
-tfl_plot <- function(name, items = list(), from = "own") {
+tfl_plot <- function(name, items = list(), from = "own", input = NULL, form = c("short", "map")) {
   if (!is.character(name) || length(name) != 1L || !grepl("^[A-Za-z][A-Za-z0-9_]*$", name)) {
     stop("tfl_plot(): `name` is a plot's name: a letter, then letters, digits or _.", call. = FALSE)
   }
+  form <- match.arg(form)
+  if (!is.null(input) && (!is.character(input) || length(input) != 1L || is.na(input) ||
+                          !grepl("^[A-Za-z.][A-Za-z0-9_.]*$", input))) {
+    stop("tfl_plot(): `input` is one object's name (the object the plot pipes from), or NULL.",
+         call. = FALSE)
+  }
   x <- tfl_item(name, list(), from)
   x$items <- items
+  x$form <- form
+  x[["input"]] <- input
   class(x) <- c("tfl_plot", class(x))
   x
 }
@@ -86,7 +104,8 @@ tfl_plot <- function(name, items = list(), from = "own") {
                        "and what arranges them -- not both: ",
                        paste(unique(fns[!is_plot & !tail]), collapse = ", "), "."))
     }
-    plots <- lapply(content[is_plot], function(p) list(name = p$fn, items = p$items))
+    plots <- lapply(content[is_plot], function(p) list(name = p$fn, items = p$items,
+                                                       input = p[["input"]]))
   } else {
     plots <- list(list(name = NULL, items = content[!tail]))
   }
@@ -182,6 +201,9 @@ tfl_plot <- function(name, items = list(), from = "own") {
 # A value of an item as the R it stands for (a language object); `type`,
 # the argument's (parsed), says a text that is code (.fig_text_lang())
 .fig_value_lang <- function(v, arg = "", objects = .fig_object_args, type = NULL) {
+  # (a `~` is not written, L463: no `c()`; an argument with it is left out
+  # by .fig_item_lang(), an element of a sequence is NULL there)
+  if (is.null(v)) return(NULL)
   if (inherits(v, "tfl_unset")) {
     warning(sprintf(paste0("A figure's `%s` is !unset, which removes a key in the layering; ",
                            "NULL is !r NULL: written as NULL."), arg), call. = FALSE)
@@ -189,8 +211,9 @@ tfl_plot <- function(name, items = list(), from = "own") {
   }
   if (inherits(v, "tfl_r")) return(str2lang(as.character(unclass(v))))
   if (inherits(v, "tfl_call")) {
-    ty <- .fig_arg_types(v$fn, v$args %||% list())
-    a <- lapply(stats::setNames(names(v$args %||% list()), names(v$args %||% list())),
+    v$args <- .drop_null(v$args %||% list())
+    ty <- .fig_arg_types(v$fn, v$args)
+    a <- lapply(stats::setNames(names(v$args), names(v$args)),
                 function(k) .fig_value_lang(v$args[[k]], k, type = ty[[k]]))
     # unit(0.5, "cm"), rel(1.2): their leading arguments by position, as
     # they are written
@@ -295,7 +318,8 @@ tfl_plot <- function(name, items = list(), from = "own") {
 # An item as its call; a card's positional `...` (xlim's limits) written
 # by position, xlim(0, 52)
 .fig_item_lang <- function(it) {
-  a <- it$args %||% list()
+  # (a `~` argument is not written, L463)
+  a <- .drop_null(it$args %||% list())
   obj <- .fig_objects_of(it$fn)
   ty <- .fig_arg_types(it$fn, a)
   args <- lapply(stats::setNames(names(a), names(a)), function(k) .fig_value_lang(a[[k]], k, obj, ty[[k]]))
@@ -660,7 +684,9 @@ tfl_plot <- function(name, items = list(), from = "own") {
 .fig_content_code <- function(output, name = "content") {
   parts <- .fig_split_content(output$content)
   lv <- .codelist_levels(.codelists_rows(output$codelists, output$id), output$id)
-  d <- .fig_steps_code(output$data$steps %||% list(), lv, order = TRUE)
+  # (the report's subjects, when made: its reads joined to them)
+  d <- .fig_steps_code(output$data$steps %||% list(), lv, order = TRUE,
+                       subjects = attr(output, "fig_subjects"))
   head <- if (length(lv)) .codelists_head(lv)
   plots <- parts$plots
   one <- length(plots) == 1L
@@ -676,16 +702,24 @@ tfl_plot <- function(name, items = list(), from = "own") {
     f1 <- .schema_fn_name(first$fn)
     lines <- character()
     if (f1 %in% c("tfl_risk_panel", "tfl_text_column", "tfl_n_panel")) {
+      if (!is.null(p$input)) {
+        .ard_stop(sprintf(paste0("The plot `%s` starts with %s, which makes its own data and takes no ",
+                                 "input: drop `from: %s`."), target, f1, p$input))
+      }
       own <- .fig_own_panel(first, target)
       pre <- c(pre, own$data)
       lines <- own$code
       libs <- c(libs, own$libs)
     } else {
       terms <- character()
+      # (what joins a call to the one before it, with `from:` only: the
+      # receiving function's `join`; R code and the like `+`, as before)
+      joins <- character()
       for (it in p$items) {
         fn <- .schema_fn_name(it$fn)
         if (identical(fn, ".r")) {
           terms <- c(terms, as.character(it$args$code))
+          joins <- c(joins, "+")
           next
         }
         if (identical(fn, "tfl_ard_number")) {
@@ -693,10 +727,12 @@ tfl_plot <- function(name, items = list(), from = "own") {
           own <- .fig_own_ard_number(it, k_ard)
           pre <- c(pre, own$pre)
           terms <- c(terms, own$term)
+          joins <- c(joins, "+")
           ard <- TRUE
           next
         }
         terms <- c(terms, .fig_term_text(.fig_item_lang(it)))
+        joins <- c(joins, if (!is.null(p$input)) .fig_fn_join(fn) else "+")
         pk <- if (grepl("::", it$fn, fixed = TRUE)) sub("::.*$", "", it$fn) else .fig_fn_package(fn)
         if (!is.null(pk) && !pk %in% .fig_attached) needs <- c(needs, pk)
         if (fn %in% c("ggsurvfit", "ggcuminc") || startsWith(fn, "add_") || identical(pk, "ggsurvfit")) {
@@ -705,7 +741,7 @@ tfl_plot <- function(name, items = list(), from = "own") {
         # patchwork's inside one plot (p + inset_element(...))
         if (identical(pk, "patchwork")) libs <- c(libs, "patchwork")
       }
-      lines <- .fig_plus_chain(target, terms)
+      lines <- .fig_plus_chain(target, terms, p$input, joins)
     }
     body <- c(body, lines, "")
   }
@@ -713,6 +749,8 @@ tfl_plot <- function(name, items = list(), from = "own") {
     libs <- c(libs, "patchwork")
     body <- c(body, .fig_compose_lines(name, plots, parts$compose))
   }
+  # (what a code step does not keep, read after it: stopped)
+  .fig_kept_check(d, c(pre, body))
   code <- c(
     section("data"),
     head, d$code,
@@ -725,17 +763,60 @@ tfl_plot <- function(name, items = list(), from = "own") {
   code <- .fig_rename_df(code, tfl_fig_data_name(design_like))
   code <- .fig_tidy_names(code)
   needs <- setdiff(unique(needs), c("ggplot2", "ggsurvfit", "patchwork"))
-  .fig_code_out(c(.fig_units_used(code), code), d$reads, unique(libs), needs, ard = ard)
+  # no head (.fig_script_head() is a script of its own's): the content is
+  # a part of the report's program, run after the study's setup, whose
+  # programs/study_helpers.R and figure setup define the helpers it calls
+  # (tte_time(), fmt_num(), order_levels() ...) and the days_per_* constants
+  # -- tfl_content_run() evaluates both first too; it calls order_levels()
+  # of the arms, and its items may call the setup's theme_tfl(), which no
+  # head carries
+  .fig_code_out(code, d$reads, unique(libs), needs, ard = ard)
 }
 
 # `target <- a +` then each term on its line
-.fig_plus_chain <- function(target, terms) {
+.fig_plus_chain <- function(target, terms, input = NULL, joins = NULL) {
   if (!length(terms)) return(paste(target, "<- ggplot()"))
   ind <- function(t) gsub("\n", "\n  ", t, fixed = TRUE)
   t <- vapply(terms, ind, "")
   n <- length(t)
+  if (!is.null(input)) return(.fig_pipe_chain(target, input, t, joins))
   c(paste0(target, " <- ", t[1L], if (n > 1L) " +"),
     if (n > 1L) paste0("  ", t[-1L], c(rep(" +", n - 2L), "")))
+}
+
+# The join of a function in a plot's chain: its row in tfl_fn_defs() (`|>`
+# or `+`); `+` for one that has no row
+.fig_fn_join <- function(fn) {
+  d <- tfl_fn_defs()
+  j <- d$join[match(fn, d$fn)]
+  if (is.na(j)) "+" else j
+}
+
+# A plot with `from:`: `target <- input |> first(...) + layer(...) ...`, the
+# first call piped from the input and each of the others joined as its
+# function's join says.  A `|>` call after a `+` chain is written with the
+# chain in parentheses: `(input |> first() + layer()) |> next()` (`|>` binds
+# tighter than `+`).  `t`: the calls as text, `joins`: the join of each.
+.fig_pipe_chain <- function(target, input, t, joins) {
+  n <- length(t)
+  op <- c("|>", if (n > 1L) joins[-1L])
+  open <- 0L
+  plus <- FALSE
+  for (k in seq_len(n)) {
+    if (k > 1L && identical(op[k], "|>") && plus) {
+      t[k - 1L] <- paste0(t[k - 1L], ")")
+      open <- open + 1L
+      plus <- FALSE
+    }
+    if (identical(op[k], "+")) plus <- TRUE
+  }
+  # (no input: the first call starts the statement, a table object's helper)
+  if (is.null(input)) {
+    return(c(paste0(target, " <- ", strrep("(", open), t[1L], if (n > 1L) paste0(" ", op[2L])),
+             if (n > 1L) paste0("  ", t[-1L], c(if (n > 2L) paste0(" ", op[-(1:2)]), ""))))
+  }
+  c(paste0(target, " <- ", strrep("(", open), input, " |>"),
+    paste0("  ", t, c(if (n > 1L) paste0(" ", op[-1L]), "")))
 }
 
 # the plots into one: wrap_plots() when the content says it, else one
@@ -874,7 +955,7 @@ tfl_fig_content_from_design <- function(design) {
   xb <- grep("^x_breaks <- ", b$step1, value = TRUE)
   if (length(xb)) steps <- c(steps, list(list(step = "code", label = "the x axis's breaks", code = xb)))
   env <- new.env(parent = globalenv())
-  eval(parse(text = tfl_fig_setup_code()), env)
+  .fig_setup_eval(env)
   ex <- parse(text = b$step2, keep.source = FALSE)
   subs <- list()
   main <- NULL

@@ -223,12 +223,8 @@ tfl_listing_spec <- function(listings = NULL, listing_cols = NULL,
     r$population_id <- r$population_id %||% NA_character_
     if (is.na(r$dataset) && is.na(r$data)) add_l(i, "dataset", sprintf("%s: no `dataset`", who(r$output_id)))
     if (!is.na(r$data)) {
-      both <- c("dataset", "population_id")[!is.na(c(r$dataset, r$population_id))]
-      if (length(both)) {
-        add_l(i, "data", sprintf(paste(
-          "%s: a listing reads its `data` or a %s; not both (the analysis",
-          "data has them)"), who(r$output_id), paste0("`", both, "`", collapse = " and ")))
-      }
+      both <- .data_both(r$data, r$dataset, r$population_id, c("dataset", "population_id"))
+      if (length(both)) add_l(i, "data", sprintf("%s: a listing %s", who(r$output_id), .data_both_text(both)))
       if (!.adata_name_ok(r$data)) {
         add_l(i, "data", sprintf("%s: `data` is the data_id of an analysis data, not %s",
                                  who(r$output_id), r$data))
@@ -411,16 +407,20 @@ print.tfl_listing_spec <- function(x, ...) {
 #' @param output_id The listing; may be left out when the definition has one.
 #' @param datasets The data catalog (see [tfl_read_data_code()]); `NULL`:
 #'   `ard`'s.
-#' @param rework Code run on `data` before it is sorted, or `NULL`.
+#' @param rework Code run on `data` before it is sorted, or `NULL`.  One
+#'   expression is written as it is; code of several runs in a scope of its
+#'   own, `data <- local({ ...; data })`, so only `data` comes out of it.
 #' @param type The listing type when the listing's `type` is blank (one of
 #'   rtfreporter's `listing_spec()` types).
 #' @param codelists The reports' code lists (a table definition's
 #'   `codelists` sheet, or a data frame with `output_id`, `variable`,
-#'   `value`, `label`, `order`): the listing's rows of the columns it shows
-#'   or sorts by are put on its data after its condition (`cl_<variable>`
-#'   and `set_levels()`, see [tfl_helpers_code()]) -- each such column a
-#'   factor in its list's order (it sorts so), its values as the list has
-#'   them.  Before them the arms are put in their numeric order by
+#'   `value`, `label`, `order`): the listing's rows are put on its data
+#'   after its condition (`cl_<variable>` and `set_levels()`, see
+#'   [tfl_helpers_code()]) -- each column of its records that has a list
+#'   (shown, sorted by, or one a column across or a row of a table of the
+#'   records is made from) a factor in its list's order (it sorts so), its
+#'   values as the list has them; a list of a column the records do not
+#'   have changes nothing.  Before them the arms are put in their numeric order by
 #'   `order_levels()` (`TRT01A` by `TRT01AN`; a list wins), so a sort on
 #'   an arm sorts so.  The columns are factors of the codes, in the list's
 #'   order (for sorting); a label, when the display needs one, goes in the
@@ -497,10 +497,10 @@ tfl_listing_code <- function(spec, output_id = NULL, datasets = NULL,
     sprintf("listing_col(%s)", paste(a, collapse = ", "))
   }, "")
   type <- if (is.na(l$type)) type else l$type
-  # the code lists of the columns it shows or sorts by
-  shown <- unique(c(unlist(lapply(cols$vars, .split_bar)),
-                    sub("^-", "", .split_bar(l$sort))))
-  lv <- .codelist_levels(codelists, l$output_id, shown)
+  # its code lists: every column of its records with one (not only the
+  # columns it shows or sorts by: a table of the records makes its columns
+  # across and its rows of others), as the ARD's analyses have them
+  lv <- .codelist_levels(codelists, l$output_id)
   # the records its condition keeps, its code lists, its order -- in one
   # statement; a rework (code of its own) before the order
   sort <- .r_sort(l$sort)
@@ -568,7 +568,8 @@ tfl_listing_code <- function(spec, output_id = NULL, datasets = NULL,
     unlist(lapply(also, function(d) tfl_read_data_code(datasets, d))),
     if (is.null(rework)) "# its records, in its order; dates as they print",
     .make_code("data", obj, steps),
-    if (!is.null(rework)) c("", "# rework", rework, "", "# in its order; dates as they print",
+    if (!is.null(rework)) c("", "# rework", .content_steps_code(rework), "",
+                            "# in its order; dates as they print",
                             .make_code("data", "data", c(sort, dates))),
     if (identical(part, "all")) lay_out) |>
     .drop_attached_ns()

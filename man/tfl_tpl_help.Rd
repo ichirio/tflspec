@@ -21,8 +21,9 @@ study's spec folder; \code{NULL} for none (the \code{study} column is then
 \code{"settings.<name>"} ones (\code{"settings.treatment"} for the \code{by}).}
 
 \item{population}{The report's analysis set: the value of the
-parameters taken from the report's \verb{population:}
-(\code{"output.common.population"}); \code{NULL} for none.}
+template's set parameter (the one of \code{choices = "populations"}, which
+fills its subjects row; \code{\link[=tfl_report_set]{tfl_report_set()}}) when the report does not
+give it; \code{NULL} for none.}
 
 \item{tier}{The tiers to print: \code{"required"}, \code{"key"}, \code{"usual"}, \code{"other"}
 (all by default; \code{c("required", "usual")} folds the others away).}

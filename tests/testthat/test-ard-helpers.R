@@ -30,8 +30,9 @@ test_that("ard_value() gives one statistic: its text, its value, or stops", {
   expect_identical(e$ard_value(a, "KM", "prob", "estimate", ARM = "A", level = 0.5),
                    unlist(a$stat_fmt[a$variable == "prob" & a$stat_name == "estimate" &
                                        vapply(a$group1_level, as.character, "") == "A"]))
+  # with digits: the study's rounding, as a table cell "{estimate:.1f}"
   expect_identical(e$ard_value(a, "KM", "prob", "estimate", ARM = "A", level = 0.5, digits = 1),
-                   formatC(est, format = "f", digits = 1))
+                   sprintf("%.1f", rtfreporter::round_num(est, 1)))
   # no group: a row each, so not one
   expect_error(e$ard_value(a, "KM", "prob", "estimate", level = 0.5), "2 rows .* not one")
   expect_error(e$ard_value(a, "KM", "prob", "estimate", ARM = "C", level = 0.5), "0 rows")
@@ -39,6 +40,28 @@ test_that("ard_value() gives one statistic: its text, its value, or stops", {
   a$stat[a$variable == "prob" & a$stat_name == "conf.high"] <- list(NA_real_)
   expect_identical(e$ard_value(a, "KM", "prob", "conf.high", ARM = "B", level = 0.5), "NE")
   expect_identical(e$ard_value(a, "KM", "prob", "conf.high", ARM = "B", level = 0.5, na = "-"), "-")
+})
+
+test_that("fmt_num() rounds by the study's rule, as a table cell does", {
+  e <- helper_env()
+  withr::local_options(rtfreporter.rounding = "sas")
+  expect_identical(e$fmt_num(0.125, 2), "0.13")
+  expect_identical(e$fmt_num(120.5, 0), "121")
+  expect_identical(e$fmt_num(c(2.675, NA, -0.125), 2), c("2.68", "NE", "-0.13"))
+  expect_identical(e$fmt_num(NA, 1, na = "-"), "-")
+  expect_identical(e$fmt_num("1.25", 1), "1.3")
+  withr::local_options(rtfreporter.rounding = "r")
+  expect_identical(e$fmt_num(0.125, 2), "0.12")
+  expect_identical(e$fmt_num(120.5, 0), "120")
+  expect_identical(e$fmt_num(NA_real_, 2), "NE")
+})
+
+test_that("fmt_pvalue(): <0.001, else 3 decimals by the study's rounding", {
+  e <- helper_env()
+  withr::local_options(rtfreporter.rounding = "sas")
+  expect_identical(e$fmt_pvalue(c(0.0004, 0.0125, 0.5, NA)),
+                   c("<0.001", "0.013", "0.500", NA))
+  expect_identical(e$fmt_pvalue(0.0125, na = "NE"), "0.013")
 })
 
 test_that("ard_stats() gives statistics as a data frame, a row per group and level", {
@@ -66,6 +89,35 @@ test_that("ard_fingerprint() reads ard_status.csv", {
   expect_identical(e$ard_fingerprint("T-3"), "")
 })
 
+test_that("read_ard() gives a report's rows of the study ARD, or stops naming the ARD program", {
+  e <- helper_env()
+  dir <- tempfile("study")
+  dir.create(file.path(dir, "output", "ard"), recursive = TRUE)
+  on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+  path <- file.path(dir, "output", "ard", "ard.rds")
+  # no study ARD yet
+  expect_error(e$read_ard("T-1", path),
+               sprintf("There is no study ARD (%s): run programs/ard/T-1.R first.", path),
+               fixed = TRUE)
+  ard <- data.frame(output_id = c("T-1", "T-1", "T-2"), analysis_id = "A",
+                    stat_name = c("n", "p", "n"), stat = c(1, 0.5, 2))
+  saveRDS(ard, path)
+  got <- e$read_ard("T-1", path)
+  expect_identical(names(got), names(ard))
+  expect_identical(got$stat_name, c("n", "p"))
+  expect_identical(unique(got$output_id), "T-1")
+  # an id with no rows stops, as the generated reads do (the program's name
+  # made from the id as tflplanner makes it)
+  expect_error(e$read_ard("T 3", path),
+               "The study ARD has no rows for T 3: run programs/ard/T_3.R first.",
+               fixed = TRUE)
+  expect_error(e$read_ard(c("T-1", "T-2"), path), "one output id")
+  # the default path: the study ARD under the study folder the programs run in
+  old <- setwd(dir)
+  on.exit(setwd(old), add = TRUE, after = FALSE)
+  expect_identical(e$read_ard("T-2")$stat, 2)
+})
+
 test_that("a figure's ARD pieces: the code reads `ard`, the checks look in it", {
   a <- km_ard()
   d <- tfl_fig_design(
@@ -79,7 +131,7 @@ test_that("a figure's ARD pieces: the code reads `ard`, the checks look in it", 
                        stat = "estimate", group = "ARM = A", label = "Median (A): {value}")))
   code <- tfl_fig_design_code(d, "F-1", setup = TRUE, save = FALSE, name = "plot")
   expect_true(attr(code, "ard"))
-  expect_false(attr(tfl_fig_design_code(tfl_fig_template("km_simple"), setup = TRUE), "ard"))
+  expect_false(attr(tfl_fig_design_code(tfl_fig_template("km_simple", group = "TRT01P"), setup = TRUE), "ard"))
   expect_true("nr <- ard_stats(ard, \"KM\", variable = \"time\", stats = \"n.risk\", by = \"ARM\")" %in% code)
   # the number's text in the data part, under a name the plot uses
   i <- which(code == "ard_label_1 <- paste0(")
@@ -280,4 +332,95 @@ test_that("tag_ard() refuses what is not a cards ARD (a custom analysis's plain 
   expect_error(e$tag_ard(0.5, "T", "FISHER"), "an object of class numeric")
   ok <- e$tag_ard(data.frame(variable = "x", stat_name = "n", stat = 1), "T", "A")
   expect_identical(ok$output_id, "T")
+})
+
+# fictional time-to-event records, one parameter
+tte_data <- function(aval, unit) {
+  data.frame(USUBJID = sprintf("S-%02d", seq_along(aval)), PARAMCD = "OS",
+             AVAL = aval, AVALU = unit, CNSR = c(0, 1, 2)[seq_along(aval)])
+}
+
+test_that("tte_time() converts AVAL from its AVALU to the unit asked for", {
+  e <- helper_env()
+  d <- e$tte_time(tte_data(c(1, 2, 0.5), "MONTHS"), "days")
+  expect_equal(d$AVAL, c(1, 2, 0.5) * 30.4375)
+  expect_identical(d$AVALU, rep("DAYS", 3))
+  # the other columns as they were (CNSR is not touched)
+  expect_identical(d$CNSR, c(0, 1, 2))
+  expect_identical(d$USUBJID, c("S-01", "S-02", "S-03"))
+  m <- e$tte_time(tte_data(c(30.4375, 365.25), "DAYS"), "months")
+  expect_equal(m$AVAL, c(1, 12))
+  expect_identical(m$AVALU, c("MONTHS", "MONTHS"))
+  expect_equal(e$tte_time(tte_data(c(14, 7), "DAYS"), "weeks")$AVAL, c(2, 1))
+  expect_equal(e$tte_time(tte_data(2, "WEEKS"), "days")$AVAL, 14)
+  expect_equal(e$tte_time(tte_data(c(12, 6), "MONTHS"), "years")$AVAL, c(1, 0.5))
+  expect_equal(e$tte_time(tte_data(1, "YEARS"), "days")$AVAL, 365.25)
+  # the unit asked for in any case; the same unit leaves AVAL as it is
+  i <- tte_data(c(5L, 9L), "DAYS")
+  expect_identical(e$tte_time(i, "DAYS")$AVAL, c(5L, 9L))
+  expect_identical(e$tte_time(i)$AVALU, c("DAYS", "DAYS"))
+})
+
+test_that("tte_time(): AVALU in any case, none is DAYS, an empty data passes", {
+  e <- helper_env()
+  low <- e$tte_time(tte_data(c(1, 3), c("months", "Months")), "days")
+  expect_equal(low$AVAL, c(1, 3) * 30.4375)
+  expect_identical(low$AVALU, c("DAYS", "DAYS"))
+  f <- tte_data(2, "MONTHS")
+  f$AVALU <- factor(f$AVALU)
+  expect_equal(e$tte_time(f)$AVAL, 2 * 30.4375)
+  # no AVALU column: the times are days
+  no <- tte_data(c(61, 30), "DAYS")
+  no$AVALU <- NULL
+  r <- e$tte_time(no, "weeks")
+  expect_equal(r$AVAL, c(61, 30) / 7)
+  expect_identical(r$AVALU, c("WEEKS", "WEEKS"))
+  # an empty data: as it is, whatever its unit column
+  empty <- tte_data(c(1, 2), c("DAYS", "MONTHS"))[0, ]
+  expect_identical(e$tte_time(empty, "months"), empty)
+})
+
+test_that("tte_time() stops on two units, an unknown or a missing unit", {
+  e <- helper_env()
+  expect_error(e$tte_time(tte_data(c(1, 30), c("MONTHS", "DAYS"))),
+               "two or more units (AVALU DAYS, MONTHS)", fixed = TRUE)
+  expect_error(e$tte_time(tte_data(c(1, 30), c("MONTHS", "HOURS"))),
+               "AVALU HOURS is not DAYS, WEEKS, MONTHS or YEARS", fixed = TRUE)
+  expect_error(e$tte_time(tte_data(c(1, 30), c("MONTHS", NA))),
+               "AVALU is missing on 1 record(s)", fixed = TRUE)
+  expect_error(e$tte_time(tte_data(c(1, 30), c("", " "))),
+               "AVALU is missing on 2 record(s)", fixed = TRUE)
+  expect_error(e$tte_time(data.frame(AVALU = "DAYS")), "the data has no AVAL", fixed = TRUE)
+  for (u in list("hours", NA_character_, c("days", "months"), character())) {
+    expect_error(e$tte_time(tte_data(1, "DAYS"), u),
+                 "the unit must be one of days, weeks, months, years", info = toString(u))
+  }
+})
+
+test_that("tte_time(): the study's days_per_* win; else tfl_time_unit_days()", {
+  e <- helper_env()
+  one <- function(unit) e$tte_time(tte_data(1, unit), "days")$AVAL
+  d <- tfl_time_unit_days()
+  expect_identical(c(days_per_week = one("WEEKS"), days_per_month = one("MONTHS"),
+                     days_per_year = one("YEARS")), d)
+  # the study's setup sets one: it is used, the others stay
+  e$days_per_month <- 30
+  expect_identical(one("MONTHS"), 30)
+  expect_identical(e$tte_time(tte_data(60, "DAYS"), "months")$AVAL, 2)
+  expect_identical(one("YEARS"), d[["days_per_year"]])
+  # a function of that name is not a number of days
+  e$days_per_week <- function() 5
+  expect_identical(one("WEEKS"), d[["days_per_week"]])
+})
+
+test_that(".tte_surv() writes the event as CNSR == 0, and the method help says it", {
+  expect_identical(tflspec:::.tte_surv("AVAL", "CNSR"), "survival::Surv(AVAL, CNSR == 0)")
+  expect_identical(tflspec:::.tte_surv("time", "cens"), "survival::Surv(time, cens == 0)")
+  m <- tfl_ard_methods()
+  note <- m$note[m$method %in% c("km", "logrank", "regression", "km_diff")]
+  expect_length(note, 4L)
+  expect_true(all(grepl("survival::Surv(AVAL, CNSR == 0)", note, fixed = TRUE)))
+  expect_false(any(grepl("1 - CNSR", m$note, fixed = TRUE)))
+  # the helper is one a program calls by name
+  expect_true("tte_time" %in% tflspec:::.ard_helper_names)
 })

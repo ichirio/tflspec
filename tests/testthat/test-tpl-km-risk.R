@@ -44,7 +44,7 @@ test_that("in a study: A (the data steps, the call) = B (the design) = the templ
                                    tfl_item("labs", list(y = "Progression-free"))))
     x <- tplfig_check(o, d, data)
     expect_match(paste(x$a, collapse = "\n"),
-                 sprintf("content <- tflspec::tfl_tpl(adtte_pfs, \"%s\", by = TRT01A) +", nm), fixed = TRUE)
+                 sprintf("content <- tflspec::tfl_tpl(adtte_sub, \"%s\", by = TRT01A) +", nm), fixed = TRUE)
   }
 })
 
@@ -146,7 +146,7 @@ test_that("a report's plot: key that does nothing in km_survival, km_cumulative 
                               })
     list(ro = ro, w = w)
   }
-  draw <- function(ro) tplfig_png(suppressMessages(suppressWarnings(tfl_content_run(ro, data))))
+  draw <- function(ro) tplfig_png(suppressMessages(suppressWarnings(tfl_content_run(ro, data, study = st))))
   for (nm in c("km_survival", "km_cumulative")) {
     base <- resolve(km_plot_report(nm))
     expect_length(base$w, 0L)
@@ -225,9 +225,10 @@ test_that("the draft check and tfl_check_spec() report a plot: key that does not
   ctx_study$study_dir <- d
   for (cx in list(ctx, ctx_study)) {
     expect_no_warning(q <- suppressMessages(tfl_ai_check(ans, cx)))
-    expect_identical(q$where[q$severity == "warning"], "plot censor_size")
-    expect_match(q$problem[q$severity == "warning"], "^plot: censor_size has no effect in template km_survival: ")
-    # (the draft keeps no analysis set, which is another problem: not about plot:)
+    w <- q$severity == "warning" & q$where != "data"
+    expect_identical(q$where[w], "plot censor_size")
+    expect_match(q$problem[w], "^plot: censor_size has no effect in template km_survival: ")
+    # (the context names no analysis set, a warning of its own at `data`: not about plot:)
     expect_false(any(q$severity == "error" & grepl("^plot", q$where)))
   }
 })

@@ -135,10 +135,10 @@ names(tfl_fig_style())
 
 A time on a figure's axis is converted with named constants, not with
 numbers in each program: `days_per_week`, `days_per_month` and
-`days_per_year`. AVAL is converted from each record's unit, AVALU (`DAYS`,
-`WEEKS`, `MONTHS` or `YEARS`; days when the data has no AVALU; a unit
-not one of them stops the program), with `case_when(AVALU == "MONTHS" ~
-days_per_month, ...)`; another time is in days:
+`days_per_year`. AVAL is converted from its unit, AVALU (`DAYS`,
+`WEEKS`, `MONTHS` or `YEARS`; days when the data has no AVALU), by the
+study helper `tte_time("months")`: one unit in the data, a unit not one of
+them or two units stop the program. Another time is in days:
 `mutate(TRTDURD = TRTDURD / days_per_week)`. The study's setup
 sets them; `tfl_fig_setup_code()` defines each one that is not defined
 yet, with the values of `tfl_time_unit_days()`.
@@ -152,7 +152,7 @@ tfl_time_unit_days()
 The `forest_hr` template draws hazard ratios that are statistics of an
 ARD -- one Cox model of all subjects and one within each subgroup,
 made by cards / cardx -- rather than fitting the models in the figure
-program. `tfl_fig_template("forest_hr", subgroups = , comparison = )`
+program. `tfl_fig_template("forest_hr", group = , subgroups = , comparison = )`
 gives the design, and `attr(design, "analyses")` the analyses the ARD
 needs (`tfl_fig_forest_analyses()`), ready for the ARD spec. Its text
 columns (N, the estimate and its interval) are a panel at the right of

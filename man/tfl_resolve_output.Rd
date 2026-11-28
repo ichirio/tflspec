@@ -9,11 +9,11 @@ tfl_resolve_output(output, study, provenance = FALSE)
 \arguments{
 \item{output}{A \code{tfl_output} as read from its file.}
 
-\item{study}{A \code{tfl_study_spec} (its \code{defaults} and \code{patterns}).}
+\item{study}{A \code{tfl_study_spec} (its \code{defaults} and \code{styles}).}
 
 \item{provenance}{\code{TRUE} to say where each content item's arguments come
 from: each item gets \code{arg_from} (a named character vector, one an
-argument: \code{"own"}, \code{"defaults"} or \code{"pattern:<name>"}; a verb whose
+argument: \code{"own"}, \code{"defaults"}, \code{"style:<name>"} or \code{"template:<name>"}; a verb whose
 \code{...} is named, such as \code{plan_cells()}, by top-level key, any other verb
 one layer's whole) and \code{below} (the same verb's item with the report's
 own layer left out, \code{NULL} when no layer has it: what a revert goes
@@ -24,7 +24,7 @@ The \code{tfl_output}, resolved (attribute \code{resolved} = \code{TRUE}).
 }
 \description{
 \code{tfl_resolve_output()} puts a report's own file over the layers its
-\code{extends} names (\code{defaults}, \verb{patterns/<name>}), nearest last.  The
+\code{extends} names (\code{defaults}), nearest last.  The
 page has no file layer: it is the report's page configuration (its style
 set, \verb{style:}) under the template's and the report's own \verb{page:}, with
 the study's \verb{tokens:} (\code{study.yml}) under the report's tokens; a band
@@ -38,8 +38,7 @@ the layers below, in the place the first of them had; a function the
 report does not have keeps the layers' items; a function only the
 report has goes after them.  The \code{content} of \code{defaults} is a table's
 (normalize_ard, the digits ...): a figure or a listing takes its other
-parts (\code{page}, \code{codelists}), not its content.  A pattern's content
-(\verb{patterns/<name>}, chosen report by report) layers onto any kind.
+parts (\code{page}, \code{codelists}), not its content.
 \code{extends: none} uses no layer.  The report's style (\code{style: compact}, a
 set of \code{defaults.yml}'s \verb{styles:}, or a built-in one; the study's
 \code{settings.style}, else \code{tfl_standard}, when it names none) is the

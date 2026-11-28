@@ -1,7 +1,7 @@
 # ============================================================================
 #  A report's file name from the study's pattern (decided 10/24)
 # ----------------------------------------------------------------------------
-#  The study's `settings: file` (and a report's or TOC entry's own) is a
+#  The study's `settings: file` (and a TOC entry's own) is a
 #  pattern: `{output_id}` as ever, and the parts of the report's number --
 #  `{type}` (t / f / l), `{num}` (15.1.5.1), `{num:N}` (its first N levels
 #  joined, 151), `{part}` (a), `{part_no}` (1) -- and `{shell_code}`, the

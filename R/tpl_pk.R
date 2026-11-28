@@ -22,7 +22,7 @@
   "cv = \\(x) if (!length(x) || mean(x) == 0) NA_real_ else 100 * sd(x) / mean(x))")
 
 .tpl_pk_params <- function() list(
-  tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  tfl_param("population", required = TRUE, choices = "populations", doc = "the analysis set's id (SAF)"),
   .tpl_subset_param(),
   tfl_param("data", "ADPC", doc = "the dataset of concentrations"),
   tfl_param("where", NULL, doc = "the records kept (R), e.g. ANL01FL == \"Y\""),
@@ -124,8 +124,9 @@
            times = list(type = "levels", multiple = TRUE, of = "time"),
            stats = list(type = "list", multiple = FALSE, fields = c("label", "template")))),
     examples = list(pk_conc = list(population = "SAF", blq = "BLQFL == \"Y\"")))
-  .tfl_template("pk_conc", kind = "table", layout = "listing_summary",
-                params = .tpl_pk_params(), body = .tpl_pk_body)
+  .tfl_template("pk_conc", ai = TRUE, kind = "table", layout = "listing_summary",
+                params = .tpl_pk_params(), body = .tpl_pk_body,
+                label = "PK concentrations by subject with their summary")
 }
 
 #' PK concentrations by subject with their summary: a table plan from the

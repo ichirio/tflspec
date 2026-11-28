@@ -76,7 +76,13 @@ test_that("codelists: the study's lists by name, not a layer's", {
     "codelists:",
     "  SEX: [{value: F, label: Female}, {value: M, label: Male}]",
     "  TOXGR: [0, 1, 2]")))
-  expect_identical(st$codelists, list(SEX = c(F = "Female", M = "Male"), TOXGR = c("0", "1", "2")))
+  cl <- st$codelists
+  # (TOXGR's codes are numbers in the YAML, not text: read as text, with a
+  # warning row each to quote them, R/check_spec.R)
+  expect_identical(attr(cl, "problems")$code, c("0", "1", "2"))
+  expect_identical(unique(attr(cl, "problems")$level), "warning")
+  attr(cl, "problems") <- NULL
+  expect_identical(cl, list(SEX = c(F = "Female", M = "Male"), TOXGR = c("0", "1", "2")))
   expect_identical(st$defaults$codelists, list())
 })
 
@@ -117,7 +123,7 @@ amt_run_study <- function(levels = "define_xml", env = parent.frame()) {
   if (!is.null(levels)) {
     st <- yaml::read_yaml(file.path(d, "study.yml"))
     st$settings$adam_levels <- levels
-    yaml::write_yaml(st, file.path(d, "study.yml"))
+    write_study_yml(d, st)
   }
   cat("adam_meta:",
       "  variables: [{dataset: ADSL, variable: SEX, codelist: CL.SEX}]",
@@ -262,7 +268,8 @@ test_that("a data whose filter keeps one level of an adam_meta column has that l
              file.path(d, "spec", "outputs", "T-AN.yml"))
   code <- tfl_ard_code(tfl_read_study_spec(d), "T-AN", save = FALSE)
   expect_false(any(grepl("intersect(adam_codes", code, fixed = TRUE)))
-  expect_true(any(grepl('cl_sex[c("F")]', code, fixed = TRUE)))
+  # (the ARD program's list is codes only: narrowed by its values)
+  expect_true(any(grepl('intersect(cl_sex, c("F"))', code, fixed = TRUE)))
 })
 
 test_that("adam_meta's columns count as listed for the analysis's dataset and ADSL", {
@@ -293,7 +300,7 @@ test_that("tfl_check_spec() warns of a study code list named like an ADaM column
   # under adam_levels: none, nothing
   st <- yaml::read_yaml(file.path(d, "study.yml"))
   st$settings$adam_levels <- "none"
-  yaml::write_yaml(st, file.path(d, "study.yml"))
+  write_study_yml(d, st)
   p <- suppressMessages(tfl_check_spec(d))
   expect_identical(sum(p$part %in% "study"), 0L)
 })
@@ -316,20 +323,24 @@ test_that("study$codelists references: left out when the study has not the list,
 })
 
 test_that("demog's value_labels: the study's lists by name, for the columns the report shows", {
+  # (demog left tflspec_v1, canon 2026-11-24: its copy in the test series)
+  local_test_series()
   r <- list(id = "T-DM", kind = "table", common = list(population = "SAF"),
-            template = list(name = "tflspec_v1/demog",
+            template = list(name = "tflspec_test/demog",
                             analysis = list(by = list("TRT01A"), categorical = list("SEX", "AGEGR1")),
                             content = list(labels = list(SEX = "Sex, n (%)"))))
   o <- tfl_template_resolve(r)
   lab <- Filter(function(it) identical(it$fn, "plan_labels"), o$content)
   expect_length(lab, 1L)
   a <- lab[[1L]]$args
-  expect_identical(names(a), c("SEX", "AGEGR1"))
-  expect_identical(as.character(unclass(a$SEX)), 'c(SEX = "Sex, n (%)", study$codelists$SEX)')
+  # (the heading under `variable`, as every path writes it: tflspec#856)
+  expect_identical(names(a), c("variable", "SEX", "AGEGR1"))
+  expect_identical(a$variable, list(SEX = "Sex, n (%)"))
+  expect_identical(as.character(unclass(a$SEX)), "study$codelists$SEX")
   expect_identical(as.character(unclass(a$AGEGR1)), "study$codelists$AGEGR1")
   # a report's own map wins; an empty one: no value labels
   r$template$content$value_labels <- list()
   o <- tfl_template_resolve(r)
   lab <- Filter(function(it) identical(it$fn, "plan_labels"), o$content)
-  expect_identical(lab[[1L]]$args, list(SEX = "Sex, n (%)"))
+  expect_identical(lab[[1L]]$args, list(variable = list(SEX = "Sex, n (%)")))
 })

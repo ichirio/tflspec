@@ -63,32 +63,35 @@ its md5.  It never overwrites a file the study has.
 \details{
 The study changes a template by editing its copy, and a series's values
 in its copy's \verb{values:} (\code{\link[=tfl_series_values_set]{tfl_series_values_set()}}).  A report SPEC
-still names a template as \code{template: name: tflspec_v1/demog}; a report
-that names a template the study has not copied stops, with the call
-that copies it.  With \code{as}, a template is copied under a new name: a
-template of this study only (\code{copied.yml} keeps the original's name).
+still names a template as \code{template: name: tflspec_v1/tflspec_summary}; a
+report that names a template the study has not copied stops, with the
+call that copies it (a template retired from the series, such as
+\code{tflspec_v1/demog}, with the template to use instead).  With \code{as}, a
+template is copied under a new name: a template of this study only
+(\code{copied.yml} keeps the original's name).
 
 When a source changes, \code{tfl_template_status()} lists each copied file's
 state, \code{tfl_template_diff()} shows a copy's lines against its source,
 and \code{tfl_recopy_templates()} copies the chosen templates again (the
-study's own edits of them are lost, with a warning).
+study's own edits of them are replaced, with a warning; the file as it
+was is kept under \verb{spec/.backup/}).
 }
 \examples{
 study <- tempfile("study")
 dir.create(file.path(study, "spec", "outputs"), recursive = TRUE)
-writeLines(c("id: T-1", "kind: table", "template:", "  name: tflspec_v1/demog",
+writeLines(c("id: T-1", "kind: table", "template:", "  name: tflspec_v1/tflspec_summary",
              "  analysis: {by: TRT01A, continuous: [AGE]}"),
            file.path(study, "spec", "outputs", "T-1.yml"))
 tfl_copy_templates(study)[, c("series", "template", "status")]
-tfl_copy_templates(study, "tflspec_v1/demog", as = "demog_wide")$status
+tfl_copy_templates(study, "tflspec_v1/tflspec_summary", as = "summary_wide")$status
 tfl_template_status(study)[, c("template", "status")]
 
 # the study edits its copy; the copy now differs from the source
-f <- file.path(study, "spec", "series", "tflspec_v1", "templates", "demog.yml")
+f <- file.path(study, "spec", "series", "tflspec_v1", "templates", "tflspec_summary.yml")
 writeLines(c(readLines(f), "# the study's note"), f)
 tfl_template_status(study)$status
-tail(tfl_template_diff(study, "tflspec_v1/demog"), 2)
-suppressWarnings(tfl_recopy_templates(study, "tflspec_v1/demog"))$status
+tail(tfl_template_diff(study, "tflspec_v1/tflspec_summary"), 2)
+suppressWarnings(tfl_recopy_templates(study, "tflspec_v1/tflspec_summary"))$status
 unlink(study, recursive = TRUE)
 }
 \seealso{

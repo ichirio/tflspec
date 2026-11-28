@@ -39,7 +39,10 @@ report's skeleton and nothing of its look:
   row for one shell that covers several reports often has only the common
   part of the title, without Part 1 or Part 2.)  `label` stays the TOC's
   title.  When the two differ, say so in an assumption; it is not a
-  question.  And the shell's footnotes:
+  question.  A line the study's general conventions ask of every output
+  (a third line with the analysis set) is written when this shell leaves
+  it out, as the other shells write it: an assumption, `item: titles`,
+  `from:` the conventions' section.  And the shell's footnotes:
   {{footnotes_at}}
   A footnote is the shell's text as it is: never reworded, none added.  A
   footnote of a statistic the table does not show (`SD = Standard
@@ -64,7 +67,11 @@ report's skeleton and nothing of its look:
   and `shift` have it -- and each arm heads one value column, not a Value
   and a Change column under it), write this
   one item, nothing more of the header: `plan_col_header: {header: [{line:
-  "1", cols: .values, span: each, text: "{col}\n(N={n})"}]}`;
+  "1", cols: .values, span: each, text: "{col}\n(N={n})"}]}`.  The N is
+  the report's `BIGN` analysis: when the report has none, add it (`id:
+  BIGN`, `method: categorical`, `data:` the report's subjects data,
+  `variables: [<the column variable>]`); without it the header prints
+  `N=NA` and `tfl_check_spec()` warns;
 - a `data:` definition that `code` makes may name its `population`: the
   set's subjects are made first and are in reach as `<dataset>_sub`
   (`adsl_sub`); its other fields (`where`, `add`, `derive` ...) stay blank.
@@ -75,9 +82,11 @@ report's skeleton and nothing of its look:
 Not in a draft, ever: header rows (`plan_col_header`, but the N under the
 arm above), pages (`plan_paginate_*`), blank rows, borders, fonts,
 `plan_style`.  The study's defaults and the person's builder do those.
-The column widths are in every table and listing draft: `plan_columns:
-{widths: {...}}` for a table, `width:` for a listing column (ai/AGENTS.md,
-step 5).  A figure has no column widths: write none.
+The column widths are in every table and listing draft, each from a
+basis (the shell's proportions, else the content; ai/AGENTS.md, step 5):
+for a table a `plan_columns` item in `content:`, `- plan_columns:
+{widths: {...}}` -- never a template argument; `width:` for a listing
+column.  A figure has no column widths: write none.
 A zero count the SAP or the standard prints as `0`: a guarded list (a
 guard sees the cell's statistics), a template's `count_cell: [!r 'n == 0
 ~ "0"', "{n} ({p:.1f%}%)"]` or a code SPEC's `plan_cells: {categorical:
@@ -181,26 +190,28 @@ ard:
 A figure from a template with its own data (`km_survival`,
 `km_cumulative`): the template by `name` and `args`, and its data as
 `steps` under `data` (never a bare list) -- the data stage only: `read`,
-the analysis set (`flag`, or a semi `join` on ADSL), `param`.  **Not the
-template's own steps**: no `survfit`, no `time_unit` -- the template
-makes them, and the check refuses a draft that writes them.  Never drop
-`data.steps` either: without them the figure would be of every record.
+`param` (and a record condition the shell names).  **Not the template's
+own steps**: no `survfit`, no `time_unit` -- the template makes them, and
+the check refuses a draft that writes them.  Never drop `data.steps`
+either: without them the figure would be of every parameter.  The
+analysis set is the report's, on its data (`data: {population: ITT}`),
+never a step: the program joins the records to its subjects (the check
+names a `flag` step on the set's flag, `ITTFL`; `flag` is for a record
+flag, `ANL01FL`).
 
 ```yaml
 id: F-14-2-2
 kind: figure
 label: "Kaplan-Meier Plot of Overall Survival"
-common:
-  population: ITT
 extends: [defaults]
 template:
   name: km_survival
   args: {by: TRT01P, time_unit: months}
 data:
   source: code
+  population: ITT
   steps:
     - {step: read, dataset: ADTTE}
-    - {step: flag, variable: ITTFL}
     - {step: param, value: OS}
 plot: {x_label: "Time (Months)", y_label: "Survival Probability"}
 page:
@@ -227,10 +238,13 @@ it to these rules (every agent of tflspec#512 tripped on them):
 
 `data` (a table's or listing's flat list of definitions), one item each: `id`, `from` (a dataset of
 `spec/data.yml`, or an analysis data above it), `population`, `subjects_in`,
-`where`, `add`, `derive`, `keep`, `distinct`, `code` -- no other key (a data has no
+`where`, `add`, `derive`, `arrange`, `keep`, `distinct`, `code` -- no other key (a data has no
 `label`: its `id` names it; a note is a YAML comment).
 `population` and `subjects_in` are one or the other; with `code`, only `id`,
 `from` and `population`.
+`arrange` is the rows' order, a list of columns (of the data so far, after `derive`),
+`-COL` for descending (`arrange: [USUBJID, -ASTDT]`): write a listing's sort here, in
+the data, not in `code`; `distinct` then keeps the first row in that order.
 
 `ard.analyses`, one item each: `id`, `method`, then **either** `data`
 (an analysis data's id of this report) **or** `dataset` with
@@ -322,9 +336,10 @@ Group: {RENALGR}"`.
   `analyses: [..., {id: P_SEX, method: fisher, dataset: ADSL, population:
   SAF, by: [TRT01A], variables: [SEX]}, {id: P_AGE, method: kruskal,
   dataset: ADSL, population: SAF, by: [TRT01A], variables: [AGE]}]` and
-  `plan_compare: {p: "{p.value:.3f}"}` (the column's name is yours: `p`,
-  `pvalue`; `"<0.001"` for small values: `p: [!r 'p.value < 0.001 ~
-  "<0.001"', "{p.value:.3f}"]`).  The methods: `fisher`, `chisq`
+  `plan_compare: {p: [!r 'p.value < 0.001 ~ "<0.001"', "{p.value:.3f}"]}`
+  (the column's name is yours: `p`, `pvalue`; the p-value `<0.001` below
+  0.001, else 3 decimals -- write it so, never `"{p.value:.3f}"` alone,
+  which prints `0.000`).  The methods: `fisher`, `chisq`
   (categorical), `ttest` (two arms), `wilcox`, `kruskal`, `oneway`
   (continuous, any number of arms).  The p-value goes on the variable's
   first row; a p-value the shell puts on a row of its own is a question.
@@ -392,13 +407,40 @@ Group: {RENALGR}"`.
   Day)"`; a mark after a term with its space, `paste0(AEDECOD, " #")`; a
   missing date blank, `ifelse(is.na(ASTDT), "", format(ASTDT, ...))`.
 
+## SAS and R: missing values first
+
+Shells and SAPs are often written in SAS.  R treats a missing value
+otherwise, and a condition copied as it is can keep no record.
+
+- **A blank is `NA`.**  The setup reads every blank text value of the
+  ADaM (SAS's `''`) as `NA` (`dplyr::na_if(x, "")`): a flag is `"Y"` or
+  `NA`.  `x == ""` finds nothing; SAS `missing(x)` and `x = ''` are
+  `is.na(x)`.
+- **A comparison with `NA` is `NA`, and a `where` drops the row.**
+  SAS `ABLFL ne 'Y'` keeps the blanks; R `ABLFL != "Y"` drops them, and
+  keeps no record when ABLFL is blank on every other row.  Write
+  `!ABLFL %in% "Y"`.  SAS `x not in ('A', 'B')` is `!x %in% c("A",
+  "B")`; `in` is `%in%` (`%in%` is never `NA`: a missing value is simply
+  not in the list).
+- **A missing number.**  SAS takes it as smaller than every number
+  (`AVAL < 5` keeps it); R's `AVAL < 5` is `NA` and drops it.  Keep the
+  SAS meaning only when the shell means it: `is.na(AVAL) | AVAL < 5`.
+- **Sorting.**  SAS sorts missing values first; `dplyr::arrange()` puts
+  `NA` last and `sort()` drops it.  A shell's order is written as an
+  order (a code list, a `sort`), not left to the data.
+- **Counting.**  `sum(x == "Y")`, `mean(AVAL)` and `max(AVAL)` are `NA`
+  when one value is; `table()` leaves `NA` out.  In your own code write
+  `sum(x %in% "Y")`, `mean(AVAL, na.rm = TRUE)`.  A template counts its
+  missing values itself (the Missing row, `missing_row`).
+
 ## Easy mistakes (the check refuses these)
 
 | wrong | right |
 |---|---|
 | `{left: MedDRA version 27.0, fictional dictionary.}` | `{left: "MedDRA version 27.0, fictional dictionary."}` -- a comma, a colon or `#` in a text: quote it |
 | `label: Shift Table of Laboratory Values: Baseline versus Worst` | `label: "Shift Table of Laboratory Values: Baseline versus Worst"` -- `: ` inside a value is a YAML error; quote every free text |
-| `template: {name: km_survival, ...}` with `data.steps` holding `survfit`, or with no `data.steps` | the data stage only: `read`, the analysis set, `param` -- the template makes `time_unit` and `survfit` |
+| `template: {name: km_survival, ...}` with `data.steps` holding `survfit`, or with no `data.steps` | the data stage only: `read`, `param` -- the template makes `time_unit` and `survfit` |
+| a figure's `{step: flag, variable: SAFFL}` (or a condition on the set's flag) | `data: {source: code, population: SAF, steps: [...]}` -- the analysis set is the report's, on its data; the program joins the records to its subjects |
 | `where: !r TRTEMFL == "Y"` (works, but needs no tag) | `where: TRTEMFL == "Y"` -- a condition is written bare (names, numbers, strings, `== != < <= > >=`, `& \| !`, `%in% c(...)`, `is.na()`, parentheses); R beyond that (`between()`) carries `!r` |
 | `data: [{step: read, dataset: ADTTE}, ...]` | `data: {source: code, steps: [{step: read, dataset: ADTTE}, ...]}` |
 | an analysis with `data: lb_worst` **and** `population: SAF` | one of the two: `data` alone, or `dataset` with `population` |
@@ -431,5 +473,6 @@ Group: {RENALGR}"`.
 8. `ai:` is the last top-level key: `assumptions` (each with `from` when
    from a decision) and `confirm`.
 9. A template with its own data (`km_survival`, `km_cumulative`) has
-   `data.steps` of `read`, the analysis set and `param` -- and none of the
-   template's own steps (`survfit`, `time_unit`).
+   `data.steps` of `read` and `param` -- and none of the template's own
+   steps (`survfit`, `time_unit`).  A figure's analysis set is its
+   data's `population:`, never a `flag` step on the set's flag.

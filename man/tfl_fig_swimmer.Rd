@@ -64,8 +64,11 @@ assigned in order; change them in the script.}
 
 \item{response_data}{Dataset with \code{response} and \code{assessment}.}
 
-\item{time_unit}{Unit of \code{time} in the data is days; the axis is shown in
-\code{days}, \code{weeks}, \code{months} or \code{years}.}
+\item{time_unit}{The unit the analysis and the axis use: \code{days}, \code{weeks},
+\code{months} or \code{years}.  AVAL is converted from its unit, AVALU (days when
+the data has none), by the study helper \code{tte_time()}; a data with two
+units stops the program.  The script defines \code{tte_time()} itself unless
+a study's setup has it.}
 
 \item{visit_every}{Draw dotted visit lines every this many time units.}
 

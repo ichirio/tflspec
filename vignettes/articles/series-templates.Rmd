@@ -41,12 +41,19 @@ template:
 ```
 
 The template fills its `"{name}"` spots with these values. Where the
-report gives no value, the template's default applies. The result is an
-ordinary report SPEC.
+report gives no value, the template's default applies; an argument
+written `~` (YAML null) gives no value too. To have none (the argument
+not passed at all), write `!unset`; to pass `NULL` itself, write
+`!r NULL`. The result is an ordinary report SPEC.
 
 A report changes the table in two ways:
 
-- **by an argument**: `args:` gives a value in place of the default;
+- **by an argument**: `args:` gives a value in place of the default. A
+  map whose default is a series value (`formats`) is the exception: the
+  report's names go over the series' map one by one, a name whose value
+  is `!unset` is removed (for `formats`, that statistic then takes the
+  ARD catalog's format), and the names the report does not write keep
+  the series' values (see [Series values](#series-values));
 - **by an appended card**: the report's own `content:` lists plan items
   (cards) that come after the template's. When the template already has
   a card of the same verb, the two become one. The last one wins, and
@@ -315,6 +322,19 @@ cat(readLines(system.file("series", "tflspec_v1", "series.yml", package = "tflsp
     sep = "\n")
 ```
 
+A template may read the study before the series. The two listing
+templates write their style as
+
+```yaml
+style: !study {key: settings.style, fallback: !series style_listing}
+```
+
+so a listing's style is the study's `settings.style` (`study.yml`),
+and the series's `style_listing` (`tfl_small` above) only when the
+study has none. The header and the footnotes of the study's style reach
+the listings too. A series's `values:` hold no `!study`: the series is
+the study's fallback.
+
 A study changes them in its own copy of `series.yml`
 (`spec/series/tflspec_v1/series.yml`), under `values:`. It may edit the
 file, or let `tfl_series_values_set()` write the values (the rest of the
@@ -335,6 +355,21 @@ ae2 <- run_report(file.path(tempdir(), "T-AE.yml"))
 na <- Filter(function(i) i$fn == "normalize_ard", ae2$spec$content)
 na[[1]]$args$overall
 ```
+
+A report that writes a map argument whose default is `!series K`
+changes only the names it writes. With the series's `formats` above,
+
+```yaml
+template:
+  name: tflspec_v1/tflspec_summary
+  analysis:
+    formats: {mean: 3, "AGE:sd": !unset}
+```
+
+gives `mean` 3 decimals, drops `AGE:sd`, and keeps `N`, `sd`, `median`
+and the others as the series has them. A map inside the map (one
+variable's statistics) is put over in the same way. Other arguments, a
+list such as `hierarchy` among them, are replaced whole.
 
 ## For template authors: `derive:`
 

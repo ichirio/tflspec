@@ -30,6 +30,30 @@
 #' data, and replaces the template's row of its id.  The result is a plain
 #' code SPEC, as [tfl_read_output()] reads one.
 #'
+#' The template's `page:` holds the page's defaults; the report's `page:`
+#' changes only what it writes: a call's arguments (`rtf_page`, ...) and
+#' `tokens` name by name, a band's lines by number (and the blocks `first`
+#' and `last`), a line's cells one by one.  An unnamed sequence of lines
+#' replaces the band's numbered lines.  `!unset` stays in the page, to drop
+#' that cell, line, block or band when the page is resolved over the page
+#' settings ([tfl_resolve_output()]); [tfl_page_origins()] says which layer
+#' gave each field.
+#'
+#' A report's value replaces the default, but for an argument of a map type
+#' whose default is the series' (`!series K`, such as `formats`): the
+#' report's map is put over the series' map name by name.  A name the report
+#' writes replaces the series' value of that name (a map value merges into
+#' the series' map of that name, in the same way), a name whose value is
+#' `!unset` is removed, and the names the report does not write keep the
+#' series' values.
+#'
+#' An argument the report writes `~` (YAML null) is not given: the
+#' default applies, as when it is left out.  None (the argument not
+#' passed) is `!unset`; `NULL` itself is `!r NULL`.  A list argument
+#' (`list<...>`) the report gives is never empty, has no `""` or `NA`
+#' entry, and is not a map where a sequence is declared: such a value
+#' stops, naming the argument.
+#'
 #' An analysis item's `analyses:` (`per`, `ids`) says its analyses: `per:
 #' variable` one a variable (its id the variable's entry in `ids`, else the
 #' variable's name); `per: level` or `per: [columns]` one row whose
@@ -103,7 +127,7 @@
 #'   `"args"` holds the template's arguments as used, and `"origins"` where
 #'   each came from (`"report"`, `"template"`, `"series"` -- a `!series`
 #'   value, from the study's copy of `series.yml` --, `"study"` -- a
-#'   `!study` value, from `study.yml` --, `"fixed"`).
+#'   `!study` value, from `study.yml`, or its fallback's origin --, `"fixed"`).
 #' @seealso [tfl_arg_defs()], [tfl_copy_templates()], [tfl_series_dir()]
 #' @export
 tfl_template_resolve <- function(report, template = NULL, study = NULL) {
@@ -125,6 +149,14 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   defs <- tfl_arg_defs(template = template, study_dir = study_dir)
 
   given <- .tr_given(report$template, defs$name, template, who)
+  # the set parameter (the one its subjects row's `population: "{...}"`
+  # names, a figure's data map's, A2-T): the report's set when it does not
+  # give it (.tr_report_set(), .tpl_set_fill()); its data map is no rows
+  sp <- .tpl_set_param(template, study_dir)
+  if (is.na(sp)) sp <- .tr_map_set_param(tpl, defs$name)
+  rs <- .tr_report_set(report, given, sp, template, who)
+  report$data <- rs$data
+  given <- rs$given
   env <- list()
   origins <- character()
   missing <- character()
@@ -137,6 +169,13 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
              call. = FALSE)
       }
       val <- given[[p]]
+      # a map whose default is the series' (!series K) or the study's
+      # (!study K, with or without a fallback): the report's names
+      # over that map, the rest as the series has them (canon e023312)
+      if (defs$default_kind[[i]] %in% c("series", "study") && startsWith(defs$type[[i]], "map<") &&
+          .tr_is_map(val)) {
+        val <- .tr_merge_map(def, val)
+      }
       o <- "report"
     } else {
       val <- def
@@ -145,6 +184,7 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
     if (inherits(val, "tfl_unset")) val <- NULL
     if (!is.null(val)) attr(val, "fixed") <- attr(val, "origin") <- attr(val, "origins") <- NULL
     .tr_one_value(val, defs$type[[i]], defs$values[[i]], p, o, template, who)
+    .tr_list_value(val, defs$type[[i]], p, o, template, who)
     if (is.null(val) && isTRUE(defs$required[[i]])) missing <- c(missing, p)
     env[p] <- list(val)
     origins[[p]] <- o
@@ -154,6 +194,12 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
          " (required: the report gives no value and the template no default).", call. = FALSE)
   }
 
+  # (a header's cells the report gives, col_header: their {name}s of the
+  # template's arguments filled, as the written-out default's span: "{by}")
+  for (p in defs$name[defs$type %in% .tr_header_cells_type & defs$name %in% names(given)]) {
+    env[p] <- list(.tr_fill(env[[p]], env[setdiff(names(env), p)]))
+  }
+  .tr_header_cells(env, defs, given, template, who)
   args_env <- env
   env <- .tr_derive(tpl$derive, env, defs$name, template, origins)
   .tr_check(tpl$check, env, defs$name, origins, template, who)
@@ -179,11 +225,15 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
       for (key in names(r)) rows[[k]][key] <- list(r[[key]])
     }
   }
-  rows <- lapply(rows, function(r) {
+  # (each row filled as a map: a key filled with no value -- nothing, or
+  # `!unset` -- is no key.  A figure's data map is one such map, filled
+  # whole: its `population: "{population}"` with no set is no set)
+  fill_row <- function(r) {
     r <- .tr_fill(r, env)
-    r[!vapply(r, function(v) inherits(v, "tfl_unset"), NA)]
-  })
-  rows <- lapply(rows, .derive_map_in)
+    if (is.list(r)) r <- r[!vapply(r, function(v) is.null(v) || inherits(v, "tfl_unset"), NA)]
+    .derive_map_in(r)
+  }
+  rows <- if (!is.null(names(rows))) fill_row(rows) else lapply(rows, fill_row)
 
   items <- list()
   for (it in tpl$analysis %||% list()) {
@@ -206,20 +256,34 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   # !r study$codelists$X, as demog's default)
   cenv <- env
   if ("value_labels" %in% names(env)) {
-    cenv["labels"] <- list(.tr_merge_labels(env$labels, env$value_labels, template))
+    keys <- .tr_plan_keys(.tr_fill(tpl$content %||% list(), env))
+    cenv["labels"] <- list(.tr_merge_labels(env$labels, env$value_labels, template, keys))
   }
   content <- .tr_fill(tpl$content %||% list(), cenv)
   # (the plan_labels items as one; a reference to a study list for a column
   # no analysis reads left out)
   cols <- unique(as.character(unlist(lapply(items, function(a) c(a$variables, a$by)))))
   content <- .tr_labels_join(content, cols)
+  # (a variable's heading under `variable`, as every path writes it)
+  content <- .tr_labels_args(content)
   if (is.list(report$content)) content <- c(content, report$content)
-  page <- .tr_fill(tpl$page %||% list(), env)
-  for (k in names(report$page)) page[k] <- list(report$page[[k]])
+  # the page: the template's `page:` (the defaults) under the report's,
+  # which changes only what it writes (.page_over(): a call's arguments by
+  # name, a band's lines by number, a line's cells); `!unset` stays a marker
+  # for the final resolve over the page settings (.page_resolve())
+  tpl_page <- .tr_fill(tpl$page %||% list(), env)
+  page <- .page_over(tpl_page %||% list(), report$page)
+  # the style: the report's, else the template's; `!unset` (a study's
+  # `settings.style: !unset` read by the template's `!study`) is no style,
+  # so the report gets the study's default as a report without one does
+  style <- report$style %||% tpl$style
+  if (inherits(style, "tfl_unset")) style <- NULL
 
   y <- list(id = report$id, kind = report$kind %||% tpl$kind %||% "table",
-            label = report$label %||% tpl$label, common = report$common,
-            extends = report$extends %||% tpl$extends, style = report$style %||% tpl$style,
+            label = report$label %||% tpl$label,
+            # (its set is on the rows the set parameter filled, A2-T: not in `common:`)
+            common = if (length(report$common)) report$common[setdiff(names(report$common), "population")],
+            extends = report$extends %||% tpl$extends, style = style,
             figure = tpl$figure, data = rows,
             ard = if (length(items)) c(if (identical(kind, "figure")) list(analysis_data = rows),
                                        list(analyses = items)),
@@ -229,6 +293,8 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   attr(out, "template") <- template
   attr(out, "args") <- args_env
   attr(out, "origins") <- origins
+  # (the template's page layer, for tfl_page_origins())
+  attr(out, "page_template") <- tpl_page
   out
 }
 
@@ -381,12 +447,12 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
 
 # The study as a list: a list as given, study.yml, or a folder that holds
 # it.  Read from a file or a folder, it has attribute "study_dir" (the
-# study folder: the series are read from its copies).  A study.yml with
-# series_settings: stops (.series_settings_gone()).
+# study folder: the series are read from its copies).  Its old forms stop
+# (.study_yml_form_check()).
 .tr_study <- function(study, who) {
   if (is.null(study)) return(study)
   if (is.list(study)) {
-    .series_settings_gone(study, attr(study, "study_dir"))
+    .study_yml_form_check(study, attr(study, "study_dir"))
     return(study)
   }
   if (!is.character(study) || length(study) != 1L) {
@@ -397,7 +463,7 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   sd <- normalizePath(if (is_dir) study else dirname(study), winslash = "/", mustWork = FALSE)
   if (!file.exists(f)) stop(who, ": no file ", f, call. = FALSE)
   out <- .series_read_yaml(f) %||% list()
-  .series_settings_gone(out, sd)
+  .study_yml_form_check(out, sd, f)
   structure(out, study_dir = sd)
 }
 
@@ -449,26 +515,168 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   invisible()
 }
 
-# The report's arguments: `template:` without `name`, its step sections
-# (data, analysis, content, page) and a flat `args:` read as one map
-.tr_given <- function(t, names_ok, template, who) {
-  t$name <- NULL
-  out <- list()
-  for (k in names(t)) {
-    v <- t[[k]]
-    if (k %in% c("args", "data", "analysis", "content", "page") && !k %in% names_ok &&
-        is.list(v) && !is.null(names(v))) {
-      for (p in names(v)) out[p] <- list(v[[p]])
+# An argument of a list type (list<...>, alone or beside other members) the
+# report gives: an empty field is "not given" (the argument left out, the
+# template's default) and "(none)" is !unset, so a given list is never empty,
+# has no "" or NA entry, and is not a map where only sequences are declared
+# (a map of "" is what a field read as "name | text" rows gives).  A value
+# from the template, the series or the study is not checked here; R code
+# (!r) and other tagged values are not either.
+.tr_list_value <- function(val, type, p, origin, template, who) {
+  if (is.null(val) || is.na(type) || !identical(origin, "report") || is.object(val)) {
+    return(invisible())
+  }
+  m <- .type_members(type)
+  if (!any(startsWith(m, "list<"))) return(invisible())
+  seq_only <- !any(grepl("^(map|vec|rows|call|step)<", m))
+  blank <- function(e) {
+    is.null(e) || (is.atomic(e) && !is.object(e) &&
+                     (!length(e) || (length(e) == 1L && (is.na(e) || identical(as.character(e), "")))))
+  }
+  entries <- if (is.list(val)) val else as.list(val)
+  why <- if (!length(val)) {
+    "an empty list"
+  } else if (seq_only && any(nzchar(names(val) %||% ""))) {
+    "a map (name: value)"
+  } else if (any(vapply(entries, function(e) is.atomic(e) && length(e) == 1L && !is.object(e) &&
+                          is.na(e), NA))) {
+    "an NA entry"
+  } else if (any(vapply(entries, blank, NA))) {
+    "an empty entry (\"\")"
+  }
+  if (is.null(why)) return(invisible())
+  stop(who, ": ", template, "'s ", p, " is a list (", type, "); the report gives ", why,
+       ". Leave ", p, " out for the template's default, or write !unset for none.",
+       call. = FALSE)
+}
+
+# The type of a header's cells (col_header): the tables sheet's col_header
+# columns, plan_col_header(header = )
+.tr_header_cells_type <- "rows<line, cols, span, text>"
+
+# A header's cells the report gives: each a map of line, cols, span and
+# text, with a line and cols.  The old row form of tflspec_summary's
+# col_header ({row_label: , .values: }, plan_col_header(lines = )) stops,
+# saying how a cell is written (canon 11-28: no alias for the old shape)
+.tr_header_cells <- function(env, defs, given, template, who) {
+  ok <- c("line", "cols", "span", "text")
+  for (p in defs$name[defs$type %in% .tr_header_cells_type & defs$name %in% names(given)]) {
+    v <- env[[p]]
+    if (is.null(v) || is.object(v)) next
+    rows <- if (is.list(v) && is.null(names(v))) v else list(v)
+    keys <- unique(unlist(lapply(rows, function(r) if (is.list(r)) names(r) else NA_character_)))
+    bad <- setdiff(keys, ok)
+    miss <- !all(vapply(rows, function(r) is.list(r) && all(c("line", "cols") %in% names(r)), NA))
+    if (!length(bad) && !miss) next
+    stop(who, ": ", template, "'s ", p, " is the header's cells, one row a cell (",
+         paste(ok, collapse = ", "), "; a line and cols in each), as the tables sheet's col_header",
+         if (length(bad)) paste0("; not a cell's key: ", paste(bad[!is.na(bad)], collapse = ", ")),
+         if (any(c("row_label", ".values") %in% bad))
+           paste0(". The old row form ({row_label: , .values: }) is gone: write each cell as a row,",
+                  " {line: \"1\", cols: row_label, text: \"\"} and",
+                  " {line: \"1\", cols: .values, text: \"{col}\"}"),
+         ".", call. = FALSE)
+  }
+  invisible()
+}
+
+# A map as read (a named list, not a tagged value); an empty list is one too
+.tr_is_map <- function(x) {
+  is.list(x) && !is.object(x) && (!length(x) || .series_is_map(x))
+}
+
+# `over` put over `base` name by name (canon e023312): a name `over` writes
+# replaces the base's, a map value merges into the base's map of that name,
+# and `!unset` removes the name; the base's other names stay.  Nothing left
+# is NULL (as `!unset` for the whole argument); a map inside left empty
+# drops its name.
+.tr_merge_map <- function(base, over) {
+  out <- if (.tr_is_map(base)) base else list()
+  attributes(out) <- if (length(out)) list(names = names(out))
+  for (k in names(over)) {
+    v <- over[[k]]
+    if (inherits(v, "tfl_unset")) {
+      out[[k]] <- NULL
+    } else if (.tr_is_map(v)) {
+      out[[k]] <- .tr_merge_map(out[[k]], v)
     } else {
       out[k] <- list(v)
     }
   }
+  if (length(out)) out
+}
+
+# The report's analysis set and the template's set parameter (A2, A2-T,
+# canon 11-15: the set lives on the report's data; the template's set
+# parameter `sp` -- the one that fills its subjects row, or its data map's
+# `population: "{...}"`, found from the template, not by a name; NA none --
+# is that value, its default the template's).  One rule for every template:
+# - the set the report says beside its arguments (.tpl_set_beside(): its
+#   data map's `population`, `data: {population: SAF}`, else `common:
+#   population` until `common` goes) is the parameter's value when the
+#   report does not give it; given both, they are one value, or it stops
+#   (.tpl_set_fill(): the set is written twice);
+# - a template with no set parameter takes no set on the data map (it
+#   stops: no claim the program does not keep; `common:` is left as it was);
+# - the data map says the set only: it is no data rows (those are a list,
+#   merged by id), and another key stops, naming it.
+# list(data = the report's data rows, given = its arguments)
+.tr_report_set <- function(report, given, sp, template, who) {
+  d <- report[["data"]]
+  map <- is.list(d) && length(d) && !is.null(names(d))
+  if (map) {
+    other <- setdiff(names(d), "population")
+    if (length(other)) {
+      stop(who, ": ", template, ": the report's data is a map (", paste(other, collapse = ", "),
+           "); a template report's data map says its analysis set only (data: {population: SAF}), ",
+           "its own data are rows by id (data: [{id: ..., ...}]).", call. = FALSE)
+    }
+  }
+  set <- .tpl_set_beside(report)
+  rows <- if (!map) d
+  if (is.na(set)) return(list(data = rows, given = given))
+  if (is.na(sp)) {
+    if (map) {
+      stop(who, ": ", template, " takes no analysis set (it fills none from an argument); ",
+           "the report's data says ", set, ".", call. = FALSE)
+    }
+    return(list(data = rows, given = given))
+  }
+  # (the parameter given `!unset`, no set, beside a set: two sets too)
+  if (inherits(given[[sp]], "tfl_unset")) {
+    stop(who, ": ", template, ": ", .set_twice_text(
+      sprintf("the template argument `%s` (none)", sp), sprintf("the report's data (%s)", set)),
+      ", on the report's data.", call. = FALSE)
+  }
+  list(data = rows, given = .tpl_set_fill(given, sp, report, who))
+}
+
+# The parameter a template's data map fills its set from (a figure's
+# `data: {population: "{population}"}`; `names_ok` its parameters): NA none
+.tr_map_set_param <- function(tpl, names_ok) {
+  d <- tpl[["data"]]
+  p <- if (is.list(d) && !is.null(names(d))) d[["population"]]
+  if (!is.character(p) || length(p) != 1L || !grepl("^[{][A-Za-z_][A-Za-z0-9_]*[}]$", p)) {
+    return(NA_character_)
+  }
+  p <- substr(p, 2L, nchar(p) - 1L)
+  if (p %in% names_ok) p else NA_character_
+}
+
+# The report's arguments: `template:` without `name`, its step sections
+# (data, analysis, content, page) and a flat `args:` read as one map
+# (.tpl_args_placed(), the one rule of where an argument sits)
+.tr_given <- function(t, names_ok, template, who) {
+  out <- .tpl_args_placed(t, own = names_ok, name = template)$args
   bad <- setdiff(names(out), names_ok)
   if (length(bad)) {
     stop(who, ": ", template, " has no argument ", paste(bad, collapse = ", "),
          " (its arguments: ", paste(names_ok, collapse = ", "), ").", call. = FALSE)
   }
-  out
+  # (an argument written `~`, YAML null, is not given: the template's default,
+  # as when it is left out.  None -- not passed -- is `!unset`; NULL itself
+  # is `!r NULL`.  Canon 2026-11-24, the 318 distinction kept)
+  out[!vapply(out, is.null, NA)]
 }
 
 # One analysis item as its analyses (canon fc7bd00).  `analyses: {per, ids}`:
@@ -478,12 +686,14 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
 #                   ids after them as ids:VALUE=ID,...
 #   no per          one analysis, the item's id
 # labels ({variable: heading}) and value_labels ({variable: {code: text}}) as
-# one map for plan_labels(): a variable in both keeps its heading, written
-# under its own name in front of its values (the heading a value_labels entry
+# one map for plan_labels(): a variable in both keeps its heading -- under
+# `variable` for a table whose rows are `variable` (`keys`, the table's cols
+# and rows: .plan_labels_args()), else (and for a key column) written under
+# its own name in front of its values (the heading a value_labels entry
 # gives itself under that name wins)
-.tr_merge_labels <- function(labels, value_labels, template) {
+.tr_merge_labels <- function(labels, value_labels, template, keys = character()) {
   if (is.null(value_labels)) return(labels)
-  out <- as.list(labels)
+  out <- .plan_labels_args(labels, keys)
   for (v in names(value_labels)) {
     vl <- value_labels[[v]]
     if (is.null(vl) || inherits(vl, "tfl_unset")) next
@@ -505,8 +715,94 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
   if (length(out)) out else NULL
 }
 
+# A template's labels map ({name: text or value labels}) as plan_labels()'
+# arguments: the one rule every template takes (tfl_template_resolve(), the
+# registry's demog), so a report's program says the same call whichever way
+# it is made (tflspec#856) -- the call the sheets write too (spec_code.R:
+# the variables' headings under `variable`).  For a table whose rows are
+# `variable` (`keys`: its cols and rows), every variable's heading goes
+# under `variable`, first, after any `variable` entry the map has: one text
+# named by a variable, and a value-labels map's entry under its own
+# variable's name (`SEX: {SEX: Sex, F: Female}`).  rtfreporter reads the
+# headings from that one entry once it is there, so none may stay outside
+# it.  A key column's heading and the value labels (a named text, a list of
+# them, a reference to a study list) stay under their own name, in order;
+# a table without `variable` keeps the map as it is.
+.plan_labels_args <- function(labels, keys = character()) {
+  if (!length(labels)) return(list())
+  labels <- as.list(labels)
+  if (!"variable" %in% keys) return(labels)
+  nm <- names(labels) %||% rep("", length(labels))
+  plain <- function(x) !inherits(x, c("tfl_r", "tfl_unset", "tfl_call"))
+  # (a `variable` entry in R cannot take more names: the map as it is)
+  if (!plain(labels[["variable"]])) return(labels)
+  var <- if (!is.null(labels[["variable"]])) as.list(labels[["variable"]]) else list()
+  rest <- list()
+  for (i in seq_along(labels)) {
+    v <- nm[i]
+    x <- labels[[i]]
+    if (identical(v, "variable")) next
+    if (!nzchar(v) || v %in% keys || !plain(x)) {
+      rest <- c(rest, stats::setNames(list(x), v))
+      next
+    }
+    if (is.character(x) && length(x) == 1L && !is.na(x) && is.null(names(x))) {
+      var[[v]] <- x
+      next
+    }
+    # (a value-labels map with the variable's own heading in it)
+    xn <- names(x)
+    if (!is.null(xn) && v %in% xn && (is.character(x) || is.list(x))) {
+      h <- x[[match(v, xn)]]
+      if (is.character(h) && length(h) == 1L && !is.na(h)) {
+        var[[v]] <- h
+        x <- x[xn != v]
+      }
+    }
+    if (length(x)) rest <- c(rest, stats::setNames(list(x), v))
+  }
+  if (!length(var)) return(rest)
+  c(list(variable = var), rest)
+}
+
+# The table's keys (its table_plan item's cols and rows) in a template's
+# content as its file writes it (`- table_plan: {cols, rows}`)
+.tr_plan_keys <- function(content) {
+  first <- function(it) if (is.list(it) && length(it) == 1L && !is.null(names(it))) names(it) else ""
+  tp <- match("table_plan", vapply(content, first, ""))
+  if (is.na(tp) || !is.list(content[[tp]]$table_plan)) return(character())
+  as.character(unlist(content[[tp]]$table_plan[c("cols", "rows")], use.names = FALSE))
+}
+
+# The template's plan_labels items in plan_labels()' arguments
+# (.plan_labels_args()), with the table's keys
+.tr_labels_args <- function(content) {
+  keys <- .tr_plan_keys(content)
+  if (!"variable" %in% keys) return(content)
+  for (k in seq_along(content)) {
+    it <- content[[k]]
+    if (!is.list(it) || !identical(names(it), "plan_labels")) next
+    a <- it$plan_labels
+    if (is.list(a) && !is.null(names(a))) content[[k]] <- list(plan_labels = .plan_labels_args(a, keys))
+  }
+  content
+}
+
 .tr_item <- function(it, env, template) {
   shadow <- as.character(unlist(it$params))
+  # (a param is the row's function's argument, written bare inside
+  # dplyr::filter() and dplyr::mutate(): a name the ARD has itself -- a
+  # cards column, analysis_id, output_id, population_id -- would read the
+  # column instead, so it stops; so do data and ard, the function's own
+  # names for its rows and its result)
+  own <- shadow[.ard_own_name(shadow) | shadow %in% c("data", "ard")]
+  if (length(own)) {
+    stop("template ", template, ": item ", it$id %||% "?", ": params: ",
+         paste(own, collapse = ", "), " is a name the ARD uses itself (",
+         "a cards column, analysis_id, output_id or population_id) or the ",
+         "row function's own (data, ard); ",
+         "give the param another name.", call. = FALSE)
+  }
   cond <- it$conditions
   it$conditions <- NULL
   an <- it$analyses
@@ -541,8 +837,13 @@ tfl_template_resolve <- function(report, template = NULL, study = NULL) {
     }
     return(list(f))
   }
-  ids <- an$ids
-  lapply(as.character(f$variables), function(v) {
+  .item_per_variable(f, an$ids)
+}
+
+# An item as an item a variable: each its variable's id in `ids`, else the
+# variable's name (a template's `per: variable`, an analysis's analysis_ids)
+.item_per_variable <- function(f, ids) {
+  lapply(as.character(unlist(f$variables)), function(v) {
     g <- f
     g$id <- if (!is.null(ids[[v]])) as.character(ids[[v]]) else v
     g$variables <- v

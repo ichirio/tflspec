@@ -21,7 +21,7 @@ A \code{tfl_output} (the report as a code SPEC).  Its attribute
 \code{"args"} holds the template's arguments as used, and \code{"origins"} where
 each came from (\code{"report"}, \code{"template"}, \code{"series"} -- a \code{!series}
 value, from the study's copy of \code{series.yml} --, \code{"study"} -- a
-\code{!study} value, from \code{study.yml} --, \code{"fixed"}).
+\code{!study} value, from \code{study.yml}, or its fallback's origin --, \code{"fixed"}).
 }
 \description{
 Reads the report's template (\verb{template: name: <series>/<template>}), puts
@@ -35,6 +35,30 @@ data, and replaces the template's row of its id.  The result is a plain
 code SPEC, as \code{\link[=tfl_read_output]{tfl_read_output()}} reads one.
 }
 \details{
+The template's \verb{page:} holds the page's defaults; the report's \verb{page:}
+changes only what it writes: a call's arguments (\code{rtf_page}, ...) and
+\code{tokens} name by name, a band's lines by number (and the blocks \code{first}
+and \code{last}), a line's cells one by one.  An unnamed sequence of lines
+replaces the band's numbered lines.  \code{!unset} stays in the page, to drop
+that cell, line, block or band when the page is resolved over the page
+settings (\code{\link[=tfl_resolve_output]{tfl_resolve_output()}}); \code{\link[=tfl_page_origins]{tfl_page_origins()}} says which layer
+gave each field.
+
+A report's value replaces the default, but for an argument of a map type
+whose default is the series' (\verb{!series K}, such as \code{formats}): the
+report's map is put over the series' map name by name.  A name the report
+writes replaces the series' value of that name (a map value merges into
+the series' map of that name, in the same way), a name whose value is
+\code{!unset} is removed, and the names the report does not write keep the
+series' values.
+
+An argument the report writes \code{~} (YAML null) is not given: the
+default applies, as when it is left out.  None (the argument not
+passed) is \code{!unset}; \code{NULL} itself is \verb{!r NULL}.  A list argument
+(\verb{list<...>}) the report gives is never empty, has no \code{""} or \code{NA}
+entry, and is not a map where a sequence is declared: such a value
+stops, naming the argument.
+
 An analysis item's \verb{analyses:} (\code{per}, \code{ids}) says its analyses: \code{per: variable} one a variable (its id the variable's entry in \code{ids}, else the
 variable's name); \code{per: level} or \verb{per: [columns]} one row whose
 \code{analysis_per} tells the generator how to name the analyses; no \code{per}

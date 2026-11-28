@@ -55,7 +55,12 @@ finds, with the report's resolved arguments, one a line (the model
 \item{study}{The study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}) or its folder; for a listing
 of records (\code{data: {source: dataset}}) the code starts with its data
 part, as \code{\link[=tfl_listing_code]{tfl_listing_code()}} \code{part = "data"} writes it (the dataset
-read, its condition, code lists and order).  \code{NULL}: the content only.}
+read, its condition, code lists and order).  \code{NULL}: the content only.
+A figure with an analysis set (its data's \verb{population:}) that reads a
+dataset starts with the set's subjects, made as the report's program
+makes them, and every dataset it reads is joined to them; with no
+study (or a set the study does not define) it starts with a \code{stop()}
+line saying so: never a figure of every subject.}
 }
 \value{
 The code, one element a line.

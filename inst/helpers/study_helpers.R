@@ -1,9 +1,18 @@
 # The functions a study's generated programs call: the code lists on a
-# data, the ids in front of an analysis's ARD, the formats after a call,
-# the statistics asked for, one report's rows into the study ARD, and a
-# figure's reading of an ARD (one statistic, statistics as a data frame,
-# the fingerprint of what was built).
-# Base R, cards and dplyr only: the programs run without tflspec.
+# data, a time to event in one unit, the ids in front of an analysis's
+# ARD, the formats after a call, the statistics asked for, one report's
+# rows into the study ARD and back out of it, and a figure's reading of an
+# ARD (one statistic, statistics as a data frame, the fingerprint of what
+# was built).
+# Base R, cards, dplyr and rtfreporter's round_num(): the programs run
+# without tflspec.
+
+# A code list's codes, in its order: its names when it has names (code ->
+# label), else its values (a list of the values themselves).  What the data
+# and the ARD hold; the labels reach a table only through plan_labels().
+# (No helper is named cl_*: that is the code lists' own names, cl_<var>.)
+#   codelist_codes(c(F = "Female", M = "Male"))  # c("F", "M")
+codelist_codes <- function(cl) if (is.null(names(cl))) unname(cl) else names(cl)
 
 # The code lists on a data: each listed column a factor whose levels are
 # the CODES, in its list's order (a list with names: the names, the codes
@@ -21,8 +30,7 @@
 set_levels <- function(data, ...) {
   lists <- list(...)
   for (v in intersect(names(lists), names(data))) {
-    cl <- lists[[v]]
-    values <- if (is.null(names(cl))) unname(cl) else names(cl)
+    values <- codelist_codes(lists[[v]])
     x <- as.character(data[[v]])
     x[!is.na(x) & !nzchar(trimws(x))] <- NA
     unknown <- setdiff(unique(x[!is.na(x)]), values)
@@ -177,6 +185,50 @@ order_levels <- function(data, vars = NULL, from = NULL, ...) {
 #   adsl |> order_arms()
 order_arms <- function(data) order_levels(data)
 
+# A time to event in `unit` (days, weeks, months, years): AVAL from its
+# unit, AVALU (any case; DAYS when the data has no AVALU).  One unit in the
+# data: a unit not DAYS, WEEKS, MONTHS or YEARS, a missing one, or two
+# units stop the program.  AVALU says the new unit after it.  The days in a
+# week, month, year: the study's days_per_week / days_per_month /
+# days_per_year when its setup sets them, else 7, 30.4375, 365.25.  The
+# step after the parameter filter; the event is Surv(AVAL, CNSR == 0).
+#   adtte |> filter(PARAMCD == "OS") |> tte_time("months")
+tte_time <- function(data, unit = "days") {
+  days <- c(DAYS = 1,
+            WEEKS = get0("days_per_week", mode = "numeric", ifnotfound = 7),
+            MONTHS = get0("days_per_month", mode = "numeric", ifnotfound = 30.4375),
+            YEARS = get0("days_per_year", mode = "numeric", ifnotfound = 365.25))
+  to <- toupper(as.character(unit))
+  if (length(to) != 1L || is.na(to) || !to %in% names(days)) {
+    stop("tte_time(): the unit must be one of days, weeks, months, years, not ",
+         paste(unit, collapse = " "), call. = FALSE)
+  }
+  if (!nrow(data)) return(data)
+  if (!"AVAL" %in% names(data)) stop("tte_time(): the data has no AVAL", call. = FALSE)
+  from <- "DAYS"
+  if ("AVALU" %in% names(data)) {
+    u <- toupper(trimws(as.character(data$AVALU)))
+    if (anyNA(u) || any(u == "")) {
+      stop("tte_time(): AVALU is missing on ", sum(is.na(u) | u == ""),
+           " record(s); the time's unit must be given", call. = FALSE)
+    }
+    from <- unique(u)
+    bad <- setdiff(from, names(days))
+    if (length(bad)) {
+      stop("tte_time(): AVALU ", paste(bad, collapse = ", "),
+           " is not DAYS, WEEKS, MONTHS or YEARS", call. = FALSE)
+    }
+    if (length(from) > 1L) {
+      stop("tte_time(): the data has two or more units (AVALU ",
+           paste(sort(from), collapse = ", "),
+           "); filter it to one parameter first", call. = FALSE)
+    }
+  }
+  if (from != to) data$AVAL <- data$AVAL * days[[from]] / days[[to]]
+  data$AVALU <- to
+  data
+}
+
 # The ids in front: the report, the analysis and its analysis set.  A cards
 # ARD stays one (class card), so the study ARD is one too and cards' own
 # tools (as_nested_list(), compare_ard()) take it.  Analyses run together
@@ -304,8 +356,23 @@ bind_items <- function(...) {
   ard
 }
 
-# A p-value as text: <0.001, else 3 decimals
-fmt_pvalue <- function(x) ifelse(x < 0.001, "<0.001", sprintf("%.3f", x))
+# A number as text with `digits` decimals, rounded by the study's rule
+# (options(rtfreporter.rounding), set once in study_setup.R): the rule a
+# table's "{x:.2f}" rounds by, so a figure prints what the table prints.
+# A missing value is `na`.
+#   fmt_num(0.125, 2)  # "0.13" with rounding: sas; "0.12" with r
+fmt_num <- function(x, digits, na = "NE") {
+  x <- as.numeric(x)
+  out <- sprintf(paste0("%.", digits, "f"), rtfreporter::round_num(x, digits))
+  out[is.na(x)] <- na
+  out
+}
+
+# A p-value as text: <0.001, else 3 decimals by the study's rounding
+fmt_pvalue <- function(x, na = NA_character_) {
+  x <- as.numeric(x)
+  ifelse(!is.na(x) & x < 0.001, "<0.001", fmt_num(x, 3L, na = na))
+}
 
 # The formats after the call, for what takes no fmt_fun (cardx's tests and
 # models, a study's own functions, code, ard_stack()'s own rows): by
@@ -423,8 +490,9 @@ keep_min_pct <- function(ard, pct, met_in = c("any", "all", "total")) {
 
 # An ARD's columns in their code lists' order: the rows of a listed
 # variable (as `variable` or a group) get its list's levels (as the ARD has
-# them, the labels).  For what does not keep its data's factor order --
-# cardx's survfit makes the arms' factor again, in alphabetical order.
+# them, the codes: codelist_codes(), what set_levels() gives the data).  For
+# what does not keep its data's factor order -- cardx's survfit makes the
+# arms' factor again, in alphabetical order.
 # Values and rows are as they were; a value the list does not have stays.
 #   relevel_ard(ard, TRT01A = cl_trt01a)
 relevel_ard <- function(ard, ...) {
@@ -435,7 +503,7 @@ relevel_ard <- function(ard, ...) {
     kl <- if (k == "variable") "variable_level" else paste0(k, "_level")
     if (!kl %in% names(ard)) next
     for (v in intersect(names(lists), unique(ard[[k]]))) {
-      levs <- unname(lists[[v]])
+      levs <- codelist_codes(lists[[v]])
       on <- which(ard[[k]] %in% v)
       ard[[kl]][on] <- lapply(ard[[kl]][on], function(x) {
         if (length(x) != 1L || is.na(x) || !as.character(x) %in% levs) return(x)
@@ -594,8 +662,11 @@ complete_hierarchy <- function(ard, variables, under = list(), when_none = FALSE
 # One statistic of an ARD, as text: the row of the analysis, the variable
 # (and its level), the statistic and the groups named (`TRT01A =
 # "Placebo"`); exactly one row, or the program stops and says how many.
-# The text is the ARD's own (stat_fmt), or the value with `digits`
-# decimals; a missing value is `na`.
+# With `digits` the value is rounded by the study's rule (fmt_num()), as a
+# table cell is; a figure's label gives `digits`.  Without it the text is
+# the ARD's own (stat_fmt: the formats of ard_setup.R, rounded by cards),
+# which need not be a table's decimals: for reading the ARD's own text.
+# A missing value is `na`.
 #   ard_value(ard, "KM", "prob", "estimate", TRT01A = "Placebo", level = 0.5)
 ard_value <- function(ard, analysis_id, variable, stat, ..., level = NULL,
                       digits = NULL, na = "NE") {
@@ -625,7 +696,7 @@ ard_value <- function(ard, analysis_id, variable, stat, ..., level = NULL,
   i <- which(k)
   v <- if (is.list(ard$stat)) ard$stat[[i]] else ard$stat[i]
   if (!length(v) || is.na(v[[1L]])) return(na)
-  if (!is.null(digits)) return(formatC(as.numeric(v[[1L]]), format = "f", digits = digits))
+  if (!is.null(digits)) return(fmt_num(v[[1L]], digits, na = na))
   f <- if ("stat_fmt" %in% names(ard)) {
     if (is.list(ard$stat_fmt)) ard$stat_fmt[[i]] else ard$stat_fmt[i]
   }
@@ -692,6 +763,31 @@ ard_fingerprint <- function(report_id, path = "output/ard/ard_status.csv") {
   st <- utils::read.csv(path, colClasses = "character")
   d <- st$definition[st$output_id == report_id]
   if (!length(d) || is.na(d[1L])) "" else d[1L]
+}
+
+# One report's rows of the study ARD (what save_ard() put there), or the
+# program stops and says which ARD program to run first: no study ARD, or
+# no rows for the report.  What a program reading another report's ARD
+# calls, in place of readRDS() and a filter that gives no rows without a
+# word.
+#   ard <- read_ard("T-14-2-1")
+read_ard <- function(report_id, path = "output/ard/ard.rds") {
+  if (!is.character(report_id) || length(report_id) != 1L || is.na(report_id)) {
+    stop("read_ard(): `report_id` is one output id.", call. = FALSE)
+  }
+  prog <- file.path("programs", "ard",
+                    paste0(gsub("[^A-Za-z0-9._-]", "_", report_id), ".R"))
+  if (!file.exists(path)) {
+    stop(sprintf("There is no study ARD (%s): run %s first.", path, prog),
+         call. = FALSE)
+  }
+  ard <- readRDS(path)
+  ard <- ard[ard$output_id %in% report_id, , drop = FALSE]
+  if (!nrow(ard)) {
+    stop(sprintf("The study ARD has no rows for %s: run %s first.", report_id, prog),
+         call. = FALSE)
+  }
+  ard
 }
 
 # One report's rows into the study ARD (the other reports' left as they

@@ -14,8 +14,10 @@ series_read <- function(f) {
   yaml::read_yaml(f, handlers = series_tag_handlers())
 }
 
-series_templates <- function() {
-  fs <- list.files(file.path(series_dir(), "templates"), "[.]yml$",
+# (the shipped series' templates; `dir` another series folder: the test
+# series of the purpose templates that left tflspec_v1, canon 2026-11-24)
+series_templates <- function(dir = series_dir()) {
+  fs <- list.files(file.path(dir, "templates"), "[.]yml$",
                    full.names = TRUE)
   stats::setNames(lapply(fs, series_read), basename(fs))
 }
@@ -51,7 +53,7 @@ test_that("every file in the tflspec_v1 series folder parses", {
 test_that("every template has its keys, a BIGN item and ids on its items", {
   skip_if(!nzchar(series_dir()), "the series folder is not installed")
   ts <- series_templates()
-  expect_length(ts, 12L)
+  expect_length(ts, 7L)
   # (a listing counts nothing: tflspec_listing has no analysis step; nor
   # does km_cards, its figure drawn from the data's steps)
   no_analysis <- c("tflspec_listing.yml", "km_cards.yml")
@@ -75,7 +77,10 @@ test_that("every template has its keys, a BIGN item and ids on its items", {
 
 test_that("the percentages' denominator is BIGN and the items say how analysis ids are made", {
   skip_if(!nzchar(series_dir()), "the series folder is not installed")
-  ts <- series_templates()
+  # (the shipped templates and the test series' ones: demog, ae_soc_pt,
+  # lab_tox_shift, orr_subgroup, listing)
+  ts <- c(series_templates(), series_templates(test_path("fixtures", "series", "tflspec_test")))
+  expect_length(ts, 12L)
   for (nm in c("demog", "ae_soc_pt", "lab_tox_shift", "tflspec_shift")) {
     a <- ts[[paste0(nm, ".yml")]]$analysis
     ids <- vapply(a, function(x) x$id, character(1))
@@ -112,16 +117,21 @@ test_that("the percentages' denominator is BIGN and the items say how analysis i
   expect_true(isTRUE(tl$params$columns$required))
   expect_identical(tl$params$columns$type, "rows<vars,label,width,collapse_repeats>")
   expect_identical(tl$params$by_break$default, "page")
-  expect_identical(tl$style, "style_listing")
+  # the study's style, else the series's style_listing (canon e023312)
+  expect_identical(tl$style, list(key = "settings.style", fallback = "style_listing"))
+  expect_identical(ts[["listing.yml"]]$style, tl$style)
   cmp <- ts[["forest_hr.yml"]]$params$comparison
   expect_identical(cmp$type, "string")
   expect_identical(cmp$input, "pick")
   expect_identical(cmp$step, "analysis")
   expect_identical(cmp$tier, "usual")
   expect_identical(cmp$description, "The arm compared against the reference")
-  expect_match(ts[["km_simple.yml"]]$data[[2]]$derive,
-               "[[\"{time_unit}\"]]", fixed = TRUE)
-  expect_match(ts[["km_simple.yml"]]$data[[2]]$derive, "months = {days_per_month}", fixed = TRUE)
+  # the time's unit is the study helper's, not a division written in the template
+  expect_identical(as.character(ts[["km_simple.yml"]]$data[[2]]$then), "tte_time(\"{time_unit}\")")
+  expect_null(ts[["km_simple.yml"]]$data[[2]]$derive)
+  expect_null(ts[["km_simple.yml"]]$params$days_per_month)
+  expect_null(ts[["km_cards.yml"]]$params$days_per_month)
+  expect_match(ts[["forest_hr.yml"]]$analysis[[2]]$args, "survival::Surv({time}, {censor} == 0)", fixed = TRUE)
   expect_equal(ts[["ae_soc_pt.yml"]]$params$min_pct$default, 0)
   expect_identical(ts[["orr_subgroup.yml"]]$data[[1]]$population,
                    "population_efficacy")
@@ -136,9 +146,7 @@ test_that("every param is an argument definition with closed words", {
   skip_if(!nzchar(series_dir()), "the series folder is not installed")
   inputs <- c("pick", "text", "condition", "table")
   steps <- c("data", "analysis", "content", "page")
-  sources <- c("vars", "levels", "codelist", "populations", "report_data",
-               "study_data", "ard", "columns", "study_info", "tokens",
-               "stats", "fixed", "styles", "from_args")
+  sources <- tfl_choice_sources()$word
   for (nm in names(series_templates())) {
     ps <- series_templates()[[nm]]$params
     expect_true(length(ps) > 0L && !is.null(names(ps)), info = nm)
@@ -196,4 +204,19 @@ test_that("every \"{x}\" in data and analysis names a param or a condition colum
                   info = paste(nm, a$id, paste(bad, collapse = " ")))
     }
   }
+})
+
+test_that("every series template's time_unit enum is the quick figures' pp_time_units", {
+  # one list of time units: quick.R's pp_time_units, the KM template's
+  # choices and the series templates' enums (a fourth place to drift)
+  want <- names(tflspec:::pp_time_units)
+  seen <- 0L
+  for (nm in names(series_templates())) {
+    ty <- series_templates()[[nm]]$params$time_unit$type
+    if (is.null(ty)) next
+    seen <- seen + 1L
+    got <- strsplit(sub("^enum\\[(.*)\\]$", "\\1", ty), "|", fixed = TRUE)[[1L]]
+    expect_identical(got, want, info = nm)
+  }
+  expect_gte(seen, 2L)
 })

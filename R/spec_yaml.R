@@ -53,7 +53,7 @@
 #'   to replace the set's label); a report may have none of them.  Any other
 #'   key stops.  The old `population` argument stops: write
 #'   `common = list(population = )`.
-#' @param population Removed: `population` -> `common: population`.
+#' @param population Removed: the set is the data's ([tfl_set_report_set()]).
 #' @param extends The files layered under this one, nearest first
 #'   (`"defaults"`, `"patterns/<name>"`); `"none"` for none; or a list by
 #'   step (`data`, `ard`, `content`, `page`), each such a value
@@ -70,7 +70,10 @@
 #' @param ard The report's part of the study ARD, made in the ARD stage
 #'   before any report (a list: `analyses`, and `analysis_data` for a figure);
 #'   `NULL` none.  A table's or listing's definitions are `data:` in a file.
-#' @param codelists The report's code lists, by variable.
+#' @param codelists The report's code lists, by variable: each a list of
+#'   `{value, label}` entries, or a reference to one of the study's lists,
+#'   `list(list = "SEX")` or `list(list = "SEX", codes = list("M", "F"))`
+#'   ([tfl_read_study_spec()]).
 #' @param content The layers, a list of `tfl_item`.
 #' @param page The document: `titles`, `footnotes`, `header`, `footer`
 #'   (maps by line), `tokens`, and the `rtf_*` calls' arguments.
@@ -121,7 +124,8 @@ tfl_item <- function(fn, args = list(), from = "own") {
     stop(paste0("tfl_item(): `from` is \"own\", \"defaults\", \"pattern:<name>\", ",
                 "\"style:<name>\" or \"template:<name>\"."), call. = FALSE)
   }
-  structure(list(fn = fn, args = args, from = from), class = "tfl_item")
+  # (a `~` argument is not written: R/spec_study.R .drop_null(), L463)
+  structure(list(fn = fn, args = .drop_null(args), from = from), class = "tfl_item")
 }
 
 #' @rdname tfl_r
@@ -138,8 +142,7 @@ tfl_output <- function(id, kind = c("table", "figure", "listing"),
   }
   kind <- match.arg(kind)
   if (!is.null(population)) {
-    stop("tfl_output(): ", id, ": `population` -> `common: population`; write ",
-         "`common = list(population = ...)`.", call. = FALSE)
+    stop("tfl_output(): ", id, ": ", .common_old_line, call. = FALSE)
   }
   common <- .common_in(common, paste0("tfl_output(): ", id))
   if (!inherits(content, "tfl_r") &&
@@ -260,11 +263,18 @@ tfl_read_output <- function(path) {
   on.exit(.spec_read$file <- NULL, add = TRUE)
   y <- .yaml_read_file(path, handlers = .yaml_handlers())
   if (!is.list(y)) stop("tfl_read_output(): ", path, " is not a map.", call. = FALSE)
+  out <- .outputs_of_yaml(y, path)
+  if (is.null(y$outputs)) out[[1L]] else out
+}
+
+# A report file's plain list as its reports: a list of tfl_output (one, or
+# a family's `outputs:` each over its `base:`)
+.outputs_of_yaml <- function(y, path = "") {
   if (!is.null(y$outputs)) {
     base <- y$base %||% list()
     return(lapply(y$outputs, function(o) .output_from_list(.merge_plain(base, o), path)))
   }
-  .output_from_list(y, path)
+  list(.output_from_list(y, path))
 }
 
 # A tag with no value in flow style -- `{b: !unset}`, `[x, !unset]` -- is
@@ -367,10 +377,16 @@ tfl_read_output <- function(path) {
     # (a multi-report file is named as its author likes)
   }
   who <- paste0("tfl_read_output(): ", y$id)
+  # (the report named in a value's message: .r_tag_stop())
+  old_id <- .spec_read$id
+  .spec_read$id <- y$id
+  on.exit(.spec_read$id <- old_id, add = TRUE)
   # (the old places, each with a line saying where it moved)
-  if (!is.null(y$population)) stop(who, ": ", .common_old_line, call. = FALSE)
+  if (!is.null(y[["population"]])) stop(who, ": ", .common_old_line, call. = FALSE)
   common <- .common_in(y$common, who)
   .yaml_keys_check(y)
+  # (a report's keys are a closed list: R/spec_old_forms.R)
+  .output_keys_check(names(y), y[["kind"]], who)
   y <- .data_list_in(y, who)
   # the ARD's analyses are the report's ard: section (2026-10-15), not data:'s
   old <- intersect(c("analysis_data", "analyses"), names(y$data))
@@ -382,8 +398,12 @@ tfl_read_output <- function(path) {
   # ([[ ]]: `$content` would take `contents` when there is no content)
   content <- if (inherits(y[["content"]], "tfl_r")) y[["content"]] else
     lapply(y[["content"]] %||% list(), .item_from_list)
-  # (a table's verb twice: one call, R/plan_repeats.R)
-  if (y$kind %in% c("table", "listing")) content <- .plan_merge_repeats(content, y$id)
+  # (a table's verb twice: one call, R/plan_repeats.R; a code SPEC file's own
+  # cards of a verb that does not stack stop)
+  if (y$kind %in% c("table", "listing")) {
+    own_file <- if (nzchar(path) && !.is_tpl_spec(y$template)) path
+    content <- .plan_merge_repeats(content, y$id, own_file)
+  }
   # (a template report that writes no `extends` takes its template's: left
   # NULL; any other report's is `defaults`)
   extends <- y$extends
@@ -393,7 +413,7 @@ tfl_read_output <- function(path) {
     id = y$id, kind = y$kind, label = y$label, common = common,
     extends = extends,
     ard = if (!is.null(y$ard)) .calls_in(y$ard),
-    data = .data_steps_in(.calls_in(y$data)), codelists = .codelists_norm(y$codelists),
+    data = .data_steps_in(.calls_in(y$data)), codelists = .codelists_norm(y$codelists, y$id),
     content = content, page = .calls_in(y$page %||% list()))
   for (k in setdiff(names(y), c(.output_fields, "outputs", "base"))) out[[k]] <- .calls_in(y[[k]])
   # several objects on its pages (R/output_objects.R): their items as items
@@ -408,8 +428,10 @@ tfl_read_output <- function(path) {
 }
 
 # The old top-level `population:` of a report, and where it went
-.common_old_line <- paste0("`population:` -> `common: population`: a report's analysis set ",
-                           "is written under `common:` (`common:` / `  population: SAF`).")
+.common_old_line <- paste0("`population:` -> the report's data: its analysis set is written where ",
+                           "its data says it -- a subjects row's `population:`, a data map's ",
+                           "`population:`, or the template's set argument (tfl_set_report_set() ",
+                           "writes it).")
 
 # The keys of a report's `common:` (what several steps read): a closed list
 .common_keys <- c("population", "treatment", "population_label")
@@ -446,7 +468,9 @@ tfl_read_output <- function(path) {
 .yaml_known_keys <- list(
   ard = c("analyses", "objects", "data", "analysis_data"),
   analysis = c("id", setdiff(.ard_spec_sheets$analyses, c("output_id", "analysis_id")),
-               "population", "conditions", "ards", "analysis_ids", "ref", "note"),
+               "population", "conditions", "ards", "analysis_ids", "ref", "note",
+               # the item's R name (default `.ard_<id>`) and its input (the pipe)
+               "name", "from"),
   data = c("id", setdiff(.ard_spec_sheets$analysis_data, c("output_id", "data_id")),
            "population", "subjects_in", "arrange", "note")
 )
@@ -459,13 +483,8 @@ tfl_read_output <- function(path) {
   say <- function(where, keys, kind) {
     known <- .yaml_known_keys[[kind]]
     for (k in setdiff(keys[nzchar(keys)], known)) {
-      d <- drop(utils::adist(k, known))
-      near <- which(d <= 2L | startsWith(known, k) | startsWith(k, known))
-      hint <- if (length(near)) {
-        sprintf("; did you mean %s:?", known[near[which.min(d[near])]])
-      } else {
-        " (not read)"
-      }
+      near <- .near_name(k, known)
+      hint <- if (!is.na(near)) sprintf("; did you mean %s:?", near) else " (not read)"
       warning(sprintf("%s: %s: is not a key%s", where, k, hint), call. = FALSE)
     }
   }
@@ -487,7 +506,149 @@ tfl_read_output <- function(path) {
 }
 
 # The report's analysis set (NA when it has none)
-.out_population <- function(o) .na_scalar(o$common$population)
+# (`[[`: a `$` would read `population_label` when the set is not written)
+.out_population <- function(o) .na_scalar(o[["common"]][["population"]])
+
+# The analysis set of a report's data (a listing's, a records part's): the
+# data's own `population` (canon 11-15: the set lives on the data), else the
+# one set its data rows carry (`rows`, the report's: .rows_carried_set(), A2-T);
+# the report's `common: population` is read only until `common` goes, last
+# (NA when none) -- one rule, the sheets' and the YAML's alike (A2 Q7).  A
+# data that reads one of the report's analysis data (`data: <id>`) has that
+# data's set (.adata_pop(): its own, else that of the subjects it keeps,
+# else the nearest above it), never one written beside it (.data_both());
+# its rows -- here and for the set they carry -- as the ARD program reads
+# them (a subjects row with no set has the report's `common: population`,
+# .rows_set() / .entry_pop_inject(), until `common` goes)
+.data_population <- function(data, o, rows = .data_rows(o)) {
+  id <- .na_scalar(if (is.list(data)) unlist(data[["data"]]))
+  if (!is.na(id)) {
+    rows <- lapply(.data_rows(o), .entry_pop_inject, .rows_set(o))
+    return(.rows_adata_pop(rows, id))
+  }
+  if (!is.null(data[["population"]])) return(data[["population"]])
+  rs <- .rows_carried_set(lapply(rows, .entry_pop_inject, .rows_set(o)), o[["ard"]][["analyses"]])
+  if (!is.na(rs)) rs else .out_population(o)
+}
+
+# The set a report's subjects rows that name none take (.entry_pop_inject()),
+# as the ARD program reads them: the set the report says beside its rows --
+# its data map's `population:` (a figure's, a listing's), else `common:
+# population` until `common` goes (the one transition read,
+# .out_population()); a map that reads one of the report's analysis data
+# (`data: <id>`) has that data's set, which comes from the rows themselves:
+# `common` only.  Never the set the rows carry (.rows_carried_set(), which
+# .report_set() reads): a row of no set is not given its neighbour's
+# (A2-T).  One rule for every path that writes the rows out (the sheets,
+# the workbook) and reads them back (NA when none)
+.rows_set <- function(o) {
+  d <- o[["data"]]
+  map <- if (is.list(d) && !is.null(names(d))) d
+  if (!is.na(.na_scalar(unlist(map[["data"]])))) return(.out_population(o))
+  p <- .na_scalar(unlist(map[["population"]]))
+  if (!is.na(p)) p else .out_population(o)
+}
+
+# The sheets' population column of a report (the planner's: the TOC's line
+# and the report's set in one cell; `tp` its TOC line's set, `tpl` its
+# template SPEC): the report's set as its data says it (.report_set()).  A
+# report whose set lives on its data (a listing's, a figure's:
+# .set_on_data()) takes this column back onto its data map, so there it is
+# the set the map says (.rows_set(): a set its subjects rows carry stays on
+# them, written once).  The TOC's line only when the report carries that
+# set already: the sheets add no set to a report of any kind (a table's
+# column goes on its rows, which would then count another set's subjects;
+# the sheets warn, tfl_check_spec() says it before).  NA when none
+.planner_set <- function(o, tp, tpl = NULL) {
+  d <- o[["data"]]
+  on_data <- is.null(tpl) && .set_on_data(o[["kind"]], if (is.list(d) && !is.null(names(d))) d)
+  rs <- if (on_data) .rows_set(o) else .report_set(o)
+  if (!is.na(rs)) return(rs)
+  tp <- .na_scalar(unlist(tp))
+  if (identical(.report_set(o), tp)) tp else NA_character_
+}
+
+# The report's analysis set as its data says it (A2-T, R/report_set.R),
+# one reader for every report, as written or resolved: a template report's
+# set argument (.tpl_set_arg()), else what its data says beside it
+# (.tpl_set_beside()), else the set its own row over the template's
+# subjects row carries (.tpl_set_rows_set(); a resolved report's row as
+# the template filled it), else the template's own default
+# (.tpl_set_default(), canon 11-15 (1)); any other report's data map's set,
+# else its rows' (.data_population(); NA when none).  The sheets'
+# population column, the page's set line and the checks read it alike;
+# `study_dir`, a study whose template copies it reads
+.report_set <- function(o, study_dir = NULL) {
+  ts <- tryCatch(.tpl_spec_of(o), error = function(e) NULL)
+  sp <- if (!is.null(ts)) .tpl_set_param(ts$name, study_dir) else NA_character_
+  if (!is.na(sp)) {
+    g <- .tpl_set_given(o, study_dir)
+    return(if (!is.na(g)) g else .tpl_set_default(ts$name, sp, study_dir))
+  }
+  d <- o[["data"]]
+  .na_scalar(unlist(.data_population(if (is.list(d) && !is.null(names(d))) d, o)))
+}
+
+# A report's data rows, each a list (its definitions): its `data:` list and
+# its ARD's `analysis_data` -- never the keys of a data map (`source`,
+# `steps` ...), which are no rows
+.data_rows <- function(o) {
+  d <- o[["data"]]
+  rows <- c(if (is.list(d) && length(d) && is.null(names(d))) d,
+            if (is.list(o[["ard"]][["analysis_data"]])) o[["ard"]][["analysis_data"]])
+  Filter(is.list, rows)
+}
+
+# .adata_pop() of the data `id` among a report's data rows as the file says
+# them (`id`, `from`, `population`, `subjects_in`)
+.rows_adata_pop <- function(rows, id) {
+  col <- function(k) vapply(rows, function(a) .na_scalar(unlist(a[[k]])), "")
+  ad <- data.frame(data_id = col("id"), from = col("from"), population_id = col("population"),
+                   subjects_in = col("subjects_in"), stringsAsFactors = FALSE)
+  .adata_pop(ad, id)
+}
+
+# A data that reads one of the report's analysis data (`data`) takes its
+# dataset and its analysis set from it: the keys written beside it as well
+# (`keys`: the dataset's, the set's), character(0) when none.  One rule: an
+# analysis's and a listing's rows (R/ard_adata.R, R/listing_spec.R), the AI's
+# listing check (R/ai_listing.R) and tfl_check_spec() (.check_set_rows())
+.data_both <- function(data, dataset, population, keys = c("dataset", "population")) {
+  given <- function(v) !is.na(.na_scalar(unlist(v)))
+  if (!given(data)) return(character())
+  keys[c(given(dataset), given(population))]
+}
+.data_both_text <- function(keys) {
+  sprintf("reads its `data` or a %s; not both (the analysis data has them)",
+          paste0("`", keys, "`", collapse = " and "))
+}
+
+# The ids of a study's analysis sets (`data`: its data.yml as read):
+# character(0) when data.yml names none; NULL when the study has no data
+# catalog (no data.yml, or an empty one): its sets are not known, and no set
+# is checked against them (.pop_unknown_text())
+.study_set_ids <- function(data) {
+  if (!length(data)) return(NULL)
+  ids <- vapply(data[["populations"]] %||% list(), function(p) .na_scalar(unlist(p[["id"]])), "")
+  ids[!is.na(ids)]
+}
+
+# A set that is none of the study's analysis sets (`pops`: the ids of
+# data.yml `populations:`, character(0) when it names none; NULL when the
+# study is not known): the line that says so, NULL when it is one or when
+# none is written.  A set is always one of the study's (canon 11-15 (2): a
+# set is registered in data.yml, a report picks it), so a study that names
+# none has none to pick.  The AI's checks and tfl_check_spec()
+# (.check_set_rows()) alike
+.pop_unknown_text <- function(x, pops) {
+  v <- as.character(unlist(x))
+  v <- v[!is.na(v) & nzchar(v)]
+  if (is.null(pops) || !length(v) || all(v %in% pops)) return(NULL)
+  sprintf("%s is not an analysis set of spec/data.yml (%s)",
+          paste(sQuote(setdiff(v, pops), FALSE), collapse = ", "),
+          if (length(pops)) paste(pops, collapse = ", ") else
+            "it names none: register the set under `populations:`")
+}
 
 # The report's subjects definition (`from: ADSL`, or from the dataset its
 # analysis set is defined on: data.yml `populations:`; no `subjects_in`, no code)
@@ -625,10 +786,59 @@ tfl_read_output <- function(path) {
     all(names(d) %in% c("source", "object")) && identical(as.character(d$object %||% "ard"), "ard")
 }
 
+# A content object in the map form: `- {name: km, from: fit, calls: [items]}`.
+# Its keys are within name / from / calls and it holds `calls`, or it holds
+# nothing but those keys.  An ordinary item (`- plan_x: {..}`, a function's
+# name as its one key) is never one.
+.obj_map_keys <- c("name", "from", "calls")
+
+.is_obj_map <- function(el) {
+  is.list(el) && !inherits(el, "tfl_r") && length(el) > 0L && !is.null(names(el)) &&
+    all(nzchar(names(el))) &&
+    ("calls" %in% names(el) || all(names(el) %in% .obj_map_keys))
+}
+
+# the content object (a tfl_plot of form "map"); the checks at reading
+.obj_map_from_list <- function(el) {
+  bad <- setdiff(names(el), .obj_map_keys)
+  if (length(bad)) {
+    stop("A content object has the keys ", paste(.obj_map_keys, collapse = ", "), ": `",
+         bad[1L], "` is not one of them.", call. = FALSE)
+  }
+  nm <- el[["name"]]
+  what <- if (is.character(nm) && length(nm) == 1L) paste0("The content object `", nm, "`")
+          else "A content object"
+  calls <- el[["calls"]]
+  if (!is.list(calls) || !length(calls) || !is.null(names(calls)) ||
+      !all(vapply(calls, function(a) is.list(a) || inherits(a, "tfl_r"), NA))) {
+    stop(what, " needs `calls:`, a sequence of items (not empty).", call. = FALSE)
+  }
+  if (is.null(nm)) {
+    stop("a content object without `name:` is not supported yet: it comes with B-5 ",
+         "(the writers of the object cards).", call. = FALSE)
+  }
+  from <- el[["from"]]
+  if (!is.null(from) && !(is.character(from) && length(from) == 1L && !is.na(from) && nzchar(from))) {
+    stop(what, ": `from:` is one object's name.", call. = FALSE)
+  }
+  tfl_plot(nm, lapply(calls, .item_from_list), input = from, form = "map")
+}
+
 # `- plan_cells: {...}` (a map of one key) as a tfl_item
 .item_from_list <- function(el) {
   # a figure's item that is R (`- !r p + annotate(...)`)
   if (inherits(el, "tfl_r")) return(tfl_item(".r", list(code = el), "own"))
+  # a content object: `{name, from, calls}`
+  if (.is_obj_map(el)) return(.obj_map_from_list(el))
+  # the old `{fn:, args:, from:}` map of an item stops (canon 11-10 :378);
+  # an item already read (a tfl_item) is taken as it is, below
+  if (is.list(el) && !inherits(el, "tfl_item") && "fn" %in% names(el) &&
+      all(names(el) %in% c("fn", "args", "from"))) {
+    fn <- if (is.character(el[["fn"]]) && length(el[["fn"]]) == 1L) el[["fn"]] else "<fn>"
+    .old_form_stop("item_fn_map", .spec_read_file(),
+                   was = sprintf("a content item written as a map `{fn: %s, args: {...}}`", fn),
+                   instead = sprintf("write it `- %s: {<args>}`", fn))
+  }
   if (is.list(el) && length(el) == 1L && !is.null(names(el)) && nzchar(names(el))) {
     args <- el[[1L]]
     if (is.null(args)) args <- list()
@@ -645,10 +855,13 @@ tfl_read_output <- function(path) {
     if (identical(.schema_fn_name(names(el)), .spec_part$fn)) {
       return(tfl_item(names(el), .part_in(args), "own"))
     }
-    return(tfl_item(names(el), .rounding_check(names(el), .logical_strict(names(el), .neutral_in(names(el), .calls_in(args)))), "own"))
+    # (R whose `!r` tag was lost stops: R/spec_r_tags.R)
+    args <- .r_tag_check(names(el), .neutral_in(names(el), .calls_in(args)))
+    return(tfl_item(names(el), .rounding_check(names(el), .logical_strict(names(el), args)), "own"))
   }
-  if (is.list(el) && !is.null(el$fn)) {
-    return(tfl_item(el$fn, .neutral_in(el$fn, .calls_in(el$args %||% list())), el$from %||% "own"))
+  if (inherits(el, "tfl_item")) {
+    args <- .r_tag_check(el$fn, .neutral_in(el$fn, .calls_in(el$args %||% list())))
+    return(tfl_item(el$fn, args, el$from %||% "own"))
   }
   stop("A content item is `- fn: {args}`.", call. = FALSE)
 }
@@ -773,8 +986,10 @@ tfl_write_output <- function(x, path) {
   if (rw_out) y$content <- c(list(list(rework = .calls_out(x$data))), y$content)
   if (length(x$page)) y$page <- .calls_out(x$page)
   # a kind's own parts beside the common ones (a figure's template, plot,
-  # plots, compose)
-  for (k in setdiff(names(x), .output_fields)) if (!is.null(x[[k]])) y[[k]] <- .calls_out(x[[k]])
+  # plots, compose): the report keys only (.output_keys, as the reader reads)
+  extra <- setdiff(names(x)[!vapply(x, is.null, NA)], .output_fields)
+  .output_keys_check(extra, x$kind, paste0("tfl_write_output(): ", x$id))
+  for (k in extra) y[[k]] <- .calls_out(x[[k]])
   if (!is.null(x$contents)) {
     y$contents <- .contents_out(x$contents)
     if (!length(x$content)) y$content <- NULL
@@ -792,8 +1007,8 @@ tfl_write_output <- function(x, path) {
   x
 }
 
-.output_fields <- c("id", "kind", "label", "common", "extends", "ard", "data", "codelists",
-                    "content", "page")
+# (the parts tfl_output() itself holds: R/spec_old_forms.R)
+.output_fields <- .output_keys$key[.output_keys$field]
 
 # A report with definitions writes them as its `data:` list: a map beside
 # them has no place.  A table's bare {source: ard} says nothing; a listing's
@@ -819,7 +1034,22 @@ tfl_write_output <- function(x, path) {
     if (x$fn %in% c("listing_col", "rtfreporter::listing_col")) out$args <- .seqs_out(out$args, .seq_keys$listing_col)
     return(out)
   }
-  if (!is.list(x) || inherits(x, c("tfl_r", "tfl_unset"))) return(x)
+  if (inherits(x, c("tfl_r", "tfl_unset"))) return(x)
+  # a data frame (a rows<...> value) is its rows, each a map of its cells
+  # (NA ones left out), as the reader reads it; the YAML writer would write
+  # its columns
+  if (is.data.frame(x)) {
+    return(lapply(seq_len(nrow(x)), function(i) {
+      r <- lapply(as.list(x[i, , drop = FALSE]), function(v) {
+        if (is.list(v)) v[[1L]] else if (is.factor(v)) as.character(v) else v
+      })
+      .calls_out(r[!vapply(r, function(v) length(v) == 1L && is.atomic(v) && is.na(v), NA)])
+    }))
+  }
+  # a named vector is a map (`rows = c(AGE = "AGE")`: {AGE: AGE}); the YAML
+  # writer would drop its names
+  if (is.atomic(x) && !is.object(x) && length(names(x))) return(as.list(x))
+  if (!is.list(x)) return(x)
   x[] <- lapply(x, .calls_out)
   x
 }
@@ -882,7 +1112,15 @@ tfl_write_output <- function(x, path) {
 # content items as they are written: `- fn: {args}`
 .items_to_list <- function(items) {
   lapply(items, function(it) {
-    if (inherits(it, "tfl_plot")) return(stats::setNames(list(.items_to_list(it$items)), it$fn))
+    if (inherits(it, "tfl_plot")) {
+      calls <- .items_to_list(it$items)
+      # the map form is written back as the map: name, from, calls
+      if (identical(it[["form"]], "map")) {
+        return(c(list(name = it$fn), if (!is.null(it[["input"]])) list(from = it[["input"]]),
+                 list(calls = calls)))
+      }
+      return(stats::setNames(list(calls), it$fn))
+    }
     if (identical(it$fn, ".r")) return(it$args$code)
     if (.is_part(it)) return(stats::setNames(list(.part_out(it$args)), it$fn))
     a <- .calls_out(it$args)
@@ -896,7 +1134,8 @@ tfl_write_output <- function(x, path) {
 # which the YAML reader folds into a character vector) as tfl_r, a
 # figure's step maps as they are
 .data_steps_in <- function(data) {
-  if (is.null(data) || is.null(data$steps)) return(data)
+  # (`data: !unset`, a part's data the layers below give: as it is)
+  if (!is.list(data) || is.null(data$steps)) return(data)
   st <- data$steps
   if (inherits(st, "tfl_r")) st <- list(st)
   else if (is.character(st)) st <- lapply(st, tfl_r)
@@ -915,13 +1154,36 @@ tfl_write_output <- function(x, path) {
 }
 
 # A report's code lists as {value, label} entries: a value written alone
-# (`TRT01P: [Placebo, Drug A]`) is its own label
-.codelists_norm <- function(cl) {
+# (`TRT01P: [Placebo, Drug A]`) is its own label; a reference to the study's
+# list (`SEX: {list: SEX}`, `{list: SEX, codes: [F, M]}`) is kept as one
+# (R/codelist_ref.R), made into its rows where the study is known.  A map
+# that is not a reference (`SEX: {F: Female, M: Male}`) stops, naming the
+# right forms: read as a list, its codes would be its labels.  `study`: the
+# study's lists (spec/defaults.yml), which take no reference.
+.codelists_norm <- function(cl, id = NULL, study = FALSE) {
   if (!length(cl)) return(list())
-  lapply(cl, function(l) {
+  nm <- names(cl) %||% rep("", length(cl))
+  out <- lapply(seq_along(cl), function(i) {
+    l <- cl[[i]]
+    if (.cl_is_ref(l)) return(.cl_ref_norm(l, nm[[i]], id))
+    if (is.list(l) && any(nzchar(names(l) %||% ""))) .cl_map_stop(l, nm[[i]], id, study)
     if (!is.list(l)) l <- as.list(l)
     lapply(l, function(e) {
       if (is.list(e)) e else list(value = e, label = e)
     })
   })
+  names(out) <- names(cl)
+  out
+}
+
+# The stop for a code list written as a map of codes to labels
+.cl_map_stop <- function(l, v, id, study) {
+  k <- names(l)[nzchar(names(l))][1L]
+  lab <- l[[k]]
+  lab <- if (is.atomic(lab) && length(lab) == 1L && !is.na(lab)) as.character(lab) else "<label>"
+  rows <- sprintf("[{value: %s, label: %s}, ...]", k, lab)
+  stop(if (study) "spec/defaults.yml `codelists:` " else paste0(if (!is.null(id)) paste0(id, ": "), "codelists: "),
+       v, ": a map of codes to labels ({", k, ": ", lab, ", ...}) is not a code list (its codes would ",
+       "be lost). Write its rows, ", rows, if (study) paste0(", or its codes alone, [", k, ", ...].") else
+         paste0(", or refer to the study's list, {list: ", v, "}."), call. = FALSE)
 }

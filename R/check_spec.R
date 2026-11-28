@@ -9,7 +9,12 @@
 #'   refuses): the report cannot be copied into the study;
 #' * `warning`: the SPEC reads, but a program that runs cannot be written
 #'   from it (the ARD program or the table's code stops; a content
-#'   function the installed rtfreporter does not have yet);
+#'   function the installed rtfreporter does not have yet; with `adam`, a
+#'   `!=` condition that drops the rows where its variable is NA; a
+#'   table whose header N and counts give a subject different groups; a
+#'   report's own code list, for a column the study's `adam_meta` maps,
+#'   with a code the define's code list does not have, `part`
+#'   `"codelists"` -- codes compared, not labels);
 #' * `note`: the program is written all the same -- an argument the
 #'   installed cards / cardx does not know, a version to look at.
 #'
@@ -35,8 +40,45 @@
 #' (`wrap_plots`'s `plots`, `ggsurvfit`'s `x`, a `data` or a `fit`), and a
 #' name given twice in a report or that is a study dataset's or a
 #' function's are errors (`part` `"names"` for the last two); an object
-#' the report names and nothing uses is a note.  The packages' installed versions come with
+#' the report names and nothing uses is a note.  The study's code lists a
+#' report names itself ([tfl_study_refs()]: a code list `{list: X}`, a code
+#' its `codes:` picks, a `study$codelists$X` in its own R text) are looked
+#' up in the study's (`spec/defaults.yml` `codelists:`): one the study has
+#' not got is an `error`, `part` `"codelists"`, `item` the variable or the
+#' place of the R text; a report whose code lists name one gets no other
+#' check (each would stop on it).  A template's default reference is not
+#' the report's and is not checked: a list the study has not got is left
+#' out of it.  A list the study has with no code is empty: a reference to
+#' it is an error too, saying so.  The study's lists themselves (when
+#' every report is checked; `output_id` `NA`, `part` `"study"`, `item`
+#' `"codelists: <list>"`): a code twice is an `error` (the study reads its
+#' first label and still opens), a code that is a number in the YAML (an
+#' unquoted `01`) a `warning` to quote it.  The packages' installed versions come with
 #' it, as an attribute.  A GUI's check button and the AI's run call it.
+#'
+#' A table's column header N: a header text with `{n}` (and no `values` of
+#' its own) takes each column's N from the report's `BIGN` analysis.  A
+#' report with no `BIGN`, or whose `BIGN` counts by no column variable of
+#' the table, is a `warning` (`part` `"content"`, item
+#' `"plan_col_header(header)"`): its header would print `N=NA`.
+#'
+#' Every `!r` value of the SPEC is read as R once, by one walker; one that
+#' does not read is an `error`, with the parser's message.  It is read, not
+#' run, by the kind of slot it fills: an item's argument by the schema's
+#' kind (a guard takes `condition ~ text`), the fields of R of the ARD and
+#' of data.yml by their own (`where` one condition, `args` a call's
+#' arguments, `derive` pieces `name = expression` and `post` steps between
+#' `|`, `code` and `then` R code); those fields are R whether or not they
+#' are written `!r`.  A report's value: `part` the report's key it is under
+#' (`content`, `template`, `ard` ...), `item` its place
+#' (`"content$plan_filter$args$where"`, `"ard$analyses$HR$code"`).  The
+#' study's own (study.yml `setup`, defaults.yml, data.yml's populations,
+#' records and datasets), on a check of every report only: `output_id` NA,
+#' `part` `"study"`, `item` the file and the place
+#' (`"data.yml: populations$SAF$where"`).  The ARD check's row and the
+#' `program` warning for the same value are not given twice.  A report's
+#' own program (a file, not a SPEC value) is read by [tfl_check_code()]
+#' (rule U01) on the review path.
 #'
 #' @param study A study read with [tfl_read_study_spec()], or its folder.
 #' @param output_id The reports to check; `NULL` for every report.
@@ -46,12 +88,35 @@
 #'   row can be made; one that cannot has an `error` row, `part`
 #'   `"build"`.  A few seconds a report.  `FALSE` (default): the checks
 #'   above only.
+#' @param adam Where the data for the data check come from.  `TRUE`
+#'   (default): the study's own datasets, from the paths of `spec/data.yml`
+#'   (from the study folder), read as the study's program reads them and
+#'   only when needed: a study with no `!=` condition reads no data, and a
+#'   dataset is read once.  `FALSE` (or `NULL`): no data check.  Or the ADaM
+#'   data as [tfl_check_fig_design()]'s `adam` takes it ([tfl_read_adam()]: a
+#'   folder or a named list of data frames).  The check: a condition of the
+#'   ARD definition (a `where` of the populations, records, analysis data or
+#'   analyses) that holds `var != value` is looked at in the dataset it
+#'   applies to: where `var` has NA there, the condition drops those rows (a
+#'   filter keeps only TRUE), and a `warning` row (`part` `"ard"`) gives the
+#'   count and the form that keeps them, `!var %in% value`.  No study
+#'   folder, a dataset whose file is not there or is not listed, or a
+#'   variable not in the dataset: no row.  The generated code is not changed.
+#'   The same data check a table's header N (its `BIGN` analysis, from
+#'   whatever data or population it names) against its counts: an analysis
+#'   that groups by BIGN's variable and reads another dataset, whose data
+#'   does not take the variable from the subjects (`add`), gives a `warning`
+#'   row when the two data carry the variable and its value differs for a
+#'   subject (the subject counted under one group in the N, another in the
+#'   rows).  Only a table whose header shows the N (`{n}` in a column
+#'   header that gives no values of its own) is looked at, and only the
+#'   datasets of such tables are read.
 #' @return A data frame, one row a problem: `output_id` (`NA` for the
 #'   study's ARD definition as a whole and the study's own rows), `part`
 #'   (`"file"`, `"study"`, `"ard"`, `"content"`, `"program"`, `"figure"`,
-#'   `"build"`), `item` (the file, the
-#'   analysis, the function and argument, or the figure's part and
-#'   field), `level` (`"error"`, `"warning"`, `"note"`, `"check"`) and
+#'   `"codelists"`, `"build"`), `item` (the file, the
+#'   analysis, the function and argument, the figure's part and
+#'   field, or the code list's column), `level` (`"error"`, `"warning"`, `"note"`, `"check"`) and
 #'   `message`.  Its attributes: `versions`, a data frame of the key
 #'   packages (`package`, `installed`, `NA` when not installed); `ids`, the
 #'   reports checked (the OK ones too); `kinds`, each report's kind, named
@@ -75,9 +140,9 @@
 #'   attr(p, "versions")
 #' }
 #' @seealso [tfl_check_reports()], [tfl_check_fix_text()], [tfl_ard_spec()],
-#'   [tfl_schema_check()], [tfl_check_fig_design()]
+#'   [tfl_schema_check()], [tfl_check_fig_design()], [tfl_study_refs()]
 #' @export
-tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
+tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) {
   if (is.character(study) && length(study) == 1L) study <- tfl_read_study_spec(study)
   if (!inherits(study, "tfl_study_spec")) {
     .ard_stop("tfl_check_spec(): `study` is a study read with tfl_read_study_spec(), or its folder.")
@@ -114,6 +179,14 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
   kinds <- vapply(outs, function(o) o$kind %||% "table", "")
   # (the study's datasets: no object of a report takes one's name)
   study_ds <- .obj_study_datasets(study)
+  # the study's code lists the reports name: a list or a code the study has
+  # not got is an error (R/check_spec_study_refs.R); a report whose own code
+  # lists name one cannot be resolved, and its other checks would stop on it
+  refs <- tfl_check_study_refs(study, outs[setdiff(ids, bad)])
+  unresolved <- attr(refs, "unresolved")
+  rows[[length(rows) + 1L]] <- refs[c("output_id", "part", "item", "level", "message")]
+  # (the reports whose header shows BIGN's N, .bign_shown())
+  n_shown <- character()
 
   # what the user wrote and a study's R fields hold: a test for a blank text,
   # where study$adam has NA (a template's own rows are not the user's: left out)
@@ -122,12 +195,23 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
     add(output_id = output_id, part = "ard", item = paste(at[2L], "/", at[3L]), level = "note",
         message = at[4L])
   }
+  # the study's own `!r` values that do not read (study.yml, defaults.yml,
+  # data.yml), on a full check only (R/check_spec_r_parse.R)
+  wks <- .check_rows()
   if (is.null(output_id)) {
+    rows[[length(rows) + 1L]] <- wks <- .r_walk_study(study)
     dd <- study$data %||% list()
     for (m in c(.blank_entry_notes(dd$populations, c("where", "derive")),
                 .blank_entry_notes(dd$records, "where"),
                 .blank_entry_notes(dd$datasets, "derive", function(e) as.character(e$dataset %||% NA)[1L]))) {
       blank_note(NA_character_, m)
+    }
+    # what the study's lists have that their read let through (the study
+    # still opens): a code twice, a code that is a number in the YAML
+    sp <- attr(study$codelists, "problems")
+    for (i in seq_len(NROW(sp))) {
+      add(output_id = NA_character_, part = "study", item = paste0("codelists: ", sp$list[i]),
+          level = sp$level[i], message = sp$message[i])
     }
     # a study code list named like an ADaM column adam_meta does not map:
     # study$adam has no levels of it (the name is not a mapping)
@@ -136,12 +220,24 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
           level = "warning", message = w$message)
     }
   }
+  # a report's own code list with a code the define's list of its column
+  # does not have (the column adam_meta maps; codes, not labels)
+  rows[[length(rows) + 1L]] <- .check_define_code_rows(study, outs[setdiff(ids, bad)])
   for (id in setdiff(ids, bad)) {
     o <- outs[[id]]
     for (m in c(.blank_entry_notes(o$ard$analysis_data, c("where", "derive", "code", "then")),
                 .blank_entry_notes(o$ard$analyses, c("where", "post", "code")))) {
       blank_note(id, m)
     }
+    if (id %in% unresolved) next
+    # an entry of its lists that is not a map: one error row, the report's
+    # other checks would stop on R's `$` error (R/object_list.R, #1000)
+    sh <- .check_entry_rows(o, id)
+    if (nrow(sh)) {
+      rows[[length(rows) + 1L]] <- sh
+      next
+    }
+    rows[[length(rows) + 1L]] <- wk <- .check_r_parse_rows(o, id)  # an `!r` value that is not R
     # its ARD definition, written as its program: the definition's problems
     # are errors; what the installed packages do not know, notes; a program
     # that cannot be written otherwise, a warning
@@ -150,10 +246,16 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
         tryCatch(tfl_ard_code(study, output_id = id, save = FALSE), error = function(e) {
           p <- e$problems
           if (is.data.frame(p) && nrow(p)) {
-            add(output_id = ifelse(is.na(p$output_id), id, p$output_id), part = "ard",
-                item = ifelse(nzchar(p$row %||% ""), paste0(p$row, "$", p$field), p$field),
-                level = "error", message = p$message)
-          } else {
+            # (a field of R that does not read: the walker's row says it)
+            p <- .r_ard_problems_left(p, rbind(wk, wks))
+            if (nrow(p)) {
+              add(output_id = ifelse(is.na(p$output_id), id, p$output_id), part = "ard",
+                  item = ifelse(nzchar(p$row %||% ""), paste0(p$row, "$", p$field), p$field),
+                  level = "error", message = p$message)
+            }
+          } else if (!any(wk$level == "error" & wk$part == "ard")) {
+            # (not when an `ard:` value that does not read is the cause: the
+            # walker's row says it)
             add(output_id = id, part = "program", item = "ard", level = "warning",
                 message = paste("the ARD program cannot be written:", one(e)))
           }
@@ -179,6 +281,8 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
       add(output_id = id, part = "content", item = "", level = "error", message = one(ro))
       next
     }
+    # (a header that shows BIGN's N: the N check looks at that N only)
+    if (.bign_shown(ro)) n_shown <- c(n_shown, id)
     # its own titles under a study header that prints the label, the title
     # and the population from the report's keys: printed twice (#518)
     if (length(.page_args(o$page$titles))) {
@@ -199,10 +303,14 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
           level = "check", message = paste0("to confirm: ", cf$why))
     }
     # the report as written: what stops the build far from its cause
-    rows[[length(rows) + 1L]] <- .check_static_rows(o, id)
+    rows[[length(rows) + 1L]] <- .check_static_rows(o, id, study)
+    # its analysis set against the study: data.yml's sets, the TOC's line
+    rows[[length(rows) + 1L]] <- .check_set_rows(o, id, study)
     # the names its fields give: a figure's that nothing above makes, a
     # table's named block (R/object_list.R)
     rows[[length(rows) + 1L]] <- .check_object_rows(ro, id, study_ds)
+    # a column header's N with no BIGN to take it from (R/check_spec_header_n.R)
+    rows[[length(rows) + 1L]] <- .check_header_n_rows(ro, id)
     if (inherits(ro$content, "tfl_r")) next
     # a figure's content key (`figure: {name, args}`): its name is one of the
     # table's (.fig_content_table()), its program is written
@@ -268,8 +376,9 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
       }
     }
     # the report's code, written: a stop is a warning (the form is right,
-    # the code is not)
-    if (form_ok) {
+    # the code is not); not when an `!r` that does not read is already
+    # an error (the walker's row says it, R/check_spec_r_parse.R)
+    if (form_ok && !any(wk$level == "error")) {
       r <- tryCatch(suppressMessages(suppressWarnings(tfl_content_code(ro))), error = function(e) e)
       if (inherits(r, "error")) {
         add(output_id = id, part = "program", item = "content", level = "warning",
@@ -277,6 +386,11 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
       }
     }
   }
+  # (with the study's data: a `!=` that drops the rows where the variable is NA)
+  rows[[length(rows) + 1L]] <- .check_ne_na_rows(study, adam, setdiff(ids, bad), is.null(output_id))
+  # (and a table's header N and its counts: a column variable of two data that
+  # differs for a subject, R/check_spec_n.R)
+  rows[[length(rows) + 1L]] <- .check_n_rows(study, adam, intersect(setdiff(ids, bad), n_shown))
   out <- do.call(rbind, rows)
   out <- out[is.na(out$output_id) | out$output_id %in% ids, , drop = FALSE]
   if (isTRUE(build) && !is.null(study$dir)) {

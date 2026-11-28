@@ -43,11 +43,11 @@ and the hazard ratio (95\% CI); an interval that cannot be estimated is
 \code{NE}.
 }
 \examples{
-\dontshow{if (requireNamespace("cardx", quietly = TRUE) && requireNamespace("survival", quietly = TRUE) && requireNamespace("broom.helpers", quietly = TRUE)) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (requireNamespace("cardx", quietly = TRUE) && requireNamespace("survival", quietly = TRUE) && requireNamespace("broom.helpers", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 set.seed(1)
 d <- data.frame(AVAL = rexp(60, 0.1), CNSR = rbinom(60, 1, 0.3),
                 ARM = rep(c("Control", "Drug X"), 30))
-hr <- cardx::ard_regression(survival::coxph(survival::Surv(AVAL, 1 - CNSR) ~ ARM, data = d),
+hr <- cardx::ard_regression(survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ ARM, data = d),
                             exponentiate = TRUE)
 forest_hr(hr, list(favours = c("Favours Drug X", "Favours Control")))
 \dontshow{\}) # examplesIf}

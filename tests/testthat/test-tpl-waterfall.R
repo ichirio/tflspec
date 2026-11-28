@@ -5,9 +5,11 @@ test_that("waterfall: the design form; the bars' order the call's step", {
                                              where = "AVISIT == \"WEEK 12\""),
                            population = wf_pop)
   # (the call's: one bar a subject said, the bars beyond the axis said, the order)
+  # (the analysis set is the data's, no step: the program joins the records to its subjects, A2)
   expect_identical(vapply(x$data$steps, `[[`, "", "step"),
-                   c("read", "join", "param", "filter", "filter", "code", "code", "rank"))
-  expect_identical(x$data$steps[[4L]]$expr, "AVISIT == \"WEEK 12\"")
+                   c("read", "param", "filter", "filter", "code", "code", "rank"))
+  expect_identical(x$data$population, "SAF")
+  expect_identical(x$data$steps[[3L]]$expr, "AVISIT == \"WEEK 12\"")
   expect_identical(x$call_steps, 3L)
   r <- tfl_template_expand("waterfall", list(param = "SUMDIAM", by_response = TRUE))
   expect_identical(vapply(r$data$steps, `[[`, "", "step"),
@@ -47,9 +49,9 @@ test_that("in a study: A (the data steps, the call) = B (the design) = the templ
                     content = list(tfl_item("labs", list(y = "Change in the sum of diameters (%)"))))
     x <- tplfig_check(o, d, data)
     txt <- paste(x$a, collapse = "\n")
-    expect_match(txt, "semi_join(", fixed = TRUE)
+    expect_false(grepl("semi_join(", txt, fixed = TRUE))
     expect_match(txt, "filter(PARAMCD == \"SUMDIAM\", AVISIT == \"WEEK 12\"", fixed = TRUE)
-    expect_match(txt, sprintf("content <- tflspec::tfl_tpl(adtr_sumdiam, \"waterfall\", by_response = %s) +", resp),
+    expect_match(txt, sprintf("content <- tflspec::tfl_tpl(adtr_sub, \"waterfall\", by_response = %s) +", resp),
                  fixed = TRUE)
     expect_identical(grepl("PARAMCD == \"BOR\"", txt, fixed = TRUE), resp)
   }

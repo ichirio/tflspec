@@ -10,10 +10,9 @@ rts_study <- function(files = list(), study = NULL, env = parent.frame()) {
                "  - dataset: ADTTE", "    level: ADaM", "    path: adam/adtte.xpt",
                "populations:", "  - id: SAF", "    dataset: ADSL", "    where: !r SAFFL == \"Y\"",
                "    label: Safety Population"), file.path(d, "spec", "data.yml"))
-  writeLines(study %||% c("study_id: MIN-1", "title: minimal", "settings:", "  rounding: sas",
+  write_study_yml(d, study %||% c("study_id: MIN-1", "title: minimal", "settings:", "  rounding: sas",
                           "  output_path: output/tfl", "  program_dir: programs/tfl",
-                          "  file: '{output_id}.rtf'", "keys:", "  id: USUBJID"),
-             file.path(d, "study.yml"))
+                          "  file: '{output_id}.rtf'", "keys:", "  id: USUBJID"))
   if (is.null(files[["defaults.yml"]])) files[["defaults.yml"]] <- "content: []"
   for (nm in names(files)) {
     f <- file.path(d, "spec", nm)
@@ -41,12 +40,17 @@ rts_trip <- function(d, env = parent.frame(), ...) {
 }
 
 test_that("the sheets' notes are written to _not_converted.yml, and counted in one message", {
-  d <- rts_study(list("defaults.yml" = c("codelists:", "  SEX: [F, M]", "content: []"),
+  # (the study's ADaM metadata: no sheet holds it)
+  d <- rts_study(list("defaults.yml" = c("adam_meta:", "  variables:",
+                                         "    - {dataset: ADSL, variable: SEX, codelist: CL.SEX}",
+                                         "  codelists:",
+                                         "    - {codelist: CL.SEX, name: Sex, value: F, decode: Female, order: 1}",
+                                         "content: []"),
                       "outputs/T-1.yml" = rts_table()))
   x <- rts_trip(d)
   expect_gt(nrow(x$sh$not_converted), 0L)
   parts <- vapply(x$nc, function(e) e$sheet, "")
-  expect_true("codelists" %in% parts)
+  expect_true("adam_meta" %in% parts)
   expect_identical(sum(grepl("could not hold", x$msgs)), 1L)
   expect_match(x$msgs[grepl("could not hold", x$msgs)],
                paste0("tfl_yaml_from_sheets(): ", nrow(x$sh$not_converted), " part"), fixed = TRUE)
@@ -79,7 +83,11 @@ test_that("a figure written as items comes back with its items and data, either 
     b <- tfl_read_outputs(x$to)[["F-1"]]
     expect_length(b$content, 4L)
     expect_identical(b$content, a$content, info = fg)
-    expect_identical(b$data, a$data, info = fg)
+    expect_identical(b$data$steps, a$data$steps, info = fg)
+    # (its analysis set `common: {population: SAF}` comes back on its data:
+    # canon 11-15, a figure's set is its data's, A2-1)
+    expect_identical(b$data[["population"]], "SAF", info = fg)
+    expect_null(b$common[["population"]], info = fg)
     expect_false(any(x$sh$not_converted$output %in% "F-1"), info = fg)
   }
   # the design list as a file (spec/figures/<id>.yml) keeps the items too
@@ -146,19 +154,19 @@ rts_cl_study <- function(env = parent.frame()) {
   writeLines(c("datasets:", "  - dataset: ADSL", "    level: ADaM", "    path: adam/adsl.xpt",
                "populations:", "  - id: SAF", "    dataset: ADSL", '    where: !r SAFFL == "Y"',
                "    label: Safety Population"), file.path(d, "data.yml"))
-  writeLines(c("study_id: S-1", "title: t", "keys:", "  id: USUBJID"), file.path(d, "study.yml"))
+  write_study_yml(d, c("study_id: S-1", "title: t", "keys:", "  id: USUBJID"))
   d
 }
 
-test_that("the study's code lists and ADaM metadata are named in the notes, and reach the file", {
+test_that("the study's code lists cross the sheets (A7); its ADaM metadata is named in the notes", {
   d <- rts_cl_study()
   x <- rts_trip(d)
   nc <- x$sh$not_converted
-  n <- nc[nc$part == "codelists", ]
-  expect_identical(nrow(n), 1L)
-  expect_match(n$reason[is.na(n$output)], "defaults.yml: SEX, AGEGR1", fixed = TRUE)
+  expect_identical(sum(nc$part == "codelists"), 0L)
+  expect_identical(unique(x$sh$study_codelists$name), c("SEX", "AGEGR1"))
+  expect_identical(tfl_read_study_spec(x$to)$codelists, tfl_read_study_spec(d)$codelists)
   expect_identical(sum(nc$part == "adam_meta"), 1L)
-  written <- x$nc[vapply(x$nc, function(e) identical(e$sheet, "codelists"), NA)]
+  written <- x$nc[vapply(x$nc, function(e) identical(e$sheet, "adam_meta"), NA)]
   expect_length(written, 1L)
   expect_true(any(grepl("[0-9]+ parts?", x$msgs)))
 })
@@ -172,27 +180,20 @@ test_that("a report's own code list makes the round trip: its program is the sam
   }
   before <- ard(d)
   expect_match(before, "set_levels(TRT01A = cl_trt01a", fixed = TRUE)
-  expect_match(before, "Drug X 200 mg", fixed = TRUE)
-  expect_match(ard(x$to), "set_levels(TRT01A = cl_trt01a", fixed = TRUE)
-  expect_match(ard(x$to), "Drug X 200 mg", fixed = TRUE)
+  # (the ARD program's list: codes only, CANON-3)
+  expect_match(before, "cl_trt01a <- c(\"Drug X\", \"Control\")", fixed = TRUE)
+  expect_identical(ard(x$to), before)
 })
 
 # -- item 5: what stopped the whole conversion ---------------------------------------
 
-test_that("a pattern with content items no longer stops the conversion: dropped, named", {
+test_that("a pattern file stops the sheets: an old form, whatever it holds", {
   for (cs in list(c("content:", "  - plan_cells: {categorical: '{n}'}"),
-                  c("content:", "  - plan_footnotes: {pages: [Note]}"))) {
-    d <- rts_study(list("patterns/p.yml" = cs,
-                        "outputs/T-1.yml" = rts_table(extends = c("defaults", "patterns/p"))))
-    x <- rts_trip(d)
-    nc <- x$sh$not_converted
-    expect_identical(nc$output[nc$part == "content"], "@p")
-    expect_match(nc$reason[nc$part == "content"], "a pattern's content (", fixed = TRUE)
-    expect_true("content" %in% vapply(x$nc, function(e) e$sheet, ""))
-    # the pattern's page part stays, the report still extends it
-    back <- tfl_read_outputs(x$to)[["T-1"]]
-    expect_true("patterns/p" %in% back$extends)
-    expect_length(tfl_read_study_spec(x$to)$patterns$p$content, 0L)
+                  c("content:", "  - plan_footnotes: {pages: [Note]}"),
+                  "content: !r 'function(x) x'")) {
+    d <- rts_study(list("patterns/p.yml" = cs, "outputs/T-1.yml" = rts_table()))
+    expect_error(tfl_sheets_from_yaml(d), "spec/patterns/: p.yml (a pattern file) is no longer read",
+                 fixed = TRUE, class = "tflspec_old_form")
   }
 })
 
@@ -231,21 +232,6 @@ test_that("a typed key study.yml never had still stops, with or without sheets$s
   sh <- tfl_sheets_from_yaml(d)
   tfl_yaml_from_sheets(sh, to, overwrite = TRUE)
   expect_identical(yaml::read_yaml(file.path(to, "study.yml"))$settings$treatment, "TRT01A")
-})
-
-test_that("a pattern's content in each form the reader accepts is named, not an error", {
-  forms <- list(
-    calls = c("content:", "  - plan_cells: {categorical: '{n}'}", "  - plan_blanks: {where: records}"),
-    fn_form = c("content:", "  - {fn: plan_cells, args: {categorical: '{n}'}}"),
-    r_item = c("content:", "  - !r 'plan_cells(categorical = \"{n}\")'"),
-    r_content = "content: !r 'function(x) x'")
-  for (nm in names(forms)) {
-    d <- rts_study(list("patterns/p.yml" = forms[[nm]],
-                        "outputs/T-1.yml" = rts_table(extends = c("defaults", "patterns/p"))))
-    x <- rts_trip(d)
-    nc <- x$sh$not_converted
-    expect_identical(nc$output[nc$part == "content"], "@p", info = nm)
-  }
 })
 
 # -- item 6: the flat workbook ----------------------------------------------------------

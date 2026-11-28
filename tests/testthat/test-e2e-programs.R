@@ -31,6 +31,10 @@ ep_run_child <- function(d, id) {
   withr::local_dir(d)
   writeLines(c(code, "saveRDS(ard, 'ard.rds')"), "prog.R")
   out <- suppressWarnings(system2(rscript, "prog.R", stdout = TRUE, stderr = TRUE))
+  # (and the child's exit status, so that a failure says it: a program that
+  # stops prints its error; a child that printed nothing at all did not run R)
+  st <- attr(out, "status")
+  out <- c(out, sprintf("[the child R (%s): exit status %s]", rscript, if (is.null(st)) 0L else st))
   list(ard = if (file.exists("ard.rds")) readRDS("ard.rds"), out = out, code = code)
 }
 
@@ -101,23 +105,23 @@ test_that("a denominator's by column the subjects' data lacks (AESEV): the recor
     "T-AE", "table", common = list(population = "SAF"), extends = "defaults", label = "TEAE by severity",
     ard = list(
       analysis_data = list(
-        list(id = "adsl_saf", from = "ADSL", population = "SAF"),
-        list(id = "adae_saf", from = "ADAE", subjects_in = "adsl_saf",
+        list(id = "adsl_sub", from = "ADSL", population = "SAF"),
+        list(id = "adae_sub", from = "ADAE", subjects_in = "adsl_sub",
              where = tfl_r("TRTEMFL == \"Y\""))),
       analyses = list(
-        list(id = "BIGN", method = "categorical", data = "adsl_saf", variables = "TRT01A"),
-        list(id = "TEAE", method = "hierarchical", data = "adae_saf",
+        list(id = "BIGN", method = "categorical", data = "adsl_sub", variables = "TRT01A"),
+        list(id = "TEAE", method = "hierarchical", data = "adae_sub",
              by = c("TRT01A", "AESEV"), variables = c("AEBODSYS", "AEDECOD"),
-             denominator = "adsl_saf", args = "over_variables = TRUE"))),
+             denominator = "adsl_sub", args = "over_variables = TRUE"))),
     data = list(source = "ard", object = "ard"),
     content = list(tfl_item("table_plan", list(cols = c("TRT01A", "AESEV"),
                                                rows = list(group1 = "AEBODSYS"),
                                                label = "AEDECOD")))), f)
   r <- ep_run_child(d, "T-AE")
   # the join takes from ADSL only what it has; AESEV is dropped from nothing
-  expect_true(any(grepl("select(-any_of(names(select(adsl_saf, any_of(c(\"TRT01A\", \"AESEV\"))))))",
+  expect_true(any(grepl("select(-any_of(names(select(adsl_sub, any_of(c(\"TRT01A\", \"AESEV\"))))))",
                         r$code, fixed = TRUE)))
-  expect_true(any(grepl("select(adsl_saf, USUBJID, TRT01A, any_of(\"AESEV\"))",
+  expect_true(any(grepl("select(adsl_sub, USUBJID, TRT01A, any_of(\"AESEV\"))",
                         r$code, fixed = TRUE)))
   expect_false(is.null(r$ard), info = paste(r$out, collapse = "\n"))
   expect_false(any(grepl("doesn't exist", r$out)))

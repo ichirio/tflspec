@@ -2,14 +2,14 @@
 % Please edit documentation in R/tpl_docs.R
 \name{tfl_tpl_param_change}
 \alias{tfl_tpl_param_change}
-\title{param_change: the template param_change}
+\title{Parameters' value and change by visit: the template param_change}
 \description{
 The table template \code{param_change}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "param_change", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab required \tab call \tab report: population, required \tab output.common.population \tab the analysis set's id (SAF) \cr
+   \code{population} \tab required \tab call \tab  \tab  \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
    \code{data} \tab required \tab call \tab  \tab  \tab the BDS dataset (ADLB, ADVS, ADEG) \cr
    \code{params} \tab other \tab call \tab  \tab  \tab the PARAMCD values, in the data's order; NULL: all \cr
@@ -26,11 +26,11 @@ The table template \code{param_change}, layout \code{summary}. Its program is on
    \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_sub \cr
    \code{formats} \tab usual \tab call \tab mean = 1; sd = 2; median = 1; min = 1; max = 1 \tab plan_digits \tab the cells' decimals (plan_digits()): by statistic (mean 1, sd 2, median 1, min 1, max 1), and a parameter's own, only for the parameters that differ, by its PARAMCD: \{GLUC: \{mean: 2, sd: 3\}\}; given by name, merged key by key; unset: none given here. The table's digits: an ARD built alone keeps cards' default formats \cr
    \code{cells} \tab usual \tab call \tab study: plan_cells.continuous, else n = \{N\}; Mean (SD) = \{mean\} (\{sd\}), \{mean\} (-); Median = ... \tab plan_cells.continuous \tab the rows of a value or a change: where each statistic goes (placement only, \{mean\}) \cr
-   \code{sd_missing} \tab other \tab call \tab study: settings.sd_missing, else - \tab settings.sd_missing \tab what prints in place of the SD when a group has no SD (n = 1): \{mean\} (<sd_missing>); "" prints the mean alone; unset: no such guard; no effect when 'cells' is given \cr
+   \code{sd_missing} \tab other \tab call \tab study: settings.sd_missing, else - \tab settings.sd_missing \tab what prints in place of the SD when a group has no SD (n = 1): \{mean\} (<sd_missing>); "" prints the mean alone; unset: no such guard; no effect when \code{cells} is given \cr
    \code{header_n} \tab other \tab call \tab set \tab  \tab the arm headings' N: "set": the arm's subjects in the analysis set; "none" or unset: no N \cr
-   \code{page_by} \tab other \tab call \tab PARAMCD \tab  \tab the variable a page a value is cut by: the parameter's (the default), named in the titles by 'page_heading'; unset: no page a value, one table, the parameter a row heading \cr
-   \code{page_heading} \tab other \tab call \tab Parameter: \{value\} \tab  \tab a parameter's page name ('\{value\}': the parameter); the last title line, or where the title line '\{PAGE_HEADING\}' is; used with 'page_by' \cr
-   \code{split} \tab other \tab call \tab group_safe \tab plan_paginate_rows.split \tab how a page break is placed (plan_paginate_rows(split = )): "none" one page; "group_safe" whole groups to a page; "group_force" a cut every 'max_rows' rows, a group continued on the next page; "rows" and "by_value" are cut by position or by value (they need their own arguments, a 'plan_paginate_rows' item) \cr
+   \code{page_by} \tab other \tab call \tab PARAMCD \tab  \tab the variable a page a value is cut by: the parameter's (the default), named in the titles by \code{page_heading}; unset: no page a value, one table, the parameter a row heading \cr
+   \code{page_heading} \tab other \tab call \tab Parameter: \{value\} \tab  \tab a parameter's page name (\code{{value}}: the parameter); the last title line, or where the title line \code{{PAGE_HEADING}} is; used with \code{page_by} \cr
+   \code{split} \tab other \tab call \tab group_safe \tab plan_paginate_rows.split \tab how a page break is placed (plan_paginate_rows(split = )): "none" one page; "group_safe" whole groups to a page; "group_force" a cut every \code{max_rows} rows, a group continued on the next page; "rows" and "by_value" are cut by position or by value (they need their own arguments, a \code{plan_paginate_rows} item) \cr
    \code{param_labels} \tab other \tab call \tab  \tab  \tab each parameter's text by its PARAMCD \{GLUC: "Glucose (mg/dL)"\}; given by name, merged; NULL: the study's PARAMCD code list's labels, else the codes print \cr
    \code{heading} \tab other \tab call \tab  \tab  \tab the label column's heading \cr
    \code{stub_name} \tab other \tab call \tab study: plan_stub.name, no fallback \tab plan_stub.name \tab the row-title column's name (plan_stub(name = )) \cr

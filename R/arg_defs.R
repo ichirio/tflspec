@@ -10,7 +10,7 @@
 #    tfl_arg_defs(fn = "plan_cells")             a schema function's args
 #    tfl_arg_defs(fn = "data")                   the keys of a data: row
 #    tfl_arg_defs(fn = "analysis")               the keys of an analysis item
-#    tfl_arg_defs(template = "tflspec_v1/demog") a template's params:
+#    tfl_arg_defs(template = "tflspec_v1/tflspec_summary") a template's params:
 # ============================================================================
 
 # the 5 input forms: pick (choose from a list; one or several follows the
@@ -33,23 +33,7 @@
 #   sort_keys     plan_sort's per-level sort keys
 .arg_editors <- c("roles", "cells", "header_lines", "digits", "levels", "sort_keys")
 
-# the closed list of choice sources (15 words, canon 11-14 and the
-# figure_style word of 2026-11-18).  An entry writes one with what it
-# depends on in brackets ("vars(adsl_sub)", "levels(SEX)",
-# "from_args(continuous, categorical)", "figure_style(palette)"); several
-# separated by ", " give the list's groups in that order
-# ("report_data, study_data").
-.arg_choice_sources <- c("vars", "levels", "codelist", "populations", "report_data",
-                         "study_data", "ard", "columns", "study_info", "tokens",
-                         "stats", "fixed", "styles", "from_args", "figure_style")
-
-# what figure_style(<kind>) lists: the study's figure style's colours in
-# their order, or its marker shapes
-.arg_figure_style_kinds <- c("palette", "marker")
-
-# the words that let a pick take a value not in the list (`free`) unless the
-# definition says otherwise
-.arg_free_sources <- c("tokens", "study_info", "codelist")
+# the closed list of choice sources: R/arg_choice_sources.R (tfl_choice_sources())
 
 .arg_steps <- c("data", "analysis", "content", "page")
 .arg_default_kinds <- c("value", "study", "series", "unset", "fixed")
@@ -64,54 +48,6 @@
 # the YAML tags a template's values may carry, kept as written (the value is
 # resolved for a study later: tfl_template_resolve())
 .arg_tags <- c("series", "study", "fixed", "unset", "r")
-
-# the source words of a choices entry, in order, without their brackets
-.arg_choice_words <- function(choices) {
-  if (is.null(choices) || !length(choices) || all(is.na(choices))) {
-    return(character())
-  }
-  x <- paste(as.character(choices), collapse = ", ")
-  # commas inside brackets belong to the word's argument
-  depth <- 0L
-  chars <- strsplit(x, "", fixed = TRUE)[[1L]]
-  for (i in seq_along(chars)) {
-    if (chars[i] == "(") depth <- depth + 1L
-    if (chars[i] == ")") depth <- depth - 1L
-    if (chars[i] == "," && depth > 0L) chars[i] <- "\001"
-  }
-  parts <- trimws(strsplit(paste(chars, collapse = ""), ",", fixed = TRUE)[[1L]])
-  parts <- gsub("\001", ",", parts, fixed = TRUE)
-  parts[nzchar(parts)]
-}
-
-.arg_check_choices <- function(choices, where) {
-  entries <- .arg_choice_words(choices)
-  words <- sub("[(].*$", "", entries)
-  bad <- setdiff(words, .arg_choice_sources)
-  # vars(<name>) is a data row id; vars(from_args(<arg>)) the columns of the
-  # data another argument names.  Nothing else nests in vars().
-  inner <- sub("^vars[(](.*)[)]$", "\\1", entries[words == "vars" & grepl("^vars[(].*[)]$", entries)])
-  inner <- inner[grepl("[(]", inner) & !grepl("^from_args[(].*[)]$", inner)]
-  if (length(inner)) {
-    stop(sprintf("%s: vars() takes a data row id or from_args(<arg>), not %s.", where,
-                 paste(encodeString(inner, quote = "\""), collapse = ", ")), call. = FALSE)
-  }
-  # figure_style(<kind>): the kind one of palette, marker
-  fs <- entries[words == "figure_style"]
-  fs_kind <- sub("^figure_style[(]\\s*(.*?)\\s*[)]$", "\\1", fs, perl = TRUE)
-  fs_bad <- fs[!grepl("^figure_style[(].*[)]$", fs) | !fs_kind %in% .arg_figure_style_kinds]
-  if (length(fs_bad)) {
-    stop(sprintf("%s: %s: write figure_style(<kind>), the kind one of %s.", where,
-                 paste(encodeString(fs_bad, quote = "\""), collapse = ", "),
-                 paste(.arg_figure_style_kinds, collapse = ", ")), call. = FALSE)
-  }
-  if (length(bad)) {
-    stop(sprintf("%s: unknown choice source %s; the sources are %s.", where,
-                 paste(encodeString(bad, quote = "\""), collapse = ", "),
-                 paste(.arg_choice_sources, collapse = ", ")), call. = FALSE)
-  }
-  invisible(choices)
-}
 
 # A tagged YAML value as written: the value with its tag (a template's
 # defaults stay unresolved here).
@@ -222,7 +158,7 @@
 
 # What a schema function's argument gets where schema.yml is silent: a
 # statistic member (`stat`, `list<stat>`) picks from the statistics' names.
-# That is a rule of the type.  A column argument's choices (ard, columns,
+# That is a rule of the type.  A column argument's choices (columns(ard), columns,
 # vars) and an ordered list (`ordered: true`) are written in the definition,
 # not worked out here from the function's name or package.
 .arg_schema_fill <- function(args) {
@@ -508,6 +444,9 @@
     out <- do.call(rbind, rows)
     rownames(out) <- NULL
   }
+  for (i in seq_len(nrow(out))) {
+    .arg_check_choice_deps(out$choices[[i]], out$name, sprintf("%s: argument `%s`", where, out$name[i]))
+  }
   bad <- !is.na(out$group) & !out$group %in% g$id
   if (any(bad)) {
     stop(sprintf("%s: argument `%s`: group %s is not in groups: (%s).", where, out$name[bad][1L],
@@ -531,12 +470,12 @@
   list(
     id = list(type = "string", input = "text", required = TRUE, tier = "required",
               description = "The row's name; the analysis items read it by this id."),
-    from = list(type = "string", input = "pick", choices = "report_data, study_data", free = FALSE,
+    from = list(type = "string", input = "pick", choices = "objects(data), study_data", free = FALSE,
                 required = TRUE, tier = "required",
                 description = "The dataset the row reads: a study dataset or a row above."),
     population = list(type = "string", input = "pick", choices = "populations", free = FALSE,
                       description = "The analysis set the row keeps (data.yml's where)."),
-    subjects_in = list(type = "string", input = "pick", choices = "report_data, fixed", free = FALSE,
+    subjects_in = list(type = "string", input = "pick", choices = "objects(data), fixed", free = FALSE,
                        values = "none",
                        description = "The row whose subjects are kept (inner join); none keeps all."),
     add = list(type = "list<column>", input = "pick", choices = "vars(from_args(subjects_in))",
@@ -569,7 +508,7 @@
     method = list(type = "string", input = "pick", choices = "fixed", values = methods, free = TRUE,
                   required = TRUE, tier = "required",
                   description = "The function called (categorical, continuous, hierarchical, ...)."),
-    data = list(type = "string", input = "pick", choices = "report_data", free = FALSE,
+    data = list(type = "string", input = "pick", choices = "objects(data)", free = FALSE,
                 required = TRUE, tier = "required", description = "The data: row the item reads."),
     params = list(type = "list<string>", input = "text", tier = "other",
                   description = "The columns of the conditions table, in order."),
@@ -592,7 +531,7 @@
                      description = "The analysis variables."),
     statistics = list(type = "list<string>", input = "pick", choices = "stats", ordered = TRUE,
                       description = "The statistics kept."),
-    denominator = list(type = "string", input = "pick", choices = "report_data", free = FALSE,
+    denominator = list(type = "string", input = "pick", choices = "objects(data)", free = FALSE,
                        description = "The data: row of the % denominator."),
     overall = list(type = "logical", input = "pick", description = "A total over the by groups."),
     formats = list(type = "map<string,number|string>", input = "table", choices = "stats", free = TRUE,
@@ -659,7 +598,7 @@
 # tflplanner's home standards/series/, the package's own series).
 .template_file <- function(template, study_dir = NULL) {
   if (!is.character(template) || length(template) != 1L || !grepl("^[^/]+/[^/]+$", template)) {
-    stop(sprintf("template %s: write <series>/<template>, e.g. \"tflspec_v1/demog\".",
+    stop(sprintf("template %s: write <series>/<template>, e.g. \"tflspec_v1/tflspec_summary\".",
                  encodeString(as.character(template)[1L], quote = "\"")), call. = FALSE)
   }
   parts <- strsplit(template, "/", fixed = TRUE)[[1L]]
@@ -670,8 +609,10 @@
   if (!is.null(study_dir)) {
     f <- file.path(.study_series_root(study_dir), parts[1L], "templates", paste0(parts[2L], ".yml"))
     if (file.exists(f)) return(f)
+    # (a retired template: its replacement, not a copy that cannot be made)
+    note <- .series_retired_note(template)
     stop(sprintf("template %s is not copied into the study (no %s): %s.", template, f,
-                 .study_copy_hint(study_dir, template)), call. = FALSE)
+                 if (nzchar(note)) note else .study_copy_hint(study_dir, template)), call. = FALSE)
   }
   dirs <- .series_search_dirs()
   dirs <- dirs[nzchar(dirs)]
@@ -679,9 +620,11 @@
     f <- file.path(d, parts[1L], "templates", paste0(parts[2L], ".yml"))
     if (file.exists(f)) return(f)
   }
-  stop(sprintf("template %s: no file %s in the series folders (%s).", template,
+  note <- .series_retired_note(template)
+  stop(sprintf("template %s: no file %s in the series folders (%s).%s", template,
                file.path(parts[1L], "templates", paste0(parts[2L], ".yml")),
-               paste(dirs, collapse = ", ")), call. = FALSE)
+               paste(dirs, collapse = ", "), if (nzchar(note)) paste0(" ", note, ".") else ""),
+       call. = FALSE)
 }
 
 # The `groups:` of the series a template file belongs to (its folder's
@@ -709,7 +652,7 @@
 #'
 #' @param fn A function of the schema (`"plan_cells"`), or `"data"` (the keys
 #'   of a `data:` row) or `"analysis"` (the keys of an analysis item).
-#' @param template A template, `"<series>/<template>"` (`"tflspec_v1/demog"`).
+#' @param template A template, `"<series>/<template>"` (`"tflspec_v1/tflspec_summary"`).
 #'   Its file is found in the series folders: the option `tflspec.series_dir`,
 #'   tflplanner's home `standards/series/`, the series tflspec ships.
 #' @param study_dir A study folder: the template is read from the study's
@@ -722,7 +665,10 @@
 #'   the function's `groups:` list or, for a template, its series'
 #'   `series.yml` (a template's own `groups:` replaces it), entries `{id: ,
 #'   label: {en: , ja: }}`; no rows when none is written (one unnamed
-#'   group).  The columns:
+#'   group).  For `fn`, its attribute `"fn"` is the function's one-row data
+#'   frame of [tfl_fn_defs()] (its join, the argument the pipe fills, what
+#'   it gives; `"data"` is the `data_row` row), `NULL` when it has none.
+#'   The columns:
 #'   \describe{
 #'     \item{name}{the argument.}
 #'     \item{label_en, label_ja}{its label, from `label: {en: , ja: }`; a
@@ -743,7 +689,7 @@
 #'     \item{required}{`TRUE` for an argument that has no default and must be
 #'       given.}
 #'     \item{default}{(a list column) the default as written; a tagged value
-#'       (`!series K`, `!study K`, `!fixed v`, `!r`) is a `tfl_tagged` object.
+#'       (`!series K`, `!study K`, `!study {key: K, fallback: V}`, `!fixed v`, `!r`) is a `tfl_tagged` object.
 #'       It is resolved for a study by [tfl_template_resolve()].  A schema
 #'       function's argument with no default written takes the function's own
 #'       default when that is one `TRUE` or `FALSE` and the argument's type is
@@ -755,12 +701,14 @@
 #'       (its step is not made) or `stop` (it needs a value: "(none)" is not
 #'       offered); by default `stop` for a required argument, else `omit`.}
 #'     \item{choices}{(a list column) the sources of the choices, in order:
-#'       the closed words `vars(<data>)`, `levels(<var>)`, `codelist(<name>)`,
-#'       `populations`, `report_data`, `study_data`, `ard`, `columns(<object>)`,
-#'       `study_info`, `tokens`, `stats`, `fixed`, `styles`,
-#'       `from_args(<arg>, ...)`, `figure_style(<palette|marker>)` (the
-#'       study's figure style's colours in their order, or its marker
-#'       shapes).  Another word stops.}
+#'       the closed words of [tfl_choice_sources()] (14: `vars(<data>)`,
+#'       `levels(<var>)`, `codelist(<name>)`, `columns(<object>)`,
+#'       `populations`, `study_data`, `objects(<kind>)`, `stats`,
+#'       `format_sets`, `styles`, `figure_style(<palette|marker>)`, `tokens`,
+#'       `fixed`, `from_args(<arg>, ...)`).  Another word stops; an old
+#'       word (`report_data`, `ard`, `study_info`) stops naming the new one,
+#'       and so does `levels(<arg>)` of an argument of the card (write
+#'       `levels(from_args(<arg>))`).}
 #'     \item{values}{(a list column) the fixed values (`fixed`, an `enum`).
 #'       `values:` writes each as a value or `{value: , label: {en: , ja: }}`.}
 #'     \item{value_labels}{(a list column) the values' labels, a data frame
@@ -816,8 +764,9 @@
 #'   A definition stops, saying what to write, for an unknown `tier` or
 #'   `unset` or `editor` word, a `group` not in `groups:`, a `member_of` that is not
 #'   another argument, a malformed `passes_to`, a label or help that is
-#'   neither a text nor `{en: , ja: }`, and a choice word outside the 15.
-#' @seealso [tfl_schema()] (the schema's functions), [tfl_template_resolve()]
+#'   neither a text nor `{en: , ja: }`, and a choice word outside the 14.
+#' @seealso [tfl_schema()] (the schema's functions), [tfl_choice_sources()] (the choice
+#'   sources), [tfl_template_resolve()]
 #'   (a report's template with its values filled in, and where each came from).
 #' @examples
 #' d <- tfl_arg_defs(fn = "analysis")
@@ -846,10 +795,14 @@ tfl_arg_defs <- function(fn = NULL, template = NULL, study_dir = NULL) {
   }
   fn <- as.character(fn)[1L]
   if (identical(fn, "data")) {
-    return(.arg_table(.data_row_arg_defs(), "data", "data row"))
+    out <- .arg_table(.data_row_arg_defs(), "data", "data row")
+    attr(out, "fn") <- .fn_def_row(fn)
+    return(out)
   }
   if (identical(fn, "analysis")) {
-    return(.arg_table(.analysis_item_arg_defs(), "analysis", "analysis item"))
+    out <- .arg_table(.analysis_item_arg_defs(), "analysis", "analysis item")
+    attr(out, "fn") <- .fn_def_row(fn)
+    return(out)
   }
   ent <- tfl_schema(fn)
   if (is.null(ent)) {
@@ -860,7 +813,9 @@ tfl_arg_defs <- function(fn = NULL, template = NULL, study_dir = NULL) {
                           ent$visible)
   args <- .arg_formal_defaults(args, ent$formal_defaults)
   step <- if (fn %in% .arg_page_fns) "page" else .arg_step_for_stage(ent$stage)
-  .arg_table(args, step, fn, ent[["groups"]])
+  out <- .arg_table(args, step, fn, ent[["groups"]])
+  attr(out, "fn") <- .fn_def_row(fn)
+  out
 }
 
 # An argument whose definition writes no `default` takes the function's own
@@ -899,6 +854,9 @@ tfl_arg_defs <- function(fn = NULL, template = NULL, study_dir = NULL) {
   d <- list(type = dots$type %||% "string", description = dots$description %||% "")
   if (!is.null(dots$input)) d$input <- dots$input
   if (!is.null(dots$choices)) d$choices <- dots$choices
+  if (!is.null(dots$values)) d$values <- dots$values
+  if (isTRUE(dots$free)) d$free <- TRUE
+  if (!is.null(dots$label)) d$label <- dots$label
   if (!is.null(dots$editor)) d$editor <- dots$editor
   d$dots_style <- dots$style %||% NA_character_
   d$dots_key <- dots$key %||% NA_character_

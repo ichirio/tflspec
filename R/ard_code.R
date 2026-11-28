@@ -161,50 +161,110 @@
   paste(lines, collapse = "\n")
 }
 
-# The names R code assigns, or NA when it defines a named function or assigns
-# with <<- (code that is best run in a scope of its own)
+# The names R code assigns in its own scope (not in a function written in
+# it): `x <- `, `x = `, `for (x in )`, and the object a replacement changes
+# (`x$a <- `, `x[i] <- `, `names(x) <- ` assign x).  NA when it does not
+# parse or assigns with <<- (outside whatever scope it is given).
 .code_assigns <- function(code) {
   tk <- .code_tokens(code)
-  if (is.null(tk)) return(NA)
-  # (a function written inside a call, `lapply(x, function(n) n)`, is not one
-  # the code defines)
-  fn <- which(tk$token == "FUNCTION")
-  defined <- length(fn) > 0L && any(fn > 1L & tk$token[pmax(fn - 1L, 1L)] %in% c("LEFT_ASSIGN", "EQ_ASSIGN"))
-  if (defined || any(tk$text %in% c("<<-", "->>"))) {
-    return(NA)
+  if (is.null(tk) || any(tk$text %in% c("<<-", "->>"))) return(NA)
+  ex <- parse(text = code, keep.source = FALSE)
+  out <- character()
+  # x$a, x[i], names(x), attr(x, "a"): x
+  object <- function(e) {
+    while (is.call(e) && length(e) > 1L) e <- e[[2L]]
+    if (is.name(e) || (is.character(e) && length(e) == 1L)) as.character(e)
   }
-  n <- nrow(tk)
-  left <- which(tk$token %in% c("LEFT_ASSIGN", "EQ_ASSIGN"))
-  right <- which(tk$token == "RIGHT_ASSIGN")
-  unique(c(tk$text[left[left > 1L] - 1L], tk$text[right[right < n] + 1L]))
+  walk <- function(e) {
+    f <- if (is.name(e[[1L]])) as.character(e[[1L]]) else ""
+    if (identical(f, "function")) return(invisible())
+    if (f %in% c("<-", "=") && length(e) == 3L) out <<- c(out, object(e[[2L]]))
+    if (identical(f, "for")) out <<- c(out, as.character(e[[2L]]))
+    a <- as.list(e)[-1L]
+    for (i in seq_along(a)) if (is.call(a[[i]])) walk(a[[i]])
+    invisible()
+  }
+  for (i in seq_along(ex)) if (is.call(ex[[i]])) walk(ex[[i]])
+  unique(out)
 }
 
-# One expression that is no assignment and has no `<<-` (a function inside
-# it may assign what it likes)
-.code_plain_single <- function(code) {
+# The names R code reads as objects or calls (a symbol not after `$` or
+# `@`, not an argument's name)
+.code_reads <- function(code) {
   tk <- .code_tokens(code)
-  !is.null(tk) && !any(tk$text %in% c("<<-", "->>", "->"))
+  if (is.null(tk)) return(character())
+  prev <- c("", tk$token[-nrow(tk)])
+  unique(tk$text[tk$token %in% c("SYMBOL", "SYMBOL_FUNCTION_CALL") &
+                   !prev %in% c("'$'", "'@'")])
 }
 
-# The code of a `custom` analysis (or an analysis data's `code`) as the
-# program's own lines: everything before its last expression as it is, the
-# last made `name` (through `steps`).  NULL when that does not read well:
-# the code assigns a name the program has (`avoid`), defines a function,
-# or ends in an assignment -- then it runs in local() as before.
-.code_as_program <- function(code, name, steps, avoid) {
+# The one name a piece of one expression assigns (`x_breaks <- ...`), else
+# NULL
+.code_one_target <- function(code) {
+  ex <- tryCatch(parse(text = code, keep.source = FALSE), error = function(e) NULL)
+  as <- .code_assigns(code)
+  if (length(ex) == 1L && !anyNA(as) && length(as) == 1L) as
+}
+
+# R code two spaces in, one element a line: a blank line stays blank, a
+# line inside a string as it is
+.code_indent <- function(code) {
+  lines <- strsplit(code, "\n", fixed = TRUE)[[1L]]
+  pd <- tryCatch(utils::getParseData(parse(text = code, keep.source = TRUE)),
+                 error = function(e) NULL)
+  inside <- integer()
+  s <- if (!is.null(pd)) pd[pd$token == "STR_CONST" & pd$line2 > pd$line1, , drop = FALSE]
+  for (k in seq_len(NROW(s))) inside <- c(inside, seq.int(s$line1[k] + 1L, s$line2[k]))
+  own <- !seq_along(lines) %in% inside
+  blank <- own & !nzchar(trimws(lines))
+  lines[blank] <- ""
+  lines[own & !blank] <- paste0("  ", lines[own & !blank])
+  lines
+}
+
+# SPEC R written into a program (A1).  The one rule: a piece is written as
+# it is only when it is one expression that assigns no name but `name`, the
+# one it makes; any other piece runs in a scope of its own, local({ }), and
+# the program assigns its result to `name` -- the value of its last
+# expression (`value = "last"`: an analysis's ARD, an analysis data) or of
+# `name` at its end (`value = "name"`: a Rework's `data`, a figure step's
+# `out`, a layer's `p`).  What else it assigns (`data$TRT01A <- `, `fit`,
+# `cox`) stays in the piece: the program's objects are not changed.
+# `binds`: the program's objects the SPEC text names otherwise
+# (`c(data = "adtte_saf")`): renamed in a piece written as it is, bound in
+# the scope (those it reads, not one of the same name).  `steps`: the pipe
+# after it.  `name = NULL`: the piece keeps nothing.
+.code_piece <- function(code, name, value = c("last", "name"), binds = character(),
+                        steps = list()) {
+  value <- match.arg(value)
+  code <- paste(as.character(code), collapse = "\n")
+  ex <- tryCatch(parse(text = code, keep.source = FALSE), error = function(e) NULL)
+  as <- .code_assigns(code)
+  steps <- Filter(Negate(is.null), steps)
+  if (length(ex) == 1L && !anyNA(as) && all(as %in% name)) {
+    own <- .rename_symbols(code, binds)
+    # (it assigns its name: the steps after it on that name)
+    if (length(as)) return(c(own, if (length(steps)) .pipe_code(name, name, steps)))
+    if (value == "name") return(own)
+    made <- .code_as_program(own, name, steps)
+    if (!is.null(made)) return(made)
+  }
+  b <- binds[names(binds) %in% .code_reads(code) & names(binds) != binds]
+  last <- if (length(ex)) ex[[length(ex)]]
+  body <- c(if (length(b)) sprintf("  %s <- %s", names(b), b), .code_indent(code),
+            if (value == "name" && !is.null(name) && !identical(last, as.name(name)))
+              paste0("  ", name))
+  txt <- paste(c("local({", body, "})"), collapse = "\n")
+  if (is.null(name)) txt else .pipe_code(name, txt, steps)
+}
+
+# One expression written as the program's own lines (.code_piece()): the
+# comments above it, the expression made `name` (through `steps`).  NULL
+# when that does not read well (another expression on its first line).
+.code_as_program <- function(code, name, steps) {
   ex <- tryCatch(parse(text = code, keep.source = TRUE), error = function(e) NULL)
-  if (!length(ex)) return(NULL)
-  last <- ex[[length(ex)]]
-  if (is.call(last) && as.character(last[[1L]])[1L] %in% c("<-", "=", "<<-")) {
-    return(NULL)
-  }
-  # one expression assigns nothing of its own at the top (a function in it
-  # keeps what it assigns); several: what they assign must be no name of the
-  # program's
-  if (length(ex) > 1L || !.code_plain_single(code)) {
-    as <- .code_assigns(code)
-    if (anyNA(as) || any(as %in% avoid)) return(NULL)
-  }
+  if (length(ex) != 1L) return(NULL)
+  last <- ex[[1L]]
   sr <- attr(ex, "srcref")[[length(ex)]]
   lines <- strsplit(code, "\n", fixed = TRUE)[[1L]]
   l1 <- sr[1L]
@@ -236,11 +296,19 @@
 # ---- the setup ------------------------------------------------------------
 
 # the names the setup and tflspec give (a study's code does not assign them)
-.ard_helper_names <- c("set_levels", "tag_ard", "fmt_pvalue", "fmt_ard",
+.ard_helper_names <- c("set_levels", "tag_ard", "fmt_pvalue", "fmt_num", "fmt_ard",
                        "keep_stats", "save_ard", "fmt_default", "tfl_stats",
                        "complete_hierarchy", "relevel_ard", "drop_empty_groups", "keep_min_pct",
                        "ard_hierarchical_or_none", "order_arms", "order_levels", "bind_items",
-                       "blank_as_na", "missing_level")
+                       "blank_as_na", "missing_level", "tte_time")
+
+# The event of a time to event, as every writer writes it: CNSR 0 is the
+# event, any other value (1, 2, ... one a censoring reason) a censoring.
+# `1 - CNSR` holds only while CNSR is 0 or 1.  `pkg = FALSE`: a bare
+# `Surv(...)`, for a program that has attached survival or ggsurvfit.
+.tte_surv <- function(time = "AVAL", censor = "CNSR", pkg = TRUE) {
+  sprintf("%sSurv(%s, %s == 0)", if (pkg) "survival::" else "", time, censor)
+}
 
 # the packages an ARD program attaches (its setup's library() calls), and
 # those R attaches itself: their functions without `pkg::`
@@ -835,8 +903,8 @@
 
 # The report's code lists at its program's head: `cl_sex <- c(F =
 # "Female", M = "Male")`, each code (a name) and its label -- the label the
-# table plan applies; the ARD holds the codes; a list without labels, its
-# values
+# table plan applies, in a report program; a list without labels, its
+# values -- what the ARD program has, codes only (.codelist_codes_only())
 .codelists_lines <- function(levels) {
   nm <- function(v) ifelse(make.names(v) == v, v, encodeString(v, quote = "\""))
   unlist(lapply(names(levels), function(v) {
@@ -1052,8 +1120,7 @@
   dl <- .ard_data_lines(x, a, nad, levels)
   xo <- x
   xo$analysis_data <- ad_o
-  made <- .adata_lines(xo, ids, subj, levels,
-                       avoid = c(.r_name(dl$used_ds), paste0("pop_", .r_name(dl$pops_id))))
+  made <- .adata_lines(xo, ids, subj, levels)
   # one section, `# ---- data ----`: the datasets as the setup (or the
   # program's own reads) made them, the analysis set, the analysis data.  The
   # analysis set is the object <dataset>_sub (.ard_sub_names()), so a code
@@ -1220,7 +1287,7 @@
       on <- which(!is.na(dcol[rows]) & dcol[rows] == d)
       unique(unlist(lapply(on, function(i) .den_needs(rd[i, ], keys))))
     })
-    made <- .adata_lines(xo, named[[o]], subj, lv, avoid = taken, reads = reads,
+    made <- .adata_lines(xo, named[[o]], subj, lv, reads = reads,
                          needs = needs, dens = rd$denominator)
     # the analyses reading the same records (dataset, analysis set, where)
     # share one data: it takes the union of the ADSL columns they need
@@ -1228,8 +1295,14 @@
     own <- is.na(dcol[rows])
     take_of <- lapply(split(seq_along(rows)[own], grp[own]), function(k)
       unique(unlist(lapply(rows[k], function(i) .den_needs(a[i, ], keys)))))
+    # the items' own names (`name:`) and inputs (`from:`)
+    given_nm <- .item_names_given(a)
+    from_of <- .item_froms_given(a)
+    for (i in rows) .ard_from_check(a[i, , drop = FALSE])
     data_name <- vapply(rows, function(i) {
       r <- a[i, ]
+      # an item with `from:` reads that object (the pipe), no data of its own
+      if (!is.na(from_of[i])) return(from_of[[i]])
       # on an analysis data: it, or its records the analysis's condition keeps
       if (!is.na(dcol[i])) {
         if (is.na(r$where)) return(dcol[i])
@@ -1239,7 +1312,9 @@
         taken <<- c(taken, nm)
         data_of[[key]] <<- nm
         auto_ds[[nm]] <<- .adata_dataset(ad_o, dcol[i]) %||% dcol[i]
-        auto_note[[nm]] <<- sprintf("made from %s; where", dcol[i])
+        # (its condition is the filter line below: no "where" of its own, which
+        # ended the comment with nothing after it, as the analysis data's)
+        auto_note[[nm]] <<- sprintf("made from %s.", dcol[i])
         made <<- c(made, .made_line(nm, dcol[i], r$where, lv))
         return(nm)
       }
@@ -1286,16 +1361,19 @@
           paste0(" \u2014 ", .records_sheet(x)$label[rk])) else
           if (!is.na(r$dataset)) r$dataset else pop_ds,
         if (!is.null(join)) sprintf(" of the subjects of %s", pop),
-        if (!is.null(join) && length(take_txt)) sprintf(", %s from ADSL", paste(take_txt, collapse = ", ")),
-        if (!is.null(whr)) "; where")
+        if (!is.null(join) && length(take_txt)) sprintf(", %s from ADSL", paste(take_txt, collapse = ", ")))
+      # (no "; where": its condition is the filter line below)
       made <<- c(made, .make_code(nm, src, c(
         join, if (!is.null(whr)) sprintf("dplyr::filter(%s)", whr),
         if (length(lv)) .levels_step)))
       nm
     }, "")
     names(data_name) <- as.character(rows)
+    # (an item's `from:` is an object, not data the program makes: no data
+    # of its own, as an item with no dataset)
     dn <- data.frame(output_id = o, analysis_id = a$analysis_id[rows],
-                     data = unname(data_name), stringsAsFactors = FALSE)
+                     data = ifelse(is.na(from_of[rows]), unname(data_name), "NULL"),
+                     stringsAsFactors = FALSE)
     if (several) {
       # the report's part, its code lists put on what its analyses read
       # once the analyses are written (below), as in one report's program
@@ -1311,7 +1389,7 @@
     # each analysis's ARD under a name of its own: .ard_<id>
     top <- rows[is.na(par[rows])]
     fun_names <- .ard_fun_names()
-    ard_names <- .ard_item_names(a$analysis_id[top], c(taken, fun_names))
+    ard_names <- .ard_item_names(a$analysis_id[top], c(taken, fun_names), given = given_nm[top])
     avoid <- c(taken, ard_names, paste0(ard_names, "_conditions"), paste0(ard_names, "_one"),
                "ard", "ards", "report_id", if (length(lv)) .cl_name(names(lv)),
                .ard_helper_names)
@@ -1333,9 +1411,9 @@
       }
       lines <- if (.item_type(r) == "model") {
         # a model: its call under its own name, not an ARD's
-        mn <- .ard_model_name(r$analysis_id, avoid)
+        mn <- if (!is.na(given_nm[i])) given_nm[i] else .ard_model_name(r$analysis_id, avoid)
         avoid <- c(avoid, mn)
-        .ard_model_lines(r, dname, mn)
+        .ard_model_lines(r, dname, mn, from = !is.na(from_of[i]))
       } else if (!is.null(cond)) {
         # condition rows: the analysis once in each (purrr::pmap); a param
         # in the call's arguments or its post steps the function's argument
@@ -1343,19 +1421,18 @@
         for (k in intersect(c("args", "post"), names(rp))) {
           if (!is.na(rp[[k]])) rp[[k]] <- .item_param_refs(rp[[k]], .item_params(r))
         }
-        .ard_cond_lines(r, cond, .ard_item_calls(xo, rp, keys, subj, "data", "ard", avoid),
+        .ard_cond_lines(r, cond, .ard_item_calls(xo, rp, keys, subj, "data", "ard"),
                         dname, ard_names[j])
       } else if (length(kids)) {
         .ard_wrapper_lines(xo, r, a[kids, , drop = FALSE], keys, subj,
                            dname, ard_names[j])
       } else if (length(.split_bar(r$groups %||% NA))) {
         # condition-defined groups: the analysis once in each level
-        .ard_groups_lines(xo, r, .ard_analysis_lines(xo, r, keys, subj, "data", "ard",
-                                                     avoid),
+        .ard_groups_lines(xo, r, .ard_analysis_lines(xo, r, keys, subj, "data", "ard"),
                           dname, ard_names[j])
       } else {
         .ard_item_calls(xo, r, keys, subj, dname,
-                        ard_names[j], avoid, per_cols = TRUE)
+                        ard_names[j], per_cols = TRUE)
       }
       code <- c(code, if (j > 1L || several) "", pre, lines,
                 .item_per_level_lines(r, ard_names[j]))
@@ -1500,7 +1577,7 @@
   syms <- unique(unlist(lapply(rest, function(l)
     tryCatch(all.names(parse(text = l, keep.source = FALSE)),
              error = function(e) character()))))
-  # a data that is another under a name of its own (`adsl_saf <- pop_saf`,
+  # a data that is another under a name of its own (`adsl_sub <- pop_saf`,
   # the study's program keeps pop_* for every report): what it names is
   # read too -- it has no step of its own to put the code lists on
   alias <- "^([A-Za-z.][A-Za-z0-9._]*) <- ([A-Za-z.][A-Za-z0-9._]*)$"
@@ -1560,7 +1637,7 @@
 
 # One analysis: `.ard_<id> <- call |> ... |> tag_ard(...)`, its label a
 # comment above it
-.ard_analysis_lines <- function(x, r, keys, subj, data, name, avoid) {
+.ard_analysis_lines <- function(x, r, keys, subj, data, name) {
   pid <- r$population_id
   pop <- if (!is.na(pid)) paste0("pop_", .r_name(pid))
   pop_name <- if (is.null(pop)) "NULL" else pop
@@ -1618,34 +1695,27 @@
       list(node), steps))))
   }
   if (identical(call_fn, "(code)")) {
-    out <- .code_as_program(node, name, steps, avoid)
-    if (is.null(out)) {
-      # code that is best in a scope of its own: `data` and `population`
-      # bound there
-      inner <- strsplit(r$code, "\n", fixed = TRUE)[[1L]]
-      out <- .pipe_code(name, paste(c("local({",
-                                      paste0("  data <- ", data),
-                                      paste0("  population <- ", pop_name),
-                                      paste0("  ", inner),
-                                      "})"), collapse = "\n"), steps)
-    }
-    return(c(comment, out))
+    # the SPEC's code, its `data` and `population` the program's
+    # (.code_piece(): one expression as it is, else in a scope of its own)
+    return(c(comment, .code_piece(r$code, name, "last",
+                                  binds = c(data = data, population = pop_name),
+                                  steps = steps)))
   }
   # an analysis that is a call: written from its calls (.ard_analysis_call(),
   # the list the YAML spec's run reads too: R/spec_ard.R)
   .ard_call_lines(.ard_analysis_call(x, r, keys, subj, data = data), r, data, name)
 }
 
-# An analysis data that is an analysis set and nothing else (`adsl_saf <-
+# An analysis data that is an analysis set and nothing else (`adsl_sub <-
 # pop_saf`), when the set is used for nothing else in the program: made
 # once, under the data's name, where the analysis data are
-# (`adsl_saf <- adsl |> dplyr::filter(SAFFL == "Y") |> ...`), and no pop_saf.
+# (`adsl_sub <- adsl |> dplyr::filter(SAFFL == "Y") |> ...`), and no pop_saf.
 .pop_as_adata <- function(code, data_ids) {
   rx <- "^([A-Za-z.][A-Za-z0-9._]*) <- (pop_[A-Za-z0-9._]+)$"
-  # (or the set's subjects narrowed further: `adsl_saf <- pop_saf |>
+  # (or the set's subjects narrowed further: `adsl_sub <- pop_saf |>
   # filter(PART == "Part 1")`, the set's own steps then these)
   rx_pipe <- "^([A-Za-z.][A-Za-z0-9._]*) <- (pop_[A-Za-z0-9._]+) \\|>\n"
-  # (one step, in one call: `adsl_saf <- filter(pop_saf, PART == "Part 1")`)
+  # (one step, in one call: `adsl_sub <- filter(pop_saf, PART == "Part 1")`)
   rx_call <- paste0("^([A-Za-z.][A-Za-z0-9._]*) <- ([A-Za-z_.][A-Za-z0-9._:]*)",
                     "\\((pop_[A-Za-z0-9._]+), (.*)\\)$")
   one <- grepl(rx_call, code) & !grepl("\n", code, fixed = TRUE)
@@ -2003,10 +2073,48 @@
 # The R names the program gives the report's items (one builder: the ARD
 # program and tfl_output_objects() both call these).  An ARD or a value
 # item: .ard_<its id, lower case, other characters _>, made unique against
-# `taken` (_1, _2 ...); a model item: its id, lower case.
-.ard_item_names <- function(ids, taken = character()) {
-  nm <- make.unique(c(taken, paste0(".ard_", gsub("[^a-z0-9]+", "_", tolower(ids)))), sep = "_")
-  if (length(taken)) nm[-seq_along(taken)] else nm
+# `taken` (_1, _2 ...); a model item: its id, lower case.  `given`: the
+# names the items write (`name:`, NA for none), used as they are; the others
+# get the default, made unique against them too (B-5: the program and
+# tfl_output_objects() read the names here, so they cannot differ).
+.ard_item_names <- function(ids, taken = character(), given = NULL) {
+  if (is.null(given)) given <- rep(NA_character_, length(ids))
+  have <- !is.na(given)
+  taken <- c(taken, given[have])
+  nm <- make.unique(c(taken, paste0(".ard_", gsub("[^a-z0-9]+", "_", tolower(ids[!have])))), sep = "_")
+  given[!have] <- if (length(taken)) nm[-seq_along(taken)] else nm
+  given
+}
+
+# The items' own names (`name:`) and inputs (`from:`) of the analyses
+# `a`, NA where an item has none (a sheet without the columns: none)
+.item_names_given <- function(a) {
+  vapply(seq_len(nrow(a)), function(i) .item_cell(a[i, , drop = FALSE], "name"), "")
+}
+.item_froms_given <- function(a) {
+  vapply(seq_len(nrow(a)), function(i) .item_cell(a[i, , drop = FALSE], "from"), "")
+}
+
+# An item with `from:` takes its input from that object (the pipe), not
+# from a dataset it makes itself; it has no parent (a nested item is a part
+# of its parent's call: no object of its own).  Stops on what it cannot say.
+.ard_from_check <- function(r) {
+  who <- sprintf("analysis item %s", r$analysis_id)
+  if (!is.na(.item_cell(r, "parent")) &&
+      (!is.na(.item_cell(r, "from")) || !is.na(.item_cell(r, "name")))) {
+    .ard_stop(sprintf(paste0("`name:` / `from:` on a nested item (%s, in %s) cannot be written: ",
+                             "it is a part of its parent's call, not an object of its own; ",
+                             "put them on the parent."), r$analysis_id, r$parent))
+  }
+  if (is.na(.item_cell(r, "from"))) return(invisible())
+  own <- c("data", "dataset", "records", "where")
+  bad <- own[!vapply(own, function(k) is.na(.item_cell(r, k)), NA)]
+  if (length(bad)) {
+    .ard_stop(sprintf(paste0("%s has `from:` and `%s`: `from:` is its input (the pipe), so it makes ",
+                             "no data of its own; drop one of them."),
+                      who, paste(bad, collapse = "`, `")))
+  }
+  invisible()
 }
 .ard_model_name <- function(id, avoid = character()) {
   make.unique(c(avoid, make.names(tolower(id))), sep = "_")[length(avoid) + 1L]
@@ -2094,7 +2202,9 @@
     .item_id_given(sprintf("toupper(paste(%s, sep = \"_\"))",
                            paste(sprintf("unique(data$%s)", per), collapse = ", ")), rule$ids)
   } else .q(r$analysis_id)
-  if (own) rule <- sprintf("if (nzchar(analysis_id)) analysis_id else %s", rule)
+  # (the function's argument, .env$: inside mutate() a bare analysis_id is
+  # the ARD's own column, which tag_ard() has added, one value a row)
+  if (own) rule <- sprintf("if (nzchar(.env$analysis_id)) .env$analysis_id else %s", rule)
   sprintf("  ard <- dplyr::mutate(ard, analysis_id = %s)", rule)
 }
 
@@ -2211,10 +2321,10 @@
 # An item's call, or its calls (ards:): each the item with the call's keys
 # over its own, under a name of its own, bound into the item's (one
 # analysis_id); in a condition row's function, into its `ard`
-.ard_item_calls <- function(x, r, keys, subj, data, name, avoid, per_cols = FALSE) {
+.ard_item_calls <- function(x, r, keys, subj, data, name, per_cols = FALSE) {
   ar <- .item_ards(r)
   if (is.null(ar)) {
-    return(c(.ard_analysis_lines(x, r, keys, subj, data, name, avoid),
+    return(c(.ard_analysis_lines(x, r, keys, subj, data, name),
              if (per_cols) .item_per_cols_lines(r, r, name)))
   }
   nm <- paste0(if (identical(name, "ard")) ".ard" else name, "_", seq_along(ar))
@@ -2222,7 +2332,7 @@
   for (k in seq_along(ar)) {
     rk <- r
     for (key in names(ar[[k]])) rk[[key]] <- ar[[k]][[key]]
-    out <- c(out, .ard_analysis_lines(x, rk, keys, subj, data, nm[k], avoid),
+    out <- c(out, .ard_analysis_lines(x, rk, keys, subj, data, nm[k]),
              if (per_cols) .item_per_cols_lines(r, rk, nm[k]))
   }
   c(out, sprintf("# %s: its %d calls, one analysis", r$analysis_id, length(ar)),
@@ -2231,9 +2341,14 @@
 
 # A model item (type: model): its call under its own name, not bound into
 # the ARD; the call's `data` the item's data
-.ard_model_lines <- function(r, data, name) {
+.ard_model_lines <- function(r, data, name, from = FALSE) {
   args <- .item_cell(r, "args")
   args <- if (is.na(args)) character() else trimws(args)
+  if (from) {
+    # `name <- from |> method(args)`: the pipe fills the first argument
+    return(c(sprintf("# %s: a model, kept as %s (not in the ARD)", r$analysis_id, name),
+             .pipe_code(name, data, list(sprintf("%s(%s)", r$method, paste(args, collapse = ", "))))))
+  }
   if (!length(args) || !grepl("\\bdata\\s*=", args)) {
     args <- paste(c(args, paste0("data = ", data)), collapse = ", ")
   } else {
@@ -2301,7 +2416,7 @@
   # (an analysis_id column: the row's own id, else the per rule's)
   if ("analysis_id" %in% names(cond)) {
     cond$analysis_id[is.na(cond$analysis_id)] <- ""
-    p <- c(p, "analysis_id")
+    p <- unique(c(p, "analysis_id"))
   }
   tab <- paste0(name, "_conditions")
   fun <- paste0(name, "_one")

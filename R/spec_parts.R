@@ -36,7 +36,8 @@
 # A part item as read from YAML: its content as items, its data as a
 # report's data
 .part_in <- function(args) {
-  if (!is.null(args$content)) {
+  # (`content: !unset`: the layers' part content taken away, as it is)
+  if (!is.null(args$content) && !inherits(args$content, "tfl_unset")) {
     if (!is.list(args$content) || !is.null(names(args$content))) {
       .ard_stop(sprintf("%s: `content` is a sequence of items (`- fn: {args}`).", .spec_part$fn))
     }
@@ -56,7 +57,11 @@
 .part_out <- function(args) {
   out <- .calls_out(args[setdiff(names(args), c("content", "data"))])
   if (!is.null(args$data)) out$data <- .calls_out(args$data)
-  if (!is.null(args$content)) out$content <- .items_to_list(.part_items(args$content))
+  if (inherits(args$content, "tfl_unset")) {
+    out$content <- args$content
+  } else if (!is.null(args$content)) {
+    out$content <- .items_to_list(.part_items(args$content))
+  }
   out[c(intersect(c("name", "absent", "data"), names(out)),
         setdiff(names(out), c("name", "absent", "data", "content")),
         intersect("content", names(out)))]
@@ -215,8 +220,8 @@ tfl_data_code <- function(output, study, ard = TRUE) {
       c("# the study ARD's rows of this report",
         sprintf("%s <- readRDS(\"output/ard/ard.rds\") |>\n  subset(output_id == \"%s\")", nm, ro$id))
     } else {
-      if (is.null(spec)) spec <- .ard_spec_of_study(study, output_id = ro$id)$spec
-      .records_code(ro, d, nm, spec)
+      if (is.null(spec)) spec <- .ard_spec_of_study(study, output_id = ro$id)
+      .records_code(ro, d, nm, spec$spec, spec$codelists)
     }
     stmt <- !grepl("^#", lines) & nzchar(lines)
     lines <- lines[!(stmt & lines %in% seen)]
@@ -235,19 +240,19 @@ tfl_data_code <- function(output, study, ard = TRUE) {
   if (length(s)) s
 }
 
-.records_code <- function(o, data, name, ard_spec) {
+.records_code <- function(o, data, name, ard_spec, codelists = NULL) {
   txt <- function(x) {
     v <- unlist(lapply(x, as.character))
     if (!length(v)) NA_character_ else paste(v, collapse = " | ")
   }
   # (a resolved report with no analysis set has NA)
-  pop <- Filter(Negate(is.na), as.list(data[["population"]] %||% .out_population(o)))
+  pop <- Filter(Negate(is.na), as.list(.data_population(data, o)))
   l <- data.frame(output_id = o$id, dataset = txt(data[["dataset"]]), data = txt(data[["data"]]),
                   population_id = txt(pop),
                   where = txt(data[["where"]]), sort = txt(data[["sort"]]), stringsAsFactors = FALSE)
   sp <- tfl_listing_spec(l, data.frame(output_id = o$id, vars = "USUBJID"), check = FALSE)
   code <- tfl_listing_code(sp, o$id, ard = ard_spec, part = "data",
-                           rework = .records_rework(data))
+                           rework = .records_rework(data), codelists = codelists)
   at <- grep("^data <- ", code)
   if (length(at)) code[at] <- sub("^data <- ", paste0(name, " <- "), code[at])
   code

@@ -37,7 +37,7 @@ test_that("an analysis's calls write the code the program writes", {
     res <- tflspec:::.ard_analysis_call(x, r, keys, "USUBJID")
     expect_identical(
       tflspec:::.ard_call_lines(res, r, "data", "ard_x"),
-      tflspec:::.ard_analysis_lines(x, r, keys, "USUBJID", "data", "ard_x", character()),
+      tflspec:::.ard_analysis_lines(x, r, keys, "USUBJID", "data", "ard_x"),
       info = r$analysis_id)
   }
 })
@@ -70,8 +70,7 @@ test_that("an analysis's code, run, is what its calls make", {
 # a YAML study of two tables, the TOC listing the second first
 sa_yaml_study <- function(dir) {
   dir.create(file.path(dir, "spec", "outputs"), recursive = TRUE)
-  writeLines(c("study_id: SA-1", "keys:", "  id: USUBJID", "  output: output/ard/ard.rds"),
-             file.path(dir, "study.yml"))
+  write_study_yml(dir, c("study_id: SA-1", "keys:", "  id: USUBJID", "  output: output/ard/ard.rds"))
   writeLines(c("datasets:", "  - dataset: ADSL", "    level: ADaM", "    path: data/adam/adsl.rds",
                "populations:", "  - id: SAF", "    dataset: ADSL", "    where: !r SAFFL == \"Y\""),
              file.path(dir, "spec", "data.yml"))
@@ -135,7 +134,8 @@ test_that("a report's own code list applies, not the file's of the same variable
   writeLines(c(readLines(f), "codelists:", "  SEX:", "    - {value: M, label: Men}",
                "    - {value: F, label: Women}"), f)
   base <- tfl_ard_code(tfl_read_study_spec(dir), "T-2", save = FALSE)
-  expect_true(any(grepl("Women", base)))
+  # (the report's own order; the ARD program takes the codes only)
+  expect_true("cl_sex <- c(\"M\", \"F\")" %in% base)
   sa_codelists_file(dir, "SEX: [{value: F, label: Girls}, {value: M, label: Boys}]")
   code <- tfl_ard_code(suppressMessages(tfl_read_study_spec(dir)), "T-2", save = FALSE)
   expect_identical(code, base)

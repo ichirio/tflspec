@@ -105,8 +105,8 @@ test_that("a design from nothing is all added; a parsed answer works", {
 })
 
 test_that("a composed figure is compared plot by plot", {
-  km <- tfl_fig_template("km_simple")
-  box <- tfl_fig_template("box_by_group")
+  km <- tfl_fig_template("km_simple", group = "TRT01P")
+  box <- tfl_fig_template("box_by_group", group = "TRT01A")
   cur <- tfl_fig_design(plots = list(km = km, box = box))
   km2 <- km
   km2$plot$title <- "OS"

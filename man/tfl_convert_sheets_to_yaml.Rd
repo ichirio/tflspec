@@ -47,7 +47,11 @@ setup code), \code{ard} (the ARD sheets), \code{listing} (\code{listings},
 (study.yml's fields), \code{templates}, \code{template_rows} and \code{template_maps}
 (the template reports: \code{\link[=tfl_sheets_from_yaml]{tfl_sheets_from_yaml()}}; a template report's
 map arguments, which the sheets do not hold, are taken from its file
-already in \code{to}, else named in a warning and a note), \code{not_converted} (\code{\link[=tfl_sheets_from_yaml]{tfl_sheets_from_yaml()}}'s notes
+already in \code{to}, else named in a warning and a note), \code{study_codelists}
+(the study's code lists, written to \code{spec/defaults.yml} \verb{codelists:},
+each in its \code{order}; without it, the lists of the \code{spec/defaults.yml}
+already in \code{to}, else the lists the reports refer to named in a warning
+and a note), \code{not_converted} (\code{\link[=tfl_sheets_from_yaml]{tfl_sheets_from_yaml()}}'s notes
 on what the sheets could not hold: listed in \verb{_not_converted.yml} too,
 with one message saying how many).  What the app holds, or what the
 workbooks read as.}
@@ -61,8 +65,9 @@ Reads the definition files of a study folder as tflplanner wrote them --
 \code{study.yml}, \code{spec/table_spec.xlsx}, \code{spec/report_spec.xlsx},
 \code{spec/ard_definition.json} (or \code{spec/ard_spec.xlsx}),
 \code{spec/listing_figure_spec.xlsx}, \verb{spec/figures/<id>.yml} -- and writes
-the YAML spec to \code{to}: \code{study.yml}, \code{spec/data.yml}, \code{spec/defaults.yml},
-\verb{spec/patterns/<name>.yml}, \code{spec/toc.yml} and one
+the YAML spec to \code{to}: \code{study.yml}, \code{spec/data.yml}, \code{spec/defaults.yml}
+(a sheets' \verb{@<name>} is a page configuration there, \verb{styles: <name>:};
+one that names none stops), \code{spec/toc.yml} and one
 \verb{spec/outputs/<id>.yml} a report.  Loose files (a table and a report
 workbook alone) convert too: \code{from} may be a folder holding them.
 }

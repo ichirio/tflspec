@@ -36,7 +36,7 @@ pp_quick_legends <- list(
   panel_inside = c("manual", "inside_tr")
 )
 
-pp_time_units <- c(days = "as_is", weeks = "days_to_weeks", months = "days_to_months", years = "days_to_years")
+pp_time_units <- c(days = "days", weeks = "days_to_weeks", months = "days_to_months", years = "days_to_years")
 
 #' Code object returned by the quick API
 #' @param x A `tfl_code` object.
@@ -119,9 +119,13 @@ pp_prep_adam <- function(adam) if (is.null(adam)) NULL else tfl_read_adam(adam)
 #'   `panel_right`, `panel_inside` (`panel*` = legend drawn from an item table).
 #' @param pop Population flag (`== "Y"`); `NULL` for none.
 #' @param data Dataset name.
-#' @param time,censor Time and censor (1 = censored) variables.
-#' @param time_unit Unit of `time` in the data is days; the axis is shown in
-#'   `days`, `weeks`, `months` or `years`.
+#' @param time,censor Time and censor variables (CNSR: 0 = the event, any
+#'   other value a censoring).
+#' @param time_unit The unit the analysis and the axis use: `days`, `weeks`,
+#'   `months` or `years`.  AVAL is converted from its unit, AVALU (days when
+#'   the data has none), by the study helper `tte_time()`; a data with two
+#'   units stops the program.  The script defines `tte_time()` itself unless
+#'   a study's setup has it.
 #' @param title Figure title.
 #' @param file Write the script to this file.
 #' @param plot_id Used in the output file name.

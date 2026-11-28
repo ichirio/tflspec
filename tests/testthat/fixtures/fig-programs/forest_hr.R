@@ -1,7 +1,7 @@
 # ---- data ------------------------------------------------------------------
-adtte_ttde <- adtte |>
+adtte_sub <- adtte |>
   order_levels() |>
-  filter(PARAMCD == "TTDE", SAFFL == "Y")
+  filter(PARAMCD == "TTDE")
 
 est <- ard_stats(
   ard,
@@ -12,45 +12,48 @@ est <- ard_stats(
 )
 
 # the rows to draw: the comparison arm, a heading row per subgroup
-if (!"Xanomeline High Dose" %in% est[["TRT01A"]][!is.na(est$conf.low)]) {
-  stop("forest_hr: `comparison` (Xanomeline High Dose) is the reference arm or not an arm of the data",
-       call. = FALSE)
-}
-est <- est |>
-  # the reference arm has no interval; a subgroup whose model did not
-  # converge (no events in an arm) has no point: NE
-  filter(!is.na(conf.low)) |>
-  filter(TRT01A == "Xanomeline High Dose") |>
-  mutate(
-    subgroup = case_when(
-      !is.na(SEX) ~ "SEX",
-      !is.na(AGEGR1) ~ "AGEGR1",
-      TRUE ~ "All subjects"
-    ),
-    level = coalesce(SEX, AGEGR1, "All subjects"),
-    ok = is.finite(estimate) & is.finite(conf.low) & is.finite(conf.high) &
-      conf.high < 1000,
-    txt = ifelse(ok, sprintf("%.2f (%.2f, %.2f)", estimate, conf.low, conf.high),
-                 "NE"),
-    across(c(estimate, conf.low, conf.high), ~ ifelse(ok, .x, NA))
-  )
-# a heading row above each subgroup's levels, the levels indented
-# (the headings read the subgroups' labels, a variable's name when it has none)
-sg_label <- c(SEX = "Sex", AGEGR1 = "Age group")
-heads <- est |>
-  filter(subgroup != "All subjects") |>
-  distinct(subgroup) |>
-  mutate(level = coalesce(unname(sg_label[subgroup]), subgroup), head = TRUE)
-est <- est |>
-  mutate(head = FALSE) |>
-  bind_rows(heads) |>
-  arrange(factor(subgroup, levels = unique(est$subgroup)), desc(head)) |>
-  mutate(
-    label = ifelse(head | subgroup == "All subjects", level, paste0("    ", level)),
-    n = ifelse(head, "", as.character(n_obs)),
-    txt = ifelse(head, "", txt),
-    y = rev(row_number())
-  )
+est <- local({
+  if (!"Xanomeline High Dose" %in% est[["TRT01A"]][!is.na(est$conf.low)]) {
+    stop("forest_hr: `comparison` (Xanomeline High Dose) is the reference arm or not an arm of the data",
+         call. = FALSE)
+  }
+  est <- est |>
+    # the reference arm has no interval; a subgroup whose model did not
+    # converge (no events in an arm) has no point: NE
+    filter(!is.na(conf.low)) |>
+    filter(TRT01A == "Xanomeline High Dose") |>
+    mutate(
+      subgroup = case_when(
+        !is.na(SEX) ~ "SEX",
+        !is.na(AGEGR1) ~ "AGEGR1",
+        TRUE ~ "All subjects"
+      ),
+      level = coalesce(SEX, AGEGR1, "All subjects"),
+      ok = is.finite(estimate) & is.finite(conf.low) & is.finite(conf.high) &
+        conf.high < 1000,
+      txt = ifelse(ok, paste0(fmt_num(estimate, 2), " (", fmt_num(conf.low, 2),
+                              ", ", fmt_num(conf.high, 2), ")"), "NE"),
+      across(c(estimate, conf.low, conf.high), ~ ifelse(ok, .x, NA))
+    )
+  # a heading row above each subgroup's levels, the levels indented
+  # (the headings read the subgroups' labels, a variable's name when it has none)
+  sg_label <- c(SEX = "Sex", AGEGR1 = "Age group")
+  heads <- est |>
+    filter(subgroup != "All subjects") |>
+    distinct(subgroup) |>
+    mutate(level = coalesce(unname(sg_label[subgroup]), subgroup), head = TRUE)
+  est <- est |>
+    mutate(head = FALSE) |>
+    bind_rows(heads) |>
+    arrange(factor(subgroup, levels = unique(est$subgroup)), desc(head)) |>
+    mutate(
+      label = ifelse(head | subgroup == "All subjects", level, paste0("    ", level)),
+      n = ifelse(head, "", as.character(n_obs)),
+      txt = ifelse(head, "", txt),
+      y = rev(row_number())
+    )
+  est
+})
 
 # ---- plot ------------------------------------------------------------------
 

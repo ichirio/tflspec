@@ -117,7 +117,7 @@ ssc_sheets <- function(rounding = NULL) {
     datasets = data.frame(dataset = c("ADAE", "ADSL"), path = c("adae.rds", "adsl.rds"),
                           derive = c("AEDUR = AENDY - ASTDY + 1", NA)),
     populations = data.frame(population_id = "SAF", dataset = "ADSL", where = "SAFFL == \"Y\""),
-    analysis_data = data.frame(output_id = "F-1", data_id = "adae_saf", from = "ADAE",
+    analysis_data = data.frame(output_id = "F-1", data_id = "adae_sub", from = "ADAE",
                                population_id = "SAF"),
     analyses = data.frame(output_id = "T-1", analysis_id = "A1", method = "categorical",
                           dataset = "ADSL", population_id = "SAF", by = "TRT01A",
@@ -223,7 +223,7 @@ test_that("tflspec.study_setup: ARD, listing and figure programs start from the 
   expect_false(any(grepl("^adsl <- adsl$", on$ard)))
   expect_true(any(grepl("^adae <- order_levels\\(adae", on$data)))
   expect_false(any(grepl("mutate(AEDUR", on$ard, fixed = TRUE)))
-  expect_true(any(grepl("^adae_saf <- ", on$data)))
+  expect_true(any(grepl("^adae_sub <- ", on$data)))
   expect_true(any(grepl("^data <- adae", on$listing)))
   expect_false(any(grepl("^adae <- ", on$listing)))
   # off again: as it was
@@ -616,20 +616,20 @@ test_that("adam_levels: none -- a report's own levels work, and so does a study 
   item <- function(...) tfl_item("table_plan", list(cols = "TRT01A"))
   # levels written as values, and the report's own list: fine
   own <- tfl_output("T-1", "table", common = list(population = "SAF"),
-                    data = list(list(id = "adsl_saf", from = "ADSL",
+                    data = list(list(id = "adsl_sub", from = "ADSL",
                                      derive = list(SEXF = "factor(SEX, levels = c(\"F\", \"M\"))"))),
                     content = list(item()))
   expect_no_error(tfl_resolve_output(own, st))
   mine <- tfl_output("T-2", "table", common = list(population = "SAF"),
                      codelists = list(SEX = c("F", "M")),
-                     data = list(list(id = "adsl_saf", from = "ADSL",
+                     data = list(list(id = "adsl_sub", from = "ADSL",
                                       derive = list(SEXF = "factor(SEX, levels = cl_sex)"))),
                      content = list(item()))
   expect_no_error(tfl_resolve_output(mine, st))
   # the study's list by name (study$codelists$SEX): no error, and the setup
   # writes study$codelists under none too
   named <- tfl_output("T-3", "table", common = list(population = "SAF"),
-                      data = list(list(id = "adsl_saf", from = "ADSL",
+                      data = list(list(id = "adsl_sub", from = "ADSL",
                                        derive = list(SEXF = "factor(SEX, levels = names(study$codelists$SEX))"))),
                       content = list(item()))
   expect_no_error(tfl_resolve_output(named, st))

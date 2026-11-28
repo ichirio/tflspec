@@ -100,3 +100,15 @@ test_that("a listing's data is read through the folder's variable too", {
                    c("adae <- readRDS(file.path(path_adam, \"adae.rds\"))",
                      "adae <- blank_as_na(adae)"))
 })
+
+test_that("a path is normalised before it is matched: \ and a leading ./", {
+  withr::local_options(tflspec.paths = c(path_adam = "data/adam"))
+  want <- "file.path(path_adam, \"adsl.sas7bdat\")"
+  expect_identical(.path_code("data/adam/adsl.sas7bdat"), want)
+  expect_identical(.path_code("./data/adam/adsl.sas7bdat"), want)
+  expect_identical(.path_code(".//data/adam/adsl.sas7bdat"), want)
+  expect_identical(.path_code("data\\adam\\adsl.sas7bdat"), want)
+  expect_identical(.path_code(".\\data\\adam\\adsl.sas7bdat"), want)
+  # not under it: the path as normalised
+  expect_identical(.path_code(".\\other\\x.rds"), "\"other/x.rds\"")
+})

@@ -43,7 +43,9 @@ study ARD, with the definition's fingerprint), \code{FALSE} in \code{ard}.}
 names its report (a blank \code{output_id} stops).  A report's rows of the
 variables its analyses read (\code{by}, \code{strata}, \code{variables}, and the
 names in \code{args}, \code{code} and \code{post}) count: the program writes them at
-its head (\code{cl_sex <- c(F = "Female", M = "Male")}) and puts them on
+its head, codes only (\code{cl_sex <- c("F", "M")}: no label is the ARD's,
+so a label-only change leaves the program and its fingerprint as they
+were), and puts them on
 the data the analyses read (\code{set_levels(SEX = cl_sex)}): each column a
 factor of the codes in the list's order -- the ARD holds \code{"F"}, not
 \code{"Female"}, and counts a level no record has (\code{n = 0}).  The factor is
@@ -71,9 +73,11 @@ study key \code{output} (default \code{output/ard/ard.rds}).  The code runs from
 the study folder, and reads as a person writes it: the tidyverse layout
 (a call on one line when it fits in 80 characters, else an argument a
 line), dplyr verbs for the data (\code{filter()}, \code{mutate()}, \code{select()}), and
-a \code{custom} analysis's code with the program's names in place of \code{data}
-and \code{population} (in \code{local()} only when it needs a scope of its own: it
-defines a function, or assigns a name the program has).
+a \code{custom} analysis's code: one expression as it is, with the program's
+names in place of \code{data} and \code{population}; code of several expressions
+(or one that assigns a name) as written, in a scope of its own,
+\verb{.ard_<id> <- local(\{ data <- <analysis data>; ... \})}, so what it
+assigns (\verb{data$TRT01A <- }, a model) changes nothing of the program's.
 }
 \details{
 The data comes in three stages: the denominator (ADSL filtered to the
@@ -96,7 +100,8 @@ default in \code{\link[=tfl_ard_statistics]{tfl_ard_statistics()}}) are in the c
 variable's own (\code{BMIBL:sd=3}) with its own list.  An integer is
 that many decimals, \verb{xx.x\%} is \code{label_round(1, scale = 100)},
 \code{xx.x*1000} is \code{label_round(1, scale = 1000)} and
-\code{pvalue} the program's \code{fmt_pvalue()} (\verb{<0.001} or 3 decimals);
+\code{pvalue} the program's \code{fmt_pvalue()} (\verb{<0.001}, or 3 decimals by the
+study's rounding);
 \code{cards::apply_fmt_fun()} then fills \code{stat_fmt}.  What takes no \code{fmt_fun}
 gets the same formats after the call, from \code{fmt_ard()}: cardx's tests, CIs
 and models, \code{cards::ard_stack_hierarchical()}, a study's own function,

@@ -19,10 +19,17 @@
 #'   `NULL` when it has none);
 #' * `tfl_marker(name)` -- an event or symbol marker (`Death`, `censor` ...);
 #' * `tfl_save(plot, file, type)` -- `ggsave()` at the standard's size;
-#' * `tfl_km_risk(ard, fit)` -- a KM figure's number at risk from the KM
-#'   table's ARD (`cardx::ard_survival_survfit(times = )`), checked against
-#'   the curve;
+#' * `tfl_km_risk(ard, fit, divisor = 1)` -- a KM figure's number at risk
+#'   from the KM table's ARD (`cardx::ard_survival_survfit(times = )`),
+#'   checked against the curve.  The ARD's times are in the analysis data's
+#'   unit; `divisor` turns them into the axis's (1 when they already are,
+#'   e.g. when the table's data was converted by `tte_time()`);
 #' * `tfl_check(plot, levels = )` -- the checks of [tfl_check_fig()].
+#'
+#' The script also sets `options(tflspec.fig_style =)` to the same tables
+#' (`colors` rebuilt from `tfl_palettes`), so that [km_curves()] and
+#' [forest_hr()], which read the style from that option, draw with the
+#' study's treatment colours like the rest of the program.
 #'
 #' A figure program sources it (`source("programs/tfl/fig_setup.R")`) and
 #' ends with `tfl_check(plot)`.  `tfl_check_fig()` runs the same checks from
@@ -74,6 +81,18 @@ tfl_fig_setup_code <- function(style = tfl_fig_style(), date = Sys.Date()) {
     "",
     df_code("tfl_markers", style$markers),
     "",
+    "# km_curves() and forest_hr() read the style from this option: the same tables",
+    "options(tflspec.fig_style = list(",
+    "  settings = tfl_settings,",
+    "  colors = data.frame(",
+    "    palette = rep(names(tfl_palettes), lengths(tfl_palettes)),",
+    "    value = unlist(lapply(tfl_palettes, function(p)",
+    "      if (is.null(names(p))) rep(NA_character_, length(p)) else names(p)),",
+    "      use.names = FALSE),",
+    "    colour = unlist(tfl_palettes, use.names = FALSE),",
+    "    stringsAsFactors = FALSE),",
+    "  markers = tfl_markers))",
+    "",
     .fig_unit_guard(),
     "",
     helpers,
@@ -84,6 +103,27 @@ tfl_fig_setup_code <- function(style = tfl_fig_style(), date = Sys.Date()) {
 #' @export
 tfl_check_fig <- function(plot, levels = NULL, quiet = FALSE) {
   e <- new.env(parent = globalenv())
-  eval(parse(text = tfl_fig_setup_code(), encoding = "UTF-8"), envir = e)
+  .fig_setup_eval(e)
   e$tfl_check(plot, levels = levels, quiet = quiet)
+}
+
+# The setup script run into `env` for tflspec's own use: the style option it
+# sets is put back, so a call does not change the session's options.
+.fig_setup_eval <- function(env, style = tfl_fig_style()) {
+  old <- options(tflspec.fig_style = getOption("tflspec.fig_style"))
+  on.exit(options(old), add = TRUE)
+  eval(parse(text = tfl_fig_setup_code(style), encoding = "UTF-8"), envir = env)
+  invisible(env)
+}
+
+# What a study's setup gives a figure report's code before it runs, evaluated
+# into `env`: programs/study_helpers.R (tfl_helpers_code(): fmt_num(),
+# order_levels(), tte_time() ...), then programs/tfl/fig_setup.R
+# (tfl_fig_setup_code(): theme_tfl() ... and the days_per_* constants, each
+# unless the session has it -- a study's own value, set in its setup, wins).
+# A report's content code carries none of them (.fig_script_head()): what
+# runs it outside the study's program gives them here, the same lines.
+.study_setup_eval <- function(env) {
+  eval(parse(text = tfl_helpers_code(), encoding = "UTF-8"), envir = env)
+  .fig_setup_eval(env)
 }

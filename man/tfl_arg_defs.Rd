@@ -10,7 +10,7 @@ tfl_arg_defs(fn = NULL, template = NULL, study_dir = NULL)
 \item{fn}{A function of the schema (\code{"plan_cells"}), or \code{"data"} (the keys
 of a \verb{data:} row) or \code{"analysis"} (the keys of an analysis item).}
 
-\item{template}{A template, \code{"<series>/<template>"} (\code{"tflspec_v1/demog"}).
+\item{template}{A template, \code{"<series>/<template>"} (\code{"tflspec_v1/tflspec_summary"}).
 Its file is found in the series folders: the option \code{tflspec.series_dir},
 tflplanner's home \verb{standards/series/}, the series tflspec ships.}
 
@@ -25,7 +25,10 @@ row \code{...}, of the dots' type.  Its attribute \code{"groups"} is the card's
 groups in their order, a data frame \code{id}, \code{label_en}, \code{label_ja} from
 the function's \verb{groups:} list or, for a template, its series'
 \code{series.yml} (a template's own \verb{groups:} replaces it), entries \verb{\{id: , label: \{en: , ja: \}\}}; no rows when none is written (one unnamed
-group).  The columns:
+group).  For \code{fn}, its attribute \code{"fn"} is the function's one-row data
+frame of \code{\link[=tfl_fn_defs]{tfl_fn_defs()}} (its join, the argument the pipe fills, what
+it gives; \code{"data"} is the \code{data_row} row), \code{NULL} when it has none.
+The columns:
 \describe{
 \item{name}{the argument.}
 \item{label_en, label_ja}{its label, from \verb{label: \{en: , ja: \}}; a
@@ -46,7 +49,7 @@ default for a type \code{r}, \code{formula} or \code{guard}, \code{condition} fo
 \item{required}{\code{TRUE} for an argument that has no default and must be
 given.}
 \item{default}{(a list column) the default as written; a tagged value
-(\verb{!series K}, \verb{!study K}, \verb{!fixed v}, \code{!r}) is a \code{tfl_tagged} object.
+(\verb{!series K}, \verb{!study K}, \verb{!study \{key: K, fallback: V\}}, \verb{!fixed v}, \code{!r}) is a \code{tfl_tagged} object.
 It is resolved for a study by \code{\link[=tfl_template_resolve]{tfl_template_resolve()}}.  A schema
 function's argument with no default written takes the function's own
 default when that is one \code{TRUE} or \code{FALSE} and the argument's type is
@@ -58,12 +61,14 @@ of \code{\link[=tfl_param]{tfl_param()}}): \code{omit} (the argument is left out
 (its step is not made) or \code{stop} (it needs a value: "(none)" is not
 offered); by default \code{stop} for a required argument, else \code{omit}.}
 \item{choices}{(a list column) the sources of the choices, in order:
-the closed words \verb{vars(<data>)}, \verb{levels(<var>)}, \verb{codelist(<name>)},
-\code{populations}, \code{report_data}, \code{study_data}, \code{ard}, \verb{columns(<object>)},
-\code{study_info}, \code{tokens}, \code{stats}, \code{fixed}, \code{styles},
-\verb{from_args(<arg>, ...)}, \verb{figure_style(<palette|marker>)} (the
-study's figure style's colours in their order, or its marker
-shapes).  Another word stops.}
+the closed words of \code{\link[=tfl_choice_sources]{tfl_choice_sources()}} (14: \verb{vars(<data>)},
+\verb{levels(<var>)}, \verb{codelist(<name>)}, \verb{columns(<object>)},
+\code{populations}, \code{study_data}, \verb{objects(<kind>)}, \code{stats},
+\code{format_sets}, \code{styles}, \verb{figure_style(<palette|marker>)}, \code{tokens},
+\code{fixed}, \verb{from_args(<arg>, ...)}).  Another word stops; an old
+word (\code{report_data}, \code{ard}, \code{study_info}) stops naming the new one,
+and so does \verb{levels(<arg>)} of an argument of the card (write
+\verb{levels(from_args(<arg>))}).}
 \item{values}{(a list column) the fixed values (\code{fixed}, an \code{enum}).
 \verb{values:} writes each as a value or \verb{\{value: , label: \{en: , ja: \}\}}.}
 \item{value_labels}{(a list column) the values' labels, a data frame
@@ -81,7 +86,7 @@ or the argument's \verb{labels:} map (column: label).  A \verb{map<K, V>}'s
 two columns are written \verb{columns: \{key: \{label: \}, value: \{label: \}\}};
 a value that is itself a map has its own \verb{columns:} (the same form).}
 \item{new_row}{(a list column) a table's values for a row the user
-adds, by column (\verb{new_row: \{key: subgroup\}}); \code{NULL} when none.  Each
+adds, by column (\code{new_row: {key: subgroup}}); \code{NULL} when none.  Each
 name must be one of the argument's \verb{columns:}.}
 \item{fixed_rows}{(a list column) a template's table param: the rows
 the template writes with fixed values next to its \code{"{name}"} (the
@@ -119,7 +124,7 @@ the entries as one named vector (\code{plan_labels(c(AGE = "Age"))});
 A definition stops, saying what to write, for an unknown \code{tier} or
 \code{unset} or \code{editor} word, a \code{group} not in \verb{groups:}, a \code{member_of} that is not
 another argument, a malformed \code{passes_to}, a label or help that is
-neither a text nor \verb{\{en: , ja: \}}, and a choice word outside the 15.
+neither a text nor \verb{\{en: , ja: \}}, and a choice word outside the 14.
 }
 \description{
 One definition of every argument, for the code SPEC's cards and the
@@ -134,6 +139,7 @@ d[, c("name", "input", "type", "tier")]
 head(tfl_arg_defs(fn = "plan_cells")[, c("name", "input", "type")])
 }
 \seealso{
-\code{\link[=tfl_schema]{tfl_schema()}} (the schema's functions), \code{\link[=tfl_template_resolve]{tfl_template_resolve()}}
+\code{\link[=tfl_schema]{tfl_schema()}} (the schema's functions), \code{\link[=tfl_choice_sources]{tfl_choice_sources()}} (the choice
+sources), \code{\link[=tfl_template_resolve]{tfl_template_resolve()}}
 (a report's template with its values filled in, and where each came from).
 }

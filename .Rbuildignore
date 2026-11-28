@@ -20,3 +20,4 @@
 ^inst/dev$
 ^AGENTS\.md$
 ^CONTRIBUTING\.md$
+^\.gitattributes$

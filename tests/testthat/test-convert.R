@@ -6,8 +6,8 @@
 conv_study <- function(dir) {
   spec <- file.path(dir, "spec")
   dir.create(file.path(spec, "figures"), recursive = TRUE)
-  writeLines(c("study_id: CV-1", "title: A study", "phase: '2'", "created: '2026-10-14'",
-               "tflplanner: 0.0.2.9222"), file.path(dir, "study.yml"))
+  write_study_yml(dir, c("study_id: CV-1", "title: A study", "phase: '2'", "created: '2026-10-14'",
+               "tflplanner: 0.0.2.9222"))
   tb <- list(
     tables = data.frame(output_id = c(NA, "T-1"), cols = c(NA, "ARM"), rows = c(NA, "group = variable"),
                         stringsAsFactors = FALSE),
@@ -43,9 +43,9 @@ conv_study <- function(dir) {
     '{"study": {"key": ["id", "output"], "value": ["USUBJID", "output/ard/ard.rds"]},',
     ' "datasets": {"dataset": ["ADSL"], "level": ["ADaM"], "path": ["data/adam/adsl.rds"], "derive": [null]},',
     ' "populations": {"population_id": ["SAF"], "dataset": ["ADSL"], "where": ["SAFFL == \\"Y\\""], "derive": [null], "label": ["Safety Analysis Set"]},',
-    ' "analysis_data": {"output_id": ["T-1"], "data_id": ["adsl_saf"], "from": ["ADSL"], "population_id": ["SAF"], "subjects_in": [null], "where": [null], "add": [null], "derive": [null], "keep": [null], "distinct": [null], "code": [null]},',
+    ' "analysis_data": {"output_id": ["T-1"], "data_id": ["adsl_sub"], "from": ["ADSL"], "population_id": ["SAF"], "subjects_in": [null], "where": [null], "add": [null], "derive": [null], "keep": [null], "distinct": [null], "code": [null]},',
     ' "analyses": {"output_id": ["T-1", "T-1"], "analysis_id": ["BIGN", "AGE"], "parent": [null, null], "label": [null, null],',
-    '   "method": ["categorical", "continuous"], "data": ["adsl_saf", "adsl_saf"], "dataset": [null, null], "population_id": [null, null],',
+    '   "method": ["categorical", "continuous"], "data": ["adsl_sub", "adsl_sub"], "dataset": [null, null], "population_id": [null, null],',
     '   "where": [null, null], "by": [null, "ARM"], "strata": [null, null], "variables": ["ARM", "AGE"], "statistics": [null, "N | mean | sd"],',
     '   "denominator": [null, null], "formats": [null, null], "args": [null, "conf.level = 0.9"], "post": [null, null], "code": [null, null],',
     '   "purpose": [null, null], "reason": [null, null]}}'), file.path(spec, "ard_definition.json"))
@@ -80,7 +80,7 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   expect_identical(st$study_id, "CV-1")
   expect_null(st$tflplanner)
   expect_identical(st$keys$output, "output/ard/ard.rds")
-  expect_identical(st$spec_version, 1L)
+  expect_identical(st$spec_version, tflspec:::.spec_version)
   # every report's file: the report sheet's study row
   expect_identical(st$settings$file, "{output_id}.rtf")
   expect_true("tflspec" %in% names(st$packages))
@@ -112,9 +112,11 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   expect_identical(t1$kind, "table")
   expect_identical(t1$extends, "defaults")
   expect_identical(t1$style, "Compact")
-  expect_identical(t1$common$population, "SAF")
+  # (its set on its subjects row, A2-T: never `common:`)
+  expect_null(t1$common$population)
+  expect_identical(t1$ard$analysis_data[[1L]]$population, "SAF")
   expect_identical(t1$data$source, "ard")
-  expect_identical(t1$ard$analysis_data[[1L]]$id, "adsl_saf")
+  expect_identical(t1$ard$analysis_data[[1L]]$id, "adsl_sub")
   expect_identical(t1$ard$analyses[[2L]]$id, "AGE")
   expect_identical(t1$ard$analyses[[2L]]$statistics, c("N", "mean", "sd"))
   expect_s3_class(t1$ard$analyses[[2L]]$args, "tfl_r")
@@ -276,9 +278,9 @@ test_that("a table of label NA, rows by name over a default template, row groups
   tfl_yaml_from_sheets(sheets, to, overwrite = TRUE)
   o <- tfl_resolve_output(tfl_read_outputs(to)[["T-9"]], tfl_read_study_spec(to))
   expect_identical(o$content[[1L]]$args$label, NA)
-  y <- tfl_content_code(o)
+  y <- no_bign(tfl_content_code(o))
   # the same plan as the sheets' (its data normalized first, a step of its own)
-  s0 <- trimws(sub("^plan <- table_plan[(]data, ", "table_plan(", tfl_table_code(sp, "T-9", data = "data", normalize = FALSE)))
+  s0 <- trimws(sub("^plan <- table_plan[(]data, ", "table_plan(", no_bign(tfl_table_code(sp, "T-9", data = "data", normalize = FALSE))))
   s1 <- trimws(y[-(1:2)])
   expect_identical(s1, s0)
 })

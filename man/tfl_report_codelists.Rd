@@ -16,12 +16,17 @@ files, read as \code{\link[=tfl_sheets_from_yaml]{tfl_sheets_from_yaml()}} reads
 \item{rows}{The reports' own code list rows (the sheets' \code{codelists},
 a template's lists among them), when the caller has them: the sheets are
 then not made again.  The result keeps the columns of \code{rows}, and a row
-of a report not in \code{outputs} stays.  \code{NULL} (default): made from
+of a report not in \code{outputs} stays.  The rows of a variable with a
+\code{list} cell (a reference to one of the study's lists) are made again
+from the study's list, whatever their codes and labels say; a list or code
+the study has not got stops.  \code{NULL} (default): made from
 \code{outputs}.}
 }
 \value{
 A data frame of the sheets' \code{codelists} rows (\code{output_id},
-\code{variable}, \code{value}, \code{label}, \code{order}, \code{under}), the reports in the
+\code{variable}, \code{value}, \code{label}, \code{order}, \code{under}, \code{list}: a reference to
+one of the study's lists as its rows, the study's codes and labels,
+\code{list} naming it), the reports in the
 TOC's order; every row has its report (no \code{NA} \code{output_id}), and zero
 rows when no report has a list.  \code{\link[=tfl_ard_code]{tfl_ard_code()}} and \code{\link[=tfl_build_ard]{tfl_build_ard()}}
 write a study's ARD with these.
@@ -40,6 +45,14 @@ list.
 \details{
 The ARD holds each row's \code{value} (the code); its \code{label} is applied by the
 report's table plan (\code{plan_labels}), and by a figure's legend.
+
+The ARD side takes the codes only: the ARD program writes each list as
+its codes in their order (\code{cl_sex <- c("F", "M")}), and the ARD's
+fingerprint (\code{\link[=tfl_ard_spec_hash]{tfl_ard_spec_hash()}}) counts the codes, their order and
+\code{under}, never a label.  A change of labels alone leaves the ARD up to
+date; the labels go into the report program's \code{plan_labels()}.  A
+report's list that none of its steps uses (its data, analyses, content or
+figure) is a warning, naming the variable.
 }
 \examples{
 d <- system.file("extdata", "spec-yaml", package = "tflspec")

@@ -1,7 +1,7 @@
 # ---- data ------------------------------------------------------------------
-adtr_bpchg <- adtr |>
+adtr_sub <- adtr |>
   order_levels() |>
-  filter(PARAMCD == "BPCHG", FASFL == "Y") |>
+  filter(PARAMCD == "BPCHG") |>
   left_join(
     adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
     by = "USUBJID"
@@ -16,7 +16,7 @@ adtr_bpchg <- adtr |>
 pal <- tfl_colours("response")
 
 plot <- ggplot() +
-  geom_col(data = adtr_bpchg, aes(x = INDEX, y = AVAL, fill = BOR), width = 0.8) +
+  geom_col(data = adtr_sub, aes(x = INDEX, y = AVAL, fill = BOR), width = 0.8) +
   geom_hline(yintercept = 0, linetype = "solid", colour = "black",
              linewidth = 0.5) +
   geom_hline(

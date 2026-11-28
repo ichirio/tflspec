@@ -2,7 +2,7 @@
 # template's file: a cells key `n:` is the statistic n, not FALSE
 
 test_that("a template's cells key n stays the text n", {
-  d <- tfl_arg_defs(template = "tflspec_v1/demog")
+  d <- tfl_arg_defs(template = "tflspec_v1/tflspec_summary")
   cells <- d$default[[match("cells", d$name)]]
   expect_identical(names(cells)[1L], "n")
 })

@@ -2,7 +2,10 @@
 # list of maps) are rows of the ARD's conditions sheet with a blank
 # analysis_id, read back as the same rows; a map (`formats`, `analysis_ids`)
 # is not on the sheets -- it stays in the report's YAML file: back to YAML,
-# taken from the report's file written over, else said
+# taken from the report's file written over, else said.  The reports are of
+# the test series tflspec_test (local_test_series(): the purpose templates
+# that left tflspec_v1, canon 2026-11-24; each builder sets it for the
+# calling test).
 
 tn_study <- function() tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
 
@@ -12,16 +15,18 @@ tn_code <- function() {
 }
 
 tn_demog <- function() {
+  local_test_series(parent.frame())
   tfl_output("T-11", "table", label = "Demographics",
-             template = list(name = "tflspec_v1/demog", args = list(
+             template = list(name = "tflspec_test/demog", args = list(
                by = "TRT01A", continuous = "AGE", categorical = c("SEX", "RACE"),
                analysis_ids = list(AGE = "AGE_STATS"),
                formats = list(mean = 1L, sd = 2L))))
 }
 
 tn_lab <- function() {
+  local_test_series(parent.frame())
   tfl_output("T-14", "table", label = "Lab shift",
-             template = list(name = "tflspec_v1/lab_tox_shift", args = list(
+             template = list(name = "tflspec_test/lab_tox_shift", args = list(
                by = "TRT01A", formats = list(n = 0L, p = "xx.xx%"),
                conditions = list(
                  list(tox_dir = "High", param = "Alanine Aminotransferase (U/L)"),
@@ -29,8 +34,9 @@ tn_lab <- function() {
 }
 
 tn_orr <- function() {
+  local_test_series(parent.frame())
   tfl_output("T-13", "table", label = "Response",
-             template = list(name = "tflspec_v1/orr_subgroup", args = list(
+             template = list(name = "tflspec_test/orr_subgroup", args = list(
                by = "TRT01A", subgroup_vars = c("SEX", "AGEGR1"), conf_level = 0.9,
                conditions = list(
                  list(subgroup = "SEX", subgroup_lvl = "F", where = tfl_r("SEX == \"F\"")),

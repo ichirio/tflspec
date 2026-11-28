@@ -28,9 +28,9 @@ test_that("an argument cards does not have, a function it does not have, an item
   skip_if_not_installed("cards")
   d <- cs_study()
   an <- function(id, method, args = NULL) Filter(Negate(is.null), list(
-    id = id, method = method, data = "adsl_saf", by = "TRT01A", variables = "AGE", args = args))
+    id = id, method = method, data = "adsl_sub", by = "TRT01A", variables = "AGE", args = args))
   o <- tfl_output("T-AGE", "table", common = list(population = "SAF"), label = "Age",
-    ard = list(analysis_data = list(list(id = "adsl_saf", from = "ADSL", population = "SAF")),
+    ard = list(analysis_data = list(list(id = "adsl_sub", from = "ADSL", population = "SAF")),
                analyses = list(an("AGE", "cards::ard_summary", "nope = 1"))),
     content = list(tfl_item("table_plan", list(cols = "TRT01A", nope = 2))))
   tfl_write_output(o, file.path(d, "spec", "outputs", "T-AGE.yml"))
@@ -45,6 +45,24 @@ test_that("an argument cards does not have, a function it does not have, an item
   p2 <- tfl_check_spec(d, "T-AGE")
   expect_true(any(p2$part == "ard" & p2$level == "error" & grepl("has no ard_nonexistent", p2$message)))
   expect_error(tfl_check_spec(d, "T-NONE"), "no report")
+})
+
+test_that("an analysis item that is not a map: one error row for the report, not a silent drop (#1000)", {
+  skip_if_not_installed("haven")
+  d <- cs_study()
+  o <- tfl_output("T-AGE", "table", common = list(population = "SAF"), label = "Age",
+    ard = list(analysis_data = list(list(id = "adsl_sub", from = "ADSL", population = "SAF")),
+               analyses = list(list(id = "AGE", method = "continuous", data = "adsl_sub", by = "TRT01A",
+                                    variables = "AGE"), "not a map")),
+    content = list(tfl_item("table_plan", list(cols = "TRT01A"))))
+  tfl_write_output(o, file.path(d, "spec", "outputs", "T-AGE.yml"))
+  p <- tfl_check_spec(d, "T-AGE")
+  r <- p[p$item == "analysis item 2", ]
+  expect_identical(nrow(r), 1L)
+  expect_identical(c(r$output_id, r$part, r$level), c("T-AGE", "analysis", "error"))
+  expect_match(r$message, "^analysis item 2 of T-AGE is not a map \\(it is `not a map`\\)")
+  # (not R's own error from a check that walks the items after it)
+  expect_false(any(grepl("$ operator", p$message, fixed = TRUE)))
 })
 
 test_that("build = TRUE: a report the checks pass is built; one that cannot be made has a build error row (#519)", {
@@ -108,10 +126,12 @@ test_that("page: titles under a study header that prints the label, title and po
   tfl_write_output(o, file.path(d, "spec", "outputs", "T-DM.yml"))
   expect_false("page" %in% tfl_check_spec(d)$part)
   # the agent's instructions say so (the study's default configuration prints them)
-  yaml::write_yaml(list(settings = list(style = "tfl_standard")), file.path(d, "study.yml"))
+  write_study_yml(d, list(settings = list(style = "tfl_standard")))
   s <- tflspec:::.ai_spec_settings(d)
   expect_identical(s$titles_in_header, c("OUTPUT_LABEL", "OUTPUT_TITLE", "OUTPUT_POPULATION"))
   expect_match(tflspec:::.ai_titles_text(s$titles_in_header), "no `page: titles`", fixed = TRUE)
   expect_match(tflspec:::.ai_titles_text(character()), "`page: titles`, from the shell", fixed = TRUE)
   expect_match(tflspec:::.ai_titles_text(character()), "the TOC's title only when none", fixed = TRUE)
+  # a line the general conventions ask of every output is written when a shell leaves it out (#960)
+  expect_match(tflspec:::.ai_titles_text(character()), "general conventions ask of every output", fixed = TRUE)
 })

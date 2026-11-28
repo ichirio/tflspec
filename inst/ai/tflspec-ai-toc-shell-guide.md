@@ -826,15 +826,16 @@ xxxx-xx-xxxx  xxxxxxxx    XXXXXXXX /             xx      xxxxxx     xxxxxxxx
 ```
 
 "Sorted by subject and start day; the subject printed once."
-→ `data: {source: dataset, dataset: ADAE, where: !r SAFFL == "Y" & AESER
-== "Y", sort: [USUBJID, ASTDY]}`.
+→ `data: {source: dataset, dataset: ADAE, population: SAF, where: !r AESER
+== "Y", sort: [USUBJID, ASTDY]}`: the safety set is the report's, on its
+data (its subjects from ADSL, the records joined to them), never a
+condition on the records' own `SAFFL`.
 → `plan_listing`, `type: multiline`, its columns in order: `USUBJID`
 "Subject" `collapse_repeats: true`; `TRT01A` "Treatment"; `[AEBODSYS,
 AEDECOD]` "System Organ Class /" + backslash-n + "Preferred Term", `sep`
 `'" / "'`; `ASTDY` "Start" + backslash-n + "Day"; `AESEV` "Severity";
 `AEOUT` "Outcome".
-Assumptions: the variables behind each column; serious is `AESER`;
-`SAFFL` is on ADAE.
+Assumptions: the variables behind each column; serious is `AESER`.
 
 ### Shell F-1
 
@@ -842,12 +843,15 @@ A description, not a picture: a line per arm through the mean at each
 visit, an error bar of one standard error, the arms side by side; x:
 Visit in visit order, baseline to cycle 9; y: "Mean (SE) Systolic Blood Pressure (mmHg)";
 the legend below.
-→ `template: mean_se`; `data: {source: code, steps: [...]}`: `read`
-ADVS, `param` `SYSBP` (assumed: a question), `flag` `SAFFL`, `filter`
-the non-missing values of the shell's visits (`AVISITN <= 8`), `levels`
-`AVISIT` by `AVISITN`, `summary` `sm` (`AVAL` by `TRT01A, AVISITN,
-AVISIT`, interval `se`).  The template's `join` step is gone: ADVS has
-`TRT01A` and `SAFFL` itself.
+→ `template: mean_se`; `data: {source: code, population: SAF, steps:
+[...]}`: the safety set is the report's, on its data -- the program makes
+its subjects and joins the records to them; no step keeps it (no `flag`
+on `SAFFL`, no `join` to ADSL's safe subjects).  The steps: `read` ADVS,
+`param` `SYSBP` (assumed: a question), `filter` the non-missing values of
+the shell's visits (`AVISITN <= 8`), `levels` `AVISIT` by `AVISITN`,
+`summary` `sm` (`AVAL` by `TRT01A, AVISITN, AVISIT`, interval `se`).
+The arms, `TRT01A`, are written (a figure's group has no default).  The
+template's `join` step is gone: ADVS has `TRT01A` itself.
 → `content`: `ggplot: {}`, then `geom_line`, `geom_point` and
 `geom_errorbar` on `sm` (`data: sm`, their `mapping`, dodged by
 `position_dodge(width = 0.3)`), `scale_colour_tfl` (the treatment

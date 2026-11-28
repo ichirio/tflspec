@@ -2,19 +2,19 @@
 % Please edit documentation in R/tpl_docs.R
 \name{tfl_tpl_pk_conc}
 \alias{tfl_tpl_pk_conc}
-\title{pk_conc: the template pk_conc}
+\title{PK concentrations by subject with their summary: the template pk_conc}
 \description{
 The table template \code{pk_conc}, layout \code{listing_summary}. Its program is one call, \code{tfl_tpl(ard, "pk_conc", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab required \tab call \tab report: population, required \tab output.common.population \tab the analysis set's id (SAF) \cr
+   \code{population} \tab required \tab call \tab  \tab  \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
    \code{data} \tab other \tab call \tab ADPC \tab  \tab the dataset of concentrations \cr
    \code{where} \tab other \tab call \tab  \tab  \tab the records kept (R), e.g. ANL01FL == "Y" \cr
    \code{by} \tab other \tab call \tab study: settings.treatment, else PARAM, TRT01A \tab settings.treatment \tab the groups: a page each (an analyte, an arm), the summary's too \cr
-   \code{heading} \tab other \tab call \tab  \tab  \tab a page's name in the titles (\{<group>\}: its value); NULL: the groups' values, a line each; the last title line, or where the title line '\{PAGE_HEADING\}' is \cr
+   \code{heading} \tab other \tab call \tab  \tab  \tab a page's name in the titles (\{<group>\}: its value); NULL: the groups' values, a line each; the last title line, or where the title line \code{{PAGE_HEADING}} is \cr
    \code{time} \tab other \tab call \tab ATPT \tab  \tab the time point's variable (the columns) \cr
    \code{time_order} \tab other \tab call \tab ATPTN \tab  \tab the time points' order variable; NULL: by name \cr
    \code{times} \tab other \tab call \tab  \tab  \tab the time points, in order; NULL: by time_order \cr
@@ -29,7 +29,7 @@ The table template \code{pk_conc}, layout \code{listing_summary}. Its program is
    \code{stats} \tab other \tab call \tab N = \{N:.0f\}; Mean = \{mean:.4s\}; SD = \{sd:.5s\}; SE = \{se:.... \tab  \tab the summary's rows: label = cell \cr
    \code{split_at} \tab other \tab call \tab  \tab  \tab the time point that starts a second block of columns (each block its pages, the group's first); NULL: one \cr
    \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_sub \cr
-   \code{split} \tab other \tab call \tab none \tab plan_paginate_rows.split \tab how a page break is placed (plan_paginate_rows(split = )): "none" one page; "group_safe" whole groups to a page; "group_force" a cut every 'max_rows' rows, a group continued on the next page; "rows" and "by_value" are cut by position or by value (they need their own arguments, a 'plan_paginate_rows' item) \cr
+   \code{split} \tab other \tab call \tab none \tab plan_paginate_rows.split \tab how a page break is placed (plan_paginate_rows(split = )): "none" one page; "group_safe" whole groups to a page; "group_force" a cut every \code{max_rows} rows, a group continued on the next page; "rows" and "by_value" are cut by position or by value (they need their own arguments, a \code{plan_paginate_rows} item) \cr
 }
 }
 

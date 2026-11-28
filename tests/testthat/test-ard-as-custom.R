@@ -6,16 +6,16 @@ test_that("an analysis as R: the same ARD as its columns gave", {
     study = df(key = "id", value = "USUBJID"),
     datasets = df(dataset = c("ADSL", "ADAE"), path = c("adsl.rds", "adae.rds")),
     populations = df(population_id = "SAF", dataset = "ADSL", where = "SAFFL == \"Y\""),
-    analysis_data = df(output_id = "T1", data_id = c("adsl_saf", "adae_teae"), from = c("ADSL", "ADAE"),
+    analysis_data = df(output_id = "T1", data_id = c("adsl_sub", "adae_teae"), from = c("ADSL", "ADAE"),
                        population_id = c("SAF", "SAF"), where = c(NA, "TRTEMFL == \"Y\""),
                        add = c(NA, "TRT01A")),
     analyses = df(
       output_id = "T1", analysis_id = c("BIGN", "AGE", "AE"),
       method = c("cards::ard_tabulate", "continuous", "cards::ard_stack_hierarchical"),
-      data = c("adsl_saf", "adsl_saf", "adae_teae"),
+      data = c("adsl_sub", "adsl_sub", "adae_teae"),
       by = c(NA, "TRT01A", "TRT01A"),
       variables = c("TRT01A", "AGE", "AEBODSYS | AEDECOD"),
-      denominator = c(NA, NA, "adsl_saf")))
+      denominator = c(NA, NA, "adsl_sub")))
   x <- tfl_ard_spec(s)
   as_custom <- function(x, id) {
     v <- tfl_ard_as_custom(x, "T1", id)
@@ -32,7 +32,7 @@ test_that("an analysis as R: the same ARD as its columns gave", {
   v <- tfl_ard_as_custom(x, "T1", "AE")
   expect_identical(v$method, "custom")
   expect_match(v$code, "cards::ard_stack_hierarchical(\n  data,", fixed = TRUE)
-  expect_match(v$code, "denominator = adsl_saf", fixed = TRUE)
+  expect_match(v$code, "denominator = adsl_sub", fixed = TRUE)
   # the row's formats and its method's defaults, as the column writes them
   y <- x
   y$analyses$formats[2L] <- "mean=xx.xx"

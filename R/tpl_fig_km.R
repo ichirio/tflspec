@@ -43,7 +43,7 @@
   }
   list(
     d(tfl_param("population", NULL, type = "text", tier = "usual",
-                doc = "the analysis set's id (SAF): its subjects kept; NULL: every record")),
+                choices = "populations", doc = "the analysis set's id (SAF): its subjects kept; NULL: every record")),
     d(.tpl_subset_param()),
     d(tfl_param("data", "ADTTE", type = "text", doc = "the dataset (ADTTE; ADSL with `event`)")),
     d(tfl_param("param", NULL, type = "levels", of = "PARAMCD", tier = "usual",
@@ -54,9 +54,9 @@
     tfl_param("time", "AVAL", type = "vars", tier = "usual",
               doc = "the time variable (Surv(time, ...)), in `time_unit`"),
     tfl_param("time_unit", "months", type = "choice", choices = c("days", "weeks", "months", "years"),
-              tier = "usual", doc = "the time's unit: the call's first step converts the days to it; the x axis's title"),
+              tier = "usual", doc = "the unit the analysis and the axis use: the call's first step converts AVAL from its unit, AVALU, to it (tte_time()); the x axis's title"),
     tfl_param("censor", "CNSR", type = "vars", tier = "usual",
-              doc = "the censoring variable, 1 censored (Surv(time, censor == 0))"),
+              doc = "the censoring variable, 0 the event, any other value a censoring (Surv(time, censor == 0))"),
     tfl_param("by", NULL, required = TRUE, type = "vars",
               doc = "the curves' variable (survfit2(~ by), the colours)"),
     tfl_param("y_type", "survival", type = "choice", choices = c("survival", "risk"), tier = "usual",
@@ -247,13 +247,11 @@
     dg <- as.integer(a$legend_median_digits %||% 1L)
     lab <- .tpl_km_median_label(a$legend_median_text %||% .tpl_km_median_text)
     f$stats <- append(f$stats, list(list(step = "code",
-      label = "the legend's text: each arm's median survival (95% CI)",
+      label = "the legend's text: each arm's median survival (95% CI)", out = "legend_labels",
       code = paste0(
         "med <- summary(fit)$table\n",
         "if (!is.matrix(med)) med <- matrix(med, nrow = 1, dimnames = list(\"All\", names(med)))\n",
-        "fmt_med <- function(x) {\n",
-        "  ifelse(is.na(x), \"NE\", formatC(rtfreporter::round_num(x, ", dg, "), format = \"f\", digits = ", dg, "))\n",
-        "}\n",
+        "fmt_med <- function(x) fmt_num(x, ", dg, ")\n",
         "arm_of <- sub(\"^[^=]*=\", \"\", rownames(med))\n",
         "legend_labels <- stats::setNames(", lab, ", arm_of)"))),
       fit)
@@ -310,7 +308,7 @@
     risk <- identical(a$y_type, "risk")
     grp <- !is.null(f$stats[[fit]]$by)
     f$stats <- c(f$stats, list(list(step = "code",
-      label = "the confidence interval at the axis's times, as vertical bars",
+      label = "the confidence interval at the axis's times, as vertical bars", out = "ci_pts",
       code = paste0(
         "ci_pts <- summary(fit, times = ", times, ", extend = TRUE)\n",
         "ci_pts <- data.frame(\n",
@@ -445,9 +443,9 @@
     Filter(Negate(is.null), list(type = p$type, multiple = isTRUE(p$multiple), choices = p$choices,
                                  fields = p$fields))
   }), vapply(new, `[[`, "", "name")))
-  .tfl_template("km", kind = "figure", layout = "km", params = .tpl_km_params(),
+  .tfl_template("km", ai = TRUE, kind = "figure", layout = "km", params = .tpl_km_params(),
                 body = .tpl_km_layout_body, call = "tfl_tpl",
-                label = "Kaplan-Meier curves (the layout)",
+                label = "Kaplan-Meier curves",
                 example = list(param = "PFS", by = "TRT01A"))
   # (hidden: the look, the y axis's type, and the data stage -- a report's
   # own `data:` steps: read, the analysis set's join, param, filter)

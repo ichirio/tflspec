@@ -75,7 +75,10 @@ figure (and a listing or a records table that still has the map), a
 list (\code{source} -- \code{"ard"}, \code{"code"} or \code{"dataset"} -- and \code{object},
 \code{steps}, \code{code}, \code{dataset} ...).}
 
-\item{codelists}{The report's code lists, by variable.}
+\item{codelists}{The report's code lists, by variable: each a list of
+\verb{\{value, label\}} entries, or a reference to one of the study's lists,
+\code{list(list = "SEX")} or \code{list(list = "SEX", codes = list("M", "F"))}
+(\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}).}
 
 \item{content}{The layers, a list of \code{tfl_item}.}
 
@@ -96,7 +99,7 @@ a style set of \code{defaults.yml}'s \verb{styles:}, or a built-in one such as
 \code{"tfl_small"}; \code{\link[=tfl_styles]{tfl_styles()}} lists them); \code{NULL}: the template's set
 value, else the study's \code{settings.style}, else \code{tfl_standard}.}
 
-\item{population}{Removed: \code{population} -> \code{common: population}.}
+\item{population}{Removed: the set is the data's (\code{\link[=tfl_set_report_set]{tfl_set_report_set()}}).}
 }
 \value{
 \code{tfl_r()}: a string of class \code{tfl_r}; \code{tfl_unset()}: an object

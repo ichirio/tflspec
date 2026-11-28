@@ -106,10 +106,10 @@ its `data` column instead of `dataset` / `population_id`.
 ```{r}
 adata <- df(
   output_id = "T-14-3-1",
-  data_id = c("adsl_saf", "adae_teae", "adae_ser"),
+  data_id = c("adsl_sub", "adae_teae", "adae_ser"),
   from = c("ADSL", "ADAE", "adae_teae"),
   population_id = c("SAF", NA, NA),
-  subjects_in = c(NA, "adsl_saf", NA),
+  subjects_in = c(NA, "adsl_sub", NA),
   where = c(NA, 'TRTEMFL == "Y"', 'AESER == "Y"'),
   keep = c(NA, "AEBODSYS | AEDECOD | AESER | TRT01A", NA))
 
@@ -120,7 +120,7 @@ analyses <- df(
   data = c("adae_teae", "adae_ser"),
   by = "TRT01A",
   variables = c("AEBODSYS | AEDECOD", "AEDECOD"),
-  denominator = "adsl_saf")
+  denominator = "adsl_sub")
 
 spec <- tfl_ard_spec(c(base, list(analysis_data = adata, analyses = analyses)))
 ```
@@ -219,8 +219,8 @@ table and another way in the next).
 
 Handed to the ARD program, a report's code lists of the variables its
 analyses read (`by`, `strata`, `variables`, and the names in `args`,
-`code` and `post`) are written at the program's head (`cl_sex <- c(F =
-"Female", M = "Male")`) and put on those columns before any analysis
+`code` and `post`) are written at the program's head, codes only
+(`cl_sex <- c("F", "M")`), and put on those columns before any analysis
 (`set_levels(SEX = cl_sex)`): each becomes a factor of the codes in the
 list's order, so **the ARD holds "F"**, keeps the order and **counts a
 value no record has** (`n = 0`); the factor is made after the analysis's
@@ -228,7 +228,8 @@ filter, its levels narrowed to the values the filter's simple conditions
 leave. A value the list does not have stops the program, naming the
 column and the value; a condition on such a column is written in codes
 (`SEX == "F"`; a label stops it). The labels are the table plan's
-(`plan_labels()`), not the ARD's.
+(`plan_labels()`, in the report program), not the ARD's: a change of
+labels alone leaves the ARD program and its fingerprint as they were.
 A variable the table only prints is not made a factor. A data made from
 another -- an analysis set, an analysis data, an analysis's own subset --
 is made factors again as its last step (`|> .levels()`): a value the list

@@ -2,31 +2,32 @@
 % Please edit documentation in R/tpl_docs.R
 \name{tfl_tpl_disposition}
 \alias{tfl_tpl_disposition}
-\title{disposition: the template disposition}
+\title{Disposition: the template disposition}
 \description{
 The table template \code{disposition}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "disposition", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
+   \code{population} \tab required \tab data \tab  \tab  \tab the analysis set's id (SAF): the subjects the report is of \cr
    \code{categorical} \tab required \tab call \tab  \tab  \tab the status variables, in order (EOSSTT) \cr
    \code{by} \tab required \tab call \tab  \tab  \tab the column variable (the arms); not a default and not the study's treatment \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1"; unset: all \cr
    \code{data} \tab other \tab call \tab ADSL \tab  \tab a subject-level dataset \cr
-   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id when 'data' is not ADSL; NULL: <data>_sub \cr
-   \code{denominator} \tab other \tab call \tab  \tab  \tab the categorical variables' percentages' denominator, passed explicitly: NULL (default): the analysis set's subjects (with a 'data' other than ADSL, the records kept); a number: that many in every column; numbers named by the values of 'by' ('c("Drug X" = 60, "Control" = 55)'): that many in each column; the id of an analysis data ('adsl_itt', or one of the report's own): its rows in each column. A number is not for 'total' = TRUE. The column headings' N is the analysis set's, not moved \cr
+   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id when \code{data} is not ADSL; NULL: <data>_sub \cr
+   \code{denominator} \tab other \tab call \tab  \tab  \tab the categorical variables' percentages' denominator, passed explicitly: NULL (default): the analysis set's subjects (with a \code{data} other than ADSL, the records kept); a number: that many in every column; numbers named by the values of \code{by} (\code{c("Drug X" = 60, "Control" = 55)}): that many in each column; the id of an analysis data (\code{adsl_itt}, or one of the report's own): its rows in each column. A number is not for \code{total} = TRUE. The column headings' N is the analysis set's, not moved \cr
    \code{formats} \tab usual \tab call \tab  \tab  \tab the ARD's formats (precision): per statistic, and per variable (BMIBL: \{mean: 2, sd: 3\}); given by name, merged over the statistics catalog's (tfl_ard_statistics(), by default N 0, mean 1, sd 2, median 1, min 0, max 0, p xx.x\%); a number is the decimals, "xx.x\%" a proportion as a percent; unset: none given here \cr
-   \code{total} \tab usual \tab call \tab FALSE \tab  \tab TRUE: a Total column, last (each analysis again without 'by') \cr
+   \code{total} \tab usual \tab call \tab FALSE \tab  \tab TRUE: a Total column, last (each analysis again without \code{by}) \cr
    \code{missing_row} \tab other \tab call \tab TRUE \tab  \tab TRUE (default): a Missing row, last, for each categorical variable that has missing values (NA or blank). FALSE: no Missing row; missing values are left out of the counts. \cr
    \code{missing_label} \tab other \tab call \tab Missing \tab  \tab that row's label \cr
    \code{order} \tab other \tab call \tab  \tab plan_levels.variable \tab the blocks' order (plan_levels(variable = )); NULL: the continuous, then the categorical \cr
    \code{labels} \tab usual \tab call \tab Status at end of study, n (\%) \tab  \tab each variable's heading; given by name, merged (RACE: ~ drops one); a variable it does not name has none; unset: no headings \cr
    \code{categorical_levels} \tab other \tab call \tab  \tab  \tab per categorical variable, its values in display order, each shown even when 0 (RACE: [ASIAN, WHITE]); NULL: the code list's order, else the data's \cr
    \code{cells} \tab usual \tab call \tab study: plan_cells.continuous, else n = \{N\}; Mean (SD) = \{mean\} (\{sd\}), \{mean\} (-); Median = ... \tab plan_cells.continuous \tab the rows of each continuous variable: where each statistic goes (placement only, \{mean\}) \cr
-   \code{sd_missing} \tab other \tab call \tab study: settings.sd_missing, else - \tab settings.sd_missing \tab what prints in place of the SD when a group has no SD (n = 1): \{mean\} (<sd_missing>); "" prints the mean alone; unset: no such guard; no effect when 'cells' is given \cr
+   \code{sd_missing} \tab other \tab call \tab study: settings.sd_missing, else - \tab settings.sd_missing \tab what prints in place of the SD when a group has no SD (n = 1): \{mean\} (<sd_missing>); "" prints the mean alone; unset: no such guard; no effect when \code{cells} is given \cr
    \code{count_cell} \tab other \tab call \tab study: plan_cells.categorical, plan_cells.default, no fallback \tab plan_cells.categorical, plan_cells.default \tab a categorical value's cell, n (\%); NULL: the study standard's \cr
    \code{total_label} \tab other \tab call \tab Total \tab  \tab the Total column's heading \cr
-   \code{header_n} \tab other \tab call \tab denominator \tab  \tab the arm headings' N: "denominator" or "set": the arm's subjects in the analysis set ('denominator' does not move it); "none" no N; unset: no N. It acts on the heading 'col_header' gives as a text \cr
+   \code{header_n} \tab other \tab call \tab denominator \tab  \tab the arm headings' N: "denominator" or "set": the arm's subjects in the analysis set (\code{denominator} does not move it); "none" no N; unset: no N. It acts on the heading \code{col_header} gives as a text \cr
    \code{col_header} \tab other \tab call \tab study: plan_col_header.lines, plan_col_header.header, no fallback \tab plan_col_header.lines, plan_col_header.header \tab the arm heading: a text (\{col\} and \{n\}, a line a line), the lines of plan_col_header(lines = ), or its cells (header = ); NULL: none \cr
    \code{heading} \tab other \tab call \tab  \tab plan_stub.heading \tab the row-title (stub) column's heading, a line a line.  Given, it is the stub's (plan_stub(heading = ), the stub being row_label, first) \cr
    \code{stub_name} \tab other \tab call \tab study: plan_stub.name, no fallback \tab plan_stub.name \tab the row-title column's name (plan_stub(name = )) \cr

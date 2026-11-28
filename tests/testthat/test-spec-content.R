@@ -36,7 +36,9 @@ test_that("tfl_content_code(): a resolved spec file's table, its inherited items
   st <- tfl_read_study_spec(d)
   out <- tfl_resolve_output(tfl_read_outputs(d)[[1L]], st)
   code <- tfl_content_code(out, pipe = "|>")
-  expect_match(code[1L], "^plan <- table_plan\\(data, cols = \"TRT01A\"", perl = TRUE)
+  # (BIGN's lines first: its rows out of the table's data, its n for the header)
+  expect_match(code[1L], "^# BIGN", perl = TRUE)
+  expect_true(any(grepl("^plan <- table_plan\\(data, cols = \"TRT01A\"", code, perl = TRUE)))
   expect_true(any(grepl("# (study default)", code, fixed = TRUE)))
   expect_true(any(grepl("plan_cell_style(where = ~ p > 0.5, bold = TRUE)", code, fixed = TRUE)))
   expect_true(any(grepl("border_header = rtf_border(top = TRUE, bottom = TRUE)", code, fixed = TRUE)))
@@ -161,7 +163,7 @@ test_that("a Rework comes after normalize_ard() and before the plan, as written,
       tfl_item("normalize_ard", list()),
       tfl_item("table_plan", list(cols = "ARM", rows = list(group = "variable"))),
       tfl_item("plan_cells", list(categorical = "{n} ({p:.1f%})"))))
-  code <- tfl_content_code(out, pipe = "|>")
+  code <- no_bign(tfl_content_code(out, pipe = "|>"))
   expect_identical(code[1:4], c("data <- ard |> normalize_ard()",
                                 "data <- data[data$variable != \"RACE\", ]", "",
                                 "plan <- table_plan(data, cols = \"ARM\", rows = c(group = \"variable\")) |>"))
@@ -174,7 +176,7 @@ test_that("a Rework comes after normalize_ard() and before the plan, as written,
   expect_identical(pages(env$plan), pages(tfl_content_run(out, ard)))
   expect_false("RACE" %in% tfl_content_run(out, ard)$data$variable)
   # the pipe operator follows `pipe`
-  expect_identical(tfl_content_code(out, pipe = "%>%")[1L], "data <- ard %>% normalize_ard()")
+  expect_identical(no_bign(tfl_content_code(out, pipe = "%>%"))[1L], "data <- ard %>% normalize_ard()")
   bad <- out
   bad$data$steps <- list(list(fn = "geom_point"))
   expect_error(tfl_content_code(bad), "are R")
@@ -194,7 +196,7 @@ test_that("a Rework does not normalize a second time: the defaults' normalizatio
     data = list(source = "ard", object = "ard", steps = list(tfl_r(
       "data$.label[data$variable == \"SEX\"] <- \"Sex (n)\""))),
     content = tflspec:::.merge_content(defaults, own))
-  code <- tfl_content_code(out, pipe = "|>")
+  code <- no_bign(tfl_content_code(out, pipe = "|>"))
   expect_identical(code[1:2], c("data <- ard |> normalize_ard()",
                                 "data$.label[data$variable == \"SEX\"] <- \"Sex (n)\""))
   expect_identical(sum(grepl("normalize_ard", code, fixed = TRUE)), 1L)
@@ -205,8 +207,8 @@ test_that("a Rework does not normalize a second time: the defaults' normalizatio
   # the process_code, which the sheets keep as it is
   sp <- tflspec:::.plan_sheets_from_content(
     tflspec:::.content_drop_data_steps(out$content), "T-1")
-  expect_identical(plan, tfl_table_code(sp, "T-1", data = "data", pipe = "|>",
-                                        normalize = FALSE))
+  expect_identical(plan, no_bign(tfl_table_code(sp, "T-1", data = "data", pipe = "|>",
+                                        normalize = FALSE)))
   skip_if_not_installed("cards")
   ard <- cards::ard_stack(cards::ADSL, .by = ARM, cards::ard_tabulate(variables = SEX))
   p <- suppressMessages(tfl_content_run(out, ard))
@@ -237,7 +239,7 @@ test_that("a Rework keeps the content's normalize_ard() arguments; with none, `d
   }
   # the arguments are written, and used: the Rework sees the data they made
   o <- mk("data <- data[data$variable != \"RACE\", ]")
-  expect_identical(tfl_content_code(o, pipe = "|>")[1L], "data <- ard |> normalize_ard(drop_key_variables = TRUE)")
+  expect_identical(no_bign(tfl_content_code(o, pipe = "|>"))[1L], "data <- ard |> normalize_ard(drop_key_variables = TRUE)")
   plain <- mk("data <- data", norm = list())
   expect_identical(pages(tfl_content_run(mk("data <- data"), ard)),
                    pages(tfl_content_run(mk(NULL), ard)))
@@ -248,14 +250,14 @@ test_that("a Rework keeps the content's normalize_ard() arguments; with none, `d
   expect_identical(pages(run_code(o)), pages(tfl_content_run(o, ard)))
   # no normalize_ard() item: the ARD as it is, a Rework that normalizes itself
   o <- mk("data <- normalize_ard(data)", norm = NULL)
-  code <- tfl_content_code(o, pipe = "|>")
+  code <- no_bign(tfl_content_code(o, pipe = "|>"))
   expect_identical(code[1:2], c("data <- ard", "data <- normalize_ard(data)"))
   expect_identical(pages(run_code(o)), pages(tfl_content_run(o, ard)))
   expect_identical(tfl_content_run(o, ard)$data, tfl_content_run(mk(NULL, norm = list()), ard)$data)
   expect_identical(tfl_content_run(o, ard)$data, rtfreporter::normalize_ard(ard))
   # (a Rework that does not normalize it is rtfreporter's error, as in a program)
   o <- mk("data <- data[data$variable == \"SEX\", ]", norm = NULL)
-  expect_identical(tfl_content_code(o, pipe = "|>")[1L], "data <- ard")
+  expect_identical(no_bign(tfl_content_code(o, pipe = "|>"))[1L], "data <- ard")
   expect_error(tfl_content_run(o, ard), "NORMALIZED")
 })
 
@@ -321,15 +323,17 @@ test_that("a table of records, a report's own data code, a listing and a figure 
   out <- tfl_output("T-1", "table",
     data = list(source = "dataset", object = "ard", steps = list(tfl_r("data <- ard[ard$AGE > 70, ]"))),
     content = c(list(tfl_item("normalize_ard", list())), tp))
-  expect_identical(tfl_content_code(out, pipe = "|>"),
+  expect_identical(no_bign(tfl_content_code(out, pipe = "|>")),
                    c("data <- ard[ard$AGE > 70, ]", "",
                      "plan <- table_plan(data, cols = \"ARM\", rows = c(group = \"variable\"))"))
   # source: code -- `data$code` is the step
   out <- tfl_output("T-1", "table",
     data = list(source = "code", code = tfl_r("data <- normalize_ard(ard)\ndata <- data[data$variable == \"SEX\", ]")),
     content = c(list(tfl_item("normalize_ard", list())), tp))
-  expect_identical(tfl_content_code(out, pipe = "|>"),
-                   c("data <- normalize_ard(ard)", "data <- data[data$variable == \"SEX\", ]", "",
+  # (two statements: in a scope of their own that leaves `data`, A1)
+  expect_identical(no_bign(tfl_content_code(out, pipe = "|>")),
+                   c("data <- local({", "  data <- normalize_ard(ard)",
+                     "  data <- data[data$variable == \"SEX\", ]", "  data", "})", "",
                      "plan <- table_plan(data, cols = \"ARM\", rows = c(group = \"variable\"))"))
   skip_if_not_installed("cards")
   ard <- cards::ard_stack(cards::ADSL, .by = ARM, cards::ard_tabulate(variables = c(SEX, RACE)))
@@ -337,7 +341,7 @@ test_that("a table of records, a report's own data code, a listing and a figure 
   # a listing with steps
   out <- tfl_output("L-1", "listing",
     data = list(source = "ard", object = "ard", steps = list(tfl_r("data <- ard"))), content = tp)
-  expect_identical(tfl_content_code(out, pipe = "|>")[1:2], c("data <- ard", ""))
+  expect_identical(no_bign(tfl_content_code(out, pipe = "|>"))[1:2], c("data <- ard", ""))
 })
 
 test_that("a Rework starts from the output's own object name", {
@@ -349,7 +353,7 @@ test_that("a Rework starts from the output's own object name", {
     content = list(
       tfl_item("normalize_ard", list()),
       tfl_item("table_plan", list(cols = "ARM", rows = list(group = "variable")))))
-  code <- tfl_content_code(out, pipe = "|>")
+  code <- no_bign(tfl_content_code(out, pipe = "|>"))
   expect_identical(code[1L], "data <- ard_t1 |> normalize_ard()")
   env <- new.env()
   env$ard_t1 <- ard
@@ -357,7 +361,7 @@ test_that("a Rework starts from the output's own object name", {
   pages <- function(p) suppressMessages(rtfreporter::plan_apply(p, "table"))
   expect_identical(pages(env$plan), pages(tfl_content_run(out, ard)))
   out$content <- out$content[-1L]
-  expect_identical(tfl_content_code(out, pipe = "|>")[1L], "data <- ard_t1")
+  expect_identical(no_bign(tfl_content_code(out, pipe = "|>"))[1L], "data <- ard_t1")
 })
 
 test_that("the content as the report's own code is written as it is and runs to `content`", {
@@ -365,7 +369,7 @@ test_that("the content as the report's own code is written as it is and runs to 
                     data = list(source = "ard", object = "ard",
                                 steps = list(tfl_r("data <- ard[ard$x > 1, , drop = FALSE]"))))
   out$content <- tfl_r("content <- nrow(data)\ncontent <- content * 10")
-  expect_identical(tfl_content_code(out), c("data <- ard[ard$x > 1, , drop = FALSE]", "",
+  expect_identical(no_bign(tfl_content_code(out)), c("data <- ard[ard$x > 1, , drop = FALSE]", "",
                                             "content <- nrow(data)", "content <- content * 10"))
   expect_identical(tfl_content_run(out, data.frame(x = 1:3)), 20)
   out$content <- tfl_r("plan <- 1")
@@ -377,7 +381,10 @@ test_that("a data step of the report's own code is that code, whatever else data
     source = "code", code = tfl_r("df <- ard\ndata <- df[df$x > 1, , drop = FALSE]"),
     steps = list(list(fn = "geom_point"))))
   out$content <- tfl_r("content <- nrow(data)")
-  expect_identical(tfl_content_code(out), c("df <- ard", "data <- df[df$x > 1, , drop = FALSE]",
+  # (two statements: in a scope of their own that leaves `data`, A1; the
+  # content code itself as it is)
+  expect_identical(tfl_content_code(out), c("data <- local({", "  df <- ard",
+                                            "  data <- df[df$x > 1, , drop = FALSE]", "  data", "})",
                                             "", "content <- nrow(data)"))
   expect_identical(tfl_content_run(out, data.frame(x = 1:3)), 2L)
 })

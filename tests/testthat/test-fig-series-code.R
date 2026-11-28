@@ -62,7 +62,7 @@ test_that("a km_simple report's program calls km_curves() with its resolved argu
   expect_identical(code, tfl_content_code(o, template = "call"))
   expect_true(any(grepl("^# template tflspec_v1/km_simple", code)))
   expect_true(any(code == "km_fit <- ggsurvfit::survfit2("))
-  expect_true(any(code == "  ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ TRT01A,"))
+  expect_true(any(code == "  survival::Surv(AVAL, CNSR == 0) ~ TRT01A,"))
   expect_true(any(code == "  data = adtte_sub"))
   expect_true(any(code == "content <- tflspec::km_curves("))
   expect_true(any(code == "  km_fit = km_fit,"))
@@ -107,7 +107,7 @@ test_that("the programs run on fictional data to a ggplot", {
   rows <- lapply(conds, function(cnd) {
     sub <- if (cnd[[1L]] == "ALL") d else d[d[[cnd[[1L]]]] == cnd[[2L]], , drop = FALSE]
     a <- cardx::ard_regression(
-      survival::coxph(ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ TRT01A, data = sub), exponentiate = TRUE)
+      survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = sub), exponentiate = TRUE)
     a$group1 <- "subgroup"
     a$group1_level <- list(cnd[[1L]])
     a$group2 <- "subgroup_lvl"
@@ -152,7 +152,7 @@ test_that("km_simple's legend choices and y_label default are km_curves()'s", {
   expect_identical(t$params$legend$type, "enum[inside|bottom|none]")
   expect_identical(t$params$legend$default, "bottom")
   d <- sfc_adtte()
-  fit <- ggsurvfit::survfit2(ggsurvfit::Surv_CNSR(AVAL, CNSR) ~ TRT01A, data = d)
+  fit <- ggsurvfit::survfit2(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = d)
   p <- km_curves(fit)
   expect_identical(ggplot2::get_labs(p)$y, t$params$y_label$default)
   for (lg in c("inside", "bottom", "none")) {

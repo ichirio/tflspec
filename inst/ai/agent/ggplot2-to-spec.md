@@ -48,8 +48,9 @@ p <- ggplot(sm, aes(AVISIT, mean, colour = TRT01A, group = TRT01A)) +
 |---|---|
 | `df <- adlb` | `{step: read, dataset: ADLB}` |
 | `filter(PARAMCD == "ALT")` | `{step: param, value: ALT}` |
-| `filter(SAFFL == "Y")` | `{step: flag, variable: SAFFL}` |
-| `semi_join(adsl \|> filter(EFFFL == "Y"), by = "USUBJID")` | `{step: join, dataset: ADSL, where: 'EFFFL == "Y"', how: semi}` |
+| `filter(SAFFL == "Y")` or `semi_join(adsl \|> filter(SAFFL == "Y"), by = "USUBJID")` (the analysis set) | `data: {source: code, population: SAF, steps: [...]}` -- the report's set, on its data, never a step: the program joins the records to its subjects |
+| `filter(ANL01FL == "Y")` (a record flag) | `{step: flag, variable: ANL01FL}` |
+| `semi_join(adsl \|> filter(AGE >= 65), by = "USUBJID")` (a subgroup, not the analysis set) | `{step: join, dataset: ADSL, where: 'AGE >= 65', how: semi}` |
 | `left_join(adrs \|> filter(PARAMCD == "BOR") \|> select(USUBJID, BOR = AVALC))` | `{step: join, dataset: ADRS, where: 'PARAMCD == "BOR"', vars: BOR = AVALC}` |
 | any other `filter(...)` | `{step: filter, expr: ...}` |
 | `mutate(X = ...)` | `{step: derive, variable: X, expr: ...}` |
@@ -58,8 +59,8 @@ p <- ggplot(sm, aes(AVISIT, mean, colour = TRT01A, group = TRT01A)) +
 | `group_by(...) \|> summarise(n, mean, sd, se ...)` | `{step: summary, name: sm, ...}` (`summary_by`: by group only) |
 | responders / n with a binomial CI | `{step: rate, ...}` |
 | `count(group, category)` with % | `{step: count, ...}` |
-| `survfit(Surv(AVAL, 1 - CNSR) ~ TRT01P)` | `{step: survfit, name: fit, time: AVAL, censor: CNSR, by: TRT01P}` |
-| AVAL in days shown in months / weeks | `{step: time_unit, variable: AVAL, unit: months}` |
+| `survfit(Surv(AVAL, CNSR == 0) ~ TRT01P)` (CNSR 0 is the event, any other value a censoring) | `{step: survfit, name: fit, time: AVAL, censor: CNSR, by: TRT01P}` |
+| AVAL shown in days / weeks / months / years (from its AVALU: `tte_time("months")`) | `{step: time_unit, variable: AVAL, unit: months}` |
 | anything else that makes a data frame | `{step: code, code: 'df <- ...'}` (the datasets by their lower-case names) |
 
 ### The layers (`layers:`, in the chain's order)

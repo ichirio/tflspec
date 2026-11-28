@@ -54,8 +54,7 @@
 .tpl_demog_params <- function(defaults = list(), fixed = character(), fixed_value = character(),
                               drop = character(), add = list()) {
   p <- list(
-    tfl_param("population", required = TRUE, unset = "stop",
-              doc = "the analysis set's id: the report's `common: population`, not a template parameter"),
+    .tpl_demog_set_param("SAF"),
     tfl_param("continuous", NULL, tier = "required", unset = "stop",
               doc = "the continuous variables, in order (required: this or `categorical`)"),
     tfl_param("categorical", NULL, tier = "required", unset = "stop",
@@ -163,8 +162,17 @@
     p[[k]]$hidden <- TRUE
     p[[k]]$fixed_value <- TRUE
   }
-  p[[1L]]$hidden <- TRUE
   unname(p)
+}
+
+# The family's set parameter (A2-T Q2, canon 11-15 (1): the template holds
+# the set's default, DM's SAF): shown, in the data step -- the set adsl_sub
+# keeps, one of the study's; the report's set is this argument.  `default`
+# NULL where no set fits the template's purpose: required
+.tpl_demog_set_param <- function(default) {
+  tfl_param("population", default, required = is.null(default), tier = if (!is.null(default)) "key",
+            unset = "stop", step = "data", choices = "populations",
+            doc = "the analysis set's id (SAF): the subjects the report is of")
 }
 
 # The continuous statistics the cells name: their tokens ({mean:.1f} -> mean),
@@ -330,8 +338,9 @@
   cat <- a$categorical
   tn <- ctx$template$name %||% "demog"
   if (!length(cont) && !length(cat)) {
-    .ard_stop(sprintf(paste0("template %s: give `continuous` or `categorical`, or both ",
-                             "(the analysis variables are required: they differ in each study's shell)."), tn))
+    .tpl_args_missing_stop(sprintf(paste0("template %s: give `continuous` or `categorical`, or both ",
+                                          "(the analysis variables are required: they differ in each study's shell)."), tn),
+                           tn, c("continuous", "categorical"), any = TRUE)
   }
   # a value the template fixes (canon 1.30) is no parameter of it (a call
   # that passes the fixed value itself on, as a company's template built on
@@ -480,7 +489,8 @@
     if (length(cells)) list(tfl_item("plan_cells", cells)),
     if (length(ord)) list(tfl_item("plan_levels", ord)),
     if (length(a$labels) && length(intersect(vars, names(a$labels)))) list(tfl_item(
-      "plan_labels", list(variable = as.list(a$labels[intersect(vars, names(a$labels))])))),
+      "plan_labels", .plan_labels_args(a$labels[intersect(vars, names(a$labels))],
+                                       c(a$by, "variable")))),
     if (isTRUE(a[["total"]])) list(tfl_item("plan_total", nn(list(
       label = a$total_label, position = "last")))),
     if (!is.null(hdr)) list(hdr),
@@ -550,7 +560,7 @@
                           "blanks_last", "blanks_counted", "border_header", "style", "cells",
                           "count_cell", "sd_missing", "widths", "max_rows"),
                 fixed_value = c("formats", "missing_row", "style")),
-              body = .tpl_demog_body, ai = FALSE, parts = .tpl_demog_parts,
+              body = .tpl_demog_body, ai = TRUE, parts = .tpl_demog_parts,
               # (canon 1.27, 1.30: the study's content is not laid, fixed)
               extends = list(content = "none"), extends_fixed = "content",
               example = list(population = "SAF", by = "TRT01A", continuous = "AGE",
@@ -593,7 +603,8 @@
 
 # (`extends`: its family's `[defaults]`, canon 1.27: the study's defaults are
 # laid under the template's items, and its references read them)
-.tfl_template("summary", kind = "table", layout = "summary",
+.tfl_template("summary", ai = TRUE, kind = "table", layout = "summary",
+              label = "Continuous variables by a column key",
               params = .tpl_summary_params, body = .tpl_demog_body, extends = "defaults",
               parts = .tpl_demog_parts_of(.tpl_summary_params))
 
@@ -605,14 +616,18 @@
 .tpl_disposition_params <- .tpl_demog_params(
   defaults = list(labels = c(EOSSTT = "Status at end of study, n (%)"), max_rows = 24L),
   drop = c("continuous", "style"),
-  add = list(tfl_param("categorical", required = TRUE, unset = "stop",
+  # (the subjects' status at the end: of the set the study's disposition is
+  # of -- enrolled, randomized --, which has no one id: no default)
+  add = list(.tpl_demog_set_param(NULL),
+             tfl_param("categorical", required = TRUE, unset = "stop",
                        doc = "the status variables, in order (EOSSTT)"),
              tfl_param("denominator", NULL, doc = .tpl_den_sum_doc),
              .tpl_missing_row_sum))
 
 # (`extends`: its family's `[defaults]`, canon 1.27: the study's defaults are
 # laid under the template's items, and its references read them)
-.tfl_template("disposition", kind = "table", layout = "summary", extends = "defaults",
+.tfl_template("disposition", ai = TRUE, kind = "table", layout = "summary", extends = "defaults",
+              label = "Disposition",
               params = .tpl_disposition_params,
               body = function(a, ctx) {
                 .tpl_demog_body(a, ctx, ids = list(cat = "DISP", cat_label = "Status at end of study"))

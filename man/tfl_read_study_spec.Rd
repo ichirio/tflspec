@@ -28,7 +28,9 @@ configurations a report picks with \verb{style:}; a set holds \code{page} and
 of a built-in one), \code{figure_style}
 (\code{defaults.yml}'s \verb{figure_style:}: the study's figure style standard,
 tflspec's built-in one for a part it does not give),
-\code{patterns} (by name), \code{toc}, \code{dir}.  \code{tfl_read_outputs()}: a named list of \code{tfl_output}, by id.
+\code{toc}, \code{dir}.  A \verb{spec/patterns/} file stops the read (an old form:
+a page is a page configuration, \verb{styles:}).  \code{tfl_read_outputs()}: a
+named list of \code{tfl_output}, by id.
 }
 \description{
 \code{tfl_read_study_spec()} reads the study-level files (every one optional)
@@ -44,12 +46,18 @@ two things kept apart:
 \itemize{
 \item \verb{codelists:} the study's code lists for display, by name (\verb{SEX: [\{value: F, label: Female\}, ...]}; the lists of value-level metadata too).  A
 report or a template refers to one by its name, in R (a content
-argument \verb{!r study$codelists$SEX}; the \code{tflspec_v1/demog} template's
-\code{value_labels} default names \code{SEX}, \code{RACE}, \code{ETHNIC} and \code{AGEGR1} so); a
+argument \verb{!r study$codelists$SEX}, as a \code{tflspec_v1/tflspec_summary}
+report's \code{value_labels} names \code{SEX}, \code{RACE}, \code{ETHNIC} and \code{AGEGR1}); a
 reference to a list the study has not got is left out when the report is
 resolved.  No list reaches a report through \verb{extends:}: a report's code
-lists are its own (\verb{codelists:} in its file), and a pattern's
-\verb{codelists:} stops the read.
+lists are its own (\verb{codelists:} in its file).  A report's list of a variable is written
+in place (\verb{SEX: [\{value: F, label: Female\}, ...]}) or names one of the
+study's lists: \code{SEX: {list: SEX}} (all its codes, in its order) or \verb{SEX: \{list: SEX, codes: [M, F]\}} (those codes, in the order written).  The
+labels are the study's list's, and the programs are written as from the
+same list written in place (\code{\link[=tfl_resolve_output]{tfl_resolve_output()}}); a list the study
+has not got, or a code its list has not got, stops there, naming the
+report, the variable and the list.  The sheets keep the reference in the
+codelists sheet's \code{list} column (\code{\link[=tfl_sheets_from_yaml]{tfl_sheets_from_yaml()}}).
 \item \verb{adam_meta:} the ADaM metadata in the shape \code{\link[=tfl_read_define]{tfl_read_define()}} gives
 (until a define is read): each part a list of rows, \verb{variables: [\{dataset: ADSL, variable: SEX, codelist: CL.SEX\}, ...]} (the code list's OID) and
 \verb{codelists: [\{codelist: CL.SEX, name: Sex, value: F, decode: Female, order: 1\}, ...]} (a value a row); \verb{datasets:}, \verb{external:} and

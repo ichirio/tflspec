@@ -85,6 +85,28 @@
       .fix("add_step", step = list(step = "time_unit", variable = sf[[1L]]$time %||% "AVAL",
                                    unit = "months")))
   },
+  tte_order = function(d, ctx) {
+    # (A4) a time_unit step on AVAL writes tte_time(), which converts AVAL
+    # from AVALU and stops when the rows hold two or more units -- and
+    # ADTTE's parameters often do (OS in months, TTSKIN in days).  The step
+    # that keeps the parameter (`param`, or a `filter` on PARAMCD) belongs
+    # before it.  No fix: a fix adds or changes a piece, none moves one.
+    k <- .step_kinds(d)
+    tu <- which(k == "time_unit" & vapply(d$data, function(s)
+      identical(.fv(s, "variable", "time_unit"), "AVAL"), logical(1)))
+    keep <- which(k == "param" | (k == "filter" & vapply(d$data, function(s)
+      grepl("\\bPARAMCD\\b", paste(s$expr %||% "", collapse = " ")), logical(1))))
+    if (!length(tu) || !length(keep)) return(NULL)
+    i <- tu[1L]
+    # a parameter kept before the conversion: one unit, as far as the steps go
+    if (any(keep < i)) return(NULL)
+    j <- min(keep)
+    .adv("tte_order", "warning", "data", paste(
+      "Step %d changes AVAL's unit with tte_time() before step %d keeps the parameter:",
+      "tte_time() needs one unit (AVALU) and stops when the rows hold two or more,",
+      "as ADTTE's parameters often do. Keep the parameter first: move step %d after step %d."),
+      args = list(i, j, i, j))
+  },
   # ---- groups, colours, legend
   palette_short = function(d, ctx) {
     n <- length(ctx$levels)
@@ -192,13 +214,21 @@
                                     .fix("add_step", step = list(step = "read", dataset = "ADSL"), first = TRUE))
   },
   pop = function(d, ctx) {
-    if (.has_step(d, "read") && !.has_step(d, "flag") && !.has_step(d, "code")) {
-      # the flag the data has: the usual ones first, else any *FL
-      have <- grep("FL$", ctx$vars %||% character(), value = TRUE)
-      flag <- c(intersect(c("FASFL", "SAFFL", "ITTFL", "PPROTFL"), have), have, "SAFFL")[1L]
-      .adv("pop", "info", "data",
-           "No population: every row of the dataset is used. Keep the population's flag (FASFL, SAFFL ...).",
-           .fix("add_step", step = list(step = "flag", variable = flag)))
+    # (A2) the analysis set is the report's, its data's `population`: its
+    # program makes the subjects and joins the records the design reads to
+    # them -- no step keeps it.  A flag step keeps a record flag (ANL01FL);
+    # the design does not know the study's sets, so the advice says what to
+    # do when the flag is a set's (tfl_check_spec(): the study's populations
+    # say which)
+    i <- .step_i(d, "flag")
+    if (length(i)) {
+      fl <- .fv(d$data[[i[1L]]], "variable", "flag")
+      .adv("pop", "info", "data", paste(
+        "Step %d keeps the rows whose %s is \"Y\": right for a record flag (ANL01FL ...).",
+        "If %s is an analysis set's flag, remove the step and write the set on the report's data",
+        "(`population:` with the set's id in data.yml): the report's program makes its subjects",
+        "once and joins the records to them."),
+        args = list(i[1L], fl, fl))
     }
   },
   # ---- ggplot2 3.5 / 4.0 (fig_compat.R)

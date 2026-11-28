@@ -3,8 +3,8 @@
 
 Draft the design of one figure: the description that tflspec turns into a ggplot2 script. A design has three parts:
 
-- `data`: one ordered list of steps from the ADaM datasets to what is drawn: the figure's data `df` (read a dataset, keep a parameter and an analysis set, join variables, derive one ...), then what is computed from it (a Kaplan-Meier fit, summary statistics by visit ...), each with a `name` the layers refer to; a step after one of these changes that object;
-- The analysis set and, for a dataset of parameters (PARAMCD), the parameter define the figure: keep them as the shell says (a `flag` step, or a condition on the set's flag; a `param` step, or a figure by PARAM). Never guess them: when the shell does not say them, ask in a question; a figure without them is an error;
+- `data`: one ordered list of steps from the ADaM datasets to what is drawn: the figure's data `df` (read a dataset, keep a parameter, join variables, derive one ...), then what is computed from it (a Kaplan-Meier fit, summary statistics by visit ...), each with a `name` the layers refer to; a step after one of these changes that object;
+- The analysis set and, for a dataset of parameters (PARAMCD), the parameter define the figure. The analysis set is the report's (its "Analysis set" above): the program joins the records to its subjects, so no step keeps it -- never a `flag` step or a condition on the set's flag (`flag` is for a record flag, ANL01FL); when the report has none and the shell names one, ask in a question. Keep the parameter as the shell says (a `param` step, or a figure by PARAM). Never guess them: when the shell does not say them, ask in a question; a figure without them is an error;
 - `plot`: the figure-wide settings (title, axes, colours, legend, size);
 - `layers`: what is drawn, in the order it is drawn.
 

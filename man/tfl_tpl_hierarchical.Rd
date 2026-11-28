@@ -2,14 +2,14 @@
 % Please edit documentation in R/tpl_docs.R
 \name{tfl_tpl_hierarchical}
 \alias{tfl_tpl_hierarchical}
-\title{hierarchical: the template hierarchical}
+\title{Counts by a hierarchy: the template hierarchical}
 \description{
 The table template \code{hierarchical}, layout \code{hierarchical}. Its program is one call, \code{tfl_tpl(ard, "hierarchical", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Step \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab required \tab call \tab report: population, required \tab output.common.population \tab the analysis set's id (SAF) \cr
+   \code{population} \tab required \tab call \tab  \tab  \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
    \code{hierarchy} \tab required \tab call \tab  \tab  \tab the levels, outer first \cr
    \code{data} \tab other \tab call \tab ADAE \tab  \tab the dataset of records \cr
@@ -22,10 +22,10 @@ The table template \code{hierarchical}, layout \code{hierarchical}. Its program 
    \code{min_pct} \tab usual \tab call \tab  \tab  \tab the rows kept: this \% of subjects or more (a step of the ARD); NULL: all \cr
    \code{min_pct_in} \tab other \tab call \tab any \tab  \tab where min_pct is met: "any" column, "all" of them, or the "total" column \cr
    \code{count_cell} \tab other \tab call \tab study: plan_cells.categorical, no fallback \tab plan_cells.categorical \tab a count's cell, n (\%) (plan_cells(categorical = )); NULL: the study standard's \cr
-   \code{denominator} \tab other \tab call \tab  \tab  \tab the percentages' denominator: NULL (default): the analysis set's subjects; "data": the subjects with a record kept; a number: that many subjects in every column; numbers named by the values of 'by' ('c("Drug X" = 60, "Control" = 55)'): that many in each column; the id of an analysis data ('adsl_itt', or one of the report's own): its subjects in each column \cr
-   \code{total} \tab other \tab call \tab FALSE \tab plan_total \tab TRUE: a Total column (the analysis again without 'by', plan_total()) \cr
-   \code{header_n} \tab other \tab call \tab denominator \tab  \tab the arm headings' N: "denominator" (default): the arm's subjects the percentages are of ('denominator'); "set": the same, when 'denominator' is NULL (the analysis set); "tested": the same, when 'denominator' is "data" (the records' subjects); a header N apart from the denominator is not supported yet; "none": no N \cr
-   \code{split} \tab other \tab call \tab group_force \tab plan_paginate_rows.split \tab how a page break is placed (plan_paginate_rows(split = )): "none" one page; "group_safe" whole groups to a page; "group_force" a cut every 'max_rows' rows, a group continued on the next page; "rows" and "by_value" are cut by position or by value (they need their own arguments, a 'plan_paginate_rows' item) \cr
+   \code{denominator} \tab other \tab call \tab  \tab  \tab the percentages' denominator: NULL (default): the analysis set's subjects; "data": the subjects with a record kept; a number: that many subjects in every column; numbers named by the values of \code{by} (\code{c("Drug X" = 60, "Control" = 55)}): that many in each column; the id of an analysis data (\code{adsl_itt}, or one of the report's own): its subjects in each column \cr
+   \code{total} \tab other \tab call \tab FALSE \tab plan_total \tab TRUE: a Total column (the analysis again without \code{by}, plan_total()) \cr
+   \code{header_n} \tab other \tab call \tab denominator \tab  \tab the arm headings' N: "denominator" (default): the arm's subjects the percentages are of (\code{denominator}); "set": the same, when \code{denominator} is NULL (the analysis set); "tested": the same, when \code{denominator} is "data" (the records' subjects); a header N apart from the denominator is not supported yet; "none": no N \cr
+   \code{split} \tab other \tab call \tab group_force \tab plan_paginate_rows.split \tab how a page break is placed (plan_paginate_rows(split = )): "none" one page; "group_safe" whole groups to a page; "group_force" a cut every \code{max_rows} rows, a group continued on the next page; "rows" and "by_value" are cut by position or by value (they need their own arguments, a \code{plan_paginate_rows} item) \cr
 }
 }
 

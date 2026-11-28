@@ -2,7 +2,7 @@
 # the data catalog, the analyses, code lists, tokens, the lines of a header
 # or footer, a listing's columns) written to a workbook to be read in Excel,
 # one row a thing, keyed as today's sheets are (output_id blank: the
-# defaults; @<name>: a pattern; else the report).  What a sheet cannot
+# defaults; else the report).  What a sheet cannot
 # hold -- the layers of `content:`, `!r` values, nested calls, a figure's
 # plot -- is listed on `_not_in_xlsx`.  Design: spec-format-redesign 5.
 
@@ -48,13 +48,12 @@ tfl_write_spec_xlsx <- function(dir, path) {
   if (length(s$data$groups)) {
     note(NA_character_, "groups", "condition-defined groups (data.yml groups:) have no sheet in this workbook")
   }
-  # the defaults and patterns: the page parts, the code list templates
+  # the defaults: the page parts, the code list templates
   # (the default rows are the study's default page configuration, when it is
   # the study's own, and its tokens)
   dflt <- .style_default_name(s)
   dpage <- .page_resolve(if (dflt %in% names(s$styles)) s$styles[[dflt]]$page, .study_tokens(s), NULL)
-  scopes <- c(list(list(id = NA_character_, layer = list(page = dpage, content = s$defaults$content))),
-              lapply(names(s$patterns), function(n) list(id = paste0("@", n), layer = s$patterns[[n]])))
+  scopes <- list(list(id = NA_character_, layer = list(page = dpage, content = s$defaults$content)))
   for (sc in scopes) {
     .flat_page(sc$layer$page, sc$id, add_rows, note)
     if (length(sc$layer$content)) note(sc$id, "content", "the layers (content) are not rows")
@@ -65,9 +64,9 @@ tfl_write_spec_xlsx <- function(dir, path) {
     if (inherits(o$content, "tfl_r")) note(id, "content", "the content as R code is not rows")
     else if (length(o$content)) note(id, "content", "the layers (content) are not rows")
     add_rows("objects", .flat_report_objects_rows(o, id, note))
-    # (the report's `common: population` is the set of its subjects definition)
+    # (the report's set, its data's, is the set of its subjects definition: .rows_set())
     for (e in o$ard$analysis_data %||% list()) {
-      e <- .entry_pop_inject(e, .out_population(o), .pop_from(s$data$populations, .out_population(o)))
+      e <- .entry_pop_inject(e, .rows_set(o), .pop_from(s$data$populations, .rows_set(o)))
       add_rows("analysis_data", list(.flat_map(c(list(output_id = id), e), "analysis_data", id, note)))
     }
     for (k in c("treatment", "population_label")) {
@@ -84,7 +83,17 @@ tfl_write_spec_xlsx <- function(dir, path) {
       }
     }
     for (v in names(o$codelists)) {
-      add_rows("codelists", lapply(o$codelists[[v]], function(e) c(list(output_id = id, variable = v), e)))
+      l <- o$codelists[[v]]
+      # (a reference to the study's list: its rows, the study's codes and
+      # labels, each with the reference in its `list` cell, which an import
+      # reads; one the study has not got: the cell alone)
+      if (.cl_is_ref(l)) {
+        lc <- .cl_ref_cell(l, paste0("tfl_write_spec_xlsx(): ", id, ", ", v))
+        add_rows("codelists", lapply(.cl_ref_rows_or_cell(l, v, s$codelists, id), function(e)
+          c(list(output_id = id, variable = v), e, list(list = lc))))
+      } else {
+        add_rows("codelists", lapply(l, function(e) c(list(output_id = id, variable = v), e)))
+      }
     }
     .flat_page(o$page, id, add_rows, note)
     if (o$kind == "listing") {

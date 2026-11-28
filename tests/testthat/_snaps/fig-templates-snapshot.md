@@ -11,36 +11,51 @@
       library(ggsurvfit)
       library(patchwork)
       
-      # the days in a week, a month, a year (the study's setup may set them)
-      if (!exists("days_per_week")) days_per_week <- 7
-      if (!exists("days_per_month")) days_per_month <- 30.4375
-      if (!exists("days_per_year")) days_per_year <- 365.25
+      # the study helper tte_time() (tfl_helpers_code()), unless the study's setup has it
+      if (!exists("tte_time")) tte_time <- function(data, unit = "days") {
+        days <- c(DAYS = 1,
+                  WEEKS = get0("days_per_week", mode = "numeric", ifnotfound = 7),
+                  MONTHS = get0("days_per_month", mode = "numeric", ifnotfound = 30.4375),
+                  YEARS = get0("days_per_year", mode = "numeric", ifnotfound = 365.25))
+        to <- toupper(as.character(unit))
+        if (length(to) != 1L || is.na(to) || !to %in% names(days)) {
+          stop("tte_time(): the unit must be one of days, weeks, months, years, not ",
+               paste(unit, collapse = " "), call. = FALSE)
+        }
+        if (!nrow(data)) return(data)
+        if (!"AVAL" %in% names(data)) stop("tte_time(): the data has no AVAL", call. = FALSE)
+        from <- "DAYS"
+        if ("AVALU" %in% names(data)) {
+          u <- toupper(trimws(as.character(data$AVALU)))
+          if (anyNA(u) || any(u == "")) {
+            stop("tte_time(): AVALU is missing on ", sum(is.na(u) | u == ""),
+                 " record(s); the time's unit must be given", call. = FALSE)
+          }
+          from <- unique(u)
+          bad <- setdiff(from, names(days))
+          if (length(bad)) {
+            stop("tte_time(): AVALU ", paste(bad, collapse = ", "),
+                 " is not DAYS, WEEKS, MONTHS or YEARS", call. = FALSE)
+          }
+          if (length(from) > 1L) {
+            stop("tte_time(): the data has two or more units (AVALU ",
+                 paste(sort(from), collapse = ", "),
+                 "); filter it to one parameter first", call. = FALSE)
+          }
+        }
+        if (from != to) data$AVAL <- data$AVAL * days[[from]] / days[[to]]
+        data$AVALU <- to
+        data
+      }
       
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtte
       
-      adtte_os <- adtte |>
-        filter(PARAMCD == "OS", FASFL == "Y")
+      adtte_sub <- adtte |>
+        filter(PARAMCD == "OS") |>
+        tte_time("months")
       
-      # AVAL in months, from each record's unit, AVALU (days when the data has no AVALU)
-      adtte_os <- adtte_os |>
-        mutate(AVALU = if ("AVALU" %in% names(adtte_os)) toupper(AVALU) else "DAYS")
-      units_unknown <- setdiff(adtte_os$AVALU, c("DAYS", "WEEKS", "MONTHS", "YEARS"))
-      if (length(units_unknown)) {
-        stop("AVALU: a unit not DAYS, WEEKS, MONTHS or YEARS: ", toString(units_unknown), call. = FALSE)
-      }
-      adtte_os <- adtte_os |>
-        mutate(
-          AVAL = AVAL * case_when(
-            AVALU == "DAYS"   ~ 1,
-            AVALU == "WEEKS"  ~ days_per_week,
-            AVALU == "MONTHS" ~ days_per_month,
-            AVALU == "YEARS"  ~ days_per_year
-          ) / days_per_month,
-          AVALU = "MONTHS"
-        )
-      
-      fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = adtte_os)
+      fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = adtte_sub)
       
       x_breaks <- pretty(c(0, max(fit$time)))
       
@@ -51,11 +66,11 @@
         strata = sub("^[^=]*=", "", as.character(sr$strata)),
         n_risk = sr$n.risk
       ) |>
-        mutate(strata = factor(strata, levels = rev(levels(factor(adtte_os$TRT01P)))))
+        mutate(strata = factor(strata, levels = rev(levels(factor(adtte_sub$TRT01P)))))
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01P
-      lv <- levels(factor(adtte_os$TRT01P))
+      lv <- levels(factor(adtte_sub$TRT01P))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggsurvfit(fit, linewidth = 0.3) +
@@ -138,40 +153,55 @@
       library(ggplot2)
       library(ggsurvfit)
       
-      # the days in a week, a month, a year (the study's setup may set them)
-      if (!exists("days_per_week")) days_per_week <- 7
-      if (!exists("days_per_month")) days_per_month <- 30.4375
-      if (!exists("days_per_year")) days_per_year <- 365.25
+      # the study helper tte_time() (tfl_helpers_code()), unless the study's setup has it
+      if (!exists("tte_time")) tte_time <- function(data, unit = "days") {
+        days <- c(DAYS = 1,
+                  WEEKS = get0("days_per_week", mode = "numeric", ifnotfound = 7),
+                  MONTHS = get0("days_per_month", mode = "numeric", ifnotfound = 30.4375),
+                  YEARS = get0("days_per_year", mode = "numeric", ifnotfound = 365.25))
+        to <- toupper(as.character(unit))
+        if (length(to) != 1L || is.na(to) || !to %in% names(days)) {
+          stop("tte_time(): the unit must be one of days, weeks, months, years, not ",
+               paste(unit, collapse = " "), call. = FALSE)
+        }
+        if (!nrow(data)) return(data)
+        if (!"AVAL" %in% names(data)) stop("tte_time(): the data has no AVAL", call. = FALSE)
+        from <- "DAYS"
+        if ("AVALU" %in% names(data)) {
+          u <- toupper(trimws(as.character(data$AVALU)))
+          if (anyNA(u) || any(u == "")) {
+            stop("tte_time(): AVALU is missing on ", sum(is.na(u) | u == ""),
+                 " record(s); the time's unit must be given", call. = FALSE)
+          }
+          from <- unique(u)
+          bad <- setdiff(from, names(days))
+          if (length(bad)) {
+            stop("tte_time(): AVALU ", paste(bad, collapse = ", "),
+                 " is not DAYS, WEEKS, MONTHS or YEARS", call. = FALSE)
+          }
+          if (length(from) > 1L) {
+            stop("tte_time(): the data has two or more units (AVALU ",
+                 paste(sort(from), collapse = ", "),
+                 "); filter it to one parameter first", call. = FALSE)
+          }
+        }
+        if (from != to) data$AVAL <- data$AVAL * days[[from]] / days[[to]]
+        data$AVALU <- to
+        data
+      }
       
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtte
       
-      adtte_os <- adtte |>
-        filter(PARAMCD == "OS", FASFL == "Y")
+      adtte_sub <- adtte |>
+        filter(PARAMCD == "OS") |>
+        tte_time("months")
       
-      # AVAL in months, from each record's unit, AVALU (days when the data has no AVALU)
-      adtte_os <- adtte_os |>
-        mutate(AVALU = if ("AVALU" %in% names(adtte_os)) toupper(AVALU) else "DAYS")
-      units_unknown <- setdiff(adtte_os$AVALU, c("DAYS", "WEEKS", "MONTHS", "YEARS"))
-      if (length(units_unknown)) {
-        stop("AVALU: a unit not DAYS, WEEKS, MONTHS or YEARS: ", toString(units_unknown), call. = FALSE)
-      }
-      adtte_os <- adtte_os |>
-        mutate(
-          AVAL = AVAL * case_when(
-            AVALU == "DAYS"   ~ 1,
-            AVALU == "WEEKS"  ~ days_per_week,
-            AVALU == "MONTHS" ~ days_per_month,
-            AVALU == "YEARS"  ~ days_per_year
-          ) / days_per_month,
-          AVALU = "MONTHS"
-        )
-      
-      fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = adtte_os)
+      fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = adtte_sub)
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01P
-      lv <- levels(factor(adtte_os$TRT01P))
+      lv <- levels(factor(adtte_sub$TRT01P))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggsurvfit(fit, linewidth = 0.3) +
@@ -231,36 +261,51 @@
       library(ggsurvfit)
       library(patchwork)
       
-      # the days in a week, a month, a year (the study's setup may set them)
-      if (!exists("days_per_week")) days_per_week <- 7
-      if (!exists("days_per_month")) days_per_month <- 30.4375
-      if (!exists("days_per_year")) days_per_year <- 365.25
+      # the study helper tte_time() (tfl_helpers_code()), unless the study's setup has it
+      if (!exists("tte_time")) tte_time <- function(data, unit = "days") {
+        days <- c(DAYS = 1,
+                  WEEKS = get0("days_per_week", mode = "numeric", ifnotfound = 7),
+                  MONTHS = get0("days_per_month", mode = "numeric", ifnotfound = 30.4375),
+                  YEARS = get0("days_per_year", mode = "numeric", ifnotfound = 365.25))
+        to <- toupper(as.character(unit))
+        if (length(to) != 1L || is.na(to) || !to %in% names(days)) {
+          stop("tte_time(): the unit must be one of days, weeks, months, years, not ",
+               paste(unit, collapse = " "), call. = FALSE)
+        }
+        if (!nrow(data)) return(data)
+        if (!"AVAL" %in% names(data)) stop("tte_time(): the data has no AVAL", call. = FALSE)
+        from <- "DAYS"
+        if ("AVALU" %in% names(data)) {
+          u <- toupper(trimws(as.character(data$AVALU)))
+          if (anyNA(u) || any(u == "")) {
+            stop("tte_time(): AVALU is missing on ", sum(is.na(u) | u == ""),
+                 " record(s); the time's unit must be given", call. = FALSE)
+          }
+          from <- unique(u)
+          bad <- setdiff(from, names(days))
+          if (length(bad)) {
+            stop("tte_time(): AVALU ", paste(bad, collapse = ", "),
+                 " is not DAYS, WEEKS, MONTHS or YEARS", call. = FALSE)
+          }
+          if (length(from) > 1L) {
+            stop("tte_time(): the data has two or more units (AVALU ",
+                 paste(sort(from), collapse = ", "),
+                 "); filter it to one parameter first", call. = FALSE)
+          }
+        }
+        if (from != to) data$AVAL <- data$AVAL * days[[from]] / days[[to]]
+        data$AVALU <- to
+        data
+      }
       
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtte
       
-      adtte_os <- adtte |>
-        filter(PARAMCD == "OS", FASFL == "Y")
+      adtte_sub <- adtte |>
+        filter(PARAMCD == "OS") |>
+        tte_time("months")
       
-      # AVAL in months, from each record's unit, AVALU (days when the data has no AVALU)
-      adtte_os <- adtte_os |>
-        mutate(AVALU = if ("AVALU" %in% names(adtte_os)) toupper(AVALU) else "DAYS")
-      units_unknown <- setdiff(adtte_os$AVALU, c("DAYS", "WEEKS", "MONTHS", "YEARS"))
-      if (length(units_unknown)) {
-        stop("AVALU: a unit not DAYS, WEEKS, MONTHS or YEARS: ", toString(units_unknown), call. = FALSE)
-      }
-      adtte_os <- adtte_os |>
-        mutate(
-          AVAL = AVAL * case_when(
-            AVALU == "DAYS"   ~ 1,
-            AVALU == "WEEKS"  ~ days_per_week,
-            AVALU == "MONTHS" ~ days_per_month,
-            AVALU == "YEARS"  ~ days_per_year
-          ) / days_per_month,
-          AVALU = "MONTHS"
-        )
-      
-      fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = adtte_os)
+      fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = adtte_sub)
       
       x_breaks <- pretty(c(0, max(fit$time)))
       
@@ -271,11 +316,11 @@
         strata = sub("^[^=]*=", "", as.character(sr$strata)),
         n_risk = sr$n.risk
       ) |>
-        mutate(strata = factor(strata, levels = rev(levels(factor(adtte_os$TRT01P)))))
+        mutate(strata = factor(strata, levels = rev(levels(factor(adtte_sub$TRT01P)))))
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01P
-      lv <- levels(factor(adtte_os$TRT01P))
+      lv <- levels(factor(adtte_sub$TRT01P))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggsurvfit(fit, linewidth = 0.3) +
@@ -361,36 +406,51 @@
       library(ggsurvfit)
       library(patchwork)
       
-      # the days in a week, a month, a year (the study's setup may set them)
-      if (!exists("days_per_week")) days_per_week <- 7
-      if (!exists("days_per_month")) days_per_month <- 30.4375
-      if (!exists("days_per_year")) days_per_year <- 365.25
+      # the study helper tte_time() (tfl_helpers_code()), unless the study's setup has it
+      if (!exists("tte_time")) tte_time <- function(data, unit = "days") {
+        days <- c(DAYS = 1,
+                  WEEKS = get0("days_per_week", mode = "numeric", ifnotfound = 7),
+                  MONTHS = get0("days_per_month", mode = "numeric", ifnotfound = 30.4375),
+                  YEARS = get0("days_per_year", mode = "numeric", ifnotfound = 365.25))
+        to <- toupper(as.character(unit))
+        if (length(to) != 1L || is.na(to) || !to %in% names(days)) {
+          stop("tte_time(): the unit must be one of days, weeks, months, years, not ",
+               paste(unit, collapse = " "), call. = FALSE)
+        }
+        if (!nrow(data)) return(data)
+        if (!"AVAL" %in% names(data)) stop("tte_time(): the data has no AVAL", call. = FALSE)
+        from <- "DAYS"
+        if ("AVALU" %in% names(data)) {
+          u <- toupper(trimws(as.character(data$AVALU)))
+          if (anyNA(u) || any(u == "")) {
+            stop("tte_time(): AVALU is missing on ", sum(is.na(u) | u == ""),
+                 " record(s); the time's unit must be given", call. = FALSE)
+          }
+          from <- unique(u)
+          bad <- setdiff(from, names(days))
+          if (length(bad)) {
+            stop("tte_time(): AVALU ", paste(bad, collapse = ", "),
+                 " is not DAYS, WEEKS, MONTHS or YEARS", call. = FALSE)
+          }
+          if (length(from) > 1L) {
+            stop("tte_time(): the data has two or more units (AVALU ",
+                 paste(sort(from), collapse = ", "),
+                 "); filter it to one parameter first", call. = FALSE)
+          }
+        }
+        if (from != to) data$AVAL <- data$AVAL * days[[from]] / days[[to]]
+        data$AVALU <- to
+        data
+      }
       
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtte
       
-      adtte_os <- adtte |>
-        filter(PARAMCD == "OS", FASFL == "Y")
+      adtte_sub <- adtte |>
+        filter(PARAMCD == "OS") |>
+        tte_time("months")
       
-      # AVAL in months, from each record's unit, AVALU (days when the data has no AVALU)
-      adtte_os <- adtte_os |>
-        mutate(AVALU = if ("AVALU" %in% names(adtte_os)) toupper(AVALU) else "DAYS")
-      units_unknown <- setdiff(adtte_os$AVALU, c("DAYS", "WEEKS", "MONTHS", "YEARS"))
-      if (length(units_unknown)) {
-        stop("AVALU: a unit not DAYS, WEEKS, MONTHS or YEARS: ", toString(units_unknown), call. = FALSE)
-      }
-      adtte_os <- adtte_os |>
-        mutate(
-          AVAL = AVAL * case_when(
-            AVALU == "DAYS"   ~ 1,
-            AVALU == "WEEKS"  ~ days_per_week,
-            AVALU == "MONTHS" ~ days_per_month,
-            AVALU == "YEARS"  ~ days_per_year
-          ) / days_per_month,
-          AVALU = "MONTHS"
-        )
-      
-      fit <- survfit2(Surv(AVAL, CNSR == 0) ~ 1, data = adtte_os)
+      fit <- survfit2(Surv(AVAL, CNSR == 0) ~ 1, data = adtte_sub)
       
       x_breaks <- pretty(c(0, max(fit$time)))
       
@@ -481,8 +541,8 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtr, adrs
       
-      adtr_bpchg <- adtr |>
-        filter(PARAMCD == "BPCHG", FASFL == "Y") |>
+      adtr_sub <- adtr |>
+        filter(PARAMCD == "BPCHG") |>
         left_join(
           adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
           by = "USUBJID"
@@ -504,7 +564,7 @@
       )
       
       fig <- ggplot() +
-        geom_col(data = adtr_bpchg, aes(x = INDEX, y = AVAL, fill = BOR), width = 0.8) +
+        geom_col(data = adtr_sub, aes(x = INDEX, y = AVAL, fill = BOR), width = 0.8) +
         geom_hline(yintercept = 0, linetype = "solid", colour = "black",
                    linewidth = 0.5) +
         geom_hline(
@@ -580,15 +640,15 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtr
       
-      adtr_bpchg <- adtr |>
-        filter(PARAMCD == "BPCHG", FASFL == "Y", !is.na(AVAL)) |>
+      adtr_sub <- adtr |>
+        filter(PARAMCD == "BPCHG", !is.na(AVAL)) |>
         arrange(desc(AVAL)) |>
         mutate(INDEX = row_number())
       
       # ---- plot ------------------------------------------------------------------
       
       fig <- ggplot() +
-        geom_col(data = adtr_bpchg, aes(x = INDEX, y = AVAL), width = 0.8) +
+        geom_col(data = adtr_sub, aes(x = INDEX, y = AVAL), width = 0.8) +
         geom_hline(yintercept = 0, linetype = "solid", colour = "black",
                    linewidth = 0.5) +
         geom_hline(
@@ -660,22 +720,22 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adsl
       
-      adsl_fas <- adsl |>
-        filter(FASFL == "Y", !is.na(TRTDURD)) |>
+      adsl_sub <- adsl |>
+        filter(!is.na(TRTDURD)) |>
         # days -> months
         mutate(TRTDURD = TRTDURD / days_per_month) |>
         mutate(X0 = 0) |>
         mutate(Y_ID = reorder(USUBJID, TRTDURD)) |>
         mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03)
       
-      ongoing <- adsl_fas |>
+      ongoing <- adsl_sub |>
         filter(EOSSTT == "ONGOING")
       
       # ---- plot ------------------------------------------------------------------
       
       fig <- ggplot() +
         geom_segment(
-          data = adsl_fas,
+          data = adsl_sub,
           aes(x = X0, y = Y_ID, xend = TRTDURD, yend = Y_ID),
           linewidth = 1.2
         ) +
@@ -734,8 +794,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adsl, adrs
       
-      adsl_fas <- adsl |>
-        filter(FASFL == "Y") |>
+      adsl_sub <- adsl |>
         left_join(
           adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
           by = "USUBJID"
@@ -748,7 +807,7 @@
         mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03) |>
         mutate(BOR = factor(BOR, levels = c("CR", "PR", "SD", "PD", "NE")))
       
-      ongoing <- adsl_fas |>
+      ongoing <- adsl_sub |>
         filter(EOSSTT == "ONGOING")
       
       # ---- plot ------------------------------------------------------------------
@@ -764,7 +823,7 @@
       
       fig <- ggplot() +
         geom_segment(
-          data = adsl_fas,
+          data = adsl_sub,
           aes(x = X0, y = Y_ID, xend = TRTDURD, yend = Y_ID, colour = BOR),
           linewidth = 1.2
         ) +
@@ -824,8 +883,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adsl, adrs
       
-      adsl_fas <- adsl |>
-        filter(FASFL == "Y") |>
+      adsl_sub <- adsl |>
         left_join(
           adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
           by = "USUBJID"
@@ -838,12 +896,12 @@
         mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03) |>
         mutate(BOR = factor(BOR, levels = c("CR", "PR", "SD", "PD", "NE")))
       
-      ongoing <- adsl_fas |>
+      ongoing <- adsl_sub |>
         filter(EOSSTT == "ONGOING")
       
       assess <- adrs |>
         filter(PARAMCD == "OVR" & !is.na(ADY)) |>
-        inner_join(adsl_fas |> select(USUBJID, Y_ID), by = "USUBJID") |>
+        inner_join(adsl_sub |> select(USUBJID, Y_ID), by = "USUBJID") |>
         mutate(ADY = ADY / days_per_month)
       
       # ---- plot ------------------------------------------------------------------
@@ -859,7 +917,7 @@
       
       fig <- ggplot() +
         geom_segment(
-          data = adsl_fas,
+          data = adsl_sub,
           aes(x = X0, y = Y_ID, xend = TRTDURD, yend = Y_ID, colour = BOR),
           linewidth = 1.2
         ) +
@@ -925,8 +983,7 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adsl, adrs
       
-      adsl_fas <- adsl |>
-        filter(FASFL == "Y") |>
+      adsl_sub <- adsl |>
         left_join(
           adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
           by = "USUBJID"
@@ -939,12 +996,12 @@
         mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03) |>
         mutate(BOR = factor(BOR, levels = c("CR", "PR", "SD", "PD", "NE")))
       
-      ongoing <- adsl_fas |>
+      ongoing <- adsl_sub |>
         filter(EOSSTT == "ONGOING")
       
       assess <- adrs |>
         filter(PARAMCD == "OVR" & !is.na(ADY)) |>
-        inner_join(adsl_fas |> select(USUBJID, Y_ID), by = "USUBJID") |>
+        inner_join(adsl_sub |> select(USUBJID, Y_ID), by = "USUBJID") |>
         mutate(ADY = ADY / days_per_month)
       
       # ---- plot ------------------------------------------------------------------
@@ -960,7 +1017,7 @@
       
       fig <- ggplot() +
         geom_segment(
-          data = adsl_fas,
+          data = adsl_sub,
           aes(x = X0, y = Y_ID, xend = TRTDURD, yend = Y_ID, colour = BOR),
           linewidth = 1.2
         ) +
@@ -977,7 +1034,7 @@
           size = 1.5
         ) +
         geom_point(
-          data = adsl_fas,
+          data = adsl_sub,
           aes(x = DTHADY, y = Y_ID),
           shape = 17,
           size = 2.5,
@@ -1033,8 +1090,8 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtr, adrs
       
-      adtr_sdiam <- adtr |>
-        filter(PARAMCD == "SDIAM", FASFL == "Y") |>
+      adtr_sub <- adtr |>
+        filter(PARAMCD == "SDIAM") |>
         left_join(
           adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
           by = "USUBJID"
@@ -1065,13 +1122,13 @@
           linewidth = 0.3
         ) +
         geom_line(
-          data = adtr_sdiam,
+          data = adtr_sub,
           aes(x = ADY, y = PCHG, colour = BOR, group = USUBJID),
           linewidth = 0.5,
           alpha = 0.8
         ) +
         geom_point(
-          data = adtr_sdiam,
+          data = adtr_sub,
           aes(x = ADY, y = PCHG, colour = BOR, group = BOR),
           shape = 16,
           size = 1
@@ -1121,31 +1178,39 @@
       
       library(dplyr)
       library(ggplot2)
+      # also needs: rtfreporter (called as pkg::fn)
+      
+      # the study helper fmt_num() (tfl_helpers_code()), unless the study's setup has it
+      if (!exists("fmt_num")) fmt_num <- function(x, digits, na = "NE") {
+        x <- as.numeric(x)
+        out <- sprintf(paste0("%.", digits, "f"), rtfreporter::round_num(x, digits))
+        out[is.na(x)] <- na
+        out
+      }
       
       # ---- data ------------------------------------------------------------------
       # Input data frames: adrs, adsl
       
-      adrs_bor <- adrs |>
+      adrs_sub <- adrs |>
         filter(PARAMCD == "BOR") |>
         left_join(
-          adsl |> select(USUBJID, TRT01P, FASFL),
+          adsl |> select(USUBJID, TRT01P),
           by = "USUBJID"
-        ) |>
-        filter(FASFL == "Y")
+        )
       
-      rt <- adrs_bor |>
+      rt <- adrs_sub |>
         group_by(TRT01P) |>
         summarise(n = n(), x = sum(AVALC %in% c("CR", "PR")), .groups = "drop") |>
         mutate(
           rate  = 100 * x / n,
           lcl   = 100 * mapply(function(x, n) binom.test(x, n)$conf.int[1], x, n),
           ucl   = 100 * mapply(function(x, n) binom.test(x, n)$conf.int[2], x, n),
-          label = sprintf("%.1f%%\n(%d/%d)", rate, x, n)
+          label = paste0(fmt_num(rate, 1), "%\n(", x, "/", n, ")")
         )
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01P
-      lv <- levels(factor(adrs_bor$TRT01P))
+      lv <- levels(factor(adrs_sub$TRT01P))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
@@ -1206,22 +1271,30 @@
       
       library(dplyr)
       library(ggplot2)
+      # also needs: rtfreporter (called as pkg::fn)
+      
+      # the study helper fmt_num() (tfl_helpers_code()), unless the study's setup has it
+      if (!exists("fmt_num")) fmt_num <- function(x, digits, na = "NE") {
+        x <- as.numeric(x)
+        out <- sprintf(paste0("%.", digits, "f"), rtfreporter::round_num(x, digits))
+        out[is.na(x)] <- na
+        out
+      }
       
       # ---- data ------------------------------------------------------------------
       # Input data frames: adrs, adsl
       
-      adrs_bor <- adrs |>
+      adrs_sub <- adrs |>
         filter(PARAMCD == "BOR") |>
         left_join(
-          adsl |> select(USUBJID, TRT01P, FASFL),
+          adsl |> select(USUBJID, TRT01P),
           by = "USUBJID"
-        ) |>
-        filter(FASFL == "Y")
+        )
       
-      ct <- adrs_bor |>
+      ct <- adrs_sub |>
         count(TRT01P, AVALC) |>
         group_by(TRT01P) |>
-        mutate(pct = 100 * n / sum(n), label = sprintf("%.0f%%", pct)) |>
+        mutate(pct = 100 * n / sum(n), label = paste0(fmt_num(pct, 0), "%")) |>
         ungroup() |>
         mutate(AVALC = factor(AVALC, levels = unique(c(intersect(c("CR", "PR", "SD", "PD", "NE"), AVALC), sort(AVALC)))))
       
@@ -1293,27 +1366,35 @@
       
       library(dplyr)
       library(ggplot2)
+      # also needs: rtfreporter (called as pkg::fn)
+      
+      # the study helper fmt_num() (tfl_helpers_code()), unless the study's setup has it
+      if (!exists("fmt_num")) fmt_num <- function(x, digits, na = "NE") {
+        x <- as.numeric(x)
+        out <- sprintf(paste0("%.", digits, "f"), rtfreporter::round_num(x, digits))
+        out[is.na(x)] <- na
+        out
+      }
       
       # ---- data ------------------------------------------------------------------
       # Input data frames: adrs, adsl
       
-      adrs_bor <- adrs |>
+      adrs_sub <- adrs |>
         filter(PARAMCD == "BOR") |>
         left_join(
-          adsl |> select(USUBJID, TRT01P, FASFL),
+          adsl |> select(USUBJID, TRT01P),
           by = "USUBJID"
-        ) |>
-        filter(FASFL == "Y")
+        )
       
-      ct <- adrs_bor |>
+      ct <- adrs_sub |>
         count(TRT01P, AVALC) |>
         group_by(TRT01P) |>
-        mutate(pct = 100 * n / sum(n), label = sprintf("%.0f%%", pct)) |>
+        mutate(pct = 100 * n / sum(n), label = paste0(fmt_num(pct, 0), "%")) |>
         ungroup()
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01P
-      lv <- levels(factor(adrs_bor$TRT01P))
+      lv <- levels(factor(adrs_sub$TRT01P))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
@@ -1378,16 +1459,16 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      adlb_alt <- adlb |>
+      adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", !is.na(AVAL) & !is.na(AVISITN)) |>
+        filter(!is.na(AVAL) & !is.na(AVISITN)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
-      sm <- adlb_alt |>
+      sm <- adlb_sub |>
         filter(!is.na(AVAL)) |>
         group_by(TRT01A, AVISITN, AVISIT) |>
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
@@ -1395,7 +1476,7 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adlb_alt$TRT01A))
+      lv <- levels(factor(adlb_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       pd <- position_dodge(width = 0.3)
       
@@ -1467,16 +1548,16 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      adlb_alt <- adlb |>
+      adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", !is.na(AVAL) & !is.na(AVISITN)) |>
+        filter(!is.na(AVAL) & !is.na(AVISITN)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
-      sm <- adlb_alt |>
+      sm <- adlb_sub |>
         filter(!is.na(AVAL)) |>
         group_by(TRT01A, AVISITN, AVISIT) |>
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
@@ -1484,7 +1565,7 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adlb_alt$TRT01A))
+      lv <- levels(factor(adlb_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       pd <- position_dodge(width = 0.3)
       
@@ -1556,16 +1637,16 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      adlb_alt <- adlb |>
+      adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", !is.na(AVAL) & !is.na(AVISITN)) |>
+        filter(!is.na(AVAL) & !is.na(AVISITN)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
-      sm <- adlb_alt |>
+      sm <- adlb_sub |>
         filter(!is.na(AVAL)) |>
         group_by(TRT01A, AVISITN, AVISIT) |>
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
@@ -1573,7 +1654,7 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adlb_alt$TRT01A))
+      lv <- levels(factor(adlb_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       pd <- position_dodge(width = 0.3)
       
@@ -1646,16 +1727,16 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      adlb_alt <- adlb |>
+      adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", !is.na(AVAL) & !is.na(AVISITN)) |>
+        filter(!is.na(AVAL) & !is.na(AVISITN)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
-      sm <- adlb_alt |>
+      sm <- adlb_sub |>
         filter(!is.na(AVAL)) |>
         group_by(TRT01A, AVISITN, AVISIT) |>
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
@@ -1663,7 +1744,7 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adlb_alt$TRT01A))
+      lv <- levels(factor(adlb_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       pd <- position_dodge(width = 0.3)
       
@@ -1755,16 +1836,16 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      adlb_alt <- adlb |>
+      adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", !is.na(AVAL) & !is.na(AVISIT)) |>
+        filter(!is.na(AVAL) & !is.na(AVISIT)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
-      sm <- adlb_alt |>
+      sm <- adlb_sub |>
         filter(!is.na(AVAL)) |>
         group_by(TRT01A, AVISITN, AVISIT) |>
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
@@ -1772,12 +1853,12 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adlb_alt$TRT01A))
+      lv <- levels(factor(adlb_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
         geom_line(
-          data = adlb_alt,
+          data = adlb_sub,
           aes(x = AVISIT, y = AVAL, colour = TRT01A, group = USUBJID),
           linewidth = 0.5,
           alpha = 0.35
@@ -1835,16 +1916,16 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      adlb_alt <- adlb |>
+      adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", !is.na(AVAL)) |>
+        filter(!is.na(AVAL)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
-      sg <- adlb_alt |>
+      sg <- adlb_sub |>
         filter(!is.na(AVAL)) |>
         group_by(TRT01A, AVISITN, AVISIT) |>
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
@@ -1852,13 +1933,13 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adlb_alt$TRT01A))
+      lv <- levels(factor(adlb_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       pd <- position_dodge(width = 0.8)
       
       fig <- ggplot() +
         geom_boxplot(
-          data = adlb_alt,
+          data = adlb_sub,
           aes(x = AVISIT, y = AVAL, fill = TRT01A),
           width = 0.7,
           outlier.shape = 16,
@@ -1919,15 +2000,15 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      adlb_alt <- adlb |>
+      adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", !is.na(AVAL), AVISITN == max(AVISITN))
+        filter(!is.na(AVAL), AVISITN == max(AVISITN))
       
-      sg <- adlb_alt |>
+      sg <- adlb_sub |>
         filter(!is.na(AVAL)) |>
         group_by(TRT01A) |>
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
@@ -1935,19 +2016,19 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adlb_alt$TRT01A))
+      lv <- levels(factor(adlb_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
         geom_boxplot(
-          data = adlb_alt,
+          data = adlb_sub,
           aes(x = TRT01A, y = AVAL, fill = TRT01A),
           width = 0.5,
           outlier.shape = 1,
           alpha = 0.6
         ) +
         geom_jitter(
-          data = adlb_alt,
+          data = adlb_sub,
           aes(x = TRT01A, y = AVAL),
           width = 0.12,
           height = 0,
@@ -2003,16 +2084,16 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      adlb_alt <- adlb |>
+      adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", !is.na(CHG), AVISITN > 0) |>
+        filter(!is.na(CHG), AVISITN > 0) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
-      sg <- adlb_alt |>
+      sg <- adlb_sub |>
         filter(!is.na(CHG)) |>
         group_by(TRT01A, AVISITN, AVISIT) |>
         summarise(n = n(), mean = mean(CHG), sd = sd(CHG), .groups = "drop") |>
@@ -2020,7 +2101,7 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adlb_alt$TRT01A))
+      lv <- levels(factor(adlb_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       pd <- position_dodge(width = 0.8)
       
@@ -2028,7 +2109,7 @@
         geom_hline(yintercept = 0, linetype = "solid", colour = "grey60",
                    linewidth = 0.3) +
         geom_boxplot(
-          data = adlb_alt,
+          data = adlb_sub,
           aes(x = AVISIT, y = CHG, fill = TRT01A),
           width = 0.7,
           outlier.shape = 16,
@@ -2089,24 +2170,24 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      adlb_alt <- adlb |>
+      adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", AVISITN > 0 & !is.na(BASE) & !is.na(AVAL), AVISITN == max(AVISITN))
+        filter(AVISITN > 0 & !is.na(BASE) & !is.na(AVAL), AVISITN == max(AVISITN))
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adlb_alt$TRT01A))
+      lv <- levels(factor(adlb_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
         geom_abline(intercept = 0, slope = 1, linetype = "dashed",
                     colour = "grey50") +
         geom_point(
-          data = adlb_alt,
+          data = adlb_sub,
           aes(x = BASE, y = AVAL, colour = TRT01A, group = TRT01A),
           shape = 16,
           size = 1.8,
@@ -2166,31 +2247,31 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      adlb_alt <- adlb |>
+      adlb_sub <- adlb |>
         filter(PARAMCD == "ALT") |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", AVISITN > 0 & !is.na(BASE) & !is.na(CHG), AVISITN == max(AVISITN))
+        filter(AVISITN > 0 & !is.na(BASE) & !is.na(CHG), AVISITN == max(AVISITN))
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adlb_alt$TRT01A))
+      lv <- levels(factor(adlb_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
         geom_hline(yintercept = 0, linetype = "solid", colour = "grey60",
                    linewidth = 0.3) +
         geom_point(
-          data = adlb_alt,
+          data = adlb_sub,
           aes(x = BASE, y = CHG, colour = TRT01A, group = TRT01A),
           shape = 16,
           size = 1.8,
           alpha = 0.8
         ) +
         geom_smooth(
-          data = adlb_alt,
+          data = adlb_sub,
           aes(x = BASE, y = CHG, colour = TRT01A),
           method = "lm",
           se = FALSE
@@ -2249,14 +2330,14 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adpc, adsl
       
-      adpc_saf <- adpc |>
+      adpc_sub <- adpc |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", !is.na(AVAL))
+        filter(!is.na(AVAL))
       
-      sm <- adpc_saf |>
+      sm <- adpc_sub |>
         filter(!is.na(AVAL)) |>
         group_by(TRT01A, NFRLT) |>
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
@@ -2264,7 +2345,7 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adpc_saf$TRT01A))
+      lv <- levels(factor(adpc_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
@@ -2338,14 +2419,14 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adpc, adsl
       
-      adpc_saf <- adpc |>
+      adpc_sub <- adpc |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", !is.na(AVAL), AVAL > 0)
+        filter(!is.na(AVAL), AVAL > 0)
       
-      sm <- adpc_saf |>
+      sm <- adpc_sub |>
         filter(!is.na(AVAL)) |>
         group_by(TRT01A, NFRLT) |>
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
@@ -2354,7 +2435,7 @@
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adpc_saf$TRT01A))
+      lv <- levels(factor(adpc_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
@@ -2429,27 +2510,27 @@
       # ---- data ------------------------------------------------------------------
       # Input data frames: adpc, adsl
       
-      adpc_saf <- adpc |>
+      adpc_sub <- adpc |>
         left_join(
-          adsl |> select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A),
           by = "USUBJID"
         ) |>
-        filter(SAFFL == "Y", !is.na(AVAL), AVAL > 0)
+        filter(!is.na(AVAL), AVAL > 0)
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
-      lv <- levels(factor(adpc_saf$TRT01A))
+      lv <- levels(factor(adpc_sub$TRT01A))
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
         geom_line(
-          data = adpc_saf,
+          data = adpc_sub,
           aes(x = NFRLT, y = AVAL, colour = TRT01A, group = USUBJID),
           linewidth = 0.5,
           alpha = 0.5
         ) +
         geom_point(
-          data = adpc_saf,
+          data = adpc_sub,
           aes(x = NFRLT, y = AVAL, colour = TRT01A, group = TRT01A),
           shape = 16,
           size = 0.8,
@@ -2502,13 +2583,68 @@
       library(dplyr)
       library(ggplot2)
       library(patchwork)
+      # also needs: rtfreporter (called as pkg::fn)
+      
+      # the study helpers fmt_num(), ard_stats() (tfl_helpers_code()), unless the study's setup has them
+      if (!exists("fmt_num")) fmt_num <- function(x, digits, na = "NE") {
+        x <- as.numeric(x)
+        out <- sprintf(paste0("%.", digits, "f"), rtfreporter::round_num(x, digits))
+        out[is.na(x)] <- na
+        out
+      }
+      if (!exists("ard_stats")) ard_stats <- function(ard, analysis_id, variable = NULL, stats, by = NULL) {
+        chr <- function(x) {
+          if (!is.list(x)) return(as.character(x))
+          vapply(x, function(v) if (length(v)) as.character(v[[1L]]) else NA_character_, "")
+        }
+        num <- function(x) suppressWarnings(as.numeric(chr(x)))
+        k <- ard$analysis_id %in% analysis_id & ard$stat_name %in% stats
+        if (!is.null(variable)) k <- k & ard$variable %in% variable
+        a <- ard[k, , drop = FALSE]
+        if (!nrow(a)) {
+          stop(sprintf("ard_stats(): the ARD has no rows of %s, %s.",
+                       paste(analysis_id, collapse = ", "), paste(stats, collapse = ", ")),
+               call. = FALSE)
+        }
+        gcols <- grep("^group[0-9]+$", names(a), value = TRUE)
+        if (is.null(by)) by <- unique(stats::na.omit(unlist(lapply(gcols, function(g) chr(a[[g]])))))
+        keys <- data.frame(row.names = seq_len(nrow(a)))
+        if (length(unique(a$analysis_id)) > 1L) keys$analysis_id <- a$analysis_id
+        for (g in by) {
+          v <- rep(NA_character_, nrow(a))
+          for (col in gcols) {
+            at <- chr(a[[col]]) %in% g
+            v[at] <- chr(a[[paste0(col, "_level")]])[at]
+          }
+          keys[[g]] <- v
+        }
+        vars <- unique(a$variable)
+        if (length(vars) > 1L) keys$variable <- a$variable
+        if ("variable_level" %in% names(a)) {
+          lv <- chr(a$variable_level)
+          if (!all(is.na(lv))) {
+            nm <- if (length(vars) == 1L) vars else "level"
+            keys[[nm]] <- if (all(is.na(lv) | !is.na(num(a$variable_level)))) num(a$variable_level) else lv
+          }
+        }
+        id <- do.call(paste, c(lapply(keys, as.character), list(sep = "\r")))
+        if (!ncol(keys)) id <- rep("", nrow(a))
+        first <- !duplicated(id)
+        out <- keys[first, , drop = FALSE]
+        for (s in stats) {
+          at <- a$stat_name == s
+          out[[s]] <- num(a$stat)[at][match(id[first], id[at])]
+        }
+        rownames(out) <- NULL
+        out
+      }
       
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtte
       # Input ARD: ard (read with ard_value() / ard_stats(), tfl_helpers_code())
       
-      adtte_os <- adtte |>
-        filter(PARAMCD == "OS", FASFL == "Y")
+      adtte_sub <- adtte |>
+        filter(PARAMCD == "OS")
       
       est <- ard_stats(
         ard,
@@ -2519,40 +2655,43 @@
       )
       
       # the rows to draw: the comparison arm, a heading row per subgroup
-      est <- est |>
-        # the reference arm has no interval; a subgroup whose model did not
-        # converge (no events in an arm) has no point: NE
-        filter(!is.na(conf.low)) |>
-        mutate(
-          subgroup = case_when(
-            !is.na(SEX) ~ "SEX",
-            !is.na(AGEGR1) ~ "AGEGR1",
-            TRUE ~ "All subjects"
-          ),
-          level = paste(coalesce(SEX, AGEGR1, "All subjects"), TRT01P, sep = ": "),
-          ok = is.finite(estimate) & is.finite(conf.low) & is.finite(conf.high) &
-            conf.high < 1000,
-          txt = ifelse(ok, sprintf("%.2f (%.2f, %.2f)", estimate, conf.low, conf.high),
-                       "NE"),
-          across(c(estimate, conf.low, conf.high), ~ ifelse(ok, .x, NA))
-        )
-      # a heading row above each subgroup's levels, the levels indented
-      # (the headings read the subgroups' labels, a variable's name when it has none)
-      sg_label <- c(SEX = "Sex", AGEGR1 = "Age group")
-      heads <- est |>
-        filter(subgroup != "All subjects") |>
-        distinct(subgroup) |>
-        mutate(level = coalesce(unname(sg_label[subgroup]), subgroup), head = TRUE)
-      est <- est |>
-        mutate(head = FALSE) |>
-        bind_rows(heads) |>
-        arrange(factor(subgroup, levels = unique(est$subgroup)), desc(head)) |>
-        mutate(
-          label = ifelse(head | subgroup == "All subjects", level, paste0("    ", level)),
-          n = ifelse(head, "", as.character(n_obs)),
-          txt = ifelse(head, "", txt),
-          y = rev(row_number())
-        )
+      est <- local({
+        est <- est |>
+          # the reference arm has no interval; a subgroup whose model did not
+          # converge (no events in an arm) has no point: NE
+          filter(!is.na(conf.low)) |>
+          mutate(
+            subgroup = case_when(
+              !is.na(SEX) ~ "SEX",
+              !is.na(AGEGR1) ~ "AGEGR1",
+              TRUE ~ "All subjects"
+            ),
+            level = paste(coalesce(SEX, AGEGR1, "All subjects"), TRT01P, sep = ": "),
+            ok = is.finite(estimate) & is.finite(conf.low) & is.finite(conf.high) &
+              conf.high < 1000,
+            txt = ifelse(ok, paste0(fmt_num(estimate, 2), " (", fmt_num(conf.low, 2),
+                                    ", ", fmt_num(conf.high, 2), ")"), "NE"),
+            across(c(estimate, conf.low, conf.high), ~ ifelse(ok, .x, NA))
+          )
+        # a heading row above each subgroup's levels, the levels indented
+        # (the headings read the subgroups' labels, a variable's name when it has none)
+        sg_label <- c(SEX = "Sex", AGEGR1 = "Age group")
+        heads <- est |>
+          filter(subgroup != "All subjects") |>
+          distinct(subgroup) |>
+          mutate(level = coalesce(unname(sg_label[subgroup]), subgroup), head = TRUE)
+        est <- est |>
+          mutate(head = FALSE) |>
+          bind_rows(heads) |>
+          arrange(factor(subgroup, levels = unique(est$subgroup)), desc(head)) |>
+          mutate(
+            label = ifelse(head | subgroup == "All subjects", level, paste0("    ", level)),
+            n = ifelse(head, "", as.character(n_obs)),
+            txt = ifelse(head, "", txt),
+            y = rev(row_number())
+          )
+        est
+      })
       
       # ---- plot ------------------------------------------------------------------
       
@@ -2639,6 +2778,7 @@
       library(dplyr)
       library(ggplot2)
       library(patchwork)
+      # also needs: rtfreporter (called as pkg::fn)
       
       # ---- data ------------------------------------------------------------------
       # Input data frames: adrs, adsl
@@ -2675,9 +2815,14 @@
       
       est_df <- bind_rows(rows) |>
         mutate(
+          # (numbers even when every model failed: rounding takes no NA logical)
+          across(c(est, lcl, ucl), as.numeric),
           # not estimable (e.g. no events / all responders in a subgroup): no point, "NE"
           ok  = is.finite(est) & is.finite(lcl) & is.finite(ucl) & lcl > 0 & ucl < 1000,
-          txt = ifelse(head, "", ifelse(ok, sprintf("%.2f (%.2f, %.2f)", est, lcl, ucl), "NE")),
+          # (rounded as the tables are: options(rtfreporter.rounding))
+          txt = ifelse(head, "", ifelse(ok, sprintf("%.2f (%.2f, %.2f)",
+            rtfreporter::round_num(est, 2), rtfreporter::round_num(lcl, 2),
+            rtfreporter::round_num(ucl, 2)), "NE")),
           across(c(est, lcl, ucl), ~ ifelse(ok, .x, NA)),
           y   = rev(seq_len(n()))
         )
@@ -2952,6 +3097,7 @@
       
       library(dplyr)
       library(ggplot2)
+      # also needs: rtfreporter (called as pkg::fn)
       
       # ---- data ------------------------------------------------------------------
       # Input data frames: adae, adsl
@@ -3000,7 +3146,7 @@
         ggplot(inc_df, aes(x = x, y = AEBODSYS, fill = TRT01A)) +
         geom_col(width = 0.7) +
         geom_vline(xintercept = 0, colour = "grey30") +
-        geom_text(aes(label = ifelse(pct > 0, sprintf("%.1f", pct), ""), hjust = ifelse(x < 0, 1.15, -0.15)), size = 2.6) +
+        geom_text(aes(label = ifelse(pct > 0, sprintf("%.1f", rtfreporter::round_num(pct, 1)), ""), hjust = ifelse(x < 0, 1.15, -0.15)), size = 2.6) +
         scale_x_continuous(limits = c(-x_lim, x_lim), labels = function(v) abs(v)) +
         scale_fill_manual(values = pal_grp) +
         labs(x = "Subjects with event (%)", y = NULL) +
@@ -3047,6 +3193,7 @@
       
       library(dplyr)
       library(ggplot2)
+      # also needs: rtfreporter (called as pkg::fn)
       
       # ---- data ------------------------------------------------------------------
       # Input data frames: adae, adsl
@@ -3095,7 +3242,7 @@
         ggplot(inc_df, aes(x = x, y = AEDECOD, fill = TRT01A)) +
         geom_col(width = 0.7) +
         geom_vline(xintercept = 0, colour = "grey30") +
-        geom_text(aes(label = ifelse(pct > 0, sprintf("%.1f", pct), ""), hjust = ifelse(x < 0, 1.15, -0.15)), size = 2.6) +
+        geom_text(aes(label = ifelse(pct > 0, sprintf("%.1f", rtfreporter::round_num(pct, 1)), ""), hjust = ifelse(x < 0, 1.15, -0.15)), size = 2.6) +
         scale_x_continuous(limits = c(-x_lim, x_lim), labels = function(v) abs(v)) +
         scale_fill_manual(values = pal_grp) +
         labs(x = "Subjects with event (%)", y = NULL) +

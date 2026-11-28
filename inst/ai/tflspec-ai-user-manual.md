@@ -36,7 +36,8 @@ differ, trust the package, not this file, and fetch the matching copy with
    with `library(rtfreporter)`.
 3. **Every tflspec function is `tfl_*`** (and `tflspec_ai_manual()`).
    The functions the generated programs call as they run (`blank_as_na()`, `set_levels()`,
-   `tag_ard()`, `bind_items()`, `fmt_ard()`, `keep_stats()`, `fmt_pvalue()`, `save_ard()`)
+   `tag_ard()`, `bind_items()`, `fmt_ard()`, `keep_stats()`, `fmt_pvalue()`, `save_ard()`,
+   `read_ard()`)
    are not tflspec's exports: `tfl_helpers_code()` gives their code, which a
    study keeps in a file of its own (tflplanner: `programs/study_helpers.R`),
    so the programs run without tflspec.
@@ -164,13 +165,19 @@ warning); the rds stays the record. An ARD made elsewhere: `report$ard_source`
 test that could not run, a statistic that stopped or warned): cards keeps
 going and leaves the message in the `error` / `warning` column.
 
+To read another report's ARD in your own code (a program's `code` step, a
+figure's own data), call the study helper `read_ard("<output id>")`: that
+report's rows of the study ARD (`output/ard/ard.rds`). Do not write
+`readRDS()` and a filter: an id with no rows gives an empty table without a
+word, while `read_ard()` stops and names the ARD program to run first.
+
 ---
 ## 4. Function map — what to call for what
 
 | I want to … | Call |
 |---|---|
 | read a study folder (YAML); a report over its layers | `tfl_read_study_spec(dir)`, `tfl_read_outputs(dir)`; `tfl_resolve_output(report, study)` (§5) |
-| a report file's content as code / run it | `tfl_content_code(report)` / `tfl_content_run(report, data)`; an item's arguments: `tfl_schema(fn)`, `tfl_schema_check(item)`, `tfl_schema_help(fn, arg)`; every report's ARD, content and figure against the installed packages: `tfl_check_spec(study)` |
+| a report file's content as code / run it | `tfl_content_code(report)` / `tfl_content_run(report, data)`; an item's arguments: `tfl_schema(fn)`, `tfl_schema_check(item)`, `tfl_schema_help(fn, arg)`; every report's ARD, content and figure against the installed packages: `tfl_check_spec(study)`; the study's code lists a report names (`{list: X}`, `codes:`, `!r study$codelists$X`): `tfl_study_refs(report)`, checked in memory by `tfl_check_study_refs(study, reports)` |
 | the study folder as workbooks and back; workbooks to a folder once | `tfl_sheets_from_yaml(dir)` (`tfl_sheets_from_spec(study, outputs)` from a spec in memory), `tfl_write_spec_xlsx(dir, path)` / `tfl_import_spec_xlsx(dir, path)`; `tfl_convert_sheets_to_yaml(from, to)` |
 | start an ARD spec / read / write it | `tfl_ard_spec_template()` / `tfl_read_ard_spec()` / `tfl_write_ard_spec()` |
 | write the cards code of one output; each analysis's data by the program's name | `tfl_ard_code(spec, output_id)`; `tfl_ard_data_names(spec, output_id)` |
@@ -221,7 +228,6 @@ study.yml                   the study: id, title, settings, keys
 spec/data.yml               the data catalog: datasets, populations
 spec/toc.yml                the reports, in order
 spec/defaults.yml           what every report starts from
-spec/patterns/<name>.yml    a layer a report may extend
 spec/outputs/<id>.yml       one report a file
 spec/_<name>.yml            a note, never read (_assumptions.yml)
 ```
@@ -236,7 +242,9 @@ plan <- tfl_content_run(o, tfl_ard_for(ard, "T-1"))
 generate_rtfreport(tfl_report(o, content = plan, study = st), "T-1.rtf")
 ```
 
-**study.yml** — `study_id`, `title`; `settings:` the table and report
+**study.yml** — `spec_version: 2` (the SPEC's form: a study.yml with
+none, or an older one, stops and lists the old forms to change);
+`study_id`, `title`; `settings:` the table and report
 study keys (`rounding`: `sas` / `r`; `program_dir`; `program` and
 `file`, each report's program and RTF file, `{output_id}.R` /
 `{output_id}.rtf`; `adam_levels`: `define_xml` or `define_spec` puts on
@@ -271,9 +279,9 @@ sections follow this order.
 | Key | What it holds |
 |---|---|
 | `id`, `kind`, `label` | as in the TOC; the file is named after `id` |
-| `common` | what several steps of the report read: `population` (an analysis set's `id`: the report's subjects), `treatment` (its arm variable), `population_label` (the text `{OUTPUT_POPULATION}` prints when the report has no set, or in place of the set's label); a report may have no population.  Any other key stops; so does a top-level `population:` (`population:` -> `common: population`) |
-| `extends` | the layers under it, nearest first: `[defaults]` (the usual), `[patterns/<name>, defaults]`, or `none` |
-| `data` (a table, a listing) | the report's datasets: a flat list of definitions (`id`, `from`, `population`, `subjects_in`, `where`, `add`, `derive`, `keep`, `distinct`, `then`, `code`: the `analysis_data` sheet's rows, `data_id` as `id`), in build order, named `<dataset>_sub` / `_den` / `_<noun>` (`adsl_sub`, `adae_sub`, `adlb_den`) -- §A.1.  `then` is R piped onto the end of the definition's data after all its other keys (and the code lists' levels), as written: the data is its first argument, a pipe of several steps is fine (`dplyr::mutate(...) |> dplyr::filter(...)`), and it may do anything R does; it is not written with `code` (an error: `code` makes the whole data).  A report on a template writes a definition of the template's id to change that definition: its keys go over the template's key by key, but a definition with `code` replaces the template's one whole (none of the template's `from`, `subjects_in`, `add`, `where`, `derive` stay).  For example, `tflspec_v1/lab_tox_shift` keeps each subject's worst record by its `record_where` (default `AVISIT == "WORST POST-BASELINE"`, the ADaM's own worst record); for an ADaM with no worst record, set it to TRUE and pick the record with `then` on the template's `adlb_sub`: `template: {name: tflspec_v1/lab_tox_shift, data: {record_where: !r TRUE}, analysis: {...}}` and `data: [{id: adlb_sub, then: !r 'dplyr::slice_max(ATOXGRH, n = 1, with_ties = FALSE, by = USUBJID)'}]` (several tests: `by = c(USUBJID, PARAMCD)`, and each test's own direction, `dplyr::coalesce(ATOXGRH, ATOXGRL)` for `ATOXGRH`).  Likewise `tflspec_v1/tflspec_shift` (a category at baseline by the same after it, `BNRIND` by `ANRIND` by default, a page a `PARAMCD`) computes no worst record: the shell's rule goes on the template's `rec_sub` as `where` and `then`, for example "a subject with both Low and High after baseline counts as High": `data: [{id: rec_sub, where: !r 'PARAMCD %in% c("ALT", "HGB") & !ABLFL %in% "Y"', then: !r 'dplyr::arrange(match(ANRIND, c("HIGH", "LOW", "NORMAL"))) |> dplyr::distinct(USUBJID, PARAMCD, .keep_all = TRUE)'}]` (the order is the study's rule, worst first; one record a subject and parameter).  A subjects definition (`from: ADSL`, no `subjects_in`) without a `population` of its own takes `common: population`.  A table writes no `data: {source: ard}` (it always reads its ARD: that map stops); `ard: analysis_data:` stops (it is `data:`) |
+| `common` | what several steps of the report read: `population` (an analysis set's `id`: the report's subjects; a figure's or a listing's set is on its data, `data: {population: SAF}`, and a template report's data map says only that), `treatment` (its arm variable), `population_label` (the text `{OUTPUT_POPULATION}` prints when the report has no set, or in place of the set's label); a report may have no population.  Any other key stops; so does a top-level `population:` (`population:` -> `common: population`) |
+| `extends` | the layers under it: `[defaults]` (the usual), `none`, or a map by step (`{content: none}`); a report picks its page configuration with `style:`.  `patterns/<name>` stops (patterns are gone) |
+| `data` (a table, a listing) | the report's datasets: a flat list of definitions (`id`, `from`, `population`, `subjects_in`, `where`, `add`, `derive`, `arrange`, `keep`, `distinct`, `then`, `code`: the `analysis_data` sheet's rows, `data_id` as `id`), in build order, named `<dataset>_sub` / `_den` / `_<noun>` (`adsl_sub`, `adae_sub`, `adlb_den`) -- §A.1.  `then` is R piped onto the end of the definition's data after all its other keys (and the code lists' levels), as written: the data is its first argument, a pipe of several steps is fine (`dplyr::mutate(...) |> dplyr::filter(...)`), and it may do anything R does; it is not written with `code` (an error: `code` makes the whole data).  A report on a template writes a definition of the template's id to change that definition: its keys go over the template's key by key, but a definition with `code` replaces the template's one whole (none of the template's `from`, `subjects_in`, `add`, `where`, `derive` stay).  For example, `tflspec_v1/lab_tox_shift` keeps each subject's worst record by its `record_where` (default `AVISIT == "WORST POST-BASELINE"`, the ADaM's own worst record); for an ADaM with no worst record, set it to TRUE and pick the record with `then` on the template's `adlb_sub`: `template: {name: tflspec_v1/lab_tox_shift, data: {record_where: !r TRUE}, analysis: {...}}` and `data: [{id: adlb_sub, then: !r 'dplyr::slice_max(ATOXGRH, n = 1, with_ties = FALSE, by = USUBJID)'}]` (several tests: `by = c(USUBJID, PARAMCD)`, and each test's own direction, `dplyr::coalesce(ATOXGRH, ATOXGRL)` for `ATOXGRH`).  Likewise `tflspec_v1/tflspec_shift` (a category at baseline by the same after it, `BNRIND` by `ANRIND` by default, a page a `PARAMCD`) computes no worst record: the shell's rule goes on the template's `rec_sub` as `where` and `then`, for example "a subject with both Low and High after baseline counts as High": `data: [{id: rec_sub, where: !r 'PARAMCD %in% c("ALT", "HGB") & !ABLFL %in% "Y"', then: !r 'dplyr::arrange(match(ANRIND, c("HIGH", "LOW", "NORMAL"))) |> dplyr::distinct(USUBJID, PARAMCD, .keep_all = TRUE)'}]` (the order is the study's rule, worst first; one record a subject and parameter).  A subjects definition (`from: ADSL`, no `subjects_in`) without a `population` of its own takes `common: population`.  A table writes no `data: {source: ard}` (it always reads its ARD: that map stops); `ard: analysis_data:` stops (it is `data:`) |
 | `ard` | the report's part of the study ARD: `analyses:` (the `analyses` sheet's rows, `analysis_id` as `id`, `population_id` as `population`) -- §A.1 |
 | `data` (a figure, or a listing's records) | what the report reads, a map.  a table's Rework is not written here: it is the first item of `content:`, `- rework: {steps: [...]}` (optional R after the content's `normalize_ard()` and before `table_plan()`: it starts from `data`, which is the object normalized by the `normalize_ard` item (`data <- ard` when there is none), and leaves `data`; a Rework that never names `data` is an error; `object: ard` names the ARD object; written under `ard: data:` or `data:` it stops); `source: dataset` (a listing: `dataset`, `where`, `sort`); `source: code` (a figure: `steps:`, the design's data steps of §7; or `code: !r ...`, the report's own R) |
 | `codelists` | the report's own, by variable, a list of `{value, label}` in the order printed (the `codelists` sheet); a nested count's inner value may say `under:` (its parent's value, for `complete_hierarchy()`).  No layer gives a report a list: the study's lists (`spec/defaults.yml` `codelists:`, by name) are named where used, in R: `plan_labels: {SEX: !r study$codelists$SEX}` (the template `tflspec_v1/demog` does so by default, its `value_labels`; a list the study has not got is left out) |
@@ -297,20 +305,23 @@ removes what a layer below set. It reads in flow style too: `{b: !unset}`.
 
 **The layers.**  A report says only what differs from what it extends
 (`tfl_resolve_output()`): `page` lines, `tokens` and a call's
-arguments merge by key (no layer gives a report a code list: a
-`codelists:` in a pattern stops; the study's `codelists:` in
+arguments merge by key (no layer gives a report a code list: the
+study's `codelists:` in
 `defaults.yml` are `study$codelists`, by name, which a report or a
 template names where it uses one, `!r study$codelists$SEX`); in `content`, the report's items of one function
 replace every item of that function below it, in the place the first had;
-a function only the report has goes after them.  `defaults.yml` holds the
+a function only the report has goes after them.  A template's `page:`
+holds the page's defaults; the report's `page:` changes only the lines
+(by number), cells and call arguments it writes (`tfl_page_origins()`
+says which layer gave each field).  `defaults.yml` holds the
 study-wide content (the rounding ...) and the page configurations
 (`styles:`, a style set each: the page's settings and the fixed lines of the
 header, footer, titles and footnotes in the blocks `first` and `last`; a
 report's own lines print between them; `tfl_styles()` lists the sets and the
 built-in `tfl_standard` and `tfl_small`, a study set may not take their names);
 the study's tokens are `study.yml`'s `tokens:`.  There is no page layer of
-files: a `page:` in `defaults.yml`, or `extends: {page: ...}`, stops.  A
-pattern is `patterns/<name>.yml`.
+files: a `page:` in `defaults.yml`, or `extends: {page: ...}`, stops.  There
+are no pattern files: a `spec/patterns/` file stops the read.
 
 ---
 ## 6. A table's report file — the code spec
@@ -370,9 +381,9 @@ page:
 | digits that differ by parameter (ALT one decimal, bilirubin three) | guarded cell templates, one a parameter and the last for the rest: `plan_cells: {continuous: [!r 'PARAMCD == "ALT" ~ "{mean:.1f} ({sd:.2f})"', !r 'PARAMCD == "BILI" ~ "{mean:.3f} ({sd:.4f})"', "{mean:.2f} ({sd:.3f})"]}`; the same list under one row's label when only that row differs (`continuous: {"Mean (SD)": [...]}`; the label as an entry of its own, `plan_cells: {"Mean (SD)": [...]}`, is refused); a guard compares the value as the table has it (a key with a code list holds the label) |
 | a title line that changes with the page (`Parameter: <PARAM>`, a parameter a page) | `plan_paginate_rows: {page_by: [PARAMCD], heading: "Parameter: {PARAM}", heading_at: title}` (two keys: `page_by: [ANALYTE, RENALGR]`, a heading of two lines with `\n`); the heading goes under the report's titles on each page, or where a titles line `{PAGE_HEADING}` is (the shell's Parameter line above the population line) |
 | a listing with its summary under it (the PK samples) | the listing as the table (`table_plan: {cols: ATPT, rows: {subject: !r '~ "{USUBJID}/{AGE}/{SEX}"'}, value: AVAL}`), the summary as a part: `plan_append: {name: summary, data: {source: ard}, content: [...]}`, the whole-table items after it |
-| a p-value column (Fisher / chi-square of a categorical, Kruskal-Wallis / one-way of a continuous, a t-test of two arms) | one analysis a test with the counts' `by` and `variables` (`method: fisher`, `kruskal` ...), and `plan_compare: {p: "{p.value:.3f}"}` -- the column named as you like, the p-value on the variable's first row |
+| a p-value column (Fisher / chi-square of a categorical, Kruskal-Wallis / one-way of a continuous, a t-test of two arms) | one analysis a test with the counts' `by` and `variables` (`method: fisher`, `kruskal` ...), and `plan_compare: {p: [!r 'p.value < 0.001 ~ "<0.001"', "{p.value:.3f}"]}` -- the column named as you like, the p-value on the variable's first row, `<0.001` below 0.001, else 3 decimals |
 | every subject, no flag | `common: {population: ALL}` (in `spec/data.yml` beside the flags' sets) |
-| the KM legend with each arm's median (95% CI) | the template: `template: {name: km_survival, args: {legend_median: true}}`; the wording is `legend_median_text` with `{arm}`, `{median}`, `{lcl}`, `{ucl}` (default `"{arm}: {median} ({lcl}, {ucl})"`), e.g. `args: {legend_median: true, legend_median_text: "{arm}, Median (95% CI): {median} ({lcl}, {ucl})"}`; by hand, the plot's `legend_labels` (R: a vector named by the arms) |
+| the KM legend with each arm's median (95% CI) | the template: `template: {name: km_survival, args: {by: TRT01A, legend_median: true}}`; the wording is `legend_median_text` with `{arm}`, `{median}`, `{lcl}`, `{ucl}` (default `"{arm}: {median} ({lcl}, {ucl})"`), e.g. `args: {legend_median: true, legend_median_text: "{arm}, Median (95% CI): {median} ({lcl}, {ucl})"}`; by hand, the plot's `legend_labels` (R: a vector named by the arms) |
 
 The keys of `ard:` are the ARD sheets' columns (Appendix A.1) under their
 YAML names (`id`, `population`); the methods are `tfl_ard_methods()`.  The
@@ -486,8 +497,7 @@ object each data step reads (`in`) and leaves (`out`).
 template: km_risk_table
 data:                                   # one ordered list of steps
 - {step: read, dataset: ADTTE}          # -> df
-- {step: param, value: OS}
-- {step: flag, variable: FASFL}
+- {step: param, value: OS}              # the analysis set: the report's data population, no step
 - {step: survfit, name: fit, time: AVAL, censor: CNSR, by: TRT01A}   # -> fit
 plot: {x_label: Time (Months), colour_by: TRT01A, legend: inside}
 layers:                                 # what is drawn, in order
@@ -511,7 +521,12 @@ analyses do, and the figure starts from it.
   -- a row of the ARD definition, no line of the script.  Any step may
   say the object it reads (`in`) and the one it leaves (`out`): `filter`
   with `out: df_ev` makes `df_ev <- df |> filter(...)` and keeps `df`; a
-  `survfit` with `in: df_ev` fits it.  Unset, a read makes `df` (then
+  `survfit` with `in: df_ev` fits it.  A `code` step runs in a scope of
+  its own and keeps one object: its `out` (`{step: code, out: est, code:
+  ...}` is written `est <- local({ ...; est })`); one expression that
+  assigns one name (`x_breaks <- ...`) is written as it is and keeps it.
+  A later line that reads another object the step made stops the program's
+  writing: give it `out:`, or a code step of its own.  Unset, a read makes `df` (then
   `df2`, `df3`), a step on rows changes the object above it, a named step
   reads `df`.  A design written
   before 0.0.24.9074 (`data:` and `stats:`, `data_code` / `stats_code`)
@@ -981,17 +996,21 @@ back): rename the value or choose another separator.
 
 **Spec files (YAML, one file a report):** `tfl_output` `tfl_item` `tfl_plot` `tfl_call` `tfl_r`
 `tfl_unset` `tfl_read_output` `tfl_write_output` `tfl_read_study_spec`
-`tfl_read_outputs` `tfl_resolve_output` `tfl_run_output` `tfl_output_contents` `tfl_output_extends` `tfl_study_value` `tfl_styles` `tfl_output_objects` `tfl_output_object_uses` `tfl_output_rename` `tfl_default_name` `tfl_output_name_check` `tfl_code_refs` `tfl_write_study_part` `tfl_item_code`
+`tfl_read_outputs` `tfl_resolve_output` `tfl_page_origins` `tfl_report_set` `tfl_set_report_set` `tfl_run_output` `tfl_output_contents` `tfl_output_extends` `tfl_study_value` `tfl_styles` `tfl_output_objects` `tfl_output_object_uses` `tfl_output_rename` `tfl_default_name` `tfl_output_name_check` `tfl_code_refs` `tfl_write_study_part` `tfl_item_code`
 `tfl_item_written` `tfl_item_own` `tfl_convert_sheets_to_yaml`
 `tfl_yaml_from_sheets` `tfl_sheets_from_yaml` `tfl_sheets_from_spec` `tfl_report_codelists` `tfl_write_spec_xlsx`
-`tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_check_spec` `tfl_check_build` `tfl_check_reports` `tfl_check_fix_text` `tfl_data_code` `tfl_schema_help` `tfl_ai_decisions_read` `tfl_ai_decisions_write` `tfl_ai_confirm` `tfl_content_code` `tfl_content_run`
+`tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_check_spec` `tfl_check_build` `tfl_check_reports` `tfl_check_fix_text` `tfl_check_study_refs` `tfl_study_refs` `tfl_data_code` `tfl_schema_help` `tfl_ai_decisions_read` `tfl_ai_decisions_write` `tfl_ai_confirm` `tfl_content_code` `tfl_content_run` `tfl_bign_values` `tfl_bign_drop`
 `tfl_ai_unpack` `tfl_args_to_r` `tfl_args_from_r` `tfl_fig_content_from_design`
 
 **Manual:** `tflspec_ai_manual` `tfl_adam_metadata` `tfl_ai_review`
 
 **The functions the generated programs call (their code):** `tfl_helpers_code`
 
-**Template SPEC (prototype):** `tfl_tpl` `tfl_tpl_args` `tfl_tpl_help` `tfl_templates` `tfl_template_expand` `tfl_template_to_spec` `tfl_template_routes` `tfl_template` `tfl_param` `tfl_template_params` `tfl_template_variant` `tfl_template_run` `tfl_test_templates` `tfl_use_company_templates` `tfl_template_resolve` `tfl_arg_defs` `tfl_series_list`
+**Official runs (the base-R runner a study's batch.R is made of; its run folders):** `tfl_runner_file` `tfl_runner_code` `tfl_run_index` `tfl_latest_run`
+
+**A study's folders and its programs' files (what the study's program generator reads as values):** `tfl_study_layout` `tfl_study_program_files` `tfl_setup_values` `tfl_setup_program` `tfl_report_program` `tfl_ard_program` `tfl_builtin_standards`
+
+**Template SPEC (prototype):** `tfl_tpl` `tfl_tpl_args` `tfl_tpl_help` `tfl_templates` `tfl_template_expand` `tfl_template_to_spec` `tfl_template_routes` `tfl_template` `tfl_param` `tfl_template_params` `tfl_template_variant` `tfl_template_run` `tfl_test_templates` `tfl_use_company_templates` `tfl_template_resolve` `tfl_arg_defs` `tfl_choice_sources` `tfl_fn_defs` `tfl_object_defs` `tfl_series_list`
 `tpl_demog` `tpl_summary` `tpl_disposition` `tpl_ae_soc_pt` `tpl_ae_pt_freq` `tpl_ae_max_grade` `tpl_hierarchical`
 `tpl_shift` `tpl_lab_shift` `tpl_listing` `tpl_km_table` `tpl_param_change` `tpl_pk_conc` `tpl_lab_abnormal` `tpl_ae_eair` `tpl_ancova` `tpl_mean_se` `tpl_mean_ci` `tpl_waterfall` `tpl_forest_hr` `tpl_forest_layout` `tpl_orr` `tpl_stat_block` `tpl_ae_overview`
 `tfl_read_template_sheets` `tfl_write_template_yaml`
@@ -1007,7 +1026,7 @@ back): rename the value or choose another separator.
 **ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`
 `tfl_ard_spec_template` `tfl_ard_code` `tfl_ard_data_names` `tfl_build_ard` `tfl_ard_for`
 `tfl_ard_spec_hash` `tfl_ard_methods` `tfl_ard_as_custom` `tfl_ard_statistics`
-`tfl_ard_functions` `tfl_ard_args` `tfl_ard_model_args` `tfl_write_ard` `tfl_read_ard` `tfl_check_ard` `tfl_check_ard_function` `tfl_ard_function_template` `tfl_ard_function_info` `tfl_ard_conditions`
+`tfl_ard_functions` `tfl_ard_args` `tfl_ard_model_args` `tfl_ard_reads` `tfl_write_ard` `tfl_read_ard` `tfl_check_ard` `tfl_check_ard_function` `tfl_ard_function_template` `tfl_ard_function_info` `tfl_ard_conditions`
 
 **CDISC ARS:** `tfl_ars` `tfl_write_ars_json` `tfl_check_ars`
 `tfl_ars_unmapped` `tfl_ars_ard` `tfl_read_ars_json` `tfl_ars_to_specs`
@@ -1113,7 +1132,7 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
 | `records` | `record_id`, `dataset`, `where`, `label`, `any_label` | named sets of records (CDISC ARS data subsets): an analysis's `records` reads the set's dataset under its condition (the analysis's `where` on top), instead of `dataset` and `where`; the program's data of it is commented with the set (`# adae_sub: TESAE — Treatment-emergent SAEs (...)`); `any_label` names the "any" row of a hierarchy of them (`normalize_ard(overall = )`) when the table says none, else `Any <record_id>` |
 | `objects` | `output_id`, `object_id`, `code`, `label` | named values the ARD program makes at its top (`object_id <- code`, `label` a comment above): the study's (`output_id` blank; data.yml `objects:`) before a report's own (its `ard: objects:`); an analysis names one as its `denominator`, or in its `args` / `where`. YAML: `objects: [{id: n_saf_jp, code: !r 'c("Drug X" = 40, "Placebo" = 38)', label: ...}]` |
 | `groups` | `group_id`, `label`, `level`, `where` | condition-defined groups (CDISC ARS grouping factors; data.yml `groups:`, each with its `levels:`): a row a level, the condition (R) its records meet -- levels may overlap ("1 or 2", ">= 3 months"), a level with no `where` is every record ("All"). An analysis's `groups` runs it once in each level of each group named; its rows say the group's `label` in `group2` and the level in `group2_level`, in this sheet's order |
-| `analysis_data` | `output_id`, `data_id`, `from`, `population_id`, `subjects_in`, `where`, `add`, `derive`, `keep`, `distinct`, `code`, `then` | named data a report's analyses read (a report's, by `output_id`: the same `data_id` may mean something else in another report; a row names only its own report's rows above it): made `from` a dataset or an analysis data above, kept to a population's subjects and the records `where` keeps, with columns of the population's data added by the subject key (`add`), columns derived, and one row per set of values (`distinct`: `USUBJID | APHASE`, a denominator per subject and phase) -- in that order; `subjects` (instead of `population_id`) keeps the subjects of an analysis data above, a report's own subjects (the numerator kept to the denominator's), and `keep` the columns kept (after `derive`: a derived column may be named). `data_id` is the object's name in the ARD program (lower case, not a dataset's or the program's own `<dataset>_sub`). `then` is R piped onto the end of the data after all that (and the code lists' levels), as written (several steps in one pipe; `dplyr::slice_max(ATOXGRH, n = 1, with_ties = FALSE, by = USUBJID)`). When the columns cannot say it, `code` is R that makes the data itself (its value is the data; the datasets, the analysis set's data `<dataset>_sub` and the analysis data above are in reach); then the other columns but `from` stay blank (`then` too) |
+| `analysis_data` | `output_id`, `data_id`, `from`, `population_id`, `subjects_in`, `where`, `add`, `derive`, `arrange`, `keep`, `distinct`, `code`, `then` | named data a report's analyses read (a report's, by `output_id`: the same `data_id` may mean something else in another report; a row names only its own report's rows above it): made `from` a dataset or an analysis data above, kept to a population's subjects and the records `where` keeps, with columns of the population's data added by the subject key (`add`), columns derived, the rows put in order (`arrange`: `USUBJID | -ASTDT`, `-` for descending), and one row per set of values (`distinct`: `USUBJID | APHASE`, a denominator per subject and phase) -- in that order; `subjects` (instead of `population_id`) keeps the subjects of an analysis data above, a report's own subjects (the numerator kept to the denominator's), and `keep` the columns kept (after `derive`: a derived column may be named). `data_id` is the object's name in the ARD program (lower case, not a dataset's or the program's own `<dataset>_sub`). `then` is R piped onto the end of the data after all that (and the code lists' levels), as written (several steps in one pipe; `dplyr::slice_max(ATOXGRH, n = 1, with_ties = FALSE, by = USUBJID)`). When the columns cannot say it, `code` is R that makes the data itself (its value is the data; the datasets, the analysis set's data `<dataset>_sub` and the analysis data above are in reach); then the other columns but `from` stay blank (`then` too) |
 | `analyses` | `output_id`, `analysis_id`, `parent`, `label`, `method`, `data`, `dataset`, `records`, `population_id`, `where`, `by`, `overall`, `strata`, `groups`, `variables`, `optional`, `statistics`, `denominator`, `formats`, `args`, `post`, `code`, `purpose`, `reason` | one analysis a row; `parent`: the analysis this one runs inside (a `stack`, `subgroups` or `pairwise` analysis of the same report; it takes the parent's dataset, population and `where`); `records`: a `records` sheet set instead of `dataset` and `where`; `groups`: the condition-defined groups it runs in (each level's rows in `group2` / `group2_level`); both ids become ARD columns; `optional` (`TRUE`): the variables are the ones the data has of them (`any_of()`); `post`: steps on the ARD after the call, `\|` between them (`cards::add_calculated_row()`, `complete_hierarchy()` ...); `purpose` / `reason` (CDISC terms) only for `tfl_ars()` |
 
 - `method`: a keyword — `continuous`, `categorical`, `dichotomous`,
@@ -1223,14 +1242,20 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
   cannot say it; the definition keeps the code, the program is never edited.
 - In `args` and `code`, `data` is the analysis data and `population` the
   analysis set's subjects; the program writes them as the data's own names
-  (`adtte_ttde`, `adsl_sub`), and a `custom` analysis's last expression is
-  its ARD (`local()` only when its code defines a function or assigns a
-  name the program has).
+  (`adtte_sub`, `adsl_sub`), and a `custom` analysis's last expression is
+  its ARD.  SPEC code runs only in its own step: one expression is written
+  as it is; code of several expressions (or one that assigns a name) is
+  written as it is inside `local({ data <- adtte_sub; ... })`, its result
+  the analysis's ARD, so `data$TRT01A <- ...` or a model made there changes
+  no other analysis's data.  The same for an analysis data's `code`, a
+  Rework / own data code / a listing's rework (`data <- local({ ...; data
+  })`), a figure's `code` step (it keeps its `out`) and `layer_code` (it
+  keeps `p`); the whole `content: !r` stays as it is.
 - A function that takes a **formula** (`cardx::ard_survival_survdiff`,
   `cardx::ard_regression`, `cardx::ard_stats_aov`) leaves `by` and
   `variables` blank and gets `formula = ...` in `args`.
   `cardx::ard_survival_survfit` takes `y` as **text**
-  (`y = "survival::Surv(AVAL, 1 - CNSR)"`) and the groups in `variables`.
+  (`y = "survival::Surv(AVAL, CNSR == 0)"`) and the groups in `variables`.
 - For CIs, tests and models, `statistics` chooses which of the results to
   **keep** (`estimate | conf.low | conf.high`); for `continuous`,
   `categorical` and `missing` it says what to compute.
@@ -1249,10 +1274,10 @@ columns not given are blank):
 km  <- list(output_id = "T-14-2-2", analysis_id = "KM", population_id = "SAF",
             dataset = "ADTTE", method = "cardx::ard_survival_survfit",
             variables = "TRTA",
-            args = 'y = "survival::Surv(AVAL, 1 - CNSR)", times = c(30, 90)')
+            args = 'y = "survival::Surv(AVAL, CNSR == 0)", times = c(30, 90)')
 cox <- list(output_id = "T-14-2-2", analysis_id = "HR", population_id = "SAF",
             dataset = "ADTTE", method = "cardx::ard_regression",
-            args = 'formula = survival::Surv(AVAL, 1 - CNSR) ~ TRTA, method = "coxph", package = "survival"')
+            args = 'formula = survival::Surv(AVAL, CNSR == 0) ~ TRTA, method = "coxph", package = "survival"')
 ```
 
 #### A.1.1 CDISC ARS — writing and reading the analyses as the standard
@@ -1316,7 +1341,7 @@ once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `r`;
 | `stat_groups` | `plan_stat_groups()` | one record's statistics in named groups, `n = N \| orr_ci = n, estimate, conf.low, conf.high`; the key `.stat_group` in `cols` puts N in one column and the rate and CI in the next, in `rows` one group under another; a `cells` row's `variable` may be a group's name, its template one row or several (n rows x m columns of one record). Keep the ARD as it is: no `mutate()` of `variable` |
 | `show_keys` | `table_plan(show_keys = )` | row keys also shown as variables, `SEX | AGEGR1`: their own n (%) a block beside the subgroup ORR; with `stat_groups` add `.variables = RESP | .others = n` |
 | `keep_where`, `keep_any`, `keep_parents` | `plan_filter()` | rows kept by an R condition over the record (`p >= 0.05`: PTs with 5% or more in any arm; a SOC with its PTs) |
-| `compare`, `compare_by`, `compare_position` | `plan_compare()` | comparison columns, `p | diff`; each column's templates are `cells` rows with `variable` = its name (`{p.value:.3f}`, `{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})`); the ARD needs the test records (`cardx::ard_stats_t_test()`, `ard_stats_chisq_test()`, ...) |
+| `compare`, `compare_by`, `compare_position` | `plan_compare()` | comparison columns, `p | diff`; each column's templates are `cells` rows with `variable` = its name (a p-value `<0.001` when `p.value < 0.001`, else `{p.value:.3f}`; `{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})`); the ARD needs the test records (`cardx::ard_stats_t_test()`, `ard_stats_chisq_test()`, ...) |
 | `stack`, `stack_sep`, `stack_nest` | `normalize_ard(stack = , stack_sep = , stack_nest = )` | subgroups as one pair of keys, `subgroup = ALL, SEX, AGEGR1, AGEGR1 * SEX` (`*` crosses; or the slots `subgroup = group2, group3`); `rows` then names `subgroup` / `subgroup_level`, never `group2` / `group2_level`; written by `tfl_table_code()` at the head of the pipe (`tfl_normalize_code()`: the line alone) |
 | `total`, `total_position` | `plan_total()` | the heading of a Total column (the ARD's overall rows as one more column; its `{n}` is the study total; blank: none) and where it goes, `last` (default) or `first` |
 | `content_more` | the report's content | the table's items the columns cannot say, as YAML (`- plan_titles: {titles: [Safety population]}`); kept whole and written back; blank: none |
@@ -1325,7 +1350,7 @@ once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `r`;
 **variables**: `variable`, `label`, `order` (the variables' order: `plan_levels(variable = c("AGE", "SEX"))`), `levels` (`Grade 0 | Grade 1`; `F = Female | M = Male` gives each value its text too, `plan_levels(SEX = c(F = "Female", M = "Male"))` -- rarely needed: the code list's labels reach the table through `plan_labels()`), `empty_levels` (`hide`: no row for a value no record has; blank: a 0 row), `under` (`RACE: Asian`: its rows under that level of RACE, one indent deeper, its own heading dropped -- `plan_nest()`)
 → `plan_labels()`, `plan_levels()`.
 
-**codelists** (a report's code lists, one row a value): `output_id`, `variable`, `value`, `label`, `order`, `under` (a nested count's inner value: its parent's value as the data have it, `EYE DISORDERS` for a PT; `complete_hierarchy()` in the analysis's `post` then shows it 0 when no subject has it). Each value's place and **the text the table's (and a figure legend's) display shows for it** (`label`; blank: the value itself; the data hold the value): `tfl_ard_code(codelists = )`, `tfl_listing_code(codelists = )` and `tfl_fig_design_code(codelists = )` write `cl_sex <- c(F = "Female", M = "Male")` at the program's head and `set_levels(SEX = cl_sex, ...)` on the data the program reads (the ARD's analyses: the columns they read -- `by`, `strata`, `variables`, names in `args` / `code` / `post`; a listing: the columns it shows or sorts by; a figure: last of its data steps). Each listed column becomes a factor of the **codes** in the list's order, so **the ARD holds "F"**, in the list's order (cards keeps it; after an analysis that is not cards' -- custom code, cardx: survfit makes the arms' factor again, alphabetical -- the program writes `relevel_ard(TRT01A = cl_trt01a)`, so no `plan_levels()` of the arms is needed); a value the list does not have (not NA) stops the program with the column and the value. The table's `plan_levels` is in codes (`plan_levels(SEX = c("M", "F"))`, or left out: the list's order), and the labels reach the table through `plan_labels()`, the code list's labels merged key by key with the report's own `plan_labels` (the report's text wins); a variable's heading (the `variables` sheet's `label`) is written `plan_labels(variable = c(AGE = "Age (years)", SEX = "Sex"))` so it never meets a variable's value labels. A condition on a listed column is written in codes (`SEX == "F"`; `tfl_ard_code()` stops on `SEX == "Female"` and says so), and ARS writes the same codes. A listing prints the codes (a label, when its display needs one, goes in the listing's `rework`: `SEX = unname(cl_sex[as.character(SEX)])`); a figure's legend of the colour variable shows the labels (`labels = cl_<variable>` in its scales). Every row names its report: a blank `output_id` is an error (no study-wide rows; copy the rows into each report). A variable's `levels` on the `variables` sheet, when given, is the order instead (in codes). The code list of `variable` (an earlier form of the headings) is moved to the `variables` sheet's `label` when the table spec is read, with a message.
+**codelists** (a report's code lists, one row a value): `output_id`, `variable`, `value`, `label`, `order`, `under` (a nested count's inner value: its parent's value as the data have it, `EYE DISORDERS` for a PT; `complete_hierarchy()` in the analysis's `post` then shows it 0 when no subject has it). Each value's place and **the text the table's (and a figure legend's) display shows for it** (`label`; blank: the value itself; the data hold the value): `tfl_listing_code(codelists = )` and `tfl_fig_design_code(codelists = )` write `cl_sex <- c(F = "Female", M = "Male")` at the program's head, `tfl_ard_code(codelists = )` the codes only (`cl_sex <- c("F", "M")`: a label-only change leaves the ARD program and its fingerprint as they were), and all three write `set_levels(SEX = cl_sex, ...)` on the data the program reads (the ARD's analyses: the columns they read -- `by`, `strata`, `variables`, names in `args` / `code` / `post`; a listing: the columns it shows or sorts by; a figure: last of its data steps). Each listed column becomes a factor of the **codes** in the list's order, so **the ARD holds "F"**, in the list's order (cards keeps it; after an analysis that is not cards' -- custom code, cardx: survfit makes the arms' factor again, alphabetical -- the program writes `relevel_ard(TRT01A = cl_trt01a)`, so no `plan_levels()` of the arms is needed); a value the list does not have (not NA) stops the program with the column and the value. The table's `plan_levels` is in codes (`plan_levels(SEX = c("M", "F"))`, or left out: the list's order), and the labels reach the table through `plan_labels()`, the code list's labels merged key by key with the report's own `plan_labels` (the report's text wins); a variable's heading (the `variables` sheet's `label`) is written `plan_labels(variable = c(AGE = "Age (years)", SEX = "Sex"))` so it never meets a variable's value labels. A condition on a listed column is written in codes (`SEX == "F"`; `tfl_ard_code()` stops on `SEX == "Female"` and says so), and ARS writes the same codes. A listing prints the codes (a label, when its display needs one, goes in the listing's `rework`: `SEX = unname(cl_sex[as.character(SEX)])`); a figure's legend of the colour variable shows the labels (`labels = cl_<variable>` in its scales). Every row names its report: a blank `output_id` is an error (no study-wide rows; copy the rows into each report). A variable's `levels` on the `variables` sheet, when given, is the order instead (in codes). The code list of `variable` (an earlier form of the headings) is moved to the `variables` sheet's `label` when the table spec is read, with a message.
 
 **digits** (each statistic's decimals, once): `variable` (blank: every analysis variable; a name: its exception), `statistic` (`mean`, `sd`, `p` a percent ...), `digits` → written into the templates' tokens that say no format (`{mean} ({sd})` → `{mean:.1f} ({sd:.2f})`). A template's own format or a `cells` row's `digits` wins; a table of `tables$value = stat_fmt` (the ARD's own text) is not rounded here.
 

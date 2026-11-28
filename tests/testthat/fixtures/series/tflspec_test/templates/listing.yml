@@ -1,0 +1,60 @@
+# tflspec_test/templates/listing.yml: a test-only copy (tests/testthat/fixtures,
+# local_test_series()).  This purpose template left the shipped tflspec_v1
+# series (canon 2026-11-24); kept here for the engine coverage only it has.
+template: listing
+label: Listing of records
+params:
+  from:
+    type: string
+    input: pick
+    choices: study_data
+    step: data
+    tier: usual
+    description: The dataset of the records.
+  columns:
+    type: list<column>
+    input: pick
+    choices: vars(lst_sub)
+    ordered: true
+    step: content
+    tier: other
+    description: The columns of the listing, in order.
+  by:
+    type: column
+    input: pick
+    choices: vars(adsl_sub)
+    default: ~
+    step: analysis
+    tier: usual
+    description: The group variable of the header N; empty for one total.
+  formats:
+    type: map<string,number|string>
+    input: table
+    columns: {key: {label: {en: "Statistic", ja: "統計量"}}, value: {label: {en: "Format", ja: "書式"}}}
+    choices: stats
+    free: true
+    default: !series formats
+    step: analysis
+    tier: other
+    description: The decimals (or the format) of the header N statistics.
+      A report's names go over the series' formats; `!unset` removes one.
+extends: !series extends
+style: !study {key: settings.style, fallback: !series style_listing}
+data:
+  - id: adsl_sub
+    from: ADSL
+    population: !series population_safety
+  - id: lst_sub
+    from: "{from}"
+    subjects_in: adsl_sub
+    add: ~
+    where: ~
+    arrange: ~
+analysis:
+  - id: BIGN
+    label: Subjects, total
+    method: cards::ard_total_n
+    data: adsl_sub
+page:
+  titles: ~
+  footnotes: ~

@@ -104,8 +104,9 @@
 #'   `"<verb>.<argument>"` source is read, `study.yml`'s `settings:` the
 #'   `"settings.<name>"` ones (`"settings.treatment"` for the `by`).
 #' @param population The report's analysis set: the value of the
-#'   parameters taken from the report's `common: population`
-#'   (`"output.common.population"`); `NULL` for none.
+#'   template's set parameter (the one of `choices = "populations"`, which
+#'   fills its subjects row; [tfl_report_set()]) when the report does not
+#'   give it; `NULL` for none.
 #' @return A data frame, one row a parameter in the template's order:
 #'   `param`, `tier` (`"required"`, `"key"`, `"usual"`, `"other"`), `step`
 #'   (`"call"`, an argument of the template's call, or `"data"`, of a step
@@ -140,7 +141,10 @@ tfl_tpl_args <- function(name, study = NULL, population = NULL) {
   root <- chain[[length(chain)]]
   root_p <- lapply(root$params, .tpl_param_typed)
   names(root_p) <- vapply(root_p, `[[`, "", "name")
-  output <- list(common = list(population = population))
+  # (the report's set: the template's set parameter, A2-T; no other
+  # parameter reads the report)
+  sp <- .tpl_set_param_of(t)
+  output <- list()
   # (a template with an `extends` in its set reads the range its reports
   # read when they write no `extends` or `style:`: the settings.style set
   # over the defaults, or none under `{content: none}`)
@@ -165,7 +169,11 @@ tfl_tpl_args <- function(name, study = NULL, population = NULL) {
       sv <- hit$value
       if (!is.null(sv)) key <- hit$key
     }
-    layer <- if (!is.null(sv)) {
+    rep_set <- identical(p$name, sp) && length(population) > 0L
+    if (rep_set) sv <- population
+    layer <- if (rep_set) {
+      "report"
+    } else if (!is.null(sv)) {
       if (startsWith(key, "output.")) "report" else paste0("study: ", key)
     } else if (!is.na(vname)) {
       paste0("variant:", vname)
@@ -186,7 +194,8 @@ tfl_tpl_args <- function(name, study = NULL, population = NULL) {
                maps_to = .tpl_maps_to(p), doc = p$doc %||% NA_character_,
                study_key = key, fallback = if (is.na(key)) NA_character_ else .tpl_short(p$default),
                unset = if (.tpl_layered(t$name)) p$unset %||% "omit" else NA_character_,
-               route = .tpl_param_route(p, NULL, if (!is.null(sv)) key else NA_character_),
+               route = .tpl_param_route(p, if (rep_set) list(population),
+                                        if (!is.null(sv) && !rep_set) key else NA_character_),
                stringsAsFactors = FALSE)
   })
   out <- do.call(rbind, unname(rows))
@@ -263,19 +272,40 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
 
 # ---- the Rd page -----------------------------------------------------------------
 
-# Rd text: markdown's and Rd's specials escaped in a table cell
+# A table cell of a template page, from a definition's text: the page is
+# roxygen markdown (a pipe table) turned into Rd, so the text must come out
+# of both as written.  A code span stays one (roxygen writes it as \code or
+# \verb, escaped); one holding a | cannot sit in a table cell, so it is
+# written as quoted text.  The rest: a backslash escape where roxygen keeps it
+# for Rd (\ { } [ ] |), an HTML entity where it does not (& < * ~, an _ at a
+# word's edge and a lone backtick; an entity's { or } would reach the Rd
+# unescaped); roxygen escapes % itself.
 .tpl_rd_cell <- function(x) {
   x <- ifelse(is.na(x), "", x)
-  x <- gsub("\\", "\\\\", x, fixed = TRUE)
-  x <- gsub("|", "\\|", x, fixed = TRUE)
-  x <- gsub("{", "\\{", x, fixed = TRUE)
-  x <- gsub("}", "\\}", x, fixed = TRUE)
-  x <- gsub("`", "'", x, fixed = TRUE)
-  x <- gsub("[", "\\[", x, fixed = TRUE)
-  x <- gsub("]", "\\]", x, fixed = TRUE)
-  # a <name> placeholder is not an HTML tag (the HTML manual check)
+  x <- gsub("[\r\n]+", " ", x)
+  vapply(x, .tpl_md_text, "", USE.NAMES = FALSE)
+}
+
+.tpl_md_text <- function(s) {
+  at <- gregexpr("`[^`]+`", s)
+  code <- regmatches(s, at)[[1L]]
+  text <- regmatches(s, at, invert = TRUE)[[1L]]
+  code <- vapply(code, function(k) {
+    if (grepl("|", k, fixed = TRUE)) paste0("'", .tpl_md_plain(substr(k, 2L, nchar(k) - 1L)), "'") else k
+  }, "", USE.NAMES = FALSE)
+  paste0(c(rbind(.tpl_md_plain(text), c(code, ""))), collapse = "")
+}
+
+.tpl_md_plain <- function(x) {
+  x <- gsub("&", "&amp;", x, fixed = TRUE)
+  x <- gsub("([\\\\{}|\\[\\]])", "\\\\\\1", x, perl = TRUE)
+  # (a <name> placeholder is not an HTML tag: the HTML manual check)
   x <- gsub("<", "&lt;", x, fixed = TRUE)
-  gsub("\n", " ", x, fixed = TRUE)
+  x <- gsub("*", "&#42;", x, fixed = TRUE)
+  # (an _ inside a word, plan_cells, is never emphasis)
+  x <- gsub("(?<![[:alnum:]])_|_(?![[:alnum:]])", "&#95;", x, perl = TRUE)
+  x <- gsub("~", "&#126;", x, fixed = TRUE)
+  gsub("`", "&#96;", x, fixed = TRUE)
 }
 
 # An example call's arguments as R text
@@ -339,7 +369,8 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
 .tpl_rd_aliases <- function(name) {
   a <- .tpl_aliases_of(name)
   if (!nrow(a)) return(NULL)
-  rows <- sprintf("| `%s` | %s | %s | %s |", a$alias, a$source, a$item, .tpl_rd_cell(a$title))
+  rows <- sprintf("| `%s` | %s | %s | %s |", a$alias, .tpl_rd_cell(a$source),
+                  .tpl_rd_cell(a$item), .tpl_rd_cell(a$title))
   paste0("@section Aliases:\n",
          "The same template by the names of other collections' items: each runs it as ",
          "itself (`tfl_tpl(x, \"", a$alias[1L], "\", ...)`).\n\n",

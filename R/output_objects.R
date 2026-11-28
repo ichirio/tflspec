@@ -155,8 +155,8 @@ tfl_output_contents <- function(output, study, dir = ".") {
     if (identical(o$kind, "figure")) {
       data <- .contents_fig_data(ro, study, dir)
       if (identical(ro$data$source, "ard") || length(o$ard$analyses %||% list())) data$ard <- get_ard()
-      # (the warnings stay, as a table's do)
-      return(suppressMessages(tfl_content_run(ro, data)))
+      # (the warnings stay, as a table's do; its subjects: the study's, A2)
+      return(suppressMessages(tfl_content_run(ro, data, study = study)))
     }
     if (identical(o$kind, "listing")) {
       # a listing's records: its data step, as its program reads them; its
@@ -204,8 +204,10 @@ tfl_output_contents <- function(output, study, dir = ".") {
 # A listing's records (`data: {source: dataset, ...}`): the data part of
 # its program (tfl_listing_code(part = "data"): the dataset, or the
 # report's analysis data, its analysis set's subjects, its condition, its
-# order) run from the study folder
-.listing_data_of <- function(o, study, dir = ".", ard = NULL) {
+# code lists, its order) run from the study folder.  `ard`, `codelists`: the
+# study's ARD definition and the reports' code lists (.ard_spec_of_study())
+# when the caller has them already
+.listing_data_of <- function(o, study, dir = ".", ard = NULL, codelists = NULL) {
   d <- o$data %||% list()
   txt <- function(x) {
     v <- unlist(lapply(x, as.character))
@@ -219,10 +221,14 @@ tfl_output_contents <- function(output, study, dir = ".") {
   sp <- tfl_listing_spec(l, data.frame(output_id = o$id, vars = "USUBJID"), check = FALSE)
   old <- options(tflspec.plain_ns = TRUE, tflspec.study_setup = FALSE)
   on.exit(options(old), add = TRUE)
-  # (`ard`: the ARD definition when the caller has it already)
-  if (is.null(ard)) ard <- .ard_spec_of_study(study, output_id = o$id)$spec
+  if (is.null(ard)) {
+    s <- .ard_spec_of_study(study, output_id = o$id)
+    ard <- s$spec
+    codelists <- codelists %||% s$codelists
+  }
   rw <- .records_rework(d)
-  code <- tfl_listing_code(sp, o$id, ard = ard, part = "data", rework = rw)
+  code <- tfl_listing_code(sp, o$id, ard = ard, part = "data", rework = rw,
+                           codelists = codelists)
   if (is.null(code)) .ard_stop(sprintf("%s: the listing names no dataset.", o$id))
   env <- new.env(parent = globalenv())
   eval(parse(text = tfl_helpers_code()), env)
@@ -284,7 +290,8 @@ tfl_output_contents <- function(output, study, dir = ".") {
     }
     # (the warnings stay: the template's own -- subjects or records left out,
     # bars cut off -- are the user's to see, as a table's are)
-    stage("the figure", suppressMessages(tfl_content_run(ro, data)))
+    # (its subjects: the report's analysis set, made from the study, A2)
+    stage("the figure", suppressMessages(tfl_content_run(ro, data, study = st)))
   } else {
     ard <- stage("the ARD", suppressMessages(tfl_build_ard(st, dir = ".", output_id = ro$id, save = FALSE)))
     if (!is.null(ard$output_id)) ard <- ard[ard$output_id %in% ro$id, , drop = FALSE]

@@ -49,6 +49,7 @@ params:
     input: pick
     choices: study_data
     default: ADLB
+    unset: stop
     step: data
     tier: usual
     description: The dataset of the records (the data row rec_sub's from).
@@ -119,7 +120,7 @@ params:
   denominator:
     type: string
     input: pick
-    choices: report_data
+    choices: objects(data)
     default: adsl_sub
     step: analysis
     tier: usual
@@ -145,6 +146,7 @@ params:
     step: analysis
     tier: usual
     description: The decimals (or the format) of each statistic.
+      A report's names go over the series' formats; `!unset` removes one.
   value_labels:
     type: map<column,map<string,string>>
     input: table
@@ -169,6 +171,60 @@ params:
     step: content
     tier: usual
     description: The heading over each category after baseline ({col} the category).
+  group_header:
+    type: string
+    input: text
+    default: "{col1} (N={n})"
+    step: content
+    tier: usual
+    description: "The heading over each group's columns ({col1} the group,
+      {n} its N); not with col_header."
+  col_header:
+    type: rows<line, cols, span, text>
+    input: table
+    columns:
+      line:
+        label: {en: "Line", ja: "行"}
+        type: string
+        input: text
+        description: The header row, a whole number (1 = the top).
+      cols:
+        label: {en: "Columns", ja: "列"}
+        type: string
+        input: text
+        description: "The columns the cell sits on: a name (row_label), .values (every value column), a position or range, or KEY = value."
+      span:
+        label: {en: "Span", ja: "またがり"}
+        type: string
+        input: text
+        description: "Blank: one cell over cols; each: one cell a column; a key's name: one cell per value of that key (a spanner)."
+      text:
+        label: {en: "Text", ja: "テキスト"}
+        type: string
+        input: text
+        description: "What prints, with the tokens {col} {col1} (the column's keys) and {n} {n1} (its N); \\n a line break."
+    default:
+      - {line: "1", cols: row_label}
+      - {line: "1", cols: .values, span: "{by}", text: "{col1} (N={n})"}
+      - {line: "2", cols: row_label, text: Baseline}
+      - {line: "2", cols: .values, span: each, text: "{col}"}
+    step: content
+    tier: other
+    description: "The whole column header, one row a cell (line, cols, span,
+      text), as the tables sheet's col_header; the default is the header
+      heading, group_header and post_header make (span {by}: the group
+      variable's name).  Given, it replaces that header whole: not with
+      heading, post_header or group_header."
+  col_header_values:
+    type: map<string,logical|string|r>
+    input: table
+    columns: {key: {label: {en: "Token", ja: "トークン"}}, value: {label: {en: "Value", ja: "値"}}}
+    default: ~
+    step: content
+    tier: other
+    description: "What the header's tokens take, plan_col_header(values = ):
+      {n: page} each page's N, {n: table} the analysis set's; empty for the
+      BIGN item's N for {n}."
   baseline_total_label:
     type: string
     input: text
@@ -207,6 +263,27 @@ derive:
   shift_dir_off: {if: "{post_total}", then: cols}
   shift_dir: {if: "{baseline_total}", then: "{shift_dir_on}", else: "{shift_dir_off}"}
   shift_total: {if: "{shift_dir}", then: {direction: "{shift_dir}", label: "{baseline_total_label}", position: last}}
+  # the column header: col_header whole when the report gives it, else the
+  # one heading, group_header and post_header make (the two ways a header
+  # is made, canon 11-28: not both)
+  shift_header_given: {given: [col_header]}
+  shift_header_made:
+    value:
+      - {line: "1", cols: row_label}
+      - {line: "1", cols: .values, span: "{by}", text: "{group_header}"}
+      - {line: "2", cols: row_label, text: "{heading}"}
+      - {line: "2", cols: .values, span: each, text: "{post_header}"}
+  shift_header: {if: "{shift_header_given}", then: "{col_header}", else: "{shift_header_made}"}
+  shift_heading_given: {given: [heading]}
+  shift_post_header_given: {given: [post_header]}
+  shift_group_header_given: {given: [group_header]}
+check:
+  - fail: {if: "{shift_header_given}", then: "{shift_heading_given}"}
+    message: "col_header writes the whole header; heading is a text inside the header the template makes. Give col_header or heading, not both."
+  - fail: {if: "{shift_header_given}", then: "{shift_post_header_given}"}
+    message: "col_header writes the whole header; post_header is a text inside the header the template makes. Give col_header or post_header, not both."
+  - fail: {if: "{shift_header_given}", then: "{shift_group_header_given}"}
+    message: "col_header writes the whole header; group_header is a text inside the header the template makes. Give col_header or group_header, not both."
 data:
   - id: adsl_sub
     from: ADSL
@@ -247,12 +324,7 @@ content:
   - plan_labels: "{value_labels}"
   - plan_cells: {categorical: "{count_cell}"}
   - plan_total: "{shift_total}"
-  - plan_col_header:
-      header:
-        - {line: "1", cols: row_label}
-        - {line: "1", cols: .values, span: "{by}", text: "{col1} (N={n})"}
-        - {line: "2", cols: row_label, text: "{heading}"}
-        - {line: "2", cols: .values, span: each, text: "{post_header}"}
+  - plan_col_header: {header: "{shift_header}", values: "{col_header_values}"}
   - plan_paginate_group: {col: param, keep: false, heading: "{page_heading}", heading_at: title}
 page:
   titles: ~

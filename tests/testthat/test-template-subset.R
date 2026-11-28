@@ -225,8 +225,13 @@ test_that("a figure (km) of Part 1's subjects: A = B = the template SPEC", {
   for (n in names(data)) assign(n, data[[n]], envir = env)
   eval(parse(text = tfl_fig_setup_code()), env)
   eval(parse(text = tfl_helpers_code()), env)
+  # (the program reads the study's files: its subjects part first; run in the
+  # study, as tplfig_check() runs it)
+  wd <- setwd(d)
+  on.exit(setwd(wd), add = TRUE, after = FALSE)
   eval(parse(text = x$a), env)
+  setwd(wd)
   p1 <- sl$USUBJID[sl$SAFFL == "Y" & sl$PART == "Part 1"]
-  expect_setequal(unique(env$adtte_pfs$USUBJID),
+  expect_setequal(unique(env$adtte_sub$USUBJID),
                   intersect(p1, adtte$USUBJID[adtte$PARAMCD == "PFS"]))
 })

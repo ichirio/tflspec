@@ -3,6 +3,14 @@ template: forest_hr
 label: Forest plot, hazard ratio by subgroup
 figure: forest_hr
 params:
+  population:
+    type: string
+    input: pick
+    choices: populations
+    default: !series population_efficacy
+    step: data
+    tier: usual
+    description: The analysis set adsl_sub keeps (data.yml's populations).
   by:
     type: column
     input: pick
@@ -14,7 +22,7 @@ params:
   ref:
     type: level
     input: pick
-    choices: levels(by)
+    choices: levels(from_args(by))
     default: ~
     step: data
     tier: usual
@@ -22,7 +30,7 @@ params:
   comparison:
     type: string
     input: pick
-    choices: levels(by)
+    choices: levels(from_args(by))
     default: ~
     step: analysis
     tier: usual
@@ -59,7 +67,7 @@ params:
     default: !series censor
     step: analysis
     tier: other
-    description: The censoring column (1 censored, 0 event).
+    description: The censoring column (0 is the event, any other value a censoring).
   formats:
     type: map<string,number|string>
     input: table
@@ -70,12 +78,13 @@ params:
     step: analysis
     tier: other
     description: The decimals (or the format) of each statistic.
+      A report's names go over the series' formats; `!unset` removes one.
 extends: !series extends
 style: !series style
 data:
   - id: adsl_sub
     from: ADSL
-    population: !series population_efficacy
+    population: "{population}"
   - id: adtte_sub
     from: ADTTE
     subjects_in: adsl_sub
@@ -98,7 +107,7 @@ analysis:
       - {subgroup: ALL, subgroup_lvl: ALL, where: !r TRUE}
       - "{conditions}"
     where: !r "{where}"
-    args: !r formula = ggsurvfit::Surv_CNSR({time}, {censor}) ~ {by}, method = "coxph", package = "survival", exponentiate = TRUE
+    args: !r formula = survival::Surv({time}, {censor} == 0) ~ {by}, method = "coxph", package = "survival", exponentiate = TRUE
     post: !r dplyr::mutate(group1 = "subgroup", group1_level = list("{subgroup}"), group2 = "subgroup_lvl", group2_level = list("{subgroup_lvl}"))
     formats: "{formats}"
 page:

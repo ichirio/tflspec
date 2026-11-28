@@ -40,11 +40,22 @@ tfl_fig_template(
 \arguments{
 \item{template}{One of \code{tfl_fig_templates()$template}.}
 
-\item{data, param, pop, group}{The dataset, its PARAMCD, the analysis set
-flag and the group variable (joined from ADSL when \code{join_adsl}).}
+\item{data, param, group}{The dataset, its PARAMCD and the group variable
+(joined from ADSL when \code{join_adsl}).  \code{group} has no default: a
+template that splits the arms stops without it, naming itself and
+the argument (\code{km_single_arm}, \code{individual_spider}, the waterfalls and
+the swimmers draw no arms).}
 
-\item{time, censor, time_unit}{KM: the time, the censor variable, the axis's
-unit.  PK: \code{time} is the nominal time.}
+\item{pop}{The analysis set, by its id or its flag: no step of the
+design keeps it.  A figure's subjects are its report's analysis set
+(its data's \verb{population:}): its program makes them and joins every dataset
+the design reads to them.  \code{forest_hr} names its own analysis data's
+set by it (\code{\link[=tfl_fig_forest_analyses]{tfl_fig_forest_analyses()}}); a whole-script template passes
+it to its type's function.}
+
+\item{time, censor, time_unit}{KM: the time, the censor variable (0 = the
+event), the unit the time is in for the analysis and the axis: AVAL is
+converted from its AVALU by \code{tte_time()}.  PK: \code{time} is the nominal time.}
 
 \item{value, visit, visit_label}{The value and the visit (number and
 label): mean, box, spaghetti, scatter.}
@@ -61,9 +72,8 @@ counted as response.}
 
 \item{id, duration}{Swimmer: the subject and the bar's length (days).}
 
-\item{join_adsl}{Join \code{group} (and \code{pop}) from ADSL (\code{TRUE} for the
-longitudinal kinds; KM, waterfall and swimmer read them from their own
-dataset).}
+\item{join_adsl}{Join \code{group} from ADSL (\code{TRUE} for the longitudinal
+kinds; KM, waterfall and swimmer read it from their own dataset).}
 
 \item{title}{The figure's title.}
 

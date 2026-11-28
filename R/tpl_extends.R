@@ -23,7 +23,12 @@
   ts <- .tpl_spec_of(output)
   if (is.null(ts) || !grepl("/", ts$name, fixed = TRUE)) return(output)
   out <- tfl_template_resolve(.output_to_list(output), study = .tr_study_of(study))
+  # (a figure whose template names its content, `figure:`: its call takes
+  # the resolved arguments, .fig_content_key())
+  args <- if (!is.null(out$figure)) attr(out, "args")
   attr(out, "template") <- attr(out, "args") <- attr(out, "origins") <- NULL
+  attr(out, "page_template") <- NULL
+  if (!is.null(args)) attr(out, "args") <- args
   out
 }
 
