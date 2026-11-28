@@ -151,6 +151,30 @@ test_that("the fixtures hold every kind of report and of ARD program", {
   expect_identical(s$settings$value[s$settings$key == "listing_type"], "compact")
 })
 
+test_that("a study's figure style key and a designed figure in the study get the same value", {
+  x <- prog_fx_inputs("sample")
+  skip_if(is.null(x$study), "the sample fixture has no study spec")
+  r <- x$reports
+  ids <- names(Filter(function(v) !is.null(v$design) && is.null(v$design$figure), r))
+  skip_if(!length(ids), "no designed figure in the sample fixture")
+  id <- ids[[1L]]
+  title <- "A long axis title of the figure"
+  x$reports[[id]]$design$plot$x_label <- title
+  x$reports[[id]]$design$plot$axis_title_width <- NULL
+  # the study's copy says 10; the company's (standards) says nothing of it
+  x$study$figure_style <- list(settings = list(list(key = "axis_title_width", value = "10")))
+  code <- paste(prog_fx_report(x, id), collapse = "\n")
+  expect_true(grepl(encodeString(tflspec:::.fig_wrap_title(title, 10), quote = "\""), code,
+                    fixed = TRUE))
+  # a template's reference in the same study: the same width
+  expect_identical(tflspec:::.tpl_fig_style_read("axis_title_width", x$study), 10)
+  # and the session's option does not reach it
+  old <- options(tflspec.fig_style = list(settings = data.frame(
+    type = NA_character_, key = "axis_title_width", value = "70", stringsAsFactors = FALSE)))
+  on.exit(options(old), add = TRUE)
+  expect_identical(paste(prog_fx_report(x, id), collapse = "\n"), code)
+})
+
 test_that("hostile session options do not reach the programs", {
   x <- prog_fx_inputs("edited")
   ids <- names(x$reports)

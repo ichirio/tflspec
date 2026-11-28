@@ -27,7 +27,9 @@ out is \code{NA}.}
 
 \item{study}{The study's spec (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}), or a table or
 report spec of the sheets: \code{study_setup.R}'s rounding and data and
-\code{report_setup.R}'s font, tokens, header and footer.  \code{NULL}: none.}
+\code{report_setup.R}'s font, tokens, header and footer, and \code{fig_setup.R}'s
+figure style (the spec's \code{figure_style}, over the company's).  \code{NULL}:
+none.}
 
 \item{standards}{The company's inputs: a list with any of \code{about},
 \code{setup_code}, \code{figure_settings}, \code{figure_colors} and \code{figure_markers},

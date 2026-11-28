@@ -32,6 +32,8 @@
     # ---- every figure
     s(NA, "base_size", "10", "base font size (pt) of the theme"),
     s(NA, "axis_title_size", "10", "axis titles (pt)"),
+    s(NA, "axis_title_width", "50",
+      "characters after which an axis title wraps onto a new line (a template's axis_title_width)"),
     s(NA, "axis_text_size", "8", "axis tick labels (pt)"),
     s(NA, "legend_text_size", "9", "legend text (pt)"),
     s(NA, "legend_key_size", "0.7", "legend key size (lines)"),
@@ -165,15 +167,45 @@
 #'   by default): the arms' point shapes (`16, 17, 15`) and line types
 #'   (`solid, dashed, dotted`) in the same order, for print in black and
 #'   white; a designed figure that colours by the arms maps them too.
+#' * `settings` `axis_title_width` (`50`): the number of characters after
+#'   which an axis title wraps onto a new line, at the spaces between
+#'   words; the default of a figure template's `axis_title_width` and of
+#'   a designed figure's (its `plot` setting `axis_title_width`; `!unset`
+#'   there: no wrap), and of the scripts of [tfl_fig_km()] and the other
+#'   `tfl_fig_*()` (`axis_title_width` in the `...` of `tfl_fig_km()`,
+#'   `tfl_fig_waterfall()` and `tfl_fig_swimmer()`).  The program shows
+#'   the wrapped title.
 #' * `markers` (`marker`, `shape`, `fill`, `colour`, `size`): event markers
 #'   by label (a swimmer event named `Death` takes the `Death` row) and the
 #'   figures' own symbols (`censor`, `assessment`).
 #'
+#' A study keeps its own copy in its spec (`spec/defaults.yml`'s
+#' `figure_style:`).  One rule gives every table and key: the study's over
+#' the company's over the built-in one.  A table the study gives is its
+#' whole table, a key its table lacks is the company's.
+#' `tfl_fig_style(study)` is that style, the one a study's programs are made
+#' with ([tfl_report_program()]) and its `fig_setup.R` draws with
+#' ([tfl_setup_program()]).
+#'
+#' @param study A study's spec ([tfl_read_study_spec()]): its figure style
+#'   over the company's.  `NULL`: the company's.
+#' @param standards The company's figure style as a program maker takes it:
+#'   a list with any of `figure_settings`, `figure_colors` and
+#'   `figure_markers` (a table left out: the built-in one).  `NULL`: the
+#'   option `tflspec.fig_style`, else the built-in style.
 #' @param path A workbook.
 #' @return `tfl_fig_style()` and `tfl_read_fig_style()`: a list of three data frames;
 #'   `tfl_fig_style_template()`: `path`, invisibly.
 #' @export
-tfl_fig_style <- function() {
+tfl_fig_style <- function(study = NULL, standards = NULL) {
+  company <- if (!is.null(standards)) .fig_style_of(standards) else .fig_style_option()
+  if (is.null(study)) return(company)
+  .fig_style_study(if (is.list(study)) study$figure_style, company)
+}
+
+# The company's figure style the session has set (options(tflspec.fig_style
+# =)), each table it lacks the built-in one; none set: the built-in style
+.fig_style_option <- function() {
   s <- getOption("tflspec.fig_style")
   if (is.null(s)) return(.fig_style_builtin())
   b <- .fig_style_builtin()
@@ -257,16 +289,24 @@ tfl_read_fig_style <- function(path) {
 #     markers: [...]  # marker, shape, fill, colour, size
 #
 # (tflplanner copies the company's at the study's start, as it does the
-# rest of the defaults).  A table the study gives is the study's whole
-# table, as tfl_read_fig_style() reads a workbook's sheet; one it does not
-# give is tflspec's built-in one.  NULL part: the built-in style itself.
-.fig_style_study <- function(figure_style = NULL) {
-  b <- .fig_style_builtin()
+# rest of the defaults).
+#
+# One rule for every table and key of a figure style, the standards'
+# layering: the study's over the company's (`base`: tfl_fig_style(),
+# options(tflspec.fig_style =), else the built-in; a program maker passes
+# the company's tables it is given, .fig_style_of()) over tflspec's
+# built-in one.  The study's rows replace the company's of the same item
+# (.fig_style_items: a setting by its type and key, a palette whole, a
+# marker by its name); the company's other rows stay, so a key the study's
+# copy lacks (a copy made before the key) is the company's.
+.fig_style_study <- function(figure_style = NULL, base = tfl_fig_style()) {
+  b <- base
   if (!length(figure_style)) return(b)
-  for (k in intersect(names(b), names(figure_style))) {
+  builtin <- .fig_style_builtin()
+  for (k in intersect(names(builtin), names(figure_style))) {
     rows <- figure_style[[k]]
     if (!is.list(rows) || !length(rows)) next
-    cols <- names(b[[k]])
+    cols <- names(builtin[[k]])
     one <- function(r) {
       v <- lapply(cols, function(cn) {
         x <- r[[cn]]
@@ -274,19 +314,146 @@ tfl_read_fig_style <- function(path) {
       })
       .fs_df(stats::setNames(v, cols))
     }
-    b[[k]] <- do.call(rbind, lapply(rows, one))
+    top <- do.call(rbind, lapply(rows, one))
+    rest <- .fs_align(b[[k]], cols)
+    if (!is.null(rest) && nrow(rest)) {
+      id <- function(d) do.call(paste, c(lapply(.fig_style_items[[k]], function(cn) d[[cn]]), sep = "\r"))
+      rest <- rest[!id(rest) %in% id(top), , drop = FALSE]
+    }
+    b[[k]] <- rbind(top, rest)
+    rownames(b[[k]]) <- NULL
   }
   b
 }
 
+# The columns that name one item of each table: a study's row replaces the
+# company's rows of the same item (.fig_style_study())
+.fig_style_items <- list(settings = c("type", "key"), colors = "palette", markers = "marker")
+
+# A table with the columns `cols` (one it lacks: NA), as text
+.fs_align <- function(d, cols) {
+  if (is.null(d)) return(NULL)
+  d <- as.data.frame(d, stringsAsFactors = FALSE)
+  for (cn in setdiff(cols, names(d))) d[[cn]] <- rep(NA_character_, nrow(d))
+  d <- d[cols]
+  d[] <- lapply(d, as.character)
+  d
+}
+
+# The company's figure style from a program maker's `standards`
+# (figure_settings, figure_colors, figure_markers, as tfl_setup_program()
+# takes them); a table not given: tflspec's built-in one (never the
+# session's option: a program's text is a function of its values)
+.fig_style_of <- function(standards) {
+  b <- .fig_style_builtin()
+  pick <- function(key, part) standards[[key]] %||% b[[part]]
+  list(settings = pick("figure_settings", "settings"),
+       colors = pick("figure_colors", "colors"),
+       markers = pick("figure_markers", "markers"))
+}
+
+# A key's value by the layering: the study's style, the company's
+# (tfl_fig_style()), tflspec's built-in; NA when none has it
+.fs_get_layered <- function(key, type = NA, study_style = tfl_fig_style()) {
+  v <- .fs_get(key, type, study_style)
+  if (is.na(v)) v <- .fs_get(key, type, tfl_fig_style())
+  if (is.na(v)) v <- .fs_get(key, type, .fig_style_builtin())
+  v
+}
+
 # A `figure_style.<key>` (or `figure_style.<type>.<key>`) reference's
-# value: the study's figure style, else tflspec's built-in one; NULL when
-# neither has it
+# value: the study's figure style over the company's over the built-in one
+# (.fig_style_study()); NULL when none has it
 .tpl_fig_style_read <- function(path, study = NULL) {
   if (!length(path) || length(path) > 2L) return(NULL)
   key <- path[length(path)]
   type <- if (length(path) == 2L) path[1L] else NA
-  v <- .fs_get(key, type, .fig_style_study(study$figure_style))
-  if (is.na(v)) v <- .fs_get(key, type, .fig_style_builtin())
-  if (is.na(v)) NULL else v
+  v <- .fs_get_layered(key, type, .fig_style_study(study$figure_style))
+  if (is.na(v)) return(NULL)
+  # (the catalog keeps text: a number's text is the number, as a
+  # parameter of type number takes it -- "50" is 50)
+  n <- suppressWarnings(as.numeric(v))
+  if (!is.na(n) && grepl("^\\s*[-+]?[0-9.]+([eE][-+]?[0-9]+)?\\s*$", v)) n else v
+}
+
+# ---- axis titles: wrapped at a width -----------------------------------------------
+
+# The width an axis title wraps at when a figure content function is not
+# given one (km_curves(), forest_hr(): their `axis_title_width`), and the
+# built-in figure style's `axis_title_width`
+.fig_title_width_default <- 50
+
+# An axis title on lines of at most `width` characters: broken with "\n"
+# at the spaces between words, the one rule of every writer of an axis
+# title (the design's labs(), km_curves(), forest_hr(), the programs that
+# call them -- they write the wrapped text, not a step that wraps it).  A
+# "\n" in the text is a line break, kept; a line no longer than the width
+# is kept as written; a word longer than the width stays whole, on a line
+# of its own (a text with no spaces, as Japanese, is not broken); a line
+# laid out with a run of two or more spaces (the forest's "<- Favours A
+# ...  Favours B ->") is kept whole.  Text that is NULL, NA, empty or not
+# plain text (R code), and a width that is NULL, NA or `!unset` (no wrap),
+# give the text back unchanged.  `fill`, placeholders and their values
+# (c("{time_unit}" = "Days")): the lengths are those of the text as drawn,
+# with the values in, and the text comes back with its placeholders.
+.fig_wrap_title <- function(text, width, fill = NULL) {
+  if (.fig_no_wrap(width)) return(text)
+  w <- if (is.character(width)) suppressWarnings(as.numeric(width)) else width
+  if (!is.numeric(w) || length(w) != 1L || is.na(w) || w < 1 || w != round(w)) {
+    stop(sprintf(paste0("axis_title_width: the number of characters after which an axis title ",
+                        "wraps, a positive whole number (50); `!unset` for no wrap. Got %s."),
+                 paste(format(width), collapse = " ")), call. = FALSE)
+  }
+  if (is.null(text) || is.object(text) || !is.character(text) || length(text) != 1L ||
+      is.na(text) || !nzchar(text)) {
+    return(text)
+  }
+  lines <- strsplit(text, "\n", fixed = TRUE)[[1L]]
+  if (endsWith(text, "\n")) lines <- c(lines, "")
+  len <- function(x) {
+    for (k in names(fill)) x <- gsub(k, fill[[k]], x, fixed = TRUE)
+    nchar(x)
+  }
+  long <- len(lines) > w & !grepl("  ", lines, fixed = TRUE)
+  if (!any(long)) return(text)
+  lines[long] <- vapply(lines[long], .fig_wrap_line, "", width = w, len = len, USE.NAMES = FALSE)
+  paste(lines, collapse = "\n")
+}
+
+# Whether an axis_title_width says "no wrap": NULL, NA (also "NA", as an
+# options sheet writes it) or `!unset`
+.fig_no_wrap <- function(width) {
+  is.null(width) || inherits(width, "tfl_unset") ||
+    (length(width) == 1L && !is.object(width) &&
+       (is.na(width) || identical(toupper(trimws(as.character(width))), "NA")))
+}
+
+# One line wrapped: words joined while the line holds them (the spaces
+# between two words kept as written, those at a break dropped); `len`, a
+# text's length as drawn
+.fig_wrap_line <- function(line, width, len = nchar) {
+  out <- character()
+  cur <- NULL
+  for (tok in strsplit(line, " ", fixed = TRUE)[[1L]]) {
+    if (is.null(cur)) {
+      if (nzchar(tok)) cur <- tok
+    } else if (len(cur) + 1L + len(tok) <= width) {
+      cur <- paste0(cur, " ", tok)
+    } else {
+      out <- c(out, sub(" +$", "", cur))
+      cur <- if (nzchar(tok)) tok
+    }
+  }
+  if (!is.null(cur)) out <- c(out, sub(" +$", "", cur))
+  paste(out, collapse = "\n")
+}
+
+# The width a figure's axis titles wrap at from the figure style in force
+# (options(tflspec.fig_style =): while a study's program is made, the
+# study's over the company's, tfl_report_program(); else the company's):
+# its `axis_title_width`, else tflspec's built-in one (a style written
+# before the key); a number
+.fs_title_width <- function() {
+  v <- .fs_get_layered("axis_title_width")
+  if (is.na(v)) .fig_title_width_default else as.numeric(v)
 }

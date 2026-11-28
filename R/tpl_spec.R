@@ -237,7 +237,7 @@
     },
     settings = down(study$study$settings, path),
     figure_style = .tpl_fig_style_read(path, study),
-    km = .tpl_km_style_value(path[1L]),
+    km = .tpl_km_style_value(path[1L], study),
     {
       # (the range is merged already: an `!unset` in it took the value away)
       items <- range %||% study$defaults$content

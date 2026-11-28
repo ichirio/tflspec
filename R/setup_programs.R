@@ -163,7 +163,9 @@ tfl_builtin_standards <- function() {
 #'   out is `NA`.
 #' @param study The study's spec ([tfl_read_study_spec()]), or a table or
 #'   report spec of the sheets: `study_setup.R`'s rounding and data and
-#'   `report_setup.R`'s font, tokens, header and footer.  `NULL`: none.
+#'   `report_setup.R`'s font, tokens, header and footer, and `fig_setup.R`'s
+#'   figure style (the spec's `figure_style`, over the company's).  `NULL`:
+#'   none.
 #' @param standards The company's inputs: a list with any of `about`,
 #'   `setup_code`, `figure_settings`, `figure_colors` and `figure_markers`,
 #'   the company standards' tables.  One left out is tflspec's own
@@ -232,7 +234,7 @@ tfl_setup_program <- function(file, meta = list(), study = NULL, standards = lis
     study_user = .setup_user_seed(layout),
     study_helpers = .setup_helpers(layout, date, generator),
     report_setup = .setup_report(study, layout, date, generator),
-    fig_setup = .setup_fig(standards, fig_libs, layout, date)), context)
+    fig_setup = .setup_fig(standards, fig_libs, layout, date, study)), context)
 }
 
 # A program's banner: a bar, the lines, a bar (a blank line a lone "#")
@@ -443,17 +445,12 @@ tfl_setup_program <- function(file, meta = list(), study = NULL, standards = lis
 # ---- programs/tfl/fig_setup.R
 
 # fig_setup.R: the study's setup, the packages the figures' code uses (the
-# designed figures': ggsurvfit for a KM ...), the company's figure style
-# (tfl_fig_setup_code()), and the functions a report of one's own code ends
-# with
-.setup_fig <- function(standards, fig_libs, layout, date) {
-  # (a table the company has not given: tflspec's own)
-  pick <- function(key, part) {
-    if (key %in% names(standards)) standards[[key]] else tfl_fig_style()[[part]]
-  }
-  style <- list(settings = pick("figure_settings", "settings"),
-                colors = pick("figure_colors", "colors"),
-                markers = pick("figure_markers", "markers"))
+# designed figures': ggsurvfit for a KM ...), the figure style
+# (tfl_fig_setup_code(): the study's over the company's over tflspec's,
+# .fig_style_study(), the style its programs are made with), and the
+# functions a report of one's own code ends with
+.setup_fig <- function(standards, fig_libs, layout, date, study = NULL) {
+  style <- tfl_fig_style(study, standards)
   code <- tfl_fig_setup_code(style, date = date)
   # after its banner (the comment lines it starts with)
   at <- match(FALSE, grepl("^#", code), nomatch = length(code) + 1L) - 1L

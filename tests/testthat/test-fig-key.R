@@ -51,7 +51,8 @@ test_that("tfl_template_to_spec() writes figure: {name, args} for a series figur
   expect_identical(km$figure$args$time_unit, "months")
   expect_identical(km$figure$args$legend, "bottom")
   fo <- fk_spec(fk_lines()$forest, d)
-  expect_identical(fo$figure, list(name = "forest_hr", args = list(comparison = "Drug X")))
+  # (axis_title_width: the study's figure style's, 50, as resolved)
+  expect_identical(fo$figure, list(name = "forest_hr", args = list(comparison = "Drug X", axis_title_width = 50)))
 })
 
 test_that("the key goes through YAML and the sheets, and writes the same call as the template's path", {

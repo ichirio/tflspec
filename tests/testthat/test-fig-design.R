@@ -144,7 +144,7 @@ test_that("the new statistics and settings write what they say", {
   d <- tfl_fig_template("bar_rate_ci", group = "TRT01P")
   code <- paste(tfl_fig_design_code(d), collapse = "\n")
   expect_match(code, "binom.test", fixed = TRUE)
-  expect_match(code, 'label = paste0(fmt_num(rate, 1), "%\\n(', fixed = TRUE)
+  expect_match(code, 'label = paste0(fmt_num(rate, 1), "% (", x, "/", n, ")")', fixed = TRUE)
   d <- tfl_fig_template("pk_individual", group = "TRT01A")
   code <- paste(tfl_fig_design_code(d), collapse = "\n")
   expect_match(code, "scale_y_log10()", fixed = TRUE)
@@ -223,7 +223,7 @@ test_that("a number a figure prints is fmt_num(): the study's rounding, as a tab
     expect_identical(sum(grepl('^if [(]!exists[(]"fmt_num"[)][)] fmt_num <- function', own)), 1L, info = t)
   }
   rate <- paste(tfl_fig_design_code(tfl_fig_template("bar_rate_ci", group = "TRT01P"), "F1", setup = TRUE), collapse = "\n")
-  expect_match(rate, 'label = paste0(fmt_num(rate, 1), "%\\n(", x, "/", n, ")")', fixed = TRUE)
+  expect_match(rate, 'label = paste0(fmt_num(rate, 1), "% (", x, "/", n, ")")', fixed = TRUE)
   count <- paste(tfl_fig_design_code(tfl_fig_template("bar_stacked", group = "TRT01P"), "F1", setup = TRUE), collapse = "\n")
   expect_match(count, 'label = paste0(fmt_num(pct, 0), "%")', fixed = TRUE)
   fr <- tfl_fig_template("forest_hr", data = "ADTTE", param = "TTDE", pop = "SAFFL", group = "TRT01A",
@@ -292,7 +292,7 @@ test_that("a number a figure prints is fmt_num(): the study's rounding, as a tab
 test_that("a script of its own carries every study helper it calls: the arms' order_levels() (A3)", {
   lines <- function(x) unlist(strsplit(paste(as.character(x), collapse = "\n"), "\n", fixed = TRUE))
   d <- tfl_fig_template("mean_se", group = "TRT01P")
-  own <- lines(tfl_fig_design_code(d, "F1", save = FALSE, name = "fig", order_arms = TRUE))
+  own <- lines(tfl_fig_design_code(d, "F1", save = FALSE, name = "fig"))
   def <- function(f) sum(grepl(sprintf('^if [(]!exists[(]"%s"[)][)] %s <- function', f, f), own))
   expect_true(any(grepl("order_levels(", own, fixed = TRUE)))
   # order_levels() once, and set_levels(), which it calls
@@ -329,12 +329,15 @@ test_that("a time's unit is a named constant of the setup, never a column", {
   expect_true(any(grepl('if (!exists("days_per_month")) days_per_month <- 30.4375',
                         tfl_fig_setup_code(), fixed = TRUE)))
   # a script of its own: defines what it uses (AVAL from its unit: the
-  # helper tte_time(), no constant; another time, in days: the constant)
+  # helper tte_time(), no constant; another time, in days: the constant;
+  # the ordering helpers besides, as every script of its own)
   own <- strsplit(paste(tfl_fig_design_code(d, "F1"), collapse = "\n"), "\n")[[1]]
+  own <- own[!grepl('^if [(]!exists[(]"(codelist_codes|set_levels|order_levels)"', own)]
   expect_identical(sum(grepl("^if [(]!exists", own)), 1L)
   expect_true(any(grepl("^if [(]!exists[(]\"tte_time\"[)][)] tte_time <- function", own)))
   d$data[[which(vapply(d$data, `[[`, "", "step") == "time_unit")]]$variable <- "ADY"
   own <- strsplit(paste(tfl_fig_design_code(d, "F1"), collapse = "\n"), "\n")[[1]]
+  own <- own[!grepl('^if [(]!exists[(]"(codelist_codes|set_levels|order_levels)"', own)]
   expect_identical(sum(grepl("^if [(]!exists", own)), 1L)
   expect_true(any(grepl("^if [(]!exists[(]\"days_per_month\"[)][)]", own)))
   expect_false(any(grepl("tte_time", own, fixed = TRUE)))
@@ -567,4 +570,153 @@ test_that("a figure's group has no default: a template that splits the arms stop
   expect_error(tpl_mean_se(advs, param = "SYSBP"), "mean_se: `group` is required", fixed = TRUE)
   expect_error(tpl_mean_ci(advs, param = "SYSBP"), "mean_ci: `group` is required", fixed = TRUE)
   expect_error(tpl_forest_hr(data.frame()), "forest_hr: `group` is required", fixed = TRUE)
+})
+
+# ---- axis_title_width (tflspec#603-4, canon 11-28) ---------------------------------
+
+fd_t90 <- "Mean Change from Baseline in Diastolic Blood Pressure (mmHg) with 95% Confidence Intervals"
+fd_t90_50 <- "Mean Change from Baseline in Diastolic Blood\nPressure (mmHg) with 95% Confidence Intervals"
+
+fd_axis <- function(...) {
+  tfl_fig_design(
+    data = list(list(step = "read", dataset = "ADSL")),
+    plot = list(...),
+    layers = list(list(layer = "point", x = "TRTDURD", y = "TRTDURD")))
+}
+# the code as one text; a title as the program writes it (its "\n" escaped)
+fd_code <- function(d) paste(tfl_fig_design_code(d, save = FALSE), collapse = "\n")
+fd_lit <- function(x) encodeString(x, quote = "\"")
+
+test_that("a designed figure writes an axis title longer than axis_title_width wrapped", {
+  # the figure style's width (50): the 90-character title on two lines, in the code
+  code <- fd_code(fd_axis(x_label = "Age (years)", y_label = fd_t90))
+  expect_true(grepl(fd_lit(fd_t90_50), code, fixed = TRUE))
+  expect_false(grepl(fd_lit(fd_t90), code, fixed = TRUE))
+  expect_true(grepl(fd_lit("Age (years)"), code, fixed = TRUE))
+  # a 30-character title: as written
+  t30 <- "Mean Change from Baseline (mm)"
+  code <- fd_code(fd_axis(y_label = t30))
+  expect_true(grepl(fd_lit(t30), code, fixed = TRUE))
+  # the figure's own width; `!unset`: one line
+  code <- fd_code(fd_axis(y_label = fd_t90, axis_title_width = 30))
+  expect_true(grepl(fd_lit(tflspec:::.fig_wrap_title(fd_t90, 30)), code, fixed = TRUE))
+  d_unset <- fd_axis(y_label = fd_t90, axis_title_width = tfl_unset())
+  code <- fd_code(d_unset)
+  expect_true(grepl(fd_lit(fd_t90), code, fixed = TRUE))
+  # (the title, not the figure's title, is wrapped)
+  code <- fd_code(fd_axis(title = fd_t90))
+  expect_true(grepl(fd_lit(fd_t90), code, fixed = TRUE))
+  # the check takes the setting, `!unset` too
+  adam <- tfl_example_adam()
+  n0 <- nrow(tfl_check_fig_design(fd_axis(y_label = fd_t90), adam))
+  expect_identical(nrow(tfl_check_fig_design(d_unset, adam)), n0)
+  expect_identical(nrow(tfl_check_fig_design(fd_axis(y_label = fd_t90, axis_title_width = 30), adam)), n0)
+  expect_gt(nrow(tfl_check_fig_design(fd_axis(axis_title_width = "wide"), adam)), n0)
+  # (a number that is no width -- 0, 2.5 -- is caught by the check, as the
+  # program would stop)
+  expect_gt(nrow(tfl_check_fig_design(fd_axis(axis_title_width = 0), adam)), n0)
+  expect_gt(nrow(tfl_check_fig_design(fd_axis(axis_title_width = 2.5), adam)), n0)
+  # a design file keeps the `!unset`: written as the tag, read back as it
+  f <- tempfile(fileext = ".yml")
+  tfl_write_fig_design(d_unset, f)
+  expect_true(any(grepl("axis_title_width: !unset", readLines(f), fixed = TRUE)))
+  back <- tfl_read_fig_design(f)
+  expect_s3_class(back$plot$axis_title_width, "tfl_unset")
+  expect_true(grepl(fd_lit(fd_t90), fd_code(back), fixed = TRUE))
+  # a company's figure style: its width
+  s <- tfl_fig_style()
+  s$settings$value[s$settings$key == "axis_title_width"] <- "40"
+  old <- options(tflspec.fig_style = s)
+  on.exit(options(old), add = TRUE)
+  code <- fd_code(fd_axis(y_label = fd_t90))
+  expect_true(grepl(fd_lit(tflspec:::.fig_wrap_title(fd_t90, 40)), code, fixed = TRUE))
+})
+
+test_that("a designed figure's wrapped axis title is the drawn one", {
+  skip_if_not_installed("ggplot2", "3.5.2")
+  r <- run_design(fd_axis(y_label = fd_t90))
+  expect_identical(ggplot2::get_labs(r$fig)$y, fd_t90_50)
+  r <- run_design(fd_axis(y_label = fd_t90, axis_title_width = tfl_unset()))
+  expect_identical(ggplot2::get_labs(r$fig)$y, fd_t90)
+})
+
+test_that("the km template's axis_title_width goes to its design; NULL / !unset: no wrap", {
+  x <- function(...) tfl_template_expand("km", list(param = "PFS", by = "TRT01A", ...))$plot
+  expect_identical(x()$axis_title_width, 50)
+  expect_identical(x(axis_title_width = 30)$axis_title_width, 30)
+  expect_s3_class(x(axis_title_width = tfl_unset())$axis_title_width, "tfl_unset")
+  # the study standard's key, its fallback the template's 50
+  p <- tfl_template_params("km")$axis_title_width
+  expect_identical(p$study, "figure_style.axis_title_width")
+  expect_identical(p$default, 50)
+  # (the template's settings with none over them: `!unset` kept)
+  base <- list(y_label = "Y", axis_title_width = tfl_unset())
+  expect_identical(tflspec:::.tpl_plot_over(base, NULL), base)
+  expect_identical(tflspec:::.tpl_plot_over(base, list(axis_title_width = 40))$axis_title_width, 40)
+  # a report's `plot:` saying `!unset` over the template's width: no wrap, kept
+  base50 <- list(y_label = "Y", axis_title_width = 50)
+  expect_s3_class(tflspec:::.tpl_plot_over(base50, list(axis_title_width = tfl_unset()))$axis_title_width,
+                  "tfl_unset")
+  expect_s3_class(x(plot = list(axis_title_width = tfl_unset()))$axis_title_width, "tfl_unset")
+  # (another setting's `!unset` removes it, as before)
+  expect_null(tflspec:::.tpl_plot_over(base50, list(y_label = tfl_unset()))$y_label)
+  # drawn: tfl_tpl()
+  skip_if_not_installed("ggsurvfit")
+  skip_if_not_installed("ggplot2", "3.5.2")
+  adtte <- tflspec::adtte
+  df <- adtte[adtte$PARAMCD == "PFS", ]
+  y_of <- function(...) ggplot2::get_labs(tfl_tpl(df, "km", by = TRT01A, risk_table = FALSE,
+                                                  y_label = fd_t90, ...))$y
+  expect_identical(y_of(), fd_t90_50)
+  expect_identical(y_of(axis_title_width = tfl_unset()), fd_t90)
+})
+
+test_that("a rate / count step's label is its label_cell, one line by default (#603 6a)", {
+  d <- tfl_fig_template("bar_rate_ci", group = "TRT01P")
+  i <- which(vapply(d$data, function(s) identical(s$step, "rate"), NA))
+  code <- paste(tfl_fig_design_code(d), collapse = "\n")
+  expect_match(code, 'label = paste0(fmt_num(rate, 1), "% (", x, "/", n, ")")', fixed = TRUE)
+  expect_false(grepl("\\n(", code, fixed = TRUE))
+  # its own: other columns, a line break (written as \n in the string)
+  d$data[[i]]$label_cell <- "{rate:.1f}%\n({lcl:.1f}, {ucl:.1f}) n={n}"
+  code <- paste(tfl_fig_design_code(d), collapse = "\n")
+  expect_match(code, paste0('label = paste0(fmt_num(rate, 1), "%\\n(", fmt_num(lcl, 1), ", ", ',
+                            'fmt_num(ucl, 1), ") n=", n)'), fixed = TRUE)
+  expect_false("label_cell" %in% tfl_check_fig_design(d)$field)
+  # a token that is no column of the step stops, naming the step and its columns
+  d$data[[i]]$label_cell <- "{rate:.1f}% ({N})"
+  msg <- tryCatch(tfl_fig_design_code(d), error = conditionMessage)
+  expect_match(msg, "label_cell of the rate step (rt): {N} is not one of its columns", fixed = TRUE)
+  expect_match(msg, "{rate}, {x}, {n}, {lcl}, {ucl}", fixed = TRUE)
+  chk <- tfl_check_fig_design(d)
+  expect_identical(chk$problem[chk$field == "label_cell"], msg)
+  # a format other than .<decimals>f
+  d$data[[i]]$label_cell <- "{rate:d}"
+  expect_error(tfl_fig_design_code(d), "a format is .<decimals>f", fixed = TRUE)
+  # count: its percent, no decimal
+  d <- tfl_fig_template("bar_stacked", group = "TRT01P")
+  code <- paste(tfl_fig_design_code(d), collapse = "\n")
+  expect_match(code, 'label = paste0(fmt_num(pct, 0), "%")', fixed = TRUE)
+  j <- which(vapply(d$data, function(s) identical(s$step, "count"), NA))
+  d$data[[j]]$label_cell <- "{n} ({pct:.1f}%)"
+  code <- paste(tfl_fig_design_code(d), collapse = "\n")
+  expect_match(code, 'label = paste0(n, " (", fmt_num(pct, 1), "%)")', fixed = TRUE)
+  d$data[[j]]$label_cell <- "{x}"
+  expect_error(tfl_fig_design_code(d), "label_cell of the count step (ct): {x}", fixed = TRUE)
+  # the default made from numbers: one line, the study's rounding
+  e <- new.env()
+  eval(parse(text = tfl_helpers_code()), e)
+  e$rate <- 100 * 5 / 15
+  e$x <- 5L
+  e$n <- 15L
+  expect_identical(eval(parse(text = .cell_template_code(.fig_label_cells$rate, .fig_label_cols$rate,
+                                                         "the rate step")), e),
+                   "33.3% (5/15)")
+  # the steps' catalog: the field and its default
+  p <- tfl_fig_parts()
+  expect_identical(p$default[p$piece == "rate" & p$field == "label_cell"], "{rate:.1f}% ({x}/{n})")
+  expect_identical(p$default[p$piece == "count" & p$field == "label_cell"], "{pct:.0f}%")
+  # a typed \n (a one-line field) is a line break as a real one is
+  expect_identical(.cell_template_code("{pct:.0f}%\\n{n}", c("pct", "n"), "the count step"),
+                   .cell_template_code("{pct:.0f}%\n{n}", c("pct", "n"), "the count step"))
 })

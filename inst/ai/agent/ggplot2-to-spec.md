@@ -58,6 +58,7 @@ p <- ggplot(sm, aes(AVISIT, mean, colour = TRT01A, group = TRT01A)) +
 | `arrange(desc(v)) \|> mutate(i = row_number())` | `{step: rank, ...}` |
 | `group_by(...) \|> summarise(n, mean, sd, se ...)` | `{step: summary, name: sm, ...}` (`summary_by`: by group only) |
 | responders / n with a binomial CI | `{step: rate, ...}` |
+| a bar's printed label, `paste0(round(rate, 1), "% (", x, "/", n, ")")` | the rate step's `label_cell: "{rate:.1f}% ({x}/{n})"` (its default; `{lcl}`, `{ucl}` too, `\n` for two lines); the count step's `label_cell: "{pct:.0f}%"` |
 | `count(group, category)` with % | `{step: count, ...}` |
 | `survfit(Surv(AVAL, CNSR == 0) ~ TRT01P)` (CNSR 0 is the event, any other value a censoring) | `{step: survfit, name: fit, time: AVAL, censor: CNSR, by: TRT01P}` |
 | AVAL shown in days / weeks / months / years (from its AVALU: `tte_time("months")`) | `{step: time_unit, variable: AVAL, unit: months}` |
@@ -85,6 +86,7 @@ p <- ggplot(sm, aes(AVISIT, mean, colour = TRT01A, group = TRT01A)) +
 |---|---|
 | `labs(x = "Visit", y = "ALT (U/L)", title = )` | `x_label`, `y_label`, `title` |
 | `labs(x = NULL)` (no axis title) | `x_label: ""` |
+| an axis title on two lines (`"...\n..."`) because it is long | nothing: a title longer than `axis_title_width` (the study's figure style, 50) wraps at the spaces; `axis_title_width: 40` for another width, `axis_title_width: !unset` for none |
 | `labs(colour = "Treatment")` (the legend's title) | `legend_title: Treatment` |
 | `aes(colour = TRT01A)` / `aes(fill = BOR)` with a manual scale | `colour_by: TRT01A` |
 | `scale_fill_manual(values = c(CR = "darkgreen", PD = "red"))` | `colours: {CR: darkgreen, PD: red}` (over the study palette `palette`) |

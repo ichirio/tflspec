@@ -18,6 +18,47 @@ vec_code <- function(x, width = 70) {
   paste0("c(\n  ", paste(items, collapse = ",\n  "), "\n)")
 }
 
+# A one-cell text template ("{rate:.1f}% ({x}/{n})") as the R code that
+# makes it from columns: paste0(fmt_num(rate, 1), "% (", x, "/", n, ")").
+# The tokens are the plan cells' notation (.cell_tokens()): `{col}` the
+# column as it is, `{col:.1f}` the column with that many decimals by the
+# study's rounding (fmt_num(), a study helper).  `known` are the columns
+# the template may name; `what` names its owner in a stop ("the rate step
+# (rt)").  A line break in the template is a line break in the label.
+.cell_template_code <- function(tpl, known, what) {
+  # (a typed \n is a line break too: a one-line field cannot hold a real one)
+  tpl <- gsub("\\n", "\n", as.character(tpl), fixed = TRUE)
+  re <- "[{][^{}]+[}]"
+  toks <- .cell_tokens(tpl)
+  lits <- regmatches(tpl, gregexpr(re, tpl), invert = TRUE)[[1L]]
+  nms <- vapply(toks, `[[`, "", "name")
+  bad <- setdiff(nms, known)
+  if (length(bad)) {
+    stop(sprintf("label_cell of %s: %s is not one of its columns; write %s (a format as {%s:.1f}).",
+                 what, paste0("{", bad, "}", collapse = ", "), paste0("{", known, "}", collapse = ", "),
+                 known[1L]), call. = FALSE)
+  }
+  parts <- character()
+  for (i in seq_along(toks)) {
+    if (nzchar(lits[i])) parts <- c(parts, q(lits[i]))
+    sp <- toks[[i]]$spec
+    if (is.null(sp)) {
+      parts <- c(parts, nms[i])
+    } else {
+      d <- regmatches(sp, regexec("^[.]([0-9]{1,2})f$", sp))[[1L]]
+      if (!length(d)) {
+        stop(sprintf("label_cell of %s: {%s:%s} -- a format is .<decimals>f ({%s:.1f}).",
+                     what, nms[i], sp, nms[i]), call. = FALSE)
+      }
+      parts <- c(parts, sprintf("fmt_num(%s, %s)", nms[i], as.integer(d[2L])))
+    }
+  }
+  if (length(lits) > length(toks) && nzchar(lits[length(lits)])) parts <- c(parts, q(lits[length(lits)]))
+  if (!length(parts)) return(q(""))
+  if (length(parts) == 1L && (startsWith(parts, "\"") || startsWith(parts, "fmt_num("))) return(parts)
+  sprintf("paste0(%s)", paste(parts, collapse = ", "))
+}
+
 indent <- function(x, n = 2) {
   x <- unlist(strsplit(paste(x, collapse = "\n"), "\n", fixed = TRUE))
   paste0(strrep(" ", n), x)
@@ -81,6 +122,21 @@ pp_opt_num <- function(ctx, key, default = NA_real_) {
   v <- pp_opt(ctx, key)
   if (is.na(v)) default else as.numeric(v)
 }
+
+# The width a figure's axis titles wrap at: its option axis_title_width
+# (`...` of tfl_fig_km() ..., the options sheet), else the figure style's
+# (.fs_title_width(): the study's or company's, else 50); "NA" (NA or
+# tfl_unset() given, pp_options_df()): NULL, no wrap
+pp_title_width <- function(ctx) {
+  v <- pp_opt(ctx, "axis_title_width")
+  if (is.na(v)) return(.fs_title_width())
+  if (toupper(trimws(v)) == "NA") return(NULL)
+  v
+}
+
+# An axis title as a program writes it: wrapped at `width` (.fig_wrap_title(),
+# the one rule of every writer of an axis title), quoted
+pp_axis_title <- function(x, width = .fs_title_width()) q(.fig_wrap_title(x, width))
 
 has_layer <- function(ctx, layer) layer %in% ctx$layers
 

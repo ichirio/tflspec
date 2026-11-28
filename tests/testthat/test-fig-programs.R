@@ -208,13 +208,12 @@ test_that("a figure's data puts the arms in their number order first, a code lis
   env <- lv_fig_data(code)
   expect_identical(levels(env$adtte_sub$TRT01P), c("Placebo", "Drug B", "Drug A"))
   expect_identical(names(env$fit$strata), paste0("TRT01P=", c("Placebo", "Drug B", "Drug A")))
-  # a script of its own has no study helpers: no order_levels() ...
-  expect_false(any(grepl("order_levels", tfl_fig_design_code(d, "F-9"), fixed = TRUE)))
-  # ... unless asked for
-  expect_true(any(grepl("order_levels", tfl_fig_design_code(d, "F-9", order_arms = TRUE),
-                        fixed = TRUE)))
-  # (a code list given: the helpers are there)
-  # with code lists (which need the helpers too) the step is there, before them
+  # a script of its own the same: the tables' rule, in every program (no
+  # argument turns it off)
+  expect_true(any(grepl("adtte_sub <- adtte |>\n  order_levels() |>\n  filter(",
+                        paste(tfl_fig_design_code(d, "F-9"), collapse = "\n"), fixed = TRUE)))
+  expect_false("order_arms" %in% names(formals(tfl_fig_design_code)))
+  # with code lists the step is there, before them
   cl <- data.frame(output_id = "F-9", variable = "TRT01P",
                    value = c("Drug A", "Drug B", "Placebo"), label = NA, order = 1:3)
   code2 <- tfl_fig_design_code(d, "F-9", codelists = cl)
@@ -225,6 +224,45 @@ test_that("a figure's data puts the arms in their number order first, a code lis
             regexpr("set_levels(", txt2, fixed = TRUE)[[1L]])
   env2 <- lv_fig_data(code2)
   expect_identical(levels(env2$adtte_sub$TRT01P), c("Drug A", "Drug B", "Placebo"))
+})
+
+test_that("a drawn design's arms: order_levels() on its read and its ADSL join, with or without the setup", {
+  # (TRT01A by TRT01AN, no code list: the tables' rule, PRINCIPLES 11-28)
+  adsl <- data.frame(USUBJID = sprintf("S%02d", 1:6),
+                     TRT01A = rep(c("Placebo", "Drug B", "Drug A"), 2),
+                     TRT01AN = rep(c(1, 2, 3), 2), AGE = 30:35, WEIGHTBL = 60:65,
+                     stringsAsFactors = FALSE)
+  d <- tfl_fig_design(
+    data = list(list(step = "read", dataset = "ADSL")),
+    layers = list(list(layer = "point", x = "AGE", y = "WEIGHTBL", colour = "TRT01A")))
+  for (setup in c(FALSE, TRUE)) {
+    code <- paste(tfl_fig_design_code(d, "F-1", setup = setup, save = FALSE), collapse = "\n")
+    expect_match(code, "adsl |>\n  order_levels()", fixed = TRUE)
+  }
+  # a join of ADSL's arms: the same step, written as before
+  d2 <- tfl_fig_design(
+    data = list(list(step = "read", dataset = "ADTTE"),
+                list(step = "join", dataset = "ADSL", by = "USUBJID", vars = "TRT01A")),
+    layers = list(list(layer = "point", x = "AVAL", y = "CNSR", colour = "TRT01A")))
+  code2 <- paste(tfl_fig_design_code(d2, "F-2", save = FALSE), collapse = "\n")
+  expect_match(code2, "adsl |> order_levels() |> select(USUBJID, TRT01A)", fixed = TRUE)
+  # run: the arms in their TRT01AN order
+  skip_if_not_installed("ggplot2")
+  env <- new.env(parent = .fig_pkg_env(c("dplyr", "ggplot2")))
+  env$adsl <- adsl
+  eval(parse(text = tfl_helpers_code()), env)
+  eval(parse(text = .fig_strip_library(as.character(tfl_fig_design_code(d, "F-1", save = FALSE)))),
+       env)
+  expect_identical(levels(env$adsl_sub$TRT01A), c("Placebo", "Drug B", "Drug A"))
+  expect_s3_class(env$fig, "ggplot")
+  # a script of its own (setup = FALSE) runs with no study helpers given:
+  # it carries its order_levels()
+  env2 <- new.env(parent = .fig_pkg_env(c("dplyr", "ggplot2")))
+  env2$adsl <- adsl
+  eval(parse(text = .fig_strip_library(as.character(
+    tfl_fig_design_code(d, "F-1", setup = FALSE, save = FALSE)))), env2)
+  expect_true(exists("order_levels", envir = env2, inherits = FALSE))
+  expect_identical(levels(env2$adsl_sub$TRT01A), c("Placebo", "Drug B", "Drug A"))
 })
 
 test_that("a figure that joins ADSL orders a records data's arm by ADSL's", {

@@ -53,7 +53,9 @@ test_that("in a study: km_survival, A (the data steps, the call) = B (the design
   txt <- paste(x$a, collapse = "\n")
   expect_match(txt, "semi_join(", fixed = TRUE)
   expect_match(txt, "filter(PARAMCD == \"PFS\")", fixed = TRUE)
-  expect_match(txt, "content <- tflspec::tfl_tpl(adtte_sub, \"km_survival\", time_unit = \"days\", by = TRT01A) +",
+  # (the axis titles' width, the study's figure style's: written, last)
+  expect_match(gsub("[[:space:]]+", "", txt),
+               "content<-tflspec::tfl_tpl(adtte_sub,\"km_survival\",time_unit=\"days\",by=TRT01A,axis_title_width=50)+",
                fixed = TRUE)
   items <- paste(tfl_content_code(x$ro, template = "items"), collapse = "\n")
   expect_match(items, "add_risktable(", fixed = TRUE)
@@ -102,8 +104,7 @@ test_that("the B file in the figure designer: the report's own items seen, saved
   expect_identical(as.character(tflspec:::.fig_design_content_code(back, "F-14-2-3")),
                    tflspec:::.content_fig_code(tfl_resolve_output(b, st)))
   # the same design as a script of its own carries the study helpers it calls
-  own <- tfl_fig_design_code(back, plot_id = "F-14-2-3", save = FALSE, name = "content",
-                             order_arms = TRUE)
+  own <- tfl_fig_design_code(back, plot_id = "F-14-2-3", save = FALSE, name = "content")
   expect_true(any(grepl("^if [(]!exists[(]\"order_levels\"[)][)] ", own)))
 })
 

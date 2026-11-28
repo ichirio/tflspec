@@ -54,7 +54,7 @@
 .fig_compose_code <- function(design, plot_id, gg, setup = FALSE, save = TRUE,
                               name = "fig", levels = NULL,
                               width_in = 7.5, height_in = 4.5,
-                              order = isTRUE(setup) || length(levels) > 0L) {
+                              order = TRUE) {
   nms <- names(design$plots)
   # each figure is made as fig_<name>; one that is wrapped (a patchwork of
   # panels, a risk table) is made as `fig` first

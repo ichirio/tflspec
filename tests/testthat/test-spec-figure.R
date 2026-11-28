@@ -24,7 +24,7 @@ test_that("a figure report's code is its design's", {
   # has the helpers -- the design written as a report's, .fig_script_head())
   old <- options(tflspec.fig_in_program = TRUE)
   want <- as.character(tfl_fig_design_code(design, plot_id = "F-1", save = FALSE,
-                                           name = "content", order_arms = TRUE))
+                                           name = "content"))
   options(old)
   expect_identical(tfl_content_code(out), want)
   skip_if_not_installed("ggplot2")
