@@ -324,8 +324,14 @@ What every table of the study shares (the stub, the blank rows,
 `normalize_ard`) can go once in `spec/defaults.yml`'s `content:`; a
 report's own item of the same function replaces it.  The rounding is not
 a card there: it is the study's force, `spec/defaults.yml` `force:`
-(`force: {content: [{plan_digits: {rounding: sas}}]}`), and a report does
-not write it.
+(`sas` or `r`), and a report does not write it:
+
+```yaml
+force:
+  content:
+    - plan_digits:
+        rounding: sas
+```
 
 ### 3.6 Footnotes
 
@@ -624,7 +630,9 @@ Run through it; the review will.
    of its rows (in its `levels`), or an item of `_assumptions.yml`.
 9. Every content item is a function of `03_spec_schema.yml`, its keys
    that function's arguments; lists and maps written as YAML, `!r` only
-   for R; nothing outside `study.yml` and `spec/`.
+   for R; nothing outside `study.yml` and `spec/`.  Every key of a file
+   is one the manual's §5 names: a key of your own stops the read (a note
+   goes in `_assumptions.yml`).
 10. Everything you decided without being told is in the assumptions.
 
 ---

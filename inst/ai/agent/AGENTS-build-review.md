@@ -56,8 +56,8 @@ drafts, for the reports of a kind built here:
    and build again.  When a fix breaks something else, stop: keep the
    draft and mark what differs to confirm.  Where it still fails or still differs after the second:
    - a figure: draw it with your own ggplot2 code -- keep the data steps
-     (a `code` step where a piece will not do) and make `layers:` one
-     layer that draws the whole plot, `{layer: layer_code, code: 'p <-
+     (a `code` step where a piece will not do) and make `content:` one
+     item that draws the whole plot, `- layer_code: {code: 'p <-
      ggplot(df, aes(...)) + ...'}`.  Add the assumption `{where: figure,
      item: route, value: own code, assumption: "two fixes did not draw
      it: <why>"}` and an `ai: confirm` that says the builder cannot edit

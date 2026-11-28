@@ -5,6 +5,12 @@ common:
   population: SAF
 extends:
   - defaults
+codelists:
+  SEX:
+    - value: M
+      label: Male
+    - value: F
+      label: Female
 analysis:
   analyses:
     - id: 'N'
@@ -31,12 +37,6 @@ analysis:
         - SEX
         - AGEGR1
         - RACE
-codelists:
-  SEX:
-    - value: M
-      label: Male
-    - value: F
-      label: Female
 content:
   - table_plan:
       cols: TRT01A

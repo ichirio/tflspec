@@ -252,8 +252,10 @@ stop is *Running the requests*, below: one, or a batch.  For each request:
    topic, the decision, where it came from).  Change nothing already
    there.
 5. **Write the skeleton** of each report as `ai/spec/outputs/<id>.yml`
-   (UTF-8), the forms of the instructions exactly:
-   - `id`, `kind`, `label`, `population`, `extends: [defaults]`;
+   (UTF-8), the forms of the instructions exactly (only the keys they
+   name: any other key stops the read):
+   - `id`, `kind`, `label`, `common` (`population`: the analysis set's id),
+     `extends: [defaults]`;
    - `data`, and `analysis` (the analysis data and the analyses: method, by,
      variables, the denominator);
    - the content: a template with its arguments when one fits

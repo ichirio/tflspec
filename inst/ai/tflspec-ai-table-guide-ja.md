@@ -145,8 +145,8 @@ make = FALSE)`（参照だけ。依頼には参照として残る）か、`numbe
 `dry_run = TRUE` でも保存し、ほかは何も作りません）。次に `numbers` を渡すまで
 以後の呼び出しで使われます。
 
-**エージェントの規則**は `study.yml` の `ai:` キーです（試験標準の
-`spec/defaults.yml` に先に書いてもよく、`study.yml` が優先されます）:
+**エージェントの規則**は `study.yml` の `ai:` キーです（書ける名前はこれだけです。
+知らない名前があると、読み込みが止まります）:
 
 ```yaml
 ai:
@@ -155,7 +155,8 @@ ai:
   requests_per_chat: 0  # この依頼数で止まり、新しいチャットを求める（0: 制限なし）
   carry: [all, dataset, section]   # どの決定を聞かずに後の帳票へ適用するか
   max_rounds: 3         # 同じ項目を聞き直す最大回数。超えたら要確認
-  footnotes_at: footer  # シェルの脚注の置き場所: "footer" または "table"
+  shell_footnotes: footer  # シェルの脚注の置き場所: "footer" または "table"
+  shell_code: '^([0-9]+_)?[tlf]_[A-Za-z0-9_]+$'  # 各シェルの先頭に書かれたコードの形（ファイル名の {shell_code}）
   review: {figure: 3, table: 2, listing: 1}  # エージェントが作った帳票を確かめる深さ: 0〜3、または none
 ```
 
@@ -197,10 +198,10 @@ ADaM の要約で、データではありません。`AGENTS.md` に、開いて
    TOC の節で、`carry` の指定どおり）は聞かずに、そうでないときは「ここも同じか」と
    聞きます。始める前に自分で行を書いておくこともできます（範囲のない行は `all`）。
 4. エージェントは各帳票の**骨組み**を `ai/spec/outputs/<id>.yml` に書きます:
-   `id`、`kind`、`label`、`population`、`data`、`analysis`（解析データ、解析）、内容
+   `id`、`kind`、`label`、`common`（その `population`）、`data`、`analysis`（解析データ、解析）、内容
    （合うテンプレートがあればテンプレート、なければ `table_plan` と `plan_cells`）、
    シェルに桁数があればその桁数、`plan_columns: {widths}`（シェルの比率から）、
-   `page: titles` とシェルの脚注（`footnotes_at`）。
+   `page: titles` とシェルの脚注（`shell_footnotes`）。
    `ai:` の下には、`assumptions`（それぞれ `from: D<n>`）と `confirm`（要確認）が
    入ります。見出し行、ページ、罫線、フォントは書きません。それらは試験の
    既定とビルダーが担当します。そのあとは `run` に従って進みます（下記）。
@@ -340,9 +341,8 @@ R で、エージェントではありません。
 | `none` | その種類は作らない。あなたが `run.R` を実行する |
 
 既定は、図が 3、表が 2（表が 1 ページを超えるときはページも読む）、Listing が 1 です。
-`study.yml` の `ai: review: {figure: 3, table: 2, listing: 1}` で変えます。試験標準の
-`spec/defaults.yml` に会社の既定を書いてもかまいません。変えたあとは、エージェントへの
-指示を書き直します:
+`study.yml` の `ai: review: {figure: 3, table: 2, listing: 1}` で変えます。変えたあとは、
+エージェントへの指示を書き直します:
 
 ```r
 tfl_ai_refresh_agents(".")   # study.yml から AGENTS.md を書き直す。下書きと決定は残る
