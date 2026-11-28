@@ -49,18 +49,19 @@ test_that("generic defs name another argument with from_args(), a plain vars() i
   ch <- function(x, n) x$choices[[which(x$name == n)]]
   expect_identical(ch(d, "where"), "vars(from_args(from))")
   expect_identical(ch(d, "add"), "vars(from_args(subjects_in))")
-  expect_identical(ch(d, "subjects_in"), c("report_data", "fixed"))
+  expect_identical(ch(d, "subjects_in"), c("objects(data)", "fixed"))
+  expect_identical(ch(d, "from"), c("objects(data)", "study_data"))
   expect_identical(d$values[[which(d$name == "subjects_in")]], "none")
   a <- tfl_arg_defs(fn = "analysis")
   expect_identical(ch(a, "variables"), "vars(from_args(data))")
   expect_silent(.arg_check_choices("vars(from_args(from))", "x"))
-  expect_error(.arg_check_choices("vars(report_data(from))", "x"), "vars\\(\\) takes")
+  expect_error(.arg_check_choices("vars(objects(data))", "x"), "vars\\(\\) takes")
 })
 
-test_that("a schema column argument without choices gets ard (normalize_ard) or columns (plan_*)", {
+test_that("a schema column argument gets columns(ard) (normalize_ard) or columns (plan_*)", {
   n <- tfl_arg_defs(fn = "normalize_ard")
-  expect_identical(n$choices[[which(n$name == "keys")]], "ard")
-  expect_identical(n$choices[[which(n$name == "hierarchy")]], "ard")
+  expect_identical(n$choices[[which(n$name == "keys")]], "columns(ard)")
+  expect_identical(n$choices[[which(n$name == "hierarchy")]], "columns(ard)")
   expect_true(n$ordered[n$name == "hierarchy"])
   p <- tfl_arg_defs(fn = "plan_paginate_rows")
   expect_identical(p$choices[[which(p$name == "page_by")]], "columns")
@@ -153,9 +154,9 @@ test_that("a template's params: are read the same way, tags kept", {
 
 test_that("a choice source outside the closed words stops", {
   expect_error(.arg_check_choices("vars(adsl_sub), datasets", "x"), "unknown choice source")
-  expect_silent(.arg_check_choices("from_args(continuous, categorical), report_data", "x"))
-  expect_identical(.arg_choice_words("from_args(continuous, categorical), report_data"),
-                   c("from_args(continuous, categorical)", "report_data"))
+  expect_silent(.arg_check_choices("from_args(continuous, categorical), objects(data)", "x"))
+  expect_identical(.arg_choice_words("from_args(continuous, categorical), objects(data)"),
+                   c("from_args(continuous, categorical)", "objects(data)"))
 })
 
 test_that("fixed_rows: the rows a template writes next to a table param's \"{name}\"", {
@@ -391,7 +392,7 @@ test_that("a column field's choices are written in its definition", {
   }
   n <- 0L
   for (fn in names(y)) {
-    word <- if (identical(fn, "normalize_ard")) "ard" else if (startsWith(fn, "plan_")) "columns" else
+    word <- if (identical(fn, "normalize_ard")) "columns(ard)" else if (startsWith(fn, "plan_")) "columns" else
       if (identical(y[[fn]]$package, "cards")) "vars"
     if (is.null(word) || !is.list(y[[fn]]$args)) next
     for (a in names(y[[fn]]$args)) {
@@ -524,5 +525,69 @@ test_that("a bare call lists the names a person picks, and a border call is not 
     d <- tfl_arg_defs(fn = k[[1L]])
     expect_identical(d$type[d$name == k[[2L]]], "call<rtf_border>")
     expect_identical(d$input[d$name == k[[2L]]], "text", label = paste(k, collapse = "."))
+  }
+})
+
+test_that("the closed list of 14 choice sources is tfl_choice_sources() (CG-4)", {
+  s <- tfl_choice_sources()
+  expect_identical(s$word, c("vars", "levels", "codelist", "columns", "populations", "study_data",
+                             "objects", "stats", "format_sets", "styles", "figure_style", "tokens",
+                             "fixed", "from_args"))
+  expect_identical(s$word, .arg_choice_sources)
+  expect_true(all(c("brackets", "takes", "free", "label_en", "label_ja", "description") %in% names(s)))
+  expect_true(all(nzchar(s$label_en)) && all(nzchar(s$label_ja)))
+  expect_identical(s$word[s$brackets == "optional"], c("vars", "columns"))
+  expect_identical(attr(s, "kinds")$objects, c("data", "ard", "model", "value", "plot"))
+  expect_identical(attr(s, "kinds")$figure_style, c("palette", "marker"))
+  expect_setequal(names(attr(s, "old")), c("report_data", "ard", "study_info"))
+  # (free: the study's code lists, its tokens and format sets, which has
+  # no provider yet)
+  expect_identical(s$word[s$free], c("codelist", "format_sets", "tokens"))
+})
+
+test_that("an old choice word stops naming the new one (CG-4)", {
+  expect_error(.arg_check_choices("report_data", "x"), "write objects\\(data\\)")
+  expect_error(.arg_check_choices("report_data, study_data", "x"), "write objects\\(data\\)")
+  expect_error(.arg_check_choices("ard", "x"), "objects\\(ard\\).*columns\\(ard\\)")
+  expect_error(.arg_check_choices("study_info", "x"), "write tokens")
+  expect_error(.arg_table(list(x = list(type = "string", input = "pick", choices = "report_data")),
+                          "data", "f"), "f: argument `x`: the choice source \"report_data\" is gone")
+})
+
+test_that("a choice word's brackets follow the list (CG-4)", {
+  expect_silent(.arg_check_choices("vars, columns, columns(ard), vars(adsl_sub)", "x"))
+  expect_silent(.arg_check_choices("levels(SEX), levels(from_args(by)), codelist(SEX)", "x"))
+  expect_silent(.arg_check_choices("columns(from_args(data)), format_sets, tokens", "x"))
+  expect_error(.arg_check_choices("levels", "x"), "write levels\\(<variable>\\)")
+  expect_error(.arg_check_choices("from_args", "x"), "write from_args\\(<arguments>\\)")
+  expect_error(.arg_check_choices("figure_style", "x"), "figure_style\\(<kind>\\)")
+  expect_error(.arg_check_choices("stats(x)", "x"), "written alone")
+  expect_error(.arg_check_choices("levels(vars(a))", "x"), "levels\\(\\) takes")
+  expect_error(.arg_check_choices("from_args(a(b))", "x"), "names of the card")
+  expect_error(.arg_check_choices("levels()", "x"), "brackets are empty")
+  expect_error(.arg_check_choices("vars(a, b)", "x"), "vars\\(\\) takes one name")
+  expect_error(.arg_check_choices("codelist(from_args(a))", "x"), "codelist\\(\\) takes one name")
+  expect_silent(.arg_check_choices("levels (SEX), vars( from_args(data) )", "x"))
+  # levels(<arg>) of an argument of the card is levels(from_args(<arg>))
+  defs <- list(by = list(type = "column", input = "pick", choices = "vars"),
+               ref = list(type = "level", input = "pick", choices = "levels(by)"))
+  expect_error(.arg_table(defs, "data", "f"), "write levels\\(from_args\\(by\\)\\)")
+  defs$ref$choices <- "levels(from_args(by))"
+  expect_identical(.arg_table(defs, "data", "f")$choices[[2L]], "levels(from_args(by))")
+})
+
+test_that("format_sets has no provider yet: free input, no error (CG-4)", {
+  d <- .arg_table(list(f = list(type = "string", input = "pick", choices = "format_sets")), "content", "f")
+  expect_identical(d$choices[[1L]], "format_sets")
+  expect_true(d$free)
+})
+
+test_that("every shipped definition writes only the 14 words", {
+  y <- yaml::read_yaml(system.file("spec", "schema.yml", package = "tflspec"))
+  expect_silent(for (fn in names(y)) if (length(y[[fn]]$args)) tfl_arg_defs(fn = fn))
+  for (f in c("data", "analysis")) expect_silent(tfl_arg_defs(fn = f))
+  skip_if(!nzchar(system.file("series", package = "tflspec")), "no series")
+  for (f in list.files(system.file("series", "tflspec_v1", "templates", package = "tflspec"), "[.]yml$")) {
+    expect_no_error(tfl_arg_defs(template = paste0("tflspec_v1/", sub("[.]yml$", "", f))))
   }
 })

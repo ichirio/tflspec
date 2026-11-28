@@ -54,7 +54,7 @@ params:
   denominator:
     type: string
     input: pick
-    choices: report_data
+    choices: objects(data)
     default: adsl_sub
     step: analysis
     tier: usual
