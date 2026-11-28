@@ -53,3 +53,40 @@ test_that("in tfl_check_spec(): the percent form of a template's cell", {
   e <- p[p$level == "error", ]
   expect_true(any(grepl("{n} ({p:.1f%}%)", e$message, fixed = TRUE)))
 })
+
+test_that("plan_digits() by the values of a variable no analysis groups its rows by: an error", {
+  an <- list(list(id = "BIGN", method = "categorical", variables = "TRT01A"),
+             list(id = "VALUE", method = "continuous", by = c("TRT01A", "PARAMCD", "AVISIT"),
+                  variables = "AVAL"))
+  ro <- function(...) list(kind = "table", ard = list(analyses = an),
+                           content = list(tfl_item("plan_digits", list(...))))
+  p <- .check_digit_key_rows(ro(PARAM = list(`Alanine Aminotransferase (U/L)` = 1)), "T1")
+  expect_identical(p$level, "error")
+  expect_identical(p$item, "plan_digits(PARAM)")
+  expect_match(p$message, "no analysis groups its rows by PARAM", fixed = TRUE)
+  # a row key with its codes, a variable's or a kind's statistics, a column: fine
+  expect_null(.check_digit_key_rows(ro(PARAMCD = list(ALT = 1, BILI = list(mean = 2, sd = 3)),
+                                       AVAL = list(mean = 1, sd = 2), continuous = list(mean = 1),
+                                       group1 = 0, default = 1), "T1"))
+  # a code SPEC by the label: its key is the label's variable
+  an[[2L]]$by <- c("TRT01A", "PARAM", "AVISIT")
+  expect_null(.check_digit_key_rows(ro(PARAM = list(`Alanine Aminotransferase (U/L)` = 1)), "T1"))
+  # the ARD's columns unknown (an analysis written as code): not judged
+  an[[2L]] <- list(id = "X", method = "custom", code = "my_ard(data)")
+  expect_null(.check_digit_key_rows(ro(PARAM = list(ALT = 1)), "T1"))
+})
+
+test_that("in tfl_check_spec(): plan_digits() by a variable the template's analyses do not have", {
+  skip_if_not_installed("haven")
+  d <- file.path(withr::local_tempdir(), "study")
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  haven::write_xpt(tflspec:::.ai_chr(tflspec::adsl), file.path(d, "adam", "adsl.xpt"))
+  tfl_ai_study_init(d, adam = "adam", study_id = "CS-1")
+  tfl_write_output(tfl_output("T-DM", "table", common = list(population = "SAF"),
+    template = list(name = "demog", args = list(by = "TRT01A", continuous = "AGE", categorical = "SEX")),
+    content = list(tfl_item("plan_digits", list(RACE = list(ASIAN = 1))))),
+    file.path(d, "spec", "outputs", "T-DM.yml"))
+  p <- tfl_check_spec(d)
+  e <- p[p$level == "error", ]
+  expect_true(any(e$item == "plan_digits(RACE)"))
+})

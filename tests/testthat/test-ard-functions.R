@@ -151,6 +151,45 @@ test_that("a parent row's function says the columns the generated code reads", {
   expect_identical(col("cards::ard_summary", "by"), "by")
 })
 
+test_that("`variables`: a method takes them as its function's shape says, and its note agrees", {
+  # (the AI kit's check refuses an analysis by this rule: the CDISC Pilot
+  # arm's oneway, regression and lsmeans_diff rows were refused for having
+  # no variables, though their notes said "by and variables blank")
+  m <- tfl_ard_methods()
+  takes <- vapply(m$method, .method_variables, "", keys = m)
+  expect_identical(unname(takes[c("continuous", "categorical", "km", "pairwise", "subjects")]),
+                   rep("required", 5L))
+  none <- c("total_n", "lsmeans", "lsmeans_diff", "logrank", "abnormal", "incidence_rate",
+            "regression", "anova", "km_diff", "oneway", "aov", "records", "nested_models",
+            "regression_basic", "vif", "wald")
+  expect_identical(unname(takes[none]), rep("none", length(none)))
+  expect_identical(unname(takes[c("custom", "stack", "subgroups")]), rep(NA_character_, 3L))
+  # a method named by its function is its keyword's
+  expect_identical(.method_variables("cardx::ard_stats_oneway_test", m), "none")
+  expect_identical(.method_variables("cards::ard_summary", m), "required")
+  # a study's own function: as before, the columns analysed
+  expect_identical(.method_variables("ard_riskdiff_mn", m), "required")
+  # the note says "variables blank" exactly when the method takes none
+  blank <- grepl("variables blank", m$note, fixed = TRUE)
+  expect_identical(m$method[blank], m$method[takes %in% "none"])
+})
+
+test_that("a function the catalog says takes no `variables` has no such argument", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  f <- tfl_ard_functions()
+  f <- f[!nzchar(f$replaced_by), , drop = FALSE]
+  for (cl in f$call) {
+    fm <- names(.ard_formals(cl))
+    takes <- .method_variables(cl)
+    if (identical(takes, "none")) {
+      expect_false("variables" %in% fm, label = cl)
+    } else if (identical(takes, "required") && !identical(cl, "cards::ard_pairwise")) {
+      expect_true("variables" %in% fm, label = cl)
+    }
+  }
+})
+
 test_that("every other exported function of cards / cardx has a decided use", {
   # ARD builder design ch. 7: each of cards' and cardx's functions that is
   # not an ard_*() (those are in the catalog, above) is decided once --

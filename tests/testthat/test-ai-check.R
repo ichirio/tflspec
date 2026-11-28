@@ -171,3 +171,35 @@ test_that("tfl_ai_check() checks its arguments", {
   expect_error(tfl_ai_check(a, list(task = "figure")), "tfl_ai_context")
   expect_error(tfl_ai_check(a, tfl_ai_context("toc")), "the context is for the toc task")
 })
+
+test_that("a table's analysis: `variables` as its method's function takes them", {
+  # (the CDISC Pilot arm's drafts: a one-way ANOVA, a regression and an
+  # lsmeans_diff, whose formula says what they analyse, were refused for
+  # having no variables)
+  tbl <- function(...) {
+    ai_answer("table", "tflspec_ai: {task: table, version: 1, outputs: [T-1]}",
+              "outputs:", "  - id: T-1", "    kind: table", "    common: {population: SAF}",
+              "    ard:", "      analyses:", ..., "    content:",
+              "      - table_plan: {cols: TRT01A}", "assumptions: []")
+  }
+  ctx <- tfl_ai_context("table", outputs = "T-1")
+  at <- function(p, id) p$problem[endsWith(p$where, paste0(" ", id, " variables"))]
+  p <- tfl_ai_check(tbl(
+    "        - id: P_AGE", "          method: oneway",
+    "          args: !r formula = AGE ~ TRT01A",
+    "        - id: PAIR", "          method: lsmeans_diff",
+    "          args: !r 'formula = AGE ~ TRT01A + SEX, method = \"lm\"'",
+    "        - id: DOSE", "          method: regression",
+    "          args: !r 'formula = AGE ~ TRT01A, method = \"lm\"'",
+    "        - id: P_FN", "          method: cardx::ard_stats_oneway_test",
+    "          args: !r formula = AGE ~ TRT01A",
+    "        - id: N", "          method: total_n",
+    "        - id: AGE", "          method: continuous", "          by: [TRT01A]",
+    "        - id: P_BAD", "          method: oneway", "          variables: [AGE]",
+    "          args: !r formula = AGE ~ TRT01A"), ctx)
+  for (id in c("P_AGE", "PAIR", "DOSE", "P_FN", "N")) expect_length(at(p, id), 0L)
+  expect_identical(at(p, "AGE"), "is missing: the variables analysed")
+  expect_match(at(p, "P_BAD"), "is not taken by oneway: what it analyses is written in `args`",
+               fixed = TRUE)
+  expect_identical(p$severity[endsWith(p$where, " variables")], c("error", "error"))
+})

@@ -225,7 +225,7 @@
       "- `extends`: `[defaults]`: the study's defaults under this report.",
       "- `data`: the report's datasets, a flat list of definitions made before any table (one dataset each; named data the analyses read). Below. A table writes no `data: {source: ard}`: it always reads its ARD.",
       "- `ard`: the report's analyses, made before any table: `analyses` (one cards / cardx call each). Below. Never `ard: analysis_data` (that is `data:`).",
-      "- `codelists`: by variable, its values in the order printed, each `{value: <as in the data>, label: <as printed>}`; the ARD then holds the labels, in that order.",
+      "- `codelists`: by variable, its values in the order printed, each `{value: <as in the data>, label: <as printed>}`; the ARD holds the values (the codes) in that order, and the table prints the labels.",
       "- `content`: the table: a list of items, one a function call written `- <function>: {<argument>: <value>, ...}` (the functions below). `table_plan` first.",
       "- `page`: `titles` and `footnotes`, each a mapping by line number (`\"1\": {center: Table 14.1.1}`, `\"1\": {left: <footnote>}`); the line keys are quoted.",
       "")
@@ -237,7 +237,7 @@
              "Each a mapping with these fields (all optional but `id` and `from`); named `<dataset>_sub` (the report's part of a dataset: `adsl_sub` its subjects, `adae_sub` its records), `<dataset>_den` (a denominator) or `<dataset>_<noun>`:", "",
              sprintf("- `%s`: %s", f$analysis_data$field, f$analysis_data$description), "",
              "### ard: analyses", "",
-             "Each a mapping with these fields (`id`, `method` and, but for `total_n`, `variables` required):", "",
+             "Each a mapping with these fields (`id`, `method` and `variables` required; `variables` blank for a method whose note says so: its formula, model or columns in `args` say what it analyses):", "",
              sprintf("- `%s`: %s", f$analyses$field, f$analyses$description), "",
              "The methods (`method`):", "",
              sprintf("- `%s`: %s (%s)%s", m$method, m$label, m$call,
@@ -635,7 +635,8 @@
     }
   }
   if (!length(an)) add("ard", "has no analyses: the table has nothing to show")
-  methods <- tfl_ard_methods()$method
+  keys <- tfl_ard_methods()
+  methods <- keys$method
   for (j in seq_along(an)) {
     a <- an[[j]]
     w <- sprintf("ard.analyses[%d]", j)
@@ -656,9 +657,18 @@
       add(paste(w, "method"), sprintf("%s is not a method (%s) nor a pkg::function",
                                       sQuote(m, FALSE), paste(methods, collapse = ", ")))
     }
-    if (!identical(m, "total_n") && !identical(m, "custom") && is.null(a[["parent"]]) &&
-        !length(unlist(a[["variables"]]))) {
+    # `variables` as the method's function takes them (.method_variables()):
+    # the columns analysed, or none when a formula, a model or the method's
+    # own columns in `args` say what it analyses (the note says "variables blank")
+    takes <- .method_variables(m, keys)
+    given <- length(unlist(a[["variables"]])) > 0L
+    if (identical(takes, "required") && is.null(a[["parent"]]) && !given) {
       add(paste(w, "variables"), "is missing: the variables analysed")
+    }
+    if (identical(takes, "none") && given) {
+      add(paste(w, "variables"), sprintf(paste0(
+        "is not taken by %s: what it analyses is written in `args` (its formula, model or ",
+        "columns); leave `variables` out"), m))
     }
     chk_pop(paste(w, "population"), .ai_scalar_text(a[["population"]]))
     has_pop <- has_pop || !is.null(a[["population"]])

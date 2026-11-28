@@ -309,6 +309,8 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE, adam = TRUE) 
     # the names its fields give: a figure's that nothing above makes, a
     # table's named block (R/object_list.R)
     rows[[length(rows) + 1L]] <- .check_object_rows(ro, id, study_ds)
+    # digits by a value of a variable the ARD does not group its rows by
+    rows[[length(rows) + 1L]] <- .check_digit_key_rows(ro, id)
     # a column header's N with no BIGN to take it from (R/check_spec_header_n.R)
     rows[[length(rows) + 1L]] <- .check_header_n_rows(ro, id)
     if (inherits(ro$content, "tfl_r")) next
