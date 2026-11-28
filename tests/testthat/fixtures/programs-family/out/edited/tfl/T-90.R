@@ -36,7 +36,7 @@ data <- report_data(data, "data")
 # your code: leaves `content`
 plan <- table_plan(data, cols = "ARM")
 
-content <- report_content(content)
+content <- report_content_check(content, "table", report_id)
 
 # ---- report ----------------------------------------------------------------
 # the report, as spec/outputs/T-90.yml defines it

@@ -16,7 +16,13 @@ ARD when the content has no \code{normalize_ard()} item).  With
 content's \code{normalize_ard()} (as it is when the content has none), and
 the steps start from \code{data}.  For a figure, a
 named list of the objects its code reads: the datasets by their names
-in lower case (\code{adtte}), and \code{ard}.}
+in lower case (\code{adtte}), and \code{ard}.  For a report whose content is
+its own code, a named list of the objects it reads, by name: the
+report's analysis data (\code{ard.analysis_data}, by id), the study's
+datasets it names (\code{adsl}), and \code{ard} when the report has analyses
+(\code{\link[=tfl_run_output]{tfl_run_output()}} gives them so).  A sample dataset of tflspec's it
+names and is not given stops (class \code{tfl_content_data}): never the
+sample data.}
 
 \item{study}{For a figure with an analysis set (its data's
 \verb{population:}) that reads a dataset: the study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}})
@@ -37,7 +43,10 @@ each applied with \code{do.call()} -- for a table, the data's steps
 list of calls, so running the written code gives the same object; it is
 the quick way for a preview, the app or an assistant's check.  A report
 whose content is its own code (\code{content: !r}) runs it, after the
-data's steps, and gives what it leaves in \code{content}.
+data's steps, and gives what it leaves in \code{content}: a table's code a
+\code{table_plan}, a figure's a ggplot (or a list of them), as its program's
+\code{report_content()} checks; anything else stops with an error of class
+\code{tfl_content_contract} that names the report and what it gave.
 }
 \examples{
 if (requireNamespace("cards", quietly = TRUE)) {

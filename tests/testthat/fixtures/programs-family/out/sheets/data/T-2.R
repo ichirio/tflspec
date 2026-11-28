@@ -17,4 +17,4 @@ data <- report_data(data, "data")
 # your code: leaves `content`
 content <- head(data)
 
-content <- report_content(content)
+content <- report_content_check(content, "table", report_id)

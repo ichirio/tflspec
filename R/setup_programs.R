@@ -471,8 +471,41 @@ tfl_setup_program <- function(file, meta = list(), study = NULL, standards = lis
     "",
     rest,
     "",
+    .setup_content_contract,
+    "",
     .setup_report_content)
 }
+
+# The content contract of a report's own code (canon 11-28), written once in
+# fig_setup.R before report_content() (whose text stays as it was: the
+# app's preview has a copy of it): report_content_check() -- a table's code
+# gives a table_plan; a figure's a ggplot, an rtfplot, a data frame or
+# rtftable pages (or a list of them), as report_content() takes them.
+# Anything else stops with a condition of class `tfl_content_contract` that
+# names the report and what it gave.  A session runs this same text
+# (.own_content_contract()).
+.setup_content_contract <- c(
+  "# ---- the content contract of a report's own code: a table's code gives a",
+  "# table_plan; a figure's a ggplot, an rtfplot, a data frame or rtftable pages",
+  "# (or a list of them); anything else stops (class tfl_content_contract)",
+  "report_content_check <- function(x, kind, id) {",
+  "  fig <- identical(kind, \"figure\")",
+  "  ok <- function(p) if (fig) is.data.frame(p) || inherits(p, c(\"rtftable\", \"rtfplot\", \"ggplot\")) else",
+  "    inherits(p, \"table_plan\")",
+  "  items <- if (fig && is.list(x) && !ok(x)) x else list(x)",
+  "  bad <- if (length(items)) which(!vapply(items, ok, NA))[1L] else 0L",
+  "  if (!is.na(bad)) {",
+  "    got <- if (identical(bad, 0L)) \"an empty list\" else if (!identical(items, list(x)))",
+  "      sprintf(\"a list whose item %d is a %s\", bad, class(items[[bad]])[1L]) else",
+  "      sprintf(\"a %s\", class(x)[1L])",
+  "    want <- if (fig) \"a ggplot (or rtfplot figures, a data frame or rtftable pages, or a list of them)\" else",
+  "      \"a table_plan (rtfreporter::table_plan())\"",
+  "    stop(structure(class = c(\"tfl_content_contract\", \"error\", \"condition\"), list(",
+  "      message = sprintf(\"%s: a %s's content code must return %s; it returned %s.\", id, kind, want, got),",
+  "      call = NULL)))",
+  "  }",
+  "  x",
+  "}")
 
 # The small functions a report's own code is checked with, written once in
 # fig_setup.R (which those reports source): report_content() -- a ggplot

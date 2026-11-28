@@ -318,6 +318,28 @@ tfl_km_risk <- function(ard, fit = NULL, divisor = 1) {
 }
 
 
+# ---- the content contract of a report's own code: a table's code gives a
+# table_plan; a figure's a ggplot, an rtfplot, a data frame or rtftable pages
+# (or a list of them); anything else stops (class tfl_content_contract)
+report_content_check <- function(x, kind, id) {
+  fig <- identical(kind, "figure")
+  ok <- function(p) if (fig) is.data.frame(p) || inherits(p, c("rtftable", "rtfplot", "ggplot")) else
+    inherits(p, "table_plan")
+  items <- if (fig && is.list(x) && !ok(x)) x else list(x)
+  bad <- if (length(items)) which(!vapply(items, ok, NA))[1L] else 0L
+  if (!is.na(bad)) {
+    got <- if (identical(bad, 0L)) "an empty list" else if (!identical(items, list(x)))
+      sprintf("a list whose item %d is a %s", bad, class(items[[bad]])[1L]) else
+      sprintf("a %s", class(x)[1L])
+    want <- if (fig) "a ggplot (or rtfplot figures, a data frame or rtftable pages, or a list of them)" else
+      "a table_plan (rtfreporter::table_plan())"
+    stop(structure(class = c("tfl_content_contract", "error", "condition"), list(
+      message = sprintf("%s: a %s's content code must return %s; it returned %s.", id, kind, want, got),
+      call = NULL)))
+  }
+  x
+}
+
 # ---- a report of your own code: its `content` as rtfreporter takes it
 # (a ggplot becomes a figure; what is not a data frame, rtftable pages, a
 # ggplot or an rtfplot, or a list of them, stops, saying which item)
