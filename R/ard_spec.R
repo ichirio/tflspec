@@ -636,11 +636,21 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
         a$output_id[i], a$analysis_id[i], paste(bad, collapse = ", ")))
     }
     f <- .parse_formats(a$formats[i])
-    bad <- names(f)[is.na(f) | !.fmt_ok(f)]
+    # (a set's name: under "*" or a variable, R/format_sets.R)
+    ref <- !is.na(f) & .fmtset_name_ok(f) & !grepl(":", names(f), fixed = TRUE)
+    bad <- names(f)[(is.na(f) | !.fmt_ok(f)) & !ref]
     if (length(bad)) add(i, "formats", sprintf(
       "%s / %s: formats are statistic=format, the format xx.x, xx.x%%, xx.x*1000, a number of decimals or pvalue (%s)",
       a$output_id[i], a$analysis_id[i], paste(bad, collapse = ", ")))
+    if (any(ref)) {
+      m <- tryCatch({
+        .analysis_fmt(a[i, , drop = FALSE], keys, x, k)
+        NULL
+      }, error = conditionMessage)
+      if (!is.null(m)) add(i, "formats", m)
+    }
   }
+  pr <- c(pr, list(.fmtset_var_problems(a, x, keys)))
   cust <- which(a$method %in% "custom" & is.na(a$code))
   if (length(cust)) add(cust[1L], "code", "a `custom` analysis needs its `code`")
   pr <- c(pr, list(.objects_problems(x), .old_pop_names_problems(x), .records_problems(x)))
@@ -1305,6 +1315,9 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
                  utils::capture.output(print(as.list(dss[setdiff(names(dss), "level")]))),
                  utils::capture.output(print(as.list(st))),
                  if (!identical(al, "none")) "adam_levels: applied",
+                 # (the format sets the analyses name, their values: a set
+                 # changed makes the ARD out of date; none, none)
+                 .fmtset_hash_lines(spec, a),
                  # (adam_meta: the levels study$adam puts on the datasets read)
                  if (!identical(al, "none")) .adam_meta_hash_lines(spec$adam_meta, dss$dataset),
                  if (length(src)) paste(src, src_md5),
@@ -1482,8 +1495,7 @@ tfl_ard_as_custom <- function(spec, output_id, analysis_id) {
   den <- .den_code(r$denominator, x, pop, subj, population = "population", by = r$by)
   body <- .analysis_body(r, keys, subj, has, den)
   k <- .method_key(r$method, keys)
-  fmt <- c(if (!is.na(k)) .parse_formats(keys$formats[k]), .parse_formats(r$formats))
-  fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
+  fmt <- .analysis_fmt(r, keys, x, k)
   fmt <- if (!length(fmt)) NA_character_ else
     paste(ifelse(is.na(fmt), names(fmt), paste0(names(fmt), "=", fmt)), collapse = " | ")
   list(code = body, formats = fmt, method = "custom")

@@ -143,6 +143,9 @@
   if (!is.null(rnd) && !"rounding" %in% ard$study$key) {
     ard$study <- rbind(ard$study, data.frame(key = "rounding", value = rnd, stringsAsFactors = FALSE))
   }
+  # (the study's format sets, settings.format_sets: what a set's name in an
+  # analysis's formats reads, R/format_sets.R)
+  ard$format_sets <- .study_format_sets(study)
   spec <- .tfl_ard_spec(ard, blank_notes = FALSE)
   # (the study's ADaM metadata, for the datasets of its catalog: the levels
   # study$adam has, which the program's own reads put on too, and its

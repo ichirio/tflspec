@@ -1937,6 +1937,16 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
     own <- unlist(strsplit(as.character(output$content), "\n", fixed = TRUE))
     return(c(steps, if (length(steps)) "", own))
   }
+  # a format set's digits (plan_digits(continuous = continuous_1)): the
+  # program's digset_<name>, written above the content (R/format_sets.R)
+  output$content <- .digsets_for_program(output$content)
+  ds <- attr(output$content, "digsets")
+  attr(output$content, "digsets") <- NULL
+  if (length(ds)) {
+    return(c(.digset_lines(ds, attr(output, "study_format_sets")),
+             .content_code(output, data = data, plan = plan, pipe = pipe, template = template,
+                           study = study, piped = piped)))
+  }
   # a figure: its layers, as the figure designer writes them; a template
   # SPEC's (resolved), its data steps and the template's call (the A use)
   if (identical(output$kind, "figure")) {

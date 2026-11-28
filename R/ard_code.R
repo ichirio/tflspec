@@ -345,7 +345,9 @@
                         .spec_call_code(.spec_call("options", cards.round_type = ct), 0L), ""),
     if (length(helpers)) c("# ---- the functions the program calls ----",
                            helpers, ""),
-    .ard_helpers(used))
+    .ard_helpers(used),
+    # (the sets the analyses name, over fmt_default: R/format_sets.R)
+    if (!is.null(x)) .fmtset_lines(.fmtsets_used(x), x$format_sets))
 }
 
 # the computed statistics the programs use, and each statistic's format
@@ -471,6 +473,8 @@
     if (length(.split_bar(r$variables))) .split_bar(r$variables)[1L] else
       make.names(r$analysis_id)
   } else if (fn %in% .fmt_fun_every) character() else .split_bar(r$variables)
+  fs <- attr(fmt, "fmtsets")
+  if (!is.null(fs)) return(.fmtset_fun_arg(fs, vars))
   .fmt_fun_arg(fmt, vars)
 }
 
@@ -1648,9 +1652,8 @@
   kind <- if (is.na(k)) "" else keys$kind[k]
   call_fn <- if (is.na(k)) r$method else keys$call[k]
   den <- .den_code(r$denominator, x, pop, subj, population = pop_name, by = r$by)
-  fmt <- c(if (!is.na(k)) .parse_formats(keys$formats[k]),
-           .parse_formats(r$formats))
-  fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
+  # (its method's, its own over them, a set it names opened: R/format_sets.R)
+  fmt <- .analysis_fmt(r, keys, x, k)
   # the formats in the call (fmt_fun), when the function takes them and
   # nothing changes the ARD after it; else after it (fmt_ard())
   fmt_fun <- .call_fmt_fun(r, keys, given, fmt)
@@ -1847,8 +1850,10 @@
   for (j in seq_len(nrow(kids))) {
     kr <- kids[j, ]
     k <- .method_key(kr$method, keys)
-    f <- c(if (!is.na(k)) .parse_formats(keys$formats[k]),
-           .parse_formats(kr$formats))
+    # (a set it names opened, for its own variables: the stack's formats
+    # are by variable)
+    f <- .analysis_fmt(kr, keys, x, k)
+    attr(f, "fmtsets") <- NULL
     if (stack && any(!grepl(":", names(f), fixed = TRUE))) {
       plain <- !grepl(":", names(f), fixed = TRUE)
       vv <- .split_bar(kr$variables)
@@ -1857,7 +1862,21 @@
     }
     fmt <- c(fmt, f)
   }
-  fmt <- c(.parse_formats(r$formats), fmt)
+  # (the wrapper's own: a set it names reaches its continuous analyses'
+  # variables, R/format_sets.R)
+  own <- .parse_formats(r$formats)
+  if (any(.fmtset_name_ok(own[!is.na(own)]))) {
+    ck <- vapply(seq_len(nrow(kids)), function(j) {
+      k <- .method_key(kids$method[j], keys)
+      !is.na(k) && identical(keys$kind[k], "continuous")
+    }, NA)
+    cr <- kids[ck, , drop = FALSE]
+    own <- .fmtset_resolve(own, unique(unlist(lapply(cr$variables, .split_bar))), "continuous",
+                           unique(unlist(lapply(seq_len(nrow(cr)), function(j) .fmtset_stats(cr[j, ])))),
+                           x$format_sets, sprintf("%s / %s", r$output_id, r$analysis_id))
+    attr(own, "fmtsets") <- NULL
+  }
+  fmt <- c(own, fmt)
   fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
   given_of <- function(kr) c(.args_given(kr$args), if (!is.na(kr$strata)) "strata",
                              if (!is.na(kr$denominator)) "denominator")
@@ -1958,9 +1977,7 @@
   kind <- if (is.na(k)) "" else keys$kind[k]
   call_fn <- if (is.na(k)) r$method else keys$call[k]
   den <- .den_code(r$denominator, x, pop, subj, population = pop_name, by = r$by)
-  fmt <- c(if (!is.na(k)) .parse_formats(keys$formats[k]),
-           .parse_formats(r$formats))
-  fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
+  fmt <- .analysis_fmt(r, keys, x, k)
   fmt_fun <- .call_fmt_fun(r, keys, given, fmt)
   lv <- attr(x, "levels")[[r$output_id]]
   node <- .analysis_node(r, keys, subj, has, den, data = data,
